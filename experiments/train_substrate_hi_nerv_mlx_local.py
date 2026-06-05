@@ -705,6 +705,15 @@ def _full_main(args: argparse.Namespace) -> int:
             else None
         ),
     )
+    pr95_full_control_contract = _pr95_full_control_contract(
+        args,
+        train_time_controls=train_time_controls,
+        train_time_section_byte_control=(
+            train_time_section_byte_control.get("initial_control")
+            if bool(train_time_section_byte_control.get("enabled"))
+            else train_time_section_byte_control
+        ),
+    )
 
     scorer_teacher = None
     pose_scorer_teacher = None
@@ -1549,6 +1558,27 @@ def _build_parser() -> argparse.ArgumentParser:
         "--receiver-cache-quality-max-segnet-mae-vs-reference-for-fit-gate",
         type=float,
         default=64.0,
+    )
+    parser.add_argument("--receiver-cache-quality-min-posenet-yuv6-std", type=float, default=1.0)
+    parser.add_argument(
+        "--receiver-cache-quality-min-posenet-yuv6-dynamic-range",
+        type=float,
+        default=16.0,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-posenet-yuv6-mae-vs-reference-for-fit-gate",
+        type=float,
+        default=64.0,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-min-posenet-yuv6-temporal-signal-std-for-fit-gate",
+        type=float,
+        default=0.25,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-min-posenet-yuv6-temporal-signal-mean-abs-for-fit-gate",
+        type=float,
+        default=0.25,
     )
     parser.add_argument(
         "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
@@ -3461,6 +3491,7 @@ def _pr95_full_control_contract(
     args: argparse.Namespace,
     *,
     train_time_controls: HiNervTrainTimeControlConfig | None = None,
+    train_time_section_byte_control: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fail-closed production-full control audit for PR95-critical HiNeRV runs."""
 
@@ -3503,6 +3534,11 @@ def _pr95_full_control_contract(
         not bool(getattr(args, "disable_train_time_section_byte_metrics", False))
         and hard_byte_ceiling_attached
         and coder_qat
+    )
+    measured_section_byte_control_attached = train_time_section_byte_control is not None
+    measured_section_byte_control_active = bool(
+        isinstance(train_time_section_byte_control, Mapping)
+        and train_time_section_byte_control.get("active") is True
     )
     ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
     archive_parse_back_selection = bool(getattr(args, "post_export_receiver_cache_quality_gate", False))
@@ -3562,6 +3598,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_train_time_hard_byte_ceiling")
     if not train_time_section_byte_metrics_enabled:
         blockers.append("hinerv_full_missing_train_time_section_byte_metrics")
+    if measured_section_byte_control_attached and not measured_section_byte_control_active:
+        blockers.append("hinerv_full_train_time_section_byte_control_not_active")
     if not ema_archive_selection:
         blockers.append("hinerv_full_missing_ema_archive_selection")
     if not archive_parse_back_selection:
@@ -3615,6 +3653,15 @@ def _pr95_full_control_contract(
             "hard_byte_ceiling_attached": hard_byte_ceiling_attached,
             "train_time_section_byte_metrics_enabled": (
                 train_time_section_byte_metrics_enabled
+            ),
+            "measured_train_time_section_byte_control_attached": (
+                measured_section_byte_control_attached
+            ),
+            "measured_train_time_section_byte_control_active": (
+                measured_section_byte_control_active
+            ),
+            "measured_train_time_section_byte_control": _metadata_safe(
+                train_time_section_byte_control
             ),
             "decoder_fake_quant_forward_enabled": bool(
                 train_time_controls.decoder_fake_quant_forward_enabled
@@ -3954,6 +4001,21 @@ def _maybe_write_post_export_receiver_cache_quality(
         min_segnet_dynamic_range=float(args.receiver_cache_quality_min_segnet_dynamic_range),
         max_segnet_mae_vs_reference_for_fit_gate=float(
             args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+        ),
+        min_posenet_yuv6_std=float(
+            args.receiver_cache_quality_min_posenet_yuv6_std
+        ),
+        min_posenet_yuv6_dynamic_range=float(
+            args.receiver_cache_quality_min_posenet_yuv6_dynamic_range
+        ),
+        max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
+            args.receiver_cache_quality_max_posenet_yuv6_mae_vs_reference_for_fit_gate
+        ),
+        min_posenet_yuv6_temporal_signal_std_for_fit_gate=float(
+            args.receiver_cache_quality_min_posenet_yuv6_temporal_signal_std_for_fit_gate
+        ),
+        min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=float(
+            args.receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
         ),
         min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
             args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate

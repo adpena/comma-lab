@@ -19,6 +19,7 @@ from tac.substrates.hi_nerv.receiver_cache_quality import (
     HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA,
     HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
     build_hi_nerv_receiver_cache_mlx_scorer_response_probe,
+    build_hi_nerv_receiver_cache_scorer_input_distribution_gate,
     build_hi_nerv_receiver_cache_segnet_argmax_probe,
     write_hi_nerv_receiver_cache_quality_report,
 )
@@ -536,6 +537,82 @@ def test_hi_nerv_receiver_cache_segnet_argmax_probe_rejects_bad_class_gate(
                 (x.shape[0], 5, x.shape[2], x.shape[3]), dtype=np.float32
             ),
         )
+
+
+def test_hi_nerv_receiver_cache_scorer_input_distribution_gate_passes_motion(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    _write_scorer_input_cache(candidate, temporal_delta=3.0)
+    _write_scorer_input_cache(reference, temporal_delta=2.5)
+
+    report = build_hi_nerv_receiver_cache_scorer_input_distribution_gate(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        sample_pairs=2,
+        min_segnet_last_rgb_std=0.1,
+        min_segnet_last_rgb_dynamic_range=1.0,
+        min_posenet_yuv6_pair_std=0.1,
+        min_posenet_yuv6_pair_dynamic_range=1.0,
+        min_posenet_yuv6_temporal_signal_std=0.1,
+        min_posenet_yuv6_temporal_signal_mean_abs=0.5,
+    )
+
+    assert report["fit_gate_passed"] is True
+    assert report["posenet_yuv6_temporal_signal"]["candidate_delta_mean_abs"] > 0.5
+    assert (
+        "candidate_posenet_yuv6_temporal_signal_std_too_low"
+        not in report["blockers"]
+    )
+    assert report["score_claim"] is False
+
+
+def test_hi_nerv_receiver_cache_scorer_input_distribution_gate_blocks_flat_pose(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    _write_scorer_input_cache(candidate, temporal_delta=0.0)
+    _write_scorer_input_cache(reference, temporal_delta=2.5)
+
+    report = build_hi_nerv_receiver_cache_scorer_input_distribution_gate(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        sample_pairs=2,
+        min_segnet_last_rgb_std=0.1,
+        min_segnet_last_rgb_dynamic_range=1.0,
+        min_posenet_yuv6_pair_std=0.1,
+        min_posenet_yuv6_pair_dynamic_range=1.0,
+        min_posenet_yuv6_temporal_signal_std=0.1,
+        min_posenet_yuv6_temporal_signal_mean_abs=0.5,
+    )
+
+    assert report["fit_gate_passed"] is False
+    assert "candidate_posenet_yuv6_temporal_signal_std_too_low" in report["blockers"]
+    assert (
+        "candidate_posenet_yuv6_temporal_signal_mean_abs_too_low"
+        in report["blockers"]
+    )
+    assert report["posenet_yuv6_temporal_signal"]["candidate_delta_mean_abs"] == 0.0
+
+
+def _write_scorer_input_cache(root: Path, *, temporal_delta: float) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    grid = np.arange(2 * 4 * 4, dtype=np.float32).reshape(2, 1, 4, 4)
+    rgb = np.concatenate([grid, grid + 10.0, grid + 20.0], axis=1)
+    first = np.concatenate([grid + channel for channel in range(6)], axis=1)
+    second = first + float(temporal_delta) * np.linspace(
+        0.5,
+        1.5,
+        6,
+        dtype=np.float32,
+    ).reshape(1, 6, 1, 1)
+    np.save(root / "segnet_last_rgb.npy", rgb.astype(np.float32))
+    np.save(
+        root / "posenet_yuv6_pair.npy",
+        np.concatenate([first, second], axis=1).astype(np.float32),
+    )
 
 
 def _write_tiny_hiv1_archive(path: Path, *, member_name: str = "0.bin") -> Path:

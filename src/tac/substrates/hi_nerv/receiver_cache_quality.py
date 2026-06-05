@@ -50,12 +50,17 @@ HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA = (
 HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA = (
     "hi_nerv_receiver_cache_mlx_scorer_response_probe.v1"
 )
+HI_NERV_RECEIVER_CACHE_SCORER_INPUT_DISTRIBUTION_SCHEMA = (
+    "hi_nerv_receiver_cache_scorer_input_distribution.v1"
+)
 HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA = NERV_DISTORTION_CRUX_SCHEMA
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION = 1.0e-3
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS = 2
 SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
 DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE = 1.0e-2
 DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE = 0.25
+DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_STD_FOR_FIT_GATE = 0.25
+DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_MEAN_ABS_FOR_FIT_GATE = 0.25
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -73,6 +78,12 @@ def write_hi_nerv_receiver_cache_quality_report(
     min_posenet_yuv6_std: float = 1.0,
     min_posenet_yuv6_dynamic_range: float = 16.0,
     max_posenet_yuv6_mae_vs_reference_for_fit_gate: float = 64.0,
+    min_posenet_yuv6_temporal_signal_std_for_fit_gate: float = (
+        DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_STD_FOR_FIT_GATE
+    ),
+    min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate: float = (
+        DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_MEAN_ABS_FOR_FIT_GATE
+    ),
     segnet_argmax_probe_upstream_dir: str | Path | None = None,
     segnet_argmax_probe_device: str = "cpu",
     segnet_argmax_probe_batch_frames: int = 4,
@@ -150,6 +161,31 @@ def write_hi_nerv_receiver_cache_quality_report(
             max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
                 max_posenet_yuv6_mae_vs_reference_for_fit_gate
             ),
+        )
+
+    scorer_input_distribution_gate: dict[str, Any] | None = None
+    scorer_input_distribution_gate_path: Path | None = None
+    if reference_cache_dir is not None:
+        scorer_input_distribution_gate_path = out / "scorer_input_distribution_gate.json"
+        scorer_input_distribution_gate = (
+            write_hi_nerv_receiver_cache_scorer_input_distribution_gate(
+                output_json=scorer_input_distribution_gate_path,
+                candidate_cache_dir=cache_dir,
+                reference_cache_dir=reference_cache_dir,
+                sample_pairs=int(sample_pairs or max_pairs),
+                min_segnet_last_rgb_std=float(min_segnet_std),
+                min_segnet_last_rgb_dynamic_range=float(min_segnet_dynamic_range),
+                min_posenet_yuv6_pair_std=float(min_posenet_yuv6_std),
+                min_posenet_yuv6_pair_dynamic_range=float(
+                    min_posenet_yuv6_dynamic_range
+                ),
+                min_posenet_yuv6_temporal_signal_std=float(
+                    min_posenet_yuv6_temporal_signal_std_for_fit_gate
+                ),
+                min_posenet_yuv6_temporal_signal_mean_abs=float(
+                    min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
+                ),
+            )
         )
 
     segnet_argmax_probe: dict[str, Any] | None = None
@@ -348,6 +384,10 @@ def write_hi_nerv_receiver_cache_quality_report(
         blockers.extend(str(v) for v in quality_gate.get("blockers") or [])
     if segnet_argmax_probe is not None:
         blockers.extend(str(v) for v in segnet_argmax_probe.get("blockers") or [])
+    if scorer_input_distribution_gate is not None:
+        blockers.extend(
+            str(v) for v in scorer_input_distribution_gate.get("blockers") or []
+        )
     if distortion_crux is not None:
         blockers.extend(str(v) for v in distortion_crux.get("blockers") or [])
     if mlx_scorer_response_probe is not None:
@@ -361,6 +401,10 @@ def write_hi_nerv_receiver_cache_quality_report(
     if segnet_argmax_probe is not None:
         quality_gate_passed = quality_gate_passed and bool(
             segnet_argmax_probe.get("fit_gate_passed")
+        )
+    if scorer_input_distribution_gate is not None:
+        quality_gate_passed = quality_gate_passed and bool(
+            scorer_input_distribution_gate.get("fit_gate_passed")
         )
     if distortion_crux is not None:
         quality_gate_passed = quality_gate_passed and bool(
@@ -403,6 +447,12 @@ def write_hi_nerv_receiver_cache_quality_report(
             else None
         ),
         "segnet_argmax_probe": segnet_argmax_probe,
+        "scorer_input_distribution_gate_path": (
+            scorer_input_distribution_gate_path.as_posix()
+            if scorer_input_distribution_gate_path is not None
+            else None
+        ),
+        "scorer_input_distribution_gate": scorer_input_distribution_gate,
         "distortion_crux_probe_path": (
             distortion_crux_path.as_posix()
             if distortion_crux_path is not None
@@ -431,6 +481,240 @@ def write_hi_nerv_receiver_cache_quality_report(
     report["report_path"] = report_path.as_posix()
     write_json(report_path, report)
     return report
+
+
+def write_hi_nerv_receiver_cache_scorer_input_distribution_gate(
+    *,
+    output_json: str | Path,
+    candidate_cache_dir: str | Path,
+    reference_cache_dir: str | Path,
+    sample_pairs: int = 16,
+    min_segnet_last_rgb_std: float = 1.0,
+    min_segnet_last_rgb_dynamic_range: float = 16.0,
+    min_posenet_yuv6_pair_std: float = 1.0,
+    min_posenet_yuv6_pair_dynamic_range: float = 16.0,
+    min_posenet_yuv6_temporal_signal_std: float = (
+        DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_STD_FOR_FIT_GATE
+    ),
+    min_posenet_yuv6_temporal_signal_mean_abs: float = (
+        DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_MEAN_ABS_FOR_FIT_GATE
+    ),
+) -> dict[str, Any]:
+    report = build_hi_nerv_receiver_cache_scorer_input_distribution_gate(
+        candidate_cache_dir=candidate_cache_dir,
+        reference_cache_dir=reference_cache_dir,
+        sample_pairs=sample_pairs,
+        min_segnet_last_rgb_std=min_segnet_last_rgb_std,
+        min_segnet_last_rgb_dynamic_range=min_segnet_last_rgb_dynamic_range,
+        min_posenet_yuv6_pair_std=min_posenet_yuv6_pair_std,
+        min_posenet_yuv6_pair_dynamic_range=min_posenet_yuv6_pair_dynamic_range,
+        min_posenet_yuv6_temporal_signal_std=(
+            min_posenet_yuv6_temporal_signal_std
+        ),
+        min_posenet_yuv6_temporal_signal_mean_abs=(
+            min_posenet_yuv6_temporal_signal_mean_abs
+        ),
+    )
+    out = Path(output_json).expanduser().resolve(strict=False)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    report["report_path"] = out.as_posix()
+    write_json(out, report)
+    return report
+
+
+def build_hi_nerv_receiver_cache_scorer_input_distribution_gate(
+    *,
+    candidate_cache_dir: str | Path,
+    reference_cache_dir: str | Path,
+    sample_pairs: int = 16,
+    min_segnet_last_rgb_std: float = 1.0,
+    min_segnet_last_rgb_dynamic_range: float = 16.0,
+    min_posenet_yuv6_pair_std: float = 1.0,
+    min_posenet_yuv6_pair_dynamic_range: float = 16.0,
+    min_posenet_yuv6_temporal_signal_std: float = (
+        DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_STD_FOR_FIT_GATE
+    ),
+    min_posenet_yuv6_temporal_signal_mean_abs: float = (
+        DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_MEAN_ABS_FOR_FIT_GATE
+    ),
+) -> dict[str, Any]:
+    """Inspect scorer-input distribution and PoseNet pair temporal signal.
+
+    This is stricter than the generic cache-quality gate because it records the
+    actual tensors the contest scorers consume: SegNet last-frame RGB and the
+    two-frame PoseNet YUV6 pair.  The temporal-delta check catches flat adjacent
+    frames that can still have plausible global YUV range.
+    """
+
+    if int(sample_pairs) < 1:
+        raise ValueError(f"sample_pairs must be >= 1, got {sample_pairs}")
+    thresholds = {
+        "min_segnet_last_rgb_std": _finite_nonnegative_threshold(
+            min_segnet_last_rgb_std,
+            "min_segnet_last_rgb_std",
+        ),
+        "min_segnet_last_rgb_dynamic_range": _finite_nonnegative_threshold(
+            min_segnet_last_rgb_dynamic_range,
+            "min_segnet_last_rgb_dynamic_range",
+        ),
+        "min_posenet_yuv6_pair_std": _finite_nonnegative_threshold(
+            min_posenet_yuv6_pair_std,
+            "min_posenet_yuv6_pair_std",
+        ),
+        "min_posenet_yuv6_pair_dynamic_range": _finite_nonnegative_threshold(
+            min_posenet_yuv6_pair_dynamic_range,
+            "min_posenet_yuv6_pair_dynamic_range",
+        ),
+        "min_posenet_yuv6_temporal_signal_std": _finite_nonnegative_threshold(
+            min_posenet_yuv6_temporal_signal_std,
+            "min_posenet_yuv6_temporal_signal_std",
+        ),
+        "min_posenet_yuv6_temporal_signal_mean_abs": _finite_nonnegative_threshold(
+            min_posenet_yuv6_temporal_signal_mean_abs,
+            "min_posenet_yuv6_temporal_signal_mean_abs",
+        ),
+    }
+
+    candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
+    reference = Path(reference_cache_dir).expanduser().resolve(strict=False)
+    cand_seg = _load_cache_array(candidate, "segnet_last_rgb.npy")
+    ref_seg = _load_cache_array(reference, "segnet_last_rgb.npy")
+    cand_pose = _load_cache_array(candidate, "posenet_yuv6_pair.npy")
+    ref_pose = _load_cache_array(reference, "posenet_yuv6_pair.npy")
+    n_seg = _sample_count(cand_seg, ref_seg, int(sample_pairs))
+    n_pose = _sample_count(cand_pose, ref_pose, int(sample_pairs))
+    cand_seg_sample = np.asarray(cand_seg[:n_seg], dtype=np.float32)
+    ref_seg_sample = np.asarray(ref_seg[:n_seg], dtype=np.float32)
+    cand_pose_sample = np.asarray(cand_pose[:n_pose], dtype=np.float32)
+    ref_pose_sample = np.asarray(ref_pose[:n_pose], dtype=np.float32)
+    _validate_segnet_cache_tensor("candidate_segnet_last_rgb", cand_seg_sample)
+    _validate_segnet_cache_tensor("reference_segnet_last_rgb", ref_seg_sample)
+    _validate_posenet_yuv6_pair_tensor(
+        "candidate_posenet_yuv6_pair",
+        cand_pose_sample,
+    )
+    _validate_posenet_yuv6_pair_tensor("reference_posenet_yuv6_pair", ref_pose_sample)
+    if cand_seg_sample.shape[1:] != ref_seg_sample.shape[1:]:
+        raise ValueError(
+            "candidate/reference SegNet cache shape mismatch: "
+            f"{cand_seg_sample.shape} vs {ref_seg_sample.shape}"
+        )
+    if cand_pose_sample.shape[1:] != ref_pose_sample.shape[1:]:
+        raise ValueError(
+            "candidate/reference PoseNet YUV6 cache shape mismatch: "
+            f"{cand_pose_sample.shape} vs {ref_pose_sample.shape}"
+        )
+
+    cand_pose_delta = _posenet_yuv6_pair_temporal_delta(cand_pose_sample)
+    ref_pose_delta = _posenet_yuv6_pair_temporal_delta(ref_pose_sample)
+    candidate_seg_stats = _cache_array_distribution_stats(
+        "candidate_segnet_last_rgb",
+        cand_seg_sample,
+    )
+    reference_seg_stats = _cache_array_distribution_stats(
+        "reference_segnet_last_rgb",
+        ref_seg_sample,
+    )
+    candidate_pose_stats = _cache_array_distribution_stats(
+        "candidate_posenet_yuv6_pair",
+        cand_pose_sample,
+    )
+    reference_pose_stats = _cache_array_distribution_stats(
+        "reference_posenet_yuv6_pair",
+        ref_pose_sample,
+    )
+    candidate_temporal_stats = _cache_array_distribution_stats(
+        "candidate_posenet_yuv6_temporal_delta",
+        cand_pose_delta,
+    )
+    reference_temporal_stats = _cache_array_distribution_stats(
+        "reference_posenet_yuv6_temporal_delta",
+        ref_pose_delta,
+    )
+    candidate_temporal_mean_abs = _mean_abs_to_zero(cand_pose_delta)
+    reference_temporal_mean_abs = _mean_abs_to_zero(ref_pose_delta)
+
+    blockers = [
+        "hi_nerv_receiver_cache_scorer_input_distribution_is_false_authority"
+    ]
+    if candidate_seg_stats["std"] < thresholds["min_segnet_last_rgb_std"]:
+        blockers.append("candidate_segnet_last_rgb_distribution_std_too_low")
+    if (
+        candidate_seg_stats["dynamic_range"]
+        < thresholds["min_segnet_last_rgb_dynamic_range"]
+    ):
+        blockers.append("candidate_segnet_last_rgb_distribution_dynamic_range_too_low")
+    if candidate_pose_stats["std"] < thresholds["min_posenet_yuv6_pair_std"]:
+        blockers.append("candidate_posenet_yuv6_pair_distribution_std_too_low")
+    if (
+        candidate_pose_stats["dynamic_range"]
+        < thresholds["min_posenet_yuv6_pair_dynamic_range"]
+    ):
+        blockers.append("candidate_posenet_yuv6_pair_distribution_dynamic_range_too_low")
+    if (
+        candidate_temporal_stats["std"]
+        < thresholds["min_posenet_yuv6_temporal_signal_std"]
+    ):
+        blockers.append("candidate_posenet_yuv6_temporal_signal_std_too_low")
+    if (
+        candidate_temporal_mean_abs
+        < thresholds["min_posenet_yuv6_temporal_signal_mean_abs"]
+    ):
+        blockers.append("candidate_posenet_yuv6_temporal_signal_mean_abs_too_low")
+    blockers = _ordered_unique(blockers)
+    fit_gate_passed = len(blockers) == 1
+
+    return {
+        "schema": HI_NERV_RECEIVER_CACHE_SCORER_INPUT_DISTRIBUTION_SCHEMA,
+        "candidate_cache_dir": candidate.as_posix(),
+        "reference_cache_dir": reference.as_posix(),
+        "sample_pairs": int(min(n_seg, n_pose)),
+        "segnet_last_frame_rgb": {
+            "candidate": candidate_seg_stats,
+            "reference": reference_seg_stats,
+            "candidate_channel_mean": _channel_stat(cand_seg_sample, "mean"),
+            "candidate_channel_std": _channel_stat(cand_seg_sample, "std"),
+            "reference_channel_mean": _channel_stat(ref_seg_sample, "mean"),
+            "reference_channel_std": _channel_stat(ref_seg_sample, "std"),
+            "mean_abs_delta_vs_reference": _mean_abs(cand_seg_sample, ref_seg_sample),
+        },
+        "posenet_yuv6_pair": {
+            "candidate": candidate_pose_stats,
+            "reference": reference_pose_stats,
+            "candidate_channel_mean": _channel_stat(cand_pose_sample, "mean"),
+            "candidate_channel_std": _channel_stat(cand_pose_sample, "std"),
+            "reference_channel_mean": _channel_stat(ref_pose_sample, "mean"),
+            "reference_channel_std": _channel_stat(ref_pose_sample, "std"),
+            "mean_abs_delta_vs_reference": _mean_abs(
+                cand_pose_sample,
+                ref_pose_sample,
+            ),
+        },
+        "posenet_yuv6_temporal_signal": {
+            "candidate_delta": candidate_temporal_stats,
+            "reference_delta": reference_temporal_stats,
+            "candidate_delta_mean_abs": candidate_temporal_mean_abs,
+            "reference_delta_mean_abs": reference_temporal_mean_abs,
+            "candidate_delta_channel_mean_abs": _channel_mean_abs(cand_pose_delta),
+            "reference_delta_channel_mean_abs": _channel_mean_abs(ref_pose_delta),
+            "mean_abs_delta_vs_reference": _mean_abs(
+                cand_pose_delta,
+                ref_pose_delta,
+            ),
+            "std_ratio_vs_reference": _safe_ratio(
+                candidate_temporal_stats["std"],
+                reference_temporal_stats["std"],
+            ),
+            "mean_abs_ratio_vs_reference": _safe_ratio(
+                candidate_temporal_mean_abs,
+                reference_temporal_mean_abs,
+            ),
+        },
+        "thresholds": thresholds,
+        "fit_gate_passed": fit_gate_passed,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
@@ -1173,6 +1457,98 @@ def _validate_segnet_cache_tensor(name: str, value: np.ndarray) -> None:
         raise ValueError(f"{name} has invalid spatial shape={value.shape}")
 
 
+def _validate_posenet_yuv6_pair_tensor(name: str, value: np.ndarray) -> None:
+    if value.ndim != 4:
+        raise ValueError(f"{name} must be NCHW rank-4, got shape={value.shape}")
+    if int(value.shape[1]) != 12:
+        raise ValueError(
+            f"{name} must have 12 PoseNet YUV6 pair channels, got shape={value.shape}"
+        )
+    if int(value.shape[2]) < 1 or int(value.shape[3]) < 1:
+        raise ValueError(f"{name} has invalid spatial shape={value.shape}")
+
+
+def _finite_nonnegative_threshold(value: Any, label: str) -> float:
+    try:
+        out = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite non-negative float") from exc
+    if not math.isfinite(out) or out < 0.0:
+        raise ValueError(f"{label} must be finite and non-negative, got {out!r}")
+    return out
+
+
+def _cache_array_distribution_stats(name: str, value: np.ndarray) -> dict[str, Any]:
+    arr = np.asarray(value, dtype=np.float32)
+    min_value = _finite_probe_float(np.min(arr), f"{name}.min")
+    max_value = _finite_probe_float(np.max(arr), f"{name}.max")
+    return {
+        "name": name,
+        "shape": [int(dim) for dim in arr.shape],
+        "dtype": str(arr.dtype),
+        "min": min_value,
+        "max": max_value,
+        "mean": _finite_probe_float(np.mean(arr), f"{name}.mean"),
+        "std": _finite_probe_float(np.std(arr), f"{name}.std"),
+        "dynamic_range": _finite_probe_float(
+            max_value - min_value,
+            f"{name}.dynamic_range",
+        ),
+    }
+
+
+def _posenet_yuv6_pair_temporal_delta(value: np.ndarray) -> np.ndarray:
+    _validate_posenet_yuv6_pair_tensor("posenet_yuv6_pair", value)
+    n, _channels, h, w = value.shape
+    frames = np.asarray(value, dtype=np.float32).reshape(n, 2, 6, h, w)
+    return np.ascontiguousarray(frames[:, 1, ...] - frames[:, 0, ...])
+
+
+def _channel_stat(value: np.ndarray, reducer: str) -> list[float]:
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim < 2:
+        raise ValueError(f"channel stats require NCHW-like array, got {arr.shape}")
+    axes = tuple(axis for axis in range(arr.ndim) if axis != 1)
+    if reducer == "mean":
+        reduced = np.mean(arr, axis=axes)
+    elif reducer == "std":
+        reduced = np.std(arr, axis=axes)
+    else:
+        raise ValueError(f"unsupported channel reducer {reducer!r}")
+    return [
+        _finite_probe_float(value, f"channel_{reducer}[{index}]")
+        for index, value in enumerate(np.ravel(reduced))
+    ]
+
+
+def _channel_mean_abs(value: np.ndarray) -> list[float]:
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim < 2:
+        raise ValueError(f"channel mean_abs requires NCHW-like array, got {arr.shape}")
+    axes = tuple(axis for axis in range(arr.ndim) if axis != 1)
+    reduced = np.mean(np.abs(arr), axis=axes)
+    return [
+        _finite_probe_float(value, f"channel_mean_abs[{index}]")
+        for index, value in enumerate(np.ravel(reduced))
+    ]
+
+
+def _mean_abs(a: np.ndarray, b: np.ndarray) -> float:
+    return _finite_probe_float(np.mean(np.abs(a - b)), "mean_abs")
+
+
+def _mean_abs_to_zero(value: np.ndarray) -> float:
+    return _finite_probe_float(np.mean(np.abs(value)), "mean_abs_to_zero")
+
+
+def _safe_ratio(numerator: float, denominator: float) -> float | None:
+    num = _finite_probe_float(numerator, "ratio_numerator")
+    den = _finite_probe_float(denominator, "ratio_denominator")
+    if den <= 0.0:
+        return None
+    return num / den
+
+
 def _run_segnet_argmax_batches(
     frames_nchw: np.ndarray,
     *,
@@ -1251,11 +1627,14 @@ __all__ = [
     "HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA",
+    "HI_NERV_RECEIVER_CACHE_SCORER_INPUT_DISTRIBUTION_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA",
     "SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE",
     "build_hi_nerv_receiver_cache_mlx_scorer_response_probe",
+    "build_hi_nerv_receiver_cache_scorer_input_distribution_gate",
     "build_hi_nerv_receiver_cache_segnet_argmax_probe",
     "write_hi_nerv_direct_receiver_cache_from_payload",
     "write_hi_nerv_receiver_cache_quality_report",
+    "write_hi_nerv_receiver_cache_scorer_input_distribution_gate",
     "write_hi_nerv_receiver_cache_segnet_argmax_probe",
 ]

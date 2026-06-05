@@ -189,10 +189,27 @@ def test_train_time_section_byte_control_prices_only_actuated_sections() -> None
     }
     assert control["metrics_payload"]["archive_bytes"] == 400
     assert control["metrics_payload"]["section_bytes"]["meta_json"] == 20
+    assert control["metrics_payload"]["rate_score_per_byte"] == pytest.approx(0.01)
+    assert control["metrics_payload"]["section_rate_scores"]["decoder_state"] == (
+        pytest.approx(2.0)
+    )
+    assert control["metrics_payload"][
+        "train_time_section_rate_score__decoder_state"
+    ] == pytest.approx(2.0)
+    assert control["metrics_payload"][
+        "train_time_section_rate_score__latents_coarse"
+    ] == pytest.approx(0.4)
+    assert control["metrics_payload"]["train_time_section_rate_score__meta_json"] == (
+        pytest.approx(0.2)
+    )
     assert control["pending_section_rows"][0]["section_name"] == "meta_json"
     assert control["pending_section_rows"][0]["pending_reason"] == (
         "non_differentiable_archive_section"
     )
+    assert control["pending_section_rows"][0]["rate_score"] == pytest.approx(0.2)
+    assert control["pending_section_rows"][0][
+        "budget_rate_score_if_actuated"
+    ] == pytest.approx(0.05)
     assert control["blockers"] == []
 
 

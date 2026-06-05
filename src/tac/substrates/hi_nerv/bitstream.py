@@ -27,6 +27,7 @@ from tac.substrates._shared.decoder_state_codec import (
     deserialize_decoder_state_dict,
     serialize_decoder_state_dict,
 )
+from tac.substrates._shared.mlx_score_aware.dual_ascent import safe_dual_metric_key
 from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     ADMIT,
     CUT,
@@ -993,6 +994,17 @@ def build_hinerv_train_time_section_byte_control(
         "schema": "hi_nerv_train_time_section_byte_metrics.v1",
         "archive_bytes": archive_bytes,
         "section_bytes": dict(sorted(section_bytes.items())),
+        "rate_score_per_byte": float(byte_price_score_per_byte),
+        "section_rate_scores": {
+            name: float(nbytes) * float(byte_price_score_per_byte)
+            for name, nbytes in sorted(section_bytes.items())
+        },
+        **{
+            f"train_time_section_rate_score__{safe_dual_metric_key(name)}": (
+                float(nbytes) * float(byte_price_score_per_byte)
+            )
+            for name, nbytes in sorted(section_bytes.items())
+        },
         "authority": "macos_mlx_research_signal_false_authority",
     }
     if ceiling is None:
@@ -1004,6 +1016,7 @@ def build_hinerv_train_time_section_byte_control(
             "pending_section_rows": _hi_nerv_pending_train_time_section_rows(
                 section_rows,
                 reason="hard_byte_ceiling_not_configured",
+                byte_price_score_per_byte=byte_price_score_per_byte,
             ),
             "pending_section_count": len(section_rows),
             "blockers": ["hinerv_train_time_section_byte_hard_ceiling_missing"],
@@ -1033,6 +1046,8 @@ def build_hinerv_train_time_section_byte_control(
                     "bytes": nbytes,
                     "budget_bytes_if_actuated": budget,
                     "rate_score": float(nbytes) * float(byte_price_score_per_byte),
+                    "budget_rate_score_if_actuated": float(budget)
+                    * float(byte_price_score_per_byte),
                     "pending_reason": (
                         "non_differentiable_archive_section"
                         if role not in {"decoder", "latent"}
@@ -1085,12 +1100,15 @@ def _hi_nerv_pending_train_time_section_rows(
     rows: Sequence[Mapping[str, Any]],
     *,
     reason: str,
+    byte_price_score_per_byte: float = HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE,
 ) -> list[dict[str, Any]]:
     return [
         {
             "section_name": str(row.get("name") or ""),
             "role": str(row.get("role") or ""),
             "bytes": int(row.get("bytes") or 0),
+            "rate_score": float(int(row.get("bytes") or 0))
+            * float(byte_price_score_per_byte),
             "pending_reason": reason,
             **FALSE_AUTHORITY,
         }

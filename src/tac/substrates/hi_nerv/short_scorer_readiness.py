@@ -145,11 +145,50 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         if isinstance(post_export_quality, Mapping)
         else None
     )
+    scorer_input_distribution_gate = (
+        post_export_quality.get("scorer_input_distribution_gate")
+        if isinstance(post_export_quality, Mapping)
+        else None
+    )
     if post_export_quality is None:
         add_blocker("hi_nerv_short_smoke_receiver_cache_quality_gate_not_run")
     else:
         if not bool(post_export_quality.get("quality_gate_passed")):
             add_blocker("hi_nerv_short_smoke_receiver_cache_quality_failed")
+        if not isinstance(scorer_input_distribution_gate, Mapping):
+            add_blocker(
+                "hi_nerv_short_smoke_receiver_cache_scorer_input_distribution_gate_missing"
+            )
+        else:
+            distribution_blockers = {
+                str(blocker)
+                for blocker in scorer_input_distribution_gate.get("blockers") or []
+            }
+            if not bool(scorer_input_distribution_gate.get("fit_gate_passed")):
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_scorer_input_distribution_gate_failed"
+                )
+            if {
+                "candidate_segnet_last_rgb_distribution_std_too_low",
+                "candidate_segnet_last_rgb_distribution_dynamic_range_too_low",
+            } & distribution_blockers:
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_segnet_rgb_distribution_degenerate"
+                )
+            if {
+                "candidate_posenet_yuv6_pair_distribution_std_too_low",
+                "candidate_posenet_yuv6_pair_distribution_dynamic_range_too_low",
+            } & distribution_blockers:
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_posenet_yuv6_distribution_degenerate"
+                )
+            if {
+                "candidate_posenet_yuv6_temporal_signal_std_too_low",
+                "candidate_posenet_yuv6_temporal_signal_mean_abs_too_low",
+            } & distribution_blockers:
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_posenet_yuv6_temporal_signal_degenerate"
+                )
         if not isinstance(segnet_argmax_probe, Mapping):
             add_blocker("hi_nerv_short_smoke_receiver_cache_segnet_argmax_probe_missing")
         else:
@@ -267,6 +306,16 @@ def receiver_cache_quality_manifest_summary(
     argmax_probe = (
         report.get("segnet_argmax_probe") if isinstance(report, Mapping) else None
     )
+    scorer_input_distribution_gate = (
+        report.get("scorer_input_distribution_gate")
+        if isinstance(report, Mapping)
+        else None
+    )
+    distribution_blockers = (
+        [str(blocker) for blocker in scorer_input_distribution_gate.get("blockers") or []]
+        if isinstance(scorer_input_distribution_gate, Mapping)
+        else None
+    )
     return {
         "schema": "hi_nerv_receiver_cache_quality_summary.v1",
         "report_path": report.get("report_path"),
@@ -307,6 +356,31 @@ def receiver_cache_quality_manifest_summary(
             if isinstance(gate_stats, Mapping)
             else None
         ),
+        "scorer_input_distribution_gate_path": report.get(
+            "scorer_input_distribution_gate_path"
+        ),
+        "scorer_input_distribution_gate_passed": (
+            bool(scorer_input_distribution_gate.get("fit_gate_passed"))
+            if isinstance(scorer_input_distribution_gate, Mapping)
+            else None
+        ),
+        "scorer_input_distribution_metrics": (
+            {
+                "segnet_last_frame_rgb": scorer_input_distribution_gate.get(
+                    "segnet_last_frame_rgb"
+                ),
+                "posenet_yuv6_pair": scorer_input_distribution_gate.get(
+                    "posenet_yuv6_pair"
+                ),
+                "posenet_yuv6_temporal_signal": scorer_input_distribution_gate.get(
+                    "posenet_yuv6_temporal_signal"
+                ),
+                "thresholds": scorer_input_distribution_gate.get("thresholds"),
+            }
+            if isinstance(scorer_input_distribution_gate, Mapping)
+            else None
+        ),
+        "scorer_input_distribution_blockers": distribution_blockers,
         "distance_to_reference": (
             gate.get("distance_to_reference") if isinstance(gate, Mapping) else None
         ),

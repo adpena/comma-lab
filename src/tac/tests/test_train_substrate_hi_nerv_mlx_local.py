@@ -40,10 +40,10 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _hard_byte_ceiling_from_args,
     _hard_byte_ceiling_from_modelsize_candidate,
     _hinerv_short_scorer_smoke_readiness_summary,
+    _maybe_write_post_export_receiver_cache_quality,
     _metadata_safe,
     _modelsize_candidate_consumption_metadata,
     _modelsize_candidate_from_args,
-    _maybe_write_post_export_receiver_cache_quality,
     _pose_student_input_channels,
     _pr95_full_control_contract,
     _prioritized_pair_indices_from_args,
@@ -1181,6 +1181,78 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert contract["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hinerv_full_control_contract_requires_measured_section_byte_actuation() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "29650",
+            "--distillation-weight",
+            "1.0",
+            "--segnet-student-live-calibration-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--eval-roundtrip-ste",
+            "--pose-student-input-preprocess",
+            "pr95_yuv6",
+            "--pr95-faithful-curriculum",
+            "--pr95-curriculum-total-epochs",
+            "29650",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--hard-byte-ceiling",
+            "500000",
+            "--ema-archive-selection",
+            "--post-export-receiver-cache-quality-gate",
+            "--scorer-input-distribution-guard-weight",
+            "2.0",
+            "--segnet-distillation-objective",
+            "boundary_argmax_hinge",
+            "--segnet-direct-live-distillation-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-squared-hinge-weight",
+            "0.75",
+            "--scorer-input-contrast-floor-weight",
+            "0.5",
+            "--scorer-input-shape-tether-weight",
+            "0.75",
+        ]
+    )
+
+    blocked = _pr95_full_control_contract(
+        args,
+        train_time_section_byte_control={
+            "schema": "hi_nerv_train_time_section_byte_control.v1",
+            "active": False,
+            "blockers": ["unit_inactive"],
+        },
+    )
+    ready = _pr95_full_control_contract(
+        args,
+        train_time_section_byte_control={
+            "schema": "hi_nerv_train_time_section_byte_control.v1",
+            "active": True,
+            "section_byte_budgets": {"decoder_state": 12345},
+            "blockers": [],
+        },
+    )
+
+    assert blocked["production_full_control_ready"] is False
+    assert "hinerv_full_train_time_section_byte_control_not_active" in blocked[
+        "blockers"
+    ]
+    assert blocked["controls"]["measured_train_time_section_byte_control_attached"] is True
+    assert blocked["controls"]["measured_train_time_section_byte_control_active"] is False
+    assert ready["production_full_control_ready"] is True
+    assert ready["controls"]["measured_train_time_section_byte_control_active"] is True
+
+
 def test_hinerv_train_time_dual_ascent_config_prices_section_bytes() -> None:
     args = _build_parser().parse_args(
         [
@@ -1897,6 +1969,25 @@ def _passing_short_scorer_receiver_quality() -> dict[str, object]:
             "candidate_occupied_class_fraction": 0.8,
             "reference_occupied_class_fraction": 0.9,
             "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
+        },
+        "scorer_input_distribution_gate_path": (
+            "/Volumes/VertigoDataTier/pact/run/scorer_input_distribution_gate.json"
+        ),
+        "scorer_input_distribution_gate": {
+            "fit_gate_passed": True,
+            "segnet_last_frame_rgb": {
+                "candidate": {"std": 0.25, "dynamic_range": 0.9},
+            },
+            "posenet_yuv6_pair": {
+                "candidate": {"std": 0.22, "dynamic_range": 0.8},
+            },
+            "posenet_yuv6_temporal_signal": {
+                "candidate_delta": {"std": 0.12},
+                "candidate_delta_mean_abs": 0.15,
+            },
+            "blockers": [
+                "hi_nerv_receiver_cache_scorer_input_distribution_is_false_authority"
+            ],
         },
         "mlx_scorer_response_probe_path": (
             "/Volumes/VertigoDataTier/pact/run/mlx_scorer_response_probe.json"
