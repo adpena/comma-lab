@@ -28,6 +28,9 @@ ACQUISITION_REPORT_NAME = "hprc_spine_acquisition_report.json"
 EXPORT_REPORT_NAME = "hinerv_checkpoint_archive_export.json"
 BITSTREAM_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
 WATERFILL_REPORT_GLOB = "decoder_weight_waterfill_plan*.json"
+SHORT_SCORER_READINESS_NAME = "hi_nerv_short_scorer_smoke_readiness.json"
+SEGNET_ARGMAX_PROBE_NAME = "segnet_argmax_probe.json"
+DISTORTION_CRUX_PROBE_NAME = "distortion_crux_probe.json"
 DEFAULT_ARTIFACT_ROOT = Path("/Volumes/VertigoDataTier/pact/experiments/results")
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -107,6 +110,11 @@ def build_hinerv_smoke_comparison(
         ),
         default=None,
     )
+    best_distortion_row = min(
+        (row for row in rows if bool(row.get("distortion_metrics_available"))),
+        key=_distortion_row_sort_key,
+        default=None,
+    )
     variant_counts = {
         key: sum(1 for row in rows if bool(row["variant_flags"].get(key)))
         for key in sorted(_VARIANT_TOKENS)
@@ -135,6 +143,7 @@ def build_hinerv_smoke_comparison(
         "variant_counts": variant_counts,
         "byte_frontier_row": _public_row(byte_frontier_row),
         "most_ready_row": _public_row(most_ready_row),
+        "best_distortion_row": _public_row(best_distortion_row),
         "next_actions": _next_actions(rows),
         "rows": [_public_row(row) for row in rows],
         "feedback_refresh": feedback_refresh,
@@ -216,6 +225,25 @@ def render_hinerv_smoke_comparison_markdown(report: Mapping[str, Any]) -> str:
                 "",
             ]
         )
+    best_distortion = report.get("best_distortion_row")
+    if isinstance(best_distortion, Mapping):
+        metrics = best_distortion.get("distortion_metrics")
+        if not isinstance(metrics, Mapping):
+            metrics = {}
+        lines.extend(
+            [
+                "## Best Distortion Row",
+                "",
+                f"- run: `{best_distortion.get('run_id')}`",
+                f"- distortion readiness: {best_distortion.get('distortion_readiness_score')}",
+                f"- receiver argmax disagreement: {metrics.get('receiver_segnet_argmax_disagreement')}",
+                f"- receiver target coverage: {metrics.get('receiver_candidate_target_class_coverage_fraction')}",
+                f"- receiver target min ratio: {metrics.get('receiver_candidate_target_class_min_ratio')}",
+                f"- receiver PoseNet dist: {metrics.get('receiver_mlx_posenet_dist')}",
+                f"- next distortion action: `{best_distortion.get('distortion_next_action')}`",
+                "",
+            ]
+        )
     lines.extend(["## Top Rows", ""])
     for row in report.get("rows") or []:
         if not isinstance(row, Mapping):
@@ -223,7 +251,10 @@ def render_hinerv_smoke_comparison_markdown(report: Mapping[str, Any]) -> str:
         lines.append(
             "- "
             f"`{row.get('run_id')}` bytes={row.get('archive_bytes')} "
-            f"ready={row.get('readiness_score')} action=`{row.get('next_action')}`"
+            f"ready={row.get('readiness_score')} "
+            f"distort_ready={row.get('distortion_readiness_score')} "
+            f"action=`{row.get('next_action')}` "
+            f"distortion_action=`{row.get('distortion_next_action')}`"
         )
     lines.append("")
     return "\n".join(lines)
@@ -262,6 +293,9 @@ def _row_for_run_dir(run_dir: Path) -> dict[str, Any] | None:
         return None
     bitstream_paths = _nested_artifact_paths(run_dir, BITSTREAM_REPORT_NAME)
     waterfill_paths = _nested_artifact_paths(run_dir, WATERFILL_REPORT_GLOB)
+    short_readiness = _first_nested_report(run_dir, SHORT_SCORER_READINESS_NAME)
+    segnet_probe = _first_nested_report(run_dir, SEGNET_ARGMAX_PROBE_NAME)
+    distortion_probe = _first_nested_report(run_dir, DISTORTION_CRUX_PROBE_NAME)
     variant_flags = _variant_flags(run_dir.name)
     variant_flags["bitstream"] = bool(variant_flags["bitstream"] or bitstream_paths)
     variant_flags["waterfill"] = bool(variant_flags["waterfill"] or waterfill_paths)
@@ -281,6 +315,7 @@ def _row_for_run_dir(run_dir: Path) -> dict[str, Any] | None:
             *_string_items(_mapping_get(runner, "blockers")),
             *_string_items(_mapping_get(embedded_feedback, "blockers")),
             *_string_items(_mapping_get(export, "blockers")),
+            *_string_items(_mapping_get(short_readiness, "actionable_blockers")),
             *_acquisition_blockers(acquisition),
         ]
     )
@@ -295,6 +330,16 @@ def _row_for_run_dir(run_dir: Path) -> dict[str, Any] | None:
         for name in (RUNNER_REPORT_NAME, ACQUISITION_REPORT_NAME, EXPORT_REPORT_NAME)
         if name in reports
     ]
+    distortion_metrics = _hinerv_distortion_metrics(
+        short_readiness=short_readiness,
+        segnet_probe=segnet_probe,
+        distortion_probe=distortion_probe,
+    )
+    distortion_next_action = _hinerv_distortion_next_action(
+        metrics=distortion_metrics,
+        blockers=blockers,
+        archive_bytes=archive_bytes,
+    )
     return {
         "run_id": run_dir.name,
         "run_dir": run_dir.as_posix(),
@@ -311,6 +356,15 @@ def _row_for_run_dir(run_dir: Path) -> dict[str, Any] | None:
         "bitstream_preparation_paths": [path.as_posix() for path in bitstream_paths],
         "decoder_weight_waterfill_plan_count": len(waterfill_paths),
         "decoder_weight_waterfill_plan_paths": [path.as_posix() for path in waterfill_paths],
+        "short_scorer_readiness_path": _nested_report_path(
+            run_dir,
+            SHORT_SCORER_READINESS_NAME,
+        ),
+        "segnet_argmax_probe_path": _nested_report_path(run_dir, SEGNET_ARGMAX_PROBE_NAME),
+        "distortion_crux_probe_path": _nested_report_path(
+            run_dir,
+            DISTORTION_CRUX_PROBE_NAME,
+        ),
         "candidate_id": _first_str(
             _mapping_get(embedded_feedback, "candidate_id"),
             _mapping_get(runner, "candidate_id"),
@@ -360,6 +414,12 @@ def _row_for_run_dir(run_dir: Path) -> dict[str, Any] | None:
         "best_acquisition_bytes": _best_acquisition_bytes(acquisition),
         "acquisition_next_actions": _acquisition_next_actions(acquisition),
         "readiness_score": readiness,
+        "distortion_readiness_score": _hinerv_distortion_readiness_score(
+            distortion_metrics
+        ),
+        "distortion_metrics_available": bool(distortion_metrics),
+        "distortion_next_action": distortion_next_action,
+        "distortion_metrics": distortion_metrics,
         "next_action": _row_next_action(
             archive_bytes=archive_bytes,
             readiness_score=readiness,
@@ -388,6 +448,22 @@ def _load_reports(run_dir: Path) -> dict[str, dict[str, Any]]:
     return reports
 
 
+def _first_nested_report(run_dir: Path, name: str) -> dict[str, Any] | None:
+    path_text = _nested_report_path(run_dir, name)
+    if not path_text:
+        return None
+    try:
+        payload = read_json(Path(path_text))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _nested_report_path(run_dir: Path, name: str) -> str | None:
+    paths = _nested_artifact_paths(run_dir, name, limit=1)
+    return paths[0].as_posix() if paths else None
+
+
 def _nested_artifact_paths(run_dir: Path, pattern: str, *, limit: int = 12) -> list[Path]:
     paths: list[Path] = []
     try:
@@ -401,6 +477,131 @@ def _nested_artifact_paths(run_dir: Path, pattern: str, *, limit: int = 12) -> l
     except OSError:
         return []
     return sorted(paths, key=lambda path: path.as_posix())
+
+
+def _hinerv_distortion_metrics(
+    *,
+    short_readiness: Mapping[str, Any] | None,
+    segnet_probe: Mapping[str, Any] | None,
+    distortion_probe: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    direct_segnet = _mapping_get(short_readiness, "direct_live_segnet_gate")
+    direct_segnet_metrics = _mapping_get(direct_segnet, "metrics")
+    direct_posenet = _mapping_get(short_readiness, "direct_live_posenet_gate")
+    direct_posenet_metrics = _mapping_get(direct_posenet, "metrics")
+    receiver = _mapping_get(short_readiness, "receiver_cache_quality")
+    aggregate = _mapping_get(distortion_probe, "aggregate")
+    metrics = {
+        "short_scorer_ready": _first_bool(
+            _mapping_get(short_readiness, "ready_for_long_run"),
+            _mapping_get(short_readiness, "short_scorer_teacher_smoke_ready"),
+        ),
+        "direct_candidate_occupied_class_fraction": _first_float(
+            _mapping_get(
+                direct_segnet_metrics,
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+            )
+        ),
+        "direct_candidate_target_class_coverage_fraction": _first_float(
+            _mapping_get(
+                direct_segnet_metrics,
+                "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+            )
+        ),
+        "direct_candidate_target_class_min_ratio": _first_float(
+            _mapping_get(
+                direct_segnet_metrics,
+                "loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+            )
+        ),
+        "direct_segnet_argmax_disagreement": _first_float(
+            _mapping_get(
+                direct_segnet_metrics,
+                "loss_part_segnet_direct_live_argmax_disagreement",
+            )
+        ),
+        "receiver_segnet_argmax_disagreement": _first_float(
+            _mapping_get(segnet_probe, "segnet_argmax_disagreement_rate"),
+            _mapping_get(receiver, "segnet_argmax_disagreement_rate"),
+        ),
+        "receiver_candidate_occupied_class_fraction": _first_float(
+            _mapping_get(segnet_probe, "candidate_occupied_class_fraction"),
+            _mapping_get(receiver, "candidate_argmax_occupied_class_fraction"),
+        ),
+        "receiver_candidate_target_class_coverage_fraction": _first_float(
+            _mapping_get(segnet_probe, "candidate_target_class_coverage_fraction"),
+            _mapping_get(receiver, "candidate_argmax_target_class_coverage_fraction"),
+        ),
+        "receiver_candidate_target_class_min_ratio": _first_float(
+            _mapping_get(segnet_probe, "candidate_target_class_min_ratio"),
+            _mapping_get(receiver, "candidate_argmax_target_class_min_ratio"),
+        ),
+        "posenet_direct_score_term": _first_float(
+            _mapping_get(direct_posenet_metrics, "loss_part_pose_direct_live_score_term")
+        ),
+        "posenet_direct_raw_mse": _first_float(
+            _mapping_get(direct_posenet_metrics, "loss_part_pose_direct_live_raw_mse")
+        ),
+        "receiver_mlx_posenet_dist": _first_float(
+            _mapping_get(receiver, "mlx_scorer_response_avg_posenet_dist")
+        ),
+        "receiver_mlx_segnet_dist": _first_float(
+            _mapping_get(receiver, "mlx_scorer_response_avg_segnet_dist")
+        ),
+        "segnet_last_frame_mae_255": _first_float(
+            _nested_mapping_get(aggregate, ("segnet_last_frame_mae_255", "mean"))
+        ),
+        "posenet_yuv6_pair_mae_255": _first_float(
+            _nested_mapping_get(aggregate, ("posenet_yuv6_pair_mae_255", "mean"))
+        ),
+        "posenet_temporal_delta_mae_255": _first_float(
+            _nested_mapping_get(
+                aggregate,
+                ("posenet_temporal_delta_mae_255", "mean"),
+            )
+        ),
+    }
+    return {key: value for key, value in metrics.items() if value is not None}
+
+
+def _hinerv_distortion_readiness_score(metrics: Mapping[str, Any]) -> int:
+    score = 0
+    if _float_ge(metrics.get("direct_candidate_occupied_class_fraction"), 0.400001):
+        score += 1
+    if _float_ge(metrics.get("direct_candidate_target_class_coverage_fraction"), 0.8):
+        score += 1
+    if _float_ge(metrics.get("direct_candidate_target_class_min_ratio"), 0.2):
+        score += 1
+    if _float_le(metrics.get("receiver_segnet_argmax_disagreement"), 0.25):
+        score += 1
+    if _float_le(metrics.get("receiver_mlx_posenet_dist"), 1.0):
+        score += 1
+    return score
+
+
+def _hinerv_distortion_next_action(
+    *,
+    metrics: Mapping[str, Any],
+    blockers: Sequence[str],
+    archive_bytes: int | None,
+) -> str:
+    blocker_set = set(blockers)
+    if not metrics:
+        return "run_short_real_teacher_scorer_smoke_with_metric_harvest"
+    if _float_lt(metrics.get("direct_candidate_target_class_coverage_fraction"), 0.8):
+        return "repair_segnet_target_class_coverage_before_long_run"
+    if _float_lt(metrics.get("direct_candidate_target_class_min_ratio"), 0.2):
+        return "repair_segnet_target_class_mass_before_long_run"
+    if _float_gt(metrics.get("receiver_segnet_argmax_disagreement"), 0.25):
+        return "reduce_receiver_segnet_argmax_disagreement_before_long_run"
+    if (
+        "hi_nerv_receiver_cache_posenet_response_too_high" in blocker_set
+        or _float_gt(metrics.get("receiver_mlx_posenet_dist"), 1.0)
+    ):
+        return "repair_posenet_yuv6_geometry_response_before_long_run"
+    if archive_bytes is None:
+        return "materialize_byte_closed_archive_export"
+    return "run_full_video_mlx_replay_and_section_value_accounting"
 
 
 def _embedded_candidate_feedback_row(runner: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
@@ -548,6 +749,21 @@ def _row_sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, str]:
     )
 
 
+def _distortion_row_sort_key(row: Mapping[str, Any]) -> tuple[int, float, float, str]:
+    metrics = row.get("distortion_metrics")
+    if not isinstance(metrics, Mapping):
+        metrics = {}
+    return (
+        -int(row.get("distortion_readiness_score") or 0),
+        _float_or_default(
+            metrics.get("receiver_segnet_argmax_disagreement"),
+            default=9.0,
+        ),
+        _float_or_default(metrics.get("receiver_mlx_posenet_dist"), default=9.0),
+        str(row.get("run_id") or ""),
+    )
+
+
 def _first_int(*values: object) -> int | None:
     for value in values:
         if isinstance(value, bool) or value is None:
@@ -557,6 +773,44 @@ def _first_int(*values: object) -> int | None:
         except (TypeError, ValueError):
             continue
     return None
+
+
+def _first_float(*values: object) -> float | None:
+    for value in values:
+        if isinstance(value, bool) or value is None:
+            continue
+        try:
+            out = float(value)
+        except (TypeError, ValueError):
+            continue
+        if out == out:
+            return out
+    return None
+
+
+def _float_or_default(value: object, *, default: float) -> float:
+    parsed = _first_float(value)
+    return float(default) if parsed is None else parsed
+
+
+def _float_ge(value: object, floor: float) -> bool:
+    parsed = _first_float(value)
+    return bool(parsed is not None and parsed >= float(floor))
+
+
+def _float_le(value: object, ceiling: float) -> bool:
+    parsed = _first_float(value)
+    return bool(parsed is not None and parsed <= float(ceiling))
+
+
+def _float_lt(value: object, floor: float) -> bool:
+    parsed = _first_float(value)
+    return bool(parsed is not None and parsed < float(floor))
+
+
+def _float_gt(value: object, ceiling: float) -> bool:
+    parsed = _first_float(value)
+    return bool(parsed is not None and parsed > float(ceiling))
 
 
 def _first_sequence_int(value: object) -> int | None:

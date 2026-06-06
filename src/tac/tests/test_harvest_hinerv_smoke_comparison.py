@@ -150,3 +150,104 @@ def test_harvest_hinerv_smoke_comparison_writes_comparison_and_refresh(
     refresh = json.loads(refresh_json.read_text(encoding="utf-8"))
     assert refresh["schema"] == "nerv_queue_training_feedback_refresh.v1"
     assert refresh["refreshed_row_count"] == 0
+
+
+def test_harvest_hinerv_smoke_comparison_extracts_distortion_readiness_metrics(
+    tmp_path: Path,
+) -> None:
+    run_dir = tmp_path / "hinerv_target_mass_ladder_4epoch_smoke"
+    _write_json(
+        run_dir / "compact_renderer_mlx_spine_runner_report.json",
+        {
+            "schema": "compact_renderer_mlx_spine_runner.v1",
+            "execute_family": "hi_nerv",
+            "training_executed": True,
+            "archive_bytes": 170_000,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        run_dir / "hi_nerv_mlx_training" / "hi_nerv_short_scorer_smoke_readiness.json",
+        {
+            "schema": "hi_nerv_short_scorer_smoke_readiness.v1",
+            "ready_for_long_run": False,
+            "actionable_blockers": [
+                "hi_nerv_short_smoke_direct_live_target_class_mass_collapsed",
+                "hi_nerv_receiver_cache_posenet_response_too_high",
+            ],
+            "direct_live_segnet_gate": {
+                "metrics": {
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.48,
+                }
+            },
+            "direct_live_posenet_gate": {
+                "metrics": {
+                    "loss_part_pose_direct_live_score_term": 40.0,
+                    "loss_part_pose_direct_live_raw_mse": 160.0,
+                }
+            },
+            "receiver_cache_quality": {
+                "segnet_argmax_disagreement_rate": 0.45,
+                "candidate_argmax_occupied_class_fraction": 0.4,
+                "candidate_argmax_target_class_coverage_fraction": 0.4,
+                "candidate_argmax_target_class_min_ratio": 0.0,
+                "mlx_scorer_response_avg_posenet_dist": 190.0,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        run_dir
+        / "hi_nerv_mlx_training"
+        / "post_export_receiver_cache_quality"
+        / "segnet_argmax_probe.json",
+        {
+            "schema": "hi_nerv_segnet_argmax_probe.v1",
+            "segnet_argmax_disagreement_rate": 0.44,
+            "candidate_occupied_class_fraction": 0.4,
+            "candidate_target_class_coverage_fraction": 0.4,
+            "candidate_target_class_min_ratio": 0.0,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write_json(
+        run_dir
+        / "hi_nerv_mlx_training"
+        / "post_export_receiver_cache_quality"
+        / "distortion_crux_probe.json",
+        {
+            "schema": "nerv_distortion_crux_probe.v1",
+            "aggregate": {
+                "segnet_last_frame_mae_255": {"mean": 19.5},
+                "posenet_yuv6_pair_mae_255": {"mean": 13.8},
+                "posenet_temporal_delta_mae_255": {"mean": 9.8},
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    report = harvest_cli.build_hinerv_smoke_comparison(artifact_roots=(tmp_path,))
+
+    row = report["rows"][0]
+    metrics = row["distortion_metrics"]
+    assert row["distortion_metrics_available"] is True
+    assert row["distortion_readiness_score"] == 1
+    assert row["distortion_next_action"] == (
+        "repair_segnet_target_class_mass_before_long_run"
+    )
+    assert metrics["receiver_segnet_argmax_disagreement"] == 0.44
+    assert metrics["receiver_candidate_target_class_min_ratio"] == 0.0
+    assert metrics["receiver_mlx_posenet_dist"] == 190.0
+    assert metrics["segnet_last_frame_mae_255"] == 19.5
+    assert report["best_distortion_row"]["run_id"] == run_dir.name
