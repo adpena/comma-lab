@@ -2694,6 +2694,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         prob_floor: float = 0.55,
         lambda_prob_floor: float = 16.0,
         lambda_seed: float = 8.0,
+        lambda_support_preserve: float = 64.0,
+        lambda_outside_argmax_preserve: float = 16.0,
         seed_temperature: float = 0.5,
         min_margin_mean_drop: float = 1.0e-6,
         max_pose_output_delta_l2: float = 0.05,
@@ -2741,6 +2743,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ("prob_floor", float(prob_floor)),
             ("lambda_prob_floor", float(lambda_prob_floor)),
             ("lambda_seed", float(lambda_seed)),
+            ("lambda_support_preserve", float(lambda_support_preserve)),
+            ("lambda_outside_argmax_preserve", float(lambda_outside_argmax_preserve)),
             ("seed_temperature", float(seed_temperature)),
             ("min_margin_mean_drop", float(min_margin_mean_drop)),
             ("max_pose_output_delta_l2", float(max_pose_output_delta_l2)),
@@ -3001,6 +3005,31 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         initial_margin_reference = mx.stop_gradient(  # type: ignore[union-attr]
             mx.array(initial_margin_reference_np, dtype=mx.float32)
         )
+        initial_argmax_one_hot_np = np.eye(class_count, dtype=np.float32)[initial_argmax_np]
+        initial_argmax_one_hot = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(initial_argmax_one_hot_np, dtype=mx.float32)
+        )
+        initial_argmax_logit_np = np.sum(initial_logits_np * initial_argmax_one_hot_np, axis=-1)
+        initial_argmax_impostor_np = np.array(initial_logits_np, copy=True)
+        np.put_along_axis(
+            initial_argmax_impostor_np,
+            initial_argmax_np[..., None],
+            -np.inf,
+            axis=-1,
+        )
+        initial_argmax_margin_reference = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(initial_argmax_impostor_np.max(axis=-1) - initial_argmax_logit_np, dtype=mx.float32)
+        )
+        outside_region_mask_np = (~region_bool_np).astype(np.float32)
+        outside_region_mask = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(outside_region_mask_np, dtype=mx.float32)
+        )
+        outside_region_pixels = float(np.count_nonzero(outside_region_mask_np))
+        initial_pose_reference = (
+            mx.stop_gradient(mx.array(initial_pose, dtype=mx.float32))  # type: ignore[union-attr]
+            if initial_pose is not None
+            else None
+        )
 
         def _loss_fn(model_obj: Any) -> Any:
             _, pred1 = _predict_pair01(model_obj)
@@ -3049,9 +3078,28 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
                 preserve_weight = max(1.0, already_won_pixels / unsolved_tail_pixels)
                 loss_preserve = (  # type: ignore[assignment]
-                    float(preserve_weight)
+                    float(lambda_support_preserve)
+                    * float(preserve_weight)
                     * mx.sum(preserve_violation * preserve_violation * already_won_mask)
                     / already_won_pixels
+                )
+            loss_outside_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            if outside_region_pixels > 0.0 and float(lambda_outside_argmax_preserve) > 0.0:
+                initial_winner_logit = mx.sum(logits * initial_argmax_one_hot, axis=-1)  # type: ignore[union-attr]
+                competitor_logits = mx.where(  # type: ignore[union-attr]
+                    initial_argmax_one_hot > 0.0,
+                    mx.array(-1.0e30, dtype=logits.dtype),
+                    logits,
+                )
+                initial_winner_impostor = mx.max(competitor_logits, axis=-1)  # type: ignore[union-attr]
+                outside_margin_erosion = mx.maximum(  # type: ignore[union-attr]
+                    (initial_winner_impostor - initial_winner_logit) - initial_argmax_margin_reference,
+                    0.0,
+                )
+                loss_outside_preserve = (  # type: ignore[assignment]
+                    float(lambda_outside_argmax_preserve)
+                    * mx.sum(outside_margin_erosion * outside_margin_erosion * outside_region_mask)
+                    / outside_region_pixels
                 )
             pred_class = mx.argmax(logits, axis=-1)  # type: ignore[union-attr]
             unsolved = mx.stop_gradient(  # type: ignore[union-attr]
@@ -3063,6 +3111,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + float(lambda_prob_floor) * loss_prob
                 + float(lambda_seed) * loss_seed
                 + loss_preserve
+                + loss_outside_preserve
             )
 
         if tree_unflatten is None:
@@ -3249,8 +3298,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 axis=-1,
             )
             pose = pose_fn(yuv6_pair)
-            target = mx.array(target_pose_np)  # type: ignore[union-attr]
-            return mx.mean((pose - target) ** 2)  # type: ignore[union-attr]
+            # The acceptance cap is movement from the *initial live pose*, not
+            # distance to the source video's target pose.  The v9 smoke showed
+            # target-pose compensation can improve a proxy while still
+            # violating the trust cap.  Compensate on the exact guard surface.
+            trust_target = (
+                initial_pose_reference
+                if initial_pose_reference is not None
+                else mx.array(target_pose_np)  # type: ignore[union-attr]
+            )
+            return mx.mean((pose - trust_target) ** 2)  # type: ignore[union-attr]
 
         def _apply_compensation_step(
             base_snapshot: list[tuple[Any, Any]],
@@ -3859,6 +3916,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "max_candidate_margin_mean_improvement": float(max_candidate_margin_mean_improvement),
             "max_candidate_margin_p50_improvement": float(max_candidate_margin_p50_improvement),
             "progress_reference": "initial_unsolved_tail_with_already_won_preservation",
+            "trust_region_controls": {
+                "lambda_support_preserve": float(lambda_support_preserve),
+                "lambda_outside_argmax_preserve": float(lambda_outside_argmax_preserve),
+                "outside_region_pixel_count": int(outside_region_pixels),
+                "pose_trust_cap_l2": float(max_pose_output_delta_l2),
+            },
             "unsolved_tail_pixel_count": int(unsolved_tail_pixel_count),
             "already_won_region_pixel_count": int(already_won_pixel_count),
             "before_unsolved_tail_margin_stats": dict(before_unsolved_tail_stats),

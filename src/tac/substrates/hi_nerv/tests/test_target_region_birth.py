@@ -1419,3 +1419,53 @@ def test_compensation_never_relaxes_birth_allow_list_invariant() -> None:
         assert allowed_pose_compensation_update_name(name)
         assert not allowed_birth_update_name(name)
     assert payload["receipt"]["schema"] == TARGET_REGION_BIRTH_RECEIPT_SCHEMA
+
+
+@skip_no_mlx
+def test_frame0_compensation_is_priced_against_initial_pose_cap_surface() -> None:
+    """Compensation must target the exact Pose trust cap surface.
+
+    The cap checks movement from the initial live pose.  A compensator trained
+    against source-video target pose can look useful while still violating that
+    cap.  The accepted composite fixture proves the current implementation
+    lowers the initial-pose movement enough to satisfy the guard, and the
+    per-attempt telemetry records that exact cap result.
+    """
+
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _near_boundary_all_class1_targets(cfg, mx)
+    labels_np = np.ones((cfg.num_pairs, cfg.output_height, cfg.output_width), dtype=np.int32)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        pose_teacher=_FrameDiffPoseTeacher(mx, k=0.5),
+        max_pose_output_delta_l2=0.05,
+        max_steps=24,
+        learning_rate=2.0e-3,
+    )
+
+    assert payload["accepted"] is True
+    assert payload["composite_accepted"] is True
+    assert payload["pose_guard"]["max_accepted_pose_output_delta_l2"] <= payload["pose_guard"][
+        "max_pose_output_delta_l2"
+    ]
+    pc = payload["pose_compensation"]
+    assert pc is not None
+    accepted_attempts = [record for record in pc["attempts"] if record["accepted"]]
+    assert accepted_attempts
+    for record in accepted_attempts:
+        assert record["composite_pose_cap_satisfied"] is True
+        assert record["composite_pose_output_delta_l2"] <= payload["pose_guard"]["max_pose_output_delta_l2"]
+        assert record["composite_delta_score_nonrate"] < 0.0
