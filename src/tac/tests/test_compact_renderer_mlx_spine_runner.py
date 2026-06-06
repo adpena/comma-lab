@@ -6920,6 +6920,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             yuv6_temporal_std_min_ratio,
             weight_decay,
             grad_clip_max_norm,
+            target_segnet_argmax_1=None,
         ):
             captured["scorer_domain_bootstrap_call"] = {
                 "target0_shape": tuple(target_rgb_0.shape),
@@ -7564,6 +7565,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
             yuv6_temporal_std_min_ratio,
             weight_decay,
             grad_clip_max_norm,
+            target_segnet_argmax_1=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -7861,6 +7863,7 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
             yuv6_temporal_std_min_ratio,
             weight_decay,
             grad_clip_max_norm,
+            target_segnet_argmax_1=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -8584,7 +8587,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert runner_mod._snerv_auto_skip_high_modes_for_resolution(
         explicit_mode=None,
         model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
-    ) == ("full", "shared_mean", "channel_mean", "scalar_mean")
+    ) == ("scalar_mean", "channel_mean", "shared_mean")
     official_primitives_auto_skip_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
@@ -8625,6 +8628,9 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert reparsed_official_primitives_sn["candidate_id"] == (
         official_primitives_sn["candidate_id"]
     )
+    assert reparsed_official_primitives_sn[
+        "official_skip_high_mode_token_missing"
+    ] is True
     target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
@@ -14932,6 +14938,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
             yuv6_temporal_std_min_ratio,
             weight_decay,
             grad_clip_max_norm,
+            target_segnet_argmax_1=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15227,6 +15234,7 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
             yuv6_temporal_std_min_ratio,
             weight_decay,
             grad_clip_max_norm,
+            target_segnet_argmax_1=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,

@@ -135,6 +135,9 @@ class ScorerTeacherProvider(Protocol):
     def teacher_logits_for_indices(self, idx: Any) -> Any:
         """Return teacher logits ``(B, H', W', num_classes)`` for pair batch ``idx``."""
 
+    def teacher_argmax_for_indices(self, idx: Any) -> Any:
+        """Return exact hard labels when the teacher cache preserved them."""
+
 
 @runtime_checkable
 class PoseScorerTeacherProvider(Protocol):

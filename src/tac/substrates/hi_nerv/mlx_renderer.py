@@ -1063,6 +1063,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         target_rgb_1: Any,
         *,
         pair_indices: Any,
+        target_segnet_argmax_1: Any | None = None,
+        target_region_bootstrap_weight: float = 0.25,
         steps: int = 8,
         learning_rate: float = 2.0e-3,
         rgb_weight: float = 1.0,
@@ -1107,6 +1109,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "yuv6_weight": float(yuv6_weight),
             "temporal_delta_weight": float(temporal_delta_weight),
             "contrast_floor_weight": float(contrast_floor_weight),
+            "target_region_bootstrap_weight": float(target_region_bootstrap_weight),
         }
         if not math.isfinite(lr) or lr <= 0.0:
             raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
@@ -1154,6 +1157,81 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         ref_yuv1 = mx.stop_gradient(rgb_to_yuv6_mlx(target1 * 255.0) / 255.0)  # type: ignore[union-attr]
         ref_temporal = ref_yuv1 - ref_yuv0
 
+        def _target_region_weight_map() -> tuple[Any, dict[str, Any]]:
+            """Return a mean-one frame-1 region weight map for bootstrap waterfill."""
+
+            if target_segnet_argmax_1 is not None:
+                labels = mx.array(target_segnet_argmax_1, dtype=mx.int32)  # type: ignore[union-attr]
+                if labels.ndim == 4 and int(labels.shape[-1]) == 1:
+                    labels = labels[..., 0]
+                if labels.ndim != 3:
+                    raise ValueError(
+                        "target_segnet_argmax_1 must have shape BHW or BHW1; "
+                        f"got {tuple(int(v) for v in labels.shape)}"
+                    )
+                if tuple(int(v) for v in labels.shape) != tuple(
+                    int(v) for v in target1.shape[:3]
+                ):
+                    raise ValueError(
+                        "target_segnet_argmax_1 shape must match target_rgb_1 BHW; "
+                        f"argmax={tuple(int(v) for v in labels.shape)} "
+                        f"target={tuple(int(v) for v in target1.shape[:3])}"
+                    )
+                class_count = int(np.asarray(mx.max(labels), dtype=np.int32).item()) + 1
+                if class_count <= 0:
+                    class_count = 1
+                weight = mx.zeros_like(labels.astype(mx.float32))  # type: ignore[union-attr]
+                class_rows: list[dict[str, Any]] = []
+                eps = mx.array(1.0e-6, dtype=mx.float32)
+                for class_index in range(class_count):
+                    mask = (labels == class_index).astype(mx.float32)
+                    fraction = mx.mean(mask)  # type: ignore[union-attr]
+                    active = (fraction > 0.0).astype(mx.float32)
+                    class_weight = active / mx.sqrt(mx.maximum(fraction, eps))  # type: ignore[union-attr]
+                    weight = weight + mask * class_weight
+                    mx.eval(fraction, class_weight)  # type: ignore[union-attr]
+                    class_rows.append({
+                        "class_index": int(class_index),
+                        "target_fraction": float(fraction.item()),
+                        "inverse_sqrt_fraction_weight": float(class_weight.item()),
+                    })
+                mean_weight = mx.mean(weight)  # type: ignore[union-attr]
+                normalized = weight / mx.maximum(mean_weight, eps)  # type: ignore[union-attr]
+                mx.eval(normalized, mean_weight)  # type: ignore[union-attr]
+                return normalized[..., None], {
+                    "source": "exact_segnet_target_argmax_frame1",
+                    "class_count": int(class_count),
+                    "class_rows": class_rows,
+                    "mean_before_normalization": float(mean_weight.item()),
+                }
+
+            channel_mean = mx.mean(target1, axis=(1, 2), keepdims=True)  # type: ignore[union-attr]
+            saliency = mx.mean(mx.abs(target1 - channel_mean), axis=-1, keepdims=True)  # type: ignore[union-attr]
+            saliency_mean = mx.mean(saliency)  # type: ignore[union-attr]
+            normalized_saliency = saliency / mx.maximum(  # type: ignore[union-attr]
+                saliency_mean,
+                mx.array(1.0e-6, dtype=mx.float32),
+            )
+            weight = mx.clip(  # type: ignore[union-attr]
+                mx.array(0.5, dtype=mx.float32)
+                + mx.array(0.5, dtype=mx.float32) * normalized_saliency,
+                mx.array(0.25, dtype=mx.float32),
+                mx.array(4.0, dtype=mx.float32),
+            )
+            mean_weight = mx.mean(weight)  # type: ignore[union-attr]
+            normalized = weight / mx.maximum(  # type: ignore[union-attr]
+                mean_weight,
+                mx.array(1.0e-6, dtype=mx.float32),
+            )
+            mx.eval(normalized, mean_weight, saliency_mean)  # type: ignore[union-attr]
+            return normalized, {
+                "source": "rgb_frame1_saliency_fallback",
+                "mean_before_normalization": float(mean_weight.item()),
+                "saliency_mean": float(saliency_mean.item()),
+            }
+
+        target_region_weight_map, target_region_metadata = _target_region_weight_map()
+
         def _predict_pair01(model_obj: Any) -> tuple[Any, Any]:
             pair01 = model_obj(idx) / 255.0
             pred0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
@@ -1164,6 +1242,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             pred0, pred1 = _predict_pair01(model_obj)
             rgb0 = mx.mean((pred0 - target0) * (pred0 - target0))  # type: ignore[union-attr]
             rgb1 = mx.mean((pred1 - target1) * (pred1 - target1))  # type: ignore[union-attr]
+            target_region_rgb1 = mx.mean(  # type: ignore[union-attr]
+                target_region_weight_map * (pred1 - target1) * (pred1 - target1)
+            )
             pred_yuv0 = rgb_to_yuv6_mlx(pred0 * 255.0) / 255.0
             pred_yuv1 = rgb_to_yuv6_mlx(pred1 * 255.0) / 255.0
             yuv0 = mx.mean((pred_yuv0 - ref_yuv0) * (pred_yuv0 - ref_yuv0))  # type: ignore[union-attr]
@@ -1176,6 +1257,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "rgb_pair_mse": 0.5 * (rgb0 + rgb1),
                 "rgb_frame0_mse": rgb0,
                 "rgb_frame1_mse": rgb1,
+                "target_region_rgb_frame1_mse": target_region_rgb1,
                 "yuv6_pair_mse": 0.5 * (yuv0 + yuv1),
                 "yuv6_temporal_delta_mse": temporal,
                 "output_rgb_std": 0.5 * (mx.std(pred0) + mx.std(pred1)),  # type: ignore[union-attr]
@@ -1206,6 +1288,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + weights["yuv6_weight"] * metrics["yuv6_pair_mse"]
                 + weights["temporal_delta_weight"] * metrics["yuv6_temporal_delta_mse"]
                 + weights["contrast_floor_weight"] * _contrast_floor_loss(metrics)
+                + weights["target_region_bootstrap_weight"]
+                * metrics["target_region_rgb_frame1_mse"]
             )
 
         def _scalar_metrics(model_obj: Any) -> dict[str, float]:
@@ -1372,8 +1456,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "grad_norm_last": grad_norm_history[-1] if grad_norm_history else None,
             "metrics_before": before,
             "metrics_after": after,
+            "target_region_bootstrap": {
+                "schema": "hi_nerv_scorer_domain_bootstrap_target_region_waterfill.v1",
+                "enabled": bool(weights["target_region_bootstrap_weight"] > 0.0),
+                "weight": float(weights["target_region_bootstrap_weight"]),
+                "map_source": str(target_region_metadata.get("source")),
+                "metadata": target_region_metadata,
+            },
             "rgb_pair_mse_delta": _improvement("rgb_pair_mse"),
             "rgb_frame1_mse_delta": _improvement("rgb_frame1_mse"),
+            "target_region_rgb_frame1_mse_delta": _improvement(
+                "target_region_rgb_frame1_mse"
+            ),
             "yuv6_pair_mse_delta": _improvement("yuv6_pair_mse"),
             "yuv6_temporal_delta_mse_delta": _improvement("yuv6_temporal_delta_mse"),
             "contrast_floor_loss_delta": _improvement("contrast_floor_loss"),

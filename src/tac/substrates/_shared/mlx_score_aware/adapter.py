@@ -1776,21 +1776,24 @@ class MlxScoreAwareAdapter:
         argmax_disagreement: float | None,
         pose_direct_live_score_term: float | None,
         pose_score_term: float | None,
+        segnet_score_debt: float | None = None,
     ) -> float | None:
         """Contest-shaped non-rate proxy from direct SegNet and PoseNet terms."""
 
-        if argmax_disagreement is None:
-            return None
+        if segnet_score_debt is None:
+            if argmax_disagreement is None:
+                return None
+            seg_term = SEGNET_DIRECT_LIVE_SCORE_WEIGHT * float(argmax_disagreement)
+        else:
+            seg_term = float(segnet_score_debt)
         pose_term = (
             pose_direct_live_score_term
             if pose_direct_live_score_term is not None
             else pose_score_term
         )
         if pose_term is None:
-            return None
-        return SEGNET_DIRECT_LIVE_SCORE_WEIGHT * float(argmax_disagreement) + float(
-            pose_term
-        )
+            return seg_term if segnet_score_debt is not None else None
+        return seg_term + float(pose_term)
 
     @staticmethod
     def _target_class_support_credit(
@@ -2512,6 +2515,22 @@ class MlxScoreAwareAdapter:
             post_update_loss_part_metrics,
             "loss_part_segnet_direct_live_rare_class_logit_loss",
         )
+        pre_segnet_score_debt = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+        )
+        post_segnet_score_debt = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+        )
+        pre_segnet_crossing_score_debt = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss",
+        )
+        post_segnet_crossing_score_debt = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss",
+        )
         (
             rare_class_logit_recovered_meaningfully,
             rare_class_logit_recovery_delta,
@@ -2520,20 +2539,43 @@ class MlxScoreAwareAdapter:
             pre_value=pre_rare_class_logit_loss,
             post_value=post_rare_class_logit_loss,
         )
+        segnet_score_debt_proxy_available = (
+            pre_segnet_score_debt is not None and post_segnet_score_debt is not None
+        )
+        pre_segnet_score_proxy = (
+            pre_segnet_score_debt if segnet_score_debt_proxy_available else None
+        )
+        post_segnet_score_proxy = (
+            post_segnet_score_debt if segnet_score_debt_proxy_available else None
+        )
         pre_direct_nonrate_score = self._direct_nonrate_score_proxy(
             argmax_disagreement=pre_argmax_disagreement,
             pose_direct_live_score_term=pre_pose_direct_live_score_term,
             pose_score_term=pre_pose_score_term,
+            segnet_score_debt=pre_segnet_score_proxy,
         )
         post_direct_nonrate_score = self._direct_nonrate_score_proxy(
             argmax_disagreement=post_argmax_disagreement,
             pose_direct_live_score_term=post_pose_direct_live_score_term,
             pose_score_term=post_pose_score_term,
+            segnet_score_debt=post_segnet_score_proxy,
         )
         direct_nonrate_improved = (
             pre_direct_nonrate_score is not None
             and post_direct_nonrate_score is not None
             and post_direct_nonrate_score < pre_direct_nonrate_score - 1.0e-7
+        )
+        segnet_score_debt_improved = (
+            pre_segnet_score_debt is not None
+            and post_segnet_score_debt is not None
+            and post_segnet_score_debt < pre_segnet_score_debt - 1.0e-7
+        )
+        segnet_crossing_score_debt_improved = (
+            pre_segnet_crossing_score_debt is not None
+            and post_segnet_crossing_score_debt is not None
+            and post_segnet_crossing_score_debt
+            < pre_segnet_crossing_score_debt
+            - max(1.0e-6, 1.0e-4 * max(abs(pre_segnet_crossing_score_debt), 1.0))
         )
         (
             raw_pose_worsened_too_much,
@@ -2608,6 +2650,10 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_post_segnet_escape_selection_before_restore": post_escape_selection,
             "scorer_space_step_guard_pre_rare_class_logit_loss": pre_rare_class_logit_loss,
             "scorer_space_step_guard_post_rare_class_logit_loss_before_restore": post_rare_class_logit_loss,
+            "scorer_space_step_guard_pre_segnet_score_debt": pre_segnet_score_debt,
+            "scorer_space_step_guard_post_segnet_score_debt_before_restore": post_segnet_score_debt,
+            "scorer_space_step_guard_pre_segnet_crossing_score_debt": pre_segnet_crossing_score_debt,
+            "scorer_space_step_guard_post_segnet_crossing_score_debt_before_restore": post_segnet_crossing_score_debt,
             "scorer_space_step_guard_rare_class_logit_recovery_delta": rare_class_logit_recovery_delta,
             "scorer_space_step_guard_rare_class_logit_recovery_floor": rare_class_logit_recovery_floor,
             "scorer_space_step_guard_pre_direct_nonrate_score": pre_direct_nonrate_score,
@@ -2624,6 +2670,26 @@ class MlxScoreAwareAdapter:
         metrics["scorer_space_step_guard_direct_nonrate_improved"] = float(
             direct_nonrate_improved
         )
+        metrics["scorer_space_step_guard_direct_nonrate_uses_segnet_score_debt"] = (
+            float(segnet_score_debt_proxy_available)
+        )
+        metrics["scorer_space_step_guard_segnet_score_debt_improved"] = float(
+            segnet_score_debt_improved
+        )
+        metrics[
+            "scorer_space_step_guard_segnet_crossing_score_debt_improved"
+        ] = float(segnet_crossing_score_debt_improved)
+        if pre_segnet_score_debt is not None and post_segnet_score_debt is not None:
+            metrics["scorer_space_step_guard_segnet_score_debt_delta"] = float(
+                post_segnet_score_debt - pre_segnet_score_debt
+            )
+        if (
+            pre_segnet_crossing_score_debt is not None
+            and post_segnet_crossing_score_debt is not None
+        ):
+            metrics[
+                "scorer_space_step_guard_segnet_crossing_score_debt_delta"
+            ] = float(post_segnet_crossing_score_debt - pre_segnet_crossing_score_debt)
         metrics[
             "scorer_space_step_guard_segnet_target_class_ratio_drop_compared_class_count"
         ] = float(target_class_ratio_drop_compared_class_count)
@@ -2825,6 +2891,8 @@ class MlxScoreAwareAdapter:
             and target_class_ratio_drop_within_limit
             and (
                 direct_nonrate_improved
+                or segnet_score_debt_improved
+                or segnet_crossing_score_debt_improved
                 or bootstrap_escape_improved_meaningfully
                 or bootstrap_argmax_improved_meaningfully
                 or rare_class_logit_recovered_meaningfully
@@ -2858,6 +2926,8 @@ class MlxScoreAwareAdapter:
             )
             and (
                 target_class_coverage_improved
+                or segnet_score_debt_improved
+                or segnet_crossing_score_debt_improved
                 or bootstrap_escape_improved_meaningfully
                 or bootstrap_argmax_improved_meaningfully
                 or rare_class_logit_recovered_meaningfully
@@ -3041,6 +3111,8 @@ class MlxScoreAwareAdapter:
             or target_class_coverage_improved
             or bootstrap_occupancy_improved
             or target_class_min_ratio_recovery
+            or segnet_score_debt_improved
+            or segnet_crossing_score_debt_improved
         )
         target_class_within_ceiling_rare_recovery = (
             target_class_argmax_within_ceiling
@@ -3125,6 +3197,8 @@ class MlxScoreAwareAdapter:
                 target_class_structural_recovery
                 or target_class_bootstrap_escape_allowed
                 or target_class_within_ceiling_rare_recovery
+                or segnet_score_debt_improved
+                or segnet_crossing_score_debt_improved
                 or bootstrap_escape_improved_meaningfully
                 or bootstrap_argmax_improved_meaningfully
                 or target_class_min_ratio_recovery
@@ -3517,6 +3591,14 @@ class MlxScoreAwareAdapter:
                 trial_metrics,
                 "loss_part_segnet_direct_live_rare_class_logit_loss",
             )
+            trial_segnet_score_debt = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+            )
+            trial_segnet_crossing_score_debt = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss",
+            )
             (
                 trial_rare_class_logit_recovered_meaningfully,
                 trial_rare_class_logit_recovery_delta,
@@ -3525,15 +3607,40 @@ class MlxScoreAwareAdapter:
                 pre_value=pre_rare_class_logit_loss,
                 post_value=trial_rare_class_logit_loss,
             )
+            trial_segnet_score_debt_proxy_available = (
+                pre_segnet_score_debt is not None
+                and trial_segnet_score_debt is not None
+            )
+            trial_segnet_score_proxy = (
+                trial_segnet_score_debt
+                if trial_segnet_score_debt_proxy_available
+                else None
+            )
             trial_direct_nonrate_score = self._direct_nonrate_score_proxy(
                 argmax_disagreement=trial_argmax_disagreement,
                 pose_direct_live_score_term=trial_pose_direct_live_score_term,
                 pose_score_term=trial_pose_score_term,
+                segnet_score_debt=trial_segnet_score_proxy,
             )
             trial_direct_nonrate_improved = (
                 pre_direct_nonrate_score is not None
                 and trial_direct_nonrate_score is not None
                 and trial_direct_nonrate_score < pre_direct_nonrate_score - eps
+            )
+            trial_segnet_score_debt_improved = (
+                pre_segnet_score_debt is not None
+                and trial_segnet_score_debt is not None
+                and trial_segnet_score_debt < pre_segnet_score_debt - eps
+            )
+            trial_segnet_crossing_score_debt_improved = (
+                pre_segnet_crossing_score_debt is not None
+                and trial_segnet_crossing_score_debt is not None
+                and trial_segnet_crossing_score_debt
+                < pre_segnet_crossing_score_debt
+                - max(
+                    1.0e-6,
+                    1.0e-4 * max(abs(pre_segnet_crossing_score_debt), 1.0),
+                )
             )
             (
                 trial_raw_pose_worsened_too_much,
@@ -3653,6 +3760,8 @@ class MlxScoreAwareAdapter:
                 and trial_target_class_ratio_drop_within_limit
                 and (
                     trial_direct_nonrate_improved
+                    or trial_segnet_score_debt_improved
+                    or trial_segnet_crossing_score_debt_improved
                     or trial_escape_improved_meaningfully
                     or trial_argmax_improved_meaningfully
                     or trial_rare_class_logit_recovered_meaningfully
@@ -3699,6 +3808,8 @@ class MlxScoreAwareAdapter:
                 )
                 and (
                     trial_target_class_coverage_improved
+                    or trial_segnet_score_debt_improved
+                    or trial_segnet_crossing_score_debt_improved
                     or trial_escape_improved_meaningfully
                     or trial_argmax_improved_meaningfully
                     or trial_rare_class_logit_recovered_meaningfully
@@ -3788,6 +3899,8 @@ class MlxScoreAwareAdapter:
                 or trial_target_class_coverage_improved
                 or trial_occupancy_improved
                 or trial_target_class_min_ratio_recovery
+                or trial_segnet_score_debt_improved
+                or trial_segnet_crossing_score_debt_improved
             )
             trial_target_class_support_credit_eligible = (
                 target_class_coverage_floor_active
@@ -3872,6 +3985,8 @@ class MlxScoreAwareAdapter:
                     trial_target_class_coverage_breakthrough
                     or trial_target_class_bootstrap_escape_allowed
                     or trial_target_class_coverage_improved
+                    or trial_segnet_score_debt_improved
+                    or trial_segnet_crossing_score_debt_improved
                     or trial_escape_improved_meaningfully
                     or trial_argmax_improved_meaningfully
                     or trial_rare_class_logit_recovered_meaningfully
@@ -4044,6 +4159,14 @@ class MlxScoreAwareAdapter:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_rare_class_logit_loss"
                 ] = float(trial_rare_class_logit_loss)
+            if trial_segnet_score_debt is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_score_debt"
+                ] = float(trial_segnet_score_debt)
+            if trial_segnet_crossing_score_debt is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_crossing_score_debt"
+                ] = float(trial_segnet_crossing_score_debt)
             if trial_direct_nonrate_score is not None:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_direct_nonrate_score"
@@ -4072,6 +4195,19 @@ class MlxScoreAwareAdapter:
                 ),
                 "scorer_space_step_guard_backtracking_last_rare_class_logit_recovery_floor": (
                     trial_rare_class_logit_recovery_floor
+                ),
+                "scorer_space_step_guard_backtracking_last_segnet_score_debt_delta": (
+                    None
+                    if pre_segnet_score_debt is None
+                    or trial_segnet_score_debt is None
+                    else trial_segnet_score_debt - pre_segnet_score_debt
+                ),
+                "scorer_space_step_guard_backtracking_last_segnet_crossing_score_debt_delta": (
+                    None
+                    if pre_segnet_crossing_score_debt is None
+                    or trial_segnet_crossing_score_debt is None
+                    else trial_segnet_crossing_score_debt
+                    - pre_segnet_crossing_score_debt
                 ),
             }.items():
                 if value is not None:
@@ -4124,6 +4260,15 @@ class MlxScoreAwareAdapter:
             metrics[
                 "scorer_space_step_guard_backtracking_last_rare_class_logit_recovered_meaningfully"
             ] = float(trial_rare_class_logit_recovered_meaningfully)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_direct_nonrate_uses_segnet_score_debt"
+            ] = float(trial_segnet_score_debt_proxy_available)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_segnet_score_debt_improved"
+            ] = float(trial_segnet_score_debt_improved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_segnet_crossing_score_debt_improved"
+            ] = float(trial_segnet_crossing_score_debt_improved)
             if trial_argmax_recovery is not None:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_argmax_recovery"
@@ -6255,8 +6400,11 @@ class MlxScoreAwareAdapter:
                 "pose_metric": "loss_part_pose_score_term",
                 "pose_direct_live_metric": "loss_part_pose_direct_live_score_term",
                 "direct_nonrate_score_proxy": (
-                    "100 * loss_part_segnet_direct_live_argmax_disagreement + "
-                    "loss_part_pose_direct_live_score_term_or_pose_score_term"
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_score_"
+                    "weighted_total_unsolved_argmax_mass, else 100 * "
+                    "loss_part_segnet_direct_live_argmax_disagreement; plus "
+                    "loss_part_pose_direct_live_score_term_or_pose_score_term "
+                    "when available"
                 ),
                 "escape_selection_metric": (
                     "10 * max(0, 1 - candidate_occupied_class_fraction) "

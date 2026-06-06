@@ -3912,6 +3912,7 @@ def _initialize_output_head_target_bias(
     target_rgb_1: Any,
     controls: HiNervTrainTimeControlConfig,
     source_pair_indices: Sequence[int] | None = None,
+    target_segnet_argmax_1: Any | None = None,
 ) -> dict[str, Any]:
     control = controls.validated()
     if not bool(control.output_head_target_bias_init_enabled):
@@ -4042,6 +4043,11 @@ def _initialize_output_head_target_bias(
                 target0_subset,
                 target1_subset,
                 pair_indices=pair_indices,
+                target_segnet_argmax_1=(
+                    None
+                    if target_segnet_argmax_1 is None
+                    else target_segnet_argmax_1[:bootstrap_count]
+                ),
                 steps=int(control.scorer_domain_bootstrap_steps),
                 learning_rate=float(control.scorer_domain_bootstrap_learning_rate),
                 rgb_weight=float(control.scorer_domain_bootstrap_rgb_weight),

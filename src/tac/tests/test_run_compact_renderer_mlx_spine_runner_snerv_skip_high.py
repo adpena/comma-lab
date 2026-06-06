@@ -104,6 +104,45 @@ def test_snerv_runner_binds_manual_official_skip_high_mode_to_native_export(
     assert report["snerv_mlx_native_export"]["executed"] is True
 
 
+def test_snerv_runner_allows_compact_override_for_legacy_official_id_without_skip_token(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _patch_lightweight_snerv_native_report(monkeypatch)
+    candidate = runner._resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=(
+            "snerv_np600_haar_lv1_lfb1_stepb1_fc11e0_p1_"
+            "mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_"
+            "int8_symmetric_ceil178000"
+        ),
+        hard_byte_ceilings=(178_000,),
+    )
+    assert candidate is not None
+    assert candidate["official_skip_high_mode"] == "full"
+    assert candidate["official_skip_high_mode_token_missing"] is True
+
+    report = runner.execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "out",
+        num_pairs=2,
+        epochs=1,
+        source_video_path=_source_video(tmp_path),
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate=candidate,
+        snerv_official_skip_high_mode_override="scalar_mean",
+        run_native_mlx_export=True,
+        snerv_score_aware_long_training_epochs=1,
+        upstream_dir=tmp_path / "upstream",
+        repo_root=Path.cwd(),
+        allow_overwrite=True,
+    )
+
+    exported = captured["modelsize_candidate"]
+    assert exported["official_skip_high_mode"] == "scalar_mean"
+    assert exported["snerv_official_skip_high_mode"] == "scalar_mean"
+    assert report["snerv_mlx_native_export"]["executed"] is True
+
+
 def test_snerv_runner_rejects_implicit_official_full_skip_high_under_byte_cap(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

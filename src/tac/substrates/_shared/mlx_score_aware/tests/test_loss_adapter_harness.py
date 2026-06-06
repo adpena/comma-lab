@@ -3458,6 +3458,183 @@ def test_adapter_scorer_space_step_guard_accepts_preserved_rare_class_min_ratio_
 
 
 @mlx_only
+def test_adapter_scorer_space_step_guard_prices_target_region_score_debt_before_argmax_proxy() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=1.0,
+        scorer_space_step_guard_min_post_segnet_target_class_min_ratio=0.2,
+        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=0.05,
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=0.8,
+        scorer_space_step_guard_max_post_segnet_distribution_mae=0.30,
+        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=0.20,
+        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=3.5,
+        scorer_space_step_guard_max_direct_nonrate_score_worsening=0.001,
+        scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=5.0,
+        scorer_space_step_guard_backtracking_steps=0,
+    )
+    call_count = 0
+    stable_support = {
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+        "loss_part_segnet_direct_live_candidate_target_class_0_ratio": 0.5,
+        "loss_part_segnet_direct_live_candidate_target_class_1_ratio": 0.0,
+        "loss_part_segnet_direct_live_candidate_target_class_2_ratio": 1.0,
+        "loss_part_segnet_direct_live_target_class_0_fraction": 0.2,
+        "loss_part_segnet_direct_live_target_class_1_fraction": 0.2,
+        "loss_part_segnet_direct_live_target_class_2_fraction": 0.6,
+        "loss_part_pose_direct_live_score_term": 40.0,
+        "loss_part_pose_score_term": 55.0,
+        "loss_part_scorer_input_distribution_guard_segnet_frame1_mae": 0.09,
+        "loss_part_scorer_input_distribution_guard_yuv6_pair_mae": 0.07,
+        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 1.1,
+    }
+
+    def _fake_loss_part_metrics(_batch, *, loss_weights=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                **stable_support,
+                "loss_part_segnet_direct_live_argmax_disagreement": 0.52,
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 35.0,
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss": 100.0,
+            }
+        return {
+            **stable_support,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.60,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 20.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss": 90.0,
+        }
+
+    adapter._score_aware_loss_part_metrics = _fake_loss_part_metrics  # type: ignore[method-assign]
+
+    metrics = adapter.train_step(
+        mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={},
+    )
+
+    assert metrics[
+        "scorer_space_step_guard_direct_nonrate_uses_segnet_score_debt"
+    ] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_pre_direct_nonrate_score"] == (
+        pytest.approx(75.0)
+    )
+    assert metrics[
+        "scorer_space_step_guard_post_direct_nonrate_score_before_restore"
+    ] == pytest.approx(60.0)
+    assert metrics["scorer_space_step_guard_segnet_score_debt_delta"] == (
+        pytest.approx(-15.0)
+    )
+    assert metrics["scorer_space_step_guard_segnet_score_debt_improved"] == (
+        pytest.approx(1.0)
+    )
+    assert metrics[
+        "scorer_space_step_guard_target_class_min_ratio_bootstrap_hold_allowed"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_reject_reason_post_segnet_target_class_min_ratio_below_floor"
+    ] == pytest.approx(0.0)
+    assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(0.0)
+
+
+@mlx_only
+def test_adapter_scorer_space_step_guard_accepts_bounded_margin_crossing_progress_before_hard_argmax_moves() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=1.0,
+        scorer_space_step_guard_min_post_segnet_target_class_min_ratio=0.2,
+        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=0.05,
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=0.8,
+        scorer_space_step_guard_max_post_segnet_distribution_mae=0.30,
+        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=0.20,
+        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=3.5,
+        scorer_space_step_guard_max_direct_nonrate_score_worsening=0.001,
+        scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=5.0,
+        scorer_space_step_guard_backtracking_steps=0,
+    )
+    call_count = 0
+    stable_support = {
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+        "loss_part_segnet_direct_live_candidate_target_class_0_ratio": 0.5,
+        "loss_part_segnet_direct_live_candidate_target_class_1_ratio": 0.0,
+        "loss_part_segnet_direct_live_candidate_target_class_2_ratio": 1.0,
+        "loss_part_segnet_direct_live_target_class_0_fraction": 0.2,
+        "loss_part_segnet_direct_live_target_class_1_fraction": 0.2,
+        "loss_part_segnet_direct_live_target_class_2_fraction": 0.6,
+        "loss_part_segnet_direct_live_argmax_disagreement": 0.52,
+        "loss_part_pose_score_term": 55.0,
+        "loss_part_scorer_input_distribution_guard_segnet_frame1_mae": 0.09,
+        "loss_part_scorer_input_distribution_guard_yuv6_pair_mae": 0.07,
+        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 1.1,
+    }
+
+    def _fake_loss_part_metrics(_batch, *, loss_weights=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                **stable_support,
+                "loss_part_pose_direct_live_score_term": 40.0,
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 20.0,
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss": 100.0,
+            }
+        return {
+            **stable_support,
+            "loss_part_pose_direct_live_score_term": 40.2,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 20.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss": 80.0,
+        }
+
+    adapter._score_aware_loss_part_metrics = _fake_loss_part_metrics  # type: ignore[method-assign]
+
+    metrics = adapter.train_step(
+        mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={},
+    )
+
+    assert metrics[
+        "scorer_space_step_guard_direct_nonrate_uses_segnet_score_debt"
+    ] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_direct_nonrate_score_worsening_delta"] == (
+        pytest.approx(0.2)
+    )
+    assert metrics[
+        "scorer_space_step_guard_segnet_crossing_score_debt_improved"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_segnet_crossing_score_debt_delta"
+    ] == pytest.approx(-20.0)
+    assert metrics[
+        "scorer_space_step_guard_bootstrap_direct_nonrate_worsening_allowed"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_reject_reason_post_direct_nonrate_score_worsened"
+    ] == pytest.approx(0.0)
+    assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(0.0)
+
+
+@mlx_only
 def test_adapter_scorer_space_step_guard_rejects_target_class_ratio_theft() -> None:
     import mlx.core as mx
 

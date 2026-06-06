@@ -364,6 +364,68 @@ def test_mlx_scorer_domain_bootstrap_reduces_rgb_yuv6_loss() -> None:
 
 
 @skip_no_mlx
+def test_mlx_scorer_domain_bootstrap_accepts_exact_target_region_waterfill() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(1)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    ramp = mx.reshape(
+        mx.linspace(0.05, 0.95, cfg.output_height * cfg.output_width),
+        (1, cfg.output_height, cfg.output_width, 1),
+    )
+    target0 = mx.tile(
+        mx.concatenate([0.15 + 0.2 * ramp, 0.2 + 0.25 * ramp, 0.05 + 0.1 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    target1 = mx.tile(
+        mx.concatenate([0.45 - 0.25 * ramp, 0.1 + 0.2 * ramp, 0.2 + 0.35 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    labels_np = np.zeros(
+        (cfg.num_pairs, cfg.output_height, cfg.output_width),
+        dtype=np.int32,
+    )
+    labels_np[:, : max(1, cfg.output_height // 4), :] = 1
+    labels = mx.array(labels_np)
+
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    model.initialize_output_head_contrast_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        max_gain=16.0,
+    )
+
+    payload = model.fit_scorer_domain_bootstrap_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=labels,
+        target_region_bootstrap_weight=2.0,
+        steps=8,
+        learning_rate=1.0e-3,
+        rgb_weight=0.5,
+        yuv6_weight=0.25,
+        temporal_delta_weight=0.1,
+        grad_clip_max_norm=1.0,
+    )
+
+    region = payload["target_region_bootstrap"]
+    assert region["enabled"] is True
+    assert region["map_source"] == "exact_segnet_target_argmax_frame1"
+    assert region["metadata"]["class_count"] == 2
+    assert payload["target_region_bootstrap_weight"] == pytest.approx(2.0)
+    assert payload["loss_history_last"] <= payload["loss_history_first"]
+    assert payload["target_region_rgb_frame1_mse_delta"] >= 0.0
+    assert payload["runtime_sidecar_bytes"] == 0
+    assert "head_rgb_1.*" in payload["archive_charged_decoder_tensors"]
+
+
+@skip_no_mlx
 def test_mlx_renderer_generic_resize_path_matches_pytorch() -> None:
     import mlx.core as mx
     import numpy as np

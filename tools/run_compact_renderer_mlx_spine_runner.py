@@ -87,7 +87,6 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
     DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
-    DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES,
     HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
     HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
     SNERV_MODELSIZE_CONTROL_PROFILES,
@@ -2724,7 +2723,10 @@ def _snerv_auto_skip_high_modes_for_resolution(
 
     The executor still consumes exactly one resolved candidate.  This helper
     only broadens ``auto`` candidate discovery so the rate-plausible compact
-    modes compete against the historically huge ``full`` mode by default.
+    modes replace the historically huge ``full`` mode by default. ``full`` is
+    still available when explicitly requested as a diagnostic, but byte-capped
+    official SNeRV launches should not spend their first smoke on a known
+    multi-megabyte MFU activation slab.
     """
 
     if explicit_mode is not None:
@@ -2733,7 +2735,7 @@ def _snerv_auto_skip_high_modes_for_resolution(
         normalize_snerv_model_size_adapter(str(model_size_adapter))
         == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     ):
-        return DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES
+        return ("scalar_mean", "channel_mean", "shared_mean")
     return ("full",)
 
 
@@ -3502,10 +3504,11 @@ def _modelsize_candidate_from_self_describing_id(
             if groups.get("temporal_mode_token") is not None
             else "delta"
         )
-        parsed_official_skip_high_mode = (
-            _snerv_official_skip_high_mode_from_id_token(
-                groups.get("official_skip_high_mode_token")
-            )
+        parsed_official_skip_high_mode_token = groups.get(
+            "official_skip_high_mode_token"
+        )
+        parsed_official_skip_high_mode = _snerv_official_skip_high_mode_from_id_token(
+            parsed_official_skip_high_mode_token
         )
         row = analyze_snerv_modelsize_candidate(
             hard_byte_ceiling=int(matched.group("hard_byte_ceiling")),
@@ -3597,6 +3600,18 @@ def _modelsize_candidate_from_self_describing_id(
                 )
             else:
                 return None
+        if (
+            str(row.get("snerv_model_size_adapter"))
+            == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+            and parsed_official_skip_high_mode_token is None
+            and str(row.get("official_skip_high_mode")) == "full"
+        ):
+            row["official_skip_high_mode_token_missing"] = True
+            row["implicit_official_skip_high_mode"] = "full"
+            row["blockers"] = [
+                *list(row.get("blockers") or []),
+                "official_snerv_skip_high_mode_token_missing_full_is_diagnostic_only",
+            ]
     else:
         return None
     if row["candidate_id"] != token:
@@ -6167,6 +6182,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         )
         or ""
     ).strip().lower()
+    if (
+        raw_candidate_skip_high_mode == "full"
+        and bool(candidate.get("official_skip_high_mode_token_missing"))
+        and normalize_snerv_model_size_adapter(
+            str(candidate.get("snerv_model_size_adapter") or snerv_model_size_adapter_override)
+        )
+        == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    ):
+        raw_candidate_skip_high_mode = ""
     if (
         raw_candidate_skip_high_mode
         and raw_candidate_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES
@@ -18307,6 +18331,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
     )
     model = HinervSubstrateMLX(cfg)
+    bootstrap_scorer_teacher = None
     if bool(output_head_target_bias_init):
         output_head_target_bias_init_payload = dict(
             model.initialize_output_head_bias_from_targets(
@@ -18449,11 +18474,80 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         else:
             bootstrap_pair_indices = mx.arange(bootstrap_count, dtype=mx.int32)
             bootstrap_pair_index_semantics = "identity_local_rows_are_source_pairs"
+        target_segnet_argmax_1 = None
+        bootstrap_segnet_teacher_metadata: dict[str, Any] = {
+            "schema": "hi_nerv_bootstrap_exact_segnet_target_argmax.v1",
+            "enabled": False,
+            "reason": "real_segnet_teacher_not_required_for_bootstrap",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "authority": "macos_mlx_research_signal_false_authority",
+            "dispatch_attempted": False,
+        }
+        if (
+            segnet_distillation_weight > 0.0
+            or segnet_direct_live_distillation_weight > 0.0
+            or segnet_direct_live_subcontrol_active
+        ):
+            bootstrap_probe_bundle = SimpleNamespace(
+                target_rgb_0=target_rgb_0[:bootstrap_count],
+                target_rgb_1=target_rgb_1[:bootstrap_count],
+                segnet_teacher_frame_index=1,
+            )
+            bootstrap_scorer_teacher = build_mlx_segnet_pair_teacher(
+                bootstrap_probe_bundle,
+                upstream_dir=scorer_upstream_dir,
+                device=resolved_distillation_device,
+            )
+            argmax_fn = getattr(
+                bootstrap_scorer_teacher,
+                "teacher_argmax_for_indices",
+                None,
+            )
+            if callable(argmax_fn):
+                bootstrap_local_indices = mx.arange(bootstrap_count, dtype=mx.int32)
+                target_segnet_argmax_1 = argmax_fn(bootstrap_local_indices)
+                mx.eval(target_segnet_argmax_1)
+                bootstrap_segnet_teacher_metadata = {
+                    "schema": "hi_nerv_bootstrap_exact_segnet_target_argmax.v1",
+                    "enabled": True,
+                    "source": "real_mlx_segnet_teacher_cache_argmax",
+                    "pair_count": int(bootstrap_count),
+                    "pair_index_semantics": bootstrap_pair_index_semantics,
+                    "teacher_frame_index": 1,
+                    "teacher_cache_reusable_for_training": bool(
+                        int(getattr(bootstrap_scorer_teacher, "frame_count", -1))
+                        == int(hydrated_target_pair_count)
+                    ),
+                    "upstream_segnet_safetensors_sha256": getattr(
+                        bootstrap_scorer_teacher,
+                        "upstream_segnet_safetensors_sha256",
+                        None,
+                    ),
+                    "runtime_sidecar_bytes": 0,
+                    "archive_charged_decoder_tensors": [],
+                    "authority": "macos_mlx_research_signal_false_authority",
+                    "dispatch_attempted": False,
+                }
+            else:
+                bootstrap_segnet_teacher_metadata = {
+                    "schema": "hi_nerv_bootstrap_exact_segnet_target_argmax.v1",
+                    "enabled": False,
+                    "reason": "segnet_teacher_argmax_provider_missing",
+                    "blockers": [
+                        "hi_nerv_bootstrap_exact_segnet_target_argmax_missing"
+                    ],
+                    "runtime_sidecar_bytes": 0,
+                    "archive_charged_decoder_tensors": [],
+                    "authority": "macos_mlx_research_signal_false_authority",
+                    "dispatch_attempted": False,
+                }
         bootstrap_payload = dict(
             bootstrap_initializer(
                 target_rgb_0[:bootstrap_count],
                 target_rgb_1[:bootstrap_count],
                 pair_indices=bootstrap_pair_indices,
+                target_segnet_argmax_1=target_segnet_argmax_1,
                 steps=int(scorer_domain_bootstrap_steps),
                 learning_rate=float(scorer_domain_bootstrap_learning_rate),
                 rgb_weight=float(scorer_domain_bootstrap_rgb_weight),
@@ -18472,6 +18566,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
         bootstrap_payload["pair_index_semantics"] = bootstrap_pair_index_semantics
         bootstrap_payload["max_pairs"] = int(scorer_domain_bootstrap_max_pairs)
+        bootstrap_payload["exact_segnet_target_argmax"] = (
+            bootstrap_segnet_teacher_metadata
+        )
         output_head_target_bias_init_payload["scorer_domain_bootstrap"] = (
             bootstrap_payload
         )
@@ -19645,11 +19742,32 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         or segnet_direct_live_distillation_weight > 0.0
         or segnet_direct_live_subcontrol_active
     ):
-        scorer_teacher = build_mlx_segnet_pair_teacher(
-            teacher_probe_bundle,
-            upstream_dir=scorer_upstream_dir,
-            device=resolved_distillation_device,
-        )
+        if (
+            bootstrap_scorer_teacher is not None
+            and int(getattr(bootstrap_scorer_teacher, "frame_count", -1))
+            == int(hydrated_target_pair_count)
+        ):
+            scorer_teacher = bootstrap_scorer_teacher
+            artifact_metadata["score_aware_training"][
+                "segnet_teacher_cache_reuse"
+            ] = {
+                "schema": "hi_nerv_segnet_teacher_cache_reuse.v1",
+                "reused_from": "output_head_target_bias_init.scorer_domain_bootstrap",
+                "frame_count": int(getattr(scorer_teacher, "frame_count", 0)),
+                "teacher_argmax_preserved": bool(
+                    getattr(scorer_teacher, "teacher_argmax_thw", None) is not None
+                ),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+                "authority": "macos_mlx_research_signal_false_authority",
+                "dispatch_attempted": False,
+            }
+        else:
+            scorer_teacher = build_mlx_segnet_pair_teacher(
+                teacher_probe_bundle,
+                upstream_dir=scorer_upstream_dir,
+                device=resolved_distillation_device,
+            )
         if segnet_distillation_weight > 0.0:
             learnable_student_head = build_learnable_student_head(
                 num_classes=int(scorer_teacher.num_classes),
