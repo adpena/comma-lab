@@ -10,6 +10,7 @@ import pytest
 from tac.training.long_training_canonical import (
     CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE,
     CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE,
+    CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
     CurriculumStage,
     LongTrainingConfig,
     PolyakEMAShadow,
@@ -78,13 +79,40 @@ def test_archive_selection_prefers_target_class_coverage_over_generic_occupancy(
 
 def test_archive_selection_uses_target_min_ratio_as_secondary_tiebreaker() -> None:
     weak_material_coverage = _archive_selection_health_sort_key(
-        _row(0.8, target_coverage=1.0, target_min_ratio=0.1)
+        _row(
+            0.8,
+            target_coverage=1.0,
+            target_min_ratio=CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
+        )
     )
     stronger_material_coverage = _archive_selection_health_sort_key(
         _row(0.8, target_coverage=1.0, target_min_ratio=0.7)
     )
 
     assert stronger_material_coverage < weak_material_coverage
+
+
+def test_archive_selection_treats_low_target_min_ratio_as_collapsed() -> None:
+    target_mass_collapsed = _archive_selection_health_sort_key(
+        _row(
+            1.0,
+            target_coverage=1.0,
+            target_min_ratio=(
+                CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE - 1e-6
+            ),
+        )
+    )
+    target_mass_preserved = _archive_selection_health_sort_key(
+        _row(
+            CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE,
+            target_coverage=CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE,
+            target_min_ratio=CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
+        )
+    )
+
+    assert target_mass_collapsed[0] == 2
+    assert target_mass_preserved[0] == 0
+    assert target_mass_preserved < target_mass_collapsed
 
 
 class _ArchiveSelectionUnitModel:

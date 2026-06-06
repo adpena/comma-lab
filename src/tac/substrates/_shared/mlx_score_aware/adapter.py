@@ -45,6 +45,9 @@ from tac.substrates._shared.mlx_score_aware.loss import (
     posenet_yuv6_geometry_tether_loss,
     score_aware_loss,
 )
+from tac.training.long_training_canonical import (
+    CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
+)
 
 if TYPE_CHECKING:
     from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
@@ -159,8 +162,15 @@ def _segnet_direct_live_escape_selection_metric(
     candidate_occupied_class_fraction: float | None,
     argmax_disagreement: float | None,
     target_class_coverage_fraction: float | None = None,
+    target_class_min_ratio: float | None = None,
 ) -> float | None:
-    """Archive-selection scalar that prices class escape before local fit."""
+    """Checkpoint scalar that prices class escape before local fit.
+
+    Generic occupied-class fraction is not enough for the contest SegNet term:
+    a checkpoint can light up classes while leaving a required target class at
+    near-zero pixel mass. Price that as unresolved argmax debt so PR95-style
+    best-checkpoint capture preserves class birth before QAT/byte pressure.
+    """
 
     if candidate_occupied_class_fraction is None or argmax_disagreement is None:
         return None
@@ -172,6 +182,11 @@ def _segnet_direct_live_escape_selection_metric(
             if target_class_coverage_fraction is None
             else float(target_class_coverage_fraction)
         )
+        target_min_ratio = (
+            None
+            if target_class_min_ratio is None
+            else float(target_class_min_ratio)
+        )
     except (TypeError, ValueError):
         return None
     if not (
@@ -180,8 +195,18 @@ def _segnet_direct_live_escape_selection_metric(
         and math.isfinite(target_coverage)
     ):
         return None
+    target_min_ratio_penalty = 0.0
+    if target_min_ratio is not None:
+        if not math.isfinite(target_min_ratio):
+            return None
+        floor = CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE
+        target_min_ratio_penalty = max(0.0, floor - target_min_ratio) / floor
     class_recovery_fraction = min(class_fraction, target_coverage)
-    return 10.0 * max(0.0, 1.0 - class_recovery_fraction) + disagreement
+    return (
+        10.0 * max(0.0, 1.0 - class_recovery_fraction)
+        + 10.0 * target_min_ratio_penalty
+        + disagreement
+    )
 
 
 def _segnet_argmax_meaningful_recovery_floor(
@@ -2496,6 +2521,7 @@ class MlxScoreAwareAdapter:
                 candidate_occupied_class_fraction=pre_occ,
                 argmax_disagreement=pre_argmax_disagreement,
                 target_class_coverage_fraction=pre_target_class_coverage,
+                target_class_min_ratio=pre_target_class_min_ratio,
             )
         post_escape_selection = self._finite_metric(
             post_update_loss_part_metrics,
@@ -2506,6 +2532,7 @@ class MlxScoreAwareAdapter:
                 candidate_occupied_class_fraction=post_occ,
                 argmax_disagreement=post_argmax_disagreement,
                 target_class_coverage_fraction=post_target_class_coverage,
+                target_class_min_ratio=post_target_class_min_ratio,
             )
         pre_rare_class_logit_loss = self._finite_metric(
             pre_update_loss_part_metrics,
@@ -3586,6 +3613,7 @@ class MlxScoreAwareAdapter:
                     candidate_occupied_class_fraction=trial_occ,
                     argmax_disagreement=trial_argmax_disagreement,
                     target_class_coverage_fraction=trial_target_class_coverage,
+                    target_class_min_ratio=trial_target_class_min_ratio,
                 )
             trial_rare_class_logit_loss = self._finite_metric(
                 trial_metrics,
@@ -4853,6 +4881,9 @@ class MlxScoreAwareAdapter:
             target_class_coverage_fraction=out.get(
                 "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
             ),
+            target_class_min_ratio=out.get(
+                "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+            ),
         )
         if escape_metric is not None:
             out["loss_part_segnet_direct_live_escape_selection"] = escape_metric
@@ -5760,6 +5791,9 @@ class MlxScoreAwareAdapter:
             target_class_coverage_fraction=out.get(
                 "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
             ),
+            target_class_min_ratio=out.get(
+                "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+            ),
         )
         if escape_metric is not None:
             out["loss_part_segnet_direct_live_escape_selection"] = escape_metric
@@ -6407,9 +6441,9 @@ class MlxScoreAwareAdapter:
                     "when available"
                 ),
                 "escape_selection_metric": (
-                    "10 * max(0, 1 - candidate_occupied_class_fraction) "
-                    "+ argmax_disagreement, with target-class coverage folded "
-                    "into the class recovery term when present"
+                    "10 * max(0, 1 - min(candidate_occupied_class_fraction, "
+                    "target_class_coverage_when_present)) + 10 * "
+                    "target_min_ratio_floor_debt + argmax_disagreement"
                 ),
                 "bootstrap_trust_region": {
                     "schema": "mlx_score_aware_bootstrap_trust_region.v1",

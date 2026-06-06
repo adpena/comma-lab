@@ -113,6 +113,42 @@ def test_scorer_support_ladder_stage_order_damps_base_loss() -> None:
     ] == pytest.approx(0.125)
 
 
+def test_escape_selection_metric_prices_target_class_min_ratio_debt() -> None:
+    healthy = score_adapter._segnet_direct_live_escape_selection_metric(
+        candidate_occupied_class_fraction=1.0,
+        target_class_coverage_fraction=1.0,
+        target_class_min_ratio=0.2,
+        argmax_disagreement=0.25,
+    )
+    weak_mass = score_adapter._segnet_direct_live_escape_selection_metric(
+        candidate_occupied_class_fraction=1.0,
+        target_class_coverage_fraction=1.0,
+        target_class_min_ratio=0.1,
+        argmax_disagreement=0.25,
+    )
+    collapsed_mass = score_adapter._segnet_direct_live_escape_selection_metric(
+        candidate_occupied_class_fraction=1.0,
+        target_class_coverage_fraction=1.0,
+        target_class_min_ratio=0.0,
+        argmax_disagreement=0.25,
+    )
+
+    assert healthy == pytest.approx(0.25)
+    assert weak_mass == pytest.approx(5.25)
+    assert collapsed_mass == pytest.approx(10.25)
+
+
+def test_escape_selection_metric_preserves_legacy_surface_without_target_mass() -> None:
+    metric = score_adapter._segnet_direct_live_escape_selection_metric(
+        candidate_occupied_class_fraction=0.4,
+        target_class_coverage_fraction=None,
+        target_class_min_ratio=None,
+        argmax_disagreement=0.6,
+    )
+
+    assert metric == pytest.approx(6.6)
+
+
 def test_scorer_support_ladder_observation_escalates_only_after_stall() -> None:
     adapter = object.__new__(MlxScoreAwareAdapter)
     adapter._scorer_support_ladder_enabled = True

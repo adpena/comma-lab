@@ -127,6 +127,7 @@ __all__ = [
     "CANONICAL_NON_PROMOTABLE_MARKERS",
     "CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE",
     "CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE",
+    "CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE",
     "DEFAULT_CHECKPOINT_INTERVAL_EPOCHS",
     "DEFAULT_CHECKPOINT_RETENTION_KEEP_BEST_N",
     "DEFAULT_CHECKPOINT_RETENTION_KEEP_LAST_N",
@@ -190,6 +191,7 @@ EMA_ACCUMULATION_MODES: frozenset[str] = frozenset({"kahan", "naive"})
 CONTEST_RATE_SCORE_PER_BYTE: float = 25.0 / 37_545_489.0
 CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
 CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE = 1.0
+CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE = 0.2
 
 # Canonical schema version for TrainingArtifact JSON emission.
 TRAINING_ARTIFACT_SCHEMA_VERSION: str = "long_training_canonical_artifact.v1"
@@ -3021,10 +3023,10 @@ def _archive_selection_health_sort_key(
     """Return hard health tier before proxy-score archive selection.
 
     Training-time direct-live SegNet escape can be erased by EMA smoothing.
-    When an adapter exposes target-class coverage, prefer an archive view that
-    preserves the material target classes the upstream SegNet actually sees.
-    Older adapters that only expose occupied-class fraction retain the previous
-    non-collapse sort behavior.
+    When an adapter exposes target-class coverage or target-class mass, prefer
+    an archive view that preserves the material target classes the upstream
+    SegNet actually sees. Older adapters that only expose occupied-class
+    fraction retain the previous non-collapse sort behavior.
     """
 
     components = row.get("score_components")
@@ -3056,6 +3058,10 @@ def _archive_selection_health_sort_key(
         and effective_target_coverage
         < CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
     )
+    target_min_ratio_collapsed = (
+        target_min_ratio is not None
+        and target_min_ratio < CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE
+    )
     # Match the receiver/export SegNet argmax survival gate: two occupied
     # classes out of five is still a collapse for scorer-faithful HiNeRV.
     occupied_collapsed = (
@@ -3063,7 +3069,13 @@ def _archive_selection_health_sort_key(
         and occupied
         < CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
     )
-    tier = 2 if target_collapsed else 1 if occupied_collapsed else 0
+    tier = (
+        2
+        if target_collapsed or target_min_ratio_collapsed
+        else 1
+        if occupied_collapsed
+        else 0
+    )
     return (
         tier,
         -(effective_target_coverage or 0.0),
