@@ -34,6 +34,7 @@ class ActionEffect:
     affected_pairs: tuple[int, ...]
     affected_regions: tuple[str, ...]
     payload_sections: tuple[str, ...]
+    state_custody: Mapping[str, str | int | bool]
     old_d_seg: float
     new_d_seg: float
     old_d_pose: float
@@ -76,21 +77,27 @@ class ActionEffect:
 
     @property
     def old_score(self) -> float:
-        return contest_score(
-            self.old_d_seg,
-            self.old_d_pose,
-            self.old_bytes,
-            reference_bytes=self.reference_bytes,
-        )
+        try:
+            return contest_score(
+                self.old_d_seg,
+                self.old_d_pose,
+                self.old_bytes,
+                reference_bytes=self.reference_bytes,
+            )
+        except ValueError:
+            return math.nan
 
     @property
     def new_score(self) -> float:
-        return contest_score(
-            self.new_d_seg,
-            self.new_d_pose,
-            self.new_bytes,
-            reference_bytes=self.reference_bytes,
-        )
+        try:
+            return contest_score(
+                self.new_d_seg,
+                self.new_d_pose,
+                self.new_bytes,
+                reference_bytes=self.reference_bytes,
+            )
+        except ValueError:
+            return math.nan
 
     def to_mapping(self, *, min_score_improvement: float = 0.0) -> dict[str, Any]:
         blockers = _action_effect_blockers(
@@ -106,20 +113,23 @@ class ActionEffect:
             **{
                 key: value
                 for key, value in asdict(self).items()
-                if key != "receiver_surface"
+                if key not in {"receiver_surface", "state_custody"}
             },
             "affected_pairs": list(self.affected_pairs),
             "affected_regions": list(self.affected_regions),
             "payload_sections": list(self.payload_sections),
+            "state_custody": dict(self.state_custody),
             "receiver_surface": dict(self.receiver_surface),
-            "old_score": self.old_score,
-            "new_score": self.new_score,
-            "delta_d_seg": self.delta_d_seg,
-            "delta_d_pose": self.delta_d_pose,
+            "old_score": _finite_value_or_none(self.old_score),
+            "new_score": _finite_value_or_none(self.new_score),
+            "delta_d_seg": _finite_value_or_none(self.delta_d_seg),
+            "delta_d_pose": _finite_value_or_none(self.delta_d_pose),
             "delta_bytes": self.delta_bytes,
-            "delta_score_nonrate": self.delta_score_nonrate,
-            "rate_score_delta": self.rate_score_delta,
-            "delta_score_total": self.delta_score_total,
+            "delta_score_nonrate": _finite_value_or_none(
+                self.delta_score_nonrate
+            ),
+            "rate_score_delta": _finite_value_or_none(self.rate_score_delta),
+            "delta_score_total": _finite_value_or_none(self.delta_score_total),
             "byte_price": 25.0 / float(self.reference_bytes),
             "receiver_visible": _receiver_visible(self.receiver_surface),
             "byte_priced": _byte_priced(self),
@@ -155,6 +165,7 @@ def build_action_effect(
         affected_pairs=tuple(_int_values(payload.get("affected_pairs"))),
         affected_regions=tuple(_text_values(payload.get("affected_regions"))),
         payload_sections=tuple(_text_values(payload.get("payload_sections"))),
+        state_custody=_state_custody(payload.get("state_custody"), payload=payload),
         old_d_seg=_finite_float(payload.get("old_d_seg")),
         new_d_seg=_finite_float(payload.get("new_d_seg")),
         old_d_pose=_finite_float(payload.get("old_d_pose")),
@@ -199,6 +210,11 @@ def action_effect_from_pair_local_servo(
             "affected_pairs": report.get("pair_ids") or receipt.get("pair_ids"),
             "affected_regions": _affected_regions(receipt),
             "payload_sections": receipt.get("payload_sections") or (),
+            "state_custody": {
+                "archive_sha256": receipt.get("archive_sha256"),
+                "runtime_tree_sha256": receipt.get("runtime_tree_sha256"),
+                "payload_sha256": receipt.get("payload_sha256"),
+            },
             "old_d_seg": report.get("score_state_old_d_seg")
             or receipt.get("old_d_seg"),
             "new_d_seg": report.get("score_state_new_d_seg")
@@ -299,6 +315,8 @@ def _action_effect_blockers(
         blockers.append("action_effect_action_id_missing")
     if not effect.producer:
         blockers.append("action_effect_producer_missing")
+    if not effect.consumer:
+        blockers.append("action_effect_consumer_missing")
     if effect.family not in {"hinerv", "snerv", "pact_nerv", "selector", "shared"}:
         blockers.append("action_effect_family_unknown")
     if not effect.authority:
@@ -307,6 +325,8 @@ def _action_effect_blockers(
         blockers.append("action_effect_score_state_invalid")
     if not _archive_byte_state_valid(effect):
         blockers.append("action_effect_archive_byte_state_invalid")
+    if not _state_custodied(effect.state_custody):
+        blockers.append("action_effect_state_custody_hash_missing")
     if not _receiver_visible(effect.receiver_surface):
         blockers.append("action_effect_receiver_surface_motion_missing")
     if effect.fakequant_survived is not True:
@@ -327,7 +347,11 @@ def _byte_priced(effect: ActionEffect) -> bool:
         return True
     if effect.value_per_byte is None:
         return False
-    return math.isfinite(float(effect.value_per_byte)) and float(effect.value_per_byte) >= 0.0
+    return math.isfinite(float(effect.value_per_byte))
+
+
+def _finite_value_or_none(value: float) -> float | None:
+    return float(value) if math.isfinite(float(value)) else None
 
 
 def _score_admissible(
@@ -360,6 +384,21 @@ def _archive_byte_state_valid(effect: ActionEffect) -> bool:
     )
 
 
+def _state_custodied(custody: Mapping[str, Any]) -> bool:
+    for key in (
+        "archive_sha256",
+        "candidate_archive_sha256",
+        "source_archive_sha256",
+        "payload_sha256",
+        "runtime_tree_sha256",
+        "section_tree_sha256",
+    ):
+        value = custody.get(key)
+        if isinstance(value, str) and value.strip():
+            return True
+    return False
+
+
 def _receiver_visible(surface: Mapping[str, Any]) -> bool:
     for key in (
         "uint8_changed_pixels",
@@ -388,6 +427,30 @@ def _receiver_surface(value: Any) -> dict[str, float | int | bool | str]:
             isinstance(raw, float) and not math.isfinite(raw)
         ):
             out[str(key)] = raw
+    return out
+
+
+def _state_custody(
+    value: Any,
+    *,
+    payload: Mapping[str, Any],
+) -> dict[str, str | int | bool]:
+    out: dict[str, str | int | bool] = {}
+    if isinstance(value, Mapping):
+        for key, raw in value.items():
+            if isinstance(raw, bool | int | str) and str(raw):
+                out[str(key)] = raw
+    for key in (
+        "archive_sha256",
+        "candidate_archive_sha256",
+        "source_archive_sha256",
+        "payload_sha256",
+        "runtime_tree_sha256",
+        "section_tree_sha256",
+    ):
+        raw = payload.get(key)
+        if key not in out and isinstance(raw, bool | int | str) and str(raw):
+            out[key] = raw
     return out
 
 

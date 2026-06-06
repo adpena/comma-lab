@@ -181,6 +181,7 @@ def test_pr95_grade_report_accepts_parseback_priced_hinerv_receipt() -> None:
         "exact_score_delta"
     ]
     assert report["action_effect"]["receiver_visible"] is True
+    assert report["action_effect"]["state_custody"]["archive_sha256"] == "a" * 64
     assert report["score_claim"] is False
 
 

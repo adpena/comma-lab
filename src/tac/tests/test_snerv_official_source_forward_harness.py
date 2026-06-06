@@ -10,6 +10,7 @@ import pytest
 
 import tac.analysis.snerv_official_source_forward_harness as harness_mod
 from tac.analysis.snerv_official_source_forward_harness import (
+    BIT_FLIP_FALSIFICATION_SCHEMA,
     DEFAULT_OFFICIAL_SNERV_REPO,
     OFFICIAL_SNERV_SHA,
     SCHEMA,
@@ -254,6 +255,7 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
         assert row["output_hashes_bit_identical"] is True
         assert row["blockers"] == []
         assert row["score_claim"] is False
+        _assert_bit_flip_falsification(row, component_id)
 
     tub = rows["tub"]
     assert tub["primitive_source_forward_parity_proven"] is True
@@ -264,6 +266,7 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert tub["graph_input_max_abs_error"] == 0.0
     assert tub["output2_fusion_max_abs_error"] == 0.0
     assert tub["official_output_sha256"] == tub["portable_output_sha256"]
+    _assert_bit_flip_falsification(tub, "tub")
     assert (
         "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing"
         in tub["closed_blockers"]
@@ -290,6 +293,24 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert local_gap["receiver_safe_adapter_present"] is True
     assert local_gap["official_source_forward_markers_present"] is False
     assert local_gap["source_forward_parity_proven"] is False
+
+
+def _assert_bit_flip_falsification(row: dict, component_id: str) -> None:
+    assert row["bit_flip_falsification_passed"] is True
+    proof = row["bit_flip_falsification"]
+    assert proof["schema"] == BIT_FLIP_FALSIFICATION_SCHEMA
+    assert proof["component_id"] == component_id
+    assert proof["baseline_official_output_sha256"] == row["official_output_sha256"]
+    assert proof["baseline_portable_output_sha256"] == row["portable_output_sha256"]
+    assert proof["baseline_official_output_sha256"] != proof[
+        "perturbed_portable_output_sha256"
+    ]
+    assert proof["negative_control_max_abs_error"] > proof["tolerance"]
+    assert proof["negative_control_output_hashes_bit_identical"] is False
+    assert proof["falsifies_when_perturbed"] is True
+    assert proof["passed"] is True
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
 
 
 def test_snerv_official_source_forward_harness_preserves_fixture_state_without_authority(

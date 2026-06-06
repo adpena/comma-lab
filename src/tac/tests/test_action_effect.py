@@ -24,6 +24,7 @@ def test_action_effect_prices_exact_nonlinear_score_and_receiver_survival() -> N
             "affected_pairs": [7],
             "affected_regions": ["pair7_class1_region3"],
             "payload_sections": ["decoder_head"],
+            "state_custody": {"archive_sha256": "a" * 64},
             "old_d_seg": 0.010,
             "new_d_seg": 0.009,
             "old_d_pose": 0.0001,
@@ -44,6 +45,7 @@ def test_action_effect_prices_exact_nonlinear_score_and_receiver_survival() -> N
     assert effect["family"] == "hinerv"
     assert effect["action_effect_admitted"] is True
     assert effect["receiver_visible"] is True
+    assert effect["state_custody"]["archive_sha256"] == "a" * 64
     assert effect["delta_score_total"] == effect["delta_score_nonrate"]
     assert math.isclose(effect["delta_score_total"], -0.1)
     assert effect["score_claim"] is False
@@ -70,6 +72,8 @@ def test_action_effect_rejects_subquantum_parseback_lost_byte_growth() -> None:
 
     assert effect["action_effect_admitted"] is False
     assert "action_effect_receiver_surface_motion_missing" in effect["blockers"]
+    assert "action_effect_consumer_missing" in effect["blockers"]
+    assert "action_effect_state_custody_hash_missing" in effect["blockers"]
     assert "action_effect_fakequant_survival_missing" in effect["blockers"]
     assert "action_effect_parseback_survival_missing" in effect["blockers"]
     assert "action_effect_byte_delta_not_priced" in effect["blockers"]
@@ -137,6 +141,8 @@ def _effect_payload(action_id: str, delta_score: float) -> dict[str, object]:
         "family": "selector",
         "authority": "parseback_mlx",
         "producer": "unit_test",
+        "consumer": "action_commutator_ledger",
+        "state_custody": {"payload_sha256": "b" * 64},
         "old_d_seg": old_d_seg,
         "new_d_seg": new_d_seg,
         "old_d_pose": 0.0001,

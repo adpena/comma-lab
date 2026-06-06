@@ -36,6 +36,11 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     build_snerv_official_tub_source_forward_replay_artifact,
 )
+from tac.analysis.source_forward_bit_flip_falsification import (
+    BIT_FLIP_FALSIFICATION_SCHEMA,
+    build_array_bit_flip_falsification,
+    build_named_arrays_bit_flip_falsification,
+)
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_official_mfu_hfr_tub_decoder_payload,
     encode_official_mfu_hfr_tub_decoder_payload,
@@ -377,14 +382,14 @@ def build_snerv_official_source_forward_harness_artifact(
         component_rows = [
             mfu_row,
             hfr_row,
-            _tub_component_row_from_source_replay(tub_source_replay),
+            _selected_tub_component_row(tub_source_replay),
         ]
     except Exception as exc:  # pragma: no cover - exercised by fail-closed callers.
         harness_blockers.append(f"snerv_official_source_harness_failed:{type(exc).__name__}")
         component_rows = [
             _failed_component_row("mfu", exc),
             _failed_component_row("hfr", exc),
-            _tub_component_row_from_source_replay(tub_source_replay),
+            _selected_tub_component_row(tub_source_replay),
         ]
         source_replay = {
             "schema": SOURCE_REPLAY_SCHEMA,
@@ -409,6 +414,7 @@ def build_snerv_official_source_forward_harness_artifact(
     mfu_hfr_passed = all(
         row["component_id"] in {"mfu", "hfr"}
         and row.get("source_forward_parity_proven") is True
+        and row.get("bit_flip_falsification_passed") is True
         for row in component_rows
         if row["component_id"] in {"mfu", "hfr"}
     )
@@ -430,6 +436,10 @@ def build_snerv_official_source_forward_harness_artifact(
     full_passed = bool(
         mfu_hfr_passed
         and all(row.get("source_forward_parity_proven") is True for row in component_rows)
+        and all(
+            row.get("bit_flip_falsification_passed") is True
+            for row in component_rows
+        )
         and receiver_runtime.get("receiver_runtime_decode_proven") is True
     )
     receiver_ready = bool(
@@ -534,7 +544,10 @@ def build_snerv_official_source_forward_harness_artifact(
             *[
                 blocker
                 for row in component_rows
-                for blocker in row.get("blockers", ())
+                for blocker in [
+                    *(row.get("blockers") or ()),
+                    *(row.get("preserved_blockers") or ()),
+                ]
             ],
         ]
     )
@@ -1070,6 +1083,10 @@ def _tub_component_row_from_source_replay(
             *(artifact.get("blockers") or ()),
         ]
     )
+    bit_flip_falsification = _nested_value(
+        artifact,
+        ("full_forward_equivalence", "bit_flip_falsification"),
+    )
     return {
         "schema": "snerv_official_source_forward_component_replay.v1",
         "component_id": "tub",
@@ -1095,6 +1112,11 @@ def _tub_component_row_from_source_replay(
             )
         ),
         "source_forward_parity_falsified": False,
+        "bit_flip_falsification": bit_flip_falsification,
+        "bit_flip_falsification_passed": _nested_bool(
+            artifact,
+            ("full_forward_equivalence", "bit_flip_falsification_passed"),
+        ),
         "full_stack_source_forward_parity_proven": full_tub_parity,
         "full_tub_source_forward_parity_proven": full_tub_parity,
         "tolerance": 0.0,
@@ -1150,6 +1172,57 @@ def _tub_component_row_from_source_replay(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _selected_tub_component_row(artifact: Mapping[str, Any]) -> dict[str, Any]:
+    """Select the most falsifiable TUB row available for component parity gates."""
+
+    source_replay_row = _tub_component_row_from_source_replay(artifact)
+    if (
+        source_replay_row.get("full_tub_source_forward_parity_proven") is True
+        and source_replay_row.get("source_forward_parity_proven") is True
+        and source_replay_row.get("bit_flip_falsification_passed") is True
+    ):
+        return source_replay_row
+    graph_input_row = _run_tub_graph_input_replay()
+    source_replay_preserved = [
+        str(blocker)
+        for blocker in (
+            [
+                *(source_replay_row.get("preserved_blockers") or ()),
+                *(source_replay_row.get("blockers") or ()),
+            ]
+        )
+        if str(blocker)
+    ]
+    source_replay_authority_blockers = [
+        blocker
+        for blocker in source_replay_preserved
+        if blocker in SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS
+    ]
+    if source_replay_preserved:
+        graph_input_row = {
+            **graph_input_row,
+            "blockers": _ordered_unique(
+                [
+                    *(graph_input_row.get("blockers") or ()),
+                    *source_replay_authority_blockers,
+                ]
+            ),
+            "closed_blockers": _ordered_unique(
+                [
+                    *(graph_input_row.get("closed_blockers") or ()),
+                    *(source_replay_row.get("closed_blockers") or ()),
+                ]
+            ),
+            "preserved_blockers": _ordered_unique(
+                [
+                    *(graph_input_row.get("preserved_blockers") or ()),
+                    *source_replay_preserved,
+                ]
+            ),
+        }
+    return graph_input_row
 
 
 def _nested_value(source: Mapping[str, Any], keys: Sequence[str]) -> Any:
@@ -1432,6 +1505,14 @@ def _run_tub_graph_input_replay() -> dict[str, Any]:
     portable_all_outputs = {**portable_outputs, **portable_fusion_outputs}
     max_abs_error = max(graph_error, fusion_error)
     output_hash = _hash_named_arrays(official_all_outputs)
+    portable_output_hash = _hash_named_arrays(portable_all_outputs)
+    bit_flip_falsification = build_named_arrays_bit_flip_falsification(
+        component_id="tub",
+        official_outputs=official_all_outputs,
+        portable_outputs=portable_all_outputs,
+        tolerance=0.0,
+        false_authority=FALSE_AUTHORITY,
+    )
     blockers = [
         "snerv_official_pytorch_wavelets_runtime_dependency_missing",
         "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
@@ -1445,8 +1526,12 @@ def _run_tub_graph_input_replay() -> dict[str, Any]:
         "backend": "official_torch_vs_portable",
         "source_forward_parity_proven": False,
         "primitive_source_forward_parity_proven": True,
+        "source_fixture_forward_parity_proven": True,
+        "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
         "portable_output2_fusion_receiver_mapping_proven": fusion_error == 0.0,
         "source_forward_parity_falsified": False,
+        "bit_flip_falsification": bit_flip_falsification,
+        "bit_flip_falsification_passed": bit_flip_falsification["passed"],
         "full_stack_source_forward_parity_proven": False,
         "full_tub_source_forward_parity_proven": False,
         "tolerance": 0.0,
@@ -1461,9 +1546,8 @@ def _run_tub_graph_input_replay() -> dict[str, Any]:
             }
         ),
         "official_output_sha256": output_hash,
-        "portable_output_sha256": _hash_named_arrays(portable_all_outputs),
-        "output_hashes_bit_identical": output_hash
-        == _hash_named_arrays(portable_all_outputs),
+        "portable_output_sha256": portable_output_hash,
+        "output_hashes_bit_identical": output_hash == portable_output_hash,
         "output_shapes": _shape_map(official_all_outputs),
         "closed_blockers": [
             "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
@@ -1677,6 +1761,13 @@ def _component_row(
     max_abs_error = float(np.max(np.abs(official_output - portable_output)))
     official_hash = _hash_array(official_output)
     portable_hash = _hash_array(portable_output)
+    bit_flip_falsification = build_array_bit_flip_falsification(
+        component_id=component_id,
+        official_output=official_output,
+        portable_output=portable_output,
+        tolerance=0.0,
+        false_authority=FALSE_AUTHORITY,
+    )
     return {
         "schema": "snerv_official_source_forward_component_replay.v1",
         "component_id": component_id,
@@ -1684,6 +1775,8 @@ def _component_row(
         "backend": backend,
         "source_forward_parity_proven": bool(source_forward_parity_proven),
         "source_forward_parity_falsified": False,
+        "bit_flip_falsification": bit_flip_falsification,
+        "bit_flip_falsification_passed": bit_flip_falsification["passed"],
         "full_stack_source_forward_parity_proven": bool(
             full_stack_source_forward_parity_proven
         ),
@@ -1710,6 +1803,8 @@ def _failed_component_row(component_id: str, exc: Exception) -> dict[str, Any]:
         "backend": "official_torch_vs_portable",
         "source_forward_parity_proven": False,
         "source_forward_parity_falsified": False,
+        "bit_flip_falsification": None,
+        "bit_flip_falsification_passed": False,
         "full_stack_source_forward_parity_proven": False,
         "tolerance": 0.0,
         "max_abs_error": None,
@@ -2362,6 +2457,7 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
 
 
 __all__ = [
+    "BIT_FLIP_FALSIFICATION_SCHEMA",
     "DEFAULT_OFFICIAL_SNERV_REPO",
     "FALSE_AUTHORITY",
     "OFFICIAL_SNERV_SHA",

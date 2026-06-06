@@ -29,6 +29,9 @@ from typing import Any
 
 import numpy as np
 
+from tac.analysis.source_forward_bit_flip_falsification import (
+    build_named_arrays_bit_flip_falsification,
+)
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
     official_output2_fusion_numpy,
@@ -461,6 +464,13 @@ def _run_source_fixture(
     }
     forward_error = _max_abs_error(full_forward_arrays, manual_forward_arrays)
     forward_passed = forward_error == 0.0
+    forward_bit_flip_falsification = build_named_arrays_bit_flip_falsification(
+        component_id="tub",
+        official_outputs=full_forward_arrays,
+        portable_outputs=manual_forward_arrays,
+        tolerance=0.0,
+        false_authority=FALSE_AUTHORITY,
+    )
     official_frame_arrays = {
         "img_yl": _tensor_array(img_yl),
         "yh_out": _tensor_array(yh_out),
@@ -590,6 +600,8 @@ def _run_source_fixture(
             "manual_replay_sha256": _hash_named_arrays(manual_forward_arrays),
             "output_hashes_bit_identical": _hash_named_arrays(full_forward_arrays)
             == _hash_named_arrays(manual_forward_arrays),
+            "bit_flip_falsification": forward_bit_flip_falsification,
+            "bit_flip_falsification_passed": forward_bit_flip_falsification["passed"],
             "output_shapes": _shape_map(full_forward_arrays),
             "blockers": (
                 []

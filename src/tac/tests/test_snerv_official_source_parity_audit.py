@@ -9,6 +9,7 @@ from tac.analysis.snerv_official_primitive_replay import (
     RECEIVER_RUNTIME_DECODE_SCHEMA,
 )
 from tac.analysis.snerv_official_source_parity_audit import (
+    BIT_FLIP_FALSIFICATION_SCHEMA,
     SCHEMA,
     build_snerv_official_mfu_hfr_tub_forward_parity_artifact,
     build_snerv_official_source_parity_audit,
@@ -272,6 +273,59 @@ def test_snerv_official_forward_parity_artifact_rejects_boolean_only_pass(
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["blockers"]
 
 
+def test_snerv_official_forward_parity_artifact_rejects_numeric_replay_without_bit_flip_falsification(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_snerv_repo(tmp_path)
+    local = _write_marker_only_local_snerv_repo(tmp_path)
+    artifact_path = tmp_path / "numeric_without_bit_flip.json"
+    component_rows = [
+        _numeric_component_row("mfu"),
+        _numeric_component_row("hfr"),
+        _numeric_component_row("tub"),
+    ]
+    for row in component_rows:
+        row.pop("bit_flip_falsification")
+        row["bit_flip_falsification_passed"] = False
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+                "official_weight_manifest": {
+                    "state_dict_sha256": "1" * 64,
+                    "state_dict_key_count": 9,
+                },
+                "source_forward_replay": {
+                    "backend": "torch_vs_numpy",
+                    "input_bundle_sha256": "2" * 64,
+                },
+                "receiver_runtime_decode": _receiver_runtime_decode_contract(),
+                "official_mfu_hfr_tub_forward_parity_passed": True,
+                "official_mfu_hfr_tub_forward_parity_falsified": False,
+                "component_rows": component_rows,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_snerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=local,
+        official_forward_parity_artifact_path=artifact_path,
+        generated_utc="20260603T000000Z",
+    )
+
+    artifact_row = report["official_forward_parity_artifact_row"]
+    assert artifact_row["parity_passed"] is False
+    assert "bit_flip_falsification_not_passed:mfu" in artifact_row["blockers"]
+    assert "bit_flip_falsification_missing:mfu" in artifact_row["blockers"]
+    assert report["official_mfu_hfr_tub_parity_proven"] is False
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in report["blockers"]
+
+
 def test_snerv_official_forward_parity_artifact_accepts_numeric_replay_evidence(
     tmp_path: Path,
 ) -> None:
@@ -390,6 +444,9 @@ def test_snerv_official_forward_parity_artifact_accepts_exact_zero_tolerance(
         row = _numeric_component_row(component_id)
         row["tolerance"] = 0.0
         row["max_abs_error"] = 0.0
+        proof = dict(row["bit_flip_falsification"])
+        proof["tolerance"] = 0.0
+        row["bit_flip_falsification"] = proof
         component_rows.append(row)
     artifact_path.write_text(
         json.dumps(
@@ -489,6 +546,26 @@ def _numeric_component_row(component_id: str) -> dict[str, object]:
         "official_output_sha256": "4" * 64,
         "portable_output_sha256": "4" * 64,
         "official_weight_sha256": "5" * 64,
+        "bit_flip_falsification": {
+            "schema": BIT_FLIP_FALSIFICATION_SCHEMA,
+            "component_id": component_id,
+            "mode": "unit_test_single_bit_flip_on_portable_output",
+            "output_name": "output",
+            "bit_flip_byte_offset": 0,
+            "bit_flip_mask": 1,
+            "tolerance": 1.0e-6,
+            "baseline_official_output_sha256": "4" * 64,
+            "baseline_portable_output_sha256": "4" * 64,
+            "perturbed_portable_output_sha256": "b" * 64,
+            "negative_control_max_abs_error": 1.0e-3,
+            "negative_control_output_hashes_bit_identical": False,
+            "falsifies_when_perturbed": True,
+            "passed": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "bit_flip_falsification_passed": True,
     }
 
 

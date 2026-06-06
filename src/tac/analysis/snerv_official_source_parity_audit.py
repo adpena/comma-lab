@@ -26,6 +26,9 @@ from tac.analysis.snerv_official_primitive_replay import (
     RECEIVER_RUNTIME_DECODE_SCHEMA,
     build_snerv_official_primitive_replay_binding,
 )
+from tac.analysis.source_forward_bit_flip_falsification import (
+    BIT_FLIP_FALSIFICATION_SCHEMA,
+)
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 
 SCHEMA = "snerv_official_source_parity_audit.v1"
@@ -884,6 +887,77 @@ def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
         )
     ):
         blockers.append("official_weight_identity_missing")
+    blockers.extend(_forward_parity_bit_flip_blockers(row))
+    return blockers
+
+
+def _forward_parity_bit_flip_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    proof = row.get("bit_flip_falsification")
+    if row.get("bit_flip_falsification_passed") is not True:
+        blockers.append("bit_flip_falsification_not_passed")
+    if not isinstance(proof, Mapping):
+        blockers.append("bit_flip_falsification_missing")
+        return blockers
+    if proof.get("schema") != BIT_FLIP_FALSIFICATION_SCHEMA:
+        blockers.append("bit_flip_falsification_schema_invalid")
+    if proof.get("component_id") != row.get("component_id"):
+        blockers.append("bit_flip_falsification_component_mismatch")
+    if proof.get("falsifies_when_perturbed") is not True:
+        blockers.append("bit_flip_falsification_did_not_falsify")
+    if proof.get("passed") is not True:
+        blockers.append("bit_flip_falsification_proof_not_passed")
+
+    tolerance = _float_or_none(proof.get("tolerance"))
+    negative_control_error = _float_or_none(
+        proof.get("negative_control_max_abs_error")
+    )
+    if tolerance is None or tolerance < 0.0:
+        blockers.append("bit_flip_falsification_tolerance_missing")
+        tolerance_bound = 0.0
+    else:
+        tolerance_bound = max(0.0, tolerance)
+    if negative_control_error is None:
+        blockers.append("bit_flip_falsification_error_missing")
+    elif negative_control_error <= tolerance_bound:
+        blockers.append("bit_flip_falsification_error_not_above_tolerance")
+
+    official_hash = proof.get("baseline_official_output_sha256")
+    portable_hash = proof.get("baseline_portable_output_sha256")
+    perturbed_hash = proof.get("perturbed_portable_output_sha256")
+    for field, value in (
+        ("baseline_official_output_sha256", official_hash),
+        ("baseline_portable_output_sha256", portable_hash),
+        ("perturbed_portable_output_sha256", perturbed_hash),
+    ):
+        if not _is_sha256_hex(value):
+            blockers.append(f"bit_flip_falsification_{field}_missing")
+    if (
+        _is_sha256_hex(official_hash)
+        and _is_sha256_hex(row.get("official_output_sha256"))
+        and official_hash != row.get("official_output_sha256")
+    ):
+        blockers.append("bit_flip_falsification_official_hash_mismatch")
+    if (
+        _is_sha256_hex(portable_hash)
+        and _is_sha256_hex(row.get("portable_output_sha256"))
+        and portable_hash != row.get("portable_output_sha256")
+    ):
+        blockers.append("bit_flip_falsification_portable_hash_mismatch")
+    if (
+        _is_sha256_hex(official_hash)
+        and _is_sha256_hex(portable_hash)
+        and official_hash != portable_hash
+    ):
+        blockers.append("bit_flip_falsification_baseline_hash_mismatch")
+    if (
+        _is_sha256_hex(official_hash)
+        and _is_sha256_hex(perturbed_hash)
+        and official_hash == perturbed_hash
+    ):
+        blockers.append("bit_flip_falsification_hash_not_distinguished")
+    if proof.get("negative_control_output_hashes_bit_identical") is not False:
+        blockers.append("bit_flip_falsification_hash_not_distinguished")
     return blockers
 
 
@@ -1226,6 +1300,7 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
 
 __all__ = [
     "AUTHORITY",
+    "BIT_FLIP_FALSIFICATION_SCHEMA",
     "FALSE_AUTHORITY",
     "FORWARD_PARITY_ARTIFACT_SCHEMA",
     "OFFICIAL_MARKER_GROUPS",
