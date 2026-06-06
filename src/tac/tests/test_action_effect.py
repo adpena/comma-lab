@@ -1201,3 +1201,78 @@ def test_validate_action_effect_rows_cli_rejects_bad_ledger(tmp_path: Path) -> N
         str(item).startswith("action_effect_forbidden_score_authority")
         for item in summary["rows"][0]["blockers"]
     )
+
+
+def test_hinerv_scorer_bootstrap_converter_records_real_blockers(tmp_path: Path) -> None:
+    artifact = tmp_path / "training_artifact.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "archive_sha256": "e" * 64,
+                "substrate_artifact_metadata": {
+                    "substrate_supplied_score_aware_training": {
+                        "scorer_domain_bootstrap": {
+                            "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+                            "authority": "macos_mlx_research_signal_false_authority",
+                            "accepted_step_count": 2,
+                            "archive_charged_decoder_tensors": [
+                                "latents_fine",
+                                "feature_grids.*",
+                                "head_rgb_1.*",
+                            ],
+                            "metrics_before": {
+                                "segnet_margin_bootstrap_argmax_disagreement": 0.50,
+                                "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass": 50.0,
+                                "segnet_margin_bootstrap_worst_class_index": 4.0,
+                            },
+                            "metrics_after": {
+                                "segnet_margin_bootstrap_argmax_disagreement": 0.49,
+                                "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass": 49.0,
+                                "segnet_margin_bootstrap_worst_class_index": 4.0,
+                            },
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    ledger = tmp_path / "action_effect_rows.jsonl"
+    repo_root = Path(__file__).resolve().parents[3]
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "convert_hinerv_scorer_bootstrap_to_action_effect.py"),
+            "--training-artifact",
+            str(artifact),
+            "--output-jsonl",
+            str(ledger),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["schema"] == "tac.hinerv_scorer_bootstrap_action_effect_conversion.v1"
+    assert summary["authority"] == "batch_local_live_mlx"
+    assert "hinerv_scorer_bootstrap_pose_endpoint_missing" in summary["blockers"]
+    assert "hinerv_scorer_bootstrap_exact_nonrate_delta_missing" in summary["blockers"]
+
+    rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["schema"] == ACTION_EFFECT_V1_SCHEMA
+    assert row["promotion_eligible"] is False
+    assert row["old_d_seg"] == pytest.approx(0.50)
+    assert row["new_d_seg"] == pytest.approx(0.49)
+    assert row["delta_score_nonrate"] is None
+    assert row["seg_score_delta"] == pytest.approx(-1.0)
+    assert row["payload_sections"] == ["latents_fine", "feature_grids.*", "head_rgb_1.*"]
+    assert row["region_ids"] == ["class:4"]
+    assert validate_action_effect_payload(row)["passed"] is True
+    for forbidden in ("score_claim", "score_claim_valid", "official_score"):
+        assert forbidden not in row
