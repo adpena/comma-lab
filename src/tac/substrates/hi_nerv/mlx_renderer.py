@@ -2943,6 +2943,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pair_indices: Any,
         target_segnet_argmax_1: Any | None = None,
         pose_teacher: Any | None = None,
+        require_pose_trust: bool = False,
         max_steps: int = 64,
         learning_rate: float = 5.0e-4,
         target_min_region_ratio: float = 0.02,
@@ -2978,6 +2979,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         from tac.substrates.hi_nerv.target_region_birth import (
             allowed_birth_update_name,
             build_target_region_birth_receipt,
+            region_argmax_transition_counts,
             region_margin_stats,
             select_worst_target_region_with_mask,
         )
@@ -3074,6 +3076,51 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             else None
         )
         pose_available = callable(pose_fn)
+        # Official PoseNet preprocess interpolates each frame to (384, 512)
+        # BEFORE rgb_to_yuv6; this actuator applies no resize, so the
+        # concat-YUV6-pair surface is contest-faithful only when frames are
+        # already at contest size (then upstream's interpolate is a no-op,
+        # mirroring build_mlx_posenet_pair_teacher's hard requirement).
+        pose_input_contest_resolution = (
+            int(target1.shape[1]),
+            int(target1.shape[2]),
+        ) == (384, 512)
+        if (
+            require_pose_trust
+            and pose_available
+            and not pose_input_contest_resolution
+        ):
+            return {
+                "schema": "hi_nerv_target_region_birth.v1",
+                "enabled": True,
+                "accepted": False,
+                "reason": "pose_trust_requires_contest_resolution_frames",
+                "pose_input_height": int(target1.shape[1]),
+                "pose_input_width": int(target1.shape[2]),
+                "accepted_step_count": 0,
+                "rejected_step_count": 0,
+                "blockers": [
+                    "hinerv_target_region_birth_pose_surface_non_contest_resolution"
+                ],
+                "runtime_sidecar_bytes": 0,
+                "human_visual_fidelity_objective": False,
+            }
+        if require_pose_trust and not pose_available:
+            # L3+ stages must not admit pose-blind updates. Fail closed before
+            # any work: no steps, no state movement, loud blocker.
+            return {
+                "schema": "hi_nerv_target_region_birth.v1",
+                "enabled": True,
+                "accepted": False,
+                "reason": "pose_trust_required_but_teacher_missing",
+                "accepted_step_count": 0,
+                "rejected_step_count": 0,
+                "blockers": [
+                    "hinerv_target_region_birth_pose_trust_required_but_teacher_missing"
+                ],
+                "runtime_sidecar_bytes": 0,
+                "human_visual_fidelity_objective": False,
+            }
 
         def _predict_pair01(model_obj: Any) -> tuple[Any, Any]:
             pair01 = model_obj(idx) / 255.0
@@ -3150,6 +3197,44 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         initial_uint8 = _receiver_uint8_int(base_pred1)
         initial_pose = _pose_output_np(base_pred0, base_pred1)
         region_bool_np = region_mask_np > 0.0
+        target_pose_np: np.ndarray | None = None
+        if pose_available:
+            pose_target_fn = getattr(pose_teacher, "teacher_pose_for_indices", None)
+            if callable(pose_target_fn):
+                target_pose = pose_target_fn(
+                    mx.arange(int(target1.shape[0]), dtype=mx.int32)  # type: ignore[union-attr]
+                )
+            else:
+                # Target pose through the SAME live surface, from the actual
+                # target frames — keeps candidate/target pose comparable.
+                target_pose = pose_fn(
+                    mx.concatenate(  # type: ignore[union-attr]
+                        [
+                            rgb_to_yuv6_mlx(target0 * 255.0),
+                            rgb_to_yuv6_mlx(target1 * 255.0),
+                        ],
+                        axis=-1,
+                    )
+                )
+            mx.eval(target_pose)  # type: ignore[union-attr]
+            target_pose_np = np.asarray(target_pose, dtype=np.float32)
+
+        def _d_seg_batch(argmax_np: np.ndarray) -> float:
+            return float(np.mean(argmax_np != labels_np))
+
+        def _d_pose_batch(pose: np.ndarray | None) -> float | None:
+            if pose is None or target_pose_np is None:
+                return None
+            return float(np.mean((pose - target_pose_np) ** 2))
+
+        def _nonrate_score(d_seg: float, d_pose: float | None) -> float | None:
+            if d_pose is None:
+                return None
+            return 100.0 * d_seg + math.sqrt(10.0 * d_pose)
+
+        initial_d_seg = _d_seg_batch(initial_argmax_np)
+        initial_d_pose = _d_pose_batch(initial_pose)
+        initial_nonrate = _nonrate_score(initial_d_seg, initial_d_pose)
 
         def _impostor_logit(logits: Any) -> Any:
             if class_count == 1:
@@ -3318,11 +3403,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             pose = _pose_output_np(pred0, pred1)
             float_delta = mx.max(mx.abs(pred1 - base_pred1))  # type: ignore[union-attr]
             mx.eval(float_delta)  # type: ignore[union-attr]
+            argmax_np = np.argmax(logits_np, axis=-1)
             return {
                 "stats": stats,
                 "uint8": uint8,
                 "pose": pose,
                 "logits_np": logits_np,
+                "argmax_np": argmax_np,
+                "d_seg_batch": _d_seg_batch(argmax_np),
+                "d_pose_batch": _d_pose_batch(pose),
                 "float_rgb_delta_linf": float(float_delta.item()),
             }
 
@@ -3346,7 +3435,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         rejected_step_count = 0
         subquantum_rejected_step_count = 0
         pose_guard_rejected_step_count = 0
+        joint_score_rejected_step_count = 0
         no_progress_rejected_step_count = 0
+        best_nonrate = initial_nonrate
         receiver_quantum_growth_attempt_count = 0
         backtracking_attempt_count = 0
         loss_history: list[float] = []
@@ -3423,6 +3514,28 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     pose_guard_rejected_step_count += 1
                     rejected_step_count += 1
                     break
+                candidate_nonrate = _nonrate_score(
+                    candidate["d_seg_batch"],
+                    candidate["d_pose_batch"],
+                )
+                if (
+                    candidate_nonrate is not None
+                    and best_nonrate is not None
+                    and candidate_nonrate >= best_nonrate
+                ):
+                    # Exact nonlinear joint admission (batch-local authority):
+                    # a Seg win whose sqrt(10*d_pose) cost erases it is a net
+                    # score regression and must not be admitted, even when the
+                    # raw pose-output cap was satisfied.
+                    pose_violation_seen = True
+                    _restore_parameters(base_snapshot)
+                    if attempt_lr * 0.5 >= min_lr:
+                        backtracking_attempt_count += 1
+                        attempt_lr *= 0.5
+                        continue
+                    joint_score_rejected_step_count += 1
+                    rejected_step_count += 1
+                    break
                 stats = candidate["stats"]
                 ratio_progress = (
                     stats["region_hard_won_pixels"]
@@ -3450,6 +3563,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 last_grad_norm_by_group = grad_norms
                 last_update_norm_by_group = update_norms
                 best_stats = dict(stats)
+                if candidate_nonrate is not None:
+                    best_nonrate = candidate_nonrate
                 if pose_delta is not None:
                     max_accepted_pose_delta_l2 = max(
                         max_accepted_pose_delta_l2,
@@ -3485,12 +3600,44 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             blockers.append("hinerv_target_region_birth_out_of_scope_state_mutated")
         final = _region_candidate_state()
         after_stats = final["stats"]
-        final_argmax_np = np.argmax(final["logits_np"], axis=-1)
+        final_argmax_np = final["argmax_np"]
         argmax_flipped_region = int(
             np.count_nonzero(
                 (final_argmax_np != initial_argmax_np) & region_bool_np
             )
         )
+        argmax_transitions = region_argmax_transition_counts(
+            initial_argmax_np,
+            final_argmax_np,
+            region_bool_np,
+            birth_class,
+        )
+        final_nonrate = _nonrate_score(final["d_seg_batch"], final["d_pose_batch"])
+        exact_nonrate_payload: dict[str, Any] = {
+            "authority": "batch_local_live_mlx",
+            "old_d_seg_batch": float(initial_d_seg),
+            "new_d_seg_batch": float(final["d_seg_batch"]),
+            "old_d_pose_batch": (
+                None if initial_d_pose is None else float(initial_d_pose)
+            ),
+            "new_d_pose_batch": (
+                None
+                if final["d_pose_batch"] is None
+                else float(final["d_pose_batch"])
+            ),
+            "old_nonrate_score": (
+                None if initial_nonrate is None else float(initial_nonrate)
+            ),
+            "new_nonrate_score": (
+                None if final_nonrate is None else float(final_nonrate)
+            ),
+            "delta_score_nonrate": (
+                None
+                if initial_nonrate is None or final_nonrate is None
+                else float(final_nonrate - initial_nonrate)
+            ),
+            "pose_term_available": bool(target_pose_np is not None),
+        }
         uint8_changed_total = _uint8_changed_in_region(initial_uint8, final["uint8"])
         uint8_delta_abs_max = float(
             np.abs(final["uint8"].astype(np.int32) - initial_uint8.astype(np.int32))[
@@ -3509,6 +3656,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             )
         pose_guard_payload: dict[str, Any] = {
             "available": bool(pose_available),
+            "input_convention": "concat_yuv6_pair_nhwc255_frame0_then_frame1",
+            "pose_input_height": int(target1.shape[1]),
+            "pose_input_width": int(target1.shape[2]),
+            "pose_input_contest_resolution": bool(pose_input_contest_resolution),
             "max_pose_output_delta_l2": float(max_pose_output_delta_l2),
             "max_accepted_pose_output_delta_l2": float(max_accepted_pose_delta_l2),
             "final_pose_output_delta_l2": (
@@ -3532,6 +3683,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             updated_parameter_names=sorted(accepted_update_names),
             pose_guard=pose_guard_payload,
             runtime_sidecar_bytes=0,
+            argmax_transitions=argmax_transitions,
+            exact_nonrate=exact_nonrate_payload,
         )
         return {
             "schema": "hi_nerv_target_region_birth.v1",
@@ -3551,7 +3704,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "rejected_step_count": int(rejected_step_count),
             "subquantum_rejected_step_count": int(subquantum_rejected_step_count),
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
+            "joint_score_rejected_step_count": int(joint_score_rejected_step_count),
             "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
+            "argmax_transitions": argmax_transitions,
+            "exact_nonrate": exact_nonrate_payload,
             "receiver_quantum_growth_attempt_count": int(
                 receiver_quantum_growth_attempt_count
             ),

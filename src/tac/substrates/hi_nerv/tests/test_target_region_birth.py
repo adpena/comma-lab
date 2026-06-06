@@ -24,10 +24,32 @@ from tac.substrates.hi_nerv.target_region_birth import (
     allowed_birth_update_name,
     build_target_region_birth_receipt,
     find_target_region_debts,
+    region_argmax_transition_counts,
     region_margin_stats,
     select_worst_target_region,
     select_worst_target_region_with_mask,
 )
+
+
+def test_region_argmax_transition_counts_disambiguate_churn_from_birth() -> None:
+    region = np.ones((1, 2, 3), dtype=np.float32)
+    before = np.array([[[0, 1, 2], [0, 0, 1]]], dtype=np.int64)
+    after = np.array([[[1, 0, 2], [2, 0, 1]]], dtype=np.int64)
+    # target class = 1: (0,0) wrong->target; (0,1) target->wrong;
+    # (1,0) wrong->wrong churn; (0,2)/(1,1)/(1,2) unchanged.
+    counts = region_argmax_transition_counts(before, after, region, 1)
+    assert counts["argmax_changed_count_region"] == 3
+    assert counts["wrong_to_target_count"] == 1
+    assert counts["target_to_wrong_count"] == 1
+    assert counts["wrong_to_wrong_count"] == 1
+    assert counts["target_hard_won_count"] == 1
+    assert counts["target_hard_lost_count"] == 1
+    assert counts["net_target_support_delta"] == 0
+    # Churn-only motion must NOT read as birth: 3 flips, zero net support.
+    masked = region_argmax_transition_counts(
+        before, after, np.zeros_like(region), 1
+    )
+    assert masked["argmax_changed_count_region"] == 0
 
 skip_no_mlx = pytest.mark.skipif(
     importlib.util.find_spec("mlx") is None,
@@ -421,6 +443,18 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
         "hinerv_target_region_birth_pose_trust_telemetry_missing"
         in payload["blockers"]
     )
+    # Transition disambiguation: the accepted birth must show net target
+    # support, and total churn must bound the won count from above.
+    transitions = payload["argmax_transitions"]
+    assert transitions["target_hard_won_count"] > 0
+    assert transitions["net_target_support_delta"] > 0
+    assert (
+        transitions["argmax_changed_count_region"]
+        >= transitions["target_hard_won_count"]
+    )
+    # No pose teacher -> exact joint term explicitly unavailable, not faked.
+    assert payload["exact_nonrate"]["pose_term_available"] is False
+    assert payload["exact_nonrate"]["delta_score_nonrate"] is None
     # Frozen-tensor proof: nothing outside the birth scope moved a single bit.
     frozen_after = _frozen_tensor_snapshot(model, np)
     assert frozen_after.keys() == frozen_before.keys()
@@ -592,6 +626,94 @@ def test_target_region_birth_pose_guard_blocks_visible_pose_harm() -> None:
         not in payload["blockers"]
     )
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
+
+
+@skip_no_mlx
+def test_require_pose_trust_fails_closed_without_teacher() -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    before = {
+        str(raw): np.array(leaf, copy=True)
+        for raw, leaf in tree_flatten(model.parameters())
+        if leaf is not None
+    }
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        require_pose_trust=True,
+        max_steps=4,
+    )
+    assert payload["accepted"] is False
+    assert payload["reason"] == "pose_trust_required_but_teacher_missing"
+    assert (
+        "hinerv_target_region_birth_pose_trust_required_but_teacher_missing"
+        in payload["blockers"]
+    )
+    assert payload["accepted_step_count"] == 0
+    after = {
+        str(raw): np.array(leaf, copy=True)
+        for raw, leaf in tree_flatten(model.parameters())
+        if leaf is not None
+    }
+    for name, value in before.items():
+        assert np.array_equal(value, after[name]), name
+
+
+@skip_no_mlx
+def test_accepted_birth_with_pose_teacher_requires_joint_score_improvement() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        pose_teacher=_MeanTrackingPoseTeacher(mx),
+        # Raw cap deliberately huge: only the EXACT joint score may arbitrate.
+        max_pose_output_delta_l2=1.0e9,
+        max_steps=12,
+        learning_rate=2.0e-3,
+    )
+    nonrate = payload["exact_nonrate"]
+    assert nonrate["pose_term_available"] is True
+    assert nonrate["old_nonrate_score"] is not None
+    # The binding invariant: ACCEPTED implies the exact nonlinear joint score
+    # (100*d_seg + sqrt(10*d_pose), batch-local) improved; otherwise every
+    # candidate must have been rejected through the joint gate.
+    if payload["accepted"]:
+        assert nonrate["delta_score_nonrate"] is not None
+        assert nonrate["delta_score_nonrate"] < 0.0
+    else:
+        assert (
+            payload["joint_score_rejected_step_count"] >= 1
+            or payload["subquantum_rejected_step_count"] >= 1
+        )
+    assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in (
+        payload["blockers"]
+    )
 
 
 @skip_no_mlx

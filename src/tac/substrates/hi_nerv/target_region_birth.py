@@ -297,6 +297,50 @@ def region_margin_stats(
     }
 
 
+def region_argmax_transition_counts(
+    initial_argmax: np.ndarray,
+    final_argmax: np.ndarray,
+    region_mask_bhw: np.ndarray,
+    class_index: int,
+) -> dict[str, int]:
+    """Disambiguate receiver argmax motion from target-class birth.
+
+    ``argmax_changed_count_region`` is receiver-motion telemetry only: it
+    counts churn of ANY class. Birth admission must use the target-class
+    transitions — ``wrong_to_target`` (hard won), ``target_to_wrong`` (hard
+    lost), and their difference ``net_target_support_delta``. A region can
+    post tens of thousands of flips while the net target support is zero or
+    negative; conflating the two overclaims birth.
+    """
+
+    before = np.asarray(initial_argmax)
+    after = np.asarray(final_argmax)
+    region = np.asarray(region_mask_bhw) > 0.0
+    if before.shape != after.shape or before.shape != region.shape:
+        raise ValueError(
+            "argmax/region shapes must match; got "
+            f"before={before.shape} after={after.shape} region={region.shape}"
+        )
+    cls = int(class_index)
+    before_target = before == cls
+    after_target = after == cls
+    changed = before != after
+    wrong_to_target = int(np.count_nonzero(region & ~before_target & after_target))
+    target_to_wrong = int(np.count_nonzero(region & before_target & ~after_target))
+    wrong_to_wrong = int(
+        np.count_nonzero(region & changed & ~before_target & ~after_target)
+    )
+    return {
+        "argmax_changed_count_region": int(np.count_nonzero(region & changed)),
+        "wrong_to_target_count": wrong_to_target,
+        "target_to_wrong_count": target_to_wrong,
+        "wrong_to_wrong_count": wrong_to_wrong,
+        "target_hard_won_count": wrong_to_target,
+        "target_hard_lost_count": target_to_wrong,
+        "net_target_support_delta": wrong_to_target - target_to_wrong,
+    }
+
+
 def build_target_region_birth_receipt(
     *,
     debt: TargetRegionDebt,
@@ -314,6 +358,8 @@ def build_target_region_birth_receipt(
     updated_parameter_names: Sequence[str],
     pose_guard: Mapping[str, Any],
     runtime_sidecar_bytes: int = 0,
+    argmax_transitions: Mapping[str, int] | None = None,
+    exact_nonrate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the actuation receipt with crux-trace-compatible keys.
 
@@ -333,6 +379,11 @@ def build_target_region_birth_receipt(
         raise ValueError(
             f"updated parameter names escape the birth scope: {sorted(disallowed)}"
         )
+    transition_counts = (
+        {str(k): int(v) for k, v in argmax_transitions.items()}
+        if argmax_transitions is not None
+        else {}
+    )
     receipt: dict[str, Any] = {
         "schema": TARGET_REGION_BIRTH_RECEIPT_SCHEMA,
         "actuator_id": "hinerv_target_region_birth",
@@ -366,6 +417,13 @@ def build_target_region_birth_receipt(
             ALLOWED_BIRTH_UPDATE_EXACT + ALLOWED_BIRTH_UPDATE_PREFIXES
         ),
         "pose_guard": dict(pose_guard),
+        # Receiver-motion vs target-birth disambiguation: the flips alias
+        # above is churn telemetry; admission semantics live in transitions.
+        "argmax_transitions": transition_counts or None,
+        **transition_counts,
+        # Exact nonlinear joint movement (batch-local authority) when a pose
+        # teacher was available: 100*Δd_seg + (sqrt(10*d_pose') - sqrt(10*d_pose)).
+        "exact_nonrate": dict(exact_nonrate) if exact_nonrate is not None else None,
         "runtime_sidecar_bytes": int(runtime_sidecar_bytes),
         "human_visual_fidelity_objective": False,
         # Authority marker WITHOUT the canonical authority/readiness keys:

@@ -2660,6 +2660,42 @@ runtime-tree custody. This tool is the bridge from Python deconstruction to
 Rust/Zig/C/ASM ports: Python remains the oracle until native implementations
 pass the same vectors byte-for-byte.
 
+## Native eval-time runtime discipline — NON-NEGOTIABLE
+
+**Source:** operator approval 2026-06-06 verbatim *"claude.md rule approved;"*
+on the drafted amendment in
+`.omx/research/validation_native_runtime_proposal_20260606.md` (operator
+override path; T3 quorum bypassed per Mission-alignment consequence 1, signal
+preserved via this provenance line). Delta over the sister "Deterministic
+packet compiler" section above: the allowance test + the named audit bundle.
+
+Native eval-time code (Rust/Zig/C/ASM in `runtime-rs/`, `cuda/`, `mojo/`) is
+ALLOWED when it expands the legal witness-program class (richer action/selector
+/mask/pose grammars decodable inside the upstream 30-minute budget,
+`upstream/README.md:114`) or hardens deterministic replay (CPU-stable integer
+kernels for round/clamp/resize/YUV-basis paths). It is FORBIDDEN as a carrier
+for any learned or video-derived constant — weights, codebooks, masks,
+trajectories, LUTs, action tables — outside `archive.zip`
+(`upstream/README.md:118`: large artifacts count toward compressed size).
+
+Every native runtime MUST ship with:
+
+1. a Python reference oracle (per the packet-compiler section above; per-
+   function promotion = flip its parity test to `assert_sha256_parity`, the
+   `runtime-rs/crates/tac-packet-compiler` gate);
+2. the payload-cleanliness audit bundle: `binary_source_audit.md`,
+   `embedded_constants_audit.txt`, `archive_payload_manifest.json`,
+   `rebuild_instructions.md`, `python_reference_equivalence_test.py`;
+3. a bit-identical or scorer-identical equivalence test against the same
+   archive bytes on the target authority (CPU and CUDA evaluated separately
+   per the apples-to-apples discipline).
+
+Sequencing is grammar-first: design the score-program grammar in Python
+(ActionEffect IR lineage), profile inflate wall-clock, and promote only proven
+hot paths to native. The brain stays offline (oracle cache, action atlas,
+program search, entropy compiler, parse-back replay); the native decoder is
+the body — small, fast, deterministic, payload-clean.
+
 ## Deployment version checklist — non-negotiable
 
 Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:
