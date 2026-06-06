@@ -16166,32 +16166,59 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "dispatch_attempted": False,
         }
         if float(pose_direct_live_distillation_weight) > 0.0:
-            bootstrap_pose_scorer_teacher = build_mlx_posenet_pair_teacher(
-                SimpleNamespace(
-                    target_rgb_0=target_rgb_0[:bootstrap_count],
-                    target_rgb_1=target_rgb_1[:bootstrap_count],
-                ),
-                upstream_dir=scorer_upstream_dir,
-                device=resolved_distillation_device,
-            )
-            bootstrap_pose_teacher_metadata = {
-                "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
-                "enabled": True,
-                "source": "real_mlx_posenet_teacher_cache",
-                "pair_count": int(bootstrap_count),
-                "pair_index_semantics": bootstrap_pair_index_semantics,
-                "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
-                "pose_dims": int(getattr(bootstrap_pose_scorer_teacher, "pose_dims", 0)),
-                "upstream_posenet_safetensors_sha256": getattr(
-                    bootstrap_pose_scorer_teacher,
-                    "upstream_posenet_safetensors_sha256",
-                    None,
-                ),
-                "runtime_sidecar_bytes": 0,
-                "archive_charged_decoder_tensors": [],
-                "authority": "macos_mlx_research_signal_false_authority",
-                "dispatch_attempted": False,
-            }
+            # Build the REAL PoseNet pair teacher LOCALLY at the birth callsite
+            # so fit_target_region_birth_from_segnet can emit a populated
+            # pose_guard (pose_available True) and the exact_nonrate term. The
+            # bundle requires contest (384, 512) targets; bootstrap targets ARE
+            # contest-size in the real smoke. Any failure (resolution mismatch,
+            # missing upstream weights, device fault) must NOT crash the runner:
+            # fall back to pose_teacher=None and record the reason so the v5
+            # receipt's pose_guard.available=False is explained, not silent.
+            try:
+                bootstrap_pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+                    SimpleNamespace(
+                        target_rgb_0=target_rgb_0[:bootstrap_count],
+                        target_rgb_1=target_rgb_1[:bootstrap_count],
+                        pose_dims=6,
+                    ),
+                    upstream_dir=scorer_upstream_dir,
+                    device=resolved_distillation_device,
+                )
+            except Exception as pose_teacher_exc:  # never crash runner on teacher build
+                bootstrap_pose_scorer_teacher = None
+                bootstrap_pose_teacher_metadata = {
+                    "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
+                    "enabled": False,
+                    "reason": "posenet_pair_teacher_build_failed",
+                    "blockers": [
+                        f"hi_nerv_bootstrap_posenet_pair_teacher_build_failed:{pose_teacher_exc}"
+                    ],
+                    "pair_count": int(bootstrap_count),
+                    "pair_index_semantics": bootstrap_pair_index_semantics,
+                    "runtime_sidecar_bytes": 0,
+                    "archive_charged_decoder_tensors": [],
+                    "authority": "macos_mlx_research_signal_false_authority",
+                    "dispatch_attempted": False,
+                }
+            else:
+                bootstrap_pose_teacher_metadata = {
+                    "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
+                    "enabled": True,
+                    "source": "real_mlx_posenet_teacher_cache",
+                    "pair_count": int(bootstrap_count),
+                    "pair_index_semantics": bootstrap_pair_index_semantics,
+                    "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
+                    "pose_dims": int(getattr(bootstrap_pose_scorer_teacher, "pose_dims", 0)),
+                    "upstream_posenet_safetensors_sha256": getattr(
+                        bootstrap_pose_scorer_teacher,
+                        "upstream_posenet_safetensors_sha256",
+                        None,
+                    ),
+                    "runtime_sidecar_bytes": 0,
+                    "archive_charged_decoder_tensors": [],
+                    "authority": "macos_mlx_research_signal_false_authority",
+                    "dispatch_attempted": False,
+                }
         requested_segnet_margin_bootstrap_weight = float(scorer_domain_bootstrap_segnet_margin_weight)
         requested_segnet_hard_birth_bootstrap_weight = float(scorer_domain_bootstrap_segnet_hard_birth_weight)
         if (
