@@ -24,6 +24,7 @@ def build_array_bit_flip_falsification(
     output_name: str = "output",
     false_authority: Mapping[str, bool] | None = None,
 ) -> dict[str, Any]:
+    tolerance_value = _nonnegative_tolerance_or_none(tolerance)
     official = np.ascontiguousarray(np.asarray(official_output, dtype="<f8"))
     portable = np.ascontiguousarray(np.asarray(portable_output, dtype="<f8"))
     perturbed, byte_offset, bit_mask = _single_bit_flip_perturbation(
@@ -39,7 +40,8 @@ def build_array_bit_flip_falsification(
         byte_offset is not None
         and bit_mask is not None
         and negative_control_max_abs_error is not None
-        and negative_control_max_abs_error > max(0.0, float(tolerance))
+        and tolerance_value is not None
+        and negative_control_max_abs_error > tolerance_value
         and official_hash == portable_hash
         and perturbed_hash != official_hash
     )
@@ -50,7 +52,7 @@ def build_array_bit_flip_falsification(
         "output_name": output_name,
         "bit_flip_byte_offset": byte_offset,
         "bit_flip_mask": bit_mask,
-        "tolerance": float(tolerance),
+        "tolerance": tolerance_value,
         "baseline_official_output_sha256": official_hash,
         "baseline_portable_output_sha256": portable_hash,
         "perturbed_portable_output_sha256": perturbed_hash,
@@ -71,6 +73,7 @@ def build_named_arrays_bit_flip_falsification(
     tolerance: float,
     false_authority: Mapping[str, bool] | None = None,
 ) -> dict[str, Any]:
+    tolerance_value = _nonnegative_tolerance_or_none(tolerance)
     official_hash = _hash_named_arrays(official_outputs)
     portable_hash = _hash_named_arrays(portable_outputs)
     names = sorted(set(official_outputs) & set(portable_outputs))
@@ -95,7 +98,7 @@ def build_named_arrays_bit_flip_falsification(
             "output_name": None,
             "bit_flip_byte_offset": None,
             "bit_flip_mask": None,
-            "tolerance": float(tolerance),
+            "tolerance": tolerance_value,
             "baseline_official_output_sha256": official_hash,
             "baseline_portable_output_sha256": portable_hash,
             "perturbed_portable_output_sha256": portable_hash,
@@ -121,6 +124,7 @@ def build_named_arrays_bit_flip_falsification(
     negative_control_hashes_bit_identical = perturbed_named_hash == official_hash
     passed = bool(
         proof.get("passed") is True
+        and tolerance_value is not None
         and official_hash == portable_hash
         and not negative_control_hashes_bit_identical
     )
@@ -144,7 +148,10 @@ def _single_bit_flip_perturbation(
     tolerance: float,
 ) -> tuple[np.ndarray, int | None, int | None]:
     candidate = np.ascontiguousarray(np.asarray(array, dtype="<f8")).copy()
+    tolerance_bound = _tolerance_bound(tolerance)
     if candidate.size == 0:
+        return candidate, None, None
+    if not np.isfinite(tolerance_bound):
         return candidate, None, None
     reference_array = np.ascontiguousarray(np.asarray(reference, dtype="<f8"))
     raw = candidate.view(np.uint8).reshape(-1)
@@ -155,12 +162,25 @@ def _single_bit_flip_perturbation(
             max_abs_error = _max_abs_error_or_none(reference_array, candidate)
             if (
                 max_abs_error is not None
-                and max_abs_error > max(0.0, float(tolerance))
+                and max_abs_error > tolerance_bound
                 and _hash_array(reference_array) != _hash_array(candidate)
             ):
                 return candidate.copy(), byte_offset, bit_mask
             raw[byte_offset] = original
     return candidate, None, None
+
+
+def _nonnegative_tolerance_or_none(value: float) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if np.isfinite(out) and out >= 0.0 else None
+
+
+def _tolerance_bound(value: float) -> float:
+    tolerance = _nonnegative_tolerance_or_none(value)
+    return float("inf") if tolerance is None else tolerance
 
 
 def _max_abs_error_or_none(left: np.ndarray, right: np.ndarray) -> float | None:
