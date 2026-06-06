@@ -6079,6 +6079,128 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_official_long_training_metadata_checkpoint_does_not_clear_source_forward(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    state_path = tmp_path / "official_state_dict_slice.npz"
+    np.savez(state_path, **_minimal_full_official_decoder_state())
+    manifest = mod._official_trained_checkpoint_mapping_manifest_from_inputs(
+        state_dict=None,
+        state_dict_path=state_path,
+        decoder_len=None,
+        state_dict_kind="unit_test_npz_official_checkpoint",
+    )
+    captured_kwargs: list[dict[str, object]] = []
+
+    def fake_replay(**kwargs: object) -> dict[str, object]:
+        captured_kwargs.append(dict(kwargs))
+        return _fake_tub_fixture_replay_passed()
+
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        fake_replay,
+    )
+
+    replay = mod._build_official_mfu_hfr_tub_long_training_replay_contract(
+        output_dir=tmp_path / "metadata_only_replay",
+        pairs_nchw255=_tiny_pairs(pairs=1),
+        model_size=SnervModelSizeConfig(
+            adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        ),
+        source_pair_indices=(0,),
+        official_trained_checkpoint_mapping_manifest=manifest,
+        allow_overwrite=True,
+    )
+
+    assert captured_kwargs == [{}]
+    assert replay["official_trained_checkpoint_loaded"] is True
+    assert replay["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert replay["official_trained_checkpoint_source_forward_replay_verified"] is False
+    assert replay["source_forward_replay_verified"] is False
+    assert replay["source_forward_replay_bound"] is False
+    assert replay["source_forward_replay_authority"] is False
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in replay[
+        "blockers"
+    ]
+
+
+def test_official_long_training_consumes_checkpoint_loaded_tub_replay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    state_path = tmp_path / "official_state_dict_slice.npz"
+    np.savez(state_path, **_minimal_full_official_decoder_state())
+    manifest = mod._official_trained_checkpoint_mapping_manifest_from_inputs(
+        state_dict=None,
+        state_dict_path=state_path,
+        decoder_len=None,
+        state_dict_kind="unit_test_npz_official_checkpoint",
+    )
+    captured_kwargs: list[dict[str, object]] = []
+
+    def fake_replay(**kwargs: object) -> dict[str, object]:
+        captured_kwargs.append(dict(kwargs))
+        return {
+            **_fake_tub_fixture_replay_passed(),
+            "official_trained_checkpoint_loaded": True,
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_trained_checkpoint_load": {
+                "requested": True,
+                "loaded": True,
+                "blockers": [],
+                "state_dict_source": state_path.as_posix(),
+            },
+            "source_forward_parity_proven": True,
+            "full_tub_source_forward_parity_proven": True,
+            "source_forward_replay_authority": True,
+            "preserved_blockers": [],
+            "blockers": [],
+        }
+
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        fake_replay,
+    )
+
+    replay = mod._build_official_mfu_hfr_tub_long_training_replay_contract(
+        output_dir=tmp_path / "loaded_replay",
+        pairs_nchw255=_tiny_pairs(pairs=1),
+        model_size=SnervModelSizeConfig(
+            adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        ),
+        source_pair_indices=(0,),
+        official_trained_checkpoint_mapping_manifest=manifest,
+        official_trained_checkpoint_state_dict_path=state_path,
+        allow_overwrite=True,
+    )
+
+    assert captured_kwargs == [
+        {
+            "official_trained_checkpoint_state_dict_path": state_path,
+            "official_trained_checkpoint_state_dict_kind": (
+                "official_trained_checkpoint_state_dict"
+            ),
+        }
+    ]
+    assert replay["official_trained_checkpoint_loaded"] is True
+    assert replay["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert replay["official_trained_checkpoint_source_forward_replay_verified"] is True
+    assert replay["official_torch_source_forward_replay_passed"] is True
+    assert replay["source_forward_replay_verified"] is True
+    assert replay["source_forward_replay_bound"] is True
+    assert replay["source_forward_replay_authority"] is True
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" not in replay[
+        "blockers"
+    ]
+
+
 def test_official_primitives_long_training_consumes_checkpoint_mapping(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
