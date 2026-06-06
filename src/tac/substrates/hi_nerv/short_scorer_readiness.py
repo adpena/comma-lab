@@ -24,6 +24,9 @@ HI_NERV_SHORT_SCORER_SMOKE_AUTHORITY = (
 )
 HI_NERV_SHORT_SCORER_SMOKE_AXIS_TAG = "[macOS-MLX research-signal]"
 HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON = 1.0e-6
+HI_NERV_CONTEST_ORIGINAL_VIDEO_BYTES = 37_545_489
+HI_NERV_CONTEST_RATE_SCORE_PER_BYTE = 25.0 / HI_NERV_CONTEST_ORIGINAL_VIDEO_BYTES
+HI_NERV_CONTEST_SEGNET_PIXEL_SCORE_WEIGHT = 100.0
 _SEGNET_DIRECT_LIVE_SUBCONTROL_DUAL_KEYS = {
     "segnet_direct_live_class_histogram_weight": (
         "hi_nerv_segnet_direct_live_class_histogram"
@@ -683,6 +686,12 @@ def build_hinerv_short_scorer_smoke_readiness_report(
                     "hi_nerv_short_smoke_receiver_cache_mlx_scorer_response_probe_failed"
                 )
 
+    score_dynamics_diagnosis = _score_dynamics_diagnosis(
+        final_components,
+        receiver_cache_summary=receiver_cache_summary,
+        min_target_min_ratio=min_target_min_ratio,
+        section_byte_dual_ascent_gate=section_byte_dual_ascent_gate,
+    )
     ready = not actionable_blockers
     return {
         "schema": HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
@@ -764,6 +773,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             "weight": temporal_floor_weight,
             "metrics": temporal_floor_metrics,
         },
+        "score_dynamics_diagnosis": score_dynamics_diagnosis,
         "receiver_cache_quality": receiver_cache_summary,
         "final_loss_components_present": bool(final_components),
         "actionable_blockers": actionable_blockers,
@@ -815,6 +825,7 @@ def hinerv_short_scorer_smoke_readiness_summary(
             "posenet_temporal_signal_floor_gate": report.get(
                 "posenet_temporal_signal_floor_gate"
             ),
+            "score_dynamics_diagnosis": report.get("score_dynamics_diagnosis"),
             "receiver_cache_quality": report.get("receiver_cache_quality"),
             "actionable_blockers": [
                 str(blocker) for blocker in report.get("actionable_blockers") or []
@@ -874,6 +885,316 @@ def hinerv_short_scorer_smoke_long_run_admission(
             "axis_tag": HI_NERV_SHORT_SCORER_SMOKE_AXIS_TAG,
         }
     )
+
+
+def _score_dynamics_diagnosis(
+    metrics: Mapping[str, Any],
+    *,
+    receiver_cache_summary: Mapping[str, Any] | None,
+    min_target_min_ratio: float,
+    section_byte_dual_ascent_gate: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Classify the local score dynamics that matter to upstream evaluate.py.
+
+    ``evaluate.py`` admits exactly three score axes: last-frame SegNet argmax
+    pixels, two-frame PoseNet YUV6 error, and archive bytes.  This helper keeps
+    that geometry visible to automation, so short smokes answer which atom is
+    unsolved and whether accepted updates reduce it.
+    """
+
+    seg_atom_rows = _segnet_target_region_atom_rows(metrics)
+    worst_seg_atom = seg_atom_rows[0] if seg_atom_rows else None
+    seg_unsolved_score = _first_finite_mapping_value(
+        metrics,
+        (
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+            "loss_part_segnet_direct_live_argmax_disagreement",
+        ),
+    )
+    if (
+        seg_unsolved_score is not None
+        and "loss_part_segnet_direct_live_argmax_disagreement" in metrics
+        and "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass"
+        not in metrics
+    ):
+        seg_unsolved_score *= HI_NERV_CONTEST_SEGNET_PIXEL_SCORE_WEIGHT
+    pre_seg_unsolved_score = _first_finite_mapping_value(
+        metrics,
+        (
+            "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+            "dynamics_pre_update_loss_part_segnet_direct_live_argmax_disagreement",
+        ),
+    )
+    if (
+        pre_seg_unsolved_score is not None
+        and "dynamics_pre_update_loss_part_segnet_direct_live_argmax_disagreement"
+        in metrics
+        and "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass"
+        not in metrics
+    ):
+        pre_seg_unsolved_score *= HI_NERV_CONTEST_SEGNET_PIXEL_SCORE_WEIGHT
+    seg_delta = _delta(seg_unsolved_score, pre_seg_unsolved_score)
+    target_min_ratio = _finite_mapping_value(
+        metrics,
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+    )
+    target_coverage = _finite_mapping_value(
+        metrics,
+        "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+    )
+    argmax_disagreement = _finite_mapping_value(
+        metrics,
+        "loss_part_segnet_direct_live_argmax_disagreement",
+    )
+
+    pose_direct = _finite_mapping_value(metrics, "loss_part_pose_direct_live_score_term")
+    pose_proxy = _finite_mapping_value(metrics, "loss_part_pose_score_term")
+    pose_score = pose_direct if pose_direct is not None else pose_proxy
+    pre_pose_direct = _finite_mapping_value(
+        metrics,
+        "dynamics_pre_update_loss_part_pose_direct_live_score_term",
+    )
+    pre_pose_proxy = _finite_mapping_value(
+        metrics,
+        "dynamics_pre_update_loss_part_pose_score_term",
+    )
+    pre_pose_score = pre_pose_direct if pre_pose_direct is not None else pre_pose_proxy
+    pose_delta = _delta(pose_score, pre_pose_score)
+
+    archive_bytes = _finite_mapping_value(metrics, "train_time_archive_bytes")
+    archive_rate_score = _finite_mapping_value(metrics, "train_time_archive_rate_score")
+    if archive_rate_score is None and archive_bytes is not None:
+        archive_rate_score = archive_bytes * HI_NERV_CONTEST_RATE_SCORE_PER_BYTE
+    pre_archive_rate_score = _finite_mapping_value(
+        metrics,
+        "dynamics_pre_update_loss_part_train_time_archive_rate_score",
+    )
+    rate_delta = _delta(archive_rate_score, pre_archive_rate_score)
+
+    local_score_proxy = _sum_finite(seg_unsolved_score, pose_score, archive_rate_score)
+    pre_local_score_proxy = _sum_finite(
+        pre_seg_unsolved_score,
+        pre_pose_score,
+        pre_archive_rate_score,
+    )
+    local_score_delta = _delta(local_score_proxy, pre_local_score_proxy)
+    dominant_axis = _dominant_axis(
+        {
+            "segnet_target_region": seg_unsolved_score,
+            "posenet_yuv6_pair": pose_score,
+            "archive_rate": archive_rate_score,
+        }
+    )
+    min_ratio_blocked = bool(
+        target_min_ratio is not None
+        and _below_floor(target_min_ratio, min_target_min_ratio)
+    )
+    active_byte_constraints = []
+    if isinstance(section_byte_dual_ascent_gate, Mapping):
+        active_byte_constraints = [
+            str(key)
+            for key in section_byte_dual_ascent_gate.get(
+                "constraints_with_active_loss_pressure"
+            )
+            or []
+        ]
+    receiver_summary = receiver_cache_summary if isinstance(receiver_cache_summary, Mapping) else {}
+    receiver_seg_score = _finite_float(receiver_summary.get("mlx_scorer_response_avg_segnet_dist"))
+    receiver_pose_score = _finite_float(receiver_summary.get("mlx_scorer_response_avg_posenet_dist"))
+
+    if min_ratio_blocked or (
+        worst_seg_atom is not None
+        and (worst_seg_atom.get("score_weighted_unsolved_argmax_mass") or 0.0) > 0.0
+    ):
+        regime = "segnet_target_region_decision_crossing_blocked"
+        actuator = "target_region_margin_crossing_output_head_bias_and_region_waterfill"
+    elif pose_score is not None and pose_score > 1.0:
+        regime = "posenet_yuv6_pair_geometry_blocked"
+        actuator = "pose_yuv6_geometry_temporal_tether_and_pair_curriculum"
+    elif archive_rate_score is not None and active_byte_constraints:
+        regime = "rate_dual_pressure_active"
+        actuator = "section_byte_dual_qat_ablation_and_waterfill"
+    else:
+        regime = "no_single_dominant_score_axis_observed"
+        actuator = "inspect_missing_metrics_or_optimizer_dynamics"
+
+    return {
+        "schema": "hi_nerv_evaluate_py_score_dynamics_diagnosis.v1",
+        "authority": HI_NERV_SHORT_SCORER_SMOKE_AUTHORITY,
+        "axis_tag": HI_NERV_SHORT_SCORER_SMOKE_AXIS_TAG,
+        "contest_formula": {
+            "score": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/original_video_bytes",
+            "original_video_bytes": HI_NERV_CONTEST_ORIGINAL_VIDEO_BYTES,
+            "rate_score_per_byte": HI_NERV_CONTEST_RATE_SCORE_PER_BYTE,
+            "segnet_pixel_score_weight": HI_NERV_CONTEST_SEGNET_PIXEL_SCORE_WEIGHT,
+        },
+        "dominant_axis": dominant_axis,
+        "dynamics_regime": regime,
+        "recommended_next_actuator": actuator,
+        "segnet": {
+            "argmax_disagreement": argmax_disagreement,
+            "target_class_coverage_fraction": target_coverage,
+            "target_class_min_ratio": target_min_ratio,
+            "min_ratio_floor": min_target_min_ratio,
+            "score_weighted_unsolved_argmax_mass": seg_unsolved_score,
+            "pre_score_weighted_unsolved_argmax_mass": pre_seg_unsolved_score,
+            "delta_score_weighted_unsolved_argmax_mass": seg_delta,
+            "accepted_update_reduced_unsolved_mass": _negative_delta(seg_delta),
+            "worst_target_region_atom": worst_seg_atom,
+            "top_target_region_atoms": seg_atom_rows[:5],
+            "receiver_avg_segnet_dist": receiver_seg_score,
+        },
+        "posenet": {
+            "score_term": pose_score,
+            "pre_score_term": pre_pose_score,
+            "delta_score_term": pose_delta,
+            "accepted_update_reduced_pose_term": _negative_delta(pose_delta),
+            "direct_live_score_term": pose_direct,
+            "cached_score_term": pose_proxy,
+            "yuv6_pair_distribution_mae": _finite_mapping_value(
+                metrics,
+                "loss_part_scorer_input_distribution_guard_yuv6_pair_mae",
+            ),
+            "yuv6_pair_contrast_ratio": _finite_mapping_value(
+                metrics,
+                "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+            ),
+            "temporal_signal_std_ratio": _first_finite_mapping_value(
+                metrics,
+                (
+                    "loss_part_posenet_temporal_signal_floor_mean_std_ratio",
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio",
+                ),
+            ),
+            "receiver_avg_posenet_dist": receiver_pose_score,
+        },
+        "rate": {
+            "archive_bytes": archive_bytes,
+            "archive_rate_score": archive_rate_score,
+            "pre_archive_rate_score": pre_archive_rate_score,
+            "delta_archive_rate_score": rate_delta,
+            "byte_dual_active": bool(
+                section_byte_dual_ascent_gate.get("active")
+                if isinstance(section_byte_dual_ascent_gate, Mapping)
+                else False
+            ),
+            "active_loss_pressure_constraints": active_byte_constraints,
+        },
+        "joint": {
+            "local_score_proxy": local_score_proxy,
+            "pre_local_score_proxy": pre_local_score_proxy,
+            "delta_local_score_proxy": local_score_delta,
+            "accepted_update_reduced_local_score_proxy": _negative_delta(
+                local_score_delta
+            ),
+            "seg_pose_tradeoff": _tradeoff_label(seg_delta, pose_delta),
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def _segnet_target_region_atom_rows(metrics: Mapping[str, Any]) -> list[dict[str, Any]]:
+    prefix = "loss_part_segnet_direct_live_target_min_ratio_floor_class_"
+    suffix = "_score_weighted_unsolved_argmax_mass"
+    rows: list[dict[str, Any]] = []
+    for key in sorted(metrics):
+        key_s = str(key)
+        if not key_s.startswith(prefix) or not key_s.endswith(suffix):
+            continue
+        class_index = key_s[len(prefix) : -len(suffix)]
+        if not class_index.isdigit():
+            continue
+        base = f"{prefix}{class_index}"
+        score_mass = _finite_mapping_value(metrics, key_s)
+        if score_mass is None:
+            continue
+        rows.append(
+            {
+                "class_index": int(class_index),
+                "score_weighted_unsolved_argmax_mass": score_mass,
+                "target_region_unsolved_argmax_mass": _finite_mapping_value(
+                    metrics,
+                    f"{base}_target_region_unsolved_argmax_mass",
+                ),
+                "score_weighted_crossing_loss": _finite_mapping_value(
+                    metrics,
+                    f"{base}_score_weighted_crossing_loss",
+                ),
+                "target_fraction": _finite_mapping_value(
+                    metrics,
+                    f"{base}_target_fraction",
+                ),
+                "region_ratio": _finite_mapping_value(
+                    metrics,
+                    f"{base}_region_ratio",
+                ),
+                "region_deficit": _finite_mapping_value(
+                    metrics,
+                    f"{base}_region_deficit",
+                ),
+                "hard_ratio": _finite_mapping_value(metrics, f"{base}_hard_ratio"),
+                "target_region_frontier_margin": _finite_mapping_value(
+                    metrics,
+                    f"{base}_target_region_frontier_margin",
+                ),
+            }
+        )
+    return sorted(
+        rows,
+        key=lambda row: (
+            float(row.get("score_weighted_unsolved_argmax_mass") or 0.0),
+            float(row.get("score_weighted_crossing_loss") or 0.0),
+        ),
+        reverse=True,
+    )
+
+
+def _delta(value: float | None, pre_value: float | None) -> float | None:
+    if value is None or pre_value is None:
+        return None
+    return value - pre_value
+
+
+def _negative_delta(delta: float | None) -> bool | None:
+    if delta is None:
+        return None
+    return delta < 0.0
+
+
+def _sum_finite(*values: float | None) -> float | None:
+    present = [float(value) for value in values if value is not None]
+    if not present:
+        return None
+    return sum(present)
+
+
+def _dominant_axis(values: Mapping[str, float | None]) -> str | None:
+    finite = {
+        str(key): float(value)
+        for key, value in values.items()
+        if value is not None and math.isfinite(float(value))
+    }
+    if not finite:
+        return None
+    return max(finite, key=lambda key: abs(finite[key]))
+
+
+def _tradeoff_label(seg_delta: float | None, pose_delta: float | None) -> str:
+    seg_improved = bool(seg_delta is not None and seg_delta < 0.0)
+    seg_worsened = bool(seg_delta is not None and seg_delta > 0.0)
+    pose_improved = bool(pose_delta is not None and pose_delta < 0.0)
+    pose_worsened = bool(pose_delta is not None and pose_delta > 0.0)
+    if seg_improved and pose_improved:
+        return "segnet_and_posenet_cooperative"
+    if seg_improved and pose_worsened:
+        return "segnet_improved_posenet_worsened"
+    if seg_worsened and pose_improved:
+        return "posenet_improved_segnet_worsened"
+    if seg_worsened and pose_worsened:
+        return "segnet_and_posenet_both_worsened"
+    if seg_delta is None or pose_delta is None:
+        return "tradeoff_delta_missing"
+    return "segnet_and_posenet_flat_or_mixed_small"
 
 
 def receiver_cache_quality_manifest_summary(
@@ -977,6 +1298,31 @@ def receiver_cache_quality_manifest_summary(
         ),
         "segnet_argmax_disagreement_rate": (
             argmax_probe.get("segnet_argmax_disagreement_rate")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_argmax_target_region_error_score_contribution": (
+            argmax_probe.get("target_region_error_score_contribution")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_argmax_target_region_error_worst_class": (
+            argmax_probe.get("target_region_error_worst_class")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_argmax_target_region_error_worst_score_contribution": (
+            argmax_probe.get("target_region_error_worst_score_contribution")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_argmax_target_region_error_total_mismatch_pixels": (
+            argmax_probe.get("target_region_error_total_mismatch_pixels")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_argmax_target_region_error_profile": (
+            argmax_probe.get("target_region_error_profile")
             if isinstance(argmax_probe, Mapping)
             else None
         ),

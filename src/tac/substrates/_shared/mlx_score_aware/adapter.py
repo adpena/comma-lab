@@ -40,6 +40,7 @@ from tac.substrates._shared.mlx_score_aware.dual_ascent import (
 )
 from tac.substrates._shared.mlx_score_aware.loss import (
     _direct_live_posenet_distillation_loss_and_metrics,
+    _segnet_direct_live_subcontrol_active,
     component_loss_weight,
     posenet_yuv6_geometry_tether_loss,
     score_aware_loss,
@@ -298,12 +299,12 @@ _SCORER_SUPPORT_LADDER_STAGE_COMPONENTS: dict[int, tuple[str, ...]] = {
         "segnet_direct_live_target_mass_floor",
         "segnet_direct_live_rare_class_logit",
     ),
-    2: ("segnet_direct_live_target_min_ratio_floor",),
-    3: ("segnet_direct_live_class_balanced_hinge",),
-    4: (
-        "segnet_direct_live_class_balanced_squared_hinge",
+    2: (
+        "segnet_direct_live_target_min_ratio_floor",
         "segnet_direct_live_class_region_recon",
     ),
+    3: ("segnet_direct_live_class_balanced_hinge",),
+    4: ("segnet_direct_live_class_balanced_squared_hinge",),
 }
 
 
@@ -342,9 +343,11 @@ def _apply_scorer_support_ladder_loss_weights(
     """Apply staged missing-class recovery pressure to effective loss weights.
 
     Stage 1 is the least invasive scorer-space move: target-mass floor plus
-    rare-class logit. Stage 2 adds the worst target-class min-ratio floor.
-    Stage 3 adds a class-balanced hinge, and stage 4 adds the squared
-    hinge/region tether. While active, the base direct-live logit MSE is damped
+    rare-class logit. Stage 2 adds the worst target-class min-ratio floor plus
+    the target-region RGB tether, because upstream ``evaluate.py`` prices
+    last-frame target-region argmax flips rather than global class presence.
+    Stage 3 adds a class-balanced hinge, and stage 4 adds the squared hinge.
+    While active, the base direct-live logit MSE is damped
     so the optimizer does not spend the step recreating a one-class teacher-
     logit average before the hard argmax support exists.
     """
@@ -4775,18 +4778,9 @@ class MlxScoreAwareAdapter:
         direct_live_weight = float(
             self.bundle.segnet_direct_live_distillation_weight
         )
-        direct_live_subcontrol_active = any(
-            float(value) > 0.0
-            for value in (
-                self.bundle.segnet_direct_live_class_histogram_weight,
-                self.bundle.segnet_direct_live_class_balanced_hinge_weight,
-                self.bundle.segnet_direct_live_class_balanced_ce_weight,
-                self.bundle.segnet_direct_live_class_balanced_squared_hinge_weight,
-                self.bundle.segnet_direct_live_class_region_recon_weight,
-                self.bundle.segnet_direct_live_rare_class_logit_weight,
-                self.bundle.segnet_direct_live_target_mass_floor_weight,
-                self.bundle.segnet_direct_live_target_min_ratio_floor_weight,
-            )
+        direct_live_subcontrol_active = _segnet_direct_live_subcontrol_active(
+            self.bundle,
+            loss_weights,
         )
         direct_live_active = bool(
             (direct_live_weight > 0.0 or direct_live_subcontrol_active)

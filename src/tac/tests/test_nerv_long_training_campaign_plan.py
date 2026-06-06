@@ -302,7 +302,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["command_argv"][row["command_argv"].index("--mlx-prefilter-scorer-device") + 1] == "gpu" for row in hi_rows
     )
     assert all(
-        row["command_argv"][row["command_argv"].index("--mlx-prefilter-scorer-batch-pairs") + 1] == "8"
+        row["command_argv"][
+            row["command_argv"].index("--mlx-prefilter-scorer-batch-pairs") + 1
+        ]
+        == "1"
         for row in hi_rows
     )
     assert all("--mlx-prefilter-progress-every" in row["command_argv"] for row in hi_rows)

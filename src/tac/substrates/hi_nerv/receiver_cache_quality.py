@@ -1042,6 +1042,10 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         candidate_histogram,
         reference_histogram,
     )
+    target_region_error = _argmax_target_region_error_profile(
+        cand_argmax,
+        ref_argmax,
+    )
     candidate_occupied_class_fraction = candidate_occupancy[
         "occupied_class_fraction"
     ]
@@ -1135,6 +1139,17 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         ],
         "candidate_target_class_ratio": target_class_coverage[
             "candidate_target_class_ratio"
+        ],
+        "target_region_error_profile": target_region_error["profile"],
+        "target_region_error_total_mismatch_pixels": target_region_error[
+            "total_mismatch_pixels"
+        ],
+        "target_region_error_score_contribution": target_region_error[
+            "score_contribution"
+        ],
+        "target_region_error_worst_class": target_region_error["worst_class"],
+        "target_region_error_worst_score_contribution": target_region_error[
+            "worst_score_contribution"
         ],
         "candidate_top2_margin": _margin_stats(cand_margin),
         "reference_top2_margin": _margin_stats(ref_margin),
@@ -1320,6 +1335,79 @@ def _argmax_histogram_target_class_coverage(
         "candidate_target_any_class_covered": any_covered,
         "candidate_target_class_ratio": ratios,
         "min_class_pixel_count_for_target_coverage": int(min_count),
+    }
+
+
+def _argmax_target_region_error_profile(
+    candidate_argmax: np.ndarray,
+    reference_argmax: np.ndarray,
+) -> dict[str, Any]:
+    """Return SegNet target-region mismatch debt in contest score units.
+
+    Upstream ``evaluate.py`` prices SegNet as ``100 * d_seg`` over the scored
+    last-frame argmax surface.  Aggregate mismatches by the reference target
+    class so receiver probes expose which class-region still owns the actual
+    score debt, not just whether a class appears anywhere.
+    """
+
+    if candidate_argmax.shape != reference_argmax.shape:
+        raise ValueError(
+            "target-region error profile requires matching argmax shapes; got "
+            f"{candidate_argmax.shape} vs {reference_argmax.shape}"
+        )
+    total_pixels = int(reference_argmax.size)
+    max_class = int(max(np.max(candidate_argmax), np.max(reference_argmax), 0))
+    class_count = max(max_class + 1, 5)
+    mismatch = candidate_argmax != reference_argmax
+    profile: list[dict[str, Any]] = []
+    worst_class: int | None = None
+    worst_score = 0.0
+    total_mismatch_pixels = 0
+    for class_index in range(class_count):
+        target_mask = reference_argmax == class_index
+        target_pixels = int(np.count_nonzero(target_mask))
+        mismatch_pixels = int(np.count_nonzero(mismatch & target_mask))
+        matched_pixels = int(target_pixels - mismatch_pixels)
+        total_mismatch_pixels += mismatch_pixels
+        class_score = (
+            100.0 * float(mismatch_pixels) / float(total_pixels)
+            if total_pixels
+            else 100.0
+        )
+        if mismatch_pixels > 0 and class_score > worst_score:
+            worst_score = class_score
+            worst_class = class_index
+        profile.append(
+            {
+                "class_index": int(class_index),
+                "target_pixels": target_pixels,
+                "matched_pixels": matched_pixels,
+                "mismatch_pixels": mismatch_pixels,
+                "target_fraction": (
+                    float(target_pixels / total_pixels) if total_pixels else 0.0
+                ),
+                "mismatch_fraction_of_total": (
+                    float(mismatch_pixels / total_pixels) if total_pixels else 0.0
+                ),
+                "mismatch_fraction_of_target_region": (
+                    float(mismatch_pixels / target_pixels)
+                    if target_pixels
+                    else 0.0
+                ),
+                "segnet_score_contribution": class_score,
+            }
+        )
+    total_score = (
+        100.0 * float(total_mismatch_pixels) / float(total_pixels)
+        if total_pixels
+        else 100.0
+    )
+    return {
+        "profile": profile,
+        "total_mismatch_pixels": int(total_mismatch_pixels),
+        "score_contribution": total_score,
+        "worst_class": worst_class,
+        "worst_score_contribution": float(worst_score),
     }
 
 

@@ -376,6 +376,15 @@ def test_hi_nerv_receiver_cache_segnet_argmax_probe_prices_real_flip_surface(
     assert report["total_pixels"] == 16
     assert report["mismatch_pixels"] == 1
     assert report["segnet_argmax_disagreement_rate"] == pytest.approx(1.0 / 16.0)
+    assert report["target_region_error_score_contribution"] == pytest.approx(6.25)
+    assert report["target_region_error_worst_class"] == 0
+    assert report["target_region_error_worst_score_contribution"] == pytest.approx(
+        6.25
+    )
+    assert report["target_region_error_profile"][0]["mismatch_pixels"] == 1
+    assert report["target_region_error_profile"][0][
+        "segnet_score_contribution"
+    ] == pytest.approx(6.25)
     assert report["fit_gate_passed"] is False
     assert "candidate_segnet_argmax_disagreement_too_high" in report["blockers"]
 

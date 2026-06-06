@@ -1254,6 +1254,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(value)  # type: ignore[union-attr]
             return float(value.item())
 
+        def _contrast_floor_scalar(model_obj: Any) -> float:
+            value = _contrast_floor_loss(_metric_tensors(model_obj))
+            mx.eval(value)  # type: ignore[union-attr]
+            return float(value.item())
+
         def _apply_gradient_step(
             *,
             base_snapshot: list[tuple[Any, Any]],
@@ -1277,11 +1282,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             return applied
 
         current_loss = _loss_scalar(self)
+        current_contrast_floor = _contrast_floor_scalar(self)
+        preserve_contrast_floor = bool(weights["contrast_floor_weight"] > 0.0)
         loss_history: list[float] = [current_loss]
         grad_norm_history: list[float] = []
         clipped_count = 0
         accepted_step_count = 0
         rejected_step_count = 0
+        contrast_floor_rejected_step_count = 0
         backtracking_attempt_count = 0
         min_accepted_step_lr = lr
         max_backtracking_attempts = 8
@@ -1308,13 +1316,21 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     step_lr=step_lr,
                 )
                 candidate_loss = _loss_scalar(self)
-                if candidate_loss <= current_loss + 1.0e-12:
+                candidate_contrast_floor = _contrast_floor_scalar(self)
+                contrast_floor_ok = (
+                    not preserve_contrast_floor
+                    or candidate_contrast_floor <= current_contrast_floor + 1.0e-9
+                )
+                if candidate_loss <= current_loss + 1.0e-12 and contrast_floor_ok:
                     current_loss = candidate_loss
+                    current_contrast_floor = candidate_contrast_floor
                     min_accepted_step_lr = min(min_accepted_step_lr, step_lr)
                     loss_history.append(candidate_loss)
                     accepted = True
                     accepted_step_count += 1
                     break
+                if not contrast_floor_ok:
+                    contrast_floor_rejected_step_count += 1
                 _restore_parameters(base_snapshot)
                 step_lr *= 0.5
             if not accepted:
@@ -1341,6 +1357,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "grad_clip_clipped_step_count": int(clipped_count),
             "accepted_step_count": int(accepted_step_count),
             "rejected_step_count": int(rejected_step_count),
+            "contrast_floor_preserving_acceptance": preserve_contrast_floor,
+            "contrast_floor_rejected_step_count": int(
+                contrast_floor_rejected_step_count
+            ),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "max_backtracking_attempts_per_step": int(max_backtracking_attempts),
             "min_accepted_step_learning_rate": float(min_accepted_step_lr),

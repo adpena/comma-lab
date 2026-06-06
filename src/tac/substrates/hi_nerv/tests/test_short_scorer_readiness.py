@@ -49,6 +49,22 @@ def _receiver_quality() -> dict[str, object]:
             "target_material_class_count": 5.0,
             "reference_occupied_class_fraction": 0.9,
             "segnet_argmax_disagreement_rate": 0.02,
+            "target_region_error_score_contribution": 2.0,
+            "target_region_error_worst_class": 4,
+            "target_region_error_worst_score_contribution": 1.25,
+            "target_region_error_total_mismatch_pixels": 20,
+            "target_region_error_profile": {
+                "score_contribution": 2.0,
+                "worst_class": 4,
+                "worst_score_contribution": 1.25,
+                "classes": {
+                    "4": {
+                        "target_pixels": 100,
+                        "mismatch_pixels": 12,
+                        "segnet_score_contribution": 1.25,
+                    }
+                },
+            },
             "blockers": [],
         },
         "mlx_scorer_response_probe_required": True,
@@ -239,6 +255,60 @@ def test_decoder_weight_waterfill_requires_live_gradient_actuation() -> None:
         "hi_nerv_short_smoke_decoder_waterfill_gradient_multiplier_not_observed"
         in report["actionable_blockers"]
     )
+
+
+def test_score_dynamics_diagnosis_prices_target_region_pose_and_rate() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(
+            segnet_direct_live_target_min_ratio_floor_weight=0.7,
+            pose_direct_live_distillation_weight=0.6,
+        ),
+        final_loss_components={
+            **_base_metrics(),
+            **_pose_direct_live_metrics(),
+            **_dual_metrics(
+                "hi_nerv_segnet_direct_live_distill",
+                "hi_nerv_segnet_direct_live_target_min_ratio_floor",
+                "hi_nerv_posenet_yuv6_pair_distill",
+            ),
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 2.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_unsolved_argmax_mass": 50.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_target_region_unsolved_argmax_mass": 0.5,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_crossing_loss": 125.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_target_fraction": 0.5,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_region_ratio": 0.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_region_deficit": 0.2,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 50.0,
+            "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 55.0,
+            "dynamics_pre_update_loss_part_pose_direct_live_score_term": 1.5,
+            "loss_part_pose_direct_live_score_term": 2.0,
+            "train_time_archive_bytes": 150000.0,
+            "train_time_archive_rate_score": 0.09987884296832571,
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    diagnosis = report["score_dynamics_diagnosis"]
+    assert diagnosis["schema"] == "hi_nerv_evaluate_py_score_dynamics_diagnosis.v1"
+    assert diagnosis["score_claim"] is False
+    assert diagnosis["dominant_axis"] == "segnet_target_region"
+    assert (
+        diagnosis["dynamics_regime"]
+        == "segnet_target_region_decision_crossing_blocked"
+    )
+    assert diagnosis["segnet"]["accepted_update_reduced_unsolved_mass"] is True
+    assert diagnosis["segnet"]["delta_score_weighted_unsolved_argmax_mass"] == pytest.approx(
+        -5.0
+    )
+    assert diagnosis["segnet"]["worst_target_region_atom"]["class_index"] == 1
+    assert diagnosis["posenet"]["accepted_update_reduced_pose_term"] is False
+    assert diagnosis["joint"]["seg_pose_tradeoff"] == "segnet_improved_posenet_worsened"
+    assert diagnosis["rate"]["archive_rate_score"] == pytest.approx(0.09987884296832571)
 
 
 def test_decoder_weight_waterfill_blocks_zero_requested_controls_for_nonempty_plan() -> None:
@@ -701,6 +771,15 @@ def test_direct_live_segnet_blocks_receiver_target_class_coverage_collapse() -> 
     assert report["receiver_cache_quality"][
         "candidate_argmax_target_class_coverage_fraction"
     ] == pytest.approx(0.6)
+    assert report["receiver_cache_quality"][
+        "segnet_argmax_target_region_error_score_contribution"
+    ] == pytest.approx(2.0)
+    assert report["receiver_cache_quality"][
+        "segnet_argmax_target_region_error_worst_class"
+    ] == 4
+    assert report["receiver_cache_quality"][
+        "segnet_argmax_target_region_error_profile"
+    ]["classes"]["4"]["segnet_score_contribution"] == pytest.approx(1.25)
     assert (
         "hi_nerv_short_smoke_receiver_cache_segnet_target_class_coverage_collapsed"
         in report["actionable_blockers"]

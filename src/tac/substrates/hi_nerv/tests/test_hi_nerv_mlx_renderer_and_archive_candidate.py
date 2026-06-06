@@ -350,6 +350,8 @@ def test_mlx_scorer_domain_bootstrap_reduces_rgb_yuv6_loss() -> None:
     assert payload["enabled"] is True
     assert payload["runtime_sidecar_bytes"] == 0
     assert payload["human_visual_fidelity_objective"] is False
+    assert payload["contrast_floor_preserving_acceptance"] is True
+    assert payload["contrast_floor_rejected_step_count"] >= 0
     assert payload["loss_history_last"] <= payload["loss_history_first"]
     assert (
         payload["metrics_after"]["contrast_floor_loss"]

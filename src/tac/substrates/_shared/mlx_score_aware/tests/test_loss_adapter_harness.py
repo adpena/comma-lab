@@ -68,11 +68,15 @@ def test_scorer_support_ladder_stage_order_damps_base_loss() -> None:
     assert weights["segnet_direct_live_target_mass_floor"] == pytest.approx(2.0)
     assert weights["segnet_direct_live_rare_class_logit"] == pytest.approx(1.0)
     assert weights["segnet_direct_live_target_min_ratio_floor"] == pytest.approx(1.0)
+    assert weights["segnet_direct_live_class_region_recon"] == pytest.approx(0.125)
     assert weights["segnet_direct_live_rare_class_logit_config_floor"] == pytest.approx(
         1.0
     )
     assert weights[
         "segnet_direct_live_target_min_ratio_floor_config_floor"
+    ] == pytest.approx(1.0)
+    assert weights[
+        "segnet_direct_live_class_region_recon_config_floor"
     ] == pytest.approx(1.0)
     assert "segnet_direct_live_class_balanced_hinge" not in weights
     assert "segnet_direct_live_class_balanced_hinge_config_floor" not in weights
@@ -97,8 +101,6 @@ def test_scorer_support_ladder_stage_order_damps_base_loss() -> None:
     assert weights[
         "segnet_direct_live_target_min_ratio_floor_config_floor"
     ] == pytest.approx(1.0)
-    assert "segnet_direct_live_class_region_recon" not in weights
-    assert "segnet_direct_live_class_region_recon_config_floor" not in weights
     assert weights["segnet_direct_live_base_loss"] == pytest.approx(0.25)
     assert metrics["scorer_support_ladder_active"] == pytest.approx(1.0)
     assert metrics["scorer_support_ladder_stage"] == pytest.approx(2.0)
@@ -106,6 +108,9 @@ def test_scorer_support_ladder_stage_order_damps_base_loss() -> None:
     assert metrics[
         "scorer_support_ladder_component_config_floor__segnet_direct_live_rare_class_logit"
     ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_support_ladder_component_floor__segnet_direct_live_class_region_recon"
+    ] == pytest.approx(0.125)
 
 
 def test_scorer_support_ladder_observation_escalates_only_after_stall() -> None:

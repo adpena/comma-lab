@@ -1368,7 +1368,7 @@ def _hinerv_campaign_row(
         "--mlx-prefilter-scorer-device",
         "gpu",
         "--mlx-prefilter-scorer-batch-pairs",
-        str(int(batch_pairs)),
+        "1",
         "--mlx-prefilter-progress-every",
         "10",
         "--telemetry-flush-interval-epochs",

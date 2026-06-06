@@ -210,6 +210,54 @@ def component_config_weight_with_floor(
     return max(configured, floor)
 
 
+_SEGNET_DIRECT_LIVE_SUBCONTROL_COMPONENTS: tuple[tuple[str, str], ...] = (
+    ("segnet_direct_live_class_histogram", "segnet_direct_live_class_histogram_weight"),
+    (
+        "segnet_direct_live_class_balanced_hinge",
+        "segnet_direct_live_class_balanced_hinge_weight",
+    ),
+    (
+        "segnet_direct_live_class_balanced_ce",
+        "segnet_direct_live_class_balanced_ce_weight",
+    ),
+    (
+        "segnet_direct_live_class_balanced_squared_hinge",
+        "segnet_direct_live_class_balanced_squared_hinge_weight",
+    ),
+    (
+        "segnet_direct_live_class_region_recon",
+        "segnet_direct_live_class_region_recon_weight",
+    ),
+    ("segnet_direct_live_rare_class_logit", "segnet_direct_live_rare_class_logit_weight"),
+    (
+        "segnet_direct_live_target_mass_floor",
+        "segnet_direct_live_target_mass_floor_weight",
+    ),
+    (
+        "segnet_direct_live_target_min_ratio_floor",
+        "segnet_direct_live_target_min_ratio_floor_weight",
+    ),
+)
+
+
+def _segnet_direct_live_subcontrol_active(
+    bundle: RendererBundle,
+    loss_weights: Mapping[str, float] | None,
+) -> bool:
+    """Return whether any direct-live SegNet subcontrol has non-zero pressure."""
+
+    for component, attr in _SEGNET_DIRECT_LIVE_SUBCONTROL_COMPONENTS:
+        stage_weight = component_loss_weight(loss_weights, component)
+        config_weight = component_config_weight_with_floor(
+            loss_weights,
+            component,
+            float(getattr(bundle, attr)),
+        )
+        if config_weight * stage_weight > 0.0:
+            return True
+    return False
+
+
 def _extra_loss_weight_overrides(
     loss_weights: Mapping[str, float] | None,
 ) -> dict[str, float]:
@@ -2182,9 +2230,13 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
     total = mx.array(0.0, dtype=mx.float32)
     occupied = mx.array(0.0, dtype=mx.float32)
     active_terms = []
+    unsolved_argmax_masses = []
+    score_weighted_unsolved_argmax_masses = []
+    score_weighted_crossing_losses = []
     min_ratio = mx.array(1.0, dtype=mx.float32)
     min_region_ratio = mx.array(1.0, dtype=mx.float32)
     worst_ratio_deficit = mx.array(0.0, dtype=mx.float32)
+    worst_region_deficit = mx.array(0.0, dtype=mx.float32)
     metrics: dict[str, Any] = {
         "segnet_direct_live_target_min_ratio_floor_configured_floor": floor_arr,
     }
@@ -2221,7 +2273,20 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
             worst_ratio_deficit,
             mx.where(class_active > 0.0, ratio_deficit, 0.0),
         )
-        ratio_active = (ratio_deficit > 0.0).astype(mx.float32)
+        worst_region_deficit = mx.maximum(
+            worst_region_deficit,
+            mx.where(class_active > 0.0, region_deficit, 0.0),
+        )
+        support_deficit = mx.maximum(ratio_deficit, region_deficit)
+        ratio_active = (support_deficit > 0.0).astype(mx.float32)
+        target_region_unsolved_argmax_mass = (
+            class_active
+            * target_fraction
+            * mx.maximum(mx.array(1.0, dtype=mx.float32) - region_ratio, 0.0)
+        )
+        score_weighted_unsolved_argmax_mass = (
+            mx.array(100.0, dtype=mx.float32) * target_region_unsolved_argmax_mass
+        )
         class_prob = probs[..., class_index]
         candidate_soft_fraction = mx.mean(class_prob)
         target_prob_mean = (
@@ -2244,6 +2309,12 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         target_region_crossing_loss = (
             mx.sum(target_mask * target_region_margin * target_region_margin)
             / mx.maximum(target_mass, eps)
+        )
+        score_weighted_crossing_loss = (
+            mx.array(100.0, dtype=mx.float32)
+            * class_active
+            * target_fraction
+            * target_region_crossing_loss
         )
         masked_region_margin = mx.where(
             target_mask > 0.0,
@@ -2314,7 +2385,7 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         )
         ratio_boost = (
             mx.array(1.0, dtype=mx.float32)
-            + mx.array(16.0, dtype=mx.float32) * ratio_deficit
+            + mx.array(16.0, dtype=mx.float32) * support_deficit
             + mx.array(8.0, dtype=mx.float32) * region_deficit
         )
         class_loss = (
@@ -2342,6 +2413,11 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         total = total + boosted_loss
         occupied = occupied + class_active
         active_terms.append(boosted_loss)
+        unsolved_argmax_masses.append(target_region_unsolved_argmax_mass)
+        score_weighted_unsolved_argmax_masses.append(
+            score_weighted_unsolved_argmax_mass
+        )
+        score_weighted_crossing_losses.append(score_weighted_crossing_loss)
         metrics[f"segnet_direct_live_target_min_ratio_floor_class_{class_index}"] = (
             class_loss
         )
@@ -2397,6 +2473,15 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_region_crossing_loss"
         ] = target_region_crossing_loss
         metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_region_unsolved_argmax_mass"
+        ] = target_region_unsolved_argmax_mass
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_score_weighted_unsolved_argmax_mass"
+        ] = score_weighted_unsolved_argmax_mass
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_score_weighted_crossing_loss"
+        ] = score_weighted_crossing_loss
+        metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_island_crossing_loss"
         ] = seed_island_crossing_loss
         metrics[
@@ -2412,12 +2497,36 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
     class_mean = total / mx.maximum(occupied, eps)
     worst_class = mx.max(mx.stack(active_terms))
     loss = class_mean + worst_class
+    unsolved_stack = mx.stack(unsolved_argmax_masses)
+    score_weighted_unsolved_stack = mx.stack(score_weighted_unsolved_argmax_masses)
+    score_weighted_crossing_stack = mx.stack(score_weighted_crossing_losses)
     metrics["segnet_direct_live_target_min_ratio_floor_loss"] = loss
     metrics["segnet_direct_live_target_min_ratio_floor_mean_loss"] = class_mean
     metrics["segnet_direct_live_target_min_ratio_floor_worst_class_loss"] = worst_class
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_total_target_region_unsolved_argmax_mass"
+    ] = mx.sum(unsolved_stack)
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_worst_target_region_unsolved_argmax_mass"
+    ] = mx.max(unsolved_stack)
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass"
+    ] = mx.sum(score_weighted_unsolved_stack)
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_score_weighted_worst_unsolved_argmax_mass"
+    ] = mx.max(score_weighted_unsolved_stack)
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss"
+    ] = mx.sum(score_weighted_crossing_stack)
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_worst_score_weighted_unsolved_argmax_class_index"
+    ] = mx.argmax(score_weighted_unsolved_stack).astype(mx.float32)
     metrics["segnet_direct_live_target_min_ratio_floor_worst_ratio_deficit"] = (
         worst_ratio_deficit
     )
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_worst_region_deficit"
+    ] = worst_region_deficit
     metrics["segnet_direct_live_target_min_ratio_floor_min_ratio"] = min_ratio
     metrics["segnet_direct_live_target_min_ratio_floor_min_region_ratio"] = (
         min_region_ratio
@@ -3120,18 +3229,9 @@ def score_aware_loss(
         parts["distill"] = distill
 
     direct_live_weight = float(bundle.segnet_direct_live_distillation_weight)
-    direct_live_subcontrol_active = any(
-        float(value) > 0.0
-        for value in (
-            bundle.segnet_direct_live_class_histogram_weight,
-            bundle.segnet_direct_live_class_balanced_hinge_weight,
-            bundle.segnet_direct_live_class_balanced_ce_weight,
-            bundle.segnet_direct_live_class_balanced_squared_hinge_weight,
-            bundle.segnet_direct_live_class_region_recon_weight,
-            bundle.segnet_direct_live_rare_class_logit_weight,
-            bundle.segnet_direct_live_target_mass_floor_weight,
-            bundle.segnet_direct_live_target_min_ratio_floor_weight,
-        )
+    direct_live_subcontrol_active = _segnet_direct_live_subcontrol_active(
+        bundle,
+        loss_weights,
     )
     direct_live_active = direct_live_weight > 0.0 or direct_live_subcontrol_active
     if direct_live_active and segnet_direct_live_stage_weight != 0.0:

@@ -1078,6 +1078,63 @@ def test_direct_live_segnet_reports_target_class_coverage() -> None:
     ) == pytest.approx(0.0)
 
 
+def test_target_region_argmax_mass_is_priced_in_score_units() -> None:
+    target_0 = mx.zeros((1, 4, 4, 3))
+    target_1 = mx.ones((1, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[:, :2, :, 0] = 5.0
+            arr[:, 2:, :, 1] = 5.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 0] = 5.0
+            arr[..., 1] = 3.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_target_min_ratio_floor_weight=1.0,
+        allow_segnet_only_research=True,
+    )
+
+    _total, parts = score_aware_loss(bundle, mx.array([0]))
+
+    assert _scalar(
+        parts[
+            "segnet_direct_live_target_min_ratio_floor_class_1_target_region_unsolved_argmax_mass"
+        ]
+    ) == pytest.approx(0.5)
+    assert _scalar(
+        parts[
+            "segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_unsolved_argmax_mass"
+        ]
+    ) == pytest.approx(50.0)
+    assert _scalar(
+        parts[
+            "segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass"
+        ]
+    ) == pytest.approx(50.0)
+    assert _scalar(
+        parts[
+            "segnet_direct_live_target_min_ratio_floor_worst_score_weighted_unsolved_argmax_class_index"
+        ]
+    ) == pytest.approx(1.0)
+
+
 def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
     target_1 = mx.ones((2, 4, 4, 3))
@@ -1465,6 +1522,80 @@ def test_direct_live_segnet_class_region_recon_targets_missing_regions() -> None
     ) > _scalar(raw_parts["segnet_direct_live_distill"])
 
 
+def test_direct_live_segnet_class_region_recon_config_floor_activates() -> None:
+    target_0 = mx.zeros((1, 4, 4, 3))
+    target_1 = mx.array(
+        np.linspace(0.1, 0.9, num=4 * 4 * 3, dtype=np.float32).reshape(
+            1, 4, 4, 3
+        )
+    )
+
+    class _ZeroModel:
+        def parameters(self):
+            return {}
+
+        def reconstruct_pair(self, idx):
+            del idx
+            frame = mx.zeros((1, 3, 4, 4), dtype=mx.float32)
+            return frame, frame
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[:, :2, :, 0] = 6.0
+            arr[:, 2:, :, 1] = 6.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 2] = 8.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=_ZeroModel(),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_base_loss_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="argmax_hinge",
+    )
+
+    _inactive_total, inactive_parts = score_aware_loss(bundle, mx.array([0]))
+    _active_total, active_parts = score_aware_loss(
+        bundle,
+        mx.array([0]),
+        loss_weights={
+            "segnet_direct_live_base_loss": 0.0,
+            "segnet_direct_live_class_region_recon": 1.0,
+            "segnet_direct_live_class_region_recon_config_floor": 1.0,
+        },
+    )
+
+    assert "segnet_direct_live_class_region_recon_loss" not in inactive_parts
+    assert _scalar(
+        active_parts["segnet_direct_live_class_region_recon_loss"]
+    ) > 0.0
+    assert _scalar(
+        active_parts["segnet_direct_live_class_region_recon_effective_config_weight"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        active_parts["segnet_direct_live_class_region_recon_weight"]
+    ) == pytest.approx(1.0)
+    assert _scalar(active_parts["segnet_direct_live_base_loss_weight"]) == pytest.approx(
+        0.0
+    )
+
+
 def test_direct_live_segnet_rare_class_logit_prices_any_present_class() -> None:
     target_0 = mx.zeros((1, 4, 4, 3))
     target_1 = mx.ones((1, 4, 4, 3))
@@ -1817,6 +1948,24 @@ def test_target_min_ratio_floor_seed_frontier_is_target_region_stable() -> None:
             "segnet_direct_live_target_min_ratio_floor_class_1_seed_island_crossing_loss"
         ]
     ) > 40000.0
+    assert _scalar(
+        metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_ratio_deficit"
+        ]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_region_deficit"
+        ]
+    ) == pytest.approx(0.35)
+    assert _scalar(
+        metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_ratio_active"
+        ]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        metrics["segnet_direct_live_target_min_ratio_floor_worst_region_deficit"]
+    ) == pytest.approx(0.35)
 
 
 def test_direct_live_segnet_base_loss_weight_zero_keeps_ce_escape_active() -> None:
