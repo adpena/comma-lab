@@ -295,6 +295,9 @@ def _needs_measurement_row(
     additive_delta_total = _add_optional_floats(first.delta_score_total, second.delta_score_total)
     additive_delta_nonrate = _add_optional_floats(first.delta_score_nonrate, second.delta_score_nonrate)
     additive_delta_bytes = _add_optional_ints(first.delta_bytes, second.delta_bytes)
+    byte_cost = None if additive_delta_bytes is None else abs(additive_delta_bytes)
+    additive_score_improvement_total = _score_improvement(additive_delta_total)
+    additive_score_improvement_nonrate = _score_improvement(additive_delta_nonrate)
     command = first_measurement_command or (
         "uv run python tools/run_pr110_commutator_ledger.py "
         "--action-effects <single_action_effects.jsonl> "
@@ -316,8 +319,14 @@ def _needs_measurement_row(
         "second_delta_score_nonrate": second.delta_score_nonrate,
         "additive_delta_score_total": additive_delta_total,
         "additive_delta_score_nonrate": additive_delta_nonrate,
+        "additive_score_improvement_total": additive_score_improvement_total,
+        "additive_score_improvement_nonrate": additive_score_improvement_nonrate,
         "additive_delta_bytes": additive_delta_bytes,
-        "byte_cost": None if additive_delta_bytes is None else abs(additive_delta_bytes),
+        "byte_cost": byte_cost,
+        "additive_value_per_byte_total": _value_per_byte(additive_score_improvement_total, byte_cost),
+        "additive_value_per_byte_nonrate": _value_per_byte(additive_score_improvement_nonrate, byte_cost),
+        "measurement_priority_rank": None,
+        "measurement_priority_basis": None,
         "pair_ids": sorted(set(first.pair_ids) | set(second.pair_ids)),
         "region_ids": sorted(set(first.region_ids) | set(second.region_ids)),
         "comm": None,
@@ -412,6 +421,7 @@ def build_commutator_ledger(
         key=lambda r: r["comm"],
         reverse=True,
     )
+    ranked_queue = _rank_measurement_queue(queue)
     return {
         "schema": ACTION_COMMUTATOR_LEDGER_SCHEMA,
         "single_effect_count": len(singles),
@@ -425,13 +435,14 @@ def build_commutator_ledger(
         "rows": rows,
         "macro_action_candidates": synergistic[: max(0, int(macro_action_limit))],
         "conflict_pairs": conflicting[: max(0, int(conflict_pair_limit))],
-        "measurement_queue": queue,
+        "measurement_queue": ranked_queue,
         "eps": float(eps),
         "policy": {
             "commutator_values_are_measured_never_invented": True,
             "unmeasured_pairs_emit_needs_measurement_rows": True,
             "composition_is_order_sensitive": True,
             "measurement_queue_carries_first_command": True,
+            "measurement_queue_ranked_by_expected_additive_score_authority_and_byte_cost": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
@@ -451,6 +462,78 @@ def _add_optional_ints(left: int | None, right: int | None) -> int | None:
     if left is None or right is None:
         return None
     return int(left) + int(right)
+
+
+def _score_improvement(delta: float | None) -> float | None:
+    if delta is None:
+        return None
+    value = float(delta)
+    if not math.isfinite(value):
+        return None
+    return -value
+
+
+def _value_per_byte(improvement: float | None, byte_cost: int | None) -> float | None:
+    if improvement is None or byte_cost is None or byte_cost <= 0:
+        return None
+    value = float(improvement)
+    if not math.isfinite(value):
+        return None
+    return value / float(byte_cost)
+
+
+def _rank_measurement_queue(queue: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    ranked = sorted((dict(row) for row in queue), key=_measurement_queue_sort_key)
+    for index, row in enumerate(ranked, start=1):
+        row["measurement_priority_rank"] = index
+        row["measurement_priority_basis"] = _measurement_priority_basis(row)
+    return ranked
+
+
+def _measurement_queue_sort_key(row: Mapping[str, Any]) -> tuple[int, int, float, float, int, str, str]:
+    authority_penalty = 0 if row.get("authority_compatible") is True else 1
+    improvement = _measurement_priority_improvement(row)
+    missing_score_penalty = 0 if improvement is not None else 1
+    value = _measurement_priority_value_per_byte(row)
+    byte_cost = row.get("byte_cost")
+    byte_cost_i = int(byte_cost) if isinstance(byte_cost, int) and not isinstance(byte_cost, bool) else 10**18
+    return (
+        authority_penalty,
+        missing_score_penalty,
+        -(improvement if improvement is not None else -math.inf),
+        -(value if value is not None else -math.inf),
+        byte_cost_i,
+        str(row.get("first_action_id") or ""),
+        str(row.get("second_action_id") or ""),
+    )
+
+
+def _measurement_priority_improvement(row: Mapping[str, Any]) -> float | None:
+    total = row.get("additive_score_improvement_total")
+    if isinstance(total, (int, float)) and not isinstance(total, bool) and math.isfinite(float(total)):
+        return float(total)
+    nonrate = row.get("additive_score_improvement_nonrate")
+    if isinstance(nonrate, (int, float)) and not isinstance(nonrate, bool) and math.isfinite(float(nonrate)):
+        return float(nonrate)
+    return None
+
+
+def _measurement_priority_value_per_byte(row: Mapping[str, Any]) -> float | None:
+    total = row.get("additive_value_per_byte_total")
+    if isinstance(total, (int, float)) and not isinstance(total, bool) and math.isfinite(float(total)):
+        return float(total)
+    nonrate = row.get("additive_value_per_byte_nonrate")
+    if isinstance(nonrate, (int, float)) and not isinstance(nonrate, bool) and math.isfinite(float(nonrate)):
+        return float(nonrate)
+    return None
+
+
+def _measurement_priority_basis(row: Mapping[str, Any]) -> str:
+    if _measurement_priority_improvement(row) is None:
+        return "undefined"
+    if row.get("additive_score_improvement_total") is not None:
+        return "total"
+    return "nonrate"
 
 
 def _coerce_effects(effects: Sequence[Any], label: str) -> list[ActionEffect]:

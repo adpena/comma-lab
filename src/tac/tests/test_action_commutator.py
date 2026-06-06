@@ -296,6 +296,14 @@ def test_ledger_queue_when_no_pair_effects_at_all():
     assert ledger["needs_measurement_count"] == 6
     assert all(r["comm"] is None for r in ledger["measurement_queue"])
     assert all("first_measurement_command" in r for r in ledger["measurement_queue"])
+    assert [r["measurement_priority_rank"] for r in ledger["measurement_queue"]] == list(range(1, 7))
+    assert all(r["measurement_priority_basis"] == "total" for r in ledger["measurement_queue"])
+    assert ledger["measurement_queue"][0]["additive_score_improvement_total"] == pytest.approx(5.0)
+    assert {
+        ledger["measurement_queue"][0]["first_action_id"],
+        ledger["measurement_queue"][0]["second_action_id"],
+    } == {"A", "C"}
+    assert ledger["policy"]["measurement_queue_ranked_by_expected_additive_score_authority_and_byte_cost"] is True
 
 
 def test_ledger_queues_pair_with_incompatible_authority_never_fabricates():
@@ -310,6 +318,20 @@ def test_ledger_queues_pair_with_incompatible_authority_never_fabricates():
     assert len(incompat) == 1
     assert incompat[0]["authority_compatible"] is False
     assert "incompatible" in incompat[0]["reason"]
+
+
+def test_measurement_queue_ranks_authority_compatible_before_cross_authority():
+    weak_compatible = _seg_effect("weakA", new_d_seg=0.099, authority="contest_cpu")
+    weak_compatible_b = _seg_effect("weakB", new_d_seg=0.099, authority="contest_cpu")
+    strong_cross = _seg_effect("strongX", new_d_seg=0.001, authority="receiver_closed_frontier_rate_attack")
+    ledger = build_commutator_ledger([weak_compatible, weak_compatible_b, strong_cross], [])
+
+    queue = ledger["measurement_queue"]
+    assert queue[0]["authority_compatible"] is True
+    assert {queue[0]["first_action_id"], queue[0]["second_action_id"]} == {"weakA", "weakB"}
+    incompatible = [row for row in queue if row["authority_compatible"] is False]
+    assert incompatible
+    assert min(row["measurement_priority_rank"] for row in incompatible) > 2
 
 
 def test_ledger_separates_synergistic_and_conflicting_and_sorts():
