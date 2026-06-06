@@ -1043,6 +1043,13 @@ def test_lf_hf_queue_consumes_hf_residual_receiver_payload_proof(
     assert "snerv_lf_conditioned_hf_bounded_training_binding_missing" not in blockers
     assert row["blocked"] is True
     assert row["status"] == "blocked_until_prerequisite_evidence"
+    assert "snerv_lf_hf_source_forward_artifact_missing" in row[
+        "inherited_queue_authority_blockers"
+    ]
+    assert (
+        "snerv_official_tub_lf_hf_decoder_replacement_authority_gate_missing"
+        in row["inherited_queue_authority_blockers"]
+    )
     assert row["command_argv"] == []
     assert row["unblock_command_argv"]
     assert "tools/build_snerv_lf_hf_runtime_binding_proof.py" in row[

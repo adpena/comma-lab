@@ -907,6 +907,9 @@ def _candidate_row(
         )
         or ()
     )
+    inherited_queue_authority_blockers = _inherited_queue_authority_blockers(
+        current_state
+    )
     source_forward_extra_blockers: list[str] = []
     if solution_family in _SOURCE_FORWARD_QUEUE_FAMILIES:
         source_forward_extra_blockers = [
@@ -1418,6 +1421,7 @@ def _candidate_row(
         "status": status,
         "blocked": bool(blockers),
         "blockers": blockers,
+        "inherited_queue_authority_blockers": inherited_queue_authority_blockers,
         "launch_authority_contract": launch_contract,
         "bounded_training_binding_contract": bounded_training_binding_contract,
         "unblock_launch_authority_contract": unblock_launch_contract,
@@ -1488,6 +1492,28 @@ def _candidate_row(
         "output_root": output_root.as_posix(),
         **QUEUE_FALSE_AUTHORITY,
     }
+
+
+def _inherited_queue_authority_blockers(
+    current_state: Mapping[str, Any],
+) -> list[str]:
+    """Expose queue-level authority blockers on every row without changing semantics."""
+
+    return _dedupe(
+        [
+            *(
+                _nested(current_state, ("source_forward_evidence", "queue_blockers"))
+                or ()
+            ),
+            *(
+                _nested(
+                    current_state,
+                    ("official_replacement_authority_evidence", "queue_blockers"),
+                )
+                or ()
+            ),
+        ]
+    )
 
 
 def _launch_authority_contract(
