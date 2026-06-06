@@ -37928,11 +37928,11 @@
       "id": "lane_rate_attack_g1_cpu_axis_specific_20260518",
       "name": "Rate-Attack G1 CPU-axis-specific optimization",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/frontier_scan.py + tools/probe_g1_cpu_axis_re_rank.py + tools/cpu_axis_optimal_archive_selector.py + experiments/results/g1_cpu_axis_re_rank_20260518T214250Z/report.json"
         },
         "real_archive_empirical": {
           "status": false,
@@ -37947,23 +37947,25 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "uv run python tools/audit_frontier_rate_attack_consolidation.py --strict --format text => PASS with legacy_rate_attack_lane_registry blockers=0; G1 probe score_claim=false"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "ruff clean for frontier-rate/G1 files; pytest consolidation + G1 frontend scan tests => 6 passed"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/feedback_g1_cpu_axis_re_rank_landed_20260518.md + .omx/research/codex_session_summary_g1_cpu_axis_rerank_20260518T214650Z_codex.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/probe_g1_cpu_axis_re_rank.py --write-report plus tools/cpu_axis_optimal_archive_selector.py --json provide the operator rerank and report path"
         }
       },
-      "notes": "Codex registered after routing directive claimed pre-registration; G1 existing-anchor CPU rerank probe."
+      "notes": "Codex registered after routing directive claimed pre-registration; G1 existing-anchor CPU rerank probe.",
+      "lane_class": "rate_attack_existing_anchor_rerank_probe",
+      "research_only": true
     },
     {
       "id": "lane_a1_binary_distillation_design_zig_sparseness_ablation_20260518",
@@ -51655,7 +51657,9 @@
           "evidence": ""
         }
       },
-      "notes": "Stale duplicate L0 placeholder superseded by lane_codex_inverse_steg_rate_attack_adapter_bridge_20260524 and codex_inverse_steg_water_bucket_portfolio_actuation_20260524; retained for historical no-signal-loss reconciliation."
+      "notes": "Stale duplicate L0 placeholder superseded by lane_codex_inverse_steg_rate_attack_adapter_bridge_20260524 and codex_inverse_steg_water_bucket_portfolio_actuation_20260524; retained for historical no-signal-loss reconciliation.",
+      "lane_class": "refused_duplicate_scaffold",
+      "research_only": true
     },
     {
       "id": "lane_codex_inverse_steg_rate_attack_adapter_bridge_20260524",
@@ -70367,5 +70371,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-06T19:19:06Z"
+  "updated_at": "2026-06-06T19:23:11Z"
 }

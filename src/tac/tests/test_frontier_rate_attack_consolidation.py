@@ -89,6 +89,30 @@ def test_frontier_rate_attack_consolidation_audit_covers_compiler_layers() -> No
             consumer["exists"] is True for consumer in row["canonical_consumer_rows"]
         )
         assert all(text_ref["covered"] is True for text_ref in row["text_ref_rows"])
+    lane_registry = audit["legacy_rate_attack_lane_registry"]
+    assert lane_registry["blockers"] == []
+    assert lane_registry["score_claim"] is False
+    assert lane_registry["promotion_eligible"] is False
+    assert lane_registry["ready_for_exact_eval_dispatch"] is False
+    lane_rows = {row["lane_id"]: row for row in lane_registry["rows"]}
+    assert (
+        lane_rows["lane_rate_attack_g1_cpu_axis_specific_20260518"]["status"]
+        == "evidence_recorded"
+    )
+    assert (
+        "impl_complete"
+        in lane_rows["lane_rate_attack_g1_cpu_axis_specific_20260518"]["true_gates"]
+    )
+    assert (
+        lane_rows["codex_inverse_rate_attack_pr95_mlx_bridge_20260524"]["status"]
+        == "refused_duplicate_scaffold"
+    )
+    assert (
+        lane_rows["codex_inverse_rate_attack_pr95_mlx_bridge_20260524"][
+            "research_only"
+        ]
+        is True
+    )
     assert {
         (edge["from"], edge["to"])
         for edge in audit["score_program_dag"]["edges"]
@@ -128,6 +152,13 @@ def test_frontier_rate_attack_consolidation_render_names_formal_and_legacy_surfa
     assert "RATE-OP-2 tropical argmax boundary: planning_only_consumed" in text
     assert "RATE-OP-3 decoy/mosaic residual basis: planning_only_consumed" in text
     assert "RATE ACH autopilot feature matrix: planning_only_consumed" in text
+    assert "legacy_rate_attack_lane_registry:" in text
+    assert "lane_rate_attack_g1_cpu_axis_specific_20260518: evidence_recorded" in text
+    assert (
+        "codex_inverse_rate_attack_pr95_mlx_bridge_20260524: "
+        "refused_duplicate_scaffold"
+        in text
+    )
     assert "entropy_grammar: registered-only" in text
     assert "payload_and_residual_basis: registered-only" in text
 

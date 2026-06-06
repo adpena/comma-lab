@@ -10,6 +10,7 @@ covers the score-program layers.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -464,6 +465,20 @@ LEGACY_RATE_ATTACK_CANONICAL_CONSUMER_PATHS: tuple[str, ...] = (
     "tools/cathedral_autopilot_autonomous_loop.py",
 )
 
+LEGACY_RATE_ATTACK_LANE_ID_TOKENS: tuple[str, ...] = (
+    "rate_attack",
+    "final_rate",
+    "rate_allocator",
+    "frontier_rate",
+)
+
+REFUSED_DUPLICATE_LANE_CLASSES = frozenset(
+    {
+        "refused_duplicate_scaffold",
+        "stale_duplicate_placeholder",
+    }
+)
+
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
@@ -520,6 +535,13 @@ def _read_text_or_empty(path: Path) -> str:
     if not path.is_file():
         return ""
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _read_json_mapping(path: Path) -> Mapping[str, Any]:
+    if not path.is_file():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, Mapping) else {}
 
 
 def _required_source_exists_by_id(repo_root: Path) -> dict[str, bool]:
@@ -747,6 +769,76 @@ def _legacy_rate_attack_advisory_blockers(
     return blockers
 
 
+def _legacy_rate_attack_lane_registry_rows(repo_root: Path) -> list[dict[str, Any]]:
+    registry = _read_json_mapping(repo_root / ".omx/state/lane_registry.json")
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        return []
+    rows: list[dict[str, Any]] = []
+    for lane in lanes:
+        if not isinstance(lane, Mapping):
+            continue
+        lane_id = str(lane.get("id") or "")
+        if not any(token in lane_id for token in LEGACY_RATE_ATTACK_LANE_ID_TOKENS):
+            continue
+        gates = lane.get("gates")
+        gate_rows = gates if isinstance(gates, Mapping) else {}
+        true_gates = sorted(
+            str(gate_id)
+            for gate_id, gate_payload in gate_rows.items()
+            if isinstance(gate_payload, Mapping)
+            and gate_payload.get("status") is True
+        )
+        lane_class = str(lane.get("lane_class") or "").strip()
+        research_only = lane.get("research_only") is True
+        notes = str(lane.get("notes") or "")
+        note_lc = notes.lower()
+        duplicate_noted = "duplicate" in note_lc or "superseded" in note_lc
+        blockers: list[str] = []
+        if not true_gates and not lane_class and not research_only:
+            blockers.append("zero_gate_legacy_lane_unclassified")
+        if duplicate_noted and lane_class not in REFUSED_DUPLICATE_LANE_CLASSES:
+            blockers.append("duplicate_or_superseded_lane_not_refused")
+        if lane_class in REFUSED_DUPLICATE_LANE_CLASSES and not research_only:
+            blockers.append("refused_duplicate_lane_not_research_only")
+        if blockers:
+            status = "blocked"
+        elif lane_class in REFUSED_DUPLICATE_LANE_CLASSES:
+            status = "refused_duplicate_scaffold"
+        elif true_gates:
+            status = "evidence_recorded"
+        else:
+            status = "classified_research_only"
+        rows.append(
+            {
+                "lane_id": lane_id,
+                "name": lane.get("name"),
+                "level": lane.get("level"),
+                "phase": lane.get("phase"),
+                "lane_class": lane_class,
+                "research_only": research_only,
+                "true_gates": true_gates,
+                "notes": notes,
+                "status": status,
+                "blockers": blockers,
+            }
+        )
+    return rows
+
+
+def _legacy_rate_attack_lane_registry_blockers(
+    lane_rows: Iterable[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    for row in lane_rows:
+        lane_id = row.get("lane_id")
+        blockers.extend(
+            f"legacy_rate_attack_lane_registry_blocked:{lane_id}:{blocker}"
+            for blocker in row.get("blockers") or []
+        )
+    return blockers
+
+
 def _adapters_by_target_kind(manifest: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     rows: dict[str, Mapping[str, Any]] = {}
     for item in manifest.get("adapters") or []:
@@ -955,6 +1047,10 @@ def build_frontier_rate_attack_consolidation_audit(
     lineage_blockers = _machine_vision_lineage_blockers(lineage_rows)
     advisory_rows = _legacy_rate_attack_advisory_rows(root)
     advisory_blockers = _legacy_rate_attack_advisory_blockers(advisory_rows)
+    legacy_lane_rows = _legacy_rate_attack_lane_registry_rows(root)
+    legacy_lane_blockers = _legacy_rate_attack_lane_registry_blockers(
+        legacy_lane_rows
+    )
 
     blockers: list[str] = []
     blockers.extend(
@@ -1044,6 +1140,7 @@ def build_frontier_rate_attack_consolidation_audit(
     )
     blockers.extend(lineage_blockers)
     blockers.extend(advisory_blockers)
+    blockers.extend(legacy_lane_blockers)
     production_action_ready = not production_action_blockers
 
     return {
@@ -1096,6 +1193,15 @@ def build_frontier_rate_attack_consolidation_audit(
             ),
             "rows": advisory_rows,
             "blockers": advisory_blockers,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "legacy_rate_attack_lane_registry": {
+            "schema": "legacy_rate_attack_lane_registry_canonicalization.v1",
+            "id_tokens": list(LEGACY_RATE_ATTACK_LANE_ID_TOKENS),
+            "rows": legacy_lane_rows,
+            "blockers": legacy_lane_blockers,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1191,6 +1297,32 @@ def render_frontier_rate_attack_consolidation_audit(
                 f"  - {row.get('source_label')}: {row.get('status')}; "
                 f"artifacts={row.get('artifact_count', 0)}; "
                 f"layers={','.join(map(str, row.get('compiler_layers') or []))}"
+            )
+    lane_registry = audit.get("legacy_rate_attack_lane_registry")
+    if isinstance(lane_registry, Mapping):
+        rows = [
+            row
+            for row in lane_registry.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        blockers = lane_registry.get("blockers") or []
+        zero_gate_count = sum(1 for row in rows if not row.get("true_gates"))
+        refused_count = sum(
+            1
+            for row in rows
+            if row.get("status") == "refused_duplicate_scaffold"
+        )
+        lines.append(
+            "legacy_rate_attack_lane_registry: "
+            f"{len(rows)} lane(s); blockers={len(blockers)}; "
+            f"zero_gate={zero_gate_count}; refused_duplicate={refused_count}"
+        )
+        for row in rows:
+            lines.append(
+                f"  - {row.get('lane_id')}: {row.get('status')}; "
+                f"level={row.get('level')}; "
+                f"class={row.get('lane_class') or 'untyped'}; "
+                f"gates={','.join(map(str, row.get('true_gates') or [])) or 'none'}"
             )
     lines.append("state:")
     for row in audit.get("state_surfaces") or []:
