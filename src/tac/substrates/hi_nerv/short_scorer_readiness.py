@@ -554,6 +554,10 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_accepted_steps_without_argmax_debt_move"
             )
+        if scorer_domain_hard_birth_gate["receiver_quantum_rejections_without_crossing"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_receiver_subquantum_updates"
+            )
         if scorer_domain_hard_birth_gate["no_accepted_steps_with_remaining_debt"]:
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_no_accepted_steps_with_debt"
@@ -1387,6 +1391,26 @@ def _scorer_domain_hard_birth_gate(
         "segnet_hard_birth_bootstrap_loss_delta",
     )
     accepted_step_count = _finite_mapping_value(metadata, "accepted_step_count")
+    receiver_quantum_attempt_count = _finite_mapping_value(
+        metadata,
+        "receiver_quantum_attempt_count",
+    )
+    receiver_quantum_rejected_step_count = _finite_mapping_value(
+        metadata,
+        "receiver_quantum_rejected_step_count",
+    )
+    receiver_quantum_crossing_accepted_step_count = _finite_mapping_value(
+        metadata,
+        "receiver_quantum_crossing_accepted_step_count",
+    )
+    max_candidate_frame1_delta_abs_uint8 = _finite_mapping_value(
+        metadata,
+        "max_candidate_frame1_delta_abs_uint8",
+    )
+    max_accepted_frame1_delta_abs_uint8 = _finite_mapping_value(
+        metadata,
+        "max_accepted_frame1_delta_abs_uint8",
+    )
     debt_remains = bool(
         remaining_debt is not None
         and remaining_debt > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
@@ -1430,6 +1454,16 @@ def _scorer_domain_hard_birth_gate(
         and debt_remains
         and not hard_argmax_birth_progress
     )
+    receiver_quantum_rejections_without_crossing = bool(
+        metadata.get("receiver_quantum_acceptance_enabled") is True
+        and receiver_quantum_rejected_step_count is not None
+        and receiver_quantum_rejected_step_count > 0.0
+        and (
+            receiver_quantum_crossing_accepted_step_count is None
+            or receiver_quantum_crossing_accepted_step_count <= 0.0
+        )
+        and debt_remains
+    )
     return {
         "schema": "hi_nerv_scorer_domain_hard_birth_bootstrap_gate.v1",
         "required": True,
@@ -1447,6 +1481,16 @@ def _scorer_domain_hard_birth_gate(
         "after_score_weighted_worst_unsolved_argmax_mass": after_worst_debt,
         "delta_score_weighted_worst_unsolved_argmax_mass": worst_debt_delta,
         "loss_delta": loss_delta,
+        "receiver_quantum_acceptance_enabled": bool(
+            metadata.get("receiver_quantum_acceptance_enabled")
+        ),
+        "receiver_quantum_attempt_count": receiver_quantum_attempt_count,
+        "receiver_quantum_rejected_step_count": receiver_quantum_rejected_step_count,
+        "receiver_quantum_crossing_accepted_step_count": (
+            receiver_quantum_crossing_accepted_step_count
+        ),
+        "max_candidate_frame1_delta_abs_uint8": max_candidate_frame1_delta_abs_uint8,
+        "max_accepted_frame1_delta_abs_uint8": max_accepted_frame1_delta_abs_uint8,
         "after_min_ratio_present": after_min_ratio is not None,
         "after_min_ratio_cleared": after_min_ratio_cleared,
         "remaining_debt_present": debt_remains,
@@ -1458,16 +1502,23 @@ def _scorer_domain_hard_birth_gate(
         "soft_loss_progress": loss_moved,
         "soft_progress_only_no_argmax_debt_move": soft_progress_only,
         "accepted_steps_without_argmax_debt_move": accepted_without_argmax_debt_move,
+        "receiver_quantum_rejections_without_crossing": (
+            receiver_quantum_rejections_without_crossing
+        ),
         "birth_progress_stage": (
             "hard_argmax_birth_or_debt_progress"
             if hard_argmax_birth_progress
             else (
-                "soft_loss_progress_only_no_argmax_debt_move"
-                if soft_progress_only
+                "receiver_subquantum_updates_no_crossing"
+                if receiver_quantum_rejections_without_crossing
                 else (
-                    "accepted_steps_without_argmax_debt_move"
-                    if accepted_without_argmax_debt_move
-                    else "hard_birth_progress_not_observed"
+                    "soft_loss_progress_only_no_argmax_debt_move"
+                    if soft_progress_only
+                    else (
+                        "accepted_steps_without_argmax_debt_move"
+                        if accepted_without_argmax_debt_move
+                        else "hard_birth_progress_not_observed"
+                    )
                 )
             )
         ),

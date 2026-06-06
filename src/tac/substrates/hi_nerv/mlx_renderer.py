@@ -2173,6 +2173,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(value)  # type: ignore[union-attr]
             return float(value.item())
 
+        def _frame1_delta_max_abs_from_base(base_pred1: Any) -> float:
+            _, candidate_pred1 = _predict_pair01(self)
+            delta = mx.max(mx.abs(candidate_pred1 - base_pred1))  # type: ignore[union-attr]
+            mx.eval(delta)  # type: ignore[union-attr]
+            return float(delta.item())
+
         def _apply_gradient_step(
             *,
             base_snapshot: list[tuple[Any, Any]],
@@ -2207,6 +2213,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         current_segnet_score_debt = _segnet_bootstrap_score_debt_scalar(self)
         preserve_contrast_floor = bool(weights["contrast_floor_weight"] > 0.0)
         preserve_segnet_score_debt = bool(segnet_live_bootstrap_requested)
+        receiver_quantum_acceptance_enabled = bool(
+            segnet_live_bootstrap_requested
+            and weights["segnet_hard_birth_bootstrap_weight"] > 0.0
+        )
+        receiver_uint8_half_step_normalized = 0.5 / 255.0
         loss_history: list[float] = [current_loss]
         grad_norm_history: list[float] = []
         clipped_count = 0
@@ -2214,13 +2225,25 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         rejected_step_count = 0
         contrast_floor_rejected_step_count = 0
         segnet_score_debt_rejected_step_count = 0
+        receiver_quantum_rejected_step_count = 0
+        receiver_quantum_crossing_accepted_step_count = 0
+        receiver_quantum_attempt_count = 0
+        receiver_quantum_growth_attempt_count = 0
+        max_candidate_frame1_delta_abs = 0.0
+        max_candidate_frame1_delta_abs_uint8 = 0.0
+        max_accepted_frame1_delta_abs = 0.0
+        max_accepted_frame1_delta_abs_uint8 = 0.0
         backtracking_attempt_count = 0
         bootstrap_scoped_out_gradient_tensor_count = 0
         accepted_bootstrap_update_tensor_names: set[str] = set()
         min_accepted_step_lr = lr
         max_backtracking_attempts = 8
+        max_receiver_quantum_growth_attempts = 20
         for _step in range(step_count):
             base_snapshot = _snapshot_parameters()
+            _, base_pred1 = _predict_pair01(self)
+            base_pred1 = mx.stop_gradient(mx.array(base_pred1))  # type: ignore[union-attr]
+            mx.eval(base_pred1)  # type: ignore[union-attr]
             loss, grads = loss_and_grad_fn(self)
             mx.eval(loss)  # type: ignore[union-attr]
             if clip is not None:
@@ -2235,8 +2258,21 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             step_lr = lr
             applied_tensor_count = 0
             applied_tensor_names: list[str] = []
-            for _attempt in range(max_backtracking_attempts):
+            if receiver_quantum_acceptance_enabled:
+                step_lr_schedule = [
+                    lr * (2.0**attempt)
+                    for attempt in range(max_receiver_quantum_growth_attempts)
+                ]
+            else:
+                step_lr_schedule = [
+                    lr / (2.0**attempt) for attempt in range(max_backtracking_attempts)
+                ]
+            for attempt_index, step_lr in enumerate(step_lr_schedule):
                 backtracking_attempt_count += 1
+                if receiver_quantum_acceptance_enabled:
+                    receiver_quantum_attempt_count += 1
+                    if attempt_index > 0:
+                        receiver_quantum_growth_attempt_count += 1
                 (
                     applied_tensor_count,
                     applied_tensor_names,
@@ -2252,6 +2288,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 candidate_loss = _loss_scalar(self)
                 candidate_contrast_floor = _contrast_floor_scalar(self)
                 candidate_segnet_score_debt = _segnet_bootstrap_score_debt_scalar(self)
+                candidate_frame1_delta_abs = _frame1_delta_max_abs_from_base(base_pred1)
+                candidate_frame1_delta_abs_uint8 = candidate_frame1_delta_abs * 255.0
+                max_candidate_frame1_delta_abs = max(
+                    max_candidate_frame1_delta_abs,
+                    candidate_frame1_delta_abs,
+                )
+                max_candidate_frame1_delta_abs_uint8 = max(
+                    max_candidate_frame1_delta_abs_uint8,
+                    candidate_frame1_delta_abs_uint8,
+                )
                 contrast_floor_ok = (
                     not preserve_contrast_floor
                     or candidate_contrast_floor <= current_contrast_floor + 1.0e-9
@@ -2261,26 +2307,46 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     or candidate_segnet_score_debt
                     <= current_segnet_score_debt + 1.0e-6
                 )
+                receiver_quantum_ok = (
+                    not receiver_quantum_acceptance_enabled
+                    or candidate_frame1_delta_abs >= receiver_uint8_half_step_normalized
+                    or candidate_segnet_score_debt
+                    < current_segnet_score_debt - 1.0e-6
+                )
                 if (
                     candidate_loss <= current_loss + 1.0e-12
                     and contrast_floor_ok
                     and segnet_score_debt_ok
+                    and receiver_quantum_ok
                 ):
                     current_loss = candidate_loss
                     current_contrast_floor = candidate_contrast_floor
                     current_segnet_score_debt = candidate_segnet_score_debt
                     min_accepted_step_lr = min(min_accepted_step_lr, step_lr)
+                    max_accepted_frame1_delta_abs = max(
+                        max_accepted_frame1_delta_abs,
+                        candidate_frame1_delta_abs,
+                    )
+                    max_accepted_frame1_delta_abs_uint8 = max(
+                        max_accepted_frame1_delta_abs_uint8,
+                        candidate_frame1_delta_abs_uint8,
+                    )
                     loss_history.append(candidate_loss)
                     accepted = True
                     accepted_step_count += 1
+                    receiver_quantum_crossing_accepted_step_count += int(
+                        receiver_quantum_acceptance_enabled
+                        and candidate_frame1_delta_abs >= receiver_uint8_half_step_normalized
+                    )
                     accepted_bootstrap_update_tensor_names.update(applied_tensor_names)
                     break
                 if not contrast_floor_ok:
                     contrast_floor_rejected_step_count += 1
                 if not segnet_score_debt_ok:
                     segnet_score_debt_rejected_step_count += 1
+                if not receiver_quantum_ok:
+                    receiver_quantum_rejected_step_count += 1
                 _restore_parameters(base_snapshot)
-                step_lr *= 0.5
             if not accepted:
                 _restore_parameters(base_snapshot)
                 rejected_step_count += 1
@@ -2341,8 +2407,31 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "segnet_score_debt_rejected_step_count": int(
                 segnet_score_debt_rejected_step_count
             ),
+            "receiver_quantum_acceptance_enabled": receiver_quantum_acceptance_enabled,
+            "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
+            "receiver_quantum_attempt_count": int(receiver_quantum_attempt_count),
+            "receiver_quantum_growth_attempt_count": int(
+                receiver_quantum_growth_attempt_count
+            ),
+            "receiver_quantum_rejected_step_count": int(
+                receiver_quantum_rejected_step_count
+            ),
+            "receiver_quantum_crossing_accepted_step_count": int(
+                receiver_quantum_crossing_accepted_step_count
+            ),
+            "max_candidate_frame1_delta_abs": float(max_candidate_frame1_delta_abs),
+            "max_candidate_frame1_delta_abs_uint8": float(
+                max_candidate_frame1_delta_abs_uint8
+            ),
+            "max_accepted_frame1_delta_abs": float(max_accepted_frame1_delta_abs),
+            "max_accepted_frame1_delta_abs_uint8": float(
+                max_accepted_frame1_delta_abs_uint8
+            ),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "max_backtracking_attempts_per_step": int(max_backtracking_attempts),
+            "max_receiver_quantum_growth_attempts_per_step": int(
+                max_receiver_quantum_growth_attempts
+            ),
             "min_accepted_step_learning_rate": float(min_accepted_step_lr),
             "pair_count": int(idx.shape[0]),
             **weights,

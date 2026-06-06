@@ -649,6 +649,14 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
         )
     assert payload["segnet_score_debt_preserving_acceptance"] is True
     assert payload["segnet_score_debt_rejected_step_count"] >= 0
+    assert payload["receiver_quantum_acceptance_enabled"] is True
+    assert payload["receiver_quantum_attempt_count"] >= payload["accepted_step_count"]
+    assert payload["receiver_quantum_growth_attempt_count"] > 0
+    assert payload["receiver_quantum_rejected_step_count"] > 0
+    assert payload["receiver_quantum_crossing_accepted_step_count"] == (
+        payload["accepted_step_count"]
+    )
+    assert payload["max_accepted_frame1_delta_abs_uint8"] >= 0.5
     assert payload["segnet_margin_bootstrap_loss_delta"] >= 0.0
     assert payload["segnet_hard_birth_bootstrap_loss_delta"] >= 0.0
     assert (
@@ -750,6 +758,14 @@ def test_mlx_scorer_domain_bootstrap_hard_birth_can_actuate_without_margin_weigh
     assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]
     assert "head_rgb_0.*" not in payload["archive_charged_decoder_tensors"]
     assert payload["segnet_score_debt_preserving_acceptance"] is True
+    assert payload["receiver_quantum_acceptance_enabled"] is True
+    assert payload["receiver_quantum_attempt_count"] >= payload["accepted_step_count"]
+    assert payload["receiver_quantum_growth_attempt_count"] > 0
+    assert payload["receiver_quantum_rejected_step_count"] > 0
+    assert payload["receiver_quantum_crossing_accepted_step_count"] == (
+        payload["accepted_step_count"]
+    )
+    assert payload["max_accepted_frame1_delta_abs_uint8"] >= 0.5
     assert payload["metrics_before"]["segnet_hard_birth_bootstrap_loss"] > 0.0
     assert (
         payload["metrics_before"]["segnet_hard_birth_bootstrap_active_class_count"]

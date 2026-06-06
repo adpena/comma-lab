@@ -185,6 +185,12 @@ def _output_head_bootstrap_metadata(
     hard_birth_loss_delta: float = 1.0,
     bootstrap_enabled: bool = True,
     hard_birth_enabled: bool = True,
+    receiver_quantum_acceptance_enabled: bool = False,
+    receiver_quantum_attempt_count: float = 0.0,
+    receiver_quantum_rejected_step_count: float = 0.0,
+    receiver_quantum_crossing_accepted_step_count: float = 0.0,
+    max_candidate_frame1_delta_abs_uint8: float = 0.0,
+    max_accepted_frame1_delta_abs_uint8: float = 0.0,
 ) -> dict[str, object]:
     metrics_before: dict[str, float] = {
         "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
@@ -233,6 +239,22 @@ def _output_head_bootstrap_metadata(
             ),
             "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
                 float(hard_birth_remaining_debt) - float(hard_birth_before_debt)
+            ),
+            "receiver_quantum_acceptance_enabled": bool(
+                receiver_quantum_acceptance_enabled
+            ),
+            "receiver_quantum_attempt_count": float(receiver_quantum_attempt_count),
+            "receiver_quantum_rejected_step_count": float(
+                receiver_quantum_rejected_step_count
+            ),
+            "receiver_quantum_crossing_accepted_step_count": float(
+                receiver_quantum_crossing_accepted_step_count
+            ),
+            "max_candidate_frame1_delta_abs_uint8": float(
+                max_candidate_frame1_delta_abs_uint8
+            ),
+            "max_accepted_frame1_delta_abs_uint8": float(
+                max_accepted_frame1_delta_abs_uint8
             ),
         },
     }
@@ -754,6 +776,48 @@ def test_scorer_domain_hard_birth_bootstrap_classifies_soft_only_progress() -> N
     assert gate["delta_score_weighted_total_unsolved_argmax_mass"] == pytest.approx(
         0.0
     )
+
+
+def test_scorer_domain_hard_birth_bootstrap_blocks_subquantum_receiver_updates() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata=_output_head_bootstrap_metadata(
+            accepted_step_count=0.0,
+            hard_birth_before_min_ratio=0.0,
+            hard_birth_after_min_ratio=0.0,
+            hard_birth_before_debt=50.0,
+            hard_birth_remaining_debt=50.0,
+            hard_birth_before_worst_debt=25.0,
+            hard_birth_after_worst_debt=25.0,
+            hard_birth_loss_delta=0.0,
+            receiver_quantum_acceptance_enabled=True,
+            receiver_quantum_attempt_count=20.0,
+            receiver_quantum_rejected_step_count=20.0,
+            receiver_quantum_crossing_accepted_step_count=0.0,
+            max_candidate_frame1_delta_abs_uint8=0.0005,
+            max_accepted_frame1_delta_abs_uint8=0.0,
+        ),
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_receiver_subquantum_updates"
+        in report["actionable_blockers"]
+    )
+    gate = report["scorer_domain_hard_birth_bootstrap_gate"]
+    assert gate["birth_progress_stage"] == "receiver_subquantum_updates_no_crossing"
+    assert gate["receiver_quantum_acceptance_enabled"] is True
+    assert gate["receiver_quantum_rejected_step_count"] == pytest.approx(20.0)
+    assert gate["receiver_quantum_crossing_accepted_step_count"] == pytest.approx(0.0)
+    assert gate["max_candidate_frame1_delta_abs_uint8"] == pytest.approx(0.0005)
 
 
 def test_scorer_domain_hard_birth_bootstrap_clears_with_ratio_and_steps() -> None:
