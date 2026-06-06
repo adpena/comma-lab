@@ -5949,9 +5949,17 @@ def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
     replay = report["score_aware_long_training"][
         "official_mfu_hfr_tub_source_forward_replay"
     ]
-    assert replay["receiver_official_payload_forward_replay_passed"] is False
+    assert replay["receiver_official_payload_decode_replay_passed"] is True
+    assert replay["receiver_official_payload_forward_replay_passed"] is True
+    assert replay["receiver_official_payload_forward_replay_scope"] == (
+        "archive_payload_decode_and_self_consistency_not_target_distortion"
+    )
+    assert replay["target_reconstruction_within_tolerance"] is False
     assert np.isfinite(float(replay["max_abs_error_nchw255"]))
-    assert "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed" in replay[
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed" not in replay[
+        "blockers"
+    ]
+    assert "snerv_official_mfu_hfr_tub_target_reconstruction_outside_tolerance" in replay[
         "blockers"
     ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())

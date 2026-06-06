@@ -8233,7 +8233,8 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             if shape_matches and finite
             else None
         )
-        replay_passed = bool(
+        target_reconstruction_tolerance = 5.0e-2
+        receiver_decode_replay_passed = bool(
             selected_authority.get("frame_producing_official_export") is True
             and selected_authority.get("receiver_payload_frame_replay_passed") is True
             and receiver_frame_replay.get("receiver_payload_frame_replay_passed") is True
@@ -8242,12 +8243,16 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             and shape_matches
             and finite
             and max_abs_error is not None
-            and max_abs_error <= 5.0e-2
+        )
+        target_reconstruction_within_tolerance = bool(
+            receiver_decode_replay_passed
+            and max_abs_error is not None
+            and max_abs_error <= target_reconstruction_tolerance
         )
         component_rows = _official_long_training_replay_component_rows(
             primitive_proof=primitive_proof,
             tensor_map=tensor_map,
-            receiver_replay_passed=replay_passed,
+            receiver_replay_passed=receiver_decode_replay_passed,
             tub_fixture_replay=tub_fixture_replay,
         )
         source_forward_blockers = _filter_official_source_forward_blockers_for_mapping(
@@ -8255,7 +8260,10 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             trained_checkpoint_mapping_manifest,
         )
         blockers = [
-            "" if replay_passed else "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
+            "" if receiver_decode_replay_passed else "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
+            ""
+            if target_reconstruction_within_tolerance
+            else "snerv_official_mfu_hfr_tub_target_reconstruction_outside_tolerance",
             "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
             "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
             ""
@@ -8285,7 +8293,19 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             "decoded_frames_finite": finite,
             "frame_shape_matches": shape_matches,
             "max_abs_error_nchw255": max_abs_error,
-            "receiver_official_payload_forward_replay_passed": replay_passed,
+            "target_reconstruction_tolerance_nchw255": target_reconstruction_tolerance,
+            "target_reconstruction_within_tolerance": (
+                target_reconstruction_within_tolerance
+            ),
+            "receiver_official_payload_decode_replay_passed": (
+                receiver_decode_replay_passed
+            ),
+            "receiver_official_payload_forward_replay_passed": (
+                receiver_decode_replay_passed
+            ),
+            "receiver_official_payload_forward_replay_scope": (
+                "archive_payload_decode_and_self_consistency_not_target_distortion"
+            ),
             "component_rows": component_rows,
             "blockers": _ordered_unique(str(blocker) for blocker in blockers if blocker),
         }
