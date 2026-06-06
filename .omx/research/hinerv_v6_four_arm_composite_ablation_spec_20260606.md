@@ -75,6 +75,43 @@ v5 persisted counters only (pose_guard_rejected_step_count=3), not per-step
 old/new d_pose rows. The instrumentation in §3 exists precisely so v6 emits
 the table the partner asked for; fabricating a v5 table is forbidden.
 
+## Amendments accepted from GPT review (pre-run; 2026-06-07)
+
+1. **Dual epsilon.** `epsilon_research_batch_local = 1e-6` for v6 live rows
+   ONLY (labelled research-stage numerical epsilon). L4/L5 (fakequant /
+   parse-back / inflate) admission uses a replay-calibrated epsilon:
+   `max(1e-5, 5 × measured_replay_noise_floor)`; the noise floor itself must
+   be measured and reported before any survival-row admission reuses ΔS.
+2. **Catastrophic guard tightened + counterfactualized.** Primary admission:
+   `exact_delta_score_nonrate < -1e-6`. Backstop (blowup-catcher, NOT a
+   tradeoff policer): `pose_score_regression ≤ 0.5 batch-local` AND
+   `d_pose_new ≤ 1.25 · d_pose_old`. Both counterfactuals emitted per step:
+   `would_accept_exact_score_if_raw_cap_disabled` AND
+   `would_accept_without_catastrophic_guard` (at d_pose≈194 the ratio cap
+   permits ~9.9 score units, so the 0.5 score cap dominates — the logs must
+   show whether the ratio cap ever binds).
+3. **Interaction/commutator field.** v6 emits
+   `interaction_or_commutator = ΔS(C) − ΔS(A) − ΔS(B)` — the first HiNeRV
+   row in the action-commutator ledger, connecting the servo directly to the
+   PR110 algebra lane (composite deltas ≠ sums under scorer nonlinearity).
+4. **Decision matrix deliverable.** Post-run table: A accepted/rejected-by;
+   B pose-improved/seg-unchanged; C exact ΔS + interaction; D exact ΔS +
+   improvement-over-C. Interpretation contract: A-accepts-but-old-cap-rejects
+   ⇒ v5 was a cap failure; only-D-accepts ⇒ future operator is joint line
+   search; no-arm-accepts ⇒ first failing surface is the next patch target.
+5. **Remediation namespace.** If the audit returns confirmed-HIGH on any v6
+   dependency (B operator / F threading / D schema), v6 proceeds only after
+   remediation AND every v6 `action_id` includes a
+   `remediated_dependency_hash` component so pre-audit rows can never be
+   compared with post-remediation rows.
+6. **Must-have field list** (superset of §"The 4 arms"): action_id, arm,
+   old/new d_seg + d_pose, seg/pose score deltas, exact ΔS_nonrate, old/new
+   raw region debt, all four transition counts + net, hard_won_count,
+   argmax_changed_count_region, pose_output_l2_delta, pose_input_delta_linf,
+   raw_cap_decision, exact_score_decision, catastrophic_guard_decision, both
+   would_accept counterfactuals, restore_state_pass,
+   authority=batch_local_live_mlx, promotion_eligible=false.
+
 ## Taint rule (reinforced, in force)
 
 No swarm output (B operator, F threading, A/C/D/E modules) updates launch
