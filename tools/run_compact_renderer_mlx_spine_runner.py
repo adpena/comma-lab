@@ -16337,6 +16337,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             grad_clip_max_norm=None,
                         )
                     )
+                    if (
+                        bool(pose_trust_required)
+                        and target_region_birth_payload.get("accepted") is True
+                    ):
+                        pose_trusted_blockers = _hi_nerv_pose_trusted_birth_payload_blockers(
+                            target_region_birth_payload
+                        )
+                        target_region_birth_payload["pose_trusted_validation_blockers"] = list(
+                            pose_trusted_blockers
+                        )
+                        target_region_birth_payload["pose_trusted_validated"] = not pose_trusted_blockers
+                        if pose_trusted_blockers:
+                            target_region_birth_payload["accepted"] = False
+                            target_region_birth_payload["blockers"] = _dedupe(
+                                [
+                                    *[str(value) for value in target_region_birth_payload.get("blockers") or []],
+                                    *pose_trusted_blockers,
+                                ]
+                            )
                 except Exception as exc:
                     target_region_birth_payload = {
                         **target_region_birth_payload,
@@ -18209,6 +18228,73 @@ def _restore_mlx_model_parameters(model: Any, snapshot: list[tuple[Any, Any]]) -
         ) from exc
     model.update(tree_unflatten([(name, mx.array(value)) for name, value in snapshot]))
     mx.eval(model.parameters())
+
+
+def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> list[str]:
+    """Return fail-closed blockers for an accepted pose-trusted birth payload."""
+
+    blockers: list[str] = []
+    receipt_raw = payload.get("receipt")
+    receipt = receipt_raw if isinstance(receipt_raw, Mapping) else {}
+    row = receipt if receipt else payload
+    if str(row.get("schema") or "") != "hi_nerv_target_region_birth_receipt.v1":
+        blockers.append("hi_nerv_pose_trusted_birth_receipt_missing")
+    if int(row.get("accepted_step_count") or payload.get("accepted_step_count") or 0) <= 0:
+        blockers.append("hi_nerv_pose_trusted_birth_accepted_step_missing")
+
+    transitions_raw = row.get("argmax_transitions")
+    transitions = transitions_raw if isinstance(transitions_raw, Mapping) else row
+    hard_won = transitions.get("target_hard_won_count")
+    net_support = transitions.get("net_target_support_delta")
+    if not isinstance(hard_won, (int, float)) or float(hard_won) <= 0.0:
+        blockers.append("hi_nerv_pose_trusted_birth_target_hard_won_missing")
+    if not isinstance(net_support, (int, float)) or float(net_support) <= 0.0:
+        blockers.append("hi_nerv_pose_trusted_birth_net_support_not_positive")
+
+    pose_guard_raw = row.get("pose_guard")
+    pose_guard = pose_guard_raw if isinstance(pose_guard_raw, Mapping) else {}
+    if pose_guard.get("available") is not True:
+        blockers.append("hi_nerv_pose_trusted_birth_pose_guard_missing")
+    if pose_guard.get("pose_input_contest_resolution") is not True:
+        blockers.append("hi_nerv_pose_trusted_birth_pose_input_not_contest_resolution")
+    accepted_delta = pose_guard.get("max_accepted_pose_output_delta_l2")
+    pose_cap = pose_guard.get("max_pose_output_delta_l2")
+    if not isinstance(accepted_delta, (int, float)) or not isinstance(pose_cap, (int, float)):
+        blockers.append("hi_nerv_pose_trusted_birth_pose_cap_telemetry_missing")
+    elif float(accepted_delta) > float(pose_cap):
+        blockers.append("hi_nerv_pose_trusted_birth_pose_cap_exceeded")
+
+    nonrate_raw = row.get("exact_nonrate")
+    nonrate = nonrate_raw if isinstance(nonrate_raw, Mapping) else {}
+    delta_score = nonrate.get("delta_score_nonrate")
+    if nonrate.get("pose_term_available") is not True:
+        blockers.append("hi_nerv_pose_trusted_birth_pose_nonrate_missing")
+    if not isinstance(delta_score, (int, float)) or float(delta_score) >= 0.0:
+        blockers.append("hi_nerv_pose_trusted_birth_exact_nonrate_not_improved")
+
+    frontier_raw = row.get("candidate_frontier_telemetry")
+    frontier = frontier_raw if isinstance(frontier_raw, Mapping) else {}
+    if int(frontier.get("candidate_attempt_count") or 0) <= 0:
+        blockers.append("hi_nerv_pose_trusted_birth_candidate_frontier_missing")
+
+    compensation_raw = row.get("pose_compensation")
+    compensation = compensation_raw if isinstance(compensation_raw, Mapping) else None
+    if compensation is not None and compensation.get("composite_accepted") is True:
+        if compensation.get("frame1_receiver_uint8_unchanged_by_compensation") is not True:
+            blockers.append("hi_nerv_pose_trusted_birth_compensation_moved_frame1")
+        birth_names = {str(name) for name in (row.get("updated_parameter_names") or [])}
+        compensation_names = [str(name) for name in (compensation.get("compensation_updated_parameter_names") or [])]
+        if not compensation_names:
+            blockers.append("hi_nerv_pose_trusted_birth_compensation_names_missing")
+        for name in compensation_names:
+            if not name.startswith("head_rgb_0"):
+                blockers.append("hi_nerv_pose_trusted_birth_compensation_scope_escape")
+                break
+            if name in birth_names:
+                blockers.append("hi_nerv_pose_trusted_birth_compensation_in_birth_scope")
+                break
+
+    return _dedupe(blockers)
 
 
 def _write_hi_nerv_runner_live_birth_survival_rows(

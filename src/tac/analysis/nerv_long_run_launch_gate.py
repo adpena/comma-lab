@@ -180,9 +180,17 @@ def _pose_trusted(row: Mapping[str, Any]) -> bool:
     pose_guard = row.get("pose_guard") or {}
     nonrate = row.get("exact_nonrate") or {}
     delta = nonrate.get("delta_score_nonrate")
+    accepted_delta = pose_guard.get("max_accepted_pose_output_delta_l2")
+    pose_cap = pose_guard.get("max_pose_output_delta_l2")
+    pose_cap_satisfied = (
+        isinstance(accepted_delta, (int, float))
+        and isinstance(pose_cap, (int, float))
+        and float(accepted_delta) <= float(pose_cap)
+    )
     return bool(
         pose_guard.get("available")
         and pose_guard.get("pose_input_contest_resolution")
+        and pose_cap_satisfied
         and nonrate.get("pose_term_available")
         and isinstance(delta, (int, float))
         and float(delta) < 0.0

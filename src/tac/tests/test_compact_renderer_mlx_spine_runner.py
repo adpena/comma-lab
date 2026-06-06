@@ -40,6 +40,7 @@ import tools.run_compact_renderer_mlx_spine_runner as runner_mod  # noqa: E402
 from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     CompactRendererMlxSpineRunnerError,
+    _hi_nerv_pose_trusted_birth_payload_blockers,
     _parse_args,
     _pr95_long_campaign_prelaunch_blockers,
     _require_scorer_upstream_dir_for_distillation,
@@ -97,6 +98,80 @@ def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() 
     assert "segnet_direct_live_target_mass_floor_weight" in call
     assert '"segnet_direct_live_target_min_ratio_floor_weight": float(' in call
     assert "segnet_direct_live_target_min_ratio_floor_weight" in call
+
+
+def test_pose_trusted_birth_payload_validator_rejects_metadata_only_acceptance() -> None:
+    blockers = _hi_nerv_pose_trusted_birth_payload_blockers(
+        {
+            "schema": "hi_nerv_target_region_birth.v1",
+            "accepted": True,
+            "accepted_step_count": 1,
+            "action_id": "a" * 64,
+        }
+    )
+
+    assert "hi_nerv_pose_trusted_birth_receipt_missing" in blockers
+    assert "hi_nerv_pose_trusted_birth_target_hard_won_missing" in blockers
+    assert "hi_nerv_pose_trusted_birth_pose_cap_telemetry_missing" in blockers
+    assert "hi_nerv_pose_trusted_birth_exact_nonrate_not_improved" in blockers
+    assert "hi_nerv_pose_trusted_birth_candidate_frontier_missing" in blockers
+
+
+def test_pose_trusted_birth_payload_validator_accepts_receiver_closed_receipt() -> None:
+    blockers = _hi_nerv_pose_trusted_birth_payload_blockers(
+        {
+            "schema": "hi_nerv_target_region_birth.v1",
+            "accepted": True,
+            "action_id": "a" * 64,
+            "receipt": {
+                "schema": "hi_nerv_target_region_birth_receipt.v1",
+                "surface": "live_mlx",
+                "action_id": "a" * 64,
+                "accepted_step_count": 1,
+                "updated_parameter_names": ["head_rgb_1.weight"],
+                "argmax_transitions": {
+                    "target_hard_won_count": 3,
+                    "target_hard_lost_count": 0,
+                    "net_target_support_delta": 3,
+                },
+                "pose_guard": {
+                    "available": True,
+                    "pose_input_contest_resolution": True,
+                    "max_accepted_pose_output_delta_l2": 0.025,
+                    "max_pose_output_delta_l2": 0.05,
+                },
+                "exact_nonrate": {
+                    "pose_term_available": True,
+                    "delta_score_nonrate": -0.1,
+                },
+                "candidate_frontier_telemetry": {
+                    "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+                    "candidate_attempt_count": 2,
+                },
+                "pose_compensation": {
+                    "composite_accepted": True,
+                    "frame1_receiver_uint8_unchanged_by_compensation": True,
+                    "compensation_updated_parameter_names": ["head_rgb_0.bias"],
+                },
+            },
+        }
+    )
+
+    assert blockers == []
+
+
+def test_hinerv_runner_calls_pose_trusted_birth_validator_after_actuator() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    body = source[
+        source.index("target_region_birth_payload = dict(") : source.index(
+            "except Exception as exc:",
+            source.index("target_region_birth_payload = dict("),
+        )
+    ]
+
+    assert "_hi_nerv_pose_trusted_birth_payload_blockers(" in body
+    assert 'target_region_birth_payload["accepted"] = False' in body
+    assert 'target_region_birth_payload["pose_trusted_validated"]' in body
 
 
 def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None:

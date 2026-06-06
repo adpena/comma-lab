@@ -63,6 +63,8 @@ def _live_birth_receipt(
         "pose_guard": {
             "available": pose_trusted,
             "pose_input_contest_resolution": pose_trusted,
+            "max_accepted_pose_output_delta_l2": 0.025 if pose_trusted else None,
+            "max_pose_output_delta_l2": 0.05,
         },
         "exact_nonrate": {
             "pose_term_available": pose_trusted,
@@ -158,6 +160,23 @@ def test_live_birth_without_pose_trust_is_l2(tmp_path: Path) -> None:
         frontier_pointer=_pointer(tmp_path),
         now_utc=NOW,
     )
+    assert verdict["highest_level"] == "L2"
+    assert "pose_trusted_birth_receipt_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_live_birth_without_pose_cap_telemetry_is_not_pose_trusted(tmp_path: Path) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt(pose_trusted=True)
+    row["pose_guard"].pop("max_accepted_pose_output_delta_l2")
+    _write(root / "birth.json", row)
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
     assert verdict["highest_level"] == "L2"
     assert "pose_trusted_birth_receipt_missing" in verdict["blocking_evidence"]
     assert verdict["approved"] is False
