@@ -2995,6 +2995,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             )
 
         eps = 1.0e-6
+        initial_impostor_np = np.array(initial_logits_np, copy=True)
+        initial_impostor_np[..., birth_class] = -np.inf
+        initial_margin_reference_np = initial_impostor_np.max(axis=-1) - initial_logits_np[..., birth_class]
+        initial_margin_reference = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(initial_margin_reference_np, dtype=mx.float32)
+        )
 
         def _loss_fn(model_obj: Any) -> Any:
             _, pred1 = _predict_pair01(model_obj)
@@ -3030,7 +3036,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             loss_seed = mx.sum(seed_weight * crossing * crossing)  # type: ignore[union-attr]
             loss_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             if already_won_pixel_count > 0:
-                preserve_violation = mx.maximum(margin_raw, 0.0)  # type: ignore[union-attr]
+                # Preserve already-won target support as a trust-region
+                # constraint, not only after it has crossed the argmax boundary.
+                # The v9 smoke exposed a bad local minimum where a step won a
+                # few unsolved-tail pixels by eroding and then destroying most
+                # already-correct pixels. Penalize margin erosion against the
+                # initial receiver-surface margin so the optimizer feels that
+                # spill before it becomes a hard argmax loss.
+                preserve_violation = mx.maximum(  # type: ignore[union-attr]
+                    margin_raw - initial_margin_reference,
+                    0.0,
+                )
                 preserve_weight = max(1.0, already_won_pixels / unsolved_tail_pixels)
                 loss_preserve = (  # type: ignore[assignment]
                     float(preserve_weight)
@@ -3373,6 +3389,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         best_unsolved_tail_stats = dict(before_unsolved_tail_stats)
         candidate_attempt_count = 0
         region_progress_candidate_count = 0
+        spill_rejected_candidate_count = 0
         pose_cap_satisfied_candidate_count = 0
         joint_score_improved_candidate_count = 0
         pose_rejected_candidate_count = 0
@@ -3382,6 +3399,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         max_candidate_argmax_flipped_pixels_region = 0
         max_candidate_region_hard_won_delta = 0
         max_candidate_region_hard_ratio_delta = 0.0
+        max_candidate_already_won_lost_count = 0
         max_candidate_margin_mean_improvement = 0.0
         max_candidate_margin_p50_improvement = 0.0
         max_candidate_nonrate_improvement = 0.0
@@ -3525,14 +3543,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
                 net_target_support_delta = int(region_transitions["net_target_support_delta"])
                 already_won_lost_count = int(candidate["already_won_lost_count"])
-                ratio_progress = bool(net_target_support_delta > 0 or tail_hard_won_delta > 0.0)
+                support_spill = bool(already_won_lost_count > 0 or net_target_support_delta < 0)
+                ratio_progress = bool(net_target_support_delta > 0 and not support_spill)
                 # Mean margin registers single-pixel receiver motion; the
                 # median stays pure telemetry because one flipped pixel cannot
                 # move it, which would re-open the quantum-growth/backtrack
                 # ping-pong this acceptance rule exists to terminate.
                 margin_progress = bool(
                     tail_margin_mean_improvement > float(min_margin_mean_drop)
-                    and already_won_lost_count == 0
+                    and not support_spill
                 )
                 region_progress = bool(ratio_progress or margin_progress)
                 pose_delta = _pose_delta_l2(candidate["pose"])
@@ -3569,6 +3588,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     max_candidate_region_hard_ratio_delta,
                     candidate_region_hard_ratio_delta,
                 )
+                max_candidate_already_won_lost_count = max(
+                    max_candidate_already_won_lost_count,
+                    int(already_won_lost_count),
+                )
                 max_candidate_margin_mean_improvement = max(
                     max_candidate_margin_mean_improvement,
                     candidate_margin_mean_improvement,
@@ -3598,6 +3621,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     region_progress_candidate_count += 1
                 else:
                     no_progress_candidate_count += 1
+                    if support_spill:
+                        spill_rejected_candidate_count += 1
                 if not pose_cap_rejects:
                     pose_cap_satisfied_candidate_count += 1
                 if candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate < best_nonrate:
@@ -3641,6 +3666,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "unsolved_tail_hard_ratio_delta": float(tail_hard_ratio_delta),
                     "unsolved_tail_margin_mean_improvement": float(tail_margin_mean_improvement),
                     "unsolved_tail_margin_p50_improvement": float(tail_margin_p50_improvement),
+                    "support_spill": bool(support_spill),
                     "region_progress": bool(region_progress),
                     "pose_output_delta_l2": (None if pose_delta is None else float(pose_delta)),
                     "pose_cap_satisfied": bool(not pose_cap_rejects),
@@ -3817,6 +3843,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "authority": "batch_local_live_mlx_false_authority",
             "candidate_attempt_count": int(candidate_attempt_count),
             "region_progress_candidate_count": int(region_progress_candidate_count),
+            "spill_rejected_candidate_count": int(spill_rejected_candidate_count),
             "pose_cap_satisfied_candidate_count": int(pose_cap_satisfied_candidate_count),
             "joint_score_improved_candidate_count": int(joint_score_improved_candidate_count),
             "pose_rejected_candidate_count": int(pose_rejected_candidate_count),
@@ -3828,6 +3855,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "max_candidate_argmax_flipped_pixels_region": int(max_candidate_argmax_flipped_pixels_region),
             "max_candidate_region_hard_won_delta": int(max_candidate_region_hard_won_delta),
             "max_candidate_region_hard_ratio_delta": float(max_candidate_region_hard_ratio_delta),
+            "max_candidate_already_won_lost_count": int(max_candidate_already_won_lost_count),
             "max_candidate_margin_mean_improvement": float(max_candidate_margin_mean_improvement),
             "max_candidate_margin_p50_improvement": float(max_candidate_margin_p50_improvement),
             "progress_reference": "initial_unsolved_tail_with_already_won_preservation",

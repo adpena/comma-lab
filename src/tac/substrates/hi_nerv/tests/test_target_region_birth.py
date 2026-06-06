@@ -494,6 +494,34 @@ class _PartialRegionSegNetTeacher(_BehavioralSegNetTeacher):
         return self._mx.stack([class0, class1], axis=-1)
 
 
+class _SpillPronePartialRegionSegNetTeacher(_BehavioralSegNetTeacher):
+    """Tail birth and already-won support have opposite RGB geometry.
+
+    The unsolved tail behaves like the normal red-vs-green class-1 boundary, so
+    a red-brightening birth can win some tail pixels.  The already-won island
+    is intentionally won by the opposite green-vs-red geometry; that same update
+    erodes and can destroy its support.  This mirrors the v9 smoke failure where
+    a few newly won tail pixels were bought by losing a much larger solved
+    island.
+    """
+
+    def __init__(self, mx, labels, already_won_mask):
+        super().__init__(mx, labels)
+        self._already_won_mask = mx.array(already_won_mask.astype(np.float32))
+
+    def teacher_logits_for_frames_nhwc01(self, frames):
+        red = frames[..., 0]
+        green = frames[..., 1]
+        tail_class0 = green - red
+        tail_class1 = red - green
+        won_class0 = red - green
+        won_class1 = green - red + 0.05
+        mask = self._already_won_mask
+        class0 = (1.0 - mask) * tail_class0 + mask * won_class0
+        class1 = (1.0 - mask) * tail_class1 + mask * won_class1
+        return self._mx.stack([class0, class1], axis=-1)
+
+
 class _MeanTrackingPoseTeacher:
     """Pose output amplifies frame-1 mean so any visible edit breaches the cap."""
 
@@ -645,6 +673,63 @@ def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() ->
     assert any(record["decision"] == "accepted" for record in telemetry["attempts"])
     assert max(record["region_net_target_support_delta"] for record in telemetry["attempts"]) >= 24
     assert all(record["already_won_lost_count"] == 0 for record in telemetry["attempts"])
+
+
+@skip_no_mlx
+def test_target_region_birth_rejects_spilling_attempts_before_clean_tail_birth() -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    already_won = np.zeros_like(labels_np, dtype=np.float32)
+    already_won[0, 4:10, 6:10] = 1.0
+    teacher = _SpillPronePartialRegionSegNetTeacher(mx, mx.array(labels_np), already_won)
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    before = {str(raw): np.array(leaf, copy=True) for raw, leaf in tree_flatten(model.parameters()) if leaf is not None}
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=6,
+        learning_rate=2.0e-3,
+        target_min_region_ratio=0.02,
+    )
+
+    assert payload["accepted"] is True
+    assert payload["before_region_hard_ratio"] == pytest.approx(0.5)
+    assert payload["after_region_hard_ratio"] == pytest.approx(1.0)
+    transitions = payload["argmax_transitions"]
+    assert transitions["wrong_to_target_count"] == 24
+    assert transitions["target_to_wrong_count"] == 0
+    assert transitions["net_target_support_delta"] == 24
+    telemetry = payload["candidate_frontier_telemetry"]
+    assert telemetry["spill_rejected_candidate_count"] > 0
+    assert telemetry["max_candidate_already_won_lost_count"] > 0
+    assert telemetry["final_already_won_lost_count"] == 0
+    spilling = [record for record in telemetry["attempts"] if record["support_spill"]]
+    assert spilling
+    assert all(record["decision"] != "accepted" for record in spilling)
+    assert any(record["region_wrong_to_target_count"] > 0 for record in spilling)
+    assert any(
+        (not record["support_spill"])
+        and record["decision"] == "accepted"
+        and record["region_net_target_support_delta"] > 0
+        for record in telemetry["attempts"]
+    )
+    after = {str(raw): np.array(leaf, copy=True) for raw, leaf in tree_flatten(model.parameters()) if leaf is not None}
+    for name, value in before.items():
+        if allowed_birth_update_name(name):
+            continue
+        assert np.array_equal(value, after[name]), name
 
 
 @skip_no_mlx
