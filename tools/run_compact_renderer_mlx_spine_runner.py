@@ -4257,6 +4257,78 @@ def _snerv_score_aware_long_training_required_control_contract(
     }
 
 
+def _snerv_score_aware_long_training_artifact_path(
+    score_aware_long_training: Mapping[str, Any],
+) -> Path | None:
+    for key in ("training_artifact_path", "artifact_path"):
+        raw = score_aware_long_training.get(key)
+        if isinstance(raw, str) and raw:
+            return Path(raw).expanduser().resolve(strict=False)
+    telemetry_path = score_aware_long_training.get("telemetry_path")
+    if isinstance(telemetry_path, str) and telemetry_path:
+        return (
+            Path(telemetry_path)
+            .expanduser()
+            .resolve(strict=False)
+            .parent
+            / "training_artifact.json"
+        )
+    return None
+
+
+def _write_snerv_runner_crux_trace(
+    *,
+    artifact: dict[str, Any],
+    score_aware_long_training: dict[str, Any],
+) -> dict[str, Any]:
+    training_artifact_path = _snerv_score_aware_long_training_artifact_path(
+        score_aware_long_training
+    )
+    if training_artifact_path is None:
+        return {
+            "schema": "snerv_runner_crux_trace_attachment.v1",
+            "written": False,
+            "blockers": ["snerv_score_aware_training_artifact_path_missing"],
+            **FALSE_AUTHORITY,
+        }
+    trace_path = training_artifact_path.parent / "nerv_crux_trace_rows.json"
+    if not training_artifact_path.is_file():
+        return {
+            "schema": "snerv_runner_crux_trace_attachment.v1",
+            "written": False,
+            "path": trace_path.as_posix(),
+            "source_path": training_artifact_path.as_posix(),
+            "blockers": ["snerv_score_aware_training_artifact_missing_for_crux_trace"],
+            **FALSE_AUTHORITY,
+        }
+    try:
+        trace = write_trace_rows_for_training_artifact(
+            training_artifact_path,
+            output_path=trace_path,
+            require_direct_live_posenet=True,
+            require_direct_live_segnet=True,
+        )
+    except Exception as exc:  # pragma: no cover - defensive runner custody path
+        return {
+            "schema": "snerv_runner_crux_trace_attachment.v1",
+            "written": False,
+            "path": trace_path.as_posix(),
+            "source_path": training_artifact_path.as_posix(),
+            "error": f"{type(exc).__name__}:{exc}",
+            "blockers": ["snerv_crux_trace_write_failed"],
+            **FALSE_AUTHORITY,
+        }
+    trace_attachment = {
+        "schema": "snerv_runner_crux_trace_attachment.v1",
+        "written": True,
+        **trace,
+        **FALSE_AUTHORITY,
+    }
+    score_aware_long_training["nerv_crux_trace"] = dict(trace_attachment)
+    artifact["score_aware_long_training"] = score_aware_long_training
+    return trace_attachment
+
+
 def _run_snerv_native_mlx_export_attachment(
     *,
     requested: bool,
@@ -4768,6 +4840,10 @@ def _run_snerv_native_mlx_export_attachment(
         snerv_score_aware_long_training = dict(
             artifact.get("score_aware_long_training") or {}
         )
+        snerv_crux_trace = _write_snerv_runner_crux_trace(
+            artifact=artifact,
+            score_aware_long_training=snerv_score_aware_long_training,
+        )
         snerv_training_telemetry_contract = (
             snerv_score_aware_long_training.get("training_telemetry_contract")
         )
@@ -4891,6 +4967,9 @@ def _run_snerv_native_mlx_export_attachment(
                     "snerv_score_aware_long_training_telemetry_contract_missing"
                 )
             blockers.extend(snerv_required_control_contract.get("blockers") or [])
+        blockers.extend(snerv_crux_trace.get("blockers") or [])
+        if not bool(snerv_crux_trace.get("written")):
+            blockers.append("snerv_crux_trace_missing")
         receiver_reconstruction = _snerv_receiver_reconstruction_summary(
             target_profile=artifact.get("receiver_target_reconstruction_profile"),
             export_profile=artifact.get("receiver_export_reconstruction_profile"),
@@ -5086,6 +5165,7 @@ def _run_snerv_native_mlx_export_attachment(
                 snerv_required_control_contract.get("passed") is True
             ),
             "score_aware_long_training": snerv_score_aware_long_training,
+            "nerv_crux_trace": snerv_crux_trace,
             "score_aware_long_training_telemetry_contract": (
                 dict(snerv_training_telemetry_contract)
                 if isinstance(snerv_training_telemetry_contract, Mapping)

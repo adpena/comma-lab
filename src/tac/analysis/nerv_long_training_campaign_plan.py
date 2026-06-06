@@ -3634,6 +3634,14 @@ def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
                     / "telemetry.jsonl"
                 ).as_posix(),
                 (output_dir / "snerv_mlx_training" / "nerv_crux_trace_rows.json").as_posix(),
+                (
+                    output_dir
+                    / "snerv_mlx_native_export"
+                    / "native_train_export"
+                    / "snerv_score_aware_long_training"
+                    / "long_training"
+                    / "nerv_crux_trace_rows.json"
+                ).as_posix(),
             ]
         )
     return artifacts

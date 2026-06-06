@@ -1142,6 +1142,49 @@ def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
     )
 
 
+def test_snerv_runner_crux_trace_attaches_to_score_aware_long_training(
+    tmp_path: Path,
+) -> None:
+    long_training_dir = tmp_path / "snerv_score_aware_long_training" / "long_training"
+    long_training_dir.mkdir(parents=True)
+    artifact_path = long_training_dir / "training_artifact.json"
+    telemetry_path = long_training_dir / "telemetry.jsonl"
+    telemetry_path.write_text("", encoding="utf-8")
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "archive_bytes": 99_000,
+                "per_epoch_metrics": [
+                    {
+                        "loss_components": {
+                            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 7.25,
+                            "loss_part_pose_direct_live_raw_mse": 0.0036,
+                        }
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact = {}
+    score_aware_long_training = {"telemetry_path": telemetry_path.as_posix()}
+
+    report = runner_mod._write_snerv_runner_crux_trace(
+        artifact=artifact,
+        score_aware_long_training=score_aware_long_training,
+    )
+
+    trace_path = long_training_dir / "nerv_crux_trace_rows.json"
+    assert report["written"] is True
+    assert report["path"] == trace_path.as_posix()
+    assert report["blockers"] == []
+    assert trace_path.is_file()
+    assert score_aware_long_training["nerv_crux_trace"]["path"] == trace_path.as_posix()
+    assert artifact["score_aware_long_training"]["nerv_crux_trace"][
+        "row_count"
+    ] > 0
+
+
 def test_hinerv_runner_archive_resolution_uses_emitted_overcap_ema_archives(
     tmp_path: Path,
 ) -> None:
