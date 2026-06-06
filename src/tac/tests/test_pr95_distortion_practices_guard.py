@@ -5,6 +5,7 @@ from pathlib import Path
 
 from tac.analysis.pr95_distortion_practices_guard import (
     AXIS_TRACE_CONTRACT_SCHEMA,
+    PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA,
     PAYLOAD_GUARD_SCHEMA,
     POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA,
     PRACTICE_DAG_SCHEMA,
@@ -15,6 +16,7 @@ from tac.analysis.pr95_distortion_practices_guard import (
     SOURCE_INVENTORY_SCHEMA,
     STAGE_DAG_SCHEMA,
     TELEMETRY_CONTRACT_SCHEMA,
+    build_pact_nerv_receiver_compiler_dag,
     build_pr95_distortion_axis_trace_contract,
     build_pr95_distortion_practices_payload_guard,
     build_pr95_distortion_practices_row_guard,
@@ -67,8 +69,96 @@ def test_pr95_distortion_guard_accepts_hinerv_pr95_curriculum_row() -> None:
     assert guard["optimization_stage_dag"][
         "all_required_stage_signals_observed"
     ] is True
+    compiler_dag = guard["receiver_compiler_dag"]
+    assert compiler_dag["schema"] == PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA
+    assert compiler_dag["pre_long_run_ready"] is True
+    assert compiler_dag["promotion_compiler_ready"] is False
+    assert compiler_dag["policy"]["primary_problem"] == (
+        "minimum_description_length_under_frozen_receivers"
+    )
+    compiler_nodes = {node["node_id"]: node for node in compiler_dag["nodes"]}
+    assert compiler_nodes["exact_evaluator_atom_oracle"]["green"] is True
+    assert compiler_nodes["receiver_surface_integer_search"]["green"] is True
+    assert compiler_nodes["sufficient_statistic_oracle_baselines"]["green"] is False
+    assert compiler_nodes["byte_compiler_value_per_byte"]["green"] is False
+    assert (
+        "hinerv_section_output_delta_per_byte_rows"
+        in compiler_nodes["receiver_surface_integer_search"]["observed_evidence"]
+    )
+    assert compiler_nodes["byte_compiler_value_per_byte"][
+        "required_before_promotion"
+    ] is True
     assert guard["score_claim"] is False
     assert guard["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pact_nerv_receiver_compiler_dag_preserves_partner_oracle_ladder() -> None:
+    dag = build_pact_nerv_receiver_compiler_dag(_hinerv_row(), family="hi_nerv")
+
+    assert dag["schema"] == PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA
+    assert dag["pre_long_run_ready"] is True
+    nodes = {node["node_id"]: node for node in dag["nodes"]}
+    assert nodes["exact_evaluator_atom_oracle"]["required_before_long_run"] is True
+    assert nodes["receiver_surface_integer_search"]["required_before_long_run"] is True
+    assert nodes["sufficient_statistic_oracle_baselines"]["title"] == (
+        "mask-first and pose-trajectory sufficient-statistic oracles"
+    )
+    assert nodes["sufficient_statistic_oracle_baselines"]["depends_on"] == [
+        "seg_only_mask_witness_oracle",
+        "pose_only_yuv6_witness_oracle",
+    ]
+    assert nodes["witness_family_pareto_frontier"]["depends_on"] == [
+        "sufficient_statistic_oracle_baselines",
+        "receiver_surface_integer_search",
+    ]
+    assert nodes["scorer_equivalence_witness_search"]["depends_on"] == [
+        "witness_family_pareto_frontier",
+        "cell_volume_compressibility_estimator",
+        "receiver_surface_integer_search",
+    ]
+    assert "HNeRV pair latent" in nodes["family_backend_residualization"][
+        "math_surface"
+    ]
+    assert nodes["multi_authority_replay"]["required_before_promotion"] is True
+    assert dag["promotion_compiler_ready"] is False
+
+
+def test_receiver_compiler_byte_value_requires_score_delta_ledger() -> None:
+    row = _hinerv_row()
+    row.update(
+        {
+            "pr95_distortion_axis_trace_contract": {"required_axes": []},
+            "sufficient_statistic_oracle_baselines_ready": True,
+            "seg_only_mask_witness_oracle_ready": True,
+            "pose_only_yuv6_witness_oracle_ready": True,
+            "witness_family_pareto_ready": True,
+            "cell_volume_compressibility_estimate_ready": True,
+            "scorer_equivalence_witness_search_ready": True,
+            "dual_certificate_ready": True,
+            "legal_code_data_boundary_contract_ready": True,
+            "family_backend_residualization_ready": True,
+            "section_value_per_byte_rows": [
+                {
+                    "section": "pair_local_latents_fine",
+                    "score_value_per_byte": 0.0004,
+                    "delta_total_score": -0.0008,
+                    "delta_seg": -2.0e-6,
+                    "delta_pose": -1.0e-7,
+                    "delta_archive_bytes": 2,
+                }
+            ],
+        }
+    )
+
+    dag = build_pact_nerv_receiver_compiler_dag(row, family="hi_nerv")
+    nodes = {node["node_id"]: node for node in dag["nodes"]}
+
+    assert nodes["byte_compiler_value_per_byte"]["green"] is True
+    assert "score_value_per_byte:pair_local_latents_fine" in nodes[
+        "byte_compiler_value_per_byte"
+    ]["observed_evidence"]
+    assert nodes["multi_authority_replay"]["green"] is False
+    assert dag["promotion_compiler_ready"] is False
 
 
 def test_pr95_distortion_guard_rejects_metadata_only_actuator_contract() -> None:
@@ -136,6 +226,54 @@ def test_pr95_distortion_guard_rejects_subquantum_hinerv_actuator_evidence() -> 
     assert "hinerv_pair_local_receiver_uint8_crossing_potential" not in actuator_row[
         "observed_evidence"
     ]
+
+
+def test_pr95_distortion_guard_rejects_boolean_only_snerv_source_forward_evidence() -> None:
+    row = _snerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence.pop("source_forward_replay_proof")
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    compiler_nodes = {
+        node["node_id"]: node for node in guard["receiver_compiler_dag"]["nodes"]
+    }
+    assert compiler_nodes["receiver_surface_integer_search"]["green"] is False
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert "snerv_complete_numerical_source_forward_proof_present" not in (
+        actuator_row["observed_evidence"]
+    )
+
+
+def test_pr95_distortion_guard_rejects_inline_only_hinerv_actuator_evidence() -> None:
+    row = _hinerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence.pop("pair_local_smoke_artifact_schema")
+    evidence.pop("pair_local_smoke_artifact_path")
+    evidence.pop("pair_local_smoke_artifact_sha256")
+    evidence.pop("pair_local_smoke_artifact_bytes")
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert actuator_row["observed"] is False
+    assert "hinerv_pair_local_smoke_artifact_path_sha256_bytes" not in (
+        actuator_row["observed_evidence"]
+    )
 
 
 def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
@@ -287,6 +425,17 @@ def test_pr95_family_actuator_contract_splits_hinerv_and_snerv() -> None:
     assert "hinerv_pair_local_actuator_smoke.v1" in hi[
         "required_execution_evidence"
     ]
+    assert "pair_local_smoke_artifact_path_sha256_bytes" in hi[
+        "required_execution_evidence"
+    ]
+    assert "receiver_uint8_changed_count" in hi["required_execution_evidence"]
+    assert "section_output_delta_per_byte_rows" in hi[
+        "required_execution_evidence"
+    ]
+    assert "section_value_per_byte_rows" not in hi["required_execution_evidence"]
+    assert hi["acceptance_policy"][
+        "output_delta_per_byte_is_not_score_value_per_byte"
+    ] is True
     assert "snerv_official_source_forward_state_artifact.v1" in snerv[
         "required_execution_evidence"
     ]
@@ -355,6 +504,16 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "schema": SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA,
         "family": "hi_nerv",
         "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_smoke_artifact_schema": (
+            "hinerv_pair_local_actuator_smoke_artifact.v1"
+        ),
+        "pair_local_smoke_artifact_path": (
+            "/Volumes/VertigoDataTier/pact/test_pr95_guard/"
+            "hi_nerv_pair_local_actuator_smoke/"
+            "hinerv_pair_local_actuator_smoke_pair000000_aaaaaaaaaaaa.json"
+        ),
+        "pair_local_smoke_artifact_sha256": "d" * 64,
+        "pair_local_smoke_artifact_bytes": 2048,
         "actuator_kind": "pair_local_latent_row",
         "actuator_tensor_name": "latents_fine",
         "updated_tensor_names": ["latents_fine"],
@@ -369,14 +528,27 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "pair_local_output_delta_max_abs_uint8": 1.02,
         "receiver_uint8_half_step_normalized": 0.5 / 255.0,
         "receiver_uint8_crossing_potential": True,
+        "receiver_uint8_changed": True,
+        "receiver_uint8_changed_count": 12,
+        "receiver_uint8_changed_fraction": 0.001,
+        "receiver_uint8_delta_abs_max": 2,
+        "non_target_pair_receiver_uint8_changed_count": 0,
+        "non_target_pair_receiver_uint8_delta_abs_max": 0,
         "pair_locality_verified": True,
         "non_target_pair_output_delta_l2_max": 0.0,
         "state_restored_after_smoke": True,
         "pair_local_latents_fine_original_row_sha256": "c" * 64,
         "pair_local_latents_fine_restored_row_sha256": "c" * 64,
-        "section_value_per_byte_rows": [
-            {"section": "pair_local_latents_fine", "value_per_byte": 0.004}
+        "section_output_delta_per_byte_rows": [
+            {
+                "section": "pair_local_latents_fine",
+                "bytes": 128,
+                "output_delta_l2_per_byte": 0.004,
+                "value_semantics": "receiver_output_l2_per_byte_not_score_value",
+                "score_value_per_byte_measured": False,
+            }
         ],
+        "section_value_per_byte_rows": [],
         "score_claim": False,
         "promotion_eligible": False,
     }
@@ -392,6 +564,19 @@ def _snerv_actuator_execution_evidence() -> dict:
         "checkpoint_export_lineage_bound": True,
         "mfu_hfr_tub_source_forward_parity_proven": True,
         "tub_output2_source_forward_parity_proven": True,
+        "source_forward_replay_proof": {
+            "official_torch_frame_hash": "1" * 64,
+            "mlx_frame_hash": "2" * 64,
+            "numpy_receiver_frame_hash": "3" * 64,
+            "parseback_frame_hash": "4" * 64,
+            "tub_output_2_hash": "5" * 64,
+            "max_abs_frame_delta_official_mlx": 0.0,
+            "max_abs_yuv6_delta_official_numpy": 0.0,
+            "seg_logit_linf_official_parseback": 0.0,
+            "pose_linf_official_parseback": 0.0,
+            "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
+            "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
+        },
         "score_claim": False,
         "promotion_eligible": False,
     }

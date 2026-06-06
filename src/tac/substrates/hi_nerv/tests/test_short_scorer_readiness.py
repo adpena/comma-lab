@@ -33,8 +33,37 @@ def _controls(**overrides: float) -> dict[str, float]:
 
 
 def _receiver_quality() -> dict[str, object]:
+    archive_sha256 = "a" * 64
+    receiver_raw_sha256 = "b" * 64
     return {
         "quality_gate_passed": True,
+        "archive_path": "/Volumes/VertigoDataTier/pact/hi_nerv/archive.zip",
+        "archive_sha256": archive_sha256,
+        "archive_bytes": 12345,
+        "zip_member": "x",
+        "candidate_cache_manifest_path": (
+            "/Volumes/VertigoDataTier/pact/hi_nerv/candidate_cache/manifest.json"
+        ),
+        "candidate_cache_manifest_sha256": "c" * 64,
+        "cache_manifest_summary": {
+            "source_kind": "hi_nerv_direct_receiver_render",
+            "raw_sha256": receiver_raw_sha256,
+            "pair_count": 1,
+            "array_sha256": {},
+        },
+        "direct_receiver_cache_report": {
+            "schema": "hi_nerv_direct_receiver_cache_report.v1",
+            "source_family": "hi_nerv",
+            "archive_sha256": archive_sha256,
+            "zip_member": "x",
+            "archive_magic": "HIV1",
+            "cached_pair_count": 1,
+            "direct_render_raw_sha256": receiver_raw_sha256,
+            "identity_audit_sha256": "d" * 64,
+            "candidate_cache_identity_mode": (
+                "hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"
+            ),
+        },
         "quality_gate": {"verdict": "PASS", "stats": {}},
         "scorer_input_distribution_gate": {
             "fit_gate_passed": True,
@@ -109,6 +138,11 @@ def _pose_direct_live_metrics() -> dict[str, float]:
         "loss_part_pose_direct_live_raw_mse": 0.00196,
         "loss_part_pose_direct_live_score_marginal_wrt_raw_mse": 35.714285714285715,
         "loss_part_pose_direct_live_yuv6_pair_std": 0.22,
+        "loss_part_pose_direct_live_input_official_yuv6_concat": 1.0,
+        "loss_part_pose_direct_live_input_frame0_incidence": 1.0,
+        "loss_part_pose_direct_live_input_frame1_incidence": 1.0,
+        "loss_part_pose_direct_live_input_channel_count": 12.0,
+        "loss_part_pose_direct_live_input_temporal_delta_proxy_authority": 0.0,
         "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std": 0.08,
     }
 
@@ -191,6 +225,10 @@ def _output_head_bootstrap_metadata(
     receiver_quantum_crossing_accepted_step_count: float = 0.0,
     max_candidate_frame1_delta_abs_uint8: float = 0.0,
     max_accepted_frame1_delta_abs_uint8: float = 0.0,
+    max_candidate_frame1_receiver_uint8_changed_count: float = 1.0,
+    max_accepted_frame1_receiver_uint8_changed_count: float = 1.0,
+    max_candidate_frame1_receiver_uint8_changed_fraction: float = 1.0e-6,
+    max_accepted_frame1_receiver_uint8_changed_fraction: float = 1.0e-6,
 ) -> dict[str, object]:
     metrics_before: dict[str, float] = {
         "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
@@ -256,6 +294,18 @@ def _output_head_bootstrap_metadata(
             "max_accepted_frame1_delta_abs_uint8": float(
                 max_accepted_frame1_delta_abs_uint8
             ),
+            "max_candidate_frame1_receiver_uint8_changed_count": float(
+                max_candidate_frame1_receiver_uint8_changed_count
+            ),
+            "max_accepted_frame1_receiver_uint8_changed_count": float(
+                max_accepted_frame1_receiver_uint8_changed_count
+            ),
+            "max_candidate_frame1_receiver_uint8_changed_fraction": float(
+                max_candidate_frame1_receiver_uint8_changed_fraction
+            ),
+            "max_accepted_frame1_receiver_uint8_changed_fraction": float(
+                max_accepted_frame1_receiver_uint8_changed_fraction
+            ),
         },
     }
 
@@ -280,6 +330,11 @@ def test_direct_live_pose_only_accepts_observed_posenet_and_dual_telemetry() -> 
     assert report["axis_tag"] == HI_NERV_SHORT_SCORER_SMOKE_AXIS_TAG
     assert report["ready_for_long_run"] is True
     assert report["score_claim"] is False
+    receiver_surface = report["receiver_surface_identity_gate"]
+    assert receiver_surface["archive_identity_present"] is True
+    assert receiver_surface["direct_receiver_parseback_present"] is True
+    assert receiver_surface["candidate_cache_manifest_bound"] is True
+    assert receiver_surface["archive_sha256_mismatch"] is False
     assert report["teacher_gate"]["direct_live_posenet_only"] is True
     assert report["direct_live_posenet_gate"]["metrics"][
         "loss_part_pose_direct_live_score_term"
@@ -292,6 +347,63 @@ def test_direct_live_pose_only_accepts_observed_posenet_and_dual_telemetry() -> 
     assert admission["long_run_admission_passed"] is True
     assert admission["short_scorer_teacher_smoke_passed"] is True
     assert admission["admission_blockers"] == []
+
+
+def test_receiver_surface_identity_requires_direct_archive_parseback_report() -> None:
+    receiver = _receiver_quality()
+    del receiver["direct_receiver_cache_report"]
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(pose_direct_live_distillation_weight=0.6),
+        final_loss_components={
+            **_base_metrics(),
+            **_pose_direct_live_metrics(),
+            **_dual_metrics(
+                "hi_nerv_segnet_direct_live_distill",
+                "hi_nerv_posenet_yuv6_pair_distill",
+            ),
+        },
+        post_export_quality=receiver,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=0.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert report["receiver_surface_identity_gate"][
+        "direct_receiver_parseback_present"
+    ] is False
+    assert "hi_nerv_short_smoke_receiver_surface_parseback_missing" in report[
+        "actionable_blockers"
+    ]
+
+
+def test_receiver_surface_identity_blocks_archive_sha_mismatch() -> None:
+    receiver = _receiver_quality()
+    receiver["direct_receiver_cache_report"] = {
+        **receiver["direct_receiver_cache_report"],
+        "archive_sha256": "e" * 64,
+    }
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(pose_direct_live_distillation_weight=0.6),
+        final_loss_components={
+            **_base_metrics(),
+            **_pose_direct_live_metrics(),
+            **_dual_metrics(
+                "hi_nerv_segnet_direct_live_distill",
+                "hi_nerv_posenet_yuv6_pair_distill",
+            ),
+        },
+        post_export_quality=receiver,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=0.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert report["receiver_surface_identity_gate"]["archive_sha256_mismatch"] is True
+    assert "hi_nerv_short_smoke_receiver_surface_archive_sha256_mismatch" in report[
+        "actionable_blockers"
+    ]
 
 
 def test_direct_live_segnet_requires_dual_even_with_generic_teacher() -> None:
@@ -804,6 +916,10 @@ def test_scorer_domain_hard_birth_bootstrap_blocks_subquantum_receiver_updates()
             receiver_quantum_crossing_accepted_step_count=0.0,
             max_candidate_frame1_delta_abs_uint8=0.0005,
             max_accepted_frame1_delta_abs_uint8=0.0,
+            max_candidate_frame1_receiver_uint8_changed_count=0.0,
+            max_accepted_frame1_receiver_uint8_changed_count=0.0,
+            max_candidate_frame1_receiver_uint8_changed_fraction=0.0,
+            max_accepted_frame1_receiver_uint8_changed_fraction=0.0,
         ),
     )
 
@@ -818,6 +934,55 @@ def test_scorer_domain_hard_birth_bootstrap_blocks_subquantum_receiver_updates()
     assert gate["receiver_quantum_rejected_step_count"] == pytest.approx(20.0)
     assert gate["receiver_quantum_crossing_accepted_step_count"] == pytest.approx(0.0)
     assert gate["max_candidate_frame1_delta_abs_uint8"] == pytest.approx(0.0005)
+    assert gate["max_candidate_frame1_receiver_uint8_changed_count"] == pytest.approx(
+        0.0
+    )
+
+
+def test_scorer_domain_hard_birth_bootstrap_blocks_accepted_byte_invisible_steps() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata=_output_head_bootstrap_metadata(
+            accepted_step_count=2.0,
+            hard_birth_before_min_ratio=0.0,
+            hard_birth_after_min_ratio=0.0,
+            hard_birth_before_debt=50.0,
+            hard_birth_remaining_debt=50.0,
+            hard_birth_before_worst_debt=25.0,
+            hard_birth_after_worst_debt=25.0,
+            hard_birth_loss_delta=0.0,
+            receiver_quantum_acceptance_enabled=True,
+            receiver_quantum_attempt_count=2.0,
+            receiver_quantum_rejected_step_count=0.0,
+            receiver_quantum_crossing_accepted_step_count=2.0,
+            max_candidate_frame1_delta_abs_uint8=2.0,
+            max_accepted_frame1_delta_abs_uint8=2.0,
+            max_candidate_frame1_receiver_uint8_changed_count=0.0,
+            max_accepted_frame1_receiver_uint8_changed_count=0.0,
+            max_candidate_frame1_receiver_uint8_changed_fraction=0.0,
+            max_accepted_frame1_receiver_uint8_changed_fraction=0.0,
+        ),
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_accepted_steps_without_receiver_uint8_change"
+        in report["actionable_blockers"]
+    )
+    gate = report["scorer_domain_hard_birth_bootstrap_gate"]
+    assert gate["birth_progress_stage"] == "accepted_steps_without_receiver_uint8_change"
+    assert gate["accepted_steps_without_receiver_uint8_change"] is True
+    assert gate["max_accepted_frame1_receiver_uint8_changed_count"] == pytest.approx(
+        0.0
+    )
 
 
 def test_scorer_domain_hard_birth_bootstrap_clears_with_ratio_and_steps() -> None:
@@ -1148,6 +1313,31 @@ def test_direct_live_pose_enabled_requires_live_yuv6_score_metrics() -> None:
 def test_direct_live_pose_enabled_requires_pose_score_marginal_telemetry() -> None:
     pose_metrics = _pose_direct_live_metrics()
     del pose_metrics["loss_part_pose_direct_live_score_marginal_wrt_raw_mse"]
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(pose_direct_live_distillation_weight=0.6),
+        final_loss_components={
+            **_base_metrics(),
+            **pose_metrics,
+            **_dual_metrics(
+                "hi_nerv_segnet_direct_live_distill",
+                "hi_nerv_posenet_yuv6_pair_distill",
+            ),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=0.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert "hi_nerv_short_smoke_missing_direct_live_posenet_telemetry" in report[
+        "actionable_blockers"
+    ]
+
+
+def test_direct_live_pose_enabled_requires_official_yuv6_concat_custody() -> None:
+    pose_metrics = _pose_direct_live_metrics()
+    del pose_metrics["loss_part_pose_direct_live_input_official_yuv6_concat"]
     report = build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_controls(pose_direct_live_distillation_weight=0.6),
         final_loss_components={

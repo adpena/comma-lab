@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import zipfile
@@ -307,7 +308,7 @@ def test_mlx_output_head_target_contrast_init_scales_archive_head_weights() -> N
 
 
 @skip_no_mlx
-def test_mlx_pair_local_actuator_smoke_is_latent_row_local() -> None:
+def test_mlx_pair_local_actuator_smoke_is_latent_row_local(tmp_path: Path) -> None:
     import mlx.core as mx
 
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
@@ -333,6 +334,7 @@ def test_mlx_pair_local_actuator_smoke_is_latent_row_local() -> None:
         target1,
         pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
         learning_rate=2.0e5,
+        artifact_dir=tmp_path / "pair_local_smoke",
     )
 
     assert smoke["schema"] == "hinerv_pair_local_actuator_smoke.v1"
@@ -349,6 +351,27 @@ def test_mlx_pair_local_actuator_smoke_is_latent_row_local() -> None:
     assert smoke["output_delta"]["non_target_pair_output_delta_l2_max"] <= 1.0e-12
     assert smoke["output_delta"]["receiver_uint8_crossing_potential"] is True
     assert smoke["output_delta"]["pair_local_output_delta_max_abs_uint8"] >= 0.5
+    assert smoke["output_delta"]["receiver_uint8_changed"] is True
+    assert smoke["output_delta"]["receiver_uint8_changed_count"] > 0
+    assert smoke["output_delta"]["receiver_uint8_delta_abs_max"] > 0
+    assert (
+        smoke["output_delta"]["non_target_pair_receiver_uint8_changed_count"] == 0
+    )
+    assert smoke["output_delta"]["non_target_pair_receiver_uint8_delta_abs_max"] == 0
+    artifact = smoke["pair_local_smoke_artifact"]
+    artifact_path = Path(artifact["path"])
+    assert artifact_path.is_file()
+    artifact_bytes = artifact_path.read_bytes()
+    assert artifact["bytes"] == len(artifact_bytes)
+    assert artifact["sha256"] == hashlib.sha256(artifact_bytes).hexdigest()
+    artifact_payload = json.loads(artifact_bytes.decode("utf-8"))
+    assert artifact_payload["schema"] == "hinerv_pair_local_actuator_smoke_artifact.v1"
+    assert artifact_payload["payload"]["schema"] == (
+        "hinerv_pair_local_actuator_smoke.v1"
+    )
+    assert artifact_payload["payload"]["pair_local_adapter_sha256"] == (
+        smoke["pair_local_adapter_sha256"]
+    )
     state_restore = smoke["state_restore"]
     assert state_restore["checked_tensor_name"] == "latents_fine"
     assert state_restore["checked_row_indices"] == [0]
@@ -361,11 +384,28 @@ def test_mlx_pair_local_actuator_smoke_is_latent_row_local() -> None:
     assert summary["pair_local_adapter_sha256"] == smoke["pair_local_adapter_sha256"]
     assert summary["receiver_uint8_crossing_potential"] is True
     assert summary["pair_local_output_delta_max_abs_uint8"] >= 0.5
+    assert summary["receiver_uint8_changed"] is True
+    assert summary["receiver_uint8_changed_count"] == smoke["output_delta"][
+        "receiver_uint8_changed_count"
+    ]
+    assert summary["non_target_pair_receiver_uint8_changed_count"] == 0
+    assert summary["pair_local_smoke_artifact_schema"] == (
+        "hinerv_pair_local_actuator_smoke_artifact.v1"
+    )
+    assert summary["pair_local_smoke_artifact_path"] == artifact["path"]
+    assert summary["pair_local_smoke_artifact_sha256"] == artifact["sha256"]
+    assert summary["pair_local_smoke_artifact_bytes"] == artifact["bytes"]
     assert summary["state_restored_after_smoke"] is True
     assert summary["pair_local_latents_fine_original_row_sha256"] == (
         summary["pair_local_latents_fine_restored_row_sha256"]
     )
-    assert summary["section_value_per_byte_rows"][0]["value_per_byte"] > 0.0
+    output_rows = summary["section_output_delta_per_byte_rows"]
+    assert output_rows[0]["output_delta_l2_per_byte"] > 0.0
+    assert output_rows[0]["value_semantics"] == (
+        "receiver_output_l2_per_byte_not_score_value"
+    )
+    assert output_rows[0]["score_value_per_byte_measured"] is False
+    assert summary["section_value_per_byte_rows"] == []
     assert summary["score_claim"] is False
 
 
@@ -403,6 +443,8 @@ def test_mlx_pair_local_actuator_smoke_blocks_subquantum_receiver_delta() -> Non
     assert smoke["summary_for_pr95_guard"] is None
     assert smoke["state_restore"]["state_restored_after_smoke"] is True
     assert smoke["output_delta"]["receiver_uint8_crossing_potential"] is False
+    assert smoke["output_delta"]["receiver_uint8_changed"] is False
+    assert smoke["output_delta"]["receiver_uint8_changed_count"] == 0
     assert smoke["output_delta"]["pair_local_output_delta_max_abs_uint8"] < 0.5
 
 
@@ -600,11 +642,18 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
 
     margin = payload["segnet_margin_bootstrap"]
     assert margin["enabled"] is True
-    assert margin["source"] == "live_mlx_segnet_candidate_logits_against_frame1_target_argmax"
+    assert margin["source"] == (
+        "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_logits_"
+        "against_frame1_target_argmax"
+    )
     assert payload["segnet_margin_bootstrap_weight"] == pytest.approx(1.5)
     hard_birth = payload["segnet_hard_birth_bootstrap"]
     assert hard_birth["enabled"] is True
-    assert hard_birth["source"] == "live_mlx_segnet_candidate_logits_worst_target_class_birth"
+    assert hard_birth["source"] == (
+        "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_logits_"
+        "worst_target_class_birth"
+    )
+    assert hard_birth["receiver_surface"] == "clamp_round_uint8_rgb_ste_nhwc01"
     assert hard_birth["worst_loss_selection"] == "score_weighted_unsolved_argmax_mass"
     assert payload["segnet_hard_birth_bootstrap_weight"] == pytest.approx(2.0)
     assert (
@@ -632,10 +681,14 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     assert smoke["state_restore"]["mutated_row_sha256"] == (
         smoke["pair_local_adapter_sha256"]
     )
-    assert smoke["section_value_per_byte_rows"][0]["bytes"] == (
+    assert smoke["section_output_delta_per_byte_rows"][0]["bytes"] == (
         smoke["pair_local_adapter_bytes"]
     )
-    assert smoke["section_value_per_byte_rows"][0]["value_per_byte"] > 0.0
+    assert (
+        smoke["section_output_delta_per_byte_rows"][0]["output_delta_l2_per_byte"]
+        > 0.0
+    )
+    assert smoke["section_value_per_byte_rows"] == []
     assert payload["pr95_scorer_atom_actuator_execution_evidence"] is None
     assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]
     assert "head_rgb_0.*" not in payload["archive_charged_decoder_tensors"]
@@ -652,13 +705,23 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     assert payload["receiver_quantum_acceptance_enabled"] is True
     assert payload["receiver_quantum_attempt_count"] >= payload["accepted_step_count"]
     assert payload["receiver_quantum_growth_attempt_count"] > 0
-    assert payload["receiver_quantum_rejected_step_count"] > 0
-    assert payload["receiver_quantum_crossing_accepted_step_count"] == (
+    assert payload["receiver_quantum_surface"] == "clamp_round_uint8_rgb_frame1"
+    assert payload["max_candidate_frame1_receiver_uint8_changed_count"] >= (
+        payload["max_accepted_frame1_receiver_uint8_changed_count"]
+    )
+    assert payload["max_accepted_frame1_receiver_uint8_changed_count"] >= 0.0
+    assert (
+        payload["receiver_quantum_rejected_step_count"]
+        + payload["hard_birth_argmax_progress_rejected_step_count"]
+    ) > 0
+    assert payload["hard_birth_argmax_progress_accepted_step_count"] == (
         payload["accepted_step_count"]
     )
-    assert payload["max_accepted_frame1_delta_abs_uint8"] >= 0.5
-    assert payload["segnet_margin_bootstrap_loss_delta"] >= 0.0
-    assert payload["segnet_hard_birth_bootstrap_loss_delta"] >= 0.0
+    assert payload["hard_birth_argmax_progress_rejected_step_count"] > 0
+    assert payload["max_accepted_segnet_worst_debt_reduction"] >= 0.0
+    assert payload["max_candidate_segnet_worst_debt_reduction"] >= (
+        payload["max_accepted_segnet_worst_debt_reduction"]
+    )
     assert (
         "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
         in payload["metrics_after"]
@@ -761,11 +824,22 @@ def test_mlx_scorer_domain_bootstrap_hard_birth_can_actuate_without_margin_weigh
     assert payload["receiver_quantum_acceptance_enabled"] is True
     assert payload["receiver_quantum_attempt_count"] >= payload["accepted_step_count"]
     assert payload["receiver_quantum_growth_attempt_count"] > 0
-    assert payload["receiver_quantum_rejected_step_count"] > 0
+    assert payload["receiver_quantum_surface"] == "clamp_round_uint8_rgb_frame1"
     assert payload["receiver_quantum_crossing_accepted_step_count"] == (
         payload["accepted_step_count"]
     )
-    assert payload["max_accepted_frame1_delta_abs_uint8"] >= 0.5
+    assert payload["max_candidate_frame1_receiver_uint8_delta_abs"] >= (
+        payload["max_accepted_frame1_receiver_uint8_delta_abs"]
+    )
+    assert payload["max_accepted_frame1_receiver_uint8_changed_count"] >= 0.0
+    assert payload["hard_birth_argmax_progress_accepted_step_count"] == (
+        payload["accepted_step_count"]
+    )
+    assert payload["hard_birth_argmax_progress_rejected_step_count"] > 0
+    assert payload["max_accepted_segnet_worst_debt_reduction"] >= 0.0
+    assert payload["max_candidate_segnet_worst_debt_reduction"] >= (
+        payload["max_accepted_segnet_worst_debt_reduction"]
+    )
     assert payload["metrics_before"]["segnet_hard_birth_bootstrap_loss"] > 0.0
     assert (
         payload["metrics_before"]["segnet_hard_birth_bootstrap_active_class_count"]

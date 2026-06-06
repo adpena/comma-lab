@@ -349,6 +349,11 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         "loss_part_pose_direct_live_raw_mse",
         "loss_part_pose_direct_live_score_marginal_wrt_raw_mse",
         "loss_part_pose_direct_live_yuv6_pair_std",
+        "loss_part_pose_direct_live_input_official_yuv6_concat",
+        "loss_part_pose_direct_live_input_frame0_incidence",
+        "loss_part_pose_direct_live_input_frame1_incidence",
+        "loss_part_pose_direct_live_input_channel_count",
+        "loss_part_pose_direct_live_input_temporal_delta_proxy_authority",
         "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std",
     )
     pose_direct_live_metrics = {
@@ -558,6 +563,10 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_receiver_subquantum_updates"
             )
+        if scorer_domain_hard_birth_gate["accepted_steps_without_receiver_uint8_change"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_accepted_steps_without_receiver_uint8_change"
+            )
         if scorer_domain_hard_birth_gate["no_accepted_steps_with_remaining_debt"]:
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_no_accepted_steps_with_debt"
@@ -672,6 +681,9 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         )
 
     receiver_cache_summary = receiver_cache_quality_manifest_summary(post_export_quality)
+    receiver_surface_identity_gate = _receiver_surface_identity_gate(
+        post_export_quality
+    )
     segnet_argmax_probe = (
         post_export_quality.get("segnet_argmax_probe")
         if isinstance(post_export_quality, Mapping)
@@ -690,6 +702,22 @@ def build_hinerv_short_scorer_smoke_readiness_report(
     if post_export_quality is None:
         add_blocker("hi_nerv_short_smoke_receiver_cache_quality_gate_not_run")
     else:
+        if not receiver_surface_identity_gate["archive_identity_present"]:
+            add_blocker(
+                "hi_nerv_short_smoke_receiver_surface_archive_identity_missing"
+            )
+        if not receiver_surface_identity_gate["direct_receiver_parseback_present"]:
+            add_blocker(
+                "hi_nerv_short_smoke_receiver_surface_parseback_missing"
+            )
+        if receiver_surface_identity_gate["archive_sha256_mismatch"]:
+            add_blocker(
+                "hi_nerv_short_smoke_receiver_surface_archive_sha256_mismatch"
+            )
+        if not receiver_surface_identity_gate["candidate_cache_manifest_bound"]:
+            add_blocker(
+                "hi_nerv_short_smoke_receiver_surface_cache_manifest_missing"
+            )
         if not bool(post_export_quality.get("quality_gate_passed")):
             add_blocker("hi_nerv_short_smoke_receiver_cache_quality_failed")
         if not isinstance(scorer_input_distribution_gate, Mapping):
@@ -870,6 +898,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         },
         "score_dynamics_diagnosis": score_dynamics_diagnosis,
         "receiver_cache_quality": receiver_cache_summary,
+        "receiver_surface_identity_gate": receiver_surface_identity_gate,
         "final_loss_components_present": bool(final_components),
         "actionable_blockers": actionable_blockers,
         "blockers": [
@@ -1403,6 +1432,34 @@ def _scorer_domain_hard_birth_gate(
         metadata,
         "receiver_quantum_crossing_accepted_step_count",
     )
+    hard_birth_argmax_progress_accepted_step_count = _finite_mapping_value(
+        metadata,
+        "hard_birth_argmax_progress_accepted_step_count",
+    )
+    hard_birth_argmax_progress_rejected_step_count = _finite_mapping_value(
+        metadata,
+        "hard_birth_argmax_progress_rejected_step_count",
+    )
+    hard_birth_worst_improved_total_spill_rejected_step_count = (
+        _finite_mapping_value(
+            metadata,
+            "hard_birth_worst_improved_total_spill_rejected_step_count",
+        )
+    )
+    max_candidate_segnet_worst_debt_reduction = _finite_mapping_value(
+        metadata,
+        "max_candidate_segnet_worst_debt_reduction",
+    )
+    max_candidate_segnet_total_debt_spill_given_worst_improvement = (
+        _finite_mapping_value(
+            metadata,
+            "max_candidate_segnet_total_debt_spill_given_worst_improvement",
+        )
+    )
+    max_accepted_segnet_worst_debt_reduction = _finite_mapping_value(
+        metadata,
+        "max_accepted_segnet_worst_debt_reduction",
+    )
     max_candidate_frame1_delta_abs_uint8 = _finite_mapping_value(
         metadata,
         "max_candidate_frame1_delta_abs_uint8",
@@ -1410,6 +1467,22 @@ def _scorer_domain_hard_birth_gate(
     max_accepted_frame1_delta_abs_uint8 = _finite_mapping_value(
         metadata,
         "max_accepted_frame1_delta_abs_uint8",
+    )
+    max_candidate_frame1_receiver_uint8_changed_count = _finite_mapping_value(
+        metadata,
+        "max_candidate_frame1_receiver_uint8_changed_count",
+    )
+    max_accepted_frame1_receiver_uint8_changed_count = _finite_mapping_value(
+        metadata,
+        "max_accepted_frame1_receiver_uint8_changed_count",
+    )
+    max_candidate_frame1_receiver_uint8_changed_fraction = _finite_mapping_value(
+        metadata,
+        "max_candidate_frame1_receiver_uint8_changed_fraction",
+    )
+    max_accepted_frame1_receiver_uint8_changed_fraction = _finite_mapping_value(
+        metadata,
+        "max_accepted_frame1_receiver_uint8_changed_fraction",
     )
     debt_remains = bool(
         remaining_debt is not None
@@ -1464,6 +1537,15 @@ def _scorer_domain_hard_birth_gate(
         )
         and debt_remains
     )
+    accepted_steps_without_receiver_uint8_change = bool(
+        metadata.get("receiver_quantum_acceptance_enabled") is True
+        and accepted_steps_present
+        and (
+            max_accepted_frame1_receiver_uint8_changed_count is not None
+            and max_accepted_frame1_receiver_uint8_changed_count <= 0.0
+        )
+        and debt_remains
+    )
     return {
         "schema": "hi_nerv_scorer_domain_hard_birth_bootstrap_gate.v1",
         "required": True,
@@ -1489,8 +1571,38 @@ def _scorer_domain_hard_birth_gate(
         "receiver_quantum_crossing_accepted_step_count": (
             receiver_quantum_crossing_accepted_step_count
         ),
+        "hard_birth_argmax_progress_accepted_step_count": (
+            hard_birth_argmax_progress_accepted_step_count
+        ),
+        "hard_birth_argmax_progress_rejected_step_count": (
+            hard_birth_argmax_progress_rejected_step_count
+        ),
+        "hard_birth_worst_improved_total_spill_rejected_step_count": (
+            hard_birth_worst_improved_total_spill_rejected_step_count
+        ),
+        "max_candidate_segnet_worst_debt_reduction": (
+            max_candidate_segnet_worst_debt_reduction
+        ),
+        "max_candidate_segnet_total_debt_spill_given_worst_improvement": (
+            max_candidate_segnet_total_debt_spill_given_worst_improvement
+        ),
+        "max_accepted_segnet_worst_debt_reduction": (
+            max_accepted_segnet_worst_debt_reduction
+        ),
         "max_candidate_frame1_delta_abs_uint8": max_candidate_frame1_delta_abs_uint8,
         "max_accepted_frame1_delta_abs_uint8": max_accepted_frame1_delta_abs_uint8,
+        "max_candidate_frame1_receiver_uint8_changed_count": (
+            max_candidate_frame1_receiver_uint8_changed_count
+        ),
+        "max_accepted_frame1_receiver_uint8_changed_count": (
+            max_accepted_frame1_receiver_uint8_changed_count
+        ),
+        "max_candidate_frame1_receiver_uint8_changed_fraction": (
+            max_candidate_frame1_receiver_uint8_changed_fraction
+        ),
+        "max_accepted_frame1_receiver_uint8_changed_fraction": (
+            max_accepted_frame1_receiver_uint8_changed_fraction
+        ),
         "after_min_ratio_present": after_min_ratio is not None,
         "after_min_ratio_cleared": after_min_ratio_cleared,
         "remaining_debt_present": debt_remains,
@@ -1505,10 +1617,16 @@ def _scorer_domain_hard_birth_gate(
         "receiver_quantum_rejections_without_crossing": (
             receiver_quantum_rejections_without_crossing
         ),
+        "accepted_steps_without_receiver_uint8_change": (
+            accepted_steps_without_receiver_uint8_change
+        ),
         "birth_progress_stage": (
             "hard_argmax_birth_or_debt_progress"
             if hard_argmax_birth_progress
             else (
+                "accepted_steps_without_receiver_uint8_change"
+                if accepted_steps_without_receiver_uint8_change
+                else (
                 "receiver_subquantum_updates_no_crossing"
                 if receiver_quantum_rejections_without_crossing
                 else (
@@ -1519,6 +1637,7 @@ def _scorer_domain_hard_birth_gate(
                         if accepted_without_argmax_debt_move
                         else "hard_birth_progress_not_observed"
                     )
+                )
                 )
             )
         ),
@@ -1699,6 +1818,83 @@ def receiver_cache_quality_manifest_summary(
     }
 
 
+def _receiver_surface_identity_gate(report: Any) -> dict[str, Any]:
+    if not isinstance(report, Mapping):
+        return {
+            "schema": "hi_nerv_receiver_surface_identity_gate.v1",
+            "archive_identity_present": False,
+            "direct_receiver_parseback_present": False,
+            "archive_sha256_mismatch": False,
+            "candidate_cache_manifest_bound": False,
+        }
+    direct_report = report.get("direct_receiver_cache_report")
+    direct_report = direct_report if isinstance(direct_report, Mapping) else {}
+    cache_summary = report.get("cache_manifest_summary")
+    cache_summary = cache_summary if isinstance(cache_summary, Mapping) else {}
+
+    archive_sha256 = _hex_sha256_or_none(report.get("archive_sha256"))
+    direct_archive_sha256 = _hex_sha256_or_none(direct_report.get("archive_sha256"))
+    archive_bytes = _finite_mapping_value(report, "archive_bytes")
+    top_zip_member = _nonempty_string_or_none(report.get("zip_member"))
+    direct_zip_member = _nonempty_string_or_none(direct_report.get("zip_member"))
+    cache_manifest_raw_sha256 = _hex_sha256_or_none(cache_summary.get("raw_sha256"))
+    direct_raw_sha256 = _hex_sha256_or_none(
+        direct_report.get("direct_render_raw_sha256")
+    )
+    candidate_cache_manifest_sha256 = _hex_sha256_or_none(
+        report.get("candidate_cache_manifest_sha256")
+    )
+
+    archive_identity_present = bool(
+        _nonempty_string_or_none(report.get("archive_path"))
+        and archive_sha256 is not None
+        and archive_bytes is not None
+        and archive_bytes > 0.0
+        and top_zip_member
+    )
+    direct_receiver_parseback_present = bool(
+        direct_report.get("schema") == "hi_nerv_direct_receiver_cache_report.v1"
+        and direct_report.get("source_family") == "hi_nerv"
+        and direct_report.get("archive_magic") == "HIV1"
+        and direct_archive_sha256 is not None
+        and direct_zip_member
+        and _finite_mapping_value(direct_report, "cached_pair_count") is not None
+        and _finite_mapping_value(direct_report, "cached_pair_count") > 0.0
+        and direct_raw_sha256 is not None
+        and _nonempty_string_or_none(direct_report.get("identity_audit_sha256"))
+        and direct_report.get("candidate_cache_identity_mode")
+        == "hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"
+    )
+    archive_sha256_mismatch = bool(
+        archive_sha256 is not None
+        and direct_archive_sha256 is not None
+        and archive_sha256 != direct_archive_sha256
+    )
+    candidate_cache_manifest_bound = bool(
+        _nonempty_string_or_none(report.get("candidate_cache_manifest_path"))
+        and candidate_cache_manifest_sha256 is not None
+        and cache_summary.get("source_kind") == "hi_nerv_direct_receiver_render"
+        and cache_manifest_raw_sha256 is not None
+        and direct_raw_sha256 is not None
+        and cache_manifest_raw_sha256 == direct_raw_sha256
+    )
+    return {
+        "schema": "hi_nerv_receiver_surface_identity_gate.v1",
+        "archive_identity_present": archive_identity_present,
+        "direct_receiver_parseback_present": direct_receiver_parseback_present,
+        "archive_sha256_mismatch": archive_sha256_mismatch,
+        "candidate_cache_manifest_bound": candidate_cache_manifest_bound,
+        "archive_sha256": archive_sha256,
+        "direct_receiver_archive_sha256": direct_archive_sha256,
+        "zip_member": top_zip_member,
+        "direct_receiver_zip_member": direct_zip_member,
+        "cache_manifest_source_kind": cache_summary.get("source_kind"),
+        "cache_manifest_raw_sha256": cache_manifest_raw_sha256,
+        "direct_receiver_raw_sha256": direct_raw_sha256,
+        "candidate_cache_manifest_sha256": candidate_cache_manifest_sha256,
+    }
+
+
 def _control_float(controls: Any, key: str) -> float:
     value = controls.get(key) if isinstance(controls, Mapping) else getattr(controls, key)
     finite = _finite_float(value)
@@ -1713,6 +1909,22 @@ def _finite_float(value: Any) -> float | None:
     if not math.isfinite(out):
         return None
     return out
+
+
+def _nonempty_string_or_none(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _hex_sha256_or_none(value: Any) -> str | None:
+    text = _nonempty_string_or_none(value)
+    if text is None or len(text) != 64:
+        return None
+    if any(ch not in "0123456789abcdefABCDEF" for ch in text):
+        return None
+    return text.lower()
 
 
 def _below_floor(

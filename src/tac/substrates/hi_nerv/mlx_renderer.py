@@ -22,8 +22,10 @@ local PyTorch HiNeRV grammar so archive/export/runtime contracts remain ours.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 from collections.abc import Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -138,6 +140,21 @@ def _apply_fake_quant_bits(values: Any, *, bits: int | None) -> Any:
     if int(bits) == 0:
         return values + mx.stop_gradient(mx.zeros_like(values) - values)  # type: ignore[union-attr]
     return _fake_quant_symmetric_ste(values, bits=int(bits))
+
+
+def _receiver_uint8_roundtrip_ste_nhwc01(rgb: Any) -> Any:
+    """Clamp/round receiver RGB while preserving first-order gradients.
+
+    The contest evaluator consumes inflated byte images, not continuous MLX
+    tensors.  HiNeRV hard-birth losses therefore need to see this receiver
+    surface during training, otherwise the optimizer can spend steps in a
+    subquantum basin that changes float RGB but not the scored uint8 image.
+    """
+
+    _require_mlx()
+    clamped = mx.clip(rgb, 0.0, 1.0)  # type: ignore[union-attr]
+    receiver = mx.round(clamped * 255.0) / 255.0  # type: ignore[union-attr]
+    return rgb + mx.stop_gradient(receiver - rgb)  # type: ignore[union-attr]
 
 
 def _resolve_fake_quant_bits(
@@ -530,6 +547,54 @@ class _LatentInjectorMLX(nn.Module if nn is not None else object):  # type: igno
         )
         v = mx.reshape(v, (-1, 1, 1, self.channels))  # type: ignore[union-attr]
         return mx.broadcast_to(v, (int(v.shape[0]), h, w, self.channels))  # type: ignore[union-attr]
+
+
+def _write_pair_local_smoke_artifact(
+    payload: Mapping[str, Any],
+    *,
+    artifact_dir: str | Path | None,
+    pair_index: int,
+    adapter_sha256: str,
+) -> dict[str, Any] | None:
+    if artifact_dir is None:
+        return None
+    out_dir = Path(artifact_dir).expanduser().resolve(strict=False)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    artifact_schema = "hinerv_pair_local_actuator_smoke_artifact.v1"
+    artifact_payload = {
+        "schema": artifact_schema,
+        "family": "hi_nerv",
+        "payload": dict(payload),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    data = (
+        json.dumps(
+            artifact_payload,
+            sort_keys=True,
+            indent=2,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+    path = out_dir / (
+        f"hinerv_pair_local_actuator_smoke_pair{int(pair_index):06d}_"
+        f"{str(adapter_sha256)[:12]}.json"
+    )
+    path.write_bytes(data)
+    return {
+        "schema": "hinerv_pair_local_actuator_smoke_artifact_record.v1",
+        "artifact_schema": artifact_schema,
+        "path": path.as_posix(),
+        "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -1065,8 +1130,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         *,
         pair_indices: Any,
         learning_rate: float = 1.0e-2,
+        artifact_dir: str | Path | None = None,
     ) -> dict[str, Any]:
-        """Probe true per-pair latent controllability without writing artifacts."""
+        """Probe true per-pair latent controllability."""
 
         _require_mlx()
         if tree_flatten is None:
@@ -1143,6 +1209,42 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             digest.update(row.tobytes())
             return digest.hexdigest()
 
+        def _uint8_change_stats(
+            before0: Any,
+            before1: Any,
+            after0: Any,
+            after1: Any,
+        ) -> dict[str, Any]:
+            before_np = np.concatenate(
+                [
+                    np.asarray(before0, dtype=np.float32).reshape(-1),
+                    np.asarray(before1, dtype=np.float32).reshape(-1),
+                ]
+            )
+            after_np = np.concatenate(
+                [
+                    np.asarray(after0, dtype=np.float32).reshape(-1),
+                    np.asarray(after1, dtype=np.float32).reshape(-1),
+                ]
+            )
+            before_u8 = np.rint(np.clip(before_np * 255.0, 0.0, 255.0)).astype(
+                np.uint8
+            )
+            after_u8 = np.rint(np.clip(after_np * 255.0, 0.0, 255.0)).astype(
+                np.uint8
+            )
+            changed = before_u8 != after_u8
+            abs_delta = np.abs(after_u8.astype(np.int16) - before_u8.astype(np.int16))
+            return {
+                "changed_count": int(np.count_nonzero(changed)),
+                "changed_fraction": (
+                    float(np.count_nonzero(changed)) / float(changed.size)
+                    if changed.size
+                    else 0.0
+                ),
+                "delta_abs_max_uint8": int(abs_delta.max()) if abs_delta.size else 0,
+            }
+
         original_latents_fine = mx.array(self.latents_fine)  # type: ignore[union-attr]
         loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
         loss, grads = loss_and_grad_fn(self)
@@ -1214,13 +1316,34 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             selected_delta_l2 = float(selected_delta_l2_tensor.item())
             selected_delta_max_abs = float(selected_delta_max_abs_tensor.item())
             non_target_delta_l2 = float(non_target_delta_l2_tensor.item())
+            target_uint8_stats = _uint8_change_stats(
+                before_target0,
+                before_target1,
+                after_target0,
+                after_target1,
+            )
+            if non_target_pair is None:
+                non_target_uint8_stats = {
+                    "changed_count": 0,
+                    "changed_fraction": 0.0,
+                    "delta_abs_max_uint8": 0,
+                }
+            else:
+                non_target_uint8_stats = _uint8_change_stats(
+                    before_non_target0,
+                    before_non_target1,
+                    after_non_target0,
+                    after_non_target1,
+                )
         finally:
             self.update({"latents_fine": original_latents_fine})
             mx.eval(self.parameters())  # type: ignore[union-attr]
         restored_np = np.asarray(self.latents_fine, dtype=np.float32)
         restored_row_sha256 = _latent_row_digest(restored_np[target_index])
         state_restored = restored_row_sha256 == original_row_sha256
-        value_per_byte = selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
+        output_delta_l2_per_byte = (
+            selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
+        )
         receiver_uint8_half_step_normalized = 0.5 / 255.0
         selected_delta_max_abs_uint8 = selected_delta_max_abs * 255.0
         receiver_uint8_crossing_potential = (
@@ -1235,18 +1358,26 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             blockers.append("hinerv_pair_local_output_delta_not_positive")
         if not receiver_uint8_crossing_potential:
             blockers.append("hinerv_pair_local_output_delta_below_uint8_half_step")
+        receiver_uint8_changed = int(target_uint8_stats["changed_count"]) > 0
+        if not receiver_uint8_changed:
+            blockers.append("hinerv_pair_local_receiver_uint8_unchanged")
+        non_target_uint8_unchanged = int(non_target_uint8_stats["changed_count"]) == 0
+        if not non_target_uint8_unchanged:
+            blockers.append("hinerv_pair_local_non_target_uint8_delta_detected")
         pair_locality_verified = non_target_delta_l2 <= 1.0e-12
         if not pair_locality_verified:
             blockers.append("hinerv_pair_local_non_target_pair_delta_detected")
         if not state_restored:
             blockers.append("hinerv_pair_local_state_restore_failed")
-        section_rows = [
+        section_output_rows = [
             {
                 "section": "pair_local_latents_fine",
                 "bytes": adapter_bytes,
                 "grad_norm": grad_norm,
                 "output_delta_l2": selected_delta_l2,
-                "value_per_byte": value_per_byte,
+                "output_delta_l2_per_byte": output_delta_l2_per_byte,
+                "value_semantics": "receiver_output_l2_per_byte_not_score_value",
+                "score_value_per_byte_measured": False,
                 "score_claim": False,
             }
         ]
@@ -1268,18 +1399,33 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pair_local_output_delta_max_abs_uint8": selected_delta_max_abs_uint8,
             "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
             "receiver_uint8_crossing_potential": receiver_uint8_crossing_potential,
+            "receiver_uint8_changed": receiver_uint8_changed,
+            "receiver_uint8_changed_count": int(target_uint8_stats["changed_count"]),
+            "receiver_uint8_changed_fraction": float(
+                target_uint8_stats["changed_fraction"]
+            ),
+            "receiver_uint8_delta_abs_max": int(
+                target_uint8_stats["delta_abs_max_uint8"]
+            ),
+            "non_target_pair_receiver_uint8_changed_count": int(
+                non_target_uint8_stats["changed_count"]
+            ),
+            "non_target_pair_receiver_uint8_delta_abs_max": int(
+                non_target_uint8_stats["delta_abs_max_uint8"]
+            ),
             "pair_locality_verified": pair_locality_verified,
             "non_target_pair_output_delta_l2_max": non_target_delta_l2,
             "state_restored_after_smoke": state_restored,
             "pair_local_latents_fine_original_row_sha256": original_row_sha256,
             "pair_local_latents_fine_restored_row_sha256": restored_row_sha256,
-            "section_value_per_byte_rows": section_rows,
+            "section_output_delta_per_byte_rows": section_output_rows,
+            "section_value_per_byte_rows": [],
             "score_claim": False,
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
-        return {
+        payload: dict[str, Any] = {
             "schema": "hinerv_pair_local_actuator_smoke.v1",
             "family": "hi_nerv",
             "axis_tag": MLX_EVIDENCE_GRADE,
@@ -1311,6 +1457,22 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "pair_local_output_delta_max_abs_uint8": selected_delta_max_abs_uint8,
                 "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
                 "receiver_uint8_crossing_potential": receiver_uint8_crossing_potential,
+                "receiver_uint8_changed": receiver_uint8_changed,
+                "receiver_uint8_changed_count": int(
+                    target_uint8_stats["changed_count"]
+                ),
+                "receiver_uint8_changed_fraction": float(
+                    target_uint8_stats["changed_fraction"]
+                ),
+                "receiver_uint8_delta_abs_max": int(
+                    target_uint8_stats["delta_abs_max_uint8"]
+                ),
+                "non_target_pair_receiver_uint8_changed_count": int(
+                    non_target_uint8_stats["changed_count"]
+                ),
+                "non_target_pair_receiver_uint8_delta_abs_max": int(
+                    non_target_uint8_stats["delta_abs_max_uint8"]
+                ),
                 "non_target_pair_output_delta_l2_max": non_target_delta_l2,
                 "pair_locality_verified": pair_locality_verified,
             },
@@ -1326,7 +1488,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pair_local_adapter_sha256": adapter_sha256,
             "pair_local_grad_norm": grad_norm,
             "pair_local_output_delta_l2": selected_delta_l2,
-            "section_value_per_byte_rows": section_rows,
+            "section_output_delta_per_byte_rows": section_output_rows,
+            "section_value_per_byte_rows": [],
             "blockers": blockers,
             "summary_for_pr95_guard": summary if not blockers else None,
             "score_claim": False,
@@ -1334,6 +1497,30 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+        artifact_record = _write_pair_local_smoke_artifact(
+            payload,
+            artifact_dir=artifact_dir,
+            pair_index=target_index,
+            adapter_sha256=adapter_sha256,
+        )
+        if artifact_record:
+            payload["pair_local_smoke_artifact"] = artifact_record
+            if isinstance(payload.get("summary_for_pr95_guard"), dict):
+                payload["summary_for_pr95_guard"].update(
+                    {
+                        "pair_local_smoke_artifact_schema": artifact_record[
+                            "artifact_schema"
+                        ],
+                        "pair_local_smoke_artifact_path": artifact_record["path"],
+                        "pair_local_smoke_artifact_sha256": artifact_record[
+                            "sha256"
+                        ],
+                        "pair_local_smoke_artifact_bytes": artifact_record[
+                            "bytes"
+                        ],
+                    }
+                )
+        return payload
 
     def fit_scorer_domain_bootstrap_from_targets(
         self,
@@ -1358,6 +1545,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         yuv6_temporal_std_min_ratio: float = 0.5,
         weight_decay: float = 0.0,
         grad_clip_max_norm: float | None = 1.0,
+        pair_local_smoke_artifact_dir: str | Path | None = None,
     ) -> dict[str, Any]:
         """Run a bounded scorer-domain prefit on archive-charged parameters.
 
@@ -1658,7 +1846,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "enabled": bool(weights["segnet_margin_bootstrap_weight"] > 0.0),
                 "weight": float(weights["segnet_margin_bootstrap_weight"]),
                 "margin_floor": float(segnet_margin_floor),
-                "source": "live_mlx_segnet_candidate_logits_against_frame1_target_argmax",
+                "source": (
+                    "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_"
+                    "logits_against_frame1_target_argmax"
+                ),
+                "receiver_surface": "clamp_round_uint8_rgb_ste_nhwc01",
                 "target_index_semantics": "local_bootstrap_batch_indices",
                 "runtime_sidecar_bytes": 0,
                 "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
@@ -1669,7 +1861,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "enabled": bool(weights["segnet_hard_birth_bootstrap_weight"] > 0.0),
                 "weight": float(weights["segnet_hard_birth_bootstrap_weight"]),
                 "min_ratio_floor": float(segnet_hard_birth_floor),
-                "source": "live_mlx_segnet_candidate_logits_worst_target_class_birth",
+                "source": (
+                    "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_"
+                    "logits_worst_target_class_birth"
+                ),
+                "receiver_surface": "clamp_round_uint8_rgb_ste_nhwc01",
                 "worst_loss_selection": "score_weighted_unsolved_argmax_mass",
                 "target_index_semantics": "local_bootstrap_batch_indices",
                 "runtime_sidecar_bytes": 0,
@@ -1714,7 +1910,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     ),
                 }
 
-            candidate_logits = segnet_margin_live_fn(pred1)
+            receiver_pred1 = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
+            candidate_logits = segnet_margin_live_fn(receiver_pred1)
             if candidate_logits.ndim != 4:
                 raise ValueError(
                     "live SegNet bootstrap candidate logits must be BHWC; got "
@@ -2164,20 +2361,60 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(value)  # type: ignore[union-attr]
             return float(value.item())
 
-        def _segnet_bootstrap_score_debt_scalar(model_obj: Any) -> float:
+        def _segnet_bootstrap_debt_scalars(model_obj: Any) -> tuple[float, float, float]:
             if not segnet_live_bootstrap_requested:
-                return 0.0
-            value = _metric_tensors(model_obj)[
-                "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
-            ]
-            mx.eval(value)  # type: ignore[union-attr]
-            return float(value.item())
+                return 0.0, 0.0, 1.0
+            metrics = _metric_tensors(model_obj)
+            if weights["segnet_hard_birth_bootstrap_weight"] > 0.0:
+                total = metrics[
+                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass"
+                ]
+                worst = metrics[
+                    "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"
+                ]
+                min_ratio = metrics[
+                    "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio"
+                ]
+            else:
+                total = metrics[
+                    "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
+                ]
+                worst = metrics[
+                    "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass"
+                ]
+                min_ratio = metrics[
+                    "segnet_margin_bootstrap_candidate_target_class_min_ratio"
+                ]
+            mx.eval(total, worst, min_ratio)  # type: ignore[union-attr]
+            return float(total.item()), float(worst.item()), float(min_ratio.item())
 
         def _frame1_delta_max_abs_from_base(base_pred1: Any) -> float:
             _, candidate_pred1 = _predict_pair01(self)
             delta = mx.max(mx.abs(candidate_pred1 - base_pred1))  # type: ignore[union-attr]
             mx.eval(delta)  # type: ignore[union-attr]
             return float(delta.item())
+
+        def _frame1_receiver_uint8_stats_from_base(
+            base_pred1: Any,
+        ) -> dict[str, float]:
+            _, candidate_pred1 = _predict_pair01(self)
+            base_u8 = mx.round(mx.clip(base_pred1, 0.0, 1.0) * 255.0)  # type: ignore[union-attr]
+            candidate_u8 = mx.round(  # type: ignore[union-attr]
+                mx.clip(candidate_pred1, 0.0, 1.0) * 255.0
+            )
+            delta_u8 = mx.abs(candidate_u8 - base_u8)  # type: ignore[union-attr]
+            changed = (delta_u8 > 0.0).astype(mx.float32)
+            changed_count = mx.sum(changed)  # type: ignore[union-attr]
+            changed_fraction = mx.mean(changed)  # type: ignore[union-attr]
+            max_abs_uint8 = mx.max(delta_u8)  # type: ignore[union-attr]
+            float_delta = mx.max(mx.abs(candidate_pred1 - base_pred1))  # type: ignore[union-attr]
+            mx.eval(changed_count, changed_fraction, max_abs_uint8, float_delta)  # type: ignore[union-attr]
+            return {
+                "changed_count": float(changed_count.item()),
+                "changed_fraction": float(changed_fraction.item()),
+                "max_abs_uint8": float(max_abs_uint8.item()),
+                "float_delta_abs_max": float(float_delta.item()),
+            }
 
         def _apply_gradient_step(
             *,
@@ -2210,7 +2447,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
 
         current_loss = _loss_scalar(self)
         current_contrast_floor = _contrast_floor_scalar(self)
-        current_segnet_score_debt = _segnet_bootstrap_score_debt_scalar(self)
+        (
+            current_segnet_score_debt,
+            current_segnet_worst_debt,
+            current_segnet_min_ratio,
+        ) = _segnet_bootstrap_debt_scalars(self)
         preserve_contrast_floor = bool(weights["contrast_floor_weight"] > 0.0)
         preserve_segnet_score_debt = bool(segnet_live_bootstrap_requested)
         receiver_quantum_acceptance_enabled = bool(
@@ -2229,10 +2470,28 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         receiver_quantum_crossing_accepted_step_count = 0
         receiver_quantum_attempt_count = 0
         receiver_quantum_growth_attempt_count = 0
+        receiver_quantum_shrink_attempt_count = 0
+        hard_birth_argmax_progress_accepted_step_count = 0
+        hard_birth_argmax_progress_rejected_step_count = 0
+        hard_birth_worst_improved_total_spill_rejected_step_count = 0
+        segnet_worst_debt_rejected_step_count = 0
+        max_candidate_segnet_total_debt_reduction = 0.0
+        max_candidate_segnet_worst_debt_reduction = 0.0
+        max_candidate_segnet_min_ratio_increase = 0.0
+        max_candidate_segnet_total_debt_spill_given_worst_improvement = 0.0
+        max_accepted_segnet_total_debt_reduction = 0.0
+        max_accepted_segnet_worst_debt_reduction = 0.0
+        max_accepted_segnet_min_ratio_increase = 0.0
         max_candidate_frame1_delta_abs = 0.0
         max_candidate_frame1_delta_abs_uint8 = 0.0
+        max_candidate_frame1_receiver_uint8_changed_count = 0.0
+        max_candidate_frame1_receiver_uint8_changed_fraction = 0.0
+        max_candidate_frame1_receiver_uint8_delta_abs = 0.0
         max_accepted_frame1_delta_abs = 0.0
         max_accepted_frame1_delta_abs_uint8 = 0.0
+        max_accepted_frame1_receiver_uint8_changed_count = 0.0
+        max_accepted_frame1_receiver_uint8_changed_fraction = 0.0
+        max_accepted_frame1_receiver_uint8_delta_abs = 0.0
         backtracking_attempt_count = 0
         bootstrap_scoped_out_gradient_tensor_count = 0
         accepted_bootstrap_update_tensor_names: set[str] = set()
@@ -2259,20 +2518,27 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             applied_tensor_count = 0
             applied_tensor_names: list[str] = []
             if receiver_quantum_acceptance_enabled:
-                step_lr_schedule = [
+                shrink_trials = [
+                    lr / (2.0**attempt)
+                    for attempt in range(max_backtracking_attempts, 0, -1)
+                ]
+                growth_trials = [
                     lr * (2.0**attempt)
                     for attempt in range(max_receiver_quantum_growth_attempts)
                 ]
+                step_lr_schedule = shrink_trials + growth_trials
             else:
                 step_lr_schedule = [
                     lr / (2.0**attempt) for attempt in range(max_backtracking_attempts)
                 ]
-            for attempt_index, step_lr in enumerate(step_lr_schedule):
+            for _attempt_index, step_lr in enumerate(step_lr_schedule):
                 backtracking_attempt_count += 1
                 if receiver_quantum_acceptance_enabled:
                     receiver_quantum_attempt_count += 1
-                    if attempt_index > 0:
+                    if step_lr > lr:
                         receiver_quantum_growth_attempt_count += 1
+                    elif step_lr < lr:
+                        receiver_quantum_shrink_attempt_count += 1
                 (
                     applied_tensor_count,
                     applied_tensor_names,
@@ -2287,9 +2553,53 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
                 candidate_loss = _loss_scalar(self)
                 candidate_contrast_floor = _contrast_floor_scalar(self)
-                candidate_segnet_score_debt = _segnet_bootstrap_score_debt_scalar(self)
-                candidate_frame1_delta_abs = _frame1_delta_max_abs_from_base(base_pred1)
+                (
+                    candidate_segnet_score_debt,
+                    candidate_segnet_worst_debt,
+                    candidate_segnet_min_ratio,
+                ) = _segnet_bootstrap_debt_scalars(self)
+                candidate_total_debt_reduction = (
+                    current_segnet_score_debt - candidate_segnet_score_debt
+                )
+                candidate_worst_debt_reduction = (
+                    current_segnet_worst_debt - candidate_segnet_worst_debt
+                )
+                candidate_min_ratio_increase = (
+                    candidate_segnet_min_ratio - current_segnet_min_ratio
+                )
+                max_candidate_segnet_total_debt_reduction = max(
+                    max_candidate_segnet_total_debt_reduction,
+                    candidate_total_debt_reduction,
+                )
+                max_candidate_segnet_worst_debt_reduction = max(
+                    max_candidate_segnet_worst_debt_reduction,
+                    candidate_worst_debt_reduction,
+                )
+                max_candidate_segnet_min_ratio_increase = max(
+                    max_candidate_segnet_min_ratio_increase,
+                    candidate_min_ratio_increase,
+                )
+                if candidate_worst_debt_reduction > 1.0e-6:
+                    max_candidate_segnet_total_debt_spill_given_worst_improvement = max(
+                        max_candidate_segnet_total_debt_spill_given_worst_improvement,
+                        -candidate_total_debt_reduction,
+                    )
+                candidate_receiver_uint8_stats = (
+                    _frame1_receiver_uint8_stats_from_base(base_pred1)
+                )
+                candidate_frame1_delta_abs = float(
+                    candidate_receiver_uint8_stats["float_delta_abs_max"]
+                )
                 candidate_frame1_delta_abs_uint8 = candidate_frame1_delta_abs * 255.0
+                candidate_frame1_receiver_uint8_changed_count = float(
+                    candidate_receiver_uint8_stats["changed_count"]
+                )
+                candidate_frame1_receiver_uint8_changed_fraction = float(
+                    candidate_receiver_uint8_stats["changed_fraction"]
+                )
+                candidate_frame1_receiver_uint8_delta_abs = float(
+                    candidate_receiver_uint8_stats["max_abs_uint8"]
+                )
                 max_candidate_frame1_delta_abs = max(
                     max_candidate_frame1_delta_abs,
                     candidate_frame1_delta_abs,
@@ -2297,6 +2607,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 max_candidate_frame1_delta_abs_uint8 = max(
                     max_candidate_frame1_delta_abs_uint8,
                     candidate_frame1_delta_abs_uint8,
+                )
+                max_candidate_frame1_receiver_uint8_changed_count = max(
+                    max_candidate_frame1_receiver_uint8_changed_count,
+                    candidate_frame1_receiver_uint8_changed_count,
+                )
+                max_candidate_frame1_receiver_uint8_changed_fraction = max(
+                    max_candidate_frame1_receiver_uint8_changed_fraction,
+                    candidate_frame1_receiver_uint8_changed_fraction,
+                )
+                max_candidate_frame1_receiver_uint8_delta_abs = max(
+                    max_candidate_frame1_receiver_uint8_delta_abs,
+                    candidate_frame1_receiver_uint8_delta_abs,
                 )
                 contrast_floor_ok = (
                     not preserve_contrast_floor
@@ -2307,22 +2629,53 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     or candidate_segnet_score_debt
                     <= current_segnet_score_debt + 1.0e-6
                 )
+                segnet_worst_debt_ok = (
+                    not preserve_segnet_score_debt
+                    or candidate_segnet_worst_debt <= current_segnet_worst_debt + 1.0e-6
+                )
+                hard_birth_argmax_progress_ok = (
+                    not receiver_quantum_acceptance_enabled
+                    or candidate_total_debt_reduction > 1.0e-6
+                    or candidate_worst_debt_reduction > 1.0e-6
+                    or candidate_min_ratio_increase > 1.0e-6
+                )
                 receiver_quantum_ok = (
                     not receiver_quantum_acceptance_enabled
-                    or candidate_frame1_delta_abs >= receiver_uint8_half_step_normalized
-                    or candidate_segnet_score_debt
-                    < current_segnet_score_debt - 1.0e-6
+                    or candidate_frame1_receiver_uint8_changed_count > 0.0
+                )
+                loss_ok = (
+                    candidate_loss <= current_loss + 1.0e-12
+                    or (
+                        receiver_quantum_acceptance_enabled
+                        and hard_birth_argmax_progress_ok
+                    )
                 )
                 if (
-                    candidate_loss <= current_loss + 1.0e-12
+                    loss_ok
                     and contrast_floor_ok
                     and segnet_score_debt_ok
+                    and segnet_worst_debt_ok
+                    and hard_birth_argmax_progress_ok
                     and receiver_quantum_ok
                 ):
                     current_loss = candidate_loss
                     current_contrast_floor = candidate_contrast_floor
                     current_segnet_score_debt = candidate_segnet_score_debt
+                    current_segnet_worst_debt = candidate_segnet_worst_debt
+                    current_segnet_min_ratio = candidate_segnet_min_ratio
                     min_accepted_step_lr = min(min_accepted_step_lr, step_lr)
+                    max_accepted_segnet_total_debt_reduction = max(
+                        max_accepted_segnet_total_debt_reduction,
+                        candidate_total_debt_reduction,
+                    )
+                    max_accepted_segnet_worst_debt_reduction = max(
+                        max_accepted_segnet_worst_debt_reduction,
+                        candidate_worst_debt_reduction,
+                    )
+                    max_accepted_segnet_min_ratio_increase = max(
+                        max_accepted_segnet_min_ratio_increase,
+                        candidate_min_ratio_increase,
+                    )
                     max_accepted_frame1_delta_abs = max(
                         max_accepted_frame1_delta_abs,
                         candidate_frame1_delta_abs,
@@ -2331,12 +2684,28 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         max_accepted_frame1_delta_abs_uint8,
                         candidate_frame1_delta_abs_uint8,
                     )
+                    max_accepted_frame1_receiver_uint8_changed_count = max(
+                        max_accepted_frame1_receiver_uint8_changed_count,
+                        candidate_frame1_receiver_uint8_changed_count,
+                    )
+                    max_accepted_frame1_receiver_uint8_changed_fraction = max(
+                        max_accepted_frame1_receiver_uint8_changed_fraction,
+                        candidate_frame1_receiver_uint8_changed_fraction,
+                    )
+                    max_accepted_frame1_receiver_uint8_delta_abs = max(
+                        max_accepted_frame1_receiver_uint8_delta_abs,
+                        candidate_frame1_receiver_uint8_delta_abs,
+                    )
                     loss_history.append(candidate_loss)
                     accepted = True
                     accepted_step_count += 1
+                    hard_birth_argmax_progress_accepted_step_count += int(
+                        receiver_quantum_acceptance_enabled
+                        and hard_birth_argmax_progress_ok
+                    )
                     receiver_quantum_crossing_accepted_step_count += int(
                         receiver_quantum_acceptance_enabled
-                        and candidate_frame1_delta_abs >= receiver_uint8_half_step_normalized
+                        and candidate_frame1_receiver_uint8_changed_count > 0.0
                     )
                     accepted_bootstrap_update_tensor_names.update(applied_tensor_names)
                     break
@@ -2344,6 +2713,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     contrast_floor_rejected_step_count += 1
                 if not segnet_score_debt_ok:
                     segnet_score_debt_rejected_step_count += 1
+                    if candidate_worst_debt_reduction > 1.0e-6:
+                        hard_birth_worst_improved_total_spill_rejected_step_count += 1
+                if not segnet_worst_debt_ok:
+                    segnet_worst_debt_rejected_step_count += 1
+                if not hard_birth_argmax_progress_ok:
+                    hard_birth_argmax_progress_rejected_step_count += 1
                 if not receiver_quantum_ok:
                     receiver_quantum_rejected_step_count += 1
                 _restore_parameters(base_snapshot)
@@ -2359,6 +2734,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             target1,
             pair_indices=idx,
             learning_rate=min(lr, 1.0e-2),
+            artifact_dir=pair_local_smoke_artifact_dir,
         )
         pr95_actuator_execution_evidence = (
             pair_local_smoke.get("summary_for_pr95_guard")
@@ -2407,11 +2783,48 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "segnet_score_debt_rejected_step_count": int(
                 segnet_score_debt_rejected_step_count
             ),
+            "segnet_worst_debt_rejected_step_count": int(
+                segnet_worst_debt_rejected_step_count
+            ),
+            "hard_birth_argmax_progress_accepted_step_count": int(
+                hard_birth_argmax_progress_accepted_step_count
+            ),
+            "hard_birth_argmax_progress_rejected_step_count": int(
+                hard_birth_argmax_progress_rejected_step_count
+            ),
+            "hard_birth_worst_improved_total_spill_rejected_step_count": int(
+                hard_birth_worst_improved_total_spill_rejected_step_count
+            ),
+            "max_candidate_segnet_total_debt_reduction": float(
+                max_candidate_segnet_total_debt_reduction
+            ),
+            "max_candidate_segnet_worst_debt_reduction": float(
+                max_candidate_segnet_worst_debt_reduction
+            ),
+            "max_candidate_segnet_min_ratio_increase": float(
+                max_candidate_segnet_min_ratio_increase
+            ),
+            "max_candidate_segnet_total_debt_spill_given_worst_improvement": float(
+                max_candidate_segnet_total_debt_spill_given_worst_improvement
+            ),
+            "max_accepted_segnet_total_debt_reduction": float(
+                max_accepted_segnet_total_debt_reduction
+            ),
+            "max_accepted_segnet_worst_debt_reduction": float(
+                max_accepted_segnet_worst_debt_reduction
+            ),
+            "max_accepted_segnet_min_ratio_increase": float(
+                max_accepted_segnet_min_ratio_increase
+            ),
             "receiver_quantum_acceptance_enabled": receiver_quantum_acceptance_enabled,
             "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
+            "receiver_quantum_surface": "clamp_round_uint8_rgb_frame1",
             "receiver_quantum_attempt_count": int(receiver_quantum_attempt_count),
             "receiver_quantum_growth_attempt_count": int(
                 receiver_quantum_growth_attempt_count
+            ),
+            "receiver_quantum_shrink_attempt_count": int(
+                receiver_quantum_shrink_attempt_count
             ),
             "receiver_quantum_rejected_step_count": int(
                 receiver_quantum_rejected_step_count
@@ -2423,9 +2836,27 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "max_candidate_frame1_delta_abs_uint8": float(
                 max_candidate_frame1_delta_abs_uint8
             ),
+            "max_candidate_frame1_receiver_uint8_changed_count": float(
+                max_candidate_frame1_receiver_uint8_changed_count
+            ),
+            "max_candidate_frame1_receiver_uint8_changed_fraction": float(
+                max_candidate_frame1_receiver_uint8_changed_fraction
+            ),
+            "max_candidate_frame1_receiver_uint8_delta_abs": float(
+                max_candidate_frame1_receiver_uint8_delta_abs
+            ),
             "max_accepted_frame1_delta_abs": float(max_accepted_frame1_delta_abs),
             "max_accepted_frame1_delta_abs_uint8": float(
                 max_accepted_frame1_delta_abs_uint8
+            ),
+            "max_accepted_frame1_receiver_uint8_changed_count": float(
+                max_accepted_frame1_receiver_uint8_changed_count
+            ),
+            "max_accepted_frame1_receiver_uint8_changed_fraction": float(
+                max_accepted_frame1_receiver_uint8_changed_fraction
+            ),
+            "max_accepted_frame1_receiver_uint8_delta_abs": float(
+                max_accepted_frame1_receiver_uint8_delta_abs
             ),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "max_backtracking_attempts_per_step": int(max_backtracking_attempts),
@@ -2476,6 +2907,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
                 _improvement(
                     "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass"
+                )
+            ),
+            "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass_delta": (
+                _improvement(
+                    "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"
                 )
             ),
             "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio_delta": float(

@@ -31,6 +31,7 @@ POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA = "pr95_posenet_marginal_telemetry_contr
 SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA = (
     "pr95_scorer_atom_actuator_execution_evidence.v1"
 )
+PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA = "pact_nerv_receiver_compiler_dag.v1"
 
 PR95_SOURCE_REL = Path(
     "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
@@ -262,6 +263,288 @@ PRACTICE_DAG_LAYER_METADATA: Mapping[str, Mapping[str, str]] = {
     },
 }
 
+PACT_NERV_RECEIVER_COMPILER_DAG_ROWS: tuple[dict[str, Any], ...] = (
+    {
+        "node_id": "exact_evaluator_atom_oracle",
+        "title": "exact evaluate.py scorer atom oracle",
+        "depends_on": [],
+        "required_before_long_run": True,
+        "required_before_promotion": True,
+        "math_surface": (
+            "SegNet target argmax/logits, PoseNet target outputs, YUV6 pair "
+            "inputs, byte price, and score atom weights from upstream evaluate.py"
+        ),
+        "engineering_surface": (
+            "research-time cached target scorer atoms outside archive.zip, with "
+            "row-level scorer telemetry proving the same surfaces are consumed"
+        ),
+    },
+    {
+        "node_id": "receiver_surface_integer_search",
+        "title": "receiver-visible integer/uint8 update search",
+        "depends_on": ["exact_evaluator_atom_oracle"],
+        "required_before_long_run": True,
+        "required_before_promotion": True,
+        "math_surface": (
+            "accept parameter moves only after clamp/round uint8 and scorer-debt "
+            "movement, not continuous RGB loss alone"
+        ),
+        "engineering_surface": (
+            "HiNeRV hard-birth byte crossings or SNeRV receiver source-forward "
+            "proof, depending on family"
+        ),
+    },
+    {
+        "node_id": "seg_only_mask_witness_oracle",
+        "title": "SegNet-only mask witness oracle",
+        "depends_on": ["exact_evaluator_atom_oracle"],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "minimum legal description for frame-1 witnesses that preserve "
+            "upstream SegNet argmax cells while ignoring PoseNet"
+        ),
+        "engineering_surface": (
+            "mask entropy, procedural painter, boundary residuals, and "
+            "seg_oracle_score rows"
+        ),
+    },
+    {
+        "node_id": "pose_only_yuv6_witness_oracle",
+        "title": "PoseNet-only YUV6 trajectory witness oracle",
+        "depends_on": ["exact_evaluator_atom_oracle"],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "minimum legal description for two-frame YUV6 witnesses that "
+            "preserve upstream PoseNet outputs while ignoring SegNet"
+        ),
+        "engineering_surface": (
+            "pose trajectory entropy, hard-pair list, YUV6 sensitivity basis, "
+            "and pose_oracle_score rows"
+        ),
+    },
+    {
+        "node_id": "sufficient_statistic_oracle_baselines",
+        "title": "mask-first and pose-trajectory sufficient-statistic oracles",
+        "depends_on": [
+            "seg_only_mask_witness_oracle",
+            "pose_only_yuv6_witness_oracle",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "estimate the MDL of SegNet masks, PoseNet trajectory, and their "
+            "joint scorer-equivalence sufficient statistics"
+        ),
+        "engineering_surface": (
+            "Oracle A mask renderer, Oracle B pose witness, Oracle C joint "
+            "constraint initializer"
+        ),
+    },
+    {
+        "node_id": "witness_family_pareto_frontier",
+        "title": "witness-family Pareto frontier",
+        "depends_on": [
+            "sufficient_statistic_oracle_baselines",
+            "receiver_surface_integer_search",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "compare witness grammars by exact d_seg, d_pose, bytes, runtime, "
+            "and parse-back stability rather than by model-family aesthetics"
+        ),
+        "engineering_surface": (
+            "solid painter, road/lane splines, blob grammar, adversarial basis, "
+            "HNeRV, HiNeRV, SNeRV, and hybrid rows on one score axis"
+        ),
+    },
+    {
+        "node_id": "cell_volume_compressibility_estimator",
+        "title": "cell-volume-to-compressibility estimator",
+        "depends_on": ["witness_family_pareto_frontier"],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "estimate how much RGB/YUV6 freedom each scorer-equivalence cell "
+            "offers per compressed bit"
+        ),
+        "engineering_surface": (
+            "survival perturbation probes, entropy estimates, and hard-cell "
+            "allocation telemetry"
+        ),
+    },
+    {
+        "node_id": "scorer_equivalence_witness_search",
+        "title": "scorer-equivalence witness search",
+        "depends_on": [
+            "witness_family_pareto_frontier",
+            "cell_volume_compressibility_estimator",
+            "receiver_surface_integer_search",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "find any compact RGB pair inside the same SegNet/PoseNet cells, "
+            "independent of human visual fidelity"
+        ),
+        "engineering_surface": (
+            "solid/semantic painter, spline road/lane painter, adversarial basis, "
+            "low-rank YUV6 basis, HNeRV/HiNeRV/SNeRV witnesses"
+        ),
+    },
+    {
+        "node_id": "dual_pair_certificate_ledger",
+        "title": "dual SegNet/PoseNet/byte pair certificate ledger",
+        "depends_on": ["scorer_equivalence_witness_search"],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "per-pair certificate that accepted bytes improve exact nonlinear "
+            "SegNet, PoseNet, and rate objective components"
+        ),
+        "engineering_surface": (
+            "pair-level margin, pose error, byte delta, and value-per-byte "
+            "certificate rows"
+        ),
+    },
+    {
+        "node_id": "legal_code_data_boundary_contract",
+        "title": "contest legal code/data boundary contract",
+        "depends_on": ["exact_evaluator_atom_oracle"],
+        "required_before_long_run": False,
+        "required_before_promotion": True,
+        "math_surface": (
+            "conservative accounting of which information is charged archive "
+            "data versus allowed general-purpose inflate code"
+        ),
+        "engineering_surface": (
+            "source constants inventory, generated-artifact detector, archive "
+            "member ledger, and conservative/aggressive mode tag"
+        ),
+    },
+    {
+        "node_id": "integer_optimizer_per_witness_grammar",
+        "title": "integer optimizer per witness grammar",
+        "depends_on": [
+            "scorer_equivalence_witness_search",
+            "receiver_surface_integer_search",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "coordinate/line/annealing search over receiver-visible integer "
+            "parameters with exact delta-score admission"
+        ),
+        "engineering_surface": (
+            "grammar-specific integer line search for splines, bitplanes, "
+            "latent quantizers, codebooks, and sidecar residuals"
+        ),
+    },
+    {
+        "node_id": "scorer_effect_vq_codebook",
+        "title": "scorer-effect VQ/codebook compiler",
+        "depends_on": ["scorer_equivalence_witness_search"],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "codebook atoms are priced by delta SegNet margins, PoseNet vector "
+            "movement, and archive bytes rather than image patch MSE"
+        ),
+        "engineering_surface": (
+            "VQ rows over score effects, section byte costs, and receiver "
+            "parse-back proof"
+        ),
+    },
+    {
+        "node_id": "hypernetwork_pair_weight_generator",
+        "title": "pair-local hypernetwork witness generator",
+        "depends_on": ["scorer_equivalence_witness_search"],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "tiny generator maps compressed mask/pose coefficients into "
+            "per-pair witness weights when smoother than direct latents"
+        ),
+        "engineering_surface": (
+            "hypernetwork weight generator, bitrate mask, and receiver-visible "
+            "pair replay telemetry"
+        ),
+    },
+    {
+        "node_id": "shortest_program_generator",
+        "title": "shortest evaluator-equivalent program generator",
+        "depends_on": [
+            "seg_only_mask_witness_oracle",
+            "pose_only_yuv6_witness_oracle",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "search hand-written or learned procedural programs that emit "
+            "evaluator-equivalent witnesses with lower MDL than neural weights"
+        ),
+        "engineering_surface": (
+            "road polygon, lane splines, object blobs, YUV6 perturbation "
+            "programs, and sparse residual instruction streams"
+        ),
+    },
+    {
+        "node_id": "family_backend_residualization",
+        "title": "family-specific backend residualization",
+        "depends_on": [
+            "scorer_equivalence_witness_search",
+            "dual_pair_certificate_ledger",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": False,
+        "math_surface": (
+            "assign each scorer atom to the backend with best score-value per "
+            "byte: procedural grammar, HNeRV pair latent, HiNeRV grid/head, "
+            "SNeRV LF/HF, or sparse sidecar"
+        ),
+        "engineering_surface": (
+            "HiNeRV as hierarchical scorer-witness backend; SNeRV LF as PoseNet "
+            "YUV6 carrier and HF as SegNet boundary carrier"
+        ),
+    },
+    {
+        "node_id": "byte_compiler_value_per_byte",
+        "title": "archive byte compiler and value-per-byte ledger",
+        "depends_on": [
+            "family_backend_residualization",
+            "legal_code_data_boundary_contract",
+            "receiver_surface_integer_search",
+        ],
+        "required_before_long_run": False,
+        "required_before_promotion": True,
+        "math_surface": (
+            "admit bytes only when 100*delta_d_seg + sqrt-pose delta + "
+            "25*delta_bytes/N improves the exact objective"
+        ),
+        "engineering_surface": (
+            "section quant ladders, entropy/range/ANS/Brotli sweeps, metadata "
+            "stripping, residual/codebook/latent byte pricing"
+        ),
+    },
+    {
+        "node_id": "multi_authority_replay",
+        "title": "live/fakequant/parseback/inflate/evaluate replay closure",
+        "depends_on": ["byte_compiler_value_per_byte"],
+        "required_before_long_run": False,
+        "required_before_promotion": True,
+        "math_surface": (
+            "same candidate score direction across live, fakequant, archive "
+            "parse-back, inflate, official CPU, and official CUDA/T4 axes"
+        ),
+        "engineering_surface": (
+            "receiver-proven archive.zip, parse-back replay, full-video MLX "
+            "prefilter, local CPU replay, exact dispatch only after local win"
+        ),
+    },
+)
+
 PR95_STAGE_DAG_ROWS: tuple[dict[str, Any], ...] = (
     {
         "stage_index": 1,
@@ -488,16 +771,18 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
             "600_non_overlapping_pairs",
             "segnet_last_frame_argmax_regions",
             "posenet_two_frame_yuv6_pair_motion",
-            "archive_section_value_per_byte",
+            "archive_section_score_value_per_byte",
         ],
         "family_actuators": family_actuators,
         "required_execution_evidence": (
             [
                 "hinerv_pair_local_actuator_smoke.v1",
+                "pair_local_smoke_artifact_path_sha256_bytes",
                 "adapter_bytes_and_sha256",
                 "pair_local_grad_norm_by_group",
                 "pair_local_output_delta",
-                "section_value_per_byte_rows",
+                "receiver_uint8_changed_count",
+                "section_output_delta_per_byte_rows",
             ]
             if family_key == "hi_nerv"
             else [
@@ -514,6 +799,8 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
             "execution_evidence_required_before_long_run": True,
             "cross_family_evidence_rejected": True,
             "actuator_must_report_grad_norm_by_group": True,
+            "output_delta_per_byte_is_not_score_value_per_byte": True,
+            "promotion_requires_score_value_per_byte_with_component_deltas": True,
         },
         **FALSE_AUTHORITY,
     }
@@ -606,6 +893,104 @@ def build_pr95_distortion_axis_trace_contract(family: str) -> dict[str, Any]:
                 ),
             },
         ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_pact_nerv_receiver_compiler_dag(
+    row: Mapping[str, Any],
+    *,
+    family: str | None = None,
+) -> dict[str, Any]:
+    """Return the contest-native MDL receiver-compiler dependency DAG.
+
+    The partner research reframes HiNeRV/SNeRV as backends for the shortest
+    legal archive that emits frames inside the same SegNet/PoseNet equivalence
+    cells.  This DAG preserves that framing while keeping immediate long-run
+    requirements separate from later frontier-escape oracle campaigns.
+    """
+
+    if not isinstance(row, Mapping):
+        raise PR95DistortionPracticesGuardError("row must be a mapping")
+    command = _command_list(row)
+    family_key = str(
+        family or row.get("family") or _arg_value(command, "--execute-family") or "unknown"
+    )
+    family_key = family_key.strip().lower().replace("-", "_") or "unknown"
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    observed = _receiver_compiler_observed_signals(row=row, family=family_key)
+    node_green: dict[str, bool] = {}
+    nodes: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    first_failed_pre_long: list[str] = []
+
+    for spec in PACT_NERV_RECEIVER_COMPILER_DAG_ROWS:
+        node_id = str(spec["node_id"])
+        depends_on = [str(dep) for dep in spec.get("depends_on", ())]
+        missing_prerequisites = [
+            dep for dep in depends_on if node_green.get(dep) is not True
+        ]
+        evidence = _string_list(observed.get(node_id))
+        observed_node = bool(evidence)
+        green = bool(observed_node and not missing_prerequisites)
+        node_green[node_id] = green
+        if spec.get("required_before_long_run") is True and not green:
+            if not missing_prerequisites:
+                first_failed_pre_long.append(node_id)
+            blockers.append(f"{family_key}_pact_nerv_receiver_compiler_{node_id}_missing")
+        nodes.append(
+            {
+                "schema": "pact_nerv_receiver_compiler_dag_node.v1",
+                "node_id": node_id,
+                "title": spec["title"],
+                "depends_on": depends_on,
+                "missing_prerequisites": missing_prerequisites,
+                "observed": observed_node,
+                "green": green,
+                "required_before_long_run": bool(
+                    spec.get("required_before_long_run")
+                ),
+                "required_before_promotion": bool(
+                    spec.get("required_before_promotion")
+                ),
+                "status": (
+                    "green"
+                    if green
+                    else "blocked_by_prerequisite"
+                    if missing_prerequisites
+                    else "missing"
+                ),
+                "observed_evidence": evidence,
+                "math_surface": spec["math_surface"],
+                "engineering_surface": spec["engineering_surface"],
+            }
+        )
+
+    pre_long_nodes = [node for node in nodes if node["required_before_long_run"]]
+    promotion_nodes = [node for node in nodes if node["required_before_promotion"]]
+    return {
+        "schema": PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA,
+        "family": family_key,
+        "node_count": len(nodes),
+        "pre_long_run_required_node_count": len(pre_long_nodes),
+        "promotion_required_node_count": len(promotion_nodes),
+        "pre_long_run_ready": all(node["green"] for node in pre_long_nodes),
+        "promotion_compiler_ready": all(node["green"] for node in promotion_nodes),
+        "first_failed_pre_long_run_node_ids": first_failed_pre_long,
+        "nodes": nodes,
+        "blockers": _dedupe(blockers),
+        "policy": {
+            "contest_objective": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/N",
+            "primary_problem": "minimum_description_length_under_frozen_receivers",
+            "human_visual_fidelity_is_not_authority": True,
+            "inflated_rgb_frames_are_receiver_witnesses_not_the_target_object": True,
+            "offline_compiler_compute_is_unbounded_research_state": True,
+            "eval_time_receiver_must_be_small_deterministic_and_runtime_bounded": True,
+            "large_learned_artifacts_must_be_archive_charged": True,
+            "pre_long_run_nodes_are_required": True,
+            "compiler_oracle_nodes_are_frontier_escape_campaigns": True,
+        },
         **FALSE_AUTHORITY,
     }
 
@@ -876,8 +1261,14 @@ def build_pr95_distortion_practices_row_guard(
         practice_rows=practice_rows,
     )
     stage_dag = _build_stage_dag(row=row, command=command, family=family)
+    receiver_compiler_dag = build_pact_nerv_receiver_compiler_dag(
+        row,
+        family=family,
+    )
     if required and stage_dag.get("all_required_stage_signals_observed") is not True:
         blockers.extend(_string_list(stage_dag.get("blockers")))
+    if required and receiver_compiler_dag.get("pre_long_run_ready") is not True:
+        blockers.extend(_string_list(receiver_compiler_dag.get("blockers")))
     passed_count = sum(1 for item in practice_rows if item["passed"])
     guard = {
         "schema": SCHEMA,
@@ -895,10 +1286,12 @@ def build_pr95_distortion_practices_row_guard(
         "practice_rows": practice_rows,
         "practice_dag": practice_dag,
         "optimization_stage_dag": stage_dag,
+        "receiver_compiler_dag": receiver_compiler_dag,
         "dag_blockers": _dedupe(
             [
                 *_string_list(practice_dag.get("blockers")),
                 *_string_list(stage_dag.get("blockers")),
+                *_string_list(receiver_compiler_dag.get("blockers")),
             ]
         ),
         "blockers": _dedupe(blockers),
@@ -1593,6 +1986,248 @@ def _family_actuator_execution_evidence(
     return False, evidence
 
 
+def _receiver_compiler_observed_signals(
+    *,
+    row: Mapping[str, Any],
+    family: str,
+) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    telemetry_contract = _first_mapping(
+        row,
+        (
+            "pr95_evaluate_scorer_domain_telemetry_contract",
+            "scorer_domain_telemetry_contract",
+        ),
+    )
+    upstream_binding = _first_mapping(row, ("upstream_evaluate_score_binding",))
+    scorer_atoms: list[str] = []
+    if telemetry_contract.get("schema") == TELEMETRY_CONTRACT_SCHEMA:
+        scorer_atoms.append("scorer_domain_telemetry_contract_schema")
+    if _int_value(telemetry_contract.get("segnet_scored_frame_index")) == 1:
+        scorer_atoms.append("segnet_last_frame_incidence")
+    if _int_sequence(telemetry_contract.get("posenet_scored_frame_indices")) == [0, 1]:
+        scorer_atoms.append("posenet_two_frame_incidence")
+    if _string_list(telemetry_contract.get("segnet_argmax_occupancy_metric_names")):
+        scorer_atoms.append("segnet_argmax_occupancy_metrics")
+    if _string_list(telemetry_contract.get("posenet_yuv6_pair_metric_names")):
+        scorer_atoms.append("posenet_yuv6_pair_metrics")
+    rate = upstream_binding.get("rate") if isinstance(upstream_binding, Mapping) else None
+    rate = rate if isinstance(rate, Mapping) else {}
+    if (
+        _positive_float_value(rate.get("rate_price_per_archive_byte")) is not None
+        and _positive_int_value(rate.get("canonical_denominator_bytes")) is not None
+        and "archive.zip" in str(rate.get("archive_authority") or "")
+    ):
+        scorer_atoms.append("archive_zip_byte_price_bound")
+    if scorer_atoms:
+        out["exact_evaluator_atom_oracle"] = scorer_atoms
+
+    actuator_ok, actuator_evidence = _family_actuator_execution_evidence(
+        row,
+        family=family,
+    )
+    if actuator_ok:
+        if family == "hi_nerv":
+            out["receiver_surface_integer_search"] = [
+                *actuator_evidence,
+                "hi_nerv_receiver_uint8_integer_surface_crossing",
+            ]
+        elif family == "snerv":
+            out["receiver_surface_integer_search"] = [
+                *actuator_evidence,
+                "snerv_receiver_source_forward_numeric_surface_proof",
+            ]
+
+    if _deep_evidence_present(
+        row,
+        {
+            "seg_only_mask_witness_oracle_ready",
+            "seg_oracle_score",
+            "seg_mask_entropy",
+            "seg_witness_bytes",
+            "seg_residual_bytes",
+            "seg_oracle_report",
+        },
+    ):
+        out["seg_only_mask_witness_oracle"] = ["seg_only_mask_witness_oracle_evidence"]
+    if _deep_evidence_present(
+        row,
+        {
+            "pose_only_yuv6_witness_oracle_ready",
+            "pose_oracle_score",
+            "pose_trajectory_entropy",
+            "pose_witness_bytes",
+            "pose_jacobian_spectrum",
+            "pose_oracle_report",
+        },
+    ):
+        out["pose_only_yuv6_witness_oracle"] = [
+            "pose_only_yuv6_witness_oracle_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "sufficient_statistic_oracle_baselines_ready",
+            "joint_sufficient_statistic_oracle_report",
+        },
+    ):
+        out["sufficient_statistic_oracle_baselines"] = [
+            "joint_sufficient_statistic_oracle_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "witness_family_pareto_ready",
+            "witness_family_pareto_rows",
+            "backend_scoreboard",
+            "backend_compiler_shootout_report",
+        },
+    ):
+        out["witness_family_pareto_frontier"] = [
+            "witness_family_pareto_frontier_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "cell_volume_compressibility_estimate_ready",
+            "cell_volume_compressibility_rows",
+            "cell_volume_compressibility_report",
+            "irrelevance_radius_map",
+        },
+    ):
+        out["cell_volume_compressibility_estimator"] = [
+            "cell_volume_compressibility_estimator_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "scorer_equivalence_witness_search_ready",
+            "joint_cell_search_report",
+            "joint_witness_archive",
+            "scorer_equivalence_witness_rows",
+        },
+    ):
+        out["scorer_equivalence_witness_search"] = [
+            "scorer_equivalence_witness_search_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "dual_certificate_ready",
+            "dual_pair_certificate_ledger_ready",
+            "pair_certificate_rows",
+            "seg_pose_byte_certificate_rows",
+        },
+    ):
+        out["dual_pair_certificate_ledger"] = [
+            "dual_pair_certificate_ledger_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "legal_code_data_boundary_contract_ready",
+            "contest_code_data_boundary_contract",
+            "charged_vs_free_boundary",
+            "inflate_source_constant_audit",
+            "source_constant_audit_passed",
+        },
+    ):
+        out["legal_code_data_boundary_contract"] = [
+            "legal_code_data_boundary_contract_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "integer_optimizer_per_witness_grammar_ready",
+            "integer_receiver_surface_search_report",
+            "coordinate_descent_receiver_surface_rows",
+            "latent_quantized_line_search_rows",
+        },
+    ):
+        out["integer_optimizer_per_witness_grammar"] = [
+            "integer_optimizer_per_witness_grammar_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "scorer_effect_vq_codebook_ready",
+            "scorer_effect_codebook_ready",
+            "scorer_effect_codebook_rows",
+            "vq_scorer_effect_report",
+        },
+    ):
+        out["scorer_effect_vq_codebook"] = ["scorer_effect_vq_codebook_evidence"]
+    if _deep_evidence_present(
+        row,
+        {
+            "hypernetwork_pair_weight_generator_ready",
+            "pair_weight_hypernetwork_report",
+            "hypernetwork_receiver_replay_rows",
+        },
+    ):
+        out["hypernetwork_pair_weight_generator"] = [
+            "hypernetwork_pair_weight_generator_evidence"
+        ]
+    if _deep_evidence_present(
+        row,
+        {
+            "shortest_program_generator_ready",
+            "shortest_evaluator_equivalent_program_report",
+            "procedural_witness_program_rows",
+        },
+    ):
+        out["shortest_program_generator"] = ["shortest_program_generator_evidence"]
+    if _deep_evidence_present(
+        row,
+        {
+            "family_backend_residualization_ready",
+            "hybrid_grammar_residual_backend_ready",
+            "backend_hnerv_pair_ready",
+            "backend_hinerv_patch_ready",
+            "backend_snerv_lfhf_ready",
+            "backend_procedural_ready",
+        },
+    ):
+        out["family_backend_residualization"] = [
+            "family_backend_residualization_evidence"
+        ]
+    score_value_evidence = _score_value_per_byte_evidence(row)
+    if score_value_evidence:
+        out["byte_compiler_value_per_byte"] = [
+            *score_value_evidence,
+            "section_score_value_per_byte_with_component_deltas",
+        ]
+    axis_contract = _first_mapping(
+        row,
+        (
+            "pr95_distortion_axis_trace_contract",
+            "distortion_axis_trace_contract",
+        ),
+    )
+    axes = set(_string_list(axis_contract.get("required_axes")))
+    replay_ready = _deep_evidence_present(
+        row,
+        {
+            "multi_authority_replay_ready",
+            "archive_parseback_replay_components",
+            "full_video_mlx_replay_ready",
+            "receiver_proof_passed",
+            "byte_closed_receiver_proof",
+        },
+    )
+    if replay_ready or {
+        "live_forward",
+        "fakequant_forward",
+        "archive_parseback",
+        "inflate_replay",
+        "official_evaluate_py",
+    }.issubset(axes):
+        out["multi_authority_replay"] = [
+            "axis_trace_contract_or_replay_evidence"
+        ]
+    return out
+
+
 def _hinerv_actuator_execution_evidence_ok(
     execution: Mapping[str, Any],
     *,
@@ -1603,6 +2238,15 @@ def _hinerv_actuator_execution_evidence_ok(
     smoke_ok = smoke_schema == "hinerv_pair_local_actuator_smoke.v1"
     if smoke_ok:
         evidence.append(f"hinerv_pair_local_smoke_schema={smoke_schema}")
+    artifact_schema_ok = (
+        str(execution.get("pair_local_smoke_artifact_schema") or "")
+        == "hinerv_pair_local_actuator_smoke_artifact.v1"
+    )
+    artifact_path_ok = bool(str(execution.get("pair_local_smoke_artifact_path") or ""))
+    artifact_sha_ok = _is_sha256_text(execution.get("pair_local_smoke_artifact_sha256"))
+    artifact_bytes = _positive_int_value(execution.get("pair_local_smoke_artifact_bytes"))
+    if artifact_schema_ok and artifact_path_ok and artifact_sha_ok and artifact_bytes is not None:
+        evidence.append("hinerv_pair_local_smoke_artifact_path_sha256_bytes")
     actuator_kind_ok = str(execution.get("actuator_kind") or "") == "pair_local_latent_row"
     tensor_ok = str(execution.get("actuator_tensor_name") or "") == "latents_fine"
     updated_names = _string_list(execution.get("updated_tensor_names"))
@@ -1645,6 +2289,27 @@ def _hinerv_actuator_execution_evidence_ok(
     )
     if receiver_crossing_ok:
         evidence.append("hinerv_pair_local_receiver_uint8_crossing_potential")
+    receiver_uint8_changed_count = _positive_int_value(
+        execution.get("receiver_uint8_changed_count")
+    )
+    receiver_uint8_delta_abs_max = _positive_int_value(
+        execution.get("receiver_uint8_delta_abs_max")
+    )
+    non_target_uint8_changed_count = _non_negative_int_value(
+        execution.get("non_target_pair_receiver_uint8_changed_count")
+    )
+    non_target_uint8_delta_abs_max = _non_negative_int_value(
+        execution.get("non_target_pair_receiver_uint8_delta_abs_max")
+    )
+    receiver_uint8_change_ok = (
+        execution.get("receiver_uint8_changed") is True
+        and receiver_uint8_changed_count is not None
+        and receiver_uint8_delta_abs_max is not None
+        and non_target_uint8_changed_count == 0
+        and non_target_uint8_delta_abs_max == 0
+    )
+    if receiver_uint8_change_ok:
+        evidence.append("hinerv_pair_local_receiver_uint8_changed")
     locality_ok = execution.get("pair_locality_verified") is True
     non_target_delta = _non_negative_float_value(
         execution.get("non_target_pair_output_delta_l2_max")
@@ -1665,20 +2330,22 @@ def _hinerv_actuator_execution_evidence_ok(
     )
     if state_restored_ok and state_sha_ok:
         evidence.append("hinerv_pair_local_state_restored_after_smoke")
-    section_rows = _mapping_list(execution.get("section_value_per_byte_rows"))
-    section_rows_ok = any(
+    section_output_rows = _mapping_list(execution.get("section_output_delta_per_byte_rows"))
+    section_output_rows_ok = any(
         str(row.get("section") or "") == "pair_local_latents_fine"
-        and (
-            _positive_float_value(row.get("value_per_byte")) is not None
-            or _positive_float_value(row.get("score_value_per_byte")) is not None
-        )
-        for row in section_rows
+        and _positive_float_value(row.get("output_delta_l2_per_byte")) is not None
+        and row.get("score_value_per_byte_measured") is False
+        for row in section_output_rows
     )
-    if section_rows_ok:
-        evidence.append("hinerv_section_value_per_byte_rows")
+    if section_output_rows_ok:
+        evidence.append("hinerv_section_output_delta_per_byte_rows")
     return bool(
         base_ok
         and smoke_ok
+        and artifact_schema_ok
+        and artifact_path_ok
+        and artifact_sha_ok
+        and artifact_bytes is not None
         and actuator_kind_ok
         and tensor_ok
         and updated_scope_ok
@@ -1690,11 +2357,12 @@ def _hinerv_actuator_execution_evidence_ok(
         and grad_group_norm is not None
         and output_delta is not None
         and receiver_crossing_ok
+        and receiver_uint8_change_ok
         and locality_ok
         and non_target_ok
         and state_restored_ok
         and state_sha_ok
-        and section_rows_ok
+        and section_output_rows_ok
     ), evidence
 
 
@@ -1725,6 +2393,10 @@ def _snerv_actuator_execution_evidence_ok(
     output2_ok = execution.get("tub_output2_source_forward_parity_proven") is True
     if output2_ok:
         evidence.append("snerv_tub_output2_source_forward_parity_proven")
+    source_forward_proof_ok = _snerv_execution_has_numerical_source_forward_proof(
+        execution,
+        evidence=evidence,
+    )
     return bool(
         base_ok
         and state_schema_ok
@@ -1733,7 +2405,56 @@ def _snerv_actuator_execution_evidence_ok(
         and lineage_ok
         and mfu_hfr_tub_ok
         and output2_ok
+        and source_forward_proof_ok
     ), evidence
+
+
+def _snerv_execution_has_numerical_source_forward_proof(
+    execution: Mapping[str, Any],
+    *,
+    evidence: list[str],
+) -> bool:
+    status = execution.get("source_forward_replay_proof_status")
+    status = status if isinstance(status, Mapping) else {}
+    if status.get("source_forward_replay_numerical_proof_complete") is True:
+        evidence.append("snerv_numerical_source_forward_status_complete")
+        return True
+    proof = execution.get("source_forward_replay_proof")
+    proof = proof if isinstance(proof, Mapping) else execution
+    hash_fields = (
+        "official_torch_frame_hash",
+        "mlx_frame_hash",
+        "numpy_receiver_frame_hash",
+        "parseback_frame_hash",
+        "tub_output_2_hash",
+    )
+    numeric_fields = (
+        "max_abs_frame_delta_official_mlx",
+        "max_abs_yuv6_delta_official_numpy",
+        "seg_logit_linf_official_parseback",
+        "pose_linf_official_parseback",
+    )
+    tensor_group_fields = ("mfu_tensor_hashes", "hfr_tensor_hashes")
+    hash_ok = all(_is_sha256_text(proof.get(field)) for field in hash_fields)
+    numeric_ok = all(_non_negative_float_value(proof.get(field)) is not None for field in numeric_fields)
+    groups_ok = True
+    for field in tensor_group_fields:
+        group = proof.get(field)
+        if not isinstance(group, Mapping) or not group:
+            groups_ok = False
+            break
+        if any(not str(name) or not _is_sha256_text(value) for name, value in group.items()):
+            groups_ok = False
+            break
+    if hash_ok:
+        evidence.append("snerv_source_forward_frame_and_tub_hashes_bound")
+    if numeric_ok:
+        evidence.append("snerv_source_forward_numeric_deltas_bound")
+    if groups_ok:
+        evidence.append("snerv_source_forward_mfu_hfr_tensor_hash_groups_bound")
+    if hash_ok and numeric_ok and groups_ok:
+        evidence.append("snerv_complete_numerical_source_forward_proof_present")
+    return bool(hash_ok and numeric_ok and groups_ok)
 
 
 def _is_sha256_text(value: Any) -> bool:
@@ -1843,12 +2564,28 @@ def _non_negative_float_value(value: Any) -> float | None:
     return parsed if math.isfinite(parsed) and parsed >= 0.0 else None
 
 
+def _finite_float_value(value: Any) -> float | None:
+    try:
+        parsed = float(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
 def _positive_int_value(value: Any) -> int | None:
     try:
         parsed = int(str(value))
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _non_negative_int_value(value: Any) -> int | None:
+    try:
+        parsed = int(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
 
 
 def _int_value(value: Any) -> int | None:
@@ -1922,10 +2659,75 @@ def _deep_truthy(value: Any, keys: set[str]) -> bool:
     return False
 
 
+def _deep_evidence_present(value: Any, keys: set[str]) -> bool:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if str(key) in keys:
+                if item is True:
+                    return True
+                if isinstance(item, Mapping) and bool(item):
+                    return True
+                if (
+                    isinstance(item, Sequence)
+                    and not isinstance(item, (str, bytes))
+                    and bool(item)
+                ):
+                    return True
+                if isinstance(item, str) and bool(item.strip()):
+                    return True
+                if _finite_float_value(item) is not None:
+                    return True
+            if _deep_evidence_present(item, keys):
+                return True
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return any(_deep_evidence_present(item, keys) for item in value)
+    return False
+
+
 def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         return [item for item in value if isinstance(item, Mapping)]
     return []
+
+
+def _first_finite_score_delta(row: Mapping[str, Any]) -> float | None:
+    for key in ("delta_total_score", "total_score_delta", "score_delta"):
+        value = _finite_float_value(row.get(key))
+        if value is not None:
+            return value
+    saving = _positive_float_value(row.get("score_saving"))
+    if saving is not None:
+        return -saving
+    return None
+
+
+def _score_value_per_byte_evidence(row: Mapping[str, Any]) -> list[str]:
+    rows: list[Mapping[str, Any]] = []
+    rows.extend(_mapping_list(row.get("section_value_per_byte_rows")))
+    execution = row.get("pr95_scorer_atom_actuator_execution_evidence")
+    if isinstance(execution, Mapping):
+        rows.extend(_mapping_list(execution.get("section_value_per_byte_rows")))
+    evidence: list[str] = []
+    for section_row in rows:
+        section = str(section_row.get("section") or "").strip()
+        score_value = _positive_float_value(section_row.get("score_value_per_byte"))
+        score_delta = _first_finite_score_delta(section_row)
+        delta_seg = _finite_float_value(section_row.get("delta_seg"))
+        delta_pose = _finite_float_value(section_row.get("delta_pose"))
+        delta_bytes = _finite_float_value(section_row.get("delta_archive_bytes"))
+        if delta_bytes is None:
+            delta_bytes = _finite_float_value(section_row.get("delta_bytes"))
+        if (
+            section
+            and score_value is not None
+            and score_delta is not None
+            and score_delta < 0.0
+            and delta_seg is not None
+            and delta_pose is not None
+            and delta_bytes is not None
+        ):
+            evidence.append(f"score_value_per_byte:{section}")
+    return evidence
 
 
 def _string_list(value: Any) -> list[str]:
@@ -1968,6 +2770,7 @@ def _dedupe(values: Sequence[str]) -> list[str]:
 
 __all__ = [
     "AXIS_TRACE_CONTRACT_SCHEMA",
+    "PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA",
     "PAYLOAD_GUARD_SCHEMA",
     "POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA",
     "PRACTICES",
@@ -1980,6 +2783,7 @@ __all__ = [
     "STAGE_DAG_SCHEMA",
     "TELEMETRY_CONTRACT_SCHEMA",
     "PR95DistortionPracticesGuardError",
+    "build_pact_nerv_receiver_compiler_dag",
     "build_pr95_distortion_axis_trace_contract",
     "build_pr95_distortion_practices_payload_guard",
     "build_pr95_distortion_practices_row_guard",
