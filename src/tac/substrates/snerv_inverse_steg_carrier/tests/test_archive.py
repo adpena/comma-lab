@@ -1028,6 +1028,58 @@ def test_official_mfu_hfr_tub_payload_binds_source_shaped_output2_to_frames() ->
     assert proof["ready_for_exact_eval_dispatch"] is False
 
 
+def test_official_payload_exposes_source_forward_primitive_tensor_bundle() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    bundle["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    bundle["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float64).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.125, dtype=np.float64)
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+
+    trace = decoded.source_forward_primitive_tensor_bundle(pair_ids=[0])
+
+    assert trace["schema"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub."
+        "source_forward_primitive_tensor_bundle.v1"
+    )
+    assert trace["score_claim"] is False
+    assert trace["complete_for_source_forward_action_effect"] is False
+    assert trace["requires_external_scorer_tensors"] is True
+    assert trace["pair_ids"] == [0]
+    tensors = trace["tensors"]
+    assert tensors["rgb_pair_float"].shape == (1, 2, 3, 16, 16)
+    assert tensors["rgb_pair_uint8"].shape == (1, 2, 3, 16, 16)
+    assert tensors["output_2"].shape == (2, 3, 16, 16)
+    assert tensors["mfu_in"].ndim == 1
+    assert tensors["tub_out"].ndim == 1
+    assert "coord_time_embedding" in trace["missing_action_effect_tensor_names"]
+    assert "segnet_logits" in trace["missing_action_effect_tensor_names"]
+    assert "output_2" not in trace["missing_action_effect_tensor_names"]
+
+
 def test_official_mfu_hfr_tub_output2_payload_requires_complete_pair() -> None:
     bundle = _official_payload_fixture()
     temporal = np.zeros((1, 4, 4, 4), dtype=np.float64)

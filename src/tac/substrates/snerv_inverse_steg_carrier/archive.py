@@ -23,6 +23,7 @@ import numpy as np
 
 from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    SOURCE_FORWARD_TENSOR_NAMES,
     build_snerv_payload_bitflip_falsification,
     validate_snerv_source_forward_proof_action_effect,
 )
@@ -136,6 +137,9 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA = (
 )
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA = (
     "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_proof_status.v1"
+)
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PRIMITIVE_TENSOR_BUNDLE_SCHEMA = (
+    "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_primitive_tensor_bundle.v1"
 )
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
@@ -695,6 +699,117 @@ class OfficialMfuHfrTubReceiverPayload:
             **FALSE_AUTHORITY,
         }
 
+    def source_forward_primitive_tensor_bundle(
+        self,
+        *,
+        pair_ids: Sequence[int] | None = None,
+        clip_to_uint8_range: bool = True,
+    ) -> dict[str, Any]:
+        """Expose receiver-byte primitive tensors for SourceForwardProof producers.
+
+        This is deliberately not a complete proof: scorer tensors and official
+        Torch/MLX surfaces are supplied by separate producers. The value here is
+        that archive parse-back and NumPy receiver surfaces now have one
+        canonical tensor bundle instead of ad hoc reconstructions.
+        """
+
+        low, skip_mid, skip_high = self.mfu_inputs()
+        current, previous, next_frame = self.tub_inputs()
+        output2_inputs = self.tub_output2_inputs()
+        mfu_out, hfr_out, tub_out, output_tensors = _execute_official_mfu_hfr_tub_forward(
+            mfu=self.build_mfu(),
+            hfr_heads=self.build_hfr_heads(),
+            low=low,
+            skip_mid=skip_mid,
+            skip_high=skip_high,
+            tub_current=current,
+            tub_previous=previous,
+            tub_next_frame=next_frame,
+            tub_config=dict(self.header.get("tub_config") or {}),
+            tub_temporal_encoder_concat=(
+                output2_inputs[0] if output2_inputs is not None else None
+            ),
+            tub_output2_raw=output2_inputs[1] if output2_inputs is not None else None,
+        )
+        frames = self.decode_frames(clip_to_uint8_range=clip_to_uint8_range)
+        if int(frames.shape[0]) % 2:
+            raise SnervArchiveError(
+                "source-forward primitive tensor bundle requires even frame count"
+            )
+        pair_frames = frames.reshape(int(frames.shape[0]) // 2, 2, *frames.shape[1:])
+        selected_pair_ids = (
+            [int(value) for value in pair_ids]
+            if pair_ids is not None
+            else list(range(int(pair_frames.shape[0])))
+        )
+        if not selected_pair_ids:
+            raise SnervArchiveError("source-forward primitive tensor bundle needs pair ids")
+        if min(selected_pair_ids) < 0 or max(selected_pair_ids) >= int(pair_frames.shape[0]):
+            raise SnervArchiveError(
+                f"source-forward primitive pair ids {selected_pair_ids!r} outside "
+                f"available range [0,{int(pair_frames.shape[0])})"
+            )
+        selected = np.asarray(pair_frames[selected_pair_ids], dtype=np.float32)
+        tensors: dict[str, np.ndarray] = {
+            "mfu_in": _source_forward_trace_pack_tensor_group(
+                ("low", low),
+                ("skip_mid", skip_mid),
+                ("skip_high", skip_high),
+            ),
+            "mfu_out": _source_forward_trace_pack_tensor_group(
+                ("up1", mfu_out.up1),
+                ("cat_mid", mfu_out.cat_mid),
+                ("unet1", mfu_out.unet1),
+                ("unet1_up", mfu_out.unet1_up),
+                ("cat_high", mfu_out.cat_high),
+                ("pyr_out", mfu_out.pyr_out),
+            ),
+            "hfr_in": np.asarray(mfu_out.pyr_out, dtype=np.float32),
+            "hfr_out": np.asarray(hfr_out.yh_out, dtype=np.float32),
+            "tub_in": _source_forward_trace_pack_tensor_group(
+                ("current", current),
+                ("previous", previous),
+                ("next_frame", next_frame),
+            ),
+            "tub_out": _source_forward_trace_pack_tensor_group(
+                ("normalized_lf", tub_out.normalized_lf),
+                ("prev_lowpass_over_2", tub_out.prev_lowpass_over_2),
+                ("next_lowpass_over_2", tub_out.next_lowpass_over_2),
+            ),
+            "rgb_pair_float": selected,
+            "rgb_pair_uint8": np.clip(np.rint(selected), 0, 255).astype(np.uint8),
+        }
+        if "tub.output2_fused" in output_tensors:
+            tensors["output_2"] = np.asarray(
+                output_tensors["tub.output2_fused"],
+                dtype=np.float32,
+            )
+        missing = [name for name in SOURCE_FORWARD_TENSOR_NAMES if name not in tensors]
+        return {
+            "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PRIMITIVE_TENSOR_BUNDLE_SCHEMA,
+            "payload_schema": self.schema,
+            "payload_sha256": self.payload_sha256,
+            "payload_bytes": int(self.payload_bytes),
+            "surface": "archive_parseback_or_numpy_receiver_primitive",
+            "pair_ids": selected_pair_ids,
+            "tensor_names": sorted(tensors),
+            "tensors": tensors,
+            "missing_action_effect_tensor_names": missing,
+            "complete_for_source_forward_action_effect": not missing,
+            "requires_external_scorer_tensors": any(
+                name
+                in {
+                    "segnet_input",
+                    "posenet_input",
+                    "segnet_logits",
+                    "segnet_argmax",
+                    "posenet_output",
+                }
+                for name in missing
+            ),
+            **FALSE_AUTHORITY,
+        }
+
 
 def _execute_official_mfu_hfr_tub_forward(
     *,
@@ -750,6 +865,25 @@ def _execute_official_mfu_hfr_tub_forward(
         output_tensors["tub.output2_decoder_input"] = fusion.decoder_input
         output_tensors["tub.output2_fused"] = fusion.output2_fused
     return mfu_out, hfr_out, tub_out, output_tensors
+
+
+def _source_forward_trace_pack_tensor_group(
+    *items: tuple[str, np.ndarray],
+) -> np.ndarray:
+    """Pack heterogeneously shaped trace tensors into one comparable vector."""
+
+    parts: list[np.ndarray] = []
+    for _name, value in items:
+        arr = np.ascontiguousarray(np.asarray(value, dtype=np.float64))
+        header = np.asarray(
+            [float(arr.ndim), *[float(dim) for dim in arr.shape], float(arr.size)],
+            dtype=np.float64,
+        )
+        parts.append(header)
+        parts.append(arr.reshape(-1))
+    if not parts:
+        return np.zeros((0,), dtype=np.float64)
+    return np.concatenate(parts).astype(np.float64, copy=False)
 
 
 def _official_mfu_hfr_frame_planes(
