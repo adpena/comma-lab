@@ -202,6 +202,9 @@ def _survival_rows_for_action(
         if str(row.get("action_id") or "") != action_id:
             blockers.append(f"l4_survival_action_id_mismatch:{surface}")
             continue
+        if row.get("pose_compensation_required") is True and row.get("pose_compensation_survived") is not True:
+            blockers.append(f"birth_survival_pose_compensation_not_survived:{surface}")
+            continue
         if row.get("survived") is True:
             if _target_support_positive(
                 row,

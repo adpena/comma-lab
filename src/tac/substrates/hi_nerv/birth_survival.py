@@ -165,13 +165,23 @@ def _live_worst_region(live_birth_payload: Mapping[str, Any]) -> Mapping[str, An
     return worst
 
 
-def _predict_frame1_nhwc01(model: Any, pair_indices: Any) -> Any:
-    """Return frame-1 NHWC in [0, 1] from the renderer for the given pairs."""
+def _predict_pair01_nhwc01(model: Any, pair_indices: Any) -> tuple[Any, Any]:
+    """Return both pair frames as NHWC in [0, 1] from the renderer."""
 
     import mlx.core as mx
 
     pair01 = model(pair_indices) / 255.0
-    return mx.transpose(pair01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
+    return (
+        mx.transpose(pair01[:, 0], (0, 2, 3, 1)),  # type: ignore[union-attr]
+        mx.transpose(pair01[:, 1], (0, 2, 3, 1)),  # type: ignore[union-attr]
+    )
+
+
+def _predict_frame1_nhwc01(model: Any, pair_indices: Any) -> Any:
+    """Return frame-1 NHWC in [0, 1] from the renderer for the given pairs."""
+
+    _pred0, pred1 = _predict_pair01_nhwc01(model, pair_indices)
+    return pred1
 
 
 def _candidate_logits_np(scorer_teacher: Any, frame1_nhwc01: Any) -> np.ndarray:
@@ -229,6 +239,133 @@ def _region_debt_units(region_unsolved: int, total_scored_pixels: int) -> float:
     return float(100.0 * int(region_unsolved) / int(total_scored_pixels))
 
 
+def _live_pose_compensation(live_birth_payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    compensation = live_birth_payload.get("pose_compensation")
+    if not isinstance(compensation, Mapping):
+        receipt = live_birth_payload.get("receipt")
+        if isinstance(receipt, Mapping):
+            compensation = receipt.get("pose_compensation")
+    if not isinstance(compensation, Mapping) or compensation.get("composite_accepted") is not True:
+        return None
+    return compensation
+
+
+def _live_compensation_d_pose(compensation: Mapping[str, Any]) -> float | None:
+    candidates: list[float] = []
+    raw = compensation.get("composite_d_pose_batch")
+    if isinstance(raw, int | float):
+        candidates.append(float(raw))
+    for attempt in compensation.get("attempts") or []:
+        if not isinstance(attempt, Mapping) or attempt.get("accepted") is not True:
+            continue
+        raw_attempt = attempt.get("composite_d_pose_batch")
+        if isinstance(raw_attempt, int | float):
+            candidates.append(float(raw_attempt))
+    finite = [value for value in candidates if np.isfinite(value) and value >= 0.0]
+    if not finite:
+        return None
+    return min(finite)
+
+
+def _pose_compensation_survival_on_surface(
+    model: Any,
+    *,
+    pose_teacher: Any | None,
+    target_rgb_0: Any | None,
+    target_rgb_1: Any | None,
+    pair_indices: Any,
+    live_pose_compensation: Mapping[str, Any] | None,
+    d_pose_tolerance_abs: float,
+    d_pose_tolerance_rel: float,
+) -> dict[str, Any]:
+    """Re-measure frame0 compensation survival for a composite birth action."""
+
+    if live_pose_compensation is None:
+        return {
+            "required": False,
+            "survived": None,
+            "blockers": [],
+            "live_composite_d_pose_batch": None,
+            "surface_d_pose_batch": None,
+        }
+    live_d_pose = _live_compensation_d_pose(live_pose_compensation)
+    if live_d_pose is None:
+        return {
+            "required": True,
+            "survived": False,
+            "blockers": ["pose_compensation_survival_live_d_pose_missing"],
+            "live_composite_d_pose_batch": None,
+            "surface_d_pose_batch": None,
+        }
+    pose_fn = getattr(pose_teacher, "teacher_pose_for_yuv6_pair_nhwc", None) if pose_teacher is not None else None
+    if not callable(pose_fn):
+        return {
+            "required": True,
+            "survived": False,
+            "blockers": ["pose_compensation_survival_pose_teacher_missing"],
+            "live_composite_d_pose_batch": float(live_d_pose),
+            "surface_d_pose_batch": None,
+        }
+
+    _require_mlx()
+    import mlx.core as mx
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    if target_rgb_0 is None or target_rgb_1 is None:
+        target_pose_fn = getattr(pose_teacher, "teacher_pose_for_indices", None)
+        if not callable(target_pose_fn):
+            return {
+                "required": True,
+                "survived": False,
+                "blockers": ["pose_compensation_survival_target_frames_missing"],
+                "live_composite_d_pose_batch": float(live_d_pose),
+                "surface_d_pose_batch": None,
+            }
+        target_pose = target_pose_fn(pair_indices)
+    else:
+        target0 = mx.array(target_rgb_0).astype(mx.float32)  # type: ignore[union-attr]
+        target1 = mx.array(target_rgb_1).astype(mx.float32)  # type: ignore[union-attr]
+        target_pose = pose_fn(
+            mx.concatenate(  # type: ignore[union-attr]
+                [rgb_to_yuv6_mlx(target0 * 255.0), rgb_to_yuv6_mlx(target1 * 255.0)],
+                axis=-1,
+            )
+        )
+    pred0, pred1 = _predict_pair01_nhwc01(model, pair_indices)
+    surface_pose = pose_fn(
+        mx.concatenate(  # type: ignore[union-attr]
+            [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+            axis=-1,
+        )
+    )
+    mx.eval(target_pose, surface_pose)  # type: ignore[union-attr]
+    target_pose_np = np.asarray(target_pose, dtype=np.float64)
+    surface_pose_np = np.asarray(surface_pose, dtype=np.float64)
+    if target_pose_np.shape != surface_pose_np.shape:
+        return {
+            "required": True,
+            "survived": False,
+            "blockers": ["pose_compensation_survival_pose_shape_mismatch"],
+            "live_composite_d_pose_batch": float(live_d_pose),
+            "surface_d_pose_batch": None,
+        }
+    surface_d_pose = float(np.mean((surface_pose_np - target_pose_np) ** 2))
+    tolerance = float(d_pose_tolerance_abs) + float(d_pose_tolerance_rel) * max(float(live_d_pose), 1.0e-12)
+    survived = bool(np.isfinite(surface_d_pose) and surface_d_pose <= float(live_d_pose) + tolerance)
+    return {
+        "required": True,
+        "survived": survived,
+        "blockers": ([] if survived else ["pose_compensation_survival_d_pose_regressed"]),
+        "live_composite_d_pose_batch": float(live_d_pose),
+        "surface_d_pose_batch": surface_d_pose,
+        "d_pose_tolerance_abs": float(d_pose_tolerance_abs),
+        "d_pose_tolerance_rel": float(d_pose_tolerance_rel),
+        "surface_pose_score_term": float(np.sqrt(10.0 * max(surface_d_pose, 0.0))),
+        "live_pose_score_term": float(np.sqrt(10.0 * max(float(live_d_pose), 0.0))),
+    }
+
+
 def _fake_quant_config_snapshot(model: Any) -> dict[str, Any]:
     return {
         "configured_enabled": bool(getattr(model, "decoder_fake_quant_forward_configured_enabled", False)),
@@ -257,11 +394,16 @@ def measure_birth_survival(
     model: Any,
     *,
     scorer_teacher: Any,
+    pose_teacher: Any | None = None,
+    target_rgb_0: Any | None = None,
+    target_rgb_1: Any | None = None,
     target_labels: Any,
     live_birth_payload: Mapping[str, Any],
     surface: str,
     pair_indices: Any,
     fakequant_bits: int = 8,
+    pose_d_pose_tolerance_abs: float = 1.0e-8,
+    pose_d_pose_tolerance_rel: float = 5.0e-2,
 ) -> dict[str, Any]:
     """Re-measure one accepted live birth on ``surface`` and emit a typed row.
 
@@ -299,6 +441,7 @@ def measure_birth_survival(
     birth_class = int(worst_region["class_index"])
     region_mask_np, region_pixels = reconstruct_birth_region_mask(target_labels, worst_region)
     initial_in_region_target = _initial_in_region_target_count(worst_region)
+    live_pose_compensation = _live_pose_compensation(live_birth_payload)
 
     idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
     if idx.ndim != 1 or int(idx.shape[0]) <= 0:
@@ -321,12 +464,29 @@ def measure_birth_survival(
             region_mask_np=region_mask_np,
             birth_class=birth_class,
         )
+        pose_compensation_survival = _pose_compensation_survival_on_surface(
+            model,
+            pose_teacher=pose_teacher,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            pair_indices=idx,
+            live_pose_compensation=live_pose_compensation,
+            d_pose_tolerance_abs=float(pose_d_pose_tolerance_abs),
+            d_pose_tolerance_rel=float(pose_d_pose_tolerance_rel),
+        )
     finally:
         _restore_fake_quant_config(model, fq_snapshot)
 
     region_hard_won = int(support["region_hard_won"])
     net_target_support_delta = int(region_hard_won - initial_in_region_target)
-    survived = bool(region_hard_won >= 1 and net_target_support_delta > 0)
+    target_support_survived = bool(region_hard_won >= 1 and net_target_support_delta > 0)
+    compensation_required = bool(pose_compensation_survival["required"])
+    compensation_survived = (
+        True
+        if not compensation_required
+        else bool(pose_compensation_survival["survived"])
+    )
+    survived = bool(target_support_survived and compensation_survived)
     region_debt_units = _region_debt_units(int(support["region_unsolved"]), int(support["total_scored_pixels"]))
 
     return _survival_row(
@@ -345,6 +505,7 @@ def measure_birth_survival(
         fakequant_bits=bits,
         total_scored_pixels=int(support["total_scored_pixels"]),
         worst_region=worst_region,
+        pose_compensation_survival=pose_compensation_survival,
     )
 
 
@@ -475,6 +636,7 @@ def _survival_row(
     fakequant_bits: int,
     total_scored_pixels: int,
     worst_region: Mapping[str, Any],
+    pose_compensation_survival: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the survival row in the gate's canonical schema.
 
@@ -492,6 +654,10 @@ def _survival_row(
         "wrong_to_target_count": int(region_hard_won),
         "target_to_wrong_count": int(target_hard_lost),
     }
+    pose_payload = dict(pose_compensation_survival or {})
+    pose_required = bool(pose_payload.get("required"))
+    pose_survived = None if not pose_required else bool(pose_payload.get("survived"))
+    blockers = [str(item) for item in pose_payload.get("blockers") or []]
     row: dict[str, Any] = {
         "schema": BIRTH_SURVIVAL_SCHEMA,
         "action_id": str(action_id),
@@ -516,6 +682,10 @@ def _survival_row(
         # Top-level transition aliases (the gate merges these too).
         **transitions,
         "argmax_transitions": transitions,
+        "pose_compensation_required": pose_required,
+        "pose_compensation_survived": pose_survived,
+        "pose_compensation_survival": pose_payload or None,
+        "blockers": blockers,
         "worst_region": dict(worst_region),
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
