@@ -82,6 +82,19 @@ CHECKPOINT_REPORT_MISSING_BLOCKER = (
 AUTHORITY_GATE_MISSING_BLOCKER = (
     "snerv_official_tub_lf_hf_decoder_replacement_authority_gate_missing"
 )
+SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS: frozenset[str] = frozenset(
+    {
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "official_hfr_weight_tensor_mapping_not_loaded",
+        "full_official_hfr_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+        "snerv_official_trained_checkpoint_state_dict_value_artifact_missing",
+        "snerv_official_tub_checkpoint_export_lineage_missing",
+        "snerv_official_trained_checkpoint_source_forward_replay_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+    }
+)
 
 
 class SnervOfficialTubLfHfReplacementAuthorityGateError(ValueError):
@@ -201,10 +214,17 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
             *tub_state["blockers"],
         ]
     )
+    source_forward_authority_residual_blockers = _source_forward_authority_residual_blockers(
+        [
+            *raw_evidence_blockers,
+            *(source_state.get("source_forward_authority_residual_blockers") or ()),
+        ]
+    )
     queue_blockers = _dedupe(
         [
             *replacement_blockers,
             *raw_evidence_blockers,
+            *source_forward_authority_residual_blockers,
             *(
                 [SOURCE_ARTIFACT_MISSING_BLOCKER]
                 if source_state.get("artifact_count") == 0
@@ -217,8 +237,14 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
             ),
         ]
     )
+    source_forward_authority_residual_blocker_set = set(
+        source_forward_authority_residual_blockers
+    )
     queue_blockers = [
-        blocker for blocker in queue_blockers if blocker not in set(closed)
+        blocker
+        for blocker in queue_blockers
+        if blocker not in set(closed)
+        or blocker in source_forward_authority_residual_blocker_set
     ]
     rebuild_command = _rebuild_command(
         output_root=root,
@@ -273,6 +299,9 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
         "official_tub_lf_hf_decoder_replacement_ready": replacement_ready,
         "closed_campaign_blockers": closed,
         "raw_evidence_blockers": raw_evidence_blockers,
+        "source_forward_authority_residual_blockers": (
+            source_forward_authority_residual_blockers
+        ),
         "queue_blockers": queue_blockers,
         "blockers": _dedupe(
             [
@@ -524,6 +553,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
                 SOURCE_AUTHORITY_BLOCKER,
                 FULL_REPLAY_BLOCKER,
             ],
+            "source_forward_authority_residual_blockers": [],
             "blockers": [SOURCE_ARTIFACT_MISSING_BLOCKER],
             **QUEUE_FALSE_AUTHORITY,
         }
@@ -553,12 +583,23 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         if nested_tub_fixture_ready
         else []
     )
-    raw_source_blockers = {str(blocker) for blocker in source.get("blockers") or ()}
+    raw_source_blocker_items = [
+        *(source.get("blockers") or ()),
+        *(source.get("preserved_blockers") or ()),
+        *(replay.get("source_forward_authority_residual_blockers") or ()),
+        *(nested_tub.get("blockers") or ()),
+        *(nested_tub.get("preserved_blockers") or ()),
+    ]
+    raw_source_blockers = {str(blocker) for blocker in raw_source_blocker_items}
+    source_forward_authority_residual_blockers = (
+        _source_forward_authority_residual_blockers(raw_source_blocker_items)
+    )
     source_authority_conflicting_blockers = {
         SOURCE_AUTHORITY_BLOCKER,
         FULL_REPLAY_BLOCKER,
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
         "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        *SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS,
     }
     source_authority_blocked_by_raw_evidence = bool(
         raw_source_blockers.intersection(source_authority_conflicting_blockers)
@@ -574,6 +615,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
     source_authority = bool(
         full_tub
         and not source_authority_blocked_by_raw_evidence
+        and not source_forward_authority_residual_blockers
         and (
             replay.get("source_forward_replay_authority") is True
             or source.get("source_forward_replay_authority") is True
@@ -594,6 +636,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
     source_blockers = []
     if not source_authority:
         source_blockers.extend([SOURCE_AUTHORITY_BLOCKER, FULL_REPLAY_BLOCKER])
+    source_blockers.extend(source_forward_authority_residual_blockers)
     return {
         "schema": "snerv_official_tub_lf_hf_source_forward_state.v1",
         "artifact_count": 1,
@@ -624,6 +667,9 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         "decoded_frames_sha256": replay.get("decoded_frames_sha256"),
         "receiver_output2_frame_replay_blockers": _dedupe(receiver_blockers),
         "source_forward_authority_blockers": _dedupe(source_blockers),
+        "source_forward_authority_residual_blockers": (
+            source_forward_authority_residual_blockers
+        ),
         "closed_campaign_blockers": _dedupe(closed),
         "blockers": _dedupe(
             [
@@ -997,6 +1043,18 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return out if out >= 0 else None
+
+
+def _source_forward_authority_residual_blockers(values: Sequence[Any]) -> list[str]:
+    """Return raw evidence blockers that keep receiver replay from source authority."""
+
+    return _dedupe(
+        [
+            str(value)
+            for value in values
+            if str(value) in SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS
+        ]
+    )
 
 
 def _dedupe(values: Sequence[Any]) -> list[str]:

@@ -97,6 +97,68 @@ def test_authority_gate_can_open_without_score_or_dispatch_authority(
     assert report["local_mlx_long_training_allowed"] is False
 
 
+def test_authority_gate_keeps_residual_source_forward_blockers_sticky(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+    )
+    source["blockers"] = [
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+    source["receiver_payload_frame_replay"][
+        "source_forward_authority_residual_blockers"
+    ] = [
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        source_forward_artifacts=[source],
+        checkpoint_export_reports=[_checkpoint_export_report(trained_mapping=True)],
+        output_root=tmp_path / "gate",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["official_tub_lf_hf_decoder_replacement_ready"] is False
+    assert report["full_tub_source_forward_replay_ready"] is False
+    assert (
+        report["source_forward_evidence"]["receiver_payload_source_forward_authority"]
+        is False
+    )
+    assert report["source_forward_authority_residual_blockers"] == [
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+    assert report["source_forward_evidence"][
+        "source_forward_authority_residual_blockers"
+    ] == report["source_forward_authority_residual_blockers"]
+    blockers = set(report["queue_blockers"])
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in (
+        blockers
+    )
+    assert "official_weight_tensor_mapping_not_loaded" in blockers
+    assert "full_official_mfu_forward_artifact_not_emitted" in blockers
+    assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in blockers
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        not in report["closed_campaign_blockers"]
+    )
+
+
 def test_authority_gate_preserves_source_and_checkpoint_blockers_for_partial_mapping(
     tmp_path: Path,
 ) -> None:
