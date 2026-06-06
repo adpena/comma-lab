@@ -488,6 +488,8 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
         scorer_teacher=teacher,
         segnet_margin_bootstrap_weight=1.5,
         segnet_margin_bootstrap_floor=0.1,
+        segnet_hard_birth_bootstrap_weight=2.0,
+        segnet_hard_birth_bootstrap_min_ratio_floor=0.05,
         steps=6,
         learning_rate=5.0e-4,
         rgb_weight=0.5,
@@ -500,7 +502,14 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     assert margin["enabled"] is True
     assert margin["source"] == "live_mlx_segnet_candidate_logits_against_frame1_target_argmax"
     assert payload["segnet_margin_bootstrap_weight"] == pytest.approx(1.5)
+    hard_birth = payload["segnet_hard_birth_bootstrap"]
+    assert hard_birth["enabled"] is True
+    assert hard_birth["source"] == "live_mlx_segnet_candidate_logits_worst_target_class_birth"
+    assert payload["segnet_hard_birth_bootstrap_weight"] == pytest.approx(2.0)
+    assert payload["segnet_score_debt_preserving_acceptance"] is True
+    assert payload["segnet_score_debt_rejected_step_count"] >= 0
     assert payload["segnet_margin_bootstrap_loss_delta"] >= 0.0
+    assert payload["segnet_hard_birth_bootstrap_loss_delta"] >= 0.0
     assert (
         "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
         in payload["metrics_after"]
@@ -509,8 +518,87 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
         "segnet_margin_bootstrap_class_1_score_weighted_unsolved_argmax_mass"
         in payload["metrics_after"]
     )
+    assert (
+        "segnet_hard_birth_bootstrap_class_1_seed_prob_deficit"
+        in payload["metrics_after"]
+    )
     assert payload["runtime_sidecar_bytes"] == 0
     assert "head_rgb_1.*" in payload["archive_charged_decoder_tensors"]
+
+
+@skip_no_mlx
+def test_mlx_scorer_domain_bootstrap_hard_birth_can_actuate_without_margin_weight() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    class FakeSegNetTeacher:
+        num_classes = 2
+
+        def __init__(self, labels):
+            self._labels = labels
+
+        def teacher_argmax_for_indices(self, indices):
+            return mx.take(self._labels, indices, axis=0)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            red = frames[..., 0]
+            green = frames[..., 1]
+            class0 = green - red
+            class1 = red - green
+            return mx.stack([class0, class1], axis=-1)
+
+    mx.random.seed(11)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    ramp = mx.reshape(
+        mx.linspace(0.05, 0.95, cfg.output_height * cfg.output_width),
+        (1, cfg.output_height, cfg.output_width, 1),
+    )
+    target0 = mx.tile(
+        mx.concatenate([0.2 + 0.1 * ramp, 0.3 + 0.2 * ramp, 0.1 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    target1 = mx.tile(
+        mx.concatenate([0.15 + 0.1 * ramp, 0.55 - 0.1 * ramp, 0.1 + 0.1 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    labels_np = np.zeros(
+        (cfg.num_pairs, cfg.output_height, cfg.output_width),
+        dtype=np.int32,
+    )
+    labels_np[:, : max(1, cfg.output_height // 3), :] = 1
+    labels = mx.array(labels_np)
+    teacher = FakeSegNetTeacher(labels)
+
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    payload = model.fit_scorer_domain_bootstrap_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=labels,
+        scorer_teacher=teacher,
+        segnet_margin_bootstrap_weight=0.0,
+        segnet_hard_birth_bootstrap_weight=2.0,
+        segnet_hard_birth_bootstrap_min_ratio_floor=0.05,
+        steps=3,
+        learning_rate=2.5e-4,
+        rgb_weight=0.1,
+        yuv6_weight=0.0,
+        temporal_delta_weight=0.0,
+        grad_clip_max_norm=1.0,
+    )
+
+    assert payload["segnet_margin_bootstrap"]["enabled"] is False
+    assert payload["segnet_hard_birth_bootstrap"]["enabled"] is True
+    assert payload["segnet_score_debt_preserving_acceptance"] is True
+    assert payload["metrics_before"]["segnet_hard_birth_bootstrap_loss"] > 0.0
+    assert (
+        payload["metrics_before"]["segnet_hard_birth_bootstrap_active_class_count"]
+        > 0.0
+    )
+    assert payload["segnet_hard_birth_bootstrap_loss_delta"] >= 0.0
 
 
 @skip_no_mlx

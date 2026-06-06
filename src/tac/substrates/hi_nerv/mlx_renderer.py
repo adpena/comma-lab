@@ -1068,6 +1068,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         scorer_teacher: Any | None = None,
         segnet_margin_bootstrap_weight: float = 0.0,
         segnet_margin_bootstrap_floor: float = 0.25,
+        segnet_hard_birth_bootstrap_weight: float = 0.0,
+        segnet_hard_birth_bootstrap_min_ratio_floor: float = 0.02,
         steps: int = 8,
         learning_rate: float = 2.0e-3,
         rgb_weight: float = 1.0,
@@ -1114,6 +1116,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "contrast_floor_weight": float(contrast_floor_weight),
             "target_region_bootstrap_weight": float(target_region_bootstrap_weight),
             "segnet_margin_bootstrap_weight": float(segnet_margin_bootstrap_weight),
+            "segnet_hard_birth_bootstrap_weight": float(
+                segnet_hard_birth_bootstrap_weight
+            ),
         }
         if not math.isfinite(lr) or lr <= 0.0:
             raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
@@ -1135,6 +1140,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             raise ValueError(
                 "segnet_margin_bootstrap_floor must be finite and non-negative; "
                 f"got {segnet_margin_bootstrap_floor}"
+            )
+        segnet_hard_birth_floor = float(segnet_hard_birth_bootstrap_min_ratio_floor)
+        if (
+            not math.isfinite(segnet_hard_birth_floor)
+            or segnet_hard_birth_floor < 0.0
+            or segnet_hard_birth_floor > 1.0
+        ):
+            raise ValueError(
+                "segnet_hard_birth_bootstrap_min_ratio_floor must be finite "
+                f"in [0, 1]; got {segnet_hard_birth_bootstrap_min_ratio_floor}"
             )
         wd = float(weight_decay)
         if not math.isfinite(wd) or wd < 0.0:
@@ -1256,6 +1271,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         ]
         segnet_margin_live_fn = None
         segnet_margin_target_labels = None
+        segnet_live_bootstrap_requested = bool(
+            weights["segnet_margin_bootstrap_weight"] > 0.0
+            or weights["segnet_hard_birth_bootstrap_weight"] > 0.0
+        )
         segnet_margin_metadata: dict[str, Any] = {
             "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
             "enabled": False,
@@ -1266,7 +1285,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "archive_charged_decoder_tensors": [],
             "human_visual_fidelity_objective": False,
         }
-        if weights["segnet_margin_bootstrap_weight"] > 0.0:
+        segnet_hard_birth_metadata: dict[str, Any] = {
+            "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_hard_birth.v1",
+            "enabled": False,
+            "weight": float(weights["segnet_hard_birth_bootstrap_weight"]),
+            "min_ratio_floor": float(segnet_hard_birth_floor),
+            "reason": "segnet_hard_birth_bootstrap_weight_not_positive",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "human_visual_fidelity_objective": False,
+        }
+        if segnet_live_bootstrap_requested:
             blockers: list[str] = []
             live_fn = getattr(scorer_teacher, "teacher_logits_for_frames_nhwc01", None)
             if not callable(live_fn):
@@ -1310,16 +1339,27 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 mx.eval(segnet_margin_target_labels)  # type: ignore[union-attr]
             if blockers:
                 raise ValueError(
-                    "segnet_margin_bootstrap_weight was positive, but the live "
+                    "a live SegNet bootstrap weight was positive, but the live "
                     f"SegNet bootstrap actuator cannot run: {blockers}"
                 )
             segnet_margin_live_fn = live_fn
             segnet_margin_metadata = {
                 "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
-                "enabled": True,
+                "enabled": bool(weights["segnet_margin_bootstrap_weight"] > 0.0),
                 "weight": float(weights["segnet_margin_bootstrap_weight"]),
                 "margin_floor": float(segnet_margin_floor),
                 "source": "live_mlx_segnet_candidate_logits_against_frame1_target_argmax",
+                "target_index_semantics": "local_bootstrap_batch_indices",
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
+                "human_visual_fidelity_objective": False,
+            }
+            segnet_hard_birth_metadata = {
+                "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_hard_birth.v1",
+                "enabled": bool(weights["segnet_hard_birth_bootstrap_weight"] > 0.0),
+                "weight": float(weights["segnet_hard_birth_bootstrap_weight"]),
+                "min_ratio_floor": float(segnet_hard_birth_floor),
+                "source": "live_mlx_segnet_candidate_logits_worst_target_class_birth",
                 "target_index_semantics": "local_bootstrap_batch_indices",
                 "runtime_sidecar_bytes": 0,
                 "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
@@ -1336,7 +1376,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if (
                 segnet_margin_live_fn is None
                 or segnet_margin_target_labels is None
-                or weights["segnet_margin_bootstrap_weight"] <= 0.0
+                or (
+                    weights["segnet_margin_bootstrap_weight"] <= 0.0
+                    and weights["segnet_hard_birth_bootstrap_weight"] <= 0.0
+                )
             ):
                 zero = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
                 one = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
@@ -1347,6 +1390,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass": zero,
                     "segnet_margin_bootstrap_candidate_target_class_min_ratio": one,
                     "segnet_margin_bootstrap_worst_class_index": mx.array(  # type: ignore[union-attr]
+                        -1.0,
+                        dtype=mx.float32,
+                    ),
+                    "segnet_hard_birth_bootstrap_loss": zero,
+                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": zero,
+                    "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass": zero,
+                    "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": one,
+                    "segnet_hard_birth_bootstrap_worst_class_index": mx.array(  # type: ignore[union-attr]
                         -1.0,
                         dtype=mx.float32,
                     ),
@@ -1385,6 +1436,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             worst_unsolved = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
             worst_class = mx.array(-1.0, dtype=mx.float32)  # type: ignore[union-attr]
             min_region_ratio = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
+            logits = candidate_logits - mx.max(  # type: ignore[union-attr]
+                candidate_logits,
+                axis=-1,
+                keepdims=True,
+            )
+            exp_logits = mx.exp(logits)  # type: ignore[union-attr]
+            probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
+            hard_birth_total_loss = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            hard_birth_active_count = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            hard_birth_worst_loss = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            hard_birth_worst_unsolved = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            hard_birth_worst_class = mx.array(-1.0, dtype=mx.float32)  # type: ignore[union-attr]
+            hard_birth_min_ratio = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
             metrics: dict[str, Any] = {}
             for class_index in range(class_count):
                 target_mask = (segnet_margin_target_labels == class_index).astype(
@@ -1446,6 +1510,138 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     )
                 )
                 class_loss = boost * crossing_loss
+                hard_birth_ratio = mx.minimum(  # type: ignore[union-attr]
+                    support_ratio,
+                    region_ratio,
+                )
+                hard_birth_deficit = mx.maximum(  # type: ignore[union-attr]
+                    0.0,
+                    segnet_hard_birth_floor - hard_birth_ratio,
+                )
+                hard_birth_active = active * (
+                    hard_birth_deficit > 0.0
+                ).astype(mx.float32)
+                class_prob = probs[..., class_index]
+                candidate_soft_fraction = mx.mean(class_prob)  # type: ignore[union-attr]
+                target_prob_mean = mx.sum(target_mask * class_prob) / mx.maximum(  # type: ignore[union-attr]
+                    target_pixels,
+                    eps,
+                )
+                masked_margin = mx.where(  # type: ignore[union-attr]
+                    target_mask > 0.0,
+                    margin,
+                    mx.array(1.0e30, dtype=margin.dtype),
+                )
+                frontier_margin = mx.stop_gradient(mx.min(masked_margin))  # type: ignore[union-attr]
+                frontier_margin = mx.where(  # type: ignore[union-attr]
+                    active > 0.0,
+                    frontier_margin,
+                    mx.array(0.0, dtype=mx.float32),
+                )
+                shifted_margin = mx.maximum(  # type: ignore[union-attr]
+                    margin - frontier_margin,
+                    mx.array(0.0, dtype=mx.float32),
+                )
+                seed_temperature = mx.minimum(  # type: ignore[union-attr]
+                    mx.array(2.0, dtype=mx.float32),
+                    mx.maximum(
+                        mx.array(0.25, dtype=mx.float32),
+                        mx.sqrt(mx.maximum(target_fraction, eps)),  # type: ignore[union-attr]
+                    ),
+                )
+                seed_weight = target_mask * mx.exp(  # type: ignore[union-attr]
+                    -mx.stop_gradient(shifted_margin) / seed_temperature
+                )
+                seed_weight_mass = mx.sum(seed_weight)  # type: ignore[union-attr]
+                seed_weight_normalized = seed_weight / mx.maximum(  # type: ignore[union-attr]
+                    seed_weight_mass,
+                    eps,
+                )
+                seed_target_prob_mean = mx.sum(seed_weight_normalized * class_prob)  # type: ignore[union-attr]
+                seed_crossing_loss = mx.sum(  # type: ignore[union-attr]
+                    seed_weight_normalized * margin * margin
+                )
+                soft_mass_floor = mx.minimum(  # type: ignore[union-attr]
+                    target_fraction,
+                    mx.maximum(
+                        mx.array(1.0e-3, dtype=mx.float32),
+                        segnet_hard_birth_floor * target_fraction,
+                    ),
+                )
+                soft_mass_log_ratio = mx.maximum(  # type: ignore[union-attr]
+                    mx.log((soft_mass_floor + eps) / mx.maximum(candidate_soft_fraction, eps)),
+                    0.0,
+                )
+                target_prob_floor = mx.minimum(  # type: ignore[union-attr]
+                    mx.array(0.85, dtype=mx.float32),
+                    mx.maximum(
+                        mx.array(0.55, dtype=mx.float32),
+                        mx.array(0.35, dtype=mx.float32)
+                        + mx.array(4.0, dtype=mx.float32) * segnet_hard_birth_floor,
+                    ),
+                )
+                seed_prob_floor = mx.minimum(  # type: ignore[union-attr]
+                    mx.array(0.92, dtype=mx.float32),
+                    target_prob_floor + mx.array(0.10, dtype=mx.float32),
+                )
+                target_prob_deficit = mx.maximum(  # type: ignore[union-attr]
+                    target_prob_floor - target_prob_mean,
+                    0.0,
+                )
+                seed_prob_deficit = mx.maximum(  # type: ignore[union-attr]
+                    seed_prob_floor - seed_target_prob_mean,
+                    0.0,
+                )
+                hard_birth_boost = mx.stop_gradient(  # type: ignore[union-attr]
+                    hard_birth_active
+                    * (
+                        1.0
+                        + mx.minimum(64.0, score_weighted_unsolved)
+                        + 64.0 * hard_birth_deficit
+                        + 16.0
+                        / mx.sqrt(
+                            mx.maximum(
+                                target_fraction,
+                                mx.array(1.0e-4, dtype=mx.float32),
+                            )
+                        )
+                    )
+                )
+                hard_birth_loss_raw = (
+                    8.0 * soft_mass_log_ratio * soft_mass_log_ratio
+                    + 16.0 * target_prob_deficit * target_prob_deficit
+                    + 24.0 * seed_prob_deficit * seed_prob_deficit
+                    + (
+                        1.0
+                        + mx.minimum(32.0, mx.stop_gradient(score_weighted_unsolved))
+                    )
+                    * crossing_loss
+                    + 8.0 * seed_crossing_loss
+                )
+                hard_birth_loss = hard_birth_boost * hard_birth_loss_raw
+                hard_birth_total_loss = hard_birth_total_loss + hard_birth_loss
+                hard_birth_active_count = hard_birth_active_count + hard_birth_active
+                hard_birth_better_loss = hard_birth_loss > hard_birth_worst_loss
+                hard_birth_worst_loss = mx.where(  # type: ignore[union-attr]
+                    hard_birth_better_loss,
+                    hard_birth_loss,
+                    hard_birth_worst_loss,
+                )
+                hard_birth_better_unsolved = score_weighted_unsolved > hard_birth_worst_unsolved
+                hard_birth_worst_unsolved = mx.where(  # type: ignore[union-attr]
+                    hard_birth_better_unsolved,
+                    score_weighted_unsolved,
+                    hard_birth_worst_unsolved,
+                )
+                hard_birth_worst_class = mx.where(  # type: ignore[union-attr]
+                    hard_birth_better_unsolved,
+                    mx.array(float(class_index), dtype=mx.float32),
+                    hard_birth_worst_class,
+                )
+                hard_birth_min_ratio = mx.minimum(  # type: ignore[union-attr]
+                    hard_birth_min_ratio,
+                    active * hard_birth_ratio + (1.0 - active),
+                )
                 total_loss = total_loss + class_loss
                 active_count = active_count + active
                 total_unsolved = total_unsolved + active * score_weighted_unsolved
@@ -1473,6 +1669,33 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 metrics[f"{prefix}_score_weighted_unsolved_argmax_mass"] = (
                     score_weighted_unsolved
                 )
+                birth_prefix = f"segnet_hard_birth_bootstrap_class_{class_index}"
+                metrics[f"{birth_prefix}_loss"] = hard_birth_loss_raw
+                metrics[f"{birth_prefix}_active"] = hard_birth_active
+                metrics[f"{birth_prefix}_target_fraction"] = target_fraction
+                metrics[f"{birth_prefix}_candidate_hard_fraction"] = hard_fraction
+                metrics[f"{birth_prefix}_candidate_soft_fraction"] = (
+                    candidate_soft_fraction
+                )
+                metrics[f"{birth_prefix}_support_ratio"] = support_ratio
+                metrics[f"{birth_prefix}_target_region_correct_ratio"] = region_ratio
+                metrics[f"{birth_prefix}_birth_ratio"] = hard_birth_ratio
+                metrics[f"{birth_prefix}_birth_deficit"] = hard_birth_deficit
+                metrics[f"{birth_prefix}_target_prob_mean"] = target_prob_mean
+                metrics[f"{birth_prefix}_target_prob_floor"] = target_prob_floor
+                metrics[f"{birth_prefix}_target_prob_deficit"] = target_prob_deficit
+                metrics[f"{birth_prefix}_seed_target_prob_mean"] = (
+                    seed_target_prob_mean
+                )
+                metrics[f"{birth_prefix}_seed_prob_floor"] = seed_prob_floor
+                metrics[f"{birth_prefix}_seed_prob_deficit"] = seed_prob_deficit
+                metrics[f"{birth_prefix}_soft_mass_floor"] = soft_mass_floor
+                metrics[f"{birth_prefix}_soft_mass_log_ratio"] = soft_mass_log_ratio
+                metrics[f"{birth_prefix}_frontier_margin"] = frontier_margin
+                metrics[f"{birth_prefix}_seed_crossing_loss"] = seed_crossing_loss
+                metrics[f"{birth_prefix}_score_weighted_unsolved_argmax_mass"] = (
+                    score_weighted_unsolved
+                )
             metrics.update({
                 "segnet_margin_bootstrap_loss": total_loss
                 / mx.maximum(active_count, eps),
@@ -1489,6 +1712,23 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     min_region_ratio
                 ),
                 "segnet_margin_bootstrap_worst_class_index": worst_class,
+                "segnet_hard_birth_bootstrap_loss": (
+                    hard_birth_total_loss / mx.maximum(hard_birth_active_count, eps)
+                    + hard_birth_worst_loss
+                ),
+                "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (
+                    total_unsolved
+                ),
+                "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass": (
+                    hard_birth_worst_unsolved
+                ),
+                "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
+                    hard_birth_min_ratio
+                ),
+                "segnet_hard_birth_bootstrap_worst_class_index": hard_birth_worst_class,
+                "segnet_hard_birth_bootstrap_active_class_count": (
+                    hard_birth_active_count
+                ),
             })
             return metrics
 
@@ -1548,6 +1788,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 * metrics["target_region_rgb_frame1_mse"]
                 + weights["segnet_margin_bootstrap_weight"]
                 * metrics["segnet_margin_bootstrap_loss"]
+                + weights["segnet_hard_birth_bootstrap_weight"]
+                * metrics["segnet_hard_birth_bootstrap_loss"]
             )
 
         def _scalar_metrics(model_obj: Any) -> dict[str, float]:
@@ -1601,6 +1843,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(value)  # type: ignore[union-attr]
             return float(value.item())
 
+        def _segnet_bootstrap_score_debt_scalar(model_obj: Any) -> float:
+            if not segnet_live_bootstrap_requested:
+                return 0.0
+            value = _metric_tensors(model_obj)[
+                "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
+            ]
+            mx.eval(value)  # type: ignore[union-attr]
+            return float(value.item())
+
         def _apply_gradient_step(
             *,
             base_snapshot: list[tuple[Any, Any]],
@@ -1625,13 +1876,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
 
         current_loss = _loss_scalar(self)
         current_contrast_floor = _contrast_floor_scalar(self)
+        current_segnet_score_debt = _segnet_bootstrap_score_debt_scalar(self)
         preserve_contrast_floor = bool(weights["contrast_floor_weight"] > 0.0)
+        preserve_segnet_score_debt = bool(segnet_live_bootstrap_requested)
         loss_history: list[float] = [current_loss]
         grad_norm_history: list[float] = []
         clipped_count = 0
         accepted_step_count = 0
         rejected_step_count = 0
         contrast_floor_rejected_step_count = 0
+        segnet_score_debt_rejected_step_count = 0
         backtracking_attempt_count = 0
         min_accepted_step_lr = lr
         max_backtracking_attempts = 8
@@ -1659,13 +1913,24 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
                 candidate_loss = _loss_scalar(self)
                 candidate_contrast_floor = _contrast_floor_scalar(self)
+                candidate_segnet_score_debt = _segnet_bootstrap_score_debt_scalar(self)
                 contrast_floor_ok = (
                     not preserve_contrast_floor
                     or candidate_contrast_floor <= current_contrast_floor + 1.0e-9
                 )
-                if candidate_loss <= current_loss + 1.0e-12 and contrast_floor_ok:
+                segnet_score_debt_ok = (
+                    not preserve_segnet_score_debt
+                    or candidate_segnet_score_debt
+                    <= current_segnet_score_debt + 1.0e-6
+                )
+                if (
+                    candidate_loss <= current_loss + 1.0e-12
+                    and contrast_floor_ok
+                    and segnet_score_debt_ok
+                ):
                     current_loss = candidate_loss
                     current_contrast_floor = candidate_contrast_floor
+                    current_segnet_score_debt = candidate_segnet_score_debt
                     min_accepted_step_lr = min(min_accepted_step_lr, step_lr)
                     loss_history.append(candidate_loss)
                     accepted = True
@@ -1673,6 +1938,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     break
                 if not contrast_floor_ok:
                     contrast_floor_rejected_step_count += 1
+                if not segnet_score_debt_ok:
+                    segnet_score_debt_rejected_step_count += 1
                 _restore_parameters(base_snapshot)
                 step_lr *= 0.5
             if not accepted:
@@ -1703,6 +1970,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "contrast_floor_rejected_step_count": int(
                 contrast_floor_rejected_step_count
             ),
+            "segnet_score_debt_preserving_acceptance": preserve_segnet_score_debt,
+            "segnet_score_debt_rejected_step_count": int(
+                segnet_score_debt_rejected_step_count
+            ),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "max_backtracking_attempts_per_step": int(max_backtracking_attempts),
             "min_accepted_step_learning_rate": float(min_accepted_step_lr),
@@ -1722,6 +1993,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "metadata": target_region_metadata,
             },
             "segnet_margin_bootstrap": segnet_margin_metadata,
+            "segnet_hard_birth_bootstrap": segnet_hard_birth_metadata,
             "rgb_pair_mse_delta": _improvement("rgb_pair_mse"),
             "rgb_frame1_mse_delta": _improvement("rgb_frame1_mse"),
             "target_region_rgb_frame1_mse_delta": _improvement(
@@ -1741,6 +2013,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "segnet_margin_bootstrap_candidate_target_class_min_ratio_delta": float(
                 after["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
                 - before["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
+            ),
+            "segnet_hard_birth_bootstrap_loss_delta": _improvement(
+                "segnet_hard_birth_bootstrap_loss"
+            ),
+            "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
+                _improvement(
+                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass"
+                )
+            ),
+            "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio_delta": float(
+                after["segnet_hard_birth_bootstrap_candidate_target_class_min_ratio"]
+                - before["segnet_hard_birth_bootstrap_candidate_target_class_min_ratio"]
             ),
             "yuv6_pair_mse_delta": _improvement("yuv6_pair_mse"),
             "yuv6_temporal_delta_mse_delta": _improvement("yuv6_temporal_delta_mse"),

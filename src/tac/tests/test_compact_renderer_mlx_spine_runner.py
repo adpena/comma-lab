@@ -7075,6 +7075,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             target_segnet_argmax_1=None,
             scorer_teacher=None,
             segnet_margin_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
         ):
             captured["scorer_domain_bootstrap_call"] = {
                 "target0_shape": tuple(target_rgb_0.shape),
@@ -7082,6 +7084,12 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "steps": int(steps),
                 "scorer_teacher_present": scorer_teacher is not None,
                 "segnet_margin_bootstrap_weight": float(segnet_margin_bootstrap_weight),
+                "segnet_hard_birth_bootstrap_weight": float(
+                    segnet_hard_birth_bootstrap_weight
+                ),
+                "segnet_hard_birth_bootstrap_min_ratio_floor": float(
+                    segnet_hard_birth_bootstrap_min_ratio_floor
+                ),
             }
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -7356,6 +7364,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         posenet_temporal_signal_floor_weight=0.85,
         posenet_temporal_signal_min_std_ratio=0.35,
         posenet_temporal_signal_min_mean_abs_ratio=0.45,
+        scorer_domain_bootstrap_segnet_margin_weight=1.5,
+        scorer_domain_bootstrap_segnet_hard_birth_weight=3.0,
+        scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=0.07,
         segnet_direct_live_class_balanced_ce_weight=0.25,
         segnet_direct_live_target_mass_floor_weight=0.4,
         segnet_direct_live_target_min_ratio_floor_weight=0.4,
@@ -7455,6 +7466,13 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured[
         "bundle_segnet_direct_live_target_min_ratio_floor_weight"
     ] == pytest.approx(0.4)
+    bootstrap_call = captured["scorer_domain_bootstrap_call"]
+    assert bootstrap_call["scorer_teacher_present"] is True
+    assert bootstrap_call["segnet_margin_bootstrap_weight"] == pytest.approx(1.5)
+    assert bootstrap_call["segnet_hard_birth_bootstrap_weight"] == pytest.approx(3.0)
+    assert bootstrap_call[
+        "segnet_hard_birth_bootstrap_min_ratio_floor"
+    ] == pytest.approx(0.07)
     temporal_dual = captured["dual_ascent_constraints"][
         "hi_nerv_posenet_temporal_signal_floor"
     ]
@@ -7724,6 +7742,8 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
             target_segnet_argmax_1=None,
             scorer_teacher=None,
             segnet_margin_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -8024,6 +8044,8 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
             target_segnet_argmax_1=None,
             scorer_teacher=None,
             segnet_margin_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15101,6 +15123,8 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
             target_segnet_argmax_1=None,
             scorer_teacher=None,
             segnet_margin_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15399,6 +15423,8 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
             target_segnet_argmax_1=None,
             scorer_teacher=None,
             segnet_margin_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_weight=0.0,
+            segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,

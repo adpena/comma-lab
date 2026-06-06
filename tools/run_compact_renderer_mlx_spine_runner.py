@@ -10394,6 +10394,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_domain_bootstrap_yuv6_temporal_std_min_ratio: float = 0.5,
     scorer_domain_bootstrap_weight_decay: float = 0.0,
     scorer_domain_bootstrap_grad_clip_max_norm: float | None = 1.0,
+    scorer_domain_bootstrap_segnet_margin_weight: float = 1.0,
+    scorer_domain_bootstrap_segnet_hard_birth_weight: float = 2.0,
+    scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor: float = 0.02,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = (
@@ -11825,6 +11828,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 None
                 if scorer_domain_bootstrap_grad_clip_max_norm is None
                 else float(scorer_domain_bootstrap_grad_clip_max_norm)
+            ),
+            scorer_domain_bootstrap_segnet_margin_weight=float(
+                scorer_domain_bootstrap_segnet_margin_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
+                scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
             ),
             scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
@@ -17613,6 +17625,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_domain_bootstrap_yuv6_temporal_std_min_ratio: float = 0.5,
     scorer_domain_bootstrap_weight_decay: float = 0.0,
     scorer_domain_bootstrap_grad_clip_max_norm: float | None = 1.0,
+    scorer_domain_bootstrap_segnet_margin_weight: float = 1.0,
+    scorer_domain_bootstrap_segnet_hard_birth_weight: float = 2.0,
+    scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor: float = 0.02,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -17995,11 +18010,30 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "scorer_domain_bootstrap_weight_decay",
             scorer_domain_bootstrap_weight_decay,
         ),
+        (
+            "scorer_domain_bootstrap_segnet_margin_weight",
+            scorer_domain_bootstrap_segnet_margin_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_weight,
+        ),
     ):
         if not math.isfinite(float(value)) or float(value) < 0.0:
             raise CompactRendererMlxSpineRunnerError(
                 f"{name} must be finite and non-negative"
             )
+    if (
+        not math.isfinite(
+            float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor)
+        )
+        or float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor) < 0.0
+        or float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor) > 1.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor "
+            "must be finite and in [0, 1]"
+        )
     if (
         scorer_domain_bootstrap_grad_clip_max_norm is not None
         and (
@@ -18689,7 +18723,19 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 target_segnet_argmax_1=target_segnet_argmax_1,
                 scorer_teacher=bootstrap_scorer_teacher,
                 segnet_margin_bootstrap_weight=(
-                    1.0 if bootstrap_scorer_teacher is not None else 0.0
+                    float(scorer_domain_bootstrap_segnet_margin_weight)
+                    if bootstrap_scorer_teacher is not None
+                    else 0.0
+                ),
+                segnet_hard_birth_bootstrap_weight=(
+                    float(scorer_domain_bootstrap_segnet_hard_birth_weight)
+                    if bootstrap_scorer_teacher is not None
+                    else 0.0
+                ),
+                segnet_hard_birth_bootstrap_min_ratio_floor=(
+                    float(
+                        scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
+                    )
                 ),
                 steps=int(scorer_domain_bootstrap_steps),
                 learning_rate=float(scorer_domain_bootstrap_learning_rate),
@@ -27701,6 +27747,35 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-margin-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Live SegNet target-region margin weight for the bounded HiNeRV "
+            "scorer-domain bootstrap. Applied only when a real SegNet teacher "
+            "is built; zero disables this sub-actuator."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+        default=2.0,
+        type=float,
+        help=(
+            "Live SegNet hard-class-birth weight for the bounded HiNeRV "
+            "scorer-domain bootstrap. Applied only when a real SegNet teacher "
+            "is built; zero disables this sub-actuator."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-min-ratio-floor",
+        default=0.02,
+        type=float,
+        help=(
+            "Minimum target-class birth ratio floor used by the hard-birth "
+            "bootstrap sub-actuator. Must be in [0, 1]."
+        ),
+    )
+    parser.add_argument(
         "--no-scorer-space-step-guard",
         action="store_false",
         dest="scorer_space_step_guard_enabled",
@@ -30174,6 +30249,15 @@ def main(argv: list[str] | None = None) -> int:
                 None
                 if float(args.scorer_domain_bootstrap_grad_clip_max_norm) < 0.0
                 else float(args.scorer_domain_bootstrap_grad_clip_max_norm)
+            ),
+            scorer_domain_bootstrap_segnet_margin_weight=float(
+                args.scorer_domain_bootstrap_segnet_margin_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
             ),
             scorer_space_step_guard_enabled=bool(
                 args.scorer_space_step_guard_enabled
