@@ -22,6 +22,7 @@ from tac.substrates.hi_nerv.target_region_birth import (
     TARGET_REGION_BIRTH_RECEIPT_SCHEMA,
     TargetRegionDebt,
     allowed_birth_update_name,
+    birth_action_id,
     build_target_region_birth_receipt,
     find_target_region_debts,
     region_argmax_transition_counts,
@@ -46,10 +47,9 @@ def test_region_argmax_transition_counts_disambiguate_churn_from_birth() -> None
     assert counts["target_hard_lost_count"] == 1
     assert counts["net_target_support_delta"] == 0
     # Churn-only motion must NOT read as birth: 3 flips, zero net support.
-    masked = region_argmax_transition_counts(
-        before, after, np.zeros_like(region), 1
-    )
+    masked = region_argmax_transition_counts(before, after, np.zeros_like(region), 1)
     assert masked["argmax_changed_count_region"] == 0
+
 
 skip_no_mlx = pytest.mark.skipif(
     importlib.util.find_spec("mlx") is None,
@@ -93,9 +93,7 @@ def test_find_target_region_debts_prices_components_in_score_units() -> None:
         assert row.region_unsolved_pixel_count == row.region_pixel_count
         assert row.region_hard_ratio == 0.0
         assert row.total_scored_pixels == total_scored
-        assert row.score_debt_units == pytest.approx(
-            100.0 * row.region_pixel_count / total_scored
-        )
+        assert row.score_debt_units == pytest.approx(100.0 * row.region_pixel_count / total_scored)
     # Class 0 is fully solved everywhere it appears: zero debt rows allowed,
     # but they must carry zero unsolved pixels.
     for row in rows:
@@ -253,9 +251,7 @@ def test_receipt_emits_crux_trace_compatible_keys() -> None:
     assert receipt["schema"] == TARGET_REGION_BIRTH_RECEIPT_SCHEMA
     assert receipt["receiver_surface_uint8_changed_pixels"] == 9
     assert receipt["receiver_surface_argmax_flipped_pixels"] == 3
-    assert receipt["receiver_surface_worst_region_margin_p50_delta"] == pytest.approx(
-        -0.4
-    )
+    assert receipt["receiver_surface_worst_region_margin_p50_delta"] == pytest.approx(-0.4)
     assert receipt["receiver_surface_float_rgb_delta_linf"] == pytest.approx(0.02)
     assert receipt["frame_scope"] == "frame1_seg_pose_joint"
     # Custody contract: receipts travel inside substrate_artifact_metadata,
@@ -273,6 +269,35 @@ def test_receipt_emits_crux_trace_compatible_keys() -> None:
     }
     assert not (forbidden & receipt.keys())
     assert not (forbidden & receipt["worst_region"].keys())
+
+
+def test_birth_action_id_is_stable_and_group_sensitive() -> None:
+    labels, candidate = _two_region_labels()
+    worst, _mask = select_worst_target_region_with_mask(labels, candidate)
+    group_hashes = {
+        "head_rgb_1": "a" * 64,
+        "latents_fine": "b" * 64,
+    }
+
+    first = birth_action_id(
+        debt=worst,
+        initial_group_sha256=group_hashes,
+        trained_groups=["latents_fine", "head_rgb_1"],
+    )
+    second = birth_action_id(
+        debt=worst,
+        initial_group_sha256=dict(reversed(list(group_hashes.items()))),
+        trained_groups=["head_rgb_1", "latents_fine"],
+    )
+    changed_groups = birth_action_id(
+        debt=worst,
+        initial_group_sha256=group_hashes,
+        trained_groups=["head_rgb_1"],
+    )
+
+    assert first == second
+    assert first != changed_groups
+    assert len(first) == 64
 
 
 # ---------------------------------------------------------------------------
@@ -374,11 +399,7 @@ def _frozen_tensor_snapshot(model, np_module):
 
     frozen = {}
     for raw_name, leaf in tree_flatten(model.parameters()):
-        name = (
-            ".".join(str(p) for p in raw_name)
-            if isinstance(raw_name, (tuple, list))
-            else str(raw_name)
-        )
+        name = ".".join(str(p) for p in raw_name) if isinstance(raw_name, (tuple, list)) else str(raw_name)
         if leaf is None:
             continue
         if not allowed_birth_update_name(name):
@@ -423,8 +444,7 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     assert payload["accepted"] is True
     assert payload["accepted_step_count"] >= 1
     margin_delta = (
-        payload["after_region_margin_stats"]["margin_p50"]
-        - payload["before_region_margin_stats"]["margin_p50"]
+        payload["after_region_margin_stats"]["margin_p50"] - payload["before_region_margin_stats"]["margin_p50"]
     )
     assert margin_delta < 0.0 or payload["after_region_hard_ratio"] > 0.0
     receipt = payload["receipt"]
@@ -433,25 +453,17 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     # Scope proof: every updated tensor is birth-scoped, and at least one
     # update actually landed.
     assert payload["updated_parameter_names"]
-    assert all(
-        allowed_birth_update_name(name) for name in payload["updated_parameter_names"]
-    )
+    assert all(allowed_birth_update_name(name) for name in payload["updated_parameter_names"])
     assert payload["grad_norm_by_group"]
     assert payload["runtime_sidecar_bytes"] == 0
     # Pose telemetry was unavailable -> the payload must say so, loudly.
-    assert (
-        "hinerv_target_region_birth_pose_trust_telemetry_missing"
-        in payload["blockers"]
-    )
+    assert "hinerv_target_region_birth_pose_trust_telemetry_missing" in payload["blockers"]
     # Transition disambiguation: the accepted birth must show net target
     # support, and total churn must bound the won count from above.
     transitions = payload["argmax_transitions"]
     assert transitions["target_hard_won_count"] > 0
     assert transitions["net_target_support_delta"] > 0
-    assert (
-        transitions["argmax_changed_count_region"]
-        >= transitions["target_hard_won_count"]
-    )
+    assert transitions["argmax_changed_count_region"] >= transitions["target_hard_won_count"]
     # No pose teacher -> exact joint term explicitly unavailable, not faked.
     assert payload["exact_nonrate"]["pose_term_available"] is False
     assert payload["exact_nonrate"]["delta_score_nonrate"] is None
@@ -466,11 +478,7 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     before_hashes = payload["parameter_group_sha256_before"]
     after_hashes = payload["parameter_group_sha256_after"]
     assert before_hashes["out_of_scope"] == after_hashes["out_of_scope"]
-    assert any(
-        before_hashes[group] != after_hashes[group]
-        for group in before_hashes
-        if group != "out_of_scope"
-    )
+    assert any(before_hashes[group] != after_hashes[group] for group in before_hashes if group != "out_of_scope")
 
 
 @skip_no_mlx
@@ -488,9 +496,7 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
     teacher = _SubquantumSegNetTeacher(mx, mx.array(labels_np))
     model.initialize_output_head_bias_from_targets(target0, target1)
     all_before = {
-        (
-            ".".join(str(p) for p in raw) if isinstance(raw, (tuple, list)) else str(raw)
-        ): np.array(leaf, copy=True)
+        (".".join(str(p) for p in raw) if isinstance(raw, (tuple, list)) else str(raw)): np.array(leaf, copy=True)
         for raw, leaf in tree_flatten(model.parameters())
         if leaf is not None
     }
@@ -514,9 +520,7 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
     assert payload["updated_parameter_names"] == []
     all_after = {
-        (
-            ".".join(str(p) for p in raw) if isinstance(raw, (tuple, list)) else str(raw)
-        ): np.array(leaf, copy=True)
+        (".".join(str(p) for p in raw) if isinstance(raw, (tuple, list)) else str(raw)): np.array(leaf, copy=True)
         for raw, leaf in tree_flatten(model.parameters())
         if leaf is not None
     }
@@ -617,14 +621,8 @@ def test_target_region_birth_pose_guard_blocks_visible_pose_harm() -> None:
     # so nothing may be accepted and pose telemetry must be present.
     assert payload["accepted"] is False
     assert payload["pose_guard"]["available"] is True
-    assert (
-        payload["pose_guard_rejected_step_count"] >= 1
-        or payload["subquantum_rejected_step_count"] >= 1
-    )
-    assert (
-        "hinerv_target_region_birth_pose_trust_telemetry_missing"
-        not in payload["blockers"]
-    )
+    assert payload["pose_guard_rejected_step_count"] >= 1 or payload["subquantum_rejected_step_count"] >= 1
+    assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in payload["blockers"]
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
 
 
@@ -642,11 +640,7 @@ def test_require_pose_trust_fails_closed_without_teacher() -> None:
     labels_np = _block_labels(cfg, np)
     teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
     model.initialize_output_head_bias_from_targets(target0, target1)
-    before = {
-        str(raw): np.array(leaf, copy=True)
-        for raw, leaf in tree_flatten(model.parameters())
-        if leaf is not None
-    }
+    before = {str(raw): np.array(leaf, copy=True) for raw, leaf in tree_flatten(model.parameters()) if leaf is not None}
     payload = model.fit_target_region_birth_from_segnet(
         scorer_teacher=teacher,
         target_rgb_0=target0,
@@ -658,16 +652,9 @@ def test_require_pose_trust_fails_closed_without_teacher() -> None:
     )
     assert payload["accepted"] is False
     assert payload["reason"] == "pose_trust_required_but_teacher_missing"
-    assert (
-        "hinerv_target_region_birth_pose_trust_required_but_teacher_missing"
-        in payload["blockers"]
-    )
+    assert "hinerv_target_region_birth_pose_trust_required_but_teacher_missing" in payload["blockers"]
     assert payload["accepted_step_count"] == 0
-    after = {
-        str(raw): np.array(leaf, copy=True)
-        for raw, leaf in tree_flatten(model.parameters())
-        if leaf is not None
-    }
+    after = {str(raw): np.array(leaf, copy=True) for raw, leaf in tree_flatten(model.parameters()) if leaf is not None}
     for name, value in before.items():
         assert np.array_equal(value, after[name]), name
 
@@ -707,13 +694,8 @@ def test_accepted_birth_with_pose_teacher_requires_joint_score_improvement() -> 
         assert nonrate["delta_score_nonrate"] is not None
         assert nonrate["delta_score_nonrate"] < 0.0
     else:
-        assert (
-            payload["joint_score_rejected_step_count"] >= 1
-            or payload["subquantum_rejected_step_count"] >= 1
-        )
-    assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in (
-        payload["blockers"]
-    )
+        assert payload["joint_score_rejected_step_count"] >= 1 or payload["subquantum_rejected_step_count"] >= 1
+    assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in (payload["blockers"])
 
 
 @skip_no_mlx
@@ -728,9 +710,7 @@ def test_target_region_birth_returns_disabled_when_no_debt() -> None:
     target0, target1 = _green_dominant_targets(cfg, mx)
     # Labels say class 0 everywhere; the green-dominant init wins class 0
     # everywhere, so there is no unsolved region and nothing to birth.
-    labels_np = np.zeros(
-        (cfg.num_pairs, cfg.output_height, cfg.output_width), dtype=np.int32
-    )
+    labels_np = np.zeros((cfg.num_pairs, cfg.output_height, cfg.output_width), dtype=np.int32)
     teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
     model.initialize_output_head_bias_from_targets(target0, target1)
 

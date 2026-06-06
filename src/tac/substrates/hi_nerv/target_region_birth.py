@@ -44,11 +44,7 @@ ALLOWED_BIRTH_UPDATE_PREFIXES: tuple[str, ...] = (
 def allowed_birth_update_name(name: Any) -> bool:
     """Return True when a flattened parameter name is birth-updatable."""
 
-    flat = (
-        ".".join(str(part) for part in name)
-        if isinstance(name, (tuple, list))
-        else str(name)
-    )
+    flat = ".".join(str(part) for part in name) if isinstance(name, (tuple, list)) else str(name)
     if flat in ALLOWED_BIRTH_UPDATE_EXACT:
         return True
     return any(flat.startswith(prefix) for prefix in ALLOWED_BIRTH_UPDATE_PREFIXES)
@@ -87,13 +83,8 @@ class TargetRegionDebt:
         """
 
         if full_eval_total_scored_pixels <= 0:
-            raise ValueError(
-                "full_eval_total_scored_pixels must be positive; got "
-                f"{full_eval_total_scored_pixels}"
-            )
-        return float(
-            100.0 * self.region_unsolved_pixel_count / full_eval_total_scored_pixels
-        )
+            raise ValueError(f"full_eval_total_scored_pixels must be positive; got {full_eval_total_scored_pixels}")
+        return float(100.0 * self.region_unsolved_pixel_count / full_eval_total_scored_pixels)
 
     def as_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -181,9 +172,7 @@ def find_target_region_debts(
                         region_label=int(region_label),
                         region_pixel_count=region_pixels,
                         region_unsolved_pixel_count=unsolved_pixels,
-                        region_hard_ratio=float(
-                            (region_pixels - unsolved_pixels) / region_pixels
-                        ),
+                        region_hard_ratio=float((region_pixels - unsolved_pixels) / region_pixels),
                         frame_pixel_count=frame_pixels,
                         total_scored_pixels=total_scored,
                         score_debt_units=float(100.0 * unsolved_pixels / total_scored),
@@ -267,15 +256,10 @@ def region_margin_stats(
     if logits.ndim != 4:
         raise ValueError(f"logits must be BHWC; got shape {logits.shape}")
     if mask.shape != logits.shape[:3]:
-        raise ValueError(
-            "region mask BHW must match logits BHW; got "
-            f"mask={mask.shape} logits={logits.shape[:3]}"
-        )
+        raise ValueError(f"region mask BHW must match logits BHW; got mask={mask.shape} logits={logits.shape[:3]}")
     class_count = int(logits.shape[-1])
     if not 0 <= int(class_index) < class_count:
-        raise ValueError(
-            f"class_index {class_index} outside logits classes {class_count}"
-        )
+        raise ValueError(f"class_index {class_index} outside logits classes {class_count}")
     flat_mask = mask.reshape(-1) > 0.0
     region_pixels = int(np.count_nonzero(flat_mask))
     if region_pixels == 0:
@@ -318,8 +302,7 @@ def region_argmax_transition_counts(
     region = np.asarray(region_mask_bhw) > 0.0
     if before.shape != after.shape or before.shape != region.shape:
         raise ValueError(
-            "argmax/region shapes must match; got "
-            f"before={before.shape} after={after.shape} region={region.shape}"
+            f"argmax/region shapes must match; got before={before.shape} after={after.shape} region={region.shape}"
         )
     cls = int(class_index)
     before_target = before == cls
@@ -327,9 +310,7 @@ def region_argmax_transition_counts(
     changed = before != after
     wrong_to_target = int(np.count_nonzero(region & ~before_target & after_target))
     target_to_wrong = int(np.count_nonzero(region & before_target & ~after_target))
-    wrong_to_wrong = int(
-        np.count_nonzero(region & changed & ~before_target & ~after_target)
-    )
+    wrong_to_wrong = int(np.count_nonzero(region & changed & ~before_target & ~after_target))
     return {
         "argmax_changed_count_region": int(np.count_nonzero(region & changed)),
         "wrong_to_target_count": wrong_to_target,
@@ -339,6 +320,36 @@ def region_argmax_transition_counts(
         "target_hard_lost_count": target_to_wrong,
         "net_target_support_delta": wrong_to_target - target_to_wrong,
     }
+
+
+def birth_action_id(
+    *,
+    debt: TargetRegionDebt,
+    initial_group_sha256: Mapping[str, str],
+    trained_groups: Sequence[str],
+) -> str:
+    """Return the stable identity of ONE birth action across surfaces.
+
+    L4 survival is only proof when the same action is traced through live,
+    fakequant, parse-back, and inflate surfaces; a freshly re-solved birth
+    under fakequant is a different experiment. Survival receipts must CARRY
+    this id from the live receipt, never recompute it from their own state.
+    """
+
+    import hashlib
+
+    payload = "|".join(
+        [
+            "hinerv_target_region_birth",
+            str(debt.batch_index),
+            str(debt.class_index),
+            str(debt.region_label),
+            str(debt.region_pixel_count),
+            ",".join(f"{name}={initial_group_sha256[name]}" for name in sorted(initial_group_sha256)),
+            ",".join(sorted(str(g) for g in trained_groups)),
+        ]
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def build_target_region_birth_receipt(
@@ -360,6 +371,8 @@ def build_target_region_birth_receipt(
     runtime_sidecar_bytes: int = 0,
     argmax_transitions: Mapping[str, int] | None = None,
     exact_nonrate: Mapping[str, Any] | None = None,
+    action_id: str | None = None,
+    surface: str = "live_mlx",
 ) -> dict[str, Any]:
     """Assemble the actuation receipt with crux-trace-compatible keys.
 
@@ -369,24 +382,18 @@ def build_target_region_birth_receipt(
     consumer needing producer-specific adapters.
     """
 
-    margin_p50_delta = float(
-        after_margin_stats["margin_p50"] - before_margin_stats["margin_p50"]
-    )
-    disallowed = [
-        name for name in updated_parameter_names if not allowed_birth_update_name(name)
-    ]
+    margin_p50_delta = float(after_margin_stats["margin_p50"] - before_margin_stats["margin_p50"])
+    disallowed = [name for name in updated_parameter_names if not allowed_birth_update_name(name)]
     if disallowed:
-        raise ValueError(
-            f"updated parameter names escape the birth scope: {sorted(disallowed)}"
-        )
+        raise ValueError(f"updated parameter names escape the birth scope: {sorted(disallowed)}")
     transition_counts = (
-        {str(k): int(v) for k, v in argmax_transitions.items()}
-        if argmax_transitions is not None
-        else {}
+        {str(k): int(v) for k, v in argmax_transitions.items()} if argmax_transitions is not None else {}
     )
     receipt: dict[str, Any] = {
         "schema": TARGET_REGION_BIRTH_RECEIPT_SCHEMA,
         "actuator_id": "hinerv_target_region_birth",
+        "action_id": action_id,
+        "surface": str(surface),
         "family": "hinerv",
         "frame_scope": "frame1_seg_pose_joint",
         "pair_index": int(debt.batch_index),
@@ -397,25 +404,17 @@ def build_target_region_birth_receipt(
         "after_region_hard_ratio": float(after_margin_stats["region_hard_ratio"]),
         "worst_region_margin_p50_delta": margin_p50_delta,
         "receiver_surface_worst_region_margin_p50_delta": margin_p50_delta,
-        "receiver_surface_uint8_changed_pixels": int(
-            receiver_uint8_changed_pixels_region
-        ),
+        "receiver_surface_uint8_changed_pixels": int(receiver_uint8_changed_pixels_region),
         "receiver_surface_uint8_delta_abs_max": float(receiver_uint8_delta_abs_max),
         "receiver_surface_float_rgb_delta_linf": float(receiver_float_rgb_delta_linf),
         "receiver_surface_argmax_flipped_pixels": int(argmax_flipped_pixels_region),
         "accepted_step_count": int(accepted_step_count),
         "rejected_step_count": int(rejected_step_count),
         "blockers": [str(item) for item in blockers],
-        "grad_norm_by_group": {
-            str(name): float(value) for name, value in grad_norm_by_group.items()
-        },
-        "update_norm_by_group": {
-            str(name): float(value) for name, value in update_norm_by_group.items()
-        },
+        "grad_norm_by_group": {str(name): float(value) for name, value in grad_norm_by_group.items()},
+        "update_norm_by_group": {str(name): float(value) for name, value in update_norm_by_group.items()},
         "updated_parameter_names": sorted(str(name) for name in updated_parameter_names),
-        "allowed_update_prefixes": list(
-            ALLOWED_BIRTH_UPDATE_EXACT + ALLOWED_BIRTH_UPDATE_PREFIXES
-        ),
+        "allowed_update_prefixes": list(ALLOWED_BIRTH_UPDATE_EXACT + ALLOWED_BIRTH_UPDATE_PREFIXES),
         "pose_guard": dict(pose_guard),
         # Receiver-motion vs target-birth disambiguation: the flips alias
         # above is churn telemetry; admission semantics live in transitions.

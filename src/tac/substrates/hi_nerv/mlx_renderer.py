@@ -232,14 +232,17 @@ def _conv2d_with_params(
     stride = getattr(layer, "stride", 1)
     dilation = getattr(layer, "dilation", 1)
     groups = getattr(layer, "groups", 1)
-    return mx.conv2d(
-        x,
-        weight,
-        stride=stride,
-        padding=padding,
-        dilation=dilation,
-        groups=groups,
-    ) + bias  # type: ignore[union-attr]
+    return (
+        mx.conv2d(
+            x,
+            weight,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            groups=groups,
+        )
+        + bias
+    )  # type: ignore[union-attr]
 
 
 def _layer_norm_with_params(
@@ -291,9 +294,7 @@ def trilinear_upsample_mlx(
         raise ValueError(f"grid must be (T,S,S,C), got {tuple(grid.shape)}")
     time_bins, scale_h, scale_w, channels = (int(v) for v in grid.shape)
     if scale_h != int(local_scale) or scale_w != int(local_scale):
-        raise ValueError(
-            f"grid local scale {(scale_h, scale_w)} != {int(local_scale)}"
-        )
+        raise ValueError(f"grid local scale {(scale_h, scale_w)} != {int(local_scale)}")
     if time_bins <= 0 or channels <= 0:
         raise ValueError("grid must have positive temporal bins and channels")
 
@@ -579,10 +580,7 @@ def _write_pair_local_smoke_artifact(
         )
         + "\n"
     ).encode("utf-8")
-    path = out_dir / (
-        f"hinerv_pair_local_actuator_smoke_pair{int(pair_index):06d}_"
-        f"{str(adapter_sha256)[:12]}.json"
-    )
+    path = out_dir / (f"hinerv_pair_local_actuator_smoke_pair{int(pair_index):06d}_{str(adapter_sha256)[:12]}.json")
     path.write_bytes(data)
     return {
         "schema": "hinerv_pair_local_actuator_smoke_artifact_record.v1",
@@ -613,20 +611,27 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         if not 0 <= int(cfg.fine_injection_block_index) < int(cfg.num_upsample_blocks):
             raise ValueError("fine_injection_block_index out of range")
         if int(cfg.fine_injection_block_index) <= int(cfg.mid_injection_block_index):
-            raise ValueError(
-                "fine_injection_block_index must be > mid_injection_block_index"
-            )
+            raise ValueError("fine_injection_block_index must be > mid_injection_block_index")
         mx.random.seed(int(getattr(cfg, "init_seed", 0)))  # type: ignore[union-attr]
 
-        self.latents_coarse = mx.random.normal(  # type: ignore[union-attr]
-            shape=(int(cfg.num_pairs), int(cfg.latent_dim_coarse))
-        ) * 0.02
-        self.latents_mid = mx.random.normal(  # type: ignore[union-attr]
-            shape=(int(cfg.num_pairs), int(cfg.latent_dim_mid))
-        ) * 0.02
-        self.latents_fine = mx.random.normal(  # type: ignore[union-attr]
-            shape=(int(cfg.num_pairs), int(cfg.latent_dim_fine))
-        ) * 0.02
+        self.latents_coarse = (
+            mx.random.normal(  # type: ignore[union-attr]
+                shape=(int(cfg.num_pairs), int(cfg.latent_dim_coarse))
+            )
+            * 0.02
+        )
+        self.latents_mid = (
+            mx.random.normal(  # type: ignore[union-attr]
+                shape=(int(cfg.num_pairs), int(cfg.latent_dim_mid))
+            )
+            * 0.02
+        )
+        self.latents_fine = (
+            mx.random.normal(  # type: ignore[union-attr]
+                shape=(int(cfg.num_pairs), int(cfg.latent_dim_fine))
+            )
+            * 0.02
+        )
 
         self.latent_embed: Any = nn.Linear(  # type: ignore[union-attr]
             int(cfg.latent_dim_coarse),
@@ -727,9 +732,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         self.decoder_fake_quant_forward_stage_qat_active = not bool(stage_controlled)
         self.decoder_fake_quant_bits = bits
         self.decoder_fake_quant_bits_by_name = normalized
-        self.decoder_fake_quant_forward_enabled = bool(enabled) and (
-            not bool(stage_controlled)
-        )
+        self.decoder_fake_quant_forward_enabled = bool(enabled) and (not bool(stage_controlled))
 
     def _set_decoder_fake_quant_stage_active(
         self,
@@ -742,9 +745,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
     ) -> dict[str, Any]:
         active_bool = bool(active)
         self.decoder_fake_quant_forward_stage_qat_active = active_bool
-        self.decoder_fake_quant_forward_enabled = (
-            bool(self.decoder_fake_quant_forward_configured_enabled)
-            and (active_bool or not bool(self.decoder_fake_quant_forward_stage_controlled))
+        self.decoder_fake_quant_forward_enabled = bool(self.decoder_fake_quant_forward_configured_enabled) and (
+            active_bool or not bool(self.decoder_fake_quant_forward_stage_controlled)
         )
         self.decoder_fake_quant_forward_last_stage = {
             "schema": "hi_nerv_decoder_fake_quant_stage_control.v1",
@@ -754,15 +756,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "stage_index": None if stage_index is None else int(stage_index),
             "stage_qat_active": active_bool,
             "stage_controlled": bool(self.decoder_fake_quant_forward_stage_controlled),
-            "configured_enabled": bool(
-                self.decoder_fake_quant_forward_configured_enabled
-            ),
+            "configured_enabled": bool(self.decoder_fake_quant_forward_configured_enabled),
             "forward_active": bool(self.decoder_fake_quant_forward_enabled),
-            "global_quant_bits": (
-                None
-                if self.decoder_fake_quant_bits is None
-                else int(self.decoder_fake_quant_bits)
-            ),
+            "global_quant_bits": (None if self.decoder_fake_quant_bits is None else int(self.decoder_fake_quant_bits)),
             "per_tensor_group_count": len(self.decoder_fake_quant_bits_by_name),
         }
         return dict(self.decoder_fake_quant_forward_last_stage)
@@ -804,21 +800,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             build_decoder_waterfill_fake_quant_forward_plan,
         )
 
-        report = build_decoder_waterfill_fake_quant_forward_plan(
-            decoder_weight_waterfill_plan
-        )
-        actuation_blockers = [
-            str(blocker) for blocker in report.get("actuation_blockers") or []
-        ]
+        report = build_decoder_waterfill_fake_quant_forward_plan(decoder_weight_waterfill_plan)
+        actuation_blockers = [str(blocker) for blocker in report.get("actuation_blockers") or []]
         if actuation_blockers:
             raise ValueError(
-                "decoder_weight_waterfill_plan is not safe for train-time "
-                f"fake quantization: {actuation_blockers}"
+                f"decoder_weight_waterfill_plan is not safe for train-time fake quantization: {actuation_blockers}"
             )
-        per_tensor_bits = {
-            str(name): int(bits)
-            for name, bits in dict(report.get("per_tensor_bits") or {}).items()
-        }
+        per_tensor_bits = {str(name): int(bits) for name, bits in dict(report.get("per_tensor_bits") or {}).items()}
         enabled = bool(per_tensor_bits) or fallback_quant_bits is not None
         self.configure_decoder_fake_quant_forward(
             enabled=enabled,
@@ -829,9 +817,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         return {
             **report,
             "configured": bool(enabled),
-            "fallback_quant_bits": (
-                None if fallback_quant_bits is None else int(fallback_quant_bits)
-            ),
+            "fallback_quant_bits": (None if fallback_quant_bits is None else int(fallback_quant_bits)),
             "configured_global_quant_bits": (
                 None if self.decoder_fake_quant_bits is None else int(self.decoder_fake_quant_bits)
             ),
@@ -841,8 +827,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
     def _fake_quant_bits(self) -> int | None:
         return (
             int(self.decoder_fake_quant_bits)
-            if bool(self.decoder_fake_quant_forward_enabled)
-            and self.decoder_fake_quant_bits is not None
+            if bool(self.decoder_fake_quant_forward_enabled) and self.decoder_fake_quant_bits is not None
             else None
         )
 
@@ -854,49 +839,57 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
     def _siren_init(self) -> None:
         w = float(self.cfg.sin_frequency)
         bound = _siren_uniform_bound(int(self.cfg.latent_dim_coarse), w)
-        self.latent_embed.update({
-            "weight": mx.random.uniform(  # type: ignore[union-attr]
-                low=-bound,
-                high=bound,
-                shape=self.latent_embed.weight.shape,
-            ),
-            "bias": mx.zeros_like(self.latent_embed.bias),  # type: ignore[union-attr]
-        })
+        self.latent_embed.update(
+            {
+                "weight": mx.random.uniform(  # type: ignore[union-attr]
+                    low=-bound,
+                    high=bound,
+                    shape=self.latent_embed.weight.shape,
+                ),
+                "bias": mx.zeros_like(self.latent_embed.bias),  # type: ignore[union-attr]
+            }
+        )
         for block in self.blocks:
             conv = block.conv
             kh, kw = int(conv.weight.shape[1]), int(conv.weight.shape[2])
             fan_in = int(conv.weight.shape[3]) * kh * kw
             bound = _siren_uniform_bound(fan_in, w)
-            conv.update({
-                "weight": mx.random.uniform(  # type: ignore[union-attr]
-                    low=-bound,
-                    high=bound,
-                    shape=conv.weight.shape,
-                ),
-                "bias": mx.zeros_like(conv.bias),  # type: ignore[union-attr]
-            })
+            conv.update(
+                {
+                    "weight": mx.random.uniform(  # type: ignore[union-attr]
+                        low=-bound,
+                        high=bound,
+                        shape=conv.weight.shape,
+                    ),
+                    "bias": mx.zeros_like(conv.bias),  # type: ignore[union-attr]
+                }
+            )
         for injector in (self.mid_injector, self.fine_injector):
             bound = _siren_uniform_bound(injector.latent_dim, w)
-            injector.proj.update({
-                "weight": mx.random.uniform(  # type: ignore[union-attr]
-                    low=-bound,
-                    high=bound,
-                    shape=injector.proj.weight.shape,
-                ),
-                "bias": mx.zeros_like(injector.proj.bias),  # type: ignore[union-attr]
-            })
+            injector.proj.update(
+                {
+                    "weight": mx.random.uniform(  # type: ignore[union-attr]
+                        low=-bound,
+                        high=bound,
+                        shape=injector.proj.weight.shape,
+                    ),
+                    "bias": mx.zeros_like(injector.proj.bias),  # type: ignore[union-attr]
+                }
+            )
         for head in (self.head_rgb_0, self.head_rgb_1):
             kh, kw = int(head.weight.shape[1]), int(head.weight.shape[2])
             fan_in = int(head.weight.shape[3]) * kh * kw
             bound = _siren_uniform_bound(fan_in, w)
-            head.update({
-                "weight": mx.random.uniform(  # type: ignore[union-attr]
-                    low=-bound,
-                    high=bound,
-                    shape=head.weight.shape,
-                ),
-                "bias": mx.zeros_like(head.bias),  # type: ignore[union-attr]
-            })
+            head.update(
+                {
+                    "weight": mx.random.uniform(  # type: ignore[union-attr]
+                        low=-bound,
+                        high=bound,
+                        shape=head.weight.shape,
+                    ),
+                    "bias": mx.zeros_like(head.bias),  # type: ignore[union-attr]
+                }
+            )
 
     def initialize_output_head_bias_from_targets(
         self,
@@ -919,8 +912,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             target = mx.array(target_rgb).astype(mx.float32)  # type: ignore[union-attr]
             if target.ndim != 4 or int(target.shape[-1]) != 3:
                 raise ValueError(
-                    "target RGB tensors must be NHWC with 3 channels; got "
-                    f"shape={tuple(int(v) for v in target.shape)}"
+                    f"target RGB tensors must be NHWC with 3 channels; got shape={tuple(int(v) for v in target.shape)}"
                 )
             eps = float(epsilon)
             if not math.isfinite(eps) or eps <= 0.0 or eps >= 0.5:
@@ -938,18 +930,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "schema": "hi_nerv_output_head_target_bias_init.v1",
             "enabled": True,
             "epsilon": float(epsilon),
-            "target_rgb_0_mean": [
-                float(v) for v in np.asarray(mean_0, dtype=np.float32).reshape(-1)
-            ],
-            "target_rgb_1_mean": [
-                float(v) for v in np.asarray(mean_1, dtype=np.float32).reshape(-1)
-            ],
-            "head_rgb_0_bias": [
-                float(v) for v in np.asarray(self.head_rgb_0.bias, dtype=np.float32).reshape(-1)
-            ],
-            "head_rgb_1_bias": [
-                float(v) for v in np.asarray(self.head_rgb_1.bias, dtype=np.float32).reshape(-1)
-            ],
+            "target_rgb_0_mean": [float(v) for v in np.asarray(mean_0, dtype=np.float32).reshape(-1)],
+            "target_rgb_1_mean": [float(v) for v in np.asarray(mean_1, dtype=np.float32).reshape(-1)],
+            "head_rgb_0_bias": [float(v) for v in np.asarray(self.head_rgb_0.bias, dtype=np.float32).reshape(-1)],
+            "head_rgb_1_bias": [float(v) for v in np.asarray(self.head_rgb_1.bias, dtype=np.float32).reshape(-1)],
             "runtime_sidecar_bytes": 0,
             "archive_charged_decoder_tensors": [
                 "head_rgb_0.bias",
@@ -981,10 +965,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         eps = float(min_output_std)
         gain_cap = float(max_gain)
         if not math.isfinite(eps) or eps <= 0.0:
-            raise ValueError(
-                "min_output_std must be finite and positive; "
-                f"got {min_output_std!r}"
-            )
+            raise ValueError(f"min_output_std must be finite and positive; got {min_output_std!r}")
         if not math.isfinite(gain_cap) or gain_cap < 1.0:
             raise ValueError(f"max_gain must be finite and >= 1; got {max_gain!r}")
 
@@ -997,13 +978,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
             if target.ndim != 4 or int(target.shape[-1]) != 3:
                 raise ValueError(
-                    f"{name} must be NHWC with 3 channels; got "
-                    f"shape={tuple(int(v) for v in target.shape)}"
+                    f"{name} must be NHWC with 3 channels; got shape={tuple(int(v) for v in target.shape)}"
                 )
             if int(target.shape[0]) != int(idx.shape[0]):
                 raise ValueError(
-                    f"{name} batch {int(target.shape[0])} must match "
-                    f"pair_indices length {int(idx.shape[0])}"
+                    f"{name} batch {int(target.shape[0])} must match pair_indices length {int(idx.shape[0])}"
                 )
 
         pair01 = self(idx) / 255.0
@@ -1025,16 +1004,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         target0_std, before0_std, gain0 = _gain(target0, cand0)
         target1_std, before1_std, gain1 = _gain(target1, cand1)
         self.head_rgb_0.update(
-            {
-                "weight": self.head_rgb_0.weight
-                * mx.reshape(gain0.astype(self.head_rgb_0.weight.dtype), (3, 1, 1, 1))
-            }
+            {"weight": self.head_rgb_0.weight * mx.reshape(gain0.astype(self.head_rgb_0.weight.dtype), (3, 1, 1, 1))}
         )
         self.head_rgb_1.update(
-            {
-                "weight": self.head_rgb_1.weight
-                * mx.reshape(gain1.astype(self.head_rgb_1.weight.dtype), (3, 1, 1, 1))
-            }
+            {"weight": self.head_rgb_1.weight * mx.reshape(gain1.astype(self.head_rgb_1.weight.dtype), (3, 1, 1, 1))}
         )
         pair_after01 = self(idx) / 255.0
         after0 = mx.transpose(pair_after01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
@@ -1155,11 +1128,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         if target_index < 0 or target_index >= int(self.latents_fine.shape[0]):
             raise ValueError(f"target pair index out of range: {target_index}")
         non_target_index = next(
-            (
-                int(value)
-                for value in range(int(self.latents_fine.shape[0]))
-                if int(value) != target_index
-            ),
+            (int(value) for value in range(int(self.latents_fine.shape[0])) if int(value) != target_index),
             None,
         )
         step_lr = float(learning_rate)
@@ -1227,21 +1196,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     np.asarray(after1, dtype=np.float32).reshape(-1),
                 ]
             )
-            before_u8 = np.rint(np.clip(before_np * 255.0, 0.0, 255.0)).astype(
-                np.uint8
-            )
-            after_u8 = np.rint(np.clip(after_np * 255.0, 0.0, 255.0)).astype(
-                np.uint8
-            )
+            before_u8 = np.rint(np.clip(before_np * 255.0, 0.0, 255.0)).astype(np.uint8)
+            after_u8 = np.rint(np.clip(after_np * 255.0, 0.0, 255.0)).astype(np.uint8)
             changed = before_u8 != after_u8
             abs_delta = np.abs(after_u8.astype(np.int16) - before_u8.astype(np.int16))
             return {
                 "changed_count": int(np.count_nonzero(changed)),
-                "changed_fraction": (
-                    float(np.count_nonzero(changed)) / float(changed.size)
-                    if changed.size
-                    else 0.0
-                ),
+                "changed_fraction": (float(np.count_nonzero(changed)) / float(changed.size) if changed.size else 0.0),
                 "delta_abs_max_uint8": int(abs_delta.max()) if abs_delta.size else 0,
             }
 
@@ -1341,14 +1302,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         restored_np = np.asarray(self.latents_fine, dtype=np.float32)
         restored_row_sha256 = _latent_row_digest(restored_np[target_index])
         state_restored = restored_row_sha256 == original_row_sha256
-        output_delta_l2_per_byte = (
-            selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
-        )
+        output_delta_l2_per_byte = selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
         receiver_uint8_half_step_normalized = 0.5 / 255.0
         selected_delta_max_abs_uint8 = selected_delta_max_abs * 255.0
-        receiver_uint8_crossing_potential = (
-            selected_delta_max_abs >= receiver_uint8_half_step_normalized
-        )
+        receiver_uint8_crossing_potential = selected_delta_max_abs >= receiver_uint8_half_step_normalized
         blockers: list[str] = []
         if not math.isfinite(float(loss.item())):
             blockers.append("hinerv_pair_local_loss_not_finite")
@@ -1401,18 +1358,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "receiver_uint8_crossing_potential": receiver_uint8_crossing_potential,
             "receiver_uint8_changed": receiver_uint8_changed,
             "receiver_uint8_changed_count": int(target_uint8_stats["changed_count"]),
-            "receiver_uint8_changed_fraction": float(
-                target_uint8_stats["changed_fraction"]
-            ),
-            "receiver_uint8_delta_abs_max": int(
-                target_uint8_stats["delta_abs_max_uint8"]
-            ),
-            "non_target_pair_receiver_uint8_changed_count": int(
-                non_target_uint8_stats["changed_count"]
-            ),
-            "non_target_pair_receiver_uint8_delta_abs_max": int(
-                non_target_uint8_stats["delta_abs_max_uint8"]
-            ),
+            "receiver_uint8_changed_fraction": float(target_uint8_stats["changed_fraction"]),
+            "receiver_uint8_delta_abs_max": int(target_uint8_stats["delta_abs_max_uint8"]),
+            "non_target_pair_receiver_uint8_changed_count": int(non_target_uint8_stats["changed_count"]),
+            "non_target_pair_receiver_uint8_delta_abs_max": int(non_target_uint8_stats["delta_abs_max_uint8"]),
             "pair_locality_verified": pair_locality_verified,
             "non_target_pair_output_delta_l2_max": non_target_delta_l2,
             "state_restored_after_smoke": state_restored,
@@ -1458,21 +1407,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
                 "receiver_uint8_crossing_potential": receiver_uint8_crossing_potential,
                 "receiver_uint8_changed": receiver_uint8_changed,
-                "receiver_uint8_changed_count": int(
-                    target_uint8_stats["changed_count"]
-                ),
-                "receiver_uint8_changed_fraction": float(
-                    target_uint8_stats["changed_fraction"]
-                ),
-                "receiver_uint8_delta_abs_max": int(
-                    target_uint8_stats["delta_abs_max_uint8"]
-                ),
-                "non_target_pair_receiver_uint8_changed_count": int(
-                    non_target_uint8_stats["changed_count"]
-                ),
-                "non_target_pair_receiver_uint8_delta_abs_max": int(
-                    non_target_uint8_stats["delta_abs_max_uint8"]
-                ),
+                "receiver_uint8_changed_count": int(target_uint8_stats["changed_count"]),
+                "receiver_uint8_changed_fraction": float(target_uint8_stats["changed_fraction"]),
+                "receiver_uint8_delta_abs_max": int(target_uint8_stats["delta_abs_max_uint8"]),
+                "non_target_pair_receiver_uint8_changed_count": int(non_target_uint8_stats["changed_count"]),
+                "non_target_pair_receiver_uint8_delta_abs_max": int(non_target_uint8_stats["delta_abs_max_uint8"]),
                 "non_target_pair_output_delta_l2_max": non_target_delta_l2,
                 "pair_locality_verified": pair_locality_verified,
             },
@@ -1508,16 +1447,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if isinstance(payload.get("summary_for_pr95_guard"), dict):
                 payload["summary_for_pr95_guard"].update(
                     {
-                        "pair_local_smoke_artifact_schema": artifact_record[
-                            "artifact_schema"
-                        ],
+                        "pair_local_smoke_artifact_schema": artifact_record["artifact_schema"],
                         "pair_local_smoke_artifact_path": artifact_record["path"],
-                        "pair_local_smoke_artifact_sha256": artifact_record[
-                            "sha256"
-                        ],
-                        "pair_local_smoke_artifact_bytes": artifact_record[
-                            "bytes"
-                        ],
+                        "pair_local_smoke_artifact_sha256": artifact_record["sha256"],
+                        "pair_local_smoke_artifact_bytes": artifact_record["bytes"],
                     }
                 )
         return payload
@@ -1582,9 +1515,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "contrast_floor_weight": float(contrast_floor_weight),
             "target_region_bootstrap_weight": float(target_region_bootstrap_weight),
             "segnet_margin_bootstrap_weight": float(segnet_margin_bootstrap_weight),
-            "segnet_hard_birth_bootstrap_weight": float(
-                segnet_hard_birth_bootstrap_weight
-            ),
+            "segnet_hard_birth_bootstrap_weight": float(segnet_hard_birth_bootstrap_weight),
         }
         if not math.isfinite(lr) or lr <= 0.0:
             raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
@@ -1604,15 +1535,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         segnet_margin_floor = float(segnet_margin_bootstrap_floor)
         if not math.isfinite(segnet_margin_floor) or segnet_margin_floor < 0.0:
             raise ValueError(
-                "segnet_margin_bootstrap_floor must be finite and non-negative; "
-                f"got {segnet_margin_bootstrap_floor}"
+                f"segnet_margin_bootstrap_floor must be finite and non-negative; got {segnet_margin_bootstrap_floor}"
             )
         segnet_hard_birth_floor = float(segnet_hard_birth_bootstrap_min_ratio_floor)
-        if (
-            not math.isfinite(segnet_hard_birth_floor)
-            or segnet_hard_birth_floor < 0.0
-            or segnet_hard_birth_floor > 1.0
-        ):
+        if not math.isfinite(segnet_hard_birth_floor) or segnet_hard_birth_floor < 0.0 or segnet_hard_birth_floor > 1.0:
             raise ValueError(
                 "segnet_hard_birth_bootstrap_min_ratio_floor must be finite "
                 f"in [0, 1]; got {segnet_hard_birth_bootstrap_min_ratio_floor}"
@@ -1622,10 +1548,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             raise ValueError(f"weight_decay must be finite and non-negative; got {weight_decay}")
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
-            raise ValueError(
-                "grad_clip_max_norm must be None or finite and positive; "
-                f"got {grad_clip_max_norm}"
-            )
+            raise ValueError(f"grad_clip_max_norm must be None or finite and positive; got {grad_clip_max_norm}")
 
         idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
         if idx.ndim != 1 or int(idx.shape[0]) <= 0:
@@ -1635,13 +1558,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
             if target.ndim != 4 or int(target.shape[-1]) != 3:
                 raise ValueError(
-                    f"{name} must be NHWC with 3 channels; got "
-                    f"shape={tuple(int(v) for v in target.shape)}"
+                    f"{name} must be NHWC with 3 channels; got shape={tuple(int(v) for v in target.shape)}"
                 )
             if int(target.shape[0]) != int(idx.shape[0]):
                 raise ValueError(
-                    f"{name} batch {int(target.shape[0])} must match "
-                    f"pair_indices length {int(idx.shape[0])}"
+                    f"{name} batch {int(target.shape[0])} must match pair_indices length {int(idx.shape[0])}"
                 )
 
         ref_yuv0 = mx.stop_gradient(rgb_to_yuv6_mlx(target0 * 255.0) / 255.0)  # type: ignore[union-attr]
@@ -1657,12 +1578,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     labels = labels[..., 0]
                 if labels.ndim != 3:
                     raise ValueError(
-                        "target_segnet_argmax_1 must have shape BHW or BHW1; "
-                        f"got {tuple(int(v) for v in labels.shape)}"
+                        f"target_segnet_argmax_1 must have shape BHW or BHW1; got {tuple(int(v) for v in labels.shape)}"
                     )
-                if tuple(int(v) for v in labels.shape) != tuple(
-                    int(v) for v in target1.shape[:3]
-                ):
+                if tuple(int(v) for v in labels.shape) != tuple(int(v) for v in target1.shape[:3]):
                     raise ValueError(
                         "target_segnet_argmax_1 shape must match target_rgb_1 BHW; "
                         f"argmax={tuple(int(v) for v in labels.shape)} "
@@ -1681,11 +1599,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     class_weight = active / mx.sqrt(mx.maximum(fraction, eps))  # type: ignore[union-attr]
                     weight = weight + mask * class_weight
                     mx.eval(fraction, class_weight)  # type: ignore[union-attr]
-                    class_rows.append({
-                        "class_index": int(class_index),
-                        "target_fraction": float(fraction.item()),
-                        "inverse_sqrt_fraction_weight": float(class_weight.item()),
-                    })
+                    class_rows.append(
+                        {
+                            "class_index": int(class_index),
+                            "target_fraction": float(fraction.item()),
+                            "inverse_sqrt_fraction_weight": float(class_weight.item()),
+                        }
+                    )
                 mean_weight = mx.mean(weight)  # type: ignore[union-attr]
                 normalized = weight / mx.maximum(mean_weight, eps)  # type: ignore[union-attr]
                 mx.eval(normalized, mean_weight)  # type: ignore[union-attr]
@@ -1704,8 +1624,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 mx.array(1.0e-6, dtype=mx.float32),
             )
             weight = mx.clip(  # type: ignore[union-attr]
-                mx.array(0.5, dtype=mx.float32)
-                + mx.array(0.5, dtype=mx.float32) * normalized_saliency,
+                mx.array(0.5, dtype=mx.float32) + mx.array(0.5, dtype=mx.float32) * normalized_saliency,
                 mx.array(0.25, dtype=mx.float32),
                 mx.array(4.0, dtype=mx.float32),
             )
@@ -1744,8 +1663,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         segnet_margin_live_fn = None
         segnet_margin_target_labels = None
         segnet_live_bootstrap_requested = bool(
-            weights["segnet_margin_bootstrap_weight"] > 0.0
-            or weights["segnet_hard_birth_bootstrap_weight"] > 0.0
+            weights["segnet_margin_bootstrap_weight"] > 0.0 or weights["segnet_hard_birth_bootstrap_weight"] > 0.0
         )
         if segnet_live_bootstrap_requested:
             archive_charged_bootstrap_tensors = live_segnet_scoped_bootstrap_tensors
@@ -1822,12 +1740,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     labels = labels[..., 0]
                 if labels.ndim != 3:
                     raise ValueError(
-                        "target_segnet_argmax_1 must have shape BHW or BHW1; "
-                        f"got {tuple(int(v) for v in labels.shape)}"
+                        f"target_segnet_argmax_1 must have shape BHW or BHW1; got {tuple(int(v) for v in labels.shape)}"
                     )
-                if tuple(int(v) for v in labels.shape) != tuple(
-                    int(v) for v in target1.shape[:3]
-                ):
+                if tuple(int(v) for v in labels.shape) != tuple(int(v) for v in target1.shape[:3]):
                     raise ValueError(
                         "target_segnet_argmax_1 shape must match target_rgb_1 BHW; "
                         f"argmax={tuple(int(v) for v in labels.shape)} "
@@ -1847,8 +1762,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "weight": float(weights["segnet_margin_bootstrap_weight"]),
                 "margin_floor": float(segnet_margin_floor),
                 "source": (
-                    "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_"
-                    "logits_against_frame1_target_argmax"
+                    "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_logits_against_frame1_target_argmax"
                 ),
                 "receiver_surface": "clamp_round_uint8_rgb_ste_nhwc01",
                 "target_index_semantics": "local_bootstrap_batch_indices",
@@ -1861,10 +1775,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "enabled": bool(weights["segnet_hard_birth_bootstrap_weight"] > 0.0),
                 "weight": float(weights["segnet_hard_birth_bootstrap_weight"]),
                 "min_ratio_floor": float(segnet_hard_birth_floor),
-                "source": (
-                    "receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_"
-                    "logits_worst_target_class_birth"
-                ),
+                "source": ("receiver_uint8_roundtrip_ste_live_mlx_segnet_candidate_logits_worst_target_class_birth"),
                 "receiver_surface": "clamp_round_uint8_rgb_ste_nhwc01",
                 "worst_loss_selection": "score_weighted_unsolved_argmax_mass",
                 "target_index_semantics": "local_bootstrap_batch_indices",
@@ -1928,9 +1839,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             class_count = int(candidate_logits.shape[-1])
             if class_count <= 0:
                 raise ValueError("live SegNet bootstrap logits must have at least one class")
-            max_target_class = int(
-                np.asarray(mx.max(segnet_margin_target_labels), dtype=np.int32).item()
-            )
+            max_target_class = int(np.asarray(mx.max(segnet_margin_target_labels), dtype=np.int32).item())
             if max_target_class >= class_count:
                 raise ValueError(
                     "target SegNet argmax contains a class outside live logits: "
@@ -1960,9 +1869,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             hard_birth_min_ratio = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
             metrics: dict[str, Any] = {}
             for class_index in range(class_count):
-                target_mask = (segnet_margin_target_labels == class_index).astype(
-                    mx.float32
-                )
+                target_mask = (segnet_margin_target_labels == class_index).astype(mx.float32)
                 target_fraction = mx.mean(target_mask)  # type: ignore[union-attr]
                 active = (target_fraction > 0.0).astype(mx.float32)
                 class_pred_mask = (pred_class == class_index).astype(mx.float32)
@@ -2003,20 +1910,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     margin * margin * target_mask
                 ) / mx.maximum(target_pixels, eps)
                 score_weighted_unsolved = (
-                    mx.array(100.0, dtype=mx.float32)
-                    * target_fraction
-                    * mx.maximum(0.0, 1.0 - region_ratio)  # type: ignore[union-attr]
+                    mx.array(100.0, dtype=mx.float32) * target_fraction * mx.maximum(0.0, 1.0 - region_ratio)  # type: ignore[union-attr]
                 )
                 support_deficit = mx.maximum(0.0, 1.0 - support_ratio)  # type: ignore[union-attr]
                 region_deficit = mx.maximum(0.0, 1.0 - region_ratio)  # type: ignore[union-attr]
                 boost = mx.stop_gradient(  # type: ignore[union-attr]
                     active
-                    * (
-                        1.0
-                        + mx.minimum(32.0, score_weighted_unsolved)
-                        + 16.0 * support_deficit
-                        + 16.0 * region_deficit
-                    )
+                    * (1.0 + mx.minimum(32.0, score_weighted_unsolved) + 16.0 * support_deficit + 16.0 * region_deficit)
                 )
                 class_loss = boost * crossing_loss
                 hard_birth_ratio = mx.minimum(  # type: ignore[union-attr]
@@ -2027,9 +1927,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     0.0,
                     segnet_hard_birth_floor - hard_birth_ratio,
                 )
-                hard_birth_active = active * (
-                    hard_birth_deficit > 0.0
-                ).astype(mx.float32)
+                hard_birth_active = active * (hard_birth_deficit > 0.0).astype(mx.float32)
                 class_prob = probs[..., class_index]
                 candidate_soft_fraction = mx.mean(class_prob)  # type: ignore[union-attr]
                 target_prob_mean = mx.sum(target_mask * class_prob) / mx.maximum(  # type: ignore[union-attr]
@@ -2085,8 +1983,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     mx.array(0.85, dtype=mx.float32),
                     mx.maximum(
                         mx.array(0.55, dtype=mx.float32),
-                        mx.array(0.35, dtype=mx.float32)
-                        + mx.array(4.0, dtype=mx.float32) * segnet_hard_birth_floor,
+                        mx.array(0.35, dtype=mx.float32) + mx.array(4.0, dtype=mx.float32) * segnet_hard_birth_floor,
                     ),
                 )
                 seed_prob_floor = mx.minimum(  # type: ignore[union-attr]
@@ -2120,19 +2017,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     8.0 * soft_mass_log_ratio * soft_mass_log_ratio
                     + 16.0 * target_prob_deficit * target_prob_deficit
                     + 24.0 * seed_prob_deficit * seed_prob_deficit
-                    + (
-                        1.0
-                        + mx.minimum(32.0, mx.stop_gradient(score_weighted_unsolved))
-                    )
-                    * crossing_loss
+                    + (1.0 + mx.minimum(32.0, mx.stop_gradient(score_weighted_unsolved))) * crossing_loss
                     + 8.0 * seed_crossing_loss
                 )
                 hard_birth_loss = hard_birth_boost * hard_birth_loss_raw
                 hard_birth_total_loss = hard_birth_total_loss + hard_birth_loss
                 hard_birth_active_count = hard_birth_active_count + hard_birth_active
-                hard_birth_better_unsolved = (
-                    score_weighted_unsolved > hard_birth_worst_unsolved
-                )
+                hard_birth_better_unsolved = score_weighted_unsolved > hard_birth_worst_unsolved
                 hard_birth_worst_loss = mx.where(  # type: ignore[union-attr]
                     hard_birth_better_unsolved,
                     hard_birth_loss,
@@ -2181,17 +2072,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 metrics[f"{prefix}_candidate_support_ratio"] = support_ratio
                 metrics[f"{prefix}_target_region_correct_ratio"] = region_ratio
                 metrics[f"{prefix}_crossing_loss"] = crossing_loss
-                metrics[f"{prefix}_score_weighted_unsolved_argmax_mass"] = (
-                    score_weighted_unsolved
-                )
+                metrics[f"{prefix}_score_weighted_unsolved_argmax_mass"] = score_weighted_unsolved
                 birth_prefix = f"segnet_hard_birth_bootstrap_class_{class_index}"
                 metrics[f"{birth_prefix}_loss"] = hard_birth_loss_raw
                 metrics[f"{birth_prefix}_active"] = hard_birth_active
                 metrics[f"{birth_prefix}_target_fraction"] = target_fraction
                 metrics[f"{birth_prefix}_candidate_hard_fraction"] = hard_fraction
-                metrics[f"{birth_prefix}_candidate_soft_fraction"] = (
-                    candidate_soft_fraction
-                )
+                metrics[f"{birth_prefix}_candidate_soft_fraction"] = candidate_soft_fraction
                 metrics[f"{birth_prefix}_support_ratio"] = support_ratio
                 metrics[f"{birth_prefix}_target_region_correct_ratio"] = region_ratio
                 metrics[f"{birth_prefix}_birth_ratio"] = hard_birth_ratio
@@ -2199,55 +2086,37 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 metrics[f"{birth_prefix}_target_prob_mean"] = target_prob_mean
                 metrics[f"{birth_prefix}_target_prob_floor"] = target_prob_floor
                 metrics[f"{birth_prefix}_target_prob_deficit"] = target_prob_deficit
-                metrics[f"{birth_prefix}_seed_target_prob_mean"] = (
-                    seed_target_prob_mean
-                )
+                metrics[f"{birth_prefix}_seed_target_prob_mean"] = seed_target_prob_mean
                 metrics[f"{birth_prefix}_seed_prob_floor"] = seed_prob_floor
                 metrics[f"{birth_prefix}_seed_prob_deficit"] = seed_prob_deficit
                 metrics[f"{birth_prefix}_soft_mass_floor"] = soft_mass_floor
                 metrics[f"{birth_prefix}_soft_mass_log_ratio"] = soft_mass_log_ratio
                 metrics[f"{birth_prefix}_frontier_margin"] = frontier_margin
                 metrics[f"{birth_prefix}_seed_crossing_loss"] = seed_crossing_loss
-                metrics[f"{birth_prefix}_score_weighted_unsolved_argmax_mass"] = (
-                    score_weighted_unsolved
-                )
-            metrics.update({
-                "segnet_margin_bootstrap_loss": total_loss
-                / mx.maximum(active_count, eps),
-                "segnet_margin_bootstrap_argmax_disagreement": mx.mean(  # type: ignore[union-attr]
-                    (pred_class != segnet_margin_target_labels).astype(mx.float32)
-                ),
-                "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass": (
-                    total_unsolved
-                ),
-                "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass": (
-                    worst_unsolved
-                ),
-                "segnet_margin_bootstrap_candidate_target_class_min_ratio": (
-                    min_region_ratio
-                ),
-                "segnet_margin_bootstrap_worst_class_index": worst_class,
-                "segnet_hard_birth_bootstrap_loss": (
-                    hard_birth_total_loss / mx.maximum(hard_birth_active_count, eps)
-                    + hard_birth_worst_loss
-                ),
-                "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (
-                    total_unsolved
-                ),
-                "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass": (
-                    hard_birth_worst_unsolved
-                ),
-                "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
-                    hard_birth_min_ratio
-                ),
-                "segnet_hard_birth_bootstrap_worst_class_index": hard_birth_worst_class,
-                "segnet_hard_birth_bootstrap_worst_loss_class_index": (
-                    hard_birth_worst_loss_class
-                ),
-                "segnet_hard_birth_bootstrap_active_class_count": (
-                    hard_birth_active_count
-                ),
-            })
+                metrics[f"{birth_prefix}_score_weighted_unsolved_argmax_mass"] = score_weighted_unsolved
+            metrics.update(
+                {
+                    "segnet_margin_bootstrap_loss": total_loss / mx.maximum(active_count, eps),
+                    "segnet_margin_bootstrap_argmax_disagreement": mx.mean(  # type: ignore[union-attr]
+                        (pred_class != segnet_margin_target_labels).astype(mx.float32)
+                    ),
+                    "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass": (total_unsolved),
+                    "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass": (worst_unsolved),
+                    "segnet_margin_bootstrap_candidate_target_class_min_ratio": (min_region_ratio),
+                    "segnet_margin_bootstrap_worst_class_index": worst_class,
+                    "segnet_hard_birth_bootstrap_loss": (
+                        hard_birth_total_loss / mx.maximum(hard_birth_active_count, eps) + hard_birth_worst_loss
+                    ),
+                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (total_unsolved),
+                    "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass": (
+                        hard_birth_worst_unsolved
+                    ),
+                    "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (hard_birth_min_ratio),
+                    "segnet_hard_birth_bootstrap_worst_class_index": hard_birth_worst_class,
+                    "segnet_hard_birth_bootstrap_worst_loss_class_index": (hard_birth_worst_loss_class),
+                    "segnet_hard_birth_bootstrap_active_class_count": (hard_birth_active_count),
+                }
+            )
             return metrics
 
         def _metric_tensors(model_obj: Any) -> dict[str, Any]:
@@ -2290,8 +2159,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ) / (rgb_target + eps)
             temporal_deficit = mx.maximum(  # type: ignore[union-attr]
                 0.0,
-                temporal_std_floor * temporal_target
-                - metrics["output_yuv6_temporal_delta_std"],
+                temporal_std_floor * temporal_target - metrics["output_yuv6_temporal_delta_std"],
             ) / (temporal_target + eps)
             return rgb_deficit * rgb_deficit + temporal_deficit * temporal_deficit
 
@@ -2302,12 +2170,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + weights["yuv6_weight"] * metrics["yuv6_pair_mse"]
                 + weights["temporal_delta_weight"] * metrics["yuv6_temporal_delta_mse"]
                 + weights["contrast_floor_weight"] * _contrast_floor_loss(metrics)
-                + weights["target_region_bootstrap_weight"]
-                * metrics["target_region_rgb_frame1_mse"]
-                + weights["segnet_margin_bootstrap_weight"]
-                * metrics["segnet_margin_bootstrap_loss"]
-                + weights["segnet_hard_birth_bootstrap_weight"]
-                * metrics["segnet_hard_birth_bootstrap_loss"]
+                + weights["target_region_bootstrap_weight"] * metrics["target_region_rgb_frame1_mse"]
+                + weights["segnet_margin_bootstrap_weight"] * metrics["segnet_margin_bootstrap_loss"]
+                + weights["segnet_hard_birth_bootstrap_weight"] * metrics["segnet_hard_birth_bootstrap_loss"]
             )
 
         def _scalar_metrics(model_obj: Any) -> dict[str, float]:
@@ -2315,17 +2180,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             contrast_floor = _contrast_floor_loss(metrics)
             mx.eval(list(metrics.values()))  # type: ignore[union-attr]
             mx.eval(contrast_floor)  # type: ignore[union-attr]
-            out = {
-                name: float(np.asarray(value, dtype=np.float32).reshape(-1)[0])
-                for name, value in metrics.items()
-            }
+            out = {name: float(np.asarray(value, dtype=np.float32).reshape(-1)[0]) for name, value in metrics.items()}
             out["contrast_floor_loss"] = float(contrast_floor.item())
-            out["output_rgb_std_ratio"] = float(
-                out["output_rgb_std"] / max(out["target_rgb_std"], 1.0e-6)
-            )
+            out["output_rgb_std_ratio"] = float(out["output_rgb_std"] / max(out["target_rgb_std"], 1.0e-6))
             out["output_yuv6_temporal_delta_std_ratio"] = float(
-                out["output_yuv6_temporal_delta_std"]
-                / max(out["target_yuv6_temporal_delta_std"], 1.0e-6)
+                out["output_yuv6_temporal_delta_std"] / max(out["target_yuv6_temporal_delta_std"], 1.0e-6)
             )
             return out
 
@@ -2366,25 +2225,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 return 0.0, 0.0, 1.0
             metrics = _metric_tensors(model_obj)
             if weights["segnet_hard_birth_bootstrap_weight"] > 0.0:
-                total = metrics[
-                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass"
-                ]
-                worst = metrics[
-                    "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"
-                ]
-                min_ratio = metrics[
-                    "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio"
-                ]
+                total = metrics["segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass"]
+                worst = metrics["segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"]
+                min_ratio = metrics["segnet_hard_birth_bootstrap_candidate_target_class_min_ratio"]
             else:
-                total = metrics[
-                    "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
-                ]
-                worst = metrics[
-                    "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass"
-                ]
-                min_ratio = metrics[
-                    "segnet_margin_bootstrap_candidate_target_class_min_ratio"
-                ]
+                total = metrics["segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"]
+                worst = metrics["segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass"]
+                min_ratio = metrics["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
             mx.eval(total, worst, min_ratio)  # type: ignore[union-attr]
             return float(total.item()), float(worst.item()), float(min_ratio.item())
 
@@ -2455,8 +2302,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         preserve_contrast_floor = bool(weights["contrast_floor_weight"] > 0.0)
         preserve_segnet_score_debt = bool(segnet_live_bootstrap_requested)
         receiver_quantum_acceptance_enabled = bool(
-            segnet_live_bootstrap_requested
-            and weights["segnet_hard_birth_bootstrap_weight"] > 0.0
+            segnet_live_bootstrap_requested and weights["segnet_hard_birth_bootstrap_weight"] > 0.0
         )
         receiver_uint8_half_step_normalized = 0.5 / 255.0
         loss_history: list[float] = [current_loss]
@@ -2518,19 +2364,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             applied_tensor_count = 0
             applied_tensor_names: list[str] = []
             if receiver_quantum_acceptance_enabled:
-                shrink_trials = [
-                    lr / (2.0**attempt)
-                    for attempt in range(max_backtracking_attempts, 0, -1)
-                ]
-                growth_trials = [
-                    lr * (2.0**attempt)
-                    for attempt in range(max_receiver_quantum_growth_attempts)
-                ]
+                shrink_trials = [lr / (2.0**attempt) for attempt in range(max_backtracking_attempts, 0, -1)]
+                growth_trials = [lr * (2.0**attempt) for attempt in range(max_receiver_quantum_growth_attempts)]
                 step_lr_schedule = shrink_trials + growth_trials
             else:
-                step_lr_schedule = [
-                    lr / (2.0**attempt) for attempt in range(max_backtracking_attempts)
-                ]
+                step_lr_schedule = [lr / (2.0**attempt) for attempt in range(max_backtracking_attempts)]
             for _attempt_index, step_lr in enumerate(step_lr_schedule):
                 backtracking_attempt_count += 1
                 if receiver_quantum_acceptance_enabled:
@@ -2548,9 +2386,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     grads_tree=grads,
                     step_lr=step_lr,
                 )
-                bootstrap_scoped_out_gradient_tensor_count += int(
-                    scoped_out_tensor_count
-                )
+                bootstrap_scoped_out_gradient_tensor_count += int(scoped_out_tensor_count)
                 candidate_loss = _loss_scalar(self)
                 candidate_contrast_floor = _contrast_floor_scalar(self)
                 (
@@ -2558,15 +2394,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     candidate_segnet_worst_debt,
                     candidate_segnet_min_ratio,
                 ) = _segnet_bootstrap_debt_scalars(self)
-                candidate_total_debt_reduction = (
-                    current_segnet_score_debt - candidate_segnet_score_debt
-                )
-                candidate_worst_debt_reduction = (
-                    current_segnet_worst_debt - candidate_segnet_worst_debt
-                )
-                candidate_min_ratio_increase = (
-                    candidate_segnet_min_ratio - current_segnet_min_ratio
-                )
+                candidate_total_debt_reduction = current_segnet_score_debt - candidate_segnet_score_debt
+                candidate_worst_debt_reduction = current_segnet_worst_debt - candidate_segnet_worst_debt
+                candidate_min_ratio_increase = candidate_segnet_min_ratio - current_segnet_min_ratio
                 max_candidate_segnet_total_debt_reduction = max(
                     max_candidate_segnet_total_debt_reduction,
                     candidate_total_debt_reduction,
@@ -2584,22 +2414,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         max_candidate_segnet_total_debt_spill_given_worst_improvement,
                         -candidate_total_debt_reduction,
                     )
-                candidate_receiver_uint8_stats = (
-                    _frame1_receiver_uint8_stats_from_base(base_pred1)
-                )
-                candidate_frame1_delta_abs = float(
-                    candidate_receiver_uint8_stats["float_delta_abs_max"]
-                )
+                candidate_receiver_uint8_stats = _frame1_receiver_uint8_stats_from_base(base_pred1)
+                candidate_frame1_delta_abs = float(candidate_receiver_uint8_stats["float_delta_abs_max"])
                 candidate_frame1_delta_abs_uint8 = candidate_frame1_delta_abs * 255.0
-                candidate_frame1_receiver_uint8_changed_count = float(
-                    candidate_receiver_uint8_stats["changed_count"]
-                )
+                candidate_frame1_receiver_uint8_changed_count = float(candidate_receiver_uint8_stats["changed_count"])
                 candidate_frame1_receiver_uint8_changed_fraction = float(
                     candidate_receiver_uint8_stats["changed_fraction"]
                 )
-                candidate_frame1_receiver_uint8_delta_abs = float(
-                    candidate_receiver_uint8_stats["max_abs_uint8"]
-                )
+                candidate_frame1_receiver_uint8_delta_abs = float(candidate_receiver_uint8_stats["max_abs_uint8"])
                 max_candidate_frame1_delta_abs = max(
                     max_candidate_frame1_delta_abs,
                     candidate_frame1_delta_abs,
@@ -2621,17 +2443,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     candidate_frame1_receiver_uint8_delta_abs,
                 )
                 contrast_floor_ok = (
-                    not preserve_contrast_floor
-                    or candidate_contrast_floor <= current_contrast_floor + 1.0e-9
+                    not preserve_contrast_floor or candidate_contrast_floor <= current_contrast_floor + 1.0e-9
                 )
                 segnet_score_debt_ok = (
-                    not preserve_segnet_score_debt
-                    or candidate_segnet_score_debt
-                    <= current_segnet_score_debt + 1.0e-6
+                    not preserve_segnet_score_debt or candidate_segnet_score_debt <= current_segnet_score_debt + 1.0e-6
                 )
                 segnet_worst_debt_ok = (
-                    not preserve_segnet_score_debt
-                    or candidate_segnet_worst_debt <= current_segnet_worst_debt + 1.0e-6
+                    not preserve_segnet_score_debt or candidate_segnet_worst_debt <= current_segnet_worst_debt + 1.0e-6
                 )
                 hard_birth_argmax_progress_ok = (
                     not receiver_quantum_acceptance_enabled
@@ -2640,15 +2458,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     or candidate_min_ratio_increase > 1.0e-6
                 )
                 receiver_quantum_ok = (
-                    not receiver_quantum_acceptance_enabled
-                    or candidate_frame1_receiver_uint8_changed_count > 0.0
+                    not receiver_quantum_acceptance_enabled or candidate_frame1_receiver_uint8_changed_count > 0.0
                 )
-                loss_ok = (
-                    candidate_loss <= current_loss + 1.0e-12
-                    or (
-                        receiver_quantum_acceptance_enabled
-                        and hard_birth_argmax_progress_ok
-                    )
+                loss_ok = candidate_loss <= current_loss + 1.0e-12 or (
+                    receiver_quantum_acceptance_enabled and hard_birth_argmax_progress_ok
                 )
                 if (
                     loss_ok
@@ -2700,12 +2513,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     accepted = True
                     accepted_step_count += 1
                     hard_birth_argmax_progress_accepted_step_count += int(
-                        receiver_quantum_acceptance_enabled
-                        and hard_birth_argmax_progress_ok
+                        receiver_quantum_acceptance_enabled and hard_birth_argmax_progress_ok
                     )
                     receiver_quantum_crossing_accepted_step_count += int(
-                        receiver_quantum_acceptance_enabled
-                        and candidate_frame1_receiver_uint8_changed_count > 0.0
+                        receiver_quantum_acceptance_enabled and candidate_frame1_receiver_uint8_changed_count > 0.0
                     )
                     accepted_bootstrap_update_tensor_names.update(applied_tensor_names)
                     break
@@ -2737,9 +2548,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             artifact_dir=pair_local_smoke_artifact_dir,
         )
         pr95_actuator_execution_evidence = (
-            pair_local_smoke.get("summary_for_pr95_guard")
-            if isinstance(pair_local_smoke, Mapping)
-            else None
+            pair_local_smoke.get("summary_for_pr95_guard") if isinstance(pair_local_smoke, Mapping) else None
         )
 
         def _improvement(key: str) -> float:
@@ -2757,112 +2566,60 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "yuv6_temporal_std_min_ratio": temporal_std_floor,
             "grad_clip_clipped_step_count": int(clipped_count),
             "bootstrap_update_scope": bootstrap_update_scope,
-            "bootstrap_update_allowlist_patterns": list(
-                archive_charged_bootstrap_tensors
-            ),
-            "bootstrap_update_applied_tensor_count": len(
-                accepted_bootstrap_update_tensor_names
-            ),
-            "bootstrap_update_applied_tensor_names": sorted(
-                accepted_bootstrap_update_tensor_names
-            ),
-            "bootstrap_scoped_out_gradient_tensor_count": int(
-                bootstrap_scoped_out_gradient_tensor_count
-            ),
+            "bootstrap_update_allowlist_patterns": list(archive_charged_bootstrap_tensors),
+            "bootstrap_update_applied_tensor_count": len(accepted_bootstrap_update_tensor_names),
+            "bootstrap_update_applied_tensor_names": sorted(accepted_bootstrap_update_tensor_names),
+            "bootstrap_scoped_out_gradient_tensor_count": int(bootstrap_scoped_out_gradient_tensor_count),
             "hinerv_pair_local_actuator_smoke": pair_local_smoke,
-            "pr95_scorer_atom_actuator_execution_evidence": (
-                pr95_actuator_execution_evidence
-            ),
+            "pr95_scorer_atom_actuator_execution_evidence": (pr95_actuator_execution_evidence),
             "accepted_step_count": int(accepted_step_count),
             "rejected_step_count": int(rejected_step_count),
             "contrast_floor_preserving_acceptance": preserve_contrast_floor,
-            "contrast_floor_rejected_step_count": int(
-                contrast_floor_rejected_step_count
-            ),
+            "contrast_floor_rejected_step_count": int(contrast_floor_rejected_step_count),
             "segnet_score_debt_preserving_acceptance": preserve_segnet_score_debt,
-            "segnet_score_debt_rejected_step_count": int(
-                segnet_score_debt_rejected_step_count
-            ),
-            "segnet_worst_debt_rejected_step_count": int(
-                segnet_worst_debt_rejected_step_count
-            ),
-            "hard_birth_argmax_progress_accepted_step_count": int(
-                hard_birth_argmax_progress_accepted_step_count
-            ),
-            "hard_birth_argmax_progress_rejected_step_count": int(
-                hard_birth_argmax_progress_rejected_step_count
-            ),
+            "segnet_score_debt_rejected_step_count": int(segnet_score_debt_rejected_step_count),
+            "segnet_worst_debt_rejected_step_count": int(segnet_worst_debt_rejected_step_count),
+            "hard_birth_argmax_progress_accepted_step_count": int(hard_birth_argmax_progress_accepted_step_count),
+            "hard_birth_argmax_progress_rejected_step_count": int(hard_birth_argmax_progress_rejected_step_count),
             "hard_birth_worst_improved_total_spill_rejected_step_count": int(
                 hard_birth_worst_improved_total_spill_rejected_step_count
             ),
-            "max_candidate_segnet_total_debt_reduction": float(
-                max_candidate_segnet_total_debt_reduction
-            ),
-            "max_candidate_segnet_worst_debt_reduction": float(
-                max_candidate_segnet_worst_debt_reduction
-            ),
-            "max_candidate_segnet_min_ratio_increase": float(
-                max_candidate_segnet_min_ratio_increase
-            ),
+            "max_candidate_segnet_total_debt_reduction": float(max_candidate_segnet_total_debt_reduction),
+            "max_candidate_segnet_worst_debt_reduction": float(max_candidate_segnet_worst_debt_reduction),
+            "max_candidate_segnet_min_ratio_increase": float(max_candidate_segnet_min_ratio_increase),
             "max_candidate_segnet_total_debt_spill_given_worst_improvement": float(
                 max_candidate_segnet_total_debt_spill_given_worst_improvement
             ),
-            "max_accepted_segnet_total_debt_reduction": float(
-                max_accepted_segnet_total_debt_reduction
-            ),
-            "max_accepted_segnet_worst_debt_reduction": float(
-                max_accepted_segnet_worst_debt_reduction
-            ),
-            "max_accepted_segnet_min_ratio_increase": float(
-                max_accepted_segnet_min_ratio_increase
-            ),
+            "max_accepted_segnet_total_debt_reduction": float(max_accepted_segnet_total_debt_reduction),
+            "max_accepted_segnet_worst_debt_reduction": float(max_accepted_segnet_worst_debt_reduction),
+            "max_accepted_segnet_min_ratio_increase": float(max_accepted_segnet_min_ratio_increase),
             "receiver_quantum_acceptance_enabled": receiver_quantum_acceptance_enabled,
             "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
             "receiver_quantum_surface": "clamp_round_uint8_rgb_frame1",
             "receiver_quantum_attempt_count": int(receiver_quantum_attempt_count),
-            "receiver_quantum_growth_attempt_count": int(
-                receiver_quantum_growth_attempt_count
-            ),
-            "receiver_quantum_shrink_attempt_count": int(
-                receiver_quantum_shrink_attempt_count
-            ),
-            "receiver_quantum_rejected_step_count": int(
-                receiver_quantum_rejected_step_count
-            ),
-            "receiver_quantum_crossing_accepted_step_count": int(
-                receiver_quantum_crossing_accepted_step_count
-            ),
+            "receiver_quantum_growth_attempt_count": int(receiver_quantum_growth_attempt_count),
+            "receiver_quantum_shrink_attempt_count": int(receiver_quantum_shrink_attempt_count),
+            "receiver_quantum_rejected_step_count": int(receiver_quantum_rejected_step_count),
+            "receiver_quantum_crossing_accepted_step_count": int(receiver_quantum_crossing_accepted_step_count),
             "max_candidate_frame1_delta_abs": float(max_candidate_frame1_delta_abs),
-            "max_candidate_frame1_delta_abs_uint8": float(
-                max_candidate_frame1_delta_abs_uint8
-            ),
+            "max_candidate_frame1_delta_abs_uint8": float(max_candidate_frame1_delta_abs_uint8),
             "max_candidate_frame1_receiver_uint8_changed_count": float(
                 max_candidate_frame1_receiver_uint8_changed_count
             ),
             "max_candidate_frame1_receiver_uint8_changed_fraction": float(
                 max_candidate_frame1_receiver_uint8_changed_fraction
             ),
-            "max_candidate_frame1_receiver_uint8_delta_abs": float(
-                max_candidate_frame1_receiver_uint8_delta_abs
-            ),
+            "max_candidate_frame1_receiver_uint8_delta_abs": float(max_candidate_frame1_receiver_uint8_delta_abs),
             "max_accepted_frame1_delta_abs": float(max_accepted_frame1_delta_abs),
-            "max_accepted_frame1_delta_abs_uint8": float(
-                max_accepted_frame1_delta_abs_uint8
-            ),
-            "max_accepted_frame1_receiver_uint8_changed_count": float(
-                max_accepted_frame1_receiver_uint8_changed_count
-            ),
+            "max_accepted_frame1_delta_abs_uint8": float(max_accepted_frame1_delta_abs_uint8),
+            "max_accepted_frame1_receiver_uint8_changed_count": float(max_accepted_frame1_receiver_uint8_changed_count),
             "max_accepted_frame1_receiver_uint8_changed_fraction": float(
                 max_accepted_frame1_receiver_uint8_changed_fraction
             ),
-            "max_accepted_frame1_receiver_uint8_delta_abs": float(
-                max_accepted_frame1_receiver_uint8_delta_abs
-            ),
+            "max_accepted_frame1_receiver_uint8_delta_abs": float(max_accepted_frame1_receiver_uint8_delta_abs),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "max_backtracking_attempts_per_step": int(max_backtracking_attempts),
-            "max_receiver_quantum_growth_attempts_per_step": int(
-                max_receiver_quantum_growth_attempts
-            ),
+            "max_receiver_quantum_growth_attempts_per_step": int(max_receiver_quantum_growth_attempts),
             "min_accepted_step_learning_rate": float(min_accepted_step_lr),
             "pair_count": int(idx.shape[0]),
             **weights,
@@ -2883,36 +2640,24 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "segnet_hard_birth_bootstrap": segnet_hard_birth_metadata,
             "rgb_pair_mse_delta": _improvement("rgb_pair_mse"),
             "rgb_frame1_mse_delta": _improvement("rgb_frame1_mse"),
-            "target_region_rgb_frame1_mse_delta": _improvement(
-                "target_region_rgb_frame1_mse"
-            ),
-            "segnet_margin_bootstrap_loss_delta": _improvement(
-                "segnet_margin_bootstrap_loss"
-            ),
+            "target_region_rgb_frame1_mse_delta": _improvement("target_region_rgb_frame1_mse"),
+            "segnet_margin_bootstrap_loss_delta": _improvement("segnet_margin_bootstrap_loss"),
             "segnet_margin_bootstrap_argmax_disagreement_delta": _improvement(
                 "segnet_margin_bootstrap_argmax_disagreement"
             ),
             "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
-                _improvement(
-                    "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
-                )
+                _improvement("segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass")
             ),
             "segnet_margin_bootstrap_candidate_target_class_min_ratio_delta": float(
                 after["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
                 - before["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
             ),
-            "segnet_hard_birth_bootstrap_loss_delta": _improvement(
-                "segnet_hard_birth_bootstrap_loss"
-            ),
+            "segnet_hard_birth_bootstrap_loss_delta": _improvement("segnet_hard_birth_bootstrap_loss"),
             "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
-                _improvement(
-                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass"
-                )
+                _improvement("segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass")
             ),
             "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass_delta": (
-                _improvement(
-                    "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"
-                )
+                _improvement("segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass")
             ),
             "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio_delta": float(
                 after["segnet_hard_birth_bootstrap_candidate_target_class_min_ratio"]
@@ -2921,12 +2666,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "yuv6_pair_mse_delta": _improvement("yuv6_pair_mse"),
             "yuv6_temporal_delta_mse_delta": _improvement("yuv6_temporal_delta_mse"),
             "contrast_floor_loss_delta": _improvement("contrast_floor_loss"),
-            "output_rgb_std_ratio_delta": float(
-                after["output_rgb_std_ratio"] - before["output_rgb_std_ratio"]
-            ),
+            "output_rgb_std_ratio_delta": float(after["output_rgb_std_ratio"] - before["output_rgb_std_ratio"]),
             "output_yuv6_temporal_delta_std_ratio_delta": float(
-                after["output_yuv6_temporal_delta_std_ratio"]
-                - before["output_yuv6_temporal_delta_std_ratio"]
+                after["output_yuv6_temporal_delta_std_ratio"] - before["output_yuv6_temporal_delta_std_ratio"]
             ),
             "runtime_sidecar_bytes": 0,
             "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
@@ -2978,6 +2720,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
         from tac.substrates.hi_nerv.target_region_birth import (
             allowed_birth_update_name,
+            birth_action_id,
             build_target_region_birth_receipt,
             region_argmax_transition_counts,
             region_margin_stats,
@@ -3004,18 +2747,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if not math.isfinite(value) or value < 0.0:
                 raise ValueError(f"{name} must be finite and non-negative; got {value}")
         if not 0.0 <= float(target_min_region_ratio) <= 1.0:
-            raise ValueError(
-                "target_min_region_ratio must be in [0, 1]; got "
-                f"{target_min_region_ratio}"
-            )
+            raise ValueError(f"target_min_region_ratio must be in [0, 1]; got {target_min_region_ratio}")
         if float(margin_tau) <= 0.0 or float(seed_temperature) <= 0.0:
             raise ValueError("margin_tau and seed_temperature must be positive")
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
-            raise ValueError(
-                "grad_clip_max_norm must be None or finite and positive; "
-                f"got {grad_clip_max_norm}"
-            )
+            raise ValueError(f"grad_clip_max_norm must be None or finite and positive; got {grad_clip_max_norm}")
 
         import mlx.optimizers as mlx_optim
 
@@ -3027,20 +2764,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
             if target.ndim != 4 or int(target.shape[-1]) != 3:
                 raise ValueError(
-                    f"{name} must be NHWC with 3 channels; got "
-                    f"shape={tuple(int(v) for v in target.shape)}"
+                    f"{name} must be NHWC with 3 channels; got shape={tuple(int(v) for v in target.shape)}"
                 )
             if int(target.shape[0]) != int(idx.shape[0]):
                 raise ValueError(
-                    f"{name} batch {int(target.shape[0])} must match "
-                    f"pair_indices length {int(idx.shape[0])}"
+                    f"{name} batch {int(target.shape[0])} must match pair_indices length {int(idx.shape[0])}"
                 )
 
         live_fn = getattr(scorer_teacher, "teacher_logits_for_frames_nhwc01", None)
         if not callable(live_fn):
             raise ValueError(
-                "scorer_teacher must expose teacher_logits_for_frames_nhwc01 for "
-                "the target-region birth actuator"
+                "scorer_teacher must expose teacher_logits_for_frames_nhwc01 for the target-region birth actuator"
             )
         if target_segnet_argmax_1 is not None:
             labels = mx.array(target_segnet_argmax_1, dtype=mx.int32)  # type: ignore[union-attr]
@@ -3059,9 +2793,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
         if labels.ndim == 4 and int(labels.shape[-1]) == 1:
             labels = labels[..., 0]
-        if labels.ndim != 3 or tuple(int(v) for v in labels.shape) != tuple(
-            int(v) for v in target1.shape[:3]
-        ):
+        if labels.ndim != 3 or tuple(int(v) for v in labels.shape) != tuple(int(v) for v in target1.shape[:3]):
             raise ValueError(
                 "target SegNet argmax must be BHW matching target_rgb_1; got "
                 f"argmax={tuple(int(v) for v in labels.shape)} "
@@ -3070,11 +2802,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         labels = mx.stop_gradient(labels)  # type: ignore[union-attr]
         mx.eval(labels)  # type: ignore[union-attr]
 
-        pose_fn = (
-            getattr(pose_teacher, "teacher_pose_for_yuv6_pair_nhwc", None)
-            if pose_teacher is not None
-            else None
-        )
+        pose_fn = getattr(pose_teacher, "teacher_pose_for_yuv6_pair_nhwc", None) if pose_teacher is not None else None
         pose_available = callable(pose_fn)
         # Official PoseNet preprocess interpolates each frame to (384, 512)
         # BEFORE rgb_to_yuv6; this actuator applies no resize, so the
@@ -3085,11 +2813,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             int(target1.shape[1]),
             int(target1.shape[2]),
         ) == (384, 512)
-        if (
-            require_pose_trust
-            and pose_available
-            and not pose_input_contest_resolution
-        ):
+        if require_pose_trust and pose_available and not pose_input_contest_resolution:
             return {
                 "schema": "hi_nerv_target_region_birth.v1",
                 "enabled": True,
@@ -3099,9 +2823,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "pose_input_width": int(target1.shape[2]),
                 "accepted_step_count": 0,
                 "rejected_step_count": 0,
-                "blockers": [
-                    "hinerv_target_region_birth_pose_surface_non_contest_resolution"
-                ],
+                "blockers": ["hinerv_target_region_birth_pose_surface_non_contest_resolution"],
                 "runtime_sidecar_bytes": 0,
                 "human_visual_fidelity_objective": False,
             }
@@ -3115,9 +2837,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "reason": "pose_trust_required_but_teacher_missing",
                 "accepted_step_count": 0,
                 "rejected_step_count": 0,
-                "blockers": [
-                    "hinerv_target_region_birth_pose_trust_required_but_teacher_missing"
-                ],
+                "blockers": ["hinerv_target_region_birth_pose_trust_required_but_teacher_missing"],
                 "runtime_sidecar_bytes": 0,
                 "human_visual_fidelity_objective": False,
             }
@@ -3138,10 +2858,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(logits)  # type: ignore[union-attr]
             out = np.asarray(logits, dtype=np.float32)
             if out.ndim != 4:
-                raise ValueError(
-                    "live SegNet candidate logits must be BHWC; got "
-                    f"{out.shape}"
-                )
+                raise ValueError(f"live SegNet candidate logits must be BHWC; got {out.shape}")
             return out
 
         def _pose_output_np(pred0: Any, pred1: Any) -> np.ndarray | None:
@@ -3287,17 +3004,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             loss_seed = mx.sum(seed_weight * crossing * crossing)  # type: ignore[union-attr]
             pred_class = mx.argmax(logits, axis=-1)  # type: ignore[union-attr]
             unsolved = mx.stop_gradient(  # type: ignore[union-attr]
-                mx.sum(
-                    region_mask
-                    * (pred_class != birth_class).astype(mx.float32)
-                )
+                mx.sum(region_mask * (pred_class != birth_class).astype(mx.float32))
             )
             debt_weight = 1.0 + 100.0 * unsolved / total_scored_pixels
-            return debt_weight * (
-                loss_margin
-                + float(lambda_prob_floor) * loss_prob
-                + float(lambda_seed) * loss_seed
-            )
+            return debt_weight * (loss_margin + float(lambda_prob_floor) * loss_prob + float(lambda_seed) * loss_seed)
 
         if tree_unflatten is None:
             raise RuntimeError("MLX tree_unflatten unavailable despite successful MLX import")
@@ -3381,9 +3091,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 grad_sq_by_group[group] = grad_sq_by_group.get(group, 0.0) + grad_sq_value
                 step_sq = mx.sum(step * step)  # type: ignore[union-attr]
                 mx.eval(step_sq)  # type: ignore[union-attr]
-                update_sq_by_group[group] = (
-                    update_sq_by_group.get(group, 0.0) + float(step_sq.item())
-                )
+                update_sq_by_group[group] = update_sq_by_group.get(group, 0.0) + float(step_sq.item())
             self.update(tree_unflatten(updated))
             mx.eval(self.parameters())  # type: ignore[union-attr]
             return (
@@ -3477,9 +3185,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
                 if not applied_names:
                     _restore_parameters(base_snapshot)
-                    blockers.append(
-                        "hinerv_target_region_birth_no_scoped_gradient_signal"
-                    )
+                    blockers.append("hinerv_target_region_birth_no_scoped_gradient_signal")
                     break
                 candidate = _region_candidate_state()
                 changed_in_region = _uint8_changed_in_region(
@@ -3502,9 +3208,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     rejected_step_count += 1
                     break
                 pose_delta = _pose_delta_l2(candidate["pose"])
-                if pose_delta is not None and pose_delta > float(
-                    max_pose_output_delta_l2
-                ):
+                if pose_delta is not None and pose_delta > float(max_pose_output_delta_l2):
                     pose_violation_seen = True
                     _restore_parameters(base_snapshot)
                     if attempt_lr * 0.5 >= min_lr:
@@ -3518,11 +3222,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     candidate["d_seg_batch"],
                     candidate["d_pose_batch"],
                 )
-                if (
-                    candidate_nonrate is not None
-                    and best_nonrate is not None
-                    and candidate_nonrate >= best_nonrate
-                ):
+                if candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate >= best_nonrate:
                     # Exact nonlinear joint admission (batch-local authority):
                     # a Seg win whose sqrt(10*d_pose) cost erases it is a net
                     # score regression and must not be admitted, even when the
@@ -3537,17 +3237,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     rejected_step_count += 1
                     break
                 stats = candidate["stats"]
-                ratio_progress = (
-                    stats["region_hard_won_pixels"]
-                    > best_stats["region_hard_won_pixels"]
-                )
+                ratio_progress = stats["region_hard_won_pixels"] > best_stats["region_hard_won_pixels"]
                 # Mean margin registers single-pixel receiver motion; the
                 # median stays pure telemetry because one flipped pixel cannot
                 # move it, which would re-open the quantum-growth/backtrack
                 # ping-pong this acceptance rule exists to terminate.
-                margin_progress = stats["margin_mean"] < best_stats[
-                    "margin_mean"
-                ] - float(min_margin_mean_drop)
+                margin_progress = stats["margin_mean"] < best_stats["margin_mean"] - float(min_margin_mean_drop)
                 if not ratio_progress and not margin_progress:
                     _restore_parameters(base_snapshot)
                     if attempt_lr * 0.5 >= min_lr:
@@ -3601,11 +3296,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         final = _region_candidate_state()
         after_stats = final["stats"]
         final_argmax_np = final["argmax_np"]
-        argmax_flipped_region = int(
-            np.count_nonzero(
-                (final_argmax_np != initial_argmax_np) & region_bool_np
-            )
-        )
+        argmax_flipped_region = int(np.count_nonzero((final_argmax_np != initial_argmax_np) & region_bool_np))
         argmax_transitions = region_argmax_transition_counts(
             initial_argmax_np,
             final_argmax_np,
@@ -3615,45 +3306,31 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         final_nonrate = _nonrate_score(final["d_seg_batch"], final["d_pose_batch"])
         exact_nonrate_payload: dict[str, Any] = {
             "authority": "batch_local_live_mlx",
+            # Local pair-batch units never masquerade as full-video score
+            # units: a 1-pair region debt drop is servo evidence, not a
+            # promotion delta. Full-equivalent estimates, when computed, use
+            # the separate *_full_equivalent_estimate keys.
+            "normalization_scope": "batch_local",
             "old_d_seg_batch": float(initial_d_seg),
             "new_d_seg_batch": float(final["d_seg_batch"]),
-            "old_d_pose_batch": (
-                None if initial_d_pose is None else float(initial_d_pose)
-            ),
-            "new_d_pose_batch": (
-                None
-                if final["d_pose_batch"] is None
-                else float(final["d_pose_batch"])
-            ),
-            "old_nonrate_score": (
-                None if initial_nonrate is None else float(initial_nonrate)
-            ),
-            "new_nonrate_score": (
-                None if final_nonrate is None else float(final_nonrate)
-            ),
+            "old_d_pose_batch": (None if initial_d_pose is None else float(initial_d_pose)),
+            "new_d_pose_batch": (None if final["d_pose_batch"] is None else float(final["d_pose_batch"])),
+            "old_nonrate_score": (None if initial_nonrate is None else float(initial_nonrate)),
+            "new_nonrate_score": (None if final_nonrate is None else float(final_nonrate)),
             "delta_score_nonrate": (
-                None
-                if initial_nonrate is None or final_nonrate is None
-                else float(final_nonrate - initial_nonrate)
+                None if initial_nonrate is None or final_nonrate is None else float(final_nonrate - initial_nonrate)
             ),
             "pose_term_available": bool(target_pose_np is not None),
         }
         uint8_changed_total = _uint8_changed_in_region(initial_uint8, final["uint8"])
         uint8_delta_abs_max = float(
-            np.abs(final["uint8"].astype(np.int32) - initial_uint8.astype(np.int32))[
-                region_bool_np
-            ].max()
+            np.abs(final["uint8"].astype(np.int32) - initial_uint8.astype(np.int32))[region_bool_np].max()
             if region_bool_np.any()
             else 0.0
         )
         final_pose_delta = _pose_delta_l2(final["pose"])
-        if (
-            accepted_step_count > 0
-            and after_stats["region_hard_ratio"] < float(target_min_region_ratio)
-        ):
-            blockers.append(
-                "hinerv_target_region_birth_min_ratio_floor_not_reached"
-            )
+        if accepted_step_count > 0 and after_stats["region_hard_ratio"] < float(target_min_region_ratio):
+            blockers.append("hinerv_target_region_birth_min_ratio_floor_not_reached")
         pose_guard_payload: dict[str, Any] = {
             "available": bool(pose_available),
             "input_convention": "concat_yuv6_pair_nhwc255_frame0_then_frame1",
@@ -3662,11 +3339,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_input_contest_resolution": bool(pose_input_contest_resolution),
             "max_pose_output_delta_l2": float(max_pose_output_delta_l2),
             "max_accepted_pose_output_delta_l2": float(max_accepted_pose_delta_l2),
-            "final_pose_output_delta_l2": (
-                None if final_pose_delta is None else float(final_pose_delta)
-            ),
+            "final_pose_output_delta_l2": (None if final_pose_delta is None else float(final_pose_delta)),
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
         }
+        action_identity = birth_action_id(
+            debt=worst,
+            initial_group_sha256=parameter_group_sha256_before,
+            trained_groups=sorted({_group_for_name(name) for name in accepted_update_names}),
+        )
         receipt = build_target_region_birth_receipt(
             debt=worst,
             before_margin_stats=before_stats,
@@ -3685,10 +3365,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             runtime_sidecar_bytes=0,
             argmax_transitions=argmax_transitions,
             exact_nonrate=exact_nonrate_payload,
+            action_id=action_identity,
+            surface="live_mlx",
         )
         return {
             "schema": "hi_nerv_target_region_birth.v1",
             "enabled": True,
+            "action_id": action_identity,
             "accepted": bool(accepted_step_count > 0),
             "birth_class_index": birth_class,
             "worst_region": worst.as_dict(),
@@ -3697,9 +3380,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "before_region_hard_ratio": float(before_stats["region_hard_ratio"]),
             "after_region_hard_ratio": float(after_stats["region_hard_ratio"]),
             "target_min_region_ratio": float(target_min_region_ratio),
-            "target_min_region_ratio_reached": bool(
-                after_stats["region_hard_ratio"] >= float(target_min_region_ratio)
-            ),
+            "target_min_region_ratio_reached": bool(after_stats["region_hard_ratio"] >= float(target_min_region_ratio)),
             "accepted_step_count": int(accepted_step_count),
             "rejected_step_count": int(rejected_step_count),
             "subquantum_rejected_step_count": int(subquantum_rejected_step_count),
@@ -3708,9 +3389,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
             "argmax_transitions": argmax_transitions,
             "exact_nonrate": exact_nonrate_payload,
-            "receiver_quantum_growth_attempt_count": int(
-                receiver_quantum_growth_attempt_count
-            ),
+            "receiver_quantum_growth_attempt_count": int(receiver_quantum_growth_attempt_count),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "loss_history_first": (loss_history[0] if loss_history else None),
             "loss_history_last": (loss_history[-1] if loss_history else None),
@@ -3805,26 +3484,32 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             int(self.cfg.output_height),
             int(self.cfg.output_width),
         )
-        rgb_0 = mx.sigmoid(
-            _conv2d_with_params(
-                self.head_rgb_0,
-                h,
-                fake_quant_bits=fake_quant_bits,
-                fake_quant_bits_by_name=fake_quant_bits_by_name,
-                weight_name="head_rgb_0.weight",
-                bias_name="head_rgb_0.bias",
+        rgb_0 = (
+            mx.sigmoid(
+                _conv2d_with_params(
+                    self.head_rgb_0,
+                    h,
+                    fake_quant_bits=fake_quant_bits,
+                    fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    weight_name="head_rgb_0.weight",
+                    bias_name="head_rgb_0.bias",
+                )
             )
-        ) * 255.0  # type: ignore[union-attr]
-        rgb_1 = mx.sigmoid(
-            _conv2d_with_params(
-                self.head_rgb_1,
-                h,
-                fake_quant_bits=fake_quant_bits,
-                fake_quant_bits_by_name=fake_quant_bits_by_name,
-                weight_name="head_rgb_1.weight",
-                bias_name="head_rgb_1.bias",
+            * 255.0
+        )  # type: ignore[union-attr]
+        rgb_1 = (
+            mx.sigmoid(
+                _conv2d_with_params(
+                    self.head_rgb_1,
+                    h,
+                    fake_quant_bits=fake_quant_bits,
+                    fake_quant_bits_by_name=fake_quant_bits_by_name,
+                    weight_name="head_rgb_1.weight",
+                    bias_name="head_rgb_1.bias",
+                )
             )
-        ) * 255.0  # type: ignore[union-attr]
+            * 255.0
+        )  # type: ignore[union-attr]
         pair_nhwc = mx.stack([rgb_0, rgb_1], axis=1)  # type: ignore[union-attr]
         return mx.transpose(pair_nhwc, (0, 1, 4, 2, 3))  # type: ignore[union-attr]
 
@@ -3849,21 +3534,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "latents_coarse": np.asarray(self.latents_coarse, dtype=np.float32).copy(),
             "latents_mid": np.asarray(self.latents_mid, dtype=np.float32).copy(),
             "latents_fine": np.asarray(self.latents_fine, dtype=np.float32).copy(),
-            "latent_embed.weight": np.asarray(
-                self.latent_embed.weight, dtype=np.float32
-            ).copy(),
-            "latent_embed.bias": np.asarray(
-                self.latent_embed.bias, dtype=np.float32
-            ).copy(),
+            "latent_embed.weight": np.asarray(self.latent_embed.weight, dtype=np.float32).copy(),
+            "latent_embed.bias": np.asarray(self.latent_embed.bias, dtype=np.float32).copy(),
         }
         for i, block in enumerate(self.blocks):
             conv = block.conv
             out[f"blocks.{i}.conv.weight"] = np.transpose(
                 np.asarray(conv.weight, dtype=np.float32), (0, 3, 1, 2)
             ).copy()
-            out[f"blocks.{i}.conv.bias"] = np.asarray(
-                conv.bias, dtype=np.float32
-            ).copy()
+            out[f"blocks.{i}.conv.bias"] = np.asarray(conv.bias, dtype=np.float32).copy()
         if bool(self.cfg.use_hierarchical_feature_grid):
             for i, grid_module in enumerate(self.feature_grids):
                 for level, grid in enumerate(grid_module.grids):
@@ -3922,20 +3601,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ("mid_injector.proj", self.mid_injector),
             ("fine_injector.proj", self.fine_injector),
         ):
-            out[f"{name}.weight"] = np.asarray(
-                injector.proj.weight, dtype=np.float32
-            ).copy()
-            out[f"{name}.bias"] = np.asarray(
-                injector.proj.bias, dtype=np.float32
-            ).copy()
+            out[f"{name}.weight"] = np.asarray(injector.proj.weight, dtype=np.float32).copy()
+            out[f"{name}.bias"] = np.asarray(injector.proj.bias, dtype=np.float32).copy()
         for head_name in ("head_rgb_0", "head_rgb_1"):
             head = getattr(self, head_name)
-            out[f"{head_name}.weight"] = np.transpose(
-                np.asarray(head.weight, dtype=np.float32), (0, 3, 1, 2)
-            ).copy()
-            out[f"{head_name}.bias"] = np.asarray(
-                head.bias, dtype=np.float32
-            ).copy()
+            out[f"{head_name}.weight"] = np.transpose(np.asarray(head.weight, dtype=np.float32), (0, 3, 1, 2)).copy()
+            out[f"{head_name}.bias"] = np.asarray(head.bias, dtype=np.float32).copy()
         return out
 
 
