@@ -138,6 +138,39 @@ def main(argv: list[str] | None = None) -> int:
             "component-delta telemetry blockers."
         ),
     )
+    parser.add_argument(
+        "--spectral-band-allocator-receiver-payload-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_score_tethered_spectral_band_allocator_receiver_proof.v1 "
+            "JSON. Repeatable; used to clear only spectral allocator "
+            "implementation and section-native byte telemetry blockers."
+        ),
+    )
+    parser.add_argument(
+        "--lf-latent-hyperprior-receiver-payload-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_lf_latent_hyperprior_receiver_proof.v1 JSON. Repeatable; "
+            "used to clear only LF hyperprior implementation, NumPy decoder, "
+            "and receiver replay blockers."
+        ),
+    )
+    parser.add_argument(
+        "--lf-hf-runtime-binding-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_lf_hf_runtime_binding_proof.v1 JSON. Repeatable; used to "
+            "clear only receiver-runtime binding blockers after exact payload "
+            "bytes decode through the family receiver module."
+        ),
+    )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)
@@ -191,6 +224,17 @@ def main(argv: list[str] | None = None) -> int:
         load_json_with_source_identity(path)
         for path in args.lf_super_resolution_receiver_payload_proof
     ]
+    spectral_band_allocator_receiver_payload_proofs = [
+        load_json_with_source_identity(path)
+        for path in args.spectral_band_allocator_receiver_payload_proof
+    ]
+    lf_latent_hyperprior_receiver_payload_proofs = [
+        load_json_with_source_identity(path)
+        for path in args.lf_latent_hyperprior_receiver_payload_proof
+    ]
+    lf_hf_runtime_binding_proofs = [
+        load_json_with_source_identity(path) for path in args.lf_hf_runtime_binding_proof
+    ]
 
     report = build_snerv_lf_hf_replacement_queue(
         lf_payload_reports=lf_reports,
@@ -208,9 +252,17 @@ def main(argv: list[str] | None = None) -> int:
         lf_super_resolution_receiver_payload_proofs=(
             lf_super_resolution_receiver_payload_proofs
         ),
+        spectral_band_allocator_receiver_payload_proofs=(
+            spectral_band_allocator_receiver_payload_proofs
+        ),
+        lf_latent_hyperprior_receiver_payload_proofs=(
+            lf_latent_hyperprior_receiver_payload_proofs
+        ),
+        lf_hf_runtime_binding_proofs=lf_hf_runtime_binding_proofs,
         output_root=output_root,
         lane_id=str(args.lane_id),
         queue_id=str(args.queue_id),
+        queue_artifact_path=output_json,
         min_free_bytes=int(args.min_free_bytes),
         allow_local_output=bool(args.allow_local_output),
     )

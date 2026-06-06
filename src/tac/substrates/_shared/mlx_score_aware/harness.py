@@ -70,6 +70,7 @@ def run_mlx_score_aware_full_main(
     pr95_curriculum_total_epochs: int | None = None,
     pr95_muon_policy: str = "faithful_stage8_only",
     pr95_stage_source_weight_amplification_enabled: bool = False,
+    pr95_force_weighted_extra_qat_when_stage_inactive: bool = False,
     # Wave N+11 Z7-Mamba-2 stabilizer recipe (forwarded to adapter; see
     # MlxScoreAwareAdapter.__init__ for canonical contract docstring).
     # All None/0/"adamw"/False defaults preserve byte-stable legacy behavior.
@@ -91,12 +92,42 @@ def run_mlx_score_aware_full_main(
     scorer_space_step_guard_enabled: bool = False,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction: float
+    | None = None,
+    scorer_space_step_guard_min_post_segnet_target_class_min_ratio: float
+    | None = None,
+    scorer_space_step_guard_max_post_segnet_target_class_ratio_drop: float
+    | None = None,
     scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = None,
+    scorer_space_step_guard_max_post_segnet_distribution_mae: float | None = None,
+    scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae: float
+    | None = None,
+    scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio: float
+    | None = None,
     scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = None,
     scorer_space_step_guard_max_post_pose_score_term: float | None = None,
     scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
+    scorer_space_step_guard_max_pose_score_term_relative_worsening: float
+    | None = None,
+    scorer_space_step_guard_max_pose_score_term_absolute_worsening: float
+    | None = None,
+    scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening: float
+    | None = None,
+    scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening: float
+    | None = None,
+    scorer_space_step_guard_max_direct_nonrate_score_worsening: float | None = None,
+    scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening: float
+    | None = None,
     scorer_space_step_guard_backtracking_steps: int = 0,
     scorer_space_step_guard_backtracking_shrink: float = 0.5,
+    scorer_support_ladder_enabled: bool = False,
+    scorer_support_ladder_target_coverage_floor: float | None = None,
+    scorer_support_ladder_target_min_ratio_floor: float | None = None,
+    scorer_support_ladder_patience_steps: int = 1,
+    scorer_support_ladder_growth_factor: float = 2.0,
+    scorer_support_ladder_max_multiplier: float = 16.0,
+    scorer_support_ladder_base_loss_max_when_active: float = 0.25,
+    scorer_support_ladder_activation_weights: Mapping[str, Any] | None = None,
     ema_archive_selection_enabled: bool = False,
     checkpoint_selection_metric_key: str = "total",
     checkpoint_selection_metric_mode: str = "min",
@@ -186,6 +217,10 @@ def run_mlx_score_aware_full_main(
             False keeps generic compact renderer launches on literal operator
             scorer weights so fit-first byte-cap runs do not inherit an
             implicit 100x SegNet amplification.
+        pr95_force_weighted_extra_qat_when_stage_inactive: default-off
+            bounded-proof switch for non-PR95 archive-section byte controls.
+            When true, weighted ``RendererBundle.extra_loss_terms`` are
+            evaluated even before PR95's native ``qat_active`` stages.
         prioritized_pair_indices: optional hard-pair/sensitivity pair indices
             sampled before random fill by the shared MLX adapter. This is local
             training emphasis and telemetry only; it does not create full-video
@@ -207,13 +242,17 @@ def run_mlx_score_aware_full_main(
             after finite-gradient validation and before clipping/update. These
             are scorer-aware train-time waterfilling/ablation controls, not
             metadata-only knobs.
-        scorer_space_step_guard_enabled / min_pre / min_post / max_contrast:
+        scorer_space_step_guard_enabled / min_pre / min_post / min_target_coverage /
+            max_contrast:
             optional scorer-domain trust-region guard. When enabled, renderer
             optimizer steps that collapse real SegNet direct-live class
             occupancy after a noncollapsed pre-update state are rejected by
-            restoring renderer parameters and emitting fail-closed telemetry.
-            The backtracking controls optionally accept a smaller interpolated
-            fraction of the proposed step before falling back to restore.
+            restoring renderer parameters and emitting fail-closed telemetry. The
+            target-class coverage floor protects the upstream-evaluate SegNet
+            last-frame class support separately from generic occupied-class
+            count. The backtracking controls optionally accept a smaller
+            interpolated fraction of the proposed step before falling back to
+            restore.
         ema_archive_selection_enabled: when True, the canonical trainer exports
             both live and EMA final archives, evaluates their local score-aware
             proxy plus charged archive bytes, writes
@@ -280,6 +319,9 @@ def run_mlx_score_aware_full_main(
         pr95_stage_source_weight_amplification_enabled=(
             pr95_stage_source_weight_amplification_enabled
         ),
+        pr95_force_weighted_extra_qat_when_stage_inactive=bool(
+            pr95_force_weighted_extra_qat_when_stage_inactive
+        ),
         # Wave N+11 stabilizer kwargs (forwarded; defaults are
         # legacy-preserving so sister substrates remain byte-stable).
         grad_clip_max_norm=grad_clip_max_norm,
@@ -304,8 +346,26 @@ def run_mlx_score_aware_full_main(
         scorer_space_step_guard_min_post_segnet_occupied_class_fraction=(
             scorer_space_step_guard_min_post_segnet_occupied_class_fraction
         ),
+        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
+            scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+        ),
+        scorer_space_step_guard_min_post_segnet_target_class_min_ratio=(
+            scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+        ),
+        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=(
+            scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+        ),
         scorer_space_step_guard_max_post_segnet_contrast_ratio=(
             scorer_space_step_guard_max_post_segnet_contrast_ratio
+        ),
+        scorer_space_step_guard_max_post_segnet_distribution_mae=(
+            scorer_space_step_guard_max_post_segnet_distribution_mae
+        ),
+        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=(
+            scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+        ),
+        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=(
+            scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
         ),
         scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
             scorer_space_step_guard_max_post_segnet_argmax_disagreement
@@ -316,11 +376,45 @@ def run_mlx_score_aware_full_main(
         scorer_space_step_guard_max_post_pose_direct_live_score_term=(
             scorer_space_step_guard_max_post_pose_direct_live_score_term
         ),
+        scorer_space_step_guard_max_pose_score_term_relative_worsening=(
+            scorer_space_step_guard_max_pose_score_term_relative_worsening
+        ),
+        scorer_space_step_guard_max_pose_score_term_absolute_worsening=(
+            scorer_space_step_guard_max_pose_score_term_absolute_worsening
+        ),
+        scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=(
+            scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+        ),
+        scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=(
+            scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+        ),
+        scorer_space_step_guard_max_direct_nonrate_score_worsening=(
+            scorer_space_step_guard_max_direct_nonrate_score_worsening
+        ),
+        scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=(
+            scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+        ),
         scorer_space_step_guard_backtracking_steps=(
             scorer_space_step_guard_backtracking_steps
         ),
         scorer_space_step_guard_backtracking_shrink=(
             scorer_space_step_guard_backtracking_shrink
+        ),
+        scorer_support_ladder_enabled=scorer_support_ladder_enabled,
+        scorer_support_ladder_target_coverage_floor=(
+            scorer_support_ladder_target_coverage_floor
+        ),
+        scorer_support_ladder_target_min_ratio_floor=(
+            scorer_support_ladder_target_min_ratio_floor
+        ),
+        scorer_support_ladder_patience_steps=scorer_support_ladder_patience_steps,
+        scorer_support_ladder_growth_factor=scorer_support_ladder_growth_factor,
+        scorer_support_ladder_max_multiplier=scorer_support_ladder_max_multiplier,
+        scorer_support_ladder_base_loss_max_when_active=(
+            scorer_support_ladder_base_loss_max_when_active
+        ),
+        scorer_support_ladder_activation_weights=(
+            scorer_support_ladder_activation_weights
         ),
     )
 

@@ -6,12 +6,14 @@ import importlib.util
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tac.analysis.snerv_official_tub_source_forward_replay import (
     DEFAULT_OFFICIAL_SNERV_REPO,
     PYTORCH_WAVELETS_BLOCKER,
     SCHEMA,
+    STATE_VALUE_ARTIFACT_BLOCKER,
     TUB_CLOSED_BY_FIXTURE_REPLAY,
     TUB_PRESERVED_BLOCKERS,
     build_snerv_official_tub_source_forward_replay_artifact,
@@ -116,6 +118,80 @@ def test_snerv_official_tub_replay_preserves_dependency_and_checkpoint_blockers(
         assert artifact["official_pytorch_wavelets_runtime_dependency_installed"] is True
 
 
+def test_snerv_official_tub_source_forward_replay_persists_value_state_npz(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "official_snerv_t_one_step_state_dict.npz"
+    artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        train_one_step=True,
+        output_state_dict_path=state_path,
+        generated_utc="20260604T000000Z",
+    )
+
+    assert state_path.is_file()
+    assert artifact["source_forward_replay_executed"] is True
+    assert artifact["official_trained_checkpoint_loaded"] is True
+    assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert artifact["full_tub_source_forward_parity_proven"] is True
+    assert (
+        artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
+    )
+    assert artifact["source_forward_replay_authority"] is True
+    assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
+    assert artifact["official_trained_checkpoint_state_dict_path"] == state_path.as_posix()
+    assert artifact["official_trained_checkpoint_state_dict_slice_present"] is True
+    assert artifact["official_trained_checkpoint_state_dict_slice_file_present"] is True
+    assert (
+        artifact["official_trained_checkpoint_state_dict_slice_runner_arg"]
+        == "--snerv-official-trained-checkpoint-state-dict-path"
+    )
+    state_artifact = artifact["official_trained_checkpoint_state_dict_artifact"]
+    assert state_artifact["path"] == state_path.as_posix()
+    assert state_artifact["bytes"] == state_path.stat().st_size
+    assert len(state_artifact["sha256"]) == 64
+    assert state_artifact["member_count"] > 0
+    assert any(
+        name.startswith("encoder.1.") and name.endswith(".npy")
+        for name in state_artifact["member_names"]
+    )
+    assert any(
+        name.startswith("encoder.2.") and name.endswith(".npy")
+        for name in state_artifact["member_names"]
+    )
+    assert any(
+        name.startswith("decoder.") and name.endswith(".npy")
+        for name in state_artifact["member_names"]
+    )
+    mapping = artifact["official_trained_checkpoint_mapping_manifest"]
+    assert mapping["official_tub_temporal_encoder_weight_mapping_proven"] is True
+    assert mapping["official_tub_output2_decoder_weight_mapping_proven"] is True
+    assert mapping["official_mfu_trained_checkpoint_weight_mapping_proven"] is True
+    with np.load(state_path, allow_pickle=False) as data:
+        keys = list(data.files)
+        assert any(key.startswith("encoder.1.") for key in keys)
+        assert any(key.startswith("encoder.2.") for key in keys)
+        assert any(key.startswith("decoder.") for key in keys)
+
+
+def test_snerv_official_tub_source_forward_replay_blocks_authority_without_value_state_npz() -> None:
+    artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        train_one_step=True,
+        generated_utc="20260604T000000Z",
+    )
+
+    assert artifact["source_forward_replay_executed"] is True
+    assert artifact["official_trained_checkpoint_loaded"] is True
+    assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert artifact["full_tub_source_forward_parity_proven"] is True
+    assert (
+        artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
+    )
+    assert artifact["source_forward_replay_authority"] is False
+    assert STATE_VALUE_ARTIFACT_BLOCKER in artifact["blockers"]
+
+
 def test_snerv_official_tub_replay_missing_checkout_is_fail_closed(tmp_path: Path) -> None:
     artifact = build_snerv_official_tub_source_forward_replay_artifact(
         official_repo_dir=tmp_path / "missing-snerv",
@@ -149,3 +225,35 @@ def test_snerv_official_tub_replay_cli_writes_json(tmp_path: Path) -> None:
     assert payload["schema"] == SCHEMA
     assert payload["source_forward_replay_executed"] is True
     assert payload["score_claim"] is False
+
+
+def test_snerv_official_tub_replay_cli_writes_value_state_npz(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "tub_replay.json"
+    state_path = tmp_path / "official_state.npz"
+
+    rc = main(
+        [
+            "--official-repo-dir",
+            _official_repo().as_posix(),
+            "--generated-utc",
+            "20260604T000000Z",
+            "--train-one-step",
+            "--write-state-dict-npz",
+            state_path.as_posix(),
+            "--write-json",
+            out.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert state_path.is_file()
+    assert payload["official_trained_checkpoint_state_dict_path"] == (
+        state_path.as_posix()
+    )
+    assert payload["official_trained_checkpoint_state_dict_slice_present"] is True
+    assert payload["official_trained_checkpoint_state_dict_artifact"]["member_count"] > 0
+    assert payload["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
+    assert payload["source_forward_replay_authority"] is True

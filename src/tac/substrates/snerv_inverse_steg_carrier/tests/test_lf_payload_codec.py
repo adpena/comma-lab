@@ -347,6 +347,7 @@ def test_lf_payload_v2_binary_header_replaces_json_header_without_signal_loss() 
         mode="portfolio_auto",
         wrapper="none",
         header_format="json",
+        allow_legacy_json_header=True,
     )
 
     assert binary_packet.startswith(SNERV_LF_QUANT_V2_MAGIC)
@@ -359,6 +360,12 @@ def test_lf_payload_v2_binary_header_replaces_json_header_without_signal_loss() 
     assert binary_report.packet_bytes < json_report.packet_bytes
     assert binary_report.mode_histogram == json_report.mode_histogram
     assert binary_report.wrapper_histogram == json_report.wrapper_histogram
+    binary_header_len = mod._HEADER.unpack(binary_packet[: mod._HEADER.size])[2]
+    binary_header = binary_packet[
+        mod._HEADER.size : mod._HEADER.size + binary_header_len
+    ]
+    assert b"schema" not in binary_header
+    assert b"decoded_sha256" not in binary_header
 
     for ref, got in zip(planes, decode_lf_quant_payload_v2(binary_packet), strict=True):
         np.testing.assert_array_equal(got, ref)
@@ -369,17 +376,81 @@ def test_lf_payload_v2_binary_header_replaces_json_header_without_signal_loss() 
     assert inspected.header_bytes == binary_report.header_bytes
 
 
-def test_lf_payload_v2_legacy_json_header_remains_decodable() -> None:
+def test_lf_payload_v2_compact_binary_omits_per_plane_hash_overhead() -> None:
+    planes = [
+        np.array([[idx % 4]], dtype=np.int64)
+        for idx in range(64)
+    ]
+
+    compact_packet, compact_report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="uint2",
+        wrapper="none",
+    )
+    legacy_packet, legacy_report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="uint2",
+        wrapper="none",
+        header_format="legacy_binary",
+    )
+
+    assert compact_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == 3
+    assert legacy_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == 2
+    assert compact_report.payload_bytes == legacy_report.payload_bytes
+    assert (
+        legacy_report.header_bytes - compact_report.header_bytes
+        == 32 * (len(planes) - 1)
+    )
+    assert compact_report.packet_bytes < legacy_report.packet_bytes
+    for ref, got in zip(planes, decode_lf_quant_payload_v2(compact_packet), strict=True):
+        np.testing.assert_array_equal(got, ref)
+    inspected = inspect_lf_quant_payload_v2(compact_packet)
+    assert inspected.plane_rows[0].decoded_sha256
+    assert inspected.header_bytes == compact_report.header_bytes
+
+
+def test_lf_payload_v2_compact_binary_aggregate_hash_catches_header_drift() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec as mod
+
+    plane = np.array([[0, 1, 2, 3]], dtype=np.int64)
+    packet, _report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="uint2",
+        wrapper="none",
+    )
+    mutated = bytearray(packet)
+    pos = mod._HEADER.size + len(mod._BINARY_HEADER_MAGIC)
+    _plane_count, pos = mod.decode_varint(mutated, pos)
+    _payload_bytes, pos = mod.decode_varint(mutated, pos)
+    pos += 64
+    _height, pos = mod.decode_varint(mutated, pos)
+    _width, pos = mod.decode_varint(mutated, pos)
+    mutated[pos] = mod._MODE_TO_CODE["signed_int2_bitpack"]
+
+    with pytest.raises(SnervLfPayloadCodecError, match="aggregate sha256 mismatch"):
+        decode_lf_quant_payload_v2(bytes(mutated))
+
+
+def test_lf_payload_v2_json_header_encoding_is_guarded_but_decodable() -> None:
     planes = [
         np.array([[-2, -1], [0, 1]], dtype=np.int64),
         np.array([[1, 0], [-1, -2]], dtype=np.int64),
     ]
+
+    with pytest.raises(SnervLfPayloadCodecError, match="JSON header encoding is blocked"):
+        encode_lf_quant_payload_v2_with_report(
+            planes,
+            mode="int2",
+            wrapper="none",
+            header_format="json",
+        )
 
     packet, report = encode_lf_quant_payload_v2_with_report(
         planes,
         mode="int2",
         wrapper="none",
         header_format="json",
+        allow_legacy_json_header=True,
     )
     decoded = decode_lf_quant_payload_v2(packet)
     inspected = inspect_lf_quant_payload_v2(packet)
@@ -409,11 +480,12 @@ def test_lf_payload_v2_binary_header_cuts_many_tiny_plane_json_overhead() -> Non
         mode="int2",
         wrapper="none",
         header_format="json",
+        allow_legacy_json_header=True,
     )
     decoded = decode_lf_quant_payload_v2(binary_packet)
     inspected = inspect_lf_quant_payload_v2(binary_packet)
 
-    assert binary_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == 2
+    assert binary_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == 3
     assert binary_report.payload_bytes == json_report.payload_bytes
     binary_overhead = binary_report.packet_bytes - binary_report.payload_bytes
     json_overhead = json_report.packet_bytes - json_report.payload_bytes
@@ -436,6 +508,8 @@ def test_lf_payload_portfolio_auto_uses_bounded_wrappers_by_default() -> None:
     assert "brotli_q11" not in wrappers
     assert "lzma" not in wrappers
     assert "lzma_extreme" not in wrappers
+    assert mod._brotli_quality_for_wrapper("brotli_auto", payload_bytes=0) == 6
+    assert mod._brotli_quality_for_wrapper("brotli_auto", payload_bytes=128) == 6
     assert (
         mod._brotli_quality_for_wrapper(
             "brotli_auto",
@@ -443,6 +517,8 @@ def test_lf_payload_portfolio_auto_uses_bounded_wrappers_by_default() -> None:
         )
         == 6
     )
+    assert mod._lzma_preset_for_wrapper("lzma_auto", payload_bytes=0) == 6
+    assert mod._lzma_preset_for_wrapper("lzma_auto", payload_bytes=128) == 6
     assert (
         mod._lzma_preset_for_wrapper(
             "lzma_auto",
@@ -451,6 +527,10 @@ def test_lf_payload_portfolio_auto_uses_bounded_wrappers_by_default() -> None:
         == 6
     )
     assert mod._brotli_quality_for_wrapper("brotli", payload_bytes=10_000_000) == 11
+    assert mod._lzma_preset_for_wrapper(
+        "lzma_extreme",
+        payload_bytes=10_000_000,
+    ) == (9 | mod.lzma.PRESET_EXTREME)
 
 
 def test_archive_lf_payload_codec_v2_is_receiver_decoded() -> None:

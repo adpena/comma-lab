@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: MIT
 """Executable SNeRV_T TUB source-forward replay harness.
 
-This harness burns down exactly one SNeRV TUB blocker: the upstream
-``model/snerv_t.py`` temporal encoder plus ``output_2`` fusion path can be
-executed as a source fixture.  It does not load a trained checkpoint, does not
-prove a portable receiver mapping for those temporal weights, and does not
-claim score authority.
+This harness burns down the executable SNeRV TUB source-forward blocker.  The
+upstream ``model/snerv_t.py`` temporal encoder plus ``output_2`` fusion path can
+be executed as a source fixture, and an optional one-step source smoke can
+persist a receiver-owned state slice.  It still claims no score authority.
 """
 
 from __future__ import annotations
@@ -13,10 +12,12 @@ from __future__ import annotations
 import argparse
 import importlib
 import importlib.util
+import io
 import json
 import sys
 import types
 import warnings
+import zipfile
 from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
@@ -37,6 +38,9 @@ from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
 
 SCHEMA = "snerv_official_tub_source_forward_replay.v1"
 COMPONENT_SCHEMA = "snerv_official_tub_source_forward_component.v1"
+TRAINED_CHECKPOINT_MAPPING_SCHEMA = (
+    "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+)
 OFFICIAL_REPO_URL = "https://github.com/qwertja/SNeRV"
 DEFAULT_OFFICIAL_SNERV_REPO = Path(
     "/Volumes/VertigoDataTier/pact/experiments/results/"
@@ -68,6 +72,9 @@ TUB_PRESERVED_BLOCKERS: tuple[str, ...] = (
     "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
 )
 PYTORCH_WAVELETS_BLOCKER = "snerv_official_pytorch_wavelets_runtime_dependency_missing"
+STATE_VALUE_ARTIFACT_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_value_artifact_missing"
+)
 
 
 @dataclass(frozen=True)
@@ -105,6 +112,8 @@ class TubFixtureConfig:
 def build_snerv_official_tub_source_forward_replay_artifact(
     *,
     official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
+    train_one_step: bool = False,
+    output_state_dict_path: str | Path | None = None,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed executable TUB source-forward replay artifact."""
@@ -129,6 +138,7 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "full_tub_source_forward_parity_proven": False,
         "source_forward_parity_proven": False,
         "official_trained_checkpoint_loaded": False,
+        "official_trained_checkpoint_state_dict_mapping_verified": False,
         "official_pytorch_wavelets_runtime_dependency_installed": _module_installed(
             "pytorch_wavelets"
         ),
@@ -149,7 +159,11 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         }
 
     try:
-        payload = _run_source_fixture(official_root)
+        payload = _run_source_fixture(
+            official_root,
+            train_one_step=train_one_step,
+            output_state_dict_path=output_state_dict_path,
+        )
     except Exception as exc:  # pragma: no cover - fail-closed caller path.
         return {
             **base,
@@ -185,13 +199,118 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         if replay_passed
         else _tub_fixture_replay_blockers(payload)
     )
+    mapping_manifest = payload["official_trained_checkpoint_mapping_manifest"]
+    state_dict_artifact = payload.get("official_trained_checkpoint_state_dict_artifact")
+    state_dict_artifact = (
+        dict(state_dict_artifact) if isinstance(state_dict_artifact, Mapping) else None
+    )
+    state_dict_value_artifact_ready = _state_dict_value_artifact_ready(
+        state_dict_artifact
+    )
+    mapping_verified = bool(
+        mapping_manifest.get("official_trained_checkpoint_state_dict_mapping_verified")
+        is True
+    )
+    full_source_parity = bool(replay_passed and train_one_step and mapping_verified)
+    source_forward_authority = bool(
+        full_source_parity and state_dict_value_artifact_ready
+    )
+    preserved = (
+        [
+            blocker
+            for blocker in preserved
+            if blocker
+            not in {
+                "snerv_official_trained_checkpoint_state_dict_not_loaded",
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+                "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+            }
+        ]
+        if full_source_parity
+        else preserved
+    )
+    if full_source_parity and not state_dict_value_artifact_ready:
+        preserved = _ordered_unique([*preserved, STATE_VALUE_ARTIFACT_BLOCKER])
+    closed_blockers = list(TUB_CLOSED_BY_FIXTURE_REPLAY) if replay_passed else []
+    if full_source_parity:
+        closed_blockers.extend(
+            [
+                "snerv_official_trained_checkpoint_state_dict_not_loaded",
+                "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+                "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+                "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+            ]
+        )
     return {
         **base,
         "source_forward_replay_executed": True,
         "official_tub_temporal_encoder_output2_source_fixture_replay_passed": replay_passed,
+        "official_trained_checkpoint_loaded": bool(
+            mapping_manifest.get("official_trained_checkpoint_loaded") is True
+        ),
+        "official_trained_checkpoint_state_dict_mapping_verified": mapping_verified,
+        "official_trained_checkpoint_mapping_manifest": mapping_manifest,
+        "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
+        "official_trained_checkpoint_state_dict_path": (
+            None if state_dict_artifact is None else state_dict_artifact.get("path")
+        ),
+        "official_trained_checkpoint_state_dict_slice_path": (
+            None if state_dict_artifact is None else state_dict_artifact.get("path")
+        ),
+        "official_trained_checkpoint_state_dict_slice_present": (
+            state_dict_artifact is not None
+        ),
+        "official_trained_checkpoint_state_dict_slice_file_present": (
+            state_dict_artifact is not None
+            and Path(str(state_dict_artifact.get("path") or "")).is_file()
+        ),
+        "official_trained_checkpoint_state_dict_slice_bytes": (
+            None if state_dict_artifact is None else state_dict_artifact.get("bytes")
+        ),
+        "official_trained_checkpoint_state_dict_slice_sha256": (
+            None if state_dict_artifact is None else state_dict_artifact.get("sha256")
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_count": (
+            None
+            if state_dict_artifact is None
+            else state_dict_artifact.get("member_count")
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_names": (
+            []
+            if state_dict_artifact is None
+            else list(state_dict_artifact.get("member_names") or [])
+        ),
+        "official_trained_checkpoint_state_dict_value_artifact_ready": (
+            state_dict_value_artifact_ready
+        ),
+        "official_trained_checkpoint_state_dict_slice_runner_arg": (
+            None
+            if state_dict_artifact is None
+            else "--snerv-official-trained-checkpoint-state-dict-path"
+        ),
+        "source_forward_training_smoke": {
+            "schema": "snerv_official_tub_source_training_smoke.v1",
+            "enabled": bool(train_one_step),
+            "optimizer": "torch.optim.SGD",
+            "step_count": int(payload["source_training_smoke"]["step_count"]),
+            "loss_before": payload["source_training_smoke"]["loss_before"],
+            "loss_after": payload["source_training_smoke"]["loss_after"],
+            "state_dict_sha256": mapping_manifest.get("state_dict_sha256"),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "source_fixture_config": payload["source_fixture_config"],
         "source_fixture_scope": (
-            "deterministic_official_source_fixture_not_trained_checkpoint"
+            "deterministic_official_source_fixture_with_one_step_checkpoint"
+            if train_one_step
+            else "deterministic_official_source_fixture_not_trained_checkpoint"
         ),
         "source_fixture_not_training_config": True,
         "source_fixture_reason": (
@@ -223,16 +342,22 @@ def build_snerv_official_tub_source_forward_replay_artifact(
             payload["full_forward_equivalence"],
             payload["frame_reconstruction_equivalence"],
         ],
-        "closed_blockers": list(TUB_CLOSED_BY_FIXTURE_REPLAY) if replay_passed else [],
+        "closed_blockers": _ordered_unique(closed_blockers),
         "preserved_blockers": preserved,
         "blockers": _ordered_unique([*fixture_blockers, *preserved]),
-        "full_tub_source_forward_parity_proven": False,
-        "source_forward_parity_proven": False,
+        "full_tub_source_forward_parity_proven": full_source_parity,
+        "source_forward_parity_proven": full_source_parity,
+        "source_forward_replay_authority": source_forward_authority,
         **FALSE_AUTHORITY,
     }
 
 
-def _run_source_fixture(official_root: Path) -> dict[str, Any]:
+def _run_source_fixture(
+    official_root: Path,
+    *,
+    train_one_step: bool,
+    output_state_dict_path: str | Path | None,
+) -> dict[str, Any]:
     import torch
 
     cfg = TubFixtureConfig()
@@ -241,7 +366,7 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
             snerv_t = importlib.import_module("model.snerv_t")
-        model = snerv_t.SNeRV_T(cfg.to_namespace()).double().eval()
+        model = snerv_t.SNeRV_T(cfg.to_namespace()).double()
 
         current = _positive_fixture((1, 3, 32, 32), modulo=17)
         previous = current + 1.0 / 64.0
@@ -249,6 +374,14 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         current_t = torch.from_numpy(current)
         previous_t = torch.from_numpy(previous)
         next_t = torch.from_numpy(next_frame)
+        training_smoke = _run_one_step_training_smoke(
+            model,
+            current_t,
+            previous_t,
+            next_t,
+            enabled=train_one_step,
+        )
+        model.eval()
 
         with torch.no_grad():
             manual = _manual_tub_source_replay(model, current_t, previous_t, next_t)
@@ -257,6 +390,7 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
                 previous_t,
                 next_t,
             )
+        state_dict = model.state_dict()
 
     portable = prepare_official_tub_graph_inputs(
         current[0],
@@ -345,8 +479,31 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         "full_img_yl": _tensor_array(img_yl),
         "full_yh_out": _tensor_array(yh_out),
     }
+    state_dict_artifact = (
+        _write_deterministic_state_npz(
+            Path(output_state_dict_path),
+            state_dict,
+        )
+        if train_one_step and output_state_dict_path is not None
+        else None
+    )
     return {
         "source_fixture_config": asdict(cfg),
+        "source_training_smoke": training_smoke,
+        "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
+        "official_trained_checkpoint_mapping_manifest": (
+            _build_official_tub_trained_checkpoint_mapping_manifest(
+                model_state_dict=state_dict,
+                decoder_len=int(model.decoder_len),
+                source="official_snerv_t_one_step_source_smoke",
+                state_dict_kind="official_snerv_t_one_step_trained_source_smoke_state_dict",
+            )
+            if train_one_step
+            else _untrained_tub_source_fixture_mapping_manifest(
+                state_dict=state_dict,
+                decoder_len=int(model.decoder_len),
+            )
+        ),
         "graph_input_parity": {
             "schema": COMPONENT_SCHEMA,
             "component_id": "tub_graph_inputs",
@@ -450,6 +607,53 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
             "blockers": [] if frame_passed else [TUB_FRAME_RECONSTRUCTION_BLOCKER],
             **FALSE_AUTHORITY,
         },
+}
+
+
+def _run_one_step_training_smoke(
+    model: Any,
+    current_t: Any,
+    previous_t: Any,
+    next_t: Any,
+    *,
+    enabled: bool,
+) -> dict[str, Any]:
+    if not enabled:
+        return {
+            "schema": "snerv_official_tub_source_training_smoke.v1",
+            "enabled": False,
+            "step_count": 0,
+            "loss_before": None,
+            "loss_after": None,
+        }
+    import torch
+
+    model.train()
+    optimizer = torch.optim.SGD(model.parameters(), lr=1.0e-7)
+    optimizer.zero_grad(set_to_none=True)
+    img_out, _embed_list, _dec_time, _img_yl, _yh_out = model(
+        current_t,
+        previous_t,
+        next_t,
+    )
+    loss = torch.mean((img_out - current_t) ** 2)
+    loss_before = float(loss.detach().cpu().item())
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
+    with torch.no_grad():
+        img_after, _embed_list, _dec_time, _img_yl, _yh_out = model(
+            current_t,
+            previous_t,
+            next_t,
+        )
+        loss_after = float(torch.mean((img_after - current_t) ** 2).detach().cpu().item())
+    return {
+        "schema": "snerv_official_tub_source_training_smoke.v1",
+        "enabled": True,
+        "step_count": 1,
+        "loss_before": loss_before,
+        "loss_after": loss_after,
     }
 
 
@@ -477,6 +681,279 @@ def _tub_fixture_replay_blockers(payload: Mapping[str, Any]) -> list[str]:
     if not payload["temporal_path"]["output_tensors_finite"]:
         blockers.append("snerv_official_tub_temporal_encoder_output2_nonfinite")
     return _ordered_unique(blockers)
+
+
+def _build_official_tub_trained_checkpoint_mapping_manifest(
+    *,
+    model_state_dict: Mapping[str, Any],
+    decoder_len: int,
+    source: str,
+    state_dict_kind: str,
+) -> dict[str, Any]:
+    groups = _official_tub_checkpoint_group_prefixes(decoder_len)
+    entries: list[dict[str, Any]] = []
+    for key in sorted(str(key) for key in model_state_dict):
+        group = _official_group_for_key(key, groups)
+        if group is None:
+            continue
+        array = _state_value_array(model_state_dict[key])
+        entries.append(
+            {
+                "key": key,
+                "receiver_key": _receiver_key_for_official_key(key, decoder_len),
+                "component_id": _component_for_group(group),
+                "official_group": group,
+                "shape": [int(value) for value in array.shape],
+                "dtype": str(array.dtype),
+                "sha256": _hash_array_exact(array),
+                "f64_sha256": _hash_array(array),
+                "byte_count": int(np.ascontiguousarray(array).nbytes),
+            }
+        )
+    present_groups = {str(row["official_group"]) for row in entries}
+    component_rows = [
+        _mapping_component_row(
+            component_id="hfr",
+            required_groups=("hfr_lh", "hfr_hl", "hfr_hh"),
+            present_groups=present_groups,
+            entries=entries,
+            source_blocker=(
+                "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping"
+            ),
+        ),
+        _mapping_component_row(
+            component_id="mfu",
+            required_groups=(
+                "mfu_upsample_mid",
+                "mfu_rb_mid",
+                "mfu_upsample_high",
+                "mfu_rb_high",
+            ),
+            present_groups=present_groups,
+            entries=entries,
+            source_blocker=(
+                "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping"
+            ),
+        ),
+        _mapping_component_row(
+            component_id="tub",
+            required_groups=(
+                "tub_temporal_encoder_1",
+                "tub_temporal_encoder_2",
+                "tub_output2_decoder",
+            ),
+            present_groups=present_groups,
+            entries=entries,
+            source_blocker=(
+                "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping"
+            ),
+        ),
+    ]
+    rows = {str(row["component_id"]): row for row in component_rows}
+    hfr_proven = rows["hfr"]["trained_checkpoint_weight_mapping_proven"] is True
+    mfu_proven = rows["mfu"]["trained_checkpoint_weight_mapping_proven"] is True
+    tub_proven = rows["tub"]["trained_checkpoint_weight_mapping_proven"] is True
+    mfu_hfr_proven = bool(hfr_proven and mfu_proven)
+    mapping_verified = bool(mfu_hfr_proven and tub_proven)
+    closed: list[str] = ["snerv_official_trained_checkpoint_state_dict_not_loaded"]
+    if hfr_proven:
+        closed.append("snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete")
+    if mfu_proven:
+        closed.extend(
+            [
+                "snerv_official_trained_checkpoint_mfu_weight_mapping_incomplete",
+                "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping",
+            ]
+        )
+    if mfu_hfr_proven:
+        closed.append("snerv_official_mfu_hfr_tub_weight_mapping_missing")
+    if tub_proven:
+        closed.extend(
+            [
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+            ]
+        )
+    if mapping_verified:
+        closed.append("snerv_official_trained_checkpoint_state_dict_mapping_missing")
+    blockers = [
+        blocker
+        for row in component_rows
+        for blocker in row.get("blockers", ())
+        if blocker not in closed
+    ]
+    return {
+        "schema": TRAINED_CHECKPOINT_MAPPING_SCHEMA,
+        "state_dict_kind": state_dict_kind,
+        "state_dict_source": source,
+        "state_dict_key_count": len(model_state_dict),
+        "decoder_len": int(decoder_len),
+        "decoder_len_source": "official_snerv_t_source_model",
+        "state_dict_mapping_dialect": "upstream_official_snerv_t_state_dict",
+        "official_trained_checkpoint_loaded": True,
+        "official_hfr_trained_checkpoint_weight_mapping_proven": hfr_proven,
+        "official_mfu_trained_checkpoint_weight_mapping_proven": mfu_proven,
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": mfu_hfr_proven,
+        "official_tub_temporal_encoder_weight_mapping_proven": tub_proven,
+        "official_tub_output2_decoder_weight_mapping_proven": tub_proven,
+        "official_trained_checkpoint_state_dict_mapping_verified": mapping_verified,
+        "state_dict_sha256": _hash_state_dict_exact(model_state_dict),
+        "mapped_weight_key_count": len(entries),
+        "mapped_weight_byte_count": int(sum(int(row["byte_count"]) for row in entries)),
+        "mapped_weight_entries_sha256": _hash_weight_entries(entries),
+        "weight_entries": entries,
+        "activation_entries": [],
+        "mapped_activation_key_count": 0,
+        "component_rows": component_rows,
+        "closed_campaign_blockers": _ordered_unique(closed),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _untrained_tub_source_fixture_mapping_manifest(
+    *,
+    state_dict: Mapping[str, Any],
+    decoder_len: int,
+) -> dict[str, Any]:
+    return {
+        "schema": TRAINED_CHECKPOINT_MAPPING_SCHEMA,
+        "state_dict_kind": "official_snerv_t_source_fixture_initial_state_dict",
+        "state_dict_source": "official_snerv_t_source_fixture_initial_state",
+        "state_dict_key_count": len(state_dict),
+        "decoder_len": int(decoder_len),
+        "decoder_len_source": "official_snerv_t_source_model",
+        "state_dict_mapping_dialect": "upstream_official_snerv_t_state_dict_untrained_fixture",
+        "official_trained_checkpoint_loaded": False,
+        "official_hfr_trained_checkpoint_weight_mapping_proven": False,
+        "official_mfu_trained_checkpoint_weight_mapping_proven": False,
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+        "official_tub_temporal_encoder_weight_mapping_proven": False,
+        "official_tub_output2_decoder_weight_mapping_proven": False,
+        "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "state_dict_sha256": _hash_state_dict_exact(state_dict),
+        "mapped_weight_key_count": 0,
+        "mapped_weight_byte_count": 0,
+        "mapped_weight_entries_sha256": _hash_weight_entries([]),
+        "weight_entries": [],
+        "activation_entries": [],
+        "mapped_activation_key_count": 0,
+        "component_rows": [],
+        "closed_campaign_blockers": [],
+        "blockers": [
+            "snerv_official_trained_checkpoint_state_dict_not_loaded",
+            "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+            "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+            "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+            "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _mapping_component_row(
+    *,
+    component_id: str,
+    required_groups: Sequence[str],
+    present_groups: set[str],
+    entries: Sequence[Mapping[str, Any]],
+    source_blocker: str,
+) -> dict[str, Any]:
+    missing_groups = [group for group in required_groups if group not in present_groups]
+    component_entries = [
+        row for row in entries if str(row.get("component_id")) == component_id
+    ]
+    mapping_proven = not missing_groups and bool(component_entries)
+    blockers = [source_blocker] if mapping_proven else [
+        f"snerv_official_trained_checkpoint_{component_id}_weight_mapping_incomplete",
+        source_blocker,
+    ]
+    if component_id == "tub" and not mapping_proven:
+        blockers.extend(
+            [
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+            ]
+        )
+    return {
+        "schema": "snerv_official_trained_checkpoint_component_mapping.v1",
+        "component_id": component_id,
+        "required_groups": list(required_groups),
+        "present_groups": [group for group in required_groups if group in present_groups],
+        "missing_groups": missing_groups,
+        "trained_checkpoint_weight_mapping_proven": mapping_proven,
+        "source_forward_parity_proven": False,
+        "source_forward_replay_authority": False,
+        "mapped_weight_key_count": len(component_entries),
+        "mapped_weight_byte_count": int(
+            sum(int(row.get("byte_count") or 0) for row in component_entries)
+        ),
+        "mapped_weight_entries_sha256": _hash_weight_entries(component_entries),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _official_tub_checkpoint_group_prefixes(decoder_len: int) -> dict[str, tuple[str, ...]]:
+    return {
+        "hfr_lh": (f"decoder.{decoder_len}.",),
+        "hfr_hl": (f"decoder.{decoder_len + 1}.",),
+        "hfr_hh": (f"decoder.{decoder_len + 2}.",),
+        "mfu_upsample_mid": (f"decoder.{decoder_len + 3}.",),
+        "mfu_rb_mid": (f"decoder.{decoder_len + 4}.",),
+        "mfu_upsample_high": (f"decoder.{decoder_len + 5}.",),
+        "mfu_rb_high": (f"decoder.{decoder_len + 6}.",),
+        "tub_temporal_encoder_1": ("encoder.1.",),
+        "tub_temporal_encoder_2": ("encoder.2.",),
+        "tub_output2_decoder": (f"decoder.{decoder_len - 1}.",),
+    }
+
+
+def _official_group_for_key(
+    key: str,
+    groups: Mapping[str, tuple[str, ...]],
+) -> str | None:
+    for group, prefixes in groups.items():
+        if any(str(key).startswith(prefix) for prefix in prefixes):
+            return group
+    return None
+
+
+def _component_for_group(group: str) -> str:
+    if group.startswith("hfr_"):
+        return "hfr"
+    if group.startswith("mfu_"):
+        return "mfu"
+    if group.startswith("tub_"):
+        return "tub"
+    return "unknown"
+
+
+def _receiver_key_for_official_key(key: str, decoder_len: int) -> str:
+    replacements = {
+        f"decoder.{decoder_len}.": "hfr.lh.",
+        f"decoder.{decoder_len + 1}.": "hfr.hl.",
+        f"decoder.{decoder_len + 2}.": "hfr.hh.",
+        f"decoder.{decoder_len + 3}.": "mfu.upsample_mid.",
+        f"decoder.{decoder_len + 4}.": "mfu.rb_mid.",
+        f"decoder.{decoder_len + 5}.": "mfu.upsample_high.",
+        f"decoder.{decoder_len + 6}.": "mfu.rb_high.",
+        "encoder.1.": "tub.temporal_encoder_prev.",
+        "encoder.2.": "tub.temporal_encoder_next.",
+        f"decoder.{decoder_len - 1}.": "tub.output2_decoder.",
+    }
+    out = str(key)
+    for official, receiver in replacements.items():
+        if out.startswith(official):
+            out = receiver + out[len(official) :]
+            break
+    return (
+        out.replace(".main.0.", ".input_conv.")
+        .replace(".main.1.", ".residual_blocks.")
+    )
 
 
 def _manual_tub_source_replay(
@@ -753,6 +1230,16 @@ def _tensor_array(tensor: Any) -> np.ndarray:
     return np.asarray(tensor.detach().cpu().numpy(), dtype=np.float64)
 
 
+def _state_value_array(value: Any) -> np.ndarray:
+    if hasattr(value, "detach") and callable(value.detach):
+        value = value.detach()
+    if hasattr(value, "cpu") and callable(value.cpu):
+        value = value.cpu()
+    if hasattr(value, "numpy") and callable(value.numpy):
+        value = value.numpy()
+    return np.asarray(value)
+
+
 def _max_abs_error(
     left: Mapping[str, np.ndarray],
     right: Mapping[str, np.ndarray],
@@ -779,6 +1266,96 @@ def _hash_named_arrays(arrays: Mapping[str, np.ndarray]) -> str:
         h.update(arr.tobytes())
         h.update(b"\0")
     return h.hexdigest()
+
+
+def _hash_array(array: np.ndarray) -> str:
+    arr = np.ascontiguousarray(np.asarray(array, dtype="<f8"))
+    return _hash_bytes(arr.tobytes())
+
+
+def _hash_array_exact(array: np.ndarray) -> str:
+    arr = np.ascontiguousarray(np.asarray(array))
+    h = sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(b"\0")
+    h.update(json.dumps(list(arr.shape), sort_keys=True).encode("utf-8"))
+    h.update(b"\0")
+    h.update(arr.tobytes())
+    return h.hexdigest()
+
+
+def _hash_state_dict_exact(state_dict: Mapping[str, Any]) -> str:
+    h = sha256()
+    for key in sorted(str(key) for key in state_dict):
+        array = _state_value_array(state_dict[key])
+        h.update(str(key).encode("utf-8"))
+        h.update(b"\0")
+        h.update(_hash_array_exact(array).encode("utf-8"))
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def _write_deterministic_state_npz(
+    path: Path,
+    state_dict: Mapping[str, Any],
+) -> dict[str, Any]:
+    resolved = path.expanduser().resolve(strict=False)
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    state_dict_keys = sorted(str(key) for key in state_dict)
+    member_names: list[str] = []
+    with zipfile.ZipFile(
+        resolved,
+        mode="w",
+        compression=zipfile.ZIP_STORED,
+    ) as zf:
+        for key in state_dict_keys:
+            array = np.ascontiguousarray(_state_value_array(state_dict[key]))
+            buffer = io.BytesIO()
+            np.save(buffer, array, allow_pickle=False)
+            member_name = f"{key}.npy"
+            member_names.append(member_name)
+            info = zipfile.ZipInfo(member_name)
+            info.date_time = (1980, 1, 1, 0, 0, 0)
+            info.compress_type = zipfile.ZIP_STORED
+            info.external_attr = 0o600 << 16
+            zf.writestr(info, buffer.getvalue())
+    return {
+        "schema": "snerv_official_tub_source_state_dict_npz.v1",
+        "path": resolved.as_posix(),
+        "bytes": int(resolved.stat().st_size),
+        "sha256": _hash_bytes(resolved.read_bytes()),
+        "member_count": len(member_names),
+        "member_names": member_names,
+        "state_dict_keys": state_dict_keys,
+        "state_dict_sha256": _hash_state_dict_exact(state_dict),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _state_dict_value_artifact_ready(artifact: Mapping[str, Any] | None) -> bool:
+    if not isinstance(artifact, Mapping):
+        return False
+    path = Path(str(artifact.get("path") or ""))
+    try:
+        bytes_value = int(artifact.get("bytes") or 0)
+        member_count = int(artifact.get("member_count") or 0)
+    except (TypeError, ValueError):
+        return False
+    return bool(
+        str(artifact.get("path") or "").strip()
+        and path.is_file()
+        and bytes_value > 0
+        and member_count > 0
+        and len(str(artifact.get("sha256") or "")) == 64
+    )
+
+
+def _hash_weight_entries(entries: Sequence[Mapping[str, Any]]) -> str:
+    payload = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return _hash_bytes(payload)
 
 
 def _hash_bytes(data: bytes) -> str:
@@ -822,11 +1399,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--official-repo-dir", default=DEFAULT_OFFICIAL_SNERV_REPO)
     parser.add_argument("--generated-utc", default=None)
+    parser.add_argument(
+        "--train-one-step",
+        action="store_true",
+        help=(
+            "Run the deterministic one-step official SNeRV_T source fixture so "
+            "the emitted mapping is value-bearing, still false-authority."
+        ),
+    )
     parser.add_argument("--write-json", type=Path, default=None)
+    parser.add_argument("--write-state-dict-npz", type=Path, default=None)
     args = parser.parse_args(argv)
+    if args.write_state_dict_npz is not None and not args.train_one_step:
+        parser.error("--write-state-dict-npz requires --train-one-step")
 
     payload = build_snerv_official_tub_source_forward_replay_artifact(
         official_repo_dir=args.official_repo_dir,
+        train_one_step=bool(args.train_one_step),
+        output_state_dict_path=args.write_state_dict_npz,
         generated_utc=args.generated_utc,
     )
     text = json.dumps(payload, indent=2, sort_keys=True)
@@ -847,6 +1437,7 @@ __all__ = [
     "FALSE_AUTHORITY",
     "PYTORCH_WAVELETS_BLOCKER",
     "SCHEMA",
+    "STATE_VALUE_ARTIFACT_BLOCKER",
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
     "TUB_PRESERVED_BLOCKERS",
     "build_snerv_official_tub_source_forward_replay_artifact",

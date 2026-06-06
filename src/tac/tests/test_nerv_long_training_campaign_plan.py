@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
+import os
 from hashlib import sha256
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from comma_lab.scheduler.experiment_queue import load_queue_definition
@@ -48,7 +50,17 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
-    assert report["launchable_local_row_count"] == 2
+    assert report["launchable_local_row_count"] == 0
+    for entry in report["experiment_queue"]["experiments"]:
+        if entry["blocked"]:
+            assert entry["launch_steps"] == []
+            assert entry["launch_step_count"] == 0
+            assert entry["launch_authority_contract"][
+                "queue_steps_retained_as_post_unblock_handoff"
+            ] is True
+        else:
+            assert entry["launch_steps"] == entry["steps"]
+            assert entry["launch_step_count"] == len(entry["steps"])
     assert report["snerv_lf_over_ceiling_reroute_queue"]["schema"] == ("snerv_lf_over_ceiling_reroute_queue.v1")
     assert report["snerv_lf_over_ceiling_reroute_queue_row_count"] == 1
     assert report["snerv_lf_hf_replacement_queue"]["schema"] == ("snerv_lf_hf_replacement_queue.v1")
@@ -129,6 +141,22 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-ce-weight") + 1] == "0.25"
         for row in hi_rows
     )
+    assert all("--segnet-direct-live-class-balanced-squared-hinge-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-squared-hinge-weight") + 1]
+        == "0.25"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-class-region-recon-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-region-recon-weight") + 1] == "0.25"
+        for row in hi_rows
+    )
+    assert all("--pose-direct-live-distillation-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--pose-direct-live-distillation-weight") + 1] == "0.25"
+        for row in hi_rows
+    )
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
     assert all(qat_flags.issubset(set(row["command_argv"])) for row in hi_rows)
     assert all(
@@ -155,6 +183,69 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     assert snerv["command_argv"][snerv["command_argv"].index("--segnet-distillation-weight") + 1] == "1.0"
     assert snerv["command_argv"][snerv["command_argv"].index("--pose-distillation-weight") + 1] == "1.0"
+    assert snerv["command_argv"][snerv["command_argv"].index("--pose-direct-live-distillation-weight") + 1] == (
+        "0.25"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-distillation-objective") + 1] == (
+        "boundary_argmax_hinge"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-distillation-weight") + 1] == "0.25"
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-class-histogram-weight") + 1] == (
+        "0.25"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-class-balanced-hinge-weight") + 1] == (
+        "0.5"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-class-balanced-ce-weight") + 1] == (
+        "0.25"
+    )
+    assert (
+        snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-class-balanced-squared-hinge-weight") + 1]
+        == "0.25"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-class-region-recon-weight") + 1] == (
+        "0.25"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-rare-class-logit-weight") + 1] == "4"
+    assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-distribution-guard-weight") + 1] == "2"
+    assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-contrast-floor-weight") + 1] == "0.5"
+    assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-contrast-floor-segnet-min-std-ratio") + 1] == (
+        "0.6"
+    )
+    assert (
+        snerv["command_argv"][snerv["command_argv"].index("--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio") + 1]
+        == "0.6"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-shape-tether-weight") + 1] == "0.25"
+    assert snerv["command_argv"][snerv["command_argv"].index("--posenet-yuv6-geometry-tether-weight") + 1] == "0.5"
+    assert snerv["command_argv"][snerv["command_argv"].index("--posenet-temporal-signal-floor-weight") + 1] == "0.25"
+    assert (
+        snerv["command_argv"][
+            snerv["command_argv"].index(
+                "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction"
+            )
+            + 1
+        ]
+        == "1"
+    )
+    assert (
+        snerv["command_argv"][
+            snerv["command_argv"].index(
+                "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio"
+            )
+            + 1
+        ]
+        == "0.2"
+    )
+    assert (
+        snerv["command_argv"][
+            snerv["command_argv"].index(
+                "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop"
+            )
+            + 1
+        ]
+        == "0.05"
+    )
     assert "--snerv-score-aware-long-training-eval-roundtrip-ste" in snerv["command_argv"]
     assert "--snerv-score-aware-long-training-pr95-faithful-curriculum" in snerv["command_argv"]
     assert snerv["score_aware_long_training_plan"]["coder_aware_qat_bound"] is True
@@ -194,8 +285,64 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         == "0.6"
         for row in hi_rows
     )
-    assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
-    assert all(row["local_mlx_executable"] is True for row in hi_rows)
+    assert all("--scorer-input-shape-tether-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--scorer-input-shape-tether-weight") + 1] == "0.25"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-rare-class-logit-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-rare-class-logit-weight") + 1] == "16"
+        for row in hi_rows
+    )
+    assert all("--posenet-yuv6-geometry-tether-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--posenet-yuv6-geometry-tether-weight") + 1] == "0"
+        for row in hi_rows
+    )
+    assert all("--posenet-temporal-signal-floor-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--posenet-temporal-signal-floor-weight") + 1] == "0.25"
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index(
+                "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction"
+            )
+            + 1
+        ]
+        == "1"
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index(
+                "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio"
+            )
+            + 1
+        ]
+        == "0.2"
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index(
+                "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop"
+            )
+            + 1
+        ]
+        == "0.05"
+        for row in hi_rows
+    )
+    assert all(row["local_mlx_launch_command_ready"] is False for row in hi_rows)
+    assert all(row["local_mlx_executable"] is False for row in hi_rows)
+    assert all(row["family_optimal_strategy"]["family"] == "hi_nerv" for row in hi_rows)
+    assert all(
+        "decoder_weight_waterfill"
+        in row["family_optimal_strategy"]["primary_rate_actuators"]
+        for row in hi_rows
+    )
     assert all("--auto-joint-recon-pixel-weight" not in row["command_argv"] for row in hi_rows)
     assert all("--recon-pixel-weight-path" not in row["command_argv"] for row in hi_rows)
     assert all("requires_verified_joint_p18_p19_recon_pixel_weight_artifact" in row["blockers"] for row in hi_rows)
@@ -216,9 +363,35 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all(row["source_parity"]["required_blockers"] == [] for row in hi_rows)
     assert all(row["source_parity"]["score_claim"] is False for row in hi_rows)
     assert all("hi_nerv_byte_closed_archive_export_missing" in row["promotion_blockers"] for row in hi_rows)
-    assert all(row["experiment_queue_entry"]["status"] == "queued" for row in hi_rows)
+    assert all(row["experiment_queue_entry"]["status"] == "disabled" for row in hi_rows)
+    assert all(row["experiment_queue_entry"]["launch_steps"] == [] for row in hi_rows)
     assert all(
-        row["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"] == [] for row in hi_rows
+        {
+            "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
+            "hinerv_decoder_weight_waterfill_plan_missing",
+            "hinerv_trained_archive_byte_oracle_feedback_missing",
+        }.issubset(
+            set(
+                row["experiment_queue_entry"]["launch_authority_contract"][
+                    "queue_launch_blockers"
+                ]
+            )
+        )
+        for row in hi_rows
+    )
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "family_optimal_strategy_consumed"
+        ]
+        is True
+        for row in hi_rows
+    )
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "family_optimal_strategy"
+        ]["family"]
+        == "hi_nerv"
+        for row in hi_rows
     )
     assert all(
         row["experiment_queue_entry"]["launch_authority_contract"]["pr95_distortion_practices_guard"]
@@ -537,11 +710,53 @@ def test_long_training_campaign_plan_binds_pr95_baseline_identity() -> None:
     assert "pr95_contest_cpu_exact_eval_missing" in markdown
 
 
+def test_candidate_feedback_evidence_blockers_are_family_scoped() -> None:
+    hinerv_feedback = {
+        "family": "hi_nerv",
+        "sample_generalization_blockers": [
+            "snerv_scorer_tether_smoke_report_missing",
+            "small_pair_distortion_smoke_only_not_representative",
+        ],
+        "direct_feedback_blockers": [
+            "snerv_pre_long_run_candidate_feedback_not_ready",
+            "hi_nerv_receiver_cache_quality_gate_failed",
+        ],
+    }
+    assert plan_module._candidate_feedback_evidence_blockers(
+        hinerv_feedback,
+        family="hi_nerv",
+    ) == [
+        "small_pair_distortion_smoke_only_not_representative",
+        "hi_nerv_receiver_cache_quality_gate_failed",
+    ]
+
+    snerv_feedback = {
+        "family": "snerv",
+        "snerv_mlx_native_export_packet_path": "/Volumes/VertigoDataTier/pact/snerv_packet.snar",
+        "sample_generalization_blockers": [
+            "hinerv_local_scorer_input_profile_missing",
+            "full600_or_hardpair_distortion_replay_required",
+        ],
+        "direct_feedback_blockers": [
+            "hi_nerv_archive_in_loop_byte_oracle_missing",
+            "snerv_pre_long_run_candidate_feedback_not_ready",
+        ],
+    }
+    assert plan_module._candidate_feedback_evidence_blockers(
+        snerv_feedback,
+        family="snerv",
+    ) == [
+        "full600_or_hardpair_distortion_replay_required",
+        "snerv_pre_long_run_candidate_feedback_not_ready",
+    ]
+
+
 def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     assert (
-        plan_module._experiment_launch_blockers(["requires_verified_joint_p18_p19_recon_pixel_weight_artifact"]) == []
+        plan_module._experiment_launch_blockers(["requires_verified_joint_p18_p19_recon_pixel_weight_artifact"])
+        == ["requires_verified_joint_p18_p19_recon_pixel_weight_artifact"]
     )
 
     def fake_source_inventory(_: object) -> dict:
@@ -790,6 +1005,9 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     value_domain_xray = _snerv_value_domain_xray(noncollapse=True)
     residual_proof = _snerv_hf_residual_receiver_payload_proof()
     joint_codebook_proof = _snerv_joint_codebook_receiver_payload_proof()
+    spectral_allocator_proof = _snerv_spectral_band_allocator_receiver_payload_proof()
+    hyperprior_proof = _snerv_lf_latent_hyperprior_receiver_payload_proof()
+    runtime_binding_proof = _snerv_lf_hf_runtime_binding_proof()
 
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -806,6 +1024,11 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
         snerv_value_domain_xray_reports=(value_domain_xray,),
         snerv_hf_residual_receiver_payload_proofs=(residual_proof,),
         snerv_joint_codebook_receiver_payload_proofs=(joint_codebook_proof,),
+        snerv_spectral_band_allocator_receiver_payload_proofs=(
+            spectral_allocator_proof,
+        ),
+        snerv_lf_latent_hyperprior_receiver_payload_proofs=(hyperprior_proof,),
+        snerv_lf_hf_runtime_binding_proofs=(runtime_binding_proof,),
     )
 
     queue = report["snerv_lf_hf_replacement_queue"]
@@ -886,6 +1109,20 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     assert joint_state["receiver_payload_implemented"] is True
     assert joint_state["receiver_decode_proven"] is True
     assert joint_state["numpy_receiver_decode"] is True
+    spectral_state = queue["spectral_band_allocator_evidence"]
+    assert spectral_state["artifact_count"] == 1
+    assert spectral_state["score_tethered_allocation_implemented"] is True
+    assert spectral_state["section_native_byte_telemetry_present"] is True
+    hyperprior_state = queue["lf_latent_hyperprior_evidence"]
+    assert hyperprior_state["artifact_count"] == 1
+    assert hyperprior_state["entropy_model_implemented"] is True
+    assert hyperprior_state["receiver_replay_proven"] is True
+    runtime_state = queue["runtime_binding_evidence"]
+    assert runtime_state["artifact_count"] == 1
+    assert (
+        "snerv_score_tethered_lf_hf_band_allocator_runtime_binding_missing"
+        in runtime_state["closed_campaign_blockers"]
+    )
     assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in queue["blockers"]
     assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in queue["blockers"]
     assert "snerv_official_mfu_hfr_tub_export_not_bound" not in queue["blockers"]
@@ -931,8 +1168,210 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     assert "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing" not in (
         joint_row["blockers"]
     )
+    spectral_row = next(
+        row
+        for row in queue["queue_rows"]
+        if row["solution_family"] == "score_tethered_spectral_band_allocator"
+    )
+    assert (
+        "snerv_score_tethered_lf_hf_band_allocator_not_implemented"
+        not in spectral_row["blockers"]
+    )
+    assert "snerv_mfu_hfr_section_native_byte_telemetry_missing" not in (
+        spectral_row["blockers"]
+    )
+    hyperprior_row = next(
+        row
+        for row in queue["queue_rows"]
+        if row["solution_family"] == "entropy_modeled_lf_latent_hyperprior"
+    )
+    assert "snerv_lf_latent_hyperprior_not_implemented" not in (
+        hyperprior_row["blockers"]
+    )
+    assert "snerv_lf_latent_hyperprior_numpy_decoder_missing" not in (
+        hyperprior_row["blockers"]
+    )
+    assert "snerv_lf_latent_hyperprior_receiver_replay_missing" not in (
+        hyperprior_row["blockers"]
+    )
+    assert "snerv_lf_latent_hyperprior_runtime_binding_missing" not in (
+        hyperprior_row["blockers"]
+    )
     assert queue["score_claim"] is False
     assert queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blockers(
+    tmp_path: Path,
+) -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    state_dict_path = _write_official_state_dict_npz(tmp_path)
+    stale_blockers = [
+        "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping",
+        "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+        "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+    ]
+    feedback = _snerv_scorer_input_distribution_guard_feedback_row()
+    feedback.update(
+        {
+            "candidate_id": candidate["candidate_id"],
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 600,
+            "scope_matches_candidate": True,
+            "blockers": list(stale_blockers),
+            "snerv_mlx_native_export_blockers": list(stale_blockers),
+            "snerv_official_trained_checkpoint_mapping_blockers": list(stale_blockers),
+        }
+    )
+    source_forward = _snerv_source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+        trained_checkpoint_loaded=True,
+        state_dict_path=state_dict_path,
+    )
+    mapping = dict(source_forward["official_trained_checkpoint_mapping_manifest"])
+    mapping.update(
+        {
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_tub_temporal_encoder_weight_mapping_proven": True,
+            "official_tub_output2_decoder_weight_mapping_proven": True,
+            "closed_campaign_blockers": list(stale_blockers),
+            "blockers": [],
+        }
+    )
+    source_forward.update(
+        {
+            "source_forward_replay_authority": True,
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_tub_temporal_encoder_weight_mapping_proven": True,
+            "official_tub_output2_decoder_weight_mapping_proven": True,
+            "official_trained_checkpoint_mapping_manifest": mapping,
+            "blockers": [],
+        }
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        candidate_feedback_sources=(feedback,),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_official_source_forward_artifacts=(source_forward,),
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    row_blockers = set(snerv_row["blockers"])
+    queue_launch_blockers = set(
+        snerv_row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_launch_blockers"
+        ]
+    )
+    feedback_row = snerv_row["candidate_feedback"]
+    assert not row_blockers.intersection(stale_blockers)
+    assert not queue_launch_blockers.intersection(stale_blockers)
+    assert not set(feedback_row["blockers"]).intersection(stale_blockers)
+    assert not set(feedback_row["snerv_mlx_native_export_blockers"]).intersection(
+        stale_blockers
+    )
+    assert not set(
+        feedback_row["snerv_official_trained_checkpoint_mapping_blockers"]
+    ).intersection(stale_blockers)
+    assert set(
+        feedback_row["snerv_official_source_forward_superseded_feedback_blockers"]
+    ) == set(stale_blockers)
+    split = snerv_row["snerv_official_runtime_authority_split"]
+    assert split["source_forward_replay_authority"] is True
+    assert not set(split["blockers"]).intersection(stale_blockers)
+
+
+def test_campaign_plan_does_not_promote_metadata_only_source_authority() -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    stale_blockers = [
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+    ]
+    feedback = _snerv_scorer_input_distribution_guard_feedback_row()
+    feedback.update(
+        {
+            "candidate_id": candidate["candidate_id"],
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 600,
+            "scope_matches_candidate": True,
+            "blockers": list(stale_blockers),
+            "snerv_mlx_native_export_blockers": list(stale_blockers),
+            "snerv_official_trained_checkpoint_mapping_blockers": list(stale_blockers),
+        }
+    )
+    source_forward = _snerv_source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+        trained_checkpoint_loaded=True,
+    )
+    mapping = dict(source_forward["official_trained_checkpoint_mapping_manifest"])
+    mapping.update(
+        {
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_tub_temporal_encoder_weight_mapping_proven": True,
+            "official_tub_output2_decoder_weight_mapping_proven": True,
+            "closed_campaign_blockers": [],
+            "blockers": [],
+        }
+    )
+    source_forward.update(
+        {
+            "source_forward_replay_authority": True,
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_tub_temporal_encoder_weight_mapping_proven": True,
+            "official_tub_output2_decoder_weight_mapping_proven": True,
+            "official_trained_checkpoint_mapping_manifest": mapping,
+            "blockers": [],
+        }
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        candidate_feedback_sources=(feedback,),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_official_source_forward_artifacts=(source_forward,),
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    split = snerv_row["snerv_official_runtime_authority_split"]
+    row_blockers = set(snerv_row["blockers"])
+    assert split["source_forward_replay_authority"] is False
+    assert split["full_source_forward_authority_proven"] is False
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in row_blockers
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in row_blockers
+    assert (
+        "snerv_official_trained_checkpoint_state_dict_value_artifact_missing"
+        in row_blockers
+    )
 
 
 def test_campaign_plan_auto_discovers_candidate_byte_feedback_guard_split(
@@ -947,6 +1386,257 @@ def test_campaign_plan_auto_discovers_candidate_byte_feedback_guard_split(
     discovered = cli._discover_candidate_feedback_paths([tmp_path], limit=4)
 
     assert discovered == [feedback.resolve(strict=False)]
+
+
+def test_campaign_plan_candidate_feedback_discovery_is_family_balanced(
+    tmp_path: Path,
+) -> None:
+    snerv_feedback = tmp_path / "snerv_old_candidate_byte_feedback_row.json"
+    snerv_feedback.write_text(
+        json.dumps(_snerv_scorer_input_distribution_guard_feedback_row()),
+        encoding="utf-8",
+    )
+    os.utime(snerv_feedback, (1_000.0, 1_000.0))
+    newer_snerv_fail = tmp_path / "snerv_new_failed_candidate_byte_feedback_row.json"
+    snerv_failed_payload = _snerv_scorer_input_distribution_guard_feedback_row()
+    snerv_failed_payload["snerv_scorer_input_distribution_guard_proof_passed"] = False
+    snerv_failed_payload["snerv_scorer_input_distribution_guard_proof"] = {
+        "schema": "snerv_scorer_input_distribution_guard_proof.v1",
+        "passed": False,
+        "blockers": ["snerv_scorer_input_distribution_guard_metric_missing"],
+    }
+    newer_snerv_fail.write_text(json.dumps(snerv_failed_payload), encoding="utf-8")
+    os.utime(newer_snerv_fail, (3_000.0, 3_000.0))
+    for index in range(8):
+        path = tmp_path / f"hinerv_new_{index}_candidate_byte_feedback_row.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "schema": "nerv_candidate_feedback_row.v1",
+                    "family": "hi_nerv",
+                    "created_utc": f"2026-06-05T01:00:0{index}+00:00",
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+        os.utime(path, (2_000.0 + index, 2_000.0 + index))
+
+    discovered = cli._discover_candidate_feedback_paths([tmp_path], limit=4)
+    discovered_names = {path.name for path in discovered}
+
+    assert snerv_feedback.resolve(strict=False) in discovered
+    assert any(name.startswith("hinerv_new_") for name in discovered_names)
+    assert len(discovered) == 4
+
+
+def test_snerv_bounded_candidate_feedback_clears_tether_and_guard_only() -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    feedback = _snerv_scorer_input_distribution_guard_feedback_row()
+    feedback.update(
+        {
+            "candidate_id": candidate["candidate_id"],
+            "feedback_kind": "score_aware_training_telemetry",
+            "feedback_scope": "bounded_score_aware_training_telemetry",
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 16,
+            "scope_matches_candidate": False,
+            "feedback_ready": True,
+            "snerv_score_aware_long_training_telemetry_contract": {
+                "schema": "snerv_recovered_interrupted_long_training_telemetry_contract.v1",
+                "passed": True,
+                "last_epoch": 2,
+                "row_count": 3,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "sample_generalization_blockers": [
+                "small_pair_distortion_smoke_only_not_representative",
+                "full600_or_hardpair_distortion_replay_required",
+            ],
+            "snerv_renderer_nondegenerate_blockers": [
+                "snerv_renderer_nondegenerate_smoke_min16_pairs_missing",
+                "snerv_renderer_nondegenerate_receiver_reconstruction_not_verified",
+            ],
+            "snerv_renderer_nondegenerate_proof": {
+                "schema": "snerv_renderer_nondegenerate_proof.v1",
+                "passed": False,
+                "measured_num_pairs": 16,
+                "min_pair_count": 16,
+                "blockers": [
+                    "snerv_renderer_nondegenerate_smoke_min16_pairs_missing",
+                    "snerv_renderer_nondegenerate_receiver_reconstruction_not_verified",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        }
+    )
+    partial_advisory = dict(feedback)
+    partial_advisory.update(
+        {
+            "created_utc": "2026-06-05T18:12:53+00:00",
+            "feedback_scope": "partial_pair_advisory",
+            "measured_num_pairs": 2,
+            "feedback_ready": False,
+            "source_report_path": (
+                "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/"
+                "snerv_official_snar2_zero_mfu_smoke_20260605Tcodex/"
+                "snerv_2pair_1epoch_official_channelmean_snar2_zero_mfu/"
+                "compact_renderer_mlx_spine_runner_report.json"
+            ),
+        }
+    )
+    older_bounded = dict(feedback)
+    older_bounded.update(
+        {
+            "created_utc": "2026-06-05T18:12:08+00:00",
+            "source_report_path": (
+                "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/"
+                "snerv_bounded_channelmean_v27_forced_qat_20260605Tcodex/"
+                "snerv_candidate/compact_renderer_mlx_spine_runner_report.json"
+            ),
+            "snerv_score_aware_long_training_telemetry_contract": {
+                "schema": "snerv_recovered_interrupted_long_training_telemetry_contract.v1",
+                "passed": True,
+                "last_epoch": 1,
+                "row_count": 2,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        }
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(older_bounded, partial_advisory, feedback),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    blockers = set(snerv["blockers"])
+    assert snerv["candidate_feedback"]["candidate_id"] == candidate["candidate_id"]
+    assert snerv["candidate_feedback"]["feedback_scope"] == (
+        "bounded_score_aware_training_telemetry"
+    )
+    assert snerv["candidate_feedback"]["measured_num_pairs"] == 16
+    assert (
+        snerv["candidate_feedback"][
+            "snerv_score_aware_long_training_telemetry_contract"
+        ]["last_epoch"]
+        == 2
+    )
+    assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert "snerv_scorer_tether_smoke_report_missing" not in blockers
+    assert "snerv_scorer_input_distribution_guard_missing" not in blockers
+    assert "small_pair_distortion_smoke_only_not_representative" in blockers
+    assert "full600_or_hardpair_distortion_replay_required" in blockers
+    assert "snerv_renderer_nondegenerate_receiver_reconstruction_not_verified" in blockers
+    assert snerv["local_mlx_launch_command_ready"] is False
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert queue_contract["queue_status_is_runnable_plan"] is False
+    assert "snerv_scorer_tether_smoke_report_missing" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert "snerv_scorer_input_distribution_guard_missing" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+
+
+def test_snerv_candidate_feedback_prefers_nondegenerate_proof_over_progress() -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    stale_progress = _snerv_scorer_input_distribution_guard_feedback_row()
+    stale_progress.update(
+        {
+            "candidate_id": candidate["candidate_id"],
+            "feedback_scope": "bounded_score_aware_training_telemetry",
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 16,
+            "scope_matches_candidate": False,
+            "feedback_ready": True,
+            "snerv_score_aware_long_training_telemetry_contract": {
+                "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+                "passed": True,
+                "last_epoch": 2,
+                "row_count": 3,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "direct_feedback_blockers": [],
+            "snerv_renderer_nondegenerate_proof": {
+                "schema": "snerv_renderer_nondegenerate_proof.v1",
+                "passed": False,
+                "measured_num_pairs": 16,
+                "min_pair_count": 16,
+                "blockers": ["snerv_renderer_nondegenerate_smoke_failed"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        }
+    )
+    clean_proof = dict(stale_progress)
+    clean_proof.update(
+        {
+            "feedback_scope": "partial_pair_advisory",
+            "feedback_ready": False,
+            "snerv_score_aware_long_training_telemetry_contract": {
+                "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+                "passed": True,
+                "last_epoch": 0,
+                "row_count": 1,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "snerv_renderer_nondegenerate_proof_passed": True,
+            "snerv_renderer_nondegenerate_blockers": [],
+            "snerv_renderer_nondegenerate_proof": {
+                "schema": "snerv_renderer_nondegenerate_proof.v1",
+                "passed": True,
+                "measured_num_pairs": 16,
+                "min_pair_count": 16,
+                "scorer_tether_gate_passed": True,
+                "telemetry_contract_passed": True,
+                "receiver_reconstruction_verified": True,
+                "target_value_domain_passed": True,
+                "export_value_domain_passed": True,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        }
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(stale_progress, clean_proof),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["candidate_feedback"]["feedback_scope"] == "partial_pair_advisory"
+    assert (
+        snerv["candidate_feedback"]["snerv_renderer_nondegenerate_proof"]["passed"]
+        is True
+    )
+    assert snerv["snerv_renderer_nondegenerate_gate"]["passed"] is True
+    assert "snerv_renderer_nondegenerate_smoke_failed" not in snerv["blockers"]
 
 
 def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:
@@ -1621,7 +2311,7 @@ def test_long_training_campaign_plan_consumes_snerv_header_minimization_result()
     reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
     rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
     result = rows_by_type["snar_header_minimization_result"]
-    assert report["launchable_local_row_count"] == 1
+    assert report["launchable_local_row_count"] == 0
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
     assert reroute_queue["snar_header_minimization_report_count"] == 1
     assert result["blocked"] is True
@@ -3603,6 +4293,46 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     assert snerv["execution_epochs"] == 29_650
 
 
+def test_long_training_campaign_plan_raw_snerv_native_export_uses_nested_qat_truth() -> None:
+    row = plan_module._normalize_candidate_feedback_source(
+        {
+            "schema": "unit_raw_snerv_runner.v1",
+            "family": "snerv",
+            "candidate_id": _snerv_candidate_id(),
+            "native_mlx_scorer_loop_qat_attached": True,
+            "native_mlx_scorer_loop_qat_receiver_contract_satisfied": True,
+            "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate": True,
+            "native_mlx_scorer_loop_qat_accepted_improvement": True,
+            "native_mlx_scorer_loop_qat_best_materialized": True,
+            "snerv_mlx_native_export": {
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "native_mlx_full600_campaign_ready": True,
+                "scorer_loop_qat_attached": True,
+                "scorer_loop_qat_receiver_contract_satisfied": True,
+                "scorer_loop_qat_ready_for_pose_guard_gate": True,
+                "scorer_loop_qat_accepted_improvement": True,
+                "scorer_loop_qat_best_materialized": True,
+                "scorer_loop_qat": {
+                    "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+                    "executed": False,
+                    "receiver_contract_satisfied": False,
+                    "ready_for_pose_guard_gate": False,
+                    "accepted_improvement": False,
+                    "best_packet_materialized": True,
+                    "emitted_packet_uses_scorer_loop_best_decoder": False,
+                },
+            },
+        }
+    )
+
+    assert row["native_mlx_scorer_loop_qat_attached"] is False
+    assert row["native_mlx_scorer_loop_qat_receiver_contract_satisfied"] is False
+    assert row["native_mlx_scorer_loop_qat_ready_for_pose_guard_gate"] is False
+    assert row["native_mlx_scorer_loop_qat_accepted_improvement"] is False
+    assert row["native_mlx_scorer_loop_qat_best_materialized"] is False
+
+
 def test_long_training_campaign_plan_consumes_hinerv_archive_ladder_feedback(
     tmp_path: Path,
 ) -> None:
@@ -4653,6 +5383,118 @@ def test_long_training_campaign_plan_requires_byte_closed_snerv_pre_long_run_fee
     assert "snerv_pre_long_run_feedback_custody_paths_missing" not in passed["blockers"]
 
 
+def test_long_training_campaign_queue_exposes_snerv_pre_long_full_video_handoff(
+    tmp_path: Path,
+) -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.update(
+        {
+            "nominal_total_payload_bytes": 120_000,
+            "nominal_under_ceiling": True,
+        }
+    )
+    renderer_proof = {
+        "schema": "snerv_renderer_nondegenerate_proof.v1",
+        "min_pair_count": 16,
+        "measured_num_pairs": 16,
+        "scorer_tether_gate_passed": True,
+        "telemetry_contract_passed": True,
+        "receiver_reconstruction_verified": True,
+        "target_value_domain_passed": True,
+        "export_value_domain_passed": True,
+        "official_skip_high_value_domain_passed": True,
+        "passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "snerv",
+                "candidate_id": candidate["candidate_id"],
+                "feedback_kind": "score_aware_training_telemetry",
+                "feedback_scope": "partial_pair_training_telemetry",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 16,
+                "scope_matches_candidate": False,
+                "feedback_ready": False,
+                "snerv_renderer_nondegenerate_proof": renderer_proof,
+                "snerv_renderer_nondegenerate_proof_passed": True,
+                "snerv_renderer_nondegenerate_blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    entry = snerv["experiment_queue_entry"]
+    assert entry["status"] == "disabled"
+    assert entry["blocked"] is True
+    assert entry["launch_steps"] == []
+    assert entry["launch_step_count"] == 0
+    assert entry["launch_authority_contract"]["queue_launch_step_count"] == 0
+    assert entry["steps"][0]["id"] == (
+        "materialize_snerv_full600_prefilter_feedback_before_long_run"
+    )
+    assert entry["steps"][1]["id"] == "run_mlx_first_campaign_row"
+    handoff = entry["steps"][0]
+    assert handoff["schema"] == "snerv_pre_long_run_evidence_handoff_step.v1"
+    assert handoff["candidate_id"] == candidate["candidate_id"]
+    assert handoff["score_claim"] is False
+    assert handoff["ready_for_exact_eval_dispatch"] is False
+    assert handoff["full600_materialization_command"] == snerv["command_argv"]
+    assert (
+        "snerv_pre_long_run_full_video_mlx_scorer_response_missing"
+        in handoff["blockers"]
+    )
+    assert "snerv_pre_long_run_native_full600_export_not_ready" in handoff["blockers"]
+    expected = handoff["expected_artifacts"]
+    assert expected["archive_export_json"].endswith(
+        "snerv_mlx_native_export/native_train_export/snerv_mlx_native_train_export.json"
+    )
+    assert expected["full_video_mlx_response"].endswith(
+        "snerv_mlx_native_export/native_train_export/local_mlx_prefilter/"
+        "local_mlx_prefilter_profile.json"
+    )
+    assert expected["candidate_feedback_row"].endswith(
+        "full_video_mlx_feedback/nerv_full_video_mlx_scorer_feedback_row.json"
+    )
+    harvest = handoff["harvest_command"]
+    assert harvest[:8] == [
+        "uv",
+        "run",
+        "--extra",
+        "dev",
+        "--extra",
+        "runtime",
+        "--extra",
+        "mlx",
+    ]
+    assert "tools/harvest_nerv_full_video_mlx_feedback.py" in harvest
+    assert harvest[harvest.index("--candidate-id") + 1] == candidate["candidate_id"]
+    assert harvest[harvest.index("--family") + 1] == "snerv"
+    assert harvest[harvest.index("--hard-byte-ceiling") + 1] == "178000"
+    assert handoff["next_planner_input_flag"] == "--candidate-feedback-row"
+    assert (
+        entry["metadata"]["snerv_pre_long_run_evidence_handoff"]["expected_artifacts"]
+        == expected
+    )
+
+
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -5187,9 +6029,11 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     packet_path = tmp_path / "packet.snar1"
     archive_path = tmp_path / "archive.zip"
     proof_path = tmp_path / "receiver_proof.json"
+    state_slice_path = tmp_path / "official_trained_checkpoint_state_dict_slice.npz"
     report_path.write_text('{"schema":"snerv_mlx_native_train_export.v1"}', encoding="utf-8")
     packet_path.write_bytes(b"SNAR1 packet bytes")
     archive_path.write_bytes(b"archive bytes")
+    state_slice_path.write_bytes(b"checkpoint state slice")
     proof_path.write_text(
         json.dumps(
             {
@@ -5263,6 +6107,21 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
             "schema": "snerv_official_checkpoint_export_binding.v1",
             "trained_state_exportable": True,
             "official_trained_state_exportable": True,
+            "official_trained_checkpoint_state_dict_slice_present": True,
+            "official_trained_checkpoint_state_dict_slice_path": (
+                state_slice_path.as_posix()
+            ),
+            "official_trained_checkpoint_state_dict_slice_bytes": (
+                state_slice_path.stat().st_size
+            ),
+            "official_trained_checkpoint_state_dict_slice_sha256": "b" * 64,
+            "official_trained_checkpoint_state_dict_slice_member_count": 1,
+            "official_trained_checkpoint_state_dict_slice_member_names": [
+                "decoder.layers.0.weight"
+            ],
+            "official_trained_checkpoint_state_dict_slice_runner_arg": (
+                "--snerv-official-trained-checkpoint-state-dict-path"
+            ),
             "official_trained_checkpoint_mapping_manifest": {
                 "schema": ("snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"),
                 "official_trained_checkpoint_loaded": False,
@@ -5297,6 +6156,13 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert feedback["snerv_official_mfu_hfr_tub_source_forward_replay_authority"] is False
     assert feedback["snerv_official_trained_checkpoint_loaded"] is False
     assert feedback["snerv_official_trained_checkpoint_state_dict_mapping_verified"] is False
+    assert feedback["snerv_official_trained_checkpoint_state_dict_path"] == (
+        state_slice_path.resolve(strict=False).as_posix()
+    )
+    assert feedback["snerv_official_trained_checkpoint_state_dict_slice_file_present"] is True
+    assert feedback["snerv_official_trained_checkpoint_state_dict_slice_bytes"] == (
+        state_slice_path.stat().st_size
+    )
     assert feedback["snerv_trained_state_exportable"] is True
     assert feedback["snerv_checkpoint_trained_state_exportable"] is True
     assert feedback["snerv_score_aware_long_training_trained_state_exportable"] is True
@@ -5322,6 +6188,13 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing" in official_split["blockers"]
     checkpoint_mapping = snerv["snerv_official_trained_checkpoint_mapping"]
     assert checkpoint_mapping["official_trained_checkpoint_loaded"] is False
+    command = snerv["command_argv"]
+    flag_index = command.index("--snerv-official-trained-checkpoint-state-dict-path")
+    assert command[flag_index + 1] == state_slice_path.resolve(strict=False).as_posix()
+    assert snerv["snerv_official_trained_checkpoint_state_dict_path_consumed_by_command"] is True
+    assert snerv["snerv_official_trained_checkpoint_state_dict_path_from_feedback"] == (
+        state_slice_path.resolve(strict=False).as_posix()
+    )
     assert training_plan["native_mlx_train_export_planned"] is True
     assert training_plan["native_mlx_train_export_verified"] is True
     assert training_plan["native_mlx_scorer_loop_qat_planned"] is True
@@ -5337,6 +6210,101 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in snerv["blockers"]
     assert "snerv_full_video_local_prefilter_missing" in snerv["blockers"]
     assert "snerv_local_cpu_replay_gate_missing" in snerv["blockers"]
+    assert snerv["score_claim"] is False
+    assert snerv["ready_for_exact_eval_dispatch"] is False
+
+
+def test_long_training_campaign_plan_binds_state_slice_from_modelsize_byte_feedback(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "snerv_checkpoint_archive_export.json"
+    packet_path = tmp_path / "snerv_checkpoint_packet.bin"
+    archive_path = tmp_path / "archive.zip"
+    proof_path = tmp_path / "receiver_proof.json"
+    state_slice_path = tmp_path / "official_trained_checkpoint_state_dict_slice.npz"
+    packet_path.write_bytes(b"SNAR1 packet bytes")
+    archive_path.write_bytes(b"archive bytes")
+    proof_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_ready": True,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    state_slice_path.write_bytes(b"checkpoint state slice")
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "candidate_id": _snerv_candidate_id(),
+                "num_pairs": 600,
+                "archive_bytes": archive_path.stat().st_size,
+                "archive_path": archive_path.as_posix(),
+                "archive_sha256": _sha256(archive_path),
+                "packet_bytes": packet_path.stat().st_size,
+                "packet_path": packet_path.as_posix(),
+                "packet_sha256": _sha256(packet_path),
+                "receiver_proof_path": proof_path.as_posix(),
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "report_path": report_path.as_posix(),
+                "decoder_codec": "int4_symmetric",
+                "modelsize_candidate": _snerv_budget()["selected_candidates"][0],
+                "official_checkpoint_export_binding": {
+                    "schema": "snerv_official_checkpoint_export_binding.v1",
+                    "official_trained_checkpoint_state_dict_slice_present": True,
+                    "official_trained_checkpoint_state_dict_slice_path": (
+                        state_slice_path.as_posix()
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_bytes": (
+                        state_slice_path.stat().st_size
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_sha256": "c" * 64,
+                    "official_trained_checkpoint_state_dict_slice_member_count": 1,
+                    "official_trained_checkpoint_state_dict_slice_member_names": [
+                        "decoder.layers.0.weight"
+                    ],
+                    "official_trained_checkpoint_state_dict_slice_runner_arg": (
+                        "--snerv-official-trained-checkpoint-state-dict-path"
+                    ),
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=8,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(report_path.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    feedback = snerv["candidate_feedback"]
+    assert feedback["byte_feedback_source"] == "modelsize_byte_cap_receiver_proof"
+    assert feedback["native_mlx_full600_campaign_ready"] is True
+    assert feedback["snerv_official_trained_checkpoint_state_dict_path"] == (
+        state_slice_path.resolve(strict=False).as_posix()
+    )
+    command = snerv["command_argv"]
+    flag_index = command.index("--snerv-official-trained-checkpoint-state-dict-path")
+    assert command[flag_index + 1] == state_slice_path.resolve(strict=False).as_posix()
+    assert snerv["snerv_official_trained_checkpoint_state_dict_path_consumed_by_command"] is True
+    assert snerv["snerv_official_trained_checkpoint_state_dict_path_from_feedback"] == (
+        state_slice_path.resolve(strict=False).as_posix()
+    )
+    assert "--modelsize-byte-cap-feedback-json" in command
+    assert report_path.as_posix() in command
     assert snerv["score_claim"] is False
     assert snerv["ready_for_exact_eval_dispatch"] is False
 
@@ -5601,6 +6569,9 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     snerv_tether_smoke = tmp_path / "snerv_scorer_tether_smoke.json"
     snerv_hf_residual_proof = tmp_path / "snerv_hf_residual_proof.json"
     snerv_joint_codebook_proof = tmp_path / "snerv_joint_codebook_proof.json"
+    snerv_spectral_allocator_proof = tmp_path / "snerv_spectral_allocator_proof.json"
+    snerv_lf_hyperprior_proof = tmp_path / "snerv_lf_hyperprior_proof.json"
+    snerv_lf_hf_runtime_binding_proof = tmp_path / "snerv_lf_hf_runtime_binding.json"
     proof_path = _receiver_proof(tmp_path, archive_sha="a" * 64)
     cache_quality_path = _receiver_cache_quality_report(tmp_path, passed=True)
     hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
@@ -5675,6 +6646,24 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
         json.dumps(_snerv_joint_codebook_receiver_payload_proof(), sort_keys=True),
         encoding="utf-8",
     )
+    snerv_spectral_allocator_proof.write_text(
+        json.dumps(
+            _snerv_spectral_band_allocator_receiver_payload_proof(),
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    snerv_lf_hyperprior_proof.write_text(
+        json.dumps(
+            _snerv_lf_latent_hyperprior_receiver_payload_proof(),
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    snerv_lf_hf_runtime_binding_proof.write_text(
+        json.dumps(_snerv_lf_hf_runtime_binding_proof(), sort_keys=True),
+        encoding="utf-8",
+    )
 
     rc = cli.main(
         [
@@ -5699,6 +6688,12 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(snerv_hf_residual_proof),
             "--snerv-joint-codebook-receiver-payload-proof",
             str(snerv_joint_codebook_proof),
+            "--snerv-spectral-band-allocator-receiver-payload-proof",
+            str(snerv_spectral_allocator_proof),
+            "--snerv-lf-latent-hyperprior-receiver-payload-proof",
+            str(snerv_lf_hyperprior_proof),
+            "--snerv-lf-hf-runtime-binding-proof",
+            str(snerv_lf_hf_runtime_binding_proof),
             "--epochs",
             "16",
             "--output-json",
@@ -5749,6 +6744,17 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert payload["snerv_lf_hf_replacement_queue"]["joint_codebook_evidence"][
         "source_path"
     ] == snerv_joint_codebook_proof.resolve(strict=False).as_posix()
+    assert payload["snerv_lf_hf_replacement_queue"][
+        "spectral_band_allocator_evidence"
+    ]["source_path"] == snerv_spectral_allocator_proof.resolve(strict=False).as_posix()
+    assert payload["snerv_lf_hf_replacement_queue"][
+        "lf_latent_hyperprior_evidence"
+    ]["source_path"] == snerv_lf_hyperprior_proof.resolve(strict=False).as_posix()
+    assert payload["snerv_lf_hf_replacement_queue"][
+        "runtime_binding_evidence"
+    ]["source_path"] == (
+        snerv_lf_hf_runtime_binding_proof.resolve(strict=False).as_posix()
+    )
     assert payload["snerv_lf_hf_replacement_queue_row_count"] > 0
     assert payload["experiment_queue_id"] == (f"nerv_long_training_campaign_{out_json.stem}.v1")
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
@@ -6639,6 +7645,7 @@ def _snerv_source_forward_artifact(
     source_authority: bool,
     full_tub_parity: bool,
     trained_checkpoint_loaded: bool = False,
+    state_dict_path: Path | None = None,
 ) -> dict:
     blockers = []
     if not receiver_consumes_output2:
@@ -6650,6 +7657,48 @@ def _snerv_source_forward_artifact(
                 "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
             ]
         )
+    state_dict_sha256 = (
+        _sha256(state_dict_path)
+        if state_dict_path is not None and state_dict_path.is_file()
+        else None
+    )
+    state_dict_section = {
+        "official_trained_checkpoint_state_dict_path": (
+            None if state_dict_path is None else state_dict_path.as_posix()
+        ),
+        "official_trained_checkpoint_state_dict_slice_path": (
+            None if state_dict_path is None else state_dict_path.as_posix()
+        ),
+        "official_trained_checkpoint_state_dict_slice_present": (
+            state_dict_path is not None
+        ),
+        "official_trained_checkpoint_state_dict_slice_file_present": (
+            state_dict_path is not None and state_dict_path.is_file()
+        ),
+        "official_trained_checkpoint_state_dict_slice_bytes": (
+            None
+            if state_dict_path is None or not state_dict_path.is_file()
+            else state_dict_path.stat().st_size
+        ),
+        "official_trained_checkpoint_state_dict_slice_sha256": state_dict_sha256,
+        "official_trained_checkpoint_state_dict_slice_member_count": (
+            None if state_dict_path is None else 3
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_names": (
+            []
+            if state_dict_path is None
+            else [
+                "encoder.1.weight.npy",
+                "encoder.2.weight.npy",
+                "decoder.4.weight.npy",
+            ]
+        ),
+        "official_trained_checkpoint_state_dict_slice_runner_arg": (
+            None
+            if state_dict_path is None
+            else "--snerv-official-trained-checkpoint-state-dict-path"
+        ),
+    }
     return {
         "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
         "generated_utc": "20260605T000000Z",
@@ -6682,6 +7731,7 @@ def _snerv_source_forward_artifact(
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
         "official_tub_temporal_encoder_weight_mapping_proven": False,
         "official_trained_checkpoint_state_dict_mapping_verified": False,
+        **state_dict_section,
         "official_trained_checkpoint_mapping_manifest": (
             {
                 "schema": "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1",
@@ -6696,6 +7746,7 @@ def _snerv_source_forward_artifact(
                 "closed_campaign_blockers": [
                     "snerv_official_trained_checkpoint_state_dict_not_loaded"
                 ],
+                **state_dict_section,
                 "blockers": [
                     "snerv_official_trained_checkpoint_decoder_len_not_resolved",
                     "snerv_official_trained_checkpoint_source_forward_replay_missing",
@@ -6850,6 +7901,104 @@ def _snerv_joint_codebook_receiver_payload_proof() -> dict:
             "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
         ],
         "blockers": ["snerv_joint_lf_hf_factorized_codebook_false_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_spectral_band_allocator_receiver_payload_proof() -> dict:
+    return {
+        "schema": "snerv_score_tethered_spectral_band_allocator_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": (
+            "/Volumes/VertigoDataTier/pact/snerv_spectral_allocator_proof.json"
+        ),
+        "_source_sha256": "6" * 64,
+        "packet_path": "/Volumes/VertigoDataTier/pact/snerv_packet.bin",
+        "source_packet_sha256": "1" * 64,
+        "payload_path": "/Volumes/VertigoDataTier/pact/snerv_spectral_allocator.ssba",
+        "payload_bytes": 128,
+        "payload_sha256": "7" * 64,
+        "allocation_table_raw_bytes": 48,
+        "allocation_band_count": 4,
+        "allocation_budget_units": 255,
+        "sample_shape_b2chw": [2, 2, 3, 16, 24],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "numpy_receiver_decode": True,
+        "score_tethered_allocation_implemented": True,
+        "section_native_byte_telemetry_present": True,
+        "human_readable_payload_labels": False,
+        "closed_campaign_blockers": [
+            "snerv_score_tethered_lf_hf_band_allocator_not_implemented",
+            "snerv_mfu_hfr_section_native_byte_telemetry_missing",
+        ],
+        "blockers": ["snerv_score_tethered_spectral_band_allocator_false_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_lf_latent_hyperprior_receiver_payload_proof() -> dict:
+    return {
+        "schema": "snerv_lf_latent_hyperprior_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": (
+            "/Volumes/VertigoDataTier/pact/snerv_lf_latent_hyperprior_proof.json"
+        ),
+        "_source_sha256": "8" * 64,
+        "packet_path": "/Volumes/VertigoDataTier/pact/snerv_packet.bin",
+        "source_packet_sha256": "1" * 64,
+        "payload_path": "/Volumes/VertigoDataTier/pact/snerv_lf_latent_hyperprior.slhp",
+        "payload_bytes": 192,
+        "payload_sha256": "9" * 64,
+        "mean_raw_bytes": 24,
+        "scale_raw_bytes": 24,
+        "latent_symbol_raw_bytes": 576,
+        "compressed_payload_bytes": 120,
+        "estimated_entropy_bits": 256.0,
+        "sample_shape_b2chw": [2, 2, 3, 16, 24],
+        "lf_shape_b2chw": [2, 2, 3, 4, 6],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "numpy_receiver_decode": True,
+        "entropy_model_implemented": True,
+        "hyperprior_scale_present": True,
+        "receiver_replay_proven": True,
+        "section_native_byte_telemetry_present": True,
+        "human_readable_payload_labels": False,
+        "closed_campaign_blockers": [
+            "snerv_lf_latent_hyperprior_not_implemented",
+            "snerv_lf_latent_hyperprior_numpy_decoder_missing",
+            "snerv_lf_latent_hyperprior_receiver_replay_missing",
+        ],
+        "blockers": ["snerv_lf_latent_hyperprior_payload_false_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_lf_hf_runtime_binding_proof() -> dict:
+    return {
+        "schema": "snerv_lf_hf_runtime_binding_proof.v1",
+        "generated_utc": "2026-06-06T00:00:00+00:00",
+        "_source_path": (
+            "/Volumes/VertigoDataTier/pact/snerv_lf_hf_runtime_binding.json"
+        ),
+        "_source_sha256": "a" * 64,
+        "runtime_binding_row_count": 2,
+        "runtime_bound_solution_families": [
+            "score_tethered_spectral_band_allocator",
+            "entropy_modeled_lf_latent_hyperprior",
+        ],
+        "closed_campaign_blockers": [
+            "snerv_score_tethered_lf_hf_band_allocator_runtime_binding_missing",
+            "snerv_lf_latent_hyperprior_runtime_binding_missing",
+        ],
+        "blockers": [],
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -7407,6 +8556,19 @@ def _pr95_baseline_identity() -> dict:
 
 def _sha256(path: Path) -> str:
     return sha256(path.read_bytes()).hexdigest()
+
+
+def _write_official_state_dict_npz(tmp_path: Path) -> Path:
+    path = tmp_path / "official_snerv_t_state_dict.npz"
+    np.savez(
+        path,
+        **{
+            "encoder.1.weight": np.zeros((1,), dtype=np.float32),
+            "encoder.2.weight": np.zeros((1,), dtype=np.float32),
+            "decoder.4.weight": np.zeros((1,), dtype=np.float32),
+        },
+    )
+    return path
 
 
 def _receiver_proof(root: Path, *, archive_sha: str = "a" * 64) -> Path:

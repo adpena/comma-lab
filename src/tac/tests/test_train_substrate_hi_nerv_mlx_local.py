@@ -22,12 +22,14 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     TRAINER_SCHEMA,
     HiNervTrainTimeControlConfig,
     _apply_train_time_decoder_controls,
+    _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact,
     _build_hi_nerv_train_time_section_byte_metrics_callback,
     _build_hinerv_hard_byte_ceiling_control,
     _build_hinerv_short_scorer_smoke_readiness_report,
     _build_parser,
     _build_staged_scorer_curriculum,
     _build_train_time_decoder_mutation_identity,
+    _checkpoint_retention_keep_last_n_from_args,
     _coder_qat_config_from_args,
     _config_from_args,
     _configure_decoder_fake_quant_forward,
@@ -58,6 +60,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _smoke_main,
     _train_time_control_config_from_args,
     _train_time_dual_ascent_config_from_args,
+    _validate_shared_harness_train_time_actuator_args,
 )
 from tac.analysis.nerv_modelsize_budget import analyze_hinerv_modelsize_candidate
 from tac.repo_io import sha256_file
@@ -82,6 +85,8 @@ def test_hinerv_mlx_trainer_binds_modelsize_row_and_overrides() -> None:
             "96",
             "--output-width",
             "128",
+            "--seed",
+            "37",
         ]
     )
 
@@ -95,6 +100,7 @@ def test_hinerv_mlx_trainer_binds_modelsize_row_and_overrides() -> None:
     assert cfg.decoder_channels == (9, 8, 7, 6, 5, 4, 3)
     assert cfg.output_height == 96
     assert cfg.output_width == 128
+    assert cfg.init_seed == 37
 
 
 def test_hinerv_smoke_forward_statistics_records_target_initialized_head_error() -> None:
@@ -140,10 +146,26 @@ def test_hinerv_smoke_main_initializes_decoded_target_head_before_forward() -> N
 
     decode_pos = source.index("decode_mlx_targets(")
     init_pos = source.index("_initialize_output_head_target_bias(")
+    contrast_pos = source.index("output_head_target_contrast_init =")
     forward_pos = source.index("output = model(idx)")
     stats_pos = source.index("_smoke_forward_statistics(")
 
-    assert decode_pos < init_pos < forward_pos < stats_pos
+    assert decode_pos < init_pos < contrast_pos < forward_pos < stats_pos
+    assert "\"output_head_target_contrast_init\"" in source
+    assert "hinerv_smoke_missing_output_head_target_contrast_init" in source
+
+
+def test_hinerv_full_main_short_readiness_consumes_strict_launch_actuators() -> None:
+    source = inspect.getsource(_full_main)
+    call = source[
+        source.index("short_scorer_smoke_readiness =") :
+        source.index("_attach_hinerv_short_scorer_smoke_readiness_to_training_artifact")
+    ]
+
+    assert "require_section_byte_dual_ascent=modelsize_hard_byte_ceiling is not None" in call
+    assert "require_pose_direct_live_distillation=True" in call
+    assert "decoder_weight_waterfill_plan_metadata=(" in call
+    assert "output_head_target_bias_init_metadata=output_head_target_bias_init" in call
 
 
 def test_hinerv_mlx_trainer_consumes_modelsize_candidate_for_config_codec_and_byte_cap(
@@ -175,12 +197,15 @@ def test_hinerv_mlx_trainer_consumes_modelsize_candidate_for_config_codec_and_by
             "7",
             "--modelsize-candidate-json",
             candidate_path.as_posix(),
+            "--seed",
+            "41",
         ]
     )
 
     loaded = _modelsize_candidate_from_args(args)
     assert loaded is not None
     cfg = _config_from_args(args, modelsize_candidate=loaded)
+    assert cfg.init_seed == 41
     consumption = _modelsize_candidate_consumption_metadata(
         args=args,
         candidate=loaded,
@@ -424,6 +449,8 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
             "0.75",
             "--posenet-temporal-signal-floor-weight",
             "1.25",
+            "--pose-direct-live-distillation-weight",
+            "0.625",
             "--posenet-temporal-signal-min-std-ratio",
             "0.35",
             "--posenet-temporal-signal-min-mean-abs-ratio",
@@ -481,6 +508,11 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert temporal_floor["min_std_ratio"] == pytest.approx(0.35)
     assert temporal_floor["min_mean_abs_ratio"] == pytest.approx(0.45)
     assert temporal_floor["human_visual_fidelity_objective"] is False
+    pose_direct_live = metadata["pose_direct_live_distillation"]
+    assert pose_direct_live["enabled"] is True
+    assert pose_direct_live["weight"] == pytest.approx(0.625)
+    assert pose_direct_live["pair_geometry_objective"] is True
+    assert pose_direct_live["human_visual_fidelity_objective"] is False
     assert metadata["decoder_fake_quant_forward_enabled"] is True
     assert metadata["decoder_fake_quant_bits"] == 4
     assert metadata["train_time_decoder_controls_enabled"] is True
@@ -587,6 +619,10 @@ def test_hinerv_mlx_trainer_binds_decoder_weight_waterfill_plan(
     )
     controls = _train_time_control_config_from_args(args)
     plan = _decoder_weight_waterfill_plan_from_args(args)
+    optimizer_control = _optimizer_control_metadata_from_args(
+        args,
+        decoder_weight_waterfill_plan=plan,
+    )
 
     class DummyModel:
         def __init__(self) -> None:
@@ -648,6 +684,32 @@ def test_hinerv_mlx_trainer_binds_decoder_weight_waterfill_plan(
         == {"head_rgb_0.weight": 4}
     )
     assert attachment["fake_quant_forward"]["targeted_tensor_count"] == 1
+    assert optimizer_control["waterfill_gradient_multiplier_bound"] is True
+    assert optimizer_control["waterfill_gradient_multiplier_by_name"] == {
+        "head_rgb_0.weight": pytest.approx(0.7071067811865476)
+    }
+    assert optimizer_control["gradient_multiplier_by_name"] == {
+        "head_rgb_0.weight": pytest.approx(0.7071067811865476)
+    }
+    assert optimizer_control["gradient_multiplier_waterfill_count"] == 1
+
+    override_args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--gradient-multiplier",
+            "head_rgb_0.weight=0.25",
+        ]
+    )
+    override_control = _optimizer_control_metadata_from_args(
+        override_args,
+        decoder_weight_waterfill_plan=plan,
+    )
+    assert override_control["waterfill_gradient_multiplier_by_name"] == {
+        "head_rgb_0.weight": pytest.approx(0.7071067811865476)
+    }
+    assert override_control["gradient_multiplier_by_name"] == {
+        "head_rgb_0.weight": pytest.approx(0.25)
+    }
     assert attachment["score_claim"] is False
 
 
@@ -1048,14 +1110,19 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_missing_ema_archive_selection",
         "hinerv_full_missing_archive_parse_back_selection",
         "hinerv_full_missing_scorer_input_distribution_guard",
-        "hinerv_full_missing_boundary_argmax_hinge_segnet_objective",
         "hinerv_full_missing_direct_live_segnet_distillation",
         "hinerv_full_missing_direct_live_class_escape_pressure",
         "hinerv_full_missing_scorer_input_contrast_floor",
         "hinerv_full_missing_scorer_input_shape_tether",
         "hinerv_full_missing_posenet_temporal_signal_floor",
+        "hinerv_full_missing_scorer_space_step_guard",
+        "hinerv_full_missing_strict_checkpoint_selection",
     ):
         assert blocker in payload["blockers"]
+    assert (
+        "hinerv_full_missing_boundary_argmax_hinge_segnet_objective"
+        not in payload["blockers"]
+    )
     control = payload["pr95_full_control_contract"]
     assert control["schema"] == PR95_FULL_CONTROL_CONTRACT_SCHEMA
     assert control["production_full_control_ready"] is False
@@ -1074,6 +1141,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "1.0",
             "--pose-distillation-weight",
             "1.0",
+            "--pose-direct-live-distillation-weight",
+            "0.25",
             "--eval-roundtrip-ste",
             "--pr95-faithful-curriculum",
             "--pr95-stage-source-weight-amplification",
@@ -1088,6 +1157,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "500000",
             "--ema-archive-selection",
             "--post-export-receiver-cache-quality-gate",
+            "--scorer-space-step-guard",
+            "--checkpoint-selection-metric-required",
             "--scorer-input-distribution-guard-weight",
             "2.0",
             "--segnet-distillation-objective",
@@ -1127,13 +1198,24 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     controls = contract["controls"]
     assert controls["real_segnet_distillation_loss"] is True
     assert controls["real_posenet_distillation_loss"] is True
+    assert controls["pose_direct_live_distillation_weight"] == pytest.approx(0.25)
+    assert controls["pose_direct_live_distillation"]["enabled"] is True
+    assert controls["pose_direct_live_distillation"][
+        "human_visual_fidelity_objective"
+    ] is False
     assert controls["eval_roundtrip_ste_enabled"] is True
     assert controls["pose_student_input_preprocess"] == "pr95_yuv6"
     assert controls["stage_loss_schedule"] == "pr95_faithful_8stage"
     assert controls["optimizer_kind"] == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
     assert controls["optimizer_surface"] == "pr95_faithful_stage_descriptors"
     assert controls["pr95_faithful_curriculum_enabled"] is True
+    assert controls["pr95_muon_policy"] == "every_stage"
     assert controls["pr95_stage_source_weight_amplification_enabled"] is True
+    assert controls["telemetry_flush_interval_epochs"] == 1
+    assert controls["scorer_space_step_guard_enabled"] is True
+    assert controls["scorer_space_step_guard"]["enabled"] is True
+    assert controls["checkpoint_selection"]["metric_key"] == "total"
+    assert controls["checkpoint_selection"]["metric_required"] is True
     assert controls["coder_qat_enabled"] is True
     assert controls["coder_qat_c1a_entropy_weight"] == pytest.approx(0.0003)
     assert controls["coder_qat_c1a_sigma"] == pytest.approx(0.35)
@@ -1240,6 +1322,8 @@ def test_hinerv_full_control_contract_blocks_disabled_output_head_contrast_init(
             "1.0",
             "--pose-distillation-weight",
             "1.0",
+            "--pose-direct-live-distillation-weight",
+            "0.25",
             "--eval-roundtrip-ste",
             "--pr95-faithful-curriculum",
             "--pr95-stage-source-weight-amplification",
@@ -1254,6 +1338,8 @@ def test_hinerv_full_control_contract_blocks_disabled_output_head_contrast_init(
             "500000",
             "--ema-archive-selection",
             "--post-export-receiver-cache-quality-gate",
+            "--scorer-space-step-guard",
+            "--checkpoint-selection-metric-required",
             "--scorer-input-distribution-guard-weight",
             "2.0",
             "--segnet-distillation-objective",
@@ -1311,6 +1397,8 @@ def test_hinerv_full_control_contract_requires_measured_section_byte_actuation()
             "1.0",
             "--pose-distillation-weight",
             "1.0",
+            "--pose-direct-live-distillation-weight",
+            "0.25",
             "--eval-roundtrip-ste",
             "--pose-student-input-preprocess",
             "pr95_yuv6",
@@ -1329,6 +1417,8 @@ def test_hinerv_full_control_contract_requires_measured_section_byte_actuation()
             "500000",
             "--ema-archive-selection",
             "--post-export-receiver-cache-quality-gate",
+            "--scorer-space-step-guard",
+            "--checkpoint-selection-metric-required",
             "--scorer-input-distribution-guard-weight",
             "2.0",
             "--segnet-distillation-objective",
@@ -1386,6 +1476,8 @@ def test_hinerv_full_control_contract_blocks_post_model_unactuated_byte_cap() ->
             "1.0",
             "--pose-distillation-weight",
             "1.0",
+            "--pose-direct-live-distillation-weight",
+            "0.25",
             "--eval-roundtrip-ste",
             "--pose-student-input-preprocess",
             "pr95_yuv6",
@@ -1558,6 +1650,77 @@ def test_hinerv_train_time_section_byte_metrics_callback_measures_live_payload()
     assert metrics["section_bytes"]["decoder_state"] > 0
     assert metrics["metadata"]["section_byte_control_active"] is True
     assert metrics["metadata"]["refreshed_this_step"] is True
+    assert metrics["metadata"]["section_byte_loss_weight_key_map"][
+        "decoder_state"
+    ] == "coder_qat_c1a_entropy"
+    assert "coder_qat_c1a_entropy" in metrics["metadata"][
+        "positive_active_loss_weight_keys"
+    ]
+
+
+def test_hinerv_section_byte_metrics_refresh_uses_effective_dual_weights() -> None:
+    pytest.importorskip("mlx.core")
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--num-pairs",
+            "1",
+            "--output-height",
+            "96",
+            "--output-width",
+            "128",
+            "--decoder-channels",
+            "4,4,4,4,4,4,4",
+            "--latent-dim-coarse",
+            "2",
+            "--latent-dim-mid",
+            "2",
+            "--latent-dim-fine",
+            "2",
+            "--embed-dim",
+            "8",
+            "--coder-qat",
+            "--hard-byte-ceiling",
+            "500000",
+            "--train-time-section-byte-metrics-frequency-steps",
+            "1",
+        ]
+    )
+    controls = _train_time_control_config_from_args(args)
+    model = HinervSubstrateMLX(_config_from_args(args))
+    callback, attachment = _build_hi_nerv_train_time_section_byte_metrics_callback(
+        args=args,
+        model=model,
+        decoder_codec=_decoder_codec_from_args(args, modelsize_candidate=None),
+        controls=controls,
+        decoder_weight_waterfill_plan=None,
+        hard_byte_ceiling=500_000,
+        active_loss_weights={},
+    )
+
+    assert callback is not None
+    assert attachment["enabled"] is True
+    assert attachment["active"] is False
+    assert "hinerv_train_time_section_byte_no_actuated_sections" in attachment[
+        "blockers"
+    ]
+
+    metrics = callback(model, None, {"coder_qat_c1a_entropy": 0.25})
+
+    assert metrics["metadata"]["section_byte_control_active"] is True
+    assert metrics["metadata"]["section_byte_loss_weight_key_map"][
+        "decoder_state"
+    ] == "coder_qat_c1a_entropy"
+    assert metrics["metadata"]["section_byte_budgets"]["decoder_state"] > 0
+    assert metrics["metadata"]["active_loss_weight_keys"] == [
+        "coder_qat_c1a_entropy"
+    ]
+    assert metrics["metadata"]["positive_active_loss_weight_keys"] == [
+        "coder_qat_c1a_entropy"
+    ]
     assert metrics["metadata"]["score_claim"] is False
 
 
@@ -1633,6 +1796,7 @@ def test_hinerv_full_control_contract_blocks_uncalibrated_segnet_student() -> No
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
     default_args = _build_parser().parse_args(["--full"])
     assert default_args.optimizer_kind == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert default_args.segnet_distillation_objective == "boundary_argmax_hinge"
 
     for optimizer_kind in ("rmsprop", "lion", "adafactor", "muon", "pact_muon_adamw"):
         args = _build_parser().parse_args(["--full", "--optimizer-kind", optimizer_kind])
@@ -1912,6 +2076,161 @@ def test_hinerv_mlx_trainer_forwards_section_byte_dual_controls_to_harness() -> 
     )
 
 
+def test_hinerv_direct_trainer_forwards_shared_harness_actuators() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    run_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    required = {
+        "telemetry_flush_interval_epochs",
+        "pr95_muon_policy",
+        "scorer_space_step_guard_enabled",
+        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
+        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction",
+        "scorer_space_step_guard_min_post_segnet_target_class_min_ratio",
+        "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop",
+        "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+        "scorer_space_step_guard_max_post_segnet_distribution_mae",
+        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae",
+        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio",
+        "scorer_space_step_guard_max_post_segnet_argmax_disagreement",
+        "scorer_space_step_guard_max_post_pose_score_term",
+        "scorer_space_step_guard_max_post_pose_direct_live_score_term",
+        "scorer_space_step_guard_max_pose_score_term_relative_worsening",
+        "scorer_space_step_guard_max_pose_score_term_absolute_worsening",
+        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening",
+        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening",
+        "scorer_space_step_guard_max_direct_nonrate_score_worsening",
+        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening",
+        "scorer_space_step_guard_backtracking_steps",
+        "scorer_space_step_guard_backtracking_shrink",
+        "checkpoint_retention_keep_last_n",
+        "checkpoint_retention_keep_best_n",
+        "checkpoint_retention_keep_every_n_epochs",
+        "checkpoint_retention_cold_store_roots",
+        "checkpoint_dir",
+        "resume_from_checkpoint",
+        "checkpoint_selection_metric_key",
+        "checkpoint_selection_metric_mode",
+        "checkpoint_selection_metric_required",
+        "checkpoint_selection_tie_break_metric_key",
+        "checkpoint_selection_tie_break_metric_mode",
+        "checkpoint_selection_tie_break_metric_required",
+    }
+
+    assert run_calls
+    forwarded = {
+        str(keyword.arg)
+        for call in run_calls
+        for keyword in call.keywords
+        if keyword.arg
+    }
+    assert required.issubset(forwarded)
+
+
+def test_hinerv_direct_trainer_shared_harness_actuator_defaults_and_validation() -> None:
+    args = _build_parser().parse_args(["--full"])
+
+    assert args.telemetry_flush_interval_epochs == 1
+    assert args.pr95_muon_policy == "every_stage"
+    assert args.scorer_space_step_guard is False
+    assert (
+        args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        == pytest.approx(0.400001)
+    )
+    assert (
+        args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+        == pytest.approx(1.0)
+    )
+    assert (
+        args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+        == pytest.approx(0.2)
+    )
+    assert (
+        args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+        == pytest.approx(0.05)
+    )
+    assert args.scorer_space_step_guard_max_post_segnet_contrast_ratio == pytest.approx(4.25)
+    assert args.scorer_space_step_guard_max_post_segnet_distribution_mae == pytest.approx(0.31)
+    assert (
+        args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+        == pytest.approx(0.22)
+    )
+    assert (
+        args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+        == pytest.approx(3.75)
+    )
+    assert args.scorer_space_step_guard_max_post_segnet_argmax_disagreement == pytest.approx(0.5)
+    assert (
+        args.scorer_space_step_guard_max_pose_score_term_relative_worsening
+        == pytest.approx(0.01)
+    )
+    assert (
+        args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
+        == pytest.approx(1.0e-4)
+    )
+    assert (
+        args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+        == pytest.approx(0.01)
+    )
+    assert (
+        args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+        == pytest.approx(1.0e-4)
+    )
+    assert args.scorer_space_step_guard_max_direct_nonrate_score_worsening == pytest.approx(1.0e-3)
+    assert (
+        args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+        == pytest.approx(15.0)
+    )
+    assert args.checkpoint_selection_metric_key == "total"
+    assert args.checkpoint_retention_keep_last_n == 4
+    assert _checkpoint_retention_keep_last_n_from_args(args) == 4
+    assert args.checkpoint_retention_keep_best_n == 2
+    _validate_shared_harness_train_time_actuator_args(args)
+
+    preserve_all = _build_parser().parse_args(
+        ["--full", "--checkpoint-retention-keep-last-n", "-1"]
+    )
+    assert _checkpoint_retention_keep_last_n_from_args(preserve_all) is None
+    _validate_shared_harness_train_time_actuator_args(preserve_all)
+
+    disabled_thresholds = _build_parser().parse_args(
+        [
+            "--full",
+            "--scorer-space-step-guard-max-post-segnet-distribution-mae",
+            "-1",
+            "--scorer-space-step-guard-max-direct-nonrate-score-worsening",
+            "-1",
+        ]
+    )
+    _validate_shared_harness_train_time_actuator_args(disabled_thresholds)
+
+    bad = _build_parser().parse_args(
+        [
+            "--full",
+            "--scorer-space-step-guard-backtracking-shrink",
+            "1.0",
+        ]
+    )
+    with pytest.raises(ValueError, match="backtracking-shrink"):
+        _validate_shared_harness_train_time_actuator_args(bad)
+
+    bad_retention = _build_parser().parse_args(
+        ["--full", "--checkpoint-retention-keep-last-n", "-2"]
+    )
+    with pytest.raises(ValueError, match="keep-last-n"):
+        _validate_shared_harness_train_time_actuator_args(bad_retention)
+
+
 def test_hinerv_mlx_trainer_forwards_contrast_floor_and_direct_live_bundle_kwargs() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
@@ -1948,6 +2267,10 @@ def test_hinerv_mlx_trainer_forwards_contrast_floor_and_direct_live_bundle_kwarg
         "segnet_direct_live_base_loss_weight",
     )
     assert keyword_reads_train_time_control(
+        "pose_direct_live_distillation_weight",
+        "pose_direct_live_distillation_weight",
+    )
+    assert keyword_reads_train_time_control(
         "scorer_input_contrast_floor_weight",
         "scorer_input_contrast_floor_weight",
     )
@@ -1974,6 +2297,21 @@ def test_hinerv_mlx_trainer_direct_live_weight_builds_real_segnet_teacher() -> N
     )
     assert "if segnet_teacher_needed:" in source
     assert "scorer_teacher = build_mlx_segnet_pair_teacher(" in source
+
+
+def test_hinerv_mlx_trainer_pose_direct_live_weight_builds_real_posenet_teacher() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "pose_teacher_needed = bool(" in source
+    assert (
+        "or float(train_time_controls.pose_direct_live_distillation_weight) > 0.0"
+        in source
+    )
+    assert "if pose_teacher_needed:" in source
+    assert "pose_scorer_teacher = build_mlx_posenet_pair_teacher(" in source
 
 
 def test_hinerv_mlx_trainer_hydrates_targets_from_source_pairs() -> None:
@@ -2274,6 +2612,10 @@ def _short_scorer_smoke_controls() -> HiNervTrainTimeControlConfig:
                 "0.6",
                 "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
                 "0.6",
+                "--scorer-input-shape-tether-weight",
+                "0.25",
+                "--posenet-temporal-signal-floor-weight",
+                "0.25",
             ]
         )
     )
@@ -2299,6 +2641,10 @@ def _passing_short_scorer_receiver_quality() -> dict[str, object]:
             "fit_gate_passed": True,
             "segnet_argmax_disagreement_rate": 0.02,
             "candidate_occupied_class_fraction": 0.8,
+            "candidate_target_class_coverage_fraction": 0.8,
+            "candidate_target_class_min_ratio": 0.25,
+            "candidate_target_material_class_covered_count": 4.0,
+            "target_material_class_count": 5.0,
             "reference_occupied_class_fraction": 0.9,
             "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
         },
@@ -2367,9 +2713,43 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> 
             "loss_part_segnet_direct_live_distill": 0.12,
             "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
             "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
             "loss_part_scorer_input_contrast_floor": 0.01,
             "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
             "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            "dual_ascent_active": 1.0,
+            "dual_ascent_constraint_count": 2.0,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_distill": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_distill": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_distill": 0.4,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_distill": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_argmax_disagreement": 0.4,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_argmax_disagreement": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.04,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_class_balanced_hinge": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_class_balanced_hinge": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.5,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.1,
         },
         post_export_quality=_passing_short_scorer_receiver_quality(),
         segnet_distillation_weight=1.0,
@@ -2394,6 +2774,190 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> 
     assert summary["short_scorer_teacher_smoke_ready"] is True
 
 
+def test_hinerv_short_scorer_smoke_readiness_blocks_unactuated_direct_live_dual_with_generic_teacher() -> None:
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert report["direct_live_dual_ascent_gate"]["required"] is True
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" in report[
+        "actionable_blockers"
+    ]
+
+
+def test_hinerv_short_scorer_smoke_readiness_failure_marks_training_artifact_long_run_blocker(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": TRAINER_SCHEMA,
+                "substrate_artifact_metadata": {
+                    "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+    report["report_path"] = (tmp_path / "hi_nerv_short_scorer_smoke_readiness.json").as_posix()
+
+    _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact(
+        output_dir=tmp_path,
+        report=report,
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    metadata = artifact["substrate_artifact_metadata"]
+    admission = metadata["short_scorer_teacher_smoke_long_run_admission"]
+    assert admission["long_run_admission_passed"] is False
+    assert admission["short_scorer_teacher_smoke_passed"] is False
+    assert admission["report_path"].endswith("hi_nerv_short_scorer_smoke_readiness.json")
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in admission[
+        "admission_blockers"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" in admission[
+        "admission_blockers"
+    ]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in metadata["blockers"]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in metadata["blockers"]
+    assert metadata["short_scorer_teacher_smoke_readiness"][
+        "short_scorer_teacher_smoke_ready"
+    ] is False
+
+
+def test_hinerv_short_scorer_smoke_readiness_pass_preserves_training_artifact_long_run_admission(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": TRAINER_SCHEMA,
+                "substrate_artifact_metadata": {
+                    "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            "dual_ascent_active": 1.0,
+            "dual_ascent_constraint_count": 2.0,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_distill": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_distill": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_distill": 0.4,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_distill": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_argmax_disagreement": 0.4,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_argmax_disagreement": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.04,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_class_balanced_hinge": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_class_balanced_hinge": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.5,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.1,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact(
+        output_dir=tmp_path,
+        report=report,
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    metadata = artifact["substrate_artifact_metadata"]
+    admission = metadata["short_scorer_teacher_smoke_long_run_admission"]
+    assert admission["long_run_admission_passed"] is True
+    assert admission["short_scorer_teacher_smoke_passed"] is True
+    assert admission["admission_blockers"] == []
+    assert metadata["blockers"] == ["contest_cpu_cuda_exact_eval_not_executed"]
+
+
 def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding() -> None:
     report = _build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_short_scorer_smoke_controls(),
@@ -2401,9 +2965,43 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding(
             "loss_part_segnet_direct_live_distill": 0.12,
             "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
             "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
+            "dual_ascent_active": 1.0,
+            "dual_ascent_constraint_count": 1.0,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_distill": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_distill": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_distill": 0.4,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_distill": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_argmax_disagreement": 0.4,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_argmax_disagreement": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.04,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_class_balanced_hinge": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_class_balanced_hinge": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.5,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.1,
             "loss_part_scorer_input_contrast_floor": 0.01,
             "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
             "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
         },
         post_export_quality=_passing_short_scorer_receiver_quality(),
         segnet_distillation_weight=0.0,
@@ -2416,6 +3014,219 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding(
         "actionable_blockers"
     ]
     assert report["ready_for_long_run"] is True
+
+
+def test_hinerv_short_scorer_smoke_readiness_accepts_region_subcontrol_only_binding() -> None:
+    controls = _train_time_control_config_from_args(
+        _build_parser().parse_args(
+            [
+                "--full",
+                "--segnet-direct-live-distillation-weight",
+                "0.0",
+                "--segnet-direct-live-class-region-recon-weight",
+                "0.75",
+                "--scorer-input-contrast-floor-weight",
+                "0.5",
+                "--scorer-input-contrast-floor-segnet-min-std-ratio",
+                "0.6",
+                "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+                "0.6",
+                "--scorer-input-shape-tether-weight",
+                "0.25",
+                "--posenet-temporal-signal-floor-weight",
+                "0.25",
+            ]
+        )
+    )
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=controls,
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_class_region_recon_loss": 0.07,
+            "dual_ascent_active": 1.0,
+            "dual_ascent_constraint_count": 2.0,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_class_region_recon": 0.07,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_region_recon": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_region_recon": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_class_region_recon": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_class_region_recon": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_class_region_recon": 0.75,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_class_region_recon": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.25,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.75,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.1,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["ready_for_long_run"] is True
+    assert "hi_nerv_short_smoke_direct_live_segnet_distillation_disabled" not in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_real_segnet_teacher_not_requested" not in report[
+        "actionable_blockers"
+    ]
+    gate = report["direct_live_segnet_gate"]
+    assert gate["base_distillation_enabled"] is False
+    assert gate["subcontrol_enabled"] is True
+    assert gate["subcontrol_weights"][
+        "segnet_direct_live_class_region_recon_weight"
+    ] == pytest.approx(0.75)
+    assert gate["metrics"][
+        "loss_part_segnet_direct_live_class_region_recon_loss"
+    ] == pytest.approx(0.07)
+
+
+def test_hinerv_short_scorer_smoke_readiness_accepts_target_mass_floor_only_binding() -> None:
+    controls = _train_time_control_config_from_args(
+        _build_parser().parse_args(
+            [
+                "--full",
+                "--segnet-direct-live-distillation-weight",
+                "0.0",
+                "--segnet-direct-live-target-mass-floor-weight",
+                "0.75",
+                "--scorer-input-contrast-floor-weight",
+                "0.5",
+                "--scorer-input-contrast-floor-segnet-min-std-ratio",
+                "0.6",
+                "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+                "0.6",
+                "--scorer-input-shape-tether-weight",
+                "0.25",
+                "--posenet-temporal-signal-floor-weight",
+                "0.25",
+            ]
+        )
+    )
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=controls,
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+            "loss_part_segnet_direct_live_target_mass_floor_loss": 0.07,
+            "dual_ascent_active": 1.0,
+            "dual_ascent_constraint_count": 2.0,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_target_mass_floor": 0.07,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_mass_floor": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_mass_floor": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_mass_floor": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_mass_floor": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_mass_floor": 0.75,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_target_mass_floor": 0.1,
+            "dual_ascent_metric__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.25,
+            "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.0,
+            "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.03,
+            "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 1.0,
+            "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 1.0,
+            "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.75,
+            "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.1,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+            "loss_part_scorer_input_shape_tether": 0.02,
+            "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+            "loss_part_posenet_temporal_signal_floor": 0.03,
+            "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+            "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert controls.segnet_direct_live_target_mass_floor_weight == pytest.approx(0.75)
+    assert report["ready_for_long_run"] is True
+    assert "hi_nerv_short_smoke_direct_live_segnet_distillation_disabled" not in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_real_segnet_teacher_not_requested" not in report[
+        "actionable_blockers"
+    ]
+    gate = report["direct_live_segnet_gate"]
+    assert gate["base_distillation_enabled"] is False
+    assert gate["subcontrol_enabled"] is True
+    assert gate["subcontrol_weights"][
+        "segnet_direct_live_target_mass_floor_weight"
+    ] == pytest.approx(0.75)
+    assert gate["metrics"][
+        "loss_part_segnet_direct_live_target_mass_floor_loss"
+    ] == pytest.approx(0.07)
+
+
+def test_hinerv_short_scorer_smoke_readiness_blocks_missing_region_subcontrol_metric() -> None:
+    controls = _train_time_control_config_from_args(
+        _build_parser().parse_args(
+            [
+                "--full",
+                "--segnet-direct-live-distillation-weight",
+                "0.0",
+                "--segnet-direct-live-class-region-recon-weight",
+                "0.75",
+                "--scorer-input-contrast-floor-weight",
+                "0.5",
+                "--scorer-input-contrast-floor-segnet-min-std-ratio",
+                "0.6",
+                "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+                "0.6",
+            ]
+        )
+    )
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=controls,
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert (
+        "hi_nerv_short_smoke_missing_direct_live_segnet_subcontrol_telemetry"
+        in report["actionable_blockers"]
+    )
 
 
 def test_hinerv_short_scorer_smoke_readiness_blocks_failed_mlx_response() -> None:
@@ -2433,6 +3244,8 @@ def test_hinerv_short_scorer_smoke_readiness_blocks_failed_mlx_response() -> Non
             "loss_part_segnet_direct_live_distill": 0.12,
             "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
             "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.04,
             "loss_part_scorer_input_contrast_floor": 0.01,
             "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
             "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
@@ -2470,6 +3283,7 @@ def test_hinerv_short_scorer_smoke_readiness_blocks_collapsed_receiver_occupancy
             "loss_part_segnet_direct_live_distill": 0.12,
             "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
             "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
             "loss_part_scorer_input_contrast_floor": 0.01,
             "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
             "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,

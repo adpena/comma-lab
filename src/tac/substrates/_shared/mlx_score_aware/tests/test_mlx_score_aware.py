@@ -17,6 +17,11 @@ from tac.substrates._shared.mlx_score_aware import (
     require_mlx_for_harness,
     score_aware_loss,
 )
+from tac.substrates._shared.mlx_score_aware.loss import (
+    _segnet_rare_class_logit_loss_and_metrics,
+    _segnet_target_mass_floor_loss_and_metrics,
+    _segnet_target_min_ratio_floor_loss_and_metrics,
+)
 
 mx = pytest.importorskip("mlx.core")
 
@@ -620,6 +625,35 @@ def test_score_aware_loss_applies_posenet_temporal_signal_floor() -> None:
     assert _scalar(total_guard) > _scalar(total_disabled)
 
 
+def test_score_aware_loss_applies_posenet_yuv6_geometry_tether() -> None:
+    target_0, target_1 = _targets()
+    flat = mx.ones_like(target_0) * 0.5
+    bundle = RendererBundle(
+        model=ReconstructPairModel(flat, flat),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        posenet_yuv6_geometry_tether_weight=2.0,
+    )
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    total_guard, parts_guard = score_aware_loss(bundle, idx)
+    total_disabled, parts_disabled = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"posenet_yuv6_geometry_tether": 0.0},
+    )
+    mx.eval(total_guard, total_disabled)
+
+    assert "posenet_yuv6_geometry_tether" in parts_guard
+    assert "posenet_yuv6_geometry_tether" not in parts_disabled
+    assert _scalar(parts_guard["posenet_yuv6_geometry_tether"]) > 0.0
+    assert _scalar(parts_guard["posenet_yuv6_geometry_tether_pair"]) > 0.0
+    assert _scalar(parts_guard["posenet_yuv6_geometry_tether_temporal_delta"]) > 0.0
+    assert _scalar(total_guard) > _scalar(total_disabled)
+
+
 def test_score_aware_loss_rejects_negative_scorer_input_shape_tether_weight() -> None:
     target_0, target_1 = _targets()
     with pytest.raises(
@@ -633,6 +667,22 @@ def test_score_aware_loss_rejects_negative_scorer_input_shape_tether_weight() ->
             num_pairs=2,
             forward_convention="reconstruct_pair_nchw01",
             scorer_input_shape_tether_weight=-0.125,
+        )
+
+
+def test_score_aware_loss_rejects_negative_posenet_yuv6_geometry_tether_weight() -> None:
+    target_0, target_1 = _targets()
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="posenet_yuv6_geometry_tether_weight must be >= 0",
+    ):
+        RendererBundle(
+            model=ReconstructPairModel(target_0, target_1),
+            target_rgb_0=target_0,
+            target_rgb_1=target_1,
+            num_pairs=2,
+            forward_convention="reconstruct_pair_nchw01",
+            posenet_yuv6_geometry_tether_weight=-0.125,
         )
 
 
@@ -973,6 +1023,61 @@ def test_direct_live_segnet_material_occupancy_ignores_one_pixel_crumb() -> None
     ) == pytest.approx(2.0)
 
 
+def test_direct_live_segnet_reports_target_class_coverage() -> None:
+    target_0 = mx.zeros((1, 4, 4, 3))
+    target_1 = mx.ones((1, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[:, :2, :, 0] = 5.0
+            arr[:, 2:, :, 1] = 5.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[:, :2, :, 0] = 5.0
+            arr[:, 2:, :, 2] = 5.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        allow_segnet_only_research=True,
+    )
+
+    _total, parts = score_aware_loss(bundle, mx.array([0]))
+
+    assert _scalar(
+        parts["segnet_direct_live_candidate_occupied_class_fraction"]
+    ) == pytest.approx(0.4)
+    assert _scalar(
+        parts["segnet_direct_live_target_occupied_class_fraction"]
+    ) == pytest.approx(0.4)
+    assert _scalar(
+        parts["segnet_direct_live_candidate_target_class_coverage_fraction"]
+    ) == pytest.approx(0.5)
+    assert _scalar(
+        parts["segnet_direct_live_candidate_target_material_class_covered_count"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        parts["segnet_direct_live_candidate_target_class_1_material_covered"]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        parts["segnet_direct_live_candidate_target_class_2_material_covered"]
+    ) == pytest.approx(0.0)
+
+
 def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
     target_1 = mx.ones((2, 4, 4, 3))
@@ -1110,6 +1215,33 @@ def test_direct_live_segnet_class_balanced_hinge_is_train_time_loss() -> None:
         balanced_parts["segnet_direct_live_distill"]
     ) > _scalar(raw_parts["segnet_direct_live_distill"])
 
+    _floored_total, floored_parts = score_aware_loss(
+        raw_bundle,
+        mx.array([0, 1]),
+        loss_weights={
+            "segnet_direct_live_class_balanced_hinge": 0.5,
+            "segnet_direct_live_class_balanced_hinge_config_floor": 1.0,
+        },
+    )
+
+    assert _scalar(
+        floored_parts["segnet_direct_live_class_balanced_hinge_config_weight"]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        floored_parts[
+            "segnet_direct_live_class_balanced_hinge_effective_config_weight"
+        ]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        floored_parts["segnet_direct_live_class_balanced_hinge_stage_weight"]
+    ) == pytest.approx(0.5)
+    assert _scalar(
+        floored_parts["segnet_direct_live_class_balanced_hinge_weight"]
+    ) == pytest.approx(0.5)
+    assert _scalar(
+        floored_parts["segnet_direct_live_class_balanced_hinge_loss"]
+    ) == pytest.approx(1.5)
+
 
 def test_direct_live_segnet_class_balanced_ce_is_sharp_collapse_escape_loss() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
@@ -1158,6 +1290,17 @@ def test_direct_live_segnet_class_balanced_ce_is_sharp_collapse_escape_loss() ->
     _ce_total, ce_parts = score_aware_loss(ce_bundle, mx.array([0, 1]))
 
     assert _scalar(ce_parts["segnet_direct_live_class_balanced_ce_loss"]) > 10.0
+    assert _scalar(
+        ce_parts["segnet_direct_live_class_balanced_ce_worst_class_loss"]
+    ) >= _scalar(ce_parts["segnet_direct_live_class_balanced_ce_mean_loss"])
+    assert _scalar(ce_parts["segnet_direct_live_class_balanced_ce_loss"]) == (
+        pytest.approx(
+            _scalar(ce_parts["segnet_direct_live_class_balanced_ce_mean_loss"])
+            + _scalar(
+                ce_parts["segnet_direct_live_class_balanced_ce_worst_class_loss"]
+            )
+        )
+    )
     assert _scalar(
         ce_parts["segnet_direct_live_class_balanced_ce_class_0"]
     ) > 10.0
@@ -1237,6 +1380,414 @@ def test_direct_live_segnet_squared_hinge_prices_far_margin_collapse() -> None:
     assert _scalar(
         squared_parts["segnet_direct_live_distill"]
     ) > _scalar(linear_parts["segnet_direct_live_distill"])
+
+
+def test_direct_live_segnet_class_region_recon_targets_missing_regions() -> None:
+    target_0 = mx.zeros((1, 4, 4, 3))
+    target_1 = mx.array(
+        np.linspace(0.1, 0.9, num=4 * 4 * 3, dtype=np.float32).reshape(
+            1, 4, 4, 3
+        )
+    )
+
+    class _ZeroModel:
+        def parameters(self):
+            return {}
+
+        def reconstruct_pair(self, idx):
+            del idx
+            frame = mx.zeros((1, 3, 4, 4), dtype=mx.float32)
+            return frame, frame
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[:, :2, :, 0] = 6.0
+            arr[:, 2:, :, 1] = 6.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 2] = 8.0
+            return mx.array(arr)
+
+    raw_bundle = RendererBundle(
+        model=_ZeroModel(),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_base_loss_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="argmax_hinge",
+    )
+    region_bundle = RendererBundle(
+        model=_ZeroModel(),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_base_loss_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=1.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="argmax_hinge",
+    )
+
+    _raw_total, raw_parts = score_aware_loss(raw_bundle, mx.array([0]))
+    _region_total, region_parts = score_aware_loss(region_bundle, mx.array([0]))
+
+    assert _scalar(
+        region_parts["segnet_direct_live_class_region_recon_loss"]
+    ) > 0.0
+    assert _scalar(
+        region_parts["segnet_direct_live_class_region_recon_class_0_boost"]
+    ) == pytest.approx(2.0)
+    assert _scalar(
+        region_parts["segnet_direct_live_class_region_recon_class_1_boost"]
+    ) == pytest.approx(2.0)
+    assert _scalar(
+        region_parts[
+            "segnet_direct_live_class_region_recon_target_occupied_class_fraction"
+        ]
+    ) == pytest.approx(0.4)
+    assert _scalar(
+        region_parts["segnet_direct_live_distill"]
+    ) > _scalar(raw_parts["segnet_direct_live_distill"])
+
+
+def test_direct_live_segnet_rare_class_logit_prices_any_present_class() -> None:
+    target_0 = mx.zeros((1, 4, 4, 3))
+    target_1 = mx.ones((1, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 6.0
+            arr[:, :1, :1, 1] = 9.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 2] = 9.0
+            arr[..., 1] = -6.0
+            return mx.array(arr)
+
+    common = {
+        "model": ReconstructPairModel(target_0, target_1),
+        "target_rgb_0": target_0,
+        "target_rgb_1": target_1,
+        "num_pairs": 1,
+        "forward_convention": "reconstruct_pair_nchw01",
+        "scorer_teacher": _LiveTeacher(),
+        "segnet_direct_live_distillation_weight": 1.0,
+        "segnet_direct_live_base_loss_weight": 0.0,
+        "allow_segnet_only_research": True,
+        "segnet_distillation_objective": "argmax_hinge",
+    }
+    raw_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_rare_class_logit_weight=0.0,
+    )
+    rare_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_rare_class_logit_weight=1.0,
+    )
+
+    _raw_total, raw_parts = score_aware_loss(raw_bundle, mx.array([0]))
+    _rare_total, rare_parts = score_aware_loss(rare_bundle, mx.array([0]))
+
+    assert _scalar(rare_parts["segnet_direct_live_rare_class_logit_loss"]) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_rarity_boost"]
+    ) > _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_0_rarity_boost"]
+    )
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_0_score_mass_boost"]
+    ) > _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_score_mass_boost"]
+    )
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_0_boost"]
+    ) > _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_boost"]
+    )
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_hard_deficit"]
+    ) == pytest.approx(1.0 / 16.0)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_candidate_hard_fraction"]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_candidate_soft_fraction"]
+    ) < 0.01
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_margin"]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_easy_margin"]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_easy_weight_peak"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_easy_temperature"]
+    ) == pytest.approx(0.25)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_hard_missing"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_material_hard_floor"]
+    ) == pytest.approx(0.00625)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_hard_undercovered"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_easy_margin_weight"]
+    ) == pytest.approx(12.0)
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_target_prob_floor"]
+    ) == pytest.approx(0.20)
+    assert _scalar(
+        rare_parts[
+            "segnet_direct_live_rare_class_logit_class_1_target_prob_floor_deficit"
+        ]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_crossing_loss"]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_seed_mass_floor"]
+    ) == pytest.approx(1.0 / 16.0)
+    assert _scalar(
+        rare_parts[
+            "segnet_direct_live_rare_class_logit_class_1_seed_mass_floor_log_ratio"
+        ]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_seed_mass_floor_loss"]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_seed_target_prob_mean"]
+    ) < 0.01
+    assert _scalar(
+        rare_parts["segnet_direct_live_rare_class_logit_class_1_seed_argmax_prob_floor"]
+    ) == pytest.approx(0.55)
+    assert _scalar(
+        rare_parts[
+            "segnet_direct_live_rare_class_logit_class_1_seed_argmax_prob_floor_deficit"
+        ]
+    ) > 0.0
+    assert _scalar(
+        rare_parts[
+            "segnet_direct_live_rare_class_logit_class_1_seed_argmax_prob_loss"
+        ]
+    ) > 0.0
+    assert _scalar(
+        rare_parts[
+            "segnet_direct_live_rare_class_logit_class_1_frontier_island_margin"
+        ]
+    ) > 0.0
+    assert _scalar(
+        rare_parts[
+            "segnet_direct_live_rare_class_logit_class_1_frontier_island_crossing_loss"
+        ]
+    ) > 0.0
+    assert _scalar(
+        rare_parts["segnet_direct_live_distill"]
+    ) > _scalar(raw_parts["segnet_direct_live_distill"])
+
+
+def test_rare_class_frontier_island_pressure_moves_missing_target_logit() -> None:
+    candidate = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    candidate[..., 2] = 5.0
+    candidate[..., 1] = -5.0
+    target_logits = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    target_logits[..., 0] = 4.0
+    target_logits[:, 0, 0, 1] = 8.0
+    target_argmax = mx.array(np.array([[[1, 0], [0, 0]]], dtype=np.int32))
+    target_logits_mx = mx.array(target_logits)
+
+    def _loss(candidate_logits):
+        loss, _metrics = _segnet_rare_class_logit_loss_and_metrics(
+            candidate_logits=candidate_logits,
+            target_logits=target_logits_mx,
+            target_argmax=target_argmax,
+        )
+        return loss
+
+    candidate_mx = mx.array(candidate)
+    loss_before, grad = mx.value_and_grad(_loss)(candidate_mx)
+    loss_after, metrics_after = _segnet_rare_class_logit_loss_and_metrics(
+        candidate_logits=candidate_mx - mx.array(1.0e-5, dtype=mx.float32) * grad,
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+    )
+
+    assert _scalar(
+        grad[0, 0, 0, 1]
+    ) < 0.0, "descent must increase the missing target class logit"
+    assert _scalar(
+        grad[0, 0, 0, 2]
+    ) > 0.0, "descent must decrease the impostor class logit"
+    assert _scalar(loss_after) < _scalar(loss_before)
+    assert _scalar(
+        metrics_after[
+            "segnet_direct_live_rare_class_logit_class_1_frontier_island_margin"
+        ]
+    ) >= 0.0
+    assert _scalar(
+        metrics_after[
+            "segnet_direct_live_rare_class_logit_class_1_frontier_island_crossing_loss"
+        ]
+    ) >= 0.0
+
+
+def test_target_mass_floor_prices_zero_mass_after_class_birth() -> None:
+    candidate = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    candidate[..., 2] = 5.0
+    candidate[..., 1] = -5.0
+    target_logits = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    target_argmax = mx.array(np.array([[[1, 0], [0, 0]]], dtype=np.int32))
+    target_logits_mx = mx.array(target_logits)
+
+    loss_before, metrics_before = _segnet_target_mass_floor_loss_and_metrics(
+        candidate_logits=mx.array(candidate),
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+    )
+
+    def _loss(candidate_logits):
+        loss, _metrics = _segnet_target_mass_floor_loss_and_metrics(
+            candidate_logits=candidate_logits,
+            target_logits=target_logits_mx,
+            target_argmax=target_argmax,
+        )
+        return loss
+
+    _loss_value, grad = mx.value_and_grad(_loss)(mx.array(candidate))
+    boosted = candidate.copy()
+    boosted[:, 0, 0, 1] = 8.0
+    boosted[:, 0, 0, 2] = -2.0
+    loss_after, metrics_after = _segnet_target_mass_floor_loss_and_metrics(
+        candidate_logits=mx.array(boosted),
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+    )
+
+    assert _scalar(loss_before) > 0.0
+    assert _scalar(loss_after) < _scalar(loss_before)
+    assert _scalar(
+        metrics_before[
+            "segnet_direct_live_target_mass_floor_class_1_hard_deficit_ratio"
+        ]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        metrics_before[
+            "segnet_direct_live_target_mass_floor_class_1_candidate_soft_fraction"
+        ]
+    ) < _scalar(
+        metrics_after[
+            "segnet_direct_live_target_mass_floor_class_1_candidate_soft_fraction"
+        ]
+    )
+    assert _scalar(
+        metrics_before[
+            "segnet_direct_live_target_mass_floor_class_1_target_prob_deficit"
+        ]
+    ) > _scalar(
+        metrics_after[
+            "segnet_direct_live_target_mass_floor_class_1_target_prob_deficit"
+        ]
+    )
+    assert _scalar(
+        metrics_before[
+            "segnet_direct_live_target_mass_floor_class_1_target_region_crossing_loss"
+        ]
+    ) > _scalar(
+        metrics_after[
+            "segnet_direct_live_target_mass_floor_class_1_target_region_crossing_loss"
+        ]
+    )
+    assert _scalar(
+        grad[0, 0, 0, 1]
+    ) < 0.0, "descent must increase the missing target class logit"
+    assert _scalar(
+        grad[0, 0, 0, 2]
+    ) > 0.0, "descent must decrease the winning impostor logit"
+
+
+def test_target_min_ratio_floor_prices_zero_hard_support() -> None:
+    candidate = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    candidate[..., 2] = 5.0
+    candidate[..., 1] = -5.0
+    target_logits = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    target_argmax = mx.array(np.array([[[1, 0], [0, 0]]], dtype=np.int32))
+    target_logits_mx = mx.array(target_logits)
+
+    loss_before, metrics_before = _segnet_target_min_ratio_floor_loss_and_metrics(
+        candidate_logits=mx.array(candidate),
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+        min_ratio_floor=0.35,
+    )
+
+    def _loss(candidate_logits):
+        loss, _metrics = _segnet_target_min_ratio_floor_loss_and_metrics(
+            candidate_logits=candidate_logits,
+            target_logits=target_logits_mx,
+            target_argmax=target_argmax,
+            min_ratio_floor=0.35,
+        )
+        return loss
+
+    _loss_value, grad = mx.value_and_grad(_loss)(mx.array(candidate))
+    repaired = candidate.copy()
+    repaired[:, 0, 0, 1] = 8.0
+    repaired[:, 0, 0, 2] = -2.0
+    loss_after, metrics_after = _segnet_target_min_ratio_floor_loss_and_metrics(
+        candidate_logits=mx.array(repaired),
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+        min_ratio_floor=0.35,
+    )
+
+    assert _scalar(loss_before) > 0.0
+    assert _scalar(loss_after) < _scalar(loss_before)
+    assert _scalar(metrics_before["segnet_direct_live_target_min_ratio_floor_min_ratio"]) == (
+        pytest.approx(0.0)
+    )
+    assert _scalar(
+        metrics_before[
+            "segnet_direct_live_target_min_ratio_floor_class_1_ratio_deficit"
+        ]
+    ) == pytest.approx(0.35)
+    assert _scalar(
+        metrics_after[
+            "segnet_direct_live_target_min_ratio_floor_class_1_ratio_deficit"
+        ]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        grad[0, 0, 0, 1]
+    ) < 0.0, "descent must increase the missing target class logit"
+    assert _scalar(
+        grad[0, 0, 0, 2]
+    ) > 0.0, "descent must decrease the winning impostor logit"
 
 
 def test_direct_live_segnet_base_loss_weight_zero_keeps_ce_escape_active() -> None:
@@ -1333,6 +1884,8 @@ def test_direct_live_segnet_subterm_weights_are_curriculum_stageable() -> None:
         segnet_direct_live_distillation_weight=1.0,
         segnet_direct_live_base_loss_weight=1.0,
         segnet_direct_live_class_balanced_ce_weight=1.0,
+        segnet_direct_live_class_region_recon_weight=1.0,
+        segnet_direct_live_rare_class_logit_weight=1.0,
         allow_segnet_only_research=True,
         segnet_distillation_objective="argmax_hinge",
         segnet_hinge_margin=0.5,
@@ -1346,6 +1899,8 @@ def test_direct_live_segnet_subterm_weights_are_curriculum_stageable() -> None:
         loss_weights={
             "segnet_direct_live_base_loss": 0.0,
             "segnet_direct_live_class_balanced_ce": 1.0,
+            "segnet_direct_live_class_region_recon": 1.0,
+            "segnet_direct_live_rare_class_logit": 1.0,
         },
     )
     _fit_total, fit_parts = score_aware_loss(
@@ -1354,6 +1909,8 @@ def test_direct_live_segnet_subterm_weights_are_curriculum_stageable() -> None:
         loss_weights={
             "segnet_direct_live_base_loss": 1.0,
             "segnet_direct_live_class_balanced_ce": 0.0,
+            "segnet_direct_live_class_region_recon": 0.0,
+            "segnet_direct_live_rare_class_logit": 0.0,
         },
     )
 
@@ -1364,10 +1921,22 @@ def test_direct_live_segnet_subterm_weights_are_curriculum_stageable() -> None:
         escape_parts["segnet_direct_live_class_balanced_ce_stage_weight"]
     ) == pytest.approx(1.0)
     assert _scalar(
+        escape_parts["segnet_direct_live_class_region_recon_stage_weight"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        escape_parts["segnet_direct_live_rare_class_logit_stage_weight"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
         fit_parts["segnet_direct_live_base_loss_stage_weight"]
     ) == pytest.approx(1.0)
     assert _scalar(
         fit_parts["segnet_direct_live_class_balanced_ce_stage_weight"]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        fit_parts["segnet_direct_live_class_region_recon_stage_weight"]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        fit_parts["segnet_direct_live_rare_class_logit_stage_weight"]
     ) == pytest.approx(0.0)
     assert _scalar(escape_parts["segnet_direct_live_distill"]) == pytest.approx(
         _scalar(full_parts["segnet_direct_live_distill"])
@@ -1376,6 +1945,9 @@ def test_direct_live_segnet_subterm_weights_are_curriculum_stageable() -> None:
     assert _scalar(fit_parts["segnet_direct_live_distill"]) == pytest.approx(
         _scalar(full_parts["segnet_direct_live_distill"])
         - _scalar(full_parts["segnet_direct_live_class_balanced_ce_loss"])
+        - _scalar(full_parts["segnet_direct_live_class_region_recon_loss"])
+        - _scalar(full_parts["segnet_direct_live_rare_class_logit_loss"]),
+        abs=5.0e-3,
     )
 
 
@@ -1573,6 +2145,8 @@ def test_build_mlx_posenet_pair_teacher_uses_upstream_pair_scale(
     assert observed["shape_t"] == 2.0
     assert cache.num_pairs == 1
     assert cache.pose_dims == 6
+    assert cache.live_posenet_adapter is None
+    assert "AttributeError" in str(cache.live_posenet_adapter_error)
     assert tuple(cache.per_dim_scale.shape) == (6,)
     np.testing.assert_allclose(np.array(cache.per_dim_scale), np.full((6,), 1e-3))
     np.testing.assert_allclose(

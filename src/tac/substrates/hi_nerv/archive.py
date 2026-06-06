@@ -13,14 +13,14 @@ Catalog #124 STRICT archive-grammar 8 fields declared in package
     LATENT_DIM_F(2)     u16      cfg.latent_dim_fine
     NUM_PAIRS(2)        u16      cfg.num_pairs
     DECODER_BLOB_LEN(4) u32      brotli-compressed decoder state_dict bytes len
-    LATENT_C_LEN(4)     u32      int16 coarse latents bytes len
-    LATENT_M_LEN(4)     u32      int16 mid latents bytes len
-    LATENT_F_LEN(4)     u32      int16 fine latents bytes len
+    LATENT_C_LEN(4)     u32      encoded coarse latents bytes len
+    LATENT_M_LEN(4)     u32      encoded mid latents bytes len
+    LATENT_F_LEN(4)     u32      encoded fine latents bytes len
     META_BLOB_LEN(4)    u32      utf-8 json meta bytes len
     DECODER_BLOB        ...      brotli(quality=9) of pickled state_dict
-    LATENT_C_BLOB       ...      int16 coarse latents (num_pairs, latent_dim_coarse)
-    LATENT_M_BLOB       ...      int16 mid latents
-    LATENT_F_BLOB       ...      int16 fine latents
+    LATENT_C_BLOB       ...      quantized coarse latents
+    LATENT_M_BLOB       ...      quantized mid latents
+    LATENT_F_BLOB       ...      quantized fine latents
     META_BLOB           ...      json: {"sin_freq": ..., "decoder_channels": [...], ...}
 
 Header: 4+1+2+2+2+2+4+4+4+4+4 = 33 bytes.
@@ -74,10 +74,22 @@ BROTLI_QUALITY: int = 9
 LATENT_CODEC_RAW_INT16: str = "int16_raw"
 LATENT_CODEC_BROTLI_INT16_Q11: str = "int16_brotli_q11"
 LATENT_CODEC_HI_AC_INT16_Q11: str = "int16_hi_ac_brotli_q11"
+LATENT_CODEC_RAW_INT8: str = "int8_raw"
+LATENT_CODEC_BROTLI_INT8_Q11: str = "int8_brotli_q11"
+LATENT_CODEC_PACKED_INT4: str = "int4_packed"
+LATENT_CODEC_PACKED_BROTLI_INT4_Q11: str = "int4_packed_brotli_q11"
+LATENT_CODEC_PACKED_INT2: str = "int2_packed"
+LATENT_CODEC_PACKED_BROTLI_INT2_Q11: str = "int2_packed_brotli_q11"
 SUPPORTED_LATENT_CODECS: tuple[str, ...] = (
     LATENT_CODEC_RAW_INT16,
     LATENT_CODEC_BROTLI_INT16_Q11,
     LATENT_CODEC_HI_AC_INT16_Q11,
+    LATENT_CODEC_RAW_INT8,
+    LATENT_CODEC_BROTLI_INT8_Q11,
+    LATENT_CODEC_PACKED_INT4,
+    LATENT_CODEC_PACKED_BROTLI_INT4_Q11,
+    LATENT_CODEC_PACKED_INT2,
+    LATENT_CODEC_PACKED_BROTLI_INT2_Q11,
 )
 LATENT_HI_AC_MAGIC: bytes = b"HILA1"
 LATENT_HI_AC_HEADER_FMT: str = "<5sIIII"
@@ -235,11 +247,151 @@ def _quantize_latents_to_int16(
     return (q, scale, lo)
 
 
-def _dequantize_latents(
-    q: torch.Tensor, scale: float, zero_point: float
+def _latent_codec_quant_bits(codec: str) -> int:
+    normalized = str(codec)
+    if normalized in (
+        LATENT_CODEC_RAW_INT16,
+        LATENT_CODEC_BROTLI_INT16_Q11,
+        LATENT_CODEC_HI_AC_INT16_Q11,
+    ):
+        return 16
+    if normalized in (LATENT_CODEC_RAW_INT8, LATENT_CODEC_BROTLI_INT8_Q11):
+        return 8
+    if normalized in (
+        LATENT_CODEC_PACKED_INT4,
+        LATENT_CODEC_PACKED_BROTLI_INT4_Q11,
+    ):
+        return 4
+    if normalized in (
+        LATENT_CODEC_PACKED_INT2,
+        LATENT_CODEC_PACKED_BROTLI_INT2_Q11,
+    ):
+        return 2
+    valid = ", ".join(SUPPORTED_LATENT_CODECS)
+    raise ValueError(
+        f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}"
+    )
+
+
+def _latent_unsigned_max(bits: int) -> int:
+    if int(bits) not in (2, 4, 8, 16):
+        raise ValueError(f"unsupported latent quant bits {bits}")
+    return (1 << int(bits)) - 2
+
+
+def _latent_unwrapped_byte_count(n_symbols: int, *, codec: str) -> int:
+    bits = _latent_codec_quant_bits(codec)
+    if bits == 16:
+        return int(n_symbols) * 2
+    if bits == 8:
+        return int(n_symbols)
+    return (int(n_symbols) * bits + 7) // 8
+
+
+def _quantize_latents_to_unsigned(
+    latents: torch.Tensor,
+    *,
+    bits: int,
+) -> tuple[np.ndarray, float, float]:
+    if latents.dtype not in (torch.float32, torch.float16):
+        raise ValueError(f"latents must be float; got {latents.dtype}")
+    quant_bits = int(bits)
+    max_unsigned = _latent_unsigned_max(quant_bits)
+    f = latents.detach().to(dtype=torch.float32, device="cpu")
+    lo, hi = float(f.min()), float(f.max())
+    if hi <= lo:
+        q = torch.zeros_like(f, dtype=torch.int32)
+        return q.numpy().astype(np.uint16 if quant_bits == 16 else np.uint8), 1.0, lo
+    scale = (hi - lo) / float(max_unsigned)
+    q_unsigned = ((f - lo) / scale).round().clamp(0.0, float(max_unsigned))
+    q_np = q_unsigned.to(torch.int32).numpy()
+    dtype = np.uint16 if quant_bits == 16 else np.uint8
+    return q_np.astype(dtype, copy=False), scale, lo
+
+
+def _dequantize_unsigned_latents(
+    q_unsigned: torch.Tensor,
+    scale: float,
+    zero_point: float,
 ) -> torch.Tensor:
-    q_unsigned = q.to(torch.float32) + 32767.0
+    q_unsigned = q_unsigned.to(torch.float32)
     return q_unsigned * float(scale) + float(zero_point)
+
+
+def _pack_unsigned_values(values: np.ndarray, *, bits: int) -> bytes:
+    quant_bits = int(bits)
+    flat = np.asarray(values).reshape(-1).astype(np.uint16, copy=False)
+    max_unsigned = _latent_unsigned_max(quant_bits)
+    if flat.size == 0:
+        raise ValueError("HiNeRV latent quant stream must be non-empty")
+    if int(flat.max(initial=0)) > max_unsigned:
+        raise ValueError(
+            f"latent quant value exceeds {quant_bits}-bit unsigned max {max_unsigned}"
+        )
+    if quant_bits == 16:
+        signed = flat.astype(np.int32) - 32767
+        return signed.astype("<i2", copy=False).tobytes()
+    if quant_bits == 8:
+        return flat.astype(np.uint8, copy=False).tobytes()
+    per_byte = 8 // quant_bits
+    pad = (-int(flat.size)) % per_byte
+    if pad:
+        flat = np.concatenate([flat, np.zeros(pad, dtype=flat.dtype)])
+    packed = np.zeros(int(flat.size) // per_byte, dtype=np.uint8)
+    mask = (1 << quant_bits) - 1
+    lanes = flat.reshape(-1, per_byte).astype(np.uint8, copy=False)
+    for lane in range(per_byte):
+        packed |= (lanes[:, lane] & mask) << (lane * quant_bits)
+    return packed.tobytes()
+
+
+def _unpack_unsigned_values(
+    payload: bytes,
+    *,
+    bits: int,
+    n_symbols: int,
+    name: str,
+) -> np.ndarray:
+    quant_bits = int(bits)
+    expected_symbols = int(n_symbols)
+    if expected_symbols <= 0:
+        raise ValueError(f"{name} expected symbol count must be positive")
+    if quant_bits == 16:
+        expected = expected_symbols * 2
+        if len(payload) != expected:
+            raise ValueError(f"{name} decoded int16 bytes {len(payload)} != {expected}")
+        signed = np.frombuffer(payload, dtype="<i2").astype(np.int32)
+        return (signed + 32767).astype(np.uint16, copy=False)
+    if quant_bits == 8:
+        if len(payload) != expected_symbols:
+            raise ValueError(
+                f"{name} decoded int8 bytes {len(payload)} != {expected_symbols}"
+            )
+        return np.frombuffer(payload, dtype=np.uint8).copy()
+    per_byte = 8 // quant_bits
+    expected_bytes = (expected_symbols * quant_bits + 7) // 8
+    if len(payload) != expected_bytes:
+        raise ValueError(
+            f"{name} decoded packed int{quant_bits} bytes {len(payload)} != "
+            f"{expected_bytes}"
+        )
+    packed = np.frombuffer(payload, dtype=np.uint8)
+    mask = (1 << quant_bits) - 1
+    out = np.empty(len(packed) * per_byte, dtype=np.uint8)
+    for lane in range(per_byte):
+        out[lane::per_byte] = (packed >> (lane * quant_bits)) & mask
+    return out[:expected_symbols].copy()
+
+
+def _encode_quantized_latents(
+    latents: torch.Tensor,
+    *,
+    codec: str,
+) -> tuple[bytes, float, float]:
+    bits = _latent_codec_quant_bits(codec)
+    q_unsigned, scale, zero_point = _quantize_latents_to_unsigned(latents, bits=bits)
+    raw = _pack_unsigned_values(q_unsigned, bits=bits)
+    return _encode_latent_blob(raw, codec=codec), scale, zero_point
 
 
 def pack_archive(
@@ -283,16 +435,18 @@ def pack_archive(
         if v <= 0 or v > 0xFFFF:
             raise ValueError(f"{name} {v} out of u16 range")
 
-    qc, sc_c, zp_c = _quantize_latents_to_int16(latents_coarse)
-    qm, sc_m, zp_m = _quantize_latents_to_int16(latents_mid)
-    qf, sc_f, zp_f = _quantize_latents_to_int16(latents_fine)
-
-    raw_c = qc.contiguous().numpy().tobytes()
-    raw_m = qm.contiguous().numpy().tobytes()
-    raw_f = qf.contiguous().numpy().tobytes()
-    bytes_c = _encode_latent_blob(raw_c, codec=latent_codec)
-    bytes_m = _encode_latent_blob(raw_m, codec=latent_codec)
-    bytes_f = _encode_latent_blob(raw_f, codec=latent_codec)
+    bytes_c, sc_c, zp_c = _encode_quantized_latents(
+        latents_coarse,
+        codec=latent_codec,
+    )
+    bytes_m, sc_m, zp_m = _encode_quantized_latents(
+        latents_mid,
+        codec=latent_codec,
+    )
+    bytes_f, sc_f, zp_f = _encode_quantized_latents(
+        latents_fine,
+        codec=latent_codec,
+    )
 
     decoder_blob = _serialize_state_dict(decoder_state_dict, codec=decoder_codec)
 
@@ -403,7 +557,10 @@ def build_archive_section_telemetry(
             byte_range=layout.latents_coarse_range,
             codec=latent_codec,
             scale="coarse",
-            raw_bytes=int(layout.num_pairs) * int(layout.latent_dim_coarse) * 2,
+            raw_bytes=_latent_unwrapped_byte_count(
+                int(layout.num_pairs) * int(layout.latent_dim_coarse),
+                codec=latent_codec,
+            ),
         ),
         _section_row(
             name="latents_mid",
@@ -411,7 +568,10 @@ def build_archive_section_telemetry(
             byte_range=layout.latents_mid_range,
             codec=latent_codec,
             scale="mid",
-            raw_bytes=int(layout.num_pairs) * int(layout.latent_dim_mid) * 2,
+            raw_bytes=_latent_unwrapped_byte_count(
+                int(layout.num_pairs) * int(layout.latent_dim_mid),
+                codec=latent_codec,
+            ),
         ),
         _section_row(
             name="latents_fine",
@@ -419,9 +579,15 @@ def build_archive_section_telemetry(
             byte_range=layout.latents_fine_range,
             codec=latent_codec,
             scale="fine",
-            raw_bytes=int(layout.num_pairs) * int(layout.latent_dim_fine) * 2,
+            raw_bytes=_latent_unwrapped_byte_count(
+                int(layout.num_pairs) * int(layout.latent_dim_fine),
+                codec=latent_codec,
+            ),
         ),
     ]
+    latent_quant_bits = _latent_codec_quant_bits(latent_codec)
+    for row in latent_rows:
+        row["quant_bits"] = int(latent_quant_bits)
     sections: list[dict[str, object]] = [
         _section_row(
             name="hiv1_header",
@@ -587,13 +753,24 @@ def parse_archive(blob: bytes) -> HinervArchive:
     latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
 
     def _decode_latent(buf: bytes, np_dim: int, lat_dim: int, name: str) -> torch.Tensor:
+        expected_symbols = int(np_dim) * int(lat_dim)
         raw = _decode_latent_blob(
             buf,
             codec=latent_codec,
-            expected_raw_bytes=int(np_dim) * int(lat_dim) * 2,
+            expected_raw_bytes=_latent_unwrapped_byte_count(
+                expected_symbols,
+                codec=latent_codec,
+            ),
             name=name,
         )
-        return torch.from_numpy(np.frombuffer(raw, dtype="<i2").copy()).view(
+        quant_bits = _latent_codec_quant_bits(latent_codec)
+        q_unsigned = _unpack_unsigned_values(
+            raw,
+            bits=quant_bits,
+            n_symbols=expected_symbols,
+            name=name,
+        )
+        return torch.from_numpy(q_unsigned.astype(np.float32, copy=False)).view(
             np_dim,
             lat_dim,
         )
@@ -620,9 +797,9 @@ def parse_archive(blob: bytes) -> HinervArchive:
 
     return HinervArchive(
         decoder_state_dict=sd,
-        latents_coarse=_dequantize_latents(qc, sc_c, zp_c),
-        latents_mid=_dequantize_latents(qm, sc_m, zp_m),
-        latents_fine=_dequantize_latents(qf, sc_f, zp_f),
+        latents_coarse=_dequantize_unsigned_latents(qc, sc_c, zp_c),
+        latents_mid=_dequantize_unsigned_latents(qm, sc_m, zp_m),
+        latents_fine=_dequantize_unsigned_latents(qf, sc_f, zp_f),
         meta=meta,
         schema_version=int(version),
     )
@@ -630,14 +807,26 @@ def parse_archive(blob: bytes) -> HinervArchive:
 
 def _encode_latent_blob(raw: bytes, *, codec: str) -> bytes:
     normalized = str(codec)
-    if normalized == LATENT_CODEC_RAW_INT16:
+    if normalized in (
+        LATENT_CODEC_RAW_INT16,
+        LATENT_CODEC_RAW_INT8,
+        LATENT_CODEC_PACKED_INT4,
+        LATENT_CODEC_PACKED_INT2,
+    ):
         return bytes(raw)
-    if normalized == LATENT_CODEC_BROTLI_INT16_Q11:
+    if normalized in (
+        LATENT_CODEC_BROTLI_INT16_Q11,
+        LATENT_CODEC_BROTLI_INT8_Q11,
+        LATENT_CODEC_PACKED_BROTLI_INT4_Q11,
+        LATENT_CODEC_PACKED_BROTLI_INT2_Q11,
+    ):
         return bytes(brotli.compress(raw, quality=11))
     if normalized == LATENT_CODEC_HI_AC_INT16_Q11:
         return _encode_latent_hi_ac_blob(raw)
     valid = ", ".join(SUPPORTED_LATENT_CODECS)
-    raise ValueError(f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}")
+    raise ValueError(
+        f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}"
+    )
 
 
 def _decode_latent_blob(
@@ -648,9 +837,19 @@ def _decode_latent_blob(
     name: str,
 ) -> bytes:
     normalized = str(codec)
-    if normalized == LATENT_CODEC_RAW_INT16:
+    if normalized in (
+        LATENT_CODEC_RAW_INT16,
+        LATENT_CODEC_RAW_INT8,
+        LATENT_CODEC_PACKED_INT4,
+        LATENT_CODEC_PACKED_INT2,
+    ):
         raw = bytes(blob)
-    elif normalized == LATENT_CODEC_BROTLI_INT16_Q11:
+    elif normalized in (
+        LATENT_CODEC_BROTLI_INT16_Q11,
+        LATENT_CODEC_BROTLI_INT8_Q11,
+        LATENT_CODEC_PACKED_BROTLI_INT4_Q11,
+        LATENT_CODEC_PACKED_BROTLI_INT2_Q11,
+    ):
         raw = bytes(brotli.decompress(blob))
     elif normalized == LATENT_CODEC_HI_AC_INT16_Q11:
         raw = _decode_latent_hi_ac_blob(

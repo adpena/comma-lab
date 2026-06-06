@@ -8,6 +8,7 @@ false-authority: runtime consumption is proved, exact score authority is not.
 
 from __future__ import annotations
 
+import shutil
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,8 @@ SNERV_ARCHIVE_BOUND_ADAPTER_ID = "snerv_inverse_steg_archive_export"
 SNERV_ARCHIVE_CANDIDATE_FAMILY = "snerv_inverse_steg_carrier"
 SNERV_ARCHIVE_TRANSFORM_KIND = "snerv_inverse_steg_snar1_archive"
 SNERV_ARCHIVE_TRANSFORM_KIND_V2 = "snerv_inverse_steg_snar2_archive"
+SNERV_ARCHIVE_WIRE_FORMAT = "snar1"
+SNERV_ARCHIVE_WIRE_FORMAT_V2 = "snar2"
 SNERV_RECEIVER_CONTRACT_KIND = "snerv_inverse_steg_snar1_inflate_decode_only_receiver"
 SNERV_RECEIVER_CONTRACT_KIND_V2 = (
     "snerv_inverse_steg_snar2_inflate_decode_only_receiver"
@@ -84,6 +87,7 @@ def export_snerv_archive_bound_candidate_package(
     retain_receiver_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
     mlx_triage_argv: Sequence[str] | None = None,
+    allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Emit packet custody, payload-only ``archive.zip``, runtime, and proof."""
 
@@ -114,6 +118,8 @@ def export_snerv_archive_bound_candidate_package(
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
     archive_extract_dir = out_dir / "archive_extracted_for_receiver_proof"
+    if allow_overwrite and archive_extract_dir.exists():
+        shutil.rmtree(archive_extract_dir)
     safe_extract_zip(archive_zip_path, archive_extract_dir)
 
     receiver_dwt_dependency = _receiver_dwt_dependency_mode(decoded.metadata)
@@ -146,6 +152,9 @@ def export_snerv_archive_bound_candidate_package(
         runtime_adapter_manifest_extra={
             "schema": "snerv_inverse_steg_runtime_adapter_manifest.v1",
             "archive_packet_schema": decoded.schema,
+            "archive_packet_wire_format": _archive_wire_format_for_schema(
+                decoded.schema
+            ),
             "archive_packet_sha256": decoded.packet_sha256,
             "n_pairs": int(decoded.metadata["n_pairs"]),
             "frames_per_pair": int(decoded.metadata.get("frames_per_pair", 2)),
@@ -209,12 +218,22 @@ def _archive_contract_for_schema(schema: str) -> tuple[str, str]:
     raise SnervArchiveError(f"unsupported SNeRV archive packet schema: {schema!r}")
 
 
+def _archive_wire_format_for_schema(schema: str) -> str:
+    if schema == SNERV_ARCHIVE_SCHEMA:
+        return SNERV_ARCHIVE_WIRE_FORMAT
+    if schema == SNERV_ARCHIVE_SCHEMA_V2:
+        return SNERV_ARCHIVE_WIRE_FORMAT_V2
+    raise SnervArchiveError(f"unsupported SNeRV archive packet schema: {schema!r}")
+
+
 __all__ = [
     "SNERV_ARCHIVE_BOUND_ADAPTER_ID",
     "SNERV_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "SNERV_ARCHIVE_CANDIDATE_FAMILY",
     "SNERV_ARCHIVE_TRANSFORM_KIND",
     "SNERV_ARCHIVE_TRANSFORM_KIND_V2",
+    "SNERV_ARCHIVE_WIRE_FORMAT",
+    "SNERV_ARCHIVE_WIRE_FORMAT_V2",
     "SNERV_RECEIVER_CONTRACT_KIND",
     "SNERV_RECEIVER_CONTRACT_KIND_V2",
     "SNERV_RECEIVER_PROOF_SCHEMA",

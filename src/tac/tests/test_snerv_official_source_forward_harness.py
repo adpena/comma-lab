@@ -19,6 +19,10 @@ from tac.analysis.snerv_official_source_forward_harness import (
 from tac.analysis.snerv_official_source_parity_audit import (
     build_snerv_official_source_parity_audit,
 )
+from tac.analysis.snerv_official_tub_source_forward_replay import (
+    STATE_VALUE_ARTIFACT_BLOCKER,
+    build_snerv_official_tub_source_forward_replay_artifact,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -27,6 +31,14 @@ def _official_repo() -> Path:
     if not DEFAULT_OFFICIAL_SNERV_REPO.exists():
         pytest.skip(f"official SNeRV checkout is absent: {DEFAULT_OFFICIAL_SNERV_REPO}")
     return DEFAULT_OFFICIAL_SNERV_REPO
+
+
+def _nontrained_tub_artifact() -> dict:
+    return build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        train_one_step=False,
+        generated_utc="20260604T000000Z",
+    )
 
 
 def test_snerv_official_trained_checkpoint_mapping_manifest_proves_mfu_hfr() -> None:
@@ -58,6 +70,9 @@ def test_snerv_official_trained_checkpoint_mapping_manifest_proves_mfu_hfr() -> 
         "blockers"
     ]
     assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in manifest[
+        "blockers"
+    ]
+    assert "snerv_official_trained_checkpoint_decoder_len_not_resolved" not in manifest[
         "blockers"
     ]
     assert manifest["score_claim"] is False
@@ -155,10 +170,51 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert artifact["score_claim"] is False
     assert artifact["ready_for_exact_eval_dispatch"] is False
     assert artifact["official_repo"]["head_sha"] == OFFICIAL_SNERV_SHA
-    assert artifact["official_trained_checkpoint_loaded"] is False
+    assert artifact["official_trained_checkpoint_loaded"] is True
     assert artifact["official_mfu_hfr_source_fixture_forward_parity_passed"] is True
-    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is False
-    assert artifact["full_tub_source_forward_parity_proven"] is False
+    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is True
+    assert artifact["source_forward_replay_verified"] is True
+    assert artifact["source_forward_replay_authority"] is False
+    assert (
+        artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
+    )
+    assert artifact["official_mfu_trained_checkpoint_weight_mapping_proven"] is True
+    assert artifact["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert artifact["official_tub_temporal_encoder_weight_mapping_proven"] is True
+    assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert artifact["official_tub_source_fixture_forward_parity_proven"] is True
+    assert artifact["full_tub_source_forward_parity_proven"] is True
+    assert artifact["source_forward_training_smoke"]["enabled"] is True
+    assert artifact["source_forward_training_smoke"]["step_count"] == 1
+    assert (
+        "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+        not in artifact["blockers"]
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" not in artifact[
+        "blockers"
+    ]
+    assert "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded" not in (
+        artifact["blockers"]
+    )
+    assert "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing" not in (
+        artifact["blockers"]
+    )
+    assert "snerv_official_tub_portable_output2_decoder_weight_mapping_missing" not in (
+        artifact["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        not in artifact["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
+        not in artifact["blockers"]
+    )
+    assert STATE_VALUE_ARTIFACT_BLOCKER in artifact["blockers"]
+    assert (
+        "snerv_official_tub_frame_reconstruction_source_forward_replay_missing"
+        in artifact["tub_source_fixture_closed_blockers"]
+    )
     receiver_replay = artifact["receiver_payload_frame_replay"]
     assert receiver_replay["receiver_runtime_decode_proven"] is True
     assert receiver_replay["frame_producing_official_payload_replay_proven"] is True
@@ -201,8 +257,9 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
 
     tub = rows["tub"]
     assert tub["primitive_source_forward_parity_proven"] is True
+    assert tub["source_fixture_forward_parity_proven"] is True
     assert tub["portable_output2_fusion_receiver_mapping_proven"] is True
-    assert tub["source_forward_parity_proven"] is False
+    assert tub["source_forward_parity_proven"] is True
     assert tub["max_abs_error"] == 0.0
     assert tub["graph_input_max_abs_error"] == 0.0
     assert tub["output2_fusion_max_abs_error"] == 0.0
@@ -217,11 +274,11 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     )
     assert (
         "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing"
-        in tub["blockers"]
+        not in tub["blockers"]
     )
     assert (
         "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
-        in tub["blockers"]
+        not in tub["blockers"]
     )
     assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in tub["blockers"]
 
@@ -229,6 +286,80 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert local_gap["receiver_safe_adapter_present"] is True
     assert local_gap["official_source_forward_markers_present"] is False
     assert local_gap["source_forward_parity_proven"] is False
+
+
+def test_snerv_official_source_forward_harness_grants_authority_with_persisted_tub_state(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "official_snerv_t_one_step_state_dict.npz"
+    tub_artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        train_one_step=True,
+        output_state_dict_path=state_path,
+        generated_utc="20260604T000000Z",
+    )
+
+    artifact = build_snerv_official_source_forward_harness_artifact(
+        official_repo_dir=_official_repo(),
+        repo_root=REPO_ROOT,
+        tub_source_forward_artifact=tub_artifact,
+        generated_utc="20260604T000000Z",
+    )
+
+    assert state_path.is_file()
+    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is True
+    assert artifact["source_forward_replay_verified"] is True
+    assert artifact["source_forward_replay_authority"] is True
+    assert (
+        artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
+    )
+    assert artifact["receiver_payload_frame_replay"][
+        "source_forward_replay_authority"
+    ] is True
+    assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
+
+
+def test_snerv_official_source_forward_harness_rejects_in_memory_only_tub_authority(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "official_snerv_t_one_step_state_dict.npz"
+    tub_artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        train_one_step=True,
+        output_state_dict_path=state_path,
+        generated_utc="20260604T000000Z",
+    )
+    missing_state_path = tmp_path / "missing_in_memory_only_state.npz"
+    fake_tub_artifact = {
+        **tub_artifact,
+        "official_trained_checkpoint_state_dict_path": (
+            missing_state_path.as_posix()
+        ),
+        "official_trained_checkpoint_state_dict_slice_path": (
+            missing_state_path.as_posix()
+        ),
+        "official_trained_checkpoint_state_dict_slice_file_present": True,
+        "official_trained_checkpoint_state_dict_value_artifact_ready": True,
+    }
+
+    artifact = build_snerv_official_source_forward_harness_artifact(
+        official_repo_dir=_official_repo(),
+        repo_root=REPO_ROOT,
+        tub_source_forward_artifact=fake_tub_artifact,
+        generated_utc="20260604T000000Z",
+    )
+
+    assert state_path.is_file()
+    assert not missing_state_path.exists()
+    assert artifact["source_forward_replay_verified"] is True
+    assert artifact["source_forward_replay_authority"] is False
+    assert (
+        artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
+    )
+    assert artifact["receiver_payload_frame_replay"][
+        "source_forward_replay_authority"
+    ] is False
+    assert STATE_VALUE_ARTIFACT_BLOCKER in artifact["blockers"]
 
 
 def test_snerv_official_source_forward_harness_consumes_receiver_bound_export_without_source_authority() -> None:
@@ -264,6 +395,7 @@ def test_snerv_official_source_forward_harness_consumes_receiver_bound_export_wi
         official_repo_dir=_official_repo(),
         repo_root=REPO_ROOT,
         checkpoint_export_reports=(export_report,),
+        tub_source_forward_artifact=_nontrained_tub_artifact(),
         generated_utc="20260604T000000Z",
     )
 
@@ -293,6 +425,82 @@ def test_snerv_official_source_forward_harness_consumes_receiver_bound_export_wi
     assert artifact["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_official_source_forward_harness_consumes_export_nested_mapping_manifest() -> None:
+    nested_manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
+        _minimal_native_receiver_state(),
+        decoder_len=None,
+        state_dict_kind="checkpoint_export_native_mlx_receiver_state_dict",
+        source="export_snerv_checkpoint_archive.official_checkpoint_export_binding",
+    )
+    export_report = {
+        "schema": "snerv_checkpoint_archive_export.v1",
+        "_source_path": "/Volumes/VertigoDataTier/pact/unit/snerv_checkpoint_archive_export.json",
+        "_source_sha256": "a" * 64,
+        "checkpoint_epoch": 3999,
+        "archive_bytes": 91_445,
+        "archive_sha256": "b" * 64,
+        "packet_bytes": 88_000,
+        "packet_sha256": "c" * 64,
+        "official_checkpoint_export_binding": {
+            "schema": "snerv_official_checkpoint_export_binding.v1",
+            "selected_packet_status": "frame_producing_official_export",
+            "native_checkpoint_export_bound_to_official_payload": True,
+            "official_receiver_payload_bound": True,
+            "official_receiver_tensor_map_verified": True,
+            "official_trained_checkpoint_state_dict_slice_present": True,
+            "official_trained_checkpoint_state_dict_mapping_verified": False,
+            "official_trained_checkpoint_mapping_manifest": nested_manifest,
+            "preserved_blockers": [
+                "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping",
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+            ],
+            "blockers": [
+                "snerv_official_trained_checkpoint_source_forward_replay_missing",
+            ],
+        },
+    }
+
+    artifact = build_snerv_official_source_forward_harness_artifact(
+        official_repo_dir=_official_repo(),
+        repo_root=REPO_ROOT,
+        checkpoint_export_reports=(export_report,),
+        tub_source_forward_artifact=_nontrained_tub_artifact(),
+        generated_utc="20260604T000000Z",
+    )
+
+    trained = artifact["official_trained_checkpoint_mapping_manifest"]
+    assert artifact["official_trained_checkpoint_loaded"] is True
+    assert trained["artifact_count"] == 1
+    assert trained["state_dict_mapping_dialect"] == "native_mlx_receiver_state"
+    assert artifact["official_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert artifact["official_mfu_receiver_activation_payload_bound"] is True
+    assert artifact["official_native_receiver_state_mapping_proven"] is True
+    assert artifact["official_mfu_trained_checkpoint_weight_mapping_proven"] is False
+    assert artifact["official_tub_temporal_encoder_weight_mapping_proven"] is False
+    assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is False
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" not in artifact[
+        "blockers"
+    ]
+    assert "snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete" not in (
+        artifact["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+        in artifact["blockers"]
+    )
+    assert "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded" in (
+        artifact["blockers"]
+    )
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in artifact[
+        "blockers"
+    ]
+    assert artifact["full_tub_source_forward_parity_proven"] is False
+    assert artifact["score_claim"] is False
+    assert artifact["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_official_source_forward_harness_consumes_loaded_native_checkpoint_without_fake_mapping() -> None:
     manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
         {
@@ -308,6 +516,7 @@ def test_snerv_official_source_forward_harness_consumes_loaded_native_checkpoint
         official_repo_dir=_official_repo(),
         repo_root=REPO_ROOT,
         trained_checkpoint_mapping_manifests=(manifest,),
+        tub_source_forward_artifact=_nontrained_tub_artifact(),
         generated_utc="20260604T000000Z",
     )
 
@@ -364,7 +573,7 @@ def test_snerv_source_audit_consumes_harness_artifact_without_fake_pass(
     assert artifact_row["status"] == "present"
     assert artifact_row["parity_passed"] is False
     assert artifact_row["parity_falsified"] is False
-    assert "component_not_proven:tub" in artifact_row["blockers"]
+    assert "component_not_proven:tub" not in artifact_row["blockers"]
     assert "component_not_proven:mfu" not in artifact_row["blockers"]
     assert "component_not_proven:hfr" not in artifact_row["blockers"]
     assert report["official_mfu_hfr_tub_parity_proven"] is False

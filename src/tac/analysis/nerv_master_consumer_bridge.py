@@ -811,6 +811,49 @@ def _control_inventory_evidence_units(
                 "accepted_candidate_count": report.get("accepted_candidate_count"),
                 "rejected_candidate_count": report.get("rejected_candidate_count"),
                 "best_pair_deltas": _mapping_list(report.get("best_pair_deltas")),
+                "best_packet_materialized": bool(
+                    report.get("best_packet_materialized")
+                ),
+                "best_packet_path": report.get("best_packet_path"),
+                "best_packet_bytes": report.get("best_packet_bytes"),
+                "best_packet_sha256": report.get("best_packet_sha256"),
+                "best_packet_schema": report.get("best_packet_schema"),
+                "best_packet_wire_format": report.get("best_packet_wire_format"),
+                "best_packet_contest_submission_wire_format_ready": bool(
+                    report.get("best_packet_contest_submission_wire_format_ready")
+                ),
+                "best_packet_materialization": (
+                    dict(report.get("best_packet_materialization"))
+                    if isinstance(report.get("best_packet_materialization"), Mapping)
+                    else None
+                ),
+                "emitted_packet_uses_scorer_loop_best_decoder": bool(
+                    report.get("emitted_packet_uses_scorer_loop_best_decoder")
+                ),
+                "emitted_packet_schema": report.get("emitted_packet_schema"),
+                "emitted_packet_wire_format": report.get(
+                    "emitted_packet_wire_format"
+                ),
+                "emitted_packet_contest_submission_wire_format_ready": bool(
+                    report.get("emitted_packet_contest_submission_wire_format_ready")
+                ),
+                "official_decoder_payload_binding_required": bool(
+                    report.get("official_decoder_payload_binding_required")
+                ),
+                "official_decoder_payload_binding_preserved": bool(
+                    report.get("official_decoder_payload_binding_preserved")
+                ),
+                "official_tub_output2_binding_required": bool(
+                    report.get("official_tub_output2_binding_required")
+                ),
+                "official_tub_output2_binding_preserved": bool(
+                    report.get("official_tub_output2_binding_preserved")
+                ),
+                "scorer_loop_best_packet_binding": (
+                    dict(report.get("scorer_loop_best_packet_binding"))
+                    if isinstance(report.get("scorer_loop_best_packet_binding"), Mapping)
+                    else None
+                ),
                 "accepted_improvement": bool(report.get("accepted_improvement")),
                 "ready_for_pose_guard_gate": bool(
                     report.get("ready_for_pose_guard_gate")

@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import math
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -287,6 +289,7 @@ def export_snerv_checkpoint_archive(
         packet,
         model_size=model_size,
         checkpoint_state=state,
+        output_dir=out,
     )
     package: dict[str, Any] | None = None
     if emit_receiver_proof:
@@ -1632,11 +1635,43 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _write_deterministic_npz_state_slice(
+    path: Path,
+    state: dict[str, np.ndarray],
+) -> dict[str, Any]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(
+        path,
+        mode="w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as zf:
+        for key in sorted(str(key) for key in state):
+            value = np.asarray(state[key])
+            buffer = io.BytesIO()
+            np.save(buffer, value, allow_pickle=False)
+            info = zipfile.ZipInfo(
+                filename=f"{key}.npy",
+                date_time=(1980, 1, 1, 0, 0, 0),
+            )
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            zf.writestr(info, buffer.getvalue(), compress_type=zipfile.ZIP_DEFLATED)
+    return {
+        "path": path.as_posix(),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+        "member_count": len(state),
+        "member_names": [str(key) for key in sorted(state)],
+    }
+
+
 def _official_checkpoint_export_binding(
     packet: SnervArchivePacket,
     *,
     model_size: SnervModelSizeConfig,
     checkpoint_state: dict[str, np.ndarray] | None = None,
+    output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Classify official checkpoint packet binding without claiming source parity."""
 
@@ -1692,6 +1727,12 @@ def _official_checkpoint_export_binding(
     official_mapping_state = _official_state_dict_slice_for_mapping(
         checkpoint_state or {}
     )
+    official_state_slice_record: dict[str, Any] | None = None
+    if official_mapping_state and output_dir is not None:
+        official_state_slice_record = _write_deterministic_npz_state_slice(
+            Path(output_dir) / "official_trained_checkpoint_state_dict_slice.npz",
+            official_mapping_state,
+        )
     official_mapping_has_upstream_keys = any(
         str(key).startswith(("decoder.", "encoder."))
         for key in official_mapping_state
@@ -1707,7 +1748,11 @@ def _official_checkpoint_export_binding(
                 else "checkpoint_export_has_receiver_atoms_not_upstream_official_state_dict"
             )
         ),
-        source="export_snerv_checkpoint_archive.official_checkpoint_export_binding",
+        source=(
+            str(official_state_slice_record["path"])
+            if official_state_slice_record is not None
+            else "export_snerv_checkpoint_archive.official_checkpoint_export_binding"
+        ),
     )
     mfu_hfr_mapping_proven = bool(
         official_state_manifest.get(
@@ -1848,6 +1893,36 @@ def _official_checkpoint_export_binding(
         "official_trained_state_exportable": bool(native_checkpoint_export_bound),
         "official_trained_checkpoint_state_dict_slice_present": bool(
             official_mapping_state
+        ),
+        "official_trained_checkpoint_state_dict_slice_path": (
+            None
+            if official_state_slice_record is None
+            else official_state_slice_record["path"]
+        ),
+        "official_trained_checkpoint_state_dict_slice_bytes": (
+            0
+            if official_state_slice_record is None
+            else int(official_state_slice_record["bytes"])
+        ),
+        "official_trained_checkpoint_state_dict_slice_sha256": (
+            None
+            if official_state_slice_record is None
+            else str(official_state_slice_record["sha256"])
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_count": (
+            0
+            if official_state_slice_record is None
+            else int(official_state_slice_record["member_count"])
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_names": (
+            []
+            if official_state_slice_record is None
+            else list(official_state_slice_record["member_names"])
+        ),
+        "official_trained_checkpoint_state_dict_slice_runner_arg": (
+            None
+            if official_state_slice_record is None
+            else "--snerv-official-trained-checkpoint-state-dict-path"
         ),
         "official_trained_checkpoint_state_dict_mapping_dialect": (
             official_state_manifest.get("state_dict_mapping_dialect")

@@ -143,6 +143,23 @@ def test_direct_live_segnet_distillation_requires_live_candidate_teacher() -> No
         )
 
 
+def test_target_support_floor_requires_live_candidate_teacher() -> None:
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="live SegNet candidate-frame terms require",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            distillation_weight=0.0,
+            segnet_direct_live_distillation_weight=0.0,
+            segnet_direct_live_target_mass_floor_weight=0.5,
+            segnet_direct_live_target_min_ratio_floor_weight=0.25,
+        )
+
+
 def test_student_live_calibration_is_inert_when_segnet_distillation_is_disabled() -> None:
     bundle = RendererBundle(
         model=object(),

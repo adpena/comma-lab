@@ -292,6 +292,35 @@ class RendererBundle:
             boundary all-class-2 basin where the hard argmax never escaped.
             Squaring the positive margin prices far-from-boundary pixels more
             aggressively while preserving the exact decision-boundary geometry.
+        segnet_direct_live_class_region_recon_weight: relative weight for a
+            class-balanced dense fit on the exact SegNet last-frame target
+            argmax regions. This is a collapse-escape actuator, not human
+            visual fidelity: it spends dense RGB gradient only inside the
+            target class regions that upstream ``d_seg`` scores, and
+            automatically boosts classes whose hard candidate mass is below the
+            target mass.
+        segnet_direct_live_rare_class_logit_weight: relative weight for a
+            rare/any-present target-class logit actuator on the same upstream
+            SegNet last-frame argmax surface. It prices each target-present
+            class by hard candidate deficit plus capped rarity, and adds a
+            differentiable soft-class-mass term so tiny but scored classes
+            cannot disappear while material-class coverage passes.
+        segnet_direct_live_target_mass_floor_weight: relative weight for a
+            direct soft target-mass floor over target-present SegNet classes.
+            This is the scorer-domain actuator for the post-class-birth failure
+            mode: hard class coverage can improve while the minimum target
+            class mass ratio remains zero. The term prices candidate soft mass
+            and target-region probability floors before the argmax flips, and
+            is tied to the same last-frame SegNet geometry as ``d_seg``.
+        segnet_direct_live_target_min_ratio_floor_weight: relative weight for
+            the worst-class hard-support birth actuator over target-present
+            SegNet classes. It prices the exact target-class minimum hard ratio
+            metric used by the scorer-space gate, then backprops through
+            target-region class-vs-impostor margins and seed-island
+            probabilities on the real live SegNet logits. This is narrower than
+            dense reconstruction and exists for the current distortion crux:
+            one target class can stay at zero hard argmax support even after
+            soft mass and coverage begin to move.
         segnet_tau_boundary: boundary-band temperature for boundary-aware SegNet
             objectives.
         segnet_hinge_margin: Crammer-Singer margin buffer for the
@@ -436,6 +465,12 @@ class RendererBundle:
             contrast floor: it does not care about human fidelity, only that the
             byte-realized scorer tensors carry the target's score-causal local
             structure instead of a low-rank/flat surrogate.
+        posenet_yuv6_geometry_tether_weight: optional dense PoseNet-only
+            tether on the exact upstream two-frame YUV6 tensor: direct
+            pair MSE/MAE, temporal-delta MSE/MAE, pair distribution, and pair
+            spatial-gradient structure. Unlike the temporal floor, this does
+            not merely require nonzero motion; it prices whether the scorer's
+            two-frame geometry is the right geometry.
         posenet_temporal_signal_floor_weight: optional one-sided hinge dedicated
             to the PoseNet YUV6 temporal delta. The generic YUV6-pair contrast
             floor can pass while adjacent decoded frames are nearly identical;
@@ -485,6 +520,10 @@ class RendererBundle:
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0
     segnet_direct_live_class_balanced_ce_weight: float = 0.0
     segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0
+    segnet_direct_live_class_region_recon_weight: float = 0.0
+    segnet_direct_live_rare_class_logit_weight: float = 0.0
+    segnet_direct_live_target_mass_floor_weight: float = 0.0
+    segnet_direct_live_target_min_ratio_floor_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
@@ -513,6 +552,7 @@ class RendererBundle:
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
     scorer_input_shape_tether_weight: float = 0.0
+    posenet_yuv6_geometry_tether_weight: float = 0.0
     posenet_temporal_signal_floor_weight: float = 0.0
     posenet_temporal_signal_min_std_ratio: float = 0.25
     posenet_temporal_signal_min_mean_abs_ratio: float = 0.25
@@ -628,6 +668,26 @@ class RendererBundle:
                 ">= 0; got "
                 f"{self.segnet_direct_live_class_balanced_squared_hinge_weight}"
             )
+        if self.segnet_direct_live_class_region_recon_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_class_region_recon_weight must be >= 0; got "
+                f"{self.segnet_direct_live_class_region_recon_weight}"
+            )
+        if self.segnet_direct_live_rare_class_logit_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_rare_class_logit_weight must be >= 0; got "
+                f"{self.segnet_direct_live_rare_class_logit_weight}"
+            )
+        if self.segnet_direct_live_target_mass_floor_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_target_mass_floor_weight must be >= 0; got "
+                f"{self.segnet_direct_live_target_mass_floor_weight}"
+            )
+        if self.segnet_direct_live_target_min_ratio_floor_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_target_min_ratio_floor_weight must be >= 0; "
+                f"got {self.segnet_direct_live_target_min_ratio_floor_weight}"
+            )
         if self.segnet_tau_boundary <= 0.0:
             raise MlxScoreAwareHarnessError(
                 f"segnet_tau_boundary must be > 0; got {self.segnet_tau_boundary}"
@@ -728,6 +788,11 @@ class RendererBundle:
                 "scorer_input_shape_tether_weight must be >= 0; got "
                 f"{self.scorer_input_shape_tether_weight}"
             )
+        if self.posenet_yuv6_geometry_tether_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "posenet_yuv6_geometry_tether_weight must be >= 0; got "
+                f"{self.posenet_yuv6_geometry_tether_weight}"
+            )
         if self.posenet_temporal_signal_floor_weight < 0.0:
             raise MlxScoreAwareHarnessError(
                 "posenet_temporal_signal_floor_weight must be >= 0; got "
@@ -791,6 +856,14 @@ class RendererBundle:
                 and self.segnet_student_live_calibration_weight > 0.0
             )
             or self.segnet_direct_live_distillation_weight > 0.0
+            or self.segnet_direct_live_class_histogram_weight > 0.0
+            or self.segnet_direct_live_class_balanced_hinge_weight > 0.0
+            or self.segnet_direct_live_class_balanced_ce_weight > 0.0
+            or self.segnet_direct_live_class_balanced_squared_hinge_weight > 0.0
+            or self.segnet_direct_live_class_region_recon_weight > 0.0
+            or self.segnet_direct_live_rare_class_logit_weight > 0.0
+            or self.segnet_direct_live_target_mass_floor_weight > 0.0
+            or self.segnet_direct_live_target_min_ratio_floor_weight > 0.0
         )
         if live_segnet_candidate_frame_terms_active:
             has_real = self.scorer_teacher is not None

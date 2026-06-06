@@ -165,6 +165,29 @@ def test_mlx_renderer_imports_clean() -> None:
 
 
 @skip_no_mlx
+def test_hinerv_mlx_renderer_init_seed_owns_exported_state() -> None:
+    from dataclasses import replace
+
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = replace(_official_smoke_cfg(), init_seed=17)
+    mx.random.seed(12345)
+    first = HinervSubstrateMLX(cfg).export_state_dict()
+    mx.random.seed(98765)
+    second = HinervSubstrateMLX(cfg).export_state_dict()
+
+    assert set(first) == set(second)
+    for name in sorted(first):
+        assert np.array_equal(first[name], second[name]), name
+
+    changed = HinervSubstrateMLX(replace(cfg, init_seed=18)).export_state_dict()
+    assert any(not np.array_equal(first[name], changed[name]) for name in first)
+
+
+@skip_no_mlx
 def test_mlx_renderer_parameter_parity_with_pytorch() -> None:
     from tac.substrates.hi_nerv.architecture import HinervSubstrate
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
@@ -281,6 +304,61 @@ def test_mlx_output_head_target_contrast_init_scales_archive_head_weights() -> N
     assert payload["blockers"] == []
     assert payload["output_rgb_1_std_lift_ratio"] > 2.0
     assert max(payload["head_rgb_1_weight_gain"]) <= 16.0
+
+
+@skip_no_mlx
+def test_mlx_scorer_domain_bootstrap_reduces_rgb_yuv6_loss() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(0)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    ramp = mx.reshape(
+        mx.linspace(0.05, 0.95, cfg.output_height * cfg.output_width),
+        (1, cfg.output_height, cfg.output_width, 1),
+    )
+    target0 = mx.tile(
+        mx.concatenate([0.2 + 0.2 * ramp, 0.1 + 0.4 * ramp, 0.3 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    target1 = mx.tile(
+        mx.concatenate([0.4 - 0.2 * ramp, 0.15 + 0.3 * ramp, 0.2 + 0.2 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    model.initialize_output_head_contrast_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        max_gain=16.0,
+    )
+
+    payload = model.fit_scorer_domain_bootstrap_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        steps=6,
+        learning_rate=1.0e-3,
+        rgb_weight=1.0,
+        yuv6_weight=0.5,
+        temporal_delta_weight=0.25,
+        grad_clip_max_norm=1.0,
+    )
+
+    assert payload["enabled"] is True
+    assert payload["runtime_sidecar_bytes"] == 0
+    assert payload["human_visual_fidelity_objective"] is False
+    assert payload["loss_history_last"] <= payload["loss_history_first"]
+    assert (
+        payload["metrics_after"]["contrast_floor_loss"]
+        <= payload["metrics_before"]["contrast_floor_loss"]
+    )
+    assert payload["output_rgb_std_ratio_delta"] > 0.0
+    assert payload["output_yuv6_temporal_delta_std_ratio_delta"] > 0.0
+    assert payload["contrast_floor_weight"] > 0.0
+    assert "latents_coarse" in payload["archive_charged_decoder_tensors"]
 
 
 @skip_no_mlx
@@ -952,6 +1030,11 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     bitstream_report_path = (
         tmp_path / "hi_nerv_export" / "hi_nerv_bitstream_preparation.json"
     )
+    live_receiver_codec_portfolio_selection_path = (
+        tmp_path
+        / "hi_nerv_export"
+        / "hi_nerv_live_receiver_codec_portfolio_selection.json"
+    )
     live_receiver_export_parity_path = (
         tmp_path
         / "hi_nerv_export"
@@ -971,6 +1054,7 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert npz_path.is_file()
     assert npz_manifest_path.is_file()
     assert bitstream_report_path.is_file()
+    assert live_receiver_codec_portfolio_selection_path.is_file()
     assert live_receiver_export_parity_path.is_file()
     assert archive_section_telemetry_path.is_file()
     assert proof_path.is_file()
@@ -980,6 +1064,9 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     package = json.loads(package_path.read_text(encoding="utf-8"))
     npz_manifest = json.loads(npz_manifest_path.read_text(encoding="utf-8"))
     bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
+    live_receiver_codec_portfolio_selection = json.loads(
+        live_receiver_codec_portfolio_selection_path.read_text(encoding="utf-8")
+    )
     live_receiver_export_parity = json.loads(
         live_receiver_export_parity_path.read_text(encoding="utf-8")
     )
@@ -1006,7 +1093,22 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert spine_extra["state_npz_bridge"]["artifact_sha256"] == (
         npz_manifest["artifact_sha256"]
     )
+    assert bitstream_report["decoder_codec_requested_by_export"] == "int8_mixed"
+    assert bitstream_report["decoder_codec_selected_by_export"] == "int8_mixed"
+    assert bitstream_report["decoder_codec"] == "int8_mixed"
+    assert bitstream_report["requested_decoder_codec"] == "int8_mixed"
+    assert bitstream_report["latent_codec"] == "int16_raw"
+    assert bitstream_report["live_receiver_codec_portfolio_selection"] == (
+        live_receiver_codec_portfolio_selection
+    )
     assert spine_extra["hi_nerv_bitstream_preparation"] == bitstream_report
+    assert (
+        spine_extra["hi_nerv_live_receiver_codec_portfolio_selection_path"]
+        == live_receiver_codec_portfolio_selection_path.as_posix()
+    )
+    assert spine_extra["hi_nerv_live_receiver_codec_portfolio_selection"] == (
+        live_receiver_codec_portfolio_selection
+    )
     assert (
         spine_extra["hi_nerv_mlx_live_receiver_export_parity_path"]
         == live_receiver_export_parity_path.as_posix()
@@ -1069,6 +1171,13 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert runtime_manifest["hi_nerv_bitstream_preparation_path"] == (
         bitstream_report_path.as_posix()
     )
+    assert runtime_manifest["hi_nerv_live_receiver_codec_portfolio_selection"] == (
+        live_receiver_codec_portfolio_selection
+    )
+    assert (
+        runtime_manifest["hi_nerv_live_receiver_codec_portfolio_selection_path"]
+        == live_receiver_codec_portfolio_selection_path.as_posix()
+    )
     assert runtime_manifest["hi_nerv_mlx_live_receiver_export_parity"] == (
         live_receiver_export_parity
     )
@@ -1098,6 +1207,239 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert "canonical_npz_bridge_not_used_or_not_applicable" not in portability[
         "portability_blockers"
     ]
+
+
+def test_archive_portfolio_auto_selects_receiver_parity_surviving_codec(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+    from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
+
+    def _fake_parity_proof(*, archive_bytes, source_backend, **_kwargs):
+        emitted = build_archive_section_telemetry(archive_bytes)["decoder_codec"]
+        passed = emitted == "fp16_enveloped"
+        return {
+            "schema": "hi_nerv_mlx_live_receiver_export_parity_proof.v1",
+            "source_backend": source_backend,
+            "passed": passed,
+            "proof_status": (
+                "sampled_live_receiver_export_parity_passed"
+                if passed
+                else "sampled_live_receiver_export_parity_failed"
+            ),
+            "mean_abs_delta": 0.0 if passed else 0.1,
+            "max_abs_delta": 0.0 if passed else 0.25,
+            "sampled_pair_count": 1,
+            "blockers": []
+            if passed
+            else ["hi_nerv_mlx_live_receiver_export_parity_failed"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "_build_mlx_live_receiver_export_parity_proof",
+        _fake_parity_proof,
+    )
+
+    archive_path, _archive_sha, _archive_bytes = (
+        archive_candidate.export_hi_nerv_mlx_archive(
+            _exportable_torch_model(),
+            tmp_path / "hi_nerv_portfolio_auto",
+            repo_root=REPO_ROOT,
+            decoder_codec="portfolio_auto",
+            source_backend="mlx",
+            retain_receiver_proof_output=False,
+        )
+    )
+
+    out_dir = archive_path.parent
+    selection = json.loads(
+        (
+            out_dir / "hi_nerv_live_receiver_codec_portfolio_selection.json"
+        ).read_text(encoding="utf-8")
+    )
+    manifest = json.loads(
+        (out_dir / "hprc_representation_spine_hi_nerv_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    package = json.loads(
+        (out_dir / "archive_bound_candidate_adapter_package.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert selection["requested_decoder_codec"] == "portfolio_auto"
+    assert selection["selected_decoder_codec"] == "fp16_enveloped"
+    assert selection["selected_decoder_codec_requested"] == "fp16_enveloped"
+    assert selection["selected_decoder_codec_effective"] == "fp16_enveloped"
+    assert selection["selected_decoder_codec_source"] == "archive_section_telemetry"
+    assert (
+        selection["selection_mode"]
+        == "cheapest_live_receiver_parity_passing_codec"
+    )
+    assert selection["parity_passing_candidate_count"] == 1
+    assert all(
+        row["decoder_codec_requested"] != "int2_mixed"
+        or not row["live_receiver_export_parity_passed"]
+        for row in selection["rows"]
+        if row["status"] == "measured"
+    )
+
+    spine_extra = manifest["manifest"]["representation_spine"]["manifest_extra"]
+    assert spine_extra["requested_decoder_codec"] == "portfolio_auto"
+    assert spine_extra["decoder_codec"] == "fp16_enveloped"
+    assert (
+        spine_extra["hi_nerv_bitstream_preparation"][
+            "decoder_codec_requested_by_export"
+        ]
+        == "portfolio_auto"
+    )
+    assert (
+        spine_extra["hi_nerv_bitstream_preparation"][
+            "decoder_codec_selected_by_export"
+        ]
+        == "fp16_enveloped"
+    )
+    assert (
+        spine_extra["hi_nerv_bitstream_preparation"]["decoder_codec"]
+        == "fp16_enveloped"
+    )
+    assert (
+        spine_extra["hi_nerv_bitstream_preparation"]["requested_decoder_codec"]
+        == "portfolio_auto"
+    )
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["requested_decoder_codec"] == "portfolio_auto"
+    assert runtime_manifest["decoder_codec"] == "fp16_enveloped"
+    assert (
+        runtime_manifest["hi_nerv_live_receiver_codec_portfolio_selection"]
+        == selection
+    )
+    assert (
+        "hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity"
+        not in row["blockers"]
+    )
+
+
+def test_archive_portfolio_auto_preserves_requested_vs_effective_alias_codec(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+    from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
+
+    original_pack = archive_candidate.pack_archive_from_exported_state_dict
+
+    def _aliasing_pack_archive_from_exported_state_dict(**kwargs):
+        if kwargs.get("decoder_codec") == "int4_mixed":
+            kwargs = {**kwargs, "decoder_codec": "int4_scale_bundled"}
+        return original_pack(**kwargs)
+
+    def _fake_parity_proof(*, archive_bytes, source_backend, **_kwargs):
+        emitted = build_archive_section_telemetry(archive_bytes)["decoder_codec"]
+        passed = emitted == "int4_scale_bundled"
+        return {
+            "schema": "hi_nerv_mlx_live_receiver_export_parity_proof.v1",
+            "source_backend": source_backend,
+            "passed": passed,
+            "proof_status": (
+                "sampled_live_receiver_export_parity_passed"
+                if passed
+                else "sampled_live_receiver_export_parity_failed"
+            ),
+            "mean_abs_delta": 0.0 if passed else 0.1,
+            "max_abs_delta": 0.0 if passed else 0.25,
+            "sampled_pair_count": 1,
+            "blockers": []
+            if passed
+            else ["hi_nerv_mlx_live_receiver_export_parity_failed"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "_LIVE_RECEIVER_CODEC_PORTFOLIO_CANDIDATES",
+        ("int4_mixed",),
+    )
+    monkeypatch.setattr(
+        archive_candidate,
+        "pack_archive_from_exported_state_dict",
+        _aliasing_pack_archive_from_exported_state_dict,
+    )
+    monkeypatch.setattr(
+        archive_candidate,
+        "_build_mlx_live_receiver_export_parity_proof",
+        _fake_parity_proof,
+    )
+
+    archive_path, _archive_sha, _archive_bytes = (
+        archive_candidate.export_hi_nerv_mlx_archive(
+            _exportable_torch_model(),
+            tmp_path / "hi_nerv_portfolio_auto_alias",
+            repo_root=REPO_ROOT,
+            decoder_codec="portfolio_auto",
+            source_backend="mlx",
+            retain_receiver_proof_output=False,
+        )
+    )
+
+    out_dir = archive_path.parent
+    selection = json.loads(
+        (
+            out_dir / "hi_nerv_live_receiver_codec_portfolio_selection.json"
+        ).read_text(encoding="utf-8")
+    )
+    bitstream_report = json.loads(
+        (out_dir / "hi_nerv_bitstream_preparation.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    archive_section_telemetry = json.loads(
+        (out_dir / "hi_nerv_archive_section_telemetry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    manifest = json.loads(
+        (out_dir / "hprc_representation_spine_hi_nerv_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    package = json.loads(
+        (out_dir / "archive_bound_candidate_adapter_package.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert selection["requested_decoder_codec"] == "portfolio_auto"
+    assert selection["selected_decoder_codec_requested"] == "int4_mixed"
+    assert selection["selected_decoder_codec_effective"] == "int4_scale_bundled"
+    assert selection["selected_decoder_codec"] == "int4_scale_bundled"
+    assert selection["selected_row"]["decoder_codec_requested"] == "int4_mixed"
+    assert selection["selected_row"]["decoder_codec_emitted"] == "int4_scale_bundled"
+    assert archive_section_telemetry["decoder_codec"] == "int4_scale_bundled"
+
+    assert bitstream_report["requested_decoder_codec"] == "portfolio_auto"
+    assert bitstream_report["decoder_codec_requested_by_export"] == "portfolio_auto"
+    assert bitstream_report["decoder_codec_selected_by_export"] == (
+        "int4_scale_bundled"
+    )
+    assert bitstream_report["decoder_codec"] == "int4_scale_bundled"
+
+    spine_extra = manifest["manifest"]["representation_spine"]["manifest_extra"]
+    assert spine_extra["requested_decoder_codec"] == "portfolio_auto"
+    assert spine_extra["decoder_codec"] == "int4_scale_bundled"
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["requested_decoder_codec"] == "portfolio_auto"
+    assert runtime_manifest["decoder_codec"] == "int4_scale_bundled"
 
 
 def test_archive_export_refuses_over_hard_byte_ceiling_before_receiver_package(
@@ -1224,6 +1566,104 @@ def test_archive_export_emits_hprc_spine_for_high_byte_arithmetic_latents(
     portability = runtime_manifest["mlx_numpy_portability_contract"]
     assert "constriction" in portability["non_numpy_receiver_dependencies"]
     assert proof["runtime_consumption_proof_ready"] is True
+
+
+def test_archive_export_emits_receiver_bound_lower_bit_latents(
+    tmp_path: Path,
+) -> None:
+    from tac.substrates.hi_nerv.archive import (
+        build_archive_section_telemetry,
+        parse_archive,
+        split_archive_sections,
+    )
+    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+
+    archive_path, archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
+        _exportable_torch_model(),
+        tmp_path / "hi_nerv_export_int4_latents",
+        repo_root=REPO_ROOT,
+        decoder_codec="int8_mixed",
+        latent_codec="int4_packed_brotli_q11",
+        retain_receiver_proof_output=False,
+        source_backend="pytorch_test_export",
+    )
+
+    export_dir = tmp_path / "hi_nerv_export_int4_latents"
+    manifest_path = export_dir / "hprc_representation_spine_hi_nerv_manifest.json"
+    package_path = export_dir / "archive_bound_candidate_adapter_package.json"
+    proof_path = export_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
+
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes == archive_path.stat().st_size
+    inner = (export_dir / "0.bin").read_bytes()
+    sections = split_archive_sections(inner)
+    parsed = parse_archive(inner)
+    telemetry = build_archive_section_telemetry(inner)
+    rows = {row["name"]: row for row in telemetry["sections"]}
+    assert sections.meta["_latent_codec"] == "int4_packed_brotli_q11"
+    assert parsed.latents_coarse.shape[0] == _exportable_torch_model().cfg.num_pairs
+    assert rows["latents_coarse"]["quant_bits"] == 4
+    assert rows["latents_coarse"]["raw_bytes"] == (
+        parsed.latents_coarse.numel() * 4 + 7
+    ) // 8
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    package = json.loads(package_path.read_text(encoding="utf-8"))
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    extra = manifest["manifest"]["representation_spine"]["manifest_extra"]
+    assert extra["latent_codec"] == "int4_packed_brotli_q11"
+    runtime_manifest = package["archive_bound_candidate_adapter_package"][
+        "candidate_rows"
+    ][0]["runtime_adapter_manifest"]
+    assert runtime_manifest["latent_codec"] == "int4_packed_brotli_q11"
+    assert runtime_manifest["archive_section_telemetry"]["latent_codec"] == (
+        "int4_packed_brotli_q11"
+    )
+    portability = runtime_manifest["mlx_numpy_portability_contract"]
+    assert "constriction" not in portability["non_numpy_receiver_dependencies"]
+    assert "lossy relative to the int16 latent quantizer" in portability["notes"]
+    assert proof["runtime_consumption_proof_ready"] is True
+
+
+def test_lossy_latent_codec_selection_treats_decode_survival_as_measured_delta() -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    selection = archive_candidate._build_single_codec_portfolio_selection_report(
+        requested_decoder_codec="int4_mixed",
+        selected_decoder_codec="int4_mixed",
+        latent_codec="int4_packed_brotli_q11",
+        archive_bytes=196_951,
+        payload_bytes=196_966,
+        archive_zip_build={"archive_sha256": "0" * 64},
+        live_receiver_export_parity={
+            "passed": False,
+            "receiver_decode_passed": True,
+            "proof_status": "sampled_live_receiver_export_lossy_latent_delta_measured",
+            "mean_abs_delta": 0.000954,
+            "max_abs_delta": 0.0174,
+            "blockers": [
+                "sampled_live_receiver_export_parity_not_full_video",
+                "contest_cpu_cuda_exact_eval_not_executed",
+                "scorer_replay_not_executed",
+            ],
+        },
+        hard_byte_ceiling=285_000,
+    )
+
+    row = selection["selected_row"]
+    assert row["lossy_latent_codec"] is True
+    assert row["live_receiver_export_parity_passed"] is False
+    assert row["live_receiver_export_receiver_survived"] is True
+    assert selection["receiver_surviving_candidate_count"] == 1
+    assert (
+        "hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity"
+        not in selection["blockers"]
+    )
+    assert (
+        "hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving"
+        not in selection["blockers"]
+    )
 
 
 def test_archive_bound_package_wrapper_preserves_high_byte_latent_codec(

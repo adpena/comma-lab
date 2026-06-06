@@ -133,6 +133,101 @@ def test_hinerv_archive_ladder_waterfill_carries_saliency_replay_blockers(
     )
 
 
+def test_hinerv_archive_ladder_waterfill_consumes_receiver_closed_ladder(
+    tmp_path: Path,
+) -> None:
+    export_dir = tmp_path / "live"
+    export_dir.mkdir()
+    archive = export_dir / "archive.zip"
+    archive.write_bytes(b"trained-hinerv")
+    state_path = export_dir / "hi_nerv_mlx_exported_state.npz"
+    np.savez(
+        state_path,
+        **{
+            "blocks.0.weight": np.asarray([0.25, -0.5, 1.0], dtype=np.float32),
+            "latents_coarse": np.asarray([999.0], dtype=np.float32),
+        },
+    )
+    manifest_path = export_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "framework_agnostic_npz_bridge_manifest.v1",
+                "artifact_path": state_path.as_posix(),
+                "artifact_sha256": sha256_file(state_path),
+                "tensor_count": 2,
+                "consumption_recommended": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    receiver_ladder = {
+        "schema": "nerv_receiver_closed_modelsize_ladder.v1",
+        "axis_tag": "[planning/control]",
+        "carrier_id": "hi_nerv",
+        "normalized_rows": [
+            {
+                "row_id": "receiver_smoke",
+                "archive_bytes": archive.stat().st_size,
+                "archive_path": archive.as_posix(),
+                "archive_sha256": sha256_file(archive),
+                "receiver_proof_passed": False,
+                "blockers": ["receiver_closed_byte_proof_missing"],
+                "source": {
+                    "row_id": "receiver_smoke",
+                    "candidate_id": "receiver_smoke",
+                    "archive_bytes": archive.stat().st_size,
+                    "archive_path": archive.as_posix(),
+                    "archive_sha256": sha256_file(archive),
+                    "num_pairs": 1,
+                    "receiver_proof_passed": False,
+                    "receiver_archive_replay_verified": False,
+                    "post_export_receiver_cache_quality": {
+                        "quality_gate_passed": False,
+                        "quality_gate_verdict": "CACHE_INPUTS_LOCAL_ONLY",
+                        "blockers": [
+                            "hi_nerv_receiver_cache_quality_is_false_authority"
+                        ],
+                    },
+                    "blockers": ["hi_nerv_trained_archive_byte_oracle_partial_pair_scope"],
+                },
+            }
+        ],
+        "blockers": ["receiver_closed_modelsize_ladder_not_ready"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_hinerv_archive_ladder_waterfill(
+        receiver_ladder,
+        global_saliency_by_name={"blocks.0.weight": 1.0},
+        action_bits=(0, 2, 32),
+        candidate_id="receiver_smoke",
+    )
+
+    assert report["schema"] == HINERV_ARCHIVE_LADDER_WATERFILL_SCHEMA
+    assert report["source_schema"] == "nerv_receiver_closed_modelsize_ladder.v1"
+    assert report["normalized_source_schema"] == "hinerv_archive_size_ladder.v1"
+    assert report["full_video_coverage"] is False
+    row = report["rows"][0]
+    assert row["state_npz_manifest_path"] == manifest_path.as_posix()
+    assert row["waterfill_plan"]["schema"] == "nerv_decoder_weight_waterfill.v1"
+    assert row["waterfill_plan"]["full_video_coverage"] is False
+    assert row["waterfill_plan"]["receiver_proof_status"] == "missing"
+    assert "full_video_coverage_missing" in row["blockers"]
+    assert "receiver_proof_not_satisfied" in row["blockers"]
+    assert "receiver_closed_byte_proof_missing" in row["blockers"]
+    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in row["blockers"]
+    assert "hi_nerv_receiver_cache_quality_is_false_authority" in row["blockers"]
+    assert (
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        in row["blockers"]
+    )
+    assert report["score_claim"] is False
+
+
 def test_hinerv_archive_ladder_waterfill_rejects_wrong_source_schema(
     tmp_path: Path,
 ) -> None:
@@ -141,7 +236,10 @@ def test_hinerv_archive_ladder_waterfill_rejects_wrong_source_schema(
 
     with pytest.raises(
         HinervArchiveLadderWaterfillError,
-        match=r"expected hinerv_archive_size_ladder\.v1",
+        match=(
+            r"expected hinerv_archive_size_ladder\.v1 or "
+            r"nerv_receiver_closed_modelsize_ladder\.v1"
+        ),
     ):
         build_hinerv_archive_ladder_waterfill(ladder)
 

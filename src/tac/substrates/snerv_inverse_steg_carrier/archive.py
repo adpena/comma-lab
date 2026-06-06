@@ -94,6 +94,12 @@ SNAR2_VERSION = 1
 SNAR2_SECTION_HASH_BYTES = 8
 _SNAR2_HEADER_FMT = "<5sBBBBHBBIBBHH4I4Q"
 SNAR2_HEADER_BYTES = struct.calcsize(_SNAR2_HEADER_FMT)
+_SNAR2_METADATA_FLAG_SCORE_AWARE_LONG_TRAINING_EXECUTED = 1 << 0
+_SNAR2_METADATA_FLAG_OFFICIAL_MFU_HFR_TUB_EXPORT_BOUND = 1 << 1
+_SNAR2_SUPPORTED_METADATA_FLAGS = (
+    _SNAR2_METADATA_FLAG_SCORE_AWARE_LONG_TRAINING_EXECUTED
+    | _SNAR2_METADATA_FLAG_OFFICIAL_MFU_HFR_TUB_EXPORT_BOUND
+)
 _SNAR2_WAVELET_TO_CODE = {
     "haar": 1,
     "db1": 1,
@@ -126,6 +132,11 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA = (
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_COMPRESSION_PROFILE = "bounded_lzma_preset6"
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET = 6
+DECODER_PAYLOAD_EXHAUSTIVE_LZMA_PRESET = 9 | lzma.PRESET_EXTREME
+OFFICIAL_MFU_INPUT_CODEC_FULL = "full_float64"
+OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC = "zero_synthetic_float64"
 OFFICIAL_SKIP_HIGH_CODEC_FULL = "full_float64"
 OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN = "shared_mean_float64"
 OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN = "channel_mean_float64"
@@ -162,6 +173,16 @@ OFFICIAL_TUB_INPUT_MODE_TO_CODEC = {
     "unused_synthetic": OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
     "unused_synthetic_float64": OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
     OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC: OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
+}
+OFFICIAL_MFU_INPUT_MODE_TO_CODEC = {
+    "full": OFFICIAL_MFU_INPUT_CODEC_FULL,
+    "full_float64": OFFICIAL_MFU_INPUT_CODEC_FULL,
+    OFFICIAL_MFU_INPUT_CODEC_FULL: OFFICIAL_MFU_INPUT_CODEC_FULL,
+    "zero": OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC,
+    "zeros": OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC,
+    "zero_synthetic": OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC,
+    "zero_synthetic_float64": OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC,
+    OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC: OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC,
 }
 OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS: tuple[str, ...] = (
     "mfu.upsample_mid.weight",
@@ -1051,7 +1072,7 @@ def pack_snerv_archive_snar2(
         section_bytes=section_bytes,
         section_sha256=section_sha256,
         section_reports=section_reports,
-        metadata=_snar2_metadata_from_fields(fields),
+        metadata=clean_metadata,
         header_bytes=SNAR2_HEADER_BYTES,
         total_bytes=len(packet),
     )
@@ -1818,6 +1839,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     tub_temporal_encoder_concat: np.ndarray | None = None,
     tub_output2_raw: np.ndarray | None = None,
     store_tub_output2_for_receiver_proof: bool = False,
+    mfu_input_codec: str | None = None,
     skip_high_codec: str | None = None,
     skip_high_source_shape: tuple[int, int, int, int] | None = None,
     tub_input_codec: str | None = None,
@@ -1830,6 +1852,11 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     of only carrying the local linear HF surrogate.
     """
 
+    mfu_input_plan = _official_mfu_input_storage_plan(
+        low=low,
+        skip_mid=skip_mid,
+        codec=mfu_input_codec,
+    )
     skip_high_plan = _official_skip_high_storage_plan(
         skip_high,
         codec=skip_high_codec,
@@ -1844,8 +1871,8 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     receiver_frame_shape = _official_mfu_hfr_receiver_frame_shape(
         mfu=mfu,
         hfr_heads=hfr_heads,
-        low=low,
-        skip_mid=skip_mid,
+        low=mfu_input_plan["effective"]["low"],
+        skip_mid=mfu_input_plan["effective"]["skip_mid"],
         skip_high=skip_high_plan["effective"],
     )
     output2_plan = _official_tub_output2_storage_plan(
@@ -1858,6 +1885,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         store_for_receiver_proof=bool(store_tub_output2_for_receiver_proof),
     )
     source_forward_blockers = _official_mfu_hfr_tub_source_forward_blockers(
+        mfu_input_plan["metadata"],
         skip_high_plan["metadata"],
         tub_input_plan["metadata"],
         output2_plan["metadata"],
@@ -1865,8 +1893,8 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     tensors = _official_payload_tensor_dict(
         mfu=mfu,
         hfr_heads=hfr_heads,
-        low=low,
-        skip_mid=skip_mid,
+        low=mfu_input_plan["stored"]["low"],
+        skip_mid=mfu_input_plan["stored"]["skip_mid"],
         skip_high=skip_high_plan["stored"],
         tub_current=tub_input_plan["stored"]["current"],
         tub_previous=tub_input_plan["stored"]["previous"],
@@ -1880,7 +1908,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     compressed = lzma.compress(
         raw,
         format=lzma.FORMAT_XZ,
-        preset=9 | lzma.PRESET_EXTREME,
+        preset=DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
     )
     spec = mfu.spec
     tub_config = {
@@ -1899,8 +1927,8 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     self_consistency_reference = _build_official_receiver_self_consistency_reference(
         mfu=mfu,
         hfr_heads=hfr_heads,
-        low=low,
-        skip_mid=skip_mid,
+        low=mfu_input_plan["effective"]["low"],
+        skip_mid=mfu_input_plan["effective"]["skip_mid"],
         skip_high=skip_high_plan["effective"],
         tub_current=tub_input_plan["effective"]["current"],
         tub_previous=tub_input_plan["effective"]["previous"],
@@ -1942,6 +1970,11 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "raw_tensor_sha256": _sha256(raw),
         "compressed_bytes": len(compressed),
         "compressed_sha256": _sha256(compressed),
+        "compression_profile": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_COMPRESSION_PROFILE,
+        "compression_preset": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
+        "explicit_exhaustive_compression_available": True,
+        "explicit_exhaustive_lzma_preset": DECODER_PAYLOAD_EXHAUSTIVE_LZMA_PRESET,
+        "mfu_input_storage": mfu_input_plan["metadata"],
         "skip_high_storage": skip_high_plan["metadata"],
         "tub_input_storage": tub_input_plan["metadata"],
         "tub_output2_storage": output2_plan["metadata"],
@@ -2232,7 +2265,10 @@ def decode_official_mfu_hfr_tub_decoder_payload(
 ) -> OfficialMfuHfrTubReceiverPayload:
     """Decode official MFU/HFR/TUB receiver primitive payload bytes."""
 
-    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(payload)
+    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(
+        payload,
+        expand_mfu_inputs=True,
+    )
     tensors = _expand_official_skip_high_storage(header, tensors)
     tensors = _expand_official_tub_input_storage(header, tensors)
     payload_obj = OfficialMfuHfrTubReceiverPayload(
@@ -2247,6 +2283,8 @@ def decode_official_mfu_hfr_tub_decoder_payload(
 
 def _decode_official_mfu_hfr_tub_payload_tensor_manifest(
     payload: bytes,
+    *,
+    expand_mfu_inputs: bool = True,
 ) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
     """Decode official payload tensors without expanding compact frame state."""
 
@@ -2270,6 +2308,8 @@ def _decode_official_mfu_hfr_tub_payload_tensor_manifest(
     if _sha256(raw) != str(header["raw_tensor_sha256"]):
         raise SnervArchiveError("official primitive payload raw sha256 mismatch")
     tensors = _unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    if expand_mfu_inputs:
+        tensors = _expand_official_mfu_input_storage(header, tensors)
     return dict(header), tensors
 
 
@@ -2286,7 +2326,10 @@ def _decode_official_mfu_hfr_tub_selected_frames(
         frame_indices,
         expected_frame_count=expected_frame_count,
     )
-    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(payload)
+    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(
+        payload,
+        expand_mfu_inputs=False,
+    )
     selected_tensors = _selected_official_mfu_hfr_tub_tensors(
         header,
         tensors,
@@ -2358,15 +2401,19 @@ def _selected_official_mfu_hfr_tub_tensors(
 ) -> dict[str, np.ndarray]:
     out = dict(tensors)
     selected = tuple(int(idx) for idx in selected_frame_indices)
-    out["inputs.mfu.low"] = _slice_official_frame_axis(
-        _tensor(tensors, "inputs.mfu.low"),
-        selected,
+    out["inputs.mfu.low"] = _selected_official_mfu_input_tensor(
+        header,
+        tensors,
+        key="low",
+        frame_indices=selected,
         expected_frame_count=expected_frame_count,
         name="inputs.mfu.low",
     )
-    out["inputs.mfu.skip_mid"] = _slice_official_frame_axis(
-        _tensor(tensors, "inputs.mfu.skip_mid"),
-        selected,
+    out["inputs.mfu.skip_mid"] = _selected_official_mfu_input_tensor(
+        header,
+        tensors,
+        key="skip_mid",
+        frame_indices=selected,
         expected_frame_count=expected_frame_count,
         name="inputs.mfu.skip_mid",
     )
@@ -2382,6 +2429,71 @@ def _selected_official_mfu_hfr_tub_tensors(
         expected_frame_count=expected_frame_count,
     )
     return out
+
+
+def _selected_official_mfu_input_tensor(
+    header: Mapping[str, Any],
+    tensors: Mapping[str, np.ndarray],
+    *,
+    key: str,
+    frame_indices: Sequence[int],
+    expected_frame_count: int,
+    name: str,
+) -> np.ndarray:
+    storage = header.get("mfu_input_storage")
+    tensor = _tensor(tensors, name)
+    if storage is None:
+        return _slice_official_frame_axis(
+            tensor,
+            frame_indices,
+            expected_frame_count=expected_frame_count,
+            name=name,
+        )
+    if not isinstance(storage, Mapping):
+        raise SnervArchiveError("official MFU input storage metadata must be an object")
+    codec = _normalize_official_mfu_input_codec(str(storage.get("codec", "full")))
+    source_shapes = storage.get("source_shapes") or {}
+    stored_shapes = storage.get("stored_shapes") or {}
+    if not isinstance(source_shapes, Mapping) or not isinstance(stored_shapes, Mapping):
+        raise SnervArchiveError("official MFU input storage shapes must be objects")
+    source_shape = tuple(int(v) for v in (source_shapes.get(key) or ()))
+    stored_shape = tuple(int(v) for v in (stored_shapes.get(key) or ()))
+    if stored_shape and tuple(tensor.shape) != stored_shape:
+        raise SnervArchiveError(
+            "official compact MFU stored shape mismatch; "
+            f"{name} manifest={tuple(tensor.shape)} header={stored_shape}"
+        )
+    if codec == OFFICIAL_MFU_INPUT_CODEC_FULL:
+        if source_shape and tuple(tensor.shape) != source_shape:
+            raise SnervArchiveError(
+                "official full MFU source shape mismatch; "
+                f"{name} manifest={tuple(tensor.shape)} header={source_shape}"
+            )
+        return _slice_official_frame_axis(
+            tensor,
+            frame_indices,
+            expected_frame_count=expected_frame_count,
+            name=name,
+        )
+    if codec != OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC:
+        raise SnervArchiveError(f"unsupported official MFU input codec: {codec!r}")
+    if len(source_shape) != 4 or any(v <= 0 for v in source_shape):
+        raise SnervArchiveError(
+            f"official synthetic MFU source shape is invalid for {name}"
+        )
+    if int(source_shape[0]) != int(expected_frame_count):
+        raise SnervArchiveError(
+            f"official synthetic MFU frame count mismatch for {name}; "
+            f"source={int(source_shape[0])} expected={int(expected_frame_count)}"
+        )
+    if not _is_zero_mfu_storage_placeholder(tensor):
+        raise SnervArchiveError(
+            f"official synthetic MFU placeholder is invalid for {name}"
+        )
+    return np.zeros(
+        (len(tuple(frame_indices)), *source_shape[1:]),
+        dtype=np.float64,
+    )
 
 
 def _slice_official_frame_axis(
@@ -2487,6 +2599,93 @@ def _normalize_official_tub_input_codec(codec: str | None) -> str:
         return OFFICIAL_TUB_INPUT_MODE_TO_CODEC[raw]
     except KeyError as exc:
         raise SnervArchiveError(f"unsupported official tub input codec: {codec!r}") from exc
+
+
+def _normalize_official_mfu_input_codec(codec: str | None) -> str:
+    raw = "full" if codec is None else str(codec).strip().lower()
+    try:
+        return OFFICIAL_MFU_INPUT_MODE_TO_CODEC[raw]
+    except KeyError as exc:
+        raise SnervArchiveError(f"unsupported official mfu input codec: {codec!r}") from exc
+
+
+def _official_mfu_input_storage_plan(
+    *,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    codec: str | None,
+) -> dict[str, Any]:
+    source = {
+        "low": _canonical_float64_tensor(low, name="inputs.mfu.low"),
+        "skip_mid": _canonical_float64_tensor(skip_mid, name="inputs.mfu.skip_mid"),
+    }
+    for key, value in source.items():
+        if value.ndim != 4:
+            raise SnervArchiveError(
+                f"official MFU input {key!r} must be NCHW, got {tuple(value.shape)}"
+            )
+    normalized = _normalize_official_mfu_input_codec(codec)
+    if normalized == OFFICIAL_MFU_INPUT_CODEC_FULL:
+        stored = source
+        effective = source
+    elif normalized == OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC:
+        nonzero = [
+            key
+            for key, value in source.items()
+            if np.count_nonzero(value) != 0
+        ]
+        if nonzero:
+            raise SnervArchiveError(
+                "official zero-synthetic MFU inputs require exact zero tensors; "
+                f"nonzero={nonzero}"
+            )
+        stored = {
+            key: _zero_mfu_storage_placeholder()
+            for key in source
+        }
+        effective = {
+            key: np.zeros(tuple(int(v) for v in value.shape), dtype=np.float64)
+            for key, value in source.items()
+        }
+    else:  # pragma: no cover - guarded by normalizer
+        raise SnervArchiveError(f"unsupported official mfu input codec: {codec!r}")
+    source_raw_bytes = sum(
+        int(value.size) * np.dtype("<f8").itemsize for value in source.values()
+    )
+    stored_raw_bytes = sum(
+        int(value.size) * np.dtype("<f8").itemsize for value in stored.values()
+    )
+    return {
+        "stored": stored,
+        "effective": effective,
+        "metadata": {
+            "schema": "snerv_official_mfu_input_storage.v1",
+            "codec": normalized,
+            "source_shapes": {
+                key: [int(v) for v in value.shape] for key, value in source.items()
+            },
+            "stored_shapes": {
+                key: [int(v) for v in value.shape] for key, value in stored.items()
+            },
+            "source_raw_bytes": int(source_raw_bytes),
+            "stored_raw_bytes": int(stored_raw_bytes),
+            "raw_byte_savings": int(source_raw_bytes - stored_raw_bytes),
+            "receiver_expands_mfu_inputs": (
+                normalized == OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC
+            ),
+            "receiver_frame_synthesis_uses_mfu_low_skip_mid": True,
+            "lossless_relative_to_source_mfu_inputs": True,
+            "score_lagrangian_action": (
+                "store_full_mfu_inputs"
+                if normalized == OFFICIAL_MFU_INPUT_CODEC_FULL
+                else "receiver_generate_exact_zero_mfu_inputs"
+            ),
+            "source_forward_replay_authority": False,
+            "contest_scorer_authority": False,
+            "source_forward_blockers": [],
+            **FALSE_AUTHORITY,
+        },
+    }
 
 
 def _official_skip_high_storage_plan(
@@ -2896,17 +3095,81 @@ def _official_tub_output2_storage_plan(
 
 
 def _official_mfu_hfr_tub_source_forward_blockers(
+    mfu_input_storage: Mapping[str, Any],
     skip_high_storage: Mapping[str, Any],
     tub_input_storage: Mapping[str, Any],
     tub_output2_storage: Mapping[str, Any],
 ) -> tuple[str, ...]:
     blockers: list[str] = list(OFFICIAL_MFU_HFR_TUB_BASE_SOURCE_FORWARD_BLOCKERS)
-    for storage in (skip_high_storage, tub_input_storage, tub_output2_storage):
+    for storage in (
+        mfu_input_storage,
+        skip_high_storage,
+        tub_input_storage,
+        tub_output2_storage,
+    ):
         raw = storage.get("source_forward_blockers") or ()
         if isinstance(raw, (str, bytes)) or not isinstance(raw, Sequence):
             raise SnervArchiveError("official source-forward blockers must be a list")
         blockers.extend(str(value) for value in raw)
     return tuple(dict.fromkeys(blockers))
+
+
+def _expand_official_mfu_input_storage(
+    header: Mapping[str, Any],
+    tensors: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    storage = header.get("mfu_input_storage")
+    if storage is None:
+        return tensors
+    if not isinstance(storage, Mapping):
+        raise SnervArchiveError("official MFU input storage metadata must be an object")
+    codec = _normalize_official_mfu_input_codec(str(storage.get("codec", "full")))
+    source_shapes = storage.get("source_shapes") or {}
+    stored_shapes = storage.get("stored_shapes") or {}
+    if not isinstance(source_shapes, Mapping) or not isinstance(stored_shapes, Mapping):
+        raise SnervArchiveError("official MFU input storage shapes must be objects")
+
+    out = dict(tensors)
+    for key in ("low", "skip_mid"):
+        tensor_name = f"inputs.mfu.{key}"
+        value = _tensor(tensors, tensor_name)
+        source_shape = tuple(int(v) for v in (source_shapes.get(key) or ()))
+        stored_shape = tuple(int(v) for v in (stored_shapes.get(key) or ()))
+        if stored_shape and tuple(value.shape) != stored_shape:
+            raise SnervArchiveError(
+                "official compact MFU stored shape mismatch; "
+                f"{tensor_name} manifest={tuple(value.shape)} header={stored_shape}"
+            )
+        if codec == OFFICIAL_MFU_INPUT_CODEC_FULL:
+            if source_shape and tuple(value.shape) != source_shape:
+                raise SnervArchiveError(
+                    "official full MFU source shape mismatch; "
+                    f"{tensor_name} manifest={tuple(value.shape)} header={source_shape}"
+                )
+            continue
+        if codec != OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC:
+            raise SnervArchiveError(f"unsupported official MFU input codec: {codec!r}")
+        if len(source_shape) != 4 or any(v <= 0 for v in source_shape):
+            raise SnervArchiveError(
+                f"official synthetic MFU source shape is invalid for {tensor_name}"
+            )
+        if not _is_zero_mfu_storage_placeholder(value):
+            raise SnervArchiveError(
+                f"official synthetic MFU placeholder is invalid for {tensor_name}"
+            )
+        out[tensor_name] = np.zeros(source_shape, dtype=np.float64)
+    return out
+
+
+def _zero_mfu_storage_placeholder() -> np.ndarray:
+    """Return the tiny deterministic sentinel stored for zero MFU inputs."""
+
+    return np.asarray([0.0], dtype=np.float64)
+
+
+def _is_zero_mfu_storage_placeholder(value: np.ndarray) -> bool:
+    arr = np.asarray(value, dtype=np.float64)
+    return bool(tuple(arr.shape) == (1,) and float(arr[0]) == 0.0)
 
 
 def _expand_official_tub_input_storage(
@@ -3775,6 +4038,12 @@ def _snar2_metadata_fields(metadata: Mapping[str, Any]) -> dict[str, int]:
     _snar2_u8("levels", levels)
     _snar2_u16("height", height)
     _snar2_u16("width", width)
+    metadata_flags = 0
+    if clean_metadata.get("score_aware_long_training_executed") is True:
+        metadata_flags |= _SNAR2_METADATA_FLAG_SCORE_AWARE_LONG_TRAINING_EXECUTED
+    if clean_metadata.get("snerv_official_mfu_hfr_tub_export_bound") is True:
+        metadata_flags |= _SNAR2_METADATA_FLAG_OFFICIAL_MFU_HFR_TUB_EXPORT_BOUND
+    _snar2_u8("metadata_flags", metadata_flags)
     return {
         "n_pairs": n_pairs,
         "frames_per_pair": frames_per_pair,
@@ -3782,7 +4051,7 @@ def _snar2_metadata_fields(metadata: Mapping[str, Any]) -> dict[str, int]:
         "lf_plane_count": lf_plane_count,
         "levels": levels,
         "wavelet_code": int(_SNAR2_WAVELET_TO_CODE[wavelet]),
-        "metadata_flags": 0,
+        "metadata_flags": metadata_flags,
         "height": height,
         "width": width,
     }
@@ -3801,8 +4070,11 @@ def _snar2_metadata_from_fields(fields: Mapping[str, Any]) -> dict[str, Any]:
     metadata_flags = int(fields["metadata_flags"])
     height = int(fields["height"])
     width = int(fields["width"])
-    if metadata_flags != 0:
-        raise SnervArchiveError(f"unsupported SNAR2 metadata_flags: {metadata_flags!r}")
+    unsupported_metadata_flags = metadata_flags & ~_SNAR2_SUPPORTED_METADATA_FLAGS
+    if unsupported_metadata_flags:
+        raise SnervArchiveError(
+            f"unsupported SNAR2 metadata_flags: {metadata_flags!r}"
+        )
     _snar2_u16("n_pairs", n_pairs)
     _snar2_u8("frames_per_pair", frames_per_pair)
     _snar2_u8("channels", channels)
@@ -3821,7 +4093,7 @@ def _snar2_metadata_from_fields(fields: Mapping[str, Any]) -> dict[str, Any]:
     ):
         if int(value) < 1:
             raise SnervArchiveError(f"SNAR2 {name}={value} must be >= 1")
-    return {
+    metadata = {
         "n_pairs": n_pairs,
         "frames_per_pair": frames_per_pair,
         "channels": channels,
@@ -3831,6 +4103,36 @@ def _snar2_metadata_from_fields(fields: Mapping[str, Any]) -> dict[str, Any]:
         "carrier_hw": [height, width],
         "orig_hw": [height, width],
     }
+    if metadata_flags & _SNAR2_METADATA_FLAG_SCORE_AWARE_LONG_TRAINING_EXECUTED:
+        metadata["score_aware_long_training_executed"] = True
+        metadata["score_aware_long_training"] = {
+            "executed": True,
+        }
+    if metadata_flags & _SNAR2_METADATA_FLAG_OFFICIAL_MFU_HFR_TUB_EXPORT_BOUND:
+        metadata.update(
+            {
+                "snerv_official_mfu_hfr_tub_export_bound": True,
+                "snerv_official_mfu_hfr_tub_export_bound_semantics": (
+                    "receiver_payload_bound_not_source_forward_parity"
+                ),
+                "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
+                "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
+                "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
+                "snerv_official_mfu_hfr_tub_frame_producing_export": True,
+                "source_faithful_stack": False,
+                "official_source_parity_blockers": [
+                    "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high",
+                    "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing",
+                ],
+            }
+        )
+        if metadata_flags & _SNAR2_METADATA_FLAG_SCORE_AWARE_LONG_TRAINING_EXECUTED:
+            metadata["score_aware_long_training"][
+                "official_mfu_hfr_tub_train_export"
+            ] = {
+                "trained_receiver_payload_exported": True,
+            }
+    return metadata
 
 
 def _snar2_u8(name: str, value: int) -> None:

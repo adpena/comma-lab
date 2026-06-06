@@ -959,7 +959,17 @@ def test_harness_constructs_adapter_with_wave_n11_kwargs():
         "scorer_space_step_guard_enabled",
         "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
         "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction",
         "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+        "scorer_space_step_guard_max_post_segnet_distribution_mae",
+        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae",
+        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio",
+        "scorer_space_step_guard_max_pose_score_term_relative_worsening",
+        "scorer_space_step_guard_max_pose_score_term_absolute_worsening",
+        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening",
+        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening",
+        "scorer_space_step_guard_max_direct_nonrate_score_worsening",
+        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening",
     }:
         assert required in kw_names, (
             f"harness adapter construction missing {required!r} kwarg"

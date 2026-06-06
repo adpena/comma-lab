@@ -10,16 +10,65 @@ from pathlib import Path
 import numpy as np
 
 from tac.substrates._shared.numpy_portable_inflate import pack_state_dict_numpy
+from tac.substrates.snerv_inverse_steg_carrier import (
+    mlx_native_train_export as native_export,
+)
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_snerv_archive_frames,
     unpack_snerv_archive,
 )
-from tac.substrates.snerv_inverse_steg_carrier.carrier import SnervModelSizeConfig
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+    SnervModelSizeConfig,
+)
 from tools import export_snerv_checkpoint_archive as export_tool
 from tools.export_snerv_checkpoint_archive import (
     build_snerv_checkpoint_packet,
     export_snerv_checkpoint_archive,
 )
+
+
+def _official_checkpoint_export_state() -> dict[str, np.ndarray]:
+    state: dict[str, np.ndarray] = {
+        "low": np.zeros((2, 3, 1, 1), dtype=np.float32),
+        "skip_mid": np.zeros((2, 3, 2, 2), dtype=np.float32),
+        "skip_high": np.zeros((2, 3, 4, 4), dtype=np.float32),
+        "tub.temporal_encoder_concat": np.zeros((1, 4, 1, 1), dtype=np.float32),
+        "tub.output2_raw": np.zeros((2, 8, 1, 1), dtype=np.float32),
+        "encoder.1.weight": np.zeros((3, 3, 3), dtype=np.float32),
+        "encoder.2.weight": np.zeros((3, 3, 3), dtype=np.float32),
+        "decoder.7.weight": np.zeros((3, 3, 1, 1), dtype=np.float32),
+    }
+    for name in ("lh", "hl", "hh"):
+        state[f"hfr.{name}.conv1.weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"hfr.{name}.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"hfr.{name}.conv2.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"hfr.{name}.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in range(3):
+        prefix = f"decoder.{8 + offset}"
+        state[f"{prefix}.conv1.weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"{prefix}.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.conv2.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (3, 5):
+        prefix = f"decoder.{8 + offset}"
+        state[f"{prefix}.weight"] = np.zeros((3, 3, 2, 2), dtype=np.float32)
+        state[f"{prefix}.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (4, 6):
+        prefix = f"decoder.{8 + offset}"
+        state[f"{prefix}.main.0.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.main.0.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv1.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv2.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    return state
 
 
 def test_snerv_checkpoint_packet_uses_state_lf_and_decoder_directly() -> None:
@@ -69,6 +118,81 @@ def test_snerv_checkpoint_packet_uses_state_lf_and_decoder_directly() -> None:
     assert packet.total_bytes == len(packet.packet)
     assert frames.shape == (2, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
+
+
+def test_snerv_official_checkpoint_export_emits_runner_consumable_state_slice(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "official_state.npsd"
+    state_path.write_bytes(
+        pack_state_dict_numpy(_official_checkpoint_export_state(), dtype="fp32")
+    )
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 23,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "snerv_official_slice_handoff",
+                    "snerv_model_size_adapter": (
+                        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+                    ),
+                    "levels": 1,
+                    "wavelet": "haar",
+                    "official_skip_high_mode": "full",
+                    "bits_per_coeff": 3.0,
+                    "step_map_bits_per_coeff": 0.5,
+                    "decoder_payload_codec": "int8_symmetric",
+                },
+                "hard_byte_ceilings": [],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = export_snerv_checkpoint_archive(
+        startup_json=startup,
+        checkpoint_meta=checkpoint_meta,
+        output_dir=tmp_path / "export",
+        emit_receiver_proof=False,
+    )
+    binding = report["official_checkpoint_export_binding"]
+    slice_path = Path(binding["official_trained_checkpoint_state_dict_slice_path"])
+
+    assert binding["official_trained_checkpoint_state_dict_slice_present"] is True
+    assert binding["official_trained_checkpoint_state_dict_slice_runner_arg"] == (
+        "--snerv-official-trained-checkpoint-state-dict-path"
+    )
+    assert slice_path.is_file()
+    assert binding["official_trained_checkpoint_state_dict_slice_bytes"] == (
+        slice_path.stat().st_size
+    )
+    assert binding["official_trained_checkpoint_state_dict_slice_sha256"] == (
+        export_tool.sha256_file(slice_path)
+    )
+
+    manifest = native_export._official_trained_checkpoint_mapping_manifest_from_inputs(
+        state_dict=None,
+        state_dict_path=slice_path,
+        decoder_len=None,
+        state_dict_kind="checkpoint_export_reusable_official_state_slice",
+    )
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["state_dict_source"] == slice_path.as_posix()
+    assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert manifest["official_tub_temporal_encoder_weight_mapping_proven"] is True
 
 
 def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(

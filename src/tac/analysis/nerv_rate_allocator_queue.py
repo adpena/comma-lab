@@ -132,6 +132,9 @@ def build_nerv_rate_allocator_work_queue(
         "section_admission_decision_counts": _section_admission_decision_counts(
             admission_rows
         ),
+        "section_admission_economic_decision_counts": (
+            _section_admission_economic_decision_counts(admission_rows)
+        ),
         "target_consumer_index": _target_consumer_index(rows),
         "precision_mode_index": _precision_mode_index(rows, precision_modes),
         "blockers": _dedupe_strings(
@@ -481,6 +484,90 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "local_full600_continuation_runnable_now": bool(command),
             "local_full600_continuation_command_argv": command,
             "local_full600_continuation_output_is_promotion_authority": False,
+            "runnable_now": False,
+        }
+    if work_order_type in {
+        "snerv_scorer_loop_qat_receiver_packet_binding",
+        "snerv_official_mfu_hfr_tub_scorer_loop_qat_binding",
+    }:
+        payload = (
+            work_order.get("payload", {})
+            if isinstance(work_order.get("payload"), Mapping)
+            else {}
+        )
+        packet_gate = (
+            payload.get("packet_gate")
+            if isinstance(payload.get("packet_gate"), Mapping)
+            else {}
+        )
+        official = (
+            work_order_type == "snerv_official_mfu_hfr_tub_scorer_loop_qat_binding"
+        )
+        return {
+            "ingest_kind": work_order_type,
+            "planner_action": planner_action,
+            "producer_tool": "experiments/train_substrate_snerv_scorer_loop_local.py",
+            "existing_tool_ingress": (
+                "tools/run_compact_renderer_mlx_spine_runner.py"
+                if official
+                else "tools/build_snerv_scorer_loop_geometry.py"
+            ),
+            "downstream_ingest_tools": [
+                "tools/build_snerv_scorer_loop_geometry.py",
+                "tools/build_nerv_control_inventory.py",
+                "tools/build_nerv_rate_allocator_work_queue.py",
+            ],
+            "missing_tool_or_proof": (
+                "official_mfu_hfr_tub_scorer_loop_best_packet_emitted_from_native_export"
+                if official
+                else "scorer_loop_best_receiver_packet_materialized"
+            ),
+            "source_report_path": payload.get("report_path"),
+            "source_result_sha256": payload.get("result_sha256"),
+            "source_n_pairs": payload.get("n_pairs"),
+            "source_score_delta_linf": payload.get("score_delta_linf"),
+            "source_accepted_improvement": payload.get("accepted_improvement") is True,
+            "source_receiver_contract_satisfied": (
+                payload.get("receiver_contract_satisfied") is True
+            ),
+            "source_ready_for_pose_guard_gate": (
+                payload.get("ready_for_pose_guard_gate") is True
+            ),
+            "source_best_packet_materialized": (
+                payload.get("best_packet_materialized") is True
+            ),
+            "source_best_packet_schema": payload.get("best_packet_schema"),
+            "source_best_packet_wire_format": payload.get("best_packet_wire_format"),
+            "source_best_packet_contest_submission_wire_format_ready": (
+                payload.get("best_packet_contest_submission_wire_format_ready") is True
+            ),
+            "source_emitted_packet_uses_scorer_loop_best_decoder": (
+                payload.get("emitted_packet_uses_scorer_loop_best_decoder") is True
+            ),
+            "source_emitted_packet_schema": payload.get("emitted_packet_schema"),
+            "source_emitted_packet_wire_format": payload.get(
+                "emitted_packet_wire_format"
+            ),
+            "source_emitted_packet_contest_submission_wire_format_ready": (
+                payload.get("emitted_packet_contest_submission_wire_format_ready")
+                is True
+            ),
+            "official_decoder_payload_binding_required": (
+                payload.get("official_decoder_payload_binding_required") is True
+            ),
+            "official_decoder_payload_binding_preserved": (
+                payload.get("official_decoder_payload_binding_preserved") is True
+            ),
+            "official_tub_output2_binding_required": (
+                payload.get("official_tub_output2_binding_required") is True
+            ),
+            "official_tub_output2_binding_preserved": (
+                payload.get("official_tub_output2_binding_preserved") is True
+            ),
+            "packet_gate_schema": packet_gate.get("schema"),
+            "packet_gate_blockers": _string_list(packet_gate.get("blockers")),
+            "local_full600_continuation_runnable_now": False,
+            "local_output_is_promotion_authority": False,
             "runnable_now": False,
         }
     if work_order_type == "snerv_lf_payload_codec_full_archive_replay":
@@ -897,6 +984,16 @@ def _section_admission_decision_counts(
     counts: dict[str, int] = {}
     for row in rows:
         decision = str(row.get("decision") or "unknown")
+        counts[decision] = counts.get(decision, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _section_admission_economic_decision_counts(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        decision = str(row.get("economic_decision") or "unknown")
         counts[decision] = counts.get(decision, 0) + 1
     return dict(sorted(counts.items()))
 

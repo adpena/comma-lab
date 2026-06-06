@@ -2410,24 +2410,50 @@ def _clip_flat_gradients(
     names: list[str],
     *,
     max_norm: float | None,
-) -> None:
+) -> dict[str, Any]:
     require_mlx()
+    summary: dict[str, Any] = {
+        "enabled": bool(max_norm is not None and max_norm > 0 and names),
+        "max_norm": None if max_norm is None else float(max_norm),
+        "name_count": len(names),
+        "present_gradient_count": 0,
+        "pre_norm": 0.0,
+        "scale": 1.0,
+        "would_clip": False,
+        "applied": False,
+    }
     if max_norm is None or max_norm <= 0 or not names:
-        return
+        return summary
     norm_sq = None
+    present_gradient_count = 0
     for name in names:
         grad = gradients.get(name)
         if grad is None:
             continue
+        present_gradient_count += 1
         term = mx.sum(grad * grad)  # type: ignore[union-attr]
         norm_sq = term if norm_sq is None else norm_sq + term
+    summary["present_gradient_count"] = int(present_gradient_count)
     if norm_sq is None:
-        return
+        return summary
     norm = mx.sqrt(norm_sq)  # type: ignore[union-attr]
     scale = mx.minimum(mx.array(1.0), mx.array(float(max_norm)) / (norm + 1e-6))  # type: ignore[union-attr]
+    mx.eval(norm, scale)  # type: ignore[union-attr]
+    pre_norm = float(norm.item())  # type: ignore[union-attr]
+    scale_value = float(scale.item())  # type: ignore[union-attr]
+    would_clip = pre_norm > float(max_norm)
     for name in names:
         if name in gradients and gradients[name] is not None:
             gradients[name] = gradients[name] * scale
+    summary.update(
+        {
+            "pre_norm": pre_norm,
+            "scale": scale_value,
+            "would_clip": bool(would_clip),
+            "applied": bool(would_clip and scale_value < 1.0),
+        }
+    )
+    return summary
 
 
 def apply_pr95_mlx_optimizer_step(
@@ -2454,8 +2480,16 @@ def apply_pr95_mlx_optimizer_step(
     split = partition_pr95_mlx_parameter_names(module.parameters())
     muon_names = split["muon"] if config.use_muon else []
     adamw_names = list(split["adamw"] + ([] if config.use_muon else split["muon"]))
-    _clip_flat_gradients(grads_flat, adamw_names, max_norm=config.grad_clip)
-    _clip_flat_gradients(grads_flat, muon_names, max_norm=config.grad_clip_muon)
+    adamw_clip_summary = _clip_flat_gradients(
+        grads_flat,
+        adamw_names,
+        max_norm=config.grad_clip,
+    )
+    muon_clip_summary = _clip_flat_gradients(
+        grads_flat,
+        muon_names,
+        max_norm=config.grad_clip_muon,
+    )
 
     state.step += 1
     beta1, beta2 = config.adamw_betas
@@ -2539,6 +2573,20 @@ def apply_pr95_mlx_optimizer_step(
         "adamw_tensor_count": len(adamw_names),
         "muon_parameter_names": muon_names,
         "adamw_parameter_names": sorted(adamw_names),
+        "adamw_gradient_clip": adamw_clip_summary,
+        "muon_gradient_clip": muon_clip_summary,
+        "gradient_clip_actual_application_count": int(
+            bool(adamw_clip_summary.get("applied"))
+        )
+        + int(bool(muon_clip_summary.get("applied"))),
+        "gradient_clip_would_clip_count": int(
+            bool(adamw_clip_summary.get("would_clip"))
+        )
+        + int(bool(muon_clip_summary.get("would_clip"))),
+        "gradient_clip_min_scale": min(
+            float(adamw_clip_summary.get("scale") or 1.0),
+            float(muon_clip_summary.get("scale") or 1.0),
+        ),
         "parameter_group_fingerprint_sha256": parameter_group_fingerprint.get(
             "fingerprint_sha256"
         ),

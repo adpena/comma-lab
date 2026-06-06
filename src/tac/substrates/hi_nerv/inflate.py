@@ -66,6 +66,7 @@ def build_model_from_archive(
         local_grid_channels=int(meta.get("local_grid_channels", 4)),
         convnext_mlp_ratio=int(meta.get("convnext_mlp_ratio", 2)),
         convnext_kernel_size=int(meta.get("convnext_kernel_size", 7)),
+        init_seed=int(meta.get("init_seed", 0)),
     )
 
     model = HinervSubstrate(cfg).to(device).eval()

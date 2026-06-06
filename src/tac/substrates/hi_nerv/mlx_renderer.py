@@ -33,11 +33,12 @@ if TYPE_CHECKING:
 try:  # pragma: no cover - exercised on Apple Silicon with MLX installed.
     import mlx.core as mx
     import mlx.nn as nn
-    from mlx.utils import tree_flatten
+    from mlx.utils import tree_flatten, tree_unflatten
 except Exception as exc:  # pragma: no cover - non-Apple CI import guard.
     mx = None  # type: ignore[assignment]
     nn = None  # type: ignore[assignment]
     tree_flatten = None  # type: ignore[assignment]
+    tree_unflatten = None  # type: ignore[assignment]
     _MLX_IMPORT_ERROR: Exception | None = exc
 else:
     _MLX_IMPORT_ERROR = None
@@ -549,6 +550,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             raise ValueError(
                 "fine_injection_block_index must be > mid_injection_block_index"
             )
+        mx.random.seed(int(getattr(cfg, "init_seed", 0)))  # type: ignore[union-attr]
 
         self.latents_coarse = mx.random.normal(  # type: ignore[union-attr]
             shape=(int(cfg.num_pairs), int(cfg.latent_dim_coarse))
@@ -1052,6 +1054,331 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "head_rgb_0.weight",
                 "head_rgb_1.weight",
             ],
+            "human_visual_fidelity_objective": False,
+        }
+
+    def fit_scorer_domain_bootstrap_from_targets(
+        self,
+        target_rgb_0: Any,
+        target_rgb_1: Any,
+        *,
+        pair_indices: Any,
+        steps: int = 8,
+        learning_rate: float = 2.0e-3,
+        rgb_weight: float = 1.0,
+        yuv6_weight: float = 0.5,
+        temporal_delta_weight: float = 0.25,
+        contrast_floor_weight: float = 0.5,
+        rgb_std_min_ratio: float = 0.75,
+        yuv6_temporal_std_min_ratio: float = 0.5,
+        weight_decay: float = 0.0,
+        grad_clip_max_norm: float | None = 1.0,
+    ) -> dict[str, Any]:
+        """Run a bounded scorer-domain prefit on archive-charged parameters.
+
+        Mean/std output-head calibration can still land in a SegNet one-class
+        basin.  This bootstrap mutates the real decoder/latent tensors before
+        the normal score-aware trainer begins, using the exact scorer-domain
+        surfaces available without invoking the heavy scorer: SegNet's last
+        frame RGB geometry and PoseNet's two-frame PR95/YUV6 pair plus temporal
+        delta.  The result is ordinary model state, so export/runtime byte
+        accounting stays unchanged apart from the charged tensor values.
+        """
+
+        _require_mlx()
+        import mlx.optimizers as mlx_optim
+
+        from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+        step_count = int(steps)
+        if step_count <= 0:
+            return {
+                "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+                "enabled": False,
+                "reason": "steps_not_positive",
+                "steps": step_count,
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+                "human_visual_fidelity_objective": False,
+            }
+        lr = float(learning_rate)
+        weights = {
+            "rgb_weight": float(rgb_weight),
+            "yuv6_weight": float(yuv6_weight),
+            "temporal_delta_weight": float(temporal_delta_weight),
+            "contrast_floor_weight": float(contrast_floor_weight),
+        }
+        if not math.isfinite(lr) or lr <= 0.0:
+            raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
+        for name, value in weights.items():
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and non-negative; got {value}")
+        if max(weights.values()) <= 0.0:
+            raise ValueError("at least one scorer-domain bootstrap loss weight must be > 0")
+        rgb_std_floor = float(rgb_std_min_ratio)
+        temporal_std_floor = float(yuv6_temporal_std_min_ratio)
+        for name, value in (
+            ("rgb_std_min_ratio", rgb_std_floor),
+            ("yuv6_temporal_std_min_ratio", temporal_std_floor),
+        ):
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and non-negative; got {value}")
+        wd = float(weight_decay)
+        if not math.isfinite(wd) or wd < 0.0:
+            raise ValueError(f"weight_decay must be finite and non-negative; got {weight_decay}")
+        clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
+        if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
+            raise ValueError(
+                "grad_clip_max_norm must be None or finite and positive; "
+                f"got {grad_clip_max_norm}"
+            )
+
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim != 1 or int(idx.shape[0]) <= 0:
+            raise ValueError("pair_indices must be a non-empty rank-1 tensor")
+        target0 = mx.array(target_rgb_0).astype(mx.float32)  # type: ignore[union-attr]
+        target1 = mx.array(target_rgb_1).astype(mx.float32)  # type: ignore[union-attr]
+        for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
+            if target.ndim != 4 or int(target.shape[-1]) != 3:
+                raise ValueError(
+                    f"{name} must be NHWC with 3 channels; got "
+                    f"shape={tuple(int(v) for v in target.shape)}"
+                )
+            if int(target.shape[0]) != int(idx.shape[0]):
+                raise ValueError(
+                    f"{name} batch {int(target.shape[0])} must match "
+                    f"pair_indices length {int(idx.shape[0])}"
+                )
+
+        ref_yuv0 = mx.stop_gradient(rgb_to_yuv6_mlx(target0 * 255.0) / 255.0)  # type: ignore[union-attr]
+        ref_yuv1 = mx.stop_gradient(rgb_to_yuv6_mlx(target1 * 255.0) / 255.0)  # type: ignore[union-attr]
+        ref_temporal = ref_yuv1 - ref_yuv0
+
+        def _predict_pair01(model_obj: Any) -> tuple[Any, Any]:
+            pair01 = model_obj(idx) / 255.0
+            pred0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
+            pred1 = mx.transpose(pair01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
+            return pred0, pred1
+
+        def _metric_tensors(model_obj: Any) -> dict[str, Any]:
+            pred0, pred1 = _predict_pair01(model_obj)
+            rgb0 = mx.mean((pred0 - target0) * (pred0 - target0))  # type: ignore[union-attr]
+            rgb1 = mx.mean((pred1 - target1) * (pred1 - target1))  # type: ignore[union-attr]
+            pred_yuv0 = rgb_to_yuv6_mlx(pred0 * 255.0) / 255.0
+            pred_yuv1 = rgb_to_yuv6_mlx(pred1 * 255.0) / 255.0
+            yuv0 = mx.mean((pred_yuv0 - ref_yuv0) * (pred_yuv0 - ref_yuv0))  # type: ignore[union-attr]
+            yuv1 = mx.mean((pred_yuv1 - ref_yuv1) * (pred_yuv1 - ref_yuv1))  # type: ignore[union-attr]
+            pred_temporal = pred_yuv1 - pred_yuv0
+            temporal = mx.mean(  # type: ignore[union-attr]
+                (pred_temporal - ref_temporal) * (pred_temporal - ref_temporal)
+            )
+            return {
+                "rgb_pair_mse": 0.5 * (rgb0 + rgb1),
+                "rgb_frame0_mse": rgb0,
+                "rgb_frame1_mse": rgb1,
+                "yuv6_pair_mse": 0.5 * (yuv0 + yuv1),
+                "yuv6_temporal_delta_mse": temporal,
+                "output_rgb_std": 0.5 * (mx.std(pred0) + mx.std(pred1)),  # type: ignore[union-attr]
+                "target_rgb_std": 0.5 * (mx.std(target0) + mx.std(target1)),  # type: ignore[union-attr]
+                "output_yuv6_temporal_delta_std": mx.std(pred_temporal),  # type: ignore[union-attr]
+                "target_yuv6_temporal_delta_std": mx.std(ref_temporal),  # type: ignore[union-attr]
+            }
+
+        def _contrast_floor_loss(metrics: Mapping[str, Any]) -> Any:
+            eps = 1.0e-6
+            rgb_target = metrics["target_rgb_std"]
+            temporal_target = metrics["target_yuv6_temporal_delta_std"]
+            rgb_deficit = mx.maximum(  # type: ignore[union-attr]
+                0.0,
+                rgb_std_floor * rgb_target - metrics["output_rgb_std"],
+            ) / (rgb_target + eps)
+            temporal_deficit = mx.maximum(  # type: ignore[union-attr]
+                0.0,
+                temporal_std_floor * temporal_target
+                - metrics["output_yuv6_temporal_delta_std"],
+            ) / (temporal_target + eps)
+            return rgb_deficit * rgb_deficit + temporal_deficit * temporal_deficit
+
+        def _loss_fn(model_obj: Any) -> Any:
+            metrics = _metric_tensors(model_obj)
+            return (
+                weights["rgb_weight"] * metrics["rgb_pair_mse"]
+                + weights["yuv6_weight"] * metrics["yuv6_pair_mse"]
+                + weights["temporal_delta_weight"] * metrics["yuv6_temporal_delta_mse"]
+                + weights["contrast_floor_weight"] * _contrast_floor_loss(metrics)
+            )
+
+        def _scalar_metrics(model_obj: Any) -> dict[str, float]:
+            metrics = _metric_tensors(model_obj)
+            contrast_floor = _contrast_floor_loss(metrics)
+            mx.eval(list(metrics.values()))  # type: ignore[union-attr]
+            mx.eval(contrast_floor)  # type: ignore[union-attr]
+            out = {
+                name: float(np.asarray(value, dtype=np.float32).reshape(-1)[0])
+                for name, value in metrics.items()
+            }
+            out["contrast_floor_loss"] = float(contrast_floor.item())
+            out["output_rgb_std_ratio"] = float(
+                out["output_rgb_std"] / max(out["target_rgb_std"], 1.0e-6)
+            )
+            out["output_yuv6_temporal_delta_std_ratio"] = float(
+                out["output_yuv6_temporal_delta_std"]
+                / max(out["target_yuv6_temporal_delta_std"], 1.0e-6)
+            )
+            return out
+
+        before = _scalar_metrics(self)
+        loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
+        if tree_unflatten is None:
+            raise RuntimeError("MLX tree_unflatten unavailable despite successful MLX import")
+
+        def _snapshot_parameters() -> list[tuple[Any, Any]]:
+            return [
+                (raw_name, None if leaf is None else mx.array(leaf))  # type: ignore[union-attr]
+                for raw_name, leaf in tree_flatten(self.parameters())  # type: ignore[operator]
+            ]
+
+        def _restore_parameters(snapshot: list[tuple[Any, Any]]) -> None:
+            self.update(
+                tree_unflatten(
+                    [
+                        (raw_name, None if leaf is None else mx.array(leaf))  # type: ignore[union-attr]
+                        for raw_name, leaf in snapshot
+                    ]
+                )
+            )
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+
+        def _loss_scalar(model_obj: Any) -> float:
+            value = _loss_fn(model_obj)
+            mx.eval(value)  # type: ignore[union-attr]
+            return float(value.item())
+
+        def _apply_gradient_step(
+            *,
+            base_snapshot: list[tuple[Any, Any]],
+            grads_tree: Any,
+            step_lr: float,
+        ) -> int:
+            grad_by_name = dict(tree_flatten(grads_tree))  # type: ignore[operator]
+            updated: list[tuple[Any, Any]] = []
+            applied = 0
+            for raw_name, leaf in base_snapshot:
+                grad = grad_by_name.get(raw_name)
+                if leaf is None or grad is None:
+                    updated.append((raw_name, leaf))
+                    continue
+                param = mx.array(leaf)  # type: ignore[union-attr]
+                update = param - float(step_lr) * (grad + wd * param)
+                updated.append((raw_name, update))
+                applied += 1
+            self.update(tree_unflatten(updated))
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+            return applied
+
+        current_loss = _loss_scalar(self)
+        loss_history: list[float] = [current_loss]
+        grad_norm_history: list[float] = []
+        clipped_count = 0
+        accepted_step_count = 0
+        rejected_step_count = 0
+        backtracking_attempt_count = 0
+        min_accepted_step_lr = lr
+        max_backtracking_attempts = 8
+        for _step in range(step_count):
+            base_snapshot = _snapshot_parameters()
+            loss, grads = loss_and_grad_fn(self)
+            mx.eval(loss)  # type: ignore[union-attr]
+            if clip is not None:
+                grads, total_norm = mlx_optim.clip_grad_norm(grads, clip)
+                mx.eval(total_norm)  # type: ignore[union-attr]
+                grad_norm = float(total_norm.item())
+                clipped_count += int(grad_norm > clip)
+            else:
+                grad_norm = float("nan")
+            grad_norm_history.append(grad_norm)
+            accepted = False
+            step_lr = lr
+            applied_tensor_count = 0
+            for _attempt in range(max_backtracking_attempts):
+                backtracking_attempt_count += 1
+                applied_tensor_count = _apply_gradient_step(
+                    base_snapshot=base_snapshot,
+                    grads_tree=grads,
+                    step_lr=step_lr,
+                )
+                candidate_loss = _loss_scalar(self)
+                if candidate_loss <= current_loss + 1.0e-12:
+                    current_loss = candidate_loss
+                    min_accepted_step_lr = min(min_accepted_step_lr, step_lr)
+                    loss_history.append(candidate_loss)
+                    accepted = True
+                    accepted_step_count += 1
+                    break
+                _restore_parameters(base_snapshot)
+                step_lr *= 0.5
+            if not accepted:
+                _restore_parameters(base_snapshot)
+                rejected_step_count += 1
+                loss_history.append(current_loss)
+                if applied_tensor_count == 0:
+                    break
+        after = _scalar_metrics(self)
+
+        def _improvement(key: str) -> float:
+            return float(before[key] - after[key])
+
+        return {
+            "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+            "enabled": True,
+            "method": "bounded_archive_charged_backtracking_rgb_yuv6_temporal_prefit",
+            "steps": step_count,
+            "learning_rate": lr,
+            "weight_decay": wd,
+            "grad_clip_max_norm": clip,
+            "rgb_std_min_ratio": rgb_std_floor,
+            "yuv6_temporal_std_min_ratio": temporal_std_floor,
+            "grad_clip_clipped_step_count": int(clipped_count),
+            "accepted_step_count": int(accepted_step_count),
+            "rejected_step_count": int(rejected_step_count),
+            "backtracking_attempt_count": int(backtracking_attempt_count),
+            "max_backtracking_attempts_per_step": int(max_backtracking_attempts),
+            "min_accepted_step_learning_rate": float(min_accepted_step_lr),
+            "pair_count": int(idx.shape[0]),
+            **weights,
+            "loss_history_first": loss_history[0] if loss_history else None,
+            "loss_history_last": loss_history[-1] if loss_history else None,
+            "grad_norm_first": grad_norm_history[0] if grad_norm_history else None,
+            "grad_norm_last": grad_norm_history[-1] if grad_norm_history else None,
+            "metrics_before": before,
+            "metrics_after": after,
+            "rgb_pair_mse_delta": _improvement("rgb_pair_mse"),
+            "rgb_frame1_mse_delta": _improvement("rgb_frame1_mse"),
+            "yuv6_pair_mse_delta": _improvement("yuv6_pair_mse"),
+            "yuv6_temporal_delta_mse_delta": _improvement("yuv6_temporal_delta_mse"),
+            "contrast_floor_loss_delta": _improvement("contrast_floor_loss"),
+            "output_rgb_std_ratio_delta": float(
+                after["output_rgb_std_ratio"] - before["output_rgb_std_ratio"]
+            ),
+            "output_yuv6_temporal_delta_std_ratio_delta": float(
+                after["output_yuv6_temporal_delta_std_ratio"]
+                - before["output_yuv6_temporal_delta_std_ratio"]
+            ),
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [
+                "latents_coarse",
+                "latents_mid",
+                "latents_fine",
+                "latent_embed.*",
+                "blocks.*",
+                "feature_grids.*",
+                "convnext_blocks.*",
+                "mid_injector.*",
+                "fine_injector.*",
+                "head_rgb_0.*",
+                "head_rgb_1.*",
+            ],
+            "target_surface": "segnet_last_frame_rgb_and_posenet_pr95_yuv6_pair",
             "human_visual_fidelity_objective": False,
         }
 

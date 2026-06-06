@@ -54,6 +54,12 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
         "scorer_input_shape_tether",
         "shape_tether",
     ),
+    "posenet_yuv6_geometry_tether": (
+        "posenet_yuv6_geometry_tether",
+        "posenet_yuv6_geometry",
+        "posenet_pair_geometry_tether",
+        "posenet_yuv6_pair_geometry",
+    ),
     "posenet_temporal_signal_floor": (
         "posenet_temporal_signal_floor",
         "posenet_temporal_delta_floor",
@@ -83,6 +89,27 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
     "segnet_direct_live_class_balanced_squared_hinge": (
         "segnet_direct_live_class_balanced_squared_hinge",
         "segnet_direct_live_balanced_squared_hinge",
+    ),
+    "segnet_direct_live_class_region_recon": (
+        "segnet_direct_live_class_region_recon",
+        "segnet_direct_live_region_recon",
+        "segnet_direct_live_target_region_recon",
+    ),
+    "segnet_direct_live_rare_class_logit": (
+        "segnet_direct_live_rare_class_logit",
+        "segnet_direct_live_missing_class_logit",
+        "segnet_direct_live_any_target_class_logit",
+    ),
+    "segnet_direct_live_target_mass_floor": (
+        "segnet_direct_live_target_mass_floor",
+        "segnet_direct_live_target_class_mass_floor",
+        "segnet_direct_live_min_ratio_mass_floor",
+    ),
+    "segnet_direct_live_target_min_ratio_floor": (
+        "segnet_direct_live_target_min_ratio_floor",
+        "segnet_direct_live_target_class_min_ratio_floor",
+        "segnet_direct_live_min_ratio_floor",
+        "segnet_direct_live_hard_support_floor",
     ),
 }
 _CORE_LOSS_WEIGHT_KEYS = frozenset(
@@ -161,6 +188,26 @@ def component_loss_weight(
         if key in loss_weights:
             return float(loss_weights[key])
     return float(default)
+
+
+def component_config_weight_with_floor(
+    loss_weights: Mapping[str, float] | None,
+    component: str,
+    configured_weight: float,
+) -> float:
+    """Return the static config weight lifted by a train-time config floor."""
+
+    configured = float(configured_weight)
+    floor = component_loss_weight(
+        loss_weights,
+        f"{component}_config_floor",
+        default=0.0,
+    )
+    if not math.isfinite(floor) or floor < 0.0:
+        raise ValueError(
+            f"{component}_config_floor must be finite and non-negative; got {floor!r}"
+        )
+    return max(configured, floor)
 
 
 def _extra_loss_weight_overrides(
@@ -724,6 +771,53 @@ def _posenet_yuv6_distribution_guard_parts(
     }
 
 
+def posenet_yuv6_geometry_tether_loss(
+    rgb_0: Any,
+    rgb_1: Any,
+    gt_0: Any,
+    gt_1: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Return a dense PoseNet-only geometry tether on upstream YUV6 inputs.
+
+    The temporal floor only asks whether the decoded pair has enough YUV6
+    motion magnitude. The current HiNeRV failure can pass that floor while the
+    PoseNet geometry remains wrong. This term prices the exact two-frame YUV6
+    pair, temporal delta, and local pair gradients consumed by upstream
+    PoseNet; it is not a human-perceptual objective.
+    """
+
+    parts = _posenet_yuv6_distribution_guard_parts(rgb_0, rgb_1, gt_0, gt_1)
+    total = parts["total"]
+    return total, {
+        "posenet_yuv6_geometry_tether": total,
+        "posenet_yuv6_geometry_tether_pair": parts["pair"],
+        "posenet_yuv6_geometry_tether_pair_mse": parts["pair_mse"],
+        "posenet_yuv6_geometry_tether_pair_mae": parts["pair_mae"],
+        "posenet_yuv6_geometry_tether_pair_spatial_gradient": parts[
+            "pair_spatial_gradient"
+        ],
+        "posenet_yuv6_geometry_tether_pair_spatial_gradient_mse": parts[
+            "pair_spatial_gradient_mse"
+        ],
+        "posenet_yuv6_geometry_tether_pair_spatial_gradient_mae": parts[
+            "pair_spatial_gradient_mae"
+        ],
+        "posenet_yuv6_geometry_tether_temporal_delta": parts["temporal_delta"],
+        "posenet_yuv6_geometry_tether_temporal_delta_mse": parts[
+            "temporal_delta_mse"
+        ],
+        "posenet_yuv6_geometry_tether_temporal_delta_mae": parts[
+            "temporal_delta_mae"
+        ],
+        "posenet_yuv6_geometry_tether_temporal_delta_std": parts[
+            "temporal_delta_std"
+        ],
+        "posenet_yuv6_geometry_tether_temporal_delta_dynamic_range": parts[
+            "temporal_delta_dynamic_range"
+        ],
+    }
+
+
 def scorer_input_distribution_guard_loss(
     bundle: RendererBundle,
     rgb_0: Any,
@@ -1153,6 +1247,10 @@ def _segnet_argmax_surface_metrics(
     occupied = mx.array(0.0, dtype=mx.float32)
     target_any_occupied = mx.array(0.0, dtype=mx.float32)
     target_occupied = mx.array(0.0, dtype=mx.float32)
+    target_any_covered = mx.array(0.0, dtype=mx.float32)
+    target_material_covered = mx.array(0.0, dtype=mx.float32)
+    candidate_target_min_ratio = mx.array(1.0, dtype=mx.float32)
+    eps = mx.array(1.0e-6, dtype=mx.float32)
     for class_index in range(class_count):
         cand_fraction = mx.mean(
             (cand_argmax == class_index).astype(mx.float32)
@@ -1160,12 +1258,39 @@ def _segnet_argmax_surface_metrics(
         target_fraction = mx.mean(
             (target_argmax == class_index).astype(mx.float32)
         )
+        target_present = target_fraction > 0.0
+        target_material = target_fraction >= min_class_fraction
+        target_material_threshold = mx.minimum(
+            target_fraction,
+            mx.array(min_class_fraction, dtype=mx.float32),
+        )
+        any_covered = target_present & (cand_fraction > 0.0)
+        material_covered = target_material & (
+            cand_fraction >= target_material_threshold
+        )
+        candidate_target_ratio = mx.minimum(
+            cand_fraction / mx.maximum(target_fraction, eps),
+            mx.array(1.0, dtype=mx.float32),
+        )
+        candidate_target_min_ratio = mx.minimum(
+            candidate_target_min_ratio,
+            mx.where(target_present, candidate_target_ratio, candidate_target_min_ratio),
+        )
         metrics[
             f"segnet_direct_live_candidate_class_{class_index}_fraction"
         ] = cand_fraction
         metrics[
             f"segnet_direct_live_target_class_{class_index}_fraction"
         ] = target_fraction
+        metrics[
+            f"segnet_direct_live_candidate_target_class_{class_index}_ratio"
+        ] = candidate_target_ratio
+        metrics[
+            f"segnet_direct_live_candidate_target_class_{class_index}_any_covered"
+        ] = any_covered.astype(mx.float32)
+        metrics[
+            f"segnet_direct_live_candidate_target_class_{class_index}_material_covered"
+        ] = material_covered.astype(mx.float32)
         any_occupied = any_occupied + (cand_fraction > 0.0).astype(mx.float32)
         occupied = occupied + (cand_fraction >= min_class_fraction).astype(mx.float32)
         target_any_occupied = target_any_occupied + (
@@ -1174,6 +1299,10 @@ def _segnet_argmax_surface_metrics(
         target_occupied = target_occupied + (
             target_fraction >= min_class_fraction
         ).astype(mx.float32)
+        target_any_covered = target_any_covered + any_covered.astype(mx.float32)
+        target_material_covered = target_material_covered + material_covered.astype(
+            mx.float32
+        )
     metrics["segnet_direct_live_candidate_any_occupied_class_fraction"] = (
         any_occupied / float(max(class_count, 1))
     )
@@ -1185,6 +1314,27 @@ def _segnet_argmax_surface_metrics(
     )
     metrics["segnet_direct_live_target_occupied_class_fraction"] = (
         target_occupied / float(max(class_count, 1))
+    )
+    metrics["segnet_direct_live_candidate_target_any_class_coverage_fraction"] = (
+        target_any_covered / mx.maximum(target_any_occupied, eps)
+    )
+    metrics["segnet_direct_live_candidate_target_class_coverage_fraction"] = (
+        target_material_covered / mx.maximum(target_occupied, eps)
+    )
+    metrics["segnet_direct_live_candidate_target_class_missing_fraction"] = (
+        mx.array(1.0, dtype=mx.float32)
+        - metrics["segnet_direct_live_candidate_target_class_coverage_fraction"]
+    )
+    metrics["segnet_direct_live_candidate_target_class_min_ratio"] = (
+        candidate_target_min_ratio
+    )
+    metrics["segnet_direct_live_target_any_class_count"] = target_any_occupied
+    metrics["segnet_direct_live_target_material_class_count"] = target_occupied
+    metrics["segnet_direct_live_candidate_target_any_class_covered_count"] = (
+        target_any_covered
+    )
+    metrics["segnet_direct_live_candidate_target_material_class_covered_count"] = (
+        target_material_covered
     )
     metrics["segnet_direct_live_occupancy_min_class_fraction"] = mx.array(
         min_class_fraction, dtype=mx.float32
@@ -1403,6 +1553,7 @@ def _segnet_class_balanced_ce_loss_and_metrics(
     occupied = mx.array(0.0, dtype=mx.float32)
     metrics: dict[str, Any] = {}
     eps = mx.array(1.0e-6, dtype=mx.float32)
+    active_class_terms = []
     for class_index in range(class_count):
         mask = (target_idx == class_index).astype(mx.float32)
         mass = mx.sum(mask)
@@ -1410,12 +1561,845 @@ def _segnet_class_balanced_ce_loss_and_metrics(
         class_loss = mx.sum(mask * per_pixel) / mx.maximum(mass, eps)
         total = total + class_active * class_loss
         occupied = occupied + class_active
+        active_class_terms.append(class_active * class_loss)
         metrics[
             f"segnet_direct_live_class_balanced_ce_class_{class_index}"
         ] = class_loss
-    loss = total / mx.maximum(occupied, eps)
+    class_balanced_mean = total / mx.maximum(occupied, eps)
+    worst_active_class = mx.max(mx.stack(active_class_terms))
+    loss = class_balanced_mean + worst_active_class
     metrics["segnet_direct_live_class_balanced_ce_loss"] = loss
+    metrics["segnet_direct_live_class_balanced_ce_mean_loss"] = (
+        class_balanced_mean
+    )
+    metrics["segnet_direct_live_class_balanced_ce_worst_class_loss"] = (
+        worst_active_class
+    )
     metrics["segnet_direct_live_class_balanced_ce_target_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return loss, metrics
+
+
+def _segnet_class_region_recon_loss_and_metrics(
+    *,
+    candidate_rgb: Any,
+    target_rgb: Any,
+    candidate_logits: Any,
+    target_logits: Any,
+    target_argmax: Any | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    """Class-balanced fit on upstream SegNet target regions.
+
+    Direct-live CE/hinge move the real SegNet decision surface, but a collapsed
+    compact renderer can still starve minority target regions of dense RGB
+    gradient.  This term is deliberately scoped to the exact frame/regions that
+    upstream ``evaluate.py`` scores: the last-frame SegNet argmax regions.  It
+    is not a visual objective; it is a missing-class escape actuator that gives
+    dense scorer-input gradients to target classes whose hard candidate mass is
+    below the target mass.
+    """
+
+    mx = require_mlx_for_harness()
+    class_count = int(candidate_logits.shape[-1])
+    if class_count < 1:
+        raise ValueError("SegNet class-region recon requires >=1 class")
+    if tuple(candidate_rgb.shape[:3]) != tuple(candidate_logits.shape[:3]):
+        raise ValueError(
+            "SegNet class-region recon requires candidate RGB and logits to "
+            "share batch/spatial axes; got "
+            f"rgb={tuple(candidate_rgb.shape)} logits={tuple(candidate_logits.shape)}"
+        )
+    if tuple(target_rgb.shape) != tuple(candidate_rgb.shape):
+        raise ValueError(
+            "SegNet class-region recon requires target RGB to match candidate RGB; "
+            f"target={tuple(target_rgb.shape)} candidate={tuple(candidate_rgb.shape)}"
+        )
+
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
+    candidate_idx = mx.stop_gradient(mx.argmax(candidate_logits, axis=-1))
+    ref_rgb = mx.stop_gradient(target_rgb)
+    diff = candidate_rgb - ref_rgb
+    per_pixel = mx.mean(diff * diff, axis=-1) + mx.mean(mx.abs(diff), axis=-1)
+
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    metrics: dict[str, Any] = {}
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    for class_index in range(class_count):
+        target_mask = (target_idx == class_index).astype(mx.float32)
+        target_mass = mx.sum(target_mask)
+        class_active = (target_mass > 0.0).astype(mx.float32)
+        class_loss = mx.sum(target_mask * per_pixel) / mx.maximum(target_mass, eps)
+        target_fraction = mx.stop_gradient(mx.mean(target_mask))
+        candidate_fraction = mx.stop_gradient(
+            mx.mean((candidate_idx == class_index).astype(mx.float32))
+        )
+        deficit = mx.maximum(target_fraction - candidate_fraction, 0.0)
+        deficit_ratio = deficit / mx.maximum(target_fraction, eps)
+        missing_boost = 1.0 + deficit_ratio
+        total = total + class_active * missing_boost * class_loss
+        occupied = occupied + class_active
+        metrics[
+            f"segnet_direct_live_class_region_recon_class_{class_index}"
+        ] = class_loss
+        metrics[
+            f"segnet_direct_live_class_region_recon_class_{class_index}_boost"
+        ] = missing_boost
+        metrics[
+            f"segnet_direct_live_class_region_recon_class_{class_index}_deficit"
+        ] = deficit
+    loss = total / mx.maximum(occupied, eps)
+    metrics["segnet_direct_live_class_region_recon_loss"] = loss
+    metrics["segnet_direct_live_class_region_recon_target_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return loss, metrics
+
+
+def _segnet_rare_class_logit_loss_and_metrics(
+    *,
+    candidate_logits: Any,
+    target_logits: Any,
+    target_argmax: Any | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    """Deficit-priced CE/soft-mass pressure for any target-present class.
+
+    The material-occupancy gate intentionally ignores one-pixel crumbs, but the
+    contest score does not: if upstream SegNet assigns a class to a pixel on
+    the scored last frame, a candidate missing that class can still pay
+    ``d_seg``.  Class-balanced CE already prevents dominant classes from
+    swallowing the loss; this term adds the missing piece observed in HiNeRV
+    smokes: hard candidate deficit and rarity must change the train-time price,
+    while the candidate soft class mass must remain differentiable.
+    """
+
+    mx = require_mlx_for_harness()
+    class_count = int(candidate_logits.shape[-1])
+    if class_count < 1:
+        raise ValueError("SegNet rare-class logit loss requires >=1 class")
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
+    candidate_idx = mx.stop_gradient(mx.argmax(candidate_logits, axis=-1))
+    logits = candidate_logits - mx.max(candidate_logits, axis=-1, keepdims=True)
+    exp_logits = mx.exp(logits)
+    probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)
+    log_probs = logits - mx.log(mx.sum(exp_logits, axis=-1, keepdims=True))
+
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    # Cap rarity pressure so tiny classes get a real actuator without turning a
+    # single mislabeled pixel into an infinite-gradient curriculum.
+    rare_floor = mx.array(1.0e-3, dtype=mx.float32)
+    rare_cap = mx.array(4.0, dtype=mx.float32)
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    active_terms = []
+    metrics: dict[str, Any] = {}
+    for class_index in range(class_count):
+        target_mask = (target_idx == class_index).astype(mx.float32)
+        target_mass = mx.sum(target_mask)
+        class_active = (target_mass > 0.0).astype(mx.float32)
+        target_fraction = mx.stop_gradient(mx.mean(target_mask))
+        candidate_hard_fraction = mx.stop_gradient(
+            mx.mean((candidate_idx == class_index).astype(mx.float32))
+        )
+        class_prob = probs[..., class_index]
+        candidate_soft_fraction = mx.mean(class_prob)
+        target_prob_mean = (
+            mx.sum(target_mask * class_prob) / mx.maximum(target_mass, eps)
+        )
+        class_ce = -mx.sum(target_mask * log_probs[..., class_index]) / mx.maximum(
+            target_mass,
+            eps,
+        )
+        class_logit = candidate_logits[..., class_index]
+        class_eye = mx.array(
+            [1.0 if idx == class_index else 0.0 for idx in range(class_count)],
+            dtype=candidate_logits.dtype,
+        )
+        impostor_logits = candidate_logits - class_eye * mx.array(
+            1.0e30,
+            dtype=candidate_logits.dtype,
+        )
+        max_impostor = mx.max(impostor_logits, axis=-1)
+        margin = mx.maximum(max_impostor - class_logit + 1.0, 0.0)
+        class_margin = mx.sum(target_mask * margin * margin) / mx.maximum(
+            target_mass,
+            eps,
+        )
+        masked_margin = mx.where(
+            target_mask > 0.0,
+            margin,
+            mx.array(1.0e30, dtype=margin.dtype),
+        )
+        frontier_margin = mx.stop_gradient(mx.min(masked_margin))
+        finite_frontier_margin = mx.where(
+            class_active > 0.0,
+            frontier_margin,
+            mx.array(0.0, dtype=mx.float32),
+        )
+        shifted_margin = mx.maximum(margin - frontier_margin, 0.0)
+        easy_temperature = mx.minimum(
+            mx.array(2.0, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.25, dtype=mx.float32),
+                mx.sqrt(mx.maximum(target_fraction, rare_floor)),
+            ),
+        )
+        easy_weight = target_mask * mx.exp(
+            -mx.stop_gradient(shifted_margin) / easy_temperature
+        )
+        easy_weight_mass = mx.sum(easy_weight)
+        class_easy_margin = mx.sum(easy_weight * margin * margin) / mx.maximum(
+            easy_weight_mass,
+            eps,
+        )
+        easy_weight_peak = mx.max(easy_weight) / mx.maximum(easy_weight_mass, eps)
+        hard_deficit = mx.maximum(target_fraction - candidate_hard_fraction, 0.0)
+        hard_deficit_ratio = hard_deficit / mx.maximum(target_fraction, eps)
+        hard_missing = (candidate_hard_fraction <= 0.0).astype(mx.float32)
+        material_hard_floor = mx.minimum(
+            target_fraction,
+            mx.maximum(
+                mx.array(0.001, dtype=mx.float32),
+                mx.array(0.10, dtype=mx.float32) * target_fraction,
+            ),
+        )
+        hard_undercovered = (
+            candidate_hard_fraction + eps < material_hard_floor
+        ).astype(mx.float32)
+        soft_deficit = mx.maximum(target_fraction - candidate_soft_fraction, 0.0)
+        soft_deficit_ratio = soft_deficit / mx.maximum(target_fraction, eps)
+        rarity_boost = mx.minimum(
+            rare_cap,
+            1.0 / mx.sqrt(mx.maximum(target_fraction, rare_floor)),
+        )
+        # d_seg is a per-pixel flip rate, so a large target class that is hard
+        # missing must not be hidden by equal-class averaging. Rarity still
+        # gives tiny material classes a real actuator, while score-mass boost
+        # keeps large missing classes priced near their true contest leverage.
+        score_mass_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.array(32.0, dtype=mx.float32)
+            * target_fraction
+            * (mx.array(1.0, dtype=mx.float32) + hard_undercovered)
+        )
+        boost = (1.0 + hard_deficit_ratio) * rarity_boost * score_mass_boost
+        easy_margin_weight = (
+            mx.array(2.0, dtype=mx.float32)
+            + mx.array(6.0, dtype=mx.float32) * hard_deficit_ratio
+            + mx.array(4.0, dtype=mx.float32) * hard_undercovered
+        )
+        target_prob_floor = mx.minimum(
+            mx.array(0.45, dtype=mx.float32),
+            mx.maximum(mx.array(0.20, dtype=mx.float32), target_fraction),
+        )
+        target_prob_floor_deficit = mx.maximum(
+            target_prob_floor - target_prob_mean,
+            0.0,
+        )
+        seed_mass_floor = mx.minimum(
+            mx.array(0.08, dtype=mx.float32),
+            mx.maximum(mx.array(0.02, dtype=mx.float32), target_fraction),
+        )
+        seed_mass_floor_log_ratio = mx.maximum(
+            mx.log(
+                (seed_mass_floor + eps)
+                / mx.maximum(candidate_soft_fraction, eps)
+            ),
+            0.0,
+        )
+        seed_mass_floor_loss = (
+            hard_undercovered
+            * seed_mass_floor_log_ratio
+            * seed_mass_floor_log_ratio
+        )
+        seed_weight_normalized = easy_weight / mx.maximum(easy_weight_mass, eps)
+        seed_target_prob_mean = mx.sum(seed_weight_normalized * class_prob)
+        frontier_island_margin = mx.sum(seed_weight_normalized * margin)
+        frontier_island_crossing_loss = (
+            frontier_island_margin * frontier_island_margin
+        )
+        # The contest SegNet term is a hard argmax flip rate.  When a target
+        # class has no material candidate island, soft global mass is not enough;
+        # the easiest target pixels need class-k probability high enough to win.
+        seed_argmax_prob_floor = mx.minimum(
+            mx.array(0.75, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.55, dtype=mx.float32),
+                target_prob_floor + mx.array(0.20, dtype=mx.float32),
+            ),
+        )
+        seed_argmax_prob_floor_deficit = mx.maximum(
+            seed_argmax_prob_floor - seed_target_prob_mean,
+            0.0,
+        )
+        seed_argmax_prob_loss = (
+            class_active
+            * hard_undercovered
+            * seed_argmax_prob_floor_deficit
+            * seed_argmax_prob_floor_deficit
+        )
+        crossing_loss = class_active * hard_undercovered * (
+            mx.array(8.0, dtype=mx.float32) * frontier_island_crossing_loss
+            + mx.array(16.0, dtype=mx.float32)
+            * target_prob_floor_deficit
+            * target_prob_floor_deficit
+        )
+        class_loss = (
+            class_ce
+            + class_margin
+            + easy_margin_weight * class_easy_margin
+            + 4.0 * soft_deficit_ratio * soft_deficit_ratio
+            + 4.0 * seed_mass_floor_loss
+            + crossing_loss
+            + mx.array(8.0, dtype=mx.float32) * seed_argmax_prob_loss
+        )
+        boosted_loss = class_active * boost * class_loss
+        total = total + boosted_loss
+        occupied = occupied + class_active
+        active_terms.append(boosted_loss)
+        metrics[f"segnet_direct_live_rare_class_logit_class_{class_index}"] = (
+            class_loss
+        )
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_boost"
+        ] = boost
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_rarity_boost"
+        ] = rarity_boost
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_score_mass_boost"
+        ] = score_mass_boost
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_hard_deficit"
+        ] = hard_deficit
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_soft_deficit"
+        ] = soft_deficit
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_target_fraction"
+        ] = target_fraction
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_candidate_hard_fraction"
+        ] = candidate_hard_fraction
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_candidate_soft_fraction"
+        ] = candidate_soft_fraction
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_target_prob_mean"
+        ] = target_prob_mean
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_margin"
+        ] = class_margin
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_easy_margin"
+        ] = class_easy_margin
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_easy_weight_peak"
+        ] = easy_weight_peak
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_easy_temperature"
+        ] = easy_temperature
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_frontier_margin"
+        ] = finite_frontier_margin
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_frontier_island_margin"
+        ] = frontier_island_margin
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_frontier_island_crossing_loss"
+        ] = frontier_island_crossing_loss
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_easy_margin_weight"
+        ] = easy_margin_weight
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_hard_missing"
+        ] = hard_missing
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_material_hard_floor"
+        ] = material_hard_floor
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_hard_undercovered"
+        ] = hard_undercovered
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_target_prob_floor"
+        ] = target_prob_floor
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_target_prob_floor_deficit"
+        ] = target_prob_floor_deficit
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_crossing_loss"
+        ] = crossing_loss
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_mass_floor"
+        ] = seed_mass_floor
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_mass_floor_log_ratio"
+        ] = seed_mass_floor_log_ratio
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_mass_floor_loss"
+        ] = seed_mass_floor_loss
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_target_prob_mean"
+        ] = seed_target_prob_mean
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_argmax_prob_floor"
+        ] = seed_argmax_prob_floor
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_argmax_prob_floor_deficit"
+        ] = seed_argmax_prob_floor_deficit
+        metrics[
+            f"segnet_direct_live_rare_class_logit_class_{class_index}_seed_argmax_prob_loss"
+        ] = seed_argmax_prob_loss
+    class_mean = total / mx.maximum(occupied, eps)
+    worst_class = mx.max(mx.stack(active_terms))
+    loss = class_mean + worst_class
+    metrics["segnet_direct_live_rare_class_logit_loss"] = loss
+    metrics["segnet_direct_live_rare_class_logit_mean_loss"] = class_mean
+    metrics["segnet_direct_live_rare_class_logit_worst_class_loss"] = worst_class
+    metrics["segnet_direct_live_rare_class_logit_target_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return loss, metrics
+
+
+def _segnet_target_mass_floor_loss_and_metrics(
+    *,
+    candidate_logits: Any,
+    target_logits: Any,
+    target_argmax: Any | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    """Differentiable soft-mass floor for target-present SegNet classes.
+
+    This term attacks the HiNeRV/SNeRV post-class-birth failure mode: the
+    candidate can contain a scored class somewhere, while the hard mass ratio
+    for at least one target-present class remains zero.  The contest SegNet
+    score is still a hard argmax flip rate; this loss supplies the pre-argmax
+    probability and soft-mass pressure needed for those hard islands to grow.
+    """
+
+    mx = require_mlx_for_harness()
+    class_count = int(candidate_logits.shape[-1])
+    if class_count < 1:
+        raise ValueError("SegNet target-mass floor loss requires >=1 class")
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
+    candidate_idx = mx.stop_gradient(mx.argmax(candidate_logits, axis=-1))
+    logits = candidate_logits - mx.max(candidate_logits, axis=-1, keepdims=True)
+    exp_logits = mx.exp(logits)
+    probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)
+
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    active_terms = []
+    metrics: dict[str, Any] = {}
+    for class_index in range(class_count):
+        target_mask = (target_idx == class_index).astype(mx.float32)
+        target_mass = mx.sum(target_mask)
+        class_active = (target_mass > 0.0).astype(mx.float32)
+        target_fraction = mx.stop_gradient(mx.mean(target_mask))
+        candidate_hard_fraction = mx.stop_gradient(
+            mx.mean((candidate_idx == class_index).astype(mx.float32))
+        )
+        class_prob = probs[..., class_index]
+        candidate_soft_fraction = mx.mean(class_prob)
+        target_prob_mean = (
+            mx.sum(target_mask * class_prob) / mx.maximum(target_mass, eps)
+        )
+        class_logit = candidate_logits[..., class_index]
+        class_eye = mx.array(
+            [1.0 if idx == class_index else 0.0 for idx in range(class_count)],
+            dtype=candidate_logits.dtype,
+        )
+        impostor_logits = candidate_logits - class_eye * mx.array(
+            1.0e30,
+            dtype=candidate_logits.dtype,
+        )
+        max_impostor = mx.max(impostor_logits, axis=-1)
+        target_region_margin = mx.maximum(
+            max_impostor - class_logit + mx.array(1.0, dtype=mx.float32),
+            0.0,
+        )
+        target_region_crossing_loss = (
+            mx.sum(target_mask * target_region_margin * target_region_margin)
+            / mx.maximum(target_mass, eps)
+        )
+        hard_ratio = candidate_hard_fraction / mx.maximum(target_fraction, eps)
+        hard_deficit_ratio = mx.maximum(1.0 - hard_ratio, 0.0)
+        soft_mass_floor = mx.minimum(
+            target_fraction,
+            mx.maximum(
+                mx.array(1.0e-3, dtype=mx.float32),
+                mx.array(0.35, dtype=mx.float32) * target_fraction,
+            ),
+        )
+        target_prob_floor = mx.minimum(
+            mx.array(0.70, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.45, dtype=mx.float32),
+                mx.array(0.35, dtype=mx.float32) + target_fraction,
+            ),
+        )
+        soft_mass_log_ratio = mx.maximum(
+            mx.log((soft_mass_floor + eps) / mx.maximum(candidate_soft_fraction, eps)),
+            0.0,
+        )
+        target_prob_deficit = mx.maximum(target_prob_floor - target_prob_mean, 0.0)
+        score_mass_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.array(32.0, dtype=mx.float32) * target_fraction
+        )
+        undercovered_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.array(8.0, dtype=mx.float32) * hard_deficit_ratio
+        )
+        class_loss = (
+            soft_mass_log_ratio * soft_mass_log_ratio
+            + mx.array(8.0, dtype=mx.float32)
+            * target_prob_deficit
+            * target_prob_deficit
+            + (
+                mx.array(1.0, dtype=mx.float32)
+                + mx.array(4.0, dtype=mx.float32) * hard_deficit_ratio
+            )
+            * target_region_crossing_loss
+        )
+        boosted_loss = class_active * score_mass_boost * undercovered_boost * class_loss
+        total = total + boosted_loss
+        occupied = occupied + class_active
+        active_terms.append(boosted_loss)
+        metrics[f"segnet_direct_live_target_mass_floor_class_{class_index}"] = (
+            class_loss
+        )
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_target_fraction"
+        ] = target_fraction
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_candidate_hard_fraction"
+        ] = candidate_hard_fraction
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_candidate_soft_fraction"
+        ] = candidate_soft_fraction
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_target_prob_mean"
+        ] = target_prob_mean
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_hard_ratio"
+        ] = hard_ratio
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_hard_deficit_ratio"
+        ] = hard_deficit_ratio
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_soft_mass_floor"
+        ] = soft_mass_floor
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_target_prob_floor"
+        ] = target_prob_floor
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_soft_mass_log_ratio"
+        ] = soft_mass_log_ratio
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_target_prob_deficit"
+        ] = target_prob_deficit
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_target_region_crossing_loss"
+        ] = target_region_crossing_loss
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_target_region_margin_mean"
+        ] = (
+            mx.sum(target_mask * target_region_margin)
+            / mx.maximum(target_mass, eps)
+        )
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_score_mass_boost"
+        ] = score_mass_boost
+        metrics[
+            f"segnet_direct_live_target_mass_floor_class_{class_index}_undercovered_boost"
+        ] = undercovered_boost
+    class_mean = total / mx.maximum(occupied, eps)
+    worst_class = mx.max(mx.stack(active_terms))
+    loss = class_mean + worst_class
+    metrics["segnet_direct_live_target_mass_floor_loss"] = loss
+    metrics["segnet_direct_live_target_mass_floor_mean_loss"] = class_mean
+    metrics["segnet_direct_live_target_mass_floor_worst_class_loss"] = worst_class
+    metrics["segnet_direct_live_target_mass_floor_target_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return loss, metrics
+
+
+def _segnet_target_min_ratio_floor_loss_and_metrics(
+    *,
+    candidate_logits: Any,
+    target_logits: Any,
+    target_argmax: Any | None = None,
+    min_ratio_floor: float = 0.35,
+) -> tuple[Any, dict[str, Any]]:
+    """Worst-class hard-support birth loss for upstream SegNet argmax geometry.
+
+    ``_segnet_target_mass_floor_loss_and_metrics`` prices soft class mass.  The
+    current HiNeRV distortion crux is sharper: after soft mass appears, at least
+    one target-present class can still have zero or tiny hard argmax support.
+    The contest ``d_seg`` term is a frame-1 hard argmax flip rate, so long runs
+    need an explicit differentiable actuator for that minimum target-class ratio.
+
+    The hard ratio itself is stop-gradient telemetry; it only gates/weights
+    differentiable target-region logit margins, target probabilities, and a
+    frontier-island seed probability.  This keeps the loss on the scorer's
+    decision surface without importing human visual fidelity.
+    """
+
+    mx = require_mlx_for_harness()
+    floor = float(min_ratio_floor)
+    if not math.isfinite(floor) or floor < 0.0 or floor > 1.0:
+        raise ValueError(
+            "SegNet target-min-ratio floor must be finite in [0, 1]; "
+            f"got {min_ratio_floor!r}"
+        )
+    class_count = int(candidate_logits.shape[-1])
+    if class_count < 1:
+        raise ValueError("SegNet target-min-ratio floor loss requires >=1 class")
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
+    candidate_idx = mx.stop_gradient(mx.argmax(candidate_logits, axis=-1))
+    logits = candidate_logits - mx.max(candidate_logits, axis=-1, keepdims=True)
+    exp_logits = mx.exp(logits)
+    probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)
+
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    floor_arr = mx.array(floor, dtype=mx.float32)
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    active_terms = []
+    min_ratio = mx.array(1.0, dtype=mx.float32)
+    min_region_ratio = mx.array(1.0, dtype=mx.float32)
+    worst_ratio_deficit = mx.array(0.0, dtype=mx.float32)
+    metrics: dict[str, Any] = {
+        "segnet_direct_live_target_min_ratio_floor_configured_floor": floor_arr,
+    }
+    for class_index in range(class_count):
+        target_mask = (target_idx == class_index).astype(mx.float32)
+        target_mass = mx.sum(target_mask)
+        class_active = (target_mass > 0.0).astype(mx.float32)
+        target_fraction = mx.stop_gradient(mx.mean(target_mask))
+        candidate_hard_fraction = mx.stop_gradient(
+            mx.mean((candidate_idx == class_index).astype(mx.float32))
+        )
+        target_region_hard_fraction = mx.stop_gradient(
+            mx.sum(
+                target_mask * (candidate_idx == class_index).astype(mx.float32)
+            )
+            / mx.maximum(target_mass, eps)
+        )
+        hard_ratio = mx.minimum(
+            candidate_hard_fraction / mx.maximum(target_fraction, eps),
+            mx.array(1.0, dtype=mx.float32),
+        )
+        region_ratio = mx.minimum(
+            target_region_hard_fraction,
+            mx.array(1.0, dtype=mx.float32),
+        )
+        min_ratio = mx.minimum(min_ratio, mx.where(class_active > 0.0, hard_ratio, min_ratio))
+        min_region_ratio = mx.minimum(
+            min_region_ratio,
+            mx.where(class_active > 0.0, region_ratio, min_region_ratio),
+        )
+        ratio_deficit = mx.maximum(floor_arr - hard_ratio, 0.0)
+        region_deficit = mx.maximum(floor_arr - region_ratio, 0.0)
+        worst_ratio_deficit = mx.maximum(
+            worst_ratio_deficit,
+            mx.where(class_active > 0.0, ratio_deficit, 0.0),
+        )
+        ratio_active = (ratio_deficit > 0.0).astype(mx.float32)
+        class_prob = probs[..., class_index]
+        candidate_soft_fraction = mx.mean(class_prob)
+        target_prob_mean = (
+            mx.sum(target_mask * class_prob) / mx.maximum(target_mass, eps)
+        )
+        class_logit = candidate_logits[..., class_index]
+        class_eye = mx.array(
+            [1.0 if idx == class_index else 0.0 for idx in range(class_count)],
+            dtype=candidate_logits.dtype,
+        )
+        impostor_logits = candidate_logits - class_eye * mx.array(
+            1.0e30,
+            dtype=candidate_logits.dtype,
+        )
+        max_impostor = mx.max(impostor_logits, axis=-1)
+        target_region_margin = mx.maximum(
+            max_impostor - class_logit + mx.array(1.0, dtype=mx.float32),
+            0.0,
+        )
+        target_region_crossing_loss = (
+            mx.sum(target_mask * target_region_margin * target_region_margin)
+            / mx.maximum(target_mass, eps)
+        )
+        shifted_margin = target_region_margin - mx.min(target_region_margin)
+        easy_temperature = mx.minimum(
+            mx.array(2.0, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.25, dtype=mx.float32),
+                mx.sqrt(mx.maximum(target_fraction, eps)),
+            ),
+        )
+        easy_weight = target_mask * mx.exp(
+            -mx.stop_gradient(shifted_margin) / easy_temperature
+        )
+        easy_weight_mass = mx.sum(easy_weight)
+        easy_weight_normalized = easy_weight / mx.maximum(easy_weight_mass, eps)
+        seed_target_prob_mean = mx.sum(easy_weight_normalized * class_prob)
+        seed_island_margin = mx.sum(easy_weight_normalized * target_region_margin)
+        seed_island_crossing_loss = seed_island_margin * seed_island_margin
+        target_prob_floor = mx.minimum(
+            mx.array(0.80, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.55, dtype=mx.float32),
+                mx.array(0.35, dtype=mx.float32) + floor_arr,
+            ),
+        )
+        target_prob_deficit = mx.maximum(target_prob_floor - target_prob_mean, 0.0)
+        seed_prob_floor = mx.minimum(
+            mx.array(0.90, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.70, dtype=mx.float32),
+                target_prob_floor + mx.array(0.10, dtype=mx.float32),
+            ),
+        )
+        seed_prob_deficit = mx.maximum(seed_prob_floor - seed_target_prob_mean, 0.0)
+        soft_mass_floor = mx.minimum(
+            target_fraction,
+            mx.maximum(
+                mx.array(1.0e-3, dtype=mx.float32),
+                floor_arr * target_fraction,
+            ),
+        )
+        soft_mass_log_ratio = mx.maximum(
+            mx.log((soft_mass_floor + eps) / mx.maximum(candidate_soft_fraction, eps)),
+            0.0,
+        )
+        rarity_boost = mx.minimum(
+            mx.array(8.0, dtype=mx.float32),
+            1.0 / mx.sqrt(mx.maximum(target_fraction, mx.array(1.0e-4, dtype=mx.float32))),
+        )
+        score_mass_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.array(32.0, dtype=mx.float32) * target_fraction
+        )
+        ratio_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.array(16.0, dtype=mx.float32) * ratio_deficit
+            + mx.array(8.0, dtype=mx.float32) * region_deficit
+        )
+        class_loss = (
+            mx.array(4.0, dtype=mx.float32)
+            * soft_mass_log_ratio
+            * soft_mass_log_ratio
+            + mx.array(12.0, dtype=mx.float32)
+            * target_prob_deficit
+            * target_prob_deficit
+            + mx.array(12.0, dtype=mx.float32)
+            * seed_prob_deficit
+            * seed_prob_deficit
+            + (mx.array(1.0, dtype=mx.float32) + mx.array(4.0, dtype=mx.float32) * region_deficit)
+            * target_region_crossing_loss
+            + mx.array(4.0, dtype=mx.float32) * seed_island_crossing_loss
+        )
+        boosted_loss = (
+            class_active
+            * ratio_active
+            * rarity_boost
+            * score_mass_boost
+            * ratio_boost
+            * class_loss
+        )
+        total = total + boosted_loss
+        occupied = occupied + class_active
+        active_terms.append(boosted_loss)
+        metrics[f"segnet_direct_live_target_min_ratio_floor_class_{class_index}"] = (
+            class_loss
+        )
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_boost"
+        ] = rarity_boost * score_mass_boost * ratio_boost
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_fraction"
+        ] = target_fraction
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_candidate_hard_fraction"
+        ] = candidate_hard_fraction
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_candidate_soft_fraction"
+        ] = candidate_soft_fraction
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_hard_ratio"
+        ] = hard_ratio
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_region_ratio"
+        ] = region_ratio
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_ratio_deficit"
+        ] = ratio_deficit
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_region_deficit"
+        ] = region_deficit
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_prob_mean"
+        ] = target_prob_mean
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_prob_floor"
+        ] = target_prob_floor
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_prob_deficit"
+        ] = target_prob_deficit
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_target_prob_mean"
+        ] = seed_target_prob_mean
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_prob_floor"
+        ] = seed_prob_floor
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_prob_deficit"
+        ] = seed_prob_deficit
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_soft_mass_floor"
+        ] = soft_mass_floor
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_soft_mass_log_ratio"
+        ] = soft_mass_log_ratio
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_region_crossing_loss"
+        ] = target_region_crossing_loss
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_island_crossing_loss"
+        ] = seed_island_crossing_loss
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_ratio_active"
+        ] = ratio_active
+    class_mean = total / mx.maximum(occupied, eps)
+    worst_class = mx.max(mx.stack(active_terms))
+    loss = class_mean + worst_class
+    metrics["segnet_direct_live_target_min_ratio_floor_loss"] = loss
+    metrics["segnet_direct_live_target_min_ratio_floor_mean_loss"] = class_mean
+    metrics["segnet_direct_live_target_min_ratio_floor_worst_class_loss"] = worst_class
+    metrics["segnet_direct_live_target_min_ratio_floor_worst_ratio_deficit"] = (
+        worst_ratio_deficit
+    )
+    metrics["segnet_direct_live_target_min_ratio_floor_min_ratio"] = min_ratio
+    metrics["segnet_direct_live_target_min_ratio_floor_min_region_ratio"] = (
+        min_region_ratio
+    )
+    metrics["segnet_direct_live_target_min_ratio_floor_target_occupied_class_fraction"] = (
         occupied / float(max(class_count, 1))
     )
     return loss, metrics
@@ -1426,6 +2410,7 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
     seg_rgb_nhwc01: Any,
     idx: Any,
     *,
+    target_seg_rgb_nhwc01: Any | None = None,
     loss_weights: Mapping[str, float] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Score-facing direct SegNet VJP term plus class-surface telemetry.
@@ -1510,11 +2495,18 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         loss_weights,
         "segnet_direct_live_class_histogram",
     )
-    hist_weight = (
-        float(bundle.segnet_direct_live_class_histogram_weight) * hist_stage_weight
+    hist_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_class_histogram",
+        float(bundle.segnet_direct_live_class_histogram_weight),
     )
+    hist_weight = hist_config_weight * hist_stage_weight
     metrics["segnet_direct_live_class_histogram_config_weight"] = mx.array(
         float(bundle.segnet_direct_live_class_histogram_weight),
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_histogram_effective_config_weight"] = mx.array(
+        hist_config_weight,
         dtype=mx.float32,
     )
     metrics["segnet_direct_live_class_histogram_stage_weight"] = mx.array(
@@ -1538,11 +2530,20 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         loss_weights,
         "segnet_direct_live_class_balanced_hinge",
     )
-    balanced_hinge_weight = float(
-        bundle.segnet_direct_live_class_balanced_hinge_weight
-    ) * balanced_hinge_stage_weight
+    balanced_hinge_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_class_balanced_hinge",
+        float(bundle.segnet_direct_live_class_balanced_hinge_weight),
+    )
+    balanced_hinge_weight = balanced_hinge_config_weight * balanced_hinge_stage_weight
     metrics["segnet_direct_live_class_balanced_hinge_config_weight"] = mx.array(
         float(bundle.segnet_direct_live_class_balanced_hinge_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_class_balanced_hinge_effective_config_weight"
+    ] = mx.array(
+        balanced_hinge_config_weight,
         dtype=mx.float32,
     )
     metrics["segnet_direct_live_class_balanced_hinge_stage_weight"] = mx.array(
@@ -1568,12 +2569,18 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         loss_weights,
         "segnet_direct_live_class_balanced_ce",
     )
-    balanced_ce_weight = (
-        float(bundle.segnet_direct_live_class_balanced_ce_weight)
-        * balanced_ce_stage_weight
+    balanced_ce_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_class_balanced_ce",
+        float(bundle.segnet_direct_live_class_balanced_ce_weight),
     )
+    balanced_ce_weight = balanced_ce_config_weight * balanced_ce_stage_weight
     metrics["segnet_direct_live_class_balanced_ce_config_weight"] = mx.array(
         float(bundle.segnet_direct_live_class_balanced_ce_weight),
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_balanced_ce_effective_config_weight"] = mx.array(
+        balanced_ce_config_weight,
         dtype=mx.float32,
     )
     metrics["segnet_direct_live_class_balanced_ce_stage_weight"] = mx.array(
@@ -1598,13 +2605,22 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         loss_weights,
         "segnet_direct_live_class_balanced_squared_hinge",
     )
-    squared_hinge_weight = float(
-        bundle.segnet_direct_live_class_balanced_squared_hinge_weight
-    ) * squared_hinge_stage_weight
+    squared_hinge_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_class_balanced_squared_hinge",
+        float(bundle.segnet_direct_live_class_balanced_squared_hinge_weight),
+    )
+    squared_hinge_weight = squared_hinge_config_weight * squared_hinge_stage_weight
     metrics[
         "segnet_direct_live_class_balanced_squared_hinge_config_weight"
     ] = mx.array(
         float(bundle.segnet_direct_live_class_balanced_squared_hinge_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_class_balanced_squared_hinge_effective_config_weight"
+    ] = mx.array(
+        squared_hinge_config_weight,
         dtype=mx.float32,
     )
     metrics[
@@ -1628,6 +2644,166 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
         loss = loss + squared_hinge_weight * squared_hinge
         metrics.update(squared_hinge_metrics)
+    region_recon_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_class_region_recon",
+    )
+    region_recon_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_class_region_recon",
+        float(bundle.segnet_direct_live_class_region_recon_weight),
+    )
+    region_recon_weight = region_recon_config_weight * region_recon_stage_weight
+    metrics["segnet_direct_live_class_region_recon_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_class_region_recon_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_class_region_recon_effective_config_weight"
+    ] = mx.array(
+        region_recon_config_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_region_recon_stage_weight"] = mx.array(
+        region_recon_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_region_recon_weight"] = mx.array(
+        region_recon_weight,
+        dtype=mx.float32,
+    )
+    if region_recon_weight > 0.0:
+        if target_seg_rgb_nhwc01 is None:
+            raise ValueError(
+                "segnet_direct_live_class_region_recon_weight > 0 requires "
+                "target_seg_rgb_nhwc01 so the loss is scoped to the scored "
+                "SegNet target frame."
+            )
+        region_recon, region_recon_metrics = (
+            _segnet_class_region_recon_loss_and_metrics(
+                candidate_rgb=seg_rgb_nhwc01,
+                target_rgb=target_seg_rgb_nhwc01,
+                candidate_logits=candidate_logits,
+                target_logits=target_logits,
+                target_argmax=target_argmax,
+            )
+        )
+        loss = loss + region_recon_weight * region_recon
+        metrics.update(region_recon_metrics)
+    rare_class_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_rare_class_logit",
+    )
+    rare_class_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_rare_class_logit",
+        float(bundle.segnet_direct_live_rare_class_logit_weight),
+    )
+    rare_class_weight = rare_class_config_weight * rare_class_stage_weight
+    metrics["segnet_direct_live_rare_class_logit_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_rare_class_logit_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_rare_class_logit_effective_config_weight"
+    ] = mx.array(
+        rare_class_config_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_rare_class_logit_stage_weight"] = mx.array(
+        rare_class_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_rare_class_logit_weight"] = mx.array(
+        rare_class_weight,
+        dtype=mx.float32,
+    )
+    if rare_class_weight > 0.0:
+        rare_class, rare_class_metrics = _segnet_rare_class_logit_loss_and_metrics(
+            candidate_logits=candidate_logits,
+            target_logits=target_logits,
+            target_argmax=target_argmax,
+        )
+        loss = loss + rare_class_weight * rare_class
+        metrics.update(rare_class_metrics)
+    target_mass_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_target_mass_floor",
+    )
+    target_mass_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_target_mass_floor",
+        float(bundle.segnet_direct_live_target_mass_floor_weight),
+    )
+    target_mass_weight = target_mass_config_weight * target_mass_stage_weight
+    metrics["segnet_direct_live_target_mass_floor_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_target_mass_floor_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_target_mass_floor_effective_config_weight"
+    ] = mx.array(
+        target_mass_config_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_target_mass_floor_stage_weight"] = mx.array(
+        target_mass_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_target_mass_floor_weight"] = mx.array(
+        target_mass_weight,
+        dtype=mx.float32,
+    )
+    if target_mass_weight > 0.0:
+        target_mass, target_mass_metrics = (
+            _segnet_target_mass_floor_loss_and_metrics(
+                candidate_logits=candidate_logits,
+                target_logits=target_logits,
+                target_argmax=target_argmax,
+            )
+        )
+        loss = loss + target_mass_weight * target_mass
+        metrics.update(target_mass_metrics)
+    target_min_ratio_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_target_min_ratio_floor",
+    )
+    target_min_ratio_config_weight = component_config_weight_with_floor(
+        loss_weights,
+        "segnet_direct_live_target_min_ratio_floor",
+        float(bundle.segnet_direct_live_target_min_ratio_floor_weight),
+    )
+    target_min_ratio_weight = (
+        target_min_ratio_config_weight * target_min_ratio_stage_weight
+    )
+    metrics["segnet_direct_live_target_min_ratio_floor_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_target_min_ratio_floor_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_target_min_ratio_floor_effective_config_weight"
+    ] = mx.array(
+        target_min_ratio_config_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_target_min_ratio_floor_stage_weight"] = mx.array(
+        target_min_ratio_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_target_min_ratio_floor_weight"] = mx.array(
+        target_min_ratio_weight,
+        dtype=mx.float32,
+    )
+    if target_min_ratio_weight > 0.0:
+        target_min_ratio, target_min_ratio_metrics = (
+            _segnet_target_min_ratio_floor_loss_and_metrics(
+                candidate_logits=candidate_logits,
+                target_logits=target_logits,
+                target_argmax=target_argmax,
+            )
+        )
+        loss = loss + target_min_ratio_weight * target_min_ratio
+        metrics.update(target_min_ratio_metrics)
     return loss, metrics
 
 
@@ -1700,6 +2876,11 @@ def score_aware_loss(
     scorer_input_shape_tether_stage_weight = component_loss_weight(
         loss_weights,
         "scorer_input_shape_tether",
+        default=scorer_input_guard_stage_weight,
+    )
+    posenet_yuv6_geometry_tether_stage_weight = component_loss_weight(
+        loss_weights,
+        "posenet_yuv6_geometry_tether",
         default=scorer_input_guard_stage_weight,
     )
     posenet_temporal_signal_floor_stage_weight = component_loss_weight(
@@ -1807,6 +2988,24 @@ def score_aware_loss(
         parts.update(shape_tether_parts)
 
     if (
+        bundle.posenet_yuv6_geometry_tether_weight > 0.0
+        and posenet_yuv6_geometry_tether_stage_weight != 0.0
+    ):
+        pose_geometry, pose_geometry_parts = posenet_yuv6_geometry_tether_loss(
+            rgb_0,
+            rgb_1,
+            gt_0,
+            gt_1,
+        )
+        total = (
+            total
+            + float(bundle.posenet_yuv6_geometry_tether_weight)
+            * posenet_yuv6_geometry_tether_stage_weight
+            * pose_geometry
+        )
+        parts.update(pose_geometry_parts)
+
+    if (
         bundle.posenet_temporal_signal_floor_weight > 0.0
         and posenet_temporal_signal_floor_stage_weight != 0.0
     ):
@@ -1898,8 +3097,30 @@ def score_aware_loss(
         parts["distill"] = distill
 
     direct_live_weight = float(bundle.segnet_direct_live_distillation_weight)
-    if direct_live_weight > 0.0 and segnet_direct_live_stage_weight != 0.0:
+    direct_live_subcontrol_active = any(
+        float(value) > 0.0
+        for value in (
+            bundle.segnet_direct_live_class_histogram_weight,
+            bundle.segnet_direct_live_class_balanced_hinge_weight,
+            bundle.segnet_direct_live_class_balanced_ce_weight,
+            bundle.segnet_direct_live_class_balanced_squared_hinge_weight,
+            bundle.segnet_direct_live_class_region_recon_weight,
+            bundle.segnet_direct_live_rare_class_logit_weight,
+            bundle.segnet_direct_live_target_mass_floor_weight,
+            bundle.segnet_direct_live_target_min_ratio_floor_weight,
+        )
+    )
+    direct_live_active = direct_live_weight > 0.0 or direct_live_subcontrol_active
+    if direct_live_active and segnet_direct_live_stage_weight != 0.0:
         seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
+        direct_live_loss_weights: Mapping[str, float] | None = loss_weights
+        direct_live_outer_weight = direct_live_weight
+        if direct_live_weight <= 0.0:
+            direct_live_outer_weight = 1.0
+            direct_live_loss_weights = {
+                **dict(loss_weights or {}),
+                "segnet_direct_live_base_loss": 0.0,
+            }
         (
             direct_live_distill,
             direct_live_metrics,
@@ -1907,11 +3128,16 @@ def score_aware_loss(
             bundle,
             seg_rgb,
             idx,
-            loss_weights=loss_weights,
+            target_seg_rgb_nhwc01=(
+                gt_1 if bundle.segnet_teacher_frame_index == 1 else gt_0
+            ),
+            loss_weights=direct_live_loss_weights,
         )
         total = (
             total
-            + direct_live_weight * segnet_direct_live_stage_weight * direct_live_distill
+            + direct_live_outer_weight
+            * segnet_direct_live_stage_weight
+            * direct_live_distill
         )
         parts["segnet_direct_live_distill"] = direct_live_distill
         parts.update(direct_live_metrics)
@@ -2171,7 +3397,18 @@ def build_mlx_posenet_pair_teacher(
     posenet_sha = hashlib.sha256(posenet_path.read_bytes()).hexdigest() if posenet_path.is_file() else None
     posenet, _segnet = load_default_scorers(str(upstream_path), device=device)
     posenet.eval()
-    mlx_posenet = torch_posenet_to_mlx(posenet)
+    mlx_posenet = None
+    mlx_posenet_error = None
+    try:
+        mlx_posenet = torch_posenet_to_mlx(posenet)
+    except Exception as exc:
+        # Unit tests and some fallback teacher probes use minimal Torch
+        # PoseNet shims that are valid for target-pose caching but do not carry
+        # the full upstream module state required for an MLX live scorer port.
+        # Returning the cache without the adapter preserves the student-pose
+        # path; RendererBundle still fails closed if direct-live PoseNet is
+        # enabled with this cache.
+        mlx_posenet_error = f"{type(exc).__name__}: {exc}"
     pose_dims = int(bundle.pose_dims)
     chunk = 16
     pose_chunks = []
@@ -2218,6 +3455,7 @@ def build_mlx_posenet_pair_teacher(
         upstream_posenet_safetensors_sha256=posenet_sha,
         cache_build_seconds=time.time() - t0,
         live_posenet_adapter=mlx_posenet,
+        live_posenet_adapter_error=mlx_posenet_error,
     )
 
 
@@ -2228,6 +3466,7 @@ __all__ = [
     "decode_frames_nhwc01",
     "pose_student_inputs_nhwc",
     "posenet_temporal_signal_floor_loss",
+    "posenet_yuv6_geometry_tether_loss",
     "score_aware_loss",
     "scorer_input_contrast_floor_loss",
     "scorer_input_distribution_guard_loss",

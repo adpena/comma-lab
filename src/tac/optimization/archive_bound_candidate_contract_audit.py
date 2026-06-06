@@ -675,15 +675,21 @@ def audit_archive_bound_candidate_contracts(
         path if path.is_absolute() else repo / path
         for path in root_paths
     ]
-    candidate_paths = _walk_json_files(
-        resolved_roots,
-        include_markdown=include_markdown,
-    )
     if tracked_only:
         tracked = _tracked_paths_under_roots(repo, resolved_roots)
+        suffixes = {".json"}
+        if include_markdown:
+            suffixes.update({".md", ".markdown"})
         candidate_paths = [
-            path for path in candidate_paths if _repo_rel(path, repo) in tracked
+            repo / rel_path
+            for rel_path in sorted(tracked)
+            if Path(rel_path).suffix.lower() in suffixes
         ]
+    else:
+        candidate_paths = _walk_json_files(
+            resolved_roots,
+            include_markdown=include_markdown,
+        )
     if max_files is not None:
         candidate_paths = candidate_paths[: max(0, max_files)]
 

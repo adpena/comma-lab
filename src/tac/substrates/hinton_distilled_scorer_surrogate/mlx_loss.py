@@ -726,6 +726,7 @@ class RealPoseNetTeacherCache:
     #: backprop through the real PoseNet scorer surface on decoded candidate
     #: YUV6 pair tensors instead of only through the lightweight pose student.
     live_posenet_adapter: Any | None = None
+    live_posenet_adapter_error: str | None = None
 
     def __post_init__(self) -> None:
         _require_mlx()

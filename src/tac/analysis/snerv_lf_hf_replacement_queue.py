@@ -10,12 +10,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import shutil
+import zipfile
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.snerv_lf_hf_runtime_binding import (
+    SCHEMA as SNERV_LF_HF_RUNTIME_BINDING_PROOF_SCHEMA,
+)
+from tac.analysis.snerv_lf_hf_runtime_binding import (
+    bounded_training_blocker_for_solution_family,
+    proof_cli_flag_for_solution_family,
+    runtime_binding_blocker_for_solution_family,
+)
 from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
     summarize_snerv_official_tub_lf_hf_replacement_authority_gates,
 )
@@ -26,6 +36,23 @@ ROW_SCHEMA = "snerv_lf_hf_replacement_candidate_row.v1"
 DEFAULT_LANE_ID = "lane_snerv_lf_hf_replacement_queue_20260605"
 DEFAULT_QUEUE_ID = "snerv_lf_hf_replacement_queue.v1"
 AXIS_TAG = "[planning/control:false-authority]"
+PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA = (
+    "nerv_long_training_queue_launch_authority_contract.v1"
+)
+BOUNDED_TRAINING_BINDING_CONTRACT_SCHEMA = (
+    "snerv_lf_hf_bounded_training_binding_contract.v1"
+)
+UNBLOCK_LAUNCH_CONTRACT_SCHEMA = "snerv_lf_hf_queue_unblock_launch_contract.v1"
+SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_OCCUPIED_CLASS_FRACTION = "0.400001"
+SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_COVERAGE_FRACTION = "0.8"
+SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_MIN_RATIO = "0.2"
+SNERV_BOUNDED_SMOKE_MAX_POST_SEGNET_TARGET_CLASS_RATIO_DROP = "0.05"
+SNERV_BOUNDED_SMOKE_SEGNET_RARE_CLASS_LOGIT_WEIGHT = "4"
+SNERV_BOUNDED_SMOKE_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT = "0.5"
+SNERV_BOUNDED_SMOKE_MAX_POST_SEGNET_DISTRIBUTION_MAE = "0.31"
+SNERV_BOUNDED_SMOKE_MAX_POST_POSENET_YUV6_DISTRIBUTION_MAE = "0.22"
+SNERV_BOUNDED_SMOKE_MAX_POST_POSENET_YUV6_CONTRAST_RATIO = "3.75"
+SNERV_SCORER_LOOP_QAT_MIN_RENDERER_PAIR_COUNT = 16
 DEFAULT_MIN_FREE_BYTES = 1_000_000_000
 SSD_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
@@ -61,6 +88,11 @@ _SOURCE_FORWARD_FRAME_REPLAY_CLOSED_BLOCKERS = (
     "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
     "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
 )
+_TUB_SOURCE_FIXTURE_CLOSED_BLOCKER_ALIASES = {
+    "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity": (
+        "snerv_official_tub_normalized_lf_graph_inputs_not_full_source_forward_parity",
+    ),
+}
 _SOURCE_FORWARD_QUEUE_FAMILIES = (
     "official_tub_lf_hf_decoder_replacement",
 )
@@ -79,6 +111,36 @@ _SCORER_DOMAIN_REQUIRED_METRICS = (
     "snerv_posenet_yuv6_pair_distill",
     "snerv_segnet_last_frame_distill",
 )
+_SCORER_LOOP_QAT_BOOLEAN_FLAGS = ("--snerv-scorer-loop-qat",)
+_SCORER_LOOP_QAT_VALUE_FLAGS = (
+    "--snerv-scorer-loop-max-trials",
+    "--snerv-scorer-loop-search-mode",
+    "--snerv-scorer-loop-step-map-bins",
+    "--snerv-scorer-loop-qat-bits",
+    "--snerv-scorer-loop-lf-payload-codec",
+    "--snerv-scorer-loop-perturb-scale",
+    "--snerv-scorer-loop-byte-pressure-multiplier",
+    "--snerv-scorer-loop-section-value-pressure-multiplier",
+    "--snerv-scorer-loop-max-archive-byte-growth",
+    "--snerv-scorer-loop-byte-growth-admission-mode",
+    "--snerv-scorer-loop-pose-slack",
+    "--snerv-scorer-loop-seg-slack",
+    "--snerv-scorer-loop-pair-stride",
+    "--snerv-scorer-loop-start-pair",
+    "--snerv-scorer-loop-pair-guard-min-score-improved-fraction",
+    "--snerv-scorer-loop-pair-guard-max-pose-worsened-fraction",
+    "--snerv-scorer-loop-component-guard-mode",
+)
+_TERMINAL_RENDERER_FEEDBACK_BLOCKERS = (
+    "snerv_score_aware_long_training_direct_live_segnet_candidate_argmax_collapsed",
+    "snerv_renderer_nondegenerate_telemetry_contract_missing_or_failed",
+)
+_RENDERER_NONDEGENERATE_UNBLOCK_ALLOWED_BLOCKERS = (
+    *_RENDERER_BLOCKERS,
+    *_TERMINAL_RENDERER_FEEDBACK_BLOCKERS,
+    "snerv_scorer_domain_tether_missing_telemetry",
+    "snerv_scorer_domain_tether_lambda_inactive_telemetry",
+)
 _SKIP_HIGH_BLOCKERS = (
     "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse",
     "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
@@ -89,10 +151,16 @@ _LF_CONDITIONED_HF_FAMILY = "lf_conditioned_hf_residual_generator"
 _HF_RESIDUAL_PAYLOAD_CLOSED_BLOCKERS = (
     "snerv_hf_residual_generator_receiver_payload_not_implemented",
 )
+_LF_CONDITIONED_HF_POST_PAYLOAD_BLOCKER = (
+    "snerv_lf_conditioned_hf_bounded_training_binding_missing"
+)
 _JOINT_CODEBOOK_CLOSED_BLOCKERS = (
     "snerv_joint_lf_hf_factorized_codebook_not_implemented",
     "snerv_joint_lf_hf_codebook_numpy_receiver_missing",
     "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
+)
+_JOINT_CODEBOOK_POST_PAYLOAD_BLOCKER = (
+    "snerv_joint_lf_hf_bounded_training_binding_missing"
 )
 _TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS = (
     "snerv_temporal_lf_predictor_gate_not_implemented",
@@ -102,6 +170,24 @@ _LF_SUPER_RESOLUTION_CLOSED_BLOCKERS = (
     "snerv_lf_super_resolution_receiver_payload_not_implemented",
     "snerv_lf_downsampled_anchor_component_deltas_missing",
 )
+_SPECTRAL_BAND_ALLOCATOR_CLOSED_BLOCKERS = (
+    "snerv_score_tethered_lf_hf_band_allocator_not_implemented",
+    "snerv_mfu_hfr_section_native_byte_telemetry_missing",
+)
+_LF_LATENT_HYPERPRIOR_CLOSED_BLOCKERS = (
+    "snerv_lf_latent_hyperprior_not_implemented",
+    "snerv_lf_latent_hyperprior_numpy_decoder_missing",
+    "snerv_lf_latent_hyperprior_receiver_replay_missing",
+)
+_RUNTIME_BINDING_EVIDENCE_KEY_BY_FAMILY = {
+    _LF_CONDITIONED_HF_FAMILY: "hf_residual_payload_evidence",
+    "joint_lf_hf_factorized_codebook": "joint_codebook_evidence",
+    "temporal_lf_predictor_gate": "temporal_lf_predictor_evidence",
+    "lf_super_resolution_from_tiny_anchor": "lf_super_resolution_evidence",
+    "score_tethered_spectral_band_allocator": "spectral_band_allocator_evidence",
+    "entropy_modeled_lf_latent_hyperprior": "lf_latent_hyperprior_evidence",
+}
+_OFFICIAL_TUB_LF_HF_FAMILY = "official_tub_lf_hf_decoder_replacement"
 
 
 class SnervLfHfReplacementQueueError(ValueError):
@@ -121,9 +207,13 @@ def build_snerv_lf_hf_replacement_queue(
     joint_codebook_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     temporal_lf_predictor_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     lf_super_resolution_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    spectral_band_allocator_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    lf_latent_hyperprior_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    lf_hf_runtime_binding_proofs: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     lane_id: str = DEFAULT_LANE_ID,
     queue_id: str = DEFAULT_QUEUE_ID,
+    queue_artifact_path: str | Path | None = None,
     generated_utc: str | None = None,
     min_free_bytes: int = DEFAULT_MIN_FREE_BYTES,
     allow_local_output: bool = False,
@@ -171,6 +261,13 @@ def build_snerv_lf_hf_replacement_queue(
     lf_super_resolution_state = _lf_super_resolution_state(
         lf_super_resolution_receiver_payload_proofs
     )
+    spectral_band_allocator_state = _spectral_band_allocator_state(
+        spectral_band_allocator_receiver_payload_proofs
+    )
+    lf_latent_hyperprior_state = _lf_latent_hyperprior_state(
+        lf_latent_hyperprior_receiver_payload_proofs
+    )
+    runtime_binding_state = _runtime_binding_state(lf_hf_runtime_binding_proofs)
     current_state = _current_state(
         campaign_rows=campaign_rows,
         reroute_state=reroute_state,
@@ -183,6 +280,9 @@ def build_snerv_lf_hf_replacement_queue(
         joint_codebook_state=joint_codebook_state,
         temporal_lf_predictor_state=temporal_lf_predictor_state,
         lf_super_resolution_state=lf_super_resolution_state,
+        spectral_band_allocator_state=spectral_band_allocator_state,
+        lf_latent_hyperprior_state=lf_latent_hyperprior_state,
+        runtime_binding_state=runtime_binding_state,
     )
     selected_evidence = _selected_lf_evidence(evidence_rows)
     input_source_paths = {
@@ -207,23 +307,48 @@ def build_snerv_lf_hf_replacement_queue(
         "lf_super_resolution_receiver_payload_proofs": _source_paths(
             lf_super_resolution_receiver_payload_proofs
         ),
+        "spectral_band_allocator_receiver_payload_proofs": _source_paths(
+            spectral_band_allocator_receiver_payload_proofs
+        ),
+        "lf_latent_hyperprior_receiver_payload_proofs": _source_paths(
+            lf_latent_hyperprior_receiver_payload_proofs
+        ),
+        "lf_hf_runtime_binding_proofs": _source_paths(
+            lf_hf_runtime_binding_proofs
+        ),
     }
     rebuild_command = _queue_rebuild_command(
         output_root=root,
         input_source_paths=input_source_paths,
     )
-    official_next_unblock_command = _dedupe_command(
-        _nested(
-            official_replacement_authority_state,
-            ("next_unblock_command_argv",),
+    official_gate_ready = (
+        official_replacement_authority_state.get(
+            "official_tub_lf_hf_decoder_replacement_ready"
         )
-        or ()
+        is True
+    )
+    official_gate_queue_blockers = [
+        str(blocker)
+        for blocker in official_replacement_authority_state.get("queue_blockers", ())
+        if str(blocker)
+    ]
+    official_next_unblock_command = (
+        []
+        if official_gate_ready and not official_gate_queue_blockers
+        else _dedupe_command(
+            _nested(
+                official_replacement_authority_state,
+                ("next_unblock_command_argv",),
+            )
+            or ()
+        )
     )
     rows = _candidate_rows(
         campaign_rows=campaign_rows,
         selected_evidence=selected_evidence,
         current_state=current_state,
         output_root=root,
+        queue_artifact_path=queue_artifact_path,
     )
     if not rows:
         rows = [
@@ -275,6 +400,9 @@ def build_snerv_lf_hf_replacement_queue(
         "joint_codebook_evidence": joint_codebook_state,
         "temporal_lf_predictor_evidence": temporal_lf_predictor_state,
         "lf_super_resolution_evidence": lf_super_resolution_state,
+        "spectral_band_allocator_evidence": spectral_band_allocator_state,
+        "lf_latent_hyperprior_evidence": lf_latent_hyperprior_state,
+        "runtime_binding_evidence": runtime_binding_state,
         "lf_payload_evidence_rows": evidence_rows,
         "lf_payload_evidence_row_count": len(evidence_rows),
         "selected_lf_payload_evidence": selected_evidence,
@@ -333,6 +461,8 @@ def render_snerv_lf_hf_replacement_queue_markdown(report: Mapping[str, Any]) -> 
         f"`{_nested(current, ('scorer_domain_evidence', 'scorer_domain_tether_proof_passed'))}`",
         "- value-domain noncollapse proof passed: "
         f"`{_nested(current, ('value_domain_evidence', 'value_domain_noncollapse_proof_passed'))}`",
+        "- receiver runtime binding families: "
+        f"`{', '.join(_nested(current, ('runtime_binding_evidence', 'runtime_bound_solution_families')) or [])}`",
         f"- selected LF evidence bytes: `{selected.get('lf_payload_bytes')}`",
         "",
         "## Roadmap DAG",
@@ -510,6 +640,7 @@ def _candidate_rows(
     selected_evidence: Mapping[str, Any] | None,
     current_state: Mapping[str, Any],
     output_root: Path,
+    queue_artifact_path: str | Path | None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     source_rows = list(campaign_rows)
@@ -523,7 +654,8 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
-                    solution_family="official_tub_lf_hf_decoder_replacement",
+                    queue_artifact_path=queue_artifact_path,
+                    solution_family=_OFFICIAL_TUB_LF_HF_FAMILY,
                     planner_action="run_bounded_source_faithful_lf_hf_decoder_smoke",
                     learning_objective=(
                         "learn receiver-visible official MFU/HFR/TUB decoder "
@@ -541,6 +673,7 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
                     solution_family=_LF_CONDITIONED_HF_FAMILY,
                     planner_action="probe_non_scalar_hf_generation_without_skip_high_collapse",
                     learning_objective=(
@@ -560,6 +693,7 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
                     solution_family="joint_lf_hf_factorized_codebook",
                     planner_action="build_score_tethered_joint_lf_hf_codebook_export",
                     learning_objective=(
@@ -581,6 +715,7 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
                     solution_family="temporal_lf_predictor_gate",
                     planner_action="learn_temporal_lf_delta_predictor_with_receiver_gate",
                     learning_objective=(
@@ -601,6 +736,7 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
                     solution_family="lf_super_resolution_from_tiny_anchor",
                     planner_action="store_tiny_lf_anchor_then_learn_receiver_super_resolution",
                     learning_objective=(
@@ -621,6 +757,7 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
                     solution_family="score_tethered_spectral_band_allocator",
                     planner_action="learn_mfu_hfr_lf_hf_band_budget_from_scorer_telemetry",
                     learning_objective=(
@@ -633,7 +770,7 @@ def _candidate_rows(
                         "snerv_mfu_hfr_section_native_byte_telemetry_missing",
                     ),
                     campaign_blocker_prefixes=_RENDERER_BLOCKERS,
-                    command_kind="blocked_until_band_allocator_export_exists",
+                    command_kind="spectral_band_allocator_payload_proof",
                     priority=60,
                 ),
                 _candidate_row(
@@ -641,6 +778,7 @@ def _candidate_rows(
                     selected_evidence=selected_evidence,
                     current_state=current_state,
                     output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
                     solution_family="entropy_modeled_lf_latent_hyperprior",
                     planner_action="replace_i64_lzma_lf_planes_with_learned_entropy_model",
                     learning_objective=(
@@ -654,7 +792,7 @@ def _candidate_rows(
                         "snerv_lf_latent_hyperprior_receiver_replay_missing",
                     ),
                     campaign_blocker_prefixes=_RENDERER_BLOCKERS,
-                    command_kind="blocked_until_lf_hyperprior_export_exists",
+                    command_kind="lf_latent_hyperprior_payload_proof",
                     priority=70,
                 ),
             ]
@@ -675,6 +813,7 @@ def _candidate_row(
     selected_evidence: Mapping[str, Any] | None,
     current_state: Mapping[str, Any],
     output_root: Path,
+    queue_artifact_path: str | Path | None,
     solution_family: str,
     planner_action: str,
     learning_objective: str,
@@ -738,6 +877,27 @@ def _candidate_row(
         )
         or ()
     )
+    spectral_band_allocator_closed = set(
+        _nested(
+            current_state,
+            ("spectral_band_allocator_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
+    lf_latent_hyperprior_closed = set(
+        _nested(
+            current_state,
+            ("lf_latent_hyperprior_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
+    runtime_binding_closed = set(
+        _nested(
+            current_state,
+            ("runtime_binding_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
     official_replacement_closed = set(
         _nested(
             current_state,
@@ -756,7 +916,7 @@ def _candidate_row(
             if blocker
         ]
     official_replacement_extra_blockers: list[str] = []
-    if solution_family == "official_tub_lf_hf_decoder_replacement":
+    if solution_family == _OFFICIAL_TUB_LF_HF_FAMILY:
         official_replacement_extra_blockers = [
             str(blocker)
             for blocker in (
@@ -768,6 +928,12 @@ def _candidate_row(
             )
             if blocker
         ]
+    terminal_renderer_extra_blockers: list[str] = []
+    if command_kind == "bounded_snerv_training_smoke":
+        terminal_renderer_extra_blockers = _candidate_terminal_renderer_blockers(
+            current_state,
+            candidate_id=candidate_id,
+        )
     value_domain_extra_blockers: list[str] = []
     if solution_family == _LF_CONDITIONED_HF_FAMILY:
         value_domain_extra_blockers = [
@@ -798,6 +964,9 @@ def _candidate_row(
         and str(blocker) not in joint_codebook_closed
         and str(blocker) not in temporal_lf_predictor_closed
         and str(blocker) not in lf_super_resolution_closed
+        and str(blocker) not in spectral_band_allocator_closed
+        and str(blocker) not in lf_latent_hyperprior_closed
+        and str(blocker) not in runtime_binding_closed
     ]
     joint_codebook_extra_blockers: list[str] = []
     if solution_family == "joint_lf_hf_factorized_codebook":
@@ -835,6 +1004,32 @@ def _candidate_row(
             )
             if blocker
         ]
+    spectral_band_allocator_extra_blockers: list[str] = []
+    if solution_family == "score_tethered_spectral_band_allocator":
+        spectral_band_allocator_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(
+                    current_state,
+                    ("spectral_band_allocator_evidence", "queue_blockers"),
+                )
+                or ()
+            )
+            if blocker
+        ]
+    lf_latent_hyperprior_extra_blockers: list[str] = []
+    if solution_family == "entropy_modeled_lf_latent_hyperprior":
+        lf_latent_hyperprior_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(
+                    current_state,
+                    ("lf_latent_hyperprior_evidence", "queue_blockers"),
+                )
+                or ()
+            )
+            if blocker
+        ]
     campaign_blockers = [
         blocker
         for blocker in campaign_blockers
@@ -845,6 +1040,9 @@ def _candidate_row(
         and blocker not in joint_codebook_closed
         and blocker not in temporal_lf_predictor_closed
         and blocker not in lf_super_resolution_closed
+        and blocker not in spectral_band_allocator_closed
+        and blocker not in lf_latent_hyperprior_closed
+        and blocker not in runtime_binding_closed
         and blocker not in official_replacement_closed
     ]
     blockers = _dedupe(
@@ -855,27 +1053,34 @@ def _candidate_row(
             *campaign_blockers,
             *source_forward_extra_blockers,
             *official_replacement_extra_blockers,
+            *terminal_renderer_extra_blockers,
             *value_domain_extra_blockers,
             *hf_residual_payload_extra_blockers,
             *joint_codebook_extra_blockers,
             *temporal_lf_predictor_extra_blockers,
             *lf_super_resolution_extra_blockers,
+            *spectral_band_allocator_extra_blockers,
+            *lf_latent_hyperprior_extra_blockers,
         ]
     )
     if (
-        solution_family == "official_tub_lf_hf_decoder_replacement"
+        solution_family == _OFFICIAL_TUB_LF_HF_FAMILY
         and _nested(
             current_state,
             ("official_replacement_authority_evidence", "artifact_count"),
         )
     ):
+        source_forward_gate_blockers = set(source_forward_extra_blockers)
         blockers = _dedupe(
             [
                 *[
                     blocker
                     for blocker in blockers
-                    if not blocker.startswith("snerv_official_")
-                    and not blocker.startswith("official_")
+                    if blocker in source_forward_gate_blockers
+                    or (
+                        not blocker.startswith("snerv_official_")
+                        and not blocker.startswith("official_")
+                    )
                 ],
                 *official_replacement_extra_blockers,
             ]
@@ -885,35 +1090,65 @@ def _candidate_row(
     if (
         command_kind == "bounded_snerv_training_smoke"
         and not blockers
-        and campaign_row.get("local_mlx_launch_command_ready") is True
     ):
         command = _bounded_snerv_smoke_command(
             campaign_row,
+            current_state=current_state,
             queue_row_id=queue_row_id,
             output_root=output_root,
+            queue_artifact_path=queue_artifact_path,
+            solution_family=solution_family,
         )
         if not command:
             blockers = _dedupe([*blockers, "snerv_lf_hf_base_snerv_command_missing"])
-    if command_kind == "lf_conditioned_hf_residual_payload_proof" and not blockers:
-        command = _lf_conditioned_hf_residual_payload_proof_command(
-            current_state,
-            queue_row_id=queue_row_id,
-            output_root=output_root,
-        )
-        if not command:
-            blockers = _dedupe(
-                [*blockers, "snerv_lf_conditioned_hf_residual_bounded_command_missing"]
+    if command_kind == "lf_conditioned_hf_residual_payload_proof":
+        hf_residual_proof_blockers = set(_HF_RESIDUAL_PAYLOAD_CLOSED_BLOCKERS)
+        non_hf_residual_blockers = [
+            blocker for blocker in blockers if blocker not in hf_residual_proof_blockers
+        ]
+        if non_hf_residual_blockers:
+            blockers = _dedupe(non_hf_residual_blockers)
+        elif blockers:
+            unblock_command = _lf_conditioned_hf_residual_payload_proof_command(
+                current_state,
+                queue_row_id=queue_row_id,
+                output_root=output_root,
             )
-    if command_kind == "joint_lf_hf_codebook_payload_proof" and not blockers:
-        command = _joint_lf_hf_codebook_payload_proof_command(
-            current_state,
-            queue_row_id=queue_row_id,
-            output_root=output_root,
-        )
-        if not command:
+            if not unblock_command:
+                blockers = _dedupe(
+                    [
+                        *blockers,
+                        "snerv_lf_conditioned_hf_residual_bounded_command_missing",
+                    ]
+                )
+        elif not blockers:
             blockers = _dedupe(
-                [*blockers, "snerv_joint_lf_hf_codebook_bounded_command_missing"]
+                [*blockers, _LF_CONDITIONED_HF_POST_PAYLOAD_BLOCKER]
             )
+    if command_kind == "joint_lf_hf_codebook_payload_proof":
+        joint_codebook_proof_blockers = set(_JOINT_CODEBOOK_CLOSED_BLOCKERS)
+        non_joint_codebook_blockers = [
+            blocker
+            for blocker in blockers
+            if blocker not in joint_codebook_proof_blockers
+        ]
+        if non_joint_codebook_blockers:
+            blockers = _dedupe(non_joint_codebook_blockers)
+        elif blockers:
+            unblock_command = _joint_lf_hf_codebook_payload_proof_command(
+                current_state,
+                queue_row_id=queue_row_id,
+                output_root=output_root,
+            )
+            if not unblock_command:
+                blockers = _dedupe(
+                    [
+                        *blockers,
+                        "snerv_joint_lf_hf_codebook_bounded_command_missing",
+                    ]
+                )
+        elif not blockers:
+            blockers = _dedupe([*blockers, _JOINT_CODEBOOK_POST_PAYLOAD_BLOCKER])
     if command_kind == "lf_super_resolution_tiny_anchor_payload_proof":
         lf_super_resolution_proof_blockers = set(_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS)
         non_lf_super_resolution_blockers = [
@@ -935,12 +1170,22 @@ def _candidate_row(
                     [*blockers, "snerv_lf_super_resolution_bounded_command_missing"]
                 )
         elif not blockers:
-            blockers = _dedupe(
-                [
-                    *blockers,
-                    "snerv_lf_super_resolution_receiver_runtime_binding_missing",
-                ]
+            runtime_blocker = runtime_binding_blocker_for_solution_family(
+                solution_family
             )
+            post_runtime_blocker = bounded_training_blocker_for_solution_family(
+                solution_family
+            )
+            if runtime_blocker in runtime_binding_closed:
+                blockers = _dedupe([*blockers, post_runtime_blocker])
+            else:
+                blockers = _dedupe([*blockers, runtime_blocker])
+                unblock_command = _runtime_binding_proof_command(
+                    current_state,
+                    solution_family=solution_family,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                )
     if command_kind == "temporal_lf_predictor_payload_proof":
         temporal_proof_blockers = set(_TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS)
         non_temporal_blockers = [
@@ -963,21 +1208,140 @@ def _candidate_row(
                     ]
                 )
         elif not blockers:
-            blockers = _dedupe(
-                [
-                    *blockers,
-                    "snerv_temporal_lf_predictor_receiver_runtime_binding_missing",
-                ]
+            runtime_blocker = runtime_binding_blocker_for_solution_family(
+                solution_family
             )
+            post_runtime_blocker = bounded_training_blocker_for_solution_family(
+                solution_family
+            )
+            if runtime_blocker in runtime_binding_closed:
+                blockers = _dedupe([*blockers, post_runtime_blocker])
+            else:
+                blockers = _dedupe([*blockers, runtime_blocker])
+                unblock_command = _runtime_binding_proof_command(
+                    current_state,
+                    solution_family=solution_family,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                )
+    if command_kind == "spectral_band_allocator_payload_proof":
+        spectral_proof_blockers = set(_SPECTRAL_BAND_ALLOCATOR_CLOSED_BLOCKERS)
+        non_spectral_blockers = [
+            blocker for blocker in blockers if blocker not in spectral_proof_blockers
+        ]
+        if non_spectral_blockers:
+            blockers = _dedupe(non_spectral_blockers)
+        elif blockers:
+            unblock_command = _spectral_band_allocator_payload_proof_command(
+                current_state,
+                selected_evidence=selected_evidence,
+                queue_row_id=queue_row_id,
+                output_root=output_root,
+            )
+            if not unblock_command:
+                blockers = _dedupe(
+                    [*blockers, "snerv_spectral_band_allocator_bounded_command_missing"]
+                )
+        elif not blockers:
+            runtime_blocker = runtime_binding_blocker_for_solution_family(
+                solution_family
+            )
+            post_runtime_blocker = bounded_training_blocker_for_solution_family(
+                solution_family
+            )
+            if runtime_blocker in runtime_binding_closed:
+                blockers = _dedupe([*blockers, post_runtime_blocker])
+            else:
+                blockers = _dedupe([*blockers, runtime_blocker])
+                unblock_command = _runtime_binding_proof_command(
+                    current_state,
+                    solution_family=solution_family,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                )
+    if command_kind == "lf_latent_hyperprior_payload_proof":
+        hyperprior_proof_blockers = set(_LF_LATENT_HYPERPRIOR_CLOSED_BLOCKERS)
+        non_hyperprior_blockers = [
+            blocker
+            for blocker in blockers
+            if blocker not in hyperprior_proof_blockers
+        ]
+        if non_hyperprior_blockers:
+            blockers = _dedupe(non_hyperprior_blockers)
+        elif blockers:
+            unblock_command = _lf_latent_hyperprior_payload_proof_command(
+                current_state,
+                selected_evidence=selected_evidence,
+                queue_row_id=queue_row_id,
+                output_root=output_root,
+            )
+            if not unblock_command:
+                blockers = _dedupe(
+                    [*blockers, "snerv_lf_latent_hyperprior_bounded_command_missing"]
+                )
+        elif not blockers:
+            runtime_blocker = runtime_binding_blocker_for_solution_family(
+                solution_family
+            )
+            post_runtime_blocker = bounded_training_blocker_for_solution_family(
+                solution_family
+            )
+            if runtime_blocker in runtime_binding_closed:
+                blockers = _dedupe([*blockers, post_runtime_blocker])
+            else:
+                blockers = _dedupe([*blockers, runtime_blocker])
+                unblock_command = _runtime_binding_proof_command(
+                    current_state,
+                    solution_family=solution_family,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                )
+    renderer_unblock_blockers = _renderer_nondegenerate_unblock_blockers(blockers)
+    if (
+        command_kind == "bounded_snerv_training_smoke"
+        and not command
+        and blockers
+        and not renderer_unblock_blockers
+    ):
+        unblock_command = _bounded_snerv_smoke_command(
+            campaign_row,
+            current_state=current_state,
+            queue_row_id=queue_row_id,
+            output_root=output_root,
+            queue_artifact_path=queue_artifact_path,
+            solution_family=solution_family,
+        )
     if not blockers and not command:
         blockers = _dedupe(
             [*blockers, f"snerv_lf_hf_{solution_family}_runnable_command_missing"]
         )
-    status = "local_bounded_smoke_ready_no_authority" if command and not blockers else "blocked_until_prerequisite_evidence"
+    status = (
+        "local_bounded_smoke_ready_no_authority"
+        if command and not blockers
+        else "blocked_until_prerequisite_evidence"
+    )
+    launch_contract = _launch_authority_contract(
+        status=status,
+        blockers=blockers,
+        command=command,
+    )
+    bounded_training_binding_contract = _bounded_training_binding_contract(
+        solution_family=solution_family,
+        command_kind=command_kind,
+        command=command,
+    )
+    unblock_launch_contract = _unblock_launch_authority_contract(
+        unblock_kind="snerv_renderer_nondegenerate_smoke",
+        blockers=renderer_unblock_blockers,
+        command=unblock_command,
+    )
     return {
         "schema": ROW_SCHEMA,
         "queue_row_id": queue_row_id,
+        "row_id": queue_row_id,
         "lane_id": DEFAULT_LANE_ID,
+        "family": "snerv",
+        "execute_family": "snerv",
         "source_campaign_row_id": source_row_id,
         "candidate_id": candidate_id,
         "candidate_class": "learned_lf_hf_replacement",
@@ -988,6 +1352,9 @@ def _candidate_row(
         "status": status,
         "blocked": bool(blockers),
         "blockers": blockers,
+        "launch_authority_contract": launch_contract,
+        "bounded_training_binding_contract": bounded_training_binding_contract,
+        "unblock_launch_authority_contract": unblock_launch_contract,
         "selected_lf_payload_evidence": selected_evidence,
         "measured_lf_payload_bytes": (
             None if selected_evidence is None else selected_evidence.get("lf_payload_bytes")
@@ -1037,6 +1404,13 @@ def _candidate_row(
         "lf_super_resolution_evidence": current_state.get(
             "lf_super_resolution_evidence"
         ),
+        "spectral_band_allocator_evidence": current_state.get(
+            "spectral_band_allocator_evidence"
+        ),
+        "lf_latent_hyperprior_evidence": current_state.get(
+            "lf_latent_hyperprior_evidence"
+        ),
+        "runtime_binding_evidence": current_state.get("runtime_binding_evidence"),
         "target_consumers": [
             "nerv_long_training_campaign_plan",
             "snerv_lf_over_ceiling_reroute_queue",
@@ -1050,17 +1424,146 @@ def _candidate_row(
     }
 
 
+def _launch_authority_contract(
+    *,
+    status: str,
+    blockers: Sequence[str],
+    command: Sequence[str],
+) -> dict[str, Any]:
+    runnable = bool(command) and not blockers and (
+        status == "local_bounded_smoke_ready_no_authority"
+    )
+    return {
+        "schema": PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA,
+        "queue_status_is_local_mlx_plan": True,
+        "queue_status_is_runnable_plan": runnable,
+        "queue_launch_step_count": 1 if runnable else 0,
+        "queue_steps_retained_as_post_unblock_handoff": not runnable,
+        "queue_launch_blockers": []
+        if runnable
+        else _dedupe(
+            [
+                *[str(blocker) for blocker in blockers if blocker],
+                "snerv_lf_hf_replacement_queue_row_not_runnable",
+            ]
+        ),
+        "queue_status_is_receiver_proof": False,
+        "queue_status_is_cpu_replay_proof": False,
+        "queue_status_is_exact_eval_authority": False,
+        "source_queue_schema": SCHEMA,
+        "source_row_schema": ROW_SCHEMA,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _renderer_nondegenerate_unblock_blockers(blockers: Sequence[str]) -> list[str]:
+    allowed = set(_RENDERER_NONDEGENERATE_UNBLOCK_ALLOWED_BLOCKERS)
+    return _dedupe(
+        str(blocker) for blocker in blockers if str(blocker) and str(blocker) not in allowed
+    )
+
+
+def _unblock_launch_authority_contract(
+    *,
+    unblock_kind: str,
+    blockers: Sequence[str],
+    command: Sequence[str],
+) -> dict[str, Any]:
+    runnable = bool(command) and not blockers
+    return {
+        "schema": UNBLOCK_LAUNCH_CONTRACT_SCHEMA,
+        "queue_unblock_status_is_local_mlx_plan": True,
+        "queue_unblock_status_is_runnable_plan": runnable,
+        "queue_unblock_kind": unblock_kind,
+        "queue_unblock_step_count": 1 if runnable else 0,
+        "queue_unblock_blockers": []
+        if runnable
+        else _dedupe(
+            [
+                *[str(blocker) for blocker in blockers if blocker],
+                "snerv_lf_hf_queue_unblock_command_not_runnable",
+            ]
+        ),
+        "source_queue_schema": SCHEMA,
+        "source_row_schema": ROW_SCHEMA,
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _bounded_training_binding_contract(
+    *,
+    solution_family: str,
+    command_kind: str,
+    command: Sequence[str],
+) -> dict[str, Any]:
+    bound = (
+        solution_family == _OFFICIAL_TUB_LF_HF_FAMILY
+        and command_kind == "bounded_snerv_training_smoke"
+        and bool(command)
+    )
+    family_blocker = bounded_training_blocker_for_solution_family(solution_family)
+    blockers: list[str] = []
+    if not bound:
+        if family_blocker:
+            blockers.append(family_blocker)
+        elif solution_family == _OFFICIAL_TUB_LF_HF_FAMILY:
+            blockers.append("snerv_official_tub_lf_hf_bounded_training_smoke_not_bound")
+        else:
+            blockers.append("snerv_lf_hf_bounded_training_binding_missing")
+    runner_actuator = None
+    if bound:
+        runner_actuator = {
+            "kind": command_kind,
+            "runner": "tools/run_compact_renderer_mlx_spine_runner.py",
+            "consumes_queue_artifact": True,
+            "command_prefix": list(command[:4]),
+        }
+    return {
+        "schema": BOUNDED_TRAINING_BINDING_CONTRACT_SCHEMA,
+        "solution_family": solution_family,
+        "runner_actuator_required": True,
+        "runner_actuator_bound": bound,
+        "runner_actuator": runner_actuator,
+        "family_bounded_training_blocker": family_blocker,
+        "blockers": _dedupe(blockers),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _candidate_terminal_renderer_blockers(
+    current_state: Mapping[str, Any],
+    *,
+    candidate_id: str,
+) -> list[str]:
+    evidence = _nested(current_state, ("scorer_domain_evidence", "terminal_renderer_feedback_blockers_by_candidate"))
+    evidence = evidence if isinstance(evidence, Mapping) else {}
+    blockers: list[str] = []
+    for key in (candidate_id, ""):
+        raw = evidence.get(str(key))
+        if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, bytearray)):
+            blockers.extend(str(blocker) for blocker in raw if blocker)
+    return _dedupe(blockers)
+
+
 def _bounded_snerv_smoke_command(
     campaign_row: Mapping[str, Any],
     *,
+    current_state: Mapping[str, Any],
     queue_row_id: str,
     output_root: Path,
+    queue_artifact_path: str | Path | None,
+    solution_family: str,
 ) -> list[str]:
     command = [str(part) for part in campaign_row.get("command_argv") or ()]
     if not command:
         return []
     replacements = {
         "--planner-row-id": queue_row_id,
+        "--modelsize-candidate-id": str(
+            campaign_row.get("candidate_id") or "auto"
+        ),
         "--num-pairs": "16",
         "--epochs": "128",
         "--snerv-score-aware-long-training-epochs": "128",
@@ -1069,18 +1572,79 @@ def _bounded_snerv_smoke_command(
         "--mlx-prefilter-progress-every": "4",
         "--snerv-native-mlx-receiver-proof-timeout": "600",
         "--output-dir": (output_root / queue_row_id / "bounded_smoke").as_posix(),
-        "--planner-row-queue-artifact": (output_root / "snerv_lf_hf_replacement_queue.json").as_posix(),
-        "--snerv-scorer-loop-max-trials": "1",
-        "--snerv-scorer-loop-pair-guard-min-score-improved-fraction": "0",
-        "--snerv-scorer-loop-pair-guard-max-pose-worsened-fraction": "1",
-        "--snerv-scorer-loop-max-archive-byte-growth": "0",
-        "--snerv-scorer-loop-byte-growth-admission-mode": "hard_cap",
+        "--planner-row-queue-artifact": (
+            Path(queue_artifact_path).as_posix()
+            if queue_artifact_path is not None
+            else (output_root / "snerv_lf_hf_replacement_queue.json").as_posix()
+        ),
+        "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction": (
+            SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_OCCUPIED_CLASS_FRACTION
+        ),
+        "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction": (
+            SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_COVERAGE_FRACTION
+        ),
+        "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio": (
+            SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_MIN_RATIO
+        ),
+        "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop": (
+            SNERV_BOUNDED_SMOKE_MAX_POST_SEGNET_TARGET_CLASS_RATIO_DROP
+        ),
+        "--segnet-direct-live-rare-class-logit-weight": (
+            SNERV_BOUNDED_SMOKE_SEGNET_RARE_CLASS_LOGIT_WEIGHT
+        ),
+        "--posenet-yuv6-geometry-tether-weight": (
+            SNERV_BOUNDED_SMOKE_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT
+        ),
+        "--scorer-space-step-guard-max-post-segnet-distribution-mae": (
+            SNERV_BOUNDED_SMOKE_MAX_POST_SEGNET_DISTRIBUTION_MAE
+        ),
+        "--scorer-space-step-guard-max-post-posenet-yuv6-distribution-mae": (
+            SNERV_BOUNDED_SMOKE_MAX_POST_POSENET_YUV6_DISTRIBUTION_MAE
+        ),
+        "--scorer-space-step-guard-max-post-posenet-yuv6-contrast-ratio": (
+            SNERV_BOUNDED_SMOKE_MAX_POST_POSENET_YUV6_CONTRAST_RATIO
+        ),
     }
-    boolean_flags = ("--snerv-scorer-loop-qat",)
+    scorer_loop_qat_ready = (
+        _nested(
+            current_state,
+            ("scorer_domain_evidence", "scorer_loop_qat_nondegenerate_evidence", "passed"),
+        )
+        is True
+    )
+    if scorer_loop_qat_ready:
+        replacements.update(
+            {
+                "--snerv-scorer-loop-max-trials": "1",
+                "--snerv-scorer-loop-pair-guard-min-score-improved-fraction": "0",
+                "--snerv-scorer-loop-pair-guard-max-pose-worsened-fraction": "1",
+                "--snerv-scorer-loop-max-archive-byte-growth": "0",
+                "--snerv-scorer-loop-byte-growth-admission-mode": "hard_cap",
+            }
+        )
+    state_dict_path = _bounded_snerv_official_state_dict_path(
+        current_state,
+        solution_family=solution_family,
+    )
+    if state_dict_path is not None:
+        replacements["--snerv-official-trained-checkpoint-state-dict-path"] = (
+            state_dict_path
+        )
+    boolean_flags = _SCORER_LOOP_QAT_BOOLEAN_FLAGS if scorer_loop_qat_ready else ()
+    stripped_value_flags = set(_SCORER_LOOP_QAT_VALUE_FLAGS) if not scorer_loop_qat_ready else set()
+    stripped_boolean_flags = (
+        set(_SCORER_LOOP_QAT_BOOLEAN_FLAGS) if not scorer_loop_qat_ready else set()
+    )
     out: list[str] = []
     idx = 0
     while idx < len(command):
         token = command[idx]
+        if token in stripped_boolean_flags:
+            idx += 1
+            continue
+        if token in stripped_value_flags:
+            idx += 2 if idx + 1 < len(command) else 1
+            continue
         out.append(token)
         if token in replacements and idx + 1 < len(command):
             out.append(replacements[token])
@@ -1094,6 +1658,15 @@ def _bounded_snerv_smoke_command(
     for flag in boolean_flags:
         if flag not in present:
             out.append(flag)
+    existing_modelsize_feedback_paths = {
+        out[idx + 1]
+        for idx, token in enumerate(out[:-1])
+        if token == "--modelsize-byte-cap-feedback-json"
+    }
+    for path in _bounded_snerv_extra_modelsize_feedback_paths(current_state):
+        if path not in existing_modelsize_feedback_paths:
+            out.extend(["--modelsize-byte-cap-feedback-json", path])
+            existing_modelsize_feedback_paths.add(path)
     return out
 
 
@@ -1253,6 +1826,143 @@ def _temporal_lf_predictor_payload_proof_command(
         "--output-payload",
         (output_dir / "snerv_temporal_lf_predictor.stlp").as_posix(),
     ]
+
+
+def _spectral_band_allocator_payload_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    selected_evidence: Mapping[str, Any] | None,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    packet_path = _evidence_packet_path(
+        current_state,
+        (
+            "value_domain_evidence",
+            "spectral_band_allocator_evidence",
+            "hf_residual_payload_evidence",
+            "joint_codebook_evidence",
+        ),
+    )
+    if not packet_path and selected_evidence is not None:
+        packet_path = str(
+            selected_evidence.get("packet_path")
+            or selected_evidence.get("candidate_packet_path")
+            or ""
+        ).strip()
+    if not packet_path:
+        return []
+    output_dir = output_root / queue_row_id / "spectral_band_allocator_payload_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_spectral_band_allocator_payload_proof.py",
+        "--packet",
+        packet_path,
+        "--pair-indices",
+        _evidence_pair_indices_csv(
+            current_state,
+            (
+                "value_domain_evidence",
+                "spectral_band_allocator_evidence",
+                "hf_residual_payload_evidence",
+                "joint_codebook_evidence",
+            ),
+        ),
+        "--output-json",
+        (
+            output_dir
+            / "snerv_score_tethered_spectral_band_allocator_receiver_proof.json"
+        ).as_posix(),
+        "--output-payload",
+        (output_dir / "snerv_score_tethered_spectral_band_allocator.ssba").as_posix(),
+    ]
+
+
+def _lf_latent_hyperprior_payload_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    selected_evidence: Mapping[str, Any] | None,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    packet_path = _evidence_packet_path(
+        current_state,
+        (
+            "value_domain_evidence",
+            "lf_latent_hyperprior_evidence",
+            "temporal_lf_predictor_evidence",
+            "lf_super_resolution_evidence",
+        ),
+    )
+    if not packet_path and selected_evidence is not None:
+        packet_path = str(
+            selected_evidence.get("packet_path")
+            or selected_evidence.get("candidate_packet_path")
+            or ""
+        ).strip()
+    if not packet_path:
+        return []
+    output_dir = output_root / queue_row_id / "lf_latent_hyperprior_payload_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_lf_latent_hyperprior_payload_proof.py",
+        "--packet",
+        packet_path,
+        "--pair-indices",
+        _evidence_pair_indices_csv(
+            current_state,
+            (
+                "value_domain_evidence",
+                "lf_latent_hyperprior_evidence",
+                "temporal_lf_predictor_evidence",
+                "lf_super_resolution_evidence",
+            ),
+        ),
+        "--output-json",
+        (output_dir / "snerv_lf_latent_hyperprior_receiver_proof.json").as_posix(),
+        "--output-payload",
+        (output_dir / "snerv_lf_latent_hyperprior.slhp").as_posix(),
+    ]
+
+
+def _runtime_binding_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    solution_family: str,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    evidence_key = _RUNTIME_BINDING_EVIDENCE_KEY_BY_FAMILY.get(solution_family)
+    flag = proof_cli_flag_for_solution_family(solution_family)
+    if not evidence_key or not flag:
+        return []
+    proof_path = str(
+        _nested(current_state, (evidence_key, "source_path")) or ""
+    ).strip()
+    payload_path = str(
+        _nested(current_state, (evidence_key, "payload_path")) or ""
+    ).strip()
+    payload_sha256 = str(
+        _nested(current_state, (evidence_key, "payload_sha256")) or ""
+    ).strip()
+    if not proof_path or not payload_path or not payload_sha256:
+        return []
+    output_dir = output_root / queue_row_id / "runtime_binding_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_lf_hf_runtime_binding_proof.py",
+        flag,
+        proof_path,
+        "--output-json",
+        (output_dir / "snerv_lf_hf_runtime_binding_proof.json").as_posix(),
+    ]
+
 
 def _evidence_packet_path(
     current_state: Mapping[str, Any],
@@ -1499,6 +2209,93 @@ def _source_forward_state(
     export_binding = export_binding if isinstance(export_binding, Mapping) else {}
     trained_mapping = selected.get("official_trained_checkpoint_mapping_manifest")
     trained_mapping = trained_mapping if isinstance(trained_mapping, Mapping) else {}
+    trained_checkpoint_loaded = (
+        selected.get("official_trained_checkpoint_loaded") is True
+        or trained_mapping.get("official_trained_checkpoint_loaded") is True
+    )
+    state_dict_mapping_verified = (
+        selected.get("official_trained_checkpoint_state_dict_mapping_verified") is True
+        or trained_mapping.get("official_trained_checkpoint_state_dict_mapping_verified")
+        is True
+    )
+    hfr_weight_mapping_proven = (
+        selected.get("official_hfr_trained_checkpoint_weight_mapping_proven")
+        is True
+        or trained_mapping.get(
+            "official_hfr_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+    )
+    mfu_weight_mapping_proven = (
+        selected.get("official_mfu_trained_checkpoint_weight_mapping_proven")
+        is True
+        or trained_mapping.get(
+            "official_mfu_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+    )
+    combined_mfu_hfr_weight_mapping_proven = (
+        selected.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven")
+        is True
+        or trained_mapping.get(
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+    )
+    mfu_hfr_weight_mapping_proven = (
+        combined_mfu_hfr_weight_mapping_proven
+        or (hfr_weight_mapping_proven and mfu_weight_mapping_proven)
+    )
+    mfu_activation_payload_bound = (
+        selected.get("official_mfu_receiver_activation_payload_bound") is True
+        or trained_mapping.get("official_mfu_receiver_activation_payload_bound")
+        is True
+    )
+    tub_temporal_encoder_weight_mapping_proven = (
+        selected.get("official_tub_temporal_encoder_weight_mapping_proven") is True
+        or trained_mapping.get("official_tub_temporal_encoder_weight_mapping_proven")
+        is True
+    )
+    tub_output2_decoder_weight_mapping_proven = (
+        selected.get("official_tub_output2_decoder_weight_mapping_proven") is True
+        or trained_mapping.get("official_tub_output2_decoder_weight_mapping_proven")
+        is True
+        or tub_temporal_encoder_weight_mapping_proven
+    )
+    native_receiver_state_mapping_proven = (
+        selected.get("official_native_receiver_state_mapping_proven") is True
+        or trained_mapping.get("official_native_receiver_state_mapping_proven")
+        is True
+    )
+    if (
+        mfu_hfr_weight_mapping_proven
+        and tub_temporal_encoder_weight_mapping_proven
+        and tub_output2_decoder_weight_mapping_proven
+        and not state_dict_mapping_verified
+    ):
+        state_dict_mapping_verified = True
+    state_dict_artifact = _source_forward_state_dict_value_artifact(selected)
+    state_dict_path = str(state_dict_artifact.get("path") or "").strip()
+    state_dict_file_present = state_dict_artifact.get("file_present") is True
+    state_dict_sha256_matches_report = state_dict_artifact.get(
+        "sha256_matches_report"
+    )
+    state_dict_bytes_match_report = state_dict_artifact.get("bytes_match_report")
+    state_dict_npz_opened = state_dict_artifact.get("npz_opened") is True
+    state_dict_member_names_match_report = state_dict_artifact.get(
+        "member_names_match_report"
+    )
+    state_dict_value_artifact_ready = bool(
+        state_dict_path
+        and state_dict_file_present
+        and state_dict_npz_opened
+        and state_dict_mapping_verified
+        and tub_temporal_encoder_weight_mapping_proven
+        and tub_output2_decoder_weight_mapping_proven
+        and state_dict_bytes_match_report is not False
+        and state_dict_sha256_matches_report is not False
+        and state_dict_member_names_match_report is not False
+    )
     payload_bytes = _positive_int(replay.get("payload_bytes"))
     payload_sha256 = str(replay.get("payload_sha256") or "").strip()
     receiver_bound_export = bool(
@@ -1512,7 +2309,18 @@ def _source_forward_state(
         or export_binding.get("official_export_bound") is True
     )
     full_tub_parity = selected.get("full_tub_source_forward_parity_proven") is True
-    source_authority = replay.get("source_forward_replay_authority") is True and full_tub_parity
+    source_authority = bool(
+        full_tub_parity
+        and state_dict_value_artifact_ready
+        and (
+            replay.get("source_forward_replay_authority") is True
+            or selected.get("source_forward_replay_authority") is True
+        )
+    )
+    tub_source_fixture_proven = (
+        selected.get("official_tub_source_fixture_forward_parity_proven") is True
+    )
+    tub_source_fixture_closed = _tub_source_fixture_closed_blockers(selected)
     closed = []
     if export_bound:
         closed.append("snerv_official_mfu_hfr_tub_export_not_bound")
@@ -1523,8 +2331,49 @@ def _source_forward_state(
                 "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
             ]
         )
+    if trained_checkpoint_loaded:
+        closed.append("snerv_official_trained_checkpoint_state_dict_not_loaded")
+    if state_dict_mapping_verified:
+        closed.append("snerv_official_trained_checkpoint_state_dict_mapping_missing")
+    if hfr_weight_mapping_proven:
+        closed.append("snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete")
+    if mfu_weight_mapping_proven:
+        closed.append("snerv_official_trained_checkpoint_mfu_weight_mapping_incomplete")
+        closed.append(
+            "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+        )
+    if mfu_hfr_weight_mapping_proven:
+        closed.append("snerv_official_mfu_hfr_tub_weight_mapping_missing")
+    if tub_temporal_encoder_weight_mapping_proven:
+        closed.extend(
+            [
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+            ]
+        )
+    if tub_output2_decoder_weight_mapping_proven:
+        closed.append("snerv_official_tub_portable_output2_decoder_weight_mapping_missing")
+    if tub_source_fixture_proven:
+        closed.extend(tub_source_fixture_closed)
+    if source_authority:
+        closed.extend(
+            [
+                "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+                "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+            ]
+        )
     closed.extend(str(blocker) for blocker in trained_mapping.get("closed_campaign_blockers") or ())
+    closed = _dedupe(closed)
     trained_closed = set(closed)
+    export_binding = _without_closed_source_forward_blockers_in_mapping(
+        export_binding,
+        closed=trained_closed,
+    )
+    trained_mapping = _without_closed_source_forward_blockers_in_mapping(
+        trained_mapping,
+        closed=trained_closed,
+    )
     trained_mapping_blockers = [
         str(blocker)
         for blocker in (
@@ -1560,6 +2409,31 @@ def _source_forward_state(
                 "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
             ]
         )
+    if (
+        full_tub_parity
+        and state_dict_mapping_verified
+        and tub_temporal_encoder_weight_mapping_proven
+        and not state_dict_value_artifact_ready
+    ):
+        queue_blockers.append(
+            "snerv_official_trained_checkpoint_state_dict_value_artifact_missing"
+        )
+    if state_dict_file_present and not state_dict_npz_opened:
+        queue_blockers.append(
+            "snerv_official_trained_checkpoint_state_dict_value_artifact_npz_invalid"
+        )
+    if state_dict_member_names_match_report is False:
+        queue_blockers.append(
+            "snerv_official_trained_checkpoint_state_dict_value_artifact_member_mismatch"
+        )
+    if state_dict_sha256_matches_report is False:
+        queue_blockers.append(
+            "snerv_official_trained_checkpoint_state_dict_value_artifact_sha256_mismatch"
+        )
+    if state_dict_bytes_match_report is False:
+        queue_blockers.append(
+            "snerv_official_trained_checkpoint_state_dict_value_artifact_bytes_mismatch"
+        )
     queue_blockers.extend(trained_mapping_blockers)
     return {
         "schema": "snerv_lf_hf_source_forward_evidence.v1",
@@ -1574,60 +2448,82 @@ def _source_forward_state(
         "receiver_bound_export_proven": receiver_bound_export,
         "official_checkpoint_export_bound": export_bound,
         "official_checkpoint_export_binding_evidence": dict(export_binding) or None,
-        "official_trained_checkpoint_loaded": (
-            selected.get("official_trained_checkpoint_loaded") is True
-            or trained_mapping.get("official_trained_checkpoint_loaded") is True
-        ),
+        "official_trained_checkpoint_loaded": trained_checkpoint_loaded,
         "official_trained_checkpoint_state_dict_mapping_verified": (
-            selected.get("official_trained_checkpoint_state_dict_mapping_verified")
-            is True
+            state_dict_mapping_verified
+        ),
+        "official_trained_checkpoint_state_dict_value_artifact_ready": (
+            state_dict_value_artifact_ready
+        ),
+        "official_trained_checkpoint_state_dict_path": (
+            state_dict_path or None
+        ),
+        "official_trained_checkpoint_state_dict_slice_path": (
+            state_dict_path or None
+        ),
+        "official_trained_checkpoint_state_dict_slice_present": bool(
+            state_dict_artifact.get("present")
+        ),
+        "official_trained_checkpoint_state_dict_slice_file_present": (
+            state_dict_file_present
+        ),
+        "official_trained_checkpoint_state_dict_slice_bytes": (
+            state_dict_artifact.get("bytes")
+        ),
+        "official_trained_checkpoint_state_dict_slice_sha256": (
+            state_dict_artifact.get("sha256")
+        ),
+        "official_trained_checkpoint_state_dict_slice_sha256_matches_report": (
+            state_dict_sha256_matches_report
+        ),
+        "official_trained_checkpoint_state_dict_slice_bytes_match_report": (
+            state_dict_bytes_match_report
+        ),
+        "official_trained_checkpoint_state_dict_slice_npz_opened": (
+            state_dict_npz_opened
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_names_match_report": (
+            state_dict_member_names_match_report
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_count": (
+            state_dict_artifact.get("member_count")
+        ),
+        "official_trained_checkpoint_state_dict_slice_member_names": list(
+            state_dict_artifact.get("member_names") or []
+        ),
+        "official_trained_checkpoint_state_dict_slice_runner_arg": (
+            "--snerv-official-trained-checkpoint-state-dict-path"
+            if state_dict_path
+            else None
         ),
         "official_hfr_trained_checkpoint_weight_mapping_proven": (
-            selected.get("official_hfr_trained_checkpoint_weight_mapping_proven")
-            is True
-            or trained_mapping.get(
-                "official_hfr_trained_checkpoint_weight_mapping_proven"
-            )
-            is True
+            hfr_weight_mapping_proven
         ),
         "official_mfu_trained_checkpoint_weight_mapping_proven": (
-            selected.get("official_mfu_trained_checkpoint_weight_mapping_proven")
-            is True
-            or trained_mapping.get(
-                "official_mfu_trained_checkpoint_weight_mapping_proven"
-            )
-            is True
+            mfu_weight_mapping_proven
         ),
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": (
-            selected.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven")
-            is True
-            or trained_mapping.get(
-                "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
-            )
-            is True
+            mfu_hfr_weight_mapping_proven
         ),
         "official_tub_temporal_encoder_weight_mapping_proven": (
-            selected.get("official_tub_temporal_encoder_weight_mapping_proven") is True
-            or trained_mapping.get("official_tub_temporal_encoder_weight_mapping_proven")
-            is True
+            tub_temporal_encoder_weight_mapping_proven
         ),
-        "official_mfu_receiver_activation_payload_bound": (
-            selected.get("official_mfu_receiver_activation_payload_bound") is True
-            or trained_mapping.get("official_mfu_receiver_activation_payload_bound")
-            is True
+        "official_tub_output2_decoder_weight_mapping_proven": (
+            tub_output2_decoder_weight_mapping_proven
         ),
+        "official_mfu_receiver_activation_payload_bound": mfu_activation_payload_bound,
         "official_tub_receiver_activation_payload_bound": (
             selected.get("official_tub_receiver_activation_payload_bound") is True
             or trained_mapping.get("official_tub_receiver_activation_payload_bound")
             is True
         ),
         "official_native_receiver_state_mapping_proven": (
-            selected.get("official_native_receiver_state_mapping_proven") is True
-            or trained_mapping.get("official_native_receiver_state_mapping_proven")
-            is True
+            native_receiver_state_mapping_proven
         ),
         "official_trained_checkpoint_mapping_manifest": dict(trained_mapping) or None,
         "receiver_frame_decode_consumes_output2": receiver_consumes_output2,
+        "official_tub_source_fixture_forward_parity_proven": tub_source_fixture_proven,
+        "tub_source_fixture_closed_blockers": tub_source_fixture_closed,
         "full_tub_source_forward_parity_proven": full_tub_parity,
         "source_forward_replay_authority": source_authority,
         "decoded_frames_shape": replay.get("decoded_frames_shape"),
@@ -1639,6 +2535,261 @@ def _source_forward_state(
         "blockers": _dedupe([*(selected.get("blockers") or ()), *queue_blockers]),
         **QUEUE_FALSE_AUTHORITY,
     }
+
+
+def _without_closed_source_forward_blockers_in_mapping(
+    value: Mapping[str, Any],
+    *,
+    closed: set[str],
+) -> dict[str, Any]:
+    def scrub(raw: Any, key: str | None = None) -> Any:
+        if isinstance(raw, Mapping):
+            return {str(k): scrub(v, str(k)) for k, v in raw.items()}
+        if isinstance(raw, list):
+            if key == "blockers" or (key or "").endswith("_blockers"):
+                return [
+                    str(item)
+                    for item in raw
+                    if str(item) and str(item).removeprefix("source_parity:") not in closed
+                ]
+            return [scrub(item) for item in raw]
+        return raw
+
+    scrubbed = scrub(value)
+    assert isinstance(scrubbed, dict)
+    return scrubbed
+
+
+def _bounded_snerv_official_state_dict_path(
+    current_state: Mapping[str, Any],
+    *,
+    solution_family: str,
+) -> str | None:
+    if solution_family != "official_tub_lf_hf_decoder_replacement":
+        return None
+    evidence = current_state.get("source_forward_evidence")
+    evidence = evidence if isinstance(evidence, Mapping) else {}
+    if evidence.get("official_trained_checkpoint_state_dict_value_artifact_ready") is not True:
+        return None
+    path = _existing_file_text(
+        evidence.get("official_trained_checkpoint_state_dict_path")
+        or evidence.get("official_trained_checkpoint_state_dict_slice_path")
+    )
+    if path is None:
+        return None
+    return path.as_posix()
+
+
+def _bounded_snerv_extra_modelsize_feedback_paths(
+    current_state: Mapping[str, Any],
+) -> list[str]:
+    paths: list[str] = []
+    for section_name in ("scorer_domain_evidence",):
+        section = current_state.get(section_name)
+        section = section if isinstance(section, Mapping) else {}
+        path = _existing_file_text(section.get("source_path"))
+        if path is not None:
+            paths.append(path.as_posix())
+    return _dedupe(paths)
+
+
+def _source_forward_state_dict_value_artifact(
+    selected: Mapping[str, Any],
+) -> dict[str, Any]:
+    sources: list[Mapping[str, Any]] = [selected]
+    for key in (
+        "official_tub_source_forward_replay",
+        "official_checkpoint_export_binding_evidence",
+        "official_checkpoint_export_binding",
+    ):
+        section = selected.get(key)
+        if isinstance(section, Mapping):
+            sources.append(section)
+    source_root = _path_parent_or_none(selected.get("_source_path"))
+    for source in sources:
+        artifact = source.get("official_trained_checkpoint_state_dict_artifact")
+        if isinstance(artifact, Mapping):
+            candidate = _state_dict_candidate_from_mapping(
+                artifact,
+                source_root=source_root,
+            )
+            if candidate["present"]:
+                return candidate
+        candidate = _state_dict_candidate_from_mapping(
+            source,
+            source_root=source_root,
+        )
+        if candidate["present"]:
+            return candidate
+    return {
+        "present": False,
+        "path": None,
+        "file_present": False,
+        "bytes": None,
+        "sha256": None,
+        "sha256_matches_report": None,
+        "bytes_match_report": None,
+        "npz_opened": False,
+        "member_names_match_report": None,
+        "member_count": None,
+        "member_names": [],
+    }
+
+
+def _state_dict_candidate_from_mapping(
+    source: Mapping[str, Any],
+    *,
+    source_root: Path | None,
+) -> dict[str, Any]:
+    raw_path = (
+        source.get("path")
+        or source.get("official_trained_checkpoint_state_dict_path")
+        or source.get("official_trained_checkpoint_state_dict_slice_path")
+        or source.get("snerv_official_trained_checkpoint_state_dict_path")
+        or source.get("snerv_official_trained_checkpoint_state_dict_slice_path")
+    )
+    if not raw_path:
+        return {
+            "present": False,
+            "path": None,
+            "file_present": False,
+            "bytes": None,
+            "sha256": None,
+            "sha256_matches_report": None,
+            "bytes_match_report": None,
+            "npz_opened": False,
+            "member_names_match_report": None,
+            "member_count": None,
+            "member_names": [],
+        }
+    path = _resolve_maybe_relative_path(raw_path, source_root=source_root)
+    file_present = path.is_file()
+    reported_sha = str(
+        source.get("sha256")
+        or source.get("official_trained_checkpoint_state_dict_slice_sha256")
+        or source.get("snerv_official_trained_checkpoint_state_dict_slice_sha256")
+        or ""
+    ).strip()
+    actual_sha = None
+    if file_present:
+        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    sha_matches_report = (
+        None
+        if not actual_sha or len(reported_sha) != 64
+        else actual_sha == reported_sha
+    )
+    names = (
+        source.get("member_names")
+        or source.get("official_trained_checkpoint_state_dict_slice_member_names")
+        or source.get("snerv_official_trained_checkpoint_state_dict_slice_member_names")
+        or []
+    )
+    member_names = (
+        [str(name) for name in names]
+        if isinstance(names, Sequence) and not isinstance(names, (str, bytes, bytearray))
+        else []
+    )
+    reported_bytes = (
+        _positive_int(source.get("bytes"))
+        or _positive_int(source.get("official_trained_checkpoint_state_dict_slice_bytes"))
+        or _positive_int(source.get("snerv_official_trained_checkpoint_state_dict_slice_bytes"))
+    )
+    actual_bytes = int(path.stat().st_size) if file_present else None
+    bytes_match_report = (
+        None if actual_bytes is None or reported_bytes is None else actual_bytes == reported_bytes
+    )
+    bytes_value = reported_bytes
+    if bytes_value is None and file_present:
+        bytes_value = actual_bytes
+    member_count = (
+        _positive_int(source.get("member_count"))
+        or _positive_int(
+            source.get("official_trained_checkpoint_state_dict_slice_member_count")
+        )
+        or _positive_int(
+            source.get("snerv_official_trained_checkpoint_state_dict_slice_member_count")
+        )
+    )
+    if member_count is None and member_names:
+        member_count = len(member_names)
+    actual_member_names: list[str] = []
+    npz_opened = False
+    if file_present:
+        try:
+            with zipfile.ZipFile(path, "r") as zf:
+                actual_member_names = sorted(str(name) for name in zf.namelist())
+            npz_opened = True
+        except (OSError, zipfile.BadZipFile):
+            actual_member_names = []
+            npz_opened = False
+    member_names_match_report = None
+    if npz_opened:
+        member_names_match_report = (
+            actual_member_names == sorted(member_names) if member_names else True
+        )
+        member_names = actual_member_names
+        member_count = len(actual_member_names)
+    return {
+        "present": True,
+        "path": path.as_posix(),
+        "file_present": file_present,
+        "bytes": bytes_value,
+        "sha256": actual_sha or (reported_sha if len(reported_sha) == 64 else None),
+        "sha256_matches_report": sha_matches_report,
+        "bytes_match_report": bytes_match_report,
+        "npz_opened": npz_opened,
+        "member_names_match_report": member_names_match_report,
+        "member_count": member_count,
+        "member_names": member_names,
+    }
+
+
+def _existing_file_text(value: Any) -> Path | None:
+    if not value:
+        return None
+    path = Path(str(value)).expanduser()
+    if path.is_file():
+        return path.resolve(strict=False)
+    return None
+
+
+def _resolve_maybe_relative_path(value: Any, *, source_root: Path | None) -> Path:
+    raw = Path(str(value)).expanduser()
+    path = raw if raw.is_absolute() else (source_root / raw if source_root else raw)
+    return path.resolve(strict=False)
+
+
+def _path_parent_or_none(value: Any) -> Path | None:
+    if not value:
+        return None
+    return Path(str(value)).expanduser().resolve(strict=False).parent
+
+
+def _tub_source_fixture_closed_blockers(selected: Mapping[str, Any]) -> list[str]:
+    closed: list[str] = [
+        str(blocker)
+        for blocker in selected.get("tub_source_fixture_closed_blockers") or ()
+        if blocker
+    ]
+    nested = selected.get("official_tub_source_forward_replay")
+    nested = nested if isinstance(nested, Mapping) else {}
+    if (
+        nested.get("schema") == "snerv_official_tub_source_forward_replay.v1"
+        and nested.get("official_tub_temporal_encoder_output2_source_fixture_replay_passed")
+        is True
+    ):
+        closed.extend(str(blocker) for blocker in nested.get("closed_blockers") or ())
+        for key in (
+            "temporal_path",
+            "portable_output2_fusion",
+            "frame_reconstruction_equivalence",
+        ):
+            section = nested.get(key)
+            if isinstance(section, Mapping):
+                closed.extend(str(blocker) for blocker in section.get("closed_blockers") or ())
+    for blocker in tuple(closed):
+        closed.extend(_TUB_SOURCE_FIXTURE_CLOSED_BLOCKER_ALIASES.get(blocker, ()))
+    return _dedupe(closed)
 
 
 def _scorer_domain_state(
@@ -1667,7 +2818,7 @@ def _scorer_domain_state(
             "blockers": ["snerv_lf_hf_scorer_domain_candidate_feedback_missing"],
             **QUEUE_FALSE_AUTHORITY,
         }
-    def _guard_rank(row: Mapping[str, Any]) -> tuple[int, int, int, str, str]:
+    def _guard_rank(row: Mapping[str, Any]) -> tuple[int, int, int, int, str, str]:
         health = row.get("snerv_scorer_domain_tether_health")
         health = health if isinstance(health, Mapping) else {}
         metric_health = health.get("metric_health")
@@ -1680,15 +2831,35 @@ def _scorer_domain_state(
         )
         guard = row.get("snerv_scorer_input_distribution_guard_proof")
         guard = guard if isinstance(guard, Mapping) else {}
+        qat_nondegenerate = _snerv_scorer_loop_qat_nondegenerate_evidence(row)
         return (
             1 if row.get("snerv_scorer_input_distribution_guard_proof_passed") is True else 0,
             1 if row.get("snerv_scorer_domain_tether_passed") is True else 0,
             1 if health.get("passed") is True and metrics_present else 0,
+            1 if qat_nondegenerate.get("passed") is True else 0,
             str(row.get("created_utc") or row.get("generated_utc") or ""),
             str(row.get("_source_path") or row.get("source_report_path") or ""),
         )
 
     selected = max(rows, key=_guard_rank)
+    terminal_renderer_blockers_by_candidate: dict[str, list[str]] = {}
+    for row in rows:
+        terminal_blockers = _dedupe(
+            [
+                str(blocker)
+                for blocker in (row.get("blockers") or ())
+                if str(blocker) in _TERMINAL_RENDERER_FEEDBACK_BLOCKERS
+            ]
+        )
+        if not terminal_blockers:
+            continue
+        key = str(row.get("candidate_id") or "")
+        terminal_renderer_blockers_by_candidate[key] = _dedupe(
+            [
+                *(terminal_renderer_blockers_by_candidate.get(key) or ()),
+                *terminal_blockers,
+            ]
+        )
     health = selected.get("snerv_scorer_domain_tether_health")
     health = health if isinstance(health, Mapping) else {}
     metric_health = health.get("metric_health")
@@ -1721,6 +2892,9 @@ def _scorer_domain_state(
         selected.get("snerv_scorer_input_distribution_guard_proof_passed") is True
         and guard_proof.get("passed") is True
     )
+    qat_nondegenerate_evidence = _snerv_scorer_loop_qat_nondegenerate_evidence(
+        selected
+    )
     blockers: list[str] = []
     if not guard_proof_passed:
         blockers.append("snerv_scorer_input_distribution_guard_missing")
@@ -1741,13 +2915,26 @@ def _scorer_domain_state(
         "artifact_count": len(rows),
         "selected_artifact_schema": selected.get("schema"),
         "selected_artifact_created_utc": selected.get("created_utc"),
-        "source_path": selected.get("_source_path") or selected.get("source_report_path"),
-        "source_sha256": selected.get("_source_sha256") or selected.get("source_report_sha256"),
+        "source_path": (
+            selected.get("_source_path")
+            or selected.get("_candidate_feedback_source_path")
+            or selected.get("source_report_path")
+        ),
+        "source_sha256": (
+            selected.get("_source_sha256")
+            or selected.get("_candidate_feedback_source_sha256")
+            or selected.get("source_report_sha256")
+        ),
         "candidate_id": selected.get("candidate_id"),
         "family": selected.get("family"),
         "scorer_domain_tether_proof_passed": tether_proof_passed,
         "scorer_input_distribution_guard_proof_passed": guard_proof_passed,
         "scorer_input_distribution_guard_proof": dict(guard_proof) or None,
+        "scorer_loop_qat_nondegenerate_evidence": qat_nondegenerate_evidence,
+        "scorer_loop_qat_ready": qat_nondegenerate_evidence["passed"],
+        "terminal_renderer_feedback_blockers_by_candidate": (
+            terminal_renderer_blockers_by_candidate
+        ),
         "required_metrics": list(_SCORER_DOMAIN_REQUIRED_METRICS),
         "metric_health": {str(k): v for k, v in metric_health.items()},
         "missing_metrics": missing_metrics,
@@ -1759,6 +2946,103 @@ def _scorer_domain_state(
             [] if guard_proof_passed else ["snerv_scorer_input_distribution_guard_missing"]
         ),
         "blockers": _dedupe(blockers),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _snerv_scorer_loop_qat_nondegenerate_evidence(
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    proof = row.get("snerv_renderer_nondegenerate_proof")
+    proof = proof if isinstance(proof, Mapping) else {}
+    explicit_blockers = _dedupe(
+        [
+            *(row.get("snerv_renderer_nondegenerate_blockers") or ()),
+            *(proof.get("blockers") or ()),
+        ]
+    )
+    measured_num_pairs = _positive_int(
+        proof.get("measured_num_pairs")
+        or proof.get("pair_count")
+        or proof.get("num_pairs")
+        or row.get("measured_num_pairs")
+        or row.get("candidate_num_pairs")
+    )
+    occupied_fraction = _first_finite_float(
+        proof,
+        row,
+        keys=(
+            "segnet_direct_live_max_candidate_occupied_class_fraction",
+            "candidate_occupied_class_fraction",
+            "train_direct_live_max_candidate_occupied_class_fraction",
+            "receiver_candidate_occupied_class_fraction",
+            "post_export_receiver_segnet_candidate_occupied_class_fraction",
+        ),
+    )
+    target_class_coverage_fraction = _first_finite_float(
+        proof,
+        row,
+        keys=(
+            "segnet_direct_live_max_candidate_target_class_coverage_fraction",
+            "candidate_target_class_coverage_fraction",
+            "train_direct_live_max_candidate_target_class_coverage_fraction",
+            "receiver_candidate_target_class_coverage_fraction",
+            "post_export_receiver_segnet_candidate_target_class_coverage_fraction",
+        ),
+    )
+    min_occupied_fraction = float(
+        SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_OCCUPIED_CLASS_FRACTION
+    )
+    min_target_class_coverage_fraction = float(
+        SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_COVERAGE_FRACTION
+    )
+    blockers: list[str] = []
+    if not proof:
+        blockers.append("snerv_renderer_nondegenerate_measured_qat_evidence_missing")
+    if row.get("snerv_renderer_nondegenerate_proof_passed") is not True:
+        blockers.append("snerv_renderer_nondegenerate_proof_not_passed_for_qat")
+    if proof and proof.get("passed") is not True:
+        blockers.append("snerv_renderer_nondegenerate_proof_failed_for_qat")
+    if (
+        measured_num_pairs is None
+        or measured_num_pairs < SNERV_SCORER_LOOP_QAT_MIN_RENDERER_PAIR_COUNT
+    ):
+        blockers.append("snerv_renderer_nondegenerate_qat_min16_pairs_missing")
+    if occupied_fraction is None:
+        blockers.append(
+            "snerv_renderer_nondegenerate_qat_occupied_class_fraction_missing"
+        )
+    elif occupied_fraction < min_occupied_fraction:
+        blockers.append("snerv_renderer_nondegenerate_qat_candidate_argmax_collapsed")
+    if target_class_coverage_fraction is None:
+        blockers.append(
+            "snerv_renderer_nondegenerate_qat_target_class_coverage_missing"
+        )
+    elif target_class_coverage_fraction < min_target_class_coverage_fraction:
+        blockers.append(
+            "snerv_renderer_nondegenerate_qat_target_class_coverage_collapsed"
+        )
+    blockers = _dedupe([*blockers, *explicit_blockers])
+    return {
+        "schema": "snerv_scorer_loop_qat_nondegenerate_evidence.v1",
+        "required": True,
+        "proof_attached": bool(proof),
+        "proof_passed": bool(
+            row.get("snerv_renderer_nondegenerate_proof_passed") is True
+            and proof.get("passed") is True
+        ),
+        "measured_num_pairs": measured_num_pairs,
+        "min_required_pair_count": SNERV_SCORER_LOOP_QAT_MIN_RENDERER_PAIR_COUNT,
+        "segnet_candidate_occupied_class_fraction": occupied_fraction,
+        "min_segnet_candidate_occupied_class_fraction": min_occupied_fraction,
+        "segnet_candidate_target_class_coverage_fraction": (
+            target_class_coverage_fraction
+        ),
+        "min_segnet_candidate_target_class_coverage_fraction": (
+            min_target_class_coverage_fraction
+        ),
+        "passed": not blockers,
+        "blockers": blockers,
         **QUEUE_FALSE_AUTHORITY,
     }
 
@@ -2207,6 +3491,291 @@ def _lf_super_resolution_state(
         **QUEUE_FALSE_AUTHORITY,
     }
 
+
+def _spectral_band_allocator_state(
+    spectral_band_allocator_receiver_payload_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in spectral_band_allocator_receiver_payload_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema")
+        == "snerv_score_tethered_spectral_band_allocator_receiver_proof.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_score_tethered_spectral_band_allocator_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_implemented": False,
+            "receiver_decode_proven": False,
+            "numpy_receiver_decode": False,
+            "score_tethered_allocation_implemented": False,
+            "section_native_byte_telemetry_present": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": list(_SPECTRAL_BAND_ALLOCATOR_CLOSED_BLOCKERS),
+            "blockers": list(_SPECTRAL_BAND_ALLOCATOR_CLOSED_BLOCKERS),
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    implemented = selected.get("receiver_payload_implemented") is True
+    decoded = selected.get("receiver_decode_proven") is True
+    numpy_decode = selected.get("numpy_receiver_decode") is True
+    allocation = selected.get("score_tethered_allocation_implemented") is True
+    telemetry = selected.get("section_native_byte_telemetry_present") is True
+    proof_passed = implemented and decoded and numpy_decode and allocation and telemetry
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker)
+        != "snerv_score_tethered_spectral_band_allocator_false_authority"
+    ]
+    closed = [
+        blocker
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if blocker in _SPECTRAL_BAND_ALLOCATOR_CLOSED_BLOCKERS
+    ]
+    queue_blockers: list[str] = []
+    if not proof_passed:
+        queue_blockers.extend(_SPECTRAL_BAND_ALLOCATOR_CLOSED_BLOCKERS)
+    queue_blockers.extend(selected_blockers)
+    return {
+        "schema": "snerv_score_tethered_spectral_band_allocator_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "packet_path": selected.get("packet_path"),
+        "source_packet_sha256": selected.get("source_packet_sha256"),
+        "payload_path": selected.get("payload_path"),
+        "payload_bytes": _positive_int(selected.get("payload_bytes")),
+        "payload_sha256": selected.get("payload_sha256"),
+        "allocation_table_raw_bytes": _positive_int(
+            selected.get("allocation_table_raw_bytes")
+        ),
+        "allocation_band_count": _positive_int(
+            selected.get("allocation_band_count")
+        ),
+        "allocation_budget_units": _positive_int(
+            selected.get("allocation_budget_units")
+        ),
+        "pair_indices": selected.get("pair_indices"),
+        "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
+        "receiver_payload_implemented": implemented,
+        "receiver_decode_proven": decoded,
+        "numpy_receiver_decode": numpy_decode,
+        "score_tethered_allocation_implemented": allocation,
+        "section_native_byte_telemetry_present": telemetry,
+        "human_readable_payload_labels": selected.get(
+            "human_readable_payload_labels"
+        ),
+        "closed_campaign_blockers": _dedupe(closed) if proof_passed else [],
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*selected_blockers, *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _lf_latent_hyperprior_state(
+    lf_latent_hyperprior_receiver_payload_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in lf_latent_hyperprior_receiver_payload_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema") == "snerv_lf_latent_hyperprior_receiver_proof.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_lf_latent_hyperprior_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_implemented": False,
+            "receiver_decode_proven": False,
+            "numpy_receiver_decode": False,
+            "entropy_model_implemented": False,
+            "hyperprior_scale_present": False,
+            "receiver_replay_proven": False,
+            "section_native_byte_telemetry_present": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": list(_LF_LATENT_HYPERPRIOR_CLOSED_BLOCKERS),
+            "blockers": list(_LF_LATENT_HYPERPRIOR_CLOSED_BLOCKERS),
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    implemented = selected.get("receiver_payload_implemented") is True
+    decoded = selected.get("receiver_decode_proven") is True
+    numpy_decode = selected.get("numpy_receiver_decode") is True
+    entropy_model = selected.get("entropy_model_implemented") is True
+    hyperprior_scale = selected.get("hyperprior_scale_present") is True
+    replay = selected.get("receiver_replay_proven") is True
+    telemetry = selected.get("section_native_byte_telemetry_present") is True
+    proof_passed = (
+        implemented
+        and decoded
+        and numpy_decode
+        and entropy_model
+        and hyperprior_scale
+        and replay
+        and telemetry
+    )
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker) != "snerv_lf_latent_hyperprior_payload_false_authority"
+    ]
+    closed = [
+        blocker
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if blocker in _LF_LATENT_HYPERPRIOR_CLOSED_BLOCKERS
+    ]
+    queue_blockers: list[str] = []
+    if not proof_passed:
+        queue_blockers.extend(_LF_LATENT_HYPERPRIOR_CLOSED_BLOCKERS)
+    queue_blockers.extend(selected_blockers)
+    return {
+        "schema": "snerv_lf_latent_hyperprior_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "packet_path": selected.get("packet_path"),
+        "source_packet_sha256": selected.get("source_packet_sha256"),
+        "payload_path": selected.get("payload_path"),
+        "payload_bytes": _positive_int(selected.get("payload_bytes")),
+        "payload_sha256": selected.get("payload_sha256"),
+        "mean_raw_bytes": _positive_int(selected.get("mean_raw_bytes")),
+        "scale_raw_bytes": _positive_int(selected.get("scale_raw_bytes")),
+        "latent_symbol_raw_bytes": _positive_int(
+            selected.get("latent_symbol_raw_bytes")
+        ),
+        "compressed_payload_bytes": _positive_int(
+            selected.get("compressed_payload_bytes")
+        ),
+        "estimated_entropy_bits": selected.get("estimated_entropy_bits"),
+        "pair_indices": selected.get("pair_indices"),
+        "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
+        "lf_shape_b2chw": selected.get("lf_shape_b2chw"),
+        "receiver_payload_implemented": implemented,
+        "receiver_decode_proven": decoded,
+        "numpy_receiver_decode": numpy_decode,
+        "entropy_model_implemented": entropy_model,
+        "hyperprior_scale_present": hyperprior_scale,
+        "receiver_replay_proven": replay,
+        "section_native_byte_telemetry_present": telemetry,
+        "human_readable_payload_labels": selected.get(
+            "human_readable_payload_labels"
+        ),
+        "closed_campaign_blockers": _dedupe(closed) if proof_passed else [],
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*selected_blockers, *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _runtime_binding_state(
+    lf_hf_runtime_binding_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in lf_hf_runtime_binding_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema") == SNERV_LF_HF_RUNTIME_BINDING_PROOF_SCHEMA
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_lf_hf_runtime_binding_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "runtime_bound_solution_families": [],
+            "closed_campaign_blockers": [],
+            "queue_blockers": [],
+            "blockers": [],
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    closed = [
+        str(blocker)
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if str(blocker)
+        and str(blocker)
+        in {
+            blocker
+            for blocker in (
+                runtime_binding_blocker_for_solution_family(
+                    "temporal_lf_predictor_gate"
+                ),
+                runtime_binding_blocker_for_solution_family(
+                    "lf_super_resolution_from_tiny_anchor"
+                ),
+                runtime_binding_blocker_for_solution_family(
+                    "score_tethered_spectral_band_allocator"
+                ),
+                runtime_binding_blocker_for_solution_family(
+                    "entropy_modeled_lf_latent_hyperprior"
+                ),
+            )
+            if blocker
+        }
+    ]
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker)
+        != "snerv_lf_hf_runtime_binding_payload_proofs_missing"
+    ]
+    return {
+        "schema": "snerv_lf_hf_runtime_binding_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "runtime_binding_row_count": _nonnegative_int(
+            selected.get("runtime_binding_row_count")
+        ),
+        "runtime_bound_solution_families": [
+            str(value) for value in selected.get("runtime_bound_solution_families") or ()
+        ],
+        "closed_campaign_blockers": _dedupe(closed),
+        "queue_blockers": _dedupe(selected_blockers),
+        "blockers": _dedupe(selected_blockers),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
 def _snerv_campaign_rows(campaign_plans: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for plan in campaign_plans:
@@ -2267,6 +3836,9 @@ def _current_state(
     joint_codebook_state: Mapping[str, Any],
     temporal_lf_predictor_state: Mapping[str, Any],
     lf_super_resolution_state: Mapping[str, Any],
+    spectral_band_allocator_state: Mapping[str, Any],
+    lf_latent_hyperprior_state: Mapping[str, Any],
+    runtime_binding_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     demoted_blockers: list[str] = []
@@ -2303,6 +3875,9 @@ def _current_state(
         "joint_codebook_evidence": dict(joint_codebook_state),
         "temporal_lf_predictor_evidence": dict(temporal_lf_predictor_state),
         "lf_super_resolution_evidence": dict(lf_super_resolution_state),
+        "spectral_band_allocator_evidence": dict(spectral_band_allocator_state),
+        "lf_latent_hyperprior_evidence": dict(lf_latent_hyperprior_state),
+        "runtime_binding_evidence": dict(runtime_binding_state),
         "blockers": _dedupe(blockers),
     }
 
@@ -2361,6 +3936,13 @@ def _queue_rebuild_command(
         "lf_super_resolution_receiver_payload_proofs": (
             "--lf-super-resolution-receiver-payload-proof"
         ),
+        "spectral_band_allocator_receiver_payload_proofs": (
+            "--spectral-band-allocator-receiver-payload-proof"
+        ),
+        "lf_latent_hyperprior_receiver_payload_proofs": (
+            "--lf-latent-hyperprior-receiver-payload-proof"
+        ),
+        "lf_hf_runtime_binding_proofs": "--lf-hf-runtime-binding-proof",
     }
     for key, flag in flag_by_key.items():
         for path in input_source_paths.get(key) or ():
@@ -2456,6 +4038,24 @@ def _nonnegative_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return out if out >= 0 else None
+
+
+def _first_finite_float(
+    *mappings: Mapping[str, Any],
+    keys: Sequence[str],
+) -> float | None:
+    for mapping in mappings:
+        if not isinstance(mapping, Mapping):
+            continue
+        for key in keys:
+            value = mapping.get(key)
+            try:
+                out = float(value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(out):
+                return out
+    return None
 
 
 def _stable_safe_token(text: str, *, max_len: int = 120) -> str:

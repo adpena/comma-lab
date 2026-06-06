@@ -17,6 +17,9 @@ from tac.analysis.snerv_step_map_coder import (
     encode_step_maps_waterfill,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    DECODER_PAYLOAD_EXHAUSTIVE_LZMA_PRESET,
+    DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_COMPRESSION_PROFILE,
+    DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
     HEADER_LEN_FMT,
     LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
     SECTION_ORDER,
@@ -239,7 +242,7 @@ def test_snar2_header_metadata_fails_closed_on_unsupported_values() -> None:
         struct.unpack("<5sBBBBHBBIBBHH4I4Q", archive.packet[:SNAR2_HEADER_BYTES])
     )
     metadata_flags_index = 10
-    header_values[metadata_flags_index] = 1
+    header_values[metadata_flags_index] = 0x80
     with pytest.raises(SnervArchiveError, match="metadata_flags"):
         unpack_snerv_archive(
             struct.pack("<5sBBBBHBBIBBHH4I4Q", *header_values)
@@ -614,6 +617,13 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert is_official_mfu_hfr_tub_decoder_payload(payload) is True
     assert header["schema"] == "snerv_decoder_payload.official_mfu_hfr_tub.v1"
     assert header["codec"] == "official_numpy_float64_lzma"
+    assert (
+        header["compression_profile"]
+        == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_COMPRESSION_PROFILE
+    )
+    assert header["compression_preset"] == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET
+    assert header["explicit_exhaustive_compression_available"] is True
+    assert header["explicit_exhaustive_lzma_preset"] == DECODER_PAYLOAD_EXHAUSTIVE_LZMA_PRESET
     assert header["tensor_count"] == len(header["tensor_manifest"])
     assert header["receiver_export_payload_bound"] is True
     assert header["receiver_export_self_consistency_verified"] is True
@@ -652,6 +662,29 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert proof["mfu_output"]["pyr_out_shape"] == [1, 1, 8, 8]
     assert proof["hfr_output"]["yh_out_shape"] == [1, 3, 3, 8, 8]
     assert proof["tub_output"]["shape_metadata"]["temporal_encoder_input_count"] == 2
+
+
+def test_official_mfu_hfr_tub_decoder_payload_uses_bounded_lzma_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.archive as archive_mod
+
+    real_compress = archive_mod.lzma.compress
+    observed_presets: list[int] = []
+
+    def recording_compress(data: bytes, *, format: int, preset: int) -> bytes:
+        observed_presets.append(int(preset))
+        return real_compress(data, format=format, preset=preset)
+
+    monkeypatch.setattr(archive_mod.lzma, "compress", recording_compress)
+
+    payload = encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())
+    header = _read_subpacket_header(payload)
+
+    assert observed_presets == [DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET]
+    assert header["compression_preset"] == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET
+    assert header["compressed_bytes"] > 0
+    decode_official_mfu_hfr_tub_decoder_payload(payload)
 
     with pytest.raises(SnervArchiveError, match="requires decode_official"):
         decode_decoder_payload(payload)
@@ -1033,6 +1066,91 @@ def test_official_mfu_hfr_tub_archive_selected_pair_matches_full_decode() -> Non
     assert selected.shape == (1, 2, 3, 16, 16)
     np.testing.assert_array_equal(selected, full[1:2])
     assert not np.allclose(selected, full[0:1])
+
+
+def test_official_mfu_hfr_tub_zero_mfu_inputs_are_receiver_synthetic() -> None:
+    bundle = _official_payload_fixture()
+    low_shape = np.asarray(bundle["low"]).shape
+    skip_mid_shape = np.asarray(bundle["skip_mid"]).shape
+    bundle["low"] = np.zeros((4, *low_shape[1:]), dtype=np.float64)
+    bundle["skip_mid"] = np.zeros((4, *skip_mid_shape[1:]), dtype=np.float64)
+    bundle["skip_high"] = np.concatenate(
+        [np.asarray(bundle["skip_high"]) + 0.125 * idx for idx in range(4)],
+        axis=0,
+    )
+    full_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    compact_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        mfu_input_codec="zero_synthetic",
+    )
+    full_header = _read_subpacket_header(full_payload)
+    compact_header = _read_subpacket_header(compact_payload)
+    full_decoded = decode_official_mfu_hfr_tub_decoder_payload(full_payload)
+    compact_decoded = decode_official_mfu_hfr_tub_decoder_payload(compact_payload)
+    compact_proof = compact_decoded.execute()
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=compact_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 2,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+
+    storage = compact_header["mfu_input_storage"]
+    assert storage["codec"] == "zero_synthetic_float64"
+    assert storage["stored_shapes"] == {"low": [1], "skip_mid": [1]}
+    assert storage["receiver_expands_mfu_inputs"] is True
+    assert storage["lossless_relative_to_source_mfu_inputs"] is True
+    assert storage["stored_raw_bytes"] < storage["source_raw_bytes"]
+    assert storage["raw_byte_savings"] == storage["source_raw_bytes"] - 16
+    assert compact_header["raw_tensor_bytes"] < full_header["raw_tensor_bytes"]
+    assert compact_decoded.tensors["inputs.mfu.low"].shape == bundle["low"].shape
+    assert compact_decoded.tensors["inputs.mfu.skip_mid"].shape == bundle[
+        "skip_mid"
+    ].shape
+    assert np.count_nonzero(compact_decoded.tensors["inputs.mfu.low"]) == 0
+    assert np.count_nonzero(compact_decoded.tensors["inputs.mfu.skip_mid"]) == 0
+    np.testing.assert_array_equal(
+        compact_decoded.decode_frames(clip_to_uint8_range=False),
+        full_decoded.decode_frames(clip_to_uint8_range=False),
+    )
+    full_frames = decode_snerv_archive_frames(
+        archive.packet,
+        clip_to_uint8_range=False,
+    )
+    selected = decode_snerv_archive_pair_frames(
+        archive.packet,
+        [1],
+        clip_to_uint8_range=False,
+    )
+    np.testing.assert_array_equal(selected, full_frames[1:2])
+    assert compact_proof["receiver_runtime_decode_proven"] is True
+    assert compact_proof["score_claim"] is False
+
+
+def test_official_mfu_hfr_tub_zero_mfu_inputs_refuse_nonzero_signal() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.zeros_like(np.asarray(bundle["low"]), dtype=np.float64)
+    bundle["skip_mid"] = np.zeros_like(
+        np.asarray(bundle["skip_mid"]),
+        dtype=np.float64,
+    )
+    bundle["skip_mid"][0, 0, 0, 0] = 1.0
+
+    with pytest.raises(SnervArchiveError, match="require exact zero"):
+        encode_official_mfu_hfr_tub_decoder_payload(
+            **bundle,
+            mfu_input_codec="zero_synthetic",
+        )
 
 
 def test_official_mfu_hfr_tub_archive_selected_planes_are_exact_subset() -> None:

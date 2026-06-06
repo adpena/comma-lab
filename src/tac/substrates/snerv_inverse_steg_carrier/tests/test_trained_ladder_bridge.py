@@ -489,6 +489,7 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
         not in controls["official_mfu_hfr_tub_export_blockers"]
     )
     assert controls["official_mfu_hfr_tub_export_blockers"] == [
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
     ]
     assert controls["official_receiver_tensor_map_verified"] is True

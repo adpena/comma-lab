@@ -35,6 +35,9 @@ NERV_SCORER_INPUT_HEALTH_GATE_SCHEMA = "nerv_local_scorer_input_health_gate.v1"
 SNERV_SKIP_HIGH_EXPORT_ADMISSION_GATE_SCHEMA = (
     "snerv_skip_high_export_admission_gate.v1"
 )
+FAMILY_OPTIMAL_STRATEGY_CONTRACT_SCHEMA = (
+    "nerv_family_optimal_strategy_contract.v1"
+)
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -119,6 +122,106 @@ def _artifact_mappings(root: Mapping[str, Any] | None) -> list[Mapping[str, Any]
         if isinstance(official_replay, Mapping):
             maps.append(official_replay)
     return maps
+
+
+def _family_tokens_from_artifact(
+    artifact_evidence: Mapping[str, Any] | None,
+) -> set[str]:
+    tokens: set[str] = set()
+    for row in _artifact_mappings(artifact_evidence):
+        for key in ("family", "execute_family", "candidate_family"):
+            value = str(row.get(key) or "").strip()
+            if value:
+                tokens.add(value)
+        schema = str(row.get("schema") or "").strip()
+        if schema.startswith("hi_nerv") or schema.startswith("hinerv"):
+            tokens.add("hi_nerv")
+        if schema.startswith("snerv"):
+            tokens.add("snerv")
+    return tokens
+
+
+def _family_optimal_strategy_contract(
+    *,
+    family: str,
+    artifact_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    tokens = _family_tokens_from_artifact(artifact_evidence)
+    if family == "hi_nerv":
+        foreign_tokens = sorted(token for token in tokens if token == "snerv")
+        blockers = (
+            ["hinerv_foreign_snerv_artifact_evidence_rejected"]
+            if foreign_tokens
+            else []
+        )
+        return {
+            "schema": FAMILY_OPTIMAL_STRATEGY_CONTRACT_SCHEMA,
+            "family": "hi_nerv",
+            "family_artifact_tokens": sorted(tokens),
+            "foreign_family_artifact_tokens": foreign_tokens,
+            "primary_rate_actuators": [
+                "decoder_weight_waterfill",
+                "archive_size_ladder",
+                "latent_codec_bitstream",
+                "receiver_cache_quality",
+            ],
+            "primary_distortion_actuators": [
+                "dynamic_range_scorer_input_stabilization",
+                "direct_live_segnet_class_escape",
+                "pose_direct_live_vjp",
+                "recon_pixel_weight",
+            ],
+            "forbidden_foreign_actuators": [
+                "snerv_lf_hf_replacement_queue",
+                "snerv_official_mfu_hfr_tub_source_forward",
+                "snerv_skip_high_value_domain_xray",
+            ],
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    if family == "snerv":
+        foreign_tokens = sorted(token for token in tokens if token == "hi_nerv")
+        blockers = (
+            ["snerv_foreign_hinerv_artifact_evidence_rejected"]
+            if foreign_tokens
+            else []
+        )
+        return {
+            "schema": FAMILY_OPTIMAL_STRATEGY_CONTRACT_SCHEMA,
+            "family": "snerv",
+            "family_artifact_tokens": sorted(tokens),
+            "foreign_family_artifact_tokens": foreign_tokens,
+            "primary_rate_actuators": [
+                "snar2_fixed_binary_header",
+                "lf_hf_replacement_queue",
+                "step_map_packet_recode",
+                "official_mfu_hfr_tub_source_forward_payload",
+            ],
+            "primary_distortion_actuators": [
+                "renderer_nondegenerate_closure",
+                "scorer_tethered_lf_hf_residuals",
+                "skip_high_value_domain_noncollapse",
+                "source_faithful_native_mlx_training",
+            ],
+            "forbidden_foreign_actuators": [
+                "hinerv_archive_ladder_waterfill",
+                "hinerv_decoder_weight_saliency_replay",
+                "hinerv_receiver_cache_quality",
+            ],
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    return {
+        "schema": FAMILY_OPTIMAL_STRATEGY_CONTRACT_SCHEMA,
+        "family": str(family),
+        "family_artifact_tokens": sorted(tokens),
+        "foreign_family_artifact_tokens": [],
+        "primary_rate_actuators": [],
+        "primary_distortion_actuators": [],
+        "forbidden_foreign_actuators": [],
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
 
 
 def _has_prefix(value: str, prefixes: tuple[str, ...]) -> bool:
@@ -629,6 +732,14 @@ def build_hinerv_candidate_curriculum_plan(
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_class_histogram_weight: float = 0.0,
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
+    segnet_direct_live_class_region_recon_weight: float = 0.0,
+    segnet_direct_live_rare_class_logit_weight: float = 0.0,
+    segnet_direct_live_target_mass_floor_weight: float = 0.0,
+    segnet_direct_live_target_min_ratio_floor_weight: float = 0.0,
     pose_direct_live_distillation_weight: float = 0.0,
     coder_aware_qat: bool,
     coder_qat_quant_bits: int,
@@ -684,9 +795,27 @@ def build_hinerv_candidate_curriculum_plan(
         launch_mutations.append("aligned_coder_qat_quant_bits_to_candidate_codec")
     if epochs < 8:
         blockers.append("hinerv_candidate_curriculum_requires_min_8_epochs")
+    segnet_direct_live_subcontrol_weights = {
+        "class_histogram": _num(segnet_direct_live_class_histogram_weight),
+        "class_balanced_hinge": _num(segnet_direct_live_class_balanced_hinge_weight),
+        "class_balanced_ce": _num(segnet_direct_live_class_balanced_ce_weight),
+        "class_balanced_squared_hinge": _num(
+            segnet_direct_live_class_balanced_squared_hinge_weight
+        ),
+        "class_region_recon": _num(segnet_direct_live_class_region_recon_weight),
+        "rare_class_logit": _num(segnet_direct_live_rare_class_logit_weight),
+        "target_mass_floor": _num(segnet_direct_live_target_mass_floor_weight),
+        "target_min_ratio_floor": _num(
+            segnet_direct_live_target_min_ratio_floor_weight
+        ),
+    }
+    segnet_direct_live_subcontrol_attached = any(
+        weight > 0.0 for weight in segnet_direct_live_subcontrol_weights.values()
+    )
     real_segnet_teacher_attached = bool(
         _num(segnet_distillation_weight) > 0.0
         or _num(segnet_direct_live_distillation_weight) > 0.0
+        or segnet_direct_live_subcontrol_attached
     )
     if not real_segnet_teacher_attached:
         blockers.append("hinerv_candidate_curriculum_requires_real_segnet_teacher")
@@ -703,6 +832,11 @@ def build_hinerv_candidate_curriculum_plan(
     if not candidate_selected:
         blockers.append("hinerv_modelsize_candidate_not_selected_manual_probe")
     serious_full_video_candidate = bool(candidate_selected and full_video and epochs >= 8)
+    family_optimal_strategy = _family_optimal_strategy_contract(
+        family="hi_nerv",
+        artifact_evidence=native_mlx_artifact_evidence,
+    )
+    blockers.extend(family_optimal_strategy.get("blockers") or [])
     scorer_input_health_gate = _build_nerv_local_scorer_input_health_gate(
         native_mlx_artifact_evidence,
         family_token="hinerv",
@@ -814,6 +948,12 @@ def build_hinerv_candidate_curriculum_plan(
             "segnet_direct_live_distillation_weight": float(
                 segnet_direct_live_distillation_weight
             ),
+            "segnet_direct_live_subcontrol_weights": dict(
+                segnet_direct_live_subcontrol_weights
+            ),
+            "segnet_direct_live_subcontrol_attached": bool(
+                segnet_direct_live_subcontrol_attached
+            ),
             "real_segnet_teacher_attached": real_segnet_teacher_attached,
             "pose_distillation_weight": float(pose_distillation_weight),
             "pose_direct_live_distillation_weight": float(
@@ -858,6 +998,7 @@ def build_hinerv_candidate_curriculum_plan(
             ),
         },
         "byte_oracle_logging": byte_feedback,
+        "family_optimal_strategy": family_optimal_strategy,
         "scorer_input_health_gate": scorer_input_health_gate,
         "pr95_stack_binding": pr95_binding,
         "long_campaign_prelaunch_gate": long_campaign_prelaunch_gate,
@@ -915,6 +1056,9 @@ def build_snerv_candidate_curriculum_plan(
         native_mlx_artifact_evidence,
         required_num_pairs=CONTEST_PAIR_COUNT,
     )
+    native_file_backed_export_passed = bool(
+        native_file_evidence.get("file_backed_export_proof_passed")
+    )
     native_file_proof_passed = bool(
         native_file_evidence.get("required_pair_file_backed_export_proof_passed")
     )
@@ -928,6 +1072,9 @@ def build_snerv_candidate_curriculum_plan(
         native_mlx_train_export_attached
         and native_mlx_receiver_proof_passed
         and native_file_proof_passed
+    )
+    native_byte_closed_archive_export = bool(
+        native_mlx_train_export_attached and native_file_backed_export_passed
     )
     native_train_export_planned = bool(native_mlx_train_export_attached)
     current_execution_path = (
@@ -1058,6 +1205,10 @@ def build_snerv_candidate_curriculum_plan(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    family_optimal_strategy = _family_optimal_strategy_contract(
+        family="snerv",
+        artifact_evidence=native_mlx_artifact_evidence,
+    )
     blockers: list[str] = [
         str(blocker)
         for blocker in list(native_contract.get("blockers") or [])
@@ -1067,6 +1218,7 @@ def build_snerv_candidate_curriculum_plan(
             == "snerv_mlx_native_adapter_surfaces_present_but_unproven"
         )
     ]
+    blockers.extend(family_optimal_strategy.get("blockers") or [])
     blockers.extend(official_source_forward_split.get("blockers") or [])
     blockers.extend(scorer_input_health_gate.get("blockers") or [])
     blockers.extend(skip_high_export_admission_gate.get("blockers") or [])
@@ -1079,9 +1231,15 @@ def build_snerv_candidate_curriculum_plan(
     if (
         native_mlx_train_export_attached
         and native_mlx_receiver_proof_passed
-        and not native_file_proof_passed
+        and not native_file_backed_export_passed
     ):
         blockers.append("snerv_mlx_native_file_backed_export_proof_missing_or_failed")
+    if (
+        native_mlx_train_export_attached
+        and native_mlx_receiver_proof_passed
+        and native_file_backed_export_passed
+        and not native_file_proof_passed
+    ):
         blockers.extend(native_file_evidence.get("blockers") or [])
     if not effective_scorer_loop_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
@@ -1157,8 +1315,13 @@ def build_snerv_candidate_curriculum_plan(
             ),
             muon_adamw_partition=bool(native_mlx_muon_adamw_partition_bound),
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
-            byte_closed_archive_export=measured_archive_bytes is not None,
-            receiver_proof=bool(receiver_proof_attached),
+            byte_closed_archive_export=bool(
+                measured_archive_bytes is not None
+                or native_byte_closed_archive_export
+            ),
+            receiver_proof=bool(
+                receiver_proof_attached or native_mlx_receiver_proof_passed
+            ),
             full_video_local_prefilter=bool(full_video_local_prefilter_attached),
             local_cpu_replay_gate=bool(local_cpu_replay_gate_attached),
         ),
@@ -1224,7 +1387,12 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_receiver_proof_passed": bool(
                 native_mlx_receiver_proof_passed
             ),
-            "native_mlx_file_backed_export_proof_passed": native_file_proof_passed,
+            "native_mlx_file_backed_export_proof_passed": (
+                native_file_backed_export_passed
+            ),
+            "native_mlx_required_full600_file_backed_export_proof_passed": (
+                native_file_proof_passed
+            ),
             "native_mlx_file_backed_export_evidence": native_file_evidence,
             "native_mlx_export_verified": native_export_verified,
             "native_mlx_export_full600_campaign_ready": bool(
@@ -1295,6 +1463,7 @@ def build_snerv_candidate_curriculum_plan(
             "local_cpu_replay_gate_attached": bool(local_cpu_replay_gate_attached),
         },
         "official_source_forward_authority_split": official_source_forward_split,
+        "family_optimal_strategy": family_optimal_strategy,
         "scorer_input_health_gate": scorer_input_health_gate,
         "skip_high_export_admission_gate": skip_high_export_admission_gate,
         "byte_oracle_logging": byte_feedback,

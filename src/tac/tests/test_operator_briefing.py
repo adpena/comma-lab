@@ -1070,6 +1070,12 @@ def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
         feedback_kind="training_telemetry",
         candidate_id="hinerv_waterfill_guard",
     )
+    snerv_byte_row = _write_nerv_feedback_row(
+        feedback_root / "snerv_byte_run" / "nerv_candidate_byte_feedback_row.json",
+        family="snerv",
+        feedback_kind="compact_runner_report",
+        candidate_id="snerv_channelmean_guard",
+    )
     smoke = _write_snerv_scorer_tether_smoke(
         smoke_root / "snerv_scorer_tether_smoke.json",
     )
@@ -1080,15 +1086,17 @@ def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
     payload = mod._nerv_long_training_campaign_plan_summary()
 
     assert payload["status"] == "READY_WITH_FEEDBACK"
-    assert payload["feedback_row_count"] == 2
-    assert payload["usable_feedback_row_count"] == 2
+    assert payload["feedback_row_count"] == 3
+    assert payload["usable_feedback_row_count"] == 3
     assert payload["blocked_feedback_row_count"] == 0
     assert str(snerv_row.parent) in payload["feedback_roots"]
     assert str(hinerv_row.parent) in payload["feedback_roots"]
+    assert str(snerv_byte_row.parent) in payload["feedback_roots"]
     command_args = payload["default_campaign_plan_command_args"]
-    assert command_args.count("--auto-candidate-feedback-root") == 2
+    assert command_args.count("--auto-candidate-feedback-root") == 3
     assert str(snerv_row.parent) in command_args
     assert str(hinerv_row.parent) in command_args
+    assert str(snerv_byte_row.parent) in command_args
     assert "--snerv-scorer-tether-smoke-report" in command_args
     assert str(smoke) in command_args
     assert payload["selected_snerv_scorer_tether_smoke"]["path"] == str(smoke)
@@ -1098,6 +1106,43 @@ def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
     assert payload["promotion_eligible"] is False
     assert payload["rank_or_kill_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_operator_briefing_nerv_feedback_discovery_is_root_fair_for_ssd_byte_rows(
+    tmp_path: Path,
+) -> None:
+    mod = _load_briefing_module()
+    old_root = tmp_path / "old_research"
+    ssd_root = tmp_path / "ssd"
+    for index in range(60):
+        old_path = _write_nerv_feedback_row(
+            old_root / f"old_{index:03d}" / "nerv_candidate_training_telemetry_feedback_row.json",
+            family="snerv" if index % 2 else "hi_nerv",
+            feedback_kind="training_telemetry",
+            candidate_id=f"old_candidate_{index:03d}",
+        )
+        os.utime(old_path, (1_000 + index, 1_000 + index))
+    ssd_row = _write_nerv_feedback_row(
+        ssd_root
+        / "nerv_long_training_campaigns"
+        / "snerv_bounded_channelmean_v28b_fastcodec3_20260605Tcodex"
+        / "snerv_candidate_dir"
+        / "nerv_candidate_byte_feedback_row.json",
+        family="snerv",
+        feedback_kind="compact_runner_report",
+        candidate_id="snerv_channelmean_v28b",
+    )
+    os.utime(ssd_row, (10_000, 10_000))
+
+    discovered = mod._nerv_campaign_feedback_row_paths(
+        scan_roots=(old_root, ssd_root),
+        limit=4,
+    )
+
+    assert discovered[0].resolve(strict=False) == ssd_row.resolve(strict=False)
+    assert ssd_row.resolve(strict=False) in {
+        path.resolve(strict=False) for path in discovered
+    }
 
 
 def test_operator_briefing_nerv_plan_filters_feedback_authority_leaks(

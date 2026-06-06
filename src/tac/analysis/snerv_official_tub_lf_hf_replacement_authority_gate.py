@@ -51,6 +51,7 @@ SOURCE_AUTHORITY_BLOCKER = (
 FULL_REPLAY_BLOCKER = (
     "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
 )
+TUB_SOURCE_FIXTURE_BLOCKER = "snerv_official_tub_source_fixture_replay_missing"
 TRAINED_STATE_BLOCKER = "snerv_official_trained_checkpoint_state_dict_not_loaded"
 TRAINED_MAPPING_BLOCKER = "snerv_official_trained_checkpoint_state_dict_mapping_missing"
 WEIGHT_MAPPING_BLOCKER = "snerv_official_mfu_hfr_tub_weight_mapping_missing"
@@ -118,6 +119,15 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
     source_state = _source_state(source)
     checkpoint_state = _checkpoint_state(checkpoint, source_state)
     tub_state = _tub_state(tub, source_state)
+    tub_fixture_replay_ready = bool(
+        source_state["tub_source_fixture_replay_ready"]
+        or tub_state["fixture_source_replay_passed"]
+    )
+    tub_fixture_replay_blockers = (
+        []
+        if tub_fixture_replay_ready
+        else [TUB_SOURCE_FIXTURE_BLOCKER]
+    )
     gates = [
         _gate(
             "official_checkpoint_export_binding",
@@ -134,8 +144,14 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
             source_state["receiver_output2_frame_replay_blockers"],
         ),
         _gate(
-            "trained_checkpoint_state_dict_mapping",
+            "tub_source_fixture_replay",
             ["receiver_output2_frame_replay"],
+            tub_fixture_replay_ready,
+            tub_fixture_replay_blockers,
+        ),
+        _gate(
+            "trained_checkpoint_state_dict_mapping",
+            ["tub_source_fixture_replay"],
             checkpoint_state["trained_checkpoint_state_dict_mapping_ready"],
             checkpoint_state["trained_checkpoint_mapping_blockers"],
         ),
@@ -147,7 +163,7 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
         ),
         _gate(
             "full_tub_source_forward_replay",
-            ["tub_temporal_output2_weight_mapping"],
+            ["tub_source_fixture_replay", "tub_temporal_output2_weight_mapping"],
             source_state["full_tub_source_forward_replay_ready"],
             [
                 blocker
@@ -243,6 +259,7 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
         "receiver_output2_frame_replay_ready": source_state[
             "receiver_output2_frame_replay_ready"
         ],
+        "tub_source_fixture_replay_ready": tub_fixture_replay_ready,
         "trained_checkpoint_state_dict_mapping_ready": checkpoint_state[
             "trained_checkpoint_state_dict_mapping_ready"
         ],
@@ -322,6 +339,9 @@ def summarize_snerv_official_tub_lf_hf_replacement_authority_gates(
         "receiver_output2_frame_replay_ready": (
             selected.get("receiver_output2_frame_replay_ready") is True
         ),
+        "tub_source_fixture_replay_ready": (
+            selected.get("tub_source_fixture_replay_ready") is True
+        ),
         "trained_checkpoint_state_dict_mapping_ready": (
             selected.get("trained_checkpoint_state_dict_mapping_ready") is True
         ),
@@ -360,6 +380,7 @@ def render_snerv_official_tub_lf_hf_replacement_authority_gate_markdown(
         f"- replacement ready: `{report.get('official_tub_lf_hf_decoder_replacement_ready')}`",
         f"- checkpoint export binding ready: `{report.get('official_checkpoint_export_binding_ready')}`",
         f"- receiver output2 frame replay ready: `{report.get('receiver_output2_frame_replay_ready')}`",
+        f"- TUB source fixture replay ready: `{report.get('tub_source_fixture_replay_ready')}`",
         f"- trained checkpoint mapping ready: `{report.get('trained_checkpoint_state_dict_mapping_ready')}`",
         f"- full TUB source-forward replay ready: `{report.get('full_tub_source_forward_replay_ready')}`",
         f"- score claim: `{report.get('score_claim')}`",
@@ -489,6 +510,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
             "source_path": None,
             "source_sha256": None,
             "receiver_output2_frame_replay_ready": False,
+            "tub_source_fixture_replay_ready": False,
             "receiver_payload_source_forward_authority": False,
             "full_tub_source_forward_replay_ready": False,
             "closed_campaign_blockers": [],
@@ -511,6 +533,25 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
     consumes_output2 = replay.get("receiver_frame_decode_consumes_output2") is True
     payload_bytes = _positive_int(replay.get("payload_bytes"))
     payload_sha256 = str(replay.get("payload_sha256") or "").strip()
+    nested_tub = source.get("official_tub_source_forward_replay")
+    nested_tub = nested_tub if isinstance(nested_tub, Mapping) else {}
+    nested_tub_schema = (
+        nested_tub.get("schema")
+        if nested_tub.get("schema") == "snerv_official_tub_source_forward_replay.v1"
+        else None
+    )
+    nested_tub_fixture_ready = bool(
+        nested_tub_schema
+        and nested_tub.get(
+            "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+        )
+        is True
+    )
+    nested_tub_closed = (
+        list(nested_tub.get("closed_blockers") or ())
+        if nested_tub_fixture_ready
+        else []
+    )
     receiver_ready = bool(
         receiver_runtime_decode
         and frame_replay
@@ -519,10 +560,17 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         and len(payload_sha256) == 64
     )
     full_tub = source.get("full_tub_source_forward_parity_proven") is True
-    source_authority = replay.get("source_forward_replay_authority") is True and full_tub
+    source_authority = bool(
+        full_tub
+        and (
+            replay.get("source_forward_replay_authority") is True
+            or source.get("source_forward_replay_authority") is True
+        )
+    )
     closed = []
     if receiver_ready:
         closed.extend([RECEIVER_PAYLOAD_BLOCKER, FRAME_EXPORT_BLOCKER, OUTPUT2_BLOCKER])
+    closed.extend(nested_tub_closed)
     if source_authority:
         closed.extend([SOURCE_AUTHORITY_BLOCKER, FULL_REPLAY_BLOCKER])
     receiver_blockers = []
@@ -544,7 +592,15 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         "official_checkpoint_export_binding_evidence": source.get(
             "official_checkpoint_export_binding_evidence"
         ),
+        "official_trained_checkpoint_mapping_manifest": source.get(
+            "official_trained_checkpoint_mapping_manifest"
+        ),
         "receiver_output2_frame_replay_ready": receiver_ready,
+        "tub_source_fixture_replay_ready": nested_tub_fixture_ready,
+        "nested_tub_source_forward_artifact_schema": nested_tub_schema,
+        "nested_tub_source_forward_artifact_path": source.get("_source_path"),
+        "nested_tub_source_forward_artifact_sha256": source.get("_source_sha256"),
+        "nested_tub_source_fixture_closed_blockers": _dedupe(nested_tub_closed),
         "receiver_runtime_decode_proven": receiver_runtime_decode,
         "frame_producing_official_payload_replay_proven": frame_replay,
         "receiver_frame_decode_consumes_output2": consumes_output2,
@@ -611,28 +667,38 @@ def _checkpoint_state(
     )
     mapping = binding.get("official_trained_checkpoint_mapping_manifest")
     mapping = mapping if isinstance(mapping, Mapping) else {}
+    source_mapping = source_state.get("official_trained_checkpoint_mapping_manifest")
+    source_mapping = source_mapping if isinstance(source_mapping, Mapping) else {}
     state_slice = (
         binding.get("official_trained_checkpoint_state_dict_slice_present") is True
         or mapping.get("official_trained_checkpoint_loaded") is True
+        or source_mapping.get("official_trained_checkpoint_loaded") is True
     )
     combined_mfu_hfr_mapping = (
         binding.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven") is True
         or mapping.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven")
         is True
+        or source_mapping.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven")
+        is True
     )
     hfr_mapping = (
         binding.get("official_hfr_trained_checkpoint_weight_mapping_proven") is True
         or mapping.get("official_hfr_trained_checkpoint_weight_mapping_proven") is True
+        or source_mapping.get("official_hfr_trained_checkpoint_weight_mapping_proven")
+        is True
         or combined_mfu_hfr_mapping
     )
     mfu_mapping = (
         binding.get("official_mfu_trained_checkpoint_weight_mapping_proven") is True
         or mapping.get("official_mfu_trained_checkpoint_weight_mapping_proven") is True
+        or source_mapping.get("official_mfu_trained_checkpoint_weight_mapping_proven")
+        is True
         or combined_mfu_hfr_mapping
     )
     mfu_activation_bound = (
         binding.get("official_mfu_receiver_activation_payload_bound") is True
         or mapping.get("official_mfu_receiver_activation_payload_bound") is True
+        or source_mapping.get("official_mfu_receiver_activation_payload_bound") is True
     )
     mfu_hfr_mapping = (
         combined_mfu_hfr_mapping
@@ -641,13 +707,24 @@ def _checkpoint_state(
     tub_mapping = (
         binding.get("official_tub_temporal_encoder_weight_mapping_proven") is True
         or mapping.get("official_tub_temporal_encoder_weight_mapping_proven") is True
+        or source_mapping.get("official_tub_temporal_encoder_weight_mapping_proven")
+        is True
+    )
+    tub_output2_mapping = (
+        binding.get("official_tub_output2_decoder_weight_mapping_proven") is True
+        or mapping.get("official_tub_output2_decoder_weight_mapping_proven") is True
+        or source_mapping.get("official_tub_output2_decoder_weight_mapping_proven")
+        is True
+        or tub_mapping
     )
     mapping_verified = bool(
         binding.get("official_trained_checkpoint_state_dict_mapping_verified") is True
-        or (mfu_hfr_mapping and tub_mapping)
+        or source_mapping.get("official_trained_checkpoint_state_dict_mapping_verified")
+        is True
+        or (mfu_hfr_mapping and tub_mapping and tub_output2_mapping)
     )
     trained_ready = bool(state_slice and mfu_hfr_mapping)
-    tub_ready = bool(trained_ready and tub_mapping)
+    tub_ready = bool(trained_ready and tub_mapping and tub_output2_mapping)
     closed = []
     if export_bound:
         closed.append(EXPORT_BLOCKER)
@@ -657,6 +734,7 @@ def _checkpoint_state(
         closed.append(HFR_WEIGHT_MAPPING_BLOCKER)
     if mfu_mapping:
         closed.append(MFU_WEIGHT_MAPPING_BLOCKER)
+        closed.append(MFU_ACTIVATION_NOT_WEIGHT_BLOCKER)
     if mfu_hfr_mapping:
         closed.append(WEIGHT_MAPPING_BLOCKER)
     if mapping_verified:
@@ -721,7 +799,11 @@ def _checkpoint_state(
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": mfu_hfr_mapping,
         "official_mfu_receiver_activation_payload_bound": mfu_activation_bound,
         "official_tub_temporal_encoder_weight_mapping_proven": tub_mapping,
+        "official_tub_output2_decoder_weight_mapping_proven": tub_output2_mapping,
         "official_trained_checkpoint_mapping_manifest": dict(mapping) or None,
+        "official_source_trained_checkpoint_mapping_manifest": (
+            dict(source_mapping) or None
+        ),
         "trained_checkpoint_state_dict_mapping_ready": trained_ready,
         "tub_temporal_output2_weight_mapping_ready": tub_ready,
         "closed_campaign_blockers": _dedupe(closed),
@@ -737,6 +819,28 @@ def _tub_state(
     source_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     if tub is None:
+        nested_tub_schema = source_state.get("nested_tub_source_forward_artifact_schema")
+        nested_tub_ready = source_state.get("tub_source_fixture_replay_ready") is True
+        if nested_tub_schema:
+            return {
+                "schema": "snerv_official_tub_lf_hf_tub_source_state.v1",
+                "artifact_count": 1,
+                "selected_artifact_schema": nested_tub_schema,
+                "selected_artifact_source": "nested_in_source_forward_artifact",
+                "source_path": source_state.get("nested_tub_source_forward_artifact_path"),
+                "source_sha256": source_state.get("nested_tub_source_forward_artifact_sha256"),
+                "fixture_source_replay_passed": nested_tub_ready,
+                "full_tub_source_forward_parity_proven": bool(
+                    source_state.get("full_tub_source_forward_parity_proven")
+                    is True
+                ),
+                "closed_campaign_blockers": list(
+                    source_state.get("nested_tub_source_fixture_closed_blockers")
+                    or ()
+                ),
+                "blockers": [] if nested_tub_ready else [TUB_SOURCE_FIXTURE_BLOCKER],
+                **QUEUE_FALSE_AUTHORITY,
+            }
         return {
             "schema": "snerv_official_tub_lf_hf_tub_source_state.v1",
             "artifact_count": 0,

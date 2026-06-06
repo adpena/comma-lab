@@ -38,6 +38,10 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OfficialHfrConvBlock,
     OfficialHfrHeads,
 )
+from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
+    official_output2_fusion_mlx,
+    official_output2_fusion_shape,
+)
 
 if TYPE_CHECKING:
     from tac.substrates.snerv_inverse_steg_carrier.official_mfu import OfficialSnervMfu
@@ -693,6 +697,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         tub_next_frame: np.ndarray | None = None,
         tub_temporal_encoder_concat: np.ndarray | None = None,
         tub_output2_raw: np.ndarray | None = None,
+        tub_output2_fc_hw: tuple[int, int] | None = None,
     ) -> None:
         _require_mlx()
         super().__init__()
@@ -777,6 +782,27 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             tub_output2_raw,
             name="tub_output2_raw",
         )
+        self.tub_output2_fc_hw = _official_tub_output2_fc_hw_or_none(
+            tub_output2_fc_hw,
+            has_output2=(
+                self.tub_temporal_encoder_concat is not None
+                or self.tub_output2_raw is not None
+            ),
+        )
+        self.tub_output2_fused_shape = _official_tub_output2_fused_shape_or_none(
+            tub_temporal_encoder_concat,
+            tub_output2_raw,
+            fc_hw=self.tub_output2_fc_hw,
+        )
+        self.tub_output2_receiver_frame_shape = (
+            int(self.skip_high_full_shape[0]),
+            int(self.skip_high_full_shape[1]),
+            int(self.output_hw[0]),
+            int(self.output_hw[1]),
+        )
+        self.tub_output2_receiver_frame_bound = (
+            self.tub_output2_fused_shape == self.tub_output2_receiver_frame_shape
+        )
 
     def _import_hfr_heads(self, heads: OfficialHfrHeads) -> None:
         for name, head in zip(
@@ -838,6 +864,8 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         hl = self._hfr_head_forward("hl", mfu_out.pyr_out)
         hh = self._hfr_head_forward("hh", mfu_out.pyr_out)
         recon = _haar_idwt2_level_mlx_nchw(mfu_out.pyr_out, lh, hl, hh)
+        if self.tub_output2_receiver_frame_bound:
+            recon = self._apply_tub_output2_residual(recon, frame_indices)
         b = int(idx.shape[0])
         h, w = self.output_hw
         pair = recon.reshape((b, 2, 3, h, w))
@@ -983,6 +1011,16 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             ].astype(np.float64)
         if "tub.output2_raw" in state:
             components["tub_output2_raw"] = state["tub.output2_raw"].astype(np.float64)
+        if self.tub_output2_fc_hw is not None:
+            components["fc_hw"] = tuple(int(v) for v in self.tub_output2_fc_hw)
+        if self.tub_temporal_encoder_concat is not None:
+            components["temporal_encoder_output_shape"] = tuple(
+                int(v) for v in self.tub_temporal_encoder_concat.shape
+            )
+        if self.tub_output2_raw is not None:
+            components["output2_decoder_output_shape"] = tuple(
+                int(v) for v in self.tub_output2_raw.shape
+            )
         return components
 
     def metadata(self) -> dict[str, Any]:
@@ -1028,14 +1066,55 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
                 self.tub_temporal_encoder_concat is not None
                 and self.tub_output2_raw is not None
             ),
-            "official_tub_output2_receiver_frame_bound": False,
-            "official_tub_output2_payload_loss_coupled": False,
+            "official_tub_output2_fc_hw": (
+                [int(v) for v in self.tub_output2_fc_hw]
+                if self.tub_output2_fc_hw is not None
+                else None
+            ),
+            "official_tub_output2_fused_shape": (
+                [int(v) for v in self.tub_output2_fused_shape]
+                if self.tub_output2_fused_shape is not None
+                else None
+            ),
+            "official_tub_output2_receiver_frame_shape": [
+                int(v) for v in self.tub_output2_receiver_frame_shape
+            ],
+            "official_tub_output2_receiver_frame_bound": bool(
+                self.tub_output2_receiver_frame_bound
+            ),
+            "official_tub_output2_payload_loss_coupled": bool(
+                self.tub_output2_receiver_frame_bound
+            ),
             "receiver_export_payload_schema": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
             "source_forward_replay_authority": False,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+
+    def _apply_tub_output2_residual(self, recon: Any, frame_indices: Any) -> Any:
+        if (
+            self.tub_temporal_encoder_concat is None
+            or self.tub_output2_raw is None
+            or self.tub_output2_fc_hw is None
+        ):
+            raise SnervMlxRendererError(
+                "official TUB output2 residual requested without a complete "
+                "temporal/raw/fc_hw payload"
+            )
+        _decoder_input, output2_fused = official_output2_fusion_mlx(
+            self.tub_temporal_encoder_concat,
+            self.tub_output2_raw,
+            fc_hw=self.tub_output2_fc_hw,
+        )
+        residual = mx.take(output2_fused, frame_indices, axis=0)  # type: ignore[union-attr]
+        if tuple(int(v) for v in residual.shape) != tuple(int(v) for v in recon.shape):
+            raise SnervMlxRendererError(
+                "official TUB output2 residual shape must match selected "
+                f"receiver frames; got {tuple(int(v) for v in residual.shape)}, "
+                f"expected {tuple(int(v) for v in recon.shape)}"
+            )
+        return mx.clip(recon + residual, 0.0, 255.0)  # type: ignore[union-attr]
 
     def num_parameters(self) -> int:
         _require_mlx()
@@ -1108,6 +1187,50 @@ def _official_tub_optional_payload_tensor_mlx(
     if not np.isfinite(arr).all():
         raise SnervMlxRendererError(f"{name} contains non-finite values")
     return mx.array(arr.copy(), dtype=mx.float32)  # type: ignore[union-attr]
+
+
+def _official_tub_output2_fc_hw_or_none(
+    value: tuple[int, int] | None,
+    *,
+    has_output2: bool,
+) -> tuple[int, int] | None:
+    if not has_output2:
+        return None
+    if value is None:
+        raise SnervMlxRendererError(
+            "official TUB output2 payload requires tub_output2_fc_hw"
+        )
+    fc_hw = tuple(int(v) for v in value)
+    if len(fc_hw) != 2 or any(v <= 0 for v in fc_hw):
+        raise SnervMlxRendererError(
+            f"official TUB output2 fc_hw must be positive HW, got {value!r}"
+        )
+    return fc_hw
+
+
+def _official_tub_output2_fused_shape_or_none(
+    temporal_encoder_concat: np.ndarray | None,
+    output2_raw: np.ndarray | None,
+    *,
+    fc_hw: tuple[int, int] | None,
+) -> tuple[int, int, int, int] | None:
+    if temporal_encoder_concat is None and output2_raw is None:
+        return None
+    if temporal_encoder_concat is None or output2_raw is None or fc_hw is None:
+        raise SnervMlxRendererError(
+            "official TUB output2 payload requires temporal, raw, and fc_hw "
+            "shape controls"
+        )
+    temporal = np.asarray(temporal_encoder_concat, dtype=np.float32)
+    raw = np.asarray(output2_raw, dtype=np.float32)
+    shape = official_output2_fusion_shape(
+        tuple(int(v) for v in temporal.shape),
+        fc_hw=tuple(int(v) for v in fc_hw),
+        decoder_output_shape=tuple(int(v) for v in raw.shape),
+    )
+    if shape.fused_output2_shape is None:
+        raise SnervMlxRendererError("official TUB output2 fused shape is missing")
+    return tuple(int(v) for v in shape.fused_output2_shape)
 
 
 def _trainable_conv2d_nchw_mlx(x: Any, weight_oihw: Any, bias: Any, *, padding: int) -> Any:

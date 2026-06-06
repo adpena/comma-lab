@@ -61,6 +61,13 @@ EXACT_READY_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+EXACT_READY_QUEUE_SCAN_PATTERNS = (
+    "exact_ready_queue.json",
+    "*exact_ready_queue.json",
+    "*/*exact_ready_queue.json",
+    "*/*/*exact_ready_queue.json",
+    "*/*/*/*exact_ready_queue.json",
+)
 MATERIALIZER_HANDOFF_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
@@ -78,7 +85,6 @@ NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     Path("/Volumes/VertigoDataTier/pact/experiments/results"),
     Path("/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"),
-    Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact/experiments/results"),
     Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
 )
@@ -86,8 +92,9 @@ NERV_MODELSIZE_BUDGET_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
     REPO_ROOT / "experiments" / "results",
     Path("/Volumes/VertigoDataTier/pact/experiments/results"),
-    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"),
     Path("/Volumes/APDataStore/pact/experiments/results"),
+    Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
 )
 SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
@@ -113,8 +120,10 @@ DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS = (
 TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
-    Path("/Volumes/VertigoDataTier/pact"),
-    Path("/Volumes/APDataStore/pact"),
+    Path("/Volumes/VertigoDataTier/pact/experiments/results"),
+    Path("/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"),
+    Path("/Volumes/APDataStore/pact/experiments/results"),
+    Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
 )
 SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
@@ -123,6 +132,7 @@ FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
 NERV_CANDIDATE_FEEDBACK_ROW_NAMES = (
     "snerv_upstream_eval_candidate_feedback_row.json",
     "nerv_candidate_training_telemetry_feedback_row.json",
+    "nerv_candidate_byte_feedback_row.json",
     "nerv_candidate_feedback_row.json",
     "candidate_feedback_row.json",
 )
@@ -945,6 +955,7 @@ def _exact_ready_queue_audit() -> dict[str, object]:
     queues = discover_exact_ready_queues(
         repo_root=REPO_ROOT,
         scan_root=EXACT_READY_SCAN_ROOTS,
+        patterns=EXACT_READY_QUEUE_SCAN_PATTERNS,
     )
     payload = audit_exact_ready_queues(
         queues,
@@ -990,6 +1001,7 @@ def _format_exact_ready_queue_audit() -> str:
     return "\n".join(lines)
 
 
+@lru_cache(maxsize=1)
 def _exact_ready_score_axis_repair_summary() -> dict[str, object]:
     audit = _exact_ready_queue_audit()
     plan = plan_exact_ready_score_axis_repairs_from_audit(audit)
@@ -3672,23 +3684,42 @@ def _nerv_campaign_feedback_row_paths(
         scan_roots = NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS
     if limit <= 0:
         return []
-    names = (*NERV_CANDIDATE_FEEDBACK_ROW_NAMES, "*candidate_feedback*row*.json")
+    names = (
+        *NERV_CANDIDATE_FEEDBACK_ROW_NAMES,
+        "*candidate_feedback*row*.json",
+        "*candidate_byte_feedback*row*.json",
+    )
     patterns = tuple(
         pattern
         for name in names
         for pattern in (
             name,
             f"*/{name}",
+            f"*/*/{name}",
             f"experiments/results/*/{name}",
             f"experiments/results/*/*/{name}",
             f"nerv_long_training_campaigns/*/{name}",
             f"nerv_long_training_campaigns/*/*/{name}",
         )
     )
-    return _bounded_glob_paths(
-        scan_roots=scan_roots,
-        patterns=patterns,
-        max_candidates=max(48, limit * 8),
+    candidates: list[Path] = []
+    seen: set[Path] = set()
+    per_root_limit = max(24, limit * 4)
+    for root in scan_roots:
+        for path in _bounded_glob_paths(
+            scan_roots=(root,),
+            patterns=patterns,
+            max_candidates=per_root_limit,
+        ):
+            resolved = path.resolve(strict=False)
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            candidates.append(path)
+    return sorted(
+        candidates,
+        key=lambda item: (_path_mtime_ns(item), item.as_posix()),
+        reverse=True,
     )[:limit]
 
 
@@ -8271,9 +8302,7 @@ def _packet_is_terminal(packet: dict[str, object]) -> bool:
 def _dispatch_readiness() -> dict[str, object]:
     """Structured per-phase dispatch readiness used by JSON and human output."""
     exact_ready_audit = _exact_ready_queue_audit()
-    exact_ready_repairs = plan_exact_ready_score_axis_repairs_from_audit(
-        exact_ready_audit
-    )
+    exact_ready_repairs = _exact_ready_score_axis_repair_summary()
     materializer_handoffs = _materializer_exact_ready_handoff_summary()
     stale_rows = int(exact_ready_audit.get("stale_ready_row_count") or 0)
     exact_packets = _exact_eval_packet_summaries()

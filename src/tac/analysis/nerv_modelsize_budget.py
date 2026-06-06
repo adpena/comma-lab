@@ -790,6 +790,7 @@ def build_hinerv_config_from_size_knobs(
     convnext_kernel_size: int = 7,
     mid_injection_block_index: int = HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
     fine_injection_block_index: int = HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
+    init_seed: int = 0,
 ):
     """Build the current local HiNeRV config from compact size knobs."""
 
@@ -830,6 +831,7 @@ def build_hinerv_config_from_size_knobs(
         local_grid_channels=int(local_grid_channels),
         convnext_mlp_ratio=int(convnext_mlp_ratio),
         convnext_kernel_size=int(convnext_kernel_size),
+        init_seed=int(init_seed),
     )
 
 
@@ -871,6 +873,7 @@ def build_hinerv_config_from_modelsize_candidate(candidate: Mapping[str, Any]):
                 HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
             )
         ),
+        init_seed=int(candidate.get("init_seed", 0)),
     )
 
 

@@ -242,6 +242,88 @@ def _snerv_official_checkpoint_mapping_manifest_from_source(
     return {}
 
 
+def _snerv_official_checkpoint_state_slice_manifest(
+    *sources: Any,
+    source_path: Path | None = None,
+) -> dict[str, Any]:
+    """Return an exported checkpoint state slice that the runner can consume."""
+
+    for source in sources:
+        manifest = _snerv_official_checkpoint_state_slice_manifest_from_source(
+            source,
+            source_path=source_path,
+        )
+        if manifest:
+            return manifest
+    return {}
+
+
+def _snerv_official_checkpoint_state_slice_manifest_from_source(
+    source: Any,
+    *,
+    source_path: Path | None = None,
+) -> dict[str, Any]:
+    if not isinstance(source, Mapping):
+        return {}
+    raw_path = source.get("official_trained_checkpoint_state_dict_slice_path")
+    if raw_path:
+        path = _resolve_feedback_path(raw_path, source_path=source_path)
+        out: dict[str, Any] = {
+            "path": path.as_posix(),
+            "present": bool(
+                source.get("official_trained_checkpoint_state_dict_slice_present")
+            ),
+            "file_present": path.is_file(),
+            "runner_arg": source.get(
+                "official_trained_checkpoint_state_dict_slice_runner_arg"
+            ),
+        }
+        if source.get("official_trained_checkpoint_state_dict_slice_bytes") is not None:
+            out["bytes"] = int(source.get("official_trained_checkpoint_state_dict_slice_bytes") or 0)
+        if source.get("official_trained_checkpoint_state_dict_slice_sha256") is not None:
+            out["sha256"] = str(source.get("official_trained_checkpoint_state_dict_slice_sha256") or "")
+        if source.get("official_trained_checkpoint_state_dict_slice_member_count") is not None:
+            out["member_count"] = int(source.get("official_trained_checkpoint_state_dict_slice_member_count") or 0)
+        if isinstance(
+            source.get("official_trained_checkpoint_state_dict_slice_member_names"),
+            Sequence,
+        ) and not isinstance(
+            source.get("official_trained_checkpoint_state_dict_slice_member_names"),
+            (str, bytes, bytearray),
+        ):
+            out["member_names"] = list(
+                source.get("official_trained_checkpoint_state_dict_slice_member_names")
+                or []
+            )
+        return out
+    for key in (
+        "official_checkpoint_export_binding",
+        "official_mfu_hfr_tub_train_export",
+        "official_mfu_hfr_tub_source_forward_replay",
+        "score_aware_long_training",
+        "snerv_mlx_native_export",
+        "mlx_native_export",
+        "snerv_mlx_native_file_backed_export_evidence",
+    ):
+        nested = source.get(key)
+        manifest = _snerv_official_checkpoint_state_slice_manifest_from_source(
+            nested,
+            source_path=source_path,
+        )
+        if manifest:
+            return manifest
+    return {}
+
+
+def _resolve_feedback_path(value: Any, *, source_path: Path | None = None) -> Path:
+    raw = Path(str(value)).expanduser()
+    if raw.is_absolute():
+        return raw.resolve(strict=False)
+    if source_path is not None:
+        return (source_path.parent / raw).resolve(strict=False)
+    return raw.resolve(strict=False)
+
+
 def _snerv_trained_state_exportability(*sources: Any) -> bool | None:
     for source in sources:
         if not isinstance(source, Mapping):
@@ -876,7 +958,17 @@ def build_nerv_candidate_feedback_row(
         or {}
     )
     candidate = selection.get("candidate")
+    if not isinstance(candidate, Mapping):
+        candidate = runner_report.get("modelsize_candidate")
     candidate_row = dict(candidate) if isinstance(candidate, Mapping) else {}
+    command_args = _mapping_or_empty(runner_report.get("command_args"))
+    resolved_candidate_id = str(
+        candidate_row.get("candidate_id")
+        or curriculum.get("candidate_id")
+        or runner_report.get("modelsize_candidate_id")
+        or runner_report.get("candidate_id")
+        or ""
+    ).strip()
     source_path = (
         Path(source_report_path).expanduser().resolve(strict=False)
         if source_report_path
@@ -910,6 +1002,16 @@ def build_nerv_candidate_feedback_row(
             runner_report,
         )
     )
+    snerv_official_checkpoint_state_slice = (
+        _snerv_official_checkpoint_state_slice_manifest(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            score_aware_training,
+            runner_report,
+            source_path=source_path,
+        )
+    )
     snerv_trained_state_exportable = _snerv_trained_state_exportability(
         snerv_native_export,
         snerv_native_evidence,
@@ -917,8 +1019,32 @@ def build_nerv_candidate_feedback_row(
         score_aware_training,
         runner_report,
     )
-    snerv_native_scorer_loop = _mapping_or_empty(
-        snerv_native_export.get("scorer_loop_qat")
+    snerv_native_scorer_loop_raw = snerv_native_export.get("scorer_loop_qat")
+    snerv_native_scorer_loop_present = isinstance(
+        snerv_native_scorer_loop_raw,
+        Mapping,
+    )
+    snerv_native_scorer_loop = (
+        dict(snerv_native_scorer_loop_raw)
+        if snerv_native_scorer_loop_present
+        else {}
+    )
+    snerv_native_scorer_loop_qat_attached = (
+        snerv_native_scorer_loop.get("executed")
+        if snerv_native_scorer_loop_present
+        else snerv_native_export.get("scorer_loop_qat_attached")
+    )
+    snerv_native_scorer_loop_qat_accepted_improvement = (
+        snerv_native_scorer_loop.get("accepted_improvement")
+        if snerv_native_scorer_loop_present
+        else snerv_native_export.get("scorer_loop_qat_accepted_improvement")
+    )
+    snerv_native_scorer_loop_qat_best_materialized = (
+        snerv_native_scorer_loop.get(
+            "emitted_packet_uses_scorer_loop_best_decoder"
+        )
+        if snerv_native_scorer_loop_present
+        else snerv_native_export.get("scorer_loop_qat_best_materialized")
     )
     snerv_native_training_guard = (
         build_snerv_mlx_native_training_export_guard(snerv_native_export)
@@ -990,19 +1116,44 @@ def build_nerv_candidate_feedback_row(
         "byte_feedback_source"
     )
     candidate_num_pairs = native_byte_feedback.get(
-        "candidate_num_pairs", byte_feedback.get("candidate_num_pairs")
+        "candidate_num_pairs",
+        byte_feedback.get("candidate_num_pairs")
+        if byte_feedback.get("candidate_num_pairs") is not None
+        else candidate_row.get("num_pairs"),
     )
     measured_num_pairs = native_byte_feedback.get(
-        "measured_num_pairs", byte_feedback.get("measured_num_pairs")
+        "measured_num_pairs",
+        byte_feedback.get("measured_num_pairs")
+        if byte_feedback.get("measured_num_pairs") is not None
+        else runner_report.get("measured_num_pairs")
+        if runner_report.get("measured_num_pairs") is not None
+        else command_args.get("num_pairs"),
     )
     feedback_scope = native_byte_feedback.get(
         "feedback_scope", byte_feedback.get("feedback_scope")
     )
-    scope_matches_candidate = native_byte_feedback.get(
-        "scope_matches_candidate", bool(byte_feedback.get("scope_matches_candidate"))
-    )
+    raw_scope_matches_candidate = native_byte_feedback.get("scope_matches_candidate")
+    if raw_scope_matches_candidate is None:
+        raw_scope_matches_candidate = byte_feedback.get("scope_matches_candidate")
+    if raw_scope_matches_candidate is None:
+        target_pairs = _int_or_none(candidate_num_pairs)
+        measured_pairs = _int_or_none(measured_num_pairs)
+        scope_matches_candidate = bool(
+            target_pairs is not None
+            and measured_pairs is not None
+            and target_pairs == measured_pairs
+        )
+    else:
+        scope_matches_candidate = bool(raw_scope_matches_candidate)
+    if feedback_scope is None and snerv_score_aware_training_telemetry_contract:
+        feedback_scope = (
+            "full_candidate_score_aware_training_telemetry"
+            if scope_matches_candidate
+            else "bounded_score_aware_training_telemetry"
+        )
     feedback_ready = native_byte_feedback.get(
-        "feedback_ready", bool(byte_feedback.get("feedback_ready"))
+        "feedback_ready",
+        bool(byte_feedback.get("feedback_ready")),
     )
     measured_payload_bytes = native_byte_feedback.get(
         "measured_payload_bytes", byte_feedback.get("measured_payload_bytes")
@@ -1112,7 +1263,16 @@ def build_nerv_candidate_feedback_row(
         "source_report_sha256": _sha256_file(source_path) if source_path else None,
         "mode": runner_report.get("mode"),
         "family": runner_report.get("execute_family"),
-        "candidate_id": candidate_row.get("candidate_id") or curriculum.get("candidate_id"),
+        "candidate_id": resolved_candidate_id or None,
+        "feedback_kind": (
+            byte_feedback.get("feedback_kind")
+            or native_byte_feedback.get("feedback_kind")
+            or (
+                "score_aware_training_telemetry"
+                if snerv_score_aware_training_telemetry_contract
+                else None
+            )
+        ),
         "candidate_conditioned": bool(curriculum.get("candidate_conditioned")),
         "candidate_num_pairs": candidate_num_pairs,
         "measured_num_pairs": measured_num_pairs,
@@ -1298,6 +1458,51 @@ def build_nerv_candidate_feedback_row(
         "snerv_official_trained_checkpoint_mapping_manifest": (
             snerv_official_checkpoint_mapping or None
         ),
+        "snerv_official_trained_checkpoint_state_dict_path": (
+            snerv_official_checkpoint_state_slice.get("path")
+            if snerv_official_checkpoint_state_slice.get("file_present") is True
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_path": (
+            snerv_official_checkpoint_state_slice.get("path")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_present": (
+            snerv_official_checkpoint_state_slice.get("present")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_file_present": (
+            snerv_official_checkpoint_state_slice.get("file_present")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_bytes": (
+            snerv_official_checkpoint_state_slice.get("bytes")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_sha256": (
+            snerv_official_checkpoint_state_slice.get("sha256")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_member_count": (
+            snerv_official_checkpoint_state_slice.get("member_count")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_member_names": (
+            snerv_official_checkpoint_state_slice.get("member_names")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": (
+            snerv_official_checkpoint_state_slice.get("runner_arg")
+            if snerv_official_checkpoint_state_slice
+            else None
+        ),
         "snerv_official_trained_checkpoint_loaded": (
             snerv_official_checkpoint_mapping.get("official_trained_checkpoint_loaded")
             if snerv_official_checkpoint_mapping
@@ -1480,22 +1685,13 @@ def build_nerv_candidate_feedback_row(
         "snerv_mlx_native_file_backed_export_evidence": snerv_native_evidence or None,
         "snerv_mlx_native_file_backed_byte_feedback": native_byte_feedback or None,
         "snerv_mlx_native_scorer_loop_qat_attached": (
-            snerv_native_export.get("scorer_loop_qat_attached")
-            if "scorer_loop_qat_attached" in snerv_native_export
-            else snerv_native_scorer_loop.get("executed")
+            snerv_native_scorer_loop_qat_attached
         ),
         "snerv_mlx_native_scorer_loop_qat_accepted_improvement": (
-            snerv_native_export.get("scorer_loop_qat_accepted_improvement")
-            if "scorer_loop_qat_accepted_improvement" in snerv_native_export
-            else snerv_native_scorer_loop.get("accepted_improvement")
+            snerv_native_scorer_loop_qat_accepted_improvement
         ),
         "snerv_mlx_native_scorer_loop_qat_best_materialized": (
-            snerv_native_export.get("scorer_loop_qat_best_materialized")
-            if "scorer_loop_qat_best_materialized" in snerv_native_export
-            else snerv_native_scorer_loop.get(
-                "emitted_packet_uses_scorer_loop_best_decoder"
-            )
-            or snerv_native_scorer_loop.get("best_packet_materialized")
+            snerv_native_scorer_loop_qat_best_materialized
         ),
         "snerv_binary_profile_path": snerv_profile.get("profile_path"),
         "snerv_binary_profile_written": bool(snerv_profile.get("profile_written")),

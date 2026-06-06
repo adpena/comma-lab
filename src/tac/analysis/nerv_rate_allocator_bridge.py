@@ -762,6 +762,128 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                     )
                 )
                 continue
+            packet_gate = _snerv_scorer_loop_qat_packet_gate(unit)
+            if packet_gate["scale_ready"] is not True:
+                official_binding_required = bool(
+                    packet_gate["official_binding_required"]
+                )
+                orders.append(
+                    _work_order(
+                        work_order_id=(
+                            f"bind_{family}_{run_token}_scorer_loop_qat_receiver_packet"
+                        ),
+                        work_order_type=(
+                            "snerv_official_mfu_hfr_tub_scorer_loop_qat_binding"
+                            if official_binding_required
+                            else "snerv_scorer_loop_qat_receiver_packet_binding"
+                        ),
+                        target_consumers=[
+                            "final_rate_attack",
+                            "bit_allocator",
+                            "probe_disambiguator",
+                            "cathedral_autopilot",
+                            "continual_learning_posterior",
+                        ],
+                        planner_action=(
+                            "implement_official_mfu_hfr_tub_scorer_loop_qat_packet_binding"
+                            if official_binding_required
+                            else "materialize_scorer_loop_qat_receiver_packet_before_full600"
+                        ),
+                        source_unit_id=source_unit_id,
+                        priority=6 if official_binding_required else 8,
+                        receiver_precision_modes=[
+                            "fp16_protected",
+                            "int8_protected",
+                            "int4",
+                            "int2",
+                            "zero",
+                            "rle_only",
+                        ],
+                        rationale=(
+                            "do not scale a local SNeRV scorer-loop descent until "
+                            "the exact receiver packet that would be trained or "
+                            "exported is materialized; official MFU/HFR/TUB rows "
+                            "must preserve the official decoder payload and TUB "
+                            "output2 binding instead of substituting a generic LF/HF packet"
+                        ),
+                        payload={
+                            "family": family,
+                            "report_path": unit.get("report_path"),
+                            "axis_tag": unit.get("axis_tag"),
+                            "n_pairs": unit.get("n_pairs"),
+                            "levels": unit.get("levels"),
+                            "wavelet": unit.get("wavelet"),
+                            "qat_bits": unit.get("qat_bits"),
+                            "search_mode": unit.get("search_mode"),
+                            "score_delta_linf": unit.get("score_delta_linf"),
+                            "accepted_improvement": unit.get("accepted_improvement"),
+                            "ready_for_pose_guard_gate": unit.get(
+                                "ready_for_pose_guard_gate"
+                            ),
+                            "receiver_contract_satisfied": unit.get(
+                                "receiver_contract_satisfied"
+                            ),
+                            "best_packet_materialized": unit.get(
+                                "best_packet_materialized"
+                            )
+                            is True,
+                            "emitted_packet_uses_scorer_loop_best_decoder": unit.get(
+                                "emitted_packet_uses_scorer_loop_best_decoder"
+                            )
+                            is True,
+                            "emitted_packet_schema": unit.get(
+                                "emitted_packet_schema"
+                            ),
+                            "emitted_packet_wire_format": unit.get(
+                                "emitted_packet_wire_format"
+                            ),
+                            "emitted_packet_contest_submission_wire_format_ready": (
+                                unit.get(
+                                    "emitted_packet_contest_submission_wire_format_ready"
+                                )
+                                is True
+                            ),
+                            "best_packet_path": unit.get("best_packet_path"),
+                            "best_packet_bytes": unit.get("best_packet_bytes"),
+                            "best_packet_sha256": unit.get("best_packet_sha256"),
+                            "best_packet_schema": unit.get("best_packet_schema"),
+                            "best_packet_wire_format": unit.get(
+                                "best_packet_wire_format"
+                            ),
+                            "best_packet_contest_submission_wire_format_ready": (
+                                unit.get(
+                                    "best_packet_contest_submission_wire_format_ready"
+                                )
+                                is True
+                            ),
+                            "official_decoder_payload_binding_required": unit.get(
+                                "official_decoder_payload_binding_required"
+                            )
+                            is True,
+                            "official_decoder_payload_binding_preserved": unit.get(
+                                "official_decoder_payload_binding_preserved"
+                            )
+                            is True,
+                            "official_tub_output2_binding_required": unit.get(
+                                "official_tub_output2_binding_required"
+                            )
+                            is True,
+                            "official_tub_output2_binding_preserved": unit.get(
+                                "official_tub_output2_binding_preserved"
+                            )
+                            is True,
+                            "packet_gate": packet_gate,
+                            "result_sha256": unit.get("result_sha256"),
+                        },
+                        blockers=[
+                            *blockers,
+                            *packet_gate["blockers"],
+                            "snerv_scorer_loop_qat_full600_scale_blocked_until_receiver_packet_bound",
+                            "paired_contest_cpu_cuda_auth_eval_missing",
+                        ],
+                    )
+                )
+                continue
             section_value_rows = _mapping_list(unit.get("section_value_rows"))
             section_value_profile_blockers = (
                 [] if section_value_rows else ["section_value_profile_missing"]
@@ -829,9 +951,46 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                             "best_packet_materialized"
                         )
                         is True,
+                        "emitted_packet_uses_scorer_loop_best_decoder": unit.get(
+                            "emitted_packet_uses_scorer_loop_best_decoder"
+                        )
+                        is True,
+                        "emitted_packet_schema": unit.get("emitted_packet_schema"),
+                        "emitted_packet_wire_format": unit.get(
+                            "emitted_packet_wire_format"
+                        ),
+                        "emitted_packet_contest_submission_wire_format_ready": (
+                            unit.get(
+                                "emitted_packet_contest_submission_wire_format_ready"
+                            )
+                            is True
+                        ),
                         "best_packet_path": unit.get("best_packet_path"),
                         "best_packet_bytes": unit.get("best_packet_bytes"),
                         "best_packet_sha256": unit.get("best_packet_sha256"),
+                        "best_packet_schema": unit.get("best_packet_schema"),
+                        "best_packet_wire_format": unit.get("best_packet_wire_format"),
+                        "best_packet_contest_submission_wire_format_ready": (
+                            unit.get("best_packet_contest_submission_wire_format_ready")
+                            is True
+                        ),
+                        "official_decoder_payload_binding_required": unit.get(
+                            "official_decoder_payload_binding_required"
+                        )
+                        is True,
+                        "official_decoder_payload_binding_preserved": unit.get(
+                            "official_decoder_payload_binding_preserved"
+                        )
+                        is True,
+                        "official_tub_output2_binding_required": unit.get(
+                            "official_tub_output2_binding_required"
+                        )
+                        is True,
+                        "official_tub_output2_binding_preserved": unit.get(
+                            "official_tub_output2_binding_preserved"
+                        )
+                        is True,
+                        "packet_gate": packet_gate,
                         "best_pair_deltas": _mapping_list(
                             unit.get("best_pair_deltas")
                         ),
@@ -973,6 +1132,141 @@ def _work_order(
         "ready_for_exact_eval_dispatch": False,
         "predicted_delta_adjustment": 0.0,
     }
+
+
+def _snerv_scorer_loop_qat_packet_gate(unit: Mapping[str, Any]) -> dict[str, Any]:
+    best_packet_materialized = unit.get("best_packet_materialized") is True
+    best_packet_wire_format = _unit_best_packet_wire_format(unit)
+    best_packet_contest_ready = (
+        unit.get("best_packet_contest_submission_wire_format_ready") is True
+        or best_packet_wire_format == "snar2"
+    )
+    emitted_best_packet = (
+        unit.get("emitted_packet_uses_scorer_loop_best_decoder") is True
+    )
+    emitted_packet_wire_format = _unit_emitted_packet_wire_format(unit)
+    emitted_packet_contest_ready = (
+        unit.get("emitted_packet_contest_submission_wire_format_ready") is True
+        or emitted_packet_wire_format == "snar2"
+    )
+    official_decoder_required = (
+        unit.get("official_decoder_payload_binding_required") is True
+    )
+    official_tub_required = unit.get("official_tub_output2_binding_required") is True
+    official_binding_required = bool(official_decoder_required or official_tub_required)
+    official_decoder_preserved = (
+        not official_decoder_required
+        or unit.get("official_decoder_payload_binding_preserved") is True
+    )
+    official_tub_preserved = (
+        not official_tub_required
+        or unit.get("official_tub_output2_binding_preserved") is True
+    )
+    generic_receiver_packet_ready = bool(
+        (best_packet_materialized and best_packet_contest_ready)
+        or (emitted_best_packet and emitted_packet_contest_ready)
+    )
+    scale_ready = generic_receiver_packet_ready
+    blockers: list[str] = []
+    if not generic_receiver_packet_ready:
+        blockers.append("snerv_scorer_loop_qat_best_receiver_packet_missing")
+    if best_packet_materialized and not emitted_best_packet and not best_packet_contest_ready:
+        blockers.append(
+            "snerv_scorer_loop_qat_best_packet_snar2_repack_required"
+            if best_packet_wire_format == "snar1"
+            else "snerv_scorer_loop_qat_best_packet_wire_format_missing"
+        )
+    if emitted_best_packet and not emitted_packet_contest_ready:
+        blockers.append(
+            "snerv_scorer_loop_qat_emitted_packet_snar2_repack_required"
+            if emitted_packet_wire_format == "snar1"
+            else "snerv_scorer_loop_qat_emitted_packet_wire_format_missing"
+        )
+    if official_binding_required:
+        if not emitted_best_packet:
+            blockers.append(
+                "snerv_official_scorer_loop_qat_best_packet_not_emitted_into_native_export"
+            )
+        if not official_decoder_preserved:
+            blockers.append(
+                "snerv_scorer_loop_qat_best_packet_rejected_official_payload_mismatch"
+            )
+        if not official_tub_preserved:
+            blockers.append(
+                "snerv_scorer_loop_qat_best_packet_rejected_official_tub_output2_binding_mismatch"
+            )
+        scale_ready = bool(
+            emitted_best_packet
+            and emitted_packet_contest_ready
+            and official_decoder_preserved
+            and official_tub_preserved
+        )
+    return {
+        "schema": "snerv_scorer_loop_qat_receiver_packet_gate.v1",
+        "best_packet_materialized": best_packet_materialized,
+        "best_packet_wire_format": best_packet_wire_format,
+        "best_packet_contest_submission_wire_format_ready": best_packet_contest_ready,
+        "emitted_packet_uses_scorer_loop_best_decoder": emitted_best_packet,
+        "emitted_packet_wire_format": emitted_packet_wire_format,
+        "emitted_packet_contest_submission_wire_format_ready": (
+            emitted_packet_contest_ready
+        ),
+        "official_binding_required": official_binding_required,
+        "official_decoder_payload_binding_required": official_decoder_required,
+        "official_decoder_payload_binding_preserved": official_decoder_preserved,
+        "official_tub_output2_binding_required": official_tub_required,
+        "official_tub_output2_binding_preserved": official_tub_preserved,
+        "generic_receiver_packet_ready": generic_receiver_packet_ready,
+        "scale_ready": bool(scale_ready),
+        "blockers": blockers,
+    }
+
+
+def _unit_emitted_packet_wire_format(unit: Mapping[str, Any]) -> str | None:
+    binding = (
+        unit.get("scorer_loop_best_packet_binding")
+        if isinstance(unit.get("scorer_loop_best_packet_binding"), Mapping)
+        else {}
+    )
+    for value in (
+        unit.get("emitted_packet_wire_format"),
+        binding.get("emitted_packet_wire_format"),
+    ):
+        text = str(value or "").strip().lower()
+        if text in {"snar1", "snar2"}:
+            return text
+    schema = str(unit.get("emitted_packet_schema") or binding.get("emitted_packet_schema") or "")
+    if schema.endswith(".snar2.v1"):
+        return "snar2"
+    if schema == "snerv_inverse_steg_archive.v1":
+        return "snar1"
+    return None
+
+
+def _unit_best_packet_wire_format(unit: Mapping[str, Any]) -> str | None:
+    materialization = (
+        unit.get("best_packet_materialization")
+        if isinstance(unit.get("best_packet_materialization"), Mapping)
+        else {}
+    )
+    for value in (
+        unit.get("best_packet_wire_format"),
+        materialization.get("best_packet_wire_format"),
+        unit.get("archive_packet_wire_format"),
+    ):
+        text = str(value or "").strip().lower()
+        if text in {"snar1", "snar2"}:
+            return text
+    schema = str(
+        unit.get("best_packet_schema")
+        or materialization.get("best_packet_schema")
+        or ""
+    )
+    if schema.endswith(".snar2.v1"):
+        return "snar2"
+    if schema == "snerv_inverse_steg_archive.v1":
+        return "snar1"
+    return None
 
 
 def _precision_modes_for_control(control_id: str) -> list[str]:

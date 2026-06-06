@@ -57,6 +57,7 @@ HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA = NERV_DISTORTION_CRUX_SCHEMA
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION = 1.0e-3
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS = 2
 SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
+SEGNET_ARGMAX_MIN_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE = 0.8
 DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE = 1.0e-2
 DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE = 0.25
 DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_STD_FOR_FIT_GATE = 0.25
@@ -91,6 +92,9 @@ def write_hi_nerv_receiver_cache_quality_report(
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
     min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
         SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
+    min_segnet_argmax_target_class_coverage_fraction_for_fit_gate: float = (
+        SEGNET_ARGMAX_MIN_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
     ),
     require_segnet_argmax_probe: bool = True,
     segnet_argmax_probe_logits_fn: Any | None = None,
@@ -225,6 +229,9 @@ def write_hi_nerv_receiver_cache_quality_report(
                             min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
                                 min_segnet_argmax_occupied_class_fraction_for_fit_gate
                             ),
+                            min_segnet_argmax_target_class_coverage_fraction_for_fit_gate=float(
+                                min_segnet_argmax_target_class_coverage_fraction_for_fit_gate
+                            ),
                             segnet_logits_fn=segnet_argmax_probe_logits_fn,
                         )
                     )
@@ -247,6 +254,9 @@ def write_hi_nerv_receiver_cache_quality_report(
                             ),
                             min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
                                 min_segnet_argmax_occupied_class_fraction_for_fit_gate
+                            ),
+                            min_segnet_argmax_target_class_coverage_fraction_for_fit_gate=float(
+                                min_segnet_argmax_target_class_coverage_fraction_for_fit_gate
                             ),
                         )
                     )
@@ -875,6 +885,9 @@ def write_hi_nerv_receiver_cache_segnet_argmax_probe(
     min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
         SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
     ),
+    min_segnet_argmax_target_class_coverage_fraction_for_fit_gate: float = (
+        SEGNET_ARGMAX_MIN_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
+    ),
 ) -> dict[str, Any]:
     """Run real SegNet argmax disagreement on receiver-cache RGB tensors.
 
@@ -897,6 +910,9 @@ def write_hi_nerv_receiver_cache_segnet_argmax_probe(
         min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
             min_segnet_argmax_occupied_class_fraction_for_fit_gate
         ),
+        min_segnet_argmax_target_class_coverage_fraction_for_fit_gate=(
+            min_segnet_argmax_target_class_coverage_fraction_for_fit_gate
+        ),
     )
     out = Path(output_json).expanduser().resolve(strict=False)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -916,6 +932,9 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
     min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
         SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
+    min_segnet_argmax_target_class_coverage_fraction_for_fit_gate: float = (
+        SEGNET_ARGMAX_MIN_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
     ),
     segnet_logits_fn: Any | None = None,
 ) -> dict[str, Any]:
@@ -943,6 +962,14 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         raise ValueError(
             "min_segnet_argmax_occupied_class_fraction_for_fit_gate must be "
             f"in [0, 1], got {min_candidate_occupied_class_fraction}"
+        )
+    min_target_class_coverage_fraction = float(
+        min_segnet_argmax_target_class_coverage_fraction_for_fit_gate
+    )
+    if not 0.0 <= min_target_class_coverage_fraction <= 1.0:
+        raise ValueError(
+            "min_segnet_argmax_target_class_coverage_fraction_for_fit_gate must be "
+            f"in [0, 1], got {min_target_class_coverage_fraction}"
         )
 
     candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
@@ -1011,6 +1038,10 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     ]
     candidate_occupancy = _argmax_histogram_occupancy(candidate_histogram)
     reference_occupancy = _argmax_histogram_occupancy(reference_histogram)
+    target_class_coverage = _argmax_histogram_target_class_coverage(
+        candidate_histogram,
+        reference_histogram,
+    )
     candidate_occupied_class_fraction = candidate_occupancy[
         "occupied_class_fraction"
     ]
@@ -1026,6 +1057,15 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     )
     if class_collapse:
         blockers.append("hi_nerv_receiver_cache_segnet_argmax_class_collapse")
+    target_class_collapse = (
+        target_class_coverage["target_material_class_count"] > 0
+        and target_class_coverage["candidate_target_class_coverage_fraction"]
+        < min_target_class_coverage_fraction
+    )
+    if target_class_collapse:
+        blockers.append(
+            "hi_nerv_receiver_cache_segnet_argmax_target_class_coverage_collapse"
+        )
 
     return {
         "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
@@ -1068,12 +1108,43 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         "reference_any_occupied_class_fraction": reference_occupancy[
             "any_occupied_class_fraction"
         ],
+        "candidate_target_class_coverage_fraction": target_class_coverage[
+            "candidate_target_class_coverage_fraction"
+        ],
+        "candidate_target_any_class_coverage_fraction": target_class_coverage[
+            "candidate_target_any_class_coverage_fraction"
+        ],
+        "candidate_target_class_min_ratio": target_class_coverage[
+            "candidate_target_class_min_ratio"
+        ],
+        "target_material_class_count": target_class_coverage[
+            "target_material_class_count"
+        ],
+        "target_any_class_count": target_class_coverage["target_any_class_count"],
+        "candidate_target_material_class_covered_count": target_class_coverage[
+            "candidate_target_material_class_covered_count"
+        ],
+        "candidate_target_any_class_covered_count": target_class_coverage[
+            "candidate_target_any_class_covered_count"
+        ],
+        "candidate_target_class_covered": target_class_coverage[
+            "candidate_target_class_covered"
+        ],
+        "candidate_target_any_class_covered": target_class_coverage[
+            "candidate_target_any_class_covered"
+        ],
+        "candidate_target_class_ratio": target_class_coverage[
+            "candidate_target_class_ratio"
+        ],
         "candidate_top2_margin": _margin_stats(cand_margin),
         "reference_top2_margin": _margin_stats(ref_margin),
         "thresholds": {
             "max_segnet_argmax_disagreement_for_fit_gate": threshold,
             "min_candidate_occupied_class_fraction": (
                 min_candidate_occupied_class_fraction
+            ),
+            "min_candidate_target_class_coverage_fraction": (
+                min_target_class_coverage_fraction
             ),
             "min_class_pixel_fraction_for_occupancy": (
                 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION
@@ -1082,7 +1153,11 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
                 "min_class_pixel_count"
             ],
         },
-        "fit_gate_passed": disagreement <= threshold and not class_collapse,
+        "fit_gate_passed": (
+            disagreement <= threshold
+            and not class_collapse
+            and not target_class_collapse
+        ),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -1179,6 +1254,72 @@ def _argmax_histogram_occupancy(values: list[int]) -> dict[str, Any]:
         "any_occupied_class_fraction": float(any_occupied / len(values)),
         "min_class_pixel_count": int(min_count),
         "min_class_pixel_fraction": min_fraction,
+    }
+
+
+def _argmax_histogram_target_class_coverage(
+    candidate_values: list[int],
+    reference_values: list[int],
+) -> dict[str, Any]:
+    class_count = max(len(candidate_values), len(reference_values), 1)
+    candidate = [
+        max(0, int(candidate_values[i])) if i < len(candidate_values) else 0
+        for i in range(class_count)
+    ]
+    reference = [
+        max(0, int(reference_values[i])) if i < len(reference_values) else 0
+        for i in range(class_count)
+    ]
+    ref_total = sum(reference)
+    min_count = max(
+        SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS,
+        math.ceil(ref_total * SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION),
+    )
+    target_any_count = sum(1 for value in reference if value > 0)
+    target_material_count = sum(1 for value in reference if value >= min_count)
+    any_covered = [
+        bool(reference[i] > 0 and candidate[i] > 0) for i in range(class_count)
+    ]
+    material_covered = [
+        bool(
+            reference[i] >= min_count
+            and candidate[i] >= min(min_count, reference[i])
+        )
+        for i in range(class_count)
+    ]
+    ratios = [
+        1.0
+        if reference[i] <= 0
+        else min(1.0, float(candidate[i] / max(reference[i], 1)))
+        for i in range(class_count)
+    ]
+    material_covered_count = sum(1 for value in material_covered if value)
+    any_covered_count = sum(1 for value in any_covered if value)
+    target_present_ratios = [
+        ratios[i] for i in range(class_count) if reference[i] > 0
+    ]
+    return {
+        "candidate_target_class_coverage_fraction": (
+            float(material_covered_count / target_material_count)
+            if target_material_count > 0
+            else 1.0
+        ),
+        "candidate_target_any_class_coverage_fraction": (
+            float(any_covered_count / target_any_count)
+            if target_any_count > 0
+            else 1.0
+        ),
+        "candidate_target_class_min_ratio": (
+            float(min(target_present_ratios)) if target_present_ratios else 1.0
+        ),
+        "target_material_class_count": int(target_material_count),
+        "target_any_class_count": int(target_any_count),
+        "candidate_target_material_class_covered_count": int(material_covered_count),
+        "candidate_target_any_class_covered_count": int(any_covered_count),
+        "candidate_target_class_covered": material_covered,
+        "candidate_target_any_class_covered": any_covered,
+        "candidate_target_class_ratio": ratios,
+        "min_class_pixel_count_for_target_coverage": int(min_count),
     }
 
 

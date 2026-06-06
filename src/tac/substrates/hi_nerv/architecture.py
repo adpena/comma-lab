@@ -151,6 +151,9 @@ class HinervConfig:
     convnext_kernel_size: int = 7
     """Depthwise kernel size for the ConvNeXt-style block."""
 
+    init_seed: int = 0
+    """Deterministic MLX/Torch initialization seed for train-time reproducibility."""
+
 
 def trilinear_upsample(
     grid: torch.Tensor,

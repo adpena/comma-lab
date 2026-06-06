@@ -299,7 +299,6 @@ def _official_mfu_hfr_tub_export_blockers(
         for value in observed
         if value.startswith("snerv_official_mfu_hfr_tub_")
     ]
-    tensor_map_verified = _official_receiver_tensor_map_verified(advisory_result)
     if export_bound:
         blockers = [
             value
@@ -307,12 +306,6 @@ def _official_mfu_hfr_tub_export_blockers(
             if value
             != "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
         ]
-        if tensor_map_verified:
-            blockers = [
-                value
-                for value in blockers
-                if value != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
-            ]
         for fallback in SNERV_OFFICIAL_MFU_HFR_TUB_POST_EXPORT_BLOCKERS:
             if fallback not in blockers:
                 blockers.append(fallback)

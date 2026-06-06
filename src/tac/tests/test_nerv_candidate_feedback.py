@@ -1274,6 +1274,70 @@ def test_snerv_candidate_feedback_harvests_runner_level_tether_evidence(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_candidate_feedback_requires_qat_best_packet_to_be_emitted(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    report["snerv_mlx_native_export"]["scorer_loop_qat_best_materialized"] = True
+    report["snerv_mlx_native_export"]["scorer_loop_qat"] = {
+        "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+        "executed": True,
+        "accepted_improvement": True,
+        "receiver_contract_satisfied": True,
+        "ready_for_pose_guard_gate": True,
+        "best_packet_materialized": True,
+        "emitted_packet_uses_scorer_loop_best_decoder": False,
+        "blockers": [
+            "snerv_scorer_loop_qat_best_packet_rejected_official_tub_output2_binding_mismatch",
+            "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export",
+        ],
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["snerv_mlx_native_scorer_loop_qat_attached"] is True
+    assert row["snerv_mlx_native_scorer_loop_qat_accepted_improvement"] is True
+    assert row["snerv_mlx_native_scorer_loop_qat_best_materialized"] is False
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_candidate_feedback_nested_scorer_loop_overrides_legacy_qat_flags(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    report["snerv_mlx_native_export"].update(
+        {
+            "scorer_loop_qat_attached": True,
+            "scorer_loop_qat_accepted_improvement": True,
+            "scorer_loop_qat_best_materialized": True,
+            "scorer_loop_qat": {
+                "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+                "executed": False,
+                "accepted_improvement": False,
+                "best_packet_materialized": True,
+                "emitted_packet_uses_scorer_loop_best_decoder": False,
+            },
+        }
+    )
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["snerv_mlx_native_scorer_loop_qat_attached"] is False
+    assert row["snerv_mlx_native_scorer_loop_qat_accepted_improvement"] is False
+    assert row["snerv_mlx_native_scorer_loop_qat_best_materialized"] is False
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_candidate_feedback_emits_scorer_input_distribution_guard_proof(
     tmp_path: Path,
 ) -> None:

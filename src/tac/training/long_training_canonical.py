@@ -126,6 +126,7 @@ __all__ = [
     "CANONICAL_EMA_DECAY",
     "CANONICAL_NON_PROMOTABLE_MARKERS",
     "CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE",
+    "CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE",
     "DEFAULT_CHECKPOINT_INTERVAL_EPOCHS",
     "DEFAULT_CHECKPOINT_RETENTION_KEEP_BEST_N",
     "DEFAULT_CHECKPOINT_RETENTION_KEEP_LAST_N",
@@ -188,6 +189,7 @@ DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS: int = 10
 EMA_ACCUMULATION_MODES: frozenset[str] = frozenset({"kahan", "naive"})
 CONTEST_RATE_SCORE_PER_BYTE: float = 25.0 / 37_545_489.0
 CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
+CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE = 1.0
 
 # Canonical schema version for TrainingArtifact JSON emission.
 TRAINING_ARTIFACT_SCHEMA_VERSION: str = "long_training_canonical_artifact.v1"
@@ -2895,6 +2897,24 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _archive_selection_written_archive_evidence(candidate_dir: Path) -> dict[str, Any]:
+    """Return archive evidence emitted before a selector failure, if present."""
+
+    archive_path = candidate_dir / "archive.zip"
+    if not archive_path.is_file():
+        return {}
+    archive_bytes = archive_path.stat().st_size
+    return {
+        "archive_path": archive_path.as_posix(),
+        "archive_sha256": _sha256_file(archive_path),
+        "archive_bytes": int(archive_bytes),
+        "emitted_archive_available": True,
+        "emitted_archive_evidence_source": (
+            "candidate_archive_zip_written_before_selection_failure"
+        ),
+    }
+
+
 def _archive_selection_components(
     adapter: SubstrateLongTrainingAdapter,
     config: LongTrainingConfig,
@@ -2981,33 +3001,75 @@ def _archive_selection_proxy_score(
     return proxy
 
 
-def _archive_selection_health_sort_key(row: Mapping[str, Any]) -> tuple[int, float]:
+def _finite_component(
+    components: Mapping[str, Any],
+    key: str,
+) -> float | None:
+    raw = components.get(key)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(value):
+        return None
+    return value
+
+
+def _archive_selection_health_sort_key(
+    row: Mapping[str, Any]
+) -> tuple[int, float, float, float]:
     """Return hard health tier before proxy-score archive selection.
 
     Training-time direct-live SegNet escape can be erased by EMA smoothing.
-    When an adapter exposes candidate occupied-class fraction, prefer any
-    non-collapsed archive view over a proxy-cheaper but class-collapsed view.
+    When an adapter exposes target-class coverage, prefer an archive view that
+    preserves the material target classes the upstream SegNet actually sees.
+    Older adapters that only expose occupied-class fraction retain the previous
+    non-collapse sort behavior.
     """
 
     components = row.get("score_components")
     if not isinstance(components, Mapping):
-        return (0, 0.0)
-    raw = components.get(
+        return (0, 0.0, 0.0, 0.0)
+    occupied = _finite_component(
+        components,
         "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
     )
-    try:
-        occupied = float(raw)
-    except (TypeError, ValueError):
-        return (0, 0.0)
-    if not math.isfinite(occupied):
-        return (0, 0.0)
+    target_coverage = _finite_component(
+        components,
+        "selection_health_segnet_direct_live_candidate_target_class_coverage_fraction",
+    )
+    target_any_coverage = _finite_component(
+        components,
+        "selection_health_segnet_direct_live_candidate_target_any_class_coverage_fraction",
+    )
+    target_min_ratio = _finite_component(
+        components,
+        "selection_health_segnet_direct_live_candidate_target_class_min_ratio",
+    )
+    if occupied is None and target_coverage is None and target_any_coverage is None:
+        return (0, 0.0, 0.0, 0.0)
+    effective_target_coverage = (
+        target_coverage if target_coverage is not None else target_any_coverage
+    )
+    target_collapsed = (
+        effective_target_coverage is not None
+        and effective_target_coverage
+        < CANONICAL_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
+    )
     # Match the receiver/export SegNet argmax survival gate: two occupied
     # classes out of five is still a collapse for scorer-faithful HiNeRV.
-    collapsed = (
-        occupied
+    occupied_collapsed = (
+        occupied is not None
+        and occupied
         < CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
     )
-    return (1 if collapsed else 0, -occupied)
+    tier = 2 if target_collapsed else 1 if occupied_collapsed else 0
+    return (
+        tier,
+        -(effective_target_coverage or 0.0),
+        -(target_min_ratio or 0.0),
+        -(occupied or 0.0),
+    )
 
 
 def _export_live_ema_archive_selection(
@@ -3029,13 +3091,24 @@ def _export_live_ema_archive_selection(
     manifest_path = selection_dir / "ema_archive_selection.json"
     rows: list[dict[str, Any]] = []
 
-    def _record_failure(kind: str, exc: Exception) -> None:
+    def _record_failure(
+        kind: str,
+        exc: Exception,
+        *,
+        candidate_dir: Path | None = None,
+    ) -> None:
+        written_archive_evidence = (
+            _archive_selection_written_archive_evidence(candidate_dir)
+            if candidate_dir is not None
+            else {}
+        )
         rows.append(
             {
                 "schema": "long_training_archive_selection_candidate.v1",
                 "candidate_kind": kind,
                 "status": "failed",
                 "failure": f"{type(exc).__name__}:{exc!s}",
+                **written_archive_evidence,
                 **CANONICAL_NON_PROMOTABLE_MARKERS,
             }
         )
@@ -3096,7 +3169,7 @@ def _export_live_ema_archive_selection(
                 }
             )
         except Exception as exc:
-            _record_failure(kind, exc)
+            _record_failure(kind, exc, candidate_dir=candidate_dir)
 
     _export_candidate("live", seed_offset=2_000_000)
     live_snapshot = ema_shadow.apply_to(adapter.model)

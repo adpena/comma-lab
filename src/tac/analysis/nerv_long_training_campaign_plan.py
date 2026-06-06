@@ -103,11 +103,44 @@ DEFAULT_HINERV_SEGNET_DIRECT_LIVE_DISTILLATION_WEIGHT = 0.25
 DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_HISTOGRAM_WEIGHT = 0.25
 DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_HINGE_WEIGHT = 0.5
 DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_CE_WEIGHT = 0.25
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_SQUARED_HINGE_WEIGHT = 0.25
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_REGION_RECON_WEIGHT = 0.25
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_RARE_CLASS_LOGIT_WEIGHT = 16.0
+DEFAULT_HINERV_POSE_DIRECT_LIVE_DISTILLATION_WEIGHT = 0.25
 DEFAULT_HINERV_SEGNET_DIRECT_LIVE_OBJECTIVE = "boundary_argmax_hinge"
 DEFAULT_HINERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT = 2.0
 DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_WEIGHT = 0.5
 DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO = 0.6
 DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO = 0.6
+DEFAULT_HINERV_SCORER_INPUT_SHAPE_TETHER_WEIGHT = 0.25
+DEFAULT_HINERV_SCORER_STEP_GUARD_TARGET_CLASS_COVERAGE_FRACTION = 1.0
+DEFAULT_HINERV_SCORER_STEP_GUARD_TARGET_CLASS_MIN_RATIO = 0.2
+DEFAULT_HINERV_SCORER_STEP_GUARD_TARGET_CLASS_MAX_RATIO_DROP = 0.05
+# HiNeRV short smokes on 2026-06-06 showed the dense YUV6 geometry tether is a
+# real actuator but a poor default: it improved PoseNet proxy terms while
+# burning SegNet argmax/distribution score. Keep it opt-in until a late-stage
+# or dynamic schedule proves positive value-per-byte.
+DEFAULT_HINERV_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT = 0.0
+DEFAULT_HINERV_POSENET_TEMPORAL_SIGNAL_FLOOR_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_DISTILLATION_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_HISTOGRAM_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_HINGE_WEIGHT = 0.5
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_CE_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_SQUARED_HINGE_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_REGION_RECON_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_RARE_CLASS_LOGIT_WEIGHT = 4.0
+DEFAULT_SNERV_POSE_DIRECT_LIVE_DISTILLATION_WEIGHT = 0.25
+DEFAULT_SNERV_SEGNET_DIRECT_LIVE_OBJECTIVE = "boundary_argmax_hinge"
+DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT = 2.0
+DEFAULT_SNERV_SCORER_INPUT_CONTRAST_FLOOR_WEIGHT = 0.5
+DEFAULT_SNERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO = 0.6
+DEFAULT_SNERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO = 0.6
+DEFAULT_SNERV_SCORER_INPUT_SHAPE_TETHER_WEIGHT = 0.25
+DEFAULT_SNERV_SCORER_STEP_GUARD_TARGET_CLASS_COVERAGE_FRACTION = 1.0
+DEFAULT_SNERV_SCORER_STEP_GUARD_TARGET_CLASS_MIN_RATIO = 0.2
+DEFAULT_SNERV_SCORER_STEP_GUARD_TARGET_CLASS_MAX_RATIO_DROP = 0.05
+DEFAULT_SNERV_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT = 0.5
+DEFAULT_SNERV_POSENET_TEMPORAL_SIGNAL_FLOOR_WEIGHT = 0.25
 # Do not classify the first 9e-5 pose-spike as repeated low-LR failure: its
 # telemetry explicitly requested a 2.7e-5 recovery run. The Huber path is real,
 # but it is reserved for repeated instability at or below that recovered regime;
@@ -466,6 +499,44 @@ def _snerv_scorer_tether_smoke_gate(
     }
 
 
+def _snerv_scorer_tether_smoke_gate_with_candidate_feedback(
+    gate: Mapping[str, Any],
+    feedback: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Let attached candidate feedback satisfy the tether gate, fail-closed."""
+
+    out = dict(gate)
+    if out.get("passed") is True:
+        return out
+    health = feedback.get("snerv_scorer_domain_tether_health")
+    if not isinstance(health, Mapping) or health.get("passed") is not True:
+        return out
+    blockers = [
+        str(blocker)
+        for blocker in out.get("blockers") or []
+        if str(blocker) != "snerv_scorer_tether_smoke_report_missing"
+    ]
+    out.update(
+        {
+            "attached": True,
+            "passed": not blockers,
+            "source_schema": health.get("schema"),
+            "source_metric_summary": health.get("metric_health"),
+            "source": "candidate_feedback_snerv_scorer_domain_tether_health",
+            "candidate_feedback_source_report_path": feedback.get("source_report_path"),
+            "blockers": _dedupe(blockers),
+        }
+    )
+    return out
+
+
+def _snerv_candidate_feedback_scorer_input_guard_passed(
+    feedback: Mapping[str, Any],
+) -> bool:
+    proof = feedback.get("snerv_scorer_input_distribution_guard_proof")
+    return bool(isinstance(proof, Mapping) and proof.get("passed") is True)
+
+
 def _snerv_renderer_nondegenerate_gate(
     *,
     feedback: Mapping[str, Any],
@@ -610,6 +681,13 @@ def build_nerv_long_training_campaign_plan(
     snerv_lf_super_resolution_receiver_payload_proofs: Sequence[
         Mapping[str, Any]
     ] = (),
+    snerv_spectral_band_allocator_receiver_payload_proofs: Sequence[
+        Mapping[str, Any]
+    ] = (),
+    snerv_lf_latent_hyperprior_receiver_payload_proofs: Sequence[
+        Mapping[str, Any]
+    ] = (),
+    snerv_lf_hf_runtime_binding_proofs: Sequence[Mapping[str, Any]] = (),
     pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_report: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
@@ -617,6 +695,7 @@ def build_nerv_long_training_campaign_plan(
     snerv_bounded_proof_pair_count: int = DEFAULT_SNERV_BOUNDED_PROOF_PAIR_COUNT,
     experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
     planner_row_queue_artifact_path: str | Path | None = None,
+    snerv_lf_hf_replacement_queue_artifact_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
 
@@ -791,8 +870,16 @@ def build_nerv_long_training_campaign_plan(
         lf_super_resolution_receiver_payload_proofs=(
             snerv_lf_super_resolution_receiver_payload_proofs
         ),
+        spectral_band_allocator_receiver_payload_proofs=(
+            snerv_spectral_band_allocator_receiver_payload_proofs
+        ),
+        lf_latent_hyperprior_receiver_payload_proofs=(
+            snerv_lf_latent_hyperprior_receiver_payload_proofs
+        ),
+        lf_hf_runtime_binding_proofs=snerv_lf_hf_runtime_binding_proofs,
         output_root=Path(output_root) / "snerv_lf_hf_replacements",
         queue_id=DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
+        queue_artifact_path=snerv_lf_hf_replacement_queue_artifact_path,
         allow_local_output=True,
     )
     decoder_weight_waterfill_unattached_sources = _decoder_weight_waterfill_unattached_sources(
@@ -1115,7 +1202,10 @@ def _hinerv_campaign_row(
         index=candidate_feedback_index,
     )
     prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
-    feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
+    feedback_evidence_blockers = _candidate_feedback_evidence_blockers(
+        feedback,
+        family="hi_nerv",
+    )
     family_training_telemetry_context = _family_training_telemetry_context_for(
         candidate=candidate,
         family="hi_nerv",
@@ -1235,6 +1325,8 @@ def _hinerv_campaign_row(
         _float_token(effective_segnet_distillation_weight),
         "--pose-distillation-weight",
         _float_token(effective_pose_distillation_weight),
+        "--pose-direct-live-distillation-weight",
+        _float_token(DEFAULT_HINERV_POSE_DIRECT_LIVE_DISTILLATION_WEIGHT),
         "--segnet-distillation-objective",
         DEFAULT_HINERV_SEGNET_DIRECT_LIVE_OBJECTIVE,
         "--segnet-direct-live-distillation-weight",
@@ -1245,6 +1337,14 @@ def _hinerv_campaign_row(
         _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_HINGE_WEIGHT),
         "--segnet-direct-live-class-balanced-ce-weight",
         _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_CE_WEIGHT),
+        "--segnet-direct-live-class-balanced-squared-hinge-weight",
+        _float_token(
+            DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_SQUARED_HINGE_WEIGHT
+        ),
+        "--segnet-direct-live-class-region-recon-weight",
+        _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_REGION_RECON_WEIGHT),
+        "--segnet-direct-live-rare-class-logit-weight",
+        _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_RARE_CLASS_LOGIT_WEIGHT),
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
@@ -1269,6 +1369,20 @@ def _hinerv_campaign_row(
         _float_token(DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO),
         "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
         _float_token(DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO),
+        "--scorer-input-shape-tether-weight",
+        _float_token(DEFAULT_HINERV_SCORER_INPUT_SHAPE_TETHER_WEIGHT),
+        "--posenet-yuv6-geometry-tether-weight",
+        _float_token(DEFAULT_HINERV_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT),
+        "--posenet-temporal-signal-floor-weight",
+        _float_token(DEFAULT_HINERV_POSENET_TEMPORAL_SIGNAL_FLOOR_WEIGHT),
+        "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction",
+        _float_token(
+            DEFAULT_HINERV_SCORER_STEP_GUARD_TARGET_CLASS_COVERAGE_FRACTION
+        ),
+        "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio",
+        _float_token(DEFAULT_HINERV_SCORER_STEP_GUARD_TARGET_CLASS_MIN_RATIO),
+        "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop",
+        _float_token(DEFAULT_HINERV_SCORER_STEP_GUARD_TARGET_CLASS_MAX_RATIO_DROP),
         "--run-post-export-materializers",
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
@@ -1564,8 +1678,24 @@ def _snerv_campaign_row(
         candidate=candidate,
         modelsize_byte_cap_preflight=modelsize_byte_cap_preflight,
     )
+    feedback = _snerv_feedback_with_source_forward_evidence(
+        feedback,
+        snerv_source_forward_evidence,
+    )
+    scorer_tether_smoke_gate = (
+        _snerv_scorer_tether_smoke_gate_with_candidate_feedback(
+            scorer_tether_smoke_gate,
+            feedback,
+        )
+    )
+    scorer_input_guard_feedback_passed = (
+        _snerv_candidate_feedback_scorer_input_guard_passed(feedback)
+    )
     prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
-    raw_feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
+    raw_feedback_evidence_blockers = _candidate_feedback_evidence_blockers(
+        feedback,
+        family="snerv",
+    )
     (
         feedback_evidence_blockers,
         smoke_suppressed_feedback_blockers,
@@ -1667,6 +1797,9 @@ def _snerv_campaign_row(
         )
         or 1.0e-6
     )
+    official_trained_checkpoint_state_dict_path = (
+        _snerv_official_trained_checkpoint_state_dict_path_from_feedback(feedback)
+    )
     command = [
         "uv",
         "run",
@@ -1706,6 +1839,48 @@ def _snerv_campaign_row(
         "1.0",
         "--pose-distillation-weight",
         "1.0",
+        "--pose-direct-live-distillation-weight",
+        _float_token(DEFAULT_SNERV_POSE_DIRECT_LIVE_DISTILLATION_WEIGHT),
+        "--segnet-distillation-objective",
+        DEFAULT_SNERV_SEGNET_DIRECT_LIVE_OBJECTIVE,
+        "--segnet-direct-live-distillation-weight",
+        _float_token(DEFAULT_SNERV_SEGNET_DIRECT_LIVE_DISTILLATION_WEIGHT),
+        "--segnet-direct-live-class-histogram-weight",
+        _float_token(DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_HISTOGRAM_WEIGHT),
+        "--segnet-direct-live-class-balanced-hinge-weight",
+        _float_token(DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_HINGE_WEIGHT),
+        "--segnet-direct-live-class-balanced-ce-weight",
+        _float_token(DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_CE_WEIGHT),
+        "--segnet-direct-live-class-balanced-squared-hinge-weight",
+        _float_token(
+            DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_SQUARED_HINGE_WEIGHT
+        ),
+        "--segnet-direct-live-class-region-recon-weight",
+        _float_token(DEFAULT_SNERV_SEGNET_DIRECT_LIVE_CLASS_REGION_RECON_WEIGHT),
+        "--segnet-direct-live-rare-class-logit-weight",
+        _float_token(DEFAULT_SNERV_SEGNET_DIRECT_LIVE_RARE_CLASS_LOGIT_WEIGHT),
+        "--scorer-input-distribution-guard-weight",
+        _float_token(DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT),
+        "--scorer-input-contrast-floor-weight",
+        _float_token(DEFAULT_SNERV_SCORER_INPUT_CONTRAST_FLOOR_WEIGHT),
+        "--scorer-input-contrast-floor-segnet-min-std-ratio",
+        _float_token(DEFAULT_SNERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO),
+        "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+        _float_token(
+            DEFAULT_SNERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO
+        ),
+        "--scorer-input-shape-tether-weight",
+        _float_token(DEFAULT_SNERV_SCORER_INPUT_SHAPE_TETHER_WEIGHT),
+        "--posenet-yuv6-geometry-tether-weight",
+        _float_token(DEFAULT_SNERV_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT),
+        "--posenet-temporal-signal-floor-weight",
+        _float_token(DEFAULT_SNERV_POSENET_TEMPORAL_SIGNAL_FLOOR_WEIGHT),
+        "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction",
+        _float_token(DEFAULT_SNERV_SCORER_STEP_GUARD_TARGET_CLASS_COVERAGE_FRACTION),
+        "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio",
+        _float_token(DEFAULT_SNERV_SCORER_STEP_GUARD_TARGET_CLASS_MIN_RATIO),
+        "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop",
+        _float_token(DEFAULT_SNERV_SCORER_STEP_GUARD_TARGET_CLASS_MAX_RATIO_DROP),
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
@@ -1752,6 +1927,13 @@ def _snerv_campaign_row(
         command.extend(["--planner-row-queue-artifact", planner_row_queue_artifact_path])
     for path in modelsize_byte_cap_feedback_paths:
         command.extend(["--modelsize-byte-cap-feedback-json", str(path)])
+    if official_trained_checkpoint_state_dict_path is not None:
+        command.extend(
+            [
+                "--snerv-official-trained-checkpoint-state-dict-path",
+                official_trained_checkpoint_state_dict_path.as_posix(),
+            ]
+        )
     if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
@@ -1825,6 +2007,12 @@ def _snerv_campaign_row(
         blockers,
         snerv_source_forward_evidence,
     )
+    if scorer_input_guard_feedback_passed:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "snerv_scorer_input_distribution_guard_missing"
+        ]
     source_controls_ready = (
         not source_control_blockers
         and not candidate.get("_candidate_authority_blockers")
@@ -1943,6 +2131,14 @@ def _snerv_campaign_row(
             "snerv_official_trained_checkpoint_mapping": feedback.get(
                 "snerv_official_trained_checkpoint_mapping_manifest"
             ),
+            "snerv_official_trained_checkpoint_state_dict_path_from_feedback": (
+                None
+                if official_trained_checkpoint_state_dict_path is None
+                else official_trained_checkpoint_state_dict_path.as_posix()
+            ),
+            "snerv_official_trained_checkpoint_state_dict_path_consumed_by_command": bool(
+                official_trained_checkpoint_state_dict_path is not None
+            ),
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers_before_tether_smoke": (raw_feedback_evidence_blockers),
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
@@ -2000,6 +2196,14 @@ def _row(
     extra: Mapping[str, Any],
     bounded_proof_launch: bool = False,
 ) -> dict[str, Any]:
+    family_optimal_strategy = (
+        curriculum_plan.get("family_optimal_strategy")
+        if isinstance(curriculum_plan.get("family_optimal_strategy"), Mapping)
+        else None
+    )
+    row_extra = dict(extra)
+    if isinstance(family_optimal_strategy, Mapping):
+        row_extra.setdefault("family_optimal_strategy", dict(family_optimal_strategy))
     score_gate = _score_lowering_gate(
         family=family,
         local_mlx_launch_command_ready=local_mlx_launch_command_ready,
@@ -2028,17 +2232,22 @@ def _row(
             local_mlx_launch_command_ready=local_mlx_launch_command_ready,
             blockers=blockers,
             score_lowering_gate=score_gate,
-            row_metadata=_experiment_row_metadata(extra),
+            row_metadata=_experiment_row_metadata(row_extra),
             bounded_proof_launch=bool(bounded_proof_launch),
         ),
         "curriculum_plan": dict(curriculum_plan),
+        "family_optimal_strategy": (
+            dict(family_optimal_strategy)
+            if isinstance(family_optimal_strategy, Mapping)
+            else None
+        ),
         "score_lowering_gate": score_gate,
         "local_mlx_executable": bool(score_gate["local_mlx_executable"]),
         "cpu_replay_ready": bool(score_gate["cpu_replay_ready"]),
         "exact_gate_ready": bool(score_gate["exact_gate_ready"]),
         "promotion_blockers": list(score_gate["promotion_blockers"]),
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
-        **dict(extra),
+        **row_extra,
         **FALSE_AUTHORITY,
     }
 
@@ -2162,10 +2371,43 @@ def _experiment_for_row(
     pr95_baseline_binding = metadata.get("pr95_baseline_identity_binding")
     pr95_telemetry_contract = metadata.get("pr95_evaluate_scorer_domain_telemetry_contract")
     pr95_distortion_guard = metadata.get("pr95_distortion_practices_guard")
+    family_optimal_strategy = metadata.get("family_optimal_strategy")
     snerv_runtime_authority_split = metadata.get("snerv_official_runtime_authority_split")
     snerv_renderer_nondegenerate_gate = metadata.get("snerv_renderer_nondegenerate_gate")
     snerv_pre_long_run_evidence_gate = metadata.get("snerv_pre_long_run_evidence_gate")
     current_command_is_bounded_proof = bool(metadata.get("current_command_is_bounded_proof_not_long_training"))
+    pre_long_handoff = _snerv_pre_long_run_evidence_handoff(
+        family=str(family),
+        row_id=row_id,
+        command_argv=command_argv,
+        metadata=metadata,
+        blockers=blockers,
+        postconditions=postconditions,
+    )
+    queue_steps: list[dict[str, Any]] = []
+    if pre_long_handoff is not None:
+        queue_steps.append(pre_long_handoff)
+        metadata["snerv_pre_long_run_evidence_handoff"] = dict(pre_long_handoff)
+    queue_steps.append(
+        {
+            "id": "run_mlx_first_campaign_row",
+            "command": list(command_argv),
+            "resources": {
+                "kind": "local_mlx",
+                "max_parallel_group": "local_mlx_training",
+            },
+            "postconditions": postconditions,
+            "telemetry": {
+                "artifact_paths": telemetry_artifacts,
+                "include_postcondition_paths": True,
+            },
+            "on_postcondition_failure": "failed",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
+    launch_steps = list(queue_steps) if runnable else []
     return {
         "id": _safe_path_token(row_id),
         "family": str(family),
@@ -2176,6 +2418,8 @@ def _experiment_for_row(
             "schema": "nerv_long_training_queue_launch_authority_contract.v1",
             "queue_status_is_local_mlx_plan": bool(local_mlx_launch_command_ready),
             "queue_status_is_runnable_plan": runnable,
+            "queue_launch_step_count": len(launch_steps),
+            "queue_steps_retained_as_post_unblock_handoff": not runnable,
             "queue_launch_blockers": list(launch_blockers),
             "queue_status_is_receiver_proof": False,
             "queue_status_is_cpu_replay_proof": False,
@@ -2200,6 +2444,15 @@ def _experiment_for_row(
             "pr95_distortion_practices_consumed": isinstance(
                 pr95_distortion_guard,
                 Mapping,
+            ),
+            "family_optimal_strategy_consumed": isinstance(
+                family_optimal_strategy,
+                Mapping,
+            ),
+            "family_optimal_strategy": (
+                family_optimal_strategy
+                if isinstance(family_optimal_strategy, Mapping)
+                else None
             ),
             "source_bound_capacity_controls_consumed": isinstance(
                 source_controls,
@@ -2249,29 +2502,154 @@ def _experiment_for_row(
         "score_lowering_gate": dict(score_lowering_gate),
         "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
         "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
-        "steps": [
-            {
-                "id": "run_mlx_first_campaign_row",
-                "command": list(command_argv),
-                "resources": {
-                    "kind": "local_mlx",
-                    "max_parallel_group": "local_mlx_training",
-                },
-                "postconditions": postconditions,
-                "telemetry": {
-                    "artifact_paths": telemetry_artifacts,
-                    "include_postcondition_paths": True,
-                },
-                "on_postcondition_failure": "failed",
-                "score_claim": False,
-                "promotion_eligible": False,
-                "ready_for_exact_eval_dispatch": False,
-            }
-        ],
+        "steps": queue_steps,
+        "launch_steps": launch_steps,
+        "launch_step_count": len(launch_steps),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _snerv_pre_long_run_evidence_handoff(
+    *,
+    family: str,
+    row_id: str,
+    command_argv: Sequence[str],
+    metadata: Mapping[str, Any],
+    blockers: Sequence[str],
+    postconditions: Sequence[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    """Expose the concrete pre-long SNeRV full-video feedback handoff."""
+
+    if _family_key(family) != "snerv":
+        return None
+    if bool(metadata.get("current_command_is_bounded_proof_not_long_training")):
+        return None
+    gate = metadata.get("snerv_pre_long_run_evidence_gate")
+    if not isinstance(gate, Mapping):
+        return None
+    if gate.get("required") is not True or gate.get("passed") is True:
+        return None
+    output_dir = _row_output_dir(command_argv)
+    export_json = (
+        output_dir
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "snerv_mlx_native_train_export.json"
+    )
+    prefilter_profile = (
+        output_dir
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "local_mlx_prefilter"
+        / "local_mlx_prefilter_profile.json"
+    )
+    feedback_dir = output_dir / "full_video_mlx_feedback"
+    candidate_id = _first_non_auto_candidate_id(
+        metadata.get("budget_candidate_id"),
+        metadata.get("runner_modelsize_candidate_id"),
+        _command_flag_value(command_argv, "--modelsize-candidate-id"),
+    )
+    hard_byte_ceiling = _command_flag_value(command_argv, "--hard-byte-ceiling")
+    harvest_command = [
+        "uv",
+        "run",
+        "--extra",
+        "dev",
+        "--extra",
+        "runtime",
+        "--extra",
+        "mlx",
+        "python",
+        "tools/harvest_nerv_full_video_mlx_feedback.py",
+        "--mlx-response",
+        prefilter_profile.as_posix(),
+        "--archive-export-json",
+        export_json.as_posix(),
+        "--family",
+        "snerv",
+        "--output-dir",
+        feedback_dir.as_posix(),
+    ]
+    if candidate_id:
+        harvest_command.extend(["--candidate-id", candidate_id])
+    if hard_byte_ceiling:
+        harvest_command.extend(["--hard-byte-ceiling", hard_byte_ceiling])
+    gate_blockers = _dedupe(
+        [
+            str(blocker)
+            for blocker in (
+                *(gate.get("blockers") or ()),
+                *blockers,
+            )
+            if str(blocker).startswith("snerv_pre_long_run_")
+            or str(blocker).startswith("snerv_mlx_native_")
+        ]
+    )
+    return {
+        "id": "materialize_snerv_full600_prefilter_feedback_before_long_run",
+        "schema": "snerv_pre_long_run_evidence_handoff_step.v1",
+        "status": "blocked_until_full600_native_export_and_mlx_prefilter_feedback",
+        "blocked": True,
+        "blockers": gate_blockers,
+        "row_id": row_id,
+        "candidate_id": candidate_id,
+        "command": list(command_argv),
+        "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training",
+        },
+        "postconditions": [dict(condition) for condition in postconditions],
+        "telemetry": {
+            "artifact_paths": [
+                export_json.as_posix(),
+                prefilter_profile.as_posix(),
+                (feedback_dir / "nerv_full_video_mlx_scorer_feedback_row.json").as_posix(),
+            ],
+            "include_postcondition_paths": False,
+        },
+        "on_postcondition_failure": "failed",
+        "full600_materialization_command": list(command_argv),
+        "full600_materialization_command_role": (
+            "provenance for the canonical row command; do not treat as runnable "
+            "while this queue experiment is disabled"
+        ),
+        "expected_artifacts": {
+            "archive_export_json": export_json.as_posix(),
+            "full_video_mlx_response": prefilter_profile.as_posix(),
+            "candidate_feedback_row": (
+                feedback_dir / "nerv_full_video_mlx_scorer_feedback_row.json"
+            ).as_posix(),
+            "candidate_feedback_manifest": (
+                feedback_dir / "nerv_full_video_mlx_scorer_feedback.json"
+            ).as_posix(),
+        },
+        "harvest_command": harvest_command,
+        "harvest_tool": "tools/harvest_nerv_full_video_mlx_feedback.py",
+        "next_planner_input_flag": "--candidate-feedback-row",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _command_flag_value(command_argv: Sequence[str], flag: str) -> str | None:
+    argv = [str(item) for item in command_argv]
+    if flag not in argv:
+        return None
+    index = argv.index(flag)
+    if index + 1 >= len(argv):
+        return ""
+    return argv[index + 1]
+
+
+def _first_non_auto_candidate_id(*values: Any) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text and text.lower() != "auto":
+            return text
+    return ""
 
 
 def _experiment_launch_blockers(
@@ -2283,6 +2661,9 @@ def _experiment_launch_blockers(
 
     exact_names = {
         "aurora_requires_local_timing_convergence_smoke",
+        "full600_or_hardpair_distortion_replay_required",
+        "hi_nerv_archive_in_loop_byte_oracle_missing",
+        "hinerv_candidate_curriculum_recon_pixel_weight_missing",
         "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted",
         "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling",
         "hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed",
@@ -2291,7 +2672,15 @@ def _experiment_launch_blockers(
         "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_not_file",
         "hinerv_archive_section_telemetry_receiver_cache_quality_report_sha256_mismatch",
         "hinerv_archive_section_telemetry_receiver_proof_not_bound",
+        "hinerv_decoder_weight_waterfill_plan_missing",
         "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted",
+        "hinerv_local_scorer_input_health_gate_failed",
+        "hinerv_local_scorer_input_profile_missing",
+        "hinerv_receiver_proven_archive_over_hard_byte_ceiling",
+        "hinerv_trained_archive_byte_oracle_feedback_missing",
+        "partial_pair_byte_feedback_only",
+        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
+        "small_pair_distortion_smoke_only_not_representative",
         "snerv_candidate_id_source_bound_controls_mismatch",
         "snerv_candidate_id_source_bound_controls_unparseable",
         "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training",
@@ -2383,6 +2772,8 @@ def _bounded_snerv_proof_launch_blocker(blocker: str) -> bool:
 
 def _candidate_feedback_evidence_blockers(
     feedback: Mapping[str, Any],
+    *,
+    family: str | None = None,
 ) -> list[str]:
     """Carry candidate-feedback evidence debt without making it launch-blocking."""
 
@@ -2398,7 +2789,68 @@ def _candidate_feedback_evidence_blockers(
         str(blocker) for blocker in feedback.get("snerv_official_trained_checkpoint_mapping_blockers") or [] if blocker
     )
     blockers.extend(str(blocker) for blocker in feedback.get("snerv_renderer_nondegenerate_blockers") or [] if blocker)
-    return _dedupe(blockers)
+    blockers.extend(
+        str(blocker)
+        for blocker in feedback.get("snerv_mlx_native_training_export_guard_blockers") or []
+        if blocker
+    )
+    blockers.extend(
+        str(blocker)
+        for blocker in feedback.get("snerv_mlx_native_file_backed_export_blockers") or []
+        if blocker
+    )
+    if (
+        _family_key(str(feedback.get("family") or "")) == "snerv"
+        and feedback.get("snerv_official_trained_checkpoint_state_dict_slice_path")
+        and feedback.get("snerv_official_trained_checkpoint_state_dict_slice_file_present")
+        is not True
+    ):
+        blockers.append("snerv_official_trained_checkpoint_state_dict_slice_file_missing")
+    if (
+        _family_key(str(feedback.get("family") or "")) == "snerv"
+        and feedback.get("snerv_mlx_native_file_backed_export_proof_passed")
+        is not True
+        and not feedback.get("snerv_mlx_native_export_packet_path")
+    ):
+        blockers.append("snerv_mlx_native_packet_file_missing")
+    return _filter_family_feedback_blockers(blockers, family=family)
+
+
+def _filter_family_feedback_blockers(
+    blockers: Sequence[Any],
+    *,
+    family: str | None,
+) -> list[str]:
+    family_key = _family_key(str(family or ""))
+    filtered: list[str] = []
+    for raw in blockers:
+        blocker = str(raw)
+        if not blocker:
+            continue
+        token = blocker.removeprefix("source_parity:")
+        if family_key == "hi_nerv" and token.startswith("snerv_"):
+            continue
+        if family_key == "snerv" and (
+            token.startswith("hi_nerv_") or token.startswith("hinerv_")
+        ):
+            continue
+        filtered.append(blocker)
+    return _dedupe(filtered)
+
+
+def _snerv_official_trained_checkpoint_state_dict_path_from_feedback(
+    feedback: Mapping[str, Any],
+) -> Path | None:
+    """Return the runner-consumable exported state slice, if it is real."""
+
+    for key in (
+        "snerv_official_trained_checkpoint_state_dict_path",
+        "snerv_official_trained_checkpoint_state_dict_slice_path",
+    ):
+        path = _existing_path(feedback.get(key))
+        if path is not None:
+            return path
+    return None
 
 
 def _snerv_feedback_blockers_after_tether_smoke(
@@ -2766,6 +3218,63 @@ def _without_closed_source_forward_blockers(
     )
 
 
+_SNERV_SOURCE_FORWARD_FEEDBACK_BLOCKER_KEYS = {
+    "blockers",
+    "direct_feedback_blockers",
+    "snerv_official_trained_checkpoint_mapping_blockers",
+    "snerv_mlx_native_export_blockers",
+    "snerv_mlx_native_file_backed_export_blockers",
+    "official_source_parity_blockers",
+}
+
+
+def _snerv_feedback_with_source_forward_evidence(
+    feedback: Mapping[str, Any],
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Apply newer source-forward authority proof to stale candidate feedback.
+
+    Candidate feedback rows can predate the source-forward authority artifact.
+    Keep the row-local feedback useful for telemetry and byte evidence, but do
+    not let old MFU/HFR/TUB source blockers survive as current planner debt once
+    the source-forward proof closes them.
+    """
+
+    out = dict(feedback)
+    closed = _snerv_source_forward_closed_blockers(source_forward_evidence)
+    if not out or not closed:
+        return out
+
+    def scrub(value: Any, key: str | None = None) -> Any:
+        if isinstance(value, Mapping):
+            return {str(k): scrub(v, str(k)) for k, v in value.items()}
+        if isinstance(value, list):
+            if key in _SNERV_SOURCE_FORWARD_FEEDBACK_BLOCKER_KEYS:
+                return _without_closed_source_forward_blockers(
+                    value,
+                    source_forward_evidence,
+                )
+            return [scrub(item) for item in value]
+        return value
+
+    scrubbed = scrub(out)
+    assert isinstance(scrubbed, dict)
+    superseded = sorted(
+        {
+            _source_forward_blocker_token(blocker)
+            for key in _SNERV_SOURCE_FORWARD_FEEDBACK_BLOCKER_KEYS
+            for blocker in out.get(key) or ()
+            if _source_forward_blocker_token(blocker) in closed
+        }
+    )
+    if superseded:
+        scrubbed["snerv_official_source_forward_evidence_consumed"] = True
+        scrubbed["snerv_official_source_forward_superseded_feedback_blockers"] = (
+            superseded
+        )
+    return scrubbed
+
+
 def _snerv_source_parity_with_source_forward_evidence(
     source_parity: Mapping[str, Any],
     source_forward_evidence: Mapping[str, Any] | None,
@@ -2870,6 +3379,18 @@ def _snerv_curriculum_with_source_forward_evidence(
     )
     if isinstance(updated_split, Mapping):
         blockers = _dedupe([*blockers, *(updated_split.get("blockers") or ())])
+    training_plan = out.get("training_plan")
+    if isinstance(training_plan, Mapping):
+        updated_training_plan = dict(training_plan)
+        training_split = updated_training_plan.get("official_source_forward_authority_split")
+        if isinstance(training_split, Mapping):
+            updated_training_plan["official_source_forward_authority_split"] = (
+                _snerv_source_forward_split_with_evidence(
+                    training_split,
+                    source_forward_evidence,
+                )
+            )
+        out["training_plan"] = updated_training_plan
     out["blockers"] = blockers
     out["snerv_official_source_forward_evidence_consumed"] = True
     out["snerv_official_source_forward_evidence"] = dict(source_forward_evidence)
@@ -3720,6 +4241,9 @@ def _modelsize_byte_cap_feedback_observations(
                 source_path=path,
                 archive_path=archive_path,
             )
+            receiver_proof_path = _existing_path(
+                receiver_closed.get("proof_path") or row.get("receiver_proof_path")
+            )
             report_path = _modelsize_byte_cap_report_path(
                 row,
                 source_path=path,
@@ -3730,6 +4254,10 @@ def _modelsize_byte_cap_feedback_observations(
                 candidate_mapping,
             )
             receiver_dynamic_domain = _modelsize_byte_cap_receiver_dynamic_domain(row)
+            official_state_slice = _modelsize_byte_cap_official_state_slice(
+                row,
+                source_path=path,
+            )
             observations.append(
                 {
                     "source_path": path.as_posix(),
@@ -3780,13 +4308,44 @@ def _modelsize_byte_cap_feedback_observations(
                     ),
                     "receiver_closed": True,
                     "receiver_closed_status": receiver_closed.get("status"),
-                    "receiver_proof_path": receiver_closed.get("proof_path"),
+                    "receiver_proof_path": (
+                        receiver_proof_path.as_posix()
+                        if receiver_proof_path is not None
+                        else None
+                    ),
                     "receiver_contract_satisfied": True,
                     "archive_path": archive_path.as_posix() if archive_path else None,
                     "archive_sha256": row.get("input_sha256") or row.get("archive_sha256"),
                     "packet_path": packet_path.as_posix() if packet_path else None,
                     "packet_sha256": row.get("snar1_packet_sha256") or row.get("packet_sha256"),
                     "artifact_report_path": (report_path.as_posix() if report_path else None),
+                    "snerv_official_trained_checkpoint_state_dict_path": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_path"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_path": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_path"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_present": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_present"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_file_present": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_file_present"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_bytes": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_bytes"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_sha256": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_sha256"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_member_count": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_member_count"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_member_names": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_member_names"
+                    ),
+                    "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": official_state_slice.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_runner_arg"
+                    ),
                     "candidate_id": (row.get("candidate_id") or candidate_mapping.get("candidate_id")),
                     "source_bound_controls": (
                         _modelsize_byte_cap_candidate_match_controls(candidate_mapping) if candidate_mapping else {}
@@ -3899,6 +4458,65 @@ def _modelsize_byte_cap_receiver_dynamic_domain(
     out["blockers"] = blockers
     out.update(FALSE_AUTHORITY)
     return out
+
+
+def _modelsize_byte_cap_official_state_slice(
+    row: Mapping[str, Any],
+    *,
+    source_path: Path,
+) -> dict[str, Any]:
+    sources: list[Mapping[str, Any]] = [row]
+    binding = row.get("official_checkpoint_export_binding")
+    if isinstance(binding, Mapping):
+        sources.append(binding)
+    for source in sources:
+        raw_path = source.get("official_trained_checkpoint_state_dict_slice_path")
+        if not raw_path:
+            continue
+        raw = Path(str(raw_path)).expanduser()
+        path = (
+            raw.resolve(strict=False)
+            if raw.is_absolute()
+            else (source_path.parent / raw).resolve(strict=False)
+        )
+        out: dict[str, Any] = {
+            "snerv_official_trained_checkpoint_state_dict_slice_path": path.as_posix(),
+            "snerv_official_trained_checkpoint_state_dict_slice_present": bool(
+                source.get("official_trained_checkpoint_state_dict_slice_present")
+            ),
+            "snerv_official_trained_checkpoint_state_dict_slice_file_present": path.is_file(),
+            "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": source.get(
+                "official_trained_checkpoint_state_dict_slice_runner_arg"
+            ),
+        }
+        if path.is_file():
+            out["snerv_official_trained_checkpoint_state_dict_path"] = path.as_posix()
+        for source_key, out_key in (
+            (
+                "official_trained_checkpoint_state_dict_slice_bytes",
+                "snerv_official_trained_checkpoint_state_dict_slice_bytes",
+            ),
+            (
+                "official_trained_checkpoint_state_dict_slice_sha256",
+                "snerv_official_trained_checkpoint_state_dict_slice_sha256",
+            ),
+            (
+                "official_trained_checkpoint_state_dict_slice_member_count",
+                "snerv_official_trained_checkpoint_state_dict_slice_member_count",
+            ),
+        ):
+            if source.get(source_key) is not None:
+                out[out_key] = source.get(source_key)
+        names = source.get("official_trained_checkpoint_state_dict_slice_member_names")
+        if isinstance(names, Sequence) and not isinstance(
+            names,
+            (str, bytes, bytearray),
+        ):
+            out["snerv_official_trained_checkpoint_state_dict_slice_member_names"] = list(
+                names
+            )
+        return out
+    return {}
 
 
 def _modelsize_byte_cap_first_path(
@@ -4681,19 +5299,71 @@ def _candidate_feedback_index(
 
 def _candidate_feedback_sort_key(
     row: Mapping[str, Any],
-) -> tuple[bool, int, bool, bool, int, bool, bool, bool]:
-    telemetry = row.get("training_telemetry")
-    last_epoch = int(telemetry.get("last_epoch") or 0) if isinstance(telemetry, Mapping) else 0
+) -> tuple[
+    bool,
+    int,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    int,
+    int,
+    bool,
+    bool,
+    bool,
+]:
+    last_epoch, row_count = _candidate_feedback_training_progress(row)
+    renderer_passed, tether_passed, guard_passed, direct_feedback_clean = (
+        _candidate_feedback_proof_quality(row)
+    )
     return (
         bool(row.get("scope_matches_candidate")),
         int(row.get("measured_num_pairs") or 0),
+        renderer_passed,
+        tether_passed,
+        guard_passed,
+        direct_feedback_clean,
         bool(row.get("full_video_mlx_response_attached")),
         row.get("training_stopped") is not True,
         last_epoch,
+        row_count,
         bool(row.get("receiver_proof_attached")),
         bool(row.get("full_video_local_prefilter_attached")),
         bool(row.get("local_cpu_replay_gate_attached")),
     )
+
+
+def _candidate_feedback_proof_quality(
+    row: Mapping[str, Any],
+) -> tuple[bool, bool, bool, bool]:
+    proof = row.get("snerv_renderer_nondegenerate_proof")
+    renderer_passed = bool(row.get("snerv_renderer_nondegenerate_proof_passed")) or (
+        isinstance(proof, Mapping) and proof.get("passed") is True
+    )
+    return (
+        renderer_passed,
+        bool(row.get("snerv_scorer_domain_tether_passed")),
+        bool(row.get("snerv_scorer_input_distribution_guard_proof_passed")),
+        not bool(row.get("direct_feedback_blockers")),
+    )
+
+
+def _candidate_feedback_training_progress(row: Mapping[str, Any]) -> tuple[int, int]:
+    for key in (
+        "training_telemetry",
+        "snerv_score_aware_long_training_telemetry_contract",
+        "score_aware_long_training_telemetry_contract",
+    ):
+        telemetry = row.get(key)
+        if not isinstance(telemetry, Mapping):
+            continue
+        return (
+            int(_first_present_int(telemetry, ("last_epoch", "epoch")) or 0),
+            int(_first_present_int(telemetry, ("row_count", "step_count")) or 0),
+        )
+    return (0, 0)
 
 
 def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
@@ -4914,6 +5584,7 @@ def _augment_feedback_row(
             bool(native_file_evidence.get("required_pair_file_backed_export_proof_passed")),
         )
     if isinstance(native, Mapping):
+        scorer_loop_status = _native_scorer_loop_qat_status(native)
         out.setdefault(
             "native_mlx_receiver_proof_passed",
             bool(native.get("receiver_proof_passed") and native.get("receiver_contract_satisfied")),
@@ -4922,21 +5593,20 @@ def _augment_feedback_row(
             "native_mlx_full600_campaign_ready",
             bool(native.get("native_mlx_full600_campaign_ready")),
         )
-        out.setdefault(
-            "native_mlx_scorer_loop_qat_receiver_contract_satisfied",
-            bool(native.get("scorer_loop_qat_receiver_contract_satisfied")),
+        out["native_mlx_scorer_loop_qat_attached"] = bool(
+            scorer_loop_status["attached"]
         )
-        out.setdefault(
-            "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate",
-            bool(native.get("scorer_loop_qat_ready_for_pose_guard_gate")),
+        out["native_mlx_scorer_loop_qat_receiver_contract_satisfied"] = bool(
+            scorer_loop_status["receiver_contract_satisfied"]
         )
-        out.setdefault(
-            "native_mlx_scorer_loop_qat_accepted_improvement",
-            bool(native.get("scorer_loop_qat_accepted_improvement")),
+        out["native_mlx_scorer_loop_qat_ready_for_pose_guard_gate"] = bool(
+            scorer_loop_status["ready_for_pose_guard_gate"]
         )
-        out.setdefault(
-            "native_mlx_scorer_loop_qat_best_materialized",
-            bool(native.get("scorer_loop_qat_best_materialized")),
+        out["native_mlx_scorer_loop_qat_accepted_improvement"] = bool(
+            scorer_loop_status["accepted_improvement"]
+        )
+        out["native_mlx_scorer_loop_qat_best_materialized"] = bool(
+            scorer_loop_status["best_materialized"]
         )
         out.setdefault(
             "snerv_mlx_native_hf_decoder_training",
@@ -4998,6 +5668,15 @@ def _augment_feedback_row(
             "snerv_official_native_receiver_state_mapping_proven",
             "snerv_official_tub_temporal_encoder_weight_mapping_proven",
             "snerv_official_trained_checkpoint_state_dict_mapping_verified",
+            "snerv_official_trained_checkpoint_state_dict_path",
+            "snerv_official_trained_checkpoint_state_dict_slice_path",
+            "snerv_official_trained_checkpoint_state_dict_slice_present",
+            "snerv_official_trained_checkpoint_state_dict_slice_file_present",
+            "snerv_official_trained_checkpoint_state_dict_slice_bytes",
+            "snerv_official_trained_checkpoint_state_dict_slice_sha256",
+            "snerv_official_trained_checkpoint_state_dict_slice_member_count",
+            "snerv_official_trained_checkpoint_state_dict_slice_member_names",
+            "snerv_official_trained_checkpoint_state_dict_slice_runner_arg",
             "snerv_trained_state_exportable",
             "snerv_checkpoint_trained_state_exportable",
             "snerv_score_aware_long_training_trained_state_exportable",
@@ -5053,6 +5732,44 @@ def _augment_feedback_row(
             out.get("local_cpu_replay_gate_executed") or out.get("local_cpu_replay_summary_present")
         )
     return out
+
+
+def _native_scorer_loop_qat_status(native: Mapping[str, Any]) -> dict[str, Any]:
+    """Return native SNeRV scorer-loop QAT status from the emitted export record.
+
+    A nested ``scorer_loop_qat`` record is the packet/export truth surface. The
+    legacy top-level flags are accepted only when no nested record exists.
+    """
+
+    scorer_loop_raw = native.get("scorer_loop_qat")
+    if isinstance(scorer_loop_raw, Mapping):
+        scorer_loop = dict(scorer_loop_raw)
+        return {
+            "attached": bool(scorer_loop.get("executed")),
+            "receiver_contract_satisfied": bool(
+                scorer_loop.get("receiver_contract_satisfied")
+            ),
+            "ready_for_pose_guard_gate": bool(
+                scorer_loop.get("ready_for_pose_guard_gate")
+            ),
+            "accepted_improvement": bool(scorer_loop.get("accepted_improvement")),
+            "best_materialized": bool(
+                scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
+            ),
+        }
+    return {
+        "attached": bool(native.get("scorer_loop_qat_attached")),
+        "receiver_contract_satisfied": bool(
+            native.get("scorer_loop_qat_receiver_contract_satisfied")
+        ),
+        "ready_for_pose_guard_gate": bool(
+            native.get("scorer_loop_qat_ready_for_pose_guard_gate")
+        ),
+        "accepted_improvement": bool(
+            native.get("scorer_loop_qat_accepted_improvement")
+        ),
+        "best_materialized": bool(native.get("scorer_loop_qat_best_materialized")),
+    }
 
 
 def _first_mapping_value(key: str, *sources: Any) -> Any:
@@ -5126,6 +5843,33 @@ def _snerv_native_artifact_evidence_from_feedback(
         ),
         "snerv_official_trained_checkpoint_state_dict_mapping_verified": feedback.get(
             "snerv_official_trained_checkpoint_state_dict_mapping_verified"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_path": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_path"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_path": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_path"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_present": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_present"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_file_present": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_file_present"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_bytes": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_bytes"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_sha256": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_sha256"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_member_count": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_member_count"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_member_names": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_member_names"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_runner_arg"
         ),
         "snerv_official_trained_checkpoint_mapping_blockers": feedback.get(
             "snerv_official_trained_checkpoint_mapping_blockers"
@@ -5207,7 +5951,15 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
     packet_path = _existing_path(observation.get("packet_path"))
     archive_path = _existing_path(observation.get("archive_path"))
     proof_path = _existing_path(observation.get("receiver_proof_path"))
-    report_path = _existing_path(observation.get("artifact_report_path"))
+    report_path = _existing_path(
+        observation.get("artifact_report_path")
+        or observation.get("report_path")
+        or observation.get("source_path")
+    )
+    official_state_dict_path = _existing_path(
+        observation.get("snerv_official_trained_checkpoint_state_dict_path")
+        or observation.get("snerv_official_trained_checkpoint_state_dict_slice_path")
+    )
     packet_sha = str(observation.get("packet_sha256") or "").strip()
     archive_sha = str(observation.get("archive_sha256") or "").strip()
     if packet_path is not None and not packet_sha:
@@ -5282,6 +6034,33 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
         "snerv_mlx_native_export_receiver_proof_sha256": proof_sha,
         "snerv_mlx_native_export_receiver_proof_passed": receiver_closed,
         "snerv_mlx_native_export_receiver_contract_satisfied": receiver_closed,
+        "snerv_official_trained_checkpoint_state_dict_path": (
+            official_state_dict_path.as_posix() if official_state_dict_path else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_path": (
+            observation.get("snerv_official_trained_checkpoint_state_dict_slice_path")
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_present": observation.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_present"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_file_present": bool(
+            official_state_dict_path is not None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_bytes": observation.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_bytes"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_sha256": observation.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_sha256"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_member_count": observation.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_member_count"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_member_names": observation.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_member_names"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": observation.get(
+            "snerv_official_trained_checkpoint_state_dict_slice_runner_arg"
+        ),
         "snerv_mlx_native_file_backed_export_evidence": (
             {
                 "schema": "snerv_mlx_native_train_export.v1",
@@ -5298,6 +6077,30 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
                 "receiver_contract_satisfied": True,
                 "file_backed_export_proof_passed": True,
                 "required_pair_file_backed_export_proof_passed": True,
+                "official_checkpoint_export_binding": {
+                    "schema": "snerv_official_checkpoint_export_binding.v1",
+                    "official_trained_checkpoint_state_dict_slice_present": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_present"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_path": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_path"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_bytes": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_bytes"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_sha256": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_sha256"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_member_count": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_member_count"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_member_names": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_member_names"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_runner_arg": observation.get(
+                        "snerv_official_trained_checkpoint_state_dict_slice_runner_arg"
+                    ),
+                },
                 "blockers": [],
                 **FALSE_AUTHORITY,
             }
@@ -7017,9 +7820,12 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "coder_qat_control",
         "decoder_weight_waterfill_plan",
         "feedback_launch_adjustment",
+        "family_optimal_strategy",
         "family_training_telemetry_context",
         "optimizer_control",
         "optimizer_policy",
+        "budget_candidate_id",
+        "runner_modelsize_candidate_id",
         "prioritized_pair_training",
         "upstream_evaluate_score_binding",
         "tilde_oss_leverage_binding",

@@ -31,7 +31,7 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
 from tac.repo_io import sha256_file
-from tac.submission_archive import write_minimal_single_member_archive
+from tac.submission_archive import build_minimal_single_member_archive_bytes
 from tac.substrates._shared.inflate_runtime import CAMERA_HW
 from tac.substrates._shared.pact_nerv_full_main import write_contest_runtime
 from tac.substrates.hi_nerv.architecture import (
@@ -75,6 +75,26 @@ _STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 _BITSTREAM_PREPARATION_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
 _ARCHIVE_SECTION_TELEMETRY_NAME = "hi_nerv_archive_section_telemetry.json"
 _LIVE_RECEIVER_EXPORT_PARITY_NAME = "hi_nerv_mlx_live_receiver_export_parity.json"
+_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME = (
+    "hi_nerv_live_receiver_codec_portfolio_selection.json"
+)
+_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA = (
+    "hi_nerv_live_receiver_codec_portfolio_selection.v1"
+)
+_PORTFOLIO_AUTO_CODEC_ALIASES = frozenset({"auto", "portfolio_auto", "int8_auto"})
+_LIVE_RECEIVER_CODEC_PORTFOLIO_CANDIDATES = (
+    "fp16_enveloped",
+    "int8_mixed",
+    "int8_scale_bundled",
+    "int7_mixed",
+    "int7_scale_bundled",
+    "int6_mixed",
+    "int6_scale_bundled",
+    "int4_mixed",
+    "int4_scale_bundled",
+    "int2_mixed",
+    "int2_scale_bundled",
+)
 
 
 def hi_nerv_mlx_numpy_portability_contract(
@@ -98,6 +118,12 @@ def hi_nerv_mlx_numpy_portability_contract(
         notes += (
             " The selected high-byte arithmetic latent codec also requires "
             "the constriction range-coder dependency at inflate time."
+        )
+    if normalized_latent_codec.startswith(("int8_", "int4_", "int2_")):
+        notes += (
+            " The selected lower-bit latent codec is receiver-bound and lossy "
+            "relative to the int16 latent quantizer; scorer-domain replay is "
+            "required before promotion."
         )
     return build_mlx_numpy_portability_contract(
         substrate_id="hi_nerv",
@@ -137,6 +163,7 @@ def hi_nerv_meta_from_config(cfg: HinervConfig) -> dict[str, object]:
         "local_grid_channels": int(cfg.local_grid_channels),
         "convnext_mlp_ratio": int(cfg.convnext_mlp_ratio),
         "convnext_kernel_size": int(cfg.convnext_kernel_size),
+        "init_seed": int(getattr(cfg, "init_seed", 0)),
     }
 
 
@@ -301,6 +328,7 @@ def _build_mlx_live_receiver_export_parity_proof(
     archive_bytes: bytes,
     cfg: HinervConfig,
     source_backend: str,
+    latent_codec: str = "int16_raw",
     max_pair_samples: int = 4,
     max_mean_abs_delta: float = 1.0e-3,
     max_max_abs_delta: float = 5.0e-3,
@@ -314,6 +342,8 @@ def _build_mlx_live_receiver_export_parity_proof(
     proof: dict[str, Any] = {
         "schema": HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA,
         "proof_kind": "sampled_live_mlx_vs_parsed_hiv1_receiver_pixels",
+        "latent_codec": str(latent_codec),
+        "lossy_latent_codec": bool(_latent_codec_is_lossy(latent_codec)),
         "pair_indices": [int(value) for value in pair_indices.tolist()],
         "sampled_pair_count": int(pair_indices.numel()),
         "max_mean_abs_delta": float(max_mean_abs_delta),
@@ -329,6 +359,7 @@ def _build_mlx_live_receiver_export_parity_proof(
         proof.update(
             {
                 "passed": False,
+                "receiver_decode_passed": False,
                 "proof_status": "not_applicable_non_mlx_source_backend",
                 "source_backend": source_backend,
                 "blockers": [
@@ -355,6 +386,7 @@ def _build_mlx_live_receiver_export_parity_proof(
             proof.update(
                 {
                     "passed": False,
+                    "receiver_decode_passed": False,
                     "proof_status": "live_receiver_shape_mismatch",
                     "live_tensor_shape": [int(value) for value in live_pixels.shape],
                     "receiver_tensor_shape": [
@@ -374,12 +406,18 @@ def _build_mlx_live_receiver_export_parity_proof(
             mean_abs_delta <= float(max_mean_abs_delta)
             and max_abs_delta <= float(max_max_abs_delta)
         )
+        lossy_latent_codec = bool(_latent_codec_is_lossy(latent_codec))
+        measured_lossy_delta = bool(lossy_latent_codec and not passed)
         proof.update(
             {
                 "passed": passed,
+                "receiver_decode_passed": True,
+                "lossy_latent_delta_measured": measured_lossy_delta,
                 "proof_status": (
                     "sampled_live_receiver_export_parity_passed"
                     if passed
+                    else "sampled_live_receiver_export_lossy_latent_delta_measured"
+                    if measured_lossy_delta
                     else "sampled_live_receiver_export_parity_failed"
                 ),
                 "live_tensor_shape": [int(value) for value in live_pixels.shape],
@@ -393,7 +431,7 @@ def _build_mlx_live_receiver_export_parity_proof(
                     *proof["blockers"],
                     *(
                         []
-                        if passed
+                        if passed or measured_lossy_delta
                         else ["hi_nerv_mlx_live_receiver_export_parity_failed"]
                     ),
                 ],
@@ -404,6 +442,7 @@ def _build_mlx_live_receiver_export_parity_proof(
         proof.update(
             {
                 "passed": False,
+                "receiver_decode_passed": False,
                 "proof_status": "sampled_live_receiver_export_parity_error",
                 "failure": repr(exc),
                 "blockers": [
@@ -433,6 +472,23 @@ def _live_receiver_export_parity_extra_blockers(
         str(blocker)
         for blocker in proof.get("blockers") or []
         if str(blocker).startswith("hi_nerv_mlx_live_receiver_export_")
+    ]
+
+
+def _live_receiver_codec_portfolio_extra_blockers(
+    selection: Mapping[str, Any],
+) -> list[str]:
+    selected = selection.get("selected_row")
+    selected_passed = (
+        isinstance(selected, Mapping)
+        and selected.get("live_receiver_export_parity_passed") is True
+    )
+    if selected_passed:
+        return []
+    return [
+        str(blocker)
+        for blocker in selection.get("blockers") or []
+        if str(blocker).startswith("hi_nerv_live_receiver_codec_portfolio_")
     ]
 
 
@@ -633,6 +689,345 @@ def pack_archive_from_exported_state_dict(
     return blob
 
 
+def _normalize_decoder_codec(codec: str) -> str:
+    return str(codec).strip().lower()
+
+
+def _latent_codec_is_lossy(codec: str) -> bool:
+    return str(codec).startswith(("int8_", "int4_", "int2_"))
+
+
+def _selection_row_float(row: Mapping[str, Any], key: str, default: float) -> float:
+    value = row.get(key)
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return default
+    return out if np.isfinite(out) else default
+
+
+def _build_single_codec_portfolio_selection_report(
+    *,
+    requested_decoder_codec: str,
+    selected_decoder_codec: str,
+    latent_codec: str,
+    archive_bytes: int,
+    payload_bytes: int,
+    archive_zip_build: Mapping[str, Any],
+    live_receiver_export_parity: Mapping[str, Any],
+    hard_byte_ceiling: int | None,
+) -> dict[str, Any]:
+    ceiling = None if hard_byte_ceiling is None else int(hard_byte_ceiling)
+    receiver_survived = bool(
+        live_receiver_export_parity.get("receiver_decode_passed")
+        or live_receiver_export_parity.get("passed")
+    )
+    lossy_latent_codec = _latent_codec_is_lossy(latent_codec)
+    row = {
+        "decoder_codec_requested": str(requested_decoder_codec),
+        "decoder_codec_emitted": str(selected_decoder_codec),
+        "latent_codec": str(latent_codec),
+        "lossy_latent_codec": bool(lossy_latent_codec),
+        "payload_bytes": int(payload_bytes),
+        "archive_bytes": int(archive_bytes),
+        "archive_sha256": archive_zip_build.get("archive_sha256"),
+        "archive_zip_build": dict(archive_zip_build),
+        "under_hard_byte_ceiling": (
+            None if ceiling is None else bool(int(archive_bytes) <= ceiling)
+        ),
+        "live_receiver_export_parity_passed": bool(
+            live_receiver_export_parity.get("passed")
+        ),
+        "live_receiver_export_receiver_survived": bool(receiver_survived),
+        "live_receiver_export_parity_status": live_receiver_export_parity.get(
+            "proof_status"
+        ),
+        "mean_abs_delta": live_receiver_export_parity.get("mean_abs_delta"),
+        "max_abs_delta": live_receiver_export_parity.get("max_abs_delta"),
+        "blockers": list(live_receiver_export_parity.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
+    blockers: list[str] = [
+        "hi_nerv_live_receiver_codec_portfolio_is_sampled_false_authority",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "full_video_scorer_value_replay_not_executed",
+    ]
+    if not bool(row["live_receiver_export_receiver_survived"]):
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving"
+        )
+    if (
+        not bool(row["live_receiver_export_parity_passed"])
+        and not bool(lossy_latent_codec and receiver_survived)
+    ):
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity"
+        )
+    if ceiling is not None and int(archive_bytes) > ceiling:
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_selected_codec_over_hard_byte_ceiling"
+        )
+    return {
+        "schema": _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA,
+        "requested_decoder_codec": str(requested_decoder_codec),
+        "selected_decoder_codec": str(selected_decoder_codec),
+        "selected_decoder_codec_requested": str(requested_decoder_codec),
+        "selected_decoder_codec_effective": str(selected_decoder_codec),
+        "selected_decoder_codec_source": "archive_section_telemetry",
+        "selection_mode": "single_codec_requested",
+        "hard_byte_ceiling": ceiling,
+        "candidate_count": 1,
+        "measured_candidate_count": 1,
+        "parity_passing_candidate_count": int(
+            bool(row["live_receiver_export_parity_passed"])
+        ),
+        "receiver_surviving_candidate_count": int(
+            bool(row["live_receiver_export_receiver_survived"])
+        ),
+        "selected_row": row,
+        "rows": [row],
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _select_live_receiver_portfolio_archive(
+    *,
+    model: Any,
+    exported_state_dict: Mapping[str, np.ndarray],
+    cfg: HinervConfig,
+    requested_decoder_codec: str,
+    source_backend: str,
+    pruning_ratio: float,
+    quant_noise_bits: int | None,
+    quant_noise_scale: float,
+    quant_noise_seed: int,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+    latent_codec: str,
+    hard_byte_ceiling: int | None,
+) -> tuple[bytes, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Pick the cheapest receiver-pixel-preserving codec for ``portfolio_auto``.
+
+    Rate-only ``portfolio_auto`` can choose int4/int2 packets that are tiny but
+    destroy the live scorer state after receiver decode.  This archive-bound
+    selector measures charged ZIP bytes and the existing live-MLX vs parsed-HIV1
+    receiver pixel proof for each candidate, then selects the cheapest
+    parity-passing codec under the byte ceiling.  If none passes, it selects the
+    lowest-error diagnostic row under the ceiling so the run remains inspectable
+    but carries explicit blockers.
+    """
+
+    ceiling = None if hard_byte_ceiling is None else int(hard_byte_ceiling)
+    rows: list[dict[str, Any]] = []
+    candidate_payloads: dict[str, tuple[bytes, dict[str, Any], dict[str, Any]]] = {}
+    for codec in _LIVE_RECEIVER_CODEC_PORTFOLIO_CANDIDATES:
+        try:
+            bin_bytes, bitstream_report = pack_archive_from_exported_state_dict(
+                exported_state_dict=dict(exported_state_dict),
+                cfg=cfg,
+                decoder_codec=codec,
+                pruning_ratio=pruning_ratio,
+                quant_noise_bits=quant_noise_bits,
+                quant_noise_scale=quant_noise_scale,
+                quant_noise_seed=quant_noise_seed,
+                decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+                latent_codec=latent_codec,
+                return_bitstream_report=True,
+            )
+            archive_zip_bytes, archive_zip_build = (
+                build_minimal_single_member_archive_bytes(bin_bytes)
+            )
+            live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
+                model=model,
+                archive_bytes=bin_bytes,
+                cfg=cfg,
+                source_backend=source_backend,
+                latent_codec=latent_codec,
+            )
+            archive_section_telemetry = build_archive_section_telemetry(
+                bin_bytes,
+                archive_zip_bytes=len(archive_zip_bytes),
+            )
+            emitted_codec = str(archive_section_telemetry.get("decoder_codec") or codec)
+            receiver_survived = bool(
+                live_receiver_export_parity.get("receiver_decode_passed")
+                or live_receiver_export_parity.get("passed")
+            )
+            row = {
+                "decoder_codec_requested": codec,
+                "decoder_codec_emitted": emitted_codec,
+                "latent_codec": str(latent_codec),
+                "lossy_latent_codec": bool(_latent_codec_is_lossy(latent_codec)),
+                "status": "measured",
+                "payload_bytes": len(bin_bytes),
+                "archive_bytes": len(archive_zip_bytes),
+                "archive_sha256": archive_zip_build.get("archive_sha256"),
+                "archive_zip_build": dict(archive_zip_build),
+                "under_hard_byte_ceiling": (
+                    None
+                    if ceiling is None
+                    else bool(len(archive_zip_bytes) <= ceiling)
+                ),
+                "live_receiver_export_parity_passed": bool(
+                    live_receiver_export_parity.get("passed")
+                ),
+                "live_receiver_export_receiver_survived": bool(receiver_survived),
+                "live_receiver_export_parity_status": (
+                    live_receiver_export_parity.get("proof_status")
+                ),
+                "mean_abs_delta": live_receiver_export_parity.get("mean_abs_delta"),
+                "max_abs_delta": live_receiver_export_parity.get("max_abs_delta"),
+                "parity_blockers": list(
+                    live_receiver_export_parity.get("blockers") or []
+                ),
+                **FALSE_AUTHORITY,
+            }
+            rows.append(row)
+            candidate_payloads[codec] = (
+                bin_bytes,
+                bitstream_report,
+                live_receiver_export_parity,
+            )
+        except Exception as exc:
+            rows.append(
+                {
+                    "decoder_codec_requested": codec,
+                    "status": "failed",
+                    "failure": repr(exc),
+                    "live_receiver_export_parity_passed": False,
+                    "under_hard_byte_ceiling": None,
+                    **FALSE_AUTHORITY,
+                }
+            )
+
+    measured = [row for row in rows if row.get("status") == "measured"]
+    under_ceiling = [
+        row
+        for row in measured
+        if ceiling is None or int(row["archive_bytes"]) <= ceiling
+    ]
+    eligible_scope = under_ceiling or measured
+    parity_passing = [
+        row for row in eligible_scope if bool(row.get("live_receiver_export_parity_passed"))
+    ]
+    receiver_surviving = [
+        row
+        for row in eligible_scope
+        if bool(row.get("live_receiver_export_receiver_survived"))
+    ]
+    if parity_passing:
+        selected_row = min(parity_passing, key=lambda row: int(row["archive_bytes"]))
+        selection_mode = "cheapest_live_receiver_parity_passing_codec"
+    elif receiver_surviving and _latent_codec_is_lossy(latent_codec):
+        selected_row = min(
+            receiver_surviving,
+            key=lambda row: (
+                _selection_row_float(row, "mean_abs_delta", float("inf")),
+                _selection_row_float(row, "max_abs_delta", float("inf")),
+                int(row["archive_bytes"]),
+            ),
+        )
+        selection_mode = "lowest_error_receiver_surviving_lossy_latent_codec"
+    elif eligible_scope:
+        selected_row = min(
+            eligible_scope,
+            key=lambda row: (
+                _selection_row_float(row, "mean_abs_delta", float("inf")),
+                _selection_row_float(row, "max_abs_delta", float("inf")),
+                int(row["archive_bytes"]),
+            ),
+        )
+        selection_mode = "lowest_error_diagnostic_codec_no_parity_pass"
+    else:
+        selected_row = None
+        selection_mode = "no_measured_codec"
+
+    blockers: list[str] = [
+        "hi_nerv_live_receiver_codec_portfolio_is_sampled_false_authority",
+        "contest_cpu_cuda_exact_eval_not_executed",
+        "full_video_scorer_value_replay_not_executed",
+    ]
+    if not measured:
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_no_measured_codec")
+    if ceiling is not None and measured and not under_ceiling:
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_no_candidate_under_hard_byte_ceiling"
+        )
+    if (
+        measured
+        and not parity_passing
+        and not (_latent_codec_is_lossy(latent_codec) and receiver_surviving)
+    ):
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_no_parity_passing_codec"
+        )
+    if selected_row is not None and not bool(
+        selected_row.get("live_receiver_export_receiver_survived")
+    ):
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving"
+        )
+    if (
+        selected_row is not None
+        and not bool(selected_row.get("live_receiver_export_parity_passed"))
+        and not bool(
+            _latent_codec_is_lossy(latent_codec)
+            and selected_row.get("live_receiver_export_receiver_survived")
+        )
+    ):
+        blockers.append(
+            "hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity"
+        )
+    selected_requested_codec = (
+        str(selected_row["decoder_codec_requested"]) if selected_row is not None else None
+    )
+    selected_effective_codec = (
+        str(selected_row.get("decoder_codec_emitted") or selected_requested_codec)
+        if selected_row is not None
+        else None
+    )
+    if (
+        selected_requested_codec is None
+        or selected_requested_codec not in candidate_payloads
+        or selected_effective_codec is None
+    ):
+        raise ValueError(
+            "HiNeRV live-receiver codec portfolio could not select a measured codec"
+        )
+    bin_bytes, bitstream_report, live_receiver_export_parity = candidate_payloads[
+        selected_requested_codec
+    ]
+    archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(
+        bin_bytes
+    )
+    selection_report = {
+        "schema": _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA,
+        "requested_decoder_codec": str(requested_decoder_codec),
+        "selected_decoder_codec": selected_effective_codec,
+        "selected_decoder_codec_requested": selected_requested_codec,
+        "selected_decoder_codec_effective": selected_effective_codec,
+        "selected_decoder_codec_source": "archive_section_telemetry",
+        "selection_mode": selection_mode,
+        "hard_byte_ceiling": ceiling,
+        "candidate_count": len(rows),
+        "measured_candidate_count": len(measured),
+        "candidate_under_hard_byte_ceiling_count": len(under_ceiling),
+        "parity_passing_candidate_count": len(parity_passing),
+        "receiver_surviving_candidate_count": len(receiver_surviving),
+        "selected_row": dict(selected_row),
+        "rows": rows,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+    return (
+        bin_bytes,
+        bitstream_report,
+        live_receiver_export_parity,
+        archive_zip_build,
+        selection_report,
+    )
+
+
 def export_hi_nerv_mlx_archive(
     model: Any,
     output_dir: str | Path,
@@ -671,24 +1066,91 @@ def export_hi_nerv_mlx_archive(
             source_backend=source_backend,
         )
     )
-    bin_bytes, bitstream_report = pack_archive_from_exported_state_dict(
-        exported_state_dict=exported_state_dict,
-        cfg=cfg,
-        decoder_codec=decoder_codec,
-        pruning_ratio=pruning_ratio,
-        quant_noise_bits=quant_noise_bits,
-        quant_noise_scale=quant_noise_scale,
-        quant_noise_seed=quant_noise_seed,
-        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
-        latent_codec=latent_codec,
-        return_bitstream_report=True,
-    )
-    live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
-        model=model,
-        archive_bytes=bin_bytes,
-        cfg=cfg,
-        source_backend=source_backend,
-    )
+    requested_decoder_codec = str(decoder_codec)
+    if (
+        _normalize_decoder_codec(requested_decoder_codec)
+        in _PORTFOLIO_AUTO_CODEC_ALIASES
+        and str(source_backend) == "mlx"
+    ):
+        (
+            bin_bytes,
+            bitstream_report,
+            live_receiver_export_parity,
+            archive_zip_build,
+            live_receiver_codec_portfolio_selection,
+        ) = _select_live_receiver_portfolio_archive(
+            model=model,
+            exported_state_dict=exported_state_dict,
+            cfg=cfg,
+            requested_decoder_codec=requested_decoder_codec,
+            source_backend=source_backend,
+            pruning_ratio=pruning_ratio,
+            quant_noise_bits=quant_noise_bits,
+            quant_noise_scale=quant_noise_scale,
+            quant_noise_seed=quant_noise_seed,
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            latent_codec=latent_codec,
+            hard_byte_ceiling=hard_byte_ceiling,
+        )
+        effective_decoder_codec = str(
+            live_receiver_codec_portfolio_selection["selected_decoder_codec"]
+        )
+    else:
+        bin_bytes, bitstream_report = pack_archive_from_exported_state_dict(
+            exported_state_dict=exported_state_dict,
+            cfg=cfg,
+            decoder_codec=requested_decoder_codec,
+            pruning_ratio=pruning_ratio,
+            quant_noise_bits=quant_noise_bits,
+            quant_noise_scale=quant_noise_scale,
+            quant_noise_seed=quant_noise_seed,
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            latent_codec=latent_codec,
+            return_bitstream_report=True,
+        )
+        live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
+            model=model,
+            archive_bytes=bin_bytes,
+            cfg=cfg,
+            source_backend=source_backend,
+            latent_codec=latent_codec,
+        )
+        archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(
+            bin_bytes
+        )
+        archive_section_probe = build_archive_section_telemetry(
+            bin_bytes,
+            archive_zip_bytes=len(archive_zip_bytes),
+        )
+        effective_decoder_codec = str(
+            archive_section_probe.get("decoder_codec") or requested_decoder_codec
+        )
+        live_receiver_codec_portfolio_selection = (
+            _build_single_codec_portfolio_selection_report(
+                requested_decoder_codec=requested_decoder_codec,
+                selected_decoder_codec=effective_decoder_codec,
+                latent_codec=latent_codec,
+                archive_bytes=len(archive_zip_bytes),
+                payload_bytes=len(bin_bytes),
+                archive_zip_build=archive_zip_build,
+                live_receiver_export_parity=live_receiver_export_parity,
+                hard_byte_ceiling=hard_byte_ceiling,
+            )
+        )
+    bitstream_report = {
+        **dict(bitstream_report),
+        "decoder_codec": effective_decoder_codec,
+        "latent_codec": latent_codec,
+        "requested_decoder_codec": requested_decoder_codec,
+        "decoder_codec_requested_by_export": requested_decoder_codec,
+        "decoder_codec_selected_by_export": effective_decoder_codec,
+        "live_receiver_codec_portfolio_selection": (
+            live_receiver_codec_portfolio_selection
+        ),
+        "live_receiver_codec_portfolio_selection_schema": (
+            _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA
+        ),
+    }
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
     bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
@@ -701,6 +1163,17 @@ def export_hi_nerv_mlx_archive(
         json.dumps(live_receiver_export_parity, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    live_receiver_codec_portfolio_selection_path = (
+        out_dir / _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME
+    )
+    live_receiver_codec_portfolio_selection_path.write_text(
+        json.dumps(
+            live_receiver_codec_portfolio_selection,
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
     submission_dir = out_dir / "submission"
     write_contest_runtime(
@@ -711,16 +1184,35 @@ def export_hi_nerv_mlx_archive(
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)
     archive_zip_path = out_dir / "archive.zip"
-    archive_zip_build = write_minimal_single_member_archive(
-        archive_zip_path,
-        bin_bytes,
+    archive_zip_bytes, archive_zip_build_fresh = build_minimal_single_member_archive_bytes(
+        bin_bytes
     )
+    if archive_zip_build_fresh.get("archive_sha256") != archive_zip_build.get(
+        "archive_sha256"
+    ):
+        archive_zip_build = archive_zip_build_fresh
+    archive_zip_path.write_bytes(archive_zip_bytes)
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    archive_zip_build = {
+        **archive_zip_build,
+        "path": archive_zip_path.as_posix(),
+        "bytes": int(archive_bytes),
+        "sha256": archive_sha256,
+    }
     archive_section_telemetry = build_archive_section_telemetry(
         bin_bytes,
         archive_zip_bytes=int(archive_bytes),
     )
+    archive_section_decoder_codec = str(
+        archive_section_telemetry.get("decoder_codec") or ""
+    )
+    if archive_section_decoder_codec != str(effective_decoder_codec):
+        raise ValueError(
+            "HiNeRV effective decoder codec custody mismatch: "
+            f"selection/report={effective_decoder_codec!r} "
+            f"archive_section_telemetry={archive_section_decoder_codec!r}"
+        )
     archive_section_telemetry_path = out_dir / _ARCHIVE_SECTION_TELEMETRY_NAME
     archive_section_telemetry_path.write_text(
         json.dumps(archive_section_telemetry, indent=2, sort_keys=True),
@@ -752,11 +1244,18 @@ def export_hi_nerv_mlx_archive(
                 "archive_zip_payload_only": True,
                 "runtime_source_outside_archive_zip": True,
                 "upstream_evaluate_rate_uses_archive_zip_stat_only": True,
-                "decoder_codec": decoder_codec,
+                "decoder_codec": effective_decoder_codec,
+                "requested_decoder_codec": requested_decoder_codec,
                 "latent_codec": latent_codec,
                 "archive_section_telemetry": archive_section_telemetry,
                 "archive_section_telemetry_path": (
                     archive_section_telemetry_path.as_posix()
+                ),
+                "hi_nerv_live_receiver_codec_portfolio_selection": (
+                    live_receiver_codec_portfolio_selection
+                ),
+                "hi_nerv_live_receiver_codec_portfolio_selection_path": (
+                    live_receiver_codec_portfolio_selection_path.as_posix()
                 ),
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
@@ -802,7 +1301,8 @@ def export_hi_nerv_mlx_archive(
             runtime_adapter_manifest_extra={
                 "schema": "hi_nerv_mlx_runtime_adapter_manifest.v1",
                 "latent_pyramid": ["coarse", "mid", "fine"],
-                "decoder_codec": decoder_codec,
+                "decoder_codec": effective_decoder_codec,
+                "requested_decoder_codec": requested_decoder_codec,
                 "latent_codec": latent_codec,
                 "archive_zip_build": archive_zip_build,
                 "archive_zip_payload_only": True,
@@ -811,6 +1311,12 @@ def export_hi_nerv_mlx_archive(
                 "archive_section_telemetry": archive_section_telemetry,
                 "archive_section_telemetry_path": (
                     archive_section_telemetry_path.as_posix()
+                ),
+                "hi_nerv_live_receiver_codec_portfolio_selection": (
+                    live_receiver_codec_portfolio_selection
+                ),
+                "hi_nerv_live_receiver_codec_portfolio_selection_path": (
+                    live_receiver_codec_portfolio_selection_path.as_posix()
                 ),
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
@@ -833,9 +1339,14 @@ def export_hi_nerv_mlx_archive(
             },
             candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
-            extra_blockers=_live_receiver_export_parity_extra_blockers(
-                live_receiver_export_parity
-            ),
+            extra_blockers=[
+                *_live_receiver_export_parity_extra_blockers(
+                    live_receiver_export_parity
+                ),
+                *_live_receiver_codec_portfolio_extra_blockers(
+                    live_receiver_codec_portfolio_selection
+                ),
+            ],
             mlx_triage_argv=mlx_triage_argv,
         )
     return (archive_zip_path, archive_sha256, archive_bytes)
@@ -894,9 +1405,24 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     live_receiver_export_parity = json.loads(
         live_receiver_export_parity_path.read_text(encoding="utf-8")
     )
+    live_receiver_codec_portfolio_selection_path = (
+        out_dir / _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME
+    )
+    live_receiver_codec_portfolio_selection = json.loads(
+        live_receiver_codec_portfolio_selection_path.read_text(encoding="utf-8")
+    )
     archive_section_telemetry_path = out_dir / _ARCHIVE_SECTION_TELEMETRY_NAME
     archive_section_telemetry = json.loads(
         archive_section_telemetry_path.read_text(encoding="utf-8")
+    )
+    effective_decoder_codec = str(
+        archive_section_telemetry.get("decoder_codec")
+        or live_receiver_codec_portfolio_selection.get("selected_decoder_codec")
+        or decoder_codec
+    )
+    requested_decoder_codec = str(
+        live_receiver_codec_portfolio_selection.get("requested_decoder_codec")
+        or decoder_codec
     )
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID,
@@ -919,10 +1445,17 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         runtime_adapter_manifest_extra={
             "schema": "hi_nerv_mlx_runtime_adapter_manifest.v1",
             "latent_pyramid": ["coarse", "mid", "fine"],
-            "decoder_codec": decoder_codec,
+            "decoder_codec": effective_decoder_codec,
+            "requested_decoder_codec": requested_decoder_codec,
             "latent_codec": latent_codec,
             "archive_section_telemetry": archive_section_telemetry,
             "archive_section_telemetry_path": archive_section_telemetry_path.as_posix(),
+            "hi_nerv_live_receiver_codec_portfolio_selection": (
+                live_receiver_codec_portfolio_selection
+            ),
+            "hi_nerv_live_receiver_codec_portfolio_selection_path": (
+                live_receiver_codec_portfolio_selection_path.as_posix()
+            ),
             "hi_nerv_bitstream_preparation": bitstream_report,
             "hi_nerv_bitstream_preparation_path": bitstream_report_path.as_posix(),
             "hi_nerv_mlx_live_receiver_export_parity": live_receiver_export_parity,
@@ -940,9 +1473,12 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         },
         candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
-        extra_blockers=_live_receiver_export_parity_extra_blockers(
-            live_receiver_export_parity
-        ),
+        extra_blockers=[
+            *_live_receiver_export_parity_extra_blockers(live_receiver_export_parity),
+            *_live_receiver_codec_portfolio_extra_blockers(
+                live_receiver_codec_portfolio_selection
+            ),
+        ],
         mlx_triage_argv=mlx_triage_argv,
     )
 

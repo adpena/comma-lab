@@ -294,6 +294,10 @@ def test_master_bridge_consumes_snerv_geometry_units_without_collapsing_runs() -
                 "n_pairs": 1,
                 "score_delta_linf": -0.02,
                 "receiver_contract_satisfied": True,
+                "best_packet_materialized": True,
+                "best_packet_schema": "snerv_inverse_steg_archive.snar2.v1",
+                "best_packet_wire_format": "snar2",
+                "best_packet_contest_submission_wire_format_ready": True,
             },
             {
                 "unit_type": "snerv_scorer_loop_qat_result",
@@ -303,6 +307,10 @@ def test_master_bridge_consumes_snerv_geometry_units_without_collapsing_runs() -
                 "n_pairs": 4,
                 "score_delta_linf": -0.01,
                 "receiver_contract_satisfied": True,
+                "best_packet_materialized": True,
+                "best_packet_schema": "snerv_inverse_steg_archive.snar2.v1",
+                "best_packet_wire_format": "snar2",
+                "best_packet_contest_submission_wire_format_ready": True,
             },
         ],
         "score_claim": False,
@@ -636,9 +644,9 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     assert queue["local_planning_ready_row_count"] >= 0
     assert queue["section_admission_plan_count"] == 2
     assert queue["section_admission_queue_row_count"] == 4
-    assert queue["section_admission_decision_counts"]["admit"] == 1
-    assert queue["section_admission_decision_counts"]["cut"] == 1
-    assert queue["section_admission_decision_counts"]["demote"] == 2
+    assert queue["section_admission_decision_counts"]["demote"] == 4
+    assert queue["section_admission_economic_decision_counts"]["admit"] == 2
+    assert queue["section_admission_economic_decision_counts"]["cut"] == 2
     assert queue["score_claim"] is False
     assert queue["score_claim_valid"] is False
     assert queue["promotion_eligible"] is False
@@ -944,9 +952,12 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     admission_rows = {
         row["row_id"]: row for row in queue["section_admission_queue_rows"]
     }
-    assert admission_rows["cut_selector"]["decision"] == "cut"
-    assert admission_rows["admit_residual"]["decision"] == "admit"
+    assert admission_rows["cut_selector"]["decision"] == "demote"
+    assert admission_rows["cut_selector"]["economic_decision"] == "cut"
+    assert admission_rows["admit_residual"]["decision"] == "demote"
+    assert admission_rows["admit_residual"]["economic_decision"] == "admit"
     assert admission_rows["sampled_residual"]["decision"] == "demote"
+    assert admission_rows["sampled_residual"]["economic_decision"] == "admit"
     assert admission_rows["snerv_lf_payload_codec_portfolio_auto"]["decision"] == (
         "demote"
     )
@@ -1249,6 +1260,13 @@ def _synthetic_rate_bridge() -> dict:
                 "accepted_improvement": False,
                 "ready_for_pose_guard_gate": False,
                 "receiver_contract_satisfied": True,
+                "best_packet_materialized": True,
+                "best_packet_path": "/ssd/snerv/best_packet.snar",
+                "best_packet_bytes": 117736,
+                "best_packet_sha256": "f" * 64,
+                "best_packet_schema": "snerv_inverse_steg_archive.snar2.v1",
+                "best_packet_wire_format": "snar2",
+                "best_packet_contest_submission_wire_format_ready": True,
                 "result_sha256": "e" * 64,
                 "blockers": [
                     "local_smoke_only_not_full_600_pairs",

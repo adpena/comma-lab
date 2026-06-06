@@ -69,6 +69,47 @@ def test_snerv_archive_bound_package_runs_receiver_proof(tmp_path: Path) -> None
         assert zf.read("x") == archive.packet
 
 
+def test_snerv_archive_bound_package_overwrite_refreshes_extract_dir(
+    tmp_path: Path,
+) -> None:
+    _proof, archive = build_snerv_receiver_archive_proof(
+        bins=4,
+        levels=1,
+        wavelet="haar",
+        hw=(16, 24),
+        full_frame_packet=True,
+    )
+
+    first = export_snerv_archive_bound_candidate_package(
+        packet=archive.packet,
+        output_dir=tmp_path,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=120,
+    )
+    assert first["receiver_proof"]["runtime_consumption_proof_passed"] is True
+
+    with pytest.raises(ValueError, match="archive extraction target already exists"):
+        export_snerv_archive_bound_candidate_package(
+            packet=archive.packet,
+            output_dir=tmp_path,
+            retain_receiver_output=False,
+            receiver_proof_timeout_seconds=120,
+        )
+
+    rerun = export_snerv_archive_bound_candidate_package(
+        packet=archive.packet,
+        output_dir=tmp_path,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=120,
+        allow_overwrite=True,
+    )
+
+    assert rerun["receiver_proof"]["runtime_consumption_proof_passed"] is True
+    assert (tmp_path / "archive_extracted_for_receiver_proof" / "x").read_bytes() == (
+        archive.packet
+    )
+
+
 def test_haar_package_uses_numpy_receiver_dwt_without_pywavelets_blocker(
     tmp_path: Path,
 ) -> None:
@@ -91,6 +132,7 @@ def test_haar_package_uses_numpy_receiver_dwt_without_pywavelets_blocker(
 
     assert package["receiver_proof"]["runtime_consumption_proof_passed"] is True
     assert manifest["receiver_dwt_dependency"] == "numpy_haar_no_pywavelets"
+    assert manifest["archive_packet_wire_format"] == "snar1"
     assert "pywavelets_runtime_dependency_not_contest_proven" not in row["blockers"]
     assert "paired_contest_cpu_cuda_auth_eval_missing" in row["blockers"]
 
@@ -131,6 +173,7 @@ def test_snar2_package_uses_snar2_transform_and_receiver_contract(
         == "snerv_inverse_steg_snar2_inflate_decode_only_receiver"
     )
     assert manifest["archive_packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert manifest["archive_packet_wire_format"] == "snar2"
     assert "snar1" not in row["target_kind"]
     assert "snar1" not in row["receiver_contract_kind"]
 

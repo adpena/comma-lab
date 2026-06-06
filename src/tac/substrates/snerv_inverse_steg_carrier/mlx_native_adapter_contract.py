@@ -386,8 +386,24 @@ def build_snerv_mlx_native_file_backed_evidence(
         and receiver_contract_satisfied
         and training_guard.get("export_guard_passed") is True
     )
-    scorer_loop = art.get("scorer_loop_qat")
-    scorer_loop = dict(scorer_loop) if isinstance(scorer_loop, Mapping) else {}
+    scorer_loop_raw = art.get("scorer_loop_qat")
+    scorer_loop_present = isinstance(scorer_loop_raw, Mapping)
+    scorer_loop = dict(scorer_loop_raw) if scorer_loop_present else {}
+    scorer_loop_qat_attached = (
+        scorer_loop.get("executed")
+        if scorer_loop_present
+        else art.get("scorer_loop_qat_attached")
+    )
+    scorer_loop_qat_accepted_improvement = (
+        scorer_loop.get("accepted_improvement")
+        if scorer_loop_present
+        else art.get("scorer_loop_qat_accepted_improvement")
+    )
+    scorer_loop_qat_best_materialized = (
+        scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
+        if scorer_loop_present
+        else art.get("scorer_loop_qat_best_materialized")
+    )
     return {
         "schema": "snerv_mlx_native_file_backed_evidence.v1",
         "required_num_pairs": int(required_num_pairs),
@@ -413,17 +429,12 @@ def build_snerv_mlx_native_file_backed_evidence(
         "required_pair_file_backed_export_proof_passed": bool(
             file_backed_export_proof_passed and required_pair_coverage_passed
         ),
-        "scorer_loop_qat_attached": bool(
-            scorer_loop.get("executed") or art.get("scorer_loop_qat_attached")
-        ),
+        "scorer_loop_qat_attached": bool(scorer_loop_qat_attached),
         "scorer_loop_qat_accepted_improvement": bool(
-            scorer_loop.get("accepted_improvement")
-            or art.get("scorer_loop_qat_accepted_improvement")
+            scorer_loop_qat_accepted_improvement
         ),
         "scorer_loop_qat_best_materialized": bool(
-            scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
-            or scorer_loop.get("best_packet_materialized")
-            or art.get("scorer_loop_qat_best_materialized")
+            scorer_loop_qat_best_materialized
         ),
         "blockers": list(dict.fromkeys(blockers)),
         **FALSE_AUTHORITY,

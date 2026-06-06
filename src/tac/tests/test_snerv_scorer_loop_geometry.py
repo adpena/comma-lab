@@ -67,7 +67,10 @@ def test_snerv_scorer_loop_geometry_decomposes_contest_lagrangian(
 def test_snerv_scorer_loop_geometry_units_feed_rate_allocator_bridge(
     tmp_path: Path,
 ) -> None:
-    path = _write_result(tmp_path / "snerv_result.json")
+    path = _write_result(
+        tmp_path / "snerv_result.json",
+        best_packet_materialized=True,
+    )
     report = build_snerv_scorer_loop_geometry_report([path])
 
     bridge = build_nerv_rate_allocator_bridge(
@@ -102,6 +105,183 @@ def test_snerv_scorer_loop_geometry_units_feed_rate_allocator_bridge(
         "compact_nerv_byte_price_controller.v1"
     )
     assert qat_row["planner_ingest"]["source_byte_price_decision_rows"]
+
+
+def test_snerv_scorer_loop_geometry_routes_missing_packet_binding_before_full600(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(tmp_path / "snerv_result.json")
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    bridge = build_nerv_rate_allocator_bridge(
+        master_bridge={
+            "schema": "nerv_master_consumer_bridge.v1",
+            "baseline_to_beat": "pr95",
+            "top_priority_carriers": ["snerv", "hi_nerv"],
+            "master_consumer_units": [report["allocator_units"][0]],
+            "blockers": [],
+        }
+    )
+
+    assert [
+        row
+        for row in bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    ] == []
+    bind_order = bridge["rate_allocator_work_orders"][0]
+    assert bind_order["work_order_type"] == "snerv_scorer_loop_qat_receiver_packet_binding"
+    assert "snerv_scorer_loop_qat_best_receiver_packet_missing" in bind_order[
+        "blockers"
+    ]
+    assert bind_order["payload"]["packet_gate"]["scale_ready"] is False
+
+    queue = build_nerv_rate_allocator_work_queue(rate_bridge=bridge)
+    queue_row = queue["queue_rows"][0]
+    assert queue_row["planner_ingest"]["ingest_kind"] == (
+        "snerv_scorer_loop_qat_receiver_packet_binding"
+    )
+    assert queue_row["planner_ingest"]["source_best_packet_materialized"] is False
+    assert (
+        queue_row["planner_ingest"]["local_full600_continuation_runnable_now"]
+        is False
+    )
+
+
+def test_snerv_scorer_loop_geometry_routes_snar1_packet_to_repack_binding(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(
+        tmp_path / "snerv_result.json",
+        best_packet_materialized=True,
+        best_packet_wire_format="snar1",
+    )
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    bridge = build_nerv_rate_allocator_bridge(
+        master_bridge={
+            "schema": "nerv_master_consumer_bridge.v1",
+            "baseline_to_beat": "pr95",
+            "top_priority_carriers": ["snerv", "hi_nerv"],
+            "master_consumer_units": [report["allocator_units"][0]],
+            "blockers": [],
+        }
+    )
+
+    assert [
+        row
+        for row in bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    ] == []
+    bind_order = bridge["rate_allocator_work_orders"][0]
+    assert bind_order["work_order_type"] == "snerv_scorer_loop_qat_receiver_packet_binding"
+    assert "snerv_scorer_loop_qat_best_packet_snar2_repack_required" in bind_order[
+        "blockers"
+    ]
+    assert bind_order["payload"]["packet_gate"]["best_packet_wire_format"] == "snar1"
+
+    queue = build_nerv_rate_allocator_work_queue(rate_bridge=bridge)
+    queue_row = queue["queue_rows"][0]
+    assert queue_row["planner_ingest"]["source_best_packet_wire_format"] == "snar1"
+    assert (
+        queue_row["planner_ingest"][
+            "source_best_packet_contest_submission_wire_format_ready"
+        ]
+        is False
+    )
+
+
+def test_snerv_scorer_loop_geometry_accepts_snar2_emitted_from_snar1_best(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(
+        tmp_path / "snerv_result.json",
+        best_packet_materialized=True,
+        best_packet_wire_format="snar1",
+        emitted_packet_uses_scorer_loop_best_decoder=True,
+        emitted_packet_wire_format="snar2",
+    )
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    bridge = build_nerv_rate_allocator_bridge(
+        master_bridge={
+            "schema": "nerv_master_consumer_bridge.v1",
+            "baseline_to_beat": "pr95",
+            "top_priority_carriers": ["snerv", "hi_nerv"],
+            "master_consumer_units": [report["allocator_units"][0]],
+            "blockers": [],
+        }
+    )
+
+    assert [
+        row
+        for row in bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_receiver_packet_binding"
+    ] == []
+    scale_order = bridge["rate_allocator_work_orders"][0]
+    assert scale_order["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    packet_gate = scale_order["payload"]["packet_gate"]
+    assert packet_gate["best_packet_wire_format"] == "snar1"
+    assert packet_gate["emitted_packet_wire_format"] == "snar2"
+    assert packet_gate["emitted_packet_contest_submission_wire_format_ready"] is True
+    assert packet_gate["scale_ready"] is True
+
+
+def test_snerv_scorer_loop_geometry_routes_official_payload_mismatch_to_binding_work(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(
+        tmp_path / "snerv_result.json",
+        best_packet_materialized=True,
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload.update(
+        {
+            "official_decoder_payload_binding_required": True,
+            "official_decoder_payload_binding_preserved": False,
+            "official_tub_output2_binding_required": True,
+            "official_tub_output2_binding_preserved": False,
+            "emitted_packet_uses_scorer_loop_best_decoder": False,
+        }
+    )
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    bridge = build_nerv_rate_allocator_bridge(
+        master_bridge={
+            "schema": "nerv_master_consumer_bridge.v1",
+            "baseline_to_beat": "pr95",
+            "top_priority_carriers": ["snerv", "hi_nerv"],
+            "master_consumer_units": [report["allocator_units"][0]],
+            "blockers": [],
+        }
+    )
+
+    assert [
+        row
+        for row in bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    ] == []
+    bind_order = bridge["rate_allocator_work_orders"][0]
+    assert bind_order["work_order_type"] == (
+        "snerv_official_mfu_hfr_tub_scorer_loop_qat_binding"
+    )
+    assert bind_order["payload"]["packet_gate"]["official_binding_required"] is True
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_payload_mismatch" in bind_order[
+        "blockers"
+    ]
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_tub_output2_binding_mismatch" in bind_order[
+        "blockers"
+    ]
+
+    queue = build_nerv_rate_allocator_work_queue(rate_bridge=bridge)
+    queue_row = queue["queue_rows"][0]
+    assert queue_row["planner_ingest"]["ingest_kind"] == (
+        "snerv_official_mfu_hfr_tub_scorer_loop_qat_binding"
+    )
+    assert queue_row["planner_ingest"]["official_decoder_payload_binding_required"] is True
+    assert queue_row["planner_ingest"]["official_decoder_payload_binding_preserved"] is False
+    assert queue_row["planner_ingest"]["official_tub_output2_binding_required"] is True
+    assert queue_row["planner_ingest"]["official_tub_output2_binding_preserved"] is False
 
 
 def test_snerv_scorer_loop_geometry_surfaces_rejected_score_descent(
@@ -321,6 +501,9 @@ def _write_result(
     search_mode: str = "learned_random_subspace",
     n_pairs: int = 4,
     best_packet_materialized: bool = False,
+    best_packet_wire_format: str = "snar2",
+    emitted_packet_uses_scorer_loop_best_decoder: bool = False,
+    emitted_packet_wire_format: str | None = None,
 ) -> Path:
     payload = {
         "schema": "snerv_scorer_loop_qat_local_trainer.v1",
@@ -393,20 +576,51 @@ def _write_result(
         },
     }
     if best_packet_materialized:
+        packet_schema = (
+            "snerv_inverse_steg_archive.snar2.v1"
+            if best_packet_wire_format == "snar2"
+            else "snerv_inverse_steg_archive.v1"
+        )
         payload.update(
             {
                 "best_packet_materialized": True,
                 "best_packet_path": "/ssd/snerv/best_packet.snar",
                 "best_packet_bytes": 117736,
                 "best_packet_sha256": "f" * 64,
+                "best_packet_schema": packet_schema,
+                "best_packet_wire_format": best_packet_wire_format,
+                "best_packet_contest_submission_wire_format_ready": (
+                    best_packet_wire_format == "snar2"
+                ),
                 "best_packet_materialization": {
                     "schema": "snerv_scorer_loop_best_packet_materialization.v1",
                     "materialized": True,
                     "best_packet_path": "/ssd/snerv/best_packet.snar",
                     "best_packet_bytes": 117736,
                     "best_packet_sha256": "f" * 64,
+                    "best_packet_schema": packet_schema,
+                    "best_packet_wire_format": best_packet_wire_format,
+                    "contest_submission_wire_format_ready": (
+                        best_packet_wire_format == "snar2"
+                    ),
                     "blockers": [],
                 },
+            }
+        )
+    if emitted_packet_uses_scorer_loop_best_decoder:
+        emitted_schema = (
+            "snerv_inverse_steg_archive.snar2.v1"
+            if emitted_packet_wire_format == "snar2"
+            else "snerv_inverse_steg_archive.v1"
+        )
+        payload.update(
+            {
+                "emitted_packet_uses_scorer_loop_best_decoder": True,
+                "emitted_packet_schema": emitted_schema,
+                "emitted_packet_wire_format": emitted_packet_wire_format,
+                "emitted_packet_contest_submission_wire_format_ready": (
+                    emitted_packet_wire_format == "snar2"
+                ),
             }
         )
     path.write_text(json.dumps(payload), encoding="utf-8")

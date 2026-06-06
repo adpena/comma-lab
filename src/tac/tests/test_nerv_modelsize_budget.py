@@ -134,6 +134,11 @@ def test_hinerv_modelsize_candidate_builds_same_receiver_config() -> None:
         fine_injection_block_index=4,
     )
     cfg_from_candidate = build_hinerv_config_from_modelsize_candidate(row.as_dict())
+    candidate_with_seed = row.as_dict()
+    candidate_with_seed["init_seed"] = 123
+    cfg_from_seeded_candidate = build_hinerv_config_from_modelsize_candidate(
+        candidate_with_seed
+    )
     cfg_from_knobs = build_hinerv_config_from_size_knobs(
         num_pairs=17,
         latent_dim=12,
@@ -148,8 +153,17 @@ def test_hinerv_modelsize_candidate_builds_same_receiver_config() -> None:
         mid_injection_block_index=1,
         fine_injection_block_index=4,
     )
+    cfg_from_seeded_knobs = build_hinerv_config_from_size_knobs(
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        init_seed=123,
+    )
 
     assert cfg_from_candidate == cfg_from_knobs
+    assert cfg_from_seeded_candidate.init_seed == 123
+    assert cfg_from_seeded_knobs.init_seed == 123
     assert HinervSubstrate(cfg_from_candidate).num_parameters() == (
         row.total_trainable_params
     )

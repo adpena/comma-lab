@@ -104,10 +104,46 @@ def _fake_tub_fixture_replay_passed() -> dict[str, object]:
     }
 
 
+def _minimal_full_official_decoder_state(decoder_len: int = 8) -> dict[str, np.ndarray]:
+    state: dict[str, np.ndarray] = {}
+    for offset in range(3):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.conv1.weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"{prefix}.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.conv2.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (3, 5):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.weight"] = np.zeros((3, 3, 2, 2), dtype=np.float32)
+        state[f"{prefix}.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (4, 6):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.main.0.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.main.0.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv1.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv2.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    state["encoder.1.weight"] = np.zeros((3, 3, 3), dtype=np.float32)
+    state["encoder.2.weight"] = np.zeros((3, 3, 3), dtype=np.float32)
+    state[f"decoder.{decoder_len - 1}.weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+    return state
+
+
 def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
     public_sig = inspect.signature(train_export_snerv_mlx_native)
+    assert "official_trained_checkpoint_state_dict" in public_sig.parameters
+    assert "official_trained_checkpoint_state_dict_path" in public_sig.parameters
+    assert "official_trained_checkpoint_decoder_len" in public_sig.parameters
+    assert "official_trained_checkpoint_state_dict_kind" in public_sig.parameters
     assert "score_aware_long_training_pr95_muon_policy" in public_sig.parameters
     assert (
         "score_aware_long_training_pr95_source_weight_amplification"
@@ -135,6 +171,26 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     )
     assert (
         "score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_scorer_space_step_guard_enabled"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_scorer_space_step_guard_backtracking_steps"
         in public_sig.parameters
     )
     assert "score_aware_long_training_loss_weights" in public_sig.parameters
@@ -178,6 +234,12 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
             "score_aware_long_training_scorer_input_distribution_guard_weight"
         ].default
         == DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT
+    )
+    assert (
+        public_sig.parameters[
+            "score_aware_long_training_scorer_space_step_guard_enabled"
+        ].default
+        is True
     )
     assert (
         public_sig.parameters["scorer_loop_qat_component_guard_mode"].default
@@ -311,6 +373,186 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     )
 
 
+def test_official_checkpoint_npz_ingestion_reaches_train_export_binding(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    state_path = tmp_path / "official_state_dict_slice.npz"
+    np.savez(state_path, **_minimal_full_official_decoder_state())
+    manifest = mod._official_trained_checkpoint_mapping_manifest_from_inputs(
+        state_dict=None,
+        state_dict_path=state_path,
+        decoder_len=None,
+        state_dict_kind="unit_test_npz_official_checkpoint",
+    )
+
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert manifest["official_tub_temporal_encoder_weight_mapping_proven"] is True
+
+    report = mod._run_score_aware_long_training_attachment(
+        requested_epochs=0,
+        output_dir=tmp_path / "long_training_attachment",
+        pairs_nchw255=_tiny_pairs(pairs=1),
+        model_size=SnervModelSizeConfig(
+            adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        ),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0,),
+        target_bits_per_coeff=8.0,
+        step_map_bits_per_coeff=4.0,
+        decoder_payload_codec="npz",
+        lf_payload_codec="raw",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=0.0,
+        hard_byte_ceiling=None,
+        learning_rate=1.0e-3,
+        batch_pairs=1,
+        section_byte_refresh_every_steps=1,
+        optimizer_kind="pact_muon_adamw",
+        grad_clip_max_norm=1.0,
+        weight_decay=1.0e-4,
+        eval_roundtrip_ste=False,
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_input_distribution_guard_saturation_margin=0.02,
+        scorer_input_distribution_guard_temperature=0.01,
+        scorer_input_contrast_floor_weight=0.0,
+        scorer_input_contrast_floor_segnet_min_std_ratio=0.5,
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.5,
+        checkpoint_retention_keep_last_n=1,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
+        scorer_upstream_dir=tmp_path / "missing_upstream",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_distillation_loss="mse",
+        pose_distillation_huber_delta=1.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_tau_boundary=1.0,
+        segnet_hinge_margin=1.0,
+        distillation_device="cpu",
+        allow_segnet_only_research=False,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.0,
+        coder_qat_magnitude_weight=0.0,
+        coder_qat_delta_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=4,
+        pr95_faithful_curriculum_enabled=False,
+        pr95_muon_policy="every_stage",
+        official_trained_checkpoint_mapping_manifest=manifest,
+        prioritized_pair_indices=(),
+        scorer_error_pair_sampling_weights=None,
+        scorer_error_pair_curriculum=None,
+        allow_overwrite=True,
+    )
+
+    train_export = report["official_mfu_hfr_tub_train_export"]
+    assert train_export["official_trained_checkpoint_state_dict_loaded"] is True
+    assert (
+        train_export["official_trained_checkpoint_state_dict_mapping_verified"]
+        is True
+    )
+    assert train_export["official_trained_checkpoint_source_forward_replay_verified"] is False
+    assert train_export["official_trained_checkpoint_mapping_manifest"][
+        "state_dict_source"
+    ] == state_path.as_posix()
+    assert train_export["source_forward_replay_authority"] is False
+    assert report["score_claim"] is False
+
+
+def test_train_export_threads_official_checkpoint_npz_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    state_path = tmp_path / "official_state_dict_slice.npz"
+    np.savez(state_path, **_minimal_full_official_decoder_state())
+    source_pairs = _tiny_pairs(pairs=1) / 255.0
+
+    def fake_decode_mlx_targets(*_args: object, **_kwargs: object) -> tuple[np.ndarray, np.ndarray]:
+        return (
+            np.transpose(source_pairs[:, 0], (0, 2, 3, 1)),
+            np.transpose(source_pairs[:, 1], (0, 2, 3, 1)),
+        )
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "native_train_export",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-checkpoint-npz-path",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "score_aware_long_training_epochs": 0,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        official_trained_checkpoint_state_dict_path=state_path,
+    )
+
+    long_training = report["score_aware_long_training"]
+    train_export = long_training["official_mfu_hfr_tub_train_export"]
+    assert train_export["official_trained_checkpoint_state_dict_loaded"] is True
+    assert (
+        train_export["official_trained_checkpoint_state_dict_mapping_verified"]
+        is True
+    )
+    assert train_export["official_trained_checkpoint_mapping_manifest"][
+        "state_dict_source"
+    ] == state_path.as_posix()
+    assert train_export["official_trained_checkpoint_source_forward_replay_verified"] is False
+    assert report["score_claim"] is False
+
+
+def test_train_export_refuses_dead_official_checkpoint_control_without_official_adapter(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(
+        SnervMlxNativeExportError,
+        match="official trained checkpoint controls require",
+    ):
+        train_export_snerv_mlx_native(
+            output_dir=tmp_path / "native_train_export",
+            num_pairs=1,
+            source_video_path="unit.mkv",
+            modelsize_candidate={
+                "candidate_id": "non-official-dead-checkpoint-control",
+                "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+                "levels": 1,
+                "wavelet": "haar",
+                "bits_per_coeff": 3.0,
+                "decoder_payload_codec": "int8_symmetric",
+                "score_aware_long_training_epochs": 0,
+            },
+            scorer_upstream_dir="upstream",
+            output_height=16,
+            output_width=16,
+            run_archive_export=False,
+            official_trained_checkpoint_state_dict=(
+                _minimal_full_official_decoder_state()
+            ),
+        )
+
+
 def test_checkpoint_retention_candidate_null_preserves_safe_default() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
@@ -365,6 +607,7 @@ def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs(
         segnet_distillation_weight=0.25,
         segnet_direct_live_distillation_weight=0.5,
         pose_distillation_weight=0.1,
+        pose_direct_live_distillation_weight=0.75,
         has_real_segnet_teacher=False,
         has_real_posenet_teacher=False,
         coder_aware_qat_bound=True,
@@ -378,9 +621,14 @@ def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs(
     assert "distill" in policy["required_loss_parts"]
     assert "segnet_direct_live_distill" in policy["required_loss_parts"]
     assert "pose_score_term" in policy["required_loss_parts"]
+    assert "pose_direct_live_score_term" in policy["required_loss_parts"]
     assert "pr95_stage_scorer_surrogate" in policy["required_loss_parts"]
-    assert policy["pose_selection_loss_part"] == "pose_score_term"
+    assert policy["pose_selection_loss_part"] == "pose_direct_live_score_term"
+    assert policy["pose_direct_live_distillation_weight"] == pytest.approx(0.75)
     assert "real_segnet_direct_live_distillation" in policy[
+        "active_score_surfaces"
+    ]
+    assert "real_posenet_direct_live_distillation" in policy[
         "active_score_surfaces"
     ]
     assert "snerv_score_aware_checkpoint_selection_segnet_teacher_missing" in policy[
@@ -436,6 +684,36 @@ def test_score_aware_checkpoint_selection_policy_prices_direct_live_only() -> No
     assert policy["required_loss_parts"] == ["recon", "segnet_direct_live_distill"]
     assert policy["blockers"] == []
     assert policy["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+
+
+def test_score_aware_checkpoint_selection_policy_prices_direct_live_subcontrol_only() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.75,
+        has_real_segnet_teacher=True,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=False,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=False,
+    )
+
+    assert policy["uses_score_aware_composite"] is True
+    assert policy["mse_fallback"] is False
+    assert "real_segnet_direct_live_subcontrols" in policy["active_score_surfaces"]
+    assert policy["required_loss_parts"] == [
+        "recon",
+        "segnet_direct_live_distill",
+        "segnet_direct_live_class_region_recon_loss",
+    ]
+    assert policy["segnet_direct_live_distillation_weight"] == pytest.approx(0.0)
+    assert policy["segnet_direct_live_subcontrol_weights"] == {
+        "class_region_recon": pytest.approx(0.75)
+    }
+    assert policy["blockers"] == []
 
 
 def test_score_aware_checkpoint_selection_policy_prices_contrast_floor() -> None:
@@ -501,6 +779,28 @@ def test_score_aware_checkpoint_selection_policy_prices_posenet_temporal_signal_
     assert "posenet_temporal_signal_floor" in policy["active_score_surfaces"]
     assert "posenet_temporal_signal_floor" in policy["required_loss_parts"]
     assert policy["posenet_temporal_signal_floor_weight"] == pytest.approx(0.5)
+    assert policy["blockers"] == []
+
+
+def test_score_aware_checkpoint_selection_policy_prices_posenet_yuv6_geometry_tether() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        posenet_yuv6_geometry_tether_weight=0.5,
+        has_real_segnet_teacher=False,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=False,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=False,
+    )
+
+    assert policy["uses_score_aware_composite"] is True
+    assert policy["mse_fallback"] is False
+    assert "posenet_yuv6_geometry_tether" in policy["active_score_surfaces"]
+    assert "posenet_yuv6_geometry_tether" in policy["required_loss_parts"]
+    assert policy["posenet_yuv6_geometry_tether_weight"] == pytest.approx(0.5)
     assert policy["blockers"] == []
 
 
@@ -701,10 +1001,13 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         json.dumps(
             {
                 "epoch": 0,
-                "loss_components": {
-                    "loss_part_distill": 1.0,
-                    "loss_part_pose_distill": 2.0,
-                    "loss_part_pr95_stage_seg_surrogate": 1.0,
+                    "loss_components": {
+                        "loss_part_distill": 1.0,
+                        "loss_part_pose_distill": 2.0,
+                        "loss_part_pose_direct_live_distill": 1.75,
+                        "loss_part_pose_direct_live_raw_mse": 0.25,
+                        "loss_part_pose_direct_live_score_term": 1.75,
+                        "loss_part_pr95_stage_seg_surrogate": 1.0,
                     "loss_part_pr95_stage_pose_surrogate": 2.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.25,
                     "loss_part_pr95_stage_scorer_input_contrast_floor": 0.125,
@@ -714,12 +1017,17 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb": 0.0625,
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair": 0.09375,
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.09375,
+                    "loss_part_pr95_stage_posenet_yuv6_geometry_tether": 0.1875,
+                    "loss_part_pr95_stage_posenet_yuv6_geometry_tether_pair": 0.09375,
+                    "loss_part_pr95_stage_posenet_yuv6_geometry_tether_temporal_delta": 0.09375,
                     "loss_part_pr95_stage_posenet_temporal_signal_floor": 0.03125,
                     "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
                     "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_abs_ratio": 0.6,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.0625,
                     "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.5,
                     "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+                    "loss_part_segnet_direct_live_class_region_recon_loss": 0.04,
                     "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.03125,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.125,
@@ -739,6 +1047,10 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "gradient_multiplier_applied_leaf_count": 1.0,
                     "gradient_multiplier_missing_requested_count": 0.0,
                     "gradient_multiplier_requested_but_unapplied": 0.0,
+                    "scorer_space_step_guard_enabled": 1.0,
+                    "scorer_space_step_guard_eligible": 1.0,
+                    "scorer_space_step_guard_rejected": 0.0,
+                    "scorer_space_step_guard_effective_optimizer_learning_rate": 1.0e-3,
                 },
             },
             sort_keys=True,
@@ -751,20 +1063,28 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         telemetry,
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        pose_direct_live_distillation_weight=0.75,
         segnet_student_live_calibration_weight=1.0,
         segnet_direct_live_distillation_weight=0.5,
+        segnet_direct_live_class_region_recon_weight=0.25,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
         scorer_input_distribution_guard_weight=2.0,
         scorer_input_contrast_floor_weight=0.875,
         scorer_input_shape_tether_weight=0.625,
+        posenet_yuv6_geometry_tether_weight=0.5,
         posenet_temporal_signal_floor_weight=0.5,
         gradient_multiplier_controls_requested=True,
+        scorer_space_step_guard_enabled=True,
     )
 
     assert contract["passed"] is True
     assert contract["blockers"] == []
+    assert contract["expected_posenet_direct_live_distillation"] is True
+    assert contract["posenet_direct_live_loss_observed"] is True
+    assert contract["posenet_direct_live_raw_mse_observed"] is True
+    assert contract["posenet_direct_live_score_term_observed"] is True
     assert contract["segnet_dual_metric_observed"] is True
     assert contract["posenet_dual_metric_observed"] is True
     assert contract["segnet_dual_lambda_active_observed"] is True
@@ -782,6 +1102,10 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["gradient_multiplier_applied_observed"] is True
     assert contract["gradient_multiplier_missing_requested_observed"] is False
     assert contract["gradient_multiplier_noop_observed"] is False
+    assert contract["expected_scorer_space_step_guard"] is True
+    assert contract["scorer_space_step_guard_config_observed"] is True
+    assert contract["scorer_space_step_guard_metric_observed"] is True
+    assert contract["scorer_space_step_guard_intervention_observed"] is False
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["scorer_input_guard_dual_metric_observed"] is True
     assert contract["expected_scorer_input_contrast_floor_metric"] is True
@@ -799,6 +1123,10 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["scorer_input_shape_tether_segnet_metric_observed"] is True
     assert contract["scorer_input_shape_tether_posenet_pair_metric_observed"] is True
     assert contract["scorer_input_shape_tether_posenet_delta_metric_observed"] is True
+    assert contract["expected_posenet_yuv6_geometry_tether_metric"] is True
+    assert contract["posenet_yuv6_geometry_tether_metric_observed"] is True
+    assert contract["posenet_yuv6_geometry_tether_pair_metric_observed"] is True
+    assert contract["posenet_yuv6_geometry_tether_delta_metric_observed"] is True
     assert contract["expected_posenet_temporal_signal_floor_metric"] is True
     assert contract["posenet_temporal_signal_floor_metric_observed"] is True
     assert (
@@ -812,12 +1140,166 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
+    assert contract["expected_segnet_direct_live_class_region_recon"] is True
     assert contract["segnet_direct_live_distillation_loss_observed"] is True
+    assert contract["segnet_direct_live_class_region_recon_metric_observed"] is True
     assert contract["segnet_direct_live_argmax_metric_observed"] is True
     assert contract["segnet_direct_live_class_occupancy_metric_observed"] is True
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
     ] == pytest.approx(0.6)
+    assert contract["segnet_direct_live_target_class_coverage_metric_observed"] is True
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
+    ] == pytest.approx(0.8)
+
+
+def test_score_aware_telemetry_contract_requires_scorer_space_step_guard_metrics(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.125,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_space_step_guard_enabled=True,
+    )
+
+    assert contract["passed"] is False
+    assert contract["expected_scorer_space_step_guard"] is True
+    assert contract["scorer_space_step_guard_config_observed"] is False
+    assert contract["scorer_space_step_guard_metric_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_scorer_space_step_guard_config_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_scorer_space_step_guard_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_requires_direct_live_region_recon_metric(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.125,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["expected_segnet_direct_live_distillation"] is True
+    assert contract["expected_segnet_direct_live_class_region_recon"] is True
+    assert contract["segnet_direct_live_distillation_loss_observed"] is True
+    assert contract["segnet_direct_live_class_region_recon_metric_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_class_region_recon_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_direct_live_target_class_collapse(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.125,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.6,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["segnet_direct_live_class_occupancy_metric_observed"] is True
+    assert contract["segnet_direct_live_target_class_coverage_metric_observed"] is True
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
+    ] == pytest.approx(0.6)
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_candidate_argmax_collapsed"
+        not in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_class_coverage_collapsed"
+        in contract["blockers"]
+    )
 
 
 def test_score_aware_telemetry_contract_allows_archive_dual_under_byte_target(
@@ -872,6 +1354,126 @@ def test_score_aware_telemetry_contract_allows_archive_dual_under_byte_target(
     )
 
 
+def test_latest_score_aware_training_metrics_extracts_nested_guard_and_deltas(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        "\n".join(
+            (
+                "{not-json",
+                json.dumps(
+                    {
+                        "epoch": 7,
+                        "loss": 12.5,
+                        "loss_components": {
+                            "scorer_space_step_guard_enabled": 1.0,
+                            "scorer_space_step_guard_eligible": 1.0,
+                            "scorer_space_step_guard_rejected": 0.0,
+                            "scorer_space_step_guard_optimizer_learning_rate_scale": 0.5,
+                            "dynamics_pre_update_loss_part_pose_direct_live_score_term": 0.3,
+                            "loss_part_pose_direct_live_score_term": 0.2,
+                            "dynamics_pre_update_loss_part_segnet_direct_live_argmax_disagreement": 0.05,
+                            "loss_part_segnet_direct_live_argmax_disagreement": 0.04,
+                            "dynamics_gradient_all_l2": 4.0,
+                            "dynamics_param_delta_all_l2": 2.0,
+                            "train_time_archive_bytes": 1234.0,
+                            "train_time_section_bytes__decoder_payload": 12.0,
+                            "train_time_section_bytes__lf_payload": 34.0,
+                        },
+                    },
+                    sort_keys=True,
+                ),
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    summary = mod._latest_snerv_score_aware_training_metrics(telemetry)
+
+    assert summary["telemetry_exists"] is True
+    assert summary["row_count"] == 1
+    assert summary["malformed_rows"] == 1
+    assert summary["latest_epoch"] == 7
+    assert summary["latest_loss"] == pytest.approx(12.5)
+    assert summary["train_time_archive_bytes"] == pytest.approx(1234.0)
+    assert summary["train_time_section_bytes"] == {
+        "decoder_payload": 12.0,
+        "lf_payload": 34.0,
+    }
+    assert summary["scorer_space_step_guard"]["scorer_space_step_guard_enabled"] == 1.0
+    assert summary["scorer_space_step_guard"][
+        "scorer_space_step_guard_optimizer_learning_rate_scale"
+    ] == pytest.approx(0.5)
+    pose_delta = summary["scorer_deltas"]["pose_direct_live_score_term"]
+    assert pose_delta["pre"] == pytest.approx(0.3)
+    assert pose_delta["post"] == pytest.approx(0.2)
+    assert pose_delta["delta"] == pytest.approx(-0.1)
+    assert pose_delta["improved_or_equal"] is True
+    assert summary["scorer_deltas"]["segnet_direct_live_argmax_disagreement"][
+        "improved_or_equal"
+    ] is True
+    assert summary["dynamics"]["dynamics_gradient_all_l2"] == pytest.approx(4.0)
+    assert summary["blockers"] == [
+        "snerv_score_aware_latest_telemetry_malformed_rows"
+    ]
+
+
+def test_score_aware_telemetry_contract_allows_byte_duals_under_targets(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.0,
+                    "loss_part_pose_distill": 2.0,
+                    "train_time_archive_rate_score": 0.02,
+                    "train_time_section_rate_score__decoder_payload": 0.01,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                    "dual_ascent_violation__snerv_archive_total_bytes": -0.10,
+                    "dual_ascent_update_count__snerv_archive_total_bytes": 1.0,
+                    "dual_ascent_violation__snerv_decoder_payload_section_bytes": -0.03,
+                    "dual_ascent_update_count__snerv_decoder_payload_section_bytes": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["archive_byte_dual_positive_violation_observed"] is False
+    assert contract["archive_byte_dual_update_observed"] is True
+    assert contract["section_byte_dual_positive_violation_observed"] is False
+    assert contract["section_byte_dual_update_observed"] is True
+    assert contract["archive_byte_dual_lambda_active_observed"] is False
+    assert contract["section_byte_dual_lambda_active_observed"] is False
+    assert contract["blockers"] == []
+
+
 def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dual(
     tmp_path: Path,
 ) -> None:
@@ -892,6 +1494,7 @@ def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dua
                     "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
                     "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
                     "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
+                    "dual_ascent_violation__snerv_decoder_payload_section_bytes": 0.004,
                 },
             },
             sort_keys=True,
@@ -913,6 +1516,7 @@ def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dua
 
     assert contract["passed"] is False
     assert contract["section_rate_metric_observed"] is True
+    assert contract["section_byte_dual_positive_violation_observed"] is True
     assert contract["section_byte_dual_lambda_active_observed"] is False
     assert (
         "snerv_score_aware_long_training_section_byte_dual_lambda_never_active"
@@ -985,6 +1589,7 @@ def test_score_aware_telemetry_contract_rejects_dual_lambda_without_weight_appli
                     "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
                     "dual_ascent_violation__snerv_archive_total_bytes": 0.125,
                     "dual_ascent_lambda__snerv_decoder_payload_section_bytes": 0.125,
+                    "dual_ascent_violation__snerv_decoder_payload_section_bytes": 0.125,
                 },
             },
             sort_keys=True,
@@ -1550,6 +2155,73 @@ def test_snerv_train_time_section_byte_control_binds_decoder_and_lf_only() -> No
     assert control["blockers"] == []
 
 
+def test_snerv_official_section_qat_leaves_dummy_lf_non_actuated() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    official_model_size = SnervModelSizeConfig(
+        fc_dim=4,
+        emb_size=1,
+        patch_radius=1,
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        official_skip_high_mode="channel_mean",
+    )
+    policy = mod._build_snerv_pretraining_archive_section_qat_weight_policy(
+        pairs_nchw255=_tiny_pairs(pairs=2),
+        model_size=official_model_size,
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0, 1),
+        target_bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        hard_byte_ceiling=128,
+        base_qat_weights={
+            "coder_qat_quant_residual": 1.0e-3,
+            "coder_qat_magnitude": 2.0e-4,
+        },
+    )
+
+    assert policy["active"] is True
+    assert policy["blockers"] == []
+    assert policy["decoder_section_bytes"] > 0
+    assert policy["lf_section_bytes"] > 0
+    assert "coder_qat_quant_residual" in policy["extra_loss_weights"]
+    assert "latent_qat_quant_residual" not in policy["extra_loss_weights"]
+    assert policy["non_actuated_section_names"] == ["lf_payload"]
+    assert policy["non_actuated_section_reasons"] == {
+        "lf_payload": "official_payload_frame_decode_uses_decoder_payload_dummy_lf_member"
+    }
+    pending_policy = {
+        str(row["section_name"]): row for row in policy["pending_section_operators"]
+    }
+    assert pending_policy["lf_payload"]["current_status"] == (
+        "not_train_time_actuated"
+    )
+
+    control = mod._build_snerv_train_time_section_byte_control(
+        policy,
+        policy["extra_loss_weights"],
+        hard_byte_ceiling=128,
+    )
+
+    assert control["active"] is True
+    assert control["blockers"] == []
+    assert set(control["section_byte_budgets"]) == {"decoder_payload"}
+    assert control["section_byte_loss_weight_key_map"] == {
+        "decoder_payload": "coder_qat_quant_residual"
+    }
+    pending_control = {
+        str(row["section_name"]): row for row in control["pending_section_rows"]
+    }
+    assert pending_control["lf_payload"]["current_status"] == (
+        "not_train_time_actuated"
+    )
+
+
 def test_snerv_train_time_section_byte_control_prices_pending_without_ceiling() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
@@ -2090,17 +2762,33 @@ def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
     harness_calls: list[dict[str, object]] = []
 
+    telemetry_path = tmp_path / "zero_muon_every_stage_telemetry.jsonl"
+
     class FakeArtifact:
         def as_dict(self) -> dict[str, object]:
             return {
                 "total_epochs_completed": 1,
-                "telemetry_path": "",
+                "telemetry_path": telemetry_path.as_posix(),
                 "live_checkpoint_path": "",
                 "ema_shadow_checkpoint_path": "",
             }
 
     def fake_run_mlx_score_aware_full_main(**kwargs):
         harness_calls.append(kwargs)
+        telemetry_path.write_text(
+            json.dumps(
+                {
+                    "epoch": 0,
+                    "scorer_space_step_guard_enabled": 1.0,
+                    "scorer_space_step_guard_eligible": 1.0,
+                    "scorer_space_step_guard_rejected": 0.0,
+                    "scorer_space_step_guard_effective_optimizer_learning_rate": 1.0e-3,
+                    "scorer_space_step_guard_optimizer_learning_rate_scale": 1.0,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         on_epoch_end = kwargs.get("on_epoch_end")
         if on_epoch_end is not None:
             on_epoch_end(SimpleNamespace(epoch=0, loss=0.0))
@@ -2248,13 +2936,133 @@ def test_score_aware_long_training_stage_weights_reach_snerv_harness(
         0.875
     )
     long_training = report["score_aware_long_training"]
-    assert long_training["stage_loss_weights"] == stage_weights
+    assert long_training["stage_loss_weights"] == {
+        **stage_weights,
+        "pose_direct_live_distill": 0.75,
+        "segnet_direct_live_class_histogram": 0.125,
+        "segnet_direct_live_class_balanced_hinge": 0.125,
+        "segnet_direct_live_class_balanced_ce": 0.125,
+        "segnet_direct_live_class_balanced_squared_hinge": 0.125,
+        "segnet_direct_live_class_region_recon": 0.125,
+        "segnet_direct_live_rare_class_logit": 0.125,
+        "segnet_direct_live_target_mass_floor": 0.125,
+        "segnet_direct_live_target_min_ratio_floor": 0.125,
+        "posenet_yuv6_geometry_tether": 0.25,
+    }
     assert long_training["curriculum_warmup_epochs"] == {
         "pose_distillation_warmup_epochs": 2,
         "scorer_input_shape_warmup_epochs": 1,
         "segnet_direct_live_escape_warmup_epochs": 1,
+        "segnet_direct_live_escape_class_multiplier": 1.0,
     }
     assert long_training["curriculum_stage_count"] == 3
+
+
+def test_score_aware_step_guard_pose_yuv6_candidate_controls_reach_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    monkeypatch.setattr(
+        mod,
+        "decode_mlx_targets",
+        lambda *_args, **_kwargs: (target0, target1),
+    )
+
+    harness_calls: list[dict[str, object]] = []
+
+    class FakeArtifact:
+        def as_dict(self) -> dict[str, object]:
+            return {
+                "total_epochs_completed": 1,
+                "telemetry_path": "",
+                "live_checkpoint_path": "",
+                "ema_shadow_checkpoint_path": "",
+            }
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        harness_calls.append(kwargs)
+        on_epoch_end = kwargs.get("on_epoch_end")
+        if on_epoch_end is not None:
+            on_epoch_end(SimpleNamespace(epoch=0, loss=0.0))
+        return FakeArtifact()
+
+    monkeypatch.setattr(
+        "tac.substrates._shared.mlx_score_aware.harness.run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "snerv_step_guard_pose_yuv6_candidate_controls",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_scorer_input_distribution_guard_weight": 0.0,
+            "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio": 0.23,
+            "snerv_score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop": 0.045,
+            "score_aware_long_training_scorer_space_step_guard_max_post_segnet_distribution_mae": 0.11,
+            "snerv_score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae": 0.12,
+            "score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio": 1.3,
+            "snerv_score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term": 2.4,
+            "score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term": 0.05,
+            "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening": 0.06,
+            "score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening": 0.07,
+            "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening": 0.08,
+            "score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening": 0.09,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert report["score_aware_long_training_executed"] is True
+    assert harness_calls
+    harness_kwargs = harness_calls[0]
+    assert harness_kwargs[
+        "scorer_space_step_guard_min_post_segnet_target_class_min_ratio"
+    ] == pytest.approx(0.23)
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop"
+    ] == pytest.approx(0.045)
+    assert harness_kwargs["scorer_space_step_guard_max_post_segnet_distribution_mae"] == pytest.approx(
+        0.11
+    )
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+    ] == pytest.approx(0.12)
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+    ] == pytest.approx(1.3)
+    assert harness_kwargs["scorer_space_step_guard_max_post_pose_score_term"] == pytest.approx(
+        2.4
+    )
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_post_pose_direct_live_score_term"
+    ] == pytest.approx(0.05)
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_pose_score_term_relative_worsening"
+    ] == pytest.approx(0.06)
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_pose_score_term_absolute_worsening"
+    ] == pytest.approx(0.07)
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
+    ] == pytest.approx(0.08)
+    assert harness_kwargs[
+        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
+    ] == pytest.approx(0.09)
 
 
 def test_packet_builder_emits_receiver_decodable_snar1() -> None:
@@ -2911,7 +3719,7 @@ def test_snerv_mlx_haar_renderer_trains_under_shared_pact_muon_harness(
         SnervMlxHaarScoreRenderer,
     )
 
-    pairs = _tiny_pairs(pairs=2)
+    pairs = _tiny_pairs(pairs=1)
     model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
         pairs,
         levels=1,
@@ -3254,6 +4062,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             captured["pose_indices_shape"] = tuple(indices.shape)
             return mx.zeros((int(indices.shape[0]), 6), dtype=mx.float32)
 
+        def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+            captured["pose_direct_live_yuv6_shape"] = tuple(yuv6_pair.shape)
+            return mx.zeros((int(yuv6_pair.shape[0]), 6), dtype=mx.float32)
+
     def fake_decode_mlx_targets(*_args, **_kwargs):
         return target0, target1
 
@@ -3319,6 +4131,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         run_archive_export=False,
         segnet_distillation_weight=0.01,
         pose_distillation_weight=0.001,
+        pose_direct_live_distillation_weight=0.75,
         pose_distillation_loss="huber",
         pose_distillation_huber_delta=2.0,
         segnet_distillation_objective="kl_t2",
@@ -3372,6 +4185,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert long_training["has_real_posenet_teacher"] is True
     assert long_training["teacher_binding"]["requested_distillation_device"] == "gpu"
     assert long_training["teacher_binding"]["distillation_device"] == "mps"
+    # Direct-live PoseNet consumes the upstream YUV6 pair surface, which halves
+    # the scorer RGB spatial size after rgb_to_yuv6. For the 16x16 fixture this
+    # must be 8x8x12, matching upstream modules.py PoseNet.preprocess_input.
+    assert captured["pose_direct_live_yuv6_shape"] == (2, 8, 8, 12)
     assert long_training["teacher_binding"]["distillation_device_resolution"] == {
         "schema": "snerv_native_torch_scorer_device_resolution.v1",
         "requested": "gpu",
@@ -3380,6 +4197,25 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     }
     assert long_training["coder_aware_qat"]["enabled"] is True
     assert long_training["coder_aware_qat"]["quant_bits"] == 4
+    contract = long_training["training_telemetry_contract"]
+    assert contract["expected_posenet_direct_live_distillation"] is True
+    assert contract["posenet_direct_live_loss_observed"] is True
+    assert contract["posenet_direct_live_raw_mse_observed"] is True
+    assert contract["posenet_direct_live_score_term_observed"] is True
+    selection_policy = long_training["checkpoint_selection_policy"]
+    assert selection_policy["pose_direct_live_distillation_weight"] == pytest.approx(
+        0.75
+    )
+    assert selection_policy["pose_selection_loss_part"] == "pose_direct_live_score_term"
+    assert (
+        "real_posenet_direct_live_distillation"
+        in selection_policy["active_score_surfaces"]
+    )
+    assert "pose_direct_live_score_term" in selection_policy["required_loss_parts"]
+    assert (
+        "weighted_pose_direct_live_score_term"
+        in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
+    )
     assert long_training["archive_section_qat_weight_policy_bound"] is True
     section_policy = long_training["archive_section_qat_weight_policy"]
     assert section_policy["schema"] == mod.SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA
@@ -3477,6 +4313,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert long_training["muon_adamw_partition_bound"] is True
     assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
     assert long_training["teacher_binding"]["pose_distillation_huber_delta"] == 2.0
+    assert long_training["teacher_binding"]["pose_direct_live_distillation_weight"] == 0.75
     assert long_training["teacher_binding"]["segnet_direct_live_distillation_weight"] == 0.25
     assert long_training["teacher_binding"]["segnet_direct_live_class_histogram_weight"] == 0.125
     assert (
@@ -3500,6 +4337,15 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         long_training["checkpoint_selection_policy"]["selection_metric"]
         == "score_aware_composite_full_video_surrogate"
     )
+    assert long_training["checkpoint_selection_policy"][
+        "pose_direct_live_distillation_weight"
+    ] == pytest.approx(0.75)
+    assert "real_posenet_direct_live_distillation" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
+    assert "pose_direct_live_score_term" in long_training[
+        "checkpoint_selection_policy"
+    ]["required_loss_parts"]
     assert "real_segnet_teacher_distillation" in long_training[
         "checkpoint_selection_policy"
     ]["active_score_surfaces"]
@@ -3557,7 +4403,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     )
     assert (
         long_training["checkpoint_selection_policy"]["pose_selection_loss_part"]
-        == "pose_score_term"
+        == "pose_direct_live_score_term"
     )
     assert (
         long_training["checkpoint_selection_policy"][
@@ -3786,6 +4632,12 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
         "official_authority"
     ] is False
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
+        "source_forward_authority"
+    ] is False
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
+        "receiver_payload_binding_authority"
+    ] is False
     assert evidence["snerv_official_mfu_hfr_tub_source_forward_replay_missing"]["official_authority"] is False
     assert binding["export_consumed_official_mfu"] is True
     assert binding["export_consumed_official_hfr"] is True
@@ -3951,9 +4803,9 @@ def test_train_export_official_primitives_shared_skip_high_is_receiver_closed(
     frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
 
     assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
-    assert decoded.metadata["official_skip_high_mode"] == "shared_mean"
-    assert decoded.metadata["official_skip_high_full_shape"] == [4, 3, 8, 8]
-    assert "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high" in decoded.metadata[
+    assert report["official_skip_high_mode"] == "shared_mean"
+    assert report["official_skip_high_full_shape"] == [4, 3, 8, 8]
+    assert "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high" in report[
         "official_source_parity_blockers"
     ]
     storage = official_payload.header["skip_high_storage"]
@@ -4008,21 +4860,35 @@ def test_official_mfu_hfr_tub_packet_elides_output2_payload_from_components() ->
     )
     proof = official_payload.execute()
 
-    storage = decoded.metadata["official_tub_output2_storage"]
-    assert decoded.metadata["lf_payload_codec"] == "spatial_delta_zigzag_leb128_lzma"
+    rich_metadata = packet.metadata
+    mfu_storage = official_payload.header["mfu_input_storage"]
+    assert decoded.schema == "snerv_inverse_steg_archive.snar2.v1"
+    assert "official_mfu_input_storage_mode" not in decoded.metadata
+    assert rich_metadata["official_mfu_input_storage_mode"] == "zero_synthetic"
+    assert mfu_storage["codec"] == "zero_synthetic_float64"
+    assert mfu_storage["stored_raw_bytes"] == 16
+    assert mfu_storage["raw_byte_savings"] > 0
+    assert official_payload.tensors["inputs.mfu.low"].shape == components["low"].shape
+    assert official_payload.tensors["inputs.mfu.skip_mid"].shape == components[
+        "skip_mid"
+    ].shape
+    assert np.count_nonzero(official_payload.tensors["inputs.mfu.low"]) == 0
+    assert np.count_nonzero(official_payload.tensors["inputs.mfu.skip_mid"]) == 0
+    storage = rich_metadata["official_tub_output2_storage"]
+    assert rich_metadata["lf_payload_codec"] == "spatial_delta_zigzag_leb128_lzma"
     assert (
-        decoded.metadata["lf_payload_codec_requested"]
+        rich_metadata["lf_payload_codec_requested"]
         == "spatial_delta_zigzag_leb128_lzma"
     )
     assert (
-        decoded.metadata["lf_payload_codec_selected"]
+        rich_metadata["lf_payload_codec_selected"]
         == "spatial_delta_zigzag_leb128_lzma"
     )
-    assert decoded.metadata["lf_payload_receiver_usage"] == (
+    assert rich_metadata["lf_payload_receiver_usage"] == (
         "unused_dummy_zero_official_payload_frame_decode_uses_decoder_payload"
     )
     assert (
-        decoded.metadata["lf_payload_codec_selection_report"]["section_bytes"]
+        rich_metadata["lf_payload_codec_selection_report"]["section_bytes"]
         == packet.section_bytes["lf_payload"]
     )
     assert storage["stored"] is False
@@ -4039,37 +4905,37 @@ def test_official_mfu_hfr_tub_packet_elides_output2_payload_from_components() ->
         "tub.temporal_encoder_concat",
         "tub.output2_raw",
     ]
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is False
-    assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
-    assert decoded.metadata["official_tub_output2_payload_source_available"] is True
-    assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
+    assert rich_metadata["official_tub_output2_receiver_executed"] is False
+    assert rich_metadata["official_tub_output2_payload_export_bound"] is False
+    assert rich_metadata["official_tub_output2_payload_source_available"] is True
+    assert rich_metadata["official_tub_output2_payload_proof_only_elided"] is True
     assert (
-        decoded.metadata[
+        rich_metadata[
             "official_tub_output2_payload_false_authority_metadata_bound"
         ]
         is True
     )
-    assert decoded.metadata["official_tub_output2_receiver_frame_bound"] is False
-    assert decoded.metadata["official_tub_output2_payload_loss_coupled"] is False
-    assert decoded.metadata["official_tub_output2_payload_tensor_names"] == []
-    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 0
-    assert decoded.metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
-    assert decoded.metadata["official_tub_output2_payload_source_raw_bytes"] > 0
+    assert rich_metadata["official_tub_output2_receiver_frame_bound"] is False
+    assert rich_metadata["official_tub_output2_payload_loss_coupled"] is False
+    assert rich_metadata["official_tub_output2_payload_tensor_names"] == []
+    assert rich_metadata["official_tub_output2_payload_tensor_count"] == 0
+    assert rich_metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert rich_metadata["official_tub_output2_payload_source_raw_bytes"] > 0
     manifest = {
         row["name"]: row
-        for row in decoded.metadata["official_tub_output2_payload_tensor_manifest"]
+        for row in rich_metadata["official_tub_output2_payload_tensor_manifest"]
     }
     assert manifest == {}
     assert (
-        decoded.metadata["official_tub_output2_payload_tensor_manifest_sha256"]
+        rich_metadata["official_tub_output2_payload_tensor_manifest_sha256"]
         is None
     )
     assert proof["executed_components"]["official_tub_output2_fusion"] is False
     rows = {row["name"]: row for row in proof["output_tensors"]}
     assert "tub.output2_decoder_input" not in rows
     assert "tub.output2_fused" not in rows
-    assert decoded.metadata["official_tub_output2_receiver_output_tensor_names"] == []
-    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 0
+    assert rich_metadata["official_tub_output2_receiver_output_tensor_names"] == []
+    assert rich_metadata["official_tub_output2_receiver_output_tensor_count"] == 0
     frames = decode_snerv_archive_frames(packet.packet, clip_to_uint8_range=False)
     components["tub_output2_raw"] = np.asarray(components["tub_output2_raw"]) + 7.0
     mutated_packet = mod._build_official_mfu_hfr_tub_packet_from_components(
@@ -4083,8 +4949,8 @@ def test_official_mfu_hfr_tub_packet_elides_output2_payload_from_components() ->
         clip_to_uint8_range=False,
     )
     np.testing.assert_array_equal(frames, mutated_frames)
-    assert decoded.metadata["source_faithful_stack"] is False
-    assert decoded.metadata["score_claim"] is False
+    assert rich_metadata["source_faithful_stack"] is False
+    assert rich_metadata["score_claim"] is False
 
 
 def test_official_renderer_elides_output2_from_selected_receiver_packet() -> None:
@@ -4127,6 +4993,7 @@ def test_official_renderer_elides_output2_from_selected_receiver_packet() -> Non
         tub_next_frame=components["tub_next_frame"],
         tub_temporal_encoder_concat=temporal,
         tub_output2_raw=output2_raw,
+        tub_output2_fc_hw=components["fc_hw"],
     )
 
     exported = model.export_official_components()
@@ -4144,54 +5011,57 @@ def test_official_renderer_elides_output2_from_selected_receiver_packet() -> Non
     proof = official_payload.execute()
     receiver_frames = decoded.decode_frames(clip_to_uint8_range=False)
     mlx_frames = model.render_pairs_nchw255(pair_indices=[0, 1], batch_size=2)
+    rich_metadata = packet.metadata
 
     assert "tub_temporal_encoder_concat" in exported
     assert "tub_output2_raw" in exported
     assert metadata["official_tub_output2_payload_export_bound"] is True
     assert metadata["official_tub_output2_receiver_frame_bound"] is False
     assert metadata["official_tub_output2_payload_loss_coupled"] is False
-    assert decoded.metadata["official_tub_output2_storage"]["stored"] is False
+    assert decoded.schema == "snerv_inverse_steg_archive.snar2.v1"
+    assert "official_tub_output2_storage" not in decoded.metadata
+    assert rich_metadata["official_tub_output2_storage"]["stored"] is False
     assert (
-        decoded.metadata["official_tub_output2_storage"][
+        rich_metadata["official_tub_output2_storage"][
             "source_payload_present"
         ]
         is True
     )
     assert (
-        decoded.metadata["official_tub_output2_storage"][
+        rich_metadata["official_tub_output2_storage"][
             "proof_only_elided_from_selected_runtime_packet"
         ]
         is True
     )
     assert (
-        decoded.metadata["official_tub_output2_storage"][
+        rich_metadata["official_tub_output2_storage"][
             "proof_only_false_authority_metadata"
         ]
         is True
     )
     assert (
-        decoded.metadata["official_tub_output2_storage"][
+        rich_metadata["official_tub_output2_storage"][
             "receiver_frame_decode_consumes_output2"
         ]
         is False
     )
     assert (
-        decoded.metadata["official_tub_output2_storage"]["train_time_loss_coupled"]
+        rich_metadata["official_tub_output2_storage"]["train_time_loss_coupled"]
         is False
     )
-    assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
-    assert decoded.metadata["official_tub_output2_payload_source_available"] is True
-    assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
+    assert rich_metadata["official_tub_output2_payload_export_bound"] is False
+    assert rich_metadata["official_tub_output2_payload_source_available"] is True
+    assert rich_metadata["official_tub_output2_payload_proof_only_elided"] is True
     assert (
-        decoded.metadata[
+        rich_metadata[
             "official_tub_output2_payload_false_authority_metadata_bound"
         ]
         is True
     )
-    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 0
-    assert decoded.metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
-    assert decoded.metadata["official_tub_output2_payload_source_raw_bytes"] > 0
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is False
+    assert rich_metadata["official_tub_output2_payload_tensor_count"] == 0
+    assert rich_metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert rich_metadata["official_tub_output2_payload_source_raw_bytes"] > 0
+    assert rich_metadata["official_tub_output2_receiver_executed"] is False
     assert proof["executed_components"]["official_tub_output2_fusion"] is False
     packet_tensor_names = {row["name"] for row in official_payload.header["tensor_manifest"]}
     assert "tub.temporal_encoder_concat" not in packet_tensor_names
@@ -4470,49 +5340,50 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "official_tub_fixture_closed_blockers"
     ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
-    assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
-    assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
-    assert decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
-    assert decoded.metadata["snerv_official_tub_source_fixture_replay_bound"] is True
-    assert decoded.metadata["snerv_official_tub_source_fixture_replay_passed"] is True
-    assert decoded.metadata["snerv_official_tub_source_forward_fixture_bound"] is True
-    decoded_tub_binding = decoded.metadata["snerv_official_tub_source_fixture_binding"]
+    assert decoded.schema == "snerv_inverse_steg_archive.snar2.v1"
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert report["snerv_official_tub_source_fixture_replay_bound"] is True
+    assert report["snerv_official_tub_source_fixture_replay_passed"] is True
+    assert report["snerv_official_tub_source_forward_fixture_bound"] is True
+    decoded_tub_binding = report["snerv_official_tub_source_fixture_binding"]
     assert decoded_tub_binding["source_fixture_replay_bound"] is True
     assert decoded_tub_binding["source_forward_replay_authority"] is False
     assert (
         "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
-        not in decoded.metadata["official_source_parity_blockers"]
+        not in report["official_source_parity_blockers"]
     )
     assert (
         "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing"
-        in decoded.metadata["official_source_parity_blockers"]
+        in report["official_source_parity_blockers"]
     )
-    assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
-    assert decoded.metadata["official_tub_output2_payload_source_available"] is True
-    assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
+    assert report["official_tub_output2_payload_export_bound"] is False
+    assert report["official_tub_output2_payload_source_available"] is True
+    assert report["official_tub_output2_payload_proof_only_elided"] is True
     assert (
-        decoded.metadata[
+        report[
             "official_tub_output2_payload_false_authority_metadata_bound"
         ]
         is True
     )
-    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 0
-    assert decoded.metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
-    assert decoded.metadata["official_tub_output2_payload_source_raw_bytes"] > 0
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is False
-    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 0
+    assert report["official_tub_output2_payload_tensor_count"] == 0
+    assert report["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert report["official_tub_output2_payload_source_raw_bytes"] > 0
+    assert report["official_tub_output2_receiver_executed"] is False
+    assert report["official_tub_output2_receiver_output_tensor_count"] == 0
     packet_manifest = {
         row["name"]: row
-        for row in decoded.metadata["official_tub_output2_payload_tensor_manifest"]
+        for row in report["official_tub_output2_payload_tensor_manifest"]
     }
     assert packet_manifest == {}
-    assert decoded.metadata["official_tub_output2_storage"][
+    assert report["official_tub_output2_storage"][
         "source_payload_present"
     ] is True
-    assert decoded.metadata["official_tub_output2_storage"][
+    assert report["official_tub_output2_storage"][
         "proof_only_elided_from_selected_runtime_packet"
     ] is True
-    assert decoded.metadata["official_tub_output2_storage"][
+    assert report["official_tub_output2_storage"][
         "stored_raw_bytes"
     ] == 0
     official_payload = decode_official_mfu_hfr_tub_decoder_payload(
@@ -4550,6 +5421,108 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert np.isfinite(float(export_profile["mse_nchw255"]))
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_primitives_long_training_consumes_checkpoint_mapping(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    state_path = tmp_path / "official_state_dict_slice.npz"
+    np.savez(state_path, **_minimal_full_official_decoder_state())
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        lambda: _fake_tub_fixture_replay_passed(),
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_long_training_checkpoint_bound",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-primitives-checkpoint-bound",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_batch_pairs": 2,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        official_trained_checkpoint_state_dict_path=state_path,
+    )
+
+    mapping_blockers = {
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+        "snerv_official_trained_checkpoint_state_dict_not_loaded",
+        "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+        "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+    }
+    assert mapping_blockers.isdisjoint(set(report["blockers"]))
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in report[
+        "blockers"
+    ]
+
+    long_training = report["score_aware_long_training"]
+    train_export = long_training["official_mfu_hfr_tub_train_export"]
+    assert train_export["trained_receiver_payload_exported"] is True
+    assert train_export["trained_weight_mapping_to_long_training_bound"] is True
+    assert train_export["official_trained_checkpoint_state_dict_loaded"] is True
+    assert (
+        train_export["official_trained_checkpoint_state_dict_mapping_verified"]
+        is True
+    )
+    assert mapping_blockers.isdisjoint(set(train_export["authority_blockers"]))
+    assert train_export["authority_blockers"] == [
+        "snerv_official_trained_checkpoint_source_forward_replay_missing"
+    ]
+
+    replay = long_training["official_mfu_hfr_tub_source_forward_replay"]
+    assert replay["trained_weight_mapping_to_long_training_bound"] is True
+    assert replay["official_trained_checkpoint_loaded"] is True
+    assert replay["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert mapping_blockers.isdisjoint(set(replay["blockers"]))
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in replay[
+        "blockers"
+    ]
+    rows = {row["component_id"]: row for row in replay["component_rows"]}
+    assert rows["mfu"]["trained_weight_mapping_to_long_training_bound"] is True
+    assert rows["hfr"]["trained_weight_mapping_to_long_training_bound"] is True
+    assert rows["tub"]["trained_weight_mapping_to_long_training_bound"] is True
+    assert (
+        "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping"
+        not in rows["mfu"]["blockers"]
+    )
+    assert (
+        "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping"
+        not in rows["hfr"]["blockers"]
+    )
+
+    primitive_binding = report["official_primitive_binding"]
+    tensor_map = primitive_binding["official_receiver_tensor_map"]
+    assert tensor_map["official_state_dict_mapping_verified"] is True
+    assert tensor_map["official_weight_mapping_blocker_closed"] is True
+    assert tensor_map["official_weight_mapping_blockers"] == []
+    assert mapping_blockers.isdisjoint(set(primitive_binding["blockers"]))
 
 
 def test_official_long_training_keeps_trained_packet_with_nonrender_blocker(
@@ -4621,12 +5594,18 @@ def test_official_long_training_keeps_trained_packet_with_nonrender_blocker(
         "trained_receiver_payload_exported"
     ] is True
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.schema == "snerv_inverse_steg_archive.snar2.v1"
     assert decoded.metadata["score_aware_long_training_executed"] is True
-    assert decoded.metadata["score_aware_long_training_trained_state_exportable"] is True
-    assert decoded.metadata["native_mlx_training_executed"] is True
-    assert decoded.metadata["score_aware_long_training"]["blocker_free_execution"] is False
-    assert decoded.metadata["score_aware_long_training"]["trained_state_exportable"] is True
-    assert decoded.metadata["score_aware_long_training"][
+    assert decoded.metadata["score_aware_long_training"]["executed"] is True
+    assert decoded.score_claim is False
+    assert decoded.promotion_eligible is False
+    assert decoded.ready_for_exact_eval_dispatch is False
+    assert report["score_aware_long_training_executed"] is True
+    assert report["score_aware_long_training_trained_state_exportable"] is True
+    assert report["native_mlx_training_executed"] is True
+    assert report["score_aware_long_training"]["blocker_free_execution"] is False
+    assert report["score_aware_long_training"]["trained_state_exportable"] is True
+    assert report["score_aware_long_training"][
         "official_mfu_hfr_tub_train_export"
     ]["trained_receiver_payload_exported"] is True
 
@@ -4702,8 +5681,8 @@ def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
     assert storage["source_shape"] == [4, 3, 8, 8]
     assert storage["stored_shape"] == stored_shape
     assert storage["encoder_consumed_compact_train_state"] is True
-    assert decoded.metadata["official_skip_high_export_storage_shape"] == stored_shape
-    assert decoded.metadata["official_skip_high_export_is_compact_train_state"] is True
+    assert report["official_skip_high_export_storage_shape"] == stored_shape
+    assert report["official_skip_high_export_is_compact_train_state"] is True
     assert official_payload.tensors["inputs.mfu.skip_high"].shape == (4, 3, 8, 8)
     frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
     assert frames.shape == (2, 2, 3, 16, 16)
@@ -4939,6 +5918,145 @@ def test_official_renderer_coder_qat_selects_hfr_decoder_weights() -> None:
     }
 
 
+def test_official_renderer_frame_bound_output2_moves_loss_path() -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SnervMlxOfficialMfuHfrTubScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=1)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float32).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.5, dtype=np.float32)
+
+    base = SnervMlxOfficialMfuHfrTubScoreRenderer(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=components["low"],
+        skip_mid=components["skip_mid"],
+        skip_high=components["skip_high"],
+        output_hw=(16, 16),
+        model_size=model_size,
+        tub_current=components["tub_current"],
+        tub_previous=components["tub_previous"],
+        tub_next_frame=components["tub_next_frame"],
+    )
+    with_output2 = SnervMlxOfficialMfuHfrTubScoreRenderer(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=components["low"],
+        skip_mid=components["skip_mid"],
+        skip_high=components["skip_high"],
+        output_hw=(16, 16),
+        model_size=model_size,
+        tub_current=components["tub_current"],
+        tub_previous=components["tub_previous"],
+        tub_next_frame=components["tub_next_frame"],
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        tub_output2_fc_hw=(2, 2),
+    )
+
+    indices = mx.array([0], dtype=mx.int32)
+    base_render = base(indices)
+    output2_render = with_output2(indices)
+    mx.eval(base_render, output2_render)
+    delta = np.asarray(output2_render - base_render, dtype=np.float32)
+
+    assert float(np.max(delta)) > 0.25
+    metadata = with_output2.metadata()
+    assert metadata["official_tub_output2_receiver_frame_bound"] is True
+    assert metadata["official_tub_output2_payload_loss_coupled"] is True
+    assert metadata["official_tub_output2_fused_shape"] == [2, 3, 16, 16]
+    exported = with_output2.export_official_components()
+    assert exported["fc_hw"] == (2, 2)
+    assert exported["temporal_encoder_output_shape"] == (1, 6, 8, 8)
+    assert exported["output2_decoder_output_shape"] == (2, 12, 8, 8)
+
+
+def test_official_renderer_non_frame_bound_output2_is_not_loss_coupled() -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SnervMlxOfficialMfuHfrTubScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=2)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float32).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.5, dtype=np.float32)
+
+    base = SnervMlxOfficialMfuHfrTubScoreRenderer(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=components["low"],
+        skip_mid=components["skip_mid"],
+        skip_high=components["skip_high"],
+        output_hw=(16, 16),
+        model_size=model_size,
+        tub_current=components["tub_current"],
+        tub_previous=components["tub_previous"],
+        tub_next_frame=components["tub_next_frame"],
+    )
+    with_output2 = SnervMlxOfficialMfuHfrTubScoreRenderer(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=components["low"],
+        skip_mid=components["skip_mid"],
+        skip_high=components["skip_high"],
+        output_hw=(16, 16),
+        model_size=model_size,
+        tub_current=components["tub_current"],
+        tub_previous=components["tub_previous"],
+        tub_next_frame=components["tub_next_frame"],
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        tub_output2_fc_hw=(2, 2),
+    )
+
+    metadata = with_output2.metadata()
+    assert metadata["official_tub_output2_payload_export_bound"] is True
+    assert metadata["official_tub_output2_receiver_frame_shape"] == [4, 3, 16, 16]
+    assert metadata["official_tub_output2_fused_shape"] == [2, 3, 16, 16]
+    assert metadata["official_tub_output2_receiver_frame_bound"] is False
+    assert metadata["official_tub_output2_payload_loss_coupled"] is False
+
+    indices = mx.array([0], dtype=mx.int32)
+    base_render = base(indices)
+    output2_render = with_output2(indices)
+    mx.eval(base_render, output2_render)
+    assert np.allclose(
+        np.asarray(output2_render, dtype=np.float32),
+        np.asarray(base_render, dtype=np.float32),
+        atol=1.0e-6,
+    )
+
+
 def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -4961,6 +6079,7 @@ def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
         repo_root,
         retain_receiver_output=False,
         receiver_proof_timeout_seconds=1800,
+        **_kwargs,
     ):
         packet_path = Path(model_or_artifact["packet_path"])
         packet = packet_path.read_bytes()
@@ -5043,6 +6162,12 @@ def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
         "official_authority"
     ] is False
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
+        "source_forward_authority"
+    ] is False
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
+        "receiver_payload_binding_authority"
+    ] is False
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
@@ -5069,6 +6194,7 @@ def test_train_export_blocks_over_hard_byte_ceiling_using_measured_archive_bytes
         repo_root,
         retain_receiver_output=False,
         receiver_proof_timeout_seconds=1800,
+        **_kwargs,
     ):
         del repo_root, retain_receiver_output, receiver_proof_timeout_seconds
         packet = Path(model_or_artifact["packet_path"]).read_bytes()
@@ -5993,12 +7119,23 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["best_packet_sha256"] == best_packet_sha256
     assert scorer_loop["best_packet_materialized"] is True
     assert scorer_loop["best_packet_path_sha256"] == best_packet_sha256
+    assert scorer_loop["best_packet_schema"] == "snerv_inverse_steg_archive.v1"
+    assert scorer_loop["best_packet_wire_format"] == "snar1"
+    assert scorer_loop["best_packet_contest_submission_wire_format_ready"] is False
     assert Path(scorer_loop["best_packet_path"]).read_bytes() == best_packet
     assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is True
     assert scorer_loop["emitted_packet_sha256"] == report["packet_sha256"]
     assert scorer_loop["emitted_packet_sha256"] != best_packet_sha256
+    assert scorer_loop["emitted_packet_schema"] == (
+        "snerv_inverse_steg_archive.snar2.v1"
+    )
+    assert scorer_loop["emitted_packet_wire_format"] == "snar2"
+    assert scorer_loop["emitted_packet_contest_submission_wire_format_ready"] is True
     continuity = scorer_loop["selected_packet_metadata_continuity"]
     assert continuity["metadata_only_repack"] is True
+    assert continuity["container_repacked_to_submission_format"] is True
+    assert continuity["output_packet_wire_format"] == "snar2"
+    assert continuity["contest_submission_wire_format_ready"] is True
     assert continuity["input_selected_packet_sha256"] == best_packet_sha256
     assert continuity["output_selected_packet_sha256"] == report["packet_sha256"]
     assert {
@@ -6011,6 +7148,9 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     }
     assert scorer_loop["blockers"] == ["snerv_scorer_loop_qat_auxiliary_warning"]
     assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"
+    assert report["packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert report["packet_wire_format"] == "snar2"
+    assert report["packet_contest_submission_wire_format_ready"] is True
     assert report["packet_sha256"] != best_packet_sha256
     assert report["byte_cap_control"]["packet_source"] == report["packet_source"]
     assert report["byte_cap_control"]["packet_sha256"] == report["packet_sha256"]
@@ -6021,12 +7161,12 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     emitted_packet = Path(report["packet_path"]).read_bytes()
     assert emitted_packet != best_packet
     emitted_archive = unpack_snerv_archive(emitted_packet)
+    assert emitted_archive.schema == "snerv_inverse_steg_archive.snar2.v1"
     assert emitted_archive.sections == raw_best_archive.sections
-    assert emitted_archive.metadata["step_map_coder_mode"] == (
-        "waterfill_mlx_native_uniform_importance_bridge"
-    )
-    assert emitted_archive.metadata["step_map_packet_schema"] == (
-        "snerv_step_map_coder.adaptive.v1"
+    assert "step_map_coder_mode" not in emitted_archive.metadata
+    assert "step_map_packet_schema" not in emitted_archive.metadata
+    assert report["receiver_packet_report_metadata_source"] == (
+        "snar2_compact_wire_metadata_plus_selected_packet_report_metadata"
     )
     assert report["step_map_coder_mode"] == (
         "waterfill_mlx_native_uniform_importance_bridge"
@@ -6036,6 +7176,315 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
     assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report["blockers"]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]
+    assert report["score_claim"] is False
+
+
+def test_official_train_export_rejects_generic_qat_best_packet(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    generic_best_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs + 1.0,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+    ).packet
+    generic_best_sha256 = hashlib.sha256(generic_best_packet).hexdigest()
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    class FakeQatResult:
+        def __init__(self) -> None:
+            self.best_packet = generic_best_packet
+
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 1,
+                "decoder_payload_codec": "int8_symmetric",
+                "lf_payload_codec": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_requested": "portfolio_auto",
+                "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+                "scorer_loop_evaluations": 1,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "baseline": {
+                    "archive_bytes": 111,
+                    "archive_sha256": "1" * 64,
+                    "score_linf": 3.0,
+                },
+                "best": {
+                    "archive_bytes": len(generic_best_packet),
+                    "archive_sha256": generic_best_sha256,
+                    "score_linf": 2.5,
+                },
+                "best_packet_bytes": len(generic_best_packet),
+                "best_packet_sha256": generic_best_sha256,
+                "component_guard_mode": "pose_seg_hard",
+                "pair_robust_admission": {
+                    "schema": "snerv_pair_robust_admission.v1",
+                    "n_pairs": 1,
+                    "min_score_improved_fraction": 1.0,
+                    "max_pose_worsened_fraction": 0.0,
+                    "pose_slack": 0.0,
+                    "score_improved_fraction": 1.0,
+                    "pose_worsened_fraction": 0.0,
+                    "permissive_guard": False,
+                    "passed": True,
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": [
+                    "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        qat_mod,
+        "run_snerv_scorer_loop_decoder_qat_smoke",
+        lambda **_kwargs: FakeQatResult(),
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_generic_qat_reject",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-generic-qat-reject",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "snerv_official_skip_high_mode": "channel_mean",
+            "snerv_temporal_context": 1,
+            "snerv_temporal_mode": "official_haar_dwt1d_lowpass",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=1,
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
+    )
+
+    emitted_packet = Path(report["packet_path"]).read_bytes()
+    decoded = unpack_snerv_archive(emitted_packet)
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    scorer_loop = report["scorer_loop_qat"]
+
+    assert emitted_packet != generic_best_packet
+    assert report["packet_sha256"] != generic_best_sha256
+    assert report["packet_source"] != "scorer_loop_qat_best_receiver_packet"
+    assert scorer_loop["best_packet_materialized"] is True
+    assert Path(scorer_loop["best_packet_path"]).read_bytes() == generic_best_packet
+    assert scorer_loop["official_decoder_payload_binding_required"] is True
+    assert scorer_loop["official_decoder_payload_binding_preserved"] is False
+    assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is False
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_payload_mismatch" in scorer_loop["blockers"]
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_payload_mismatch" in report["blockers"]
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
+    assert official_payload.header["schema"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.v1"
+    )
+    assert official_payload.score_claim is False
+    assert report["score_claim"] is False
+
+
+def test_official_train_export_rejects_qat_packet_with_tub_output2_binding_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    model_size_elided = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+        official_tub_output2_store_for_receiver_proof=False,
+    )
+    original_bootstrap = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs
+
+    def components_with_output2() -> dict[str, object]:
+        components = original_bootstrap(pairs, model_size=model_size_elided)
+        components["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+        components["output2_decoder_output_shape"] = (2, 12, 8, 8)
+        components["tub_temporal_encoder_concat"] = np.arange(
+            np.prod(components["temporal_encoder_output_shape"]),
+            dtype=np.float64,
+        ).reshape(components["temporal_encoder_output_shape"])
+        components["tub_output2_raw"] = (
+            np.arange(
+                np.prod(components["output2_decoder_output_shape"]),
+                dtype=np.float64,
+            ).reshape(components["output2_decoder_output_shape"])
+            / 31.0
+        )
+        return components
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def fake_bootstrap(_pairs_arg, *, model_size):
+        components = components_with_output2()
+        return components
+
+    best_packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        components_with_output2(),
+        source_pair_indices=[0],
+        model_size=model_size_elided,
+        metadata_extra={"allocation_mode": "unit_qat_output2_elided"},
+    ).packet
+    best_sha256 = hashlib.sha256(best_packet).hexdigest()
+
+    class FakeQatResult:
+        def __init__(self) -> None:
+            self.best_packet = best_packet
+
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 1,
+                "source_pair_indices": [0],
+                "decoder_payload_codec": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
+                "lf_payload_codec": "spatial_delta_zigzag_leb128_lzma",
+                "lf_payload_codec_requested": "spatial_delta_zigzag_leb128_lzma",
+                "lf_payload_codec_selected": "spatial_delta_zigzag_leb128_lzma",
+                "scorer_loop_evaluations": 1,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "baseline": {
+                    "archive_bytes": 111,
+                    "archive_sha256": "1" * 64,
+                    "score_linf": 3.0,
+                },
+                "best": {
+                    "archive_bytes": len(best_packet),
+                    "archive_sha256": best_sha256,
+                    "score_linf": 2.5,
+                },
+                "best_packet_bytes": len(best_packet),
+                "best_packet_sha256": best_sha256,
+                "component_guard_mode": "pose_seg_hard",
+                "pair_robust_admission": {
+                    "schema": "snerv_pair_robust_admission.v1",
+                    "n_pairs": 1,
+                    "min_score_improved_fraction": 1.0,
+                    "max_pose_worsened_fraction": 0.0,
+                    "pose_slack": 0.0,
+                    "score_improved_fraction": 1.0,
+                    "pose_worsened_fraction": 0.0,
+                    "permissive_guard": False,
+                    "passed": True,
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "_official_mfu_hfr_tub_bootstrap_components_from_pairs",
+        fake_bootstrap,
+    )
+    monkeypatch.setattr(
+        qat_mod,
+        "run_snerv_scorer_loop_decoder_qat_smoke",
+        lambda **_kwargs: FakeQatResult(),
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_qat_output2_mismatch",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-qat-output2-mismatch",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "snerv_fc_dim": 9,
+            "snerv_official_tub_output2_store_for_receiver_proof": True,
+            "snerv_official_tub_output2_export_mode": "proof_only",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=1,
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
+    )
+
+    emitted_packet = Path(report["packet_path"]).read_bytes()
+    emitted_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        unpack_snerv_archive(emitted_packet).sections["decoder_payload"]
+    )
+    scorer_loop = report["scorer_loop_qat"]
+    binding = scorer_loop["official_tub_output2_binding_report"]
+
+    assert emitted_packet != best_packet
+    assert report["packet_sha256"] != best_sha256
+    assert report["packet_source"] != "scorer_loop_qat_best_receiver_packet"
+    assert emitted_payload.header["tub_output2_storage"]["stored"] is True
+    assert scorer_loop["best_packet_materialized"] is True
+    assert scorer_loop["official_decoder_payload_binding_preserved"] is True
+    assert scorer_loop["official_tub_output2_binding_required"] is True
+    assert scorer_loop["official_tub_output2_binding_preserved"] is False
+    assert binding["preserved"] is False
+    assert {
+        "stored",
+        "proof_only_elided_from_selected_runtime_packet",
+        "stored_raw_bytes",
+        "payload_tensor_names",
+    }.issubset(set(binding["mismatched_fields"]))
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_payload_mismatch" not in scorer_loop[
+        "blockers"
+    ]
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_tub_output2_binding_mismatch" in scorer_loop[
+        "blockers"
+    ]
+    assert "snerv_scorer_loop_qat_best_packet_rejected_official_tub_output2_binding_mismatch" in report[
+        "blockers"
+    ]
+    assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is False
     assert report["score_claim"] is False
 
 

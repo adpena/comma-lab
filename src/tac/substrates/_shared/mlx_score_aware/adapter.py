@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import math
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -38,7 +39,9 @@ from tac.substrates._shared.mlx_score_aware.dual_ascent import (
     safe_dual_metric_key,
 )
 from tac.substrates._shared.mlx_score_aware.loss import (
+    _direct_live_posenet_distillation_loss_and_metrics,
     component_loss_weight,
+    posenet_yuv6_geometry_tether_loss,
     score_aware_loss,
 )
 
@@ -154,6 +157,7 @@ def _segnet_direct_live_escape_selection_metric(
     *,
     candidate_occupied_class_fraction: float | None,
     argmax_disagreement: float | None,
+    target_class_coverage_fraction: float | None = None,
 ) -> float | None:
     """Archive-selection scalar that prices class escape before local fit."""
 
@@ -162,15 +166,76 @@ def _segnet_direct_live_escape_selection_metric(
     try:
         class_fraction = float(candidate_occupied_class_fraction)
         disagreement = float(argmax_disagreement)
+        target_coverage = (
+            class_fraction
+            if target_class_coverage_fraction is None
+            else float(target_class_coverage_fraction)
+        )
     except (TypeError, ValueError):
         return None
-    if not (math.isfinite(class_fraction) and math.isfinite(disagreement)):
+    if not (
+        math.isfinite(class_fraction)
+        and math.isfinite(disagreement)
+        and math.isfinite(target_coverage)
+    ):
         return None
-    return 10.0 * max(0.0, 1.0 - class_fraction) + disagreement
+    class_recovery_fraction = min(class_fraction, target_coverage)
+    return 10.0 * max(0.0, 1.0 - class_recovery_fraction) + disagreement
+
+
+def _segnet_argmax_meaningful_recovery_floor(
+    *,
+    pre_argmax_disagreement: float | None,
+    max_argmax_disagreement: float | None,
+) -> float:
+    """Return the minimum hard-argmax recovery that counts as real progress.
+
+    The step guard is a scorer-space trust region, not an archive selector.
+    HiNeRV collapse smokes exposed a bad attractor where 1e-6-scale argmax
+    twitches were accepted as "bootstrap escape" while hard class occupancy
+    stayed flat.  Require a fixed pixel-rate floor and, when an argmax ceiling
+    is configured, a small fraction of the current violation.
+    """
+
+    floor = 1.0e-4
+    if pre_argmax_disagreement is None or max_argmax_disagreement is None:
+        return floor
+    try:
+        pre = float(pre_argmax_disagreement)
+        ceiling = float(max_argmax_disagreement)
+    except (TypeError, ValueError):
+        return floor
+    if not (math.isfinite(pre) and math.isfinite(ceiling)):
+        return floor
+    return max(floor, 0.05 * max(0.0, pre - ceiling))
+
+
+def _meaningful_loss_recovery(
+    *,
+    pre_value: float | None,
+    post_value: float | None,
+    relative_floor: float = 1.0e-4,
+    absolute_floor: float = 1.0e-4,
+) -> tuple[bool, float | None, float | None]:
+    """Return whether a continuous auxiliary loss recovered enough to trust."""
+
+    if pre_value is None or post_value is None:
+        return (False, None, None)
+    try:
+        pre = float(pre_value)
+        post = float(post_value)
+    except (TypeError, ValueError):
+        return (False, None, None)
+    if not (math.isfinite(pre) and math.isfinite(post)):
+        return (False, None, None)
+    recovery = pre - post
+    floor = max(float(absolute_floor), float(relative_floor) * max(abs(pre), 1.0))
+    return (recovery >= floor, recovery, floor)
 PACT_MUON_ADAMW_MUON_LR_MULTIPLIER = 2.0e-4 / 3.0e-5
 PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER = 10.0
 PR95_STAGE_BASE_SEG_WEIGHT = 100.0
 PR95_STAGE_BASE_POSE_WEIGHT = 1.0
+SEGNET_DIRECT_LIVE_SCORE_WEIGHT = 100.0
 AURORA_LIKE_SOURCE_REPO = "https://github.com/tilde-research/aurora-release"
 AURORA_LIKE_SOURCE_COMMIT = "7303d8cb9999d735cb12c921f3651f04bf362524"
 AURORA_LIKE_PP_ITERATIONS = 2
@@ -215,7 +280,122 @@ _DIRECT_LIVE_TRACE_COMPONENTS: tuple[str, ...] = (
     "segnet_direct_live_class_balanced_hinge",
     "segnet_direct_live_class_balanced_ce",
     "segnet_direct_live_class_balanced_squared_hinge",
+    "segnet_direct_live_class_region_recon",
+    "segnet_direct_live_rare_class_logit",
+    "segnet_direct_live_target_mass_floor",
+    "segnet_direct_live_target_min_ratio_floor",
 )
+_SCORER_SUPPORT_LADDER_DEFAULT_ACTIVATION_WEIGHTS: dict[str, float] = {
+    "segnet_direct_live_target_mass_floor": 1.0,
+    "segnet_direct_live_rare_class_logit": 0.5,
+    "segnet_direct_live_target_min_ratio_floor": 0.5,
+    "segnet_direct_live_class_balanced_hinge": 0.25,
+    "segnet_direct_live_class_balanced_squared_hinge": 0.125,
+    "segnet_direct_live_class_region_recon": 0.0625,
+}
+_SCORER_SUPPORT_LADDER_STAGE_COMPONENTS: dict[int, tuple[str, ...]] = {
+    1: (
+        "segnet_direct_live_target_mass_floor",
+        "segnet_direct_live_rare_class_logit",
+    ),
+    2: ("segnet_direct_live_target_min_ratio_floor",),
+    3: ("segnet_direct_live_class_balanced_hinge",),
+    4: (
+        "segnet_direct_live_class_balanced_squared_hinge",
+        "segnet_direct_live_class_region_recon",
+    ),
+}
+
+
+def _normalized_scorer_support_ladder_activation_weights(
+    activation_weights: Mapping[str, Any] | None,
+) -> dict[str, float]:
+    """Return finite non-negative activation floors for the class-support ladder."""
+
+    values = dict(_SCORER_SUPPORT_LADDER_DEFAULT_ACTIVATION_WEIGHTS)
+    for key, value in dict(activation_weights or {}).items():
+        text_key = str(key)
+        if text_key not in values:
+            raise ValueError(
+                "unknown scorer_support_ladder_activation_weights key "
+                f"{text_key!r}; expected one of {tuple(sorted(values))}"
+            )
+        scalar = float(value)
+        if not math.isfinite(scalar) or scalar < 0.0:
+            raise ValueError(
+                "scorer_support_ladder_activation_weights values must be finite "
+                f"and non-negative; got {text_key}={value!r}"
+            )
+        values[text_key] = scalar
+    return values
+
+
+def _apply_scorer_support_ladder_loss_weights(
+    loss_weights: Mapping[str, float],
+    *,
+    stage: int,
+    activation_weights: Mapping[str, float],
+    growth_factor: float,
+    max_multiplier: float,
+    base_loss_max_when_active: float,
+) -> tuple[dict[str, float], dict[str, float]]:
+    """Apply staged missing-class recovery pressure to effective loss weights.
+
+    Stage 1 is the least invasive scorer-space move: target-mass floor plus
+    rare-class logit. Stage 2 adds the worst target-class min-ratio floor.
+    Stage 3 adds a class-balanced hinge, and stage 4 adds the squared
+    hinge/region tether. While active, the base direct-live logit MSE is damped
+    so the optimizer does not spend the step recreating a one-class teacher-
+    logit average before the hard argmax support exists.
+    """
+
+    stage_i = max(0, int(stage))
+    out = {str(key): float(value) for key, value in dict(loss_weights).items()}
+    metrics: dict[str, float] = {
+        "scorer_support_ladder_active": float(stage_i > 0),
+        "scorer_support_ladder_stage": float(stage_i),
+        "scorer_support_ladder_growth_factor": float(growth_factor),
+        "scorer_support_ladder_max_multiplier": float(max_multiplier),
+    }
+    if stage_i <= 0:
+        metrics["scorer_support_ladder_base_loss_damped"] = 0.0
+        return out, metrics
+
+    multiplier = min(
+        float(max_multiplier),
+        float(growth_factor) ** float(max(0, stage_i - 1)),
+    )
+    for threshold, components in sorted(_SCORER_SUPPORT_LADDER_STAGE_COMPONENTS.items()):
+        if stage_i < threshold:
+            continue
+        for component in components:
+            floor = float(activation_weights.get(component, 0.0)) * multiplier
+            previous = float(out.get(component, 0.0))
+            out[component] = max(previous, floor)
+            config_floor_key = f"{component}_config_floor"
+            previous_config_floor = float(out.get(config_floor_key, 0.0))
+            out[config_floor_key] = max(previous_config_floor, 1.0 if floor > 0.0 else 0.0)
+            safe = safe_dual_metric_key(component)
+            metrics[f"scorer_support_ladder_component_active__{safe}"] = float(
+                out[component] > 0.0
+            )
+            metrics[f"scorer_support_ladder_component_weight__{safe}"] = float(
+                out[component]
+            )
+            metrics[f"scorer_support_ladder_component_floor__{safe}"] = float(floor)
+            metrics[f"scorer_support_ladder_component_config_floor__{safe}"] = float(
+                out[config_floor_key]
+            )
+
+    base_previous = float(out.get("segnet_direct_live_base_loss", 1.0))
+    base_damped = min(base_previous, float(base_loss_max_when_active))
+    out["segnet_direct_live_base_loss"] = base_damped
+    metrics["scorer_support_ladder_base_loss_previous_weight"] = base_previous
+    metrics["scorer_support_ladder_base_loss_effective_weight"] = base_damped
+    metrics["scorer_support_ladder_base_loss_damped"] = float(
+        base_damped < base_previous
+    )
+    return out, metrics
 
 
 def _tree_name_to_saliency_group(raw_name: Any) -> str:
@@ -611,6 +791,7 @@ class MlxScoreAwareAdapter:
         pr95_curriculum_total_epochs: int | None = None,
         pr95_muon_policy: str = "faithful_stage8_only",
         pr95_stage_source_weight_amplification_enabled: bool = False,
+        pr95_force_weighted_extra_qat_when_stage_inactive: bool = False,
         # Wave N+11 Z7-Mamba-2 stabilizer recipe (Slot 1 RESUME 1e2b78163
         # IMPLEMENTATION-LEVEL falsification + Wave N+10 NaN-at-ep-16-18
         # signature reactivation criteria per task #1481). All defaults are
@@ -649,12 +830,44 @@ class MlxScoreAwareAdapter:
         scorer_space_step_guard_enabled: bool = False,
         scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
         scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction: float
+        | None = None,
+        scorer_space_step_guard_min_post_segnet_target_class_min_ratio: float
+        | None = None,
+        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop: float
+        | None = None,
         scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = None,
+        scorer_space_step_guard_max_post_segnet_distribution_mae: float
+        | None = None,
+        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae: float
+        | None = None,
+        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio: float
+        | None = None,
         scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = None,
         scorer_space_step_guard_max_post_pose_score_term: float | None = None,
         scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
+        scorer_space_step_guard_max_pose_score_term_relative_worsening: float
+        | None = None,
+        scorer_space_step_guard_max_pose_score_term_absolute_worsening: float
+        | None = None,
+        scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening: float
+        | None = None,
+        scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening: float
+        | None = None,
+        scorer_space_step_guard_max_direct_nonrate_score_worsening: float
+        | None = None,
+        scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening: float
+        | None = None,
         scorer_space_step_guard_backtracking_steps: int = 0,
         scorer_space_step_guard_backtracking_shrink: float = 0.5,
+        scorer_support_ladder_enabled: bool = False,
+        scorer_support_ladder_target_coverage_floor: float | None = None,
+        scorer_support_ladder_target_min_ratio_floor: float | None = None,
+        scorer_support_ladder_patience_steps: int = 1,
+        scorer_support_ladder_growth_factor: float = 2.0,
+        scorer_support_ladder_max_multiplier: float = 16.0,
+        scorer_support_ladder_base_loss_max_when_active: float = 0.25,
+        scorer_support_ladder_activation_weights: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize the canonical MLX score-aware adapter.
 
@@ -686,6 +899,14 @@ class MlxScoreAwareAdapter:
                 weights, so a generic HiNeRV score-aware run cannot silently
                 turn ``--segnet-distillation-weight 16`` into effective 1600x
                 SegNet pressure and saturate the pixel fit.
+            pr95_force_weighted_extra_qat_when_stage_inactive: default-off
+                bounded-proof escape hatch for non-PR95 archive-section byte
+                controls. When true and ``RendererBundle.extra_loss_weights``
+                contains positive weights, the PR95 stage loss evaluates those
+                extra QAT terms even in source stages whose native PR95
+                ``qat_active`` flag is false. This preserves PR95 reproduction
+                semantics by default while letting short SNeRV admission runs
+                prove requested byte actuators before thousands of epochs pass.
             grad_clip_max_norm: Wave N+11 stabilizer. If not None and > 0,
                 applies ``mlx.optimizers.clip_grad_norm(grads, max_norm)``
                 after value_and_grad but before optimizer.update. Mamba-2
@@ -772,11 +993,38 @@ class MlxScoreAwareAdapter:
                 scorer-visible manifold.
             scorer_space_step_guard_min_post_segnet_occupied_class_fraction:
                 minimum post-update occupied-class fraction for guarded steps.
+            scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction:
+                optional post-update floor for material coverage of target-present
+                SegNet classes. This catches the contest-relevant failure where
+                candidate occupancy survives but rare target classes disappear.
+            scorer_space_step_guard_min_post_segnet_target_class_min_ratio:
+                optional post-update floor for the worst target-present hard
+                argmax ratio. Coverage alone is binary per class; this floor
+                prices the stronger contest failure where a target class remains
+                technically visible but at near-zero scored-pixel mass.
+            scorer_space_step_guard_max_post_segnet_target_class_ratio_drop:
+                optional max per-step drop in any target-present hard argmax
+                ratio. This prevents rare-class bootstrap from "solving" one
+                missing class by stealing pixels from another scored class.
             scorer_space_step_guard_max_post_segnet_contrast_ratio: optional
                 upper bound for post-update SegNet RGB std/reference std ratio.
                 HiNeRV smokes exposed the paired failure mode "class collapse +
                 contrast explosion"; this bound makes that causal link
                 executable.
+            scorer_space_step_guard_max_post_segnet_distribution_mae: optional
+                upper bound for normalized SegNet last-frame RGB MAE against
+                the scorer-input teacher cache. This is the train-time version
+                of the post-export scorer-input distribution gate; it prevents
+                bootstrap class recovery from leaving the RGB manifold the
+                contest SegNet actually sees.
+            scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae:
+                optional upper bound for normalized PoseNet YUV6-pair MAE.
+                PoseNet is pair-geometry sensitive, so class-recovery steps
+                that detonate YUV6 are not useful even if SegNet occupancy
+                improves.
+            scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio:
+                optional upper bound for post-update PoseNet YUV6
+                std/reference std ratio.
             scorer_space_step_guard_max_post_segnet_argmax_disagreement:
                 optional upper bound for direct-live SegNet hard-argmax
                 disagreement. Receiver-cache quality already refuses this
@@ -787,6 +1035,31 @@ class MlxScoreAwareAdapter:
             scorer_space_step_guard_max_post_pose_direct_live_score_term:
                 optional upper bound for the direct-live PoseNet
                 ``sqrt(10*d_pose)`` term when that heavier actuator is enabled.
+            scorer_space_step_guard_max_pose_score_term_relative_worsening:
+                optional relative trust-region tolerance for student-pose score
+                worsening. Worsening is rejected only when the combined direct
+                non-rate proxy does not improve enough to pay for the pose loss.
+            scorer_space_step_guard_max_pose_score_term_absolute_worsening:
+                optional absolute score-term tolerance for student-pose score
+                worsening, in direct score units.
+            scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening:
+                optional relative trust-region tolerance for direct-live PoseNet
+                score worsening. This is the higher-authority training-time
+                pair-geometry actuator when real PoseNet is attached.
+            scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening:
+                optional absolute score-term tolerance for direct-live PoseNet
+                score worsening, in direct score units.
+            scorer_space_step_guard_max_direct_nonrate_score_worsening:
+                optional combined scorer-space trust region for the direct
+                non-rate proxy ``100*d_seg + sqrt(10*d_pose)``. This keeps the
+                guard Lagrangian-shaped instead of blocking useful SegNet/PoseNet
+                tradeoffs independently.
+            scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening:
+                optional looser direct-nonrate trust region used only while
+                material target-class coverage is still below its floor. It is
+                gated by target-class preservation and scorer-input
+                distribution ceilings, so it permits rare-class bootstrap
+                motion without reopening the RGB/YUV blow-up basin.
             scorer_space_step_guard_backtracking_steps: when >0, a rejected
                 full optimizer step is not immediately discarded. The adapter
                 tries geometric interpolations between the pre-update parameters
@@ -795,6 +1068,25 @@ class MlxScoreAwareAdapter:
                 the current HiNeRV distortion crux.
             scorer_space_step_guard_backtracking_shrink: geometric shrink
                 factor for the scorer-space backtracking sequence.
+            scorer_support_ladder_enabled: train-time direct-live SegNet class
+                support actuator. It observes hard argmax support metrics from
+                the previous step and raises only the missing-class recovery
+                atoms needed for the next step. This is distinct from static
+                stage weights: target-mass/rare-logit pressure comes first,
+                hinge/region pressure is admitted only after stagnation, and
+                base logit MSE is damped while support is incomplete.
+            scorer_support_ladder_target_coverage_floor /
+                target_min_ratio_floor: floors for the cooperative receiver's
+                target-present SegNet class support. Missing values inherit the
+                corresponding scorer-space step-guard floors.
+            scorer_support_ladder_patience_steps: number of non-progressing
+                observed steps below the floors before escalating one stage.
+            scorer_support_ladder_growth_factor / max_multiplier: bounded
+                geometric multiplier for staged activation floors.
+            scorer_support_ladder_base_loss_max_when_active: upper bound on
+                ``segnet_direct_live_base_loss`` while the ladder is active.
+            scorer_support_ladder_activation_weights: optional component floor
+                overrides for the ladder's class-recovery atoms.
         """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
@@ -900,10 +1192,46 @@ class MlxScoreAwareAdapter:
                 "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
             )
         )
+        self._scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction = (
+            self._validate_unit_interval_or_none_control(
+                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction,
+                "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction",
+            )
+        )
+        self._scorer_space_step_guard_min_post_segnet_target_class_min_ratio = (
+            self._validate_unit_interval_or_none_control(
+                scorer_space_step_guard_min_post_segnet_target_class_min_ratio,
+                "scorer_space_step_guard_min_post_segnet_target_class_min_ratio",
+            )
+        )
+        self._scorer_space_step_guard_max_post_segnet_target_class_ratio_drop = (
+            self._validate_unit_interval_or_none_control(
+                scorer_space_step_guard_max_post_segnet_target_class_ratio_drop,
+                "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop",
+            )
+        )
         self._scorer_space_step_guard_max_post_segnet_contrast_ratio = (
             self._validate_positive_float_or_none_control(
                 scorer_space_step_guard_max_post_segnet_contrast_ratio,
                 "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+            )
+        )
+        self._scorer_space_step_guard_max_post_segnet_distribution_mae = (
+            self._validate_positive_float_or_none_control(
+                scorer_space_step_guard_max_post_segnet_distribution_mae,
+                "scorer_space_step_guard_max_post_segnet_distribution_mae",
+            )
+        )
+        self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae = (
+            self._validate_positive_float_or_none_control(
+                scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae,
+                "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae",
+            )
+        )
+        self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio = (
+            self._validate_positive_float_or_none_control(
+                scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio,
+                "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio",
             )
         )
         self._scorer_space_step_guard_max_post_segnet_argmax_disagreement = (
@@ -924,6 +1252,42 @@ class MlxScoreAwareAdapter:
                 "scorer_space_step_guard_max_post_pose_direct_live_score_term",
             )
         )
+        self._scorer_space_step_guard_max_pose_score_term_relative_worsening = (
+            self._validate_nonnegative_float_or_none_control(
+                scorer_space_step_guard_max_pose_score_term_relative_worsening,
+                "scorer_space_step_guard_max_pose_score_term_relative_worsening",
+            )
+        )
+        self._scorer_space_step_guard_max_pose_score_term_absolute_worsening = (
+            self._validate_nonnegative_float_or_none_control(
+                scorer_space_step_guard_max_pose_score_term_absolute_worsening,
+                "scorer_space_step_guard_max_pose_score_term_absolute_worsening",
+            )
+        )
+        self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening = (
+            self._validate_nonnegative_float_or_none_control(
+                scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening,
+                "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening",
+            )
+        )
+        self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening = (
+            self._validate_nonnegative_float_or_none_control(
+                scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening,
+                "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening",
+            )
+        )
+        self._scorer_space_step_guard_max_direct_nonrate_score_worsening = (
+            self._validate_nonnegative_float_or_none_control(
+                scorer_space_step_guard_max_direct_nonrate_score_worsening,
+                "scorer_space_step_guard_max_direct_nonrate_score_worsening",
+            )
+        )
+        self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening = (
+            self._validate_nonnegative_float_or_none_control(
+                scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening,
+                "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening",
+            )
+        )
         self._scorer_space_step_guard_backtracking_steps = (
             self._validate_nonnegative_int_control(
                 scorer_space_step_guard_backtracking_steps,
@@ -935,6 +1299,70 @@ class MlxScoreAwareAdapter:
                 scorer_space_step_guard_backtracking_shrink,
                 "scorer_space_step_guard_backtracking_shrink",
             )
+        )
+        self._scorer_support_ladder_enabled = bool(scorer_support_ladder_enabled)
+        inherited_coverage_floor = (
+            scorer_support_ladder_target_coverage_floor
+            if scorer_support_ladder_target_coverage_floor is not None
+            else scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+        )
+        inherited_min_ratio_floor = (
+            scorer_support_ladder_target_min_ratio_floor
+            if scorer_support_ladder_target_min_ratio_floor is not None
+            else scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+        )
+        self._scorer_support_ladder_target_coverage_floor = (
+            self._validate_unit_interval_or_none_control(
+                inherited_coverage_floor,
+                "scorer_support_ladder_target_coverage_floor",
+            )
+        )
+        self._scorer_support_ladder_target_min_ratio_floor = (
+            self._validate_unit_interval_or_none_control(
+                inherited_min_ratio_floor,
+                "scorer_support_ladder_target_min_ratio_floor",
+            )
+        )
+        self._scorer_support_ladder_patience_steps = (
+            self._validate_nonnegative_int_control(
+                scorer_support_ladder_patience_steps,
+                "scorer_support_ladder_patience_steps",
+            )
+        )
+        self._scorer_support_ladder_growth_factor = (
+            self._validate_positive_float_control(
+                scorer_support_ladder_growth_factor,
+                "scorer_support_ladder_growth_factor",
+            )
+        )
+        self._scorer_support_ladder_max_multiplier = (
+            self._validate_positive_float_control(
+                scorer_support_ladder_max_multiplier,
+                "scorer_support_ladder_max_multiplier",
+            )
+        )
+        self._scorer_support_ladder_base_loss_max_when_active = (
+            self._validate_nonnegative_float_control(
+                scorer_support_ladder_base_loss_max_when_active,
+                "scorer_support_ladder_base_loss_max_when_active",
+            )
+        )
+        self._scorer_support_ladder_activation_weights = (
+            _normalized_scorer_support_ladder_activation_weights(
+                scorer_support_ladder_activation_weights
+            )
+        )
+        self._scorer_support_ladder_stage = 0
+        self._scorer_support_ladder_stale_steps = 0
+        self._scorer_support_ladder_last_coverage: float | None = None
+        self._scorer_support_ladder_last_min_ratio: float | None = None
+        self._scorer_support_ladder_last_observation: dict[str, float] = {}
+        self._scorer_support_ladder_last_applied_metrics: dict[str, float] = {}
+        self._scorer_space_step_guard_learning_rate_scale = 1.0
+        self._scorer_space_step_guard_min_learning_rate_scale = (
+            1.0e-4
+            if self._scorer_space_step_guard_backtracking_steps > 0
+            else 1.0
         )
         self._train_time_dual_ascent = TrainTimeDualAscentController.from_config(
             train_time_dual_ascent_config
@@ -959,6 +1387,9 @@ class MlxScoreAwareAdapter:
         self._pr95_muon_policy = str(pr95_muon_policy)
         self._pr95_stage_source_weight_amplification_enabled = bool(
             pr95_stage_source_weight_amplification_enabled
+        )
+        self._pr95_force_weighted_extra_qat_when_stage_inactive = bool(
+            pr95_force_weighted_extra_qat_when_stage_inactive
         )
         if self._pr95_muon_policy not in {"faithful_stage8_only", "every_stage"}:
             raise ValueError(
@@ -1157,6 +1588,60 @@ class MlxScoreAwareAdapter:
             return None
         return parsed
 
+    def _segnet_target_class_ratio_drop(
+        self,
+        *,
+        pre_metrics: Mapping[str, Any],
+        post_metrics: Mapping[str, Any],
+    ) -> tuple[float | None, int]:
+        """Return worst hard-ratio drop over target-present SegNet classes.
+
+        The direct-live target coverage metric is binary per class; HiNeRV
+        smokes exposed a stricter failure where one target class can be rescued
+        by stealing almost all scored pixels from another target class.  This
+        helper compares the per-class hard argmax ratios that the loss already
+        emits and gives the guard a conservation law over target-class mass.
+        """
+
+        pre_ratio_prefix = (
+            "dynamics_pre_update_loss_part_segnet_direct_live_"
+            "candidate_target_class_"
+        )
+        post_ratio_prefix = (
+            "loss_part_segnet_direct_live_candidate_target_class_"
+        )
+        pre_target_prefix = (
+            "dynamics_pre_update_loss_part_segnet_direct_live_target_class_"
+        )
+        suffix = "_ratio"
+        worst_drop: float | None = None
+        compared = 0
+        for key in pre_metrics:
+            if not str(key).startswith(pre_ratio_prefix) or not str(key).endswith(
+                suffix
+            ):
+                continue
+            class_index = str(key)[len(pre_ratio_prefix) : -len(suffix)]
+            if not class_index.isdigit():
+                continue
+            target_fraction = self._finite_metric(
+                pre_metrics,
+                f"{pre_target_prefix}{class_index}_fraction",
+            )
+            if target_fraction is None or target_fraction <= 0.0:
+                continue
+            pre_ratio = self._finite_metric(pre_metrics, str(key))
+            post_ratio = self._finite_metric(
+                post_metrics,
+                f"{post_ratio_prefix}{class_index}_ratio",
+            )
+            if pre_ratio is None or post_ratio is None:
+                continue
+            drop = float(pre_ratio) - float(post_ratio)
+            worst_drop = drop if worst_drop is None else max(worst_drop, drop)
+            compared += 1
+        return worst_drop, compared
+
     @staticmethod
     def _validate_unit_interval_control(value: Any, name: str) -> float:
         try:
@@ -1177,6 +1662,43 @@ class MlxScoreAwareAdapter:
             raise ValueError(f"{name} must be None or a finite positive float") from exc
         if not math.isfinite(parsed) or parsed <= 0.0:
             raise ValueError(f"{name} must be None or finite and > 0; got {parsed!r}")
+        return parsed
+
+    @staticmethod
+    def _validate_nonnegative_float_or_none_control(
+        value: Any,
+        name: str,
+    ) -> float | None:
+        if value is None:
+            return None
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"{name} must be None or a finite non-negative float"
+            ) from exc
+        if not math.isfinite(parsed) or parsed < 0.0:
+            raise ValueError(f"{name} must be None or finite and >= 0; got {parsed!r}")
+        return parsed
+
+    @staticmethod
+    def _validate_positive_float_control(value: Any, name: str) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a finite positive float") from exc
+        if not math.isfinite(parsed) or parsed <= 0.0:
+            raise ValueError(f"{name} must be finite and > 0; got {parsed!r}")
+        return parsed
+
+    @staticmethod
+    def _validate_nonnegative_float_control(value: Any, name: str) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a finite non-negative float") from exc
+        if not math.isfinite(parsed) or parsed < 0.0:
+            raise ValueError(f"{name} must be finite and >= 0; got {parsed!r}")
         return parsed
 
     @staticmethod
@@ -1206,14 +1728,159 @@ class MlxScoreAwareAdapter:
         parsed = MlxScoreAwareAdapter._validate_unit_interval_control(value, name)
         return parsed
 
+    @staticmethod
+    def _metric_worsening_limit(
+        *,
+        pre_value: float | None,
+        max_relative_worsening: float | None,
+        max_absolute_worsening: float | None,
+    ) -> float | None:
+        """Return the allowed positive delta for a guarded score-term."""
+
+        if max_relative_worsening is None and max_absolute_worsening is None:
+            return None
+        base = 0.0 if max_absolute_worsening is None else float(max_absolute_worsening)
+        if max_relative_worsening is not None:
+            if pre_value is None:
+                return None
+            base += float(max_relative_worsening) * max(abs(float(pre_value)), 1.0e-12)
+        return float(base)
+
+    @classmethod
+    def _metric_worsened_beyond_limit(
+        cls,
+        *,
+        pre_value: float | None,
+        post_value: float | None,
+        max_relative_worsening: float | None,
+        max_absolute_worsening: float | None,
+    ) -> tuple[bool, float | None, float | None]:
+        """Return ``(violated, delta, limit)`` for a positive metric delta."""
+
+        limit = cls._metric_worsening_limit(
+            pre_value=pre_value,
+            max_relative_worsening=max_relative_worsening,
+            max_absolute_worsening=max_absolute_worsening,
+        )
+        if pre_value is None or post_value is None or limit is None:
+            return False, None, limit
+        delta = float(post_value) - float(pre_value)
+        return delta > limit + 1.0e-12, float(delta), float(limit)
+
+    @staticmethod
+    def _direct_nonrate_score_proxy(
+        *,
+        argmax_disagreement: float | None,
+        pose_direct_live_score_term: float | None,
+        pose_score_term: float | None,
+    ) -> float | None:
+        """Contest-shaped non-rate proxy from direct SegNet and PoseNet terms."""
+
+        if argmax_disagreement is None:
+            return None
+        pose_term = (
+            pose_direct_live_score_term
+            if pose_direct_live_score_term is not None
+            else pose_score_term
+        )
+        if pose_term is None:
+            return None
+        return SEGNET_DIRECT_LIVE_SCORE_WEIGHT * float(argmax_disagreement) + float(
+            pose_term
+        )
+
+    @staticmethod
+    def _target_class_support_credit(
+        *,
+        pre_target_class_coverage: float | None,
+        post_target_class_coverage: float | None,
+        eligible: bool,
+    ) -> tuple[float, float | None]:
+        """Return class-birth credit in direct non-rate score units.
+
+        The direct-live guard is a train-time trust region over the scorer's
+        cooperative receiver surface.  A renderer trapped in a one-class basin
+        can need a temporary uphill argmax move to birth missing target classes.
+        Price that temporary move in the same units as ``100*d_seg`` while the
+        hard scorer-input manifold/ratio-conservation gates remain satisfied.
+        """
+
+        if not eligible:
+            return 0.0, None
+        if pre_target_class_coverage is None or post_target_class_coverage is None:
+            return 0.0, None
+        delta = max(
+            0.0,
+            float(post_target_class_coverage) - float(pre_target_class_coverage),
+        )
+        return SEGNET_DIRECT_LIVE_SCORE_WEIGHT * delta, delta
+
+    @staticmethod
+    def _metric_crossed_ceiling(
+        *,
+        pre_value: float | None,
+        post_value: float | None,
+        ceiling: float | None,
+    ) -> bool:
+        """Return whether a post-update metric newly violates a ceiling."""
+
+        return (
+            ceiling is not None
+            and post_value is not None
+            and post_value > ceiling
+            and (
+                pre_value is None
+                or pre_value <= ceiling
+                or post_value >= pre_value
+            )
+        )
+
+    @staticmethod
+    def _metric_ceiling_recovery_allowed(
+        *,
+        pre_value: float | None,
+        post_value: float | None,
+        ceiling: float | None,
+        eps: float,
+    ) -> bool:
+        """Allow monotone recovery when training starts outside a ceiling."""
+
+        return (
+            ceiling is not None
+            and pre_value is not None
+            and post_value is not None
+            and pre_value > ceiling
+            and post_value > ceiling
+            and post_value < pre_value - eps
+        )
+
     def _scorer_space_step_guard_reject_reasons(
         self,
         *,
         post_occ: float | None,
-        post_contrast: float | None,
+        post_target_class_coverage: float | None = None,
+        post_target_class_min_ratio: float | None = None,
+        target_class_ratio_drop: float | None = None,
+        post_contrast: float | None = None,
+        post_segnet_distribution_mae: float | None = None,
+        post_posenet_yuv6_distribution_mae: float | None = None,
+        post_posenet_yuv6_contrast: float | None = None,
         post_argmax_disagreement: float | None = None,
         post_pose_score_term: float | None = None,
         post_pose_direct_live_score_term: float | None = None,
+        pose_score_term_worsened: bool = False,
+        pose_direct_live_score_term_worsened: bool = False,
+        direct_nonrate_score_worsened: bool = False,
+        suppress_post_occ_below_floor: bool = False,
+        suppress_post_target_class_coverage_below_floor: bool = False,
+        suppress_post_target_class_min_ratio_below_floor: bool = False,
+        suppress_post_contrast_above_ceiling: bool = False,
+        suppress_post_segnet_distribution_mae_above_ceiling: bool = False,
+        suppress_post_posenet_yuv6_distribution_mae_above_ceiling: bool = False,
+        suppress_post_posenet_yuv6_contrast_above_ceiling: bool = False,
+        suppress_post_argmax_above_ceiling: bool = False,
+        suppress_post_pose_above_ceiling: bool = False,
+        suppress_post_pose_direct_live_above_ceiling: bool = False,
     ) -> list[str]:
         """Return scorer-space step rejection reasons for post-update metrics."""
 
@@ -1223,21 +1890,96 @@ class MlxScoreAwareAdapter:
         elif (
             post_occ
             < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+            and not suppress_post_occ_below_floor
         ):
             reject_reasons.append("post_segnet_occupied_class_fraction_below_floor")
+        min_target_coverage = (
+            self._scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+        )
+        if min_target_coverage is not None:
+            if post_target_class_coverage is None:
+                reject_reasons.append(
+                    "post_segnet_target_class_coverage_fraction_missing"
+                )
+            elif (
+                post_target_class_coverage < min_target_coverage
+                and not suppress_post_target_class_coverage_below_floor
+            ):
+                reject_reasons.append(
+                    "post_segnet_target_class_coverage_fraction_below_floor"
+                )
+        min_target_min_ratio = (
+            self._scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+        )
+        if min_target_min_ratio is not None:
+            if post_target_class_min_ratio is None:
+                reject_reasons.append(
+                    "post_segnet_target_class_min_ratio_missing"
+                )
+            elif (
+                post_target_class_min_ratio < min_target_min_ratio
+                and not suppress_post_target_class_min_ratio_below_floor
+            ):
+                reject_reasons.append(
+                    "post_segnet_target_class_min_ratio_below_floor"
+                )
+        max_target_ratio_drop = (
+            self._scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+        )
+        if (
+            max_target_ratio_drop is not None
+            and target_class_ratio_drop is not None
+            and target_class_ratio_drop > max_target_ratio_drop
+        ):
+            reject_reasons.append(
+                "post_segnet_target_class_ratio_drop_above_ceiling"
+            )
         if (
             self._scorer_space_step_guard_max_post_segnet_contrast_ratio is not None
             and post_contrast is not None
             and post_contrast
             > self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+            and not suppress_post_contrast_above_ceiling
         ):
             reject_reasons.append("post_segnet_contrast_ratio_above_ceiling")
+        if (
+            self._scorer_space_step_guard_max_post_segnet_distribution_mae
+            is not None
+            and post_segnet_distribution_mae is not None
+            and post_segnet_distribution_mae
+            > self._scorer_space_step_guard_max_post_segnet_distribution_mae
+            and not suppress_post_segnet_distribution_mae_above_ceiling
+        ):
+            reject_reasons.append("post_segnet_distribution_mae_above_ceiling")
+        if (
+            self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+            is not None
+            and post_posenet_yuv6_distribution_mae is not None
+            and post_posenet_yuv6_distribution_mae
+            > self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+            and not suppress_post_posenet_yuv6_distribution_mae_above_ceiling
+        ):
+            reject_reasons.append(
+                "post_posenet_yuv6_distribution_mae_above_ceiling"
+            )
+        if (
+            self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+            is not None
+            and post_posenet_yuv6_contrast is not None
+            and post_posenet_yuv6_contrast
+            > self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+            and not suppress_post_posenet_yuv6_contrast_above_ceiling
+        ):
+            reject_reasons.append(
+                "post_posenet_yuv6_contrast_ratio_above_ceiling"
+            )
         if (
             self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
             is not None
             and post_argmax_disagreement is not None
             and post_argmax_disagreement
             > self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+            and not suppress_post_argmax_above_ceiling
         ):
             reject_reasons.append("post_segnet_argmax_disagreement_above_ceiling")
         if (
@@ -1245,6 +1987,7 @@ class MlxScoreAwareAdapter:
             and post_pose_score_term is not None
             and post_pose_score_term
             > self._scorer_space_step_guard_max_post_pose_score_term
+            and not suppress_post_pose_above_ceiling
         ):
             reject_reasons.append("post_pose_score_term_above_ceiling")
         if (
@@ -1253,8 +1996,15 @@ class MlxScoreAwareAdapter:
             and post_pose_direct_live_score_term is not None
             and post_pose_direct_live_score_term
             > self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+            and not suppress_post_pose_direct_live_above_ceiling
         ):
             reject_reasons.append("post_pose_direct_live_score_term_above_ceiling")
+        if pose_score_term_worsened:
+            reject_reasons.append("post_pose_score_term_worsened")
+        if pose_direct_live_score_term_worsened:
+            reject_reasons.append("post_pose_direct_live_score_term_worsened")
+        if direct_nonrate_score_worsened:
+            reject_reasons.append("post_direct_nonrate_score_worsened")
         return reject_reasons
 
     def _add_scorer_space_step_guard_reason_metrics(
@@ -1272,8 +2022,63 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_reject_reason_post_segnet_occupied_class_fraction_below_floor"
         ] = float("post_segnet_occupied_class_fraction_below_floor" in reject_reasons)
         metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_occupied_class_fraction_below_floor_suppressed_by_bootstrap_escape"
+        ] = float(
+            "post_segnet_occupied_class_fraction_below_floor_suppressed_by_bootstrap_escape"
+            in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_coverage_fraction_missing"
+        ] = float(
+            "post_segnet_target_class_coverage_fraction_missing" in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_coverage_fraction_below_floor"
+        ] = float(
+            "post_segnet_target_class_coverage_fraction_below_floor"
+            in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_coverage_fraction_below_floor_suppressed_by_bootstrap_escape"
+        ] = float(
+            "post_segnet_target_class_coverage_fraction_below_floor_suppressed_by_bootstrap_escape"
+            in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_min_ratio_missing"
+        ] = float("post_segnet_target_class_min_ratio_missing" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_min_ratio_below_floor"
+        ] = float(
+            "post_segnet_target_class_min_ratio_below_floor" in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_min_ratio_below_floor_suppressed_by_bootstrap_escape"
+        ] = float(
+            "post_segnet_target_class_min_ratio_below_floor_suppressed_by_bootstrap_escape"
+            in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_target_class_ratio_drop_above_ceiling"
+        ] = float(
+            "post_segnet_target_class_ratio_drop_above_ceiling" in reject_reasons
+        )
+        metrics[
             "scorer_space_step_guard_reject_reason_post_segnet_contrast_ratio_above_ceiling"
         ] = float("post_segnet_contrast_ratio_above_ceiling" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_distribution_mae_above_ceiling"
+        ] = float("post_segnet_distribution_mae_above_ceiling" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_posenet_yuv6_distribution_mae_above_ceiling"
+        ] = float(
+            "post_posenet_yuv6_distribution_mae_above_ceiling" in reject_reasons
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_posenet_yuv6_contrast_ratio_above_ceiling"
+        ] = float(
+            "post_posenet_yuv6_contrast_ratio_above_ceiling" in reject_reasons
+        )
         metrics[
             "scorer_space_step_guard_reject_reason_post_segnet_argmax_disagreement_above_ceiling"
         ] = float("post_segnet_argmax_disagreement_above_ceiling" in reject_reasons)
@@ -1283,6 +2088,15 @@ class MlxScoreAwareAdapter:
         metrics[
             "scorer_space_step_guard_reject_reason_post_pose_direct_live_score_term_above_ceiling"
         ] = float("post_pose_direct_live_score_term_above_ceiling" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_pose_score_term_worsened"
+        ] = float("post_pose_score_term_worsened" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_pose_direct_live_score_term_worsened"
+        ] = float("post_pose_direct_live_score_term_worsened" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_direct_nonrate_score_worsened"
+        ] = float("post_direct_nonrate_score_worsened" in reject_reasons)
 
     def _apply_scorer_space_step_guard(
         self,
@@ -1329,11 +2143,59 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_min_post_segnet_occupied_class_fraction": (
                 self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
             ),
+            "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction": (
+                -1.0
+                if self._scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+                is None
+                else float(
+                    self._scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+                )
+            ),
+            "scorer_space_step_guard_min_post_segnet_target_class_min_ratio": (
+                -1.0
+                if self._scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+                is None
+                else float(
+                    self._scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+                )
+            ),
+            "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+                )
+            ),
             "scorer_space_step_guard_max_post_segnet_contrast_ratio": (
                 -1.0
                 if self._scorer_space_step_guard_max_post_segnet_contrast_ratio
                 is None
                 else float(self._scorer_space_step_guard_max_post_segnet_contrast_ratio)
+            ),
+            "scorer_space_step_guard_max_post_segnet_distribution_mae": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_segnet_distribution_mae
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_post_segnet_distribution_mae
+                )
+            ),
+            "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+                )
+            ),
+            "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+                )
             ),
             "scorer_space_step_guard_max_post_segnet_argmax_disagreement": (
                 -1.0
@@ -1356,7 +2218,160 @@ class MlxScoreAwareAdapter:
                     self._scorer_space_step_guard_max_post_pose_direct_live_score_term
                 )
             ),
+            "scorer_space_step_guard_max_pose_score_term_relative_worsening": (
+                -1.0
+                if self._scorer_space_step_guard_max_pose_score_term_relative_worsening
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_pose_score_term_relative_worsening
+                )
+            ),
+            "scorer_space_step_guard_max_pose_score_term_absolute_worsening": (
+                -1.0
+                if self._scorer_space_step_guard_max_pose_score_term_absolute_worsening
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_pose_score_term_absolute_worsening
+                )
+            ),
+            "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening": (
+                -1.0
+                if self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+                )
+            ),
+            "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening": (
+                -1.0
+                if self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+                )
+            ),
+            "scorer_space_step_guard_max_direct_nonrate_score_worsening": (
+                -1.0
+                if self._scorer_space_step_guard_max_direct_nonrate_score_worsening
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_direct_nonrate_score_worsening
+                )
+            ),
+            "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening": (
+                -1.0
+                if self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                )
+            ),
+            "scorer_space_step_guard_learning_rate_scale_before": float(
+                self._scorer_space_step_guard_learning_rate_scale
+            ),
+            "scorer_space_step_guard_learning_rate_scale_after": float(
+                self._scorer_space_step_guard_learning_rate_scale
+            ),
+            "scorer_space_step_guard_learning_rate_scale_updated": 0.0,
+            "scorer_space_step_guard_min_learning_rate_scale": float(
+                self._scorer_space_step_guard_min_learning_rate_scale
+            ),
         }
+
+        def _update_learning_rate_scale(
+            proposed: float,
+            *,
+            reason: str,
+        ) -> None:
+            old_scale = float(self._scorer_space_step_guard_learning_rate_scale)
+            new_scale = min(
+                1.0,
+                max(
+                    float(self._scorer_space_step_guard_min_learning_rate_scale),
+                    float(proposed),
+                ),
+            )
+            self._scorer_space_step_guard_learning_rate_scale = new_scale
+            metrics["scorer_space_step_guard_learning_rate_scale_after"] = float(
+                new_scale
+            )
+            metrics["scorer_space_step_guard_learning_rate_scale_updated"] = float(
+                abs(new_scale - old_scale) > 1.0e-12
+            )
+            metrics[
+                "scorer_space_step_guard_learning_rate_scale_update_reason_full_accept"
+            ] = float(reason == "full_accept")
+            metrics[
+                "scorer_space_step_guard_learning_rate_scale_update_reason_backtracking_accept"
+            ] = float(reason == "backtracking_accept")
+            metrics[
+                "scorer_space_step_guard_learning_rate_scale_update_reason_reject"
+            ] = float(reason == "reject")
+
+        def _persistent_learning_rate_feedback_scale(step_scale: float) -> float:
+            """Map one-step trust-region damping to persistent LR feedback.
+
+            Backtracking interpolates the already-computed parameter update for
+            this single step.  Persistently multiplying future optimizer steps
+            by that same interpolation factor compounds the trust-region damping
+            and can freeze class-escape training after a few near-threshold
+            rejections.  Square-root feedback keeps the sign of the evidence
+            (the full step was too large) without turning a one-off 1/64
+            accepted interpolation into a permanent 64x optimizer slowdown.
+            """
+
+            try:
+                parsed = float(step_scale)
+            except (TypeError, ValueError):
+                return 1.0
+            if not math.isfinite(parsed) or parsed <= 0.0:
+                return float(self._scorer_space_step_guard_min_learning_rate_scale)
+            return math.sqrt(min(1.0, parsed))
+
+        def _persistent_reject_learning_rate_feedback_scale(step_scale: float) -> float:
+            """Return gentler persistent damping after a fully restored reject."""
+
+            return max(0.5, _persistent_learning_rate_feedback_scale(step_scale))
+
+        def _persistent_backtracking_accept_learning_rate_feedback_scale(
+            step_scale: float,
+            *,
+            target_class_coverage_floor_active: bool,
+            target_class_coverage_improved: bool,
+            target_class_coverage_breakthrough: bool,
+            rare_class_logit_recovered_meaningfully: bool,
+            bootstrap_escape_allowed: bool,
+            direct_nonrate_improved: bool,
+        ) -> tuple[float, float]:
+            """Return persistent LR feedback for an accepted line-search step.
+
+            Backtracking is a local line search over a single already-computed
+            update.  When the accepted interpolation repairs target-class
+            coverage or rare-class logits, that is positive scorer-space signal,
+            not evidence that future updates should be globally starved.  Keep
+            the one-step damping, but protect the persistent LR during the
+            bootstrap/rare-class phase so HiNeRV can actually hard-activate the
+            missing scorer classes.
+            """
+
+            base = _persistent_learning_rate_feedback_scale(step_scale)
+            recovery_floor = 0.0
+            if target_class_coverage_breakthrough or (
+                target_class_coverage_improved
+                and rare_class_logit_recovered_meaningfully
+            ):
+                recovery_floor = 1.0
+            elif target_class_coverage_improved or (
+                rare_class_logit_recovered_meaningfully
+                and not target_class_coverage_floor_active
+            ):
+                recovery_floor = 0.9
+            elif (
+                bootstrap_escape_allowed or direct_nonrate_improved
+            ) and not target_class_coverage_floor_active:
+                recovery_floor = 0.85
+            return min(1.0, max(base, recovery_floor)), recovery_floor
+
         if not self._scorer_space_step_guard_enabled:
             return metrics
 
@@ -1368,6 +2383,29 @@ class MlxScoreAwareAdapter:
             post_update_loss_part_metrics,
             "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
         )
+        pre_target_class_coverage = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+        )
+        post_target_class_coverage = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+        )
+        pre_target_class_min_ratio = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+        )
+        post_target_class_min_ratio = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+        )
+        (
+            target_class_ratio_drop,
+            target_class_ratio_drop_compared_class_count,
+        ) = self._segnet_target_class_ratio_drop(
+            pre_metrics=pre_update_loss_part_metrics,
+            post_metrics=post_update_loss_part_metrics,
+        )
         pre_contrast = self._finite_metric(
             pre_update_loss_part_metrics,
             "dynamics_pre_update_loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
@@ -1375,6 +2413,30 @@ class MlxScoreAwareAdapter:
         post_contrast = self._finite_metric(
             post_update_loss_part_metrics,
             "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+        )
+        pre_segnet_distribution_mae = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_scorer_input_distribution_guard_segnet_frame1_mae",
+        )
+        post_segnet_distribution_mae = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_scorer_input_distribution_guard_segnet_frame1_mae",
+        )
+        pre_posenet_yuv6_distribution_mae = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_scorer_input_distribution_guard_yuv6_pair_mae",
+        )
+        post_posenet_yuv6_distribution_mae = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_scorer_input_distribution_guard_yuv6_pair_mae",
+        )
+        pre_posenet_yuv6_contrast = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+        )
+        post_posenet_yuv6_contrast = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
         )
         pre_argmax_disagreement = self._finite_metric(
             pre_update_loss_part_metrics,
@@ -1400,21 +2462,164 @@ class MlxScoreAwareAdapter:
             post_update_loss_part_metrics,
             "loss_part_pose_direct_live_score_term",
         )
+        pre_escape_selection = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_escape_selection",
+        )
+        if pre_escape_selection is None:
+            pre_escape_selection = _segnet_direct_live_escape_selection_metric(
+                candidate_occupied_class_fraction=pre_occ,
+                argmax_disagreement=pre_argmax_disagreement,
+                target_class_coverage_fraction=pre_target_class_coverage,
+            )
+        post_escape_selection = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_escape_selection",
+        )
+        if post_escape_selection is None:
+            post_escape_selection = _segnet_direct_live_escape_selection_metric(
+                candidate_occupied_class_fraction=post_occ,
+                argmax_disagreement=post_argmax_disagreement,
+                target_class_coverage_fraction=post_target_class_coverage,
+            )
+        pre_rare_class_logit_loss = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_rare_class_logit_loss",
+        )
+        post_rare_class_logit_loss = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_rare_class_logit_loss",
+        )
+        (
+            rare_class_logit_recovered_meaningfully,
+            rare_class_logit_recovery_delta,
+            rare_class_logit_recovery_floor,
+        ) = _meaningful_loss_recovery(
+            pre_value=pre_rare_class_logit_loss,
+            post_value=post_rare_class_logit_loss,
+        )
+        pre_direct_nonrate_score = self._direct_nonrate_score_proxy(
+            argmax_disagreement=pre_argmax_disagreement,
+            pose_direct_live_score_term=pre_pose_direct_live_score_term,
+            pose_score_term=pre_pose_score_term,
+        )
+        post_direct_nonrate_score = self._direct_nonrate_score_proxy(
+            argmax_disagreement=post_argmax_disagreement,
+            pose_direct_live_score_term=post_pose_direct_live_score_term,
+            pose_score_term=post_pose_score_term,
+        )
+        direct_nonrate_improved = (
+            pre_direct_nonrate_score is not None
+            and post_direct_nonrate_score is not None
+            and post_direct_nonrate_score < pre_direct_nonrate_score - 1.0e-7
+        )
+        (
+            raw_pose_worsened_too_much,
+            pose_worsening_delta,
+            pose_worsening_limit,
+        ) = self._metric_worsened_beyond_limit(
+            pre_value=pre_pose_score_term,
+            post_value=post_pose_score_term,
+            max_relative_worsening=(
+                self._scorer_space_step_guard_max_pose_score_term_relative_worsening
+            ),
+            max_absolute_worsening=(
+                self._scorer_space_step_guard_max_pose_score_term_absolute_worsening
+            ),
+        )
+        (
+            raw_direct_pose_worsened_too_much,
+            direct_pose_worsening_delta,
+            direct_pose_worsening_limit,
+        ) = self._metric_worsened_beyond_limit(
+            pre_value=pre_pose_direct_live_score_term,
+            post_value=post_pose_direct_live_score_term,
+            max_relative_worsening=(
+                self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+            ),
+            max_absolute_worsening=(
+                self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+            ),
+        )
+        (
+            direct_nonrate_worsened_too_much,
+            direct_nonrate_worsening_delta,
+            direct_nonrate_worsening_limit,
+        ) = self._metric_worsened_beyond_limit(
+            pre_value=pre_direct_nonrate_score,
+            post_value=post_direct_nonrate_score,
+            max_relative_worsening=None,
+            max_absolute_worsening=(
+                self._scorer_space_step_guard_max_direct_nonrate_score_worsening
+            ),
+        )
+        pose_worsened_too_much = (
+            raw_pose_worsened_too_much and not direct_nonrate_improved
+        )
+        direct_pose_worsened_too_much = (
+            raw_direct_pose_worsened_too_much and not direct_nonrate_improved
+        )
 
         for name, value in {
             "scorer_space_step_guard_pre_segnet_occupied_class_fraction": pre_occ,
             "scorer_space_step_guard_post_segnet_occupied_class_fraction_before_restore": post_occ,
+            "scorer_space_step_guard_pre_segnet_target_class_coverage_fraction": pre_target_class_coverage,
+            "scorer_space_step_guard_post_segnet_target_class_coverage_fraction_before_restore": post_target_class_coverage,
+            "scorer_space_step_guard_pre_segnet_target_class_min_ratio": pre_target_class_min_ratio,
+            "scorer_space_step_guard_post_segnet_target_class_min_ratio_before_restore": post_target_class_min_ratio,
+            "scorer_space_step_guard_segnet_target_class_ratio_drop": target_class_ratio_drop,
             "scorer_space_step_guard_pre_segnet_contrast_ratio": pre_contrast,
             "scorer_space_step_guard_post_segnet_contrast_ratio_before_restore": post_contrast,
+            "scorer_space_step_guard_pre_segnet_distribution_mae": pre_segnet_distribution_mae,
+            "scorer_space_step_guard_post_segnet_distribution_mae_before_restore": post_segnet_distribution_mae,
+            "scorer_space_step_guard_pre_posenet_yuv6_distribution_mae": pre_posenet_yuv6_distribution_mae,
+            "scorer_space_step_guard_post_posenet_yuv6_distribution_mae_before_restore": post_posenet_yuv6_distribution_mae,
+            "scorer_space_step_guard_pre_posenet_yuv6_contrast_ratio": pre_posenet_yuv6_contrast,
+            "scorer_space_step_guard_post_posenet_yuv6_contrast_ratio_before_restore": post_posenet_yuv6_contrast,
             "scorer_space_step_guard_pre_segnet_argmax_disagreement": pre_argmax_disagreement,
             "scorer_space_step_guard_post_segnet_argmax_disagreement_before_restore": post_argmax_disagreement,
             "scorer_space_step_guard_pre_pose_score_term": pre_pose_score_term,
             "scorer_space_step_guard_post_pose_score_term_before_restore": post_pose_score_term,
             "scorer_space_step_guard_pre_pose_direct_live_score_term": pre_pose_direct_live_score_term,
             "scorer_space_step_guard_post_pose_direct_live_score_term_before_restore": post_pose_direct_live_score_term,
+            "scorer_space_step_guard_pre_segnet_escape_selection": pre_escape_selection,
+            "scorer_space_step_guard_post_segnet_escape_selection_before_restore": post_escape_selection,
+            "scorer_space_step_guard_pre_rare_class_logit_loss": pre_rare_class_logit_loss,
+            "scorer_space_step_guard_post_rare_class_logit_loss_before_restore": post_rare_class_logit_loss,
+            "scorer_space_step_guard_rare_class_logit_recovery_delta": rare_class_logit_recovery_delta,
+            "scorer_space_step_guard_rare_class_logit_recovery_floor": rare_class_logit_recovery_floor,
+            "scorer_space_step_guard_pre_direct_nonrate_score": pre_direct_nonrate_score,
+            "scorer_space_step_guard_post_direct_nonrate_score_before_restore": post_direct_nonrate_score,
+            "scorer_space_step_guard_pose_score_term_worsening_delta": pose_worsening_delta,
+            "scorer_space_step_guard_pose_score_term_worsening_limit": pose_worsening_limit,
+            "scorer_space_step_guard_pose_direct_live_score_term_worsening_delta": direct_pose_worsening_delta,
+            "scorer_space_step_guard_pose_direct_live_score_term_worsening_limit": direct_pose_worsening_limit,
+            "scorer_space_step_guard_direct_nonrate_score_worsening_delta": direct_nonrate_worsening_delta,
+            "scorer_space_step_guard_direct_nonrate_score_worsening_limit": direct_nonrate_worsening_limit,
         }.items():
             if value is not None:
                 metrics[name] = float(value)
+        metrics["scorer_space_step_guard_direct_nonrate_improved"] = float(
+            direct_nonrate_improved
+        )
+        metrics[
+            "scorer_space_step_guard_segnet_target_class_ratio_drop_compared_class_count"
+        ] = float(target_class_ratio_drop_compared_class_count)
+        metrics["scorer_space_step_guard_pose_score_term_worsened_raw"] = float(
+            raw_pose_worsened_too_much
+        )
+        metrics[
+            "scorer_space_step_guard_pose_score_term_worsened_blocking"
+        ] = float(pose_worsened_too_much)
+        metrics[
+            "scorer_space_step_guard_pose_direct_live_score_term_worsened_raw"
+        ] = float(raw_direct_pose_worsened_too_much)
+        metrics[
+            "scorer_space_step_guard_pose_direct_live_score_term_worsened_blocking"
+        ] = float(direct_pose_worsened_too_much)
+        metrics[
+            "scorer_space_step_guard_direct_nonrate_score_worsened_blocking"
+        ] = float(direct_nonrate_worsened_too_much)
 
         metrics["scorer_space_step_guard_pre_metric_present"] = float(pre_occ is not None)
         metrics["scorer_space_step_guard_post_metric_present"] = float(post_occ is not None)
@@ -1422,8 +2627,26 @@ class MlxScoreAwareAdapter:
             return metrics
 
         max_contrast = self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+        max_segnet_distribution_mae = (
+            self._scorer_space_step_guard_max_post_segnet_distribution_mae
+        )
+        max_posenet_yuv6_distribution_mae = (
+            self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+        )
+        max_posenet_yuv6_contrast = (
+            self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+        )
         max_argmax = (
             self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+        )
+        min_target_class_coverage = (
+            self._scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+        )
+        min_target_class_min_ratio = (
+            self._scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+        )
+        max_target_class_ratio_drop = (
+            self._scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
         )
         max_pose = self._scorer_space_step_guard_max_post_pose_score_term
         max_direct_pose = (
@@ -1459,6 +2682,245 @@ class MlxScoreAwareAdapter:
             and post_occ is not None
             and post_occ <= pre_occ
         )
+        target_class_coverage_floor_active = min_target_class_coverage is not None
+        target_class_coverage_preserved = (
+            pre_target_class_coverage is not None
+            and post_target_class_coverage is not None
+            and post_target_class_coverage + 1.0e-7 >= pre_target_class_coverage
+        )
+        target_class_coverage_improved = (
+            pre_target_class_coverage is not None
+            and post_target_class_coverage is not None
+            and post_target_class_coverage > pre_target_class_coverage + 1.0e-7
+        )
+        target_class_coverage_below_floor_non_improving = (
+            target_class_coverage_floor_active
+            and pre_target_class_coverage is not None
+            and post_target_class_coverage is not None
+            and pre_target_class_coverage < min_target_class_coverage
+            and post_target_class_coverage <= pre_target_class_coverage + 1.0e-7
+        )
+        target_class_min_ratio_floor_active = min_target_class_min_ratio is not None
+        target_class_min_ratio_preserved = (
+            pre_target_class_min_ratio is not None
+            and post_target_class_min_ratio is not None
+            and post_target_class_min_ratio + 1.0e-7 >= pre_target_class_min_ratio
+        )
+        target_class_min_ratio_improved = (
+            pre_target_class_min_ratio is not None
+            and post_target_class_min_ratio is not None
+            and post_target_class_min_ratio > pre_target_class_min_ratio + 1.0e-7
+        )
+        target_class_min_ratio_below_floor_non_improving = (
+            target_class_min_ratio_floor_active
+            and pre_target_class_min_ratio is not None
+            and post_target_class_min_ratio is not None
+            and pre_target_class_min_ratio < min_target_class_min_ratio
+            and post_target_class_min_ratio <= pre_target_class_min_ratio + 1.0e-7
+        )
+        target_class_ratio_drop_within_limit = (
+            max_target_class_ratio_drop is None
+            or target_class_ratio_drop is None
+            or target_class_ratio_drop <= max_target_class_ratio_drop + 1.0e-7
+        )
+        target_class_min_ratio_birth_allowed = (
+            target_class_coverage_improved
+            and target_class_min_ratio_preserved
+            and target_class_ratio_drop_within_limit
+        )
+        eps = 1.0e-7
+        bootstrap_low_occupancy = (
+            pre_occ
+            < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+            and post_occ is not None
+            and post_occ
+            < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        )
+        bootstrap_occupancy_preserved = (
+            post_occ is not None
+            and post_occ + eps >= pre_occ
+        )
+        bootstrap_occupancy_improved = (
+            post_occ is not None
+            and post_occ > pre_occ + eps
+        )
+        min_argmax_recovery = _segnet_argmax_meaningful_recovery_floor(
+            pre_argmax_disagreement=pre_argmax_disagreement,
+            max_argmax_disagreement=max_argmax,
+        )
+        bootstrap_argmax_recovery = (
+            pre_argmax_disagreement - post_argmax_disagreement
+            if pre_argmax_disagreement is not None
+            and post_argmax_disagreement is not None
+            else None
+        )
+        bootstrap_escape_improved = (
+            pre_escape_selection is not None
+            and post_escape_selection is not None
+            and post_escape_selection < pre_escape_selection - eps
+        )
+        bootstrap_argmax_improved = (
+            pre_argmax_disagreement is not None
+            and post_argmax_disagreement is not None
+            and post_argmax_disagreement < pre_argmax_disagreement - eps
+        )
+        bootstrap_argmax_improved_meaningfully = (
+            bootstrap_argmax_recovery is not None
+            and bootstrap_argmax_recovery >= min_argmax_recovery
+        )
+        bootstrap_escape_improved_meaningfully = (
+            bootstrap_occupancy_improved
+            or (
+                pre_escape_selection is not None
+                and post_escape_selection is not None
+                and pre_escape_selection - post_escape_selection
+                >= min_argmax_recovery
+            )
+        )
+        target_class_min_ratio_bootstrap_hold_allowed = (
+            target_class_coverage_floor_active
+            and target_class_min_ratio_floor_active
+            and pre_target_class_coverage is not None
+            and post_target_class_coverage is not None
+            and pre_target_class_min_ratio is not None
+            and post_target_class_min_ratio is not None
+            and pre_target_class_coverage > 0.0
+            and pre_target_class_coverage < min_target_class_coverage
+            and post_target_class_coverage < min_target_class_coverage
+            and pre_target_class_min_ratio < min_target_class_min_ratio
+            and post_target_class_min_ratio < min_target_class_min_ratio
+            and target_class_coverage_preserved
+            and target_class_min_ratio_preserved
+            and target_class_ratio_drop_within_limit
+            and (
+                direct_nonrate_improved
+                or bootstrap_escape_improved_meaningfully
+                or bootstrap_argmax_improved_meaningfully
+                or rare_class_logit_recovered_meaningfully
+            )
+        )
+        bootstrap_escape_allowed = (
+            bootstrap_low_occupancy
+            and bootstrap_occupancy_preserved
+            and (
+                bootstrap_occupancy_improved
+                or bootstrap_escape_improved_meaningfully
+                or bootstrap_argmax_improved_meaningfully
+            )
+        )
+        target_class_bootstrap_escape_allowed = (
+            target_class_coverage_floor_active
+            and pre_target_class_coverage is not None
+            and post_target_class_coverage is not None
+            and pre_target_class_coverage < min_target_class_coverage
+            and post_target_class_coverage < min_target_class_coverage
+            and target_class_coverage_preserved
+            and target_class_ratio_drop_within_limit
+            and (
+                not target_class_min_ratio_floor_active
+                or pre_target_class_min_ratio is None
+                or post_target_class_min_ratio is None
+                or pre_target_class_min_ratio >= min_target_class_min_ratio
+                or target_class_min_ratio_improved
+                or target_class_min_ratio_birth_allowed
+                or target_class_min_ratio_bootstrap_hold_allowed
+            )
+            and (
+                target_class_coverage_improved
+                or bootstrap_escape_improved_meaningfully
+                or bootstrap_argmax_improved_meaningfully
+                or rare_class_logit_recovered_meaningfully
+            )
+        )
+        target_class_coverage_breakthrough = (
+            target_class_coverage_floor_active
+            and pre_target_class_coverage is not None
+            and post_target_class_coverage is not None
+            and pre_target_class_coverage < min_target_class_coverage
+            and post_target_class_coverage + eps >= min_target_class_coverage
+            and target_class_coverage_improved
+            and rare_class_logit_recovered_meaningfully
+        )
+        if (
+            pre_escape_selection is not None
+            and post_escape_selection is not None
+        ):
+            metrics["scorer_space_step_guard_segnet_escape_delta"] = float(
+                post_escape_selection - pre_escape_selection
+            )
+        metrics["scorer_space_step_guard_bootstrap_low_occupancy"] = float(
+            bootstrap_low_occupancy
+        )
+        metrics["scorer_space_step_guard_bootstrap_occupancy_preserved"] = float(
+            bootstrap_occupancy_preserved
+        )
+        metrics["scorer_space_step_guard_bootstrap_occupancy_improved"] = float(
+            bootstrap_occupancy_improved
+        )
+        metrics["scorer_space_step_guard_bootstrap_escape_improved"] = float(
+            bootstrap_escape_improved
+        )
+        metrics[
+            "scorer_space_step_guard_bootstrap_escape_improved_meaningfully"
+        ] = float(bootstrap_escape_improved_meaningfully)
+        metrics["scorer_space_step_guard_bootstrap_argmax_improved"] = float(
+            bootstrap_argmax_improved
+        )
+        metrics[
+            "scorer_space_step_guard_bootstrap_argmax_improved_meaningfully"
+        ] = float(bootstrap_argmax_improved_meaningfully)
+        metrics[
+            "scorer_space_step_guard_rare_class_logit_recovered_meaningfully"
+        ] = float(rare_class_logit_recovered_meaningfully)
+        metrics["scorer_space_step_guard_min_argmax_recovery"] = float(
+            min_argmax_recovery
+        )
+        if bootstrap_argmax_recovery is not None:
+            metrics["scorer_space_step_guard_argmax_recovery"] = float(
+                bootstrap_argmax_recovery
+            )
+        metrics["scorer_space_step_guard_bootstrap_escape_allowed"] = float(
+            bootstrap_escape_allowed
+        )
+        metrics[
+            "scorer_space_step_guard_target_class_coverage_floor_active"
+        ] = float(target_class_coverage_floor_active)
+        metrics[
+            "scorer_space_step_guard_target_class_coverage_preserved"
+        ] = float(target_class_coverage_preserved)
+        metrics[
+            "scorer_space_step_guard_target_class_coverage_improved"
+        ] = float(target_class_coverage_improved)
+        metrics[
+            "scorer_space_step_guard_target_class_coverage_below_floor_non_improving"
+        ] = float(target_class_coverage_below_floor_non_improving)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_floor_active"
+        ] = float(target_class_min_ratio_floor_active)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_preserved"
+        ] = float(target_class_min_ratio_preserved)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_improved"
+        ] = float(target_class_min_ratio_improved)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_birth_allowed"
+        ] = float(target_class_min_ratio_birth_allowed)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_bootstrap_hold_allowed"
+        ] = float(target_class_min_ratio_bootstrap_hold_allowed)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_below_floor_non_improving"
+        ] = float(target_class_min_ratio_below_floor_non_improving)
+        metrics[
+            "scorer_space_step_guard_target_class_ratio_drop_within_limit"
+        ] = float(target_class_ratio_drop_within_limit)
+        metrics[
+            "scorer_space_step_guard_target_class_bootstrap_escape_allowed"
+        ] = float(target_class_bootstrap_escape_allowed)
+        metrics[
+            "scorer_space_step_guard_target_class_coverage_breakthrough"
+        ] = float(target_class_coverage_breakthrough)
         argmax_crossed_ceiling = (
             max_argmax is not None
             and post_argmax_disagreement is not None
@@ -1469,6 +2931,186 @@ class MlxScoreAwareAdapter:
                 or post_argmax_disagreement >= pre_argmax_disagreement
             )
         )
+        contrast_ceiling_recovery_allowed = (
+            self._metric_ceiling_recovery_allowed(
+                pre_value=pre_contrast,
+                post_value=post_contrast,
+                ceiling=max_contrast,
+                eps=eps,
+            )
+        )
+        segnet_distribution_mae_crossed_ceiling = self._metric_crossed_ceiling(
+            pre_value=pre_segnet_distribution_mae,
+            post_value=post_segnet_distribution_mae,
+            ceiling=max_segnet_distribution_mae,
+        )
+        segnet_distribution_mae_recovery_allowed = (
+            self._metric_ceiling_recovery_allowed(
+                pre_value=pre_segnet_distribution_mae,
+                post_value=post_segnet_distribution_mae,
+                ceiling=max_segnet_distribution_mae,
+                eps=eps,
+            )
+        )
+        posenet_yuv6_distribution_mae_crossed_ceiling = (
+            self._metric_crossed_ceiling(
+                pre_value=pre_posenet_yuv6_distribution_mae,
+                post_value=post_posenet_yuv6_distribution_mae,
+                ceiling=max_posenet_yuv6_distribution_mae,
+            )
+        )
+        posenet_yuv6_distribution_mae_recovery_allowed = (
+            self._metric_ceiling_recovery_allowed(
+                pre_value=pre_posenet_yuv6_distribution_mae,
+                post_value=post_posenet_yuv6_distribution_mae,
+                ceiling=max_posenet_yuv6_distribution_mae,
+                eps=eps,
+            )
+        )
+        posenet_yuv6_contrast_crossed_ceiling = self._metric_crossed_ceiling(
+            pre_value=pre_posenet_yuv6_contrast,
+            post_value=post_posenet_yuv6_contrast,
+            ceiling=max_posenet_yuv6_contrast,
+        )
+        posenet_yuv6_contrast_recovery_allowed = (
+            self._metric_ceiling_recovery_allowed(
+                pre_value=pre_posenet_yuv6_contrast,
+                post_value=post_posenet_yuv6_contrast,
+                ceiling=max_posenet_yuv6_contrast,
+                eps=eps,
+            )
+        )
+        bootstrap_direct_nonrate_worsening_allowed = False
+        target_class_argmax_worsening_delta = (
+            post_argmax_disagreement - pre_argmax_disagreement
+            if pre_argmax_disagreement is not None
+            and post_argmax_disagreement is not None
+            else None
+        )
+        target_class_bootstrap_argmax_worsening_limit = max(
+            0.002,
+            4.0 * min_argmax_recovery,
+        )
+        target_class_argmax_within_ceiling = (
+            max_argmax is None
+            or post_argmax_disagreement is None
+            or post_argmax_disagreement <= max_argmax + eps
+        )
+        target_class_argmax_trade_priced = (
+            target_class_argmax_within_ceiling
+            or target_class_argmax_worsening_delta is None
+            or target_class_argmax_worsening_delta
+            <= target_class_bootstrap_argmax_worsening_limit + eps
+        )
+        target_class_structural_recovery = (
+            target_class_coverage_breakthrough
+            or target_class_coverage_improved
+            or bootstrap_occupancy_improved
+        )
+        target_class_within_ceiling_rare_recovery = (
+            target_class_argmax_within_ceiling
+            and rare_class_logit_recovered_meaningfully
+        )
+        target_class_support_credit_eligible = (
+            target_class_coverage_floor_active
+            and pre_target_class_coverage is not None
+            and pre_target_class_coverage < min_target_class_coverage
+            and target_class_coverage_preserved
+            and target_class_ratio_drop_within_limit
+            and (
+                not target_class_min_ratio_floor_active
+                or pre_target_class_min_ratio is None
+                or post_target_class_min_ratio is None
+                or pre_target_class_min_ratio >= min_target_class_min_ratio
+                or target_class_min_ratio_improved
+                or target_class_min_ratio_birth_allowed
+                or target_class_min_ratio_bootstrap_hold_allowed
+            )
+            and target_class_structural_recovery
+            and not segnet_distribution_mae_crossed_ceiling
+            and not posenet_yuv6_distribution_mae_crossed_ceiling
+            and not posenet_yuv6_contrast_crossed_ceiling
+        )
+        (
+            target_class_support_nonrate_credit,
+            target_class_coverage_delta,
+        ) = self._target_class_support_credit(
+            pre_target_class_coverage=pre_target_class_coverage,
+            post_target_class_coverage=post_target_class_coverage,
+            eligible=target_class_support_credit_eligible,
+        )
+        bootstrap_direct_nonrate_worsening_budget = None
+        if self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening is not None:
+            bootstrap_direct_nonrate_worsening_budget = (
+                self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                + target_class_support_nonrate_credit
+            )
+        if (
+            self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+            is not None
+            and target_class_coverage_floor_active
+            and pre_target_class_coverage is not None
+            and pre_target_class_coverage < min_target_class_coverage
+            and target_class_coverage_preserved
+            and target_class_ratio_drop_within_limit
+            and (
+                not target_class_min_ratio_floor_active
+                or pre_target_class_min_ratio is None
+                or post_target_class_min_ratio is None
+                or pre_target_class_min_ratio >= min_target_class_min_ratio
+                or target_class_min_ratio_improved
+                or target_class_min_ratio_birth_allowed
+                or target_class_min_ratio_bootstrap_hold_allowed
+            )
+            and (
+                target_class_structural_recovery
+                or target_class_bootstrap_escape_allowed
+                or target_class_within_ceiling_rare_recovery
+                or bootstrap_escape_improved_meaningfully
+                or bootstrap_argmax_improved_meaningfully
+            )
+            and (
+                not target_class_coverage_breakthrough
+                or target_class_argmax_trade_priced
+            )
+            and direct_nonrate_worsening_delta is not None
+            and bootstrap_direct_nonrate_worsening_budget is not None
+            and direct_nonrate_worsening_delta
+            <= bootstrap_direct_nonrate_worsening_budget + eps
+            and not segnet_distribution_mae_crossed_ceiling
+            and not posenet_yuv6_distribution_mae_crossed_ceiling
+            and not posenet_yuv6_contrast_crossed_ceiling
+        ):
+            bootstrap_direct_nonrate_worsening_allowed = True
+            direct_nonrate_worsened_too_much = False
+            pose_worsened_too_much = False
+        metrics[
+            "scorer_space_step_guard_pose_score_term_worsened_blocking"
+        ] = float(pose_worsened_too_much)
+        metrics[
+            "scorer_space_step_guard_direct_nonrate_score_worsened_blocking"
+        ] = float(direct_nonrate_worsened_too_much)
+        argmax_ceiling_recovery_allowed = (
+            max_argmax is not None
+            and pre_argmax_disagreement is not None
+            and post_argmax_disagreement is not None
+            and pre_argmax_disagreement > max_argmax
+            and post_argmax_disagreement > max_argmax
+            and post_argmax_disagreement < pre_argmax_disagreement - eps
+            and pre_argmax_disagreement - post_argmax_disagreement
+            >= min_argmax_recovery
+        )
+        target_class_argmax_ceiling_suppression_allowed = (
+            max_argmax is not None
+            and target_class_bootstrap_escape_allowed
+            and target_class_coverage_improved
+            and rare_class_logit_recovered_meaningfully
+            and post_argmax_disagreement is not None
+            and post_argmax_disagreement > max_argmax
+            and target_class_argmax_worsening_delta is not None
+            and target_class_argmax_worsening_delta
+            <= target_class_bootstrap_argmax_worsening_limit + eps
+        )
         pose_crossed_ceiling = (
             max_pose is not None
             and post_pose_score_term is not None
@@ -1478,6 +3120,14 @@ class MlxScoreAwareAdapter:
                 or pre_pose_score_term <= max_pose
                 or post_pose_score_term >= pre_pose_score_term
             )
+        )
+        pose_ceiling_recovery_allowed = (
+            max_pose is not None
+            and pre_pose_score_term is not None
+            and post_pose_score_term is not None
+            and pre_pose_score_term > max_pose
+            and post_pose_score_term > max_pose
+            and post_pose_score_term < pre_pose_score_term - eps
         )
         direct_pose_crossed_ceiling = (
             max_direct_pose is not None
@@ -1490,13 +3140,91 @@ class MlxScoreAwareAdapter:
                 >= pre_pose_direct_live_score_term
             )
         )
+        direct_pose_ceiling_recovery_allowed = (
+            max_direct_pose is not None
+            and pre_pose_direct_live_score_term is not None
+            and post_pose_direct_live_score_term is not None
+            and pre_pose_direct_live_score_term > max_direct_pose
+            and post_pose_direct_live_score_term > max_direct_pose
+            and post_pose_direct_live_score_term
+            < pre_pose_direct_live_score_term - eps
+        )
+        metrics[
+            "scorer_space_step_guard_ceiling_recovery_contrast_allowed"
+        ] = float(contrast_ceiling_recovery_allowed)
+        metrics[
+            "scorer_space_step_guard_ceiling_recovery_segnet_distribution_mae_allowed"
+        ] = float(segnet_distribution_mae_recovery_allowed)
+        metrics[
+            "scorer_space_step_guard_ceiling_recovery_posenet_yuv6_distribution_mae_allowed"
+        ] = float(posenet_yuv6_distribution_mae_recovery_allowed)
+        metrics[
+            "scorer_space_step_guard_ceiling_recovery_posenet_yuv6_contrast_allowed"
+        ] = float(posenet_yuv6_contrast_recovery_allowed)
+        metrics[
+            "scorer_space_step_guard_bootstrap_direct_nonrate_worsening_allowed"
+        ] = float(bootstrap_direct_nonrate_worsening_allowed)
+        metrics[
+            "scorer_space_step_guard_target_class_support_credit_eligible"
+        ] = float(target_class_support_credit_eligible)
+        if target_class_coverage_delta is not None:
+            metrics[
+                "scorer_space_step_guard_target_class_coverage_delta"
+            ] = float(target_class_coverage_delta)
+        metrics[
+            "scorer_space_step_guard_target_class_support_nonrate_credit"
+        ] = float(target_class_support_nonrate_credit)
+        if bootstrap_direct_nonrate_worsening_budget is not None:
+            metrics[
+                "scorer_space_step_guard_bootstrap_direct_nonrate_worsening_budget"
+            ] = float(bootstrap_direct_nonrate_worsening_budget)
+        metrics["scorer_space_step_guard_ceiling_recovery_argmax_allowed"] = float(
+            argmax_ceiling_recovery_allowed
+        )
+        if target_class_argmax_worsening_delta is not None:
+            metrics[
+                "scorer_space_step_guard_target_class_argmax_worsening_delta"
+            ] = float(target_class_argmax_worsening_delta)
+        metrics[
+            "scorer_space_step_guard_target_class_bootstrap_argmax_worsening_limit"
+        ] = float(target_class_bootstrap_argmax_worsening_limit)
+        metrics[
+            "scorer_space_step_guard_target_class_argmax_within_ceiling"
+        ] = float(target_class_argmax_within_ceiling)
+        metrics[
+            "scorer_space_step_guard_target_class_argmax_trade_priced"
+        ] = float(target_class_argmax_trade_priced)
+        metrics[
+            "scorer_space_step_guard_target_class_structural_recovery"
+        ] = float(target_class_structural_recovery)
+        metrics[
+            "scorer_space_step_guard_target_class_within_ceiling_rare_recovery"
+        ] = float(target_class_within_ceiling_rare_recovery)
+        metrics[
+            "scorer_space_step_guard_target_class_argmax_ceiling_suppression_allowed"
+        ] = float(target_class_argmax_ceiling_suppression_allowed)
+        metrics["scorer_space_step_guard_ceiling_recovery_pose_allowed"] = float(
+            pose_ceiling_recovery_allowed
+        )
+        metrics[
+            "scorer_space_step_guard_ceiling_recovery_pose_direct_live_allowed"
+        ] = float(direct_pose_ceiling_recovery_allowed)
         eligible = (
             pre_noncollapsed
             or contrast_crossed_ceiling
+            or segnet_distribution_mae_crossed_ceiling
+            or posenet_yuv6_distribution_mae_crossed_ceiling
+            or posenet_yuv6_contrast_crossed_ceiling
             or low_occupancy_non_improving
+            or target_class_coverage_below_floor_non_improving
+            or target_class_min_ratio_below_floor_non_improving
+            or not target_class_ratio_drop_within_limit
             or argmax_crossed_ceiling
             or pose_crossed_ceiling
             or direct_pose_crossed_ceiling
+            or pose_worsened_too_much
+            or direct_pose_worsened_too_much
+            or direct_nonrate_worsened_too_much
         )
         metrics["scorer_space_step_guard_eligible"] = float(eligible)
         metrics["scorer_space_step_guard_eligible_pre_noncollapsed"] = float(
@@ -1505,9 +3233,27 @@ class MlxScoreAwareAdapter:
         metrics["scorer_space_step_guard_eligible_contrast_crossed_ceiling"] = float(
             contrast_crossed_ceiling
         )
+        metrics[
+            "scorer_space_step_guard_eligible_segnet_distribution_mae_crossed_ceiling"
+        ] = float(segnet_distribution_mae_crossed_ceiling)
+        metrics[
+            "scorer_space_step_guard_eligible_posenet_yuv6_distribution_mae_crossed_ceiling"
+        ] = float(posenet_yuv6_distribution_mae_crossed_ceiling)
+        metrics[
+            "scorer_space_step_guard_eligible_posenet_yuv6_contrast_crossed_ceiling"
+        ] = float(posenet_yuv6_contrast_crossed_ceiling)
         metrics["scorer_space_step_guard_eligible_low_occupancy_non_improving"] = float(
             low_occupancy_non_improving
         )
+        metrics[
+            "scorer_space_step_guard_eligible_target_class_coverage_below_floor_non_improving"
+        ] = float(target_class_coverage_below_floor_non_improving)
+        metrics[
+            "scorer_space_step_guard_eligible_target_class_min_ratio_below_floor_non_improving"
+        ] = float(target_class_min_ratio_below_floor_non_improving)
+        metrics[
+            "scorer_space_step_guard_eligible_target_class_ratio_drop_above_ceiling"
+        ] = float(not target_class_ratio_drop_within_limit)
         metrics["scorer_space_step_guard_eligible_argmax_crossed_ceiling"] = float(
             argmax_crossed_ceiling
         )
@@ -1517,18 +3263,109 @@ class MlxScoreAwareAdapter:
         metrics[
             "scorer_space_step_guard_eligible_pose_direct_live_crossed_ceiling"
         ] = float(direct_pose_crossed_ceiling)
+        metrics["scorer_space_step_guard_eligible_pose_worsened"] = float(
+            pose_worsened_too_much
+        )
+        metrics[
+            "scorer_space_step_guard_eligible_pose_direct_live_worsened"
+        ] = float(direct_pose_worsened_too_much)
+        metrics[
+            "scorer_space_step_guard_eligible_direct_nonrate_score_worsened"
+        ] = float(direct_nonrate_worsened_too_much)
         if not eligible:
             return metrics
 
         reject_reasons = self._scorer_space_step_guard_reject_reasons(
             post_occ=post_occ,
+            post_target_class_coverage=post_target_class_coverage,
+            post_target_class_min_ratio=post_target_class_min_ratio,
+            target_class_ratio_drop=target_class_ratio_drop,
             post_contrast=post_contrast,
+            post_segnet_distribution_mae=post_segnet_distribution_mae,
+            post_posenet_yuv6_distribution_mae=post_posenet_yuv6_distribution_mae,
+            post_posenet_yuv6_contrast=post_posenet_yuv6_contrast,
             post_argmax_disagreement=post_argmax_disagreement,
             post_pose_score_term=post_pose_score_term,
             post_pose_direct_live_score_term=post_pose_direct_live_score_term,
+            pose_score_term_worsened=pose_worsened_too_much,
+            pose_direct_live_score_term_worsened=direct_pose_worsened_too_much,
+            direct_nonrate_score_worsened=direct_nonrate_worsened_too_much,
+            suppress_post_occ_below_floor=(
+                bootstrap_escape_allowed
+                or target_class_bootstrap_escape_allowed
+                or bootstrap_direct_nonrate_worsening_allowed
+            ),
+            suppress_post_target_class_coverage_below_floor=(
+                target_class_bootstrap_escape_allowed
+                or bootstrap_direct_nonrate_worsening_allowed
+            ),
+            suppress_post_target_class_min_ratio_below_floor=(
+                target_class_min_ratio_improved
+                or target_class_min_ratio_birth_allowed
+                or target_class_min_ratio_bootstrap_hold_allowed
+                or bootstrap_direct_nonrate_worsening_allowed
+            ),
+            suppress_post_contrast_above_ceiling=contrast_ceiling_recovery_allowed,
+            suppress_post_segnet_distribution_mae_above_ceiling=(
+                segnet_distribution_mae_recovery_allowed
+            ),
+            suppress_post_posenet_yuv6_distribution_mae_above_ceiling=(
+                posenet_yuv6_distribution_mae_recovery_allowed
+            ),
+            suppress_post_posenet_yuv6_contrast_above_ceiling=(
+                posenet_yuv6_contrast_recovery_allowed
+            ),
+            suppress_post_argmax_above_ceiling=(
+                argmax_ceiling_recovery_allowed
+                or target_class_argmax_ceiling_suppression_allowed
+                or bootstrap_direct_nonrate_worsening_allowed
+            ),
+            suppress_post_pose_above_ceiling=pose_ceiling_recovery_allowed,
+            suppress_post_pose_direct_live_above_ceiling=(
+                direct_pose_ceiling_recovery_allowed
+            ),
         )
         self._add_scorer_space_step_guard_reason_metrics(metrics, reject_reasons)
+        if (
+            bootstrap_escape_allowed
+            or target_class_bootstrap_escape_allowed
+            or bootstrap_direct_nonrate_worsening_allowed
+        ) and (
+            post_occ is not None
+            and post_occ
+            < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        ):
+            metrics[
+                "scorer_space_step_guard_reject_reason_post_segnet_occupied_class_fraction_below_floor_suppressed_by_bootstrap_escape"
+            ] = 1.0
+        if target_class_bootstrap_escape_allowed and (
+            post_target_class_coverage is not None
+            and min_target_class_coverage is not None
+            and post_target_class_coverage < min_target_class_coverage
+        ):
+            metrics[
+                "scorer_space_step_guard_reject_reason_post_segnet_target_class_coverage_fraction_below_floor_suppressed_by_bootstrap_escape"
+            ] = 1.0
+        if (
+            (
+                target_class_min_ratio_improved
+                or target_class_min_ratio_birth_allowed
+                or target_class_min_ratio_bootstrap_hold_allowed
+                or bootstrap_direct_nonrate_worsening_allowed
+            )
+            and post_target_class_min_ratio is not None
+            and min_target_class_min_ratio is not None
+            and post_target_class_min_ratio < min_target_class_min_ratio
+        ):
+            metrics[
+                "scorer_space_step_guard_reject_reason_post_segnet_target_class_min_ratio_below_floor_suppressed_by_bootstrap_escape"
+            ] = 1.0
         if not reject_reasons:
+            if self._scorer_space_step_guard_learning_rate_scale < 1.0:
+                _update_learning_rate_scale(
+                    self._scorer_space_step_guard_learning_rate_scale * 1.05,
+                    reason="full_accept",
+                )
             return metrics
 
         post_update_param_trace = self._capture_parameter_trace_leaves()
@@ -1550,9 +3387,36 @@ class MlxScoreAwareAdapter:
                 trial_metrics,
                 "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
             )
+            trial_target_class_coverage = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+            )
+            trial_target_class_min_ratio = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+            )
+            (
+                trial_target_class_ratio_drop,
+                trial_target_class_ratio_drop_compared_class_count,
+            ) = self._segnet_target_class_ratio_drop(
+                pre_metrics=pre_update_loss_part_metrics,
+                post_metrics=trial_metrics,
+            )
             trial_contrast = self._finite_metric(
                 trial_metrics,
                 "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+            )
+            trial_segnet_distribution_mae = self._finite_metric(
+                trial_metrics,
+                "loss_part_scorer_input_distribution_guard_segnet_frame1_mae",
+            )
+            trial_posenet_yuv6_distribution_mae = self._finite_metric(
+                trial_metrics,
+                "loss_part_scorer_input_distribution_guard_yuv6_pair_mae",
+            )
+            trial_posenet_yuv6_contrast = self._finite_metric(
+                trial_metrics,
+                "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
             )
             trial_argmax_disagreement = self._finite_metric(
                 trial_metrics,
@@ -1566,12 +3430,453 @@ class MlxScoreAwareAdapter:
                 trial_metrics,
                 "loss_part_pose_direct_live_score_term",
             )
+            trial_escape_selection = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_escape_selection",
+            )
+            if trial_escape_selection is None:
+                trial_escape_selection = _segnet_direct_live_escape_selection_metric(
+                    candidate_occupied_class_fraction=trial_occ,
+                    argmax_disagreement=trial_argmax_disagreement,
+                    target_class_coverage_fraction=trial_target_class_coverage,
+                )
+            trial_rare_class_logit_loss = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_rare_class_logit_loss",
+            )
+            (
+                trial_rare_class_logit_recovered_meaningfully,
+                trial_rare_class_logit_recovery_delta,
+                trial_rare_class_logit_recovery_floor,
+            ) = _meaningful_loss_recovery(
+                pre_value=pre_rare_class_logit_loss,
+                post_value=trial_rare_class_logit_loss,
+            )
+            trial_direct_nonrate_score = self._direct_nonrate_score_proxy(
+                argmax_disagreement=trial_argmax_disagreement,
+                pose_direct_live_score_term=trial_pose_direct_live_score_term,
+                pose_score_term=trial_pose_score_term,
+            )
+            trial_direct_nonrate_improved = (
+                pre_direct_nonrate_score is not None
+                and trial_direct_nonrate_score is not None
+                and trial_direct_nonrate_score < pre_direct_nonrate_score - eps
+            )
+            (
+                trial_raw_pose_worsened_too_much,
+                trial_pose_worsening_delta,
+                trial_pose_worsening_limit,
+            ) = self._metric_worsened_beyond_limit(
+                pre_value=pre_pose_score_term,
+                post_value=trial_pose_score_term,
+                max_relative_worsening=(
+                    self._scorer_space_step_guard_max_pose_score_term_relative_worsening
+                ),
+                max_absolute_worsening=(
+                    self._scorer_space_step_guard_max_pose_score_term_absolute_worsening
+                ),
+            )
+            (
+                trial_raw_direct_pose_worsened_too_much,
+                trial_direct_pose_worsening_delta,
+                trial_direct_pose_worsening_limit,
+            ) = self._metric_worsened_beyond_limit(
+                pre_value=pre_pose_direct_live_score_term,
+                post_value=trial_pose_direct_live_score_term,
+                max_relative_worsening=(
+                    self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+                ),
+                max_absolute_worsening=(
+                    self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+                ),
+            )
+            (
+                trial_direct_nonrate_worsened_too_much,
+                trial_direct_nonrate_worsening_delta,
+                trial_direct_nonrate_worsening_limit,
+            ) = self._metric_worsened_beyond_limit(
+                pre_value=pre_direct_nonrate_score,
+                post_value=trial_direct_nonrate_score,
+                max_relative_worsening=None,
+                max_absolute_worsening=(
+                    self._scorer_space_step_guard_max_direct_nonrate_score_worsening
+                ),
+            )
+            trial_pose_worsened_too_much = (
+                trial_raw_pose_worsened_too_much
+                and not trial_direct_nonrate_improved
+            )
+            trial_direct_pose_worsened_too_much = (
+                trial_raw_direct_pose_worsened_too_much
+                and not trial_direct_nonrate_improved
+            )
+            trial_occupancy_improved = (
+                trial_occ is not None
+                and trial_occ > pre_occ + eps
+            )
+            trial_target_class_coverage_preserved = (
+                pre_target_class_coverage is not None
+                and trial_target_class_coverage is not None
+                and trial_target_class_coverage + eps >= pre_target_class_coverage
+            )
+            trial_target_class_coverage_improved = (
+                pre_target_class_coverage is not None
+                and trial_target_class_coverage is not None
+                and trial_target_class_coverage > pre_target_class_coverage + eps
+            )
+            trial_target_class_min_ratio_preserved = (
+                pre_target_class_min_ratio is not None
+                and trial_target_class_min_ratio is not None
+                and trial_target_class_min_ratio + eps >= pre_target_class_min_ratio
+            )
+            trial_target_class_min_ratio_improved = (
+                pre_target_class_min_ratio is not None
+                and trial_target_class_min_ratio is not None
+                and trial_target_class_min_ratio > pre_target_class_min_ratio + eps
+            )
+            trial_target_class_ratio_drop_within_limit = (
+                max_target_class_ratio_drop is None
+                or trial_target_class_ratio_drop is None
+                or trial_target_class_ratio_drop <= max_target_class_ratio_drop + eps
+            )
+            trial_target_class_min_ratio_birth_allowed = (
+                trial_target_class_coverage_improved
+                and trial_target_class_min_ratio_preserved
+                and trial_target_class_ratio_drop_within_limit
+            )
+            trial_argmax_recovery = (
+                pre_argmax_disagreement - trial_argmax_disagreement
+                if pre_argmax_disagreement is not None
+                and trial_argmax_disagreement is not None
+                else None
+            )
+            trial_argmax_improved_meaningfully = (
+                trial_argmax_recovery is not None
+                and trial_argmax_recovery >= min_argmax_recovery
+            )
+            trial_escape_improved_meaningfully = (
+                trial_occupancy_improved
+                or (
+                    pre_escape_selection is not None
+                    and trial_escape_selection is not None
+                    and pre_escape_selection - trial_escape_selection
+                    >= min_argmax_recovery
+                )
+            )
+            trial_target_class_min_ratio_bootstrap_hold_allowed = (
+                target_class_coverage_floor_active
+                and target_class_min_ratio_floor_active
+                and pre_target_class_coverage is not None
+                and trial_target_class_coverage is not None
+                and pre_target_class_min_ratio is not None
+                and trial_target_class_min_ratio is not None
+                and pre_target_class_coverage > 0.0
+                and pre_target_class_coverage < min_target_class_coverage
+                and trial_target_class_coverage < min_target_class_coverage
+                and pre_target_class_min_ratio < min_target_class_min_ratio
+                and trial_target_class_min_ratio < min_target_class_min_ratio
+                and trial_target_class_coverage_preserved
+                and trial_target_class_min_ratio_preserved
+                and trial_target_class_ratio_drop_within_limit
+                and (
+                    trial_direct_nonrate_improved
+                    or trial_escape_improved_meaningfully
+                    or trial_argmax_improved_meaningfully
+                    or trial_rare_class_logit_recovered_meaningfully
+                )
+            )
+            trial_bootstrap_escape_allowed = (
+                pre_occ
+                < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+                and trial_occ is not None
+                and trial_occ
+                < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+                and trial_occ + eps >= pre_occ
+                and (
+                    trial_occupancy_improved
+                    or trial_escape_improved_meaningfully
+                    or trial_argmax_improved_meaningfully
+                )
+            )
+            trial_target_class_bootstrap_escape_allowed = (
+                target_class_coverage_floor_active
+                and pre_target_class_coverage is not None
+                and trial_target_class_coverage is not None
+                and pre_target_class_coverage < min_target_class_coverage
+                and trial_target_class_coverage < min_target_class_coverage
+                and trial_target_class_coverage_preserved
+                and trial_target_class_ratio_drop_within_limit
+                and (
+                    not target_class_min_ratio_floor_active
+                    or pre_target_class_min_ratio is None
+                    or trial_target_class_min_ratio is None
+                    or pre_target_class_min_ratio >= min_target_class_min_ratio
+                    or trial_target_class_min_ratio_improved
+                    or trial_target_class_min_ratio_birth_allowed
+                    or trial_target_class_min_ratio_bootstrap_hold_allowed
+                )
+                and (
+                    trial_target_class_coverage_improved
+                    or trial_escape_improved_meaningfully
+                    or trial_argmax_improved_meaningfully
+                    or trial_rare_class_logit_recovered_meaningfully
+                )
+            )
+            trial_target_class_coverage_breakthrough = (
+                target_class_coverage_floor_active
+                and pre_target_class_coverage is not None
+                and trial_target_class_coverage is not None
+                and pre_target_class_coverage < min_target_class_coverage
+                and trial_target_class_coverage + eps >= min_target_class_coverage
+                and trial_target_class_coverage_improved
+                and trial_rare_class_logit_recovered_meaningfully
+            )
+            trial_contrast_ceiling_recovery_allowed = (
+                self._metric_ceiling_recovery_allowed(
+                    pre_value=pre_contrast,
+                    post_value=trial_contrast,
+                    ceiling=max_contrast,
+                    eps=eps,
+                )
+            )
+            trial_segnet_distribution_mae_recovery_allowed = (
+                self._metric_ceiling_recovery_allowed(
+                    pre_value=pre_segnet_distribution_mae,
+                    post_value=trial_segnet_distribution_mae,
+                    ceiling=max_segnet_distribution_mae,
+                    eps=eps,
+                )
+            )
+            trial_posenet_yuv6_distribution_mae_recovery_allowed = (
+                self._metric_ceiling_recovery_allowed(
+                    pre_value=pre_posenet_yuv6_distribution_mae,
+                    post_value=trial_posenet_yuv6_distribution_mae,
+                    ceiling=max_posenet_yuv6_distribution_mae,
+                    eps=eps,
+                )
+            )
+            trial_posenet_yuv6_contrast_recovery_allowed = (
+                self._metric_ceiling_recovery_allowed(
+                    pre_value=pre_posenet_yuv6_contrast,
+                    post_value=trial_posenet_yuv6_contrast,
+                    ceiling=max_posenet_yuv6_contrast,
+                    eps=eps,
+                )
+            )
+            trial_segnet_distribution_mae_crossed_ceiling = (
+                self._metric_crossed_ceiling(
+                    pre_value=pre_segnet_distribution_mae,
+                    post_value=trial_segnet_distribution_mae,
+                    ceiling=max_segnet_distribution_mae,
+                )
+            )
+            trial_posenet_yuv6_distribution_mae_crossed_ceiling = (
+                self._metric_crossed_ceiling(
+                    pre_value=pre_posenet_yuv6_distribution_mae,
+                    post_value=trial_posenet_yuv6_distribution_mae,
+                    ceiling=max_posenet_yuv6_distribution_mae,
+                )
+            )
+            trial_posenet_yuv6_contrast_crossed_ceiling = (
+                self._metric_crossed_ceiling(
+                    pre_value=pre_posenet_yuv6_contrast,
+                    post_value=trial_posenet_yuv6_contrast,
+                    ceiling=max_posenet_yuv6_contrast,
+                )
+            )
+            trial_target_class_argmax_worsening_delta = (
+                trial_argmax_disagreement - pre_argmax_disagreement
+                if pre_argmax_disagreement is not None
+                and trial_argmax_disagreement is not None
+                else None
+            )
+            trial_target_class_argmax_within_ceiling = (
+                max_argmax is None
+                or trial_argmax_disagreement is None
+                or trial_argmax_disagreement <= max_argmax + eps
+            )
+            trial_target_class_argmax_trade_priced = (
+                trial_target_class_argmax_within_ceiling
+                or trial_target_class_argmax_worsening_delta is None
+                or trial_target_class_argmax_worsening_delta
+                <= target_class_bootstrap_argmax_worsening_limit + eps
+            )
+            trial_target_class_structural_recovery = (
+                trial_target_class_coverage_breakthrough
+                or trial_target_class_coverage_improved
+                or trial_occupancy_improved
+            )
+            trial_target_class_support_credit_eligible = (
+                target_class_coverage_floor_active
+                and pre_target_class_coverage is not None
+                and pre_target_class_coverage < min_target_class_coverage
+                and trial_target_class_coverage_preserved
+                and trial_target_class_ratio_drop_within_limit
+                and (
+                    not target_class_min_ratio_floor_active
+                    or pre_target_class_min_ratio is None
+                    or trial_target_class_min_ratio is None
+                    or pre_target_class_min_ratio >= min_target_class_min_ratio
+                    or trial_target_class_min_ratio_improved
+                    or trial_target_class_min_ratio_birth_allowed
+                    or trial_target_class_min_ratio_bootstrap_hold_allowed
+                )
+                and trial_target_class_structural_recovery
+                and not trial_segnet_distribution_mae_crossed_ceiling
+                and not trial_posenet_yuv6_distribution_mae_crossed_ceiling
+                and not trial_posenet_yuv6_contrast_crossed_ceiling
+            )
+            (
+                trial_target_class_support_nonrate_credit,
+                trial_target_class_coverage_delta,
+            ) = self._target_class_support_credit(
+                pre_target_class_coverage=pre_target_class_coverage,
+                post_target_class_coverage=trial_target_class_coverage,
+                eligible=trial_target_class_support_credit_eligible,
+            )
+            trial_bootstrap_direct_nonrate_worsening_budget = None
+            if (
+                self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                is not None
+            ):
+                trial_bootstrap_direct_nonrate_worsening_budget = (
+                    self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                    + trial_target_class_support_nonrate_credit
+                )
+            trial_bootstrap_direct_nonrate_worsening_allowed = False
+            if (
+                self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                is not None
+                and target_class_coverage_floor_active
+                and pre_target_class_coverage is not None
+                and pre_target_class_coverage < min_target_class_coverage
+                and trial_target_class_coverage_preserved
+                and trial_target_class_ratio_drop_within_limit
+                and (
+                    not target_class_min_ratio_floor_active
+                    or pre_target_class_min_ratio is None
+                    or trial_target_class_min_ratio is None
+                    or pre_target_class_min_ratio >= min_target_class_min_ratio
+                    or trial_target_class_min_ratio_improved
+                    or trial_target_class_min_ratio_birth_allowed
+                    or trial_target_class_min_ratio_bootstrap_hold_allowed
+                )
+                and (
+                    trial_target_class_coverage_breakthrough
+                    or trial_target_class_bootstrap_escape_allowed
+                    or trial_target_class_coverage_improved
+                    or trial_escape_improved_meaningfully
+                    or trial_argmax_improved_meaningfully
+                    or trial_rare_class_logit_recovered_meaningfully
+                )
+                and (
+                    not trial_target_class_coverage_breakthrough
+                    or trial_target_class_argmax_trade_priced
+                )
+                and trial_direct_nonrate_worsening_delta is not None
+                and trial_bootstrap_direct_nonrate_worsening_budget is not None
+                and trial_direct_nonrate_worsening_delta
+                <= trial_bootstrap_direct_nonrate_worsening_budget + eps
+                and not trial_segnet_distribution_mae_crossed_ceiling
+                and not trial_posenet_yuv6_distribution_mae_crossed_ceiling
+                and not trial_posenet_yuv6_contrast_crossed_ceiling
+            ):
+                trial_bootstrap_direct_nonrate_worsening_allowed = True
+                trial_direct_nonrate_worsened_too_much = False
+                trial_pose_worsened_too_much = False
+            trial_argmax_ceiling_recovery_allowed = (
+                max_argmax is not None
+                and pre_argmax_disagreement is not None
+                and trial_argmax_disagreement is not None
+                and pre_argmax_disagreement > max_argmax
+                and trial_argmax_disagreement > max_argmax
+                and trial_argmax_disagreement < pre_argmax_disagreement - eps
+                and pre_argmax_disagreement - trial_argmax_disagreement
+                >= min_argmax_recovery
+            )
+            trial_target_class_argmax_ceiling_suppression_allowed = (
+                max_argmax is not None
+                and trial_target_class_bootstrap_escape_allowed
+                and trial_target_class_coverage_improved
+                and trial_rare_class_logit_recovered_meaningfully
+                and trial_argmax_disagreement is not None
+                and trial_argmax_disagreement > max_argmax
+                and trial_target_class_argmax_worsening_delta is not None
+                and trial_target_class_argmax_worsening_delta
+                <= target_class_bootstrap_argmax_worsening_limit + eps
+            )
+            trial_pose_ceiling_recovery_allowed = (
+                max_pose is not None
+                and pre_pose_score_term is not None
+                and trial_pose_score_term is not None
+                and pre_pose_score_term > max_pose
+                and trial_pose_score_term > max_pose
+                and trial_pose_score_term < pre_pose_score_term - eps
+            )
+            trial_direct_pose_ceiling_recovery_allowed = (
+                max_direct_pose is not None
+                and pre_pose_direct_live_score_term is not None
+                and trial_pose_direct_live_score_term is not None
+                and pre_pose_direct_live_score_term > max_direct_pose
+                and trial_pose_direct_live_score_term > max_direct_pose
+                and trial_pose_direct_live_score_term
+                < pre_pose_direct_live_score_term - eps
+            )
             trial_reasons = self._scorer_space_step_guard_reject_reasons(
                 post_occ=trial_occ,
+                post_target_class_coverage=trial_target_class_coverage,
+                post_target_class_min_ratio=trial_target_class_min_ratio,
+                target_class_ratio_drop=trial_target_class_ratio_drop,
                 post_contrast=trial_contrast,
+                post_segnet_distribution_mae=trial_segnet_distribution_mae,
+                post_posenet_yuv6_distribution_mae=(
+                    trial_posenet_yuv6_distribution_mae
+                ),
+                post_posenet_yuv6_contrast=trial_posenet_yuv6_contrast,
                 post_argmax_disagreement=trial_argmax_disagreement,
                 post_pose_score_term=trial_pose_score_term,
                 post_pose_direct_live_score_term=trial_pose_direct_live_score_term,
+                pose_score_term_worsened=trial_pose_worsened_too_much,
+                pose_direct_live_score_term_worsened=(
+                    trial_direct_pose_worsened_too_much
+                ),
+                direct_nonrate_score_worsened=trial_direct_nonrate_worsened_too_much,
+                suppress_post_occ_below_floor=(
+                    trial_bootstrap_escape_allowed
+                    or trial_target_class_bootstrap_escape_allowed
+                    or trial_bootstrap_direct_nonrate_worsening_allowed
+                ),
+                suppress_post_target_class_coverage_below_floor=(
+                    trial_target_class_bootstrap_escape_allowed
+                    or trial_bootstrap_direct_nonrate_worsening_allowed
+                ),
+                suppress_post_target_class_min_ratio_below_floor=(
+                    trial_target_class_min_ratio_improved
+                    or trial_target_class_min_ratio_birth_allowed
+                    or trial_target_class_min_ratio_bootstrap_hold_allowed
+                    or trial_bootstrap_direct_nonrate_worsening_allowed
+                ),
+                suppress_post_contrast_above_ceiling=(
+                    trial_contrast_ceiling_recovery_allowed
+                ),
+                suppress_post_segnet_distribution_mae_above_ceiling=(
+                    trial_segnet_distribution_mae_recovery_allowed
+                ),
+                suppress_post_posenet_yuv6_distribution_mae_above_ceiling=(
+                    trial_posenet_yuv6_distribution_mae_recovery_allowed
+                ),
+                suppress_post_posenet_yuv6_contrast_above_ceiling=(
+                    trial_posenet_yuv6_contrast_recovery_allowed
+                ),
+                suppress_post_argmax_above_ceiling=(
+                    trial_argmax_ceiling_recovery_allowed
+                    or trial_target_class_argmax_ceiling_suppression_allowed
+                    or trial_bootstrap_direct_nonrate_worsening_allowed
+                ),
+                suppress_post_pose_above_ceiling=trial_pose_ceiling_recovery_allowed,
+                suppress_post_pose_direct_live_above_ceiling=(
+                    trial_direct_pose_ceiling_recovery_allowed
+                ),
             )
             metrics["scorer_space_step_guard_backtracking_attempt_count"] = float(
                 attempt + 1
@@ -1580,10 +3885,37 @@ class MlxScoreAwareAdapter:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_segnet_occupied_class_fraction"
                 ] = float(trial_occ)
+            if trial_target_class_coverage is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_target_class_coverage_fraction"
+                ] = float(trial_target_class_coverage)
+            if trial_target_class_min_ratio is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_target_class_min_ratio"
+                ] = float(trial_target_class_min_ratio)
+            if trial_target_class_ratio_drop is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_target_class_ratio_drop"
+                ] = float(trial_target_class_ratio_drop)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_segnet_target_class_ratio_drop_compared_class_count"
+            ] = float(trial_target_class_ratio_drop_compared_class_count)
             if trial_contrast is not None:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_segnet_contrast_ratio"
                 ] = float(trial_contrast)
+            if trial_segnet_distribution_mae is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_distribution_mae"
+                ] = float(trial_segnet_distribution_mae)
+            if trial_posenet_yuv6_distribution_mae is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_posenet_yuv6_distribution_mae"
+                ] = float(trial_posenet_yuv6_distribution_mae)
+            if trial_posenet_yuv6_contrast is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_posenet_yuv6_contrast_ratio"
+                ] = float(trial_posenet_yuv6_contrast)
             if trial_argmax_disagreement is not None:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_segnet_argmax_disagreement"
@@ -1596,8 +3928,209 @@ class MlxScoreAwareAdapter:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_pose_direct_live_score_term"
                 ] = float(trial_pose_direct_live_score_term)
+            if trial_escape_selection is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_escape_selection"
+                ] = float(trial_escape_selection)
+            if trial_rare_class_logit_loss is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_rare_class_logit_loss"
+                ] = float(trial_rare_class_logit_loss)
+            if trial_direct_nonrate_score is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_direct_nonrate_score"
+                ] = float(trial_direct_nonrate_score)
+            for name, value in {
+                "scorer_space_step_guard_backtracking_last_pose_score_term_worsening_delta": (
+                    trial_pose_worsening_delta
+                ),
+                "scorer_space_step_guard_backtracking_last_pose_score_term_worsening_limit": (
+                    trial_pose_worsening_limit
+                ),
+                "scorer_space_step_guard_backtracking_last_pose_direct_live_score_term_worsening_delta": (
+                    trial_direct_pose_worsening_delta
+                ),
+                "scorer_space_step_guard_backtracking_last_pose_direct_live_score_term_worsening_limit": (
+                    trial_direct_pose_worsening_limit
+                ),
+                "scorer_space_step_guard_backtracking_last_direct_nonrate_score_worsening_delta": (
+                    trial_direct_nonrate_worsening_delta
+                ),
+                "scorer_space_step_guard_backtracking_last_direct_nonrate_score_worsening_limit": (
+                    trial_direct_nonrate_worsening_limit
+                ),
+                "scorer_space_step_guard_backtracking_last_rare_class_logit_recovery_delta": (
+                    trial_rare_class_logit_recovery_delta
+                ),
+                "scorer_space_step_guard_backtracking_last_rare_class_logit_recovery_floor": (
+                    trial_rare_class_logit_recovery_floor
+                ),
+            }.items():
+                if value is not None:
+                    metrics[name] = float(value)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_bootstrap_escape_allowed"
+            ] = float(trial_bootstrap_escape_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_bootstrap_occupancy_improved"
+            ] = float(trial_occupancy_improved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_coverage_preserved"
+            ] = float(trial_target_class_coverage_preserved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_coverage_improved"
+            ] = float(trial_target_class_coverage_improved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_preserved"
+            ] = float(trial_target_class_min_ratio_preserved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_improved"
+            ] = float(trial_target_class_min_ratio_improved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_birth_allowed"
+            ] = float(trial_target_class_min_ratio_birth_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_bootstrap_hold_allowed"
+            ] = float(trial_target_class_min_ratio_bootstrap_hold_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_ratio_drop_within_limit"
+            ] = float(trial_target_class_ratio_drop_within_limit)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_bootstrap_escape_allowed"
+            ] = float(trial_target_class_bootstrap_escape_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_coverage_breakthrough"
+            ] = float(trial_target_class_coverage_breakthrough)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_structural_recovery"
+            ] = float(trial_target_class_structural_recovery)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_bootstrap_escape_improved_meaningfully"
+            ] = float(trial_escape_improved_meaningfully)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_bootstrap_argmax_improved_meaningfully"
+            ] = float(trial_argmax_improved_meaningfully)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_rare_class_logit_recovered_meaningfully"
+            ] = float(trial_rare_class_logit_recovered_meaningfully)
+            if trial_argmax_recovery is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_argmax_recovery"
+                ] = float(trial_argmax_recovery)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_argmax_ceiling_recovery_allowed"
+            ] = float(trial_argmax_ceiling_recovery_allowed)
+            if trial_target_class_argmax_worsening_delta is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_target_class_argmax_worsening_delta"
+                ] = float(trial_target_class_argmax_worsening_delta)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_argmax_ceiling_suppression_allowed"
+            ] = float(trial_target_class_argmax_ceiling_suppression_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_argmax_within_ceiling"
+            ] = float(trial_target_class_argmax_within_ceiling)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_segnet_distribution_mae_recovery_allowed"
+            ] = float(trial_segnet_distribution_mae_recovery_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_posenet_yuv6_distribution_mae_recovery_allowed"
+            ] = float(trial_posenet_yuv6_distribution_mae_recovery_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_posenet_yuv6_contrast_recovery_allowed"
+            ] = float(trial_posenet_yuv6_contrast_recovery_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_bootstrap_direct_nonrate_worsening_allowed"
+            ] = float(trial_bootstrap_direct_nonrate_worsening_allowed)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_support_credit_eligible"
+            ] = float(trial_target_class_support_credit_eligible)
+            if trial_target_class_coverage_delta is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_target_class_coverage_delta"
+                ] = float(trial_target_class_coverage_delta)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_support_nonrate_credit"
+            ] = float(trial_target_class_support_nonrate_credit)
+            if trial_bootstrap_direct_nonrate_worsening_budget is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_bootstrap_direct_nonrate_worsening_budget"
+                ] = float(trial_bootstrap_direct_nonrate_worsening_budget)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_argmax_trade_priced"
+            ] = float(trial_target_class_argmax_trade_priced)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_direct_nonrate_improved"
+            ] = float(trial_direct_nonrate_improved)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_pose_score_term_worsened_raw"
+            ] = float(trial_raw_pose_worsened_too_much)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_pose_score_term_worsened_blocking"
+            ] = float(trial_pose_worsened_too_much)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_pose_direct_live_score_term_worsened_raw"
+            ] = float(trial_raw_direct_pose_worsened_too_much)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_pose_direct_live_score_term_worsened_blocking"
+            ] = float(trial_direct_pose_worsened_too_much)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_direct_nonrate_score_worsened_blocking"
+            ] = float(trial_direct_nonrate_worsened_too_much)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_reject_reason_count"
+            ] = float(len(trial_reasons))
+            metrics[
+                "scorer_space_step_guard_backtracking_last_reject_reason_post_direct_nonrate_score_worsened"
+            ] = float("post_direct_nonrate_score_worsened" in trial_reasons)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_reject_reason_post_segnet_argmax_disagreement_above_ceiling"
+            ] = float(
+                "post_segnet_argmax_disagreement_above_ceiling" in trial_reasons
+            )
+            metrics[
+                "scorer_space_step_guard_backtracking_last_reject_reason_post_segnet_target_class_coverage_fraction_below_floor"
+            ] = float(
+                "post_segnet_target_class_coverage_fraction_below_floor"
+                in trial_reasons
+            )
+            metrics[
+                "scorer_space_step_guard_backtracking_last_reject_reason_post_segnet_target_class_min_ratio_below_floor"
+            ] = float(
+                "post_segnet_target_class_min_ratio_below_floor" in trial_reasons
+            )
             if trial_reasons:
                 continue
+            (
+                persistent_lr_feedback_scale,
+                persistent_lr_recovery_floor,
+            ) = _persistent_backtracking_accept_learning_rate_feedback_scale(
+                step_scale,
+                target_class_coverage_floor_active=target_class_coverage_floor_active,
+                target_class_coverage_improved=trial_target_class_coverage_improved,
+                target_class_coverage_breakthrough=(
+                    trial_target_class_coverage_breakthrough
+                ),
+                rare_class_logit_recovered_meaningfully=(
+                    trial_rare_class_logit_recovered_meaningfully
+                ),
+                bootstrap_escape_allowed=trial_bootstrap_escape_allowed,
+                direct_nonrate_improved=trial_direct_nonrate_improved,
+            )
+            metrics[
+                "scorer_space_step_guard_persistent_lr_feedback_scale"
+            ] = float(persistent_lr_feedback_scale)
+            metrics[
+                "scorer_space_step_guard_persistent_lr_feedback_source_step_scale"
+            ] = float(step_scale)
+            metrics[
+                "scorer_space_step_guard_persistent_lr_feedback_recovery_floor"
+            ] = float(persistent_lr_recovery_floor)
+            _update_learning_rate_scale(
+                self._scorer_space_step_guard_learning_rate_scale
+                * persistent_lr_feedback_scale,
+                reason="backtracking_accept",
+            )
             metrics.update(
                 {
                     "scorer_space_step_guard_backtracking_accepted": 1.0,
@@ -1608,8 +4141,28 @@ class MlxScoreAwareAdapter:
                     "scorer_space_step_guard_post_segnet_occupied_class_fraction_after_backtracking": (
                         0.0 if trial_occ is None else float(trial_occ)
                     ),
+                    "scorer_space_step_guard_post_segnet_target_class_coverage_fraction_after_backtracking": (
+                        0.0
+                        if trial_target_class_coverage is None
+                        else float(trial_target_class_coverage)
+                    ),
                     "scorer_space_step_guard_post_segnet_contrast_ratio_after_backtracking": (
                         0.0 if trial_contrast is None else float(trial_contrast)
+                    ),
+                    "scorer_space_step_guard_post_segnet_distribution_mae_after_backtracking": (
+                        0.0
+                        if trial_segnet_distribution_mae is None
+                        else float(trial_segnet_distribution_mae)
+                    ),
+                    "scorer_space_step_guard_post_posenet_yuv6_distribution_mae_after_backtracking": (
+                        0.0
+                        if trial_posenet_yuv6_distribution_mae is None
+                        else float(trial_posenet_yuv6_distribution_mae)
+                    ),
+                    "scorer_space_step_guard_post_posenet_yuv6_contrast_ratio_after_backtracking": (
+                        0.0
+                        if trial_posenet_yuv6_contrast is None
+                        else float(trial_posenet_yuv6_contrast)
                     ),
                     "scorer_space_step_guard_post_segnet_argmax_disagreement_after_backtracking": (
                         0.0
@@ -1626,12 +4179,31 @@ class MlxScoreAwareAdapter:
                         if trial_pose_direct_live_score_term is None
                         else float(trial_pose_direct_live_score_term)
                     ),
+                    "scorer_space_step_guard_post_direct_nonrate_score_after_backtracking": (
+                        0.0
+                        if trial_direct_nonrate_score is None
+                        else float(trial_direct_nonrate_score)
+                    ),
                 }
             )
             return metrics
 
         restore_metrics = self._restore_parameter_trace_leaves(pre_update_param_trace)
         metrics.update(restore_metrics)
+        persistent_lr_feedback_scale = _persistent_reject_learning_rate_feedback_scale(
+            step_scale
+        )
+        metrics["scorer_space_step_guard_persistent_lr_feedback_scale"] = float(
+            persistent_lr_feedback_scale
+        )
+        metrics[
+            "scorer_space_step_guard_persistent_lr_feedback_source_step_scale"
+        ] = float(step_scale)
+        _update_learning_rate_scale(
+            self._scorer_space_step_guard_learning_rate_scale
+            * persistent_lr_feedback_scale,
+            reason="reject",
+        )
         metrics["scorer_space_step_guard_rejected"] = 1.0
         metrics["scorer_space_step_guard_intervened"] = 1.0
         self._add_scorer_space_step_guard_reason_metrics(metrics, reject_reasons)
@@ -1797,6 +4369,18 @@ class MlxScoreAwareAdapter:
             return {"score_aware_loss_part_probe_failed": 1.0}
 
         out: dict[str, float] = {}
+        for key, value in sorted(dict(loss_weights or {}).items()):
+            try:
+                scalar_weight = float(value)
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(scalar_weight):
+                continue
+            safe_key = safe_dual_metric_key(str(key))
+            out[f"active_loss_weight__{safe_key}"] = scalar_weight
+            out[f"active_loss_weight_positive__{safe_key}"] = float(
+                scalar_weight > 0.0
+            )
         weights = dict(self.bundle.extra_loss_weights)
         if loss_weights:
             weights.update(
@@ -1820,6 +4404,10 @@ class MlxScoreAwareAdapter:
                         "contrast_floor",
                         "scorer_input_shape_tether",
                         "shape_tether",
+                        "posenet_yuv6_geometry_tether",
+                        "posenet_yuv6_geometry",
+                        "posenet_pair_geometry_tether",
+                        "posenet_yuv6_pair_geometry",
                         "posenet_temporal_signal_floor",
                         "posenet_temporal_delta_floor",
                         "temporal_signal_floor",
@@ -1849,6 +4437,11 @@ class MlxScoreAwareAdapter:
         scorer_input_shape_tether_stage_weight = component_loss_weight(
             loss_weights,
             "scorer_input_shape_tether",
+            default=scorer_input_guard_stage_weight,
+        )
+        posenet_yuv6_geometry_tether_stage_weight = component_loss_weight(
+            loss_weights,
+            "posenet_yuv6_geometry_tether",
             default=scorer_input_guard_stage_weight,
         )
         posenet_temporal_signal_floor_stage_weight = component_loss_weight(
@@ -1955,6 +4548,18 @@ class MlxScoreAwareAdapter:
                 out["loss_part_config_weight_scorer_input_shape_tether"] = (
                     float(self.bundle.scorer_input_shape_tether_weight)
                 )
+            elif name == "posenet_yuv6_geometry_tether":
+                out["loss_part_weighted_posenet_yuv6_geometry_tether"] = (
+                    float(self.bundle.posenet_yuv6_geometry_tether_weight)
+                    * posenet_yuv6_geometry_tether_stage_weight
+                    * scalar
+                )
+                out["loss_part_stage_weight_posenet_yuv6_geometry_tether"] = (
+                    posenet_yuv6_geometry_tether_stage_weight
+                )
+                out["loss_part_config_weight_posenet_yuv6_geometry_tether"] = (
+                    float(self.bundle.posenet_yuv6_geometry_tether_weight)
+                )
             elif name == "posenet_temporal_signal_floor":
                 out["loss_part_weighted_posenet_temporal_signal_floor"] = (
                     float(self.bundle.posenet_temporal_signal_floor_weight)
@@ -1976,6 +4581,9 @@ class MlxScoreAwareAdapter:
             argmax_disagreement=out.get(
                 "loss_part_segnet_direct_live_argmax_disagreement"
             ),
+            target_class_coverage_fraction=out.get(
+                "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
+            ),
         )
         if escape_metric is not None:
             out["loss_part_segnet_direct_live_escape_selection"] = escape_metric
@@ -1983,6 +4591,9 @@ class MlxScoreAwareAdapter:
             ("distill" in parts)
             or ("segnet_direct_live_distill" in parts)
             or ("pose_distill" in parts)
+            or ("pose_direct_live_distill" in parts)
+            or ("posenet_yuv6_geometry_tether" in parts)
+            or ("posenet_temporal_signal_floor" in parts)
         )
         return out
 
@@ -2015,6 +4626,7 @@ class MlxScoreAwareAdapter:
         from tac.substrates._shared.mlx_score_aware.loss import (
             _apply_eval_roundtrip_ste_nhwc01,
             _direct_live_segnet_logit_distillation_loss_and_metrics,
+            _exact_segnet_target_argmax_for_indices,
             _pose_distillation_loss_and_raw_mse,
             _prepare_recon_pixel_weight,
             _weighted_recon,
@@ -2042,8 +4654,22 @@ class MlxScoreAwareAdapter:
         direct_live_weight = float(
             self.bundle.segnet_direct_live_distillation_weight
         )
+        direct_live_subcontrol_active = any(
+            float(value) > 0.0
+            for value in (
+                self.bundle.segnet_direct_live_class_histogram_weight,
+                self.bundle.segnet_direct_live_class_balanced_hinge_weight,
+                self.bundle.segnet_direct_live_class_balanced_ce_weight,
+                self.bundle.segnet_direct_live_class_balanced_squared_hinge_weight,
+                self.bundle.segnet_direct_live_class_region_recon_weight,
+                self.bundle.segnet_direct_live_rare_class_logit_weight,
+                self.bundle.segnet_direct_live_target_mass_floor_weight,
+                self.bundle.segnet_direct_live_target_min_ratio_floor_weight,
+            )
+        )
         direct_live_active = bool(
-            direct_live_weight > 0.0 and direct_live_stage_weight != 0.0
+            (direct_live_weight > 0.0 or direct_live_subcontrol_active)
+            and direct_live_stage_weight != 0.0
         )
         seg_surrogate_active = bool(float(effective_seg_weight) != 0.0)
         pose_surrogate_active = bool(float(effective_pose_weight) != 0.0)
@@ -2110,7 +4736,11 @@ class MlxScoreAwareAdapter:
                     f"student={tuple(student_logits_nhwc.shape)} "
                     f"teacher={tuple(teacher_logits_nhwc.shape)}"
                 )
-            targets_hard_nhw = mx.argmax(teacher_logits_nhwc, axis=-1)
+            targets_hard_nhw = _exact_segnet_target_argmax_for_indices(
+                self.bundle.scorer_teacher,
+                batch,
+                teacher_logits_nhwc,
+            )
             seg_logits_nchw = mx.transpose(student_logits_nhwc, (0, 3, 1, 2))
         else:
             seg_logits_nchw = None
@@ -2136,10 +4766,18 @@ class MlxScoreAwareAdapter:
             pose_pred = None
             pose_target = None
 
+        force_weighted_extra_qat = bool(
+            self._pr95_force_weighted_extra_qat_when_stage_inactive
+            and self.bundle.extra_loss_terms is not None
+            and any(
+                float(value) > 0.0
+                for value in dict(self.bundle.extra_loss_weights or {}).values()
+            )
+        )
         extra_qat_total, extra_qat_parts = self._extra_loss_terms_and_weighted_total(
             model,
             batch,
-            qat_active=bool(stage_verdict.qat_active),
+            qat_active=bool(stage_verdict.qat_active) or force_weighted_extra_qat,
             loss_weights=loss_weights,
         )
         cat_entropy_term = None
@@ -2170,6 +4808,14 @@ class MlxScoreAwareAdapter:
         direct_live_seg_loss = None
         direct_live_metrics: dict[str, Any] = {}
         if direct_live_active:
+            direct_live_loss_weights: Mapping[str, float] | None = loss_weights
+            direct_live_outer_weight = direct_live_weight
+            if direct_live_weight <= 0.0:
+                direct_live_outer_weight = 1.0
+                direct_live_loss_weights = {
+                    **dict(loss_weights or {}),
+                    "segnet_direct_live_base_loss": 0.0,
+                }
             (
                 direct_live_seg_loss,
                 direct_live_metrics,
@@ -2177,7 +4823,10 @@ class MlxScoreAwareAdapter:
                 self.bundle,
                 seg_rgb,
                 batch,
-                loss_weights=loss_weights,
+                target_seg_rgb_nhwc01=(
+                    gt_1 if self.bundle.segnet_teacher_frame_index == 1 else gt_0
+                ),
+                loss_weights=direct_live_loss_weights,
             )
         if pose_surrogate_active:
             per_dim_scale = getattr(
@@ -2211,10 +4860,20 @@ class MlxScoreAwareAdapter:
             "scorer_input_shape_tether",
             default=scorer_input_guard_stage_weight,
         )
+        posenet_yuv6_geometry_tether_stage_weight = component_loss_weight(
+            loss_weights,
+            "posenet_yuv6_geometry_tether",
+            default=scorer_input_guard_stage_weight,
+        )
         posenet_temporal_signal_floor_stage_weight = component_loss_weight(
             loss_weights,
             "posenet_temporal_signal_floor",
             default=scorer_input_guard_stage_weight,
+        )
+        pose_direct_live_stage_weight = component_loss_weight(
+            loss_weights,
+            "pose_direct_live_distill",
+            default=pose_stage_weight,
         )
         total = (
             float(effective_seg_weight) * seg_loss
@@ -2224,7 +4883,7 @@ class MlxScoreAwareAdapter:
         if direct_live_seg_loss is not None:
             total = (
                 total
-                + direct_live_weight
+                + direct_live_outer_weight
                 * direct_live_stage_weight
                 * direct_live_seg_loss
             )
@@ -2281,6 +4940,25 @@ class MlxScoreAwareAdapter:
                 * scorer_input_shape_tether_stage_weight
                 * shape_tether
             )
+        pose_geometry_tether_parts: dict[str, Any] = {}
+        if (
+            self.bundle.posenet_yuv6_geometry_tether_weight > 0.0
+            and posenet_yuv6_geometry_tether_stage_weight != 0.0
+        ):
+            pose_geometry_tether, pose_geometry_tether_parts = (
+                posenet_yuv6_geometry_tether_loss(
+                    rgb_0,
+                    rgb_1,
+                    gt_0,
+                    gt_1,
+                )
+            )
+            total = (
+                total
+                + float(self.bundle.posenet_yuv6_geometry_tether_weight)
+                * posenet_yuv6_geometry_tether_stage_weight
+                * pose_geometry_tether
+            )
         temporal_floor_parts: dict[str, Any] = {}
         if (
             self.bundle.posenet_temporal_signal_floor_weight > 0.0
@@ -2298,6 +4976,25 @@ class MlxScoreAwareAdapter:
                 + float(self.bundle.posenet_temporal_signal_floor_weight)
                 * posenet_temporal_signal_floor_stage_weight
                 * temporal_floor
+            )
+        pose_direct_live_parts: dict[str, Any] = {}
+        pose_direct_live_weight = float(
+            self.bundle.pose_direct_live_distillation_weight
+        )
+        if pose_direct_live_weight > 0.0 and pose_direct_live_stage_weight != 0.0:
+            pose_direct_live_loss, pose_direct_live_parts = (
+                _direct_live_posenet_distillation_loss_and_metrics(
+                    self.bundle,
+                    rgb_0,
+                    rgb_1,
+                    batch,
+                )
+            )
+            total = (
+                total
+                + pose_direct_live_weight
+                * pose_direct_live_stage_weight
+                * pose_direct_live_loss
             )
         if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
             total = total + float(stage_verdict.cat_lambda) * cat_entropy_term
@@ -2332,6 +5029,9 @@ class MlxScoreAwareAdapter:
             "pr95_stage_pose_distill_weight": mx.array(
                 pose_stage_weight, dtype=mx.float32
             ),
+            "pr95_stage_pose_direct_live_distill_weight": mx.array(
+                pose_direct_live_stage_weight, dtype=mx.float32
+            ),
             "pr95_stage_effective_seg_weight": mx.array(
                 effective_seg_weight, dtype=mx.float32
             ),
@@ -2350,11 +5050,18 @@ class MlxScoreAwareAdapter:
             "pr95_stage_scorer_input_shape_tether_weight": mx.array(
                 scorer_input_shape_tether_stage_weight, dtype=mx.float32
             ),
+            "pr95_stage_posenet_yuv6_geometry_tether_weight": mx.array(
+                posenet_yuv6_geometry_tether_stage_weight, dtype=mx.float32
+            ),
             "pr95_stage_posenet_temporal_signal_floor_weight": mx.array(
                 posenet_temporal_signal_floor_stage_weight, dtype=mx.float32
             ),
             "pr95_stage_segnet_direct_live_weight": mx.array(
                 direct_live_stage_weight, dtype=mx.float32
+            ),
+            "pr95_stage_forced_extra_qat_active": mx.array(
+                1.0 if force_weighted_extra_qat else 0.0,
+                dtype=mx.float32,
             ),
         }
         for name, value in guard_parts.items():
@@ -2363,7 +5070,11 @@ class MlxScoreAwareAdapter:
             parts[f"pr95_stage_{name}"] = value
         for name, value in shape_tether_parts.items():
             parts[f"pr95_stage_{name}"] = value
+        for name, value in pose_geometry_tether_parts.items():
+            parts[f"pr95_stage_{name}"] = value
         for name, value in temporal_floor_parts.items():
+            parts[f"pr95_stage_{name}"] = value
+        for name, value in pose_direct_live_parts.items():
             parts[f"pr95_stage_{name}"] = value
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
@@ -2493,6 +5204,48 @@ class MlxScoreAwareAdapter:
                 out["loss_part_weighted_pr95_stage_pose_surrogate"] = (
                     effective_pose_weight * scalar
                 )
+            elif name == "pr95_stage_pose_direct_live_score_term":
+                direct_pose_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "pose_direct_live_distill",
+                    default=component_loss_weight(loss_weights, "pose_distill"),
+                )
+                direct_pose_config_weight = float(
+                    self.bundle.pose_direct_live_distillation_weight
+                )
+                weighted = (
+                    direct_pose_config_weight
+                    * direct_pose_stage_weight
+                    * scalar
+                )
+                out[
+                    "loss_part_weighted_pr95_stage_pose_direct_live_score_term"
+                ] = weighted
+                out[
+                    "loss_part_stage_weight_pr95_stage_pose_direct_live_score_term"
+                ] = direct_pose_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_pose_direct_live_score_term"
+                ] = direct_pose_config_weight
+                if (
+                    direct_pose_config_weight > 0.0
+                    and direct_pose_stage_weight > 0.0
+                ):
+                    out["loss_part_pose_direct_live_score_term"] = scalar
+                    out["loss_part_weighted_pose_direct_live_score_term"] = weighted
+                    out["loss_part_stage_weight_pose_direct_live_distill"] = (
+                        direct_pose_stage_weight
+                    )
+                    out["loss_part_config_weight_pose_direct_live_distill"] = (
+                        direct_pose_config_weight
+                    )
+            elif name.startswith("pr95_stage_pose_direct_live_"):
+                generic_name = name.replace(
+                    "pr95_stage_pose_direct_live_",
+                    "pose_direct_live_",
+                    1,
+                )
+                out[f"loss_part_{generic_name}"] = scalar
             elif name == "pr95_stage_segnet_direct_live_distill":
                 direct_live_stage_weight = component_loss_weight(
                     loss_weights,
@@ -2650,6 +5403,47 @@ class MlxScoreAwareAdapter:
                     1,
                 )
                 out[f"loss_part_{generic_name}"] = scalar
+            elif name == "pr95_stage_posenet_yuv6_geometry_tether":
+                guard_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "posenet_yuv6_geometry_tether",
+                    default=component_loss_weight(loss_weights, "scorer_input_guard"),
+                )
+                weighted = (
+                    float(self.bundle.posenet_yuv6_geometry_tether_weight)
+                    * guard_stage_weight
+                    * scalar
+                )
+                out[
+                    "loss_part_weighted_pr95_stage_posenet_yuv6_geometry_tether"
+                ] = weighted
+                out[
+                    "loss_part_stage_weight_pr95_stage_posenet_yuv6_geometry_tether"
+                ] = guard_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_posenet_yuv6_geometry_tether"
+                ] = float(self.bundle.posenet_yuv6_geometry_tether_weight)
+                if (
+                    float(self.bundle.posenet_yuv6_geometry_tether_weight) > 0.0
+                    and guard_stage_weight > 0.0
+                ):
+                    out["loss_part_posenet_yuv6_geometry_tether"] = scalar
+                    out[
+                        "loss_part_weighted_posenet_yuv6_geometry_tether"
+                    ] = weighted
+                    out[
+                        "loss_part_stage_weight_posenet_yuv6_geometry_tether"
+                    ] = guard_stage_weight
+                    out[
+                        "loss_part_config_weight_posenet_yuv6_geometry_tether"
+                    ] = float(self.bundle.posenet_yuv6_geometry_tether_weight)
+            elif name.startswith("pr95_stage_posenet_yuv6_geometry_tether_"):
+                generic_name = name.replace(
+                    "pr95_stage_posenet_yuv6_geometry_tether_",
+                    "posenet_yuv6_geometry_tether_",
+                    1,
+                )
+                out[f"loss_part_{generic_name}"] = scalar
             elif name == "pr95_stage_posenet_temporal_signal_floor":
                 guard_stage_weight = component_loss_weight(
                     loss_weights,
@@ -2702,6 +5496,9 @@ class MlxScoreAwareAdapter:
             ),
             argmax_disagreement=out.get(
                 "loss_part_segnet_direct_live_argmax_disagreement"
+            ),
+            target_class_coverage_fraction=out.get(
+                "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
             ),
         )
         if escape_metric is not None:
@@ -2995,8 +5792,42 @@ class MlxScoreAwareAdapter:
             "segnet_direct_live_distillation": {
                 "schema": "mlx_score_aware_segnet_direct_live_distillation.v1",
                 "enabled": (
-                    float(self.bundle.segnet_direct_live_distillation_weight)
-                    > 0.0
+                    (
+                        float(self.bundle.segnet_direct_live_distillation_weight)
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_class_histogram_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_class_balanced_hinge_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_class_balanced_ce_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_class_balanced_squared_hinge_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_class_region_recon_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_rare_class_logit_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_target_mass_floor_weight
+                        )
+                        > 0.0
+                        or float(
+                            self.bundle.segnet_direct_live_target_min_ratio_floor_weight
+                        )
+                        > 0.0
+                    )
                     and self.bundle.scorer_teacher is not None
                 ),
                 "weight": float(
@@ -3017,6 +5848,18 @@ class MlxScoreAwareAdapter:
                 "class_balanced_squared_hinge_weight": float(
                     self.bundle.segnet_direct_live_class_balanced_squared_hinge_weight
                 ),
+                "class_region_recon_weight": float(
+                    self.bundle.segnet_direct_live_class_region_recon_weight
+                ),
+                "rare_class_logit_weight": float(
+                    self.bundle.segnet_direct_live_rare_class_logit_weight
+                ),
+                "target_mass_floor_weight": float(
+                    self.bundle.segnet_direct_live_target_mass_floor_weight
+                ),
+                "target_min_ratio_floor_weight": float(
+                    self.bundle.segnet_direct_live_target_min_ratio_floor_weight
+                ),
                 "teacher_surface": "teacher_logits_for_frames_nhwc01",
                 "candidate_frame_domain": "decoded_eval_roundtrip_nhwc01",
                 "objective": str(self.bundle.segnet_distillation_objective),
@@ -3024,7 +5867,9 @@ class MlxScoreAwareAdapter:
                     "real_segnet_live_logits_default_mse_or_configured_"
                     "argmax_hinge_plus_optional_target_class_histogram_or_"
                     "class_balanced_bootstrap_tether_or_class_balanced_ce_or_"
-                    "class_balanced_squared_hinge"
+                    "class_balanced_squared_hinge_or_class_region_recon_or_"
+                    "rare_class_logit_or_target_mass_floor_or_"
+                    "target_min_ratio_floor"
                 ),
                 "purpose": (
                     "backpropagate_real_segnet_input_vjp_into_renderer_pixels_"
@@ -3181,6 +6026,30 @@ class MlxScoreAwareAdapter:
                         self._scorer_space_step_guard_max_post_segnet_contrast_ratio
                     )
                 ),
+                "max_post_segnet_distribution_mae": (
+                    None
+                    if self._scorer_space_step_guard_max_post_segnet_distribution_mae
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_post_segnet_distribution_mae
+                    )
+                ),
+                "max_post_posenet_yuv6_distribution_mae": (
+                    None
+                    if self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+                    )
+                ),
+                "max_post_posenet_yuv6_contrast_ratio": (
+                    None
+                    if self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+                    )
+                ),
                 "max_post_segnet_argmax_disagreement": (
                     None
                     if self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
@@ -3200,6 +6069,54 @@ class MlxScoreAwareAdapter:
                     is None
                     else float(
                         self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+                    )
+                ),
+                "max_pose_score_term_relative_worsening": (
+                    None
+                    if self._scorer_space_step_guard_max_pose_score_term_relative_worsening
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_pose_score_term_relative_worsening
+                    )
+                ),
+                "max_pose_score_term_absolute_worsening": (
+                    None
+                    if self._scorer_space_step_guard_max_pose_score_term_absolute_worsening
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_pose_score_term_absolute_worsening
+                    )
+                ),
+                "max_pose_direct_live_score_term_relative_worsening": (
+                    None
+                    if self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+                    )
+                ),
+                "max_pose_direct_live_score_term_absolute_worsening": (
+                    None
+                    if self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+                    )
+                ),
+                "max_direct_nonrate_score_worsening": (
+                    None
+                    if self._scorer_space_step_guard_max_direct_nonrate_score_worsening
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_direct_nonrate_score_worsening
+                    )
+                ),
+                "max_bootstrap_direct_nonrate_score_worsening": (
+                    None
+                    if self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
                     )
                 ),
                 "backtracking_steps": int(
@@ -3222,6 +6139,46 @@ class MlxScoreAwareAdapter:
                 "argmax_metric": "loss_part_segnet_direct_live_argmax_disagreement",
                 "pose_metric": "loss_part_pose_score_term",
                 "pose_direct_live_metric": "loss_part_pose_direct_live_score_term",
+                "direct_nonrate_score_proxy": (
+                    "100 * loss_part_segnet_direct_live_argmax_disagreement + "
+                    "loss_part_pose_direct_live_score_term_or_pose_score_term"
+                ),
+                "escape_selection_metric": (
+                    "10 * max(0, 1 - candidate_occupied_class_fraction) "
+                    "+ argmax_disagreement, with target-class coverage folded "
+                    "into the class recovery term when present"
+                ),
+                "bootstrap_trust_region": {
+                    "schema": "mlx_score_aware_bootstrap_trust_region.v1",
+                    "below_floor_steps_allowed_when": (
+                        "pre and post occupancy are below the floor, occupancy "
+                        "is preserved, and escape_selection or argmax "
+                        "disagreement improves"
+                    ),
+                    "non_occupancy_ceilings_remain_hard": [
+                        "segnet_contrast_ratio",
+                        "pose_score_term",
+                        "pose_direct_live_score_term",
+                    ],
+                    "segnet_argmax_disagreement": (
+                        "hard in normal steps; during target-class bootstrap, "
+                        "may be exceeded only when occupied/target-class "
+                        "coverage structurally improves and the full direct "
+                        "non-rate proxy stays within the bootstrap budget"
+                    ),
+                    "learning_rate_scale_feedback": (
+                        "rejected/backtracked steps multiply the next effective "
+                        "optimizer LR by the accepted or terminal backtracking "
+                        "scale; clean full accepts grow the scale by 5 percent "
+                        "up to 1"
+                    ),
+                    "min_learning_rate_scale": float(
+                        self._scorer_space_step_guard_min_learning_rate_scale
+                    ),
+                    "current_learning_rate_scale": float(
+                        self._scorer_space_step_guard_learning_rate_scale
+                    ),
+                },
                 "rollback_contract": {
                     "parameters_restored_on_reject": True,
                     "parameters_interpolated_on_backtracking_accept": True,
@@ -4187,7 +7144,179 @@ class MlxScoreAwareAdapter:
 
         out = {str(key): float(value) for key, value in dict(metrics).items()}
         self._add_dual_ascent_metric_aliases(out)
+        out.update(self._scorer_support_ladder_last_applied_metrics)
+        out.update(self._observe_scorer_support_ladder(out))
         out.update(self._train_time_dual_ascent.observe(out))
+        return out
+
+    def _effective_loss_weights_with_scorer_support_ladder(
+        self,
+        loss_weights: Mapping[str, float],
+    ) -> dict[str, float]:
+        """Return dual-adjusted loss weights plus adaptive class-support pressure."""
+
+        base = self._train_time_dual_ascent.effective_loss_weights(loss_weights)
+        if not self._scorer_support_ladder_enabled:
+            self._scorer_support_ladder_last_applied_metrics = {
+                "scorer_support_ladder_enabled": 0.0,
+                "scorer_support_ladder_active": 0.0,
+                "scorer_support_ladder_stage": 0.0,
+            }
+            return dict(base)
+        if (
+            self._scorer_support_ladder_target_coverage_floor is None
+            and self._scorer_support_ladder_target_min_ratio_floor is None
+        ):
+            self._scorer_support_ladder_last_applied_metrics = {
+                "scorer_support_ladder_enabled": 1.0,
+                "scorer_support_ladder_configured_without_floor": 1.0,
+                "scorer_support_ladder_active": 0.0,
+                "scorer_support_ladder_stage": 0.0,
+            }
+            return dict(base)
+        adjusted, applied_metrics = _apply_scorer_support_ladder_loss_weights(
+            base,
+            stage=self._scorer_support_ladder_stage,
+            activation_weights=self._scorer_support_ladder_activation_weights,
+            growth_factor=self._scorer_support_ladder_growth_factor,
+            max_multiplier=self._scorer_support_ladder_max_multiplier,
+            base_loss_max_when_active=(
+                self._scorer_support_ladder_base_loss_max_when_active
+            ),
+        )
+        applied_metrics.update(
+            {
+                "scorer_support_ladder_enabled": 1.0,
+                "scorer_support_ladder_target_coverage_floor": (
+                    -1.0
+                    if self._scorer_support_ladder_target_coverage_floor is None
+                    else float(self._scorer_support_ladder_target_coverage_floor)
+                ),
+                "scorer_support_ladder_target_min_ratio_floor": (
+                    -1.0
+                    if self._scorer_support_ladder_target_min_ratio_floor is None
+                    else float(self._scorer_support_ladder_target_min_ratio_floor)
+                ),
+                "scorer_support_ladder_patience_steps": float(
+                    self._scorer_support_ladder_patience_steps
+                ),
+                "scorer_support_ladder_stale_steps_before_step": float(
+                    self._scorer_support_ladder_stale_steps
+                ),
+            }
+        )
+        self._scorer_support_ladder_last_applied_metrics = applied_metrics
+        return adjusted
+
+    def _observe_scorer_support_ladder(
+        self,
+        metrics: Mapping[str, float],
+    ) -> dict[str, float]:
+        """Update the next-step class-support ladder from scorer telemetry."""
+
+        if not self._scorer_support_ladder_enabled:
+            self._scorer_support_ladder_last_observation = {}
+            return {}
+        coverage = self._finite_metric(
+            metrics,
+            "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+        )
+        min_ratio = self._finite_metric(
+            metrics,
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+        )
+        rejected = bool(metrics.get("scorer_space_step_guard_rejected", 0.0))
+        backtracking_accepted = bool(
+            metrics.get("scorer_space_step_guard_backtracking_accepted", 0.0)
+        )
+        previous_stage = int(self._scorer_support_ladder_stage)
+        previous_stale = int(self._scorer_support_ladder_stale_steps)
+        floor_cov = self._scorer_support_ladder_target_coverage_floor
+        floor_min = self._scorer_support_ladder_target_min_ratio_floor
+        coverage_below = (
+            coverage is not None and floor_cov is not None and coverage < floor_cov
+        )
+        min_ratio_below = (
+            min_ratio is not None and floor_min is not None and min_ratio < floor_min
+        )
+        below_floor = bool(coverage_below or min_ratio_below)
+
+        coverage_progress = (
+            coverage is not None
+            and self._scorer_support_ladder_last_coverage is not None
+            and coverage > self._scorer_support_ladder_last_coverage + 1.0e-4
+        )
+        min_ratio_progress = (
+            min_ratio is not None
+            and self._scorer_support_ladder_last_min_ratio is not None
+            and min_ratio > self._scorer_support_ladder_last_min_ratio + 1.0e-4
+        )
+        made_progress = bool(coverage_progress or min_ratio_progress)
+
+        if coverage is not None:
+            self._scorer_support_ladder_last_coverage = float(coverage)
+        if min_ratio is not None:
+            self._scorer_support_ladder_last_min_ratio = float(min_ratio)
+
+        if not below_floor:
+            self._scorer_support_ladder_stage = 0
+            self._scorer_support_ladder_stale_steps = 0
+            reason = "floors_satisfied_or_unobserved"
+        elif previous_stage <= 0:
+            self._scorer_support_ladder_stage = 1
+            self._scorer_support_ladder_stale_steps = 0
+            reason = "below_floor_enter_stage_1"
+        elif made_progress and not (rejected and not backtracking_accepted):
+            self._scorer_support_ladder_stale_steps = 0
+            reason = "below_floor_progress_hold_stage"
+        else:
+            self._scorer_support_ladder_stale_steps += 1
+            if (
+                self._scorer_support_ladder_stale_steps
+                >= self._scorer_support_ladder_patience_steps
+            ):
+                self._scorer_support_ladder_stage = min(
+                    max(_SCORER_SUPPORT_LADDER_STAGE_COMPONENTS),
+                    previous_stage + 1,
+                )
+                self._scorer_support_ladder_stale_steps = 0
+                reason = "below_floor_stalled_escalate_stage"
+            else:
+                reason = "below_floor_stalled_wait"
+
+        out = {
+            "scorer_support_ladder_observed": float(
+                coverage is not None or min_ratio is not None
+            ),
+            "scorer_support_ladder_observed_coverage": (
+                -1.0 if coverage is None else float(coverage)
+            ),
+            "scorer_support_ladder_observed_min_ratio": (
+                -1.0 if min_ratio is None else float(min_ratio)
+            ),
+            "scorer_support_ladder_coverage_below_floor": float(coverage_below),
+            "scorer_support_ladder_min_ratio_below_floor": float(min_ratio_below),
+            "scorer_support_ladder_below_floor": float(below_floor),
+            "scorer_support_ladder_coverage_progress": float(coverage_progress),
+            "scorer_support_ladder_min_ratio_progress": float(min_ratio_progress),
+            "scorer_support_ladder_progress": float(made_progress),
+            "scorer_support_ladder_previous_stage": float(previous_stage),
+            "scorer_support_ladder_next_stage": float(
+                self._scorer_support_ladder_stage
+            ),
+            "scorer_support_ladder_previous_stale_steps": float(previous_stale),
+            "scorer_support_ladder_next_stale_steps": float(
+                self._scorer_support_ladder_stale_steps
+            ),
+            "scorer_support_ladder_step_guard_rejected": float(rejected),
+            "scorer_support_ladder_step_guard_backtracking_accepted": float(
+                backtracking_accepted
+            ),
+            "scorer_support_ladder_reason_hash": float(
+                int(hashlib.sha256(reason.encode("utf-8")).hexdigest()[:8], 16)
+            ),
+        }
+        self._scorer_support_ladder_last_observation = dict(out)
         return out
 
     def _add_dual_ascent_metric_aliases(self, metrics: dict[str, float]) -> None:
@@ -4199,43 +7328,56 @@ class MlxScoreAwareAdapter:
         for PoseNet pair/YUV6 score pressure.
         PR95-stage training computes those terms through source-faithful stage
         losses, but names them by stage surface. Alias them here so one
-        controller observes scorer distortion across native, PR95, HiNeRV, and
-        SNeRV runs while raw ``loss_part_pose_distill`` remains diagnostic MSE.
+        controller observes the active PR95 scorer objective across native,
+        HiNeRV, and SNeRV runs. Generic score-aware values are preserved under
+        ``loss_part_native_score_aware_*`` diagnostic keys when overwritten.
         """
 
         if (
-            "loss_part_distill" not in metrics
-            and "loss_part_pr95_stage_seg_surrogate" in metrics
+            "loss_part_pr95_stage_seg_surrogate" in metrics
             and _active_pr95_stage_metric_weight(
                 metrics,
                 "loss_part_pr95_stage_effective_seg_weight",
                 "loss_part_pr95_stage_distill_weight",
             )
         ):
+            if "loss_part_distill" in metrics:
+                metrics.setdefault(
+                    "loss_part_native_score_aware_distill",
+                    metrics["loss_part_distill"],
+                )
             metrics["loss_part_distill"] = metrics[
                 "loss_part_pr95_stage_seg_surrogate"
             ]
         if (
-            "loss_part_pose_distill" not in metrics
-            and "loss_part_pr95_stage_pose_surrogate" in metrics
+            "loss_part_pr95_stage_pose_surrogate" in metrics
             and _active_pr95_stage_metric_weight(
                 metrics,
                 "loss_part_pr95_stage_effective_pose_weight",
                 "loss_part_pr95_stage_pose_distill_weight",
             )
         ):
+            if "loss_part_pose_distill" in metrics:
+                metrics.setdefault(
+                    "loss_part_native_score_aware_pose_distill",
+                    metrics["loss_part_pose_distill"],
+                )
             metrics["loss_part_pose_distill"] = metrics[
                 "loss_part_pr95_stage_pose_surrogate"
             ]
         if (
-            "loss_part_pose_score_term" not in metrics
-            and "loss_part_pr95_stage_pose_surrogate" in metrics
+            "loss_part_pr95_stage_pose_surrogate" in metrics
             and _active_pr95_stage_metric_weight(
                 metrics,
                 "loss_part_pr95_stage_effective_pose_weight",
                 "loss_part_pr95_stage_pose_distill_weight",
             )
         ):
+            if "loss_part_pose_score_term" in metrics:
+                metrics.setdefault(
+                    "loss_part_native_score_aware_pose_score_term",
+                    metrics["loss_part_pose_score_term"],
+                )
             metrics["loss_part_pose_score_term"] = metrics[
                 "loss_part_pr95_stage_pose_surrogate"
             ]
@@ -4273,7 +7415,11 @@ class MlxScoreAwareAdapter:
             "loss_part_pr95_stage_effective_pose_weight",
             "loss_part_pr95_stage_pose_distill_weight",
         ) or float(
-            getattr(self.bundle, "pose_direct_live_distillation_weight", 0.0)
+            getattr(
+                getattr(self, "bundle", None),
+                "pose_direct_live_distillation_weight",
+                0.0,
+            )
         )
         pose_expected = bool(pose_expected)
         if (
@@ -4416,7 +7562,9 @@ class MlxScoreAwareAdapter:
         warmup_epochs = self._wave_n11_warmup_epochs
         warmup_steps_per_epoch = self._wave_n11_warmup_steps_per_epoch
         if warmup_epochs <= 0:
-            return float(learning_rate)
+            return float(learning_rate) * float(
+                self._scorer_space_step_guard_learning_rate_scale
+            )
         mlx_optim = self._mlx_optim
         mx = self._mx
         warmup_steps = max(1, warmup_epochs * warmup_steps_per_epoch)
@@ -4440,7 +7588,9 @@ class MlxScoreAwareAdapter:
             schedule = warmup_sched
         value = schedule(mx.array(int(self._wave_n11_step_count)))
         mx.eval(value)
-        return float(value.item())
+        return float(value.item()) * float(
+            self._scorer_space_step_guard_learning_rate_scale
+        )
 
     def optimizer_step(
         self, model: Any, loss: Any, learning_rate: float
@@ -4477,7 +7627,7 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         mlx_nn = self._mlx_nn
         mlx_optim = self._mlx_optim
-        effective_loss_weights = self._train_time_dual_ascent.effective_loss_weights(
+        effective_loss_weights = self._effective_loss_weights_with_scorer_support_ladder(
             loss_weights
         )
         self._active_loss_weights = dict(effective_loss_weights)
@@ -4507,15 +7657,20 @@ class MlxScoreAwareAdapter:
                 )
             )
 
-        if self._optimizer is None or self._optimizer_lr != learning_rate:
+        # Generic MLX optimizer objects own internal state and usually close over
+        # the LR at construction time. Rebuilding them every scorer-guard scale
+        # change would discard moments, so dynamic LR feedback is applied only by
+        # scalar-step helpers such as the Pact/PR95 partitioned optimizer path.
+        optimizer_learning_rate = float(learning_rate)
+        if self._optimizer is None or self._optimizer_lr != optimizer_learning_rate:
             # Wave N+11 stabilizer: build optimizer with optional canonical
             # warmup + (optional) cosine-decay schedule and configurable kind
             # (adamw|rmsprop) + weight_decay override. When NO stabilizer
             # kwargs are set, defaults are identical to the pre-Wave-N+11
             # adapter (AdamW(learning_rate=lr) with AdamW default
             # weight_decay=0.01) so sister substrates are byte-stable.
-            self._optimizer = self._build_wave_n11_optimizer(learning_rate)
-            self._optimizer_lr = learning_rate
+            self._optimizer = self._build_wave_n11_optimizer(optimizer_learning_rate)
+            self._optimizer_lr = optimizer_learning_rate
 
         def _loss_fn_inner(model: Any) -> Any:
             # NOTE: score_aware_loss reads bundle.model; the value_and_grad
@@ -4594,7 +7749,6 @@ class MlxScoreAwareAdapter:
             post_update_eval_targets = []
             post_update_metrics = {
                 "scorer_space_step_guard_post_train_step_update_skipped": 1.0,
-                "scorer_space_step_guard_student_heads_skipped": 1.0,
             }
         else:
             post_update_eval_targets, post_update_metrics = (
@@ -4621,24 +7775,41 @@ class MlxScoreAwareAdapter:
             *post_update_eval_targets,
         ]
 
-        if guard_rejected:
-            self._last_student_head_metrics = {}
-        else:
+        if not guard_rejected:
             post_update_metrics.setdefault(
                 "scorer_space_step_guard_post_train_step_update_skipped",
                 0.0,
             )
-            post_update_metrics.setdefault(
-                "scorer_space_step_guard_student_heads_skipped",
-                0.0,
+        post_update_metrics.setdefault(
+            "scorer_space_step_guard_student_heads_skipped",
+            0.0,
+        )
+        student_head_eval_targets = self._train_student_heads(
+            batch=batch,
+            learning_rate=learning_rate,
+            loss_weights=effective_loss_weights,
+        )
+        post_update_metrics.update(self._last_student_head_metrics)
+        if guard_rejected:
+            post_update_metrics[
+                "scorer_space_step_guard_student_heads_trained_after_reject"
+            ] = float(
+                bool(
+                    self._last_student_head_metrics.get(
+                        "segnet_student_head_update_active",
+                        0.0,
+                    )
+                    or self._last_student_head_metrics.get(
+                        "posenet_student_head_update_active",
+                        0.0,
+                    )
+                )
             )
-            student_head_eval_targets = self._train_student_heads(
-                batch=batch,
-                learning_rate=learning_rate,
-                loss_weights=effective_loss_weights,
-            )
-            post_update_metrics.update(self._last_student_head_metrics)
-            eval_targets.extend(student_head_eval_targets)
+        else:
+            post_update_metrics[
+                "scorer_space_step_guard_student_heads_trained_after_reject"
+            ] = 0.0
+        eval_targets.extend(student_head_eval_targets)
 
         mx.eval(*eval_targets)
         native_optimizer_metrics = {
@@ -4684,6 +7855,13 @@ class MlxScoreAwareAdapter:
             "native_mlx_optimizer_weight_decay_explicit": float(
                 self._wave_n11_weight_decay is not None
             ),
+            "scorer_space_step_guard_effective_optimizer_learning_rate": float(
+                optimizer_learning_rate
+            ),
+            "scorer_space_step_guard_optimizer_learning_rate_scale": float(
+                self._scorer_space_step_guard_learning_rate_scale
+            ),
+            "scorer_space_step_guard_native_optimizer_lr_scale_applied": 0.0,
         }
         return self._with_dual_ascent_metrics(
             {
@@ -4796,8 +7974,11 @@ class MlxScoreAwareAdapter:
             latent_lr_mult=PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER,
             muon_weight_decay=weight_decay,
             adamw_weight_decay=weight_decay,
-            grad_clip=self._wave_n11_grad_clip_max_norm,
-            grad_clip_muon=self._wave_n11_grad_clip_max_norm,
+            # Gradients are clipped once above at the shared score-aware
+            # trust-region boundary. Passing clip limits through again would
+            # double-dampen the already-clipped tree at PR95 partitions.
+            grad_clip=None,
+            grad_clip_muon=None,
         )
         step_summary = apply_pr95_mlx_optimizer_step(
             self.model,
@@ -4830,7 +8011,6 @@ class MlxScoreAwareAdapter:
             post_update_eval_targets = []
             post_update_metrics = {
                 "scorer_space_step_guard_post_train_step_update_skipped": 1.0,
-                "scorer_space_step_guard_student_heads_skipped": 1.0,
             }
         else:
             post_update_eval_targets, post_update_metrics = (
@@ -4849,24 +8029,40 @@ class MlxScoreAwareAdapter:
             )
         )
         post_update_metrics.update(scorer_space_step_guard_metrics)
-        if guard_rejected:
-            student_head_eval_targets = []
-            self._last_student_head_metrics = {}
-        else:
+        if not guard_rejected:
             post_update_metrics.setdefault(
                 "scorer_space_step_guard_post_train_step_update_skipped",
                 0.0,
             )
-            post_update_metrics.setdefault(
-                "scorer_space_step_guard_student_heads_skipped",
-                0.0,
+        post_update_metrics.setdefault(
+            "scorer_space_step_guard_student_heads_skipped",
+            0.0,
+        )
+        student_head_eval_targets = self._train_student_heads(
+            batch=batch,
+            learning_rate=learning_rate,
+            loss_weights=loss_weights,
+        )
+        post_update_metrics.update(self._last_student_head_metrics)
+        if guard_rejected:
+            post_update_metrics[
+                "scorer_space_step_guard_student_heads_trained_after_reject"
+            ] = float(
+                bool(
+                    self._last_student_head_metrics.get(
+                        "segnet_student_head_update_active",
+                        0.0,
+                    )
+                    or self._last_student_head_metrics.get(
+                        "posenet_student_head_update_active",
+                        0.0,
+                    )
+                )
             )
-            student_head_eval_targets = self._train_student_heads(
-                batch=batch,
-                learning_rate=learning_rate,
-                loss_weights=loss_weights,
-            )
-            post_update_metrics.update(self._last_student_head_metrics)
+        else:
+            post_update_metrics[
+                "scorer_space_step_guard_student_heads_trained_after_reject"
+            ] = 0.0
         mx.eval(
             self.model.parameters(),
             loss_value,
@@ -4884,6 +8080,13 @@ class MlxScoreAwareAdapter:
             "pact_adamw_learning_rate": float(config.adamw_lr),
             "pact_muon_learning_rate": float(config.muon_lr),
             "pact_muon_lr_multiplier": float(PACT_MUON_ADAMW_MUON_LR_MULTIPLIER),
+            "scorer_space_step_guard_effective_optimizer_learning_rate": float(
+                effective_lr
+            ),
+            "scorer_space_step_guard_optimizer_learning_rate_scale": float(
+                self._scorer_space_step_guard_learning_rate_scale
+            ),
+            "scorer_space_step_guard_pact_optimizer_lr_scale_applied": 1.0,
             **pre_update_loss_part_metrics,
             **dynamics_gradient_metrics,
             **dynamics_delta_metrics,
@@ -4982,26 +8185,31 @@ class MlxScoreAwareAdapter:
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
         self._accumulate_decoder_weight_gradient_saliency(grads)
         grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
+        pre_update_param_trace = self._capture_parameter_trace_leaves()
+        pre_update_loss_part_metrics = self._prefixed_score_aware_loss_part_metrics(
+            batch,
+            loss_weights=loss_weights,
+            prefix="dynamics_pre_update",
+        )
+        dynamics_gradient_metrics = self._group_norm_trace_metrics(
+            self._flatten_trace_leaves(grads),
+            prefix="dynamics_gradient",
+        )
+        dynamics_weight_metrics = self._direct_live_effective_weight_trace_metrics(
+            loss_weights
+        )
 
         # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
         # helper handles Muon NS iteration + Muon/AdamW partition + per-name
         # parameter routing internally. config.use_muon controls whether
         # Muon-eligible params get the NS treatment (stage 8 ON) or fall
         # through to AdamW (stages 1-7 OFF).
-        config = stage_verdict.optimizer_config
-        clip_metrics = _gradient_clip_metrics_from_norm(
-            pre_clip_norm=grad_norm_pre_clip,
-            max_norm=max(
-                value
-                for value in (config.grad_clip, config.grad_clip_muon)
-                if value is not None
-            )
-            if config.grad_clip is not None or config.grad_clip_muon is not None
-            else None,
-            actual_application_count=0,
-            delegated_to_pr95_partition_helper=(
-                config.grad_clip is not None or config.grad_clip_muon is not None
-            ),
+        base_config = stage_verdict.optimizer_config
+        scorer_lr_scale = float(self._scorer_space_step_guard_learning_rate_scale)
+        config = replace(
+            base_config,
+            adamw_lr=float(base_config.adamw_lr) * scorer_lr_scale,
+            muon_lr=float(base_config.muon_lr) * scorer_lr_scale,
         )
         _summary = apply_pr95_mlx_optimizer_step(
             self.model,
@@ -5009,12 +8217,72 @@ class MlxScoreAwareAdapter:
             self._pr95_optimizer_state,
             config,
         )
-        post_update_eval_targets, post_update_metrics = self._post_train_step_update(
-            batch
+        max_clip_norm = (
+            max(
+                value
+                for value in (config.grad_clip, config.grad_clip_muon)
+                if value is not None
+            )
+            if config.grad_clip is not None or config.grad_clip_muon is not None
+            else None
         )
+        clip_metrics = _gradient_clip_metrics_from_norm(
+            pre_clip_norm=grad_norm_pre_clip,
+            max_norm=max_clip_norm,
+            actual_application_count=int(
+                _summary.get("gradient_clip_actual_application_count") or 0
+            ),
+            delegated_to_pr95_partition_helper=(
+                config.grad_clip is not None or config.grad_clip_muon is not None
+            ),
+        )
+        clip_metrics.update(
+            {
+                "gradient_clip_pr95_partition_would_clip_count": float(
+                    int(_summary.get("gradient_clip_would_clip_count") or 0)
+                ),
+                "gradient_clip_pr95_partition_min_scale": float(
+                    _summary.get("gradient_clip_min_scale") or 1.0
+                ),
+            }
+        )
+        post_update_loss_part_metrics_before_guard = (
+            self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            )
+        )
+        scorer_space_step_guard_metrics = self._apply_scorer_space_step_guard(
+            batch=batch,
+            loss_weights=loss_weights,
+            pre_update_loss_part_metrics=pre_update_loss_part_metrics,
+            post_update_loss_part_metrics=post_update_loss_part_metrics_before_guard,
+            pre_update_param_trace=pre_update_param_trace,
+        )
+        guard_rejected = bool(
+            scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
+        )
+        dynamics_delta_metrics = self._parameter_delta_trace_metrics(
+            pre_update_param_trace
+        )
+        if guard_rejected:
+            post_update_eval_targets = []
+            post_update_metrics = {
+                "scorer_space_step_guard_post_train_step_update_skipped": 1.0,
+            }
+        else:
+            post_update_eval_targets, post_update_metrics = (
+                self._post_train_step_update(batch)
+            )
         post_update_metrics.update(
             self._train_time_section_byte_metrics(
                 batch=batch,
+                loss_weights=loss_weights,
+            )
+        )
+        post_update_metrics.update(
+            self._score_aware_loss_part_metrics(
+                batch,
                 loss_weights=loss_weights,
             )
         )
@@ -5025,12 +8293,41 @@ class MlxScoreAwareAdapter:
                 loss_weights=loss_weights,
             )
         )
+        post_update_metrics.update(scorer_space_step_guard_metrics)
+        if not guard_rejected:
+            post_update_metrics.setdefault(
+                "scorer_space_step_guard_post_train_step_update_skipped",
+                0.0,
+            )
+        post_update_metrics.setdefault(
+            "scorer_space_step_guard_student_heads_skipped",
+            0.0,
+        )
         student_head_eval_targets = self._train_student_heads(
             batch=batch,
             learning_rate=learning_rate,
             loss_weights=loss_weights,
         )
         post_update_metrics.update(self._last_student_head_metrics)
+        if guard_rejected:
+            post_update_metrics[
+                "scorer_space_step_guard_student_heads_trained_after_reject"
+            ] = float(
+                bool(
+                    self._last_student_head_metrics.get(
+                        "segnet_student_head_update_active",
+                        0.0,
+                    )
+                    or self._last_student_head_metrics.get(
+                        "posenet_student_head_update_active",
+                        0.0,
+                    )
+                )
+            )
+        else:
+            post_update_metrics[
+                "scorer_space_step_guard_student_heads_trained_after_reject"
+            ] = 0.0
 
         mx.eval(
             self.model.parameters(),
@@ -5057,6 +8354,22 @@ class MlxScoreAwareAdapter:
             ),
             "pr95_stage_cat_lambda": float(stage_verdict.cat_lambda),
             "pr95_stage_cat_sigma": float(stage_verdict.cat_sigma),
+            "pr95_stage_base_adamw_learning_rate": float(base_config.adamw_lr),
+            "pr95_stage_base_muon_learning_rate": float(base_config.muon_lr),
+            "pr95_stage_effective_adamw_learning_rate": float(config.adamw_lr),
+            "pr95_stage_effective_muon_learning_rate": float(config.muon_lr),
+            "pr95_stage_scorer_guard_learning_rate_scale": float(scorer_lr_scale),
+            "scorer_space_step_guard_effective_optimizer_learning_rate": float(
+                config.adamw_lr
+            ),
+            "scorer_space_step_guard_optimizer_learning_rate_scale": float(
+                self._scorer_space_step_guard_learning_rate_scale
+            ),
+            "scorer_space_step_guard_pr95_optimizer_lr_scale_applied": 1.0,
+            **pre_update_loss_part_metrics,
+            **dynamics_gradient_metrics,
+            **dynamics_delta_metrics,
+            **dynamics_weight_metrics,
             **post_update_metrics,
         }
 
@@ -5312,6 +8625,17 @@ class MlxScoreAwareAdapter:
         scorer_bound = (
             self.bundle.distillation_weight > 0.0
             or self.bundle.pose_distillation_weight > 0.0
+            or self.bundle.segnet_direct_live_distillation_weight > 0.0
+            or self.bundle.pose_direct_live_distillation_weight > 0.0
+            or self.bundle.segnet_direct_live_class_histogram_weight > 0.0
+            or self.bundle.segnet_direct_live_class_balanced_hinge_weight > 0.0
+            or self.bundle.segnet_direct_live_class_balanced_ce_weight > 0.0
+            or self.bundle.segnet_direct_live_class_balanced_squared_hinge_weight
+            > 0.0
+            or self.bundle.segnet_direct_live_class_region_recon_weight > 0.0
+            or self.bundle.segnet_direct_live_rare_class_logit_weight > 0.0
+            or self.bundle.segnet_direct_live_target_mass_floor_weight > 0.0
+            or self.bundle.segnet_direct_live_target_min_ratio_floor_weight > 0.0
         )
         if not scorer_bound:
             return None
@@ -5330,12 +8654,28 @@ class MlxScoreAwareAdapter:
         if "distill" in parts:
             mx.eval(parts["distill"])
             out["seg"] = float(parts["distill"].item())
+        elif "segnet_direct_live_argmax_disagreement" in parts:
+            value = parts["segnet_direct_live_argmax_disagreement"]
+            mx.eval(value)
+            out["seg"] = float(value.item())
+        elif "segnet_direct_live_distill" in parts:
+            value = parts["segnet_direct_live_distill"]
+            mx.eval(value)
+            out["seg"] = float(value.item())
         else:
             out["seg"] = 0.0
         # pose axis: only emit when the PoseNet teacher is wired.
         if "pose_distill" in parts:
             mx.eval(parts["pose_distill"])
             out["pose"] = float(parts["pose_distill"].item())
+        elif "pose_direct_live_raw_mse" in parts:
+            value = parts["pose_direct_live_raw_mse"]
+            mx.eval(value)
+            out["pose"] = float(value.item())
+        elif "pose_direct_live_distill" in parts:
+            value = parts["pose_direct_live_distill"]
+            mx.eval(value)
+            out["pose"] = float(value.item())
         else:
             out["pose"] = 0.0
         # recon_aux: telemetry-only per-pixel reconstruction component
@@ -5355,11 +8695,15 @@ class MlxScoreAwareAdapter:
         """Return non-score health metrics used to choose live vs EMA exports."""
 
         mx = self._mx
+        health_loss_weights = dict(self._active_loss_weights)
+        health_loss_weights.setdefault("segnet_direct_live_distill", 1.0)
+        health_loss_weights.setdefault("segnet_direct_live_class_histogram", 1.0)
+        health_loss_weights.setdefault("segnet_direct_live_target_min_ratio_floor", 1.0)
         try:
             _total, parts = score_aware_loss(
                 self.bundle,
                 batch,
-                loss_weights=self._active_loss_weights,
+                loss_weights=health_loss_weights,
             )
         except Exception:
             return None
@@ -5367,7 +8711,33 @@ class MlxScoreAwareAdapter:
         for key in (
             "segnet_direct_live_candidate_occupied_class_fraction",
             "segnet_direct_live_target_occupied_class_fraction",
+            "segnet_direct_live_candidate_target_any_class_coverage_fraction",
+            "segnet_direct_live_candidate_target_class_coverage_fraction",
+            "segnet_direct_live_candidate_target_class_missing_fraction",
+            "segnet_direct_live_candidate_target_class_min_ratio",
+            "segnet_direct_live_target_any_class_count",
+            "segnet_direct_live_target_material_class_count",
+            "segnet_direct_live_candidate_target_any_class_covered_count",
+            "segnet_direct_live_candidate_target_material_class_covered_count",
             "segnet_direct_live_argmax_disagreement",
+            "pose_score_term",
+            "pose_distill_raw_mse",
+            "pose_direct_live_score_term",
+            "pose_direct_live_raw_mse",
+            "pose_direct_live_yuv6_pair_std",
+            "pose_direct_live_yuv6_pair_temporal_delta_std",
+            "scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+            "scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+            "scorer_input_shape_tether",
+            "scorer_input_shape_tether_segnet_last_rgb",
+            "scorer_input_shape_tether_posenet_yuv6_pair",
+            "scorer_input_shape_tether_posenet_yuv6_temporal_delta",
+            "posenet_yuv6_geometry_tether",
+            "posenet_yuv6_geometry_tether_pair",
+            "posenet_yuv6_geometry_tether_temporal_delta",
+            "posenet_temporal_signal_floor",
+            "posenet_temporal_signal_floor_mean_std_ratio",
+            "posenet_temporal_signal_floor_mean_abs_ratio",
         ):
             value = parts.get(key)
             if value is None:

@@ -22,9 +22,14 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 HINERV_ARCHIVE_LADDER_WATERFILL_SCHEMA = "hinerv_archive_ladder_waterfill.v1"
+HINERV_ARCHIVE_SIZE_LADDER_SCHEMA = "hinerv_archive_size_ladder.v1"
+NERV_RECEIVER_CLOSED_MODELSIZE_LADDER_SCHEMA = (
+    "nerv_receiver_closed_modelsize_ladder.v1"
+)
 DEFAULT_HINERV_WATERFILL_REPLAY_ROOT = (
     "/Volumes/VertigoDataTier/pact/hinerv_archive_ladder_waterfill_replay"
 )
+HI_NERV_STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 
 
 class HinervArchiveLadderWaterfillError(ValueError):
@@ -49,9 +54,12 @@ def build_hinerv_archive_ladder_waterfill(
     SHA mismatches are blockers, not guessed paths.
     """
 
-    if archive_ladder_report.get("schema") != "hinerv_archive_size_ladder.v1":
+    source_schema = str(archive_ladder_report.get("schema") or "")
+    archive_ladder_report = _normalize_waterfill_source_report(archive_ladder_report)
+    if archive_ladder_report.get("schema") != HINERV_ARCHIVE_SIZE_LADDER_SCHEMA:
         raise HinervArchiveLadderWaterfillError(
-            "expected hinerv_archive_size_ladder.v1 report"
+            "expected hinerv_archive_size_ladder.v1 or "
+            "nerv_receiver_closed_modelsize_ladder.v1 report"
         )
     row_saliency = saliency_by_row_id or {}
     global_saliency = global_saliency_by_name or {}
@@ -108,7 +116,8 @@ def build_hinerv_archive_ladder_waterfill(
                     )
     report = {
         "schema": HINERV_ARCHIVE_LADDER_WATERFILL_SCHEMA,
-        "source_schema": archive_ladder_report.get("schema"),
+        "source_schema": source_schema or archive_ladder_report.get("schema"),
+        "normalized_source_schema": archive_ladder_report.get("schema"),
         "family": "hi_nerv",
         "axis_tag": "[planning/control]",
         "authority": "false_authority_hinerv_ladder_decoder_waterfill_no_score_claim",
@@ -177,6 +186,14 @@ def _waterfill_for_archive_row(
     num_pairs: int,
 ) -> dict[str, Any]:
     blockers = []
+    source_ladder_blockers = _ordered_unique(
+        str(blocker)
+        for blocker in (
+            *(archive_row.get("source_ladder_blockers") or ()),
+            *(archive_row.get("blockers") or ()),
+        )
+        if str(blocker)
+    )
     manifest_path = Path(str(archive_row.get("state_npz_manifest_path") or ""))
     manifest = {}
     state_dict = None
@@ -209,7 +226,8 @@ def _waterfill_for_archive_row(
             "state_npz_artifact_sha256": actual_sha,
             "waterfill_plan": None,
             "waterfill_summary": None,
-            "blockers": _ordered_unique(blockers),
+            "source_ladder_blockers": source_ladder_blockers,
+            "blockers": _ordered_unique([*blockers, *source_ladder_blockers]),
             **FALSE_AUTHORITY,
         }
     plan = build_nerv_decoder_weight_waterfill_plan(
@@ -284,11 +302,170 @@ def _waterfill_for_archive_row(
         ),
         "archive_ladder_replay_output_dir": _replay_output_dir(row_id),
         "saliency_replay_blockers": saliency_blocker_list,
+        "source_ladder_blockers": source_ladder_blockers,
         "blockers": _ordered_unique(
-            [*plan["blockers"], *saliency_blocker_list, *command_blockers]
+            [
+                *plan["blockers"],
+                *saliency_blocker_list,
+                *command_blockers,
+                *source_ladder_blockers,
+            ]
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _normalize_waterfill_source_report(report: Mapping[str, Any]) -> dict[str, Any]:
+    schema = str(report.get("schema") or "")
+    if schema == HINERV_ARCHIVE_SIZE_LADDER_SCHEMA:
+        return dict(report)
+    if schema == NERV_RECEIVER_CLOSED_MODELSIZE_LADDER_SCHEMA:
+        return _receiver_closed_modelsize_ladder_as_archive_ladder(report)
+    return dict(report)
+
+
+def _receiver_closed_modelsize_ladder_as_archive_ladder(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Expose trained receiver-closed rows through the archive-ladder shape.
+
+    ``nerv_receiver_closed_modelsize_ladder.v1`` is the artifact emitted by the
+    normal compact runner after training. It already has measured archive bytes,
+    the original source row, and cache-quality evidence, but not the
+    ``archive_rows`` key expected by the waterfill builder. Convert only
+    file-backed rows and preserve all source blockers so the result stays
+    advisory until full receiver/scorer evidence exists.
+    """
+
+    rows: list[dict[str, Any]] = []
+    observed_pair_counts: list[int] = []
+    for index, normalized in enumerate(report.get("normalized_rows") or ()):
+        if not isinstance(normalized, Mapping):
+            continue
+        source = normalized.get("source")
+        if not isinstance(source, Mapping):
+            source = {}
+        merged = {**dict(source), **dict(normalized)}
+        row_id = str(merged.get("row_id") or f"receiver_closed_{index:04d}")
+        archive_path = _string_or_none(merged.get("archive_path"))
+        manifest_path = _discover_state_npz_manifest_path(
+            merged,
+            archive_path=archive_path,
+        )
+        post_quality = source.get("post_export_receiver_cache_quality")
+        if not isinstance(post_quality, Mapping):
+            post_quality = merged.get("post_export_receiver_cache_quality")
+        if not isinstance(post_quality, Mapping):
+            post_quality = {}
+        num_pairs = _positive_int_or_none(
+            source.get("num_pairs")
+            or source.get("sample_count")
+            or merged.get("num_pairs")
+            or merged.get("sample_count")
+        )
+        if num_pairs is not None:
+            observed_pair_counts.append(num_pairs)
+        runtime_ready = bool(
+            source.get("runtime_consumption_proof_ready")
+            or source.get("runtime_consumption_proof_passed")
+            or source.get("receiver_archive_replay_verified")
+            or source.get("receiver_proof_passed")
+            or normalized.get("receiver_proof_passed")
+        )
+        cache_quality_blockers = _ordered_unique(
+            str(blocker)
+            for blocker in (
+                *(post_quality.get("blockers") or ()),
+                *(source.get("receiver_cache_quality_blockers") or ()),
+                *(merged.get("receiver_cache_quality_blockers") or ()),
+            )
+            if str(blocker)
+        )
+        source_ladder_blockers = _ordered_unique(
+            str(blocker)
+            for blocker in (
+                *(normalized.get("blockers") or ()),
+                *(source.get("blockers") or ()),
+            )
+            if str(blocker)
+        )
+        rows.append(
+            {
+                "row_id": row_id,
+                "archive_bytes": merged.get("archive_bytes"),
+                "archive_path": archive_path,
+                "archive_sha256": merged.get("archive_sha256"),
+                "state_npz_manifest_path": (
+                    manifest_path.as_posix() if manifest_path is not None else None
+                ),
+                "receiver_proof_path": merged.get("receiver_proof_path"),
+                "receiver_proof_sha256": merged.get("receiver_proof_sha256"),
+                "runtime_consumption_proof_ready": runtime_ready,
+                "runtime_consumption_proof_passed": runtime_ready,
+                "receiver_cache_quality_gate_passed": (
+                    post_quality.get("quality_gate_passed") is True
+                ),
+                "receiver_cache_quality_gate_verdict": post_quality.get(
+                    "quality_gate_verdict"
+                ),
+                "receiver_cache_quality_report_path": post_quality.get("report_path"),
+                "receiver_cache_quality_blockers": cache_quality_blockers,
+                "decoder_codec": merged.get("decoder_codec") or "int8_mixed",
+                "num_pairs": num_pairs,
+                "modelsize_candidate": source.get("candidate") or source.get("modelsize_candidate"),
+                "source_ladder_blockers": source_ladder_blockers,
+                "blockers": source_ladder_blockers,
+            }
+        )
+    num_pairs = _positive_int_or_none(report.get("num_pairs"))
+    if num_pairs is None and observed_pair_counts:
+        num_pairs = max(observed_pair_counts)
+    return {
+        "schema": HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
+        "source_schema": NERV_RECEIVER_CLOSED_MODELSIZE_LADDER_SCHEMA,
+        "family": "hi_nerv",
+        "axis_tag": report.get("axis_tag") or "[planning/control]",
+        "num_pairs": int(num_pairs or 0),
+        "report_path": report.get("report_path") or report.get("source_artifact_path"),
+        "archive_rows": rows,
+        "blockers": list(report.get("blockers") or ()),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _discover_state_npz_manifest_path(
+    row: Mapping[str, Any],
+    *,
+    archive_path: str | None,
+) -> Path | None:
+    explicit = _string_or_none(row.get("state_npz_manifest_path"))
+    if explicit is not None:
+        path = Path(explicit).expanduser()
+        return path.resolve(strict=False) if path.is_absolute() else path
+    if archive_path is None:
+        return None
+    archive = Path(archive_path).expanduser().resolve(strict=False)
+    candidate = archive.parent / HI_NERV_STATE_NPZ_MANIFEST_NAME
+    if candidate.is_file():
+        return candidate
+    return None
+
+
+def _string_or_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _positive_int_or_none(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _receiver_cache_quality_blockers(archive_row: Mapping[str, Any]) -> list[str]:

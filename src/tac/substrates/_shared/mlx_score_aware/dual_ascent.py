@@ -29,6 +29,9 @@ _SAFE_KEY_RE = re.compile(r"[^0-9A-Za-z_]+")
 _DEFAULT_SCORER_TARGET_FRACTION = 0.985
 _DEFAULT_CODER_TARGET_FRACTION = 0.98
 _DEFAULT_RATCHET_FRACTION = 0.995
+_SEGNET_DIRECT_LIVE_ARGMAX_DISAGREEMENT_TARGET = 0.15
+_SEGNET_DIRECT_LIVE_TARGET_MISSING_FRACTION_TARGET = 0.0
+_SEGNET_DIRECT_LIVE_TARGET_MIN_RATIO_TARGET = 0.35
 _FORBIDDEN_ARTIFACT_METADATA_KEYS = frozenset(
     {
         "score_claim",
@@ -463,11 +466,16 @@ def build_default_nerv_train_time_dual_ascent_config(
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
     segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
+    segnet_direct_live_class_region_recon_weight: float = 0.0,
+    segnet_direct_live_rare_class_logit_weight: float = 0.0,
+    segnet_direct_live_target_mass_floor_weight: float = 0.0,
+    segnet_direct_live_target_min_ratio_floor_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     pose_direct_live_distillation_weight: float = 0.0,
     scorer_input_distribution_guard_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
+    posenet_yuv6_geometry_tether_weight: float = 0.0,
     posenet_temporal_signal_floor_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
     archive_byte_budget: int | float | None = None,
@@ -507,6 +515,18 @@ def build_default_nerv_train_time_dual_ascent_config(
     direct_live_balanced_squared_hinge_weight = _nonnegative_weight(
         segnet_direct_live_class_balanced_squared_hinge_weight
     )
+    direct_live_class_region_recon_weight = _nonnegative_weight(
+        segnet_direct_live_class_region_recon_weight
+    )
+    direct_live_rare_class_logit_weight = _nonnegative_weight(
+        segnet_direct_live_rare_class_logit_weight
+    )
+    direct_live_target_mass_floor_weight = _nonnegative_weight(
+        segnet_direct_live_target_mass_floor_weight
+    )
+    direct_live_target_min_ratio_floor_weight = _nonnegative_weight(
+        segnet_direct_live_target_min_ratio_floor_weight
+    )
     pose_weight = _nonnegative_weight(pose_distillation_weight)
     pose_direct_live_weight = _nonnegative_weight(pose_direct_live_distillation_weight)
     distribution_guard_weight = _nonnegative_weight(
@@ -514,10 +534,14 @@ def build_default_nerv_train_time_dual_ascent_config(
     )
     contrast_floor_weight = _nonnegative_weight(scorer_input_contrast_floor_weight)
     shape_tether_weight = _nonnegative_weight(scorer_input_shape_tether_weight)
+    pose_geometry_tether_weight = _nonnegative_weight(
+        posenet_yuv6_geometry_tether_weight
+    )
     temporal_signal_floor_weight = _nonnegative_weight(
         posenet_temporal_signal_floor_weight
     )
     byte_price = _positive_weight(contest_rate_score_per_byte)
+    scorer_bootstrap_update = True
     if seg_weight > 0.0:
         constraints.append(
             _constraint_payload(
@@ -530,6 +554,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "SegNet scores only the last frame of each pair; this "
                     "dual raises the scorer-bound distillation price when "
@@ -549,6 +574,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "Direct live SegNet logits price the same frame-1 scorer "
                     "axis as the student surrogate, but backpropagate through "
@@ -556,6 +582,29 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "applied through its own stage key so generic SegNet "
                     "student warmup masks cannot accidentally disable direct-"
                     "live collapse repair."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_argmax_disagreement",
+                metric_name="loss_part_segnet_direct_live_argmax_disagreement",
+                loss_weight_key="segnet_direct_live_distill",
+                base_weight=direct_live_seg_weight,
+                target=_SEGNET_DIRECT_LIVE_ARGMAX_DISAGREEMENT_TARGET,
+                target_fraction=1.0,
+                dual_lr=0.8,
+                max_lambda=16.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "This is the bounded contest-facing SegNet last-frame "
+                    "geometry: d_seg is an argmax disagreement rate, not a "
+                    "raw logit-loss magnitude.  The dual raises the direct "
+                    "live SegNet weight when the actual frame-1 argmax flip "
+                    "rate remains above the smoke/long-run feasibility "
+                    "target."
                 ),
             )
         )
@@ -571,6 +620,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "The upstream SegNet score is an argmax-flip rate on the "
                     "last frame.  During collapse escape, direct-live hinge "
@@ -578,6 +628,32 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "class; this dual raises SegNet stage pressure when the "
                     "target class-measure tether stalls without coupling that "
                     "pressure to the generic student-distillation key."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_target_missing_fraction_histogram"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_candidate_target_class_missing_fraction"
+                ),
+                loss_weight_key="segnet_direct_live_class_histogram",
+                base_weight=direct_live_hist_weight,
+                target=_SEGNET_DIRECT_LIVE_TARGET_MISSING_FRACTION_TARGET,
+                target_fraction=1.0,
+                dual_lr=0.6,
+                max_lambda=12.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Histogram pressure should answer the bounded scorer "
+                    "question directly: are target-present SegNet classes "
+                    "missing from the candidate hard argmax on the scored "
+                    "last frame?  This dual is scale-stable across videos and "
+                    "architectures because the metric lives in [0, 1]."
                 ),
             )
         )
@@ -593,6 +669,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "Class-balanced Crammer-Singer hinge keeps minority "
                     "SegNet target classes trainable while matching "
@@ -615,11 +692,36 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "Class-balanced hard-target cross-entropy targets the "
                     "exact upstream SegNet argmax label on the last frame, "
                     "but gives stronger gradients when the target probability "
                     "is crushed in a one-class renderer basin."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_target_missing_fraction_ce"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_candidate_target_class_missing_fraction"
+                ),
+                loss_weight_key="segnet_direct_live_class_balanced_ce",
+                base_weight=direct_live_balanced_ce_weight,
+                target=_SEGNET_DIRECT_LIVE_TARGET_MISSING_FRACTION_TARGET,
+                target_fraction=1.0,
+                dual_lr=0.6,
+                max_lambda=12.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Class-balanced CE is the hard-label crossing actuator; "
+                    "this constraint couples it to missing target-class mass "
+                    "rather than to only its unbounded CE scale."
                 ),
             )
         )
@@ -639,12 +741,206 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=10.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "Class-balanced squared Crammer-Singer hinge keeps the "
                     "same upstream SegNet argmax decision boundary as the "
                     "linear hinge, but gives far-from-boundary collapsed "
                     "target classes larger gradients until hard occupancy "
                     "can escape the one-class basin."
+                ),
+            )
+        )
+    if direct_live_class_region_recon_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_class_region_recon",
+                metric_name="loss_part_segnet_direct_live_class_region_recon_loss",
+                loss_weight_key="segnet_direct_live_class_region_recon",
+                base_weight=direct_live_class_region_recon_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.2,
+                max_lambda=8.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Class-region reconstruction is a dense escape actuator "
+                    "scoped to the exact upstream SegNet last-frame target "
+                    "argmax regions. The dual raises this pressure only when "
+                    "those scorer-causal regions stall, without coupling it "
+                    "to generic RGB reconstruction."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_target_min_ratio_region_recon"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+                ),
+                loss_weight_key="segnet_direct_live_class_region_recon",
+                direction="lower_bound",
+                base_weight=direct_live_class_region_recon_weight,
+                target=_SEGNET_DIRECT_LIVE_TARGET_MIN_RATIO_TARGET,
+                target_fraction=1.0,
+                dual_lr=1.0,
+                max_lambda=16.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Class-region reconstruction is dense RGB pressure on "
+                    "exact SegNet target regions.  It should increase when "
+                    "any target-present class has too little hard candidate "
+                    "mass, not merely when the aggregate region loss is large."
+                ),
+            )
+        )
+    if direct_live_rare_class_logit_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_rare_class_logit",
+                metric_name="loss_part_segnet_direct_live_rare_class_logit_loss",
+                loss_weight_key="segnet_direct_live_rare_class_logit",
+                base_weight=direct_live_rare_class_logit_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.25,
+                max_lambda=10.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Rare-class logit pressure targets any upstream SegNet "
+                    "last-frame class that exists in the target but is missing "
+                    "or underrepresented in the hard candidate argmax. It "
+                    "keeps tiny scored classes trainable without changing the "
+                    "contest d_seg definition."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_target_min_ratio_rare_class_logit"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+                ),
+                loss_weight_key="segnet_direct_live_rare_class_logit",
+                direction="lower_bound",
+                base_weight=direct_live_rare_class_logit_weight,
+                target=_SEGNET_DIRECT_LIVE_TARGET_MIN_RATIO_TARGET,
+                target_fraction=1.0,
+                dual_lr=1.25,
+                max_lambda=24.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Rare-class logit pressure is the class-island escape "
+                    "actuator.  This lower-bound dual prices the minimum "
+                    "target-class mass ratio directly so a single crumb of a "
+                    "class can no longer satisfy the controller while the "
+                    "scored argmax remains collapsed."
+                ),
+            )
+        )
+    if direct_live_target_mass_floor_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_target_mass_floor",
+                metric_name="loss_part_segnet_direct_live_target_mass_floor_loss",
+                loss_weight_key="segnet_direct_live_target_mass_floor",
+                base_weight=direct_live_target_mass_floor_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.35,
+                max_lambda=16.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "Target-mass floor is the direct pre-argmax actuator for "
+                    "target-present SegNet classes whose hard candidate mass "
+                    "stays at zero after class birth. It is scoped to the "
+                    "upstream last-frame SegNet surface."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_target_min_ratio_mass_floor"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+                ),
+                loss_weight_key="segnet_direct_live_target_mass_floor",
+                direction="lower_bound",
+                base_weight=direct_live_target_mass_floor_weight,
+                target=_SEGNET_DIRECT_LIVE_TARGET_MIN_RATIO_TARGET,
+                target_fraction=1.0,
+                dual_lr=1.5,
+                max_lambda=32.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "The min-ratio gate is the post-birth SegNet mass crux. "
+                    "This lower-bound dual prices that exact metric into the "
+                    "target-mass floor key instead of hoping indirect class "
+                    "losses allocate enough hard pixels."
+                ),
+            )
+        )
+    if direct_live_target_min_ratio_floor_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_target_min_ratio_floor",
+                metric_name=(
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_loss"
+                ),
+                loss_weight_key="segnet_direct_live_target_min_ratio_floor",
+                base_weight=direct_live_target_min_ratio_floor_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.35,
+                max_lambda=16.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "The target-min-ratio floor is the narrow hard-support "
+                    "birth actuator for the worst target-present SegNet class. "
+                    "Its scale is kept separate from target-mass and rare-logit "
+                    "pressure so long runs can learn whether hard argmax birth "
+                    "needs more price without over-expanding dense RGB terms."
+                ),
+            )
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_target_min_ratio_floor_gate"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+                ),
+                loss_weight_key="segnet_direct_live_target_min_ratio_floor",
+                direction="lower_bound",
+                base_weight=direct_live_target_min_ratio_floor_weight,
+                target=_SEGNET_DIRECT_LIVE_TARGET_MIN_RATIO_TARGET,
+                target_fraction=1.0,
+                dual_lr=1.75,
+                max_lambda=40.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "This is the direct dual of the scorer-space min-ratio "
+                    "gate. It raises only the hard-support birth actuator when "
+                    "the worst target class remains below floor."
                 ),
             )
         )
@@ -681,6 +977,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=pose_rationale,
             )
         )
@@ -696,6 +993,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "Secondary direct-live PoseNet price for runs that keep "
                     "the pose-student tether active while also training through "
@@ -715,6 +1013,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=8.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "The scorer-input distribution guard binds the upstream "
                     "evaluate.py value domain directly: SegNet last-frame RGB "
@@ -738,6 +1037,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=4.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "The contrast floor is a scorer-input feasibility "
                     "constraint, not human visual fidelity: it prices flat "
@@ -759,12 +1059,35 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=8.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "The shape tether is the dense-gradient feasibility "
                     "constraint for low-rank NeRV outputs: it prices centered "
                     "reference-normalized residuals on SegNet frame-1 RGB and "
                     "PoseNet YUV6 pair/temporal-delta tensors so scorer-bound "
                     "losses cannot optimize a flat input manifold."
+                ),
+            )
+        )
+    if pose_geometry_tether_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_posenet_yuv6_geometry_tether",
+                metric_name="loss_part_posenet_yuv6_geometry_tether",
+                loss_weight_key="posenet_yuv6_geometry_tether",
+                base_weight=pose_geometry_tether_weight,
+                target_fraction=0.97,
+                dual_lr=0.3,
+                max_lambda=8.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
+                rationale=(
+                    "PoseNet can stay temporally nonflat while the two-frame "
+                    "YUV6 geometry is still wrong. This dual prices the dense "
+                    "pair, temporal-delta, and spatial-gradient tether on the "
+                    "exact upstream PoseNet input tensor separately from the "
+                    "generic RGB/YUV scorer-input guard."
                 ),
             )
         )
@@ -781,6 +1104,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 max_lambda=8.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
+                bootstrap_update=scorer_bootstrap_update,
                 rationale=(
                     "PoseNet consumes the two-frame PR95/YUV6 tensor. Compact "
                     "NeRV carriers can preserve broad pair statistics while "
@@ -952,15 +1276,17 @@ def _constraint_payload(
     warmup_steps: int,
     update_every_steps: int,
     rationale: str,
+    direction: str = "upper_bound",
     target: float | None = None,
     activate_when_base_weight_zero: bool = False,
+    bootstrap_update: bool = False,
 ) -> dict[str, Any]:
     return {
         "schema": TRAIN_TIME_DUAL_ASCENT_CONSTRAINT_SCHEMA,
         "constraint_id": constraint_id,
         "metric_name": metric_name,
         "loss_weight_key": loss_weight_key,
-        "direction": "upper_bound",
+        "direction": str(direction),
         "target": None if target is None else float(target),
         "target_fraction_of_initial": (
             None if target is not None else float(target_fraction)
@@ -974,7 +1300,7 @@ def _constraint_payload(
         "metric_scale": 1.0,
         "warmup_steps": int(warmup_steps),
         "update_every_steps": int(update_every_steps),
-        "bootstrap_update": False,
+        "bootstrap_update": bool(bootstrap_update),
         "activate_when_base_weight_zero": bool(activate_when_base_weight_zero),
         "base_loss_weight": float(base_weight),
         "rationale": rationale,

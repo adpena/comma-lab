@@ -244,6 +244,58 @@ def test_default_nerv_dual_ascent_config_prices_active_scorer_and_coder_terms() 
     assert config["promotion_eligible"] is False
 
 
+def test_default_nerv_scorer_duals_update_on_bootstrap_without_rate_guess() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_distillation_weight=1.0,
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_class_balanced_hinge_weight=1.0,
+        pose_distillation_weight=1.0,
+        pose_direct_live_distillation_weight=1.0,
+        scorer_input_distribution_guard_weight=1.0,
+        coder_qat_loss_weight_map={"coder_qat_quant_residual": 1.0},
+    )
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+
+    scorer_ids = {
+        "hi_nerv_segnet_last_frame_distill",
+        "hi_nerv_segnet_direct_live_distill",
+        "hi_nerv_segnet_direct_live_class_balanced_hinge",
+        "hi_nerv_posenet_yuv6_pair_distill",
+        "hi_nerv_posenet_yuv6_pair_direct_live_distill",
+        "hi_nerv_scorer_input_distribution_guard",
+    }
+    for constraint_id in scorer_ids:
+        assert constraints[constraint_id]["bootstrap_update"] is True
+    assert constraints["hi_nerv_coder_qat_quant_residual"]["bootstrap_update"] is False
+
+    controller = TrainTimeDualAscentController.from_config(config)
+    metrics = controller.observe(
+        {
+            "loss_part_distill": 10.0,
+            "loss_part_segnet_direct_live_distill": 20.0,
+            "loss_part_segnet_direct_live_class_balanced_hinge_loss": 30.0,
+            "loss_part_pose_score_term": 40.0,
+            "loss_part_pose_direct_live_score_term": 50.0,
+            "loss_part_scorer_input_distribution_guard": 60.0,
+            "loss_part_coder_qat_quant_residual": 70.0,
+        }
+    )
+
+    for constraint_id in scorer_ids:
+        key = constraint_id
+        assert metrics[f"dual_ascent_update_count__{key}"] == pytest.approx(1.0)
+        assert metrics[f"dual_ascent_lambda__{key}"] > 0.0
+    assert (
+        metrics["dual_ascent_update_count__hi_nerv_coder_qat_quant_residual"]
+        == pytest.approx(0.0)
+    )
+    assert (
+        metrics["dual_ascent_lambda__hi_nerv_coder_qat_quant_residual"]
+        == pytest.approx(0.0)
+    )
+
+
 def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> None:
     config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",
@@ -253,6 +305,10 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
         segnet_direct_live_class_balanced_hinge_weight=5.0,
         segnet_direct_live_class_balanced_ce_weight=7.0,
         segnet_direct_live_class_balanced_squared_hinge_weight=11.0,
+        segnet_direct_live_class_region_recon_weight=13.0,
+        segnet_direct_live_rare_class_logit_weight=17.0,
+        segnet_direct_live_target_mass_floor_weight=19.0,
+        segnet_direct_live_target_min_ratio_floor_weight=23.0,
     )
 
     assert config["enabled"] is True
@@ -289,6 +345,174 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
         "segnet_direct_live_class_balanced_squared_hinge"
     )
     assert squared_hinge["weight_scale"] == pytest.approx(11.0)
+    region_recon = constraints["hi_nerv_segnet_direct_live_class_region_recon"]
+    assert region_recon["metric_name"] == (
+        "loss_part_segnet_direct_live_class_region_recon_loss"
+    )
+    assert region_recon["loss_weight_key"] == (
+        "segnet_direct_live_class_region_recon"
+    )
+    assert region_recon["weight_scale"] == pytest.approx(13.0)
+    rare_class = constraints["hi_nerv_segnet_direct_live_rare_class_logit"]
+    assert rare_class["metric_name"] == (
+        "loss_part_segnet_direct_live_rare_class_logit_loss"
+    )
+    assert rare_class["loss_weight_key"] == "segnet_direct_live_rare_class_logit"
+    assert rare_class["weight_scale"] == pytest.approx(17.0)
+    target_mass = constraints["hi_nerv_segnet_direct_live_target_mass_floor"]
+    assert target_mass["metric_name"] == (
+        "loss_part_segnet_direct_live_target_mass_floor_loss"
+    )
+    assert target_mass["loss_weight_key"] == "segnet_direct_live_target_mass_floor"
+    assert target_mass["weight_scale"] == pytest.approx(19.0)
+    target_min = constraints["hi_nerv_segnet_direct_live_target_min_ratio_floor"]
+    assert target_min["metric_name"] == (
+        "loss_part_segnet_direct_live_target_min_ratio_floor_loss"
+    )
+    assert target_min["loss_weight_key"] == (
+        "segnet_direct_live_target_min_ratio_floor"
+    )
+    assert target_min["weight_scale"] == pytest.approx(23.0)
+    target_min_gate = constraints[
+        "hi_nerv_segnet_direct_live_target_min_ratio_floor_gate"
+    ]
+    assert target_min_gate["metric_name"] == (
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+    )
+    assert target_min_gate["loss_weight_key"] == (
+        "segnet_direct_live_target_min_ratio_floor"
+    )
+    assert target_min_gate["direction"] == "lower_bound"
+    assert target_min_gate["target"] == pytest.approx(0.35)
+    argmax = constraints["hi_nerv_segnet_direct_live_argmax_disagreement"]
+    assert argmax["metric_name"] == (
+        "loss_part_segnet_direct_live_argmax_disagreement"
+    )
+    assert argmax["loss_weight_key"] == "segnet_direct_live_distill"
+    assert argmax["target"] == pytest.approx(0.15)
+    assert argmax["direction"] == "upper_bound"
+    hist_missing = constraints[
+        "hi_nerv_segnet_direct_live_target_missing_fraction_histogram"
+    ]
+    assert hist_missing["metric_name"] == (
+        "loss_part_segnet_direct_live_candidate_target_class_missing_fraction"
+    )
+    assert hist_missing["loss_weight_key"] == "segnet_direct_live_class_histogram"
+    assert hist_missing["target"] == pytest.approx(0.0)
+    assert hist_missing["direction"] == "upper_bound"
+    ce_missing = constraints[
+        "hi_nerv_segnet_direct_live_target_missing_fraction_ce"
+    ]
+    assert ce_missing["metric_name"] == (
+        "loss_part_segnet_direct_live_candidate_target_class_missing_fraction"
+    )
+    assert ce_missing["loss_weight_key"] == "segnet_direct_live_class_balanced_ce"
+    assert ce_missing["target"] == pytest.approx(0.0)
+    region_min_ratio = constraints[
+        "hi_nerv_segnet_direct_live_target_min_ratio_region_recon"
+    ]
+    assert region_min_ratio["metric_name"] == (
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+    )
+    assert region_min_ratio["loss_weight_key"] == (
+        "segnet_direct_live_class_region_recon"
+    )
+    assert region_min_ratio["direction"] == "lower_bound"
+    assert region_min_ratio["target"] == pytest.approx(0.35)
+    rare_min_ratio = constraints[
+        "hi_nerv_segnet_direct_live_target_min_ratio_rare_class_logit"
+    ]
+    assert rare_min_ratio["metric_name"] == (
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+    )
+    assert rare_min_ratio["loss_weight_key"] == "segnet_direct_live_rare_class_logit"
+    assert rare_min_ratio["direction"] == "lower_bound"
+    assert rare_min_ratio["target"] == pytest.approx(0.35)
+    target_mass_min_ratio = constraints[
+        "hi_nerv_segnet_direct_live_target_min_ratio_mass_floor"
+    ]
+    assert target_mass_min_ratio["metric_name"] == (
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
+    )
+    assert target_mass_min_ratio["loss_weight_key"] == (
+        "segnet_direct_live_target_mass_floor"
+    )
+    assert target_mass_min_ratio["direction"] == "lower_bound"
+    assert target_mass_min_ratio["target"] == pytest.approx(0.35)
+
+
+def test_direct_live_dual_ascent_prices_bounded_segnet_geometry() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_class_histogram_weight=1.0,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
+        segnet_direct_live_class_region_recon_weight=1.0,
+        segnet_direct_live_rare_class_logit_weight=1.0,
+        segnet_direct_live_target_mass_floor_weight=1.0,
+        segnet_direct_live_target_min_ratio_floor_weight=1.0,
+    )
+    controller = TrainTimeDualAscentController.from_config(config)
+
+    metrics = controller.observe(
+        {
+            "loss_part_segnet_direct_live_distill": 10.0,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.52,
+            "loss_part_segnet_direct_live_class_histogram_loss": 2.0,
+            "loss_part_segnet_direct_live_class_balanced_ce_loss": 3.0,
+            "loss_part_segnet_direct_live_class_region_recon_loss": 0.5,
+            "loss_part_segnet_direct_live_rare_class_logit_loss": 100.0,
+            "loss_part_segnet_direct_live_target_mass_floor_loss": 12.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 13.0,
+            "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": (
+                0.20
+            ),
+            "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+        }
+    )
+    weights = controller.effective_loss_weights(
+        {
+            "segnet_direct_live_distill": 1.0,
+            "segnet_direct_live_class_histogram": 1.0,
+            "segnet_direct_live_class_balanced_ce": 1.0,
+            "segnet_direct_live_class_region_recon": 1.0,
+            "segnet_direct_live_rare_class_logit": 1.0,
+            "segnet_direct_live_target_mass_floor": 1.0,
+            "segnet_direct_live_target_min_ratio_floor": 1.0,
+        }
+    )
+
+    assert metrics[
+        "dual_ascent_violation__hi_nerv_segnet_direct_live_argmax_disagreement"
+    ] == pytest.approx(0.37)
+    assert metrics[
+        "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement"
+    ] > 0.0
+    assert metrics[
+        "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_rare_class_logit"
+    ] == pytest.approx(0.35)
+    assert metrics[
+        "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_rare_class_logit"
+    ] > 0.0
+    assert metrics[
+        "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor"
+    ] == pytest.approx(0.35)
+    assert metrics[
+        "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor"
+    ] > 0.0
+    assert metrics[
+        "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_floor"
+    ] > 0.0
+    assert metrics[
+        "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate"
+    ] == pytest.approx(0.35)
+    assert weights["segnet_direct_live_distill"] > 1.0
+    assert weights["segnet_direct_live_class_histogram"] > 1.0
+    assert weights["segnet_direct_live_class_balanced_ce"] > 1.0
+    assert weights["segnet_direct_live_class_region_recon"] > 1.0
+    assert weights["segnet_direct_live_rare_class_logit"] > 1.0
+    assert weights["segnet_direct_live_target_mass_floor"] > 1.0
+    assert weights["segnet_direct_live_target_min_ratio_floor"] > 1.0
 
 
 def test_direct_live_dual_ascent_survives_generic_distill_zero() -> None:
@@ -402,6 +626,23 @@ def test_default_nerv_dual_ascent_config_prices_posenet_temporal_signal_floor() 
     assert floor["weight_scale"] == pytest.approx(2.25)
     assert "frame_1-frame_0" in floor["rationale"]
     assert "YUV6 temporal delta" in floor["rationale"]
+
+
+def test_default_nerv_dual_ascent_config_prices_posenet_yuv6_geometry_tether() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        posenet_yuv6_geometry_tether_weight=1.75,
+    )
+
+    assert config["enabled"] is True
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    tether = constraints["hi_nerv_posenet_yuv6_geometry_tether"]
+    assert tether["metric_name"] == "loss_part_posenet_yuv6_geometry_tether"
+    assert tether["loss_weight_key"] == "posenet_yuv6_geometry_tether"
+    assert tether["target_fraction_of_initial"] == pytest.approx(0.97)
+    assert tether["weight_scale"] == pytest.approx(1.75)
+    assert "spatial-gradient" in tether["rationale"]
+    assert "temporally nonflat" in tether["rationale"]
 
 
 def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:

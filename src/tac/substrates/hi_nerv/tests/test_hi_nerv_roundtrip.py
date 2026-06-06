@@ -2,8 +2,8 @@
 """Catalog #91 ENCODE_INFLATE_ROUNDTRIP + Catalog #139 no_op_proof for hi_nerv.
 
 Proves the encode/decode contract of the HIV1 monolithic 0.bin grammar and
-the substrate's forward-pass parity under fp16 + per-scale int16-quant
-roundtrip across the 3-scale latent pyramid.
+the substrate's forward-pass parity under fp16 + per-scale latent quantization
+roundtrips across the 3-scale latent pyramid.
 """
 
 from __future__ import annotations
@@ -26,8 +26,14 @@ from tac.substrates.hi_nerv.archive import (
     HIV1_HEADER_SIZE,
     HIV1_MAGIC,
     HIV1_SCHEMA_VERSION,
+    LATENT_CODEC_BROTLI_INT8_Q11,
     LATENT_CODEC_BROTLI_INT16_Q11,
     LATENT_CODEC_HI_AC_INT16_Q11,
+    LATENT_CODEC_PACKED_BROTLI_INT2_Q11,
+    LATENT_CODEC_PACKED_BROTLI_INT4_Q11,
+    LATENT_CODEC_PACKED_INT2,
+    LATENT_CODEC_PACKED_INT4,
+    LATENT_CODEC_RAW_INT8,
     LATENT_CODEC_RAW_INT16,
     build_archive_section_telemetry,
     pack_archive,
@@ -260,6 +266,85 @@ def test_lossless_high_byte_arithmetic_latent_codec_roundtrips_and_shrinks():
     assert torch.equal(parsed.latents_coarse, lc)
     assert torch.equal(parsed.latents_mid, lm)
     assert torch.equal(parsed.latents_fine, lf)
+
+
+def test_lower_bit_latent_codecs_roundtrip_with_bounded_quant_error():
+    cfg = _smoke_cfg()
+    torch.manual_seed(202)
+    model = HinervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    lc = torch.linspace(-1.0, 1.0, sd["latents_coarse"].numel()).view_as(
+        sd["latents_coarse"]
+    )
+    lm = torch.linspace(-0.5, 0.75, sd["latents_mid"].numel()).view_as(
+        sd["latents_mid"]
+    )
+    lf = torch.linspace(-2.0, 0.25, sd["latents_fine"].numel()).view_as(
+        sd["latents_fine"]
+    )
+    raw_blob = pack_archive(
+        decoder_sd,
+        lc,
+        lm,
+        lf,
+        _smoke_meta(cfg),
+        latent_codec=LATENT_CODEC_RAW_INT16,
+    )
+    raw_sections = split_archive_sections(raw_blob)
+    raw_latent_bytes = (
+        len(raw_sections.latents_coarse_blob)
+        + len(raw_sections.latents_mid_blob)
+        + len(raw_sections.latents_fine_blob)
+    )
+    cases = (
+        (LATENT_CODEC_RAW_INT8, 8),
+        (LATENT_CODEC_BROTLI_INT8_Q11, 8),
+        (LATENT_CODEC_PACKED_INT4, 4),
+        (LATENT_CODEC_PACKED_BROTLI_INT4_Q11, 4),
+        (LATENT_CODEC_PACKED_INT2, 2),
+        (LATENT_CODEC_PACKED_BROTLI_INT2_Q11, 2),
+    )
+
+    for codec, bits in cases:
+        blob = pack_archive(
+            decoder_sd,
+            lc,
+            lm,
+            lf,
+            _smoke_meta(cfg),
+            latent_codec=codec,
+        )
+        sections = split_archive_sections(blob)
+        parsed = parse_archive(blob)
+        telemetry = build_archive_section_telemetry(blob)
+        rows = {row["name"]: row for row in telemetry["sections"]}
+        coded_latent_bytes = (
+            len(sections.latents_coarse_blob)
+            + len(sections.latents_mid_blob)
+            + len(sections.latents_fine_blob)
+        )
+        assert coded_latent_bytes < raw_latent_bytes
+        assert sections.meta["_latent_codec"] == codec
+        assert rows["latents_coarse"]["quant_bits"] == bits
+        expected_unwrapped = {
+            8: lc.numel(),
+            4: (lc.numel() * 4 + 7) // 8,
+            2: (lc.numel() * 2 + 7) // 8,
+        }[bits]
+        assert rows["latents_coarse"]["raw_bytes"] == expected_unwrapped
+        for parsed_latents, reference in (
+            (parsed.latents_coarse, lc),
+            (parsed.latents_mid, lm),
+            (parsed.latents_fine, lf),
+        ):
+            quant_range = max(float(reference.max() - reference.min()), 1e-12)
+            step = quant_range / float((1 << bits) - 2)
+            assert torch.allclose(parsed_latents, reference, atol=step * 0.75)
 
 
 def test_parse_archive_rejects_short_blob():

@@ -41,6 +41,12 @@ from tac.repo_io import sha256_file, write_json
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     FALSE_AUTHORITY,
 )
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    SNERV_ARCHIVE_SCHEMA,
+    SNERV_ARCHIVE_SCHEMA_V2,
+    SnervArchiveError,
+    unpack_snerv_archive,
+)
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     BYTE_GROWTH_ADMISSION_MODES,
     COMPONENT_GUARD_MODES,
@@ -405,6 +411,14 @@ def _build_report(
         "best_packet_path": best_packet_materialization.get("best_packet_path"),
         "best_packet_bytes": best_packet_materialization.get("best_packet_bytes"),
         "best_packet_sha256": best_packet_materialization.get("best_packet_sha256"),
+        "best_packet_schema": best_packet_materialization.get("best_packet_schema"),
+        "best_packet_wire_format": best_packet_materialization.get(
+            "best_packet_wire_format"
+        ),
+        "best_packet_contest_submission_wire_format_ready": (
+            best_packet_materialization.get("contest_submission_wire_format_ready")
+            is True
+        ),
         "best_packet_materialization": best_packet_materialization,
         "result": payload,
         "blockers": list(dict.fromkeys(blockers)),
@@ -509,16 +523,36 @@ def _materialize_best_packet(result: Any, output_dir: Path) -> dict[str, Any]:
     packet = bytes(raw_packet)
     if not packet:
         return _missing_best_packet_materialization("best_packet_empty")
+    try:
+        decoded = unpack_snerv_archive(packet)
+        wire_format = _packet_wire_format_for_schema(decoded.schema)
+        packet_schema = decoded.schema
+        decode_error = None
+    except SnervArchiveError as exc:
+        wire_format = None
+        packet_schema = None
+        decode_error = repr(exc)
 
     path = output_dir / "best_packet.snar"
     path.write_bytes(packet)
+    blockers = []
+    if wire_format != "snar2":
+        blockers.append(
+            "snerv_best_packet_materialized_as_snar1_debug_packet_repack_required"
+            if wire_format == "snar1"
+            else "snerv_best_packet_wire_format_unverified"
+        )
     return {
         "schema": "snerv_scorer_loop_best_packet_materialization.v1",
         "materialized": True,
         "best_packet_path": path.as_posix(),
         "best_packet_bytes": path.stat().st_size,
         "best_packet_sha256": sha256_file(path),
-        "blockers": [],
+        "best_packet_schema": packet_schema,
+        "best_packet_wire_format": wire_format,
+        "contest_submission_wire_format_ready": wire_format == "snar2",
+        "decode_error": decode_error,
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
@@ -534,6 +568,14 @@ def _missing_best_packet_materialization(reason: str) -> dict[str, Any]:
         "blockers": ["snerv_native_scorer_loop_best_packet_not_materialized"],
         **FALSE_AUTHORITY,
     }
+
+
+def _packet_wire_format_for_schema(schema: str) -> str | None:
+    if schema == SNERV_ARCHIVE_SCHEMA:
+        return "snar1"
+    if schema == SNERV_ARCHIVE_SCHEMA_V2:
+        return "snar2"
+    return None
 
 
 def _research_json_path(args: argparse.Namespace) -> Path:

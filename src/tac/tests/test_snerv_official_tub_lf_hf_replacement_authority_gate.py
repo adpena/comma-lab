@@ -35,6 +35,7 @@ def test_authority_gate_blocks_current_export_bound_receiver_replay_shape(
     assert report["schema"] == SCHEMA
     assert report["official_checkpoint_export_binding_ready"] is True
     assert report["receiver_output2_frame_replay_ready"] is True
+    assert report["tub_source_fixture_replay_ready"] is True
     assert report["trained_checkpoint_state_dict_mapping_ready"] is False
     assert report["full_tub_source_forward_replay_ready"] is False
     assert report["official_tub_lf_hf_decoder_replacement_ready"] is False
@@ -51,6 +52,18 @@ def test_authority_gate_blocks_current_export_bound_receiver_replay_shape(
         "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
         in blockers
     )
+    assert "snerv_official_tub_source_fixture_replay_missing" not in blockers
+    assert (
+        "snerv_official_tub_frame_reconstruction_source_forward_replay_missing"
+        in report["closed_campaign_blockers"]
+    )
+    fixture_gate = next(
+        row for row in report["gate_rows"] if row["gate_id"] == "tub_source_fixture_replay"
+    )
+    assert fixture_gate["blocked"] is False
+    tub_state = report["tub_source_forward_evidence"]
+    assert tub_state["selected_artifact_source"] == "nested_in_source_forward_artifact"
+    assert tub_state["fixture_source_replay_passed"] is True
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
@@ -76,6 +89,7 @@ def test_authority_gate_can_open_without_score_or_dispatch_authority(
 
     assert report["official_tub_lf_hf_decoder_replacement_ready"] is True
     assert report["blocked_gate_row_count"] == 0
+    assert report["tub_source_fixture_replay_ready"] is True
     assert report["queue_blockers"] == []
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
@@ -134,6 +148,7 @@ def test_authority_gate_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     )
     assert "SNeRV Official TUB LF/HF Replacement Authority Gate" in markdown
     assert "trained checkpoint mapping ready" in markdown
+    assert "TUB source fixture replay ready" in markdown
     assert payload["score_claim"] is False
 
 
@@ -158,6 +173,41 @@ def _source_forward_artifact(
             "official_export_bound": official_export_bound,
         },
         "full_tub_source_forward_parity_proven": full_tub_parity,
+        "official_tub_source_forward_replay": {
+            "schema": "snerv_official_tub_source_forward_replay.v1",
+            "source_forward_replay_executed": True,
+            "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
+            "full_tub_source_forward_parity_proven": full_tub_parity,
+            "source_forward_parity_proven": full_tub_parity,
+            "closed_blockers": [
+                "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
+                "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+                "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing",
+                "snerv_official_tub_frame_reconstruction_source_forward_replay_missing",
+            ],
+            "preserved_blockers": (
+                []
+                if full_tub_parity
+                else [
+                    "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                    "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                    "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+                    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+                ]
+            ),
+            "blockers": (
+                []
+                if full_tub_parity
+                else [
+                    "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                    "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                    "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+                    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+                ]
+            ),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "receiver_payload_frame_replay": {
             "schema": "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay.v1",
             "receiver_runtime_decode_proven": True,

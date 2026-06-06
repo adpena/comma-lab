@@ -16,6 +16,8 @@ Verifies per CLAUDE.md "NO FAKE IMPLEMENTATIONS" non-negotiable:
 """
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 # Skip the entire module when MLX is unavailable; the adapter+factory require MLX.
@@ -32,6 +34,17 @@ requires_mlx = pytest.mark.skipif(
 
 
 # ---------- Section 1: PR95FaithfulCurriculumFactory unit tests ----------
+
+
+def test_pr95_stage_loss_uses_preserved_exact_segnet_target_argmax() -> None:
+    """PR95-stage SegNet hard labels must match the exact scorer target labels."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    source = inspect.getsource(MlxScoreAwareAdapter._pr95_stage_loss_and_parts)
+
+    assert "_exact_segnet_target_argmax_for_indices(" in source
+    assert "targets_hard_nhw = mx.argmax(teacher_logits_nhwc, axis=-1)" not in source
 
 
 def test_adapter_aliases_pr95_direct_live_pose_into_joint_scorer_proxy() -> None:
@@ -695,6 +708,51 @@ def test_canonical_equation_l15_muon_optimizer_final_stage_only_v1_registered() 
 
 
 @requires_mlx
+def test_pr95_optimizer_step_reports_real_partition_gradient_clipping() -> None:
+    """PR95 optimizer clipping telemetry must report the actual applied partition."""
+
+    import mlx.core as mx
+    import mlx.nn as nn
+
+    from tac.local_acceleration.pr95_hnerv_mlx import (
+        Pr95MlxOptimizerConfig,
+        Pr95MlxOptimizerState,
+        apply_pr95_mlx_optimizer_step,
+    )
+
+    class TinyModule(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.decoder_weight = mx.ones((2, 2))
+            self.decoder_bias = mx.ones((2,))
+
+    module = TinyModule()
+    gradients = {
+        "decoder_weight": mx.ones((2, 2)) * 100.0,
+        "decoder_bias": mx.ones((2,)) * 100.0,
+    }
+    summary = apply_pr95_mlx_optimizer_step(
+        module,
+        gradients,
+        Pr95MlxOptimizerState(),
+        Pr95MlxOptimizerConfig(
+            use_muon=False,
+            adamw_lr=0.0,
+            muon_lr=0.0,
+            grad_clip=1.0,
+            grad_clip_muon=1.0,
+        ),
+    )
+
+    assert summary["gradient_clip_actual_application_count"] == 1
+    assert summary["gradient_clip_would_clip_count"] == 1
+    assert summary["gradient_clip_min_scale"] < 1.0
+    assert summary["adamw_gradient_clip"]["present_gradient_count"] == 2
+    assert summary["adamw_gradient_clip"]["pre_norm"] > 1.0
+    assert summary["adamw_gradient_clip"]["applied"] is True
+
+
+@requires_mlx
 def test_train_step_returns_stage_index_in_metrics_when_curriculum_enabled() -> None:
     """train_step's return dict carries pr95_stage_index + uses_muon metrics."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
@@ -720,6 +778,43 @@ def test_train_step_returns_stage_index_in_metrics_when_curriculum_enabled() -> 
     assert "loss_part_pr95_stage_scorer_surrogate" in metrics
     assert metrics["pr95_stage_index"] == 1.0
     assert metrics["pr95_stage_uses_muon"] == 0.0  # stage 1 uses AdamW only.
+
+
+@requires_mlx
+def test_train_step_applies_scorer_guard_lr_scale_to_pr95_stage_config() -> None:
+    """The scorer-space trust-region scale must actuate the real PR95 optimizer."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    adapter._scorer_space_step_guard_learning_rate_scale = 0.25
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0},
+    )
+
+    assert metrics["pr95_stage_scorer_guard_learning_rate_scale"] == pytest.approx(
+        0.25
+    )
+    assert metrics["pr95_stage_effective_adamw_learning_rate"] == pytest.approx(
+        metrics["pr95_stage_base_adamw_learning_rate"] * 0.25
+    )
+    assert metrics["pr95_stage_effective_muon_learning_rate"] == pytest.approx(
+        metrics["pr95_stage_base_muon_learning_rate"] * 0.25
+    )
+    assert metrics["scorer_space_step_guard_effective_optimizer_learning_rate"] == (
+        pytest.approx(metrics["pr95_stage_effective_adamw_learning_rate"])
+    )
 
 
 @requires_mlx
@@ -988,6 +1083,50 @@ def test_pr95_stage_qat_uses_dual_adjusted_extra_loss_weights_NO_FAKE() -> None:
     assert float(total_dual.item()) - float(total_zero.item()) == pytest.approx(6.0)
     assert metrics_dual["loss_part_weighted_coder_qat_quant_residual"] == (
         pytest.approx(6.0)
+    )
+
+
+@requires_mlx
+def test_pr95_stage_can_force_weighted_qat_for_short_admission_proof() -> None:
+    """Short bounded proofs can verify weighted byte QAT before PR95 stage 4."""
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.extra_loss_terms = lambda _model, _idx: {
+        "coder_qat_quant_residual": mx.array(3.0, dtype=mx.float32)
+    }
+    bundle.extra_loss_weights = {"coder_qat_quant_residual": 0.5}
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+        pr95_force_weighted_extra_qat_when_stage_inactive=True,
+    )
+    stage_1 = adapter._pr95_curriculum_factory.current_stage_verdict(0)
+    assert stage_1.qat_active is False
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    total, parts = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_1,
+        model=adapter.model,
+    )
+    metrics = adapter._pr95_stage_loss_part_metrics(
+        batch,
+        stage_verdict=stage_1,
+    )
+    mx.eval(total, *parts.values())
+
+    assert "coder_qat_quant_residual" in parts
+    assert float(parts["pr95_stage_forced_extra_qat_active"].item()) == pytest.approx(
+        1.0
+    )
+    assert metrics["loss_part_coder_qat_quant_residual"] == pytest.approx(3.0)
+    assert metrics["loss_part_weighted_coder_qat_quant_residual"] == pytest.approx(
+        1.5
     )
 
 

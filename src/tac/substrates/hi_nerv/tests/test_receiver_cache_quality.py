@@ -494,6 +494,7 @@ def test_hi_nerv_receiver_cache_segnet_argmax_probe_uses_configured_class_gate(
         batch_frames=1,
         max_segnet_argmax_disagreement_for_fit_gate=1.0,
         min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.2,
+        min_segnet_argmax_target_class_coverage_fraction_for_fit_gate=0.0,
         segnet_logits_fn=fake_segnet_logits,
     )
 
@@ -505,6 +506,53 @@ def test_hi_nerv_receiver_cache_segnet_argmax_probe_uses_configured_class_gate(
     assert (
         "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
         not in report["blockers"]
+    )
+
+
+def test_hi_nerv_receiver_cache_segnet_argmax_probe_blocks_target_class_loss(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    candidate.mkdir()
+    reference.mkdir()
+    cand = np.zeros((1, 3, 4, 4), dtype=np.float32)
+    ref = np.zeros((1, 3, 4, 4), dtype=np.float32)
+    cand[0, 0, :2, :] = 0.0
+    cand[0, 0, 2:, :] = 2.0
+    ref[0, 0, :2, :] = 0.0
+    ref[0, 0, 2:, :] = 1.0
+    np.save(candidate / "segnet_last_rgb.npy", cand)
+    np.save(reference / "segnet_last_rgb.npy", ref)
+
+    def fake_segnet_logits(x_nchw: np.ndarray) -> np.ndarray:
+        b, _c, h, w = x_nchw.shape
+        logits = np.zeros((b, 5, h, w), dtype=np.float32)
+        cls = x_nchw[:, 0, :, :].astype(np.int64).reshape(b, h, w)
+        for class_index in range(5):
+            logits[:, class_index, :, :] = np.where(cls == class_index, 2.0, 0.0)
+        return logits
+
+    report = build_hi_nerv_receiver_cache_segnet_argmax_probe(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        upstream_dir=None,
+        sample_pairs=1,
+        batch_frames=1,
+        max_segnet_argmax_disagreement_for_fit_gate=1.0,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.2,
+        min_segnet_argmax_target_class_coverage_fraction_for_fit_gate=0.8,
+        segnet_logits_fn=fake_segnet_logits,
+    )
+
+    assert report["candidate_occupied_class_fraction"] == pytest.approx(0.4)
+    assert report["reference_occupied_class_fraction"] == pytest.approx(0.4)
+    assert report["candidate_target_class_coverage_fraction"] == pytest.approx(0.5)
+    assert report["candidate_target_class_covered"][:3] == [True, False, False]
+    assert report["fit_gate_passed"] is False
+    assert (
+        "hi_nerv_receiver_cache_segnet_argmax_target_class_coverage_collapse"
+        in report["blockers"]
     )
 
 

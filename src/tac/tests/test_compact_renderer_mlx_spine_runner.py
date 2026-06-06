@@ -69,6 +69,117 @@ except ImportError:
     _AV_AVAILABLE = False
 
 
+def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    helper = source[
+        source.index("def _write_hi_nerv_runner_short_scorer_smoke_readiness(") :
+        source.index("def _attach_hi_nerv_short_scorer_smoke_readiness(")
+    ]
+    call = source[
+        source.index("short_scorer_smoke_readiness = (") :
+        source.index("short_scorer_smoke_readiness_summary = (")
+    ]
+
+    assert "require_section_byte_dual_ascent" in helper
+    assert "require_pose_direct_live_distillation" in helper
+    assert "decoder_weight_waterfill_plan_metadata" in helper
+    assert "output_head_target_bias_init_metadata" in helper
+    assert "_substrate_score_aware_training_from_artifact(artifact_dict)" in helper
+    assert "require_section_byte_dual_ascent=launch_hard_byte_ceiling is not None" in call
+    assert "require_pose_direct_live_distillation=True" in call
+    assert "decoder_weight_waterfill_plan_metadata=(" in call
+    assert '"segnet_direct_live_target_mass_floor_weight": float(' in call
+    assert "segnet_direct_live_target_mass_floor_weight" in call
+    assert '"segnet_direct_live_target_min_ratio_floor_weight": float(' in call
+    assert "segnet_direct_live_target_min_ratio_floor_weight" in call
+
+
+def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    body = source[
+        source.index("def execute_hi_nerv_mlx_scoreaware_and_adapt(") :
+        source.index("def _compact_score_aware_training_telemetry_contract(")
+    ]
+    main_hi_branch = source[
+        source.index('elif args.execute_family == "hi_nerv":') :
+        source.index("elif args.execute_family in PLANNER_GATED_FAMILIES:")
+    ]
+    execute_to_smoke_call = body[
+        body.index("artifact = _run_hi_nerv_mlx_scoreaware_smoke(") :
+        body.index("artifact_dict = artifact.as_dict()")
+    ]
+
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=float(\n"
+        "            segnet_direct_live_target_mass_floor_weight\n"
+        "        ),"
+    ) in body
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight=float(\n"
+        "            segnet_direct_live_target_min_ratio_floor_weight\n"
+        "        ),"
+    ) in body
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=float(\n"
+        "            segnet_direct_live_target_mass_floor_weight\n"
+        "        ),\n"
+        "        segnet_direct_live_target_min_ratio_floor_weight=float("
+    ) in body
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=(\n"
+        "                args.segnet_direct_live_target_mass_floor_weight\n"
+        "            ),"
+    ) in main_hi_branch
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight=(\n"
+        "                args.segnet_direct_live_target_min_ratio_floor_weight\n"
+        "            ),"
+    ) in main_hi_branch
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=float(\n"
+        "                segnet_direct_live_target_mass_floor_weight\n"
+        "            ),"
+    ) in execute_to_smoke_call
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight=float(\n"
+        "                segnet_direct_live_target_min_ratio_floor_weight\n"
+        "            ),"
+    ) in execute_to_smoke_call
+
+
+def _assert_compact_runner_rerun_provenance(
+    payload: dict[str, object],
+    *,
+    family: str,
+    output_dir: Path,
+) -> None:
+    provenance = payload["runner_invocation_provenance"]
+    assert isinstance(provenance, dict)
+    assert provenance["schema"] == "compact_runner_invocation_provenance.v1"
+    assert payload["original_argv"] == provenance["original_argv"]
+    assert payload["direct_smoke_rerun_argv"] == provenance["same_output_dir_rerun"][
+        "argv"
+    ]
+    assert "--execute-family" in provenance["original_arg_tokens"]
+    assert family in provenance["original_arg_tokens"]
+    rerun_argv = provenance["same_output_dir_rerun"]["argv"]
+    assert isinstance(rerun_argv, list)
+    assert "--overwrite" in rerun_argv
+    assert "--output-dir" in rerun_argv
+    assert rerun_argv[rerun_argv.index("--output-dir") + 1] == output_dir.as_posix()
+    assert provenance["score_claim"] is False
+    assert provenance["promotion_eligible"] is False
+    assert provenance["rank_or_kill_eligible"] is False
+    assert provenance["ready_for_exact_eval_dispatch"] is False
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    storage_tier = provenance["output_storage_tier"]
+    assert isinstance(storage_tier, dict)
+    assert storage_tier["large_artifacts_under_output_dir"] is True
+    assert storage_tier["score_claim"] is False
+
+
 def _fake_hinerv_output_head_contrast_init_payload(
     pair_indices,
     *,
@@ -92,6 +203,56 @@ def _fake_hinerv_output_head_contrast_init_payload(
             "head_rgb_0.weight",
             "head_rgb_1.weight",
         ],
+    }
+
+
+def _fake_hinerv_scorer_domain_bootstrap_payload(
+    pair_indices,
+    *,
+    steps: int,
+    learning_rate: float,
+    rgb_weight: float,
+    yuv6_weight: float,
+    temporal_delta_weight: float,
+    contrast_floor_weight: float,
+    rgb_std_min_ratio: float,
+    yuv6_temporal_std_min_ratio: float,
+    weight_decay: float,
+    grad_clip_max_norm: float | None,
+) -> dict[str, object]:
+    try:
+        pair_index_values = [int(value) for value in pair_indices.tolist()]
+    except AttributeError:
+        pair_index_values = [
+            int(value) for value in np.asarray(pair_indices).reshape(-1).tolist()
+        ]
+    return {
+        "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+        "enabled": True,
+        "method": "unit_fake_archive_charged_bootstrap",
+        "steps": int(steps),
+        "learning_rate": float(learning_rate),
+        "rgb_weight": float(rgb_weight),
+        "yuv6_weight": float(yuv6_weight),
+        "temporal_delta_weight": float(temporal_delta_weight),
+        "contrast_floor_weight": float(contrast_floor_weight),
+        "rgb_std_min_ratio": float(rgb_std_min_ratio),
+        "yuv6_temporal_std_min_ratio": float(yuv6_temporal_std_min_ratio),
+        "weight_decay": float(weight_decay),
+        "grad_clip_max_norm": (
+            None if grad_clip_max_norm is None else float(grad_clip_max_norm)
+        ),
+        "source_pair_indices": pair_index_values,
+        "accepted_step_count": int(steps),
+        "rejected_step_count": 0,
+        "runtime_sidecar_bytes": 0,
+        "archive_charged_decoder_tensors": [
+            "decoder.bootstrap.weight",
+        ],
+        "human_visual_fidelity_objective": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -135,6 +296,50 @@ def test_hi_nerv_frontier_gate_counts_direct_live_segnet_as_real_teacher() -> No
     assert gate["segnet_only_research_allowed"] is True
     assert "hi_nerv_real_segnet_teacher_missing" not in gate["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in gate["blockers"]
+    assert "hi_nerv_direct_live_escape_controls_missing" not in gate["blockers"]
+
+
+def test_hi_nerv_frontier_gate_counts_direct_live_posenet_as_real_teacher() -> None:
+    gate = _validate_hi_nerv_frontier_training_config(
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
+        pose_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=0.5,
+        allow_segnet_only_research=False,
+        allow_unscored_research_smoke=False,
+        score_aware_training_plan={},
+    )
+
+    assert gate["launch_allowed"] is True
+    assert gate["frontier_targeting"] is True
+    assert gate["real_segnet_teacher_attached"] is True
+    assert gate["real_posenet_teacher_attached"] is True
+    assert gate["pose_direct_live_attached"] is True
+    assert gate["pose_direct_live_distillation_weight"] == pytest.approx(0.5)
+    assert "hi_nerv_real_posenet_teacher_missing" not in gate["blockers"]
+
+
+def test_hi_nerv_frontier_gate_counts_target_support_floor_as_escape_control() -> None:
+    gate = _validate_hi_nerv_frontier_training_config(
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_target_mass_floor_weight=0.25,
+        segnet_direct_live_target_min_ratio_floor_weight=0.125,
+        pose_distillation_weight=1.0,
+        allow_segnet_only_research=False,
+        allow_unscored_research_smoke=False,
+        score_aware_training_plan={},
+    )
+
+    assert gate["launch_allowed"] is True
+    assert gate["real_segnet_teacher_attached"] is True
+    assert gate["direct_live_escape_controls_attached"] is True
+    assert gate["direct_live_escape_controls"]["target_mass_floor"] == pytest.approx(
+        0.25
+    )
+    assert gate["direct_live_escape_controls"]["target_min_ratio_floor"] == pytest.approx(
+        0.125
+    )
     assert "hi_nerv_direct_live_escape_controls_missing" not in gate["blockers"]
 
 
@@ -731,6 +936,104 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     ] is False
 
 
+def test_hinerv_runner_archive_resolution_uses_emitted_overcap_ema_archives(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "hi_nerv_mlx_training"
+    selection_dir = training_dir / "ema_archive_selection"
+    (selection_dir / "live").mkdir(parents=True, exist_ok=True)
+    (selection_dir / "ema").mkdir(parents=True, exist_ok=True)
+    live_archive = _write_synthetic_pr95_archive(
+        selection_dir / "live" / "archive.zip",
+        pairs=2,
+    )
+    ema_archive = _write_synthetic_pr95_archive(
+        selection_dir / "ema" / "archive.zip",
+        pairs=2,
+    )
+    # Make live strictly cheaper so the diagnostic resolver's byte-first choice
+    # is deterministic when both selector rows failed the same hard cap.
+    with zipfile.ZipFile(ema_archive, "a", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("padding.bin", b"x" * 16)
+    manifest = selection_dir / "ema_archive_selection.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "long_training_ema_archive_selection.v1",
+                "selected_archive_path": None,
+                "selected_archive_sha256": None,
+                "selected_archive_bytes": None,
+                "rows": [
+                    {
+                        "schema": "long_training_archive_selection_candidate.v1",
+                        "candidate_kind": "live",
+                        "status": "failed",
+                        "failure": (
+                            "ValueError:HiNeRV archive exceeds "
+                            "hard_byte_ceiling: 291749 > 285000"
+                        ),
+                    },
+                    {
+                        "schema": "long_training_archive_selection_candidate.v1",
+                        "candidate_kind": "ema",
+                        "status": "failed",
+                        "failure": (
+                            "ValueError:HiNeRV archive exceeds "
+                            "hard_byte_ceiling: 291798 > 285000"
+                        ),
+                    },
+                ],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    artifact = {
+        "archive_path": None,
+        "archive_bytes": None,
+        "archive_sha256": None,
+        "archive_selection_manifest_path": manifest.as_posix(),
+        "substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}},
+    }
+    training_dir.mkdir(parents=True, exist_ok=True)
+    (training_dir / "training_artifact.json").write_text(
+        json.dumps(artifact, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    resolution = runner_mod._hi_nerv_runner_archive_resolution_from_artifact(
+        artifact_dict=artifact,
+        training_dir=training_dir,
+        repo_root=REPO_ROOT,
+    )
+    runner_mod._attach_hi_nerv_runner_archive_resolution(
+        artifact_dict=artifact,
+        output_dir=training_dir,
+        archive_resolution=resolution,
+    )
+
+    assert resolution["archive_path"] == live_archive.as_posix()
+    assert resolution["archive_bytes"] == live_archive.stat().st_size
+    assert resolution["archive_sha256"] == runner_mod._sha256_file(live_archive)
+    assert resolution["diagnostic_only"] is True
+    assert resolution["byte_cap_rejected"] is True
+    assert resolution["candidate_kind"] == "live"
+    assert "hi_nerv_archive_selection_no_selected_archive" in resolution["blockers"]
+    assert (
+        "hi_nerv_archive_selection_rejected_over_hard_byte_ceiling"
+        in resolution["blockers"]
+    )
+    persisted = json.loads(
+        (training_dir / "training_artifact.json").read_text(encoding="utf-8")
+    )
+    persisted_resolution = persisted["substrate_artifact_metadata"][
+        "archive_resolution"
+    ]
+    assert persisted_resolution["archive_path"] == live_archive.as_posix()
+    assert persisted_resolution["diagnostic_only"] is True
+
+
 def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifact(
     tmp_path: Path,
 ) -> None:
@@ -754,9 +1057,65 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
                     "loss_part_segnet_direct_live_distill": 0.12,
                     "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
                     "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+                    "loss_part_segnet_direct_live_target_mass_floor_loss": 0.05,
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 0.04,
                     "loss_part_scorer_input_contrast_floor": 0.01,
                     "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
                     "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+                    "loss_part_scorer_input_shape_tether": 0.02,
+                    "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+                    "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+                    "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+                    "loss_part_posenet_temporal_signal_floor": 0.03,
+                    "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+                    "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+                    "dual_ascent_active": 1.0,
+                    "dual_ascent_constraint_count": 4.0,
+                    "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.03,
+                    "dual_ascent_update_count__hi_nerv_segnet_direct_live_distill": 1.0,
+                    "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_distill": 1.0,
+                    "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_distill": 0.4,
+                    "dual_ascent_violation__hi_nerv_segnet_direct_live_distill": 0.1,
+                    "dual_ascent_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03,
+                    "dual_ascent_update_count__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+                    "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_argmax_disagreement": 1.0,
+                    "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_argmax_disagreement": 0.4,
+                    "dual_ascent_violation__hi_nerv_segnet_direct_live_argmax_disagreement": 0.1,
+                    "dual_ascent_metric__hi_nerv_segnet_direct_live_target_mass_floor": 0.05,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_mass_floor": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_mass_floor": 0.03,
+                    "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_mass_floor": 1.0,
+                    "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_mass_floor": 1.0,
+                    "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_mass_floor": 0.4,
+                    "dual_ascent_violation__hi_nerv_segnet_direct_live_target_mass_floor": 0.1,
+                    "dual_ascent_metric__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.25,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.03,
+                    "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 1.0,
+                    "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 1.0,
+                    "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.4,
+                    "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.1,
+                    "dual_ascent_metric__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.04,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.03,
+                    "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_min_ratio_floor": 1.0,
+                    "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_min_ratio_floor": 1.0,
+                    "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.4,
+                    "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.1,
+                    "dual_ascent_metric__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.25,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.03,
+                    "dual_ascent_update_count__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 1.0,
+                    "dual_ascent_weight_applied__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 1.0,
+                    "dual_ascent_effective_loss_weight__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.4,
+                    "dual_ascent_violation__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.1,
                 }
             }
         ],
@@ -793,6 +1152,10 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
             "fit_gate_passed": True,
             "segnet_argmax_disagreement_rate": 0.02,
             "candidate_occupied_class_fraction": 0.8,
+            "candidate_target_class_coverage_fraction": 0.8,
+            "candidate_target_class_min_ratio": 0.25,
+            "candidate_target_material_class_covered_count": 4.0,
+            "target_material_class_count": 5.0,
             "reference_occupied_class_fraction": 0.9,
             "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
         },
@@ -817,15 +1180,30 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
         artifact_dict=artifact_dict,
         train_time_controls={
             "segnet_direct_live_distillation_weight": 0.4,
+            "segnet_direct_live_target_mass_floor_weight": 0.4,
+            "segnet_direct_live_target_min_ratio_floor_weight": 0.4,
             "scorer_input_contrast_floor_weight": 0.5,
             "scorer_input_contrast_floor_segnet_min_std_ratio": 0.6,
             "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": 0.6,
+            "scorer_input_shape_tether_weight": 0.25,
+            "posenet_temporal_signal_floor_weight": 0.25,
         },
         post_export_quality=post_export_quality,
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
         allow_unscored_research_smoke=False,
         min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+        require_section_byte_dual_ascent=False,
+        require_pose_direct_live_distillation=False,
+        decoder_weight_waterfill_plan_metadata=None,
+        output_head_target_bias_init_metadata={
+            "schema": "hi_nerv_output_head_target_bias_init.v1",
+            "enabled": True,
+            "contrast_init": {
+                "schema": "hi_nerv_output_head_target_contrast_init.v1",
+                "enabled": True,
+            },
+        },
     )
 
     assert report["short_scorer_teacher_smoke_ready"] is True
@@ -834,15 +1212,150 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
     assert Path(report["report_path"]).is_file()
     metadata = artifact_dict["substrate_artifact_metadata"]
     summary = metadata["short_scorer_teacher_smoke_readiness"]
+    admission = metadata["short_scorer_teacher_smoke_long_run_admission"]
     assert summary["ready_for_long_run"] is True
+    assert admission["long_run_admission_passed"] is True
+    assert admission["admission_blockers"] == []
     assert metadata["score_aware_training"][
         "short_scorer_teacher_smoke_readiness"
     ]["short_scorer_teacher_smoke_ready"] is True
+    assert metadata["score_aware_training"][
+        "short_scorer_teacher_smoke_long_run_admission"
+    ]["long_run_admission_passed"] is True
+    assert summary["scorer_input_shape_tether_gate"]["enabled"] is True
+    assert summary["posenet_temporal_signal_floor_gate"]["enabled"] is True
+    assert summary["direct_live_segnet_gate"]["subcontrol_weights"][
+        "segnet_direct_live_target_mass_floor_weight"
+    ] == pytest.approx(0.4)
+    assert summary["direct_live_segnet_gate"]["subcontrol_weights"][
+        "segnet_direct_live_target_min_ratio_floor_weight"
+    ] == pytest.approx(0.4)
+    assert summary["direct_live_segnet_gate"]["metrics"][
+        "loss_part_segnet_direct_live_target_mass_floor_loss"
+    ] == pytest.approx(0.05)
+    assert summary["direct_live_segnet_gate"]["metrics"][
+        "loss_part_segnet_direct_live_target_min_ratio_floor_loss"
+    ] == pytest.approx(0.04)
     persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
     persisted_summary = persisted["substrate_artifact_metadata"][
         "short_scorer_teacher_smoke_readiness"
     ]
+    persisted_admission = persisted["substrate_artifact_metadata"][
+        "short_scorer_teacher_smoke_long_run_admission"
+    ]
     assert persisted_summary["ready_for_long_run"] is True
+    assert persisted_admission["long_run_admission_passed"] is True
+
+
+def test_hinerv_runner_short_scorer_smoke_readiness_failure_marks_training_artifact(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    artifact_path = training_dir / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "substrate_artifact_metadata": {
+                    "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                    "score_aware_training": {"schema": "unit"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_dict = {
+        "per_epoch_metrics": [
+            {
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.12,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_scorer_input_contrast_floor": 0.01,
+                    "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+                    "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+                    "loss_part_scorer_input_shape_tether": 0.02,
+                    "loss_part_scorer_input_shape_tether_segnet_last_rgb": 0.003,
+                    "loss_part_scorer_input_shape_tether_posenet_yuv6_pair": 0.004,
+                    "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.005,
+                    "loss_part_posenet_temporal_signal_floor": 0.03,
+                    "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+                    "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+                }
+            }
+        ],
+        "substrate_artifact_metadata": {
+            "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            "score_aware_training": {"schema": "unit"},
+        },
+    }
+    post_export_quality = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "report_path": (tmp_path / "quality.json").as_posix(),
+        "quality_gate_passed": True,
+        "quality_gate": {"verdict": "CACHE_QUALITY_GATE_PASSED", "stats": {}},
+        "scorer_input_distribution_gate": {"fit_gate_passed": True, "blockers": []},
+        "segnet_argmax_probe": {
+            "fit_gate_passed": True,
+            "segnet_argmax_disagreement_rate": 0.02,
+            "candidate_occupied_class_fraction": 0.8,
+            "candidate_target_class_coverage_fraction": 0.8,
+            "candidate_target_material_class_covered_count": 4.0,
+            "target_material_class_count": 5.0,
+            "reference_occupied_class_fraction": 0.9,
+            "blockers": [],
+        },
+        "mlx_scorer_response_probe_required": True,
+        "mlx_scorer_response_probe": {
+            "fit_gate_passed": True,
+            "avg_posenet_dist": 0.002,
+            "avg_segnet_dist": 0.03,
+            "blockers": [],
+        },
+        "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+    }
+
+    report = runner_mod._write_hi_nerv_runner_short_scorer_smoke_readiness(
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        train_time_controls={
+            "segnet_direct_live_distillation_weight": 0.4,
+            "scorer_input_contrast_floor_weight": 0.5,
+            "scorer_input_contrast_floor_segnet_min_std_ratio": 0.6,
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": 0.6,
+            "scorer_input_shape_tether_weight": 0.25,
+            "posenet_temporal_signal_floor_weight": 0.25,
+        },
+        post_export_quality=post_export_quality,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_unscored_research_smoke=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+        require_section_byte_dual_ascent=False,
+        require_pose_direct_live_distillation=False,
+        decoder_weight_waterfill_plan_metadata=None,
+    )
+
+    assert report["ready_for_long_run"] is False
+    metadata = artifact_dict["substrate_artifact_metadata"]
+    admission = metadata["short_scorer_teacher_smoke_long_run_admission"]
+    assert admission["long_run_admission_passed"] is False
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in admission[
+        "admission_blockers"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" in admission[
+        "admission_blockers"
+    ]
+    assert "contest_cpu_cuda_exact_eval_not_executed" in metadata["blockers"]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in metadata[
+        "blockers"
+    ]
+    persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
+    persisted_metadata = persisted["substrate_artifact_metadata"]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in persisted_metadata[
+        "blockers"
+    ]
 
 
 def test_hinerv_runner_receiver_cache_quality_forwards_prioritized_pairs(
@@ -915,6 +1428,93 @@ def test_hinerv_runner_receiver_cache_quality_forwards_prioritized_pairs(
     assert captured_quality["sample_pairs"] == 2
 
 
+def test_hinerv_runner_receiver_cache_quality_records_default_pair_scope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive bytes")
+    source = tmp_path / "source.mkv"
+    source.write_bytes(b"unit source video")
+    captured_reference: dict[str, object] = {}
+    captured_quality: dict[str, object] = {}
+
+    from tac.local_acceleration import mlx_preprocess
+    from tac.substrates.hi_nerv import receiver_cache_quality
+
+    def fake_write_scorer_input_cache_from_video_file(
+        video_path,
+        output_dir,
+        *,
+        max_pairs,
+        batch_pairs,
+        **_kwargs,
+    ):
+        captured_reference.update(
+            {
+                "video_path": Path(video_path),
+                "output_dir": Path(output_dir),
+                "max_pairs": int(max_pairs),
+                "batch_pairs": int(batch_pairs),
+            }
+        )
+        cache_dir = Path(output_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "manifest.json").write_text("{}", encoding="utf-8")
+        return {"pair_count": int(max_pairs)}
+
+    def fake_write_hi_nerv_receiver_cache_quality_report(**kwargs):
+        captured_quality.update(kwargs)
+        return {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": (tmp_path / "report.json").as_posix(),
+            "archive_path": Path(kwargs["archive_zip_path"]).as_posix(),
+            "archive_sha256": "c" * 64,
+            "candidate_cache_dir": (tmp_path / "candidate_cache").as_posix(),
+            "reference_cache_dir": Path(kwargs["reference_cache_dir"]).as_posix(),
+            "quality_gate_passed": False,
+            "quality_gate": {"verdict": "CACHE_QUALITY_GATE_FAILED", "stats": {}},
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        }
+
+    monkeypatch.setattr(
+        mlx_preprocess,
+        "write_scorer_input_cache_from_video_file",
+        fake_write_scorer_input_cache_from_video_file,
+    )
+    monkeypatch.setattr(
+        receiver_cache_quality,
+        "write_hi_nerv_receiver_cache_quality_report",
+        fake_write_hi_nerv_receiver_cache_quality_report,
+    )
+
+    report = runner_mod._write_hi_nerv_runner_post_export_receiver_cache_quality(
+        requested=True,
+        archive_zip_path=archive,
+        source_video_path=source,
+        output_dir=tmp_path / "training",
+        reference_cache_dir=None,
+        max_pairs=2,
+        batch_pairs=1,
+        pair_indices=(),
+        min_segnet_std=1.0,
+        min_segnet_dynamic_range=16.0,
+        max_segnet_mae_vs_reference_for_fit_gate=64.0,
+        segnet_argmax_probe=False,
+        segnet_argmax_batch_frames=4,
+        max_segnet_argmax_disagreement_for_fit_gate=0.25,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.400001,
+        repo_root=REPO_ROOT,
+    )
+
+    assert report["runner_receiver_cache_quality_pair_indices"] == [0, 1]
+    assert captured_reference["video_path"] == source
+    assert captured_reference["max_pairs"] == 2
+    assert captured_reference["batch_pairs"] == 1
+    assert captured_quality["pair_indices"] == (0, 1)
+    assert captured_quality["sample_pairs"] == 2
+
+
 def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
     tmp_path: Path,
 ) -> None:
@@ -924,8 +1524,14 @@ def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
         "archive_path": (tmp_path / "archive.zip").as_posix(),
         "quality_gate_passed": False,
         "quality_gate": {"verdict": "CACHE_QUALITY_GATE_FAILED", "stats": {}},
+        "runner_receiver_cache_quality_max_pairs": 2,
+        "runner_requested_receiver_cache_quality_max_pairs": 1,
+        "runner_effective_receiver_cache_quality_max_pairs": 2,
+        "runner_quality_floor_receiver_cache_quality_min_pairs": 2,
+        "runner_train_scope_receiver_cache_quality_min_pairs": 2,
         "segnet_argmax_probe": {
             "fit_gate_passed": False,
+            "sample_pairs": 1,
             "segnet_argmax_disagreement_rate": 0.5,
             "boundary_argmax_disagreement_rate": 0.9,
             "candidate_argmax_histogram": [0, 0, 196536, 0, 72],
@@ -946,11 +1552,38 @@ def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
     ]
     assert summary["segnet_candidate_occupied_class_fraction"] == pytest.approx(0.2)
     assert summary["segnet_candidate_any_occupied_class_fraction"] == pytest.approx(0.4)
+    assert summary["segnet_candidate_target_class_coverage_fraction"] == pytest.approx(
+        0.2
+    )
+    assert summary[
+        "segnet_candidate_target_any_class_coverage_fraction"
+    ] == pytest.approx(0.4)
+    assert summary["segnet_candidate_target_class_min_ratio"] == pytest.approx(0.0)
+    assert summary["segnet_target_material_class_count"] == pytest.approx(5.0)
+    assert summary[
+        "segnet_candidate_target_material_class_covered_count"
+    ] == pytest.approx(1.0)
+    assert summary["segnet_candidate_target_class_covered"] == [
+        False,
+        False,
+        True,
+        False,
+        False,
+    ]
     assert summary["segnet_argmax_occupancy_min_class_pixel_count"] == pytest.approx(
         197.0
     )
+    assert summary[
+        "segnet_argmax_target_coverage_min_class_pixel_count"
+    ] == pytest.approx(197.0)
     assert summary["segnet_reference_occupied_class_fraction"] == pytest.approx(1.0)
     assert summary["segnet_reference_any_occupied_class_fraction"] == pytest.approx(1.0)
+    assert summary["segnet_argmax_sample_pairs"] == 1
+    assert summary["runner_receiver_cache_quality_max_pairs"] == 2
+    assert summary["runner_requested_receiver_cache_quality_max_pairs"] == 1
+    assert summary["runner_effective_receiver_cache_quality_max_pairs"] == 2
+    assert summary["runner_quality_floor_receiver_cache_quality_min_pairs"] == 2
+    assert summary["runner_train_scope_receiver_cache_quality_min_pairs"] == 2
 
 
 def test_hinerv_train_receiver_class_escape_contract_blocks_lost_escape() -> None:
@@ -975,6 +1608,155 @@ def test_hinerv_train_receiver_class_escape_contract_blocks_lost_escape() -> Non
         "hi_nerv_receiver_export_segnet_argmax_class_collapse"
         in contract["blockers"]
     )
+
+
+def test_hinerv_train_receiver_class_escape_contract_blocks_lost_target_coverage() -> None:
+    contract = runner_mod._hi_nerv_train_receiver_class_escape_contract(
+        training_telemetry_contract={
+            "segnet_direct_live_max_candidate_occupied_class_fraction": 0.8,
+            "segnet_direct_live_max_candidate_target_class_coverage_fraction": 0.8,
+        },
+        receiver_cache_quality_summary={
+            "segnet_candidate_occupied_class_fraction": 0.8,
+            "segnet_reference_occupied_class_fraction": 1.0,
+            "segnet_candidate_target_class_coverage_fraction": 0.4,
+            "segnet_target_material_class_count": 5.0,
+        },
+    )
+
+    assert contract["passed"] is False
+    assert (
+        contract["train_direct_live_max_candidate_target_class_coverage_fraction"]
+        == 0.8
+    )
+    assert contract["receiver_candidate_target_class_coverage_fraction"] == 0.4
+    assert (
+        "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_receiver_export_segnet_target_class_coverage_collapse"
+        in contract["blockers"]
+    )
+
+
+def test_hinerv_train_receiver_class_escape_contract_blocks_scope_mismatch_claim() -> None:
+    contract = runner_mod._hi_nerv_train_receiver_class_escape_contract(
+        training_telemetry_contract={
+            "row_count": 2,
+            "train_source_pair_indices_observed": [0, 1],
+            "train_source_pair_count_observed": 2,
+            "segnet_direct_live_max_candidate_occupied_class_fraction": 0.8,
+            "segnet_direct_live_max_candidate_target_class_coverage_fraction": 0.8,
+        },
+        receiver_cache_quality_summary={
+            "segnet_argmax_sample_pairs": 1,
+            "runner_receiver_cache_quality_pair_indices": [0],
+            "segnet_candidate_occupied_class_fraction": 0.4,
+            "segnet_reference_occupied_class_fraction": 1.0,
+            "segnet_candidate_target_class_coverage_fraction": 0.4,
+            "segnet_target_material_class_count": 5.0,
+        },
+    )
+
+    assert contract["passed"] is False
+    assert contract["train_receiver_scope_aligned"] is False
+    assert contract["train_telemetry_row_count"] == 2
+    assert contract["train_source_pair_indices_observed"] == [0, 1]
+    assert contract["train_source_pair_count_observed"] == 2
+    assert contract["receiver_segnet_argmax_sample_pairs"] == 1
+    assert contract["receiver_pair_indices"] == [0]
+    assert (
+        "hi_nerv_train_receiver_class_escape_pair_scope_mismatch"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_train_time_class_escape_not_receiver_export_preserved"
+        not in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
+        not in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_receiver_export_segnet_target_class_coverage_collapse"
+        in contract["blockers"]
+    )
+
+
+def test_hinerv_train_receiver_class_escape_contract_preserves_aligned_scope_loss() -> None:
+    contract = runner_mod._hi_nerv_train_receiver_class_escape_contract(
+        training_telemetry_contract={
+            "row_count": 2,
+            "train_source_pair_indices_observed": [0, 1],
+            "train_source_pair_count_observed": 2,
+            "segnet_direct_live_max_candidate_occupied_class_fraction": 0.8,
+            "segnet_direct_live_max_candidate_target_class_coverage_fraction": 0.8,
+        },
+        receiver_cache_quality_summary={
+            "segnet_argmax_sample_pairs": 2,
+            "runner_receiver_cache_quality_pair_indices": [0, 1],
+            "segnet_candidate_occupied_class_fraction": 0.4,
+            "segnet_reference_occupied_class_fraction": 1.0,
+            "segnet_candidate_target_class_coverage_fraction": 0.4,
+            "segnet_target_material_class_count": 5.0,
+        },
+    )
+
+    assert contract["passed"] is False
+    assert contract["train_receiver_scope_aligned"] is True
+    assert contract["train_source_pair_indices_observed"] == [0, 1]
+    assert contract["receiver_pair_indices"] == [0, 1]
+    assert (
+        "hi_nerv_train_receiver_class_escape_pair_scope_mismatch"
+        not in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_train_time_class_escape_not_receiver_export_preserved"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
+        in contract["blockers"]
+    )
+
+
+def test_hinerv_effective_receiver_cache_quality_max_pairs_tracks_train_scope() -> None:
+    assert runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
+        requested_max_pairs=1,
+        num_pairs=2,
+        train_batch_pairs=2,
+    ) == {
+        "requested_max_pairs": 1,
+        "quality_floor_min_pairs": 2,
+        "train_scope_min_pairs": 2,
+        "effective_max_pairs": 2,
+    }
+    assert runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
+        requested_max_pairs=4,
+        num_pairs=2,
+        train_batch_pairs=2,
+    )["effective_max_pairs"] == 4
+    assert runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
+        requested_max_pairs=1,
+        num_pairs=1,
+        train_batch_pairs=4,
+    ) == {
+        "requested_max_pairs": 1,
+        "quality_floor_min_pairs": 1,
+        "train_scope_min_pairs": 1,
+        "effective_max_pairs": 1,
+    }
+    assert runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
+        requested_max_pairs=1,
+        num_pairs=600,
+        train_batch_pairs=4,
+    ) == {
+        "requested_max_pairs": 1,
+        "quality_floor_min_pairs": 16,
+        "train_scope_min_pairs": 16,
+        "effective_max_pairs": 16,
+    }
 
 
 def _snerv_official_skip_candidate(mode: str) -> dict:
@@ -1606,6 +2388,9 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         native_mlx_decoder_train_lr=1e-5,
         native_mlx_decoder_train_ridge=1e-6,
         native_mlx_decoder_train_optimizer="closed_form",
+        official_trained_checkpoint_state_dict_path=(
+            tmp_path / "official_state_dict_slice.npz"
+        ),
         score_aware_long_training_epochs=8,
         score_aware_long_training_lr=1e-3,
         score_aware_long_training_batch_pairs=2,
@@ -1621,6 +2406,27 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         score_aware_long_training_pose_warmup_epochs=2,
         score_aware_long_training_scorer_input_shape_warmup_epochs=1,
         score_aware_long_training_segnet_direct_live_escape_warmup_epochs=3,
+        score_aware_long_training_scorer_space_step_guard_enabled=True,
+        score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.31,
+        score_aware_long_training_scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.32,
+        score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=0.33,
+        score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio=0.34,
+        score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=0.035,
+        score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio=3.25,
+        score_aware_long_training_scorer_space_step_guard_max_post_segnet_distribution_mae=0.14,
+        score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=0.15,
+        score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=2.25,
+        score_aware_long_training_scorer_space_step_guard_max_post_segnet_argmax_disagreement=0.16,
+        score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term=1.75,
+        score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term=0.055,
+        score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening=0.025,
+        score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening=0.026,
+        score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=0.027,
+        score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=0.028,
+        score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening=0.029,
+        score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=1.25,
+        score_aware_long_training_scorer_space_step_guard_backtracking_steps=4,
+        score_aware_long_training_scorer_space_step_guard_backtracking_shrink=0.4,
         checkpoint_retention_keep_last_n=2,
         checkpoint_retention_keep_best_n=1,
         checkpoint_retention_keep_every_n_epochs=None,
@@ -1638,6 +2444,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         segnet_direct_live_class_balanced_hinge_weight=0.375,
         segnet_direct_live_class_balanced_ce_weight=0.625,
         segnet_direct_live_class_balanced_squared_hinge_weight=0.875,
+        segnet_direct_live_class_region_recon_weight=0.9375,
         segnet_tau_boundary=1.25,
         segnet_hinge_margin=0.5,
         distillation_device="mps",
@@ -1668,6 +2475,9 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         "component_score_no_rate"
     )
     assert captured["score_aware_long_training_optimizer"] == "pact_muon_adamw"
+    assert captured["official_trained_checkpoint_state_dict_path"] == (
+        tmp_path / "official_state_dict_slice.npz"
+    )
     assert captured["scorer_loop_qat_pair_guard_min_score_improved_fraction"] == (
         pytest.approx(0.875)
     )
@@ -1697,6 +2507,70 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured["score_aware_long_training_scorer_input_shape_tether_weight"] == (
         pytest.approx(0.12)
     )
+    assert (
+        captured["score_aware_long_training_scorer_space_step_guard_enabled"] is True
+    )
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.31)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.32)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
+    ] == pytest.approx(0.33)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio"
+    ] == pytest.approx(0.34)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop"
+    ] == pytest.approx(0.035)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio"
+    ] == pytest.approx(3.25)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_distribution_mae"
+    ] == pytest.approx(0.14)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+    ] == pytest.approx(0.15)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+    ] == pytest.approx(2.25)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_argmax_disagreement"
+    ] == pytest.approx(0.16)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term"
+    ] == pytest.approx(1.75)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term"
+    ] == pytest.approx(0.055)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening"
+    ] == pytest.approx(0.025)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening"
+    ] == pytest.approx(0.026)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
+    ] == pytest.approx(0.027)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
+    ] == pytest.approx(0.028)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening"
+    ] == pytest.approx(0.029)
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+    ] == pytest.approx(1.25)
+    assert (
+        captured["score_aware_long_training_scorer_space_step_guard_backtracking_steps"]
+        == 4
+    )
+    assert captured[
+        "score_aware_long_training_scorer_space_step_guard_backtracking_shrink"
+    ] == pytest.approx(0.4)
     assert captured["segnet_student_live_calibration_weight"] == pytest.approx(0.9)
     assert captured["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
     assert captured["segnet_direct_live_base_loss_weight"] == pytest.approx(0.5)
@@ -1710,6 +2584,9 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured[
         "segnet_direct_live_class_balanced_squared_hinge_weight"
     ] == pytest.approx(0.875)
+    assert captured["segnet_direct_live_class_region_recon_weight"] == pytest.approx(
+        0.9375
+    )
     assert out["executed"] is True
     assert out["local_mlx_prefilter_profile_path"].endswith(
         "local_mlx_prefilter_profile.json"
@@ -2073,6 +2950,256 @@ def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) ->
     assert payload["rows"][0]["group_name"] == "decoder.blocks.0.weight"
 
 
+def test_hinerv_runner_materializes_waterfill_from_trained_ladder(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "state.npz"
+    np.savez(
+        state_path,
+        **{
+            "blocks.0.weight": np.asarray([0.25, -0.5, 1.0], dtype=np.float32),
+            "latents_coarse": np.asarray([999.0], dtype=np.float32),
+        },
+    )
+    manifest_path = tmp_path / "state_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "framework_agnostic_npz_bridge_manifest.v1",
+                "artifact_path": state_path.as_posix(),
+                "artifact_sha256": runner_mod._sha256_file(state_path),
+                "tensor_count": 2,
+                "consumption_recommended": True,
+                "blockers": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    ladder_path = tmp_path / "trained_ladder.json"
+    ladder_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "family": "hi_nerv",
+                "axis_tag": "[planning/control]",
+                "num_pairs": 600,
+                "archive_rows": [
+                    {
+                        "row_id": "tiny",
+                        "archive_bytes": 1234,
+                        "archive_sha256": "a" * 64,
+                        "state_npz_manifest_path": manifest_path.as_posix(),
+                        "runtime_consumption_proof_ready": True,
+                        "receiver_cache_quality_gate_passed": True,
+                        "receiver_cache_quality_blockers": [],
+                        "decoder_codec": "int8_mixed",
+                    }
+                ],
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    saliency = {
+        "schema": "mlx_decoder_weight_gradient_saliency.v1",
+        "row_count": 1,
+        "saliency_by_name": {"blocks.0.weight": 1.25},
+        "rows": [
+            {
+                "group_name": "blocks.0.weight",
+                "saliency": 1.25,
+                "numel": 3,
+            }
+        ],
+        "blockers": [],
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+    saliency_path = tmp_path / "decoder_weight_gradient_saliency.json"
+    saliency_path.write_text(json.dumps(saliency, sort_keys=True), encoding="utf-8")
+
+    out = runner_mod._write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
+        output_dir=tmp_path / "waterfill",
+        trained_archive_byte_oracle={
+            "schema": "hi_nerv_trained_archive_byte_oracle.v1",
+            "candidate_id": "candidate_a",
+            "receiver_closed_modelsize_ladder_path": ladder_path.as_posix(),
+        },
+        decoder_weight_saliency_artifact={
+            "written": True,
+            "path": saliency_path.as_posix(),
+        },
+        action_bits=(0, 2, 32),
+    )
+
+    assert out["written"] is True
+    assert out["active"] is True
+    assert out["candidate_plan_count"] == 1
+    bundle_path = Path(out["path"])
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    assert bundle["schema"] == "hinerv_archive_ladder_waterfill.v1"
+    plan_path = Path(out["candidate_plan_paths"][0]["path"])
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert plan["schema"] == runner_mod.NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
+    assert plan["_source_waterfill_bundle_path"] == bundle_path.as_posix()
+    assert plan["candidate_id"] == "candidate_a:tiny"
+    assert plan["score_claim"] is False
+    assert out["score_claim"] is False
+
+
+def test_hinerv_runner_materializes_waterfill_from_receiver_closed_ladder(
+    tmp_path: Path,
+) -> None:
+    export_dir = tmp_path / "live"
+    export_dir.mkdir()
+    archive = export_dir / "archive.zip"
+    archive.write_bytes(b"trained-hinerv")
+    state_path = export_dir / "hi_nerv_mlx_exported_state.npz"
+    np.savez(
+        state_path,
+        **{
+            "blocks.0.weight": np.asarray([0.25, -0.5, 1.0], dtype=np.float32),
+            "latents_coarse": np.asarray([999.0], dtype=np.float32),
+        },
+    )
+    manifest_path = export_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "framework_agnostic_npz_bridge_manifest.v1",
+                "artifact_path": state_path.as_posix(),
+                "artifact_sha256": runner_mod._sha256_file(state_path),
+                "tensor_count": 2,
+                "consumption_recommended": True,
+                "blockers": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    ladder_path = tmp_path / "receiver_closed_ladder.json"
+    ladder_path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_receiver_closed_modelsize_ladder.v1",
+                "carrier_id": "hi_nerv",
+                "axis_tag": "[planning/control]",
+                "normalized_rows": [
+                    {
+                        "row_id": "receiver_smoke",
+                        "archive_bytes": archive.stat().st_size,
+                        "archive_path": archive.as_posix(),
+                        "archive_sha256": runner_mod._sha256_file(archive),
+                        "receiver_proof_passed": False,
+                        "blockers": ["receiver_closed_byte_proof_missing"],
+                        "source": {
+                            "row_id": "receiver_smoke",
+                            "candidate_id": "receiver_smoke",
+                            "archive_bytes": archive.stat().st_size,
+                            "archive_path": archive.as_posix(),
+                            "archive_sha256": runner_mod._sha256_file(archive),
+                            "num_pairs": 1,
+                            "receiver_proof_passed": False,
+                            "receiver_archive_replay_verified": False,
+                            "post_export_receiver_cache_quality": {
+                                "quality_gate_passed": False,
+                                "quality_gate_verdict": "CACHE_INPUTS_LOCAL_ONLY",
+                                "blockers": [
+                                    "hi_nerv_receiver_cache_quality_is_false_authority"
+                                ],
+                            },
+                            "blockers": [
+                                "hi_nerv_trained_archive_byte_oracle_partial_pair_scope"
+                            ],
+                        },
+                    }
+                ],
+                "blockers": ["receiver_closed_modelsize_ladder_not_ready"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    saliency_path = tmp_path / "decoder_weight_gradient_saliency.json"
+    saliency_path.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_decoder_weight_gradient_saliency.v1",
+                "row_count": 1,
+                "saliency_by_name": {"blocks.0.weight": 1.25},
+                "rows": [
+                    {
+                        "group_name": "blocks.0.weight",
+                        "saliency": 1.25,
+                        "numel": 3,
+                    }
+                ],
+                "blockers": [],
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    out = runner_mod._write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
+        output_dir=tmp_path / "waterfill",
+        trained_archive_byte_oracle={
+            "schema": "hi_nerv_trained_archive_byte_oracle.v1",
+            "candidate_id": "receiver_smoke",
+            "receiver_closed_modelsize_ladder_path": ladder_path.as_posix(),
+        },
+        decoder_weight_saliency_artifact={
+            "written": True,
+            "path": saliency_path.as_posix(),
+        },
+        action_bits=(0, 2, 32),
+    )
+
+    assert out["written"] is True
+    assert out["active"] is True
+    assert out["candidate_plan_count"] == 1
+    bundle = json.loads(Path(out["path"]).read_text(encoding="utf-8"))
+    assert bundle["source_schema"] == "nerv_receiver_closed_modelsize_ladder.v1"
+    row = bundle["rows"][0]
+    assert row["state_npz_manifest_path"] == manifest_path.as_posix()
+    assert row["waterfill_plan"]["candidate_id"] == "receiver_smoke:receiver_smoke"
+    assert "full_video_coverage_missing" in row["blockers"]
+    assert "receiver_closed_byte_proof_missing" in row["blockers"]
+    assert "hi_nerv_receiver_cache_quality_is_false_authority" in row["blockers"]
+    assert out["score_claim"] is False
+
+
+def test_hinerv_runner_waterfill_from_trained_ladder_fails_closed_without_saliency(
+    tmp_path: Path,
+) -> None:
+    out = runner_mod._write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
+        output_dir=tmp_path / "waterfill",
+        trained_archive_byte_oracle={
+            "schema": "hi_nerv_trained_archive_byte_oracle.v1",
+            "candidate_id": "candidate_a",
+            "receiver_closed_modelsize_ladder_path": (
+                tmp_path / "missing_ladder.json"
+            ).as_posix(),
+        },
+        decoder_weight_saliency_artifact={"written": False},
+    )
+
+    assert out["written"] is False
+    assert "hi_nerv_decoder_weight_saliency_artifact_missing_for_waterfill" in out[
+        "blockers"
+    ]
+    assert "hi_nerv_trained_receiver_closed_modelsize_ladder_missing_for_waterfill" in out[
+        "blockers"
+    ]
+
+
 def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
     weights = runner_mod._compact_scoreaware_stage_loss_weights(
         recon=0.25,
@@ -2092,6 +3219,16 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
     assert weights["scorer_input_contrast_floor"] == pytest.approx(1.0)
     assert weights["scorer_input_shape_tether"] == pytest.approx(1.0)
     assert weights["segnet_direct_live_distill"] == pytest.approx(2.0)
+    assert weights["segnet_direct_live_class_histogram"] == pytest.approx(2.0)
+    assert weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(
+        2.0
+    )
+    assert weights["segnet_direct_live_class_balanced_ce"] == pytest.approx(2.0)
+    assert weights[
+        "segnet_direct_live_class_balanced_squared_hinge"
+    ] == pytest.approx(2.0)
+    assert weights["segnet_direct_live_class_region_recon"] == pytest.approx(2.0)
+    assert weights["segnet_direct_live_target_mass_floor"] == pytest.approx(2.0)
     assert len(stages) == 1
     assert stages[0].start_epoch == 0
     assert stages[0].end_epoch == 9
@@ -2108,6 +3245,7 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
     assert dict(warmup_stages[0].loss_weights) == {
         **weights,
         "pose_distill": 0.0,
+        "pose_direct_live_distill": 0.0,
     }
     assert warmup_stages[1].start_epoch == 3
     assert warmup_stages[1].end_epoch == 9
@@ -2127,7 +3265,7 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
         )
 
 
-def test_compact_scoreaware_direct_live_escape_warmup_stages_base_only() -> None:
+def test_compact_scoreaware_direct_live_escape_warmup_amplifies_class_atoms() -> None:
     weights = runner_mod._compact_scoreaware_stage_loss_weights(
         recon=0.25,
         segnet=2.0,
@@ -2138,6 +3276,7 @@ def test_compact_scoreaware_direct_live_escape_warmup_stages_base_only() -> None
         epochs=8,
         loss_weights=weights,
         segnet_direct_live_escape_warmup_epochs=3,
+        segnet_direct_live_escape_class_multiplier=3.0,
     )
 
     assert len(stages) == 2
@@ -2147,10 +3286,41 @@ def test_compact_scoreaware_direct_live_escape_warmup_stages_base_only() -> None
         0.0
     )
     assert stages[0].loss_weights["segnet_direct_live_distill"] == pytest.approx(2.0)
-    assert "segnet_direct_live_class_balanced_ce" not in stages[0].loss_weights
+    assert stages[0].loss_weights[
+        "segnet_direct_live_class_histogram"
+    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights[
+        "segnet_direct_live_class_balanced_hinge"
+    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights[
+        "segnet_direct_live_class_balanced_ce"
+    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights[
+        "segnet_direct_live_class_balanced_squared_hinge"
+    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights[
+        "segnet_direct_live_class_region_recon"
+    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights[
+        "segnet_direct_live_rare_class_logit"
+    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights[
+        "segnet_direct_live_target_mass_floor"
+    ] == pytest.approx(6.0)
     assert stages[1].start_epoch == 3
     assert stages[1].end_epoch == 8
     assert dict(stages[1].loss_weights) == weights
+    with pytest.raises(
+        CompactRendererMlxSpineRunnerError,
+        match="segnet_direct_live_escape_class_multiplier",
+    ):
+        runner_mod._compact_scoreaware_curriculum_stages(
+            substrate_id="unit_hi_nerv",
+            epochs=8,
+            loss_weights=weights,
+            segnet_direct_live_escape_warmup_epochs=3,
+            segnet_direct_live_escape_class_multiplier=0.0,
+        )
 
 
 def test_compact_scoreaware_shape_and_pose_warmups_compose() -> None:
@@ -2181,15 +3351,37 @@ def test_compact_scoreaware_shape_and_pose_warmups_compose() -> None:
     assert stages[0].loss_weights == {
         **weights,
         "pose_distill": 0.0,
+        "pose_direct_live_distill": 0.0,
         "segnet_direct_live_distill": 0.0,
+        "segnet_direct_live_class_histogram": 0.0,
+        "segnet_direct_live_class_balanced_hinge": 0.0,
+        "segnet_direct_live_class_balanced_ce": 0.0,
+        "segnet_direct_live_class_balanced_squared_hinge": 0.0,
+        "segnet_direct_live_class_region_recon": 0.0,
+        "segnet_direct_live_rare_class_logit": 0.0,
+        "segnet_direct_live_target_mass_floor": 0.0,
+        "segnet_direct_live_target_min_ratio_floor": 0.0,
         "segnet_direct_live_base_loss": 0.0,
     }
     assert stages[1].loss_weights == {
         **weights,
         "pose_distill": 0.0,
+        "pose_direct_live_distill": 0.0,
         "segnet_direct_live_distill": 0.0,
+        "segnet_direct_live_class_histogram": 0.0,
+        "segnet_direct_live_class_balanced_hinge": 0.0,
+        "segnet_direct_live_class_balanced_ce": 0.0,
+        "segnet_direct_live_class_balanced_squared_hinge": 0.0,
+        "segnet_direct_live_class_region_recon": 0.0,
+        "segnet_direct_live_rare_class_logit": 0.0,
+        "segnet_direct_live_target_mass_floor": 0.0,
+        "segnet_direct_live_target_min_ratio_floor": 0.0,
     }
-    assert stages[2].loss_weights == {**weights, "pose_distill": 0.0}
+    assert stages[2].loss_weights == {
+        **weights,
+        "pose_distill": 0.0,
+        "pose_direct_live_distill": 0.0,
+    }
     assert stages[3].loss_weights == weights
 
 
@@ -2243,6 +3435,8 @@ def test_compact_family_interrupted_report_preserves_false_authority_evidence(
     assert startup.as_posix() in evidence_paths
     assert telemetry.as_posix() in evidence_paths
     assert all("sha256" in row for row in payload["evidence_files"])
+    assert Path(payload["candidate_feedback"]["row_path"]).is_file()
+    assert payload["candidate_feedback"]["row"]["schema"] == "nerv_candidate_feedback_row.v1"
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
@@ -2359,6 +3553,224 @@ def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
     assert checkpoint_meta.as_posix() in evidence_paths
     assert checkpoint_live.as_posix() in evidence_paths
     assert checkpoint_ema.as_posix() in evidence_paths
+    assert Path(payload["candidate_feedback"]["row_path"]).is_file()
+    assert payload["candidate_feedback"]["row"]["schema"] == "nerv_candidate_feedback_row.v1"
+
+
+def test_recover_interrupted_report_summarizes_snerv_nested_long_training_telemetry(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "snerv_run"
+    train_dir = (
+        out
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "snerv_score_aware_long_training"
+        / "long_training"
+    )
+    train_dir.mkdir(parents=True)
+    startup = out / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "pid": 123,
+                "execute_family": "snerv",
+                "planner_row_id": "snerv::candidate::pact_muon_adamw",
+                "modelsize_candidate_id": "snerv_candidate",
+                "modelsize_candidate": {
+                    "candidate_id": "snerv_candidate",
+                    "num_pairs": 600,
+                },
+                "output_dir": out.as_posix(),
+                "source_video_path": "/Volumes/VertigoDataTier/pact/upstream/videos/0.mkv",
+                "hard_byte_ceilings": [178_000],
+                "command_args": {"execute_family": "snerv", "num_pairs": 16},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    telemetry = train_dir / "telemetry.jsonl"
+    telemetry.write_text(
+        "\n".join(
+            [
+                json.dumps({"epoch": 0, "loss": 195.0}, sort_keys=True),
+                json.dumps(
+                    {
+                        "captured_at_utc": "2026-06-05T17:30:58Z",
+                        "epoch": 1,
+                        "learning_rate": 1e-3,
+                        "loss": 713.17,
+                        "loss_components": {
+                            "dual_ascent_metric__snerv_posenet_yuv6_pair_distill": 100.7159,
+                            "dual_ascent_metric__snerv_scorer_input_distribution_guard": 3.585,
+                            "dual_ascent_metric__snerv_segnet_last_frame_distill": 0.2474,
+                            "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 6.0,
+                            "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.365,
+                            "dual_ascent_missing_metric__snerv_coder_qat_quant_residual": 0.0,
+                            "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                            "dual_ascent_missing_metric__snerv_scorer_input_distribution_guard": 0.0,
+                            "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                            "loss_part_coder_qat_quant_residual": 0.03918,
+                            "loss_part_pr95_stage_forced_extra_qat_active": 1.0,
+                            "loss_part_pr95_stage_scorer_input_distribution_guard": 3.585,
+                            "loss_part_weighted_coder_qat_quant_residual": 0.000064,
+                            "train_time_section_bytes__decoder_payload": 13_518.0,
+                            "train_time_section_bytes__lf_payload": 388.0,
+                        },
+                        "per_axis_decomposition": {
+                            "pose": 399.86,
+                            "seg": 6.15,
+                        },
+                    },
+                    sort_keys=True,
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = runner_mod._write_compact_family_interrupted_report_from_startup_marker(
+        output_dir=out,
+        reason="unit_test_snerv_recovery",
+    )
+
+    payload = json.loads(Path(report["report_path"]).read_text(encoding="utf-8"))
+    telemetry_summary = payload["telemetry_summary"]
+    loss_components = telemetry_summary["last_loss_components"]
+    assert payload["mode"] == "recovered_interrupted_compact_family_run"
+    assert payload["execute_family"] == "snerv"
+    assert payload["training_executed"] is True
+    assert "snerv_training_interrupted_before_export" in payload["blockers"]
+    assert telemetry_summary["row_count"] == 2
+    assert telemetry_summary["last_epoch"] == 1
+    assert telemetry_summary["path"] == telemetry.as_posix()
+    assert payload["score_aware_long_training_telemetry_contract"]["passed"] is True
+    assert loss_components["loss_part_pr95_stage_forced_extra_qat_active"] == 1.0
+    assert loss_components["loss_part_coder_qat_quant_residual"] == 0.03918
+    assert (
+        loss_components[
+            "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"
+        ]
+        == 0.0
+    )
+    assert loss_components["train_time_section_bytes__decoder_payload"] == 13_518.0
+    evidence_paths = {row["path"] for row in payload["evidence_files"]}
+    assert startup.as_posix() in evidence_paths
+    assert telemetry.as_posix() in evidence_paths
+    assert Path(payload["candidate_feedback"]["row_path"]).is_file()
+    assert payload["candidate_feedback"]["row"]["schema"] == "nerv_candidate_feedback_row.v1"
+    feedback_row = payload["candidate_feedback"]["row"]
+    assert feedback_row["candidate_id"] == "snerv_candidate"
+    assert feedback_row["feedback_kind"] == "score_aware_training_telemetry"
+    assert feedback_row["candidate_num_pairs"] == 600
+    assert feedback_row["measured_num_pairs"] == 16
+    assert feedback_row["scope_matches_candidate"] is False
+    assert feedback_row["feedback_scope"] == "bounded_score_aware_training_telemetry"
+    assert feedback_row["snerv_scorer_domain_tether_health"]["passed"] is True
+    assert feedback_row["snerv_scorer_domain_tether_passed"] is True
+    assert feedback_row["snerv_scorer_input_distribution_guard_proof"]["passed"] is True
+    assert feedback_row["snerv_renderer_nondegenerate_proof"]["passed"] is False
+
+
+@pytest.mark.parametrize("family", ("hi_nerv", "snerv"))
+def test_recover_interrupted_report_preserves_startup_rerun_provenance(
+    tmp_path: Path,
+    family: str,
+) -> None:
+    out = tmp_path / f"{family}_run"
+    out.mkdir()
+    startup = out / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    original_argv = [
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        family,
+        "--output-dir",
+        out.as_posix(),
+        "--num-pairs",
+        "16",
+        "--epochs",
+        "1",
+    ]
+    rerun_argv = [
+        sys.executable,
+        (REPO_ROOT / "tools/run_compact_renderer_mlx_spine_runner.py").as_posix(),
+        "--execute-family",
+        family,
+        "--output-dir",
+        out.as_posix(),
+        "--num-pairs",
+        "16",
+        "--epochs",
+        "1",
+        "--overwrite",
+    ]
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "pid": 456,
+                "execute_family": family,
+                "planner_row_id": f"{family}::unit::rerun",
+                "modelsize_candidate_id": f"{family}_candidate",
+                "modelsize_candidate": {"candidate_id": f"{family}_candidate"},
+                "output_dir": out.as_posix(),
+                "source_video_path": (
+                    "/Volumes/VertigoDataTier/pact/upstream/videos/0.mkv"
+                ),
+                "hard_byte_ceilings": [178_000],
+                "command_args": {"execute_family": family, "num_pairs": 16},
+                "original_argv": original_argv,
+                "direct_smoke_rerun_argv": rerun_argv,
+                "runner_invocation_provenance": {
+                    "schema": "compact_runner_invocation_provenance.v1",
+                    "source": "startup_marker",
+                    "original_argv": original_argv,
+                    "original_arg_tokens": original_argv[1:],
+                    "same_output_dir_rerun": {
+                        "argv": rerun_argv,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = runner_mod._write_compact_family_interrupted_report_from_startup_marker(
+        output_dir=out,
+        reason="unit_test_rerun_recovery",
+    )
+
+    payload = json.loads(Path(report["report_path"]).read_text(encoding="utf-8"))
+    provenance = payload["runner_invocation_provenance"]
+    assert payload["mode"] == "recovered_interrupted_compact_family_run"
+    assert payload["execute_family"] == family
+    assert payload["original_argv"] == original_argv
+    assert payload["direct_smoke_rerun_argv"] == rerun_argv
+    assert provenance["source"] == "startup_marker_recovery"
+    assert provenance["same_output_dir_rerun"]["argv"] == rerun_argv
+    assert provenance["recovered_from_startup_marker"] is True
+    assert provenance["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert f"{family}_training_interrupted_before_export" in payload["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
@@ -2380,12 +3792,27 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb": 0.0625,
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair": 0.09375,
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.09375,
+                    "loss_part_pr95_stage_posenet_yuv6_geometry_tether": 0.1875,
+                    "loss_part_pr95_stage_posenet_yuv6_geometry_tether_pair": 0.09375,
+                    "loss_part_pr95_stage_posenet_yuv6_geometry_tether_temporal_delta": 0.09375,
                     "loss_part_pr95_stage_posenet_temporal_signal_floor": 0.125,
                     "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio": 0.3125,
                     "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_abs_ratio": 0.28125,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.03125,
                     "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.75,
                     "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+                    "loss_part_segnet_direct_live_class_histogram_loss": 0.021,
+                    "loss_part_segnet_direct_live_class_balanced_hinge_loss": 0.022,
+                    "loss_part_segnet_direct_live_class_balanced_ce_loss": 0.023,
+                    "loss_part_segnet_direct_live_class_balanced_squared_hinge_loss": 0.024,
+                    "loss_part_segnet_direct_live_class_region_recon_loss": 0.025,
+                    "loss_part_segnet_direct_live_target_mass_floor_loss": 0.026,
+                    "loss_part_pr95_stage_segnet_direct_live_target_mass_floor_loss": 0.026,
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 0.027,
+                    "loss_part_pr95_stage_segnet_direct_live_target_min_ratio_floor_loss": 0.027,
                     "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.015625,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.0625,
@@ -2395,8 +3822,36 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
                     "dual_ascent_missing_metric__hi_nerv_scorer_input_distribution_guard": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_histogram": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_missing_fraction_histogram": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_ce": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_missing_fraction_ce": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_squared_hinge": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_region_recon": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_mass_floor": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.0,
                     "dual_ascent_lambda__hi_nerv_segnet_last_frame_distill": 0.125,
                     "dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill": 0.25,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_histogram": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_missing_fraction_histogram": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_ce": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_missing_fraction_ce": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_squared_hinge": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_region_recon": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_region_recon": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_mass_floor": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_floor": 0.03125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_floor_gate": 0.03125,
                     "dual_ascent_lambda__hi_nerv_archive_total_bytes": 0.375,
                     "dual_ascent_lambda__hi_nerv_decoder_payload_section_bytes": 0.5,
                     "dual_ascent_weight_applied__hi_nerv_archive_total_bytes": 1.0,
@@ -2420,11 +3875,19 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
         pose_distillation_weight=1.0,
         segnet_student_live_calibration_weight=1.0,
         segnet_direct_live_distillation_weight=0.5,
+        segnet_direct_live_class_histogram_weight=0.25,
+        segnet_direct_live_class_balanced_hinge_weight=0.5,
+        segnet_direct_live_class_balanced_ce_weight=0.25,
+        segnet_direct_live_class_balanced_squared_hinge_weight=0.25,
+        segnet_direct_live_class_region_recon_weight=0.25,
+        segnet_direct_live_target_mass_floor_weight=0.25,
+        segnet_direct_live_target_min_ratio_floor_weight=0.25,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
         scorer_input_distribution_guard_weight=2.0,
         scorer_input_shape_tether_weight=1.0,
+        posenet_yuv6_geometry_tether_weight=1.0,
         posenet_temporal_signal_floor_weight=1.0,
         gradient_multiplier_controls_requested=True,
     )
@@ -2454,6 +3917,10 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["scorer_input_shape_tether_segnet_metric_observed"] is True
     assert contract["scorer_input_shape_tether_posenet_pair_metric_observed"] is True
     assert contract["scorer_input_shape_tether_posenet_delta_metric_observed"] is True
+    assert contract["expected_posenet_yuv6_geometry_tether_metric"] is True
+    assert contract["posenet_yuv6_geometry_tether_metric_observed"] is True
+    assert contract["posenet_yuv6_geometry_tether_pair_metric_observed"] is True
+    assert contract["posenet_yuv6_geometry_tether_delta_metric_observed"] is True
     assert contract["expected_posenet_temporal_signal_floor_metric"] is True
     assert contract["posenet_temporal_signal_floor_metric_observed"] is True
     assert contract["posenet_temporal_signal_floor_std_ratio_metric_observed"] is True
@@ -2464,12 +3931,142 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
+    assert contract["expected_segnet_direct_live_subcontrols"] == {
+        "class_balanced_ce": True,
+        "class_balanced_hinge": True,
+        "class_balanced_squared_hinge": True,
+        "class_histogram": True,
+        "class_region_recon": True,
+        "rare_class_logit": False,
+        "target_mass_floor": True,
+        "target_min_ratio_floor": True,
+    }
     assert contract["segnet_direct_live_distillation_loss_observed"] is True
     assert contract["segnet_direct_live_argmax_metric_observed"] is True
     assert contract["segnet_direct_live_class_occupancy_metric_observed"] is True
+    assert contract["segnet_direct_live_class_histogram_metric_observed"] is True
+    assert contract["segnet_direct_live_class_balanced_hinge_metric_observed"] is True
+    assert contract["segnet_direct_live_class_balanced_ce_metric_observed"] is True
+    assert (
+        contract["segnet_direct_live_class_balanced_squared_hinge_metric_observed"]
+        is True
+    )
+    assert contract["segnet_direct_live_class_region_recon_metric_observed"] is True
+    assert contract["segnet_direct_live_target_mass_floor_metric_observed"] is True
+    assert (
+        contract["segnet_direct_live_target_min_ratio_floor_metric_observed"] is True
+    )
+    assert contract["segnet_direct_live_dual_metric_observed"] is True
+    assert contract["segnet_direct_live_dual_lambda_active_observed"] is True
+    assert contract["missing_segnet_direct_live_dual_metric_suffixes"] == []
+    assert contract["missing_segnet_direct_live_dual_activation_suffixes"] == []
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
     ] == pytest.approx(0.6)
+    assert contract["segnet_direct_live_target_class_coverage_metric_observed"] is True
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
+    ] == pytest.approx(1.0)
+    assert contract["segnet_direct_live_target_class_min_ratio_metric_observed"] is True
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_min_ratio"
+    ] == pytest.approx(0.25)
+
+
+def test_hinerv_training_telemetry_contract_tracks_source_pairs(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "batch_observability": {
+                    "train_batch": {
+                        "actual_batch_size": 2,
+                        "source_pair_indices": [1, 0],
+                    },
+                },
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.03125,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.25,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.125,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["train_source_pair_indices_observed"] == [0, 1]
+    assert contract["train_source_pair_count_observed"] == 2
+    assert contract["train_max_actual_batch_size_observed"] == 2
+
+
+def test_hinerv_training_telemetry_contract_allows_under_budget_byte_duals(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "train_time_archive_rate_score": 0.01,
+                    "train_time_section_rate_score__decoder_payload": 0.002,
+                    "dual_ascent_violation__hi_nerv_archive_total_bytes": -0.03,
+                    "dual_ascent_update_count__hi_nerv_archive_total_bytes": 1.0,
+                    "dual_ascent_violation__hi_nerv_decoder_payload_section_bytes": -0.02,
+                    "dual_ascent_update_count__hi_nerv_decoder_payload_section_bytes": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["archive_byte_dual_positive_violation_observed"] is False
+    assert contract["archive_byte_dual_update_observed"] is True
+    assert contract["section_byte_dual_positive_violation_observed"] is False
+    assert contract["section_byte_dual_update_observed"] is True
+    assert contract["archive_byte_dual_lambda_active_observed"] is False
+    assert contract["section_byte_dual_lambda_active_observed"] is False
+    assert contract["blockers"] == []
 
 
 def test_hinerv_training_telemetry_contract_rejects_section_rate_without_section_lambda(
@@ -2484,6 +4081,7 @@ def test_hinerv_training_telemetry_contract_rejects_section_rate_without_section
                     "train_time_archive_rate_score": 0.01,
                     "train_time_section_rate_score__decoder_payload": 0.002,
                     "dual_ascent_lambda__hi_nerv_archive_total_bytes": 0.375,
+                    "dual_ascent_violation__hi_nerv_decoder_payload_section_bytes": 0.004,
                 },
             },
             sort_keys=True,
@@ -2506,6 +4104,7 @@ def test_hinerv_training_telemetry_contract_rejects_section_rate_without_section
 
     assert contract["passed"] is False
     assert contract["section_rate_metric_observed"] is True
+    assert contract["section_byte_dual_positive_violation_observed"] is True
     assert contract["section_byte_dual_lambda_active_observed"] is False
     assert (
         "hi_nerv_score_aware_training_section_byte_dual_lambda_never_active"
@@ -2525,7 +4124,9 @@ def test_hinerv_training_telemetry_contract_rejects_lambda_without_weight_applic
                     "train_time_archive_rate_score": 0.01,
                     "train_time_section_rate_score__decoder_payload": 0.002,
                     "dual_ascent_lambda__hi_nerv_archive_total_bytes": 0.375,
+                    "dual_ascent_violation__hi_nerv_archive_total_bytes": 0.005,
                     "dual_ascent_lambda__hi_nerv_decoder_payload_section_bytes": 0.5,
+                    "dual_ascent_violation__hi_nerv_decoder_payload_section_bytes": 0.004,
                 },
             },
             sort_keys=True,
@@ -2664,6 +4265,50 @@ def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(
     )
 
 
+def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_subcontrol_metric(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["expected_segnet_direct_live_distillation"] is True
+    assert contract["expected_segnet_direct_live_subcontrols"]["class_region_recon"] is True
+    assert contract["segnet_direct_live_class_region_recon_metric_observed"] is False
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_class_region_recon_metric_missing"
+        in contract["blockers"]
+    )
+
+
 def test_hinerv_training_telemetry_contract_rejects_missing_shape_tether_metrics(
     tmp_path: Path,
 ) -> None:
@@ -2761,6 +4406,52 @@ def test_hinerv_training_telemetry_contract_rejects_missing_temporal_floor_ratio
     )
 
 
+def test_hinerv_training_telemetry_contract_rejects_missing_geometry_tether_parts(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_posenet_yuv6_geometry_tether": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        posenet_yuv6_geometry_tether_weight=1.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["posenet_yuv6_geometry_tether_metric_observed"] is True
+    assert contract["posenet_yuv6_geometry_tether_pair_metric_observed"] is False
+    assert contract["posenet_yuv6_geometry_tether_delta_metric_observed"] is False
+    assert (
+        "hi_nerv_score_aware_training_posenet_yuv6_geometry_tether_pair_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_posenet_yuv6_geometry_tether_delta_metric_missing"
+        in contract["blockers"]
+    )
+
+
 def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
     tmp_path: Path,
 ) -> None:
@@ -2773,6 +4464,12 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
                     "loss_part_segnet_direct_live_distill": 2.0,
                     "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
                     "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.125,
                 },
             },
             sort_keys=True,
@@ -2804,6 +4501,114 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
     )
 
 
+def test_hinerv_training_telemetry_contract_rejects_direct_live_target_class_collapse(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 2.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.4,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.125,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract[
+        "segnet_direct_live_max_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.8)
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
+    ] == pytest.approx(0.4)
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
+        not in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_target_class_coverage_collapsed"
+        in contract["blockers"]
+    )
+
+
+def test_hinerv_training_telemetry_contract_rejects_direct_live_target_mass_collapse(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 2.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.05,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.125,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
+    ] == pytest.approx(1.0)
+    assert contract[
+        "segnet_direct_live_max_candidate_target_class_min_ratio"
+    ] == pytest.approx(0.05)
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_target_class_mass_collapsed"
+        in contract["blockers"]
+    )
+
+
 def test_hinerv_training_telemetry_contract_uses_configured_class_floor(
     tmp_path: Path,
 ) -> None:
@@ -2816,6 +4621,12 @@ def test_hinerv_training_telemetry_contract_uses_configured_class_floor(
                     "loss_part_segnet_direct_live_distill": 2.0,
                     "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
                     "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_argmax_disagreement": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill": 0.125,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_argmax_disagreement": 0.125,
                 },
             },
             sort_keys=True,
@@ -2846,6 +4657,85 @@ def test_hinerv_training_telemetry_contract_uses_configured_class_floor(
         "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
         not in contract["blockers"]
     )
+
+
+def test_hinerv_training_telemetry_contract_requires_direct_live_posenet_dual(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_pose_direct_live_distill": 2.0,
+                    "loss_part_pose_direct_live_raw_mse": 4.0,
+                    "loss_part_pose_direct_live_score_term": 2.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    blocked = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=0.5,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+    assert blocked["passed"] is False
+    assert (
+        "hi_nerv_score_aware_training_direct_live_posenet_dual_metric_never_observed"
+        in blocked["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_direct_live_posenet_dual_lambda_never_active"
+        in blocked["blockers"]
+    )
+
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_pose_direct_live_distill": 2.0,
+                    "loss_part_pose_direct_live_raw_mse": 4.0,
+                    "loss_part_pose_direct_live_score_term": 2.0,
+                    "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_update_count__hi_nerv_posenet_yuv6_pair_distill": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    passed = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=0.5,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+    assert passed["passed"] is True
+    assert passed["posenet_direct_live_dual_metric_observed"] is True
+    assert passed["posenet_direct_live_dual_lambda_active_observed"] is True
+    assert passed["missing_posenet_direct_live_dual_metric_suffixes"] == []
+    assert passed["missing_posenet_direct_live_dual_activation_suffixes"] == []
 
 
 def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
@@ -3099,6 +4989,112 @@ def _write_planner_row_queue_artifact(
     return path
 
 
+def _write_snerv_lf_hf_replacement_queue_artifact(
+    path: Path,
+    *,
+    row_id: str = "snerv_lf_hf_replace_unit",
+    status: str = "local_bounded_smoke_ready_no_authority",
+    blocked: bool = False,
+    runnable_contract: bool = True,
+    solution_family: str = "official_tub_lf_hf_decoder_replacement",
+    include_bounded_training_contract: bool = True,
+    bounded_training_contract_bound: bool = True,
+    include_command: bool = True,
+    include_unblock_command: bool = False,
+    unblock_contract_runnable: bool = True,
+    command_extra: list[str] | None = None,
+) -> Path:
+    bounded_training_contract = {
+        "schema": "snerv_lf_hf_bounded_training_binding_contract.v1",
+        "solution_family": solution_family,
+        "runner_actuator_required": True,
+        "runner_actuator_bound": bounded_training_contract_bound,
+        "runner_actuator": {
+            "kind": "bounded_snerv_training_smoke",
+            "runner": "tools/run_compact_renderer_mlx_spine_runner.py",
+            "consumes_queue_artifact": True,
+        }
+        if bounded_training_contract_bound
+        else None,
+        "blockers": []
+        if bounded_training_contract_bound
+        else ["snerv_lf_conditioned_hf_bounded_training_binding_missing"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    command = [
+        "python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        "snerv",
+        "--planner-row-id",
+        row_id,
+        "--num-pairs",
+        "16",
+        "--epochs",
+        "128",
+        "--modelsize-candidate-id",
+        "snerv_lf_hf_unit_candidate",
+        *(command_extra or []),
+    ]
+    row = {
+        "schema": "snerv_lf_hf_replacement_candidate_row.v1",
+        "queue_row_id": row_id,
+        "row_id": row_id,
+        "family": "snerv",
+        "candidate_class": "learned_lf_hf_replacement",
+        "solution_family": solution_family,
+        "status": status,
+        "blocked": blocked,
+        "launch_authority_contract": {
+            "schema": "nerv_long_training_queue_launch_authority_contract.v1",
+            "queue_status_is_local_mlx_plan": True,
+            "queue_status_is_runnable_plan": runnable_contract,
+            "queue_launch_blockers": []
+            if runnable_contract
+            else ["unit_not_runnable"],
+            "queue_status_is_receiver_proof": False,
+            "queue_status_is_cpu_replay_proof": False,
+            "queue_status_is_exact_eval_authority": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if include_command:
+        row["command_argv"] = command
+    if include_unblock_command:
+        row["unblock_command_argv"] = command
+        row["unblock_launch_authority_contract"] = {
+            "schema": "snerv_lf_hf_queue_unblock_launch_contract.v1",
+            "queue_unblock_status_is_local_mlx_plan": True,
+            "queue_unblock_status_is_runnable_plan": unblock_contract_runnable,
+            "queue_unblock_kind": "snerv_renderer_nondegenerate_smoke",
+            "queue_unblock_blockers": []
+            if unblock_contract_runnable
+            else ["snerv_lf_hf_queue_unblock_command_not_runnable"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    if include_bounded_training_contract:
+        row["bounded_training_binding_contract"] = bounded_training_contract
+    payload = {
+        "schema": "snerv_lf_hf_replacement_queue.v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "queue_rows": [row],
+    }
+    path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    return path
+
+
 def test_planner_row_launch_gate_requires_queue_artifact_for_planner_row() -> None:
     blockers = runner_mod._planner_row_launch_blockers(
         SimpleNamespace(
@@ -3138,6 +5134,177 @@ def test_planner_row_launch_gate_allows_queued_runnable_artifact(
     record = guard["queue_artifact_status"]["artifact_records"][0]
     assert record["bytes"] == queue_path.stat().st_size
     assert record["sha256"] == runner_mod._sha256_file(queue_path)
+
+
+def test_planner_row_launch_gate_accepts_snerv_lf_hf_replacement_queue_rows(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+    )
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    assert runner_mod._planner_row_launch_blockers(args) == []
+    guard = runner_mod._planner_row_launch_guard(args)
+    match = guard["queue_artifact_status"]["matched_runnable_records"][0]
+    assert match["context"] == "queue_rows[0]"
+    assert match["row_status_runnable"] is True
+    assert match["launch_contract_runnable"] is True
+    assert match["score_claim"] is False
+    assert match["promotion_eligible"] is False
+    assert match["ready_for_exact_eval_dispatch"] is False
+
+
+def test_planner_row_launch_gate_rejects_snerv_lf_hf_runnable_without_command(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+        include_command=False,
+    )
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(args)
+    assert "planner_row_command_missing" in blockers
+    assert "snerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
+
+
+def test_planner_row_launch_gate_accepts_snerv_lf_hf_blocked_unblock_command(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+        status="blocked_until_prerequisite_evidence",
+        blocked=True,
+        runnable_contract=False,
+        bounded_training_contract_bound=False,
+        include_command=False,
+        include_unblock_command=True,
+    )
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    assert runner_mod._planner_row_launch_blockers(args) == []
+    guard = runner_mod._planner_row_launch_guard(args)
+    match = guard["queue_artifact_status"]["matched_runnable_records"][0]
+    assert match["context"] == "queue_rows[0].unblock_command_argv"
+    assert match["planner_row_command_mode"] == "unblock"
+    assert match["blocked"] is True
+    assert match["row_status_runnable"] is True
+    assert match["launch_contract_runnable"] is True
+
+
+def test_planner_row_launch_gate_rejects_snerv_lf_hf_unbound_unblock_command(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+        status="blocked_until_prerequisite_evidence",
+        blocked=True,
+        runnable_contract=False,
+        bounded_training_contract_bound=False,
+        include_command=False,
+        include_unblock_command=True,
+        unblock_contract_runnable=False,
+    )
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(args)
+    assert "snerv_lf_hf_queue_unblock_command_not_runnable" in blockers
+    assert "snerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
+
+
+def test_planner_row_launch_gate_rejects_snerv_lf_hf_missing_training_contract(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+        include_bounded_training_contract=False,
+    )
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(args)
+    assert "snerv_lf_hf_bounded_training_binding_contract_missing" in blockers
+    assert "snerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
+    guard = runner_mod._planner_row_launch_guard(args)
+    match = guard["queue_artifact_status"]["matched_records"][0]
+    assert match["row_status_runnable"] is True
+    assert match["launch_contract_runnable"] is False
+
+
+def test_planner_row_launch_gate_rejects_snerv_lf_hf_unbound_training_contract(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+        solution_family="lf_conditioned_hf_residual_generator",
+        bounded_training_contract_bound=False,
+    )
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(args)
+    assert "snerv_lf_hf_bounded_training_binding_contract_not_bound" in blockers
+    assert "snerv_lf_conditioned_hf_bounded_training_binding_missing" in blockers
+    assert "snerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
 
 
 def test_planner_row_launch_gate_rejects_fake_queue_schema(
@@ -3310,6 +5477,8 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
             "2,2,1",
             "--snerv-official-skip-high-mode",
             "shared_mean",
+            "--snerv-official-trained-checkpoint-state-dict-path",
+            "official_state_queued.npz",
         ],
     )
 
@@ -3328,6 +5497,9 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
             snerv_official_enc_strds=(1, 3, 2),
             snerv_official_dec_strds=(2, 2, 1),
             snerv_official_skip_high_mode="full",
+            snerv_official_trained_checkpoint_state_dict_path=Path(
+                "official_state_local.npz"
+            ),
             repo_root=REPO_ROOT,
         )
     )
@@ -3336,6 +5508,11 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
     assert "planner_row_command_mismatch:--snerv-modelsize-control-profile" in blockers
     assert "planner_row_command_mismatch:--snerv-official-enc-strds" in blockers
     assert "planner_row_command_mismatch:--snerv-official-skip-high-mode" in blockers
+    assert (
+        "planner_row_command_mismatch:"
+        "--snerv-official-trained-checkpoint-state-dict-path"
+        in blockers
+    )
     assert "planner_row_command_mismatch:--snerv-official-dec-strds" not in blockers
 
 
@@ -3430,6 +5607,73 @@ def test_planner_row_launch_gate_allows_only_bounded_timing_smoke_waiver() -> No
         )
     )
     assert "snerv_bounded_timing_smoke_waiver_exceeds_limits" in blockers
+
+
+def test_snerv_bounded_timing_smoke_skips_scorer_loop_qat_by_default() -> None:
+    args = SimpleNamespace(
+        coder_aware_qat=True,
+        snerv_scorer_loop_qat=False,
+        snerv_bounded_smoke_allow_scorer_loop_qat=False,
+    )
+
+    effective, policy = runner_mod._snerv_scorer_loop_qat_request_policy(
+        args,
+        bounded_timing_smoke_waiver_consumed=True,
+    )
+
+    assert effective is False
+    assert policy["requested"] is True
+    assert policy["effective_requested"] is False
+    assert policy["blockers"] == [
+        "snerv_bounded_timing_smoke_scorer_loop_qat_skipped"
+    ]
+    assert "packet_compression" in policy["skip_reason"]
+
+
+def test_snerv_bounded_timing_smoke_can_opt_into_scorer_loop_qat() -> None:
+    args = SimpleNamespace(
+        coder_aware_qat=False,
+        snerv_scorer_loop_qat=True,
+        snerv_bounded_smoke_allow_scorer_loop_qat=True,
+    )
+
+    effective, policy = runner_mod._snerv_scorer_loop_qat_request_policy(
+        args,
+        bounded_timing_smoke_waiver_consumed=True,
+    )
+
+    assert effective is True
+    assert policy["requested"] is True
+    assert policy["effective_requested"] is True
+    assert policy["blockers"] == []
+
+
+def test_snerv_native_scorer_loop_qat_status_prefers_nested_export_truth() -> None:
+    status = runner_mod._snerv_native_scorer_loop_qat_status(
+        {
+            "scorer_loop_qat_attached": True,
+            "scorer_loop_qat_receiver_contract_satisfied": True,
+            "scorer_loop_qat_ready_for_pose_guard_gate": True,
+            "scorer_loop_qat_accepted_improvement": True,
+            "scorer_loop_qat_best_materialized": True,
+            "scorer_loop_qat": {
+                "executed": False,
+                "receiver_contract_satisfied": False,
+                "ready_for_pose_guard_gate": False,
+                "accepted_improvement": False,
+                "best_packet_materialized": True,
+                "emitted_packet_uses_scorer_loop_best_decoder": False,
+            },
+        }
+    )
+
+    assert status == {
+        "attached": False,
+        "receiver_contract_satisfied": False,
+        "ready_for_pose_guard_gate": False,
+        "accepted_improvement": False,
+        "best_materialized": False,
+    }
 
 
 def test_planner_row_launch_gate_allows_explicit_manual_without_row() -> None:
@@ -4372,6 +6616,42 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 max_gain=max_gain,
             )
 
+        def fit_scorer_domain_bootstrap_from_targets(
+            self,
+            target_rgb_0,
+            target_rgb_1,
+            *,
+            pair_indices,
+            steps,
+            learning_rate,
+            rgb_weight,
+            yuv6_weight,
+            temporal_delta_weight,
+            contrast_floor_weight,
+            rgb_std_min_ratio,
+            yuv6_temporal_std_min_ratio,
+            weight_decay,
+            grad_clip_max_norm,
+        ):
+            captured["scorer_domain_bootstrap_call"] = {
+                "target0_shape": tuple(target_rgb_0.shape),
+                "target1_shape": tuple(target_rgb_1.shape),
+                "steps": int(steps),
+            }
+            return _fake_hinerv_scorer_domain_bootstrap_payload(
+                pair_indices,
+                steps=steps,
+                learning_rate=learning_rate,
+                rgb_weight=rgb_weight,
+                yuv6_weight=yuv6_weight,
+                temporal_delta_weight=temporal_delta_weight,
+                contrast_floor_weight=contrast_floor_weight,
+                rgb_std_min_ratio=rgb_std_min_ratio,
+                yuv6_temporal_std_min_ratio=yuv6_temporal_std_min_ratio,
+                weight_decay=weight_decay,
+                grad_clip_max_norm=grad_clip_max_norm,
+            )
+
         def num_parameters(self):
             return 123
 
@@ -4423,6 +6703,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured[
             "bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
         ] = float(bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio)
+        captured["bundle_posenet_yuv6_geometry_tether_weight"] = float(
+            bundle.posenet_yuv6_geometry_tether_weight
+        )
         captured["bundle_posenet_temporal_signal_floor_weight"] = float(
             bundle.posenet_temporal_signal_floor_weight
         )
@@ -4431,6 +6714,18 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         )
         captured["bundle_posenet_temporal_signal_min_mean_abs_ratio"] = float(
             bundle.posenet_temporal_signal_min_mean_abs_ratio
+        )
+        captured["bundle_segnet_direct_live_rare_class_logit_weight"] = float(
+            bundle.segnet_direct_live_rare_class_logit_weight
+        )
+        captured["bundle_segnet_direct_live_class_balanced_hinge_weight"] = float(
+            bundle.segnet_direct_live_class_balanced_hinge_weight
+        )
+        captured[
+            "bundle_segnet_direct_live_class_balanced_squared_hinge_weight"
+        ] = float(bundle.segnet_direct_live_class_balanced_squared_hinge_weight)
+        captured["bundle_segnet_direct_live_class_region_recon_weight"] = float(
+            bundle.segnet_direct_live_class_region_recon_weight
         )
         captured["run_prioritized_pair_indices"] = tuple(
             kwargs["prioritized_pair_indices"]
@@ -4447,17 +6742,60 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] = float(
             kwargs["scorer_space_step_guard_max_post_segnet_contrast_ratio"]
         )
+        captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] = float(
+            kwargs["scorer_space_step_guard_max_post_segnet_distribution_mae"]
+        )
+        captured[
+            "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+        ] = float(kwargs["scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"])
+        captured[
+            "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+        ] = float(kwargs["scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"])
         captured["scorer_space_step_guard_backtracking_steps"] = int(
             kwargs["scorer_space_step_guard_backtracking_steps"]
         )
+        captured[
+            "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+        ] = float(
+            kwargs[
+                "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+            ]
+        )
         captured["scorer_space_step_guard_backtracking_shrink"] = float(
             kwargs["scorer_space_step_guard_backtracking_shrink"]
+        )
+        captured["scorer_support_ladder_enabled"] = bool(
+            kwargs["scorer_support_ladder_enabled"]
+        )
+        captured["scorer_support_ladder_target_coverage_floor"] = float(
+            kwargs["scorer_support_ladder_target_coverage_floor"]
+        )
+        captured["scorer_support_ladder_target_min_ratio_floor"] = float(
+            kwargs["scorer_support_ladder_target_min_ratio_floor"]
+        )
+        captured["scorer_support_ladder_patience_steps"] = int(
+            kwargs["scorer_support_ladder_patience_steps"]
+        )
+        captured["scorer_support_ladder_growth_factor"] = float(
+            kwargs["scorer_support_ladder_growth_factor"]
+        )
+        captured["scorer_support_ladder_max_multiplier"] = float(
+            kwargs["scorer_support_ladder_max_multiplier"]
+        )
+        captured["scorer_support_ladder_base_loss_max_when_active"] = float(
+            kwargs["scorer_support_ladder_base_loss_max_when_active"]
         )
         captured["curriculum_stage_loss_weights"] = [
             dict(stage.loss_weights) for stage in kwargs["curriculum_stages"]
         ]
         captured["run_pr95_curriculum_total_epochs"] = int(
             kwargs["pr95_curriculum_total_epochs"]
+        )
+        captured["checkpoint_selection_metric_key"] = str(
+            kwargs["checkpoint_selection_metric_key"]
+        )
+        captured["checkpoint_selection_metric_required"] = bool(
+            kwargs["checkpoint_selection_metric_required"]
         )
         dual_config = kwargs["train_time_dual_ascent_config"]
         captured["dual_ascent_constraints"] = {
@@ -4523,8 +6861,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         scorer_input_guard_stage_weight=1.0,
         scorer_input_contrast_floor_stage_weight=None,
         scorer_input_shape_tether_stage_weight=None,
+        posenet_yuv6_geometry_tether_stage_weight=0.75,
         posenet_temporal_signal_floor_stage_weight=0.625,
-        segnet_direct_live_stage_weight=None,
+        segnet_direct_live_stage_weight=1.0,
         segnet_distillation_objective="kl_t2",
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
@@ -4535,6 +6874,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         scorer_input_contrast_floor_weight=0.75,
         scorer_input_contrast_floor_segnet_min_std_ratio=0.6,
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.4,
+        posenet_yuv6_geometry_tether_weight=0.95,
         posenet_temporal_signal_floor_weight=0.85,
         posenet_temporal_signal_min_std_ratio=0.35,
         posenet_temporal_signal_min_mean_abs_ratio=0.45,
@@ -4601,6 +6941,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured[
         "bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
     ] == pytest.approx(0.4)
+    assert captured["bundle_posenet_yuv6_geometry_tether_weight"] == pytest.approx(
+        0.95
+    )
     assert captured["bundle_posenet_temporal_signal_floor_weight"] == pytest.approx(
         0.85
     )
@@ -4610,6 +6953,18 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured[
         "bundle_posenet_temporal_signal_min_mean_abs_ratio"
     ] == pytest.approx(0.45)
+    assert captured["bundle_segnet_direct_live_rare_class_logit_weight"] == (
+        pytest.approx(0.0)
+    )
+    assert captured["bundle_segnet_direct_live_class_balanced_hinge_weight"] == (
+        pytest.approx(0.0)
+    )
+    assert captured[
+        "bundle_segnet_direct_live_class_balanced_squared_hinge_weight"
+    ] == pytest.approx(0.0)
+    assert captured["bundle_segnet_direct_live_class_region_recon_weight"] == (
+        pytest.approx(0.0)
+    )
     temporal_dual = captured["dual_ascent_constraints"][
         "hi_nerv_posenet_temporal_signal_floor"
     ]
@@ -4618,9 +6973,42 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     )
     assert temporal_dual["loss_weight_key"] == "posenet_temporal_signal_floor"
     assert temporal_dual["weight_scale"] == pytest.approx(0.85)
+    geometry_dual = captured["dual_ascent_constraints"][
+        "hi_nerv_posenet_yuv6_geometry_tether"
+    ]
+    assert geometry_dual["metric_name"] == (
+        "loss_part_posenet_yuv6_geometry_tether"
+    )
+    assert geometry_dual["loss_weight_key"] == "posenet_yuv6_geometry_tether"
+    assert geometry_dual["weight_scale"] == pytest.approx(0.95)
     assert captured["curriculum_stage_loss_weights"]
     assert all(
+        weights["posenet_yuv6_geometry_tether"] == pytest.approx(0.75)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
         weights["posenet_temporal_signal_floor"] == pytest.approx(0.625)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_target_mass_floor"] == pytest.approx(1.0)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_rare_class_logit"] == pytest.approx(0.0)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(0.0)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_class_balanced_squared_hinge"]
+        == pytest.approx(0.0)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_class_region_recon"] == pytest.approx(0.0)
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert captured["scorer_space_step_guard_enabled"] is True
@@ -4631,12 +7019,49 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
     ] == pytest.approx(0.4)
     assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (
-        pytest.approx(2.0)
+        pytest.approx(4.25)
+    )
+    assert captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] == (
+        pytest.approx(runner_mod.HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD)
+    )
+    assert captured[
+        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+    ] == (
+        pytest.approx(
+            runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD
+        )
+    )
+    assert captured[
+        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+    ] == (
+        pytest.approx(
+            runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD
+        )
     )
     assert captured["scorer_space_step_guard_backtracking_steps"] == 6
+    assert captured[
+        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+    ] == pytest.approx(
+        runner_mod.HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
+    )
     assert captured["scorer_space_step_guard_backtracking_shrink"] == pytest.approx(0.5)
+    assert captured["scorer_support_ladder_enabled"] is True
+    assert captured["scorer_support_ladder_target_coverage_floor"] == pytest.approx(
+        runner_mod.HI_NERV_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
+    )
+    assert captured["scorer_support_ladder_target_min_ratio_floor"] == pytest.approx(
+        runner_mod.HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE
+    )
+    assert captured["scorer_support_ladder_patience_steps"] == 1
+    assert captured["scorer_support_ladder_growth_factor"] == pytest.approx(2.0)
+    assert captured["scorer_support_ladder_max_multiplier"] == pytest.approx(16.0)
+    assert captured["scorer_support_ladder_base_loss_max_when_active"] == pytest.approx(
+        0.25
+    )
     assert captured["run_prioritized_pair_indices"] == (7, 2)
     assert captured["run_pr95_curriculum_total_epochs"] == 8
+    assert captured["checkpoint_selection_metric_key"] == "total"
+    assert captured["checkpoint_selection_metric_required"] is False
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
     training = metadata["score_aware_training"]
     assert metadata["model_num_pairs"] == 10
@@ -4645,10 +7070,29 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert metadata["sparse_prioritized_target_hydration"] is False
     priority = training["prioritized_pair_training"]
     step_guard = training["scorer_space_step_guard"]
+    support_ladder = training["segnet_direct_live_class_support_ladder"]
     assert step_guard["enabled"] is True
     assert step_guard["bound_to_shared_mlx_adapter"] is True
     assert step_guard["min_post_segnet_occupied_class_fraction"] == pytest.approx(0.4)
-    assert step_guard["max_post_segnet_contrast_ratio"] == pytest.approx(2.0)
+    assert step_guard["max_post_segnet_contrast_ratio"] == pytest.approx(4.25)
+    assert step_guard["max_post_segnet_distribution_mae"] == pytest.approx(
+        runner_mod.HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD
+    )
+    assert support_ladder["enabled"] is True
+    assert support_ladder["bound_to_shared_mlx_adapter"] is True
+    assert support_ladder["target_coverage_floor"] == pytest.approx(
+        runner_mod.HI_NERV_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE
+    )
+    assert support_ladder["target_min_ratio_floor"] == pytest.approx(
+        runner_mod.HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE
+    )
+    assert support_ladder["stage_order"][0] == "target_mass_floor_plus_rare_class_logit"
+    assert step_guard["max_post_posenet_yuv6_distribution_mae"] == pytest.approx(
+        runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD
+    )
+    assert step_guard["max_post_posenet_yuv6_contrast_ratio"] == pytest.approx(
+        runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD
+    )
     assert step_guard["backtracking_steps"] == 6
     assert step_guard["backtracking_shrink"] == pytest.approx(0.5)
     assert priority["sampling_scope"] == (
@@ -4692,6 +7136,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert output_init["bound_to_renderer_model"] is True
     assert output_init["runtime_sidecar_bytes"] == 0
     assert output_init["archive_charged_decoder_tensors"] == [
+        "decoder.bootstrap.weight",
         "head_rgb_0.bias",
         "head_rgb_0.weight",
         "head_rgb_1.bias",
@@ -4715,6 +7160,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     monkeypatch,
 ) -> None:
     from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
     from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
 
     captured: dict[str, object] = {}
@@ -4759,6 +7205,37 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
                 max_gain=max_gain,
             )
 
+        def fit_scorer_domain_bootstrap_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            steps,
+            learning_rate,
+            rgb_weight,
+            yuv6_weight,
+            temporal_delta_weight,
+            contrast_floor_weight,
+            rgb_std_min_ratio,
+            yuv6_temporal_std_min_ratio,
+            weight_decay,
+            grad_clip_max_norm,
+        ):
+            return _fake_hinerv_scorer_domain_bootstrap_payload(
+                pair_indices,
+                steps=steps,
+                learning_rate=learning_rate,
+                rgb_weight=rgb_weight,
+                yuv6_weight=yuv6_weight,
+                temporal_delta_weight=temporal_delta_weight,
+                contrast_floor_weight=contrast_floor_weight,
+                rgb_std_min_ratio=rgb_std_min_ratio,
+                yuv6_temporal_std_min_ratio=yuv6_temporal_std_min_ratio,
+                weight_decay=weight_decay,
+                grad_clip_max_norm=grad_clip_max_norm,
+            )
+
         def num_parameters(self):
             return 123
 
@@ -4781,6 +7258,17 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         shape = (int(num_pairs), int(output_height), int(output_width), 3)
         return np.zeros(shape, dtype=np.float32), np.zeros(shape, dtype=np.float32)
 
+    def fake_export_hi_nerv_mlx_archive(
+        _model_obj,
+        archive_output_dir,
+        **kwargs,
+    ):
+        captured["export_hard_byte_ceiling"] = kwargs.get("hard_byte_ceiling")
+        Path(archive_output_dir).mkdir(parents=True, exist_ok=True)
+        archive = Path(archive_output_dir) / "fake_hinerv_export_archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        return archive, runner_mod._sha256_file(archive), archive.stat().st_size
+
     def fake_run_mlx_score_aware_full_main(**kwargs):
         captured["run_pr95_curriculum_total_epochs"] = int(
             kwargs["pr95_curriculum_total_epochs"]
@@ -4788,6 +7276,11 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         captured["run_pr95_enabled"] = bool(
             kwargs["pr95_faithful_curriculum_enabled"]
         )
+        exported = kwargs["bundle"].export_archive_fn(
+            kwargs["bundle"].model,
+            tmp_path / "fake_hinerv_export",
+        )
+        captured["export_callback_result"] = exported
         archive = tmp_path / "fake_hinerv_pr95_total_archive.zip"
         _write_synthetic_pr95_archive(archive, pairs=2)
         return FakeArtifact(
@@ -4810,6 +7303,11 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         mlx_score_aware_pkg,
         "run_mlx_score_aware_full_main",
         fake_run_mlx_score_aware_full_main,
+    )
+    monkeypatch.setattr(
+        hinerv_archive_candidate,
+        "export_hi_nerv_mlx_archive",
+        fake_export_hi_nerv_mlx_archive,
     )
     monkeypatch.setattr(
         hinerv_mlx_renderer,
@@ -4939,13 +7437,14 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert consumption["candidate_id"] == "hinerv-private-smoke-candidate"
     assert consumption["consumed_by_runner_config"] is True
     assert consumption["consumed_by_decoder_codec"] is True
-    assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is False
-    assert consumption["archive_export_hard_byte_ceiling_measurement_bypass"] is True
+    assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is True
+    assert consumption["archive_export_hard_byte_ceiling_measurement_bypass"] is False
     assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is True
     assert consumption["train_time_section_byte_control_active"] is True
     assert consumption["train_time_section_byte_control_blockers"] == []
     assert consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"] == []
     assert consumption["hard_byte_ceiling"] == 178_000
+    assert captured["export_hard_byte_ceiling"] == 178_000
     assert metadata["config"]["latent_dim_mid"] == 4
     assert metadata["config"]["embed_dim"] == 4
     assert metadata["config"]["decoder_channels"] == [4, 4, 4, 4, 4, 4, 4]
@@ -5000,6 +7499,37 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
                 pair_indices,
                 min_output_std=min_output_std,
                 max_gain=max_gain,
+            )
+
+        def fit_scorer_domain_bootstrap_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            steps,
+            learning_rate,
+            rgb_weight,
+            yuv6_weight,
+            temporal_delta_weight,
+            contrast_floor_weight,
+            rgb_std_min_ratio,
+            yuv6_temporal_std_min_ratio,
+            weight_decay,
+            grad_clip_max_norm,
+        ):
+            return _fake_hinerv_scorer_domain_bootstrap_payload(
+                pair_indices,
+                steps=steps,
+                learning_rate=learning_rate,
+                rgb_weight=rgb_weight,
+                yuv6_weight=yuv6_weight,
+                temporal_delta_weight=temporal_delta_weight,
+                contrast_floor_weight=contrast_floor_weight,
+                rgb_std_min_ratio=rgb_std_min_ratio,
+                yuv6_temporal_std_min_ratio=yuv6_temporal_std_min_ratio,
+                weight_decay=weight_decay,
+                grad_clip_max_norm=grad_clip_max_norm,
             )
 
         def num_parameters(self):
@@ -5314,12 +7844,12 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         if row["local_mlx_launch_command_ready"]
     ]
     assert campaign_plan["launchable_local_row_count"] == len(launchable_local_rows)
-    assert launchable_local_rows
+    assert launchable_local_rows == []
+    assert all(row["command_argv"] for row in campaign_plan["campaign_rows"])
     assert any(
-        row["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_status_is_local_mlx_plan"
-        ]
-        is True
+        row["family"] == "hi_nerv"
+        and "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
+        in row["blockers"]
         for row in campaign_plan["campaign_rows"]
     )
     assert all(
@@ -5348,17 +7878,6 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert campaign_plan["experiment_queue_experiment_count"] == campaign_plan[
         "campaign_row_count"
     ]
-    ready_families = {
-        row["family"]
-        for row in launchable_local_rows
-    }
-    assert "hi_nerv" in ready_families
-    assert any(
-        row["family"] == "hi_nerv"
-        and "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
-        in row["blockers"]
-        for row in campaign_plan["campaign_rows"]
-    )
     snerv_campaign_rows = [
         row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"
     ]
@@ -6186,6 +8705,45 @@ def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> Non
     assert near_cap["modelsize_auto_selection_hard_byte_ceiling"] == 178_000
     assert near_cap["score_claim"] is False
     assert near_cap["ready_for_exact_eval_dispatch"] is False
+    launch_args = runner_mod._parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--planner-row-id",
+            "unit_hi_near_cap_auto",
+            "--allow-manual-compact-family-launch",
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "8",
+        ]
+    )
+    assert runner_mod._uncalibrated_near_cap_modelsize_launch_blocker(
+        args=launch_args,
+        modelsize_candidate=near_cap,
+    ) == "hi_nerv_modelsize_auto_near_cap_requires_measured_archive_feedback_before_long_training"
+    probe_args = runner_mod._parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--planner-row-id",
+            "unit_hi_near_cap_probe",
+            "--allow-manual-compact-family-launch",
+            "--allow-unscored-research-smoke",
+            "--allow-bounded-planner-row-timing-smoke-waiver",
+            "--num-pairs",
+            "16",
+            "--epochs",
+            "1",
+        ]
+    )
+    assert (
+        runner_mod._uncalibrated_near_cap_modelsize_launch_blocker(
+            args=probe_args,
+            modelsize_candidate=near_cap,
+        )
+        is None
+    )
 
     nominal = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
@@ -6507,6 +9065,8 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "snerv_export.json"
+    state_slice = tmp_path / "official_trained_checkpoint_state_dict_slice.npz"
+    state_slice.write_bytes(b"npz state slice")
     path.write_text(
         json.dumps(
             {
@@ -6521,6 +9081,25 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
                 "hard_byte_ceiling_checked_after_export": True,
                 "calibrated_archive_overrun_bytes": 228_036,
                 "required_nominal_payload_bytes_max": 91_875,
+                "official_checkpoint_export_binding": {
+                    "schema": "snerv_official_checkpoint_export_binding.v1",
+                    "official_trained_checkpoint_state_dict_slice_present": True,
+                    "official_trained_checkpoint_state_dict_slice_path": (
+                        state_slice.name
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_bytes": (
+                        state_slice.stat().st_size
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_sha256": "a" * 64,
+                    "official_trained_checkpoint_state_dict_slice_member_count": 2,
+                    "official_trained_checkpoint_state_dict_slice_member_names": [
+                        "decoder.layers.0.weight",
+                        "encoder.layers.0.weight",
+                    ],
+                    "official_trained_checkpoint_state_dict_slice_runner_arg": (
+                        "--snerv-official-trained-checkpoint-state-dict-path"
+                    ),
+                },
                 "modelsize_candidate": {
                     "candidate_id": "snerv-row",
                     "family": "snerv",
@@ -6540,6 +9119,7 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
             "family": "snerv",
             "candidate_id": "snerv-row",
             "measured_archive_bytes": 444_036,
+            "measured_payload_bytes": 2_347_396,
             "nominal_total_payload_bytes": 188_854,
             "hard_byte_ceiling": 216_000,
             "decoder_codec": "int8_symmetric",
@@ -6547,6 +9127,26 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
             "required_nominal_payload_bytes_max": 91_875,
             "hard_byte_ceiling_measurement_bypass_enabled": True,
             "hard_byte_ceiling_checked_after_export": True,
+            "snerv_official_trained_checkpoint_state_dict_slice_path": (
+                state_slice.resolve(strict=False).as_posix()
+            ),
+            "snerv_official_trained_checkpoint_state_dict_path": (
+                state_slice.resolve(strict=False).as_posix()
+            ),
+            "snerv_official_trained_checkpoint_state_dict_slice_present": True,
+            "snerv_official_trained_checkpoint_state_dict_slice_file_present": True,
+            "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": (
+                "--snerv-official-trained-checkpoint-state-dict-path"
+            ),
+            "snerv_official_trained_checkpoint_state_dict_slice_bytes": (
+                state_slice.stat().st_size
+            ),
+            "snerv_official_trained_checkpoint_state_dict_slice_sha256": "a" * 64,
+            "snerv_official_trained_checkpoint_state_dict_slice_member_count": 2,
+            "snerv_official_trained_checkpoint_state_dict_slice_member_names": [
+                "decoder.layers.0.weight",
+                "encoder.layers.0.weight",
+            ],
             "source_bound_controls": {
                 "family": "snerv",
                 "hard_byte_ceiling": 216_000,
@@ -6554,6 +9154,8 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
             },
             "receiver_closed": True,
             "receiver_closed_status": "inline_receiver_closed",
+            "receiver_contract_satisfied": True,
+            "receiver_proof_passed": True,
             "source_path": path.resolve(strict=False).as_posix(),
         }
     ]
@@ -6641,15 +9243,34 @@ def test_modelsize_byte_cap_feedback_loader_accepts_snerv_binary_profile_with_re
     )
 
     rows = runner_mod._load_modelsize_byte_cap_feedback_rows([profile])
+    archive_path = (
+        profile.parent.parent
+        / "snerv_run"
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "snerv_mlx_native_archive_bound_package"
+        / "archive.zip"
+    ).resolve(strict=False)
+    packet_path = (
+        profile.parent.parent
+        / "snerv_run"
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "snerv_mlx_native_packet.snar"
+    ).resolve(strict=False)
 
     assert rows == [
         {
             "family": "snerv",
             "candidate_id": scalar["candidate_id"],
             "measured_archive_bytes": 91_445,
+            "measured_payload_bytes": packet_path.stat().st_size,
             "nominal_total_payload_bytes": scalar["nominal_total_payload_bytes"],
             "hard_byte_ceiling": 178_000,
                 "decoder_codec": "int8_symmetric",
+                "packet_sha256": hashlib.sha256(packet_path.read_bytes()).hexdigest(),
+                "archive_path": archive_path.as_posix(),
+                "archive_sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
                 "source_bound_controls": runner_mod._byte_cap_candidate_match_controls(
                     scalar
                 ),
@@ -6767,6 +9388,126 @@ def test_snerv_official_modelsize_controls_require_candidate_resolution() -> Non
                 "0.05",
             ]
         )
+
+
+def test_hinerv_parser_exposes_receiver_bound_latent_codecs() -> None:
+    for codec in (
+        "auto",
+        "int16_hi_ac_brotli_q11",
+        "int8_brotli_q11",
+        "int4_packed_brotli_q11",
+        "int2_packed_brotli_q11",
+    ):
+        args = _parse_args(
+            [
+                "--execute-family",
+                "hi_nerv",
+                "--hi-nerv-latent-codec",
+                codec,
+            ]
+        )
+
+        assert args.execute_family == "hi_nerv"
+        assert args.hi_nerv_latent_codec == codec
+
+
+def test_hinerv_auto_latent_codec_prices_latents_before_decoder_precision() -> None:
+    assert (
+        runner_mod._resolve_hi_nerv_latent_codec_policy(
+            requested="auto",
+            hard_byte_ceiling=178_493,
+        )
+        == "int8_brotli_q11"
+    )
+    assert (
+        runner_mod._resolve_hi_nerv_latent_codec_policy(
+            requested="auto",
+            hard_byte_ceiling=216_000,
+        )
+        == "int16_hi_ac_brotli_q11"
+    )
+    assert (
+        runner_mod._resolve_hi_nerv_latent_codec_policy(
+            requested="int16_raw",
+            hard_byte_ceiling=178_493,
+        )
+        == "int16_raw"
+    )
+
+
+def test_hinerv_execute_resolves_auto_latent_codec_before_training(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_auto_latent_policy",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_493,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "hinerv-auto-latent-policy",
+            "latent_dim": 4,
+            "embed_dim": 4,
+            "decoder_channel": 4,
+            "decoder_codec": "portfolio_auto",
+            "hi_nerv_latent_codec": "auto",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_493,
+            "nominal_total_payload_bytes": 170_000,
+            "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        post_export_receiver_cache_quality_gate=False,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["hi_nerv_latent_codec"] == "int8_brotli_q11"
+    selection = out["modelsize_candidate_selection"]
+    assert selection["requested_hi_nerv_latent_codec"] == "auto"
+    assert selection["launch_hi_nerv_latent_codec"] == "int8_brotli_q11"
+    score_training = out["score_aware_training"]
+    assert score_training["requested_hi_nerv_latent_codec"] == "auto"
+    assert score_training["hi_nerv_latent_codec"] == "int8_brotli_q11"
+    assert score_training["hi_nerv_latent_codec_policy"] == {
+        "schema": "compact_hi_nerv_latent_codec_policy.v1",
+        "requested": "auto",
+        "resolved": "int8_brotli_q11",
+        "hard_byte_ceiling": 178_493,
+        "policy": "protect_decoder_precision_under_178493_by_pricing_latents",
+    }
 
 
 def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> None:
@@ -7396,7 +10137,37 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "scorer_space_step_guard_enabled" in kw_names
     assert "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction" in kw_names
     assert "scorer_space_step_guard_min_post_segnet_occupied_class_fraction" in kw_names
+    assert (
+        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
+        in kw_names
+    )
+    assert "scorer_space_step_guard_min_post_segnet_target_class_min_ratio" in kw_names
+    assert "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop" in kw_names
     assert "scorer_space_step_guard_max_post_segnet_contrast_ratio" in kw_names
+    assert "scorer_space_step_guard_max_post_segnet_distribution_mae" in kw_names
+    assert (
+        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+        in kw_names
+    )
+    assert (
+        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+        in kw_names
+    )
+    assert "scorer_space_step_guard_max_pose_score_term_relative_worsening" in kw_names
+    assert "scorer_space_step_guard_max_pose_score_term_absolute_worsening" in kw_names
+    assert (
+        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
+        in kw_names
+    )
+    assert (
+        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
+        in kw_names
+    )
+    assert "scorer_space_step_guard_max_direct_nonrate_score_worsening" in kw_names
+    assert (
+        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+        in kw_names
+    )
     assert "scorer_space_step_guard_backtracking_steps" in kw_names
     assert "scorer_space_step_guard_backtracking_shrink" in kw_names
     assert "checkpoint_selection_metric_key" in kw_names
@@ -7413,6 +10184,8 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "not direct_live_class_escape_checkpoint_selection_active" in target_source
     assert "loss_part_joint_scorer_proxy_nonrate" in target_source
     assert "loss_part_scorer_input_shape_tether" in target_source
+    assert "posenet_yuv6_geometry_tether_weight" in target_source
+    assert "posenet_yuv6_geometry_tether_stage_weight" in target_source
     assert "posenet_temporal_signal_floor_weight" in target_source
     assert "posenet_temporal_signal_floor_stage_weight" in target_source
     assert "loss_part_segnet_direct_live_escape_selection" in target_source
@@ -7453,6 +10226,9 @@ def test_snerv_native_attachment_forwards_train_time_dual_ascent_to_shared_harne
     target_source = ast.get_source_segment(source, target_fn) or ""
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
     assert "scorer_input_distribution_guard_weight=guard_weight" in target_source
+    assert "posenet_yuv6_geometry_tether_weight=geometry_tether_weight" in (
+        target_source
+    )
     assert "score_aware_long_training_posenet_temporal_signal_floor_weight" in (
         target_source
     )
@@ -7474,6 +10250,7 @@ def test_snerv_required_control_contract_rejects_missing_temporal_floor_binding(
         scorer_input_distribution_guard_weight=0.0,
         scorer_input_contrast_floor_weight=0.0,
         scorer_input_shape_tether_weight=0.0,
+        posenet_yuv6_geometry_tether_weight=0.0,
         posenet_temporal_signal_floor_weight=1.0,
     )
 
@@ -7482,6 +10259,34 @@ def test_snerv_required_control_contract_rejects_missing_temporal_floor_binding(
     assert contract["controls"]["posenet_temporal_signal_floor"]["bound"] is False
     assert (
         "snerv_score_aware_long_training_posenet_temporal_signal_floor_required_control_not_bound"
+        in contract["blockers"]
+    )
+
+
+def test_snerv_required_control_contract_rejects_missing_geometry_binding() -> None:
+    contract = runner_mod._snerv_score_aware_long_training_required_control_contract(
+        executed=True,
+        score_aware_long_training={
+            "posenet_yuv6_geometry_tether_bound": False,
+        },
+        training_telemetry_contract={
+            "expected_posenet_yuv6_geometry_tether_metric": True,
+            "posenet_yuv6_geometry_tether_metric_observed": True,
+            "posenet_yuv6_geometry_tether_pair_metric_observed": True,
+            "posenet_yuv6_geometry_tether_delta_metric_observed": True,
+        },
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_input_contrast_floor_weight=0.0,
+        scorer_input_shape_tether_weight=0.0,
+        posenet_yuv6_geometry_tether_weight=1.0,
+        posenet_temporal_signal_floor_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["controls"]["posenet_yuv6_geometry_tether"]["required"] is True
+    assert contract["controls"]["posenet_yuv6_geometry_tether"]["bound"] is False
+    assert (
+        "snerv_score_aware_long_training_posenet_yuv6_geometry_tether_required_control_not_bound"
         in contract["blockers"]
     )
 
@@ -7512,6 +10317,11 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     args = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "1"])
 
     assert args.optimizer_kind == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert (
+        args.segnet_distillation_objective
+        == runner_mod.HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE
+    )
+    assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.gradient_multiplier_by_name == []
     assert args.bias_gradient_multiplier is None
     assert args.output_head_bias_gradient_multiplier == pytest.approx(1.0)
@@ -7522,13 +10332,74 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     )
     assert (
         args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
-        == pytest.approx(0.4)
+        == pytest.approx(
+            runner_mod.HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+        )
     )
     assert args.scorer_space_step_guard_max_post_segnet_contrast_ratio == (
-        pytest.approx(2.0)
+        pytest.approx(4.25)
+    )
+    assert args.scorer_space_step_guard_max_post_segnet_distribution_mae == (
+        pytest.approx(runner_mod.HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD)
+    )
+    assert args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae == (
+        pytest.approx(
+            runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD
+        )
+    )
+    assert args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio == (
+        pytest.approx(
+            runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD
+        )
+    )
+    assert args.scorer_space_step_guard_max_post_segnet_argmax_disagreement == (
+        pytest.approx(0.5)
+    )
+    assert args.scorer_space_step_guard_max_post_pose_score_term is None
+    assert args.scorer_space_step_guard_max_post_pose_direct_live_score_term is None
+    assert (
+        args.scorer_space_step_guard_max_pose_score_term_relative_worsening
+        == pytest.approx(
+            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD
+        )
+    )
+    assert (
+        args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
+        == pytest.approx(
+            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD
+        )
+    )
+    assert (
+        args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+        == pytest.approx(
+            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD
+        )
+    )
+    assert (
+        args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+        == pytest.approx(
+            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD
+        )
+    )
+    assert (
+        args.scorer_space_step_guard_max_direct_nonrate_score_worsening
+        == pytest.approx(
+            runner_mod.HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
+        )
+    )
+    assert (
+        args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+        == pytest.approx(
+            runner_mod.HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
+        )
     )
     assert args.scorer_space_step_guard_backtracking_steps == 6
     assert args.scorer_space_step_guard_backtracking_shrink == pytest.approx(0.5)
+    assert args.scorer_support_ladder_enabled is True
+    assert args.scorer_support_ladder_patience_steps == 1
+    assert args.scorer_support_ladder_growth_factor == pytest.approx(2.0)
+    assert args.scorer_support_ladder_max_multiplier == pytest.approx(16.0)
+    assert args.scorer_support_ladder_base_loss_max_when_active == pytest.approx(0.25)
     assert (
         args.checkpoint_interval_epochs
         == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS
@@ -7536,6 +10407,96 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     assert args.checkpoint_dir is None
     assert args.resume_from_checkpoint is None
     assert args.hi_nerv_pr95_curriculum_total_epochs is None
+
+
+def test_hinerv_main_forwards_direct_live_pose_weight(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_execute_hi_nerv(**kwargs):
+        captured.update(kwargs)
+        report_path = (
+            Path(kwargs["output_dir"])
+            / "compact_renderer_mlx_spine_runner_report.json"
+        )
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema": runner_mod.COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+            "mode": "unit_hi_nerv_forwarded",
+            "report_path": report_path.as_posix(),
+            "archive_path": str(tmp_path / "archive.zip"),
+            "archive_bytes": 123,
+            "archive_sha256": "a" * 64,
+            "blockers": ["unit_false_authority"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        report_path.write_text(json.dumps(payload), encoding="utf-8")
+        return payload
+
+    monkeypatch.setattr(
+        runner_mod,
+        "execute_hi_nerv_mlx_scoreaware_and_adapt",
+        fake_execute_hi_nerv,
+    )
+
+    rc = runner_mod.main(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--source-video-path",
+            str(REPO_ROOT / "upstream/videos/0.mkv"),
+            "--num-pairs",
+            "1",
+            "--epochs",
+            "1",
+            "--batch-pairs",
+            "1",
+            "--planner-row-id",
+            "unit_hinerv_direct_live_pose_forwarding",
+            "--segnet-distillation-weight",
+            "0.25",
+            "--pose-distillation-weight",
+            "0.125",
+            "--pose-direct-live-distillation-weight",
+            "0.0625",
+            "--pose-distillation-warmup-epochs",
+            "1",
+            "--segnet-direct-live-escape-warmup-epochs",
+            "1",
+            "--segnet-direct-live-escape-class-multiplier",
+            "3.5",
+            "--allow-unscored-research-smoke",
+            "--allow-bounded-planner-row-timing-smoke-waiver",
+            "--allow-duplicate-campaign",
+            "--overwrite",
+        ]
+    )
+
+    assert rc == 0
+    assert captured["pose_distillation_weight"] == pytest.approx(0.125)
+    assert captured["pose_direct_live_distillation_weight"] == pytest.approx(0.0625)
+    assert captured["pose_distillation_warmup_epochs"] == 1
+    assert captured["segnet_direct_live_escape_warmup_epochs"] == 1
+    assert captured["segnet_direct_live_escape_class_multiplier"] == pytest.approx(3.5)
+    out = json.loads(capsys.readouterr().out)
+    assert out["mode"] == "unit_hi_nerv_forwarded"
+    report_payload = json.loads(
+        (tmp_path / "out" / "compact_renderer_mlx_spine_runner_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    _assert_compact_runner_rerun_provenance(
+        report_payload,
+        family="hi_nerv",
+        output_dir=tmp_path / "out",
+    )
 
 
 def test_compact_runner_parser_accepts_hi_nerv_pr95_curriculum_total_epochs() -> None:
@@ -8013,12 +10974,16 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "2.25",
             "--segnet-direct-live-stage-weight",
             "0.5",
+            "--segnet-direct-live-target-mass-floor-weight",
+            "0.1875",
             "--pose-distillation-warmup-epochs",
             "2",
             "--scorer-input-shape-warmup-epochs",
             "3",
             "--segnet-direct-live-escape-warmup-epochs",
             "1",
+            "--segnet-direct-live-escape-class-multiplier",
+            "2.75",
             "--scorer-input-distribution-guard-weight",
             "0.125",
             "--scorer-input-distribution-guard-saturation-margin",
@@ -8118,6 +11083,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.000004",
             "--snerv-native-mlx-decoder-train-optimizer",
             "lion",
+            "--snerv-official-trained-checkpoint-state-dict-path",
+            "official_state.npz",
             "--snerv-score-aware-long-training-epochs",
             "17",
             "--snerv-score-aware-long-training-lr",
@@ -8135,6 +11102,10 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--snerv-score-aware-long-training-eval-roundtrip-ste",
             "--snerv-score-aware-long-training-scorer-tether-smoke-steps",
             "4",
+            "--segnet-direct-live-escape-class-multiplier",
+            "3.25",
+            "--segnet-direct-live-target-mass-floor-weight",
+            "0.3125",
             "--scorer-input-distribution-guard-weight",
             "0.5",
             "--scorer-input-distribution-guard-saturation-margin",
@@ -8169,9 +11140,11 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.scorer_input_contrast_floor_stage_weight == pytest.approx(1.25)
     assert hi.scorer_input_shape_tether_stage_weight == pytest.approx(2.25)
     assert hi.segnet_direct_live_stage_weight == pytest.approx(0.5)
+    assert hi.segnet_direct_live_target_mass_floor_weight == pytest.approx(0.1875)
     assert hi.pose_distillation_warmup_epochs == 2
     assert hi.scorer_input_shape_warmup_epochs == 3
     assert hi.segnet_direct_live_escape_warmup_epochs == 1
+    assert hi.segnet_direct_live_escape_class_multiplier == pytest.approx(2.75)
     assert hi.scorer_input_distribution_guard_weight == pytest.approx(0.125)
     assert hi.scorer_input_distribution_guard_saturation_margin == pytest.approx(
         0.03125
@@ -8231,6 +11204,9 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_native_mlx_decoder_train_lr == 0.0003
     assert sn.snerv_native_mlx_decoder_train_ridge == 0.000004
     assert sn.snerv_native_mlx_decoder_train_optimizer == "lion"
+    assert sn.snerv_official_trained_checkpoint_state_dict_path == Path(
+        "official_state.npz"
+    )
     assert sn.snerv_score_aware_long_training_epochs == 17
     assert sn.snerv_score_aware_long_training_lr == 0.0025
     assert sn.snerv_score_aware_long_training_batch_pairs == 6
@@ -8240,6 +11216,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_score_aware_long_training_weight_decay == -1.0
     assert sn.snerv_score_aware_long_training_eval_roundtrip_ste is True
     assert sn.snerv_score_aware_long_training_scorer_tether_smoke_steps == 4
+    assert sn.segnet_direct_live_escape_class_multiplier == pytest.approx(3.25)
+    assert sn.segnet_direct_live_target_mass_floor_weight == pytest.approx(0.3125)
     assert sn.scorer_input_distribution_guard_weight == pytest.approx(0.5)
     assert sn.scorer_input_distribution_guard_saturation_margin == pytest.approx(0.04)
     assert sn.scorer_input_distribution_guard_temperature == pytest.approx(0.02)
@@ -8407,6 +11385,8 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
             "0.625",
             "--segnet-direct-live-class-balanced-squared-hinge-weight",
             "0.875",
+            "--segnet-direct-live-class-region-recon-weight",
+            "0.9375",
             "--recon-loss-stage-weight",
             "0.5",
             "--segnet-loss-stage-weight",
@@ -8419,6 +11399,8 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
             "0.625",
             "--scorer-input-shape-tether-stage-weight",
             "0.875",
+            "--posenet-yuv6-geometry-tether-stage-weight",
+            "0.9375",
             "--segnet-direct-live-stage-weight",
             "0.125",
             "--pose-distillation-warmup-epochs",
@@ -8427,7 +11409,45 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
             "3",
             "--segnet-direct-live-escape-warmup-epochs",
             "1",
+            "--segnet-direct-live-escape-class-multiplier",
+            "4.0",
             "--allow-segnet-only-research",
+            "--scorer-space-step-guard-min-pre-segnet-occupied-class-fraction",
+            "0.21",
+            "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction",
+            "0.22",
+            "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction",
+            "0.23",
+            "--scorer-space-step-guard-max-post-segnet-contrast-ratio",
+            "2.4",
+            "--scorer-space-step-guard-max-post-segnet-distribution-mae",
+            "0.24",
+            "--scorer-space-step-guard-max-post-posenet-yuv6-distribution-mae",
+            "0.25",
+            "--scorer-space-step-guard-max-post-posenet-yuv6-contrast-ratio",
+            "2.5",
+            "--scorer-space-step-guard-max-post-segnet-argmax-disagreement",
+            "0.26",
+            "--scorer-space-step-guard-max-post-pose-score-term",
+            "1.1",
+            "--scorer-space-step-guard-max-post-pose-direct-live-score-term",
+            "0.051",
+            "--scorer-space-step-guard-max-pose-score-term-relative-worsening",
+            "0.031",
+            "--scorer-space-step-guard-max-pose-score-term-absolute-worsening",
+            "0.032",
+            "--scorer-space-step-guard-max-pose-direct-live-score-term-relative-worsening",
+            "0.033",
+            "--scorer-space-step-guard-max-pose-direct-live-score-term-absolute-worsening",
+            "0.034",
+            "--scorer-space-step-guard-max-direct-nonrate-score-worsening",
+            "0.035",
+            "--scorer-space-step-guard-max-bootstrap-direct-nonrate-score-worsening",
+            "2.0",
+            "--scorer-space-step-guard-backtracking-steps",
+            "5",
+            "--scorer-space-step-guard-backtracking-shrink",
+            "0.45",
         ]
     )
 
@@ -8443,17 +11463,89 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
     assert captured[
         "segnet_direct_live_class_balanced_squared_hinge_weight"
     ] == pytest.approx(0.875)
+    assert captured["segnet_direct_live_class_region_recon_weight"] == pytest.approx(
+        0.9375
+    )
     assert captured["recon_loss_stage_weight"] == pytest.approx(0.5)
     assert captured["segnet_loss_stage_weight"] == pytest.approx(1.5)
     assert captured["pose_loss_stage_weight"] == pytest.approx(0.25)
     assert captured["scorer_input_guard_stage_weight"] == pytest.approx(0.375)
     assert captured["scorer_input_contrast_floor_stage_weight"] == pytest.approx(0.625)
     assert captured["scorer_input_shape_tether_stage_weight"] == pytest.approx(0.875)
+    assert captured["posenet_yuv6_geometry_tether_stage_weight"] == pytest.approx(
+        0.9375
+    )
     assert captured["segnet_direct_live_stage_weight"] == pytest.approx(0.125)
     assert captured["pose_distillation_warmup_epochs"] == 2
     assert captured["scorer_input_shape_warmup_epochs"] == 3
     assert captured["segnet_direct_live_escape_warmup_epochs"] == 1
+    assert captured["segnet_direct_live_escape_class_multiplier"] == pytest.approx(4.0)
+    assert captured["scorer_space_step_guard_enabled"] is True
+    assert captured[
+        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.21)
+    assert captured[
+        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.22)
+    assert captured[
+        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
+    ] == pytest.approx(0.23)
+    assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (
+        pytest.approx(2.4)
+    )
+    assert captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] == (
+        pytest.approx(0.24)
+    )
+    assert captured[
+        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+    ] == pytest.approx(0.25)
+    assert captured[
+        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+    ] == pytest.approx(2.5)
+    assert captured["scorer_space_step_guard_max_post_segnet_argmax_disagreement"] == (
+        pytest.approx(0.26)
+    )
+    assert captured["scorer_space_step_guard_max_post_pose_score_term"] == (
+        pytest.approx(1.1)
+    )
+    assert captured["scorer_space_step_guard_max_post_pose_direct_live_score_term"] == (
+        pytest.approx(0.051)
+    )
+    assert captured[
+        "scorer_space_step_guard_max_pose_score_term_relative_worsening"
+    ] == pytest.approx(0.031)
+    assert captured[
+        "scorer_space_step_guard_max_pose_score_term_absolute_worsening"
+    ] == pytest.approx(0.032)
+    assert captured[
+        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
+    ] == pytest.approx(0.033)
+    assert captured[
+        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
+    ] == pytest.approx(0.034)
+    assert captured["scorer_space_step_guard_max_direct_nonrate_score_worsening"] == (
+        pytest.approx(0.035)
+    )
+    assert captured[
+        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+    ] == pytest.approx(2.0)
+    assert captured["scorer_space_step_guard_backtracking_steps"] == 5
+    assert captured["scorer_space_step_guard_backtracking_shrink"] == pytest.approx(
+        0.45
+    )
     assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
+    report_payload = json.loads(
+        (
+            tmp_path
+            / "snerv_direct_live"
+            / "compact_renderer_mlx_spine_runner_report.json"
+        ).read_text(encoding="utf-8")
+    )
+    _assert_compact_runner_rerun_provenance(
+        report_payload,
+        family="snerv",
+        output_dir=tmp_path / "snerv_direct_live",
+    )
 
 
 def test_post_export_materializer_executor_runs_output_scoped_queue(
@@ -9489,6 +12581,87 @@ def test_hinerv_trained_archive_byte_oracle_blocks_numeric_receiver_class_collap
     )
 
 
+def test_hinerv_long_mlx_training_readiness_signals_summarize_actuators() -> None:
+    signals = runner_mod._hi_nerv_long_mlx_training_readiness_signals(
+        config_gate={
+            "frontier_targeting": True,
+            "real_segnet_teacher_attached": True,
+            "real_posenet_teacher_attached": True,
+            "pose_direct_live_attached": True,
+        },
+        training_telemetry_contract={
+            "passed": True,
+            "telemetry_path": "/tmp/unit_telemetry.jsonl",
+            "row_count": 4,
+            "archive_byte_dual_lambda_active_observed": True,
+            "archive_byte_dual_weight_applied_observed": True,
+            "section_rate_metric_observed": True,
+            "section_byte_dual_lambda_active_observed": True,
+            "section_byte_dual_weight_applied_observed": True,
+            "posenet_direct_live_score_term_metric_observed": True,
+            "segnet_direct_live_argmax_metric_observed": True,
+            "scorer_input_contrast_floor_metric_observed": True,
+            "posenet_temporal_signal_floor_metric_observed": True,
+        },
+        trained_archive_byte_oracle={
+            "feedback_ready": True,
+            "measured_archive_bytes": 123_456,
+            "archive_sha256": "a" * 64,
+            "measured_byte_cap_report": {
+                "under_tightest_hard_byte_ceiling": True,
+                "delta_bytes_vs_tightest_hard_byte_ceiling": -54_321,
+            },
+            "row": {"archive_bytes": 123_456},
+            "blockers": [],
+        },
+        decoder_weight_saliency_artifact={
+            "written": True,
+            "row_count": 7,
+            "path": "/tmp/saliency.json",
+        },
+        decoder_weight_waterfill_from_trained_ladder={
+            "active": True,
+            "candidate_plan_count": 2,
+            "path": "/tmp/waterfill.json",
+            "blockers": [],
+        },
+        short_scorer_smoke_readiness={
+            "ready_for_long_run": True,
+            "short_scorer_teacher_smoke_ready": True,
+            "report_path": "/tmp/readiness.json",
+            "actionable_blockers": [],
+        },
+        post_export_receiver_cache_quality_summary={
+            "quality_gate_passed": True,
+            "runner_effective_receiver_cache_quality_max_pairs": 16,
+            "runner_quality_floor_receiver_cache_quality_min_pairs": 16,
+            "segnet_argmax_disagreement_rate": 0.02,
+            "mlx_scorer_response_probe_passed": True,
+        },
+        optimizer_policy={
+            "effective_optimizer_label": "pr95_8stage_muon_adamw_every_stage",
+            "pr95_faithful_curriculum_enabled": True,
+            "native_optimizer_active": False,
+            "optimizer_kind": "pact_muon_adamw",
+        },
+        optimizer_controls={"weight_decay_effective": 1.0e-4},
+    )
+
+    assert signals["schema"] == (
+        "compact_hi_nerv_long_mlx_training_readiness_signals.v1"
+    )
+    assert signals["ready_for_controlled_long_mlx_training"] is True
+    assert signals["ready_for_promotion_replay"] is True
+    assert signals["control_blockers"] == []
+    assert signals["archive"]["measured_archive_bytes"] == 123_456
+    assert signals["telemetry"]["section_byte_dual_lambda_active_observed"] is True
+    assert signals["decoder_weight_saliency"]["row_count"] == 7
+    assert signals["decoder_weight_waterfill"]["candidate_plan_count"] == 2
+    assert signals["receiver_cache_quality"]["effective_max_pairs"] == 16
+    assert signals["score_claim"] is False
+    assert signals["ready_for_exact_eval_dispatch"] is False
+
+
 def test_measured_archive_byte_cap_report_allows_selected_looser_ceiling() -> None:
     report = runner_mod._measured_archive_byte_cap_report(
         archive_bytes=240_000,
@@ -10112,6 +13285,11 @@ def test_hinerv_execute_emits_trained_archive_byte_oracle_feedback(
     assert oracle["row"]["nominal_total_payload_bytes"] == 70_000
     assert Path(oracle["path"]).is_file()
     assert Path(oracle["receiver_closed_modelsize_ladder_path"]).is_file()
+    score_training = out["score_aware_training"]
+    assert score_training["archive_path"] == out["archive_path"]
+    assert score_training["archive_bytes"] == out["archive_bytes"]
+    assert score_training["archive_sha256"] == out["archive_sha256"]
+    assert score_training["archive_resolution"]["archive_path"] == out["archive_path"]
     byte_feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
     assert byte_feedback["byte_feedback_source"] == (
         "hi_nerv_trained_archive_byte_oracle"
@@ -10121,6 +13299,18 @@ def test_hinerv_execute_emits_trained_archive_byte_oracle_feedback(
     assert out["candidate_feedback"]["row"]["measured_archive_bytes"] == out[
         "archive_bytes"
     ]
+    readiness = out["hi_nerv_long_mlx_training_readiness_signals"]
+    assert readiness["schema"] == (
+        "compact_hi_nerv_long_mlx_training_readiness_signals.v1"
+    )
+    assert readiness["archive"]["measured_archive_bytes"] == out["archive_bytes"]
+    assert readiness["teachers"]["real_segnet_teacher_attached"] is True
+    assert readiness["teachers"]["real_posenet_teacher_attached"] is True
+    assert out["score_aware_training"]["long_mlx_training_readiness_signals"] == (
+        readiness
+    )
+    assert readiness["score_claim"] is False
+    assert readiness["ready_for_exact_eval_dispatch"] is False
     assert out["score_claim"] is False
     assert out["promotion_eligible"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
@@ -10165,6 +13355,18 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
             "archive_sha256": runner_mod._sha256_file(archive),
             "substrate_artifact_metadata": {
                 "score_aware_training": {
+                    "pose_direct_live_distillation": {
+                        "schema": "mlx_score_aware_pose_direct_live_distillation.v1",
+                        "enabled": False,
+                        "weight": 0.0,
+                        "authority": "macos_mlx_research_signal_false_authority",
+                    },
+                    "training_telemetry_contract": {
+                        "schema": "compact_score_aware_training_telemetry_contract.v1",
+                        "passed": True,
+                        "blockers": [],
+                        "authority": "macos_mlx_research_signal_false_authority",
+                    },
                     "recon_pixel_weight": {
                         "schema": "compact_recon_pixel_weight.v1",
                         "enabled": True,
@@ -10214,17 +13416,33 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
     assert captured["mlx_prefilter_scorer_device"] == "gpu"
     assert out["score_aware_training"]["stage_loss_weights"] == {
         "distill": 2.0,
+        "pose_direct_live_distill": 1.5,
         "pose_distill": 1.5,
         "recon": 0.25,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_guard": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_yuv6_geometry_tether": 1.0,
         "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 2.0,
+        "segnet_direct_live_class_histogram": 0.0,
+        "segnet_direct_live_class_balanced_hinge": 0.0,
+        "segnet_direct_live_class_balanced_ce": 0.0,
+        "segnet_direct_live_class_balanced_squared_hinge": 0.0,
+        "segnet_direct_live_class_region_recon": 0.0,
+        "segnet_direct_live_rare_class_logit": 0.0,
+        "segnet_direct_live_target_mass_floor": 2.0,
+        "segnet_direct_live_target_min_ratio_floor": 0.0,
     }
     assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == (
         "auto_discovered_joint_p18_p19_file"
     )
+    assert out["score_aware_training"]["pose_direct_live_distillation"][
+        "enabled"
+    ] is False
+    assert out["score_aware_training"]["training_telemetry_contract"][
+        "passed"
+    ] is True
     assert "hinerv_candidate_curriculum_recon_pixel_weight_missing" not in out[
         "blockers"
     ]
@@ -10682,7 +13900,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert captured_train_kwargs["latent_dim"] == 12
     assert captured_train_kwargs["embed_dim"] == 16
     assert captured_train_kwargs["decoder_channel"] == 6
-    assert captured_train_kwargs["decoder_codec"] == "int4_mixed"
+    assert captured_train_kwargs["decoder_codec"] == "portfolio_auto"
     assert captured_train_kwargs["hi_nerv_latent_codec"] == "int16_brotli_q11"
     assert captured_train_kwargs["hard_byte_ceiling"] == 178_000
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
@@ -10761,9 +13979,16 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert selection["launch_latent_dim"] == 12
     assert selection["launch_embed_dim"] == 16
     assert selection["launch_decoder_channel"] == 6
-    assert selection["launch_decoder_codec"] == "int4_mixed"
+    assert selection["requested_launch_decoder_codec"] == "int4_mixed"
+    assert selection["launch_decoder_codec"] == "portfolio_auto"
+    assert selection["launch_decoder_codec_policy"][
+        "portfolio_auto_intervened"
+    ] is True
     assert selection["launch_hi_nerv_latent_codec"] == "int16_brotli_q11"
-    assert out["score_aware_training"]["decoder_codec"] == "int4_mixed"
+    assert out["score_aware_training"]["requested_launch_decoder_codec"] == (
+        "int4_mixed"
+    )
+    assert out["score_aware_training"]["decoder_codec"] == "portfolio_auto"
     assert out["score_aware_training"]["hi_nerv_latent_codec"] == (
         "int16_brotli_q11"
     )
@@ -10793,6 +14018,13 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert feedback["feedback_scope"] == "partial_pair_advisory"
     assert feedback["scope_matches_candidate"] is False
     assert feedback["feedback_ready"] is False
+    assert feedback["measured_archive_bytes"] == out["archive_bytes"]
+    assert "partial_pair_byte_feedback_only" in out["candidate_curriculum_plan"][
+        "blockers"
+    ]
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in out[
+        "candidate_curriculum_plan"
+    ]["blockers"]
     candidate_feedback = out["candidate_feedback"]
     assert Path(candidate_feedback["row_path"]).is_file()
     assert Path(candidate_feedback["ledger_path"]).is_file()
@@ -10801,7 +14033,10 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert candidate_feedback["row"]["measured_num_pairs"] == 2
     assert candidate_feedback["row"]["feedback_ready"] is False
     assert candidate_feedback["row"]["feedback_scope"] == "partial_pair_advisory"
-    assert "hinerv_trained_archive_byte_oracle_feedback_missing" in (
+    assert "partial_pair_byte_feedback_only" in (
+        candidate_feedback["row"]["blockers"]
+    )
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in (
         candidate_feedback["row"]["blockers"]
     )
     assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in (
@@ -10818,6 +14053,130 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
         "p18_segnet": "caller_supplied",
         "p19_posenet": "caller_supplied",
     }
+
+
+def test_hinerv_execute_uses_receiver_survival_portfolio_for_scorer_active_candidate(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "score_aware_training": {
+                    "schema": "mlx_score_aware_training_objective.v1",
+                    "training_telemetry_contract": {
+                        "schema": "compact_score_aware_training_telemetry_contract.v1",
+                        "passed": True,
+                        "row_count": 1,
+                        "segnet_direct_live_max_candidate_occupied_class_fraction": 0.8,
+                        "segnet_direct_live_max_candidate_target_class_coverage_fraction": 1.0,
+                        "segnet_direct_live_max_candidate_target_class_min_ratio": 0.25,
+                    },
+                },
+            },
+        }
+
+    def fake_receiver_quality(**_kwargs):
+        return {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "quality_gate_passed": True,
+            "quality_gate": {"verdict": "CACHE_QUALITY_GATE_PASSED"},
+            "segnet_argmax_probe": {
+                "candidate_occupied_class_fraction": 0.8,
+                "reference_occupied_class_fraction": 0.8,
+                "candidate_target_class_coverage_fraction": 1.0,
+                "candidate_target_class_min_ratio": 0.25,
+                "target_material_class_count": 5,
+                "segnet_argmax_disagreement_rate": 0.05,
+                "sample_pairs": 2,
+            },
+            "blockers": [],
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "_write_hi_nerv_runner_post_export_receiver_cache_quality",
+        fake_receiver_quality,
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_direct_live_codec_policy",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "hinerv-direct-live-codec-policy",
+            "latent_dim": 12,
+            "embed_dim": 16,
+            "decoder_channel": 6,
+            "mid_injection_block_index": 2,
+            "fine_injection_block_index": 5,
+            "decoder_codec": "int4_mixed",
+            "hi_nerv_latent_codec": "int16_brotli_q11",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 160_000,
+            "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
+            "modelsize_control_contract": {
+                "schema": "nerv_modelsize_control_contract.v1",
+                "family": "hi_nerv",
+                "control_semantics": (
+                    "local_receiver_visible_grid_search_nearest_target"
+                ),
+                "archive_bytes_authority_required": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        segnet_distillation_objective="boundary_argmax_hinge",
+        segnet_direct_live_distillation_weight=0.25,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
+        pose_direct_live_distillation_weight=0.25,
+        hi_nerv_optimizer_policy="native_optimizer",
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["decoder_codec"] == "portfolio_auto"
+    selection = out["modelsize_candidate_selection"]
+    assert selection["requested_launch_decoder_codec"] == "int4_mixed"
+    assert selection["launch_decoder_codec"] == "portfolio_auto"
+    policy = selection["launch_decoder_codec_policy"]
+    assert policy["portfolio_auto_intervened"] is True
+    assert policy["policy"] == (
+        "score_preserving_receiver_survival_portfolio_under_byte_cap"
+    )
+    assert out["score_aware_training"]["requested_launch_decoder_codec"] == (
+        "int4_mixed"
+    )
+    assert out["score_aware_training"]["launch_decoder_codec"] == "portfolio_auto"
+    assert out["score_aware_training"]["launch_decoder_codec_policy"] == policy
 
 
 def test_hinerv_execute_threads_archive_section_telemetry_into_training(
@@ -11201,6 +14560,37 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
                 max_gain=max_gain,
             )
 
+        def fit_scorer_domain_bootstrap_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            steps,
+            learning_rate,
+            rgb_weight,
+            yuv6_weight,
+            temporal_delta_weight,
+            contrast_floor_weight,
+            rgb_std_min_ratio,
+            yuv6_temporal_std_min_ratio,
+            weight_decay,
+            grad_clip_max_norm,
+        ):
+            return _fake_hinerv_scorer_domain_bootstrap_payload(
+                pair_indices,
+                steps=steps,
+                learning_rate=learning_rate,
+                rgb_weight=rgb_weight,
+                yuv6_weight=yuv6_weight,
+                temporal_delta_weight=temporal_delta_weight,
+                contrast_floor_weight=contrast_floor_weight,
+                rgb_std_min_ratio=rgb_std_min_ratio,
+                yuv6_temporal_std_min_ratio=yuv6_temporal_std_min_ratio,
+                weight_decay=weight_decay,
+                grad_clip_max_norm=grad_clip_max_norm,
+            )
+
         def num_parameters(self):
             return 65050
 
@@ -11439,6 +14829,37 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
                 pair_indices,
                 min_output_std=min_output_std,
                 max_gain=max_gain,
+            )
+
+        def fit_scorer_domain_bootstrap_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            steps,
+            learning_rate,
+            rgb_weight,
+            yuv6_weight,
+            temporal_delta_weight,
+            contrast_floor_weight,
+            rgb_std_min_ratio,
+            yuv6_temporal_std_min_ratio,
+            weight_decay,
+            grad_clip_max_norm,
+        ):
+            return _fake_hinerv_scorer_domain_bootstrap_payload(
+                pair_indices,
+                steps=steps,
+                learning_rate=learning_rate,
+                rgb_weight=rgb_weight,
+                yuv6_weight=yuv6_weight,
+                temporal_delta_weight=temporal_delta_weight,
+                contrast_floor_weight=contrast_floor_weight,
+                rgb_std_min_ratio=rgb_std_min_ratio,
+                yuv6_temporal_std_min_ratio=yuv6_temporal_std_min_ratio,
+                weight_decay=weight_decay,
+                grad_clip_max_norm=grad_clip_max_norm,
             )
 
         def num_parameters(self):
@@ -11889,7 +15310,11 @@ def test_hinerv_pose_distillation_warmup_compiles_real_curriculum_stages() -> No
     assert len(stages) == 2
     assert stages[0].start_epoch == 0
     assert stages[0].end_epoch == 2
-    assert stages[0].loss_weights == {**weights, "pose_distill": 0.0}
+    assert stages[0].loss_weights == {
+        **weights,
+        "pose_distill": 0.0,
+        "pose_direct_live_distill": 0.0,
+    }
     assert stages[1].start_epoch == 2
     assert stages[1].end_epoch == 4
     assert stages[1].loss_weights == weights
@@ -12080,6 +15505,60 @@ def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
         "blockers"
     ]
+
+
+def test_hinerv_execute_forwards_target_mass_floor_to_live_smoke(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_target_mass_floor_forwarding",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_target_mass_floor_weight=0.75,
+        segnet_direct_live_stage_weight=2.5,
+        pose_direct_live_distillation_weight=0.5,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["segnet_direct_live_target_mass_floor_weight"] == (
+        pytest.approx(0.75)
+    )
+    assert captured_train_kwargs["segnet_direct_live_stage_weight"] == pytest.approx(2.5)
+    assert out["score_aware_training_config_gate"]["launch_allowed"] is True
+    assert out["score_aware_training_config_gate"]["direct_live_escape_controls"][
+        "target_mass_floor"
+    ] == pytest.approx(0.75)
+    assert out["candidate_curriculum_plan"]["scorer_pressure"][
+        "segnet_direct_live_subcontrol_weights"
+    ]["target_mass_floor"] == pytest.approx(0.75)
 
 
 def test_hinerv_modelsize_launch_preserves_explicit_segnet_only_research(
@@ -13244,6 +16723,27 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         scorer_input_contrast_floor_weight=0.875,
         scorer_input_contrast_floor_segnet_min_std_ratio=0.55,
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.45,
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.41,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.42,
+        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=0.43,
+        scorer_space_step_guard_min_post_segnet_target_class_min_ratio=0.44,
+        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=0.045,
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=3.5,
+        scorer_space_step_guard_max_post_segnet_distribution_mae=0.46,
+        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=0.47,
+        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=2.75,
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=0.48,
+        scorer_space_step_guard_max_post_pose_score_term=1.25,
+        scorer_space_step_guard_max_post_pose_direct_live_score_term=0.052,
+        scorer_space_step_guard_max_pose_score_term_relative_worsening=0.041,
+        scorer_space_step_guard_max_pose_score_term_absolute_worsening=0.042,
+        scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=0.043,
+        scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=0.044,
+        scorer_space_step_guard_max_direct_nonrate_score_worsening=0.045,
+        scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=2.5,
+        scorer_space_step_guard_backtracking_steps=7,
+        scorer_space_step_guard_backtracking_shrink=0.55,
         snerv_official_skip_high_mode_override="shared_mean",
         segnet_distillation_weight=0.025,
         pose_distillation_weight=0.0025,
@@ -13312,6 +16812,73 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0][
         "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
     ] == pytest.approx(0.45)
+    assert (
+        native_calls[0]["score_aware_long_training_scorer_space_step_guard_enabled"]
+        is True
+    )
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.41)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.42)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
+    ] == pytest.approx(0.43)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio"
+    ] == pytest.approx(0.44)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop"
+    ] == pytest.approx(0.045)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio"
+    ] == pytest.approx(3.5)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_distribution_mae"
+    ] == pytest.approx(0.46)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+    ] == pytest.approx(0.47)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
+    ] == pytest.approx(2.75)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_segnet_argmax_disagreement"
+    ] == pytest.approx(0.48)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term"
+    ] == pytest.approx(1.25)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term"
+    ] == pytest.approx(0.052)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening"
+    ] == pytest.approx(0.041)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening"
+    ] == pytest.approx(0.042)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
+    ] == pytest.approx(0.043)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
+    ] == pytest.approx(0.044)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening"
+    ] == pytest.approx(0.045)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
+    ] == pytest.approx(2.5)
+    assert (
+        native_calls[0][
+            "score_aware_long_training_scorer_space_step_guard_backtracking_steps"
+        ]
+        == 7
+    )
+    assert native_calls[0][
+        "score_aware_long_training_scorer_space_step_guard_backtracking_shrink"
+    ] == pytest.approx(0.55)
     assert native_calls[0]["segnet_distillation_weight"] == pytest.approx(0.025)
     assert native_calls[0]["pose_distillation_weight"] == pytest.approx(0.0025)
     assert native_calls[0]["pose_distillation_loss"] == "huber"
@@ -13370,6 +16937,27 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
     ] == pytest.approx(0.45)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
+    ] == pytest.approx(0.43)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio"
+    ] == pytest.approx(0.44)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop"
+    ] == pytest.approx(0.045)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
+    ] == pytest.approx(0.47)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term"
+    ] == pytest.approx(0.052)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
+    ] == pytest.approx(0.044)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_space_step_guard_backtracking_steps"
+    ] == 7
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])
@@ -13479,7 +17067,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     plan = out["candidate_curriculum_plan"]
     assert plan["training_plan"]["native_mlx_train_export_attached"] is True
     assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is True
-    assert plan["training_plan"]["native_mlx_file_backed_export_proof_passed"] is False
+    assert plan["training_plan"]["native_mlx_file_backed_export_proof_passed"] is True
+    assert (
+        plan["training_plan"][
+            "native_mlx_required_full600_file_backed_export_proof_passed"
+        ]
+        is False
+    )
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["native_mlx_real_segnet_teacher_bound"] is True
@@ -13523,6 +17117,273 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         not in plan["blockers"]
     )
     assert "snerv_mlx_native_longer_staged_training_not_executed" not in out[
+        "blockers"
+    ]
+
+
+def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+    from tac.analysis.nerv_candidate_curriculum import (
+        build_snerv_candidate_curriculum_plan,
+    )
+
+    def fake_train_export_snerv_mlx_native(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        packet_path = out / "snerv_mlx_native_packet.snar"
+        packet_path.write_bytes(b"official-snar2-packet")
+        archive_path = out / "archive.zip"
+        with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", packet_path.read_bytes())
+        report_path = out / "snerv_mlx_native_train_export.json"
+        payload = {
+            "schema": "snerv_mlx_native_train_export.v1",
+            "report_path": report_path.as_posix(),
+            "packet_path": packet_path.as_posix(),
+            "packet_bytes": packet_path.stat().st_size,
+            "packet_sha256": runner_mod._sha256_file(packet_path),
+            "packet_source": "mlx_target_hydration_numpy_closed_form_decoder_fit",
+            "archive_path": archive_path.as_posix(),
+            "archive_bytes": archive_path.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive_path),
+            "num_pairs": 2,
+            "source_pair_indices": [0, 1],
+            "native_mlx_training_executed": False,
+            "native_mlx_hf_decoder_training": {
+                "schema": "snerv_native_mlx_hf_decoder_training.v1",
+                "requested_steps": 0,
+                "executed": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_aware_long_training": {
+                "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
+                "executed": False,
+                "blockers": ["snerv_mlx_score_aware_long_training_not_executed"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "receiver_proof_path": (out / "receiver_proof.json").as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
+            "snerv_official_mfu_hfr_tub_export_bound": True,
+            "snerv_official_mfu_hfr_tub_export_bound_semantics": (
+                "receiver_payload_bound_not_source_forward_parity"
+            ),
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
+            "snerv_official_mfu_hfr_tub_frame_producing_export": True,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
+            "snerv_official_mfu_hfr_tub_export_blockers": [
+                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+            ],
+            "official_primitive_binding": {
+                "schema": "snerv_official_mfu_hfr_tub_export_binding.v3",
+                "official_receiver_payload_bound": True,
+                "selected_packet_frame_producing_official_export": True,
+                "selected_packet_official_payload_runtime_decode_authority": True,
+                "blockers": [
+                    "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                    "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "selected_official_authority": {
+                "schema": "snerv_selected_packet_official_payload_authority.v1",
+                "official_decoder_payload_selected": True,
+                "frame_producing_official_export": True,
+                "frame_decode_succeeded": True,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "blockers": [
+                "snerv_mlx_score_aware_long_training_not_executed",
+                "contest_cpu_cuda_exact_eval_not_executed",
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        Path(payload["receiver_proof_path"]).write_text(
+            json.dumps({"receiver_contract_satisfied": True}),
+            encoding="utf-8",
+        )
+        report_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+        return payload
+
+    monkeypatch.setattr(
+        native_mod,
+        "train_export_snerv_mlx_native",
+        fake_train_export_snerv_mlx_native,
+    )
+
+    attachment = runner_mod._run_snerv_native_mlx_export_attachment(
+        requested=True,
+        output_dir=tmp_path / "official_attachment",
+        num_pairs=2,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "official-binding-attachment",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 1.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+        },
+        prioritized_pair_indices=(),
+        scorer_error_pair_sampling_weights={},
+        scorer_error_pair_curriculum={},
+        repo_root=REPO_ROOT,
+        allow_overwrite=False,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=1,
+        run_scorer_loop_qat=False,
+        scorer_loop_qat_max_trials=0,
+        scorer_loop_qat_search_mode="top_weight_coordinate",
+        scorer_loop_qat_qat_bits=4,
+        scorer_loop_qat_decoder_payload_codec="int8_symmetric",
+        scorer_loop_qat_lf_payload_codec="portfolio_auto",
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
+        scorer_loop_qat_pair_guard_min_score_improved_fraction=1.0,
+        scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.0,
+        scorer_loop_qat_device="cpu",
+        scorer_loop_qat_perturb_scale=0.0,
+        scorer_loop_qat_byte_pressure_multiplier=1.0,
+        scorer_loop_qat_section_value_pressure_multiplier=1.0,
+        scorer_loop_qat_max_archive_byte_growth=0,
+        scorer_loop_qat_byte_growth_admission_mode="rate_paid",
+        scorer_loop_qat_pose_slack=0.0,
+        scorer_loop_qat_seg_slack=0.0,
+        scorer_loop_qat_seed=1337,
+        recon_pixel_weight_path=None,
+        recon_pixel_weight_manifest_path=None,
+        recon_pixel_weight_normalize="mean",
+        native_mlx_decoder_train_steps=0,
+        native_mlx_decoder_train_lr=1.0e-5,
+        native_mlx_decoder_train_ridge=1.0e-6,
+        native_mlx_decoder_train_optimizer="pact_guarded_adamw",
+        score_aware_long_training_epochs=0,
+        score_aware_long_training_lr=1.0e-3,
+        score_aware_long_training_batch_pairs=2,
+        score_aware_long_training_section_byte_refresh_every_steps=25,
+        score_aware_long_training_optimizer="pact_muon_adamw",
+        score_aware_long_training_grad_clip_max_norm=1.0,
+        score_aware_long_training_weight_decay=1.0e-4,
+        score_aware_long_training_eval_roundtrip_ste=False,
+        score_aware_long_training_scorer_tether_smoke_steps=2,
+        score_aware_long_training_scorer_input_distribution_guard_weight=0.0,
+        score_aware_long_training_scorer_input_distribution_guard_saturation_margin=0.02,
+        score_aware_long_training_scorer_input_distribution_guard_temperature=0.01,
+        score_aware_long_training_scorer_input_contrast_floor_weight=0.0,
+        score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio=0.5,
+        score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.5,
+        score_aware_long_training_scorer_input_shape_tether_weight=0.0,
+        score_aware_long_training_posenet_temporal_signal_floor_weight=0.0,
+        score_aware_long_training_posenet_temporal_signal_min_std_ratio=0.25,
+        score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio=0.25,
+        score_aware_long_training_loss_weights={},
+        score_aware_long_training_pose_warmup_epochs=0,
+        score_aware_long_training_scorer_input_shape_warmup_epochs=0,
+        score_aware_long_training_segnet_direct_live_escape_warmup_epochs=0,
+        checkpoint_retention_keep_last_n=None,
+        checkpoint_retention_keep_best_n=0,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_distillation_loss="mse",
+        pose_distillation_huber_delta=1.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_student_live_calibration_weight=1.0,
+        segnet_direct_live_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=0.0,
+        segnet_direct_live_base_loss_weight=1.0,
+        segnet_direct_live_class_histogram_weight=0.0,
+        segnet_direct_live_class_balanced_hinge_weight=0.0,
+        segnet_direct_live_class_balanced_ce_weight=0.0,
+        segnet_direct_live_class_balanced_squared_hinge_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.0,
+        segnet_tau_boundary=1.0,
+        segnet_hinge_margin=1.0,
+        distillation_device="cpu",
+        allow_segnet_only_research=False,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=4,
+        coder_qat_quant_residual_weight=0.0,
+        coder_qat_magnitude_weight=0.0,
+        coder_qat_delta_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=512,
+        score_aware_long_training_pr95_faithful_curriculum=False,
+        score_aware_long_training_pr95_muon_policy="every_stage",
+        write_mlx_prefilter_profile=False,
+        mlx_prefilter_scorer_device="cpu",
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=50,
+    )
+
+    assert attachment["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert attachment["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert attachment["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
+    assert (
+        attachment["packet_source"]
+        == "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    )
+    assert attachment["official_primitive_binding"]["official_receiver_payload_bound"] is True
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "official-binding-attachment",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 1.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+        },
+        requested_epochs=0,
+        num_pairs=2,
+        step_map_coder_mode="waterfill",
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_artifact_evidence=attachment,
+        measured_num_pairs=2,
+    )
+    official_split = plan["official_source_forward_authority_split"]
+    assert official_split["export_bound"] is True
+    assert official_split["receiver_payload_bound"] is True
+    assert official_split["frame_producing_export"] is True
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" not in plan["blockers"]
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in plan[
+        "blockers"
+    ]
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in plan[
+        "blockers"
+    ]
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in plan[
         "blockers"
     ]
 

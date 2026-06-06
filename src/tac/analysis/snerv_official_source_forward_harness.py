@@ -16,6 +16,7 @@ import json
 import sys
 import types
 import warnings
+import zipfile
 from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ from tac.analysis.snerv_official_primitive_replay import (
     build_snerv_official_primitive_replay_binding,
 )
 from tac.analysis.snerv_official_tub_source_forward_replay import (
+    STATE_VALUE_ARTIFACT_BLOCKER,
     build_snerv_official_tub_source_forward_replay_artifact,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
@@ -118,6 +120,7 @@ def build_snerv_official_trained_checkpoint_mapping_manifest(
             "official_trained_checkpoint_loaded": False,
             "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
             "official_tub_temporal_encoder_weight_mapping_proven": False,
+            "official_tub_output2_decoder_weight_mapping_proven": False,
             "state_dict_sha256": None,
             "mapped_weight_key_count": 0,
             "weight_entries": [],
@@ -153,6 +156,7 @@ def build_snerv_official_trained_checkpoint_mapping_manifest(
             "official_trained_checkpoint_loaded": True,
             "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
             "official_tub_temporal_encoder_weight_mapping_proven": False,
+            "official_tub_output2_decoder_weight_mapping_proven": False,
             "state_dict_sha256": _hash_state_dict_exact(raw_state),
             "mapped_weight_key_count": 0,
             "weight_entries": [],
@@ -245,7 +249,6 @@ def build_snerv_official_trained_checkpoint_mapping_manifest(
         for row in component_rows
         for blocker in row.get("blockers", ())
     ]
-    blockers.append("snerv_official_trained_checkpoint_decoder_len_not_resolved")
     blockers.append(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_BLOCKER)
     return {
         "schema": TRAINED_CHECKPOINT_MAPPING_SCHEMA,
@@ -260,6 +263,7 @@ def build_snerv_official_trained_checkpoint_mapping_manifest(
         "official_mfu_trained_checkpoint_weight_mapping_proven": mfu_proven,
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": mfu_hfr_proven,
         "official_tub_temporal_encoder_weight_mapping_proven": tub_proven,
+        "official_tub_output2_decoder_weight_mapping_proven": tub_proven,
         "official_mfu_receiver_activation_payload_bound": False,
         "official_tub_receiver_activation_payload_bound": False,
         "official_native_receiver_state_mapping_proven": False,
@@ -316,12 +320,32 @@ def build_snerv_official_source_forward_harness_artifact(
     checkpoint_export_binding = _checkpoint_export_binding_evidence(
         checkpoint_export_reports
     )
-    trained_checkpoint_mapping = _trained_checkpoint_mapping_evidence(
+    export_mapping_manifest = checkpoint_export_binding.get(
+        "official_trained_checkpoint_mapping_manifest"
+    )
+    trained_mapping_inputs: tuple[Mapping[str, Any], ...] = tuple(
         trained_checkpoint_mapping_manifests
     )
+    if (
+        isinstance(export_mapping_manifest, Mapping)
+        and export_mapping_manifest.get("schema") == TRAINED_CHECKPOINT_MAPPING_SCHEMA
+    ):
+        trained_mapping_inputs = (*trained_mapping_inputs, export_mapping_manifest)
     tub_source_replay = _tub_source_forward_replay_evidence(
         official_root,
         tub_source_forward_artifact,
+    )
+    tub_mapping_manifest = tub_source_replay.get(
+        "official_trained_checkpoint_mapping_manifest"
+    )
+    if (
+        isinstance(tub_mapping_manifest, Mapping)
+        and tub_mapping_manifest.get("schema") == TRAINED_CHECKPOINT_MAPPING_SCHEMA
+        and tub_mapping_manifest.get("official_trained_checkpoint_loaded") is True
+    ):
+        trained_mapping_inputs = (*trained_mapping_inputs, tub_mapping_manifest)
+    trained_checkpoint_mapping = _trained_checkpoint_mapping_evidence(
+        trained_mapping_inputs
     )
 
     component_rows: list[dict[str, Any]]
@@ -376,18 +400,104 @@ def build_snerv_official_source_forward_harness_artifact(
         for row in component_rows
         if row["component_id"] in {"mfu", "hfr"}
     )
+    tub_row = next(
+        (
+            row
+            for row in component_rows
+            if row.get("component_id") == "tub"
+        ),
+        {},
+    )
+    full_tub_source_forward_parity_proven = (
+        tub_row.get("full_tub_source_forward_parity_proven") is True
+    )
+    tub_source_fixture_forward_parity_proven = (
+        tub_row.get("source_fixture_forward_parity_proven") is True
+        or tub_row.get("primitive_source_forward_parity_proven") is True
+    )
     full_passed = bool(
         mfu_hfr_passed
         and all(row.get("source_forward_parity_proven") is True for row in component_rows)
         and receiver_runtime.get("receiver_runtime_decode_proven") is True
     )
+    receiver_ready = bool(
+        receiver_frame_replay.get("receiver_runtime_decode_proven") is True
+        and receiver_frame_replay.get("frame_producing_official_payload_replay_proven")
+        is True
+        and receiver_frame_replay.get("receiver_frame_decode_consumes_output2") is True
+    )
+    state_dict_value_artifact_ready = _tub_state_dict_value_artifact_ready(
+        tub_source_replay
+    )
+    source_forward_mapping_ready = bool(
+        trained_checkpoint_mapping.get(
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+        and trained_checkpoint_mapping.get(
+            "official_tub_temporal_encoder_weight_mapping_proven"
+        )
+        is True
+    )
+    source_forward_replay_verified = bool(
+        full_passed
+        and receiver_ready
+        and source_forward_mapping_ready
+    )
+    source_forward_authority = bool(
+        source_forward_replay_verified and state_dict_value_artifact_ready
+    )
+    if (
+        source_forward_replay_verified
+        and not state_dict_value_artifact_ready
+    ):
+        harness_blockers.append(STATE_VALUE_ARTIFACT_BLOCKER)
     closed_by_trained_checkpoint = set(
         trained_checkpoint_mapping.get("closed_campaign_blockers") or ()
     )
-    if closed_by_trained_checkpoint:
+    closed_by_source_replay = {
+        OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_BLOCKER,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+        "snerv_official_snerv_t_full_tub_source_forward_replay_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        "snerv_official_tub_normalized_lf_graph_inputs_not_full_source_forward_parity",
+        "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+    } if source_forward_replay_verified else set()
+    closed_by_source_authority = {
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+    } if source_forward_authority else set()
+    closed_by_source_forward = closed_by_source_replay | closed_by_source_authority
+    if source_forward_replay_verified:
+        nested_closed_blockers = closed_by_trained_checkpoint | closed_by_source_forward
+        source_replay = {
+            **source_replay,
+            "full_stack_source_forward_parity_proven": True,
+            "source_forward_replay_verified": True,
+            "source_forward_replay_authority": source_forward_authority,
+            "blockers": [
+                blocker
+                for blocker in source_replay.get("blockers") or ()
+                if str(blocker) not in nested_closed_blockers
+            ],
+        }
+        receiver_frame_replay = {
+            **receiver_frame_replay,
+            "source_forward_replay_bound": True,
+            "source_forward_replay_verified": True,
+            "source_forward_replay_authority": source_forward_authority,
+            "blockers": [
+                blocker
+                for blocker in receiver_frame_replay.get("blockers") or ()
+                if str(blocker) not in nested_closed_blockers
+            ],
+        }
+    if closed_by_trained_checkpoint or closed_by_source_forward:
         component_rows = _component_rows_with_closed_blockers_applied(
             component_rows,
-            closed_by_trained_checkpoint,
+            closed_by_trained_checkpoint | closed_by_source_forward,
         )
     blockers = _ordered_unique(
         [
@@ -408,6 +518,7 @@ def build_snerv_official_source_forward_harness_artifact(
         blocker
         for blocker in blockers
         if str(blocker) not in closed_by_trained_checkpoint
+        and str(blocker) not in closed_by_source_forward
     ]
 
     return {
@@ -427,6 +538,9 @@ def build_snerv_official_source_forward_harness_artifact(
         "official_checkpoint_export_binding_evidence": checkpoint_export_binding,
         "official_trained_checkpoint_mapping_manifest": trained_checkpoint_mapping,
         "official_tub_source_forward_replay": tub_source_replay,
+        "source_forward_training_smoke": tub_source_replay.get(
+            "source_forward_training_smoke"
+        ),
         "source_forward_replay": source_replay,
         "receiver_payload_frame_replay": receiver_frame_replay,
         "component_rows": component_rows,
@@ -494,7 +608,26 @@ def build_snerv_official_source_forward_harness_artifact(
             checkpoint_export_binding.get("official_export_bound") is True
         ),
         "official_mfu_hfr_weight_mapping_source_fixture_proven": mfu_hfr_passed,
-        "full_tub_source_forward_parity_proven": False,
+        "official_tub_source_fixture_forward_parity_proven": (
+            tub_source_fixture_forward_parity_proven
+        ),
+        "tub_source_fixture_closed_blockers": list(
+            tub_row.get("closed_blockers") or ()
+        ),
+        "full_tub_source_forward_parity_proven": (
+            full_tub_source_forward_parity_proven
+        ),
+        "source_forward_replay_verified": source_forward_replay_verified,
+        "source_forward_replay_authority": source_forward_authority,
+        "official_trained_checkpoint_state_dict_value_artifact_ready": (
+            state_dict_value_artifact_ready
+        ),
+        "source_forward_replay_closed_blockers": _ordered_unique(
+            sorted(closed_by_source_replay)
+        ),
+        "source_forward_authority_closed_blockers": _ordered_unique(
+            sorted(closed_by_source_authority)
+        ),
         "official_mfu_hfr_tub_primitive_replay_binding": primitive_binding,
         "receiver_runtime_decode": receiver_runtime,
         "blockers": blockers,
@@ -630,6 +763,7 @@ def _trained_checkpoint_mapping_evidence(
             "official_tub_receiver_activation_payload_bound": False,
             "official_native_receiver_state_mapping_proven": False,
             "official_tub_temporal_encoder_weight_mapping_proven": False,
+            "official_tub_output2_decoder_weight_mapping_proven": False,
             "closed_campaign_blockers": [],
             "blockers": [],
             **FALSE_AUTHORITY,
@@ -653,14 +787,25 @@ def _trained_checkpoint_mapping_evidence(
         closed.append("snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete")
     if out.get("official_mfu_trained_checkpoint_weight_mapping_proven") is True:
         closed.append("snerv_official_trained_checkpoint_mfu_weight_mapping_incomplete")
+        closed.append(
+            "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+        )
     if out.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven") is True:
         closed.append(OFFICIAL_MFU_HFR_TUB_WEIGHT_MAPPING_BLOCKER)
     if out.get("official_tub_temporal_encoder_weight_mapping_proven") is True:
         closed.extend(
             [
                 "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_encoder_decoder_weights_not_loaded",
                 "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
             ]
+        )
+    if (
+        out.get("official_tub_output2_decoder_weight_mapping_proven") is True
+        or out.get("official_tub_temporal_encoder_weight_mapping_proven") is True
+    ):
+        closed.append(
+            "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
         )
     if (
         out.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven") is True
@@ -689,6 +834,65 @@ def _tub_source_forward_replay_evidence(
         return dict(artifact)
     return build_snerv_official_tub_source_forward_replay_artifact(
         official_repo_dir=official_root,
+        train_one_step=True,
+    )
+
+
+def _tub_state_dict_value_artifact_ready(artifact: Mapping[str, Any]) -> bool:
+    path = str(
+        artifact.get("official_trained_checkpoint_state_dict_slice_path")
+        or artifact.get("official_trained_checkpoint_state_dict_path")
+        or ""
+    ).strip()
+    if not path:
+        return False
+    try:
+        bytes_value = int(
+            artifact.get("official_trained_checkpoint_state_dict_slice_bytes") or 0
+        )
+        member_count = int(
+            artifact.get("official_trained_checkpoint_state_dict_slice_member_count")
+            or 0
+        )
+    except (TypeError, ValueError):
+        return False
+    sha256_value = str(
+        artifact.get("official_trained_checkpoint_state_dict_slice_sha256") or ""
+    ).strip()
+    claimed_names = artifact.get(
+        "official_trained_checkpoint_state_dict_slice_member_names"
+    )
+    if isinstance(claimed_names, (str, bytes)) or not isinstance(
+        claimed_names,
+        Sequence,
+    ):
+        return False
+    path_obj = Path(path)
+    if not (
+        artifact.get("official_trained_checkpoint_state_dict_value_artifact_ready")
+        is True
+        and artifact.get("official_trained_checkpoint_state_dict_slice_file_present")
+        is True
+        and bytes_value > 0
+        and member_count > 0
+        and len(sha256_value) == 64
+        and path_obj.is_file()
+    ):
+        return False
+    try:
+        data = path_obj.read_bytes()
+        actual_size = int(path_obj.stat().st_size)
+        with zipfile.ZipFile(path_obj, "r") as zf:
+            actual_names = sorted(zf.namelist())
+    except (OSError, zipfile.BadZipFile):
+        return False
+    expected_names = sorted(str(name) for name in claimed_names)
+    return bool(
+        actual_size == bytes_value
+        and _hash_bytes(data) == sha256_value
+        and len(actual_names) == member_count
+        and actual_names == expected_names
+        and all(name.endswith(".npy") for name in actual_names)
     )
 
 
@@ -699,6 +903,10 @@ def _tub_component_row_from_source_replay(
     fixture_passed = (
         artifact.get("official_tub_temporal_encoder_output2_source_fixture_replay_passed")
         is True
+    )
+    full_tub_parity = artifact.get("full_tub_source_forward_parity_proven") is True
+    source_forward_parity = bool(
+        full_tub_parity and artifact.get("source_forward_parity_proven") is True
     )
     blockers = _ordered_unique(
         [
@@ -711,12 +919,16 @@ def _tub_component_row_from_source_replay(
         "schema": "snerv_official_source_forward_component_replay.v1",
         "component_id": "tub",
         "classification": (
+            "official_tub_trained_full_source_forward_parity_proven"
+            if source_forward_parity
+            else
             "official_tub_temporal_encoder_output2_source_fixture_proven_full_tub_blocked"
             if fixture_passed
             else "official_tub_temporal_encoder_output2_source_fixture_blocked"
         ),
         "backend": "official_snerv_t_source_fixture_vs_portable_numpy_tub",
-        "source_forward_parity_proven": False,
+        "source_forward_parity_proven": source_forward_parity,
+        "source_fixture_forward_parity_proven": bool(fixture_passed),
         "primitive_source_forward_parity_proven": bool(fixture_passed),
         "official_tub_temporal_encoder_output2_source_fixture_replay_passed": (
             fixture_passed
@@ -728,8 +940,8 @@ def _tub_component_row_from_source_replay(
             )
         ),
         "source_forward_parity_falsified": False,
-        "full_stack_source_forward_parity_proven": False,
-        "full_tub_source_forward_parity_proven": False,
+        "full_stack_source_forward_parity_proven": full_tub_parity,
+        "full_tub_source_forward_parity_proven": full_tub_parity,
         "tolerance": 0.0,
         "max_abs_error": _max_nested_abs_error(artifact),
         "graph_input_max_abs_error": _nested_float(
@@ -1614,6 +1826,7 @@ def _native_receiver_checkpoint_mapping_manifest(
         "official_mfu_trained_checkpoint_weight_mapping_proven": False,
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
         "official_tub_temporal_encoder_weight_mapping_proven": False,
+        "official_tub_output2_decoder_weight_mapping_proven": False,
         "official_mfu_receiver_activation_payload_bound": mfu_activation,
         "official_tub_receiver_activation_payload_bound": tub_activation,
         "official_native_receiver_state_mapping_proven": bool(

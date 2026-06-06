@@ -145,6 +145,102 @@ def test_full600_file_backed_export_unlocks_native_contract(
     assert contract["blockers"] == []
 
 
+def test_file_backed_export_requires_emitted_qat_best_packet(tmp_path: Path) -> None:
+    report = tmp_path / "report.json"
+    packet = tmp_path / "candidate.snar"
+    archive = tmp_path / "archive.zip"
+    proof = tmp_path / "receiver_proof.json"
+    report.write_text('{"schema":"unit_report"}\n', encoding="utf-8")
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact = {
+        "num_pairs": 600,
+        "artifact_report_path": report.as_posix(),
+        "packet_path": packet.as_posix(),
+        "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+        "archive_path": archive.as_posix(),
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "receiver_proof_path": proof.as_posix(),
+        "scorer_loop_qat_best_materialized": True,
+        "scorer_loop_qat": {
+            "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+            "executed": True,
+            "accepted_improvement": True,
+            "receiver_contract_satisfied": True,
+            "ready_for_pose_guard_gate": True,
+            "best_packet_materialized": True,
+            "emitted_packet_uses_scorer_loop_best_decoder": False,
+        },
+    }
+
+    evidence = build_snerv_mlx_native_file_backed_evidence(artifact)
+
+    assert evidence["file_backed_export_proof_passed"] is True
+    assert evidence["scorer_loop_qat_attached"] is True
+    assert evidence["scorer_loop_qat_accepted_improvement"] is True
+    assert evidence["scorer_loop_qat_best_materialized"] is False
+    assert evidence["score_claim"] is False
+
+
+def test_file_backed_export_nested_scorer_loop_overrides_legacy_qat_flags(
+    tmp_path: Path,
+) -> None:
+    report = tmp_path / "report.json"
+    packet = tmp_path / "candidate.snar"
+    archive = tmp_path / "archive.zip"
+    proof = tmp_path / "receiver_proof.json"
+    report.write_text('{"schema":"unit_report"}\n', encoding="utf-8")
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_receiver_proof.v1",
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact = {
+        "num_pairs": 600,
+        "artifact_report_path": report.as_posix(),
+        "packet_path": packet.as_posix(),
+        "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+        "archive_path": archive.as_posix(),
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "receiver_proof_path": proof.as_posix(),
+        "scorer_loop_qat_attached": True,
+        "scorer_loop_qat_accepted_improvement": True,
+        "scorer_loop_qat_best_materialized": True,
+        "scorer_loop_qat": {
+            "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
+            "executed": False,
+            "accepted_improvement": False,
+            "best_packet_materialized": True,
+            "emitted_packet_uses_scorer_loop_best_decoder": False,
+        },
+    }
+
+    evidence = build_snerv_mlx_native_file_backed_evidence(artifact)
+
+    assert evidence["file_backed_export_proof_passed"] is True
+    assert evidence["scorer_loop_qat_attached"] is False
+    assert evidence["scorer_loop_qat_accepted_improvement"] is False
+    assert evidence["scorer_loop_qat_best_materialized"] is False
+    assert evidence["score_claim"] is False
+
+
 def test_loss_worsened_native_training_blocks_file_backed_export(tmp_path: Path) -> None:
     report = tmp_path / "report.json"
     packet = tmp_path / "candidate.snar"

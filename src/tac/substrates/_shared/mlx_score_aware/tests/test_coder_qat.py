@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from tac.substrates._shared.mlx_score_aware.coder_qat import (
+    DEFAULT_DECODER_INCLUDE_SUBSTRINGS,
     CoderAwareQATConfig,
     build_decoder_c1a_entropy_term,
     build_decoder_coder_qat_terms,
@@ -70,6 +71,24 @@ class _HiNervOfficialParamTree:
                 "proj": {"weight": mx.array([0.0, 0.375, 1.0], dtype=mx.float32)}
             },
             "latents": mx.array([3.0, -3.0], dtype=mx.float32),
+        }
+
+    def parameters(self):
+        return self._params
+
+
+class _SnervOfficialParamTree:
+    def __init__(self, *, low_values):
+        import mlx.core as mx
+
+        self._params = {
+            "low": mx.array(low_values, dtype=mx.float32),
+            "skip_mid": mx.array([0.0, 0.5, 1.0], dtype=mx.float32),
+            "skip_high": mx.array([0.0, 0.25, 1.0], dtype=mx.float32),
+            "hfr_lh_conv1_weight": mx.array(
+                [0.0, 0.125, 1.0], dtype=mx.float32
+            ),
+            "latents": mx.array([9.0, -9.0], dtype=mx.float32),
         }
 
     def parameters(self):
@@ -208,6 +227,38 @@ def test_qat_selection_includes_hinerv_official_decoder_controls() -> None:
     assert float(terms["coder_qat_quant_residual"].item()) > 0.0
     assert float(terms["coder_qat_c1a_entropy"].item()) > 0.0
     assert float(entropy.item()) > 0.0
+
+
+@mlx_only
+def test_qat_selection_can_include_snerv_official_input_payload_atoms() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(
+        enabled=True,
+        quant_bits=2,
+        include_substrings=tuple(
+            dict.fromkeys(
+                (
+                    *DEFAULT_DECODER_INCLUDE_SUBSTRINGS,
+                    "low",
+                    "skip_mid",
+                    "skip_high",
+                    "tub_temporal_encoder_concat",
+                    "tub_output2_raw",
+                )
+            )
+        ),
+    )
+    baseline = _SnervOfficialParamTree(low_values=[0.0, 0.5, 1.0])
+    changed_low = _SnervOfficialParamTree(low_values=[0.0, 0.25, 1.0])
+
+    terms_a = build_decoder_coder_qat_terms(baseline, cfg)
+    terms_b = build_decoder_coder_qat_terms(changed_low, cfg)
+    mx.eval(terms_a["coder_qat_magnitude"], terms_b["coder_qat_magnitude"])
+
+    assert float(terms_a["coder_qat_magnitude"].item()) != pytest.approx(
+        float(terms_b["coder_qat_magnitude"].item())
+    )
 
 
 @mlx_only

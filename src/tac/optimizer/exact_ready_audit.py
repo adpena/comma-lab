@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, MutableMapping
 from pathlib import Path
 from typing import Any
 
@@ -457,6 +457,10 @@ def _ready_row_live_custody_blockers(
     runtime_tree_sha: str | None,
     runtime_content_sha: str | None,
     contract: Mapping[str, Any] | None = None,
+    archive_file_cache: MutableMapping[Path, tuple[str, int]] | None = None,
+    archive_zip_cache: MutableMapping[Path, Mapping[str, Any] | Exception] | None = None,
+    archive_manifest_cache: MutableMapping[Path, Mapping[str, Any] | Exception] | None = None,
+    runtime_manifest_cache: MutableMapping[Path, Mapping[str, Any] | Exception] | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     facts: dict[str, Any] = {}
@@ -477,8 +481,17 @@ def _ready_row_live_custody_blockers(
         if not archive_path.is_file():
             blockers.append("ready_row_archive_file_missing")
         else:
-            actual_archive_sha = sha256_file(archive_path)
-            actual_archive_bytes = archive_path.stat().st_size
+            archive_key = archive_path.resolve(strict=False)
+            archive_file_value = (
+                archive_file_cache.get(archive_key)
+                if archive_file_cache is not None
+                else None
+            )
+            if archive_file_value is None:
+                archive_file_value = (sha256_file(archive_path), archive_path.stat().st_size)
+                if archive_file_cache is not None:
+                    archive_file_cache[archive_key] = archive_file_value
+            actual_archive_sha, actual_archive_bytes = archive_file_value
             facts["actual_archive_sha256"] = actual_archive_sha
             facts["actual_archive_bytes"] = actual_archive_bytes
             if archive_sha is not None and actual_archive_sha != archive_sha:
@@ -508,12 +521,27 @@ def _ready_row_live_custody_blockers(
             blockers.extend(f"ready_row_{blocker}" for blocker in delta_blockers)
             if delta_facts:
                 facts["serialized_archive_delta"] = delta_facts
-            try:
-                zipwire = inspect_zip_headers(archive_path)
-            except (OSError, ValueError) as exc:
-                blockers.append(f"ready_row_archive_zip_unreadable:{type(exc).__name__}")
-                facts["archive_zip_error"] = str(exc)
+            zipwire_key = archive_path.resolve(strict=False)
+            zipwire_value = (
+                archive_zip_cache.get(zipwire_key)
+                if archive_zip_cache is not None
+                else None
+            )
+            if zipwire_value is None:
+                try:
+                    zipwire_value = inspect_zip_headers(archive_path)
+                except (OSError, ValueError) as exc:
+                    zipwire_value = exc
+                if archive_zip_cache is not None:
+                    archive_zip_cache[zipwire_key] = zipwire_value
+            if isinstance(zipwire_value, Exception):
+                blockers.append(
+                    "ready_row_archive_zip_unreadable:"
+                    f"{type(zipwire_value).__name__}"
+                )
+                facts["archive_zip_error"] = str(zipwire_value)
             else:
+                zipwire = zipwire_value
                 facts["archive_zip_strict"] = zipwire.get("zip_strict")
                 facts["archive_zip_member_count"] = zipwire.get("member_count")
                 if zipwire.get("zip_strict") is not True:
@@ -561,14 +589,27 @@ def _ready_row_live_custody_blockers(
             if not manifest_path.is_file():
                 blockers.append("ready_row_archive_manifest_missing")
             else:
-                try:
-                    raw_manifest = read_json(manifest_path)
-                except (OSError, ValueError) as exc:
+                manifest_key = manifest_path.resolve(strict=False)
+                manifest_value = (
+                    archive_manifest_cache.get(manifest_key)
+                    if archive_manifest_cache is not None
+                    else None
+                )
+                if manifest_value is None:
+                    try:
+                        manifest_value = read_json(manifest_path)
+                    except (OSError, ValueError) as exc:
+                        manifest_value = exc
+                    if archive_manifest_cache is not None:
+                        archive_manifest_cache[manifest_key] = manifest_value
+                if isinstance(manifest_value, Exception):
                     blockers.append(
-                        f"ready_row_archive_manifest_json_invalid:{type(exc).__name__}"
+                        "ready_row_archive_manifest_json_invalid:"
+                        f"{type(manifest_value).__name__}"
                     )
-                    facts["archive_manifest_error"] = str(exc)
+                    facts["archive_manifest_error"] = str(manifest_value)
                 else:
+                    raw_manifest = manifest_value
                     if not isinstance(raw_manifest, Mapping):
                         blockers.append("ready_row_archive_manifest_not_object")
                     elif actual_archive_sha is not None:
@@ -606,12 +647,28 @@ def _ready_row_live_custody_blockers(
                             f"ready_row_{blocker}" for blocker in gate_blockers
                         )
                         facts.update(gate_facts)
-            try:
-                runtime_manifest = runtime_dependency_manifest(submission_dir, repo_root)
-            except (OSError, ValueError, RuntimeError, SyntaxError) as exc:
-                blockers.append(f"ready_row_runtime_manifest_error:{type(exc).__name__}")
-                facts["runtime_manifest_error"] = str(exc)
+            runtime_key = submission_dir.resolve(strict=False)
+            runtime_value = (
+                runtime_manifest_cache.get(runtime_key)
+                if runtime_manifest_cache is not None
+                else None
+            )
+            if runtime_value is None:
+                try:
+                    runtime_value = runtime_dependency_manifest(
+                        submission_dir, repo_root
+                    )
+                except (OSError, ValueError, RuntimeError, SyntaxError) as exc:
+                    runtime_value = exc
+                if runtime_manifest_cache is not None:
+                    runtime_manifest_cache[runtime_key] = runtime_value
+            if isinstance(runtime_value, Exception):
+                blockers.append(
+                    f"ready_row_runtime_manifest_error:{type(runtime_value).__name__}"
+                )
+                facts["runtime_manifest_error"] = str(runtime_value)
             else:
+                runtime_manifest = runtime_value
                 actual_runtime_sha = runtime_manifest.get("runtime_tree_sha256")
                 actual_runtime_content_sha = runtime_manifest.get(
                     "runtime_content_tree_sha256"
@@ -710,6 +767,10 @@ def audit_exact_ready_queue(
     )
     row_count = 0
     queue_dir = queue_path.parent
+    archive_file_cache: dict[Path, tuple[str, int]] = {}
+    archive_zip_cache: dict[Path, Mapping[str, Any] | Exception] = {}
+    archive_manifest_cache: dict[Path, Mapping[str, Any] | Exception] = {}
+    runtime_manifest_cache: dict[Path, Mapping[str, Any] | Exception] = {}
     for row in _queue_rows(payload):
         row_count += 1
         if candidate_id_filter is not None:
@@ -744,6 +805,10 @@ def audit_exact_ready_queue(
             runtime_tree_sha=runtime_tree_sha,
             runtime_content_sha=runtime_content_sha,
             contract=direct_contract,
+            archive_file_cache=archive_file_cache,
+            archive_zip_cache=archive_zip_cache,
+            archive_manifest_cache=archive_manifest_cache,
+            runtime_manifest_cache=runtime_manifest_cache,
         )
         blockers = list(contract_blockers)
         if (

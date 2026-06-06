@@ -159,6 +159,7 @@ def _analyze_one(path: Path) -> dict[str, Any]:
     payload = read_json(path)
     result = _result_payload(payload)
     best_packet_materialization = _best_packet_materialization(payload)
+    packet_binding = _best_packet_binding(payload, result)
     baseline = _required_mapping(result, "baseline")
     best = _required_mapping(result, "best")
     evaluations = [_as_mapping(row) for row in result.get("evaluations") or []]
@@ -258,7 +259,33 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         "best_packet_path": best_packet_materialization["path"],
         "best_packet_bytes": best_packet_materialization["bytes"],
         "best_packet_sha256": best_packet_materialization["sha256"],
+        "best_packet_schema": best_packet_materialization["packet_schema"],
+        "best_packet_wire_format": best_packet_materialization["wire_format"],
+        "best_packet_contest_submission_wire_format_ready": (
+            best_packet_materialization["contest_submission_wire_format_ready"]
+        ),
         "best_packet_materialization": best_packet_materialization,
+        "emitted_packet_uses_scorer_loop_best_decoder": packet_binding[
+            "emitted_packet_uses_scorer_loop_best_decoder"
+        ],
+        "emitted_packet_schema": packet_binding["emitted_packet_schema"],
+        "emitted_packet_wire_format": packet_binding["emitted_packet_wire_format"],
+        "emitted_packet_contest_submission_wire_format_ready": packet_binding[
+            "emitted_packet_contest_submission_wire_format_ready"
+        ],
+        "official_decoder_payload_binding_required": packet_binding[
+            "official_decoder_payload_binding_required"
+        ],
+        "official_decoder_payload_binding_preserved": packet_binding[
+            "official_decoder_payload_binding_preserved"
+        ],
+        "official_tub_output2_binding_required": packet_binding[
+            "official_tub_output2_binding_required"
+        ],
+        "official_tub_output2_binding_preserved": packet_binding[
+            "official_tub_output2_binding_preserved"
+        ],
+        "scorer_loop_best_packet_binding": packet_binding,
         "best_pair_deltas": list(result.get("best_pair_deltas") or ()),
         "operating_regime": {
             "d_pose": regime.d_pose,
@@ -479,7 +506,33 @@ def _allocator_unit(row: Mapping[str, Any]) -> dict[str, Any]:
         "best_packet_path": row.get("best_packet_path"),
         "best_packet_bytes": row.get("best_packet_bytes"),
         "best_packet_sha256": row.get("best_packet_sha256"),
+        "best_packet_schema": row.get("best_packet_schema"),
+        "best_packet_wire_format": row.get("best_packet_wire_format"),
+        "best_packet_contest_submission_wire_format_ready": row.get(
+            "best_packet_contest_submission_wire_format_ready"
+        ),
         "best_packet_materialization": row.get("best_packet_materialization"),
+        "emitted_packet_uses_scorer_loop_best_decoder": row.get(
+            "emitted_packet_uses_scorer_loop_best_decoder"
+        ),
+        "emitted_packet_schema": row.get("emitted_packet_schema"),
+        "emitted_packet_wire_format": row.get("emitted_packet_wire_format"),
+        "emitted_packet_contest_submission_wire_format_ready": row.get(
+            "emitted_packet_contest_submission_wire_format_ready"
+        ),
+        "official_decoder_payload_binding_required": row.get(
+            "official_decoder_payload_binding_required"
+        ),
+        "official_decoder_payload_binding_preserved": row.get(
+            "official_decoder_payload_binding_preserved"
+        ),
+        "official_tub_output2_binding_required": row.get(
+            "official_tub_output2_binding_required"
+        ),
+        "official_tub_output2_binding_preserved": row.get(
+            "official_tub_output2_binding_preserved"
+        ),
+        "scorer_loop_best_packet_binding": row.get("scorer_loop_best_packet_binding"),
         "best_pair_deltas": row.get("best_pair_deltas"),
         "section_value_rows": row.get("section_value_rows") or [],
         "byte_price_plan": row.get("byte_price_plan") or {},
@@ -615,6 +668,44 @@ def _result_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     return payload
 
 
+def _best_packet_binding(
+    payload: Mapping[str, Any],
+    result: Mapping[str, Any],
+) -> dict[str, Any]:
+    def _field(name: str) -> Any:
+        if name in payload:
+            return payload.get(name)
+        return result.get(name)
+
+    return {
+        "schema": "snerv_scorer_loop_best_packet_binding.v1",
+        "emitted_packet_uses_scorer_loop_best_decoder": (
+            _field("emitted_packet_uses_scorer_loop_best_decoder") is True
+        ),
+        "emitted_packet_schema": _field("emitted_packet_schema"),
+        "emitted_packet_wire_format": _normalize_packet_wire_format(
+            _field("emitted_packet_wire_format")
+        ),
+        "emitted_packet_contest_submission_wire_format_ready": (
+            _field("emitted_packet_contest_submission_wire_format_ready") is True
+            or _normalize_packet_wire_format(_field("emitted_packet_wire_format"))
+            == "snar2"
+        ),
+        "official_decoder_payload_binding_required": (
+            _field("official_decoder_payload_binding_required") is True
+        ),
+        "official_decoder_payload_binding_preserved": (
+            _field("official_decoder_payload_binding_preserved") is True
+        ),
+        "official_tub_output2_binding_required": (
+            _field("official_tub_output2_binding_required") is True
+        ),
+        "official_tub_output2_binding_preserved": (
+            _field("official_tub_output2_binding_preserved") is True
+        ),
+    }
+
+
 def _best_packet_materialization(payload: Mapping[str, Any]) -> dict[str, Any]:
     materialization = payload.get("best_packet_materialization")
     if isinstance(materialization, Mapping):
@@ -623,6 +714,13 @@ def _best_packet_materialization(payload: Mapping[str, Any]) -> dict[str, Any]:
             "path": materialization.get("best_packet_path"),
             "bytes": materialization.get("best_packet_bytes"),
             "sha256": materialization.get("best_packet_sha256"),
+            "packet_schema": materialization.get("best_packet_schema"),
+            "wire_format": _normalize_packet_wire_format(
+                materialization.get("best_packet_wire_format")
+            ),
+            "contest_submission_wire_format_ready": (
+                materialization.get("contest_submission_wire_format_ready") is True
+            ),
             "source": "best_packet_materialization",
         }
     return {
@@ -630,6 +728,13 @@ def _best_packet_materialization(payload: Mapping[str, Any]) -> dict[str, Any]:
         "path": payload.get("best_packet_path"),
         "bytes": payload.get("best_packet_bytes"),
         "sha256": payload.get("best_packet_sha256"),
+        "packet_schema": payload.get("best_packet_schema"),
+        "wire_format": _normalize_packet_wire_format(
+            payload.get("best_packet_wire_format")
+        ),
+        "contest_submission_wire_format_ready": (
+            payload.get("best_packet_contest_submission_wire_format_ready") is True
+        ),
         "source": "top_level_fields",
     }
 
@@ -676,6 +781,13 @@ def _required_float(payload: Mapping[str, Any], key: str) -> float:
 def _optional_float(payload: Mapping[str, Any], key: str, default: float) -> float:
     value = payload.get(key)
     return float(default if value is None else value)
+
+
+def _normalize_packet_wire_format(value: Any) -> str | None:
+    text = str(value or "").strip().lower()
+    if text in {"snar1", "snar2"}:
+        return text
+    return None
 
 
 def _required_int(payload: Mapping[str, Any], key: str) -> int:

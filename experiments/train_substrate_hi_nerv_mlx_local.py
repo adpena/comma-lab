@@ -74,6 +74,9 @@ from tac.substrates.hi_nerv.short_scorer_readiness import (
     build_hinerv_short_scorer_smoke_readiness_report as _shared_build_readiness,
 )
 from tac.substrates.hi_nerv.short_scorer_readiness import (
+    hinerv_short_scorer_smoke_long_run_admission as _shared_long_run_admission,
+)
+from tac.substrates.hi_nerv.short_scorer_readiness import (
     hinerv_short_scorer_smoke_readiness_summary as _shared_readiness_summary,
 )
 from tac.substrates.hi_nerv.short_scorer_readiness import (
@@ -109,6 +112,19 @@ DIRECT_TRAINER_CANONICALIZATION_BLOCKERS = (
 )
 DEFAULT_WORKLOAD_SUBDIR = "hinerv_mlx_local_training"
 DEFAULT_DECODER_CODEC = "int8_mixed"
+HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
+HI_NERV_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE = 1.0
+HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE = 0.2
+HI_NERV_SEGNET_TARGET_CLASS_MAX_RATIO_DROP_FOR_STEP_GUARD = 0.05
+HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD = 0.01
+HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD = 1.0e-4
+HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD = 1.0e-3
+HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD = 15.0
+HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD = 0.31
+HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD = 0.22
+HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD = 3.75
+DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N = 4
+DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N = 2
 MODEL_SIZE_ROWS = tuple(row["row_id"] for row in hi_nerv_modelsize_config_rows(num_pairs=600))
 _HI_NERV_DECODER_CONTROL_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latent_embed",
@@ -128,6 +144,7 @@ _HI_NERV_DECODER_CONTROL_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "quantizer",
 )
 _HI_NERV_TRAIN_TIME_QUANT_NOISE_BITS: tuple[int, ...] = (2, 4, 6, 7, 8)
+HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE = "boundary_argmax_hinge"
 
 
 @dataclass(frozen=True)
@@ -147,7 +164,7 @@ class HiNervTrainTimeControlConfig:
     segnet_student_live_calibration_weight: float
     decoder_fake_quant_forward_enabled: bool
     decoder_fake_quant_bits: int
-    segnet_distillation_objective: str = "kl_t2"
+    segnet_distillation_objective: str = HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE
     distillation_temperature: float = 2.0
     segnet_direct_live_distillation_weight: float = 0.0
     segnet_direct_live_base_loss_weight: float = 1.0
@@ -155,6 +172,11 @@ class HiNervTrainTimeControlConfig:
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0
     segnet_direct_live_class_balanced_ce_weight: float = 0.0
     segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0
+    segnet_direct_live_class_region_recon_weight: float = 0.0
+    segnet_direct_live_rare_class_logit_weight: float = 0.0
+    segnet_direct_live_target_mass_floor_weight: float = 0.0
+    segnet_direct_live_target_min_ratio_floor_weight: float = 0.0
+    pose_direct_live_distillation_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     train_time_decoder_pruning_ratio: float = 0.0
@@ -183,6 +205,18 @@ class HiNervTrainTimeControlConfig:
     output_head_target_contrast_init_max_pairs: int = 8
     output_head_target_contrast_init_min_output_std: float = 1.0e-6
     output_head_target_contrast_init_max_gain: float = 4096.0
+    scorer_domain_bootstrap_enabled: bool = True
+    scorer_domain_bootstrap_steps: int = 8
+    scorer_domain_bootstrap_learning_rate: float = 2.0e-3
+    scorer_domain_bootstrap_max_pairs: int = 8
+    scorer_domain_bootstrap_rgb_weight: float = 1.0
+    scorer_domain_bootstrap_yuv6_weight: float = 0.5
+    scorer_domain_bootstrap_temporal_delta_weight: float = 0.25
+    scorer_domain_bootstrap_contrast_floor_weight: float = 0.5
+    scorer_domain_bootstrap_rgb_std_min_ratio: float = 0.75
+    scorer_domain_bootstrap_yuv6_temporal_std_min_ratio: float = 0.5
+    scorer_domain_bootstrap_weight_decay: float = 0.0
+    scorer_domain_bootstrap_grad_clip_max_norm: float | None = 1.0
 
     def validated(self) -> HiNervTrainTimeControlConfig:
         if self.stage_loss_schedule not in {
@@ -263,6 +297,26 @@ class HiNervTrainTimeControlConfig:
         _require_finite_nonnegative(
             self.segnet_direct_live_class_balanced_squared_hinge_weight,
             "segnet_direct_live_class_balanced_squared_hinge_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_class_region_recon_weight,
+            "segnet_direct_live_class_region_recon_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_rare_class_logit_weight,
+            "segnet_direct_live_rare_class_logit_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_target_mass_floor_weight,
+            "segnet_direct_live_target_mass_floor_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_target_min_ratio_floor_weight,
+            "segnet_direct_live_target_min_ratio_floor_weight",
+        )
+        _require_finite_nonnegative(
+            self.pose_direct_live_distillation_weight,
+            "pose_direct_live_distillation_weight",
         )
         _require_finite_positive(self.segnet_tau_boundary, "segnet_tau_boundary")
         _require_finite_positive(self.segnet_hinge_margin, "segnet_hinge_margin")
@@ -348,6 +402,62 @@ class HiNervTrainTimeControlConfig:
             self.output_head_target_contrast_init_max_gain,
             "output_head_target_contrast_init_max_gain",
         )
+        if int(self.scorer_domain_bootstrap_steps) < 0:
+            raise ValueError("scorer_domain_bootstrap_steps must be >= 0")
+        if int(self.scorer_domain_bootstrap_max_pairs) <= 0:
+            raise ValueError("scorer_domain_bootstrap_max_pairs must be positive")
+        _require_finite_positive(
+            self.scorer_domain_bootstrap_learning_rate,
+            "scorer_domain_bootstrap_learning_rate",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_rgb_weight,
+            "scorer_domain_bootstrap_rgb_weight",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_yuv6_weight,
+            "scorer_domain_bootstrap_yuv6_weight",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_temporal_delta_weight,
+            "scorer_domain_bootstrap_temporal_delta_weight",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_contrast_floor_weight,
+            "scorer_domain_bootstrap_contrast_floor_weight",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_rgb_std_min_ratio,
+            "scorer_domain_bootstrap_rgb_std_min_ratio",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_yuv6_temporal_std_min_ratio,
+            "scorer_domain_bootstrap_yuv6_temporal_std_min_ratio",
+        )
+        _require_finite_nonnegative(
+            self.scorer_domain_bootstrap_weight_decay,
+            "scorer_domain_bootstrap_weight_decay",
+        )
+        if self.scorer_domain_bootstrap_grad_clip_max_norm is not None:
+            _require_finite_positive(
+                self.scorer_domain_bootstrap_grad_clip_max_norm,
+                "scorer_domain_bootstrap_grad_clip_max_norm",
+            )
+        if (
+            bool(self.scorer_domain_bootstrap_enabled)
+            and int(self.scorer_domain_bootstrap_steps) > 0
+            and max(
+                float(self.scorer_domain_bootstrap_rgb_weight),
+                float(self.scorer_domain_bootstrap_yuv6_weight),
+                float(self.scorer_domain_bootstrap_temporal_delta_weight),
+                float(self.scorer_domain_bootstrap_contrast_floor_weight),
+            )
+            <= 0.0
+        ):
+            raise ValueError(
+                "enabled scorer-domain bootstrap requires at least one "
+                "positive RGB/YUV6 loss weight"
+            )
         return replace(
             self,
             optimizer_kind=str(self.optimizer_kind),
@@ -382,6 +492,21 @@ class HiNervTrainTimeControlConfig:
             ),
             segnet_direct_live_class_balanced_squared_hinge_weight=float(
                 self.segnet_direct_live_class_balanced_squared_hinge_weight
+            ),
+            segnet_direct_live_class_region_recon_weight=float(
+                self.segnet_direct_live_class_region_recon_weight
+            ),
+            segnet_direct_live_rare_class_logit_weight=float(
+                self.segnet_direct_live_rare_class_logit_weight
+            ),
+            segnet_direct_live_target_mass_floor_weight=float(
+                self.segnet_direct_live_target_mass_floor_weight
+            ),
+            segnet_direct_live_target_min_ratio_floor_weight=float(
+                self.segnet_direct_live_target_min_ratio_floor_weight
+            ),
+            pose_direct_live_distillation_weight=float(
+                self.pose_direct_live_distillation_weight
             ),
             segnet_tau_boundary=float(self.segnet_tau_boundary),
             segnet_hinge_margin=float(self.segnet_hinge_margin),
@@ -458,6 +583,31 @@ class HiNervTrainTimeControlConfig:
             output_head_target_contrast_init_max_gain=float(
                 self.output_head_target_contrast_init_max_gain
             ),
+            scorer_domain_bootstrap_enabled=bool(self.scorer_domain_bootstrap_enabled),
+            scorer_domain_bootstrap_steps=int(self.scorer_domain_bootstrap_steps),
+            scorer_domain_bootstrap_learning_rate=float(
+                self.scorer_domain_bootstrap_learning_rate
+            ),
+            scorer_domain_bootstrap_max_pairs=int(
+                self.scorer_domain_bootstrap_max_pairs
+            ),
+            scorer_domain_bootstrap_rgb_weight=float(
+                self.scorer_domain_bootstrap_rgb_weight
+            ),
+            scorer_domain_bootstrap_yuv6_weight=float(
+                self.scorer_domain_bootstrap_yuv6_weight
+            ),
+            scorer_domain_bootstrap_temporal_delta_weight=float(
+                self.scorer_domain_bootstrap_temporal_delta_weight
+            ),
+            scorer_domain_bootstrap_weight_decay=float(
+                self.scorer_domain_bootstrap_weight_decay
+            ),
+            scorer_domain_bootstrap_grad_clip_max_norm=(
+                None
+                if self.scorer_domain_bootstrap_grad_clip_max_norm is None
+                else float(self.scorer_domain_bootstrap_grad_clip_max_norm)
+            ),
         )
 
     @property
@@ -499,7 +649,19 @@ class HiNervTrainTimeControlConfig:
             ),
             "segnet_direct_live": {
                 "schema": "hi_nerv_train_time_segnet_direct_live_control.v1",
-                "enabled": float(self.segnet_direct_live_distillation_weight) > 0.0,
+                "enabled": bool(
+                    float(self.segnet_direct_live_distillation_weight) > 0.0
+                    or float(self.segnet_direct_live_class_histogram_weight) > 0.0
+                    or float(self.segnet_direct_live_class_balanced_hinge_weight) > 0.0
+                    or float(self.segnet_direct_live_class_balanced_ce_weight) > 0.0
+                    or float(self.segnet_direct_live_class_balanced_squared_hinge_weight)
+                    > 0.0
+                    or float(self.segnet_direct_live_class_region_recon_weight) > 0.0
+                    or float(self.segnet_direct_live_rare_class_logit_weight) > 0.0
+                    or float(self.segnet_direct_live_target_mass_floor_weight) > 0.0
+                    or float(self.segnet_direct_live_target_min_ratio_floor_weight)
+                    > 0.0
+                ),
                 "objective": str(self.segnet_distillation_objective),
                 "distillation_temperature": float(self.distillation_temperature),
                 "weight": float(self.segnet_direct_live_distillation_weight),
@@ -516,9 +678,29 @@ class HiNervTrainTimeControlConfig:
                 "class_balanced_squared_hinge_weight": float(
                     self.segnet_direct_live_class_balanced_squared_hinge_weight
                 ),
+                "class_region_recon_weight": float(
+                    self.segnet_direct_live_class_region_recon_weight
+                ),
+                "rare_class_logit_weight": float(
+                    self.segnet_direct_live_rare_class_logit_weight
+                ),
+                "target_mass_floor_weight": float(
+                    self.segnet_direct_live_target_mass_floor_weight
+                ),
+                "target_min_ratio_floor_weight": float(
+                    self.segnet_direct_live_target_min_ratio_floor_weight
+                ),
                 "tau_boundary": float(self.segnet_tau_boundary),
                 "hinge_margin": float(self.segnet_hinge_margin),
                 "target_surface": "upstream_segnet_last_frame_logits",
+                "human_visual_fidelity_objective": False,
+            },
+            "pose_direct_live_distillation": {
+                "schema": "hi_nerv_train_time_pose_direct_live_distillation_control.v1",
+                "enabled": float(self.pose_direct_live_distillation_weight) > 0.0,
+                "weight": float(self.pose_direct_live_distillation_weight),
+                "target_surface": "upstream_posenet_pair_score_term",
+                "pair_geometry_objective": True,
                 "human_visual_fidelity_objective": False,
             },
             "decoder_fake_quant_forward_enabled": bool(
@@ -666,6 +848,40 @@ class HiNervTrainTimeControlConfig:
                 ],
                 "human_visual_fidelity_objective": False,
             },
+            "scorer_domain_bootstrap": {
+                "schema": "hi_nerv_scorer_domain_bootstrap_control.v1",
+                "enabled": bool(self.scorer_domain_bootstrap_enabled),
+                "steps": int(self.scorer_domain_bootstrap_steps),
+                "learning_rate": float(self.scorer_domain_bootstrap_learning_rate),
+                "max_pairs": int(self.scorer_domain_bootstrap_max_pairs),
+                "rgb_weight": float(self.scorer_domain_bootstrap_rgb_weight),
+                "yuv6_weight": float(self.scorer_domain_bootstrap_yuv6_weight),
+                "temporal_delta_weight": float(
+                    self.scorer_domain_bootstrap_temporal_delta_weight
+                ),
+                "contrast_floor_weight": float(
+                    self.scorer_domain_bootstrap_contrast_floor_weight
+                ),
+                "rgb_std_min_ratio": float(
+                    self.scorer_domain_bootstrap_rgb_std_min_ratio
+                ),
+                "yuv6_temporal_std_min_ratio": float(
+                    self.scorer_domain_bootstrap_yuv6_temporal_std_min_ratio
+                ),
+                "weight_decay": float(self.scorer_domain_bootstrap_weight_decay),
+                "grad_clip_max_norm": (
+                    None
+                    if self.scorer_domain_bootstrap_grad_clip_max_norm is None
+                    else float(self.scorer_domain_bootstrap_grad_clip_max_norm)
+                ),
+                "target_surface": (
+                    "segnet_last_frame_rgb_and_posenet_pr95_yuv6_pair_before_"
+                    "score_aware_training"
+                ),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": "all_trainable_hi_nerv_decoder_and_latent_tensors",
+                "human_visual_fidelity_objective": False,
+            },
             "authority": TRAINER_AUTHORITY,
             **FALSE_AUTHORITY,
         }
@@ -734,10 +950,13 @@ def _full_main(args: argparse.Namespace) -> int:
     local_training_pair_indices = (
         tuple(range(effective_training_num_pairs)) if source_pair_indices is not None else prioritized_pair_indices
     )
-    optimizer_control = _optimizer_control_metadata_from_args(args)
     decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(
         args,
         modelsize_candidate=modelsize_candidate,
+    )
+    optimizer_control = _optimizer_control_metadata_from_args(
+        args,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
     )
     model = HinervSubstrateMLX(cfg)
     decoder_fake_quant_forward = _configure_decoder_fake_quant_forward(
@@ -850,14 +1069,31 @@ def _full_main(args: argparse.Namespace) -> int:
     learnable_student_head = None
     learnable_pose_student_head = None
     pose_distillation_weight = 0.0
+    segnet_direct_live_subcontrol_requested = any(
+        float(value) > 0.0
+        for value in (
+            train_time_controls.segnet_direct_live_class_histogram_weight,
+            train_time_controls.segnet_direct_live_class_balanced_hinge_weight,
+            train_time_controls.segnet_direct_live_class_balanced_ce_weight,
+            train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight,
+            train_time_controls.segnet_direct_live_class_region_recon_weight,
+            train_time_controls.segnet_direct_live_rare_class_logit_weight,
+            train_time_controls.segnet_direct_live_target_mass_floor_weight,
+            train_time_controls.segnet_direct_live_target_min_ratio_floor_weight,
+        )
+    )
     segnet_teacher_needed = bool(
         (
             float(args.distillation_weight) > 0.0
             and not bool(args.allow_mock_scorer_teacher)
         )
         or float(train_time_controls.segnet_direct_live_distillation_weight) > 0.0
+        or segnet_direct_live_subcontrol_requested
     )
-    pose_teacher_needed = bool(float(args.pose_distillation_weight) > 0.0)
+    pose_teacher_needed = bool(
+        float(args.pose_distillation_weight) > 0.0
+        or float(train_time_controls.pose_direct_live_distillation_weight) > 0.0
+    )
     if segnet_teacher_needed or pose_teacher_needed:
         bundle_no_teacher = RendererBundle(
             model=model,
@@ -907,6 +1143,11 @@ def _full_main(args: argparse.Namespace) -> int:
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
         pose_distillation_weight=pose_distillation_weight,
+        pose_direct_live_distillation_weight=(
+            float(train_time_controls.pose_direct_live_distillation_weight)
+            if pose_scorer_teacher is not None
+            else 0.0
+        ),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
@@ -946,6 +1187,26 @@ def _full_main(args: argparse.Namespace) -> int:
             float(
                 train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight
             )
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_class_region_recon_weight=(
+            float(train_time_controls.segnet_direct_live_class_region_recon_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_rare_class_logit_weight=(
+            float(train_time_controls.segnet_direct_live_rare_class_logit_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_target_mass_floor_weight=(
+            float(train_time_controls.segnet_direct_live_target_mass_floor_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_target_min_ratio_floor_weight=(
+            float(train_time_controls.segnet_direct_live_target_min_ratio_floor_weight)
             if scorer_teacher is not None
             else 0.0
         ),
@@ -1091,6 +1352,118 @@ def _full_main(args: argparse.Namespace) -> int:
                 output_head_target_bias_init
             ),
             "modelsize_candidate_consumption": modelsize_candidate_consumption,
+            "shared_harness_train_time_actuators": {
+                "schema": "hi_nerv_direct_trainer_shared_harness_actuators.v1",
+                "telemetry_flush_interval_epochs": args.telemetry_flush_interval_epochs,
+                "pr95_muon_policy": str(args.pr95_muon_policy),
+                "scorer_space_step_guard": {
+                    "enabled": bool(args.scorer_space_step_guard),
+                    "min_pre_segnet_occupied_class_fraction": float(
+                        args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+                    ),
+                    "min_post_segnet_occupied_class_fraction": float(
+                        args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+                    ),
+                    "min_post_segnet_target_class_coverage_fraction": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+                        )
+                    ),
+                    "min_post_segnet_target_class_min_ratio": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+                        )
+                    ),
+                    "max_post_segnet_target_class_ratio_drop": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+                        )
+                    ),
+                    "max_post_segnet_contrast_ratio": args.scorer_space_step_guard_max_post_segnet_contrast_ratio,
+                    "max_post_segnet_distribution_mae": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_post_segnet_distribution_mae
+                        )
+                    ),
+                    "max_post_posenet_yuv6_distribution_mae": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+                        )
+                    ),
+                    "max_post_posenet_yuv6_contrast_ratio": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+                        )
+                    ),
+                    "max_post_segnet_argmax_disagreement": args.scorer_space_step_guard_max_post_segnet_argmax_disagreement,
+                    "max_post_pose_score_term": args.scorer_space_step_guard_max_post_pose_score_term,
+                    "max_post_pose_direct_live_score_term": args.scorer_space_step_guard_max_post_pose_direct_live_score_term,
+                    "max_pose_score_term_relative_worsening": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_pose_score_term_relative_worsening
+                        )
+                    ),
+                    "max_pose_score_term_absolute_worsening": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
+                        )
+                    ),
+                    "max_pose_direct_live_score_term_relative_worsening": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+                        )
+                    ),
+                    "max_pose_direct_live_score_term_absolute_worsening": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+                        )
+                    ),
+                    "max_direct_nonrate_score_worsening": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_direct_nonrate_score_worsening
+                        )
+                    ),
+                    "max_bootstrap_direct_nonrate_score_worsening": (
+                        _optional_nonnegative_threshold(
+                            args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                        )
+                    ),
+                    "backtracking_steps": int(args.scorer_space_step_guard_backtracking_steps),
+                    "backtracking_shrink": float(args.scorer_space_step_guard_backtracking_shrink),
+                },
+                "checkpoint_selection": {
+                    "metric_key": str(args.checkpoint_selection_metric_key),
+                    "metric_mode": str(args.checkpoint_selection_metric_mode),
+                    "metric_required": bool(args.checkpoint_selection_metric_required),
+                    "tie_break_metric_key": str(
+                        args.checkpoint_selection_tie_break_metric_key
+                    ),
+                    "tie_break_metric_mode": str(
+                        args.checkpoint_selection_tie_break_metric_mode
+                    ),
+                    "tie_break_metric_required": bool(
+                        args.checkpoint_selection_tie_break_metric_required
+                    ),
+                },
+                "checkpoint_retention": {
+                    "keep_last_n": _checkpoint_retention_keep_last_n_from_args(args),
+                    "keep_best_n": int(args.checkpoint_retention_keep_best_n),
+                    "keep_every_n_epochs": args.checkpoint_retention_keep_every_n_epochs,
+                    "cold_store_roots": [
+                        Path(root).as_posix()
+                        for root in (args.checkpoint_retention_cold_store_root or [])
+                    ],
+                    "checkpoint_dir": (
+                        None if args.checkpoint_dir is None else args.checkpoint_dir.as_posix()
+                    ),
+                    "resume_from_checkpoint": (
+                        None
+                        if args.resume_from_checkpoint is None
+                        else args.resume_from_checkpoint.as_posix()
+                    ),
+                },
+                **FALSE_AUTHORITY,
+            },
             "prioritized_pair_training": _prioritized_pair_training_metadata(
                 prioritized_pair_indices,
                 target_hydration_pair_indices_consumed=source_pair_indices is not None,
@@ -1114,9 +1487,23 @@ def _full_main(args: argparse.Namespace) -> int:
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
         checkpoint_interval_epochs=int(args.checkpoint_interval_epochs),
+        checkpoint_retention_keep_last_n=(
+            _checkpoint_retention_keep_last_n_from_args(args)
+        ),
+        checkpoint_retention_keep_best_n=int(args.checkpoint_retention_keep_best_n),
+        checkpoint_retention_keep_every_n_epochs=(
+            args.checkpoint_retention_keep_every_n_epochs
+        ),
+        checkpoint_retention_cold_store_roots=tuple(
+            args.checkpoint_retention_cold_store_root or ()
+        ),
+        telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
         curriculum_stages=_curriculum_stages_from_args(args),
+        checkpoint_dir=args.checkpoint_dir,
+        resume_from_checkpoint=args.resume_from_checkpoint,
         pr95_faithful_curriculum_enabled=bool(args.pr95_faithful_curriculum),
         pr95_curriculum_total_epochs=args.pr95_curriculum_total_epochs,
+        pr95_muon_policy=str(args.pr95_muon_policy),
         pr95_stage_source_weight_amplification_enabled=bool(
             optimizer_control["pr95_stage_source_weight_amplification_enabled"]
         ),
@@ -1140,6 +1527,97 @@ def _full_main(args: argparse.Namespace) -> int:
         output_head_bias_gradient_multiplier=float(
             optimizer_control["output_head_bias_gradient_multiplier"]
         ),
+        scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard),
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
+            args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+        ),
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=float(
+            args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        ),
+        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+            )
+        ),
+        scorer_space_step_guard_min_post_segnet_target_class_min_ratio=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+            )
+        ),
+        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+            )
+        ),
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=args.scorer_space_step_guard_max_post_segnet_contrast_ratio,
+        scorer_space_step_guard_max_post_segnet_distribution_mae=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_post_segnet_distribution_mae
+            )
+        ),
+        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
+            )
+        ),
+        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
+            )
+        ),
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=args.scorer_space_step_guard_max_post_segnet_argmax_disagreement,
+        scorer_space_step_guard_max_post_pose_score_term=args.scorer_space_step_guard_max_post_pose_score_term,
+        scorer_space_step_guard_max_post_pose_direct_live_score_term=args.scorer_space_step_guard_max_post_pose_direct_live_score_term,
+        scorer_space_step_guard_max_pose_score_term_relative_worsening=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_pose_score_term_relative_worsening
+            )
+        ),
+        scorer_space_step_guard_max_pose_score_term_absolute_worsening=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
+            )
+        ),
+        scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
+            )
+        ),
+        scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
+            )
+        ),
+        scorer_space_step_guard_max_direct_nonrate_score_worsening=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_direct_nonrate_score_worsening
+            )
+        ),
+        scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=(
+            _optional_nonnegative_threshold(
+                args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+            )
+        ),
+        scorer_space_step_guard_backtracking_steps=int(
+            args.scorer_space_step_guard_backtracking_steps
+        ),
+        scorer_space_step_guard_backtracking_shrink=float(
+            args.scorer_space_step_guard_backtracking_shrink
+        ),
+        checkpoint_selection_metric_key=str(args.checkpoint_selection_metric_key),
+        checkpoint_selection_metric_mode=str(args.checkpoint_selection_metric_mode),
+        checkpoint_selection_metric_required=bool(
+            args.checkpoint_selection_metric_required
+        ),
+        checkpoint_selection_tie_break_metric_key=str(
+            args.checkpoint_selection_tie_break_metric_key
+        ),
+        checkpoint_selection_tie_break_metric_mode=str(
+            args.checkpoint_selection_tie_break_metric_mode
+        ),
+        checkpoint_selection_tie_break_metric_required=bool(
+            args.checkpoint_selection_tie_break_metric_required
+        ),
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
             "mlx_score_aware harness, with optional real SegNet/PoseNet teacher "
@@ -1157,6 +1635,13 @@ def _full_main(args: argparse.Namespace) -> int:
             output_dir=output_dir,
             report=post_export_quality,
         )
+    decoder_weight_waterfill_plan_metadata = (
+        _decoder_weight_waterfill_plan_attachment_metadata(
+            args=args,
+            plan=decoder_weight_waterfill_plan,
+            fake_quant_forward=decoder_fake_quant_forward,
+        )
+    )
     short_scorer_smoke_readiness = _write_hinerv_short_scorer_smoke_readiness(
         output_dir=output_dir,
         train_time_controls=train_time_controls,
@@ -1168,6 +1653,12 @@ def _full_main(args: argparse.Namespace) -> int:
         min_segnet_occupied_class_fraction_for_fit_gate=float(
             args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
         ),
+        require_section_byte_dual_ascent=modelsize_hard_byte_ceiling is not None,
+        require_pose_direct_live_distillation=True,
+        decoder_weight_waterfill_plan_metadata=(
+            decoder_weight_waterfill_plan_metadata
+        ),
+        output_head_target_bias_init_metadata=output_head_target_bias_init,
     )
     _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact(
         output_dir=output_dir,
@@ -1261,6 +1752,33 @@ def _smoke_main(args: argparse.Namespace) -> int:
         controls=train_time_controls,
         source_pair_indices=None,
     )
+    output_head_target_contrast_init = (
+        output_head_target_bias_init.get("contrast_init")
+        if isinstance(output_head_target_bias_init, Mapping)
+        else None
+    )
+    scorer_domain_bootstrap = (
+        output_head_target_bias_init.get("scorer_domain_bootstrap")
+        if isinstance(output_head_target_bias_init, Mapping)
+        else None
+    )
+    output_head_init_blockers: list[str] = []
+    if not bool(output_head_target_bias_init.get("enabled")):
+        output_head_init_blockers.append(
+            "hinerv_smoke_missing_output_head_target_bias_init"
+        )
+    if not (
+        isinstance(output_head_target_contrast_init, Mapping)
+        and bool(output_head_target_contrast_init.get("enabled"))
+    ):
+        output_head_init_blockers.append(
+            "hinerv_smoke_missing_output_head_target_contrast_init"
+        )
+    if not (
+        isinstance(scorer_domain_bootstrap, Mapping)
+        and bool(scorer_domain_bootstrap.get("enabled"))
+    ):
+        output_head_init_blockers.append("hinerv_smoke_missing_scorer_domain_bootstrap")
     output = model(idx)
     mx.eval(output)
     forward_smoke_stats = _smoke_forward_statistics(
@@ -1318,6 +1836,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
             **forward_smoke_stats,
         },
         "output_head_target_bias_init": _metadata_safe(output_head_target_bias_init),
+        "output_head_target_contrast_init": _metadata_safe(
+            output_head_target_contrast_init
+        ),
         "decoder_codec": effective_decoder_codec,
         "decoder_fake_quant_forward": decoder_fake_quant_forward,
         "decoder_weight_waterfill_plan": _decoder_weight_waterfill_plan_attachment_metadata(
@@ -1339,6 +1860,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "contest_cpu_cuda_exact_eval_not_executed",
             "hi_nerv_smoke_no_training_score",
             "official_hinerv_feature_grid_parity_not_proven",
+            *output_head_init_blockers,
             *canonicalization["blockers"],
             *byte_cap_control["blockers"],
         ],
@@ -1491,6 +2013,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--full-lr", type=float, default=1.0e-3)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=25)
+    parser.add_argument(
+        "--telemetry-flush-interval-epochs",
+        type=int,
+        default=1,
+        help=(
+            "Flush shared score-aware training telemetry this often. Direct "
+            "HiNeRV uses the compact-runner default of 1 so long runs expose "
+            "distortion, byte-dual, and guard movement from step zero."
+        ),
+    )
     parser.add_argument("--decoder-codec", default=DEFAULT_DECODER_CODEC)
     parser.add_argument(
         "--hard-byte-ceiling",
@@ -1558,6 +2090,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--distillation-weight", type=float, default=0.0)
     parser.add_argument("--pose-distillation-weight", type=float, default=1.0)
     parser.add_argument(
+        "--pose-direct-live-distillation-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Direct-live PoseNet score-term pressure on decoded frame pairs. "
+            "Use this to prevent temporal/YUV6 collapse in scorer space; it is "
+            "not a visual-fidelity objective."
+        ),
+    )
+    parser.add_argument(
         "--segnet-student-live-calibration-weight",
         type=float,
         default=1.0,
@@ -1577,7 +2119,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "boundary_kl_t2",
             "boundary_argmax_hinge",
         ),
-        default="kl_t2",
+        default=HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE,
     )
     parser.add_argument("--distillation-temperature", type=float, default=2.0)
     parser.add_argument("--segnet-direct-live-distillation-weight", type=float, default=0.0)
@@ -1600,6 +2142,46 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
     )
+    parser.add_argument(
+        "--segnet-direct-live-class-region-recon-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Direct-live SegNet last-frame target-class region RGB fit. This "
+            "is a scorer-space class-collapse repair actuator, not a human "
+            "visual fidelity objective."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-direct-live-rare-class-logit-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Direct-live SegNet rare/any-present class actuator. It prices "
+            "hard target-class deficit and soft class-mass deficit on the "
+            "upstream last-frame argmax surface."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-direct-live-target-mass-floor-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Direct-live SegNet target-present class mass floor. It attacks the "
+            "post-class-birth failure where a target class exists somewhere but "
+            "has zero hard mass inside its scored last-frame target regions."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-direct-live-target-min-ratio-floor-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Direct-live SegNet target-present class minimum hard-ratio floor. "
+            "This is the stricter companion to target-mass pressure for "
+            "post-birth class-collapse repair."
+        ),
+    )
     parser.add_argument("--segnet-tau-boundary", type=float, default=1.0)
     parser.add_argument("--segnet-hinge-margin", type=float, default=1.0)
     parser.add_argument("--allow-mock-scorer-teacher", action="store_true")
@@ -1608,6 +2190,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pose-student-input-preprocess", choices=("rgb", "pr95_yuv6"), default="pr95_yuv6")
     parser.add_argument("--pr95-faithful-curriculum", action="store_true")
     parser.add_argument("--pr95-curriculum-total-epochs", type=int, default=None)
+    parser.add_argument(
+        "--pr95-muon-policy",
+        choices=("faithful_stage8_only", "every_stage"),
+        default="every_stage",
+        help=(
+            "Muon activation policy for PR95-curriculum training. "
+            "faithful_stage8_only preserves PR95 source behavior; every_stage "
+            "is the Pact contest-specific default used with pact_muon_adamw."
+        ),
+    )
     parser.add_argument(
         "--pr95-stage-source-weight-amplification",
         action="store_true",
@@ -1685,6 +2277,59 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Maximum per-channel output-head weight gain applied by the "
             "closed-form contrast initializer."
+        ),
+    )
+    parser.add_argument(
+        "--no-scorer-domain-bootstrap",
+        action="store_false",
+        dest="scorer_domain_bootstrap",
+        help=(
+            "Disable the bounded archive-charged RGB/YUV6 bootstrap before "
+            "score-aware HiNeRV training. This is for ablation only."
+        ),
+    )
+    parser.set_defaults(scorer_domain_bootstrap=True)
+    parser.add_argument("--scorer-domain-bootstrap-steps", type=int, default=8)
+    parser.add_argument(
+        "--scorer-domain-bootstrap-learning-rate",
+        type=float,
+        default=2.0e-3,
+    )
+    parser.add_argument("--scorer-domain-bootstrap-max-pairs", type=int, default=8)
+    parser.add_argument("--scorer-domain-bootstrap-rgb-weight", type=float, default=1.0)
+    parser.add_argument("--scorer-domain-bootstrap-yuv6-weight", type=float, default=0.5)
+    parser.add_argument(
+        "--scorer-domain-bootstrap-temporal-delta-weight",
+        type=float,
+        default=0.25,
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-contrast-floor-weight",
+        type=float,
+        default=0.5,
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-rgb-std-min-ratio",
+        type=float,
+        default=0.75,
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-yuv6-temporal-std-min-ratio",
+        type=float,
+        default=0.5,
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-weight-decay",
+        type=float,
+        default=0.0,
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-grad-clip-max-norm",
+        type=float,
+        default=1.0,
+        help=(
+            "Gradient clip for the bounded scorer-domain bootstrap; negative "
+            "disables clipping for ablation."
         ),
     )
     parser.add_argument(
@@ -1795,6 +2440,155 @@ def _build_parser() -> argparse.ArgumentParser:
         default=1.0,
     )
     parser.add_argument("--ema-archive-selection", action="store_true")
+    parser.add_argument(
+        "--scorer-space-step-guard",
+        action="store_true",
+        help=(
+            "Enable shared harness post-step scorer-space rejection/backtracking "
+            "guards so direct long runs cannot silently accept SegNet/PoseNet "
+            "collapse updates."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-min-pre-segnet-occupied-class-fraction",
+        type=float,
+        default=0.4,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction",
+        type=float,
+        default=HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction",
+        type=float,
+        default=HI_NERV_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio",
+        type=float,
+        default=HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop",
+        type=float,
+        default=HI_NERV_SEGNET_TARGET_CLASS_MAX_RATIO_DROP_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-segnet-contrast-ratio",
+        type=float,
+        default=4.25,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-segnet-distribution-mae",
+        type=float,
+        default=HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-posenet-yuv6-distribution-mae",
+        type=float,
+        default=HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-posenet-yuv6-contrast-ratio",
+        type=float,
+        default=HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-segnet-argmax-disagreement",
+        type=float,
+        default=0.5,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-pose-score-term",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-pose-direct-live-score-term",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-pose-score-term-relative-worsening",
+        type=float,
+        default=HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-pose-score-term-absolute-worsening",
+        type=float,
+        default=HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-pose-direct-live-score-term-relative-worsening",
+        type=float,
+        default=HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-pose-direct-live-score-term-absolute-worsening",
+        type=float,
+        default=HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-direct-nonrate-score-worsening",
+        type=float,
+        default=HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-bootstrap-direct-nonrate-score-worsening",
+        type=float,
+        default=HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-backtracking-steps",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-backtracking-shrink",
+        type=float,
+        default=0.5,
+    )
+    parser.add_argument("--checkpoint-selection-metric-key", default="total")
+    parser.add_argument(
+        "--checkpoint-selection-metric-mode",
+        choices=("min", "max"),
+        default="min",
+    )
+    parser.add_argument("--checkpoint-selection-metric-required", action="store_true")
+    parser.add_argument("--checkpoint-selection-tie-break-metric-key", default="")
+    parser.add_argument(
+        "--checkpoint-selection-tie-break-metric-mode",
+        choices=("min", "max"),
+        default="min",
+    )
+    parser.add_argument(
+        "--checkpoint-selection-tie-break-metric-required",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--checkpoint-retention-keep-last-n",
+        type=int,
+        default=DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+        help=(
+            "Hot-retention for MLX checkpoints. Keep the last N periodic "
+            "checkpoints in the active run directory; use -1 to preserve all."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-retention-keep-best-n",
+        type=int,
+        default=DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
+    )
+    parser.add_argument("--checkpoint-retention-keep-every-n-epochs", type=int)
+    parser.add_argument(
+        "--checkpoint-retention-cold-store-root",
+        action="append",
+        default=[],
+        type=Path,
+    )
+    parser.add_argument("--checkpoint-dir", type=Path)
+    parser.add_argument("--resume-from-checkpoint", type=Path)
     parser.add_argument("--smoke-export-archive", action="store_true")
     parser.add_argument("--post-export-receiver-cache-quality-gate", action="store_true")
     parser.add_argument(
@@ -1883,6 +2677,7 @@ def _config_from_args(
     if candidate:
         _reject_modelsize_candidate_cli_config_overrides(args)
         cfg = build_hinerv_config_from_modelsize_candidate(candidate)
+        cfg = replace(cfg, init_seed=int(getattr(args, "seed", 0)))
         if int(args.output_height) != int(cfg.output_height) or int(
             args.output_width
         ) != int(cfg.output_width):
@@ -1899,6 +2694,7 @@ def _config_from_args(
         "num_pairs": int(args.num_pairs),
         "output_height": int(args.output_height),
         "output_width": int(args.output_width),
+        "init_seed": int(getattr(args, "seed", 0)),
     }
     for attr in (
         "latent_dim_coarse",
@@ -2344,6 +3140,10 @@ def _build_hi_nerv_train_time_section_byte_metrics_callback(
     def _callback(model_obj: Any, _batch: Any, _loss_weights: Mapping[str, float]) -> dict[str, Any]:
         state["step"] = int(state["step"]) + 1
         refreshed = state["step"] == 1 or state["step"] % frequency_steps == 0
+        effective_loss_weights = {
+            **{str(key): float(value) for key, value in dict(active_loss_weights).items()},
+            **{str(key): float(value) for key, value in dict(_loss_weights or {}).items()},
+        }
         if refreshed:
             state["last_control"] = (
                 _build_hi_nerv_train_time_section_byte_control_from_model(
@@ -2352,7 +3152,7 @@ def _build_hi_nerv_train_time_section_byte_metrics_callback(
                     controls=controls,
                     decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
                     hard_byte_ceiling=hard_byte_ceiling,
-                    active_loss_weights=active_loss_weights,
+                    active_loss_weights=effective_loss_weights,
                 )
             )
         control = dict(state["last_control"])
@@ -2367,6 +3167,16 @@ def _build_hi_nerv_train_time_section_byte_metrics_callback(
                 control.get("controlled_section_count") or 0
             ),
             "pending_section_count": int(control.get("pending_section_count") or 0),
+            "active_loss_weight_keys": sorted(effective_loss_weights),
+            "positive_active_loss_weight_keys": sorted(
+                key for key, value in effective_loss_weights.items() if float(value) > 0.0
+            ),
+            "section_byte_loss_weight_key_map": dict(
+                sorted(dict(control.get("section_byte_loss_weight_key_map") or {}).items())
+            ),
+            "section_byte_budgets": dict(
+                sorted(dict(control.get("section_byte_budgets") or {}).items())
+            ),
             "authority": TRAINER_AUTHORITY,
             **FALSE_AUTHORITY,
         }
@@ -2419,8 +3229,23 @@ def _train_time_dual_ascent_config_from_args(
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight
         ),
+        segnet_direct_live_class_region_recon_weight=float(
+            train_time_controls.segnet_direct_live_class_region_recon_weight
+        ),
+        segnet_direct_live_rare_class_logit_weight=float(
+            train_time_controls.segnet_direct_live_rare_class_logit_weight
+        ),
+        segnet_direct_live_target_mass_floor_weight=float(
+            train_time_controls.segnet_direct_live_target_mass_floor_weight
+        ),
+        segnet_direct_live_target_min_ratio_floor_weight=float(
+            train_time_controls.segnet_direct_live_target_min_ratio_floor_weight
+        ),
         pose_distillation_weight=float(
             getattr(args, "pose_distillation_weight", 0.0)
+        ),
+        pose_direct_live_distillation_weight=float(
+            train_time_controls.pose_direct_live_distillation_weight
         ),
         scorer_input_distribution_guard_weight=float(
             train_time_controls.scorer_input_distribution_guard_weight
@@ -2483,7 +3308,11 @@ def _train_time_control_config_from_args(
             getattr(args, "segnet_student_live_calibration_weight", 1.0)
         ),
         segnet_distillation_objective=str(
-            getattr(args, "segnet_distillation_objective", "kl_t2")
+            getattr(
+                args,
+                "segnet_distillation_objective",
+                HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE,
+            )
         ),
         distillation_temperature=float(getattr(args, "distillation_temperature", 2.0)),
         segnet_direct_live_distillation_weight=float(
@@ -2507,6 +3336,21 @@ def _train_time_control_config_from_args(
                 "segnet_direct_live_class_balanced_squared_hinge_weight",
                 0.0,
             )
+        ),
+        segnet_direct_live_class_region_recon_weight=float(
+            getattr(args, "segnet_direct_live_class_region_recon_weight", 0.0)
+        ),
+        segnet_direct_live_rare_class_logit_weight=float(
+            getattr(args, "segnet_direct_live_rare_class_logit_weight", 0.0)
+        ),
+        segnet_direct_live_target_mass_floor_weight=float(
+            getattr(args, "segnet_direct_live_target_mass_floor_weight", 0.0)
+        ),
+        segnet_direct_live_target_min_ratio_floor_weight=float(
+            getattr(args, "segnet_direct_live_target_min_ratio_floor_weight", 0.0)
+        ),
+        pose_direct_live_distillation_weight=float(
+            getattr(args, "pose_direct_live_distillation_weight", 0.0)
         ),
         segnet_tau_boundary=float(getattr(args, "segnet_tau_boundary", 1.0)),
         segnet_hinge_margin=float(getattr(args, "segnet_hinge_margin", 1.0)),
@@ -2608,6 +3452,45 @@ def _train_time_control_config_from_args(
         output_head_target_contrast_init_max_gain=float(
             getattr(args, "output_head_target_contrast_init_max_gain", 4096.0)
         ),
+        scorer_domain_bootstrap_enabled=bool(
+            getattr(args, "scorer_domain_bootstrap", True)
+        ),
+        scorer_domain_bootstrap_steps=int(
+            getattr(args, "scorer_domain_bootstrap_steps", 8)
+        ),
+        scorer_domain_bootstrap_learning_rate=float(
+            getattr(args, "scorer_domain_bootstrap_learning_rate", 2.0e-3)
+        ),
+        scorer_domain_bootstrap_max_pairs=int(
+            getattr(args, "scorer_domain_bootstrap_max_pairs", 8)
+        ),
+        scorer_domain_bootstrap_rgb_weight=float(
+            getattr(args, "scorer_domain_bootstrap_rgb_weight", 1.0)
+        ),
+        scorer_domain_bootstrap_yuv6_weight=float(
+            getattr(args, "scorer_domain_bootstrap_yuv6_weight", 0.5)
+        ),
+        scorer_domain_bootstrap_temporal_delta_weight=float(
+            getattr(args, "scorer_domain_bootstrap_temporal_delta_weight", 0.25)
+        ),
+        scorer_domain_bootstrap_contrast_floor_weight=float(
+            getattr(args, "scorer_domain_bootstrap_contrast_floor_weight", 0.5)
+        ),
+        scorer_domain_bootstrap_rgb_std_min_ratio=float(
+            getattr(args, "scorer_domain_bootstrap_rgb_std_min_ratio", 0.75)
+        ),
+        scorer_domain_bootstrap_yuv6_temporal_std_min_ratio=float(
+            getattr(args, "scorer_domain_bootstrap_yuv6_temporal_std_min_ratio", 0.5)
+        ),
+        scorer_domain_bootstrap_weight_decay=float(
+            getattr(args, "scorer_domain_bootstrap_weight_decay", 0.0)
+        ),
+        scorer_domain_bootstrap_grad_clip_max_norm=(
+            None
+            if float(getattr(args, "scorer_domain_bootstrap_grad_clip_max_norm", 1.0))
+            < 0.0
+            else float(getattr(args, "scorer_domain_bootstrap_grad_clip_max_norm", 1.0))
+        ),
     ).validated()
 
 
@@ -2619,6 +3502,33 @@ def _require_finite_nonnegative(value: float, field: str) -> None:
 def _require_finite_positive(value: float, field: str) -> None:
     if not math.isfinite(float(value)) or float(value) <= 0.0:
         raise ValueError(f"{field} must be finite and positive")
+
+
+def _optional_nonnegative_threshold(value: Any) -> float | None:
+    """Normalize compact-runner guard controls: negative values disable ceilings."""
+
+    if value is None:
+        return None
+    parsed = float(value)
+    if parsed < 0.0:
+        return None
+    return parsed
+
+
+def _checkpoint_retention_keep_last_n_from_args(args: argparse.Namespace) -> int | None:
+    """Resolve direct-trainer checkpoint hot-retention; -1 preserves all."""
+
+    raw = getattr(
+        args,
+        "checkpoint_retention_keep_last_n",
+        DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+    )
+    if isinstance(raw, bool):
+        raise ValueError("--checkpoint-retention-keep-last-n must be an integer")
+    value = int(raw)
+    if value < -1:
+        raise ValueError("--checkpoint-retention-keep-last-n must be >= -1")
+    return None if value == -1 else value
 
 
 def _validate_ratio(value: float, field: str) -> None:
@@ -3092,6 +4002,86 @@ def _initialize_output_head_target_bias(
             "runtime_sidecar_bytes": 0,
             "archive_charged_decoder_tensors": [],
             "blockers": ["hinerv_output_head_target_contrast_init_disabled"],
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+    if bool(control.scorer_domain_bootstrap_enabled):
+        bootstrap_initializer = getattr(
+            model,
+            "fit_scorer_domain_bootstrap_from_targets",
+            None,
+        )
+        if not callable(bootstrap_initializer):
+            raise RuntimeError(
+                "HiNeRV model lacks fit_scorer_domain_bootstrap_from_targets; "
+                "refusing scorer-domain-degenerate long-run launch"
+            )
+        import mlx.core as mx
+
+        pair_count = int(target_rgb_0.shape[0])
+        bootstrap_count = min(
+            pair_count,
+            int(control.scorer_domain_bootstrap_max_pairs),
+        )
+        target0_subset = target_rgb_0[:bootstrap_count]
+        target1_subset = target_rgb_1[:bootstrap_count]
+        if source_pair_indices is None:
+            pair_indices = mx.arange(bootstrap_count, dtype=mx.int32)
+        else:
+            if len(source_pair_indices) < bootstrap_count:
+                raise ValueError(
+                    "source_pair_indices shorter than scorer-domain bootstrap "
+                    f"subset: {len(source_pair_indices)} < {bootstrap_count}"
+                )
+            pair_indices = mx.array(
+                [int(value) for value in source_pair_indices[:bootstrap_count]],
+                dtype=mx.int32,
+            )
+        payload["scorer_domain_bootstrap"] = dict(
+            bootstrap_initializer(
+                target0_subset,
+                target1_subset,
+                pair_indices=pair_indices,
+                steps=int(control.scorer_domain_bootstrap_steps),
+                learning_rate=float(control.scorer_domain_bootstrap_learning_rate),
+                rgb_weight=float(control.scorer_domain_bootstrap_rgb_weight),
+                yuv6_weight=float(control.scorer_domain_bootstrap_yuv6_weight),
+                temporal_delta_weight=float(
+                    control.scorer_domain_bootstrap_temporal_delta_weight
+                ),
+                contrast_floor_weight=float(
+                    control.scorer_domain_bootstrap_contrast_floor_weight
+                ),
+                rgb_std_min_ratio=float(
+                    control.scorer_domain_bootstrap_rgb_std_min_ratio
+                ),
+                yuv6_temporal_std_min_ratio=float(
+                    control.scorer_domain_bootstrap_yuv6_temporal_std_min_ratio
+                ),
+                weight_decay=float(control.scorer_domain_bootstrap_weight_decay),
+                grad_clip_max_norm=control.scorer_domain_bootstrap_grad_clip_max_norm,
+            )
+        )
+        payload["archive_charged_decoder_tensors"] = sorted(
+            {
+                *[str(v) for v in payload.get("archive_charged_decoder_tensors", [])],
+                *[
+                    str(v)
+                    for v in payload["scorer_domain_bootstrap"].get(
+                        "archive_charged_decoder_tensors",
+                        [],
+                    )
+                ],
+            }
+        )
+    else:
+        payload["scorer_domain_bootstrap"] = {
+            "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+            "enabled": False,
+            "reason": "disabled_by_cli",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "blockers": ["hinerv_scorer_domain_bootstrap_disabled"],
             "authority": TRAINER_AUTHORITY,
             **FALSE_AUTHORITY,
         }
@@ -3612,7 +4602,61 @@ def _gradient_multiplier_by_name_from_args(
     }
 
 
-def _optimizer_control_metadata_from_args(args: argparse.Namespace) -> dict[str, Any]:
+def _gradient_multiplier_by_name_from_decoder_weight_waterfill_plan(
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+) -> dict[str, float]:
+    """Derive live optimizer multipliers from decoder-waterfill bit allocation."""
+
+    if decoder_weight_waterfill_plan is None:
+        return {}
+    if decoder_weight_waterfill_plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
+        raise ValueError(
+            "decoder_weight_waterfill_plan schema must be "
+            "'nerv_decoder_weight_waterfill.v1'"
+        )
+    try:
+        from tac.substrates.hi_nerv.bitstream import (
+            HI_NERV_DECODER_WATERFILL_ACTION_BITS,
+        )
+    except Exception as exc:  # pragma: no cover - import-time infrastructure guard
+        raise ValueError("failed to import HiNeRV waterfill bit contract") from exc
+    rows = decoder_weight_waterfill_plan.get("rows")
+    if not isinstance(rows, list):
+        raise ValueError("decoder_weight_waterfill_plan rows must be a list")
+    allowed_bits = {int(bits) for bits in HI_NERV_DECODER_WATERFILL_ACTION_BITS}
+    multipliers: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        name = str(row.get("group_name") or row.get("section_id") or "").strip()
+        if not name:
+            continue
+        try:
+            selected_bits = int(row["selected_bits"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"decoder_weight_waterfill row {name!r} missing integer selected_bits"
+            ) from exc
+        if selected_bits not in allowed_bits:
+            raise ValueError(
+                "decoder_weight_waterfill selected_bits must be one of "
+                f"{sorted(allowed_bits)}; got {selected_bits}"
+            )
+        if selected_bits <= 0:
+            multipliers[name] = 0.0
+            continue
+        # Quantization step width scales approximately with 2^-bits; using the
+        # square-root precision ratio keeps this optimizer pressure bounded
+        # while still protecting high-precision/high-value tensors.
+        multipliers[name] = min(2.0, math.sqrt(float(selected_bits) / 8.0))
+    return multipliers
+
+
+def _optimizer_control_metadata_from_args(
+    args: argparse.Namespace,
+    *,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     warmup_steps_per_epoch = int(getattr(args, "optimizer_warmup_steps_per_epoch", 1))
     if warmup_steps_per_epoch <= 0:
         raise ValueError("optimizer_warmup_steps_per_epoch must be positive")
@@ -3626,6 +4670,13 @@ def _optimizer_control_metadata_from_args(args: argparse.Namespace) -> dict[str,
         raise ValueError("pair_sampling_default_weight must be finite and >= 0")
     pair_sampling_weights = _pair_sampling_weights_from_args(args)
     gradient_multiplier_by_name = _gradient_multiplier_by_name_from_args(args)
+    waterfill_gradient_multiplier_by_name = (
+        _gradient_multiplier_by_name_from_decoder_weight_waterfill_plan(
+            decoder_weight_waterfill_plan
+        )
+    )
+    for name, multiplier in waterfill_gradient_multiplier_by_name.items():
+        gradient_multiplier_by_name.setdefault(name, float(multiplier))
     bias_gradient_multiplier = getattr(args, "bias_gradient_multiplier", None)
     if bias_gradient_multiplier is not None:
         bias_gradient_multiplier = float(bias_gradient_multiplier)
@@ -3653,6 +4704,24 @@ def _optimizer_control_metadata_from_args(args: argparse.Namespace) -> dict[str,
             str(key): float(value)
             for key, value in gradient_multiplier_by_name.items()
         },
+        "waterfill_gradient_multiplier_by_name": {
+            str(key): float(value)
+            for key, value in waterfill_gradient_multiplier_by_name.items()
+        },
+        "waterfill_gradient_multiplier_bound": bool(
+            waterfill_gradient_multiplier_by_name
+        ),
+        "waterfill_gradient_multiplier_source": (
+            "decoder_weight_waterfill_plan"
+            if waterfill_gradient_multiplier_by_name
+            else "none"
+        ),
+        "gradient_multiplier_cli_count": len(
+            _gradient_multiplier_by_name_from_args(args)
+        ),
+        "gradient_multiplier_waterfill_count": len(
+            waterfill_gradient_multiplier_by_name
+        ),
         "bias_gradient_multiplier": bias_gradient_multiplier,
         "output_head_bias_gradient_multiplier": float(
             output_head_bias_gradient_multiplier
@@ -3973,8 +5042,15 @@ def _pr95_full_control_contract(
         float(
             train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight
         ),
+        float(train_time_controls.segnet_direct_live_class_region_recon_weight),
+        float(train_time_controls.segnet_direct_live_rare_class_logit_weight),
+        float(train_time_controls.segnet_direct_live_target_mass_floor_weight),
+        float(train_time_controls.segnet_direct_live_target_min_ratio_floor_weight),
     )
     pose_distillation_weight = float(getattr(args, "pose_distillation_weight", 0.0))
+    pose_direct_live_weight = float(
+        train_time_controls.pose_direct_live_distillation_weight
+    )
     eval_roundtrip_ste = bool(getattr(args, "eval_roundtrip_ste", False))
     pose_preprocess = str(getattr(args, "pose_student_input_preprocess", ""))
     pr95_curriculum = bool(getattr(args, "pr95_faithful_curriculum", False))
@@ -4029,6 +5105,17 @@ def _pr95_full_control_contract(
     )
     ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
     archive_parse_back_selection = bool(getattr(args, "post_export_receiver_cache_quality_gate", False))
+    telemetry_flush_interval = int(
+        getattr(args, "telemetry_flush_interval_epochs", 1)
+    )
+    pr95_muon_policy = str(getattr(args, "pr95_muon_policy", "every_stage"))
+    scorer_space_step_guard = bool(getattr(args, "scorer_space_step_guard", False))
+    checkpoint_selection_metric_key = str(
+        getattr(args, "checkpoint_selection_metric_key", "total") or ""
+    )
+    checkpoint_selection_metric_required = bool(
+        getattr(args, "checkpoint_selection_metric_required", False)
+    )
     scorer_input_guard_weight = float(
         getattr(args, "scorer_input_distribution_guard_weight", 0.0)
     )
@@ -4050,6 +5137,9 @@ def _pr95_full_control_contract(
     output_head_contrast_metadata = train_time_controls.metadata()[
         "output_head_target_contrast_init"
     ]
+    scorer_domain_bootstrap_metadata = train_time_controls.metadata()[
+        "scorer_domain_bootstrap"
+    ]
 
     if distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
@@ -4063,6 +5153,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_direct_live_class_escape_pressure")
     if pose_distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_posenet_distillation_loss")
+    if pose_direct_live_weight <= 0.0:
+        blockers.append("hinerv_full_missing_direct_live_posenet_distillation")
     if bool(getattr(args, "allow_mock_scorer_teacher", False)):
         blockers.append("hinerv_full_real_scorer_teacher_blocked_by_mock_flag")
     if bool(getattr(args, "allow_segnet_only_research", False)):
@@ -4104,6 +5196,14 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_ema_archive_selection")
     if not archive_parse_back_selection:
         blockers.append("hinerv_full_missing_archive_parse_back_selection")
+    if telemetry_flush_interval <= 0:
+        blockers.append("hinerv_full_missing_training_telemetry_flush")
+    if not scorer_space_step_guard:
+        blockers.append("hinerv_full_missing_scorer_space_step_guard")
+    if not checkpoint_selection_metric_key.strip():
+        blockers.append("hinerv_full_missing_checkpoint_selection_metric")
+    if not checkpoint_selection_metric_required:
+        blockers.append("hinerv_full_missing_strict_checkpoint_selection")
     if scorer_input_guard_weight <= 0.0:
         blockers.append("hinerv_full_missing_scorer_input_distribution_guard")
     if float(train_time_controls.scorer_input_contrast_floor_weight) <= 0.0:
@@ -4116,6 +5216,11 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_output_head_target_bias_init")
     if not bool(output_head_contrast_metadata["enabled"]):
         blockers.append("hinerv_full_missing_output_head_target_contrast_init")
+    if (
+        not bool(scorer_domain_bootstrap_metadata["enabled"])
+        or int(scorer_domain_bootstrap_metadata["steps"]) <= 0
+    ):
+        blockers.append("hinerv_full_missing_scorer_domain_bootstrap")
     blockers = list(dict.fromkeys(blockers))
 
     return {
@@ -4142,6 +5247,10 @@ def _pr95_full_control_contract(
             "segnet_direct_live_class_escape_weight": segnet_class_escape_weight,
             "segnet_direct_live": train_time_controls.metadata()["segnet_direct_live"],
             "real_posenet_distillation_loss": pose_distillation_weight > 0.0,
+            "pose_direct_live_distillation_weight": pose_direct_live_weight,
+            "pose_direct_live_distillation": train_time_controls.metadata()[
+                "pose_direct_live_distillation"
+            ],
             "mock_scorer_teacher_allowed": bool(getattr(args, "allow_mock_scorer_teacher", False)),
             "segnet_only_research_allowed": bool(getattr(args, "allow_segnet_only_research", False)),
             "eval_roundtrip_ste_enabled": eval_roundtrip_ste,
@@ -4153,6 +5262,179 @@ def _pr95_full_control_contract(
             "epochs": epochs,
             "canonical_pr95_full_epochs": CANONICAL_PR95_FULL_EPOCHS,
             "pr95_curriculum_total_epochs": pr95_total_epochs,
+            "pr95_muon_policy": pr95_muon_policy,
+            "telemetry_flush_interval_epochs": telemetry_flush_interval,
+            "scorer_space_step_guard_enabled": scorer_space_step_guard,
+            "scorer_space_step_guard": {
+                "enabled": scorer_space_step_guard,
+                "min_pre_segnet_occupied_class_fraction": float(
+                    getattr(
+                        args,
+                        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
+                        0.4,
+                    )
+                ),
+                "min_post_segnet_occupied_class_fraction": float(
+                    getattr(
+                        args,
+                        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+                        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE,
+                    )
+                ),
+                "min_post_segnet_target_class_coverage_fraction": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction",
+                            HI_NERV_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE,
+                        )
+                    )
+                ),
+                "max_post_segnet_contrast_ratio": getattr(
+                    args,
+                    "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+                    None,
+                ),
+                "max_post_segnet_distribution_mae": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_post_segnet_distribution_mae",
+                            HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_post_posenet_yuv6_distribution_mae": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae",
+                            HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_post_posenet_yuv6_contrast_ratio": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio",
+                            HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_post_segnet_argmax_disagreement": getattr(
+                    args,
+                    "scorer_space_step_guard_max_post_segnet_argmax_disagreement",
+                    None,
+                ),
+                "max_post_pose_score_term": getattr(
+                    args,
+                    "scorer_space_step_guard_max_post_pose_score_term",
+                    None,
+                ),
+                "max_post_pose_direct_live_score_term": getattr(
+                    args,
+                    "scorer_space_step_guard_max_post_pose_direct_live_score_term",
+                    None,
+                ),
+                "max_pose_score_term_relative_worsening": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_pose_score_term_relative_worsening",
+                            HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_pose_score_term_absolute_worsening": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_pose_score_term_absolute_worsening",
+                            HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_pose_direct_live_score_term_relative_worsening": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening",
+                            HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_pose_direct_live_score_term_absolute_worsening": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening",
+                            HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_direct_nonrate_score_worsening": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_direct_nonrate_score_worsening",
+                            HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "max_bootstrap_direct_nonrate_score_worsening": (
+                    _optional_nonnegative_threshold(
+                        getattr(
+                            args,
+                            "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening",
+                            HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD,
+                        )
+                    )
+                ),
+                "backtracking_steps": int(
+                    getattr(args, "scorer_space_step_guard_backtracking_steps", 0)
+                ),
+                "backtracking_shrink": float(
+                    getattr(args, "scorer_space_step_guard_backtracking_shrink", 0.5)
+                ),
+            },
+            "checkpoint_selection": {
+                "metric_key": checkpoint_selection_metric_key,
+                "metric_mode": str(
+                    getattr(args, "checkpoint_selection_metric_mode", "min")
+                ),
+                "metric_required": checkpoint_selection_metric_required,
+                "tie_break_metric_key": str(
+                    getattr(args, "checkpoint_selection_tie_break_metric_key", "")
+                    or ""
+                ),
+                "tie_break_metric_mode": str(
+                    getattr(args, "checkpoint_selection_tie_break_metric_mode", "min")
+                ),
+                "tie_break_metric_required": bool(
+                    getattr(args, "checkpoint_selection_tie_break_metric_required", False)
+                ),
+            },
+            "checkpoint_retention": {
+                "keep_last_n": _checkpoint_retention_keep_last_n_from_args(args),
+                "keep_best_n": int(getattr(args, "checkpoint_retention_keep_best_n", 0)),
+                "keep_every_n_epochs": getattr(
+                    args,
+                    "checkpoint_retention_keep_every_n_epochs",
+                    None,
+                ),
+                "cold_store_root_count": len(
+                    getattr(args, "checkpoint_retention_cold_store_root", []) or []
+                ),
+                "checkpoint_dir_attached": getattr(args, "checkpoint_dir", None)
+                is not None,
+                "resume_from_checkpoint_attached": getattr(
+                    args,
+                    "resume_from_checkpoint",
+                    None,
+                )
+                is not None,
+            },
             "optimizer_warmup_steps_per_epoch": int(
                 getattr(args, "optimizer_warmup_steps_per_epoch", 1)
             ),
@@ -4304,6 +5586,27 @@ def _pr95_full_control_contract(
             "output_head_target_contrast_init_max_gain": float(
                 output_head_contrast_metadata["max_gain"]
             ),
+            "scorer_domain_bootstrap_enabled": bool(
+                scorer_domain_bootstrap_metadata["enabled"]
+            ),
+            "scorer_domain_bootstrap_steps": int(
+                scorer_domain_bootstrap_metadata["steps"]
+            ),
+            "scorer_domain_bootstrap_learning_rate": float(
+                scorer_domain_bootstrap_metadata["learning_rate"]
+            ),
+            "scorer_domain_bootstrap_max_pairs": int(
+                scorer_domain_bootstrap_metadata["max_pairs"]
+            ),
+            "scorer_domain_bootstrap_rgb_weight": float(
+                scorer_domain_bootstrap_metadata["rgb_weight"]
+            ),
+            "scorer_domain_bootstrap_yuv6_weight": float(
+                scorer_domain_bootstrap_metadata["yuv6_weight"]
+            ),
+            "scorer_domain_bootstrap_temporal_delta_weight": float(
+                scorer_domain_bootstrap_metadata["temporal_delta_weight"]
+            ),
         },
         "train_time_controls": _metadata_safe(train_time_controls.metadata()),
         "blockers": blockers,
@@ -4447,6 +5750,10 @@ def _build_hinerv_short_scorer_smoke_readiness_report(
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     allow_mock_scorer_teacher: bool,
+    require_section_byte_dual_ascent: bool = False,
+    require_pose_direct_live_distillation: bool = False,
+    decoder_weight_waterfill_plan_metadata: Mapping[str, Any] | None = None,
+    output_head_target_bias_init_metadata: Mapping[str, Any] | None = None,
     min_segnet_occupied_class_fraction_for_fit_gate: float = (
         HI_NERV_SHORT_SCORER_SMOKE_DEFAULT_MIN_SEGNET_OCCUPIED_CLASS_FRACTION
     ),
@@ -4458,6 +5765,10 @@ def _build_hinerv_short_scorer_smoke_readiness_report(
         segnet_distillation_weight=segnet_distillation_weight,
         pose_distillation_weight=pose_distillation_weight,
         allow_mock_scorer_teacher=allow_mock_scorer_teacher,
+        require_section_byte_dual_ascent=require_section_byte_dual_ascent,
+        require_pose_direct_live_distillation=require_pose_direct_live_distillation,
+        decoder_weight_waterfill_plan_metadata=decoder_weight_waterfill_plan_metadata,
+        output_head_target_bias_init_metadata=output_head_target_bias_init_metadata,
         min_segnet_occupied_class_fraction_for_fit_gate=(
             min_segnet_occupied_class_fraction_for_fit_gate
         ),
@@ -4473,6 +5784,10 @@ def _write_hinerv_short_scorer_smoke_readiness(
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     allow_mock_scorer_teacher: bool,
+    require_section_byte_dual_ascent: bool,
+    require_pose_direct_live_distillation: bool,
+    decoder_weight_waterfill_plan_metadata: Mapping[str, Any] | None,
+    output_head_target_bias_init_metadata: Mapping[str, Any] | None,
     min_segnet_occupied_class_fraction_for_fit_gate: float,
 ) -> dict[str, Any]:
     report = _build_hinerv_short_scorer_smoke_readiness_report(
@@ -4482,6 +5797,10 @@ def _write_hinerv_short_scorer_smoke_readiness(
         segnet_distillation_weight=segnet_distillation_weight,
         pose_distillation_weight=pose_distillation_weight,
         allow_mock_scorer_teacher=allow_mock_scorer_teacher,
+        require_section_byte_dual_ascent=require_section_byte_dual_ascent,
+        require_pose_direct_live_distillation=require_pose_direct_live_distillation,
+        decoder_weight_waterfill_plan_metadata=decoder_weight_waterfill_plan_metadata,
+        output_head_target_bias_init_metadata=output_head_target_bias_init_metadata,
         min_segnet_occupied_class_fraction_for_fit_gate=(
             min_segnet_occupied_class_fraction_for_fit_gate
         ),
@@ -4508,9 +5827,24 @@ def _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact(
         return
     artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
     metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    summary = _hinerv_short_scorer_smoke_readiness_summary(report)
     metadata["short_scorer_teacher_smoke_readiness"] = (
-        _hinerv_short_scorer_smoke_readiness_summary(report)
+        summary
     )
+    admission = _shared_long_run_admission(report)
+    metadata["short_scorer_teacher_smoke_long_run_admission"] = admission
+    admission_blockers = [
+        str(v) for v in admission.get("admission_blockers") or []
+    ]
+    if admission_blockers:
+        metadata["blockers"] = list(
+            dict.fromkeys(
+                [
+                    *[str(v) for v in metadata.get("blockers") or []],
+                    *admission_blockers,
+                ]
+            )
+        )
     artifact["substrate_artifact_metadata"] = metadata
     artifact_path.write_text(
         json.dumps(artifact, indent=2, sort_keys=True) + "\n",
@@ -4659,9 +5993,136 @@ def _receiver_cache_quality_manifest_summary(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    _validate_shared_harness_train_time_actuator_args(args)
     if args.full:
         return _full_main(args)
     return _smoke_main(args)
+
+
+def _validate_shared_harness_train_time_actuator_args(args: argparse.Namespace) -> None:
+    checkpoint_interval = getattr(args, "checkpoint_interval_epochs", None)
+    if checkpoint_interval is not None and int(checkpoint_interval) <= 0:
+        raise ValueError("--checkpoint-interval-epochs must be positive")
+    telemetry_flush = getattr(args, "telemetry_flush_interval_epochs", None)
+    if telemetry_flush is not None and int(telemetry_flush) <= 0:
+        raise ValueError("--telemetry-flush-interval-epochs must be positive")
+    _checkpoint_retention_keep_last_n_from_args(args)
+    keep_best_n = int(getattr(args, "checkpoint_retention_keep_best_n", 0))
+    if keep_best_n < 0:
+        raise ValueError("--checkpoint-retention-keep-best-n must be nonnegative")
+    keep_every_n_epochs = getattr(args, "checkpoint_retention_keep_every_n_epochs", None)
+    if keep_every_n_epochs is not None and int(keep_every_n_epochs) <= 0:
+        raise ValueError("--checkpoint-retention-keep-every-n-epochs must be positive")
+    for flag, attr in (
+        (
+            "--scorer-space-step-guard-min-pre-segnet-occupied-class-fraction",
+            "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
+        ),
+        (
+            "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction",
+            "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-segnet-argmax-disagreement",
+            "scorer_space_step_guard_max_post_segnet_argmax_disagreement",
+        ),
+    ):
+        value = getattr(args, attr, None)
+        if value is not None and not 0.0 <= float(value) <= 1.0:
+            raise ValueError(f"{flag} must be in [0, 1]")
+    target_coverage = getattr(
+        args,
+        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction",
+        None,
+    )
+    if target_coverage is not None:
+        target_coverage = float(target_coverage)
+        if not math.isfinite(target_coverage):
+            raise ValueError(
+                "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction must be finite"
+            )
+        if target_coverage >= 0.0 and not 0.0 <= target_coverage <= 1.0:
+            raise ValueError(
+                "--scorer-space-step-guard-min-post-segnet-target-class-coverage-fraction must be in [0, 1] or negative to disable"
+            )
+    for flag, attr in (
+        (
+            "--scorer-space-step-guard-min-post-segnet-target-class-min-ratio",
+            "scorer_space_step_guard_min_post_segnet_target_class_min_ratio",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-segnet-target-class-ratio-drop",
+            "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop",
+        ),
+    ):
+        value = getattr(args, attr, None)
+        if value is None:
+            continue
+        value = float(value)
+        if not math.isfinite(value):
+            raise ValueError(f"{flag} must be finite")
+        if value >= 0.0 and not 0.0 <= value <= 1.0:
+            raise ValueError(f"{flag} must be in [0, 1] or negative to disable")
+    for flag, attr in (
+        (
+            "--scorer-space-step-guard-max-post-segnet-contrast-ratio",
+            "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-segnet-distribution-mae",
+            "scorer_space_step_guard_max_post_segnet_distribution_mae",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-posenet-yuv6-distribution-mae",
+            "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-posenet-yuv6-contrast-ratio",
+            "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-pose-score-term",
+            "scorer_space_step_guard_max_post_pose_score_term",
+        ),
+        (
+            "--scorer-space-step-guard-max-post-pose-direct-live-score-term",
+            "scorer_space_step_guard_max_post_pose_direct_live_score_term",
+        ),
+        (
+            "--scorer-space-step-guard-max-pose-score-term-relative-worsening",
+            "scorer_space_step_guard_max_pose_score_term_relative_worsening",
+        ),
+        (
+            "--scorer-space-step-guard-max-pose-score-term-absolute-worsening",
+            "scorer_space_step_guard_max_pose_score_term_absolute_worsening",
+        ),
+        (
+            "--scorer-space-step-guard-max-pose-direct-live-score-term-relative-worsening",
+            "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening",
+        ),
+        (
+            "--scorer-space-step-guard-max-pose-direct-live-score-term-absolute-worsening",
+            "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening",
+        ),
+        (
+            "--scorer-space-step-guard-max-direct-nonrate-score-worsening",
+            "scorer_space_step_guard_max_direct_nonrate_score_worsening",
+        ),
+        (
+            "--scorer-space-step-guard-max-bootstrap-direct-nonrate-score-worsening",
+            "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening",
+        ),
+    ):
+        value = getattr(args, attr, None)
+        if value is not None:
+            parsed = float(value)
+            if not math.isfinite(parsed):
+                raise ValueError(f"{flag} must be finite")
+    if int(args.scorer_space_step_guard_backtracking_steps) < 0:
+        raise ValueError("--scorer-space-step-guard-backtracking-steps must be nonnegative")
+    shrink = float(args.scorer_space_step_guard_backtracking_shrink)
+    if not math.isfinite(shrink) or not 0.0 < shrink < 1.0:
+        raise ValueError("--scorer-space-step-guard-backtracking-shrink must be in (0, 1)")
 
 
 __all__ = [
