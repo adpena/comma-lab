@@ -351,6 +351,119 @@ MACHINE_VISION_SOURCE_CODE_LINEAGE: tuple[dict[str, Any], ...] = (
     },
 )
 
+LEGACY_RATE_ATTACK_ADVISORY_SURFACES: tuple[dict[str, Any], ...] = (
+    {
+        "surface_id": "rate_op1_stable_orbit_packet_diet",
+        "source_label": "RATE-OP-1 stable-orbit packet diet",
+        "producer_tool": "tools/build_rate_attack_op1_stable_orbit_packet_diet_xray.py",
+        "producer_module": "src/tac/contest_exploits/stable_orbit_packet_diet.py",
+        "test_path": "src/tac/contest_exploits/tests/test_stable_orbit_packet_diet.py",
+        "compiler_layers": ("entropy_grammar",),
+        "artifact_globs": (
+            "experiments/results/rate_attack_op1_*",
+            "reports/rate_attack_op1_*",
+        ),
+        "text_refs": (
+            {
+                "path": "src/tac/contest_exploits/stable_orbit_packet_diet.py",
+                "patterns": (
+                    "cathedral_autopilot_rows",
+                    "score_claim",
+                    "ready_for_exact_eval_dispatch",
+                ),
+            },
+            {
+                "path": "tools/build_rate_attack_op1_stable_orbit_packet_diet_xray.py",
+                "patterns": ("build_stable_orbit_packet_diet_xray",),
+            },
+        ),
+    },
+    {
+        "surface_id": "rate_op2_tropical_argmax_boundary",
+        "source_label": "RATE-OP-2 tropical argmax boundary",
+        "producer_tool": "tools/build_rate_attack_op2_tropical_argmax_boundary_grammar.py",
+        "producer_module": "src/tac/contest_exploits/tropical_argmax_boundary_grammar.py",
+        "test_path": "src/tac/contest_exploits/tests/test_tropical_argmax_boundary_grammar.py",
+        "compiler_layers": ("action_candidates", "entropy_grammar"),
+        "artifact_globs": (
+            "experiments/results/rate_attack_op2_*",
+            "reports/rate_attack_op2_*",
+        ),
+        "text_refs": (
+            {
+                "path": "src/tac/contest_exploits/tropical_argmax_boundary_grammar.py",
+                "patterns": (
+                    "cathedral_autopilot_rows",
+                    "score_claim",
+                    "ready_for_exact_eval_dispatch",
+                ),
+            },
+            {
+                "path": "tools/build_rate_attack_op2_tropical_argmax_boundary_grammar.py",
+                "patterns": ("build_tropical_argmax_boundary_feasibility",),
+            },
+        ),
+    },
+    {
+        "surface_id": "rate_op3_decoy_mosaic_residual_basis",
+        "source_label": "RATE-OP-3 decoy/mosaic residual basis",
+        "producer_tool": "tools/build_rate_attack_op3_decoy_mosaic_residual_basis_probe.py",
+        "producer_module": "src/tac/contest_exploits/decoy_mosaic_residual_basis.py",
+        "test_path": "src/tac/contest_exploits/tests/test_decoy_mosaic_residual_basis.py",
+        "compiler_layers": ("payload_and_residual_basis", "entropy_grammar"),
+        "artifact_globs": (
+            "experiments/results/rate_attack_op3_*",
+            "reports/rate_attack_op3_*",
+        ),
+        "text_refs": (
+            {
+                "path": "src/tac/contest_exploits/decoy_mosaic_residual_basis.py",
+                "patterns": (
+                    "cathedral_autopilot_rows",
+                    "score_claim",
+                    "ready_for_exact_eval_dispatch",
+                ),
+            },
+            {
+                "path": "tools/build_rate_attack_op3_decoy_mosaic_residual_basis_probe.py",
+                "patterns": ("build_decoy_mosaic_residual_basis_probe",),
+            },
+        ),
+    },
+    {
+        "surface_id": "rate_attack_autopilot_feature_matrix",
+        "source_label": "RATE ACH autopilot feature matrix",
+        "producer_tool": "tools/build_rate_attack_autopilot_feature_matrix.py",
+        "producer_module": "src/tac/contest_exploits/rate_attack_autopilot_features.py",
+        "test_path": "src/tac/contest_exploits/tests/test_rate_attack_autopilot_features.py",
+        "compiler_layers": ("action_candidates",),
+        "artifact_globs": (
+            "reports/rate_attack_autopilot_feature_matrix_*.json",
+            "reports/rate_attack_autopilot_feature_matrix_*_cathedral_autopilot_candidates.jsonl",
+        ),
+        "text_refs": (
+            {
+                "path": "src/tac/contest_exploits/rate_attack_autopilot_features.py",
+                "patterns": (
+                    "canonical_consumer",
+                    "score_claim",
+                    "ready_for_exact_eval_dispatch",
+                ),
+            },
+            {
+                "path": "tools/build_rate_attack_autopilot_feature_matrix.py",
+                "patterns": ("build_rate_attack_autopilot_feature_matrix",),
+            },
+        ),
+    },
+)
+
+LEGACY_RATE_ATTACK_CANONICAL_CONSUMER_PATHS: tuple[str, ...] = (
+    "src/tac/contest_exploits/rate_attack_autopilot_features.py",
+    "tools/build_rate_attack_autopilot_feature_matrix.py",
+    "tools/cathedral_autopilot_autonomous_loop.py",
+)
+
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
     try:
@@ -524,6 +637,111 @@ def _machine_vision_lineage_blockers(
         lineage_id = row.get("lineage_id")
         blockers.extend(
             f"machine_vision_lineage_blocked:{lineage_id}:{blocker}"
+            for blocker in row.get("blockers") or []
+        )
+    return blockers
+
+
+def _legacy_rate_attack_advisory_rows(repo_root: Path) -> list[dict[str, Any]]:
+    known_layers = set(SCORE_PROGRAM_LAYER_TARGET_KINDS)
+    consumer_rows = [
+        {
+            "path": rel_path,
+            "exists": (repo_root / rel_path).is_file(),
+        }
+        for rel_path in LEGACY_RATE_ATTACK_CANONICAL_CONSUMER_PATHS
+    ]
+    missing_consumers = [
+        str(row["path"]) for row in consumer_rows if row["exists"] is not True
+    ]
+    rows: list[dict[str, Any]] = []
+    for spec in LEGACY_RATE_ATTACK_ADVISORY_SURFACES:
+        producer_tool = str(spec.get("producer_tool") or "")
+        producer_module = str(spec.get("producer_module") or "")
+        test_path = str(spec.get("test_path") or "")
+        compiler_layers = tuple(
+            str(layer_id) for layer_id in spec.get("compiler_layers") or ()
+        )
+        missing_layers = [
+            layer_id for layer_id in compiler_layers if layer_id not in known_layers
+        ]
+        artifact_paths = _unique_paths(
+            path
+            for pattern in spec.get("artifact_globs") or ()
+            for path in _glob_paths(repo_root, str(pattern))
+        )
+        text_ref_rows = _lineage_text_ref_rows(repo_root, spec.get("text_refs") or ())
+        missing_text_refs = [
+            row for row in text_ref_rows if row.get("covered") is not True
+        ]
+        path_rows = [
+            {"role": "producer_tool", "path": producer_tool},
+            {"role": "producer_module", "path": producer_module},
+            {"role": "test_path", "path": test_path},
+        ]
+        path_rows = [
+            {
+                **row,
+                "exists": bool(row["path"]) and (repo_root / row["path"]).is_file(),
+            }
+            for row in path_rows
+        ]
+        blockers: list[str] = []
+        blockers.extend(
+            f"advisory_surface_path_missing:{row['role']}:{row['path']}"
+            for row in path_rows
+            if row["exists"] is not True
+        )
+        blockers.extend(
+            f"canonical_consumer_missing:{consumer}" for consumer in missing_consumers
+        )
+        blockers.extend(f"compiler_layer_unknown:{layer_id}" for layer_id in missing_layers)
+        blockers.extend(
+            "text_ref_missing:"
+            f"{row.get('path')}:{','.join(map(str, row.get('missing_patterns') or []))}"
+            for row in missing_text_refs
+        )
+        rows.append(
+            {
+                "surface_id": spec.get("surface_id"),
+                "source_label": spec.get("source_label"),
+                "status": (
+                    "planning_only_consumed_by_canonical_stack"
+                    if not blockers
+                    else "blocked"
+                ),
+                "producer_tool": producer_tool,
+                "producer_module": producer_module,
+                "test_path": test_path,
+                "path_rows": path_rows,
+                "compiler_layers": list(compiler_layers),
+                "artifact_globs": list(spec.get("artifact_globs") or ()),
+                "artifact_count": len(artifact_paths),
+                "artifact_sample_paths": artifact_paths[:20],
+                "canonical_consumer_paths": list(
+                    LEGACY_RATE_ATTACK_CANONICAL_CONSUMER_PATHS
+                ),
+                "canonical_consumer_rows": consumer_rows,
+                "text_ref_rows": text_ref_rows,
+                "blockers": blockers,
+                "research_only": True,
+                "planning_only": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return rows
+
+
+def _legacy_rate_attack_advisory_blockers(
+    advisory_rows: Iterable[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    for row in advisory_rows:
+        surface_id = row.get("surface_id")
+        blockers.extend(
+            f"legacy_rate_attack_advisory_blocked:{surface_id}:{blocker}"
             for blocker in row.get("blockers") or []
         )
     return blockers
@@ -735,6 +953,8 @@ def build_frontier_rate_attack_consolidation_audit(
     forbidden_surfaces = _forbidden_parallel_surfaces(root)
     lineage_rows = _machine_vision_lineage_rows(root)
     lineage_blockers = _machine_vision_lineage_blockers(lineage_rows)
+    advisory_rows = _legacy_rate_attack_advisory_rows(root)
+    advisory_blockers = _legacy_rate_attack_advisory_blockers(advisory_rows)
 
     blockers: list[str] = []
     blockers.extend(
@@ -823,6 +1043,7 @@ def build_frontier_rate_attack_consolidation_audit(
         for path in forbidden_surfaces
     )
     blockers.extend(lineage_blockers)
+    blockers.extend(advisory_blockers)
     production_action_ready = not production_action_blockers
 
     return {
@@ -864,6 +1085,17 @@ def build_frontier_rate_attack_consolidation_audit(
             ),
             "rows": lineage_rows,
             "blockers": lineage_blockers,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "legacy_rate_attack_advisory_surfaces": {
+            "schema": "legacy_rate_attack_advisory_surface_consumption.v1",
+            "canonical_consumer_paths": list(
+                LEGACY_RATE_ATTACK_CANONICAL_CONSUMER_PATHS
+            ),
+            "rows": advisory_rows,
+            "blockers": advisory_blockers,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -944,6 +1176,20 @@ def render_frontier_rate_attack_consolidation_audit(
                 f"  - {row.get('source_label')}: {row.get('status')}; "
                 f"artifacts={row.get('artifact_count', 0)}; "
                 f"consumers={row.get('consumer_count', 0)}; "
+                f"layers={','.join(map(str, row.get('compiler_layers') or []))}"
+            )
+    advisory = audit.get("legacy_rate_attack_advisory_surfaces")
+    if isinstance(advisory, Mapping):
+        rows = [row for row in advisory.get("rows") or [] if isinstance(row, Mapping)]
+        blockers = advisory.get("blockers") or []
+        lines.append(
+            "legacy_rate_attack_advisory_surfaces: "
+            f"{len(rows)} signal(s); blockers={len(blockers)}"
+        )
+        for row in rows:
+            lines.append(
+                f"  - {row.get('source_label')}: {row.get('status')}; "
+                f"artifacts={row.get('artifact_count', 0)}; "
                 f"layers={','.join(map(str, row.get('compiler_layers') or []))}"
             )
     lines.append("state:")

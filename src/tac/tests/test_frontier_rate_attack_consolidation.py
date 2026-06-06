@@ -64,6 +64,31 @@ def test_frontier_rate_attack_consolidation_audit_covers_compiler_layers() -> No
         assert row["consumer_count"] > 0
         assert row["blockers"] == []
         assert all(text_ref["covered"] is True for text_ref in row["text_ref_rows"])
+    advisory = audit["legacy_rate_attack_advisory_surfaces"]
+    assert advisory["blockers"] == []
+    assert advisory["score_claim"] is False
+    assert advisory["promotion_eligible"] is False
+    assert advisory["ready_for_exact_eval_dispatch"] is False
+    advisory_rows = {row["surface_id"]: row for row in advisory["rows"]}
+    assert set(advisory_rows) == {
+        "rate_op1_stable_orbit_packet_diet",
+        "rate_op2_tropical_argmax_boundary",
+        "rate_op3_decoy_mosaic_residual_basis",
+        "rate_attack_autopilot_feature_matrix",
+    }
+    for row in advisory_rows.values():
+        assert row["status"] == "planning_only_consumed_by_canonical_stack"
+        assert row["research_only"] is True
+        assert row["planning_only"] is True
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["blockers"] == []
+        assert all(path_row["exists"] is True for path_row in row["path_rows"])
+        assert all(
+            consumer["exists"] is True for consumer in row["canonical_consumer_rows"]
+        )
+        assert all(text_ref["covered"] is True for text_ref in row["text_ref_rows"])
     assert {
         (edge["from"], edge["to"])
         for edge in audit["score_program_dag"]["edges"]
@@ -98,6 +123,11 @@ def test_frontier_rate_attack_consolidation_render_names_formal_and_legacy_surfa
     assert "qrepro/PR90: consumed_by_canonical_stack" in text
     assert "PR95: consumed_by_canonical_stack" in text
     assert "PR110: consumed_by_canonical_stack" in text
+    assert "legacy_rate_attack_advisory_surfaces: 4 signal(s); blockers=0" in text
+    assert "RATE-OP-1 stable-orbit packet diet: planning_only_consumed" in text
+    assert "RATE-OP-2 tropical argmax boundary: planning_only_consumed" in text
+    assert "RATE-OP-3 decoy/mosaic residual basis: planning_only_consumed" in text
+    assert "RATE ACH autopilot feature matrix: planning_only_consumed" in text
     assert "entropy_grammar: registered-only" in text
     assert "payload_and_residual_basis: registered-only" in text
 
