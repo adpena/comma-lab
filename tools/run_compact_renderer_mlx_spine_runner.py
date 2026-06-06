@@ -2737,6 +2737,12 @@ def _snerv_auto_skip_high_modes_for_resolution(
     return ("full",)
 
 
+def _snerv_hard_byte_ceiling_configured(
+    hard_byte_ceilings: Sequence[int],
+) -> bool:
+    return any(int(value) > 0 for value in hard_byte_ceilings)
+
+
 def _modelsize_candidate_resolution_disabled(candidate_id: Any) -> bool:
     """Return whether the launch requested manual modelsize knobs only."""
 
@@ -6235,6 +6241,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 if snerv_spectra_preserving_adapter
                 else "snerv_fc_dim_emb_size_adapter_v1"
             )
+        )
+    if (
+        normalize_snerv_model_size_adapter(str(snerv_model_size_adapter))
+        == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+        and str(resolved_snerv_official_skip_high_mode) == "full"
+        and _snerv_hard_byte_ceiling_configured(hard_byte_ceilings)
+        and raw_explicit_skip_high_mode != "full"
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "SNeRV official_skip_high_mode='full' is diagnostic-only under a "
+            "hard byte ceiling because it stores the receiver-visible MFU "
+            "skip_high activation slab. Use a self-describing compact "
+            "candidate id with _skscalarmean_ or _skchannelmean_, pass "
+            "--snerv-official-skip-high-mode scalar_mean/channel_mean, or "
+            "explicitly pass --snerv-official-skip-high-mode full for a "
+            "non-promotional rate diagnostic."
         )
     resolved_step_map_coder_mode = (
         step_map_coder_mode

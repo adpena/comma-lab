@@ -629,6 +629,38 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert header["receiver_export_self_consistency_verified"] is True
     assert header["source_forward_replay_bound_by_export"] is False
     assert header["source_forward_replay_authority"] is False
+    rate = header["receiver_payload_rate_classification"]
+    component_rows = {row["component_id"]: row for row in rate["component_rows"]}
+    assert rate["schema"] == (
+        "snerv_official_mfu_hfr_tub_receiver_payload_rate_classification.v1"
+    )
+    assert rate["codec"] == "official_numpy_float64_lzma"
+    assert rate["compact_score_candidate"] is False
+    assert rate["score_lagrangian_admission"] == (
+        "blocked_activation_or_proof_only_official_receiver_payload"
+    )
+    assert rate["activation_stored_raw_bytes"] == (
+        component_rows["official_mfu_input_payload"]["stored_raw_bytes"]
+        + component_rows["official_skip_high_payload"]["stored_raw_bytes"]
+    )
+    assert component_rows["official_mfu_input_payload"]["activation_payload"] is True
+    assert component_rows["official_mfu_input_payload"][
+        "score_candidate_blocker"
+    ] == "snerv_official_mfu_receiver_activation_payload_not_compact_score_candidate"
+    assert component_rows["official_tub_input_payload"]["proof_only_payload"] is True
+    assert (
+        "snerv_official_mfu_receiver_activation_payload_not_compact_score_candidate"
+        in rate["score_candidate_blockers"]
+    )
+    assert (
+        "snerv_official_receiver_payload_requires_compact_source_faithful_training_binding"
+        in rate["long_training_launch_blockers"]
+    )
+    assert header["compact_score_candidate"] is False
+    assert header["score_lagrangian_blockers"] == rate["score_candidate_blockers"]
+    assert header["long_training_launch_blockers"] == rate[
+        "long_training_launch_blockers"
+    ]
     assert header["receiver_self_consistency_reference"]["schema"] == (
         "snerv_decoder_payload.official_mfu_hfr_tub.receiver_self_consistency.v1"
     )
@@ -796,6 +828,16 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
     )
     assert storage["stored_raw_bytes"] == storage["source_raw_bytes"]
     assert storage["raw_byte_savings"] == 0
+    rate = header["receiver_payload_rate_classification"]
+    component_rows = {row["component_id"]: row for row in rate["component_rows"]}
+    assert component_rows["official_tub_output2_payload"]["proof_only_payload"] is True
+    assert component_rows["official_tub_output2_payload"][
+        "score_candidate_blocker"
+    ] == "snerv_official_tub_output2_proof_only_payload_not_score_candidate"
+    assert (
+        "snerv_official_tub_output2_proof_only_payload_not_score_candidate"
+        in rate["long_training_launch_blockers"]
+    )
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
     rows = {row["name"]: row for row in proof["output_tensors"]}
     assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
@@ -917,6 +959,18 @@ def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
 
     assert proof["receiver_bound_official_primitive_payload"] is True
     assert proof["payload_sha256"] == decoded.decode_official_mfu_hfr_tub_payload().payload_sha256
+    rate_report = archive.section_reports["decoder_payload_rate_report"]
+    assert rate_report["report_status"] == (
+        "receiver_visible_decoder_payload_rate_classification_verified"
+    )
+    assert rate_report["section_name"] == "decoder_payload"
+    assert rate_report["section_bytes"] == archive.section_bytes["decoder_payload"]
+    assert rate_report["section_sha256"] == archive.section_sha256["decoder_payload"]
+    assert rate_report["compact_score_candidate"] is False
+    assert (
+        "snerv_official_mfu_receiver_activation_payload_not_compact_score_candidate"
+        in rate_report["long_training_launch_blockers"]
+    )
     assert frames.shape == (1, 1, 3, 16, 16)
     assert np.isfinite(frames).all()
     assert float(np.std(frames)) > 0.0

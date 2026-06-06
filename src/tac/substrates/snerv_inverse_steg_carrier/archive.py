@@ -135,6 +135,9 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_COMPRESSION_PROFILE = "bounded_lzma_preset6"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET = 6
 DECODER_PAYLOAD_EXHAUSTIVE_LZMA_PRESET = 9 | lzma.PRESET_EXTREME
+OFFICIAL_RECEIVER_PAYLOAD_RATE_CLASSIFICATION_SCHEMA = (
+    "snerv_official_mfu_hfr_tub_receiver_payload_rate_classification.v1"
+)
 OFFICIAL_MFU_INPUT_CODEC_FULL = "full_float64"
 OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC = "zero_synthetic_float64"
 OFFICIAL_SKIP_HIGH_CODEC_FULL = "full_float64"
@@ -1111,7 +1114,85 @@ def _receiver_section_reports(
         }
     )
     reports["lf_payload_codec_report"] = lf_report
+    reports["decoder_payload_rate_report"] = _decoder_payload_rate_report(
+        bytes(sections.get("decoder_payload", b"")),
+        section_bytes=int(section_bytes.get("decoder_payload", 0)),
+        section_sha256=str(section_sha256.get("decoder_payload") or ""),
+    )
     return reports
+
+
+def _decoder_payload_rate_report(
+    decoder_payload: bytes,
+    *,
+    section_bytes: int,
+    section_sha256: str,
+) -> dict[str, Any]:
+    try:
+        header = inspect_decoder_payload_header(decoder_payload)
+    except SnervArchiveError as exc:
+        return _jsonable_metadata(
+            {
+                "schema": "snerv_decoder_payload_rate_report.blocked.v1",
+                "report_status": "blocked_decoder_payload_accounting_not_inspectable",
+                "section_name": "decoder_payload",
+                "section_bytes": int(section_bytes or len(decoder_payload)),
+                "section_sha256": section_sha256 or _sha256(decoder_payload),
+                "error": f"{type(exc).__name__}:{exc}",
+                "blockers": ["snerv_decoder_payload_accounting_not_inspectable"],
+                **FALSE_AUTHORITY,
+            }
+        )
+    if header.get("schema") == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA:
+        classification = header.get("receiver_payload_rate_classification")
+        if not isinstance(classification, Mapping):
+            blockers = ["snerv_official_receiver_payload_rate_classification_missing"]
+            return _jsonable_metadata(
+                {
+                    "schema": "snerv_decoder_payload_rate_report.blocked.v1",
+                    "report_status": "blocked_official_decoder_payload_rate_classification_missing",
+                    "section_name": "decoder_payload",
+                    "section_bytes": int(section_bytes or len(decoder_payload)),
+                    "section_sha256": section_sha256 or _sha256(decoder_payload),
+                    "payload_schema": str(header.get("schema")),
+                    "codec": str(header.get("codec", "")),
+                    "compact_score_candidate": False,
+                    "blockers": blockers,
+                    "long_training_launch_blockers": blockers,
+                    **FALSE_AUTHORITY,
+                }
+            )
+        blockers = [
+            str(value)
+            for value in classification.get("score_candidate_blockers", [])
+        ]
+        return _jsonable_metadata(
+            {
+                **dict(classification),
+                "report_status": "receiver_visible_decoder_payload_rate_classification_verified",
+                "section_name": "decoder_payload",
+                "section_bytes": int(section_bytes or len(decoder_payload)),
+                "section_sha256": section_sha256 or _sha256(decoder_payload),
+                "payload_schema": str(header.get("schema")),
+                "blockers": blockers,
+                "long_training_launch_blockers": blockers,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return _jsonable_metadata(
+        {
+            "schema": "snerv_decoder_payload_rate_report.v1",
+            "report_status": "decoder_payload_rate_classification_not_official_mfu_hfr_tub",
+            "section_name": "decoder_payload",
+            "section_bytes": int(section_bytes or len(decoder_payload)),
+            "section_sha256": section_sha256 or _sha256(decoder_payload),
+            "payload_schema": str(header.get("schema", "")),
+            "codec": str(header.get("codec", "")),
+            "compact_score_candidate": False,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+    )
 
 
 def unpack_snerv_archive(packet: bytes) -> DecodedSnervArchive:
@@ -1910,6 +1991,14 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         format=lzma.FORMAT_XZ,
         preset=DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
     )
+    rate_classification = _official_receiver_payload_rate_classification(
+        mfu_input_storage=mfu_input_plan["metadata"],
+        skip_high_storage=skip_high_plan["metadata"],
+        tub_input_storage=tub_input_plan["metadata"],
+        tub_output2_storage=output2_plan["metadata"],
+        raw_tensor_bytes=len(raw),
+        compressed_bytes=len(compressed),
+    )
     spec = mfu.spec
     tub_config = {
         "temporal_encoder_output_shape": (
@@ -1978,6 +2067,17 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "skip_high_storage": skip_high_plan["metadata"],
         "tub_input_storage": tub_input_plan["metadata"],
         "tub_output2_storage": output2_plan["metadata"],
+        "receiver_payload_rate_classification": rate_classification,
+        "compact_score_candidate": bool(rate_classification["compact_score_candidate"]),
+        "score_lagrangian_admission": rate_classification[
+            "score_lagrangian_admission"
+        ],
+        "score_lagrangian_blockers": list(
+            rate_classification["score_candidate_blockers"]
+        ),
+        "long_training_launch_blockers": list(
+            rate_classification["long_training_launch_blockers"]
+        ),
         "receiver_self_consistency_reference": self_consistency_reference,
         "receiver_self_consistency_reference_sha256": _json_sha256(
             self_consistency_reference
@@ -3092,6 +3192,177 @@ def _official_tub_output2_storage_plan(
             **FALSE_AUTHORITY,
         },
     }
+
+
+def _official_receiver_payload_rate_classification(
+    *,
+    mfu_input_storage: Mapping[str, Any],
+    skip_high_storage: Mapping[str, Any],
+    tub_input_storage: Mapping[str, Any],
+    tub_output2_storage: Mapping[str, Any],
+    raw_tensor_bytes: int,
+    compressed_bytes: int,
+) -> dict[str, Any]:
+    """Classify official payload bytes for rate/launch consumers.
+
+    Official MFU/HFR/TUB receiver payloads are useful replay custody, but full
+    float64 activations are not a compact decoder representation.  This report
+    makes that distinction machine-readable at the byte-producing surface.
+    """
+
+    component_rows = [
+        _official_receiver_payload_component_row(
+            component_id="official_mfu_input_payload",
+            storage=mfu_input_storage,
+            activation_payload=(
+                _storage_codec(mfu_input_storage) == OFFICIAL_MFU_INPUT_CODEC_FULL
+            ),
+            proof_only_payload=False,
+            blocker=(
+                "snerv_official_mfu_receiver_activation_payload_not_compact_score_candidate"
+                if _storage_codec(mfu_input_storage) == OFFICIAL_MFU_INPUT_CODEC_FULL
+                else ""
+            ),
+        ),
+        _official_receiver_payload_component_row(
+            component_id="official_skip_high_payload",
+            storage=skip_high_storage,
+            activation_payload=(
+                _storage_codec(skip_high_storage) == OFFICIAL_SKIP_HIGH_CODEC_FULL
+            ),
+            proof_only_payload=False,
+            blocker=(
+                "snerv_official_skip_high_receiver_activation_payload_not_compact_score_candidate"
+                if _storage_codec(skip_high_storage) == OFFICIAL_SKIP_HIGH_CODEC_FULL
+                else ""
+            ),
+        ),
+        _official_receiver_payload_component_row(
+            component_id="official_tub_input_payload",
+            storage=tub_input_storage,
+            activation_payload=False,
+            proof_only_payload=not bool(
+                tub_input_storage.get("receiver_frame_synthesis_uses_tub_inputs")
+            ),
+            blocker=(
+                "snerv_official_tub_inputs_proof_only_payload_not_score_causal"
+                if int(tub_input_storage.get("stored_raw_bytes", 0)) > 0
+                and not bool(tub_input_storage.get("receiver_frame_synthesis_uses_tub_inputs"))
+                else ""
+            ),
+        ),
+        _official_receiver_payload_component_row(
+            component_id="official_tub_output2_payload",
+            storage=tub_output2_storage,
+            activation_payload=False,
+            proof_only_payload=bool(
+                tub_output2_storage.get("proof_only_false_authority_metadata")
+            ),
+            blocker=(
+                "snerv_official_tub_output2_proof_only_payload_not_score_candidate"
+                if int(tub_output2_storage.get("stored_raw_bytes", 0)) > 0
+                and bool(tub_output2_storage.get("proof_only_false_authority_metadata"))
+                else ""
+            ),
+        ),
+    ]
+    accounted_input_bytes = sum(int(row["stored_raw_bytes"]) for row in component_rows)
+    weight_payload_bytes = max(0, int(raw_tensor_bytes) - accounted_input_bytes)
+    component_rows.append(
+        {
+            "component_id": "official_weight_payload",
+            "codec": "float64_le_lzma_member",
+            "source_raw_bytes": weight_payload_bytes,
+            "stored_raw_bytes": weight_payload_bytes,
+            "raw_byte_savings": 0,
+            "activation_payload": False,
+            "proof_only_payload": False,
+            "score_candidate_blocker": "",
+            "score_candidate_component": True,
+        }
+    )
+
+    blockers = [
+        str(row["score_candidate_blocker"])
+        for row in component_rows
+        if row.get("score_candidate_blocker")
+    ]
+    if blockers:
+        blockers.append(
+            "snerv_official_receiver_payload_requires_compact_source_faithful_training_binding"
+        )
+    blockers = list(dict.fromkeys(blockers))
+    activation_raw_bytes = sum(
+        int(row["stored_raw_bytes"])
+        for row in component_rows
+        if bool(row.get("activation_payload"))
+    )
+    proof_only_raw_bytes = sum(
+        int(row["stored_raw_bytes"])
+        for row in component_rows
+        if bool(row.get("proof_only_payload"))
+    )
+    compact_score_candidate = not blockers
+    return _jsonable_metadata(
+        {
+            "schema": OFFICIAL_RECEIVER_PAYLOAD_RATE_CLASSIFICATION_SCHEMA,
+            "codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC,
+            "compressed_payload_bytes": int(compressed_bytes),
+            "raw_tensor_bytes": int(raw_tensor_bytes),
+            "activation_stored_raw_bytes": int(activation_raw_bytes),
+            "proof_only_stored_raw_bytes": int(proof_only_raw_bytes),
+            "weight_stored_raw_bytes": int(weight_payload_bytes),
+            "component_rows": component_rows,
+            "compact_score_candidate": compact_score_candidate,
+            "score_lagrangian_admission": (
+                "blocked_activation_or_proof_only_official_receiver_payload"
+                if blockers
+                else "compact_receiver_decoder_payload"
+            ),
+            "score_candidate_blockers": blockers,
+            "long_training_launch_blockers": blockers,
+            "score_lagrangian_action": (
+                "do_not_launch_long_training_from_float64_receiver_activation_payload"
+                if blockers
+                else "eligible_for_next_byte_closed_candidate_gate"
+            ),
+            "next_required_artifact": (
+                "compact_source_faithful_official_training_binding_or_exact_receiver_safe_activation_codec"
+                if blockers
+                else "byte_closed_exact_eval_axis_packet"
+            ),
+            "contest_scorer_authority": False,
+            **FALSE_AUTHORITY,
+        }
+    )
+
+
+def _official_receiver_payload_component_row(
+    *,
+    component_id: str,
+    storage: Mapping[str, Any],
+    activation_payload: bool,
+    proof_only_payload: bool,
+    blocker: str,
+) -> dict[str, Any]:
+    stored_raw_bytes = int(storage.get("stored_raw_bytes", 0))
+    return _jsonable_metadata(
+        {
+            "component_id": component_id,
+            "codec": _storage_codec(storage),
+            "source_raw_bytes": int(storage.get("source_raw_bytes", 0)),
+            "stored_raw_bytes": stored_raw_bytes,
+            "raw_byte_savings": int(storage.get("raw_byte_savings", 0)),
+            "activation_payload": bool(activation_payload and stored_raw_bytes > 0),
+            "proof_only_payload": bool(proof_only_payload and stored_raw_bytes > 0),
+            "score_candidate_blocker": blocker if stored_raw_bytes > 0 else "",
+            "score_candidate_component": not bool(blocker and stored_raw_bytes > 0),
+        }
+    )
+
+
+def _storage_codec(storage: Mapping[str, Any]) -> str:
+    return str(storage.get("codec", "unknown"))
 
 
 def _official_mfu_hfr_tub_source_forward_blockers(

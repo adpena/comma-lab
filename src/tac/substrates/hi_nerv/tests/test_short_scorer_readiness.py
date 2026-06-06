@@ -539,6 +539,39 @@ def test_direct_live_segnet_blocks_train_target_class_coverage_collapse() -> Non
     )
 
 
+def test_direct_live_segnet_fit_floor_ignores_float_boundary_noise() -> None:
+    metrics = {
+        **_base_metrics(),
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction": (
+            0.4000000059604645
+        ),
+        **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+    }
+    receiver = _receiver_quality()
+    receiver["segnet_argmax_probe"] = {
+        **receiver["segnet_argmax_probe"],
+        "candidate_occupied_class_fraction": 0.4000000059604645,
+    }
+
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components=metrics,
+        post_export_quality=receiver,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.400001,
+    )
+
+    assert "hi_nerv_short_smoke_direct_live_class_occupancy_collapsed" not in report[
+        "actionable_blockers"
+    ]
+    assert (
+        "hi_nerv_short_smoke_receiver_cache_segnet_argmax_class_occupancy_collapsed"
+        not in report["actionable_blockers"]
+    )
+
+
 def test_direct_live_segnet_blocks_train_target_class_mass_collapse() -> None:
     metrics = {
         **_base_metrics(),

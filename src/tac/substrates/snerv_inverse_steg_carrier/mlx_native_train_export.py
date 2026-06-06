@@ -429,6 +429,8 @@ def _official_checkpoint_full_mapping_verified(
         is True
         and manifest.get("official_tub_temporal_encoder_weight_mapping_proven")
         is True
+        and manifest.get("official_tub_output2_decoder_weight_mapping_proven")
+        is True
     )
 
 
@@ -5952,15 +5954,8 @@ def _run_score_aware_long_training_attachment(
         trained_checkpoint_mapping_manifest.get("official_trained_checkpoint_loaded")
         is True
     )
-    official_checkpoint_mapping_verified = bool(
-        trained_checkpoint_mapping_manifest.get(
-            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
-        )
-        is True
-        and trained_checkpoint_mapping_manifest.get(
-            "official_tub_temporal_encoder_weight_mapping_proven"
-        )
-        is True
+    official_checkpoint_mapping_verified = _official_checkpoint_full_mapping_verified(
+        trained_checkpoint_mapping_manifest
     )
     training_kind = (
         "snerv_mlx_official_mfu_hfr_tub_score_renderer"
@@ -8161,15 +8156,8 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
         trained_checkpoint_mapping_manifest.get("official_trained_checkpoint_loaded")
         is True
     )
-    official_checkpoint_mapping_verified = bool(
-        trained_checkpoint_mapping_manifest.get(
-            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
-        )
-        is True
-        and trained_checkpoint_mapping_manifest.get(
-            "official_tub_temporal_encoder_weight_mapping_proven"
-        )
-        is True
+    official_checkpoint_mapping_verified = _official_checkpoint_full_mapping_verified(
+        trained_checkpoint_mapping_manifest
     )
     base: dict[str, Any] = {
         "schema": "snerv_official_mfu_hfr_tub_source_forward_replay_contract.v1",

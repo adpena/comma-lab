@@ -104,6 +104,65 @@ def test_snerv_runner_binds_manual_official_skip_high_mode_to_native_export(
     assert report["snerv_mlx_native_export"]["executed"] is True
 
 
+def test_snerv_runner_rejects_implicit_official_full_skip_high_under_byte_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _patch_lightweight_snerv_native_report(monkeypatch)
+
+    with pytest.raises(
+        runner.CompactRendererMlxSpineRunnerError,
+        match="diagnostic-only under a hard byte ceiling",
+    ):
+        runner.execute_snerv_inverse_steg_advisory_and_adapt(
+            output_dir=tmp_path / "out",
+            num_pairs=2,
+            epochs=1,
+            source_video_path=_source_video(tmp_path),
+            hard_byte_ceilings=(178_000,),
+            modelsize_candidate={
+                "snerv_model_size_adapter": (
+                    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+                ),
+            },
+            run_native_mlx_export=True,
+            snerv_score_aware_long_training_epochs=1,
+            upstream_dir=tmp_path / "upstream",
+            repo_root=Path.cwd(),
+            allow_overwrite=True,
+        )
+
+    assert "modelsize_candidate" not in captured
+
+
+def test_snerv_runner_allows_explicit_official_full_skip_high_diagnostic(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _patch_lightweight_snerv_native_report(monkeypatch)
+
+    report = runner.execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "out",
+        num_pairs=2,
+        epochs=1,
+        source_video_path=_source_video(tmp_path),
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate={
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        },
+        snerv_official_skip_high_mode_override="full",
+        run_native_mlx_export=True,
+        snerv_score_aware_long_training_epochs=1,
+        upstream_dir=tmp_path / "upstream",
+        repo_root=Path.cwd(),
+        allow_overwrite=True,
+    )
+
+    candidate = captured["modelsize_candidate"]
+    assert candidate["official_skip_high_mode"] == "full"
+    assert report["snerv_mlx_native_export"]["executed"] is True
+
+
 def test_snerv_runner_rejects_candidate_skip_high_cli_conflict(
     tmp_path: Path,
 ) -> None:

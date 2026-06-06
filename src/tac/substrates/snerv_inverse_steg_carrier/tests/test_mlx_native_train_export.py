@@ -390,6 +390,8 @@ def test_official_checkpoint_npz_ingestion_reaches_train_export_binding(
     assert manifest["official_trained_checkpoint_loaded"] is True
     assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
     assert manifest["official_tub_temporal_encoder_weight_mapping_proven"] is True
+    assert manifest["official_tub_output2_decoder_weight_mapping_proven"] is True
+    assert mod._official_checkpoint_full_mapping_verified(manifest) is True
 
     report = mod._run_score_aware_long_training_attachment(
         requested_epochs=0,
@@ -468,6 +470,36 @@ def test_official_checkpoint_npz_ingestion_reaches_train_export_binding(
     ] == state_path.as_posix()
     assert train_export["source_forward_replay_authority"] is False
     assert report["score_claim"] is False
+
+
+def test_official_checkpoint_full_mapping_requires_tub_output2_decoder(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    decoder_len = 8
+    state_without_output2 = {
+        key: value
+        for key, value in _minimal_full_official_decoder_state(
+            decoder_len=decoder_len,
+        ).items()
+        if not key.startswith(f"decoder.{decoder_len - 1}.")
+    }
+    state_path = tmp_path / "official_state_dict_without_output2.npz"
+    np.savez(state_path, **state_without_output2)
+
+    manifest = mod._official_trained_checkpoint_mapping_manifest_from_inputs(
+        state_dict=None,
+        state_dict_path=state_path,
+        decoder_len=decoder_len,
+        state_dict_kind="unit_test_missing_output2_official_checkpoint",
+    )
+
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert manifest["official_tub_temporal_encoder_weight_mapping_proven"] is True
+    assert manifest["official_tub_output2_decoder_weight_mapping_proven"] is False
+    assert mod._official_checkpoint_full_mapping_verified(manifest) is False
 
 
 def test_train_export_threads_official_checkpoint_npz_path(

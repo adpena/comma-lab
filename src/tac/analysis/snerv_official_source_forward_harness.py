@@ -251,11 +251,11 @@ def build_snerv_official_trained_checkpoint_mapping_manifest(
             "trained_checkpoint_weight_mapping_proven"
         ]
     )
-    tub_proven = bool(
-        next(row for row in component_rows if row["component_id"] == "tub")[
-            "trained_checkpoint_weight_mapping_proven"
-        ]
+    tub_temporal_proven = all(
+        group in present_groups
+        for group in ("tub_temporal_encoder_1", "tub_temporal_encoder_2")
     )
+    tub_output2_proven = "tub_output2_decoder" in present_groups
     blockers = [
         blocker
         for row in component_rows
@@ -274,8 +274,8 @@ def build_snerv_official_trained_checkpoint_mapping_manifest(
         "official_hfr_trained_checkpoint_weight_mapping_proven": hfr_proven,
         "official_mfu_trained_checkpoint_weight_mapping_proven": mfu_proven,
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": mfu_hfr_proven,
-        "official_tub_temporal_encoder_weight_mapping_proven": tub_proven,
-        "official_tub_output2_decoder_weight_mapping_proven": tub_proven,
+        "official_tub_temporal_encoder_weight_mapping_proven": tub_temporal_proven,
+        "official_tub_output2_decoder_weight_mapping_proven": tub_output2_proven,
         "official_mfu_receiver_activation_payload_bound": False,
         "official_tub_receiver_activation_payload_bound": False,
         "official_native_receiver_state_mapping_proven": False,

@@ -23,6 +23,7 @@ HI_NERV_SHORT_SCORER_SMOKE_AUTHORITY = (
     "false_authority_macos_mlx_training_no_contest_score_claim"
 )
 HI_NERV_SHORT_SCORER_SMOKE_AXIS_TAG = "[macOS-MLX research-signal]"
+HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON = 1.0e-6
 _SEGNET_DIRECT_LIVE_SUBCONTROL_DUAL_KEYS = {
     "segnet_direct_live_class_histogram_weight": (
         "hi_nerv_segnet_direct_live_class_histogram"
@@ -228,14 +229,17 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         candidate_occupied = direct_live_metrics[
             "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
         ]
-        if candidate_occupied is not None and candidate_occupied < min_occupied:
+        if candidate_occupied is not None and _below_floor(
+            candidate_occupied,
+            min_occupied,
+        ):
             add_blocker("hi_nerv_short_smoke_direct_live_class_occupancy_collapsed")
         candidate_target_coverage = direct_live_metrics[
             "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
         ]
         if (
             candidate_target_coverage is not None
-            and candidate_target_coverage < min_target_coverage
+            and _below_floor(candidate_target_coverage, min_target_coverage)
         ):
             add_blocker(
                 "hi_nerv_short_smoke_direct_live_target_class_coverage_collapsed"
@@ -245,7 +249,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         ]
         if candidate_target_min_ratio is None:
             add_blocker("hi_nerv_short_smoke_direct_live_target_class_min_ratio_missing")
-        elif candidate_target_min_ratio < min_target_min_ratio:
+        elif _below_floor(candidate_target_min_ratio, min_target_min_ratio):
             add_blocker("hi_nerv_short_smoke_direct_live_target_class_mass_collapsed")
 
     pose_direct_live_keys = (
@@ -594,7 +598,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_argmax_occupancy_missing"
                 )
-            elif receiver_candidate_occupied < min_occupied:
+            elif _below_floor(receiver_candidate_occupied, min_occupied):
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_argmax_class_occupancy_collapsed"
                 )
@@ -602,7 +606,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_target_class_coverage_missing"
                 )
-            elif receiver_target_coverage < min_target_coverage:
+            elif _below_floor(receiver_target_coverage, min_target_coverage):
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_target_class_coverage_collapsed"
                 )
@@ -610,7 +614,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_target_class_min_ratio_missing"
                 )
-            elif receiver_target_min_ratio < min_target_min_ratio:
+            elif _below_floor(receiver_target_min_ratio, min_target_min_ratio):
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_target_class_mass_collapsed"
                 )
@@ -971,6 +975,15 @@ def _finite_float(value: Any) -> float | None:
     if not math.isfinite(out):
         return None
     return out
+
+
+def _below_floor(
+    value: float,
+    floor: float,
+    *,
+    epsilon: float = HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON,
+) -> bool:
+    return bool((float(value) + float(epsilon)) < float(floor))
 
 
 def _finite_mapping_value(mapping: Mapping[str, Any] | None, key: str) -> float | None:

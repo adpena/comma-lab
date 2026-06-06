@@ -18085,6 +18085,45 @@ def test_snerv_runner_refuses_conflicting_skip_high_mode_flag(
         )
 
 
+def test_snerv_runner_refuses_implicit_full_skip_high_under_byte_ceiling(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="official_skip_high_mode='full' is diagnostic-only",
+    ):
+        execute_snerv_inverse_steg_advisory_and_adapt(
+            output_dir=tmp_path / "snerv_full_skip_high_byte_ceiling",
+            num_pairs=2,
+            epochs=3,
+            source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+            modelsize_candidate={
+                "schema": "snerv_modelsize_candidate.v1",
+                "family": "snerv",
+                "candidate_id": "snerv-full-skip-high-byte-ceiling",
+                "wavelet": "haar",
+                "levels": 2,
+                "bits_per_coeff": 1.5,
+                "step_map_bits_per_coeff": 0.5,
+                "decoder_payload_codec": "int2_symmetric",
+                "snerv_model_size_adapter": (
+                    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+                ),
+                "official_skip_high_mode": "full",
+                "fc_dim": 11,
+                "emb_size": 2,
+                "num_pairs": 600,
+                "hard_byte_ceiling": 178_000,
+                "nominal_total_payload_bytes": 150_000,
+                "nominal_under_ceiling": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            repo_root=REPO_ROOT,
+        )
+
+
 def test_snerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
     tmp_path: Path,
     monkeypatch,
