@@ -109,6 +109,9 @@ Currently runs:
            (active SNeRV/HiNeRV SSD telemetry/progress roots from dispatch
             claims must be harvested into planner-visible false-authority
             feedback or explicitly block more campaign actuation)
+  Gate #37: tools/audit_frontier_rate_attack_consolidation.py
+           (legacy final-rate/byte-shaving/materializer state is the single
+            score-program compiler surface; parallel compiler scaffolds fail)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -231,6 +234,9 @@ CANONICAL_TASK_STATUS_AUDIT = TOOLS / "check_canonical_task_status_no_dangling_t
 TAC_TERMINOLOGY_AUDIT = TOOLS / "check_tac_terminology.py"
 PUBLIC_SUBMISSION_PR_AUDIT = TOOLS / "audit_public_submission_pr.py"
 ARCHIVE_BOUND_CONTRACT_AUDIT = TOOLS / "audit_archive_bound_candidate_contracts.py"
+FRONTIER_RATE_ATTACK_CONSOLIDATION_AUDIT = (
+    TOOLS / "audit_frontier_rate_attack_consolidation.py"
+)
 NERV_MODEL_SIZE_CURVE = TOOLS / "build_nerv_modelsize_archive_curve.py"
 NERV_CONTROL_INVENTORY = TOOLS / "build_nerv_control_inventory.py"
 NERV_IMPLEMENTATION_DESIGN_SWEEP = TOOLS / "build_nerv_implementation_design_sweep.py"
@@ -4633,6 +4639,18 @@ def main(argv: list[str] | None = None) -> int:
             _run_nerv_active_campaign_feedback_gate,
             "  ✓ Gate #36: NeRV active campaign feedback ingestion — PASSED",
             "  ✗ Gate #36: NeRV active campaign feedback ingestion — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            37,
+            "frontier final-rate compiler consolidation",
+            lambda: _run_gate(
+                "frontier final-rate compiler consolidation",
+                FRONTIER_RATE_ATTACK_CONSOLIDATION_AUDIT,
+                ["--format", "json"],
+            ),
+            "  ✓ Gate #37: frontier final-rate compiler consolidation — PASSED",
+            "  ✗ Gate #37: frontier final-rate compiler consolidation — FAILED",
         ),
     ]
     lane_steps = [

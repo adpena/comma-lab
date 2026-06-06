@@ -2630,6 +2630,44 @@ def _format_frontier_feedback_cycle_summary() -> str:
     return "\n".join(lines)
 
 
+@lru_cache(maxsize=1)
+def _frontier_rate_attack_consolidation_summary() -> dict[str, object]:
+    try:
+        from comma_lab.scheduler.frontier_rate_attack_consolidation import (
+            build_frontier_rate_attack_consolidation_audit,
+        )
+    except Exception as exc:  # pragma: no cover - import failure is the signal
+        return {
+            "schema": "frontier_rate_attack_consolidation_audit.v1",
+            "status": "FAIL",
+            "reason": f"consolidation audit import failed: {exc}",
+            "blockers": [f"consolidation_audit_import_failed:{type(exc).__name__}"],
+            **_false_authority_fields(),
+        }
+    payload = dict(build_frontier_rate_attack_consolidation_audit(REPO_ROOT))
+    blockers = payload.get("blockers") if isinstance(payload.get("blockers"), list) else []
+    if payload.get("status") == "PASS":
+        reason = "existing final-rate/materializer stack is the single compiler surface"
+    else:
+        reason = f"{len(blockers)} consolidation blocker(s)"
+    payload["reason"] = reason
+    return payload
+
+
+def _format_frontier_rate_attack_consolidation_summary() -> str:
+    payload = _frontier_rate_attack_consolidation_summary()
+    try:
+        from comma_lab.scheduler.frontier_rate_attack_consolidation import (
+            render_frontier_rate_attack_consolidation_audit,
+        )
+    except Exception:
+        return (
+            f"status: {payload.get('status')} — {payload.get('reason')}\n"
+            f"blockers: {len(payload.get('blockers') or [])}"
+        )
+    return render_frontier_rate_attack_consolidation_audit(payload).rstrip()
+
+
 def _repo_path_from_ref(value: object) -> Path | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -8445,6 +8483,9 @@ def _dispatch_readiness() -> dict[str, object]:
     phase7 = _constrained_coord_search_readiness()
     byte_shaving_acquisition = _byte_shaving_acquisition_summary()
     frontier_feedback_cycle = _frontier_feedback_cycle_summary()
+    frontier_rate_attack_consolidation = (
+        _frontier_rate_attack_consolidation_summary()
+    )
     pr95_mlx_profiles = _pr95_mlx_control_profile_summary()
     distortion_probe_signals = _distortion_axis_probe_summary()
     distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
@@ -8663,6 +8704,26 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6d0_frontier_rate_attack_consolidation": {
+            "status": frontier_rate_attack_consolidation["status"],
+            "reason": frontier_rate_attack_consolidation["reason"],
+            "canonical_surface": frontier_rate_attack_consolidation.get(
+                "canonical_surface"
+            ),
+            "formal_name": frontier_rate_attack_consolidation.get("formal_name"),
+            "blocker_count": len(
+                frontier_rate_attack_consolidation.get("blockers") or []
+            ),
+            "forbidden_parallel_surface_count": len(
+                frontier_rate_attack_consolidation.get(
+                    "forbidden_parallel_surfaces"
+                )
+                or []
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "phase_6e_pr95_mlx_control_profiles": {
             "status": pr95_mlx_profiles["status"],
             "reason": pr95_mlx_profiles["reason"],
@@ -8808,6 +8869,11 @@ def _format_dispatch_readiness() -> str:
     lines.append(
         "  Phase 6d (frontier feedback cycle):         "
         f"{phase6d['status']} — {phase6d['reason']}"
+    )
+    phase6d0 = readiness["phase_6d0_frontier_rate_attack_consolidation"]
+    lines.append(
+        "  Phase 6d.0 (compiler consolidation):        "
+        f"{phase6d0['status']} — {phase6d0['reason']}"
     )
     phase6e = readiness["phase_6e_pr95_mlx_control_profiles"]
     lines.append(
@@ -8995,6 +9061,9 @@ def main(argv: list[str] | None = None) -> int:
             "section_payload_grammar": _section_payload_grammar_summary(),
             "optimal_grammar_campaign": _optimal_grammar_campaign_summary(),
             "frontier_feedback_cycle": _frontier_feedback_cycle_summary(),
+            "frontier_rate_attack_consolidation": (
+                _frontier_rate_attack_consolidation_summary()
+            ),
             "pr95_mlx_control_profiles": _pr95_mlx_control_profile_summary(),
             "distortion_axis_probe_signals": _distortion_axis_probe_summary(),
             "distortion_axis_learned_sweep_bridge": (
@@ -9171,6 +9240,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6d — Frontier feedback cycle autopolicy",
         _format_frontier_feedback_cycle_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6d.0 — Frontier final-rate compiler consolidation",
+        _format_frontier_rate_attack_consolidation_summary(),
     ))
     parts.append(_section(
         "Phase 6e — PR95 MLX control profiles",
