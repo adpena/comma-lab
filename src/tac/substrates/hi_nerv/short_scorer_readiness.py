@@ -301,6 +301,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
     pose_direct_live_keys = (
         "loss_part_pose_direct_live_score_term",
         "loss_part_pose_direct_live_raw_mse",
+        "loss_part_pose_direct_live_score_marginal_wrt_raw_mse",
         "loss_part_pose_direct_live_yuv6_pair_std",
         "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std",
     )

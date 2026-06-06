@@ -5892,8 +5892,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     coder_qat_c1a_entropy_weight: float = 1.0e-4,
     coder_qat_c1a_sigma: float = 0.2,
     coder_qat_c1a_sample_size: int = 512,
-    snerv_score_aware_long_training_pr95_faithful_curriculum: bool = False,
-    snerv_score_aware_long_training_pr95_muon_policy: str = "every_stage",
+    snerv_score_aware_long_training_pr95_faithful_curriculum: bool = True,
+    snerv_score_aware_long_training_pr95_muon_policy: str = "faithful_stage8_only",
     mlx_prefilter_scorer_device: str | None = None,
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
@@ -29045,6 +29045,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--snerv-score-aware-long-training-pr95-faithful-curriculum",
         action="store_true",
+        default=True,
         help=(
             "Route SNeRV score-aware long training through the shared PR95 "
             "8-stage curriculum adapter. This is still false-authority MLX "
@@ -29052,9 +29053,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--no-snerv-score-aware-long-training-pr95-faithful-curriculum",
+        action="store_false",
+        dest="snerv_score_aware_long_training_pr95_faithful_curriculum",
+        help=(
+            "Explicitly opt out of the PR95 faithful curriculum adapter for "
+            "SNeRV research-only ablations. Do not use for long-run readiness."
+        ),
+    )
+    parser.add_argument(
         "--snerv-score-aware-long-training-pr95-muon-policy",
         choices=("faithful_stage8_only", "every_stage"),
-        default="every_stage",
+        default="faithful_stage8_only",
         help=(
             "Muon activation policy inside the PR95 curriculum. "
             "faithful_stage8_only preserves PR95 source parity; every_stage "

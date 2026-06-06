@@ -15,6 +15,13 @@ from tac.analysis.nerv_long_training_campaign_admission import (
 from tac.analysis.nerv_long_training_campaign_plan import (
     build_nerv_long_training_campaign_plan,
 )
+from tac.analysis.pr95_distortion_practices_guard import (
+    AXIS_TRACE_CONTRACT_SCHEMA,
+    POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA,
+    PRACTICE_DAG_SCHEMA,
+    SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA,
+    STAGE_DAG_SCHEMA,
+)
 from tac.cathedral_consumers.nerv_long_training_campaign_consumer import consume_candidate
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -88,10 +95,45 @@ def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
     assert selected["metadata"]["human_visual_fidelity_relevance"] == (
         "irrelevant_unless_scorer_causal"
     )
+    source_row = selected["metadata"]["source_selected_row"]
+    axis_contract = _source_row_contract(
+        source_row,
+        "pr95_distortion_axis_trace_contract",
+    )
+    assert axis_contract["schema"] == AXIS_TRACE_CONTRACT_SCHEMA
+    assert axis_contract["required_axes"] == [
+        "live_forward",
+        "fakequant_forward",
+        "archive_parseback",
+        "inflate_replay",
+        "official_evaluate_py",
+    ]
+    pose_contract = _source_row_contract(
+        source_row,
+        "pr95_posenet_marginal_telemetry_contract",
+    )
+    assert pose_contract["schema"] == POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA
+    assert pose_contract["pose_marginal_formula"] == "5/sqrt(10*d_pose)"
+    actuator_contract = _source_row_contract(
+        source_row,
+        "pr95_scorer_atom_actuator_contract",
+    )
+    assert actuator_contract["schema"] == SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA
+    assert "pair_local_film_or_latent_adapter" in actuator_contract[
+        "family_actuators"
+    ]
     row_guard = admission["selected_rows"][0]["pr95_distortion_practices_guard"]
     assert row_guard["schema"] == "pr95_distortion_practices_guard.v1"
     assert row_guard["launch_allowed"] is True
     assert row_guard["blockers"] == []
+    practice_rows = {row["practice_id"]: row for row in row_guard["practice_rows"]}
+    assert practice_rows["archive_parseback_distortion_axis_trace"]["observed"] is True
+    assert row_guard["practice_dag"]["schema"] == PRACTICE_DAG_SCHEMA
+    assert row_guard["practice_dag"]["all_nodes_green"] is True
+    assert row_guard["optimization_stage_dag"]["schema"] == STAGE_DAG_SCHEMA
+    assert row_guard["optimization_stage_dag"][
+        "all_required_stage_signals_observed"
+    ] is True
     assert admission["pr95_distortion_source_inventory"]["source_ready"] is True
 
 
@@ -385,7 +427,21 @@ def _campaign_plan(output_root: Path) -> dict:
     )
 
 
+def _source_row_contract(source_row: dict, key: str) -> dict:
+    direct = source_row.get(key)
+    if isinstance(direct, dict):
+        return direct
+    launch = source_row.get("launch_authority_contract")
+    if isinstance(launch, dict) and isinstance(launch.get(key), dict):
+        return launch[key]
+    metadata = source_row.get("metadata")
+    if isinstance(metadata, dict) and isinstance(metadata.get(key), dict):
+        return metadata[key]
+    raise KeyError(key)
+
+
 def _runnable_verdict(output_root: Path) -> dict:
+    output_root.mkdir(parents=True, exist_ok=True)
     queue = json.loads(json.dumps(_campaign_plan(output_root)["experiment_queue"]))
     hi = next(row for row in queue["experiments"] if row["family"] == "hi_nerv")
     hi["status"] = "queued"

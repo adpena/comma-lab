@@ -50,9 +50,12 @@ from tac.analysis.nerv_scorer_objective import (
 )
 from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
 from tac.analysis.pr95_distortion_practices_guard import (
+    build_pr95_distortion_axis_trace_contract,
     build_pr95_distortion_practices_row_guard,
     build_pr95_distortion_source_inventory,
     build_pr95_evaluate_scorer_domain_telemetry_contract,
+    build_pr95_posenet_marginal_telemetry_contract,
+    build_pr95_scorer_atom_actuator_contract,
 )
 from tac.analysis.snerv_lf_hf_replacement_queue import (
     DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
@@ -1453,6 +1456,9 @@ def _hinerv_campaign_row(
             ]
         )
     pr95_telemetry_contract = build_pr95_evaluate_scorer_domain_telemetry_contract("hi_nerv")
+    pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("hi_nerv")
+    pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("hi_nerv")
+    pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("hi_nerv")
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
             "id": row_id,
@@ -1461,6 +1467,9 @@ def _hinerv_campaign_row(
             "hard_byte_ceiling": int(candidate.get("hard_byte_ceiling") or 0),
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": pr95_telemetry_contract,
+            "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
+            "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "curriculum_plan": curriculum,
             "pr95_staged_curriculum": bool((curriculum.get("pr95_stage_plan") or {}).get("enabled")),
             "eval_roundtrip_ste_attached": bool(
@@ -1572,6 +1581,9 @@ def _hinerv_campaign_row(
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": (pr95_telemetry_contract),
+            "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
+            "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
@@ -1971,6 +1983,9 @@ def _snerv_campaign_row(
             ]
         )
     pr95_telemetry_contract = build_pr95_evaluate_scorer_domain_telemetry_contract("snerv")
+    pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("snerv")
+    pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("snerv")
+    pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("snerv")
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
             "id": row_id,
@@ -1979,6 +1994,9 @@ def _snerv_campaign_row(
             "hard_byte_ceiling": int(candidate.get("hard_byte_ceiling") or 0),
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": pr95_telemetry_contract,
+            "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
+            "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "curriculum_plan": curriculum,
             "pr95_faithful_curriculum_enabled": bool(pr95_curriculum_bound),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_bound),
@@ -2125,6 +2143,9 @@ def _snerv_campaign_row(
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": (pr95_telemetry_contract),
+            "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
+            "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
@@ -2190,6 +2211,9 @@ def _snerv_campaign_row(
                 "upstream_evaluate_score_binding": upstream_evaluate_binding,
                 "tilde_oss_leverage_binding": tilde_oss_binding,
                 "pr95_baseline_identity_binding": pr95_baseline_binding,
+                "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+                "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
+                "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
                 "pr95_distortion_practices_guard": pr95_distortion_guard,
                 "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
                 "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
@@ -2388,6 +2412,9 @@ def _experiment_for_row(
     tilde_oss_binding = metadata.get("tilde_oss_leverage_binding")
     pr95_baseline_binding = metadata.get("pr95_baseline_identity_binding")
     pr95_telemetry_contract = metadata.get("pr95_evaluate_scorer_domain_telemetry_contract")
+    pr95_axis_trace_contract = metadata.get("pr95_distortion_axis_trace_contract")
+    pr95_pose_marginal_contract = metadata.get("pr95_posenet_marginal_telemetry_contract")
+    pr95_actuator_contract = metadata.get("pr95_scorer_atom_actuator_contract")
     pr95_distortion_guard = metadata.get("pr95_distortion_practices_guard")
     family_optimal_strategy = metadata.get("family_optimal_strategy")
     snerv_runtime_authority_split = metadata.get("snerv_official_runtime_authority_split")
@@ -2459,6 +2486,18 @@ def _experiment_for_row(
                 pr95_telemetry_contract,
                 Mapping,
             ),
+            "pr95_distortion_axis_trace_contract_consumed": isinstance(
+                pr95_axis_trace_contract,
+                Mapping,
+            ),
+            "pr95_posenet_marginal_telemetry_contract_consumed": isinstance(
+                pr95_pose_marginal_contract,
+                Mapping,
+            ),
+            "pr95_scorer_atom_actuator_contract_consumed": isinstance(
+                pr95_actuator_contract,
+                Mapping,
+            ),
             "pr95_distortion_practices_consumed": isinstance(
                 pr95_distortion_guard,
                 Mapping,
@@ -2491,6 +2530,21 @@ def _experiment_for_row(
             ),
             "pr95_evaluate_scorer_domain_telemetry_contract": (
                 pr95_telemetry_contract if isinstance(pr95_telemetry_contract, Mapping) else None
+            ),
+            "pr95_distortion_axis_trace_contract": (
+                pr95_axis_trace_contract
+                if isinstance(pr95_axis_trace_contract, Mapping)
+                else None
+            ),
+            "pr95_posenet_marginal_telemetry_contract": (
+                pr95_pose_marginal_contract
+                if isinstance(pr95_pose_marginal_contract, Mapping)
+                else None
+            ),
+            "pr95_scorer_atom_actuator_contract": (
+                pr95_actuator_contract
+                if isinstance(pr95_actuator_contract, Mapping)
+                else None
             ),
             "pr95_distortion_practices_guard": (
                 pr95_distortion_guard if isinstance(pr95_distortion_guard, Mapping) else None
@@ -7849,6 +7903,9 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "tilde_oss_leverage_binding",
         "pr95_baseline_identity_binding",
         "pr95_evaluate_scorer_domain_telemetry_contract",
+        "pr95_distortion_axis_trace_contract",
+        "pr95_posenet_marginal_telemetry_contract",
+        "pr95_scorer_atom_actuator_contract",
         "pr95_distortion_practices_guard",
         "source_faithfulness_controls",
         "source_bound_capacity_controls",

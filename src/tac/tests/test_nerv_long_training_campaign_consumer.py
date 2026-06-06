@@ -54,6 +54,24 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert launch_contract["queue_status_is_receiver_proof"] is False
     assert launch_contract["queue_status_is_cpu_replay_proof"] is False
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
+    assert first["upstream_evaluate_score_binding"]["schema"] == (
+        "nerv_row_upstream_evaluate_binding.v1"
+    )
+    assert first["pr95_evaluate_scorer_domain_telemetry_contract"]["schema"] == (
+        "pr95_evaluate_scorer_domain_telemetry_contract.v1"
+    )
+    assert first["pr95_distortion_axis_trace_contract"]["schema"] == (
+        "pr95_distortion_axis_trace_contract.v1"
+    )
+    assert first["pr95_posenet_marginal_telemetry_contract"]["schema"] == (
+        "pr95_posenet_marginal_telemetry_contract.v1"
+    )
+    assert first["pr95_scorer_atom_actuator_contract"]["schema"] == (
+        "pr95_scorer_atom_actuator_contract.v1"
+    )
+    assert first["pr95_distortion_practices_guard"]["schema"] == (
+        "pr95_distortion_practices_guard.v1"
+    )
 
 
 def test_long_training_campaign_consumer_requires_launch_authority_contract() -> None:
@@ -184,6 +202,11 @@ def _runnable_snerv_queue(queue: dict | None = None) -> dict:
     contract["queue_status_is_receiver_proof"] = False
     contract["queue_status_is_cpu_replay_proof"] = False
     contract["queue_status_is_exact_eval_authority"] = False
+    gate = snerv["score_lowering_gate"]
+    gate["local_mlx_executable"] = True
+    gate["prelaunch_allowed"] = True
+    gate["cpu_replay_ready"] = False
+    gate["exact_gate_ready"] = False
     return out
 
 

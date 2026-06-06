@@ -260,7 +260,7 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
     gate = _mapping(experiment.get("score_lowering_gate"))
     metadata = _mapping(experiment.get("metadata"))
     launch_contract = _mapping(experiment.get("launch_authority_contract"))
-    return {
+    compact = {
         "id": _experiment_id(experiment, index),
         "family": str(experiment.get("family") or "unknown"),
         "priority": _optional_int(experiment.get("priority")),
@@ -310,6 +310,18 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    for key in (
+        "upstream_evaluate_score_binding",
+        "pr95_evaluate_scorer_domain_telemetry_contract",
+        "pr95_distortion_axis_trace_contract",
+        "pr95_posenet_marginal_telemetry_contract",
+        "pr95_scorer_atom_actuator_contract",
+        "pr95_distortion_practices_guard",
+    ):
+        value = metadata.get(key)
+        if isinstance(value, Mapping):
+            compact[key] = dict(value)
+    return compact
 
 
 def _compact_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:

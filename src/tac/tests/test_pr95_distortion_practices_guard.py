@@ -4,15 +4,23 @@ from __future__ import annotations
 from pathlib import Path
 
 from tac.analysis.pr95_distortion_practices_guard import (
+    AXIS_TRACE_CONTRACT_SCHEMA,
     PAYLOAD_GUARD_SCHEMA,
+    POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA,
+    PRACTICE_DAG_SCHEMA,
     PRACTICES,
     SCHEMA,
+    SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA,
     SOURCE_INVENTORY_SCHEMA,
+    STAGE_DAG_SCHEMA,
     TELEMETRY_CONTRACT_SCHEMA,
+    build_pr95_distortion_axis_trace_contract,
     build_pr95_distortion_practices_payload_guard,
     build_pr95_distortion_practices_row_guard,
     build_pr95_distortion_source_inventory,
     build_pr95_evaluate_scorer_domain_telemetry_contract,
+    build_pr95_posenet_marginal_telemetry_contract,
+    build_pr95_scorer_atom_actuator_contract,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -47,7 +55,17 @@ def test_pr95_distortion_guard_accepts_hinerv_pr95_curriculum_row() -> None:
     assert rows["dual_component_real_scorer_pressure"]["observed"] is True
     assert rows["official_evaluate_archive_byte_price"]["observed"] is True
     assert rows["scorer_domain_telemetry_contract"]["observed"] is True
+    assert rows["posenet_marginal_vjp_telemetry_contract"]["observed"] is True
+    assert rows["family_local_scorer_atom_actuator_contract"]["observed"] is True
     assert rows["pr95_staged_qat_coder_curriculum"]["observed"] is True
+    assert rows["archive_parseback_distortion_axis_trace"]["observed"] is True
+    assert guard["practice_dag"]["schema"] == PRACTICE_DAG_SCHEMA
+    assert guard["practice_dag"]["all_nodes_green"] is True
+    assert guard["dag_blockers"] == []
+    assert guard["optimization_stage_dag"]["schema"] == STAGE_DAG_SCHEMA
+    assert guard["optimization_stage_dag"][
+        "all_required_stage_signals_observed"
+    ] is True
     assert guard["score_claim"] is False
     assert guard["ready_for_exact_eval_dispatch"] is False
 
@@ -56,6 +74,7 @@ def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
     row = _snerv_row()
     command = row["command"]
     command.remove("--snerv-score-aware-long-training-eval-roundtrip-ste")
+    command.append("--no-snerv-score-aware-long-training-eval-roundtrip-ste")
 
     guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
 
@@ -63,6 +82,56 @@ def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
     assert "snerv_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing" in guard["blockers"]
     rows = {row["practice_id"]: row for row in guard["practice_rows"]}
     assert rows["scorer_preprocess_eval_roundtrip_yuv6"]["observed"] is False
+    dag_nodes = {row["practice_id"]: row for row in guard["practice_dag"]["nodes"]}
+    assert dag_nodes["scorer_preprocess_eval_roundtrip_yuv6"]["status"] == "missing"
+    assert dag_nodes["dual_component_real_scorer_pressure"]["status"] == (
+        "blocked_by_prerequisite"
+    )
+    assert dag_nodes["archive_parseback_distortion_axis_trace"]["status"] == (
+        "blocked_by_prerequisite"
+    )
+    assert guard["practice_dag"]["first_failed_practice_ids"] == [
+        "scorer_preprocess_eval_roundtrip_yuv6"
+    ]
+
+
+def test_pr95_distortion_guard_accepts_current_snerv_pr95_defaults() -> None:
+    row = _snerv_row()
+    command = row["command"]
+    command.remove("--snerv-score-aware-long-training-pr95-faithful-curriculum")
+    command.remove("--snerv-score-aware-long-training-eval-roundtrip-ste")
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is True
+    assert guard["blockers"] == []
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    assert rows["scorer_preprocess_eval_roundtrip_yuv6"]["observed"] is True
+    assert rows["pr95_staged_qat_coder_curriculum"]["observed"] is True
+    assert guard["optimization_stage_dag"]["observed_signals"][
+        "pr95_curriculum"
+    ] is True
+
+
+def test_pr95_distortion_guard_blocks_every_stage_muon_as_pr95_unfaithful() -> None:
+    row = _snerv_row()
+    row["command"].extend(
+        [
+            "--snerv-score-aware-long-training-pr95-muon-policy",
+            "every_stage",
+        ]
+    )
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "snerv_pr95_stage_dag_stage8_muon_finetune_missing_muon_stage8_only"
+        in guard["blockers"]
+    )
+    assert guard["optimization_stage_dag"]["observed_signals"][
+        "muon_stage8_only"
+    ] is False
 
 
 def test_pr95_distortion_guard_blocks_fake_parity_without_byte_binding() -> None:
@@ -87,6 +156,64 @@ def test_pr95_distortion_guard_blocks_fake_parity_without_scorer_telemetry_contr
     assert "hi_nerv_pr95_distortion_scorer_domain_telemetry_contract_missing" in guard["blockers"]
     rows = {row["practice_id"]: row for row in guard["practice_rows"]}
     assert rows["scorer_domain_telemetry_contract"]["observed"] is False
+
+
+def test_pr95_distortion_axis_trace_contract_names_parseback_chain() -> None:
+    contract = build_pr95_distortion_axis_trace_contract("hi_nerv")
+
+    assert contract["schema"] == AXIS_TRACE_CONTRACT_SCHEMA
+    assert contract["axis_order_is_dependency_order"] is True
+    assert contract["required_axes"] == [
+        "live_forward",
+        "fakequant_forward",
+        "archive_parseback",
+        "inflate_replay",
+        "official_evaluate_py",
+    ]
+    assert contract["acceptance_policy"]["live_only_improvement_is_false_authority"] is True
+    assert contract["acceptance_policy"]["fail_closed_on_axis_divergence"] is True
+    assert {row["stage"] for row in contract["stage_gates"]} == {
+        "class_birth",
+        "margin_crossing",
+            "argmax_disagreement",
+            "fakequant_survival",
+            "archive_parseback_survival",
+            "pose_marginal_vjp",
+            "late_byte_and_optimizer_pressure",
+        }
+    assert contract["score_claim"] is False
+
+
+def test_pr95_posenet_marginal_contract_names_frontier_derivative() -> None:
+    contract = build_pr95_posenet_marginal_telemetry_contract("snerv")
+
+    assert contract["schema"] == POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA
+    assert contract["pose_marginal_formula"] == "5/sqrt(10*d_pose)"
+    assert contract["pose_marginal_increases_as_d_pose_decreases"] is True
+    assert "pose_direct_live_score_marginal_wrt_raw_mse" in contract[
+        "required_telemetry"
+    ]
+    assert "pose_direct_live_vjp_norm_by_group" in contract["required_telemetry"]
+    assert contract["acceptance_policy"][
+        "long_run_admission_requires_pose_marginal_telemetry"
+    ] is True
+    assert contract["score_claim"] is False
+
+
+def test_pr95_family_actuator_contract_splits_hinerv_and_snerv() -> None:
+    hi = build_pr95_scorer_atom_actuator_contract("hi_nerv")
+    snerv = build_pr95_scorer_atom_actuator_contract("snerv")
+
+    assert hi["schema"] == SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA
+    assert snerv["schema"] == SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA
+    assert "pair_local_film_or_latent_adapter" in hi["family_actuators"]
+    assert "official_mfu_hfr_tub_source_forward_parity" in snerv[
+        "family_actuators"
+    ]
+    assert "tub_output2_segnet_last_frame_binding" in snerv["family_actuators"]
+    assert hi["family_actuators"] != snerv["family_actuators"]
+    assert hi["acceptance_policy"]["cross_family_evidence_rejected"] is True
+    assert snerv["score_claim"] is False
 
 
 def test_pr95_distortion_telemetry_contract_names_evaluate_domains() -> None:
@@ -165,6 +292,15 @@ def _hinerv_row() -> dict:
         "pr95_evaluate_scorer_domain_telemetry_contract": (
             build_pr95_evaluate_scorer_domain_telemetry_contract("hi_nerv")
         ),
+        "pr95_distortion_axis_trace_contract": (
+            build_pr95_distortion_axis_trace_contract("hi_nerv")
+        ),
+        "pr95_posenet_marginal_telemetry_contract": (
+            build_pr95_posenet_marginal_telemetry_contract("hi_nerv")
+        ),
+        "pr95_scorer_atom_actuator_contract": (
+            build_pr95_scorer_atom_actuator_contract("hi_nerv")
+        ),
         "score_lowering_gate": {
             "schema": "nerv_long_training_score_lowering_gate.v1",
             "local_mlx_executable": True,
@@ -192,6 +328,15 @@ def _snerv_row() -> dict:
         "upstream_evaluate_score_binding": _upstream_evaluate_score_binding("snerv"),
         "pr95_evaluate_scorer_domain_telemetry_contract": (
             build_pr95_evaluate_scorer_domain_telemetry_contract("snerv")
+        ),
+        "pr95_distortion_axis_trace_contract": (
+            build_pr95_distortion_axis_trace_contract("snerv")
+        ),
+        "pr95_posenet_marginal_telemetry_contract": (
+            build_pr95_posenet_marginal_telemetry_contract("snerv")
+        ),
+        "pr95_scorer_atom_actuator_contract": (
+            build_pr95_scorer_atom_actuator_contract("snerv")
         ),
         "score_lowering_gate": {
             "schema": "nerv_long_training_score_lowering_gate.v1",

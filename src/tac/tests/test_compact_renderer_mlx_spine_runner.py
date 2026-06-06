@@ -11775,6 +11775,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(
         0.45
     )
+    assert sn.snerv_score_aware_long_training_pr95_faithful_curriculum is True
     assert sn.snerv_score_aware_long_training_pr95_muon_policy == "every_stage"
 
 
@@ -17840,8 +17841,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         is True
     )
     assert native["score_aware_long_training_coder_qat_bound"] is True
-    assert native["score_aware_long_training_pr95_curriculum_bound"] is False
-    assert native["score_aware_long_training_pr95_muon_policy"] == "every_stage"
+    assert native["score_aware_long_training_pr95_curriculum_bound"] is True
+    assert native["score_aware_long_training_pr95_muon_policy"] == (
+        "faithful_stage8_only"
+    )
     assert native["native_mlx_hf_decoder_training"]["requested_steps"] == 11
     assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(
         0.004

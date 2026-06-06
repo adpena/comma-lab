@@ -15,12 +15,18 @@ from pathlib import Path
 from typing import Any
 
 from tac.analysis.pr95_stack_binding_requirements import FALSE_AUTHORITY
+from tac.contest_eval_contract import build_score_allocation_contract
 
 SCHEMA = "pr95_distortion_practices_guard.v1"
 SOURCE_INVENTORY_SCHEMA = "pr95_distortion_source_inventory.v1"
 PRACTICE_ROW_SCHEMA = "pr95_distortion_practice_row.v1"
 PAYLOAD_GUARD_SCHEMA = "pr95_distortion_practices_payload_guard.v1"
 TELEMETRY_CONTRACT_SCHEMA = "pr95_evaluate_scorer_domain_telemetry_contract.v1"
+PRACTICE_DAG_SCHEMA = "pr95_distortion_practices_dag.v1"
+STAGE_DAG_SCHEMA = "pr95_eight_stage_optimization_dag.v1"
+AXIS_TRACE_CONTRACT_SCHEMA = "pr95_distortion_axis_trace_contract.v1"
+SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA = "pr95_scorer_atom_actuator_contract.v1"
+POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA = "pr95_posenet_marginal_telemetry_contract.v1"
 
 PR95_SOURCE_REL = Path(
     "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
@@ -107,6 +113,33 @@ PRACTICES: tuple[Practice, ...] = (
         ),
     ),
     Practice(
+        practice_id="posenet_marginal_vjp_telemetry_contract",
+        title="PoseNet frontier marginal and VJP telemetry contract",
+        why_it_matters=(
+            "evaluate.py prices PoseNet as sqrt(10*d_pose), whose local marginal "
+            "5/sqrt(10*d_pose) grows as d_pose shrinks. Long runs must not treat "
+            "PoseNet as a late cleanup axis or accept raw-MSE-only telemetry."
+        ),
+        source_check_ids=(
+            "upstream_posenet_uses_yuv6_pair",
+            "pr95_losses_include_seg_margin_and_pose",
+        ),
+    ),
+    Practice(
+        practice_id="family_local_scorer_atom_actuator_contract",
+        title="family-local scorer-atom actuator contract",
+        why_it_matters=(
+            "PR95's 28-D per-pair latents matched the evaluator atom. HiNeRV "
+            "needs grid/head/pair-adapter controls, while SNeRV needs MFU/HFR/TUB "
+            "and LF/HF incidence controls; cross-family actuator evidence is not "
+            "launch authority."
+        ),
+        source_check_ids=(
+            "pr95_losses_include_seg_margin_and_pose",
+            "upstream_posenet_uses_yuv6_pair",
+        ),
+    ),
+    Practice(
         practice_id="pr95_staged_qat_coder_curriculum",
         title="PR95 staged curriculum with QAT and coder pressure",
         why_it_matters=(
@@ -120,6 +153,214 @@ PRACTICES: tuple[Practice, ...] = (
             "pr95_stage8_muon_present",
         ),
     ),
+    Practice(
+        practice_id="archive_parseback_distortion_axis_trace",
+        title="live/fake-quant/parse-back/inflate/evaluate trace contract",
+        why_it_matters=(
+            "PR95 selected archive-parsed candidates, not live tensors. "
+            "HiNeRV/SNeRV launch rows need the same axis chain so live scorer "
+            "movement cannot hide fake-quant, packet parse-back, inflate, or "
+            "official evaluate.py divergence."
+        ),
+        source_check_ids=(
+            "upstream_evaluate_archive_byte_price",
+            "pr95_training_eval_roundtrip_ste",
+        ),
+    ),
+)
+
+PRACTICE_DAG_EDGES: Mapping[str, tuple[str, ...]] = {
+    "official_non_overlapping_seq2_pair_geometry": (),
+    "official_evaluate_archive_byte_price": (),
+    "scorer_preprocess_eval_roundtrip_yuv6": (
+        "official_non_overlapping_seq2_pair_geometry",
+    ),
+    "dual_component_real_scorer_pressure": (
+        "scorer_preprocess_eval_roundtrip_yuv6",
+    ),
+    "scorer_domain_telemetry_contract": (
+        "dual_component_real_scorer_pressure",
+    ),
+    "posenet_marginal_vjp_telemetry_contract": (
+        "scorer_domain_telemetry_contract",
+    ),
+    "family_local_scorer_atom_actuator_contract": (
+        "dual_component_real_scorer_pressure",
+        "posenet_marginal_vjp_telemetry_contract",
+    ),
+    "pr95_staged_qat_coder_curriculum": (
+        "dual_component_real_scorer_pressure",
+        "official_evaluate_archive_byte_price",
+        "scorer_domain_telemetry_contract",
+        "posenet_marginal_vjp_telemetry_contract",
+        "family_local_scorer_atom_actuator_contract",
+    ),
+    "archive_parseback_distortion_axis_trace": (
+        "pr95_staged_qat_coder_curriculum",
+        "official_evaluate_archive_byte_price",
+    ),
+}
+
+PRACTICE_DAG_LAYER_METADATA: Mapping[str, Mapping[str, str]] = {
+    "official_non_overlapping_seq2_pair_geometry": {
+        "layer": "geometry",
+        "math_surface": "600 non-overlapping seq_len=2 samples",
+        "architecture_surface": "frame sampler and pair teacher construction",
+        "stabilization_role": "prevents PoseNet target aliasing",
+    },
+    "official_evaluate_archive_byte_price": {
+        "layer": "rate_lagrangian",
+        "math_surface": "25 * archive_zip_bytes / source_video_bytes",
+        "architecture_surface": "archive.zip packet grammar and byte oracle",
+        "stabilization_role": "keeps optimizer pressure tied to charged bytes",
+    },
+    "scorer_preprocess_eval_roundtrip_yuv6": {
+        "layer": "scorer_manifold",
+        "math_surface": "resize + uint8 STE + two-frame YUV6 PoseNet input",
+        "architecture_surface": "differentiable scorer input preprocessing",
+        "stabilization_role": "keeps gradients on the upstream evaluate.py manifold",
+    },
+    "dual_component_real_scorer_pressure": {
+        "layer": "distortion_lagrangian",
+        "math_surface": "100*d_seg + sqrt(10*d_pose)",
+        "architecture_surface": "real SegNet last-frame and PoseNet pair teachers",
+        "stabilization_role": "prevents single-component collapse",
+    },
+    "scorer_domain_telemetry_contract": {
+        "layer": "actuator_observability",
+        "math_surface": "argmax occupancy plus YUV6 geometry metrics",
+        "architecture_surface": "telemetry and checkpoint selection contract",
+        "stabilization_role": "fails closed when a requested loss is not consumed",
+    },
+    "posenet_marginal_vjp_telemetry_contract": {
+        "layer": "pose_score_marginal",
+        "math_surface": "d/d(d_pose) sqrt(10*d_pose) = 5/sqrt(10*d_pose)",
+        "architecture_surface": "direct-live PoseNet VJP and marginal telemetry",
+        "stabilization_role": "keeps low-d_pose frontier pressure visible",
+    },
+    "family_local_scorer_atom_actuator_contract": {
+        "layer": "local_controllability",
+        "math_surface": "one controllable actuator per scorer atom and incidence axis",
+        "architecture_surface": "HiNeRV grid/head adapter or SNeRV MFU/HFR/TUB/LF-HF binding",
+        "stabilization_role": "prevents global-only credit assignment collapse",
+    },
+    "pr95_staged_qat_coder_curriculum": {
+        "layer": "optimization_schedule",
+        "math_surface": "CE -> margins -> QAT -> C1a -> sigma -> Muon polish",
+        "architecture_surface": "PR95-faithful 8-stage Muon+AdamW curriculum",
+        "stabilization_role": "stages convergence before byte-closed promotion",
+    },
+    "archive_parseback_distortion_axis_trace": {
+        "layer": "authority_axis_chain",
+        "math_surface": "same score trend across live, QAT, packet, inflate, evaluate",
+        "architecture_surface": "archive parse-back and exact inflate/evaluate trace",
+        "stabilization_role": "rejects live-only distortion wins before long runs",
+    },
+}
+
+PR95_STAGE_DAG_ROWS: tuple[dict[str, Any], ...] = (
+    {
+        "stage_index": 1,
+        "stage_id": "stage1_v328_ce",
+        "epochs": 3000,
+        "loss_family": "ce",
+        "qat_active": False,
+        "c1a_lambda": 0.0,
+        "sigma": 0.2,
+        "uses_muon": False,
+        "depends_on": [],
+        "required_signals": ["pr95_curriculum"],
+    },
+    {
+        "stage_index": 2,
+        "stage_id": "stage2_v331_softplus",
+        "epochs": 5650,
+        "loss_family": "tau_softplus",
+        "qat_active": False,
+        "c1a_lambda": 0.0,
+        "sigma": 0.2,
+        "uses_muon": False,
+        "depends_on": ["stage1_v328_ce"],
+        "required_signals": ["pr95_curriculum"],
+    },
+    {
+        "stage_index": 3,
+        "stage_id": "stage3_v332_smooth",
+        "epochs": 1500,
+        "loss_family": "smooth_disagreement",
+        "qat_active": False,
+        "c1a_lambda": 0.0,
+        "sigma": 0.2,
+        "uses_muon": False,
+        "depends_on": ["stage2_v331_softplus"],
+        "required_signals": ["pr95_curriculum"],
+    },
+    {
+        "stage_index": 4,
+        "stage_id": "stage4_v332_qat",
+        "epochs": 500,
+        "loss_family": "smooth_disagreement",
+        "qat_active": True,
+        "c1a_lambda": 0.0,
+        "sigma": 0.2,
+        "uses_muon": False,
+        "depends_on": ["stage3_v332_smooth"],
+        "required_signals": ["pr95_curriculum", "coder_qat"],
+    },
+    {
+        "stage_index": 5,
+        "stage_id": "stage5_c1a_l7",
+        "epochs": 9000,
+        "loss_family": "l7_softplus",
+        "qat_active": True,
+        "c1a_lambda": 0.01,
+        "sigma": 0.2,
+        "uses_muon": False,
+        "depends_on": ["stage4_v332_qat"],
+        "required_signals": ["pr95_curriculum", "coder_qat", "c1a_entropy"],
+    },
+    {
+        "stage_index": 6,
+        "stage_id": "stage6_lambda_sweep",
+        "epochs": 2000,
+        "loss_family": "l7_softplus",
+        "qat_active": True,
+        "c1a_lambda": 0.02,
+        "sigma": 0.2,
+        "uses_muon": False,
+        "depends_on": ["stage5_c1a_l7"],
+        "required_signals": ["pr95_curriculum", "coder_qat", "c1a_entropy"],
+    },
+    {
+        "stage_index": 7,
+        "stage_id": "stage7_sigma_sweep",
+        "epochs": 3000,
+        "loss_family": "l7_softplus",
+        "qat_active": True,
+        "c1a_lambda": 0.02,
+        "sigma": 0.1,
+        "uses_muon": False,
+        "depends_on": ["stage6_lambda_sweep"],
+        "required_signals": ["pr95_curriculum", "coder_qat", "c1a_entropy"],
+    },
+    {
+        "stage_index": 8,
+        "stage_id": "stage8_muon_finetune",
+        "epochs": 5000,
+        "loss_family": "l7_softplus",
+        "qat_active": True,
+        "c1a_lambda": 0.02,
+        "sigma": 0.1,
+        "uses_muon": True,
+        "depends_on": ["stage7_sigma_sweep"],
+        "required_signals": [
+            "pr95_curriculum",
+            "coder_qat",
+            "c1a_entropy",
+            "muon_adamw_partition",
+            "muon_stage8_only",
+        ],
+    },
 )
 
 
@@ -159,13 +400,190 @@ def build_pr95_evaluate_scorer_domain_telemetry_contract(
             "loss_part_scorer_input_shape_tether_posenet_yuv6_pair_mse",
             "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta_mse",
         ],
+        "posenet_marginal_metric_names": [
+            "loss_part_pose_direct_live_raw_mse",
+            "loss_part_pose_direct_live_score_term",
+            "loss_part_pose_direct_live_score_marginal_wrt_raw_mse",
+            "loss_part_pose_direct_live_vjp_norm_by_group",
+        ],
         "pose_geometry_gate_required": True,
+        "pose_marginal_gate_required": True,
         "required_metric_groups": [
             "segnet_last_frame_argmax",
             "segnet_argmax_occupancy",
             "posenet_yuv6_pair",
+            "posenet_marginal_vjp",
         ],
         "fail_closed_on_missing_metrics": True,
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_pr95_posenet_marginal_telemetry_contract(family: str) -> dict[str, Any]:
+    """Return the PoseNet marginal/VJP telemetry contract for long-run readiness."""
+
+    family_key = str(family).strip().lower().replace("-", "_") or "unknown"
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    score_allocation = build_score_allocation_contract()
+    return {
+        "schema": POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA,
+        "family": family_key,
+        "source": "upstream/evaluate.py score term sqrt(10*d_pose)",
+        "pose_score_term": "sqrt(10*d_pose)",
+        "pose_marginal_formula": score_allocation["posenet"]["derivative_wrt_d_pose"],
+        "pose_marginal_increases_as_d_pose_decreases": True,
+        "required_telemetry": [
+            "pose_direct_live_raw_mse",
+            "pose_direct_live_score_term",
+            "pose_direct_live_score_marginal_wrt_raw_mse",
+            "pose_direct_live_vjp_norm_by_group",
+            "pose_direct_live_yuv6_pair_std",
+            "pose_direct_live_yuv6_pair_temporal_delta_std",
+            "mlx_torch_posenet_forward_parity",
+        ],
+        "acceptance_policy": {
+            "pose_is_not_late_cleanup_axis": True,
+            "fail_closed_on_missing_direct_live_pose_marginal": True,
+            "fail_closed_on_zero_or_nan_pose_vjp": True,
+            "long_run_admission_requires_pose_marginal_telemetry": True,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
+    """Return the family-specific scorer-atom actuator contract."""
+
+    family_key = str(family).strip().lower().replace("-", "_") or "unknown"
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    if family_key == "snerv":
+        family_actuators = [
+            "official_mfu_hfr_tub_source_forward_parity",
+            "tub_output2_segnet_last_frame_binding",
+            "lf_posenet_yuv6_pair_carrier",
+            "hf_segnet_boundary_margin_carrier",
+            "pair_conditioned_mfu_hfr_tub_adapter",
+        ]
+        control_surface = "SNeRV MFU/HFR/TUB plus LF/HF scorer-incidence controls"
+    else:
+        family_actuators = [
+            "hierarchical_grid_saliency",
+            "output_head_target_region_bias",
+            "target_region_waterfill",
+            "pair_local_film_or_latent_adapter",
+        ]
+        control_surface = "HiNeRV hierarchical grid/output-head plus pair-adapter controls"
+    return {
+        "schema": SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA,
+        "family": family_key,
+        "source": "PR95 28-D per-pair latent scorer-atom control",
+        "control_surface": control_surface,
+        "common_scorer_atoms": [
+            "600_non_overlapping_pairs",
+            "segnet_last_frame_argmax_regions",
+            "posenet_two_frame_yuv6_pair_motion",
+            "archive_section_value_per_byte",
+        ],
+        "family_actuators": family_actuators,
+        "acceptance_policy": {
+            "family_specific_actuators_are_not_interchangeable": True,
+            "pair_local_smoke_required_before_long_run": True,
+            "cross_family_evidence_rejected": True,
+            "actuator_must_report_grad_norm_by_group": True,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_pr95_distortion_axis_trace_contract(family: str) -> dict[str, Any]:
+    """Return the scorer-axis trace contract required before long campaigns."""
+
+    family_key = str(family).strip().lower().replace("-", "_") or "unknown"
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    return {
+        "schema": AXIS_TRACE_CONTRACT_SCHEMA,
+        "family": family_key,
+        "source": (
+            "PR95 archive parse-back selection plus upstream/evaluate.py "
+            "DistortionNet score axes"
+        ),
+        "required_axes": [
+            "live_forward",
+            "fakequant_forward",
+            "archive_parseback",
+            "inflate_replay",
+            "official_evaluate_py",
+        ],
+        "axis_order_is_dependency_order": True,
+        "acceptance_policy": {
+            "accepted_update_must_reduce_worst_region_debt": True,
+            "live_only_improvement_is_false_authority": True,
+            "fakequant_score_delta_must_be_bounded_before_stage5": True,
+            "parseback_score_delta_must_be_bounded_before_stage6": True,
+            "inflate_and_official_evaluate_required_before_promotion": True,
+            "fail_closed_on_axis_divergence": True,
+        },
+        "required_metrics": [
+            "score_live",
+            "score_fakequant",
+            "score_parseback",
+            "score_inflate",
+            "score_official_evaluate",
+            "d_seg_live",
+            "d_seg_parseback",
+            "d_pose_live",
+            "d_pose_parseback",
+            "pose_direct_live_score_marginal_wrt_raw_mse",
+            "pose_direct_live_vjp_norm_by_group",
+            "worst_region_score_debt",
+            "worst_region_margin_p50",
+            "worst_region_margin_p90",
+            "pose_worst_pair",
+            "archive_bytes_by_section",
+            "grad_norm_by_group",
+        ],
+        "stage_gates": [
+            {
+                "stage": "class_birth",
+                "pass_condition": (
+                    "target classes have nonzero direct-live support and "
+                    "worst-region score debt decreases on consecutive evals"
+                ),
+            },
+            {
+                "stage": "margin_crossing",
+                "pass_condition": "worst-region target margin median crosses zero",
+            },
+            {
+                "stage": "argmax_disagreement",
+                "pass_condition": "actual argmax disagreement decreases",
+            },
+            {
+                "stage": "fakequant_survival",
+                "pass_condition": "fake-quant score delta remains bounded",
+            },
+            {
+                "stage": "archive_parseback_survival",
+                "pass_condition": "parse-back score remains close to live score",
+            },
+            {
+                "stage": "pose_marginal_vjp",
+                "pass_condition": (
+                    "direct-live PoseNet marginal telemetry is finite and at "
+                    "least one trainable parameter group has nonzero VJP norm"
+                ),
+            },
+            {
+                "stage": "late_byte_and_optimizer_pressure",
+                "pass_condition": (
+                    "section byte duals, entropy pressure, and Muon activate "
+                    "only after earlier gates pass"
+                ),
+            },
+        ],
         **FALSE_AUTHORITY,
     }
 
@@ -270,6 +688,15 @@ def build_pr95_distortion_source_inventory(
             "F.interpolate(up, size=(384, 512)",
             "decoded_clamped.round()",
             "distortion_net.preprocess_input(decoded_bhwc)",
+        ),
+    )
+    add_record(
+        rel_path=PR95_SOURCE_REL / "src" / "stages" / "common.py",
+        check_id="pr95_archive_contains_latents",
+        required_tokens=(
+            "HNeRVDecoder(latent_dim=28",
+            "latents = nn.Parameter(torch.randn(n_pairs, 28",
+            "decoder(latents[idx])",
         ),
     )
     add_record(
@@ -421,6 +848,14 @@ def build_pr95_distortion_practices_row_guard(
     if required and inventory.get("source_ready") is not True:
         blockers.insert(0, "pr95_distortion_source_inventory_incomplete")
 
+    practice_dag = _build_practice_dag(
+        family=family,
+        required=required,
+        practice_rows=practice_rows,
+    )
+    stage_dag = _build_stage_dag(row=row, command=command, family=family)
+    if required and stage_dag.get("all_required_stage_signals_observed") is not True:
+        blockers.extend(_string_list(stage_dag.get("blockers")))
     passed_count = sum(1 for item in practice_rows if item["passed"])
     guard = {
         "schema": SCHEMA,
@@ -432,8 +867,18 @@ def build_pr95_distortion_practices_row_guard(
         "source_inventory_sha256": inventory.get("sha256"),
         "required_practice_count": len(PRACTICES) if required else 0,
         "passed_practice_count": passed_count if required else 0,
-        "launch_allowed": not blockers,
+        "launch_allowed": bool(
+            not blockers and practice_dag.get("all_nodes_green") is True
+        ),
         "practice_rows": practice_rows,
+        "practice_dag": practice_dag,
+        "optimization_stage_dag": stage_dag,
+        "dag_blockers": _dedupe(
+            [
+                *_string_list(practice_dag.get("blockers")),
+                *_string_list(stage_dag.get("blockers")),
+            ]
+        ),
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
@@ -512,6 +957,232 @@ def render_pr95_distortion_practices_markdown(payload: Mapping[str, Any]) -> str
     return "\n".join(lines)
 
 
+def _build_practice_dag(
+    *,
+    family: str,
+    required: bool,
+    practice_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows_by_id = {str(row.get("practice_id")): row for row in practice_rows}
+    node_green: dict[str, bool] = {}
+    nodes: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    first_failed_nodes: list[str] = []
+
+    for practice in PRACTICES:
+        practice_id = practice.practice_id
+        row = rows_by_id.get(practice_id, {})
+        depends_on = list(PRACTICE_DAG_EDGES.get(practice_id, ()))
+        missing_prerequisites = [
+            dep for dep in depends_on if node_green.get(dep) is not True
+        ]
+        practice_passed = row.get("passed") is True
+        green = (not required) or (practice_passed and not missing_prerequisites)
+        node_green[practice_id] = green
+        metadata = dict(PRACTICE_DAG_LAYER_METADATA.get(practice_id, {}))
+        dependency_blocker = None
+        if required and practice_passed and missing_prerequisites:
+            dependency_blocker = (
+                f"{family}_pr95_dag_{practice_id}_blocked_by_"
+                + "_and_".join(missing_prerequisites)
+            )
+            blockers.append(dependency_blocker)
+        if required and not green and not missing_prerequisites:
+            first_failed_nodes.append(practice_id)
+        nodes.append(
+            {
+                "schema": "pr95_distortion_practice_dag_node.v1",
+                "practice_id": practice_id,
+                "depends_on": depends_on,
+                "missing_prerequisites": missing_prerequisites,
+                "source_ready": row.get("source_ready") is True,
+                "observed": row.get("observed") is True,
+                "practice_passed": practice_passed,
+                "green": green,
+                "status": (
+                    "not_required"
+                    if not required
+                    else "green"
+                    if green
+                    else "blocked_by_prerequisite"
+                    if missing_prerequisites
+                    else "missing"
+                ),
+                "practice_blocker": row.get("blocker"),
+                "dependency_blocker": dependency_blocker,
+                **metadata,
+            }
+        )
+
+    all_nodes_green = (not required) or all(node["green"] for node in nodes)
+    return {
+        "schema": PRACTICE_DAG_SCHEMA,
+        "family": family,
+        "required_for_family": required,
+        "node_count": len(nodes),
+        "all_nodes_green": all_nodes_green,
+        "first_failed_practice_ids": first_failed_nodes,
+        "nodes": nodes,
+        "blockers": _dedupe(blockers),
+        "policy": {
+            "dependency_status_is_launch_relevant": True,
+            "flat_practice_rows_are_not_sufficient_without_green_dag": True,
+            "math_geometry_rate_and_optimization_layers_are_ordered": True,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def _build_stage_dag(
+    *,
+    row: Mapping[str, Any],
+    command: Sequence[str],
+    family: str,
+) -> dict[str, Any]:
+    signals = _stage_observed_signals(row=row, command=command, family=family)
+    stage_green: dict[str, bool] = {}
+    nodes: list[dict[str, Any]] = []
+    first_failed: list[str] = []
+    blockers: list[str] = []
+    for stage in PR95_STAGE_DAG_ROWS:
+        stage_id = str(stage["stage_id"])
+        depends_on = [str(item) for item in stage.get("depends_on", [])]
+        missing_prerequisites = [
+            dep for dep in depends_on if stage_green.get(dep) is not True
+        ]
+        missing_signals = [
+            str(signal)
+            for signal in stage.get("required_signals", [])
+            if signals.get(str(signal)) is not True
+        ]
+        green = not missing_prerequisites and not missing_signals
+        stage_green[stage_id] = green
+        if not green and not missing_prerequisites:
+            first_failed.append(stage_id)
+        if missing_signals:
+            blockers.append(
+                f"{family}_pr95_stage_dag_{stage_id}_missing_"
+                + "_and_".join(missing_signals)
+            )
+        nodes.append(
+            {
+                "schema": "pr95_eight_stage_optimization_dag_node.v1",
+                **{
+                    key: value
+                    for key, value in stage.items()
+                    if key not in {"depends_on", "required_signals"}
+                },
+                "depends_on": depends_on,
+                "required_signals": list(stage.get("required_signals", [])),
+                "missing_prerequisites": missing_prerequisites,
+                "missing_signals": missing_signals,
+                "green": green,
+                "status": (
+                    "green"
+                    if green
+                    else "blocked_by_prerequisite"
+                    if missing_prerequisites
+                    else "missing_signals"
+                ),
+            }
+        )
+    return {
+        "schema": STAGE_DAG_SCHEMA,
+        "family": family,
+        "source": (
+            "experiments/results/public_pr95_intake_20260504_codex/"
+            "profile_pr95_hnerv_muon_intake.md"
+        ),
+        "canonical_stage_count": len(PR95_STAGE_DAG_ROWS),
+        "canonical_total_epochs": sum(
+            int(stage["epochs"]) for stage in PR95_STAGE_DAG_ROWS
+        ),
+        "observed_signals": signals,
+        "all_required_stage_signals_observed": all(
+            bool(node["green"]) for node in nodes
+        ),
+        "first_failed_stage_ids": first_failed,
+        "nodes": nodes,
+        "blockers": _dedupe(blockers),
+        "policy": {
+            "stage8_muon_depends_on_prior_qat_and_c1a": True,
+            "stage_dag_is_observability_not_score_authority": True,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def _stage_observed_signals(
+    *,
+    row: Mapping[str, Any],
+    command: Sequence[str],
+    family: str,
+) -> dict[str, bool]:
+    hinerv_policy = _arg_value(command, "--hi-nerv-optimizer-policy")
+    snerv_curriculum_opted_out = _has_flag(
+        command,
+        "--no-snerv-score-aware-long-training-pr95-faithful-curriculum",
+    )
+    snerv_curriculum_flag = _has_flag(
+        command,
+        "--snerv-score-aware-long-training-pr95-faithful-curriculum",
+    )
+    family_key = str(family).strip().lower().replace("-", "_")
+    optimizer = _arg_value(command, "--optimizer-kind") or _arg_value(
+        command,
+        "--snerv-score-aware-long-training-optimizer",
+    )
+    snerv_muon_policy = _arg_value(
+        command,
+        "--snerv-score-aware-long-training-pr95-muon-policy",
+    )
+    pr95_curriculum = bool(
+        hinerv_policy == "pr95_curriculum"
+        or snerv_curriculum_flag
+        or (family_key == "snerv" and not snerv_curriculum_opted_out)
+        or _deep_truthy(
+            row,
+            {
+                "pr95_faithful_curriculum_enabled",
+                "pr95_staged_curriculum",
+                "native_mlx_pr95_curriculum_bound",
+            },
+        )
+    )
+    coder_qat = bool(_has_flag(command, "--coder-aware-qat"))
+    c1a_entropy = bool(_positive_float_arg(command, "--coder-qat-c1a-entropy-weight"))
+    muon_partition = bool(
+        str(optimizer or "") in {"pact_muon_adamw", "muon", "pr95_8stage_muon_adamw"}
+        or hinerv_policy == "pr95_curriculum"
+        or _deep_truthy(
+            row,
+            {
+                "muon_adamw_partition",
+                "muon_adamw_partition_bound",
+                "native_mlx_muon_adamw_partition_bound",
+            },
+        )
+    )
+    muon_stage8_only = bool(
+        hinerv_policy == "pr95_curriculum"
+        or snerv_muon_policy in {None, "", "faithful_stage8_only"}
+        or _deep_truthy(
+            row,
+            {
+                "faithful_stage8_only",
+                "stage8_muon_depends_on_prior_qat_and_c1a",
+            },
+        )
+    )
+    return {
+        "pr95_curriculum": pr95_curriculum,
+        "coder_qat": coder_qat,
+        "c1a_entropy": c1a_entropy,
+        "muon_adamw_partition": muon_partition,
+        "muon_stage8_only": muon_stage8_only,
+    }
+
+
 def _observe_practice(
     practice_id: str,
     *,
@@ -538,8 +1209,15 @@ def _observe_practice(
         if pose_weight:
             evidence.append(f"pose_distillation_weight={pose_weight:g}")
         explicit_snerv = _has_flag(command, "--snerv-score-aware-long-training-eval-roundtrip-ste")
+        snerv_opted_out = _has_flag(
+            command,
+            "--no-snerv-score-aware-long-training-eval-roundtrip-ste",
+        )
+        default_snerv = family == "snerv" and not snerv_opted_out
         if explicit_snerv:
             evidence.append("snerv_eval_roundtrip_ste_flag")
+        if default_snerv and not explicit_snerv:
+            evidence.append("snerv_eval_roundtrip_ste_default_true")
         hinerv_runner_support = _source_check_passed(source_inventory, "runner_hinerv_eval_roundtrip_metadata")
         if family == "hi_nerv" and hinerv_runner_support:
             evidence.append("hinerv_runner_eval_roundtrip_metadata_source_verified")
@@ -554,7 +1232,10 @@ def _observe_practice(
         if payload_declares:
             evidence.append("payload_eval_roundtrip_truthy")
         observed = bool(pose_weight) and (
-            explicit_snerv or payload_declares or (family == "hi_nerv" and hinerv_runner_support)
+            explicit_snerv
+            or default_snerv
+            or payload_declares
+            or (family == "hi_nerv" and hinerv_runner_support)
         )
         return observed, evidence
 
@@ -654,7 +1335,14 @@ def _observe_practice(
     if practice_id == "pr95_staged_qat_coder_curriculum":
         evidence = []
         hinerv_policy = _arg_value(command, "--hi-nerv-optimizer-policy")
-        snerv_curriculum = _has_flag(command, "--snerv-score-aware-long-training-pr95-faithful-curriculum")
+        snerv_opted_out = _has_flag(
+            command,
+            "--no-snerv-score-aware-long-training-pr95-faithful-curriculum",
+        )
+        snerv_curriculum = _has_flag(
+            command,
+            "--snerv-score-aware-long-training-pr95-faithful-curriculum",
+        ) or (family == "snerv" and not snerv_opted_out)
         coder_qat = _has_flag(command, "--coder-aware-qat")
         c1a_weight = _positive_float_arg(command, "--coder-qat-c1a-entropy-weight")
         optimizer = _arg_value(command, "--optimizer-kind") or _arg_value(
@@ -676,6 +1364,160 @@ def _observe_practice(
             or _deep_truthy(row, {"pr95_faithful_curriculum_enabled", "pr95_staged_curriculum"})
         )
         return bool(curriculum and coder_qat and c1a_weight), evidence
+
+    if practice_id == "archive_parseback_distortion_axis_trace":
+        contract = _first_mapping(
+            row,
+            (
+                "pr95_distortion_axis_trace_contract",
+                "distortion_axis_trace_contract",
+            ),
+        )
+        evidence = []
+        schema_ok = contract.get("schema") == AXIS_TRACE_CONTRACT_SCHEMA
+        if contract.get("schema"):
+            evidence.append(f"axis_trace_contract_schema={contract.get('schema')}")
+        axes = _string_list(contract.get("required_axes"))
+        required_axes = {
+            "live_forward",
+            "fakequant_forward",
+            "archive_parseback",
+            "inflate_replay",
+            "official_evaluate_py",
+        }
+        axes_ok = required_axes.issubset(set(axes))
+        if axes_ok:
+            evidence.append("required_axes=" + ",".join(sorted(required_axes)))
+        policy = contract.get("acceptance_policy")
+        policy = policy if isinstance(policy, Mapping) else {}
+        fail_closed = policy.get("fail_closed_on_axis_divergence") is True
+        live_false_authority = (
+            policy.get("live_only_improvement_is_false_authority") is True
+        )
+        parseback_gate = (
+            policy.get("parseback_score_delta_must_be_bounded_before_stage6")
+            is True
+        )
+        if fail_closed:
+            evidence.append("fail_closed_on_axis_divergence")
+        if live_false_authority:
+            evidence.append("live_only_improvement_is_false_authority")
+        if parseback_gate:
+            evidence.append("parseback_score_delta_must_be_bounded_before_stage6")
+        stage_gates = _mapping_list(contract.get("stage_gates"))
+        gate_names = {str(gate.get("stage")) for gate in stage_gates}
+        gates_ok = {
+            "class_birth",
+            "margin_crossing",
+            "argmax_disagreement",
+            "fakequant_survival",
+            "archive_parseback_survival",
+            "pose_marginal_vjp",
+            "late_byte_and_optimizer_pressure",
+        }.issubset(gate_names)
+        if gates_ok:
+            evidence.append("stage_gates=" + ",".join(sorted(gate_names)))
+        return bool(
+            schema_ok
+            and axes_ok
+            and fail_closed
+            and live_false_authority
+            and parseback_gate
+            and gates_ok
+        ), evidence
+
+    if practice_id == "posenet_marginal_vjp_telemetry_contract":
+        contract = _first_mapping(
+            row,
+            (
+                "pr95_posenet_marginal_telemetry_contract",
+                "posenet_marginal_telemetry_contract",
+            ),
+        )
+        evidence = []
+        schema_ok = contract.get("schema") == POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA
+        if contract.get("schema"):
+            evidence.append(f"pose_marginal_contract_schema={contract.get('schema')}")
+        formula_ok = str(contract.get("pose_marginal_formula") or "") == (
+            "5/sqrt(10*d_pose)"
+        )
+        if formula_ok:
+            evidence.append("pose_marginal_formula=5/sqrt(10*d_pose)")
+        required = set(_string_list(contract.get("required_telemetry")))
+        required_ok = {
+            "pose_direct_live_raw_mse",
+            "pose_direct_live_score_term",
+            "pose_direct_live_score_marginal_wrt_raw_mse",
+            "pose_direct_live_vjp_norm_by_group",
+            "mlx_torch_posenet_forward_parity",
+        }.issubset(required)
+        if required_ok:
+            evidence.append("required_pose_marginal_and_vjp_telemetry")
+        policy = contract.get("acceptance_policy")
+        policy = policy if isinstance(policy, Mapping) else {}
+        fail_closed = (
+            policy.get("fail_closed_on_missing_direct_live_pose_marginal") is True
+            and policy.get("fail_closed_on_zero_or_nan_pose_vjp") is True
+            and policy.get("long_run_admission_requires_pose_marginal_telemetry")
+            is True
+        )
+        if fail_closed:
+            evidence.append("pose_marginal_fail_closed_policy")
+        return bool(schema_ok and formula_ok and required_ok and fail_closed), evidence
+
+    if practice_id == "family_local_scorer_atom_actuator_contract":
+        contract = _first_mapping(
+            row,
+            (
+                "pr95_scorer_atom_actuator_contract",
+                "scorer_atom_actuator_contract",
+            ),
+        )
+        evidence = []
+        schema_ok = contract.get("schema") == SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA
+        if contract.get("schema"):
+            evidence.append(f"actuator_contract_schema={contract.get('schema')}")
+        family_ok = str(contract.get("family") or "") == family
+        if family_ok:
+            evidence.append(f"actuator_family={family}")
+        atoms = set(_string_list(contract.get("common_scorer_atoms")))
+        atoms_ok = {
+            "600_non_overlapping_pairs",
+            "segnet_last_frame_argmax_regions",
+            "posenet_two_frame_yuv6_pair_motion",
+        }.issubset(atoms)
+        if atoms_ok:
+            evidence.append("common_scorer_atoms_bound")
+        actuators = set(_string_list(contract.get("family_actuators")))
+        if family == "snerv":
+            family_actuators_ok = {
+                "official_mfu_hfr_tub_source_forward_parity",
+                "tub_output2_segnet_last_frame_binding",
+                "lf_posenet_yuv6_pair_carrier",
+                "hf_segnet_boundary_margin_carrier",
+            }.issubset(actuators)
+        else:
+            family_actuators_ok = {
+                "hierarchical_grid_saliency",
+                "output_head_target_region_bias",
+                "target_region_waterfill",
+                "pair_local_film_or_latent_adapter",
+            }.issubset(actuators)
+        if family_actuators_ok:
+            evidence.append("family_specific_actuators_bound")
+        policy = contract.get("acceptance_policy")
+        policy = policy if isinstance(policy, Mapping) else {}
+        policy_ok = (
+            policy.get("family_specific_actuators_are_not_interchangeable") is True
+            and policy.get("pair_local_smoke_required_before_long_run") is True
+            and policy.get("cross_family_evidence_rejected") is True
+            and policy.get("actuator_must_report_grad_norm_by_group") is True
+        )
+        if policy_ok:
+            evidence.append("family_local_actuator_fail_closed_policy")
+        return bool(
+            schema_ok and family_ok and atoms_ok and family_actuators_ok and policy_ok
+        ), evidence
 
     return False, []
 
@@ -806,6 +1648,27 @@ def _first_mapping(value: Mapping[str, Any], keys: Sequence[str]) -> Mapping[str
         item = value.get(key)
         if isinstance(item, Mapping):
             return item
+    launch_authority = value.get("launch_authority_contract")
+    if isinstance(launch_authority, Mapping):
+        for key in keys:
+            item = launch_authority.get(key)
+            if isinstance(item, Mapping):
+                return item
+    metadata = value.get("metadata")
+    if isinstance(metadata, Mapping):
+        for source in (metadata, metadata.get("source_selected_row")):
+            if not isinstance(source, Mapping):
+                continue
+            for key in keys:
+                item = source.get(key)
+                if isinstance(item, Mapping):
+                    return item
+            nested_authority = source.get("launch_authority_contract")
+            if isinstance(nested_authority, Mapping):
+                for key in keys:
+                    item = nested_authority.get(key)
+                    if isinstance(item, Mapping):
+                        return item
     return {}
 
 
@@ -877,16 +1740,24 @@ def _dedupe(values: Sequence[str]) -> list[str]:
 
 
 __all__ = [
+    "AXIS_TRACE_CONTRACT_SCHEMA",
     "PAYLOAD_GUARD_SCHEMA",
+    "POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA",
     "PRACTICES",
+    "PRACTICE_DAG_SCHEMA",
     "PRACTICE_ROW_SCHEMA",
     "SCHEMA",
+    "SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA",
     "SOURCE_INVENTORY_SCHEMA",
+    "STAGE_DAG_SCHEMA",
     "TELEMETRY_CONTRACT_SCHEMA",
     "PR95DistortionPracticesGuardError",
+    "build_pr95_distortion_axis_trace_contract",
     "build_pr95_distortion_practices_payload_guard",
     "build_pr95_distortion_practices_row_guard",
     "build_pr95_distortion_source_inventory",
     "build_pr95_evaluate_scorer_domain_telemetry_contract",
+    "build_pr95_posenet_marginal_telemetry_contract",
+    "build_pr95_scorer_atom_actuator_contract",
     "render_pr95_distortion_practices_markdown",
 ]

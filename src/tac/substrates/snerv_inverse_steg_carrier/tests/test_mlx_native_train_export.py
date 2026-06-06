@@ -146,6 +146,16 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     assert "official_trained_checkpoint_state_dict_kind" in public_sig.parameters
     assert "score_aware_long_training_pr95_muon_policy" in public_sig.parameters
     assert (
+        public_sig.parameters[
+            "score_aware_long_training_pr95_faithful_curriculum"
+        ].default
+        is True
+    )
+    assert (
+        public_sig.parameters["score_aware_long_training_pr95_muon_policy"].default
+        == "faithful_stage8_only"
+    )
+    assert (
         "score_aware_long_training_pr95_source_weight_amplification"
         in public_sig.parameters
     )
@@ -227,7 +237,7 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         public_sig.parameters[
             "score_aware_long_training_pr95_muon_policy"
         ].default
-        == "every_stage"
+        == "faithful_stage8_only"
     )
     assert (
         public_sig.parameters[

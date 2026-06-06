@@ -103,6 +103,7 @@ def _pose_direct_live_metrics() -> dict[str, float]:
     return {
         "loss_part_pose_direct_live_score_term": 0.14,
         "loss_part_pose_direct_live_raw_mse": 0.00196,
+        "loss_part_pose_direct_live_score_marginal_wrt_raw_mse": 35.714285714285715,
         "loss_part_pose_direct_live_yuv6_pair_std": 0.22,
         "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std": 0.08,
     }
@@ -824,6 +825,31 @@ def test_direct_live_pose_enabled_requires_live_yuv6_score_metrics() -> None:
         final_loss_components={
             **_base_metrics(),
             **_dual_metrics("hi_nerv_posenet_yuv6_pair_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=0.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert "hi_nerv_short_smoke_missing_direct_live_posenet_telemetry" in report[
+        "actionable_blockers"
+    ]
+
+
+def test_direct_live_pose_enabled_requires_pose_score_marginal_telemetry() -> None:
+    pose_metrics = _pose_direct_live_metrics()
+    del pose_metrics["loss_part_pose_direct_live_score_marginal_wrt_raw_mse"]
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(pose_direct_live_distillation_weight=0.6),
+        final_loss_components={
+            **_base_metrics(),
+            **pose_metrics,
+            **_dual_metrics(
+                "hi_nerv_segnet_direct_live_distill",
+                "hi_nerv_posenet_yuv6_pair_distill",
+            ),
         },
         post_export_quality=_receiver_quality(),
         segnet_distillation_weight=1.0,
