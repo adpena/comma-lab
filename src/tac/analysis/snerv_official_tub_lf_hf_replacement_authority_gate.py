@@ -73,6 +73,9 @@ TUB_TEMPORAL_MAPPING_BLOCKER = (
 TUB_OUTPUT2_MAPPING_BLOCKER = (
     "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
 )
+TRAINED_CHECKPOINT_SOURCE_FORWARD_REPLAY_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_forward_replay_missing"
+)
 SOURCE_ARTIFACT_MISSING_BLOCKER = (
     "snerv_official_tub_lf_hf_decoder_replacement_source_forward_artifact_missing"
 )
@@ -91,7 +94,7 @@ SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS: frozenset[str] = frozenset(
         "snerv_official_pytorch_wavelets_runtime_dependency_missing",
         "snerv_official_trained_checkpoint_state_dict_value_artifact_missing",
         "snerv_official_tub_checkpoint_export_lineage_missing",
-        "snerv_official_trained_checkpoint_source_forward_replay_missing",
+        TRAINED_CHECKPOINT_SOURCE_FORWARD_REPLAY_BLOCKER,
         "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
     }
 )
@@ -820,6 +823,13 @@ def _checkpoint_state(
                 TUB_OUTPUT2_MAPPING_BLOCKER,
             ]
         )
+    source_replay_proven = bool(
+        source_state.get("full_tub_source_forward_parity_proven") is True
+        or source_state.get("full_tub_source_forward_replay_ready") is True
+        or source_state.get("receiver_payload_source_forward_authority") is True
+    )
+    if source_replay_proven:
+        closed.append(TRAINED_CHECKPOINT_SOURCE_FORWARD_REPLAY_BLOCKER)
     trained_blockers = []
     if not state_slice:
         trained_blockers.append(TRAINED_STATE_BLOCKER)
@@ -843,10 +853,19 @@ def _checkpoint_state(
         )
     if not tub_output2_mapping:
         tub_blockers.extend([TUB_WEIGHT_BLOCKER, TUB_OUTPUT2_MAPPING_BLOCKER])
+    closed_set = set(closed)
     blockers = [
         *([] if export_bound else [EXPORT_BLOCKER]),
-        *(binding.get("blockers") or ()),
-        *(binding.get("preserved_blockers") or ()),
+        *[
+            blocker
+            for blocker in (binding.get("blockers") or ())
+            if str(blocker) not in closed_set
+        ],
+        *[
+            blocker
+            for blocker in (binding.get("preserved_blockers") or ())
+            if str(blocker) not in closed_set
+        ],
         *trained_blockers,
         *tub_blockers,
     ]

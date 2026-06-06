@@ -192,9 +192,14 @@ def test_authority_gate_closes_stale_source_mapping_residuals_from_source_manife
         "ready_for_exact_eval_dispatch": False,
     }
 
+    checkpoint = _checkpoint_export_report(trained_mapping=False)
+    checkpoint["official_checkpoint_export_binding"]["blockers"].append(
+        "snerv_official_trained_checkpoint_source_forward_replay_missing"
+    )
+
     report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
         source_forward_artifacts=[source],
-        checkpoint_export_reports=[_checkpoint_export_report(trained_mapping=False)],
+        checkpoint_export_reports=[checkpoint],
         output_root=tmp_path / "gate",
         min_free_bytes=0,
         allow_local_output=True,
@@ -213,12 +218,16 @@ def test_authority_gate_closes_stale_source_mapping_residuals_from_source_manife
     assert "official_hfr_weight_tensor_mapping_not_loaded" not in blockers
     assert "snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete" not in blockers
     assert "snerv_official_trained_checkpoint_mfu_weight_mapping_incomplete" not in blockers
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" not in blockers
     assert "full_official_mfu_forward_artifact_not_emitted" in blockers
     assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in blockers
     assert "official_weight_tensor_mapping_not_loaded" in report[
         "closed_campaign_blockers"
     ]
     assert "official_hfr_weight_tensor_mapping_not_loaded" in report[
+        "closed_campaign_blockers"
+    ]
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in report[
         "closed_campaign_blockers"
     ]
     assert report["score_claim"] is False
