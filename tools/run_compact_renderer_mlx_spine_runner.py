@@ -41,6 +41,7 @@ HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
 HI_NERV_SEGNET_TARGET_CLASS_COVERAGE_FRACTION_FOR_FIT_GATE = 1.0
 HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE = 0.2
 HI_NERV_SEGNET_TARGET_CLASS_MAX_RATIO_DROP_FOR_STEP_GUARD = 0.05
+HI_NERV_SEGNET_SCORER_FRAME_PIXELS = 384 * 512
 HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD = 0.01
 HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD = 1.0e-4
 HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD = 1.0e-3
@@ -12497,6 +12498,30 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
         post_export_receiver_cache_quality
     )
+    receiver_surface_replay_trace = (
+        _hi_nerv_receiver_surface_trace_from_replay_evidence(
+            receiver_replay_archive_selection=(
+                receiver_replay_archive_selection
+                if isinstance(receiver_replay_archive_selection, Mapping)
+                else None
+            ),
+            post_export_receiver_cache_quality=(
+                post_export_receiver_cache_quality
+                if isinstance(post_export_receiver_cache_quality, Mapping)
+                else None
+            ),
+            local_cpu_replay_summary=(
+                local_cpu_replay_summary
+                if isinstance(local_cpu_replay_summary, Mapping)
+                else None
+            ),
+        )
+    )
+    _attach_hi_nerv_runner_receiver_surface_trace(
+        artifact_dict=artifact_dict,
+        output_dir=training_dir,
+        receiver_surface_trace=receiver_surface_replay_trace,
+    )
     short_scorer_smoke_readiness = (
         _write_hi_nerv_runner_short_scorer_smoke_readiness(
             output_dir=training_dir,
@@ -13212,6 +13237,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "post_export_receiver_cache_quality": (
                     post_export_receiver_cache_quality_summary
                 ),
+                "receiver_surface_replay_trace": receiver_surface_replay_trace,
                 "short_scorer_teacher_smoke_readiness": (
                     short_scorer_smoke_readiness_summary
                 ),
@@ -21495,6 +21521,179 @@ def _hi_nerv_receiver_replay_selection_score(
     if not isinstance(probe, Mapping):
         return None
     return _first_finite_float(probe.get("canonical_score"))
+
+
+def _hi_nerv_receiver_surface_trace_from_replay_evidence(
+    *,
+    receiver_replay_archive_selection: Mapping[str, Any] | None,
+    post_export_receiver_cache_quality: Mapping[str, Any] | None,
+    local_cpu_replay_summary: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Build canonical receiver-surface trace fields from real replay evidence."""
+
+    report = None
+    selection_source = "post_export_receiver_cache_quality"
+    if isinstance(receiver_replay_archive_selection, Mapping):
+        selected = receiver_replay_archive_selection.get("selected_receiver_replay_report")
+        if isinstance(selected, Mapping):
+            report = selected
+            selection_source = "receiver_replay_archive_selection"
+    if report is None and isinstance(post_export_receiver_cache_quality, Mapping):
+        report = post_export_receiver_cache_quality
+    if report is None and not isinstance(local_cpu_replay_summary, Mapping):
+        return None
+
+    trace: dict[str, Any] = {
+        "schema": "nerv_receiver_surface_trace.v1",
+        "trace_source": "hi_nerv_runner_replay_evidence",
+        "archive_parseback_source": selection_source if report is not None else None,
+        "local_cpu_replay_source": (
+            "local_submission_replay.v1"
+            if isinstance(local_cpu_replay_summary, Mapping)
+            else None
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if isinstance(report, Mapping):
+        summary = _hi_nerv_receiver_cache_quality_summary(report)
+        if isinstance(summary, Mapping):
+            trace["receiver_surface_parseback_report_path"] = summary.get("report_path")
+            trace["receiver_surface_parseback_archive_sha256"] = summary.get(
+                "archive_sha256"
+            )
+            parseback_flips = _hi_nerv_parseback_argmax_flipped_pixels(summary)
+            if parseback_flips is not None:
+                trace["receiver_surface_parseback_argmax_flipped_pixels"] = (
+                    parseback_flips
+                )
+            for source_key, trace_key in (
+                (
+                    "mlx_scorer_response_avg_segnet_dist",
+                    "receiver_surface_parseback_segnet_distortion",
+                ),
+                (
+                    "mlx_scorer_response_avg_posenet_dist",
+                    "receiver_surface_parseback_posenet_distortion",
+                ),
+                (
+                    "mlx_scorer_response_canonical_score",
+                    "receiver_surface_parseback_canonical_score",
+                ),
+            ):
+                value = _first_finite_float(summary.get(source_key))
+                if value is not None:
+                    trace[trace_key] = value
+    if isinstance(local_cpu_replay_summary, Mapping):
+        trace["receiver_surface_inflate_evaluate_passed"] = bool(
+            local_cpu_replay_summary.get("evaluation_passed")
+        )
+        trace["receiver_surface_inflate_axis_tag"] = local_cpu_replay_summary.get(
+            "axis_tag"
+        )
+        for source_key, trace_key in (
+            ("seg_distortion", "receiver_surface_inflate_segnet_distortion"),
+            ("pose_distortion", "receiver_surface_inflate_posenet_distortion"),
+            ("local_score_estimate", "receiver_surface_inflate_local_score_estimate"),
+            (
+                "receiver_surface_inflated_argmax_flipped_pixels",
+                "receiver_surface_inflated_argmax_flipped_pixels",
+            ),
+        ):
+            value = _first_finite_float(local_cpu_replay_summary.get(source_key))
+            if value is not None:
+                trace[trace_key] = value
+    return trace
+
+
+def _hi_nerv_parseback_argmax_flipped_pixels(
+    summary: Mapping[str, Any],
+) -> float | None:
+    rate = _first_finite_float(summary.get("segnet_argmax_disagreement_rate"))
+    sample_pairs = _first_finite_float(summary.get("segnet_argmax_sample_pairs"))
+    if rate is None or sample_pairs is None:
+        return None
+    if rate < 0.0 or sample_pairs <= 0.0:
+        return None
+    return float(rate) * float(sample_pairs) * float(HI_NERV_SEGNET_SCORER_FRAME_PIXELS)
+
+
+def _attach_hi_nerv_runner_receiver_surface_trace(
+    *,
+    artifact_dict: dict[str, Any],
+    output_dir: str | Path,
+    receiver_surface_trace: Mapping[str, Any] | None,
+) -> None:
+    if not isinstance(receiver_surface_trace, Mapping):
+        return
+    trace = _merge_hi_nerv_receiver_surface_trace(
+        artifact_dict.get("receiver_surface_trace"),
+        receiver_surface_trace,
+    )
+    artifact_dict["receiver_surface_trace"] = trace
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        trace = _merge_hi_nerv_receiver_surface_trace(
+            metadata.get("receiver_surface_trace"),
+            trace,
+        )
+        metadata["receiver_surface_trace"] = trace
+        artifact_dict["receiver_surface_trace"] = trace
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            trace = _merge_hi_nerv_receiver_surface_trace(
+                score_training.get("receiver_surface_trace"),
+                trace,
+            )
+            score_training["receiver_surface_trace"] = trace
+            metadata["receiver_surface_trace"] = trace
+            artifact_dict["receiver_surface_trace"] = trace
+
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
+        "training_artifact.json"
+    )
+    if not artifact_path.is_file():
+        return
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    trace = _merge_hi_nerv_receiver_surface_trace(
+        artifact.get("receiver_surface_trace"),
+        trace,
+    )
+    artifact["receiver_surface_trace"] = trace
+    artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    trace = _merge_hi_nerv_receiver_surface_trace(
+        artifact_metadata.get("receiver_surface_trace"),
+        trace,
+    )
+    artifact_metadata["receiver_surface_trace"] = trace
+    artifact["receiver_surface_trace"] = trace
+    score_training = artifact_metadata.get("score_aware_training")
+    if isinstance(score_training, dict):
+        trace = _merge_hi_nerv_receiver_surface_trace(
+            score_training.get("receiver_surface_trace"),
+            trace,
+        )
+        score_training["receiver_surface_trace"] = trace
+        artifact_metadata["receiver_surface_trace"] = trace
+        artifact["receiver_surface_trace"] = trace
+    artifact["substrate_artifact_metadata"] = artifact_metadata
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _merge_hi_nerv_receiver_surface_trace(
+    existing: Any,
+    incoming: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged = dict(existing) if isinstance(existing, Mapping) else {}
+    merged.update(dict(incoming))
+    return merged
 
 
 def _write_hi_nerv_runner_receiver_replay_archive_selection(

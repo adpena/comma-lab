@@ -279,6 +279,117 @@ def test_hinerv_receiver_replay_archive_selection_prefers_archive_backed_score(
     assert manifest["score_claim"] is False
 
 
+def test_hinerv_receiver_surface_trace_attaches_real_replay_evidence(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "receiver_report.json"
+    selected_report = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "report_path": report_path.as_posix(),
+        "archive_sha256": "a" * 64,
+        "segnet_argmax_probe": {
+            "sample_pairs": 2,
+            "segnet_argmax_disagreement_rate": 0.25,
+        },
+        "mlx_scorer_response_probe_required": True,
+        "mlx_scorer_response_probe": {
+            "fit_gate_passed": True,
+            "avg_segnet_dist": 0.01,
+            "avg_posenet_dist": 0.02,
+        },
+        "blockers": [],
+    }
+    trace = runner_mod._hi_nerv_receiver_surface_trace_from_replay_evidence(
+        receiver_replay_archive_selection={
+            "selected_receiver_replay_report": selected_report,
+        },
+        post_export_receiver_cache_quality=None,
+        local_cpu_replay_summary={
+            "schema": "local_submission_replay.v1",
+            "evaluation_passed": True,
+            "axis_tag": "[macOS-CPU advisory]",
+            "seg_distortion": 0.011,
+            "pose_distortion": 0.021,
+            "local_score_estimate": 0.123,
+        },
+    )
+
+    assert trace is not None
+    assert trace["schema"] == "nerv_receiver_surface_trace.v1"
+    assert trace["archive_parseback_source"] == "receiver_replay_archive_selection"
+    assert trace["receiver_surface_parseback_argmax_flipped_pixels"] == pytest.approx(
+        0.25 * 2 * runner_mod.HI_NERV_SEGNET_SCORER_FRAME_PIXELS
+    )
+    assert trace["receiver_surface_parseback_segnet_distortion"] == pytest.approx(0.01)
+    assert trace["receiver_surface_parseback_posenet_distortion"] == pytest.approx(0.02)
+    assert trace["receiver_surface_inflate_evaluate_passed"] is True
+    assert trace["receiver_surface_inflate_axis_tag"] == "[macOS-CPU advisory]"
+    assert trace["receiver_surface_inflate_segnet_distortion"] == pytest.approx(0.011)
+    assert trace["receiver_surface_inflate_posenet_distortion"] == pytest.approx(0.021)
+    assert "receiver_surface_inflated_argmax_flipped_pixels" not in trace
+
+    artifact_path = tmp_path / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_training_artifact.v1",
+                "receiver_surface_trace": {
+                    "receiver_surface_uint8_changed_pixels": 17.0,
+                },
+                "substrate_artifact_metadata": {
+                    "receiver_surface_trace": {
+                        "receiver_surface_fakequant_argmax_flipped_pixels": 3.0,
+                    },
+                    "score_aware_training": {
+                        "receiver_surface_trace": {
+                            "receiver_surface_argmax_flipped_pixels": 5.0,
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_dict = {
+        "receiver_surface_trace": {
+            "receiver_surface_loss_delta": -0.2,
+        },
+        "substrate_artifact_metadata": {
+            "score_aware_training": {
+                "receiver_surface_trace": {
+                    "receiver_surface_worst_region_margin_p50_delta": 0.125,
+                },
+            },
+        },
+    }
+
+    runner_mod._attach_hi_nerv_runner_receiver_surface_trace(
+        artifact_dict=artifact_dict,
+        output_dir=tmp_path,
+        receiver_surface_trace=trace,
+    )
+
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert payload["receiver_surface_trace"]["receiver_surface_uint8_changed_pixels"] == (
+        17.0
+    )
+    assert payload["receiver_surface_trace"][
+        "receiver_surface_fakequant_argmax_flipped_pixels"
+    ] == 3.0
+    assert payload["receiver_surface_trace"][
+        "receiver_surface_argmax_flipped_pixels"
+    ] == 5.0
+    assert payload["receiver_surface_trace"][
+        "receiver_surface_parseback_argmax_flipped_pixels"
+    ] == trace["receiver_surface_parseback_argmax_flipped_pixels"]
+    assert artifact_dict["receiver_surface_trace"]["receiver_surface_loss_delta"] == (
+        -0.2
+    )
+    assert artifact_dict["receiver_surface_trace"][
+        "receiver_surface_worst_region_margin_p50_delta"
+    ] == 0.125
+
+
 def test_hinerv_archive_resolution_dedup_preserves_manifest_candidate_kind(
     tmp_path: Path,
 ) -> None:
