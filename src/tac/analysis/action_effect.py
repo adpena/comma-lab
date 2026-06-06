@@ -76,6 +76,14 @@ class ActionEffect:
         return self.delta_score_nonrate + self.rate_score_delta
 
     @property
+    def exact_value_per_byte(self) -> float | None:
+        if not _score_state_valid(self) or not _archive_byte_state_valid(self):
+            return None
+        if self.delta_bytes == 0:
+            return self.value_per_byte
+        return -self.delta_score_nonrate / abs(float(self.delta_bytes))
+
+    @property
     def old_score(self) -> float:
         try:
             return contest_score(
@@ -113,7 +121,7 @@ class ActionEffect:
             **{
                 key: value
                 for key, value in asdict(self).items()
-                if key not in {"receiver_surface", "state_custody"}
+                if key not in {"receiver_surface", "state_custody", "value_per_byte"}
             },
             "affected_pairs": list(self.affected_pairs),
             "affected_regions": list(self.affected_regions),
@@ -131,6 +139,8 @@ class ActionEffect:
             "rate_score_delta": _finite_value_or_none(self.rate_score_delta),
             "delta_score_total": _finite_value_or_none(self.delta_score_total),
             "byte_price": 25.0 / float(self.reference_bytes),
+            "value_per_byte": _finite_value_or_none(self.exact_value_per_byte),
+            "reported_value_per_byte": _finite_value_or_none(self.value_per_byte),
             "receiver_visible": _receiver_visible(self.receiver_surface),
             "byte_priced": _byte_priced(self),
             "score_admissible": score_admissible,
@@ -345,13 +355,18 @@ def _byte_priced(effect: ActionEffect) -> bool:
         return False
     if effect.delta_bytes == 0:
         return True
-    if effect.value_per_byte is None:
-        return False
-    return math.isfinite(float(effect.value_per_byte))
+    value = effect.exact_value_per_byte
+    return value is not None and math.isfinite(float(value))
 
 
-def _finite_value_or_none(value: float) -> float | None:
-    return float(value) if math.isfinite(float(value)) else None
+def _finite_value_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        candidate = float(value)
+    except (TypeError, ValueError):
+        return None
+    return candidate if math.isfinite(candidate) else None
 
 
 def _score_admissible(

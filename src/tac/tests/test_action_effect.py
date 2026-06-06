@@ -76,7 +76,8 @@ def test_action_effect_rejects_subquantum_parseback_lost_byte_growth() -> None:
     assert "action_effect_state_custody_hash_missing" in effect["blockers"]
     assert "action_effect_fakequant_survival_missing" in effect["blockers"]
     assert "action_effect_parseback_survival_missing" in effect["blockers"]
-    assert "action_effect_byte_delta_not_priced" in effect["blockers"]
+    assert "action_effect_byte_delta_not_priced" not in effect["blockers"]
+    assert math.isclose(effect["value_per_byte"], 0.1 / 200.0)
 
 
 def test_action_effect_rejects_metadata_only_missing_score_or_byte_state() -> None:
@@ -131,6 +132,48 @@ def test_action_commutator_ledger_promotes_superadditive_macro_action() -> None:
     assert ledger["effect_count"] == 3
     assert ledger["admitted_effect_count"] == 3
     assert ledger["score_claim"] is False
+
+
+def test_action_effect_serializes_pr110_selector_replay_row() -> None:
+    effect = build_action_effect(
+        {
+            "action_id": "pr110_pair0042_frame0_mode07",
+            "family": "selector",
+            "authority": "parseback_pr110_selector_replay",
+            "producer": "pr110_selector_sweep",
+            "consumer": "selector_menu_ilp",
+            "affected_pairs": [42],
+            "affected_regions": [],
+            "payload_sections": ["selector_stream", "mode_table"],
+            "state_custody": {
+                "source_archive_sha256": "c" * 64,
+                "payload_sha256": "d" * 64,
+            },
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.010,
+            "old_d_pose": 0.0004,
+            "new_d_pose": 0.000324,
+            "old_bytes": 1_000,
+            "new_bytes": 1_016,
+            "receiver_surface": {
+                "posenet_input_delta_linf": 0.02,
+                "pose_output_delta_l2": 0.006,
+            },
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": True,
+        }
+    )
+
+    assert effect["schema"] == ACTION_EFFECT_SCHEMA
+    assert effect["family"] == "selector"
+    assert effect["authority"] == "parseback_pr110_selector_replay"
+    assert effect["receiver_visible"] is True
+    assert effect["byte_priced"] is True
+    assert effect["value_per_byte"] is not None
+    assert effect["reported_value_per_byte"] is None
+    assert effect["payload_sections"] == ["selector_stream", "mode_table"]
+    assert effect["action_effect_admitted"] is True
 
 
 def _effect_payload(action_id: str, delta_score: float) -> dict[str, object]:
