@@ -90,7 +90,10 @@ def build_nerv_witness_readiness_dag(
         repo_root=repo,
         output_root=out_root,
     )
-    snerv_evidence = _snerv_authority_gate_evidence(snerv_authority_gate_report)
+    snerv_evidence = _snerv_authority_gate_evidence(
+        snerv_authority_gate_report,
+        evidence_roots=_default_evidence_roots(out_root),
+    )
     parseback = _parseback_contract_evidence(repo)
     pair_servo = _pair_local_servo_contract_evidence(repo)
     pair_servo_admission = _pair_local_servo_admission_evidence(
@@ -639,14 +642,22 @@ def _hinerv_smoke_evidence(
     }
 
 
-def _snerv_authority_gate_evidence(report_path: str | Path | None) -> dict[str, Any]:
+def _snerv_authority_gate_evidence(
+    report_path: str | Path | None,
+    *,
+    evidence_roots: Sequence[Path] = (),
+) -> dict[str, Any]:
     if report_path is None:
+        discovered = _discover_latest_snerv_authority_gate(evidence_roots)
+        if discovered is not None:
+            return _snerv_authority_gate_evidence(discovered, evidence_roots=evidence_roots)
         return {
             "schema": "snerv_official_source_forward_gate_evidence.v1",
             "report_path": None,
             "report_loaded": False,
             "status": "missing",
             "blockers": ["snerv_official_mfu_hfr_tub_authority_gate_missing"],
+            "auto_discovery_roots": [path.as_posix() for path in evidence_roots],
             **PROXY_FALSE_AUTHORITY_FIELDS,
         }
     path = Path(report_path).expanduser().resolve(strict=False)
@@ -662,13 +673,15 @@ def _snerv_authority_gate_evidence(report_path: str | Path | None) -> dict[str, 
         }
     require_no_truthy_authority_fields(payload, context="snerv_authority_gate_report")
     ready = bool(payload.get("official_tub_lf_hf_decoder_replacement_ready"))
-    blockers = [str(item) for item in payload.get("queue_blockers") or payload.get("blockers") or []]
+    raw_blockers = payload.get("queue_blockers") if "queue_blockers" in payload else payload.get("blockers")
+    blockers = [str(item) for item in raw_blockers or []]
     if not ready and not blockers:
         blockers.append("snerv_official_tub_lf_hf_decoder_replacement_not_ready")
     return {
         "schema": "snerv_official_source_forward_gate_evidence.v1",
         "report_path": path.as_posix(),
         "report_loaded": True,
+        "auto_discovered": any(path.is_relative_to(root) for root in evidence_roots if root.exists()),
         "status": "succeeded" if ready else "blocked",
         "official_tub_lf_hf_decoder_replacement_ready": ready,
         "blockers": blockers,
@@ -780,6 +793,40 @@ def build_distortion_birth_before_rate_pressure_evidence(
     """
 
     return _distortion_birth_stage_evidence(hinerv_evidence)
+
+
+def _default_evidence_roots(output_root: Path) -> tuple[Path, ...]:
+    roots: list[Path] = []
+    for parent in (output_root, *output_root.parents):
+        if parent.name == "results" and parent.parent.name == "experiments":
+            roots.append(parent)
+        candidate = parent / "experiments" / "results"
+        if candidate.is_dir():
+            roots.append(candidate)
+    return tuple(dict.fromkeys(path.resolve(strict=False) for path in roots))
+
+
+def _discover_latest_snerv_authority_gate(evidence_roots: Sequence[Path]) -> Path | None:
+    candidates: list[tuple[bool, float, Path]] = []
+    for root in evidence_roots:
+        if not root.is_dir():
+            continue
+        for path in root.glob("*/snerv_official_tub_lf_hf_replacement_authority_gate.json"):
+            payload = _read_json_or_none(path)
+            if payload is None:
+                continue
+            if payload.get("schema") != "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1":
+                continue
+            ready = bool(payload.get("official_tub_lf_hf_decoder_replacement_ready"))
+            try:
+                mtime = path.stat().st_mtime
+            except OSError:
+                mtime = 0.0
+            candidates.append((ready, float(mtime), path.resolve(strict=False)))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda row: (row[0], row[1], row[2].as_posix()), reverse=True)
+    return candidates[0][2]
 
 
 def _node_specs(

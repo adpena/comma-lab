@@ -137,6 +137,38 @@ def test_witness_dag_keeps_snerv_source_forward_gate_blocked_without_report(
     assert payload["snerv_long_training_approved"] is False
 
 
+def test_witness_dag_auto_discovers_newest_ready_snerv_authority_gate(
+    tmp_path: Path,
+) -> None:
+    blocked = _write_snerv_authority_gate(
+        tmp_path,
+        subdir="snerv_gate_old_blocked",
+        ready=False,
+        blockers=["snerv_official_tub_lf_hf_decoder_replacement_not_ready"],
+    )
+    ready = _write_snerv_authority_gate(
+        tmp_path,
+        subdir="snerv_gate_new_ready",
+        ready=True,
+        blockers=[],
+    )
+    blocked.touch()
+    ready.touch()
+
+    payload = build_nerv_witness_readiness_dag(
+        repo_root=REPO_ROOT,
+        output_root=tmp_path / "dag_out",
+    )
+
+    nodes = {row["node_id"]: row for row in payload["gate_nodes"]}
+    snerv = nodes["snerv.official_mfu_hfr_tub_source_forward"]
+    assert snerv["status"] == "succeeded"
+    assert snerv["blockers"] == []
+    assert snerv["evidence"]["report_path"] == ready.as_posix()
+    assert snerv["evidence"]["auto_discovered"] is True
+    assert payload["snerv_authority_gate_evidence"]["report_path"] == ready.as_posix()
+
+
 def test_check_witness_gate_status_reports_selected_node_blockers(
     tmp_path: Path,
 ) -> None:
@@ -577,6 +609,42 @@ def _write_pair_local_servo_receipt(tmp_path: Path, *, good: bool) -> Path:
         receipt["value_per_byte"] = None
     path = tmp_path / ("good_pair_servo_receipt.json" if good else "bad_pair_servo_receipt.json")
     path.write_text(json.dumps(receipt), encoding="utf-8")
+    return path
+
+
+def _write_snerv_authority_gate(
+    tmp_path: Path,
+    *,
+    subdir: str,
+    ready: bool,
+    blockers: list[str],
+) -> Path:
+    path = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / subdir
+        / "snerv_official_tub_lf_hf_replacement_authority_gate.json"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1",
+                "official_tub_lf_hf_decoder_replacement_ready": ready,
+                "queue_blockers": blockers,
+                "blockers": ["snerv_official_tub_lf_hf_decoder_replacement_false_authority", *blockers],
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
