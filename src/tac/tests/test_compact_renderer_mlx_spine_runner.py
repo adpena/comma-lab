@@ -139,6 +139,11 @@ def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None
         "            ),"
     ) in main_hi_branch
     assert (
+        "posenet_yuv6_geometry_tether_stage_weight=(\n"
+        "                args.posenet_yuv6_geometry_tether_stage_weight\n"
+        "            ),"
+    ) in main_hi_branch
+    assert (
         "segnet_direct_live_target_mass_floor_weight=float(\n"
         "                segnet_direct_live_target_mass_floor_weight\n"
         "            ),"
@@ -1374,7 +1379,22 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
             }
         ],
         "substrate_artifact_metadata": {
-            "score_aware_training": {"schema": "unit"}
+            "score_aware_training": {
+                "schema": "unit",
+                "scorer_domain_bootstrap": {
+                    "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+                    "enabled": True,
+                    "accepted_step_count": 1.0,
+                    "segnet_hard_birth_bootstrap": {
+                        "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_hard_birth.v1",
+                        "enabled": True,
+                    },
+                    "metrics_after": {
+                        "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": 0.25,
+                        "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": 0.0,
+                    },
+                },
+            }
         },
     }
     post_export_quality = {
@@ -1463,6 +1483,9 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
     assert report["short_scorer_teacher_smoke_ready"] is True
     assert report["ready_for_long_run"] is True
     assert report["actionable_blockers"] == []
+    assert report["scorer_domain_hard_birth_bootstrap_gate"][
+        "after_min_ratio_cleared"
+    ] is True
     assert Path(report["report_path"]).is_file()
     metadata = artifact_dict["substrate_artifact_metadata"]
     summary = metadata["short_scorer_teacher_smoke_readiness"]

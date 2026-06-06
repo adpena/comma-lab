@@ -96,6 +96,10 @@ def _base_metrics() -> dict[str, float]:
         "loss_part_posenet_temporal_signal_floor": 0.03,
         "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
         "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+        "loss_part_pose_score_term": 0.2,
+        "loss_part_pose_distill_raw_mse": 0.004,
+        "loss_part_pose_score_marginal_wrt_raw_mse": 25.0,
+        "loss_part_pose_distill_score_marginal_wrt_raw_mse": 25.0,
     }
 
 
@@ -167,6 +171,41 @@ def _dual_metrics(
             }
         )
     return metrics
+
+
+def _output_head_bootstrap_metadata(
+    *,
+    accepted_step_count: float = 1.0,
+    hard_birth_after_min_ratio: float = 0.25,
+    hard_birth_remaining_debt: float = 0.0,
+    bootstrap_enabled: bool = True,
+    hard_birth_enabled: bool = True,
+) -> dict[str, object]:
+    return {
+        "schema": "hi_nerv_output_head_target_bias_init.v1",
+        "enabled": True,
+        "contrast_init": {
+            "schema": "hi_nerv_output_head_target_contrast_init.v1",
+            "enabled": True,
+        },
+        "scorer_domain_bootstrap": {
+            "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+            "enabled": bool(bootstrap_enabled),
+            "accepted_step_count": float(accepted_step_count),
+            "segnet_hard_birth_bootstrap": {
+                "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_hard_birth.v1",
+                "enabled": bool(hard_birth_enabled),
+            },
+            "metrics_after": {
+                "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
+                    float(hard_birth_after_min_ratio)
+                ),
+                "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (
+                    float(hard_birth_remaining_debt)
+                ),
+            },
+        },
+    }
 
 
 def test_direct_live_pose_only_accepts_observed_posenet_and_dual_telemetry() -> None:
@@ -519,6 +558,7 @@ def test_direct_live_target_min_ratio_floor_clears_with_loss_and_dual_telemetry(
         final_loss_components={
             **_base_metrics(),
             "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 0.05,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 0.0,
             **_dual_metrics(
                 "hi_nerv_segnet_direct_live_distill",
                 "hi_nerv_segnet_direct_live_target_min_ratio_floor",
@@ -532,6 +572,135 @@ def test_direct_live_target_min_ratio_floor_clears_with_loss_and_dual_telemetry(
 
     assert report["ready_for_long_run"] is True
     assert report["actionable_blockers"] == []
+
+
+def test_direct_live_target_min_ratio_floor_blocks_unreduced_target_region_debt() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(
+            segnet_direct_live_target_min_ratio_floor_weight=0.7
+        ),
+        final_loss_components={
+            **_base_metrics(),
+            "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 0.05,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.0,
+            "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.0,
+            **_dual_metrics(
+                "hi_nerv_segnet_direct_live_distill",
+                "hi_nerv_segnet_direct_live_target_min_ratio_floor",
+            ),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert "hi_nerv_short_smoke_segnet_target_region_debt_not_reduced" in report[
+        "actionable_blockers"
+    ]
+    debt_gate = report["direct_live_segnet_gate"]["target_region_debt_dynamics_gate"]
+    assert debt_gate["accepted_update_reduced_debt"] is False
+    assert debt_gate["delta_score_weighted_unsolved_argmax_mass"] == pytest.approx(0.0)
+
+
+def test_direct_live_support_ladder_activation_requires_target_min_ratio_floor_metric() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            "active_loss_weight__segnet_direct_live_target_min_ratio_floor": 0.5,
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight"
+        in report["direct_live_segnet_gate"]["active_subcontrol_control_keys"]
+    )
+    assert "loss_part_segnet_direct_live_target_min_ratio_floor_loss" in report[
+        "direct_live_segnet_gate"
+    ]["active_subcontrol_metric_keys"]
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_subcontrol_telemetry" in (
+        report["actionable_blockers"]
+    )
+
+
+def test_scorer_domain_hard_birth_bootstrap_blocks_collapsed_after_min_ratio() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata=_output_head_bootstrap_metadata(
+            hard_birth_after_min_ratio=0.0,
+            hard_birth_remaining_debt=10.0,
+        ),
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_min_ratio_collapsed"
+        in report["actionable_blockers"]
+    )
+    gate = report["scorer_domain_hard_birth_bootstrap_gate"]
+    assert gate["hard_birth_enabled"] is True
+    assert gate["after_candidate_target_class_min_ratio"] == pytest.approx(0.0)
+
+
+def test_scorer_domain_hard_birth_bootstrap_blocks_zero_steps_with_debt() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata=_output_head_bootstrap_metadata(
+            accepted_step_count=0.0,
+            hard_birth_after_min_ratio=0.25,
+            hard_birth_remaining_debt=10.0,
+        ),
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_no_accepted_steps_with_debt"
+        in report["actionable_blockers"]
+    )
+
+
+def test_scorer_domain_hard_birth_bootstrap_clears_with_ratio_and_steps() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata=_output_head_bootstrap_metadata(),
+    )
+
+    assert report["ready_for_long_run"] is True
+    assert report["actionable_blockers"] == []
+    gate = report["scorer_domain_hard_birth_bootstrap_gate"]
+    assert gate["after_min_ratio_cleared"] is True
+    assert gate["no_accepted_steps_with_remaining_debt"] is False
 
 
 def test_direct_live_subcontrols_staged_off_do_not_require_telemetry() -> None:
@@ -861,6 +1030,33 @@ def test_direct_live_pose_enabled_requires_pose_score_marginal_telemetry() -> No
     assert "hi_nerv_short_smoke_missing_direct_live_posenet_telemetry" in report[
         "actionable_blockers"
     ]
+
+
+def test_generic_pose_enabled_requires_pose_distill_score_marginal_telemetry() -> None:
+    metrics = _base_metrics()
+    del metrics["loss_part_pose_distill_score_marginal_wrt_raw_mse"]
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **metrics,
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert "hi_nerv_short_smoke_missing_posenet_distill_telemetry" in report[
+        "actionable_blockers"
+    ]
+    assert report["posenet_distill_gate"]["metrics"][
+        "loss_part_pose_score_marginal_wrt_raw_mse"
+    ] == pytest.approx(25.0)
+    assert report["posenet_distill_gate"]["metrics"][
+        "loss_part_pose_distill_score_marginal_wrt_raw_mse"
+    ] is None
 
 
 def test_direct_live_only_segnet_requires_dual_update_telemetry() -> None:

@@ -447,6 +447,8 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
             "0.625",
             "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
             "0.75",
+            "--posenet-yuv6-geometry-tether-weight",
+            "1.125",
             "--posenet-temporal-signal-floor-weight",
             "1.25",
             "--pose-direct-live-distillation-weight",
@@ -502,6 +504,13 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert contrast_floor["segnet_last_rgb_min_std_ratio"] == pytest.approx(0.625)
     assert contrast_floor["posenet_yuv6_pair_min_std_ratio"] == pytest.approx(0.75)
     assert contrast_floor["human_visual_fidelity_objective"] is False
+    geometry_tether = metadata["posenet_yuv6_geometry_tether"]
+    assert geometry_tether["enabled"] is True
+    assert geometry_tether["weight"] == pytest.approx(1.125)
+    assert geometry_tether["target_surface"] == (
+        "exact_upstream_posenet_two_frame_yuv6_geometry"
+    )
+    assert geometry_tether["human_visual_fidelity_objective"] is False
     temporal_floor = metadata["posenet_temporal_signal_floor"]
     assert temporal_floor["enabled"] is True
     assert temporal_floor["weight"] == pytest.approx(1.25)
@@ -953,6 +962,7 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "scorer_input_guard": 1.0,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_yuv6_geometry_tether": 1.0,
         "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 0.0,
         "segnet_direct_live_base_loss": 1.0,
@@ -964,6 +974,7 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "scorer_input_guard": 1.0,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_yuv6_geometry_tether": 1.0,
         "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 1.0,
         "segnet_direct_live_base_loss": 1.0,
@@ -975,6 +986,7 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "scorer_input_guard": 1.0,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_yuv6_geometry_tether": 1.0,
         "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 1.0,
         "segnet_direct_live_base_loss": 1.0,
@@ -1114,6 +1126,7 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_missing_direct_live_class_escape_pressure",
         "hinerv_full_missing_scorer_input_contrast_floor",
         "hinerv_full_missing_scorer_input_shape_tether",
+        "hinerv_full_missing_posenet_yuv6_geometry_tether",
         "hinerv_full_missing_posenet_temporal_signal_floor",
         "hinerv_full_missing_scorer_space_step_guard",
         "hinerv_full_missing_strict_checkpoint_selection",
@@ -1181,6 +1194,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "0.6",
             "--scorer-input-shape-tether-weight",
             "0.75",
+            "--posenet-yuv6-geometry-tether-weight",
+            "1.125",
             "--posenet-temporal-signal-floor-weight",
             "1.25",
             "--posenet-temporal-signal-min-std-ratio",
@@ -1285,6 +1300,14 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
         "posenet_yuv6_pair_centered_reference_variance_fit",
         "posenet_yuv6_temporal_delta_centered_reference_variance_fit",
     ]
+    assert controls["posenet_yuv6_geometry_tether_enabled"] is True
+    assert controls["posenet_yuv6_geometry_tether_weight"] == pytest.approx(1.125)
+    assert controls["posenet_yuv6_geometry_tether_components"] == [
+        "posenet_yuv6_pair_mean_fit",
+        "posenet_yuv6_pair_std_fit",
+        "posenet_yuv6_pair_dynamic_range_fit",
+        "posenet_yuv6_temporal_delta_fit",
+    ]
     assert controls["posenet_temporal_signal_floor_enabled"] is True
     assert controls["posenet_temporal_signal_floor_weight"] == pytest.approx(1.25)
     assert controls["posenet_temporal_signal_min_std_ratio"] == pytest.approx(0.35)
@@ -1362,6 +1385,8 @@ def test_hinerv_full_control_contract_blocks_disabled_output_head_contrast_init(
             "0.6",
             "--scorer-input-shape-tether-weight",
             "0.75",
+            "--posenet-yuv6-geometry-tether-weight",
+            "1.125",
             "--posenet-temporal-signal-floor-weight",
             "1.25",
             "--posenet-temporal-signal-min-std-ratio",
@@ -1431,6 +1456,8 @@ def test_hinerv_full_control_contract_requires_measured_section_byte_actuation()
             "0.5",
             "--scorer-input-shape-tether-weight",
             "0.75",
+            "--posenet-yuv6-geometry-tether-weight",
+            "1.125",
             "--posenet-temporal-signal-floor-weight",
             "1.25",
         ]
@@ -1508,6 +1535,8 @@ def test_hinerv_full_control_contract_blocks_post_model_unactuated_byte_cap() ->
             "0.5",
             "--scorer-input-shape-tether-weight",
             "0.75",
+            "--posenet-yuv6-geometry-tether-weight",
+            "1.125",
             "--posenet-temporal-signal-floor-weight",
             "1.25",
         ]
@@ -2683,6 +2712,15 @@ def _passing_short_scorer_receiver_quality() -> dict[str, object]:
     }
 
 
+def _pose_distill_score_metrics() -> dict[str, float]:
+    return {
+        "loss_part_pose_score_term": 0.2,
+        "loss_part_pose_distill_raw_mse": 0.004,
+        "loss_part_pose_score_marginal_wrt_raw_mse": 25.0,
+        "loss_part_pose_distill_score_marginal_wrt_raw_mse": 25.0,
+    }
+
+
 def test_hinerv_short_scorer_smoke_readiness_requires_live_telemetry() -> None:
     report = _build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_short_scorer_smoke_controls(),
@@ -2727,6 +2765,7 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> 
             "loss_part_posenet_temporal_signal_floor": 0.03,
             "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
             "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            **_pose_distill_score_metrics(),
             "dual_ascent_active": 1.0,
             "dual_ascent_constraint_count": 2.0,
             "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,
@@ -2913,6 +2952,7 @@ def test_hinerv_short_scorer_smoke_readiness_pass_preserves_training_artifact_lo
             "loss_part_posenet_temporal_signal_floor": 0.03,
             "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
             "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            **_pose_distill_score_metrics(),
             "dual_ascent_active": 1.0,
             "dual_ascent_constraint_count": 2.0,
             "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,
@@ -3002,6 +3042,7 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding(
             "loss_part_posenet_temporal_signal_floor": 0.03,
             "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
             "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            **_pose_distill_score_metrics(),
         },
         post_export_quality=_passing_short_scorer_receiver_quality(),
         segnet_distillation_weight=0.0,
@@ -3074,6 +3115,7 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_region_subcontrol_only_bind
             "loss_part_posenet_temporal_signal_floor": 0.03,
             "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
             "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            **_pose_distill_score_metrics(),
         },
         post_export_quality=_passing_short_scorer_receiver_quality(),
         segnet_distillation_weight=0.0,
@@ -3158,6 +3200,7 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_target_mass_floor_only_bind
             "loss_part_posenet_temporal_signal_floor": 0.03,
             "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
             "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+            **_pose_distill_score_metrics(),
         },
         post_export_quality=_passing_short_scorer_receiver_quality(),
         segnet_distillation_weight=0.0,

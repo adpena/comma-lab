@@ -216,6 +216,13 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         for control_key, metric_key in direct_live_subcontrol_metric_keys.items()
         if control_key in active_direct_live_subcontrol_control_keys
     }
+    target_min_ratio_floor_control_active = (
+        "segnet_direct_live_target_min_ratio_floor_weight"
+        in active_direct_live_subcontrol_control_keys
+    )
+    target_region_debt_dynamics_gate = _target_region_debt_dynamics_gate(
+        final_components
+    )
     direct_live_subcontrol_enabled = bool(active_direct_live_subcontrol_metric_keys)
     direct_live_enabled = direct_live_weight > 0.0 or direct_live_subcontrol_enabled
     pose_direct_live_weight = _control_float(
@@ -239,6 +246,29 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         add_blocker("hi_nerv_short_smoke_real_segnet_teacher_not_requested")
     if not generic_posenet_requested and not pose_direct_live_enabled:
         add_blocker("hi_nerv_short_smoke_real_posenet_teacher_not_requested")
+    pose_distill_keys = (
+        "loss_part_pose_score_term",
+        "loss_part_pose_distill_raw_mse",
+        "loss_part_pose_distill_score_marginal_wrt_raw_mse",
+        "loss_part_pose_score_marginal_wrt_raw_mse",
+    )
+    pose_distill_metrics = {
+        key: _finite_mapping_value(final_components, key)
+        for key in pose_distill_keys
+    }
+    if generic_posenet_requested:
+        required_pose_distill_keys = (
+            "loss_part_pose_score_term",
+            "loss_part_pose_distill_raw_mse",
+            "loss_part_pose_distill_score_marginal_wrt_raw_mse",
+        )
+        missing_pose_distill = [
+            key
+            for key in required_pose_distill_keys
+            if pose_distill_metrics[key] is None
+        ]
+        if missing_pose_distill:
+            add_blocker("hi_nerv_short_smoke_missing_posenet_distill_telemetry")
     direct_live_keys = tuple(
         dict.fromkeys(
             (
@@ -297,6 +327,22 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             add_blocker("hi_nerv_short_smoke_direct_live_target_class_min_ratio_missing")
         elif _below_floor(candidate_target_min_ratio, min_target_min_ratio):
             add_blocker("hi_nerv_short_smoke_direct_live_target_class_mass_collapsed")
+        if target_min_ratio_floor_control_active:
+            if not target_region_debt_dynamics_gate["current_debt_present"]:
+                add_blocker(
+                    "hi_nerv_short_smoke_segnet_target_region_debt_missing"
+                )
+            elif target_region_debt_dynamics_gate["unresolved_debt_present"]:
+                if not target_region_debt_dynamics_gate["pre_debt_present"]:
+                    add_blocker(
+                        "hi_nerv_short_smoke_segnet_target_region_debt_dynamics_missing"
+                    )
+                elif not target_region_debt_dynamics_gate[
+                    "accepted_update_reduced_debt"
+                ]:
+                    add_blocker(
+                        "hi_nerv_short_smoke_segnet_target_region_debt_not_reduced"
+                    )
 
     pose_direct_live_keys = (
         "loss_part_pose_direct_live_score_term",
@@ -466,6 +512,14 @@ def build_hinerv_short_scorer_smoke_readiness_report(
     output_head_target_init_gate = _output_head_target_init_gate(
         output_head_target_bias_init_metadata
     )
+    scorer_domain_hard_birth_gate = _scorer_domain_hard_birth_gate(
+        (
+            output_head_target_bias_init_metadata.get("scorer_domain_bootstrap")
+            if isinstance(output_head_target_bias_init_metadata, Mapping)
+            else None
+        ),
+        min_target_min_ratio=min_target_min_ratio,
+    )
     if output_head_target_init_gate["required"]:
         if not output_head_target_init_gate["bias_init_enabled"]:
             add_blocker(
@@ -474,6 +528,27 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         if not output_head_target_init_gate["contrast_init_enabled"]:
             add_blocker(
                 "hi_nerv_short_smoke_output_head_target_contrast_init_not_enabled"
+            )
+    if scorer_domain_hard_birth_gate["required"]:
+        if not scorer_domain_hard_birth_gate["bootstrap_enabled"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_bootstrap_not_enabled"
+            )
+        if not scorer_domain_hard_birth_gate["hard_birth_enabled"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_not_enabled"
+            )
+        if not scorer_domain_hard_birth_gate["after_min_ratio_present"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_min_ratio_missing"
+            )
+        elif not scorer_domain_hard_birth_gate["after_min_ratio_cleared"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_min_ratio_collapsed"
+            )
+        if scorer_domain_hard_birth_gate["no_accepted_steps_with_remaining_debt"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_no_accepted_steps_with_debt"
             )
 
     contrast_floor_weight = _control_float(
@@ -740,6 +815,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
                 min_target_min_ratio
             ),
             "metrics": direct_live_metrics,
+            "target_region_debt_dynamics_gate": target_region_debt_dynamics_gate,
         },
         "direct_live_posenet_gate": {
             "enabled": pose_direct_live_enabled,
@@ -747,10 +823,16 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             "weight": pose_direct_live_weight,
             "metrics": pose_direct_live_metrics,
         },
+        "posenet_distill_gate": {
+            "enabled": generic_posenet_requested,
+            "weight": pose_weight,
+            "metrics": pose_distill_metrics,
+        },
         "direct_live_dual_ascent_gate": dual_ascent_gate,
         "section_byte_dual_ascent_gate": section_byte_dual_ascent_gate,
         "decoder_weight_waterfill_actuation_gate": decoder_waterfill_gate,
         "output_head_target_init_gate": output_head_target_init_gate,
+        "scorer_domain_hard_birth_bootstrap_gate": scorer_domain_hard_birth_gate,
         "scorer_input_contrast_floor_gate": {
             "enabled": contrast_floor_enabled,
             "weight": contrast_floor_weight,
@@ -805,6 +887,7 @@ def hinerv_short_scorer_smoke_readiness_summary(
             "teacher_gate": report.get("teacher_gate"),
             "direct_live_segnet_gate": report.get("direct_live_segnet_gate"),
             "direct_live_posenet_gate": report.get("direct_live_posenet_gate"),
+            "posenet_distill_gate": report.get("posenet_distill_gate"),
             "direct_live_dual_ascent_gate": report.get(
                 "direct_live_dual_ascent_gate"
             ),
@@ -816,6 +899,9 @@ def hinerv_short_scorer_smoke_readiness_summary(
             ),
             "output_head_target_init_gate": report.get(
                 "output_head_target_init_gate"
+            ),
+            "scorer_domain_hard_birth_bootstrap_gate": report.get(
+                "scorer_domain_hard_birth_bootstrap_gate"
             ),
             "scorer_input_contrast_floor_gate": report.get(
                 "scorer_input_contrast_floor_gate"
@@ -1202,6 +1288,90 @@ def _tradeoff_label(seg_delta: float | None, pose_delta: float | None) -> str:
     return "segnet_and_posenet_flat_or_mixed_small"
 
 
+def _target_region_debt_dynamics_gate(metrics: Mapping[str, Any]) -> dict[str, Any]:
+    current = _finite_mapping_value(
+        metrics,
+        "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+    )
+    previous = _finite_mapping_value(
+        metrics,
+        "dynamics_pre_update_loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass",
+    )
+    delta = _delta(current, previous)
+    return {
+        "schema": "hi_nerv_segnet_target_region_debt_dynamics_gate.v1",
+        "current_score_weighted_unsolved_argmax_mass": current,
+        "pre_score_weighted_unsolved_argmax_mass": previous,
+        "delta_score_weighted_unsolved_argmax_mass": delta,
+        "current_debt_present": current is not None,
+        "pre_debt_present": previous is not None,
+        "unresolved_debt_present": bool(
+            current is not None
+            and current > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+        ),
+        "accepted_update_reduced_debt": bool(
+            delta is not None
+            and delta < -HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+        ),
+    }
+
+
+def _scorer_domain_hard_birth_gate(
+    metadata: Any,
+    *,
+    min_target_min_ratio: float,
+) -> dict[str, Any]:
+    if not isinstance(metadata, Mapping):
+        return {
+            "schema": "hi_nerv_scorer_domain_hard_birth_bootstrap_gate.v1",
+            "required": False,
+            "bootstrap_enabled": False,
+            "hard_birth_enabled": False,
+            "after_min_ratio_present": False,
+            "after_min_ratio_cleared": False,
+            "no_accepted_steps_with_remaining_debt": False,
+        }
+    hard_birth = metadata.get("segnet_hard_birth_bootstrap")
+    hard_birth = hard_birth if isinstance(hard_birth, Mapping) else {}
+    after = metadata.get("metrics_after")
+    after = after if isinstance(after, Mapping) else {}
+    after_min_ratio = _finite_mapping_value(
+        after,
+        "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio",
+    )
+    remaining_debt = _finite_mapping_value(
+        after,
+        "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass",
+    )
+    accepted_step_count = _finite_mapping_value(metadata, "accepted_step_count")
+    debt_remains = bool(
+        remaining_debt is not None
+        and remaining_debt > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+    )
+    no_accepted_steps = bool(
+        accepted_step_count is not None and accepted_step_count <= 0.0
+    )
+    return {
+        "schema": "hi_nerv_scorer_domain_hard_birth_bootstrap_gate.v1",
+        "required": True,
+        "bootstrap_enabled": bool(metadata.get("enabled")),
+        "hard_birth_enabled": bool(hard_birth.get("enabled")),
+        "accepted_step_count": accepted_step_count,
+        "after_candidate_target_class_min_ratio": after_min_ratio,
+        "min_candidate_target_class_min_ratio_for_fit_gate": min_target_min_ratio,
+        "after_score_weighted_total_unsolved_argmax_mass": remaining_debt,
+        "after_min_ratio_present": after_min_ratio is not None,
+        "after_min_ratio_cleared": bool(
+            after_min_ratio is not None
+            and not _below_floor(after_min_ratio, min_target_min_ratio)
+        ),
+        "remaining_debt_present": debt_remains,
+        "no_accepted_steps_with_remaining_debt": bool(
+            no_accepted_steps and debt_remains
+        ),
+    }
+
+
 def receiver_cache_quality_manifest_summary(
     report: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
@@ -1409,12 +1579,10 @@ def _direct_live_subcontrol_active_for_stage(
     configured_weight: float,
     stage_active_weight: float | None,
 ) -> bool:
-    if configured_weight <= 0.0:
-        return False
     # Missing stage metadata means the trainer is older or the smoke failed
     # before emitting stage weights. Fail closed by requiring telemetry.
     if stage_active_weight is None:
-        return True
+        return configured_weight > 0.0
     return stage_active_weight > 0.0
 
 

@@ -23584,16 +23584,26 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
         output_path,
         artifact_dict,
     )
+    score_training = _substrate_score_aware_training_from_artifact(
+        readiness_artifact_dict
+    )
     if output_head_target_bias_init_metadata is None:
-        score_training = _substrate_score_aware_training_from_artifact(
-            readiness_artifact_dict
-        )
         candidate_output_init = score_training.get("output_head_target_bias_init")
         output_head_target_bias_init_metadata = (
             dict(candidate_output_init)
             if isinstance(candidate_output_init, Mapping)
             else {}
         )
+    if isinstance(output_head_target_bias_init_metadata, Mapping):
+        top_level_bootstrap = score_training.get("scorer_domain_bootstrap")
+        if (
+            "scorer_domain_bootstrap" not in output_head_target_bias_init_metadata
+            and isinstance(top_level_bootstrap, Mapping)
+        ):
+            output_head_target_bias_init_metadata = {
+                **dict(output_head_target_bias_init_metadata),
+                "scorer_domain_bootstrap": dict(top_level_bootstrap),
+            }
     report = build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=train_time_controls,
         final_loss_components=_final_loss_components_from_training_artifact_dict(
@@ -30482,6 +30492,9 @@ def main(argv: list[str] | None = None) -> int:
             scorer_input_shape_tether_weight=args.scorer_input_shape_tether_weight,
             posenet_yuv6_geometry_tether_weight=(
                 args.posenet_yuv6_geometry_tether_weight
+            ),
+            posenet_yuv6_geometry_tether_stage_weight=(
+                args.posenet_yuv6_geometry_tether_stage_weight
             ),
             posenet_temporal_signal_floor_weight=(
                 args.posenet_temporal_signal_floor_weight

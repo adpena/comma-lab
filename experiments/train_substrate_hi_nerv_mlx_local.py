@@ -196,6 +196,7 @@ class HiNervTrainTimeControlConfig:
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
     scorer_input_shape_tether_weight: float = 0.0
+    posenet_yuv6_geometry_tether_weight: float = 0.0
     posenet_temporal_signal_floor_weight: float = 0.0
     posenet_temporal_signal_min_std_ratio: float = 0.25
     posenet_temporal_signal_min_mean_abs_ratio: float = 0.25
@@ -373,6 +374,10 @@ class HiNervTrainTimeControlConfig:
         _require_finite_nonnegative(
             self.scorer_input_shape_tether_weight,
             "scorer_input_shape_tether_weight",
+        )
+        _require_finite_nonnegative(
+            self.posenet_yuv6_geometry_tether_weight,
+            "posenet_yuv6_geometry_tether_weight",
         )
         _require_finite_nonnegative(
             self.posenet_temporal_signal_floor_weight,
@@ -555,6 +560,9 @@ class HiNervTrainTimeControlConfig:
             ),
             scorer_input_shape_tether_weight=float(
                 self.scorer_input_shape_tether_weight
+            ),
+            posenet_yuv6_geometry_tether_weight=float(
+                self.posenet_yuv6_geometry_tether_weight
             ),
             posenet_temporal_signal_floor_weight=float(
                 self.posenet_temporal_signal_floor_weight
@@ -795,6 +803,25 @@ class HiNervTrainTimeControlConfig:
                 "target_surface": (
                     "exact_upstream_scorer_inputs_centered_and_normalized_by_"
                     "reference_channel_variance"
+                ),
+                "human_visual_fidelity_objective": False,
+            },
+            "posenet_yuv6_geometry_tether": {
+                "schema": "hi_nerv_train_time_posenet_yuv6_geometry_tether.v1",
+                "enabled": float(self.posenet_yuv6_geometry_tether_weight) > 0.0,
+                "weight": float(self.posenet_yuv6_geometry_tether_weight),
+                "components": [
+                    "posenet_yuv6_pair_mean_fit",
+                    "posenet_yuv6_pair_std_fit",
+                    "posenet_yuv6_pair_dynamic_range_fit",
+                    "posenet_yuv6_temporal_delta_fit",
+                ],
+                "target_surface": "exact_upstream_posenet_two_frame_yuv6_geometry",
+                "reason": (
+                    "PoseNet is scored on a two-frame YUV6 tensor, so long-run "
+                    "distortion control needs a direct evaluator-domain tether "
+                    "instead of relying on RGB reconstruction or human-visible "
+                    "frame quality."
                 ),
                 "human_visual_fidelity_objective": False,
             },
@@ -1235,6 +1262,9 @@ def _full_main(args: argparse.Namespace) -> int:
         scorer_input_shape_tether_weight=(
             train_time_controls.scorer_input_shape_tether_weight
         ),
+        posenet_yuv6_geometry_tether_weight=(
+            train_time_controls.posenet_yuv6_geometry_tether_weight
+        ),
         posenet_temporal_signal_floor_weight=(
             train_time_controls.posenet_temporal_signal_floor_weight
         ),
@@ -1305,6 +1335,9 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "scorer_input_contrast_floor": _metadata_safe(
                 train_time_controls.metadata()["scorer_input_contrast_floor"]
+            ),
+            "posenet_yuv6_geometry_tether": _metadata_safe(
+                train_time_controls.metadata()["posenet_yuv6_geometry_tether"]
             ),
             "posenet_temporal_signal_floor": _metadata_safe(
                 train_time_controls.metadata()["posenet_temporal_signal_floor"]
@@ -2378,6 +2411,17 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--posenet-yuv6-geometry-tether-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Dense train-time PoseNet tether on the exact evaluate.py YUV6 "
+            "pair geometry: pair mean/std/dynamic range and temporal delta. "
+            "This protects PoseNet score during SegNet class-birth and "
+            "byte-pressure updates; it is not a human visual objective."
+        ),
+    )
+    parser.add_argument(
         "--posenet-temporal-signal-floor-weight",
         type=float,
         default=0.0,
@@ -3424,6 +3468,9 @@ def _train_time_control_config_from_args(
         ),
         scorer_input_shape_tether_weight=float(
             getattr(args, "scorer_input_shape_tether_weight", 0.0)
+        ),
+        posenet_yuv6_geometry_tether_weight=float(
+            getattr(args, "posenet_yuv6_geometry_tether_weight", 0.0)
         ),
         posenet_temporal_signal_floor_weight=float(
             getattr(args, "posenet_temporal_signal_floor_weight", 0.0)
@@ -4870,6 +4917,7 @@ def _build_staged_scorer_curriculum(
                 "scorer_input_guard": 1.0,
                 "scorer_input_contrast_floor": 1.0,
                 "scorer_input_shape_tether": 1.0,
+                "posenet_yuv6_geometry_tether": 1.0,
                 "posenet_temporal_signal_floor": 1.0,
                 "segnet_direct_live_distill": 0.0,
                 "segnet_direct_live_base_loss": 1.0,
@@ -4891,6 +4939,7 @@ def _build_staged_scorer_curriculum(
                 "scorer_input_guard": 1.0,
                 "scorer_input_contrast_floor": 1.0,
                 "scorer_input_shape_tether": 1.0,
+                "posenet_yuv6_geometry_tether": 1.0,
                 "posenet_temporal_signal_floor": 1.0,
                 "segnet_direct_live_distill": 1.0,
                 "segnet_direct_live_base_loss": 1.0,
@@ -4912,6 +4961,7 @@ def _build_staged_scorer_curriculum(
                 "scorer_input_guard": 1.0,
                 "scorer_input_contrast_floor": 1.0,
                 "scorer_input_shape_tether": 1.0,
+                "posenet_yuv6_geometry_tether": 1.0,
                 "posenet_temporal_signal_floor": 1.0,
                 "segnet_direct_live_distill": 1.0,
                 "segnet_direct_live_base_loss": 1.0,
@@ -5134,6 +5184,9 @@ def _pr95_full_control_contract(
     scorer_input_shape_metadata = train_time_controls.metadata()[
         "scorer_input_shape_tether"
     ]
+    posenet_yuv6_geometry_metadata = train_time_controls.metadata()[
+        "posenet_yuv6_geometry_tether"
+    ]
     posenet_temporal_signal_metadata = train_time_controls.metadata()[
         "posenet_temporal_signal_floor"
     ]
@@ -5216,6 +5269,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_scorer_input_contrast_floor")
     if float(train_time_controls.scorer_input_shape_tether_weight) <= 0.0:
         blockers.append("hinerv_full_missing_scorer_input_shape_tether")
+    if float(train_time_controls.posenet_yuv6_geometry_tether_weight) <= 0.0:
+        blockers.append("hinerv_full_missing_posenet_yuv6_geometry_tether")
     if float(train_time_controls.posenet_temporal_signal_floor_weight) <= 0.0:
         blockers.append("hinerv_full_missing_posenet_temporal_signal_floor")
     if not bool(output_head_bias_metadata["enabled"]):
@@ -5558,6 +5613,15 @@ def _pr95_full_control_contract(
             ),
             "scorer_input_shape_tether_components": (
                 scorer_input_shape_metadata["components"]
+            ),
+            "posenet_yuv6_geometry_tether_enabled": bool(
+                posenet_yuv6_geometry_metadata["enabled"]
+            ),
+            "posenet_yuv6_geometry_tether_weight": float(
+                train_time_controls.posenet_yuv6_geometry_tether_weight
+            ),
+            "posenet_yuv6_geometry_tether_components": (
+                posenet_yuv6_geometry_metadata["components"]
             ),
             "posenet_temporal_signal_floor_enabled": bool(
                 posenet_temporal_signal_metadata["enabled"]
