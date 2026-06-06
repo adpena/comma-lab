@@ -87,9 +87,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--repo-root", type=Path, default=None)
     parser.add_argument(
-        "--materializer-emit-receiver-proof",
+        "--materializer-without-receiver-proof",
         action="store_true",
-        help="Add --emit-receiver-proof to the optional materializer work order.",
+        help=(
+            "Emit an advisory non-executable work order without receiver proof. "
+            "Queue execution stays blocked."
+        ),
     )
     parser.add_argument(
         "--materializer-run-inflate-runtime-benchmark",
@@ -142,7 +145,7 @@ def main() -> int:
             output_dir=args.materializer_output_dir,
             archive_bin=args.archive_bin,
             repo_root=args.repo_root,
-            emit_receiver_proof=bool(args.materializer_emit_receiver_proof),
+            emit_receiver_proof=not bool(args.materializer_without_receiver_proof),
             run_inflate_runtime_benchmark=bool(
                 args.materializer_run_inflate_runtime_benchmark
             ),

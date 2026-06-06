@@ -77,7 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow advisory partial coverage. Strict queue execution keeps this off.",
     )
-    parser.add_argument("--emit-receiver-proof", action="store_true")
+    parser.add_argument(
+        "--without-receiver-proof",
+        action="store_true",
+        help=(
+            "Build an advisory non-executable materializer plan without receiver "
+            "proof emission. Queue execution remains blocked."
+        ),
+    )
     parser.add_argument("--run-inflate-runtime-benchmark", action="store_true")
     parser.add_argument(
         "--overwrite",
@@ -125,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
         archive_bin=archive_bin,
         repo_root=args.repo_root,
         require_full_archive_coverage=not bool(args.allow_partial_headroom_coverage),
-        emit_receiver_proof=bool(args.emit_receiver_proof),
+        emit_receiver_proof=not bool(args.without_receiver_proof),
         run_inflate_runtime_benchmark=bool(args.run_inflate_runtime_benchmark),
     )
 

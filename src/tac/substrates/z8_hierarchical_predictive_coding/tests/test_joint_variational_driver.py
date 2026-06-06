@@ -65,6 +65,7 @@ def test_joint_variational_metadata_is_non_authority_and_score_grounded() -> Non
         "linearization_archive_sha_equals_current_archive_sha",
         "candidate_pairs_equal_archive_runtime_reconstruction",
         "raw_p18_p19_gradients_reduced_before_global_kkt_dykstra_allocation",
+        "p18_segnet_class_region_boundary_modifier_reduced_before_budget_spend",
         "true_per_axis_posenet_jacobian_mahalanobis_surface",
         "single_optimizer_update_after_full_shard_reduction",
         "relinearize_after_each_accepted_archive_mutation",

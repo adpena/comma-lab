@@ -289,7 +289,7 @@ def build_entropy_delta_materializer_work_order(
     archive_bin: str | Path | None = None,
     repo_root: str | Path | None = None,
     require_existing_archive_bin: bool = True,
-    emit_receiver_proof: bool = False,
+    emit_receiver_proof: bool = True,
     run_inflate_runtime_benchmark: bool = False,
     extra_args: Sequence[str] = (),
 ) -> dict[str, Any]:
@@ -320,6 +320,8 @@ def build_entropy_delta_materializer_work_order(
         blockers.append("materializer_output_dir_missing")
     if not schedule_json_text:
         blockers.append("schedule_json_path_missing")
+    if not emit_receiver_proof:
+        blockers.append("receiver_proof_required_for_materializer_execution")
     command: list[str] | None = None
     if not blockers:
         command = [
@@ -336,8 +338,7 @@ def build_entropy_delta_materializer_work_order(
         ]
         if repo_root is not None:
             command.extend(["--repo-root", Path(repo_root).as_posix()])
-        if emit_receiver_proof:
-            command.append("--emit-receiver-proof")
+        command.append("--emit-receiver-proof")
         if run_inflate_runtime_benchmark:
             command.append("--run-inflate-runtime-benchmark")
         command.extend(str(item) for item in extra_args)
@@ -382,7 +383,7 @@ def build_entropy_delta_campaign_plan(
     repo_root: str | Path | None = None,
     require_full_archive_coverage: bool = True,
     require_existing_archive_bin: bool = True,
-    emit_receiver_proof: bool = False,
+    emit_receiver_proof: bool = True,
     run_inflate_runtime_benchmark: bool = False,
     extra_materializer_args: Sequence[str] = (),
 ) -> dict[str, Any]:

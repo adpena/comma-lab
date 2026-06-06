@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,10 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     parse_pair_blobs_from_wavelet_blob,
     summarize_wavelet_blob_detail_codecs,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA,
+)
+from tac.substrates.z8_hierarchical_predictive_coding.inflate import CONTEST_RAW_BYTES
 from tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill import (
     FULL_VIDEO_EXACT_ACCUMULATION_REDUCTION,
     SINGLE_UPDATE_AFTER_FULL_REDUCTION,
@@ -97,6 +102,40 @@ def _surface_for_archive(
         "byte_rate_gradient_blockers": [
             "z8_byte_rate_gradient_not_differentiated_through_quantizer_entropy_codec"
         ],
+    }
+
+
+def _valid_z8_receiver_proof(*, archive_sha256: str, archive_bytes: int) -> dict[str, Any]:
+    return {
+        "schema": Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA,
+        "candidate_label": "z8_hpc1",
+        "archive_sha256": archive_sha256,
+        "archive_bytes": archive_bytes,
+        "archive_path": "archive.zip",
+        "submission_dir": "submission",
+        "runtime_tree_sha256": "b" * 64,
+        "inflate_argv": [
+            "submission/inflate.sh",
+            "submission",
+            "runtime_out",
+            "file_list.txt",
+        ],
+        "file_list_path": "receiver_proof/file_list.txt",
+        "receiver_output_path": "receiver_proof/runtime_out/0.raw",
+        "receiver_output_kind": "file",
+        "receiver_output_sha256": "c" * 64,
+        "receiver_output_bytes": CONTEST_RAW_BYTES,
+        "expected_receiver_output_bytes": CONTEST_RAW_BYTES,
+        "returncode": 0,
+        "timed_out": False,
+        "runtime_consumption_proof_ready": True,
+        "runtime_consumption_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -188,6 +227,129 @@ def test_joint_p18_p19_deadzone_materializer_emits_byte_closed_archive(
     assert manifest["rate_floor_report"]["score_claim"] is False
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_materializer_credits_receiver_proof_only_after_contract_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    def fake_export(
+        archive_payload: bytes,
+        output_dir: str | Path,
+        **_kwargs: Any,
+    ) -> tuple[Path, str, int]:
+        out_dir = Path(output_dir)
+        archive_zip = out_dir / "archive.zip"
+        archive_zip.write_bytes(b"zip:" + bytes(archive_payload)[:8])
+        archive_sha = hashlib.sha256(archive_zip.read_bytes()).hexdigest()
+        archive_bytes_count = archive_zip.stat().st_size
+        proof_dir = out_dir / "receiver_proof"
+        proof_dir.mkdir(parents=True, exist_ok=True)
+        (proof_dir / "z8_hpc1_receiver_proof.json").write_text(
+            json.dumps(
+                _valid_z8_receiver_proof(
+                    archive_sha256=archive_sha,
+                    archive_bytes=archive_bytes_count,
+                ),
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return archive_zip, archive_sha, archive_bytes_count
+
+    monkeypatch.setattr(
+        "tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill.export_z8hpc1_archive_bytes",
+        fake_export,
+    )
+    manifest = materialize_joint_p18_p19_deadzone_candidate(
+        archive_bytes,
+        tmp_path,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+        config=Z8JointCoefficientWaterfillConfig(
+            joint_weight_quantile=1.0,
+            coefficient_deadzone_quantile=1.0,
+            quantization_step=0.25,
+            emit_archive_zip=True,
+            emit_receiver_proof=True,
+        ),
+    )
+
+    assert manifest["receiver_proof_requested"] is True
+    assert manifest["receiver_proof_executed"] is True
+    assert manifest["receiver_proof_contract_verified"] is True
+    assert manifest["receiver_proof_verification_blockers"] == []
+    assert manifest["receiver_proof_contract_report"]["receiver_contract_satisfied"] is True
+    assert manifest["exact_axis_blocker"] == "contest_cpu_cuda_eval_not_executed"
+    assert manifest["exact_axis_blocker_report"]["receiver_proof_executed"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_materializer_fails_closed_when_requested_receiver_proof_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    def fake_export_without_proof(
+        archive_payload: bytes,
+        output_dir: str | Path,
+        **_kwargs: Any,
+    ) -> tuple[Path, str, int]:
+        out_dir = Path(output_dir)
+        archive_zip = out_dir / "archive.zip"
+        archive_zip.write_bytes(b"zip:" + bytes(archive_payload)[:8])
+        return (
+            archive_zip,
+            hashlib.sha256(archive_zip.read_bytes()).hexdigest(),
+            archive_zip.stat().st_size,
+        )
+
+    monkeypatch.setattr(
+        "tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill.export_z8hpc1_archive_bytes",
+        fake_export_without_proof,
+    )
+    manifest = materialize_joint_p18_p19_deadzone_candidate(
+        archive_bytes,
+        tmp_path,
+        joint_weight=_surface_for_archive(archive_bytes, joint_weight, pose_null_mask),
+        config=Z8JointCoefficientWaterfillConfig(
+            joint_weight_quantile=1.0,
+            coefficient_deadzone_quantile=1.0,
+            quantization_step=0.25,
+            emit_archive_zip=True,
+            emit_receiver_proof=True,
+        ),
+    )
+
+    assert manifest["receiver_proof_requested"] is True
+    assert manifest["receiver_proof_executed"] is False
+    assert manifest["receiver_proof_contract_verified"] is False
+    assert manifest["exact_axis_blocker"] == "receiver_proof_verification_failed"
+    assert manifest["exact_axis_blocker_report"]["receiver_proof_executed"] is False
+    assert any(
+        blocker.startswith("runtime_consumption_proof_missing_on_disk:")
+        for blocker in manifest["receiver_proof_verification_blockers"]
+    )
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_z8_receiver_proof_config_requires_archive_export() -> None:
+    with pytest.raises(ValueError, match="emit_receiver_proof requires emit_archive_zip"):
+        Z8JointCoefficientWaterfillConfig(
+            emit_archive_zip=False,
+            emit_receiver_proof=True,
+        )
+    with pytest.raises(ValueError, match="emit_receiver_proof requires emit_archive_zip"):
+        Z8JointCoefficientRelinearizationSearchConfig(
+            emit_archive_zip=False,
+            emit_receiver_proof=True,
+        )
 
 
 def test_joint_materializer_rejects_legacy_non_true_p19_surface() -> None:
@@ -604,6 +766,58 @@ def test_relinearized_search_accepts_fresh_surface_and_writes_final_candidate(
     assert manifest["final_distortion_report"]["small_receiver_distortion_measured"] is True
     assert manifest["receiver_proof_executed"] is False
     assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_relinearized_materializer_fails_closed_when_requested_receiver_proof_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive_bytes = _archive_bytes()
+    joint_weight = np.zeros((1, 2, 16, 16, 3), dtype=np.float32)
+    pose_null_mask = np.ones_like(joint_weight, dtype=bool)
+
+    def fake_export_without_proof(
+        archive_payload: bytes,
+        output_dir: str | Path,
+        **_kwargs: Any,
+    ) -> tuple[Path, str, int]:
+        out_dir = Path(output_dir)
+        archive_zip = out_dir / "archive.zip"
+        archive_zip.write_bytes(b"zip:" + bytes(archive_payload)[:8])
+        return (
+            archive_zip,
+            hashlib.sha256(archive_zip.read_bytes()).hexdigest(),
+            archive_zip.stat().st_size,
+        )
+
+    monkeypatch.setattr(
+        "tac.substrates.z8_hierarchical_predictive_coding.joint_coefficient_waterfill.export_z8hpc1_archive_bytes",
+        fake_export_without_proof,
+    )
+    manifest = materialize_joint_p18_p19_relinearized_deadzone_search(
+        archive_bytes,
+        tmp_path,
+        surfaces=[_surface_for_archive(archive_bytes, joint_weight, pose_null_mask)],
+        config=Z8JointCoefficientRelinearizationSearchConfig(
+            joint_weight_quantiles=(1.0,),
+            coefficient_deadzone_quantiles=(1.0,),
+            quantization_steps=(0.25,),
+            max_iterations=1,
+            max_cumulative_mse=1.0,
+            emit_archive_zip=True,
+            emit_receiver_proof=True,
+        ),
+    )
+
+    assert manifest["receiver_proof_requested"] is True
+    assert manifest["receiver_proof_executed"] is False
+    assert manifest["receiver_proof_contract_verified"] is False
+    assert manifest["exact_axis_blocker"] == "receiver_proof_verification_failed"
+    assert any(
+        blocker.startswith("runtime_consumption_proof_missing_on_disk:")
+        for blocker in manifest["receiver_proof_verification_blockers"]
+    )
     assert manifest["ready_for_exact_eval_dispatch"] is False
 
 

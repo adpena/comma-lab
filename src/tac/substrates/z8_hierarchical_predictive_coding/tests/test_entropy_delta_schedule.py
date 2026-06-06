@@ -249,6 +249,38 @@ def test_entropy_delta_schedule_work_order_blocks_not_ready_schedule() -> None:
     assert work_order["score_claim"] is False
 
 
+def test_entropy_delta_schedule_work_order_requires_receiver_proof_for_execution(
+    tmp_path: Path,
+) -> None:
+    archive_bin = tmp_path / "0.bin"
+    archive_bin.write_bytes(b"z8")
+    schedule = {
+        "schema": "z8_entropy_delta_schedule.v2",
+        "ready_for_materializer": True,
+        "source_archive_path": archive_bin.as_posix(),
+        "blockers": [],
+        "entropy_detail_quantization_steps": {
+            "frame_0_details:0:hh": 0.03125,
+            "frame_1_details:0:hh": 0.03125,
+        },
+    }
+
+    work_order = build_entropy_delta_materializer_work_order(
+        schedule,
+        schedule_json_path="runs/z8/schedule.json",
+        output_dir="runs/z8/materialized",
+        emit_receiver_proof=False,
+    )
+
+    assert work_order["ready_for_materializer_execution"] is False
+    assert work_order["materializer_command"] is None
+    assert work_order["blockers"] == ["receiver_proof_required_for_materializer_execution"]
+    assert work_order["exact_axis_blocker"] == (
+        "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
+    )
+    assert work_order["score_claim"] is False
+
+
 def test_entropy_delta_campaign_plan_chains_report_schedule_and_work_order(tmp_path: Path) -> None:
     archive_bin = tmp_path / "0.bin"
     archive_bin.write_bytes(b"z8")

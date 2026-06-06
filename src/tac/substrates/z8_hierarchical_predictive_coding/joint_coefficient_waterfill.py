@@ -41,6 +41,9 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     reconstruct_pair_rgb_from_pyramid,
     summarize_wavelet_blob_detail_codecs,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    verify_z8_hpc1_detail_entropy_delta_receiver_contract,
+)
 from tac.substrates.z8_hierarchical_predictive_coding.inflate_runtime_benchmark import (
     benchmark_z8_submission_inflate_runtime,
 )
@@ -131,6 +134,8 @@ class Z8JointCoefficientWaterfillConfig:
             raise ValueError("entropy_code_quantized_details and lossless_brotli_precondition_details are exclusive")
         if self.run_inflate_runtime_benchmark and not self.emit_archive_zip:
             raise ValueError("run_inflate_runtime_benchmark requires emit_archive_zip")
+        if self.emit_receiver_proof and not self.emit_archive_zip:
+            raise ValueError("emit_receiver_proof requires emit_archive_zip")
         if self.inflate_runtime_benchmark_timeout_seconds <= 0.0:
             raise ValueError("inflate_runtime_benchmark_timeout_seconds must be positive")
         if self.inflate_runtime_benchmark_auth_window_seconds <= 0.0:
@@ -222,6 +227,8 @@ class Z8JointCoefficientRelinearizationSearchConfig:
             raise ValueError("entropy_code_quantized_details and lossless_brotli_precondition_details are exclusive")
         if self.run_inflate_runtime_benchmark and not self.emit_archive_zip:
             raise ValueError("run_inflate_runtime_benchmark requires emit_archive_zip")
+        if self.emit_receiver_proof and not self.emit_archive_zip:
+            raise ValueError("emit_receiver_proof requires emit_archive_zip")
         if self.inflate_runtime_benchmark_timeout_seconds <= 0.0:
             raise ValueError("inflate_runtime_benchmark_timeout_seconds must be positive")
         if self.inflate_runtime_benchmark_auth_window_seconds <= 0.0:
@@ -1281,6 +1288,26 @@ def _rate_floor_report(*, archive_zip_bytes: int | None) -> dict[str, Any]:
     }
 
 
+def _verify_emitted_z8_receiver_proof(
+    *,
+    archive_zip_path: Path | None,
+    archive_zip_sha256: str | None,
+    archive_zip_bytes: int | None,
+    repo_root: str | Path | None,
+) -> dict[str, Any]:
+    proof_path = (
+        Path(archive_zip_path).parent / "receiver_proof" / "z8_hpc1_receiver_proof.json"
+        if archive_zip_path is not None
+        else None
+    )
+    return verify_z8_hpc1_detail_entropy_delta_receiver_contract(
+        runtime_consumption_proof=proof_path,
+        required_candidate_archive_sha256=archive_zip_sha256,
+        required_candidate_archive_bytes=archive_zip_bytes,
+        repo_root=repo_root,
+    )
+
+
 def apply_joint_p18_p19_deadzone_to_z8_archive(
     archive_bytes: bytes,
     *,
@@ -1562,6 +1589,7 @@ def materialize_joint_p18_p19_deadzone_candidate(
     archive_zip_bytes: int | None = None
     inflate_runtime_benchmark_work_order: dict[str, Any] | None = None
     inflate_runtime_benchmark_report: dict[str, Any] | None = None
+    receiver_proof_contract_report: dict[str, Any] | None = None
     if cfg.emit_archive_zip:
         archive_zip_path, archive_sha256, archive_zip_bytes = export_z8hpc1_archive_bytes(
             mutated_archive,
@@ -1583,15 +1611,29 @@ def materialize_joint_p18_p19_deadzone_candidate(
                 inflate_runtime_benchmark_work_order,
                 config=cfg,
             )
+    if cfg.emit_receiver_proof:
+        receiver_proof_contract_report = _verify_emitted_z8_receiver_proof(
+            archive_zip_path=archive_zip_path,
+            archive_zip_sha256=archive_sha256,
+            archive_zip_bytes=archive_zip_bytes,
+            repo_root=repo_root,
+        )
+    receiver_proof_verified = bool(
+        receiver_proof_contract_report
+        and receiver_proof_contract_report.get("receiver_contract_satisfied") is True
+        and receiver_proof_contract_report.get("runtime_consumption_proof_ready") is True
+    )
     exact_axis_blocker = (
         "contest_cpu_cuda_eval_not_executed"
+        if receiver_proof_verified
+        else "receiver_proof_verification_failed"
         if cfg.emit_receiver_proof
         else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
     )
     candidate_bin_sha256 = hashlib.sha256(mutated_archive).hexdigest()
     exact_axis_blocker_report = _exact_axis_blocker_report(
         exact_axis_blocker=exact_axis_blocker,
-        receiver_proof_executed=bool(cfg.emit_receiver_proof),
+        receiver_proof_executed=receiver_proof_verified,
         archive_zip_sha256=archive_sha256,
         candidate_bin_sha256=candidate_bin_sha256,
     )
@@ -1604,7 +1646,15 @@ def materialize_joint_p18_p19_deadzone_candidate(
         "archive_zip_path": archive_zip_path.as_posix() if archive_zip_path else None,
         "archive_zip_sha256": archive_sha256,
         "archive_zip_bytes": archive_zip_bytes,
-        "receiver_proof_executed": bool(cfg.emit_receiver_proof),
+        "receiver_proof_requested": bool(cfg.emit_receiver_proof),
+        "receiver_proof_executed": receiver_proof_verified,
+        "receiver_proof_contract_verified": receiver_proof_verified,
+        "receiver_proof_contract_report": receiver_proof_contract_report,
+        "receiver_proof_verification_blockers": (
+            list(receiver_proof_contract_report.get("blockers") or [])
+            if receiver_proof_contract_report is not None
+            else []
+        ),
         "inflate_runtime_benchmark_work_order": inflate_runtime_benchmark_work_order,
         "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
         "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
@@ -1905,6 +1955,7 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
     archive_zip_bytes: int | None = None
     inflate_runtime_benchmark_work_order: dict[str, Any] | None = None
     inflate_runtime_benchmark_report: dict[str, Any] | None = None
+    receiver_proof_contract_report: dict[str, Any] | None = None
     if cfg.emit_archive_zip:
         archive_zip_path, archive_sha256, archive_zip_bytes = export_z8hpc1_archive_bytes(
             final_archive,
@@ -1926,16 +1977,30 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
                 inflate_runtime_benchmark_work_order,
                 config=cfg,
             )
+    if cfg.emit_receiver_proof:
+        receiver_proof_contract_report = _verify_emitted_z8_receiver_proof(
+            archive_zip_path=archive_zip_path,
+            archive_zip_sha256=archive_sha256,
+            archive_zip_bytes=archive_zip_bytes,
+            repo_root=repo_root,
+        )
+    receiver_proof_verified = bool(
+        receiver_proof_contract_report
+        and receiver_proof_contract_report.get("receiver_contract_satisfied") is True
+        and receiver_proof_contract_report.get("runtime_consumption_proof_ready") is True
+    )
 
     exact_axis_blocker = (
         "contest_cpu_cuda_eval_not_executed"
+        if receiver_proof_verified
+        else "receiver_proof_verification_failed"
         if cfg.emit_receiver_proof
         else "receiver_proof_and_contest_cpu_cuda_eval_not_executed"
     )
     candidate_bin_sha256 = hashlib.sha256(final_archive).hexdigest()
     exact_axis_blocker_report = _exact_axis_blocker_report(
         exact_axis_blocker=exact_axis_blocker,
-        receiver_proof_executed=bool(cfg.emit_receiver_proof),
+        receiver_proof_executed=receiver_proof_verified,
         archive_zip_sha256=archive_sha256,
         candidate_bin_sha256=candidate_bin_sha256,
     )
@@ -1949,7 +2014,15 @@ def materialize_joint_p18_p19_relinearized_deadzone_search(
             "archive_zip_path": (archive_zip_path.as_posix() if archive_zip_path else None),
             "archive_zip_sha256": archive_sha256,
             "archive_zip_bytes": archive_zip_bytes,
-            "receiver_proof_executed": bool(cfg.emit_receiver_proof),
+            "receiver_proof_requested": bool(cfg.emit_receiver_proof),
+            "receiver_proof_executed": receiver_proof_verified,
+            "receiver_proof_contract_verified": receiver_proof_verified,
+            "receiver_proof_contract_report": receiver_proof_contract_report,
+            "receiver_proof_verification_blockers": (
+                list(receiver_proof_contract_report.get("blockers") or [])
+                if receiver_proof_contract_report is not None
+                else []
+            ),
             "inflate_runtime_benchmark_work_order": inflate_runtime_benchmark_work_order,
             "inflate_runtime_benchmark_report": inflate_runtime_benchmark_report,
             "inflate_runtime_benchmark_executed": inflate_runtime_benchmark_report is not None,
