@@ -3304,6 +3304,26 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         last_update_norm_by_group: dict[str, float] = {}
         max_accepted_pose_delta_l2 = 0.0
         best_stats = dict(before_stats)
+        candidate_attempt_count = 0
+        region_progress_candidate_count = 0
+        pose_cap_satisfied_candidate_count = 0
+        joint_score_improved_candidate_count = 0
+        pose_rejected_candidate_count = 0
+        joint_rejected_candidate_count = 0
+        no_progress_candidate_count = 0
+        max_candidate_receiver_uint8_changed_pixels_region = 0
+        max_candidate_argmax_flipped_pixels_region = 0
+        max_candidate_region_hard_won_delta = 0
+        max_candidate_region_hard_ratio_delta = 0.0
+        max_candidate_margin_mean_improvement = 0.0
+        max_candidate_margin_p50_improvement = 0.0
+        max_candidate_nonrate_improvement = 0.0
+        max_candidate_pose_delta_l2: float | None = None
+        min_candidate_pose_delta_l2: float | None = None
+        max_pose_rejected_receiver_uint8_changed_pixels_region = 0
+        max_pose_rejected_region_hard_won_delta = 0
+        max_pose_rejected_margin_mean_improvement = 0.0
+        min_pose_rejected_pose_delta_l2: float | None = None
         # Frame0 composite-compensation telemetry (pose-only). These remain
         # at their no-op defaults on the no-pose-teacher path so that path is
         # behaviorally byte-identical to before this operator existed.
@@ -3435,6 +3455,90 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 joint_rejects = (
                     candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate >= best_nonrate
                 )
+                candidate_attempt_count += 1
+                candidate_region_hard_won_delta = int(
+                    stats["region_hard_won_pixels"] - best_stats["region_hard_won_pixels"]
+                )
+                candidate_region_hard_ratio_delta = float(
+                    stats["region_hard_ratio"] - best_stats["region_hard_ratio"]
+                )
+                candidate_margin_mean_improvement = float(best_stats["margin_mean"] - stats["margin_mean"])
+                candidate_margin_p50_improvement = float(best_stats["margin_p50"] - stats["margin_p50"])
+                candidate_argmax_flipped_region = int(
+                    np.count_nonzero((candidate["argmax_np"] != initial_argmax_np) & region_bool_np)
+                )
+                max_candidate_receiver_uint8_changed_pixels_region = max(
+                    max_candidate_receiver_uint8_changed_pixels_region,
+                    int(changed_in_region),
+                )
+                max_candidate_argmax_flipped_pixels_region = max(
+                    max_candidate_argmax_flipped_pixels_region,
+                    candidate_argmax_flipped_region,
+                )
+                max_candidate_region_hard_won_delta = max(
+                    max_candidate_region_hard_won_delta,
+                    candidate_region_hard_won_delta,
+                )
+                max_candidate_region_hard_ratio_delta = max(
+                    max_candidate_region_hard_ratio_delta,
+                    candidate_region_hard_ratio_delta,
+                )
+                max_candidate_margin_mean_improvement = max(
+                    max_candidate_margin_mean_improvement,
+                    candidate_margin_mean_improvement,
+                )
+                max_candidate_margin_p50_improvement = max(
+                    max_candidate_margin_p50_improvement,
+                    candidate_margin_p50_improvement,
+                )
+                if pose_delta is not None:
+                    pose_delta_float = float(pose_delta)
+                    max_candidate_pose_delta_l2 = (
+                        pose_delta_float
+                        if max_candidate_pose_delta_l2 is None
+                        else max(max_candidate_pose_delta_l2, pose_delta_float)
+                    )
+                    min_candidate_pose_delta_l2 = (
+                        pose_delta_float
+                        if min_candidate_pose_delta_l2 is None
+                        else min(min_candidate_pose_delta_l2, pose_delta_float)
+                    )
+                if candidate_nonrate is not None and best_nonrate is not None:
+                    max_candidate_nonrate_improvement = max(
+                        max_candidate_nonrate_improvement,
+                        float(best_nonrate - candidate_nonrate),
+                    )
+                if region_progress:
+                    region_progress_candidate_count += 1
+                else:
+                    no_progress_candidate_count += 1
+                if not pose_cap_rejects:
+                    pose_cap_satisfied_candidate_count += 1
+                if candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate < best_nonrate:
+                    joint_score_improved_candidate_count += 1
+                if pose_cap_rejects:
+                    pose_rejected_candidate_count += 1
+                    max_pose_rejected_receiver_uint8_changed_pixels_region = max(
+                        max_pose_rejected_receiver_uint8_changed_pixels_region,
+                        int(changed_in_region),
+                    )
+                    max_pose_rejected_region_hard_won_delta = max(
+                        max_pose_rejected_region_hard_won_delta,
+                        candidate_region_hard_won_delta,
+                    )
+                    max_pose_rejected_margin_mean_improvement = max(
+                        max_pose_rejected_margin_mean_improvement,
+                        candidate_margin_mean_improvement,
+                    )
+                    if pose_delta is not None:
+                        pose_delta_float = float(pose_delta)
+                        min_pose_rejected_pose_delta_l2 = (
+                            pose_delta_float
+                            if min_pose_rejected_pose_delta_l2 is None
+                            else min(min_pose_rejected_pose_delta_l2, pose_delta_float)
+                        )
+                if joint_rejects:
+                    joint_rejected_candidate_count += 1
 
                 if pose_cap_rejects or joint_rejects:
                     # The frame1 birth step is receiver-visible but loses the
@@ -3577,6 +3681,42 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "final_pose_output_delta_l2": (None if final_pose_delta is None else float(final_pose_delta)),
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
         }
+        candidate_frontier_telemetry: dict[str, Any] = {
+            "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+            "authority": "batch_local_live_mlx_false_authority",
+            "candidate_attempt_count": int(candidate_attempt_count),
+            "region_progress_candidate_count": int(region_progress_candidate_count),
+            "pose_cap_satisfied_candidate_count": int(pose_cap_satisfied_candidate_count),
+            "joint_score_improved_candidate_count": int(joint_score_improved_candidate_count),
+            "pose_rejected_candidate_count": int(pose_rejected_candidate_count),
+            "joint_rejected_candidate_count": int(joint_rejected_candidate_count),
+            "no_progress_candidate_count": int(no_progress_candidate_count),
+            "max_candidate_receiver_uint8_changed_pixels_region": int(
+                max_candidate_receiver_uint8_changed_pixels_region
+            ),
+            "max_candidate_argmax_flipped_pixels_region": int(max_candidate_argmax_flipped_pixels_region),
+            "max_candidate_region_hard_won_delta": int(max_candidate_region_hard_won_delta),
+            "max_candidate_region_hard_ratio_delta": float(max_candidate_region_hard_ratio_delta),
+            "max_candidate_margin_mean_improvement": float(max_candidate_margin_mean_improvement),
+            "max_candidate_margin_p50_improvement": float(max_candidate_margin_p50_improvement),
+            "max_candidate_nonrate_improvement": float(max_candidate_nonrate_improvement),
+            "max_candidate_pose_output_delta_l2": (
+                None if max_candidate_pose_delta_l2 is None else float(max_candidate_pose_delta_l2)
+            ),
+            "min_candidate_pose_output_delta_l2": (
+                None if min_candidate_pose_delta_l2 is None else float(min_candidate_pose_delta_l2)
+            ),
+            "max_pose_rejected_receiver_uint8_changed_pixels_region": int(
+                max_pose_rejected_receiver_uint8_changed_pixels_region
+            ),
+            "max_pose_rejected_region_hard_won_delta": int(max_pose_rejected_region_hard_won_delta),
+            "max_pose_rejected_margin_mean_improvement": float(max_pose_rejected_margin_mean_improvement),
+            "min_pose_rejected_pose_output_delta_l2": (
+                None if min_pose_rejected_pose_delta_l2 is None else float(min_pose_rejected_pose_delta_l2)
+            ),
+            "reference_region_stats": "current_best_live_mlx",
+            "human_visual_fidelity_objective": False,
+        }
         # Frame0 composite-compensation payload (batch-local authority). The
         # compensated scope (``head_rgb_0.*``) is recorded SEPARATELY from the
         # birth ``updated_parameter_names`` so the receipt's birth-scope check
@@ -3660,6 +3800,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             runtime_sidecar_bytes=0,
             argmax_transitions=argmax_transitions,
             exact_nonrate=exact_nonrate_payload,
+            candidate_frontier_telemetry=candidate_frontier_telemetry,
             pose_compensation=pose_compensation_payload,
             action_id=action_identity,
             surface="live_mlx",
@@ -3691,6 +3832,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
             "joint_score_rejected_step_count": int(joint_score_rejected_step_count),
             "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
+            "candidate_frontier_telemetry": candidate_frontier_telemetry,
             "argmax_transitions": argmax_transitions,
             "exact_nonrate": exact_nonrate_payload,
             # Frame0 composite-compensation summary (batch-local). Defaults are

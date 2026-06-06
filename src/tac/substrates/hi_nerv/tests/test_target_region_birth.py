@@ -252,6 +252,12 @@ def test_receipt_emits_crux_trace_compatible_keys() -> None:
         update_norm_by_group={"head_rgb_1": 0.001},
         updated_parameter_names=["head_rgb_1.bias"],
         pose_guard={"available": True},
+        candidate_frontier_telemetry={
+            "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+            "candidate_attempt_count": 3,
+            "max_candidate_margin_mean_improvement": 0.125,
+            "min_pose_rejected_pose_output_delta_l2": 0.08,
+        },
     )
     assert receipt["schema"] == TARGET_REGION_BIRTH_RECEIPT_SCHEMA
     assert receipt["receiver_surface_uint8_changed_pixels"] == 9
@@ -259,6 +265,12 @@ def test_receipt_emits_crux_trace_compatible_keys() -> None:
     assert receipt["receiver_surface_worst_region_margin_p50_delta"] == pytest.approx(-0.4)
     assert receipt["receiver_surface_float_rgb_delta_linf"] == pytest.approx(0.02)
     assert receipt["frame_scope"] == "frame1_seg_pose_joint"
+    assert receipt["candidate_frontier_telemetry"] == {
+        "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+        "candidate_attempt_count": 3,
+        "max_candidate_margin_mean_improvement": 0.125,
+        "min_pose_rejected_pose_output_delta_l2": 0.08,
+    }
     # Custody contract: receipts travel inside substrate_artifact_metadata,
     # whose harness validator REFUSES nested authority/readiness keys (single
     # custody surface). The receipt must carry the non-authority marker and

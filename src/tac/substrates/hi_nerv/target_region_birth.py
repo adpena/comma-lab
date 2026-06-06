@@ -382,6 +382,7 @@ def build_target_region_birth_receipt(
     runtime_sidecar_bytes: int = 0,
     argmax_transitions: Mapping[str, int] | None = None,
     exact_nonrate: Mapping[str, Any] | None = None,
+    candidate_frontier_telemetry: Mapping[str, Any] | None = None,
     pose_compensation: Mapping[str, Any] | None = None,
     action_id: str | None = None,
     surface: str = "live_mlx",
@@ -458,6 +459,11 @@ def build_target_region_birth_receipt(
         # Exact nonlinear joint movement (batch-local authority) when a pose
         # teacher was available: 100*Δd_seg + (sqrt(10*d_pose') - sqrt(10*d_pose)).
         "exact_nonrate": dict(exact_nonrate) if exact_nonrate is not None else None,
+        "candidate_frontier_telemetry": (
+            dict(candidate_frontier_telemetry)
+            if candidate_frontier_telemetry is not None
+            else None
+        ),
         # Frame0 composite compensation record (batch-local authority). When a
         # receiver-visible birth step held region progress but lost the pose
         # cap or the exact joint gate, a frame0-only (head_rgb_0.*) pose
