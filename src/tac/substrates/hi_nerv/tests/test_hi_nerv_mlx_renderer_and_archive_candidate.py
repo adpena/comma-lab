@@ -511,8 +511,34 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
         payload["bootstrap_update_scope"]
         == "live_segnet_scoped_late_feature_grid_fine_latent_head_rgb_1"
     )
+    smoke = payload["hinerv_pair_local_actuator_smoke"]
+    assert smoke["schema"] == "hinerv_pair_local_actuator_smoke.v1"
+    assert smoke["pair_local_adapter_bytes"] > 0
+    assert len(smoke["pair_local_adapter_sha256"]) == 64
+    assert smoke["pair_local_output_delta_l2"] >= 0.0
+    assert smoke["section_value_per_byte_rows"][0]["bytes"] == (
+        smoke["pair_local_adapter_bytes"]
+    )
+    execution = payload["pr95_scorer_atom_actuator_execution_evidence"]
+    assert execution["schema"] == "pr95_scorer_atom_actuator_execution_evidence.v1"
+    assert execution["pair_local_adapter_sha256"] == (
+        smoke["pair_local_adapter_sha256"]
+    )
+    assert execution["score_claim"] is False
     assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]
     assert "head_rgb_0.*" not in payload["archive_charged_decoder_tensors"]
+    pair_local = payload["hinerv_pair_local_actuator_smoke"]
+    assert pair_local["schema"] == "hinerv_pair_local_actuator_smoke.v1"
+    assert pair_local["bootstrap_update_scope"] == payload["bootstrap_update_scope"]
+    assert pair_local["pair_local_adapter_bytes"] > 0
+    assert pair_local["score_claim"] is False
+    execution = payload["pr95_scorer_atom_actuator_execution_evidence"]
+    assert execution["pair_local_adapter_sha256"] == pair_local[
+        "pair_local_adapter_sha256"
+    ]
+    assert execution["section_value_per_byte_rows"][0]["bytes"] == pair_local[
+        "pair_local_adapter_bytes"
+    ]
     for name in payload["bootstrap_update_applied_tensor_names"]:
         assert (
             name == "latents_fine"

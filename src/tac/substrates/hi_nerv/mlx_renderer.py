@@ -21,6 +21,7 @@ local PyTorch HiNeRV grammar so archive/export/runtime contracts remain ours.
 
 from __future__ import annotations
 
+import hashlib
 import math
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
@@ -1305,6 +1306,24 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 or name.startswith("fine_injector.")
                 or name.startswith("head_rgb_1.")
             )
+
+        def _bootstrap_parameter_byte_summary() -> tuple[int, str, list[str]]:
+            digest = hashlib.sha256()
+            total_bytes = 0
+            names: list[str] = []
+            for raw_name, leaf in tree_flatten(self.parameters()):  # type: ignore[operator]
+                if leaf is None or not _bootstrap_update_name_allowed(raw_name):
+                    continue
+                name = _flat_param_name(raw_name)
+                arr = np.ascontiguousarray(np.asarray(leaf))
+                digest.update(name.encode("utf-8"))
+                digest.update(str(arr.dtype).encode("utf-8"))
+                digest.update(np.asarray(arr.shape, dtype=np.int64).tobytes())
+                digest.update(arr.tobytes())
+                total_bytes += int(arr.nbytes)
+                names.append(name)
+            return total_bytes, digest.hexdigest(), sorted(names)
+
         segnet_margin_metadata: dict[str, Any] = {
             "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
             "enabled": False,
@@ -1853,6 +1872,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             )
             return out
 
+        before_pred0_snapshot, before_pred1_snapshot = _predict_pair01(self)
+        before_pred0_snapshot = mx.stop_gradient(mx.array(before_pred0_snapshot))  # type: ignore[union-attr]
+        before_pred1_snapshot = mx.stop_gradient(mx.array(before_pred1_snapshot))  # type: ignore[union-attr]
+        mx.eval(before_pred0_snapshot, before_pred1_snapshot)  # type: ignore[union-attr]
         before = _scalar_metrics(self)
         loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
         if tree_unflatten is None:
@@ -2009,6 +2032,72 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 if applied_tensor_count == 0:
                     break
         after = _scalar_metrics(self)
+        after_pred0, after_pred1 = _predict_pair01(self)
+        output_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
+            0.5
+            * (
+                mx.mean((after_pred0 - before_pred0_snapshot) ** 2)  # type: ignore[union-attr]
+                + mx.mean((after_pred1 - before_pred1_snapshot) ** 2)  # type: ignore[union-attr]
+            )
+        )
+        mx.eval(output_delta_l2_tensor)  # type: ignore[union-attr]
+        pair_local_output_delta_l2 = float(output_delta_l2_tensor.item())
+        finite_grad_norms = [
+            float(value)
+            for value in grad_norm_history
+            if math.isfinite(float(value)) and float(value) > 0.0
+        ]
+        pair_local_grad_norm = max(finite_grad_norms) if finite_grad_norms else None
+        (
+            pair_local_adapter_bytes,
+            pair_local_adapter_sha256,
+            pair_local_adapter_tensor_names,
+        ) = _bootstrap_parameter_byte_summary()
+        pair_local_value_per_byte = (
+            pair_local_output_delta_l2 / float(pair_local_adapter_bytes)
+            if pair_local_adapter_bytes > 0
+            else 0.0
+        )
+        section_value_per_byte_rows = [
+            {
+                "section": "hi_nerv_pair_local_bootstrap_allowlist",
+                "bytes": int(pair_local_adapter_bytes),
+                "score_value": pair_local_output_delta_l2,
+                "value_per_byte": pair_local_value_per_byte,
+            }
+        ]
+        pair_local_smoke = {
+            "schema": "hinerv_pair_local_actuator_smoke.v1",
+            "family": "hi_nerv",
+            "source": "hi_nerv_scorer_domain_bootstrap",
+            "bootstrap_update_scope": bootstrap_update_scope,
+            "pair_count": int(idx.shape[0]),
+            "pair_local_adapter_bytes": int(pair_local_adapter_bytes),
+            "pair_local_adapter_sha256": pair_local_adapter_sha256,
+            "pair_local_adapter_tensor_names": pair_local_adapter_tensor_names,
+            "pair_local_grad_norm": pair_local_grad_norm,
+            "pair_local_output_delta_l2": pair_local_output_delta_l2,
+            "section_value_per_byte_rows": section_value_per_byte_rows,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        pr95_actuator_execution_evidence = {
+            "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+            "family": "hi_nerv",
+            "source": "hi_nerv_scorer_domain_bootstrap",
+            "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+            "pair_local_adapter_bytes": int(pair_local_adapter_bytes),
+            "pair_local_adapter_sha256": pair_local_adapter_sha256,
+            "pair_local_grad_norm": pair_local_grad_norm,
+            "pair_local_output_delta_l2": pair_local_output_delta_l2,
+            "section_value_per_byte_rows": section_value_per_byte_rows,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
 
         def _improvement(key: str) -> float:
             return float(before[key] - after[key])
@@ -2036,6 +2125,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ),
             "bootstrap_scoped_out_gradient_tensor_count": int(
                 bootstrap_scoped_out_gradient_tensor_count
+            ),
+            "hinerv_pair_local_actuator_smoke": pair_local_smoke,
+            "pr95_scorer_atom_actuator_execution_evidence": (
+                pr95_actuator_execution_evidence
             ),
             "accepted_step_count": int(accepted_step_count),
             "rejected_step_count": int(rejected_step_count),
