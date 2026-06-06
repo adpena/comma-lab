@@ -70304,16 +70304,16 @@
           "evidence": "uv run python tools/audit_frontier_rate_attack_consolidation.py --format text => PASS; ruff and focused pytest 16 passed"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "ruff clean for consolidation audit module/CLI/test; pytest src/tac/tests/test_frontier_rate_attack_consolidation.py => 3 passed; audit PASS with legacy advisory blockers=0 and production_action blocked"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/frontier_rate_attack_consolidation_audit_20260606T173556Z.md + .omx/research/codex_session_summary_20260606T173725Z_z8_entropy_delta_receiver_hook_codex.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/audit_frontier_rate_attack_consolidation.py wired into tools/all_lanes_preflight.py Gate #37 and tools/operator_briefing.py phase_6d0_frontier_rate_attack_consolidation summary"
         }
       },
       "notes": ""
@@ -70367,5 +70367,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-06T19:13:39Z"
+  "updated_at": "2026-06-06T19:19:06Z"
 }
