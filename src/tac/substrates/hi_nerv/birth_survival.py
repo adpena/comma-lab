@@ -20,11 +20,14 @@ Two surfaces are produced honestly here:
   weight pinned to zero) to simulate continued ordinary training, then
   re-measures the same region.
 
-The ``parseback_mlx`` and ``inflated_torch_cpu`` surfaces require an archive
-build / inflate runtime that this scoped producer cannot stand up faithfully;
-rather than fabricate a ``survived`` boolean, it returns a typed BLOCKED row
-(``hi_nerv_target_region_birth_survival_blocked.v1``) naming the blocker, so the
-gate keeps blocking those surfaces.  Honesty over coverage.
+Calling ``measure_birth_survival(..., surface="parseback_mlx")`` still returns
+a typed BLOCKED row unless a real parse-back artifact is supplied.  The bounded
+parse-back path is ``measure_birth_parseback_survival_from_report``: it consumes
+an existing receiver-cache/parse-back report, maps the live receipt's pair ids,
+and re-measures the named region by rendering the charged archive bytes through
+the receiver.  If the report names a different action id, or says it cached a
+pair set that excludes the birth pair, it returns a typed BLOCKED row with no
+``survived`` boolean.  Honesty over coverage.
 
 NO-FAKE discipline: every ``survived`` boolean is the result of a real forward
 recomputation of region target support on the named surface.  If this module
@@ -40,12 +43,17 @@ marker and NONE of ``score_claim`` / ``promotion_eligible`` /
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import hashlib
+import json
+import zipfile
+from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from scipy import ndimage
 
+from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.target_region_birth import region_margin_stats
 
 # Mirror the gate's canonical schema strings exactly (the gate is the contract).
@@ -204,18 +212,16 @@ def _candidate_logits_np(scorer_teacher: Any, frame1_nhwc01: Any) -> np.ndarray:
     return out
 
 
-def _region_support_on_surface(
-    model: Any,
+def _region_support_from_frame1_nhwc01(
     *,
     scorer_teacher: Any,
-    pair_indices: Any,
+    frame1_nhwc01: Any,
     region_mask_np: np.ndarray,
     birth_class: int,
 ) -> dict[str, Any]:
-    """Forward the model and measure the region's target support on this surface."""
+    """Measure the named birth region on a supplied receiver frame-1 surface."""
 
-    frame1 = _predict_frame1_nhwc01(model, pair_indices)
-    logits_np = _candidate_logits_np(scorer_teacher, frame1)
+    logits_np = _candidate_logits_np(scorer_teacher, frame1_nhwc01)
     class_count = int(logits_np.shape[-1])
     if not 0 <= int(birth_class) < class_count:
         raise BirthSurvivalError(f"birth class {birth_class} outside live logits classes {class_count}")
@@ -233,10 +239,165 @@ def _region_support_on_surface(
     }
 
 
+def _region_support_on_surface(
+    model: Any,
+    *,
+    scorer_teacher: Any,
+    pair_indices: Any,
+    region_mask_np: np.ndarray,
+    birth_class: int,
+) -> dict[str, Any]:
+    """Forward the model and measure the region's target support on this surface."""
+
+    frame1 = _predict_frame1_nhwc01(model, pair_indices)
+    return _region_support_from_frame1_nhwc01(
+        scorer_teacher=scorer_teacher,
+        frame1_nhwc01=frame1,
+        region_mask_np=region_mask_np,
+        birth_class=birth_class,
+    )
+
+
 def _region_debt_units(region_unsolved: int, total_scored_pixels: int) -> float:
     if total_scored_pixels <= 0:
         return 0.0
     return float(100.0 * int(region_unsolved) / int(total_scored_pixels))
+
+
+def _read_mapping_report(report: Mapping[str, Any] | str | Path) -> dict[str, Any]:
+    if isinstance(report, Mapping):
+        return dict(report)
+    path = Path(report).expanduser().resolve(strict=False)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise BirthSurvivalError(f"could not read parseback report: {path}") from exc
+    if not isinstance(payload, Mapping):
+        raise BirthSurvivalError(f"parseback report must be a JSON object: {path}")
+    return dict(payload)
+
+
+def _direct_receiver_report(report: Mapping[str, Any]) -> Mapping[str, Any]:
+    direct = report.get("direct_receiver_cache_report")
+    if isinstance(direct, Mapping):
+        return direct
+    return report
+
+
+def _parseback_report_archive_path(report: Mapping[str, Any]) -> Path | None:
+    direct = _direct_receiver_report(report)
+    for source in (direct, report):
+        raw = source.get("archive_path")
+        if isinstance(raw, str) and raw.strip():
+            return Path(raw).expanduser().resolve(strict=False)
+    return None
+
+
+def _parseback_report_archive_sha256(report: Mapping[str, Any]) -> str | None:
+    direct = _direct_receiver_report(report)
+    for source in (direct, report):
+        raw = source.get("archive_sha256")
+        if isinstance(raw, str) and len(raw) == 64:
+            return raw.lower()
+    return None
+
+
+def _parseback_report_action_id(report: Mapping[str, Any]) -> str | None:
+    direct = _direct_receiver_report(report)
+    for source in (direct, report):
+        for key in ("action_id", "live_birth_action_id", "hard_birth_action_id", "target_region_birth_action_id"):
+            raw = source.get(key)
+            if isinstance(raw, str) and raw.strip():
+                return raw.strip()
+    return None
+
+
+def _requested_pair_indices_np(pair_indices: Any) -> np.ndarray:
+    arr = np.asarray(pair_indices, dtype=np.int64).reshape(-1)
+    if arr.size == 0 or np.any(arr < 0):
+        raise BirthSurvivalError("pair_indices must be non-empty and non-negative")
+    return np.ascontiguousarray(arr)
+
+
+def _parseback_selected_pairs(report: Mapping[str, Any]) -> set[int] | None:
+    direct = _direct_receiver_report(report)
+    raw = direct.get("selected_pair_indices")
+    if raw is None:
+        return None
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        raise BirthSurvivalError("parseback report selected_pair_indices must be a sequence")
+    return {int(value) for value in raw}
+
+
+def _read_hiv1_payload_from_archive_zip(archive_path: Path) -> tuple[str, bytes]:
+    if not archive_path.is_file():
+        raise BirthSurvivalError(f"HiNeRV parseback archive.zip missing: {archive_path}")
+    try:
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            names = [name for name in zf.namelist() if not name.endswith("/")]
+            payload_members = [
+                name for name in names if name in {MINIMAL_SINGLE_MEMBER_NAME, "0.bin"}
+            ]
+            if len(payload_members) != 1:
+                raise BirthSurvivalError(
+                    "HiNeRV parseback requires exactly one HIV1 payload member "
+                    f"named {MINIMAL_SINGLE_MEMBER_NAME!r} or '0.bin'; "
+                    f"found {payload_members!r} among {names[:10]!r}"
+                )
+            member = payload_members[0]
+            payload = zf.read(member)
+    except zipfile.BadZipFile as exc:
+        raise BirthSurvivalError(f"HiNeRV parseback archive.zip is invalid: {archive_path}") from exc
+    if not payload.startswith(b"HIV1"):
+        digest = hashlib.sha256(payload).hexdigest()
+        raise BirthSurvivalError(f"HiNeRV parseback payload is not HIV1: member={member!r} sha256={digest}")
+    return member, payload
+
+
+def _render_parseback_pair01_nhwc01(
+    *,
+    archive_path: Path,
+    pair_indices: np.ndarray,
+) -> tuple[tuple[Any, Any], dict[str, Any]]:
+    """Render requested pairs from parsed HIV1 archive bytes through receiver."""
+
+    _require_mlx()
+    import mlx.core as mx
+    import torch
+
+    from tac.substrates.hi_nerv.inflate import build_model_from_archive
+
+    member, payload = _read_hiv1_payload_from_archive_zip(archive_path)
+    arc, cfg, receiver_model = build_model_from_archive(payload, device="cpu")
+    max_pair = int(pair_indices.max())
+    if max_pair >= int(cfg.num_pairs):
+        raise BirthSurvivalError(
+            "parseback pair index exceeds archive pair count: "
+            f"max_pair={max_pair} num_pairs={int(cfg.num_pairs)}"
+        )
+    idx_t = torch.tensor(pair_indices.tolist(), dtype=torch.long)
+    with torch.no_grad():
+        rgb0, rgb1 = receiver_model(idx_t)
+    frame0 = np.transpose(np.asarray(rgb0.detach().cpu(), dtype=np.float32), (0, 2, 3, 1))
+    frame1 = np.transpose(np.asarray(rgb1.detach().cpu(), dtype=np.float32), (0, 2, 3, 1))
+    archive_bytes = archive_path.read_bytes()
+    return (
+        (
+            mx.array(frame0, dtype=mx.float32),  # type: ignore[union-attr]
+            mx.array(frame1, dtype=mx.float32),  # type: ignore[union-attr]
+        ),
+        {
+            "parseback_archive_path": archive_path.as_posix(),
+            "parseback_archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+            "parseback_archive_bytes": len(archive_bytes),
+            "parseback_zip_member": str(member),
+            "parseback_payload_sha256": hashlib.sha256(payload).hexdigest(),
+            "parseback_payload_bytes": len(payload),
+            "parseback_archive_schema_version": int(arc.schema_version),
+            "parseback_receiver_model": "hiv1_build_model_from_archive_torch_cpu",
+            "parseback_pair_indices": [int(value) for value in pair_indices.tolist()],
+        },
+    )
 
 
 def _live_pose_compensation(live_birth_payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
@@ -275,6 +436,7 @@ def _pose_compensation_survival_on_surface(
     target_rgb_1: Any | None,
     pair_indices: Any,
     live_pose_compensation: Mapping[str, Any] | None,
+    surface_pair01_nhwc01: tuple[Any, Any] | None = None,
     d_pose_tolerance_abs: float,
     d_pose_tolerance_rel: float,
 ) -> dict[str, Any]:
@@ -332,7 +494,10 @@ def _pose_compensation_survival_on_surface(
                 axis=-1,
             )
         )
-    pred0, pred1 = _predict_pair01_nhwc01(model, pair_indices)
+    if surface_pair01_nhwc01 is None:
+        pred0, pred1 = _predict_pair01_nhwc01(model, pair_indices)
+    else:
+        pred0, pred1 = surface_pair01_nhwc01
     surface_pose = pose_fn(
         mx.concatenate(  # type: ignore[union-attr]
             [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
@@ -509,6 +674,153 @@ def measure_birth_survival(
     )
 
 
+def measure_birth_parseback_survival_from_report(
+    *,
+    parseback_report: Mapping[str, Any] | str | Path,
+    scorer_teacher: Any,
+    pose_teacher: Any | None = None,
+    target_rgb_0: Any | None = None,
+    target_rgb_1: Any | None = None,
+    target_labels: Any,
+    live_birth_payload: Mapping[str, Any],
+    pair_indices: Any,
+    pose_d_pose_tolerance_abs: float = 1.0e-8,
+    pose_d_pose_tolerance_rel: float = 5.0e-2,
+) -> dict[str, Any]:
+    """Re-measure an accepted birth on parsed archive receiver bytes.
+
+    The supplied report is a custody/identity handle produced by the receiver
+    cache or archive parse-back path.  This function verifies that the report
+    names a real archive and, when selected-pair coverage is present, that it
+    includes the live birth pair(s).  The actual metric surface is then rendered
+    from the archive bytes through ``build_model_from_archive`` and measured
+    through the same scorer teacher as the live/fakequant surfaces.
+    """
+
+    action_id = _live_action_id(live_birth_payload)
+    report = _read_mapping_report(parseback_report)
+    report_action_id = _parseback_report_action_id(report)
+    if report_action_id is not None and report_action_id != action_id:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="parseback_mlx",
+            blocker="birth_survival_parseback_action_id_mismatch",
+            reason=(
+                "parseback report action_id does not match live birth action_id: "
+                f"report={report_action_id} live={action_id}"
+            ),
+        )
+    archive_path = _parseback_report_archive_path(report)
+    if archive_path is None:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="parseback_mlx",
+            blocker="birth_survival_parseback_archive_path_missing",
+        )
+    expected_archive_sha = _parseback_report_archive_sha256(report)
+    if expected_archive_sha is None:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="parseback_mlx",
+            blocker="birth_survival_parseback_archive_sha256_missing",
+        )
+    if not archive_path.is_file():
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="parseback_mlx",
+            blocker="birth_survival_parseback_archive_zip_missing",
+        )
+    actual_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+    if actual_sha.lower() != expected_archive_sha.lower():
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="parseback_mlx",
+            blocker="birth_survival_parseback_archive_sha256_mismatch",
+        )
+
+    pair_np = _requested_pair_indices_np(pair_indices)
+    selected_pairs = _parseback_selected_pairs(report)
+    if selected_pairs is not None:
+        missing = sorted(int(value) for value in set(pair_np.tolist()) - selected_pairs)
+        if missing:
+            return _blocked_survival_row(
+                action_id=action_id,
+                surface="parseback_mlx",
+                blocker="birth_survival_parseback_birth_pair_not_cached",
+                reason=(
+                    "parseback report did not cache every requested birth pair; "
+                    f"missing_pairs={missing[:8]}"
+                ),
+            )
+
+    _require_mlx()
+    worst_region = _live_worst_region(live_birth_payload)
+    birth_class = int(worst_region["class_index"])
+    region_mask_np, region_pixels = reconstruct_birth_region_mask(target_labels, worst_region)
+    initial_in_region_target = _initial_in_region_target_count(worst_region)
+    live_pose_compensation = _live_pose_compensation(live_birth_payload)
+
+    pair_frames, surface_meta = _render_parseback_pair01_nhwc01(
+        archive_path=archive_path,
+        pair_indices=pair_np,
+    )
+    support = _region_support_from_frame1_nhwc01(
+        scorer_teacher=scorer_teacher,
+        frame1_nhwc01=pair_frames[1],
+        region_mask_np=region_mask_np,
+        birth_class=birth_class,
+    )
+    pose_compensation_survival = _pose_compensation_survival_on_surface(
+        object(),
+        pose_teacher=pose_teacher,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        pair_indices=pair_indices,
+        live_pose_compensation=live_pose_compensation,
+        surface_pair01_nhwc01=pair_frames,
+        d_pose_tolerance_abs=float(pose_d_pose_tolerance_abs),
+        d_pose_tolerance_rel=float(pose_d_pose_tolerance_rel),
+    )
+
+    region_hard_won = int(support["region_hard_won"])
+    net_target_support_delta = int(region_hard_won - initial_in_region_target)
+    target_support_survived = bool(region_hard_won >= 1 and net_target_support_delta > 0)
+    compensation_required = bool(pose_compensation_survival["required"])
+    compensation_survived = (
+        True
+        if not compensation_required
+        else bool(pose_compensation_survival["survived"])
+    )
+    survived = bool(target_support_survived and compensation_survived)
+    region_debt_units = _region_debt_units(int(support["region_unsolved"]), int(support["total_scored_pixels"]))
+
+    return _survival_row(
+        action_id=action_id,
+        surface="parseback_mlx",
+        survived=survived,
+        birth_class=birth_class,
+        region_pixels=region_pixels,
+        region_hard_won=region_hard_won,
+        target_hard_lost=max(0, initial_in_region_target - region_hard_won),
+        net_target_support_delta=net_target_support_delta,
+        initial_in_region_target=initial_in_region_target,
+        region_unsolved=int(support["region_unsolved"]),
+        region_debt_units=region_debt_units,
+        margin_stats=support["stats"],
+        fakequant_bits=None,
+        total_scored_pixels=int(support["total_scored_pixels"]),
+        worst_region=worst_region,
+        pose_compensation_survival=pose_compensation_survival,
+        surface_meta={
+            **surface_meta,
+            "parseback_report_schema": str(report.get("schema") or ""),
+            "parseback_direct_report_schema": str(
+                _direct_receiver_report(report).get("schema") or ""
+            ),
+        },
+    )
+
+
 def measure_birth_hysteresis(
     model: Any,
     *,
@@ -633,10 +945,11 @@ def _survival_row(
     region_unsolved: int,
     region_debt_units: float,
     margin_stats: Mapping[str, float],
-    fakequant_bits: int,
+    fakequant_bits: int | None,
     total_scored_pixels: int,
     worst_region: Mapping[str, Any],
     pose_compensation_survival: Mapping[str, Any] | None = None,
+    surface_meta: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble the survival row in the gate's canonical schema.
 
@@ -673,7 +986,6 @@ def _survival_row(
         "region_margin_mean": float(margin_stats["margin_mean"]),
         "region_margin_min": float(margin_stats["margin_min"]),
         "region_hard_ratio": float(margin_stats["region_hard_ratio"]),
-        "fakequant_bits": int(fakequant_bits),
         "total_scored_pixels": int(total_scored_pixels),
         # Canonical receiver-surface aliases the gate's support breakdown reads.
         "receiver_surface_target_hard_won_count": int(region_hard_won),
@@ -690,10 +1002,20 @@ def _survival_row(
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
     }
+    if fakequant_bits is not None:
+        row["fakequant_bits"] = int(fakequant_bits)
+    if surface_meta:
+        row.update(dict(surface_meta))
     return row
 
 
-def _blocked_survival_row(*, action_id: str, surface: str) -> dict[str, Any]:
+def _blocked_survival_row(
+    *,
+    action_id: str,
+    surface: str,
+    blocker: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
     """Typed FAIL-CLOSED row for surfaces this producer cannot stand up.
 
     Deliberately carries NO ``survived`` boolean: the gate finds no satisfying
@@ -702,14 +1024,14 @@ def _blocked_survival_row(*, action_id: str, surface: str) -> dict[str, Any]:
     fabricated ``survived=True`` here would be a fake implementation.
     """
 
-    blocker = _SURVIVAL_SURFACE_BLOCKER.get(str(surface), "birth_survival_surface_unsupported")
+    blocker = blocker or _SURVIVAL_SURFACE_BLOCKER.get(str(surface), "birth_survival_surface_unsupported")
     return {
         "schema": BIRTH_SURVIVAL_BLOCKED_SCHEMA,
         "action_id": str(action_id),
         "surface": str(surface),
         "blocked": True,
         "blocker": blocker,
-        "reason": (
+        "reason": reason or (
             "scoped MLX survival producer cannot build a faithful "
             f"{surface} surface (no archive parse-back / torch inflate runtime here)"
         ),
@@ -726,6 +1048,7 @@ __all__ = [
     "FAITHFUL_SURVIVAL_SURFACES",
     "BirthSurvivalError",
     "measure_birth_hysteresis",
+    "measure_birth_parseback_survival_from_report",
     "measure_birth_survival",
     "reconstruct_birth_region_mask",
 ]

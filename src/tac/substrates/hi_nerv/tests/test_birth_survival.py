@@ -19,11 +19,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import zipfile
 from datetime import UTC, datetime
 
 import numpy as np
 import pytest
 
+from tac.repo_io import sha256_file
+from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.birth_survival import (
     BIRTH_HYSTERESIS_SCHEMA,
     BIRTH_SURVIVAL_BLOCKED_SCHEMA,
@@ -31,6 +34,7 @@ from tac.substrates.hi_nerv.birth_survival import (
     BLOCKED_SURVIVAL_SURFACES,
     BirthSurvivalError,
     measure_birth_hysteresis,
+    measure_birth_parseback_survival_from_report,
     measure_birth_survival,
     reconstruct_birth_region_mask,
 )
@@ -284,6 +288,40 @@ def _with_accepted_pose_compensation(payload: dict, *, d_pose: float = 10_000.0)
         "receipt": {
             **payload["receipt"],
             "pose_compensation": compensation,
+        },
+    }
+
+
+def _write_mlx_model_hiv1_archive(tmp_path, model, cfg):
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    payload = pack_archive_from_exported_state_dict(
+        exported_state_dict=model.export_state_dict(),
+        cfg=cfg,
+        decoder_codec="fp16_enveloped",
+        latent_codec="int16_raw",
+    )
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(MINIMAL_SINGLE_MEMBER_NAME, payload)
+    return archive
+
+
+def _parseback_report_for_archive(archive, selected_pair_indices):
+    return {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "archive_path": archive.as_posix(),
+        "archive_sha256": sha256_file(archive),
+        "direct_receiver_cache_report": {
+            "schema": "hi_nerv_direct_receiver_cache_report.v1",
+            "source_family": "hi_nerv",
+            "archive_path": archive.as_posix(),
+            "archive_sha256": sha256_file(archive),
+            "archive_magic": "HIV1",
+            "zip_member": MINIMAL_SINGLE_MEMBER_NAME,
+            "selected_pair_indices": list(selected_pair_indices),
         },
     }
 
@@ -627,6 +665,144 @@ def test_launch_gate_consumes_fakequant_survival_row(tmp_path) -> None:
     # The gate still blocks the surfaces we deliberately did not produce, proving
     # our row is consumed surgically (not papering over the whole L4 ladder).
     assert "birth_survival_receipt_missing:parseback_mlx" in blocking
+
+
+@skip_no_mlx
+def test_parseback_survival_row_consumes_archive_report_same_action(tmp_path) -> None:
+    import mlx.core as mx
+    from tac.analysis.nerv_long_run_launch_gate import evaluate_nerv_long_run_launch_gate
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    archive = _write_mlx_model_hiv1_archive(tmp_path, model, cfg)
+    report = _parseback_report_for_archive(
+        archive,
+        selected_pair_indices=range(cfg.num_pairs),
+    )
+
+    row = measure_birth_parseback_survival_from_report(
+        parseback_report=report,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        pair_indices=idx,
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_SCHEMA
+    assert row["surface"] == "parseback_mlx"
+    assert row["action_id"] == payload["action_id"]
+    assert isinstance(row["survived"], bool)
+    assert row["parseback_archive_sha256"] == sha256_file(archive)
+    assert row["parseback_zip_member"] == MINIMAL_SINGLE_MEMBER_NAME
+    assert row["parseback_receiver_model"] == "hiv1_build_model_from_archive_torch_cpu"
+    assert row["receiver_surface_target_hard_won_count"] == row["region_hard_won_count"]
+    assert "fakequant_bits" not in row
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
+
+    run_root = tmp_path / "run"
+    run_root.mkdir()
+    (run_root / "live_birth_receipt.json").write_text(json.dumps(payload["receipt"]))
+    (run_root / "parseback_survival.json").write_text(json.dumps(row))
+    frontier = run_root / "frontier_pointer.json"
+    frontier.write_text(json.dumps({"last_refreshed_utc": datetime.now(UTC).isoformat()}))
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hinerv",
+        run_root=run_root,
+        frontier_pointer=frontier,
+    )
+    blocking = verdict["blocking_evidence"]
+    assert "birth_survival_receipt_missing:parseback_mlx" not in blocking
+    assert "l4_survival_action_id_mismatch:parseback_mlx" not in blocking
+    assert "birth_survival_receipt_missing:fakequant_mlx" in blocking
+
+
+@skip_no_mlx
+def test_parseback_survival_remeasures_pose_compensation_for_composite_birth(tmp_path) -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    payload = _with_accepted_pose_compensation(payload)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    archive = _write_mlx_model_hiv1_archive(tmp_path, model, cfg)
+    report = _parseback_report_for_archive(
+        archive,
+        selected_pair_indices=range(cfg.num_pairs),
+    )
+
+    row = measure_birth_parseback_survival_from_report(
+        parseback_report=report,
+        scorer_teacher=teacher,
+        pose_teacher=_FramePairMeanPoseTeacher(mx),
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        pair_indices=idx,
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_SCHEMA
+    assert row["surface"] == "parseback_mlx"
+    assert row["action_id"] == payload["action_id"]
+    assert row["pose_compensation_required"] is True
+    assert row["pose_compensation_survived"] is True
+    assert row["pose_compensation_survival"]["surface_d_pose_batch"] >= 0.0
+    assert row["pose_compensation_survival"]["live_composite_d_pose_batch"] == pytest.approx(10_000.0)
+    assert "pose_compensation_survival_pose_teacher_missing" not in row["blockers"]
+
+
+def test_parseback_report_action_id_mismatch_blocks_without_survival() -> None:
+    labels = np.zeros((1, 8, 10), dtype=np.int64)
+    payload = {
+        "action_id": "a" * 64,
+        "worst_region": {
+            "batch_index": 0,
+            "class_index": 0,
+            "region_label": 1,
+            "region_pixel_count": 80,
+            "region_unsolved_pixel_count": 80,
+        },
+    }
+    row = measure_birth_parseback_survival_from_report(
+        parseback_report={"action_id": "b" * 64},
+        scorer_teacher=object(),
+        target_labels=labels,
+        live_birth_payload=payload,
+        pair_indices=[0],
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_BLOCKED_SCHEMA
+    assert row["surface"] == "parseback_mlx"
+    assert row["action_id"] == payload["action_id"]
+    assert row["blocker"] == "birth_survival_parseback_action_id_mismatch"
+    assert "survived" not in row
+
+
+@skip_no_mlx
+def test_parseback_survival_blocks_when_birth_pair_not_cached(tmp_path) -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    archive = _write_mlx_model_hiv1_archive(tmp_path, model, cfg)
+    report = _parseback_report_for_archive(archive, selected_pair_indices=[0])
+
+    row = measure_birth_parseback_survival_from_report(
+        parseback_report=report,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        pair_indices=idx,
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_BLOCKED_SCHEMA
+    assert row["surface"] == "parseback_mlx"
+    assert row["action_id"] == payload["action_id"]
+    assert row["blocker"] == "birth_survival_parseback_birth_pair_not_cached"
+    assert "survived" not in row
 
 
 @skip_no_mlx
