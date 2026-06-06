@@ -36,7 +36,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from tac.analysis.action_effect import ACTION_EFFECT_V1_SCHEMA
+from tac.analysis.action_effect import (
+    ACTION_EFFECT_V1_SCHEMA,
+    NormalizationScope,
+    validate_action_effect_payload,
+)
 from tac.analysis.receiver_surface_metrics import receiver_surface_target_support_breakdown
 from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
@@ -216,6 +220,7 @@ def _survival_rows_for_action(
         if str(row.get("surface") or "") != surface:
             continue
         if str(row.get("action_id") or "") != action_id:
+            blockers.append("action_id_survival_mismatch")
             blockers.append(f"l4_survival_action_id_mismatch:{surface}")
             continue
         if row.get("pose_compensation_required") is True and row.get("pose_compensation_survived") is not True:
@@ -267,6 +272,25 @@ def _action_effect_rows_for_action(
     return [row for row in rows if str(row.get("action_id") or "") == action_id]
 
 
+def _validated_action_effect_rows(
+    rows: list[dict[str, Any]],
+    *,
+    blockers: list[str],
+) -> list[dict[str, Any]]:
+    valid: list[dict[str, Any]] = []
+    for row in rows:
+        status = validate_action_effect_payload(row)
+        if status["passed"] is True:
+            valid.append(row)
+            continue
+        row_id = str(row.get("action_id") or "unknown")
+        for blocker in status["blockers"]:
+            blocker = str(blocker)
+            blockers.append(blocker)
+            blockers.append(f"action_effect_invalid:{row_id}:{blocker}")
+    return valid
+
+
 def _require_hi_nerv_action_effect_evidence(
     rows: list[dict[str, Any]],
     *,
@@ -275,8 +299,13 @@ def _require_hi_nerv_action_effect_evidence(
 ) -> None:
     matches = _action_effect_rows_for_action(rows, action_id=action_id)
     if not matches:
+        blockers.append("action_effect_missing")
         blockers.append(f"action_effect_v1_missing:{action_id}")
         return
+    if any(not str(row.get("authority") or "").strip() for row in matches):
+        blockers.append("action_effect_untyped_authority")
+    if any(str(row.get("normalization_scope") or "") != NormalizationScope.BATCH_LOCAL.value for row in matches):
+        blockers.append("normalization_scope_mismatch")
     if not any(row.get("fakequant_survived") is True for row in matches):
         blockers.append("action_effect_same_action_fakequant_survival_missing")
     if not any(row.get("parseback_survived") is True for row in matches):
@@ -313,7 +342,43 @@ def _require_hi_nerv_action_effect_evidence(
             and int(new_bytes) != int(old_bytes)
             and not _finite_number(row.get("value_per_byte"))
         ):
+            blockers.append("value_per_byte_missing")
             blockers.append(f"value_per_byte_ledger_missing:{action_id}")
+
+
+def _representative_coverage_ok(
+    rows: list[dict[str, Any]],
+    *,
+    blockers: list[str],
+) -> bool:
+    if not rows:
+        blockers.append("representative_region_coverage_missing")
+        return False
+    candidate_blockers: list[str] = []
+    for row in rows:
+        row_blockers: list[str] = []
+        if row.get("passed") is not True:
+            row_blockers.append("representative_region_coverage_not_passed")
+        region_classes = _positive_int_or_none(row.get("region_classes_covered"))
+        distinct_classes = _positive_int_or_none(row.get("distinct_classes_accepted"))
+        if region_classes is None:
+            row_blockers.append("representative_region_coverage_region_classes_missing")
+        if distinct_classes is None:
+            row_blockers.append("representative_region_coverage_distinct_classes_missing")
+        min_regions = _positive_int_or_none(row.get("min_distinct_class_size_buckets"))
+        min_classes = _positive_int_or_none(row.get("min_distinct_classes"))
+        if min_regions is not None and (region_classes is None or region_classes < min_regions):
+            row_blockers.append("representative_region_coverage_region_classes_below_threshold")
+        if min_classes is not None and (distinct_classes is None or distinct_classes < min_classes):
+            row_blockers.append("representative_region_coverage_distinct_classes_below_threshold")
+        accepted_count = row.get("accepted_count")
+        if accepted_count is not None and _positive_int_or_none(accepted_count) is None:
+            row_blockers.append("representative_region_coverage_accepted_count_not_positive")
+        if not row_blockers:
+            return True
+        candidate_blockers.extend(row_blockers)
+    blockers.extend(_dedupe(candidate_blockers))
+    return False
 
 
 def _action_effect_has_required_v6_fields(row: Mapping[str, Any]) -> bool:
@@ -383,6 +448,27 @@ def _positive_number(value: Any) -> bool:
     return _finite_number(value) and float(value) > 0.0
 
 
+def _positive_int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
 def evaluate_nerv_long_run_launch_gate(
     *,
     family: str,
@@ -435,6 +521,7 @@ def evaluate_nerv_long_run_launch_gate(
             index=evidence_index,
             blockers=blockers,
         )
+        action_effect_rows = _validated_action_effect_rows(action_effect_rows, blockers=blockers)
         if not _parseback_selection_contract_ok(parseback_contract_rows):
             blockers.append("archive_parseback_selection_contract_missing")
         if not _source_qualified_metrics_ok(source_metric_rows, family=family):
@@ -484,8 +571,7 @@ def evaluate_nerv_long_run_launch_gate(
             if inflate_row is None:
                 blockers.append(f"birth_survival_receipt_missing:{SURVIVAL_SURFACE_L5}")
                 l5_ok = False
-            if not coverage_rows:
-                blockers.append("representative_region_coverage_missing")
+            if not _representative_coverage_ok(coverage_rows, blockers=blockers):
                 warnings.append("birth_at_init_only")
                 l5_ok = False
             if l5_ok:

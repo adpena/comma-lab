@@ -137,8 +137,9 @@ def test_pose_trusted_birth_payload_validator_accepts_receiver_closed_receipt() 
                 "pose_guard": {
                     "available": True,
                     "pose_input_contest_resolution": True,
-                    "max_accepted_pose_output_delta_l2": 0.025,
+                    "max_accepted_pose_output_delta_l2": 0.37355837225914,
                     "max_pose_output_delta_l2": 0.05,
+                    "raw_pose_cap_is_counterfactual_only": True,
                 },
                 "exact_nonrate": {
                     "pose_term_available": True,
@@ -147,17 +148,82 @@ def test_pose_trusted_birth_payload_validator_accepts_receiver_closed_receipt() 
                 "candidate_frontier_telemetry": {
                     "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
                     "candidate_attempt_count": 2,
+                    "attempts": [
+                        {
+                            "accepted": True,
+                            "exact_score_decision": "accepted",
+                            "raw_cap_decision": "violated_counterfactual_only",
+                            "catastrophic_guard_decision": "satisfied",
+                            "would_accept_exact_score_if_raw_cap_disabled": True,
+                        }
+                    ],
                 },
                 "pose_compensation": {
                     "composite_accepted": True,
                     "frame1_receiver_uint8_unchanged_by_compensation": True,
                     "compensation_updated_parameter_names": ["head_rgb_0.bias"],
+                    "attempts": [
+                        {
+                            "accepted": True,
+                            "composite_exact_score_decision": "accepted",
+                            "composite_raw_cap_decision": "violated_counterfactual_only",
+                            "composite_catastrophic_guard_decision": "satisfied",
+                            "would_accept_exact_score_if_raw_cap_disabled": True,
+                        }
+                    ],
                 },
             },
         }
     )
 
     assert blockers == []
+
+
+def test_pose_trusted_birth_payload_validator_rejects_v6_without_safe_admission_decision() -> None:
+    blockers = _hi_nerv_pose_trusted_birth_payload_blockers(
+        {
+            "schema": "hi_nerv_target_region_birth.v1",
+            "accepted": True,
+            "action_id": "a" * 64,
+            "receipt": {
+                "schema": "hi_nerv_target_region_birth_receipt.v1",
+                "surface": "live_mlx",
+                "action_id": "a" * 64,
+                "accepted_step_count": 1,
+                "updated_parameter_names": ["head_rgb_1.weight"],
+                "argmax_transitions": {
+                    "target_hard_won_count": 3,
+                    "target_hard_lost_count": 0,
+                    "net_target_support_delta": 3,
+                },
+                "pose_guard": {
+                    "available": True,
+                    "pose_input_contest_resolution": True,
+                    "max_accepted_pose_output_delta_l2": 0.37355837225914,
+                    "max_pose_output_delta_l2": 0.05,
+                    "raw_pose_cap_is_counterfactual_only": True,
+                },
+                "exact_nonrate": {
+                    "pose_term_available": True,
+                    "delta_score_nonrate": -0.1,
+                },
+                "candidate_frontier_telemetry": {
+                    "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+                    "candidate_attempt_count": 1,
+                    "attempts": [
+                        {
+                            "accepted": True,
+                            "exact_score_decision": "accepted",
+                            "raw_cap_decision": "violated_counterfactual_only",
+                            "catastrophic_guard_decision": "rejected",
+                        }
+                    ],
+                },
+            },
+        }
+    )
+
+    assert "hi_nerv_pose_trusted_birth_v6_admission_decision_missing" in blockers
 
 
 def test_pose_trusted_birth_payload_validator_rejects_already_won_spill() -> None:
@@ -595,6 +661,12 @@ def test_hinerv_archive_selection_birth_survival_candidate_row_is_not_gate_schem
     assert row["canonical_launch_gate_schema"] is False
     persisted = json.loads(Path(row["artifact_path"]).read_text(encoding="utf-8"))
     assert persisted["schema"] == "hi_nerv_target_region_birth_survival_candidate.v1"
+    ledger = archive.parent / "hi_nerv_birth_action_effects.jsonl"
+    assert row["action_effect_ledger_path"] == ledger.as_posix()
+    effect_rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+    assert effect_rows[-1]["schema"] == "tac.action_effect.v1"
+    assert effect_rows[-1]["action_id"] == "a" * 64
+    assert effect_rows[-1]["parseback_survived"] is True
 
 
 def test_hinerv_selected_birth_parseback_survival_promotes_only_selected_candidate(
@@ -809,11 +881,19 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
 
     assert row["fakequant_survived"] is True
     assert row["hysteresis_passed"] is True
+    assert row["action_effect_rows_written"] == 1
     assert float(np.asarray(model.weight)[0]) == pytest.approx(1.0)
     fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
     hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
     assert fake["producer"] == "hi_nerv_runner_live_birth_survival"
     assert hyst["producer"] == "hi_nerv_runner_live_birth_survival"
+    effect_rows = [
+        json.loads(line)
+        for line in (tmp_path / "hi_nerv_birth_action_effects.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert effect_rows[-1]["schema"] == "tac.action_effect.v1"
+    assert effect_rows[-1]["action_id"] == "d" * 64
+    assert effect_rows[-1]["fakequant_survived"] is True
 
 
 def _receiver_replay_selection_manifest(
@@ -7551,6 +7631,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             already_won_margin_floor,
             lambda_pose_trust_preserve,
             lambda_pose_target,
+            target_geometry_mode,
+            target_geometry_frontier_dilation,
             grad_clip_max_norm,
         ):
             captured["target_region_birth_call"] = {
@@ -7571,6 +7653,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "already_won_margin_floor": float(already_won_margin_floor),
                 "lambda_pose_trust_preserve": float(lambda_pose_trust_preserve),
                 "lambda_pose_target": float(lambda_pose_target),
+                "target_geometry_mode": str(target_geometry_mode),
+                "target_geometry_frontier_dilation": int(target_geometry_frontier_dilation),
                 "grad_clip_max_norm": grad_clip_max_norm,
             }
             return {
@@ -7856,6 +7940,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor=1.25,
         scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight=37.0,
         scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight=41.0,
+        scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode="largest_unsolved_component",
+        scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation=3,
         segnet_direct_live_class_balanced_ce_weight=0.25,
         segnet_direct_live_target_mass_floor_weight=0.4,
         segnet_direct_live_target_min_ratio_floor_weight=0.4,
@@ -7930,6 +8016,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_requested_weight"] == pytest.approx(3.0)
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_effective_weight"] == pytest.approx(3.0)
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_request_consumed"] is True
+    assert bootstrap_metadata["segnet_hard_birth_target_geometry_mode"] == "largest_unsolved_component"
+    assert bootstrap_metadata["segnet_hard_birth_target_geometry_frontier_dilation"] == 3
     assert bootstrap_metadata["actuators_enabled_effective"] == {
         "segnet_teacher": True,
         "pose_teacher": True,
@@ -7956,6 +8044,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["already_won_margin_floor"] == pytest.approx(1.25)
     assert target_birth_call["lambda_pose_trust_preserve"] == pytest.approx(37.0)
     assert target_birth_call["lambda_pose_target"] == pytest.approx(41.0)
+    assert target_birth_call["target_geometry_mode"] == "largest_unsolved_component"
+    assert target_birth_call["target_geometry_frontier_dilation"] == 3
     assert (
         bootstrap_call["pair_local_smoke_artifact_dir"]
         == (tmp_path / "private_smoke_full_priority_hydration" / "hi_nerv_pair_local_actuator_smoke").as_posix()

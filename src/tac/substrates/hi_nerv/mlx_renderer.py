@@ -2704,8 +2704,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         seed_temperature: float = 0.5,
         min_margin_mean_drop: float = 1.0e-6,
         max_pose_output_delta_l2: float = 0.05,
+        exact_score_epsilon_batch_local: float = 1.0e-6,
+        catastrophic_pose_relative_cap: float = 0.25,
+        catastrophic_pose_score_regression_cap: float = 0.5,
+        catastrophic_pose_output_l2_hard_cap: float | None = None,
         grad_clip_max_norm: float | None = None,
         min_region_pixels: int = 1,
+        target_geometry_mode: str = "frontier_band",
+        target_geometry_frontier_dilation: int = 1,
     ) -> dict[str, Any]:
         """Run a scoped hard-birth prefit on the worst SegNet target region.
 
@@ -2718,18 +2724,23 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         local spatial leverage (``latents_fine`` / ``feature_grids.*`` /
         ``fine_injector.*`` / ``head_rgb_1.*``).  Steps are admitted only when
         the receiver uint8 image moves inside the region AND the region's
-        hard ratio or median frontier margin improves AND the PoseNet output
-        movement stays inside the trust cap.  The result is ordinary model
-        state: no sidecar bytes, byte accounting unchanged.
+        hard ratio or median frontier margin improves AND the exact nonlinear
+        Seg/Pose nonrate score improves without catastrophic pose blow-up.  The
+        old raw pose-output cap is reported as counterfactual telemetry, not as
+        the primary admission surface. The result is ordinary model state: no
+        sidecar bytes, byte accounting unchanged.
         """
 
         _require_mlx()
+        from scipy import ndimage as scipy_ndimage
+
         from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
         from tac.substrates.hi_nerv.target_region_birth import (
             allowed_birth_update_name,
             allowed_pose_compensation_update_name,
             birth_action_id,
             build_target_region_birth_receipt,
+            pose_trusted_birth_admission_decision,
             region_argmax_transition_counts,
             region_margin_stats,
             select_worst_target_region_with_mask,
@@ -2758,13 +2769,37 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ("seed_temperature", float(seed_temperature)),
             ("min_margin_mean_drop", float(min_margin_mean_drop)),
             ("max_pose_output_delta_l2", float(max_pose_output_delta_l2)),
+            ("exact_score_epsilon_batch_local", float(exact_score_epsilon_batch_local)),
+            ("catastrophic_pose_relative_cap", float(catastrophic_pose_relative_cap)),
+            ("catastrophic_pose_score_regression_cap", float(catastrophic_pose_score_regression_cap)),
         ):
             if not math.isfinite(value) or value < 0.0:
                 raise ValueError(f"{name} must be finite and non-negative; got {value}")
+        if catastrophic_pose_output_l2_hard_cap is not None and (
+            not math.isfinite(float(catastrophic_pose_output_l2_hard_cap))
+            or float(catastrophic_pose_output_l2_hard_cap) < 0.0
+        ):
+            raise ValueError(
+                "catastrophic_pose_output_l2_hard_cap must be None or finite "
+                f"and non-negative; got {catastrophic_pose_output_l2_hard_cap}"
+            )
         if not 0.0 <= float(target_min_region_ratio) <= 1.0:
             raise ValueError(f"target_min_region_ratio must be in [0, 1]; got {target_min_region_ratio}")
         if float(margin_tau) <= 0.0 or float(seed_temperature) <= 0.0:
             raise ValueError("margin_tau and seed_temperature must be positive")
+        geometry_mode = str(target_geometry_mode)
+        valid_geometry_modes = {"frontier_band", "largest_unsolved_component", "full_tail"}
+        if geometry_mode not in valid_geometry_modes:
+            raise ValueError(
+                "target_geometry_mode must be one of "
+                f"{sorted(valid_geometry_modes)}; got {target_geometry_mode!r}"
+            )
+        frontier_dilation = int(target_geometry_frontier_dilation)
+        if frontier_dilation < 1:
+            raise ValueError(
+                "target_geometry_frontier_dilation must be >= 1; "
+                f"got {target_geometry_frontier_dilation}"
+            )
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
             raise ValueError(f"grad_clip_max_norm must be None or finite and positive; got {grad_clip_max_norm}")
@@ -2940,15 +2975,113 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             )
         unsolved_tail_mask_np = unsolved_tail_bool_np.astype(np.float32)
         already_won_mask_np = already_won_bool_np.astype(np.float32)
-        unsolved_tail_mask = mx.stop_gradient(  # type: ignore[union-attr]
-            mx.array(unsolved_tail_mask_np, dtype=mx.float32)
-        )
         already_won_mask = mx.stop_gradient(  # type: ignore[union-attr]
             mx.array(already_won_mask_np, dtype=mx.float32)
         )
         already_won_mask_4 = mx.expand_dims(already_won_mask, axis=-1)  # type: ignore[union-attr]
         unsolved_tail_pixels = float(unsolved_tail_pixel_count)
         already_won_pixels = float(already_won_pixel_count)
+
+        connectivity_4 = np.array(
+            [[False, True, False], [True, True, True], [False, True, False]],
+            dtype=bool,
+        )
+
+        def _largest_component_mask(mask_bhw: np.ndarray) -> np.ndarray:
+            mask_bool = np.asarray(mask_bhw, dtype=bool)
+            out = np.zeros(mask_bool.shape, dtype=bool)
+            for batch_index in range(mask_bool.shape[0]):
+                labeled, component_count = scipy_ndimage.label(
+                    mask_bool[batch_index],
+                    structure=connectivity_4,
+                )
+                if int(component_count) <= 0:
+                    continue
+                counts = np.bincount(labeled.reshape(-1))
+                if counts.shape[0] <= 1:
+                    continue
+                component_label = int(np.argmax(counts[1:]) + 1)
+                out[batch_index] = labeled == component_label
+            return out
+
+        def _dilate_per_frame(mask_bhw: np.ndarray) -> np.ndarray:
+            mask_bool = np.asarray(mask_bhw, dtype=bool)
+            out = np.zeros(mask_bool.shape, dtype=bool)
+            for batch_index in range(mask_bool.shape[0]):
+                out[batch_index] = scipy_ndimage.binary_dilation(
+                    mask_bool[batch_index],
+                    structure=connectivity_4,
+                    iterations=int(frontier_dilation),
+                )
+            return out
+
+        def _select_actuator_tail_mask(argmax_np: np.ndarray) -> tuple[np.ndarray, dict[str, Any]]:
+            """Return the current differentiable target geometry inside the priced parent region."""
+
+            current_unsolved = region_bool_np & (np.asarray(argmax_np) != birth_class)
+            current_won = region_bool_np & (np.asarray(argmax_np) == birth_class)
+            fallback = None
+            selected = current_unsolved
+            if geometry_mode == "frontier_band":
+                if np.any(current_won):
+                    frontier = _dilate_per_frame(current_won) & current_unsolved
+                    if np.any(frontier):
+                        selected = frontier
+                    else:
+                        fallback = "frontier_band_empty_largest_unsolved_component"
+                        selected = _largest_component_mask(current_unsolved)
+                else:
+                    fallback = "no_already_won_support_largest_unsolved_component"
+                    selected = _largest_component_mask(current_unsolved)
+            elif geometry_mode == "largest_unsolved_component":
+                selected = _largest_component_mask(current_unsolved)
+            elif geometry_mode == "full_tail":
+                selected = current_unsolved
+            if not np.any(selected) and np.any(current_unsolved):
+                fallback = fallback or "selected_empty_full_tail"
+                selected = current_unsolved
+            selected = selected.astype(np.float32)
+            return selected, {
+                "mode": geometry_mode,
+                "fallback": fallback,
+                "frontier_dilation": int(frontier_dilation),
+                "active_tail_pixel_count": int(np.count_nonzero(selected)),
+                "current_unsolved_tail_pixel_count": int(np.count_nonzero(current_unsolved)),
+                "current_already_won_region_pixel_count": int(np.count_nonzero(current_won)),
+            }
+
+        active_tail_mask_np, initial_active_tail_geometry = _select_actuator_tail_mask(initial_argmax_np)
+        if int(np.count_nonzero(active_tail_mask_np)) <= 0:
+            raise RuntimeError("target-region birth selected an empty active unsolved-tail geometry")
+        active_tail_mask = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(active_tail_mask_np, dtype=mx.float32)
+        )
+        active_tail_pixels = float(np.count_nonzero(active_tail_mask_np))
+        active_tail_geometry = dict(initial_active_tail_geometry)
+        active_tail_geometry_history: list[dict[str, Any]] = [
+            {"step_index": -1, "reason": "initial", **dict(initial_active_tail_geometry)}
+        ]
+        active_tail_refresh_count = 0
+
+        def _refresh_active_tail_mask(argmax_np: np.ndarray, *, step_index: int, reason: str) -> bool:
+            nonlocal active_tail_mask_np, active_tail_mask, active_tail_pixels
+            nonlocal active_tail_geometry, active_tail_refresh_count
+            refreshed_np, refreshed_geometry = _select_actuator_tail_mask(argmax_np)
+            refreshed_pixels = int(np.count_nonzero(refreshed_np))
+            active_tail_geometry = dict(refreshed_geometry)
+            active_tail_refresh_count += 1
+            active_tail_geometry_history.append(
+                {"step_index": int(step_index), "reason": str(reason), **dict(refreshed_geometry)}
+            )
+            if refreshed_pixels <= 0:
+                active_tail_pixels = 0.0
+                return False
+            active_tail_mask_np = refreshed_np
+            active_tail_mask = mx.stop_gradient(  # type: ignore[union-attr]
+                mx.array(active_tail_mask_np, dtype=mx.float32)
+            )
+            active_tail_pixels = float(refreshed_pixels)
+            return True
         before_unsolved_tail_stats = region_margin_stats(
             initial_logits_np,
             unsolved_tail_mask_np,
@@ -2999,6 +3132,76 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         initial_d_seg = _d_seg_batch(initial_argmax_np)
         initial_d_pose = _d_pose_batch(initial_pose)
         initial_nonrate = _nonrate_score(initial_d_seg, initial_d_pose)
+
+        def _target_birth_admission_decision(
+            *,
+            new_d_seg: float,
+            new_d_pose: float | None,
+            pose_output_l2_delta: float | None,
+        ) -> dict[str, Any]:
+            if initial_d_pose is not None and new_d_pose is not None:
+                return pose_trusted_birth_admission_decision(
+                    old_d_seg=initial_d_seg,
+                    new_d_seg=float(new_d_seg),
+                    old_d_pose=initial_d_pose,
+                    new_d_pose=new_d_pose,
+                    pose_output_l2_delta=pose_output_l2_delta,
+                    raw_pose_cap_l2=float(max_pose_output_delta_l2),
+                    exact_score_epsilon=float(exact_score_epsilon_batch_local),
+                    catastrophic_relative_cap=float(catastrophic_pose_relative_cap),
+                    catastrophic_pose_score_regression_cap=float(catastrophic_pose_score_regression_cap),
+                    catastrophic_pose_output_l2_hard_cap=catastrophic_pose_output_l2_hard_cap,
+                )
+            if require_pose_trust:
+                return pose_trusted_birth_admission_decision(
+                    old_d_seg=initial_d_seg,
+                    new_d_seg=float(new_d_seg),
+                    old_d_pose=initial_d_pose,
+                    new_d_pose=new_d_pose,
+                    pose_output_l2_delta=pose_output_l2_delta,
+                    raw_pose_cap_l2=float(max_pose_output_delta_l2),
+                    exact_score_epsilon=float(exact_score_epsilon_batch_local),
+                    catastrophic_relative_cap=float(catastrophic_pose_relative_cap),
+                    catastrophic_pose_score_regression_cap=float(catastrophic_pose_score_regression_cap),
+                    catastrophic_pose_output_l2_hard_cap=catastrophic_pose_output_l2_hard_cap,
+                )
+            seg_score_delta = 100.0 * (float(new_d_seg) - float(initial_d_seg))
+            return {
+                "schema": "hi_nerv_pose_trusted_birth_admission_decision.v1",
+                "old_d_seg": float(initial_d_seg),
+                "new_d_seg": float(new_d_seg),
+                "old_d_pose": None,
+                "new_d_pose": None if new_d_pose is None else float(new_d_pose),
+                "seg_score_delta": float(seg_score_delta),
+                "pose_score_delta": None,
+                "exact_delta_score_nonrate": float(seg_score_delta),
+                "delta_score_nonrate": float(seg_score_delta),
+                "pose_output_l2_delta": None if pose_output_l2_delta is None else float(pose_output_l2_delta),
+                "raw_pose_cap_l2": float(max_pose_output_delta_l2),
+                "raw_cap_decision": "not_applicable",
+                "raw_pose_cap_result": "not_applicable",
+                "exact_score_epsilon": float(exact_score_epsilon_batch_local),
+                "exact_score_decision": "not_applicable",
+                "catastrophic_relative_cap": float(catastrophic_pose_relative_cap),
+                "catastrophic_pose_score_regression_cap": float(catastrophic_pose_score_regression_cap),
+                "catastrophic_pose_output_l2_hard_cap": (
+                    None
+                    if catastrophic_pose_output_l2_hard_cap is None
+                    else float(catastrophic_pose_output_l2_hard_cap)
+                ),
+                "catastrophic_guard_decision": "satisfied",
+                "catastrophic_guard_reasons": [],
+                "accepted": False,
+                "would_accept_exact_score_if_raw_cap_disabled": False,
+                "would_accept_without_catastrophic_guard": False,
+                "rejected_by_raw_pose_cap": False,
+                "would_reject_under_raw_pose_cap": False,
+                "rejected_by_exact_delta_score": False,
+                "rejected_by_catastrophic_pose_guard": False,
+                "rejection_source": None,
+                "raw_cap_is_counterfactual_only": True,
+                "pose_trust_evidence_missing_but_not_required": True,
+            }
 
         def _impostor_logit(logits: Any) -> Any:
             if class_count == 1:
@@ -3059,7 +3262,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 (margin_raw + float(margin_floor)) / float(margin_tau),
                 0.0,
             )
-            loss_margin = mx.sum(crossing * crossing * unsolved_tail_mask) / unsolved_tail_pixels  # type: ignore[union-attr]
+            loss_margin = mx.sum(crossing * crossing * active_tail_mask) / active_tail_pixels  # type: ignore[union-attr]
             shifted = logits - mx.max(logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
             exp_logits = mx.exp(shifted)  # type: ignore[union-attr]
             probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
@@ -3067,15 +3270,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 float(prob_floor) - probs[..., birth_class],
                 0.0,
             )
-            loss_prob = mx.sum(prob_deficit * prob_deficit * unsolved_tail_mask) / unsolved_tail_pixels  # type: ignore[union-attr]
+            loss_prob = mx.sum(prob_deficit * prob_deficit * active_tail_mask) / active_tail_pixels  # type: ignore[union-attr]
             margin_detached = mx.stop_gradient(margin_raw)  # type: ignore[union-attr]
             masked_margin = mx.where(  # type: ignore[union-attr]
-                unsolved_tail_mask > 0.0,
+                active_tail_mask > 0.0,
                 margin_detached,
                 mx.array(1.0e30, dtype=margin_detached.dtype),
             )
             margin_min = mx.min(masked_margin)  # type: ignore[union-attr]
-            seed_weight = unsolved_tail_mask * mx.exp(  # type: ignore[union-attr]
+            seed_weight = active_tail_mask * mx.exp(  # type: ignore[union-attr]
                 -(margin_detached - margin_min) / float(seed_temperature)
             )
             seed_weight = seed_weight / mx.maximum(mx.sum(seed_weight), eps)  # type: ignore[union-attr]
@@ -3176,7 +3379,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     )
             pred_class = mx.argmax(logits, axis=-1)  # type: ignore[union-attr]
             unsolved = mx.stop_gradient(  # type: ignore[union-attr]
-                mx.sum(unsolved_tail_mask * (pred_class != birth_class).astype(mx.float32))
+                mx.sum(active_tail_mask * (pred_class != birth_class).astype(mx.float32))
             )
             debt_weight = 1.0 + 100.0 * unsolved / total_scored_pixels
             return debt_weight * (
@@ -3459,18 +3662,30 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 composite["d_seg_batch"],
                 composite["d_pose_batch"],
             )
+            composite_decision = _target_birth_admission_decision(
+                new_d_seg=float(composite["d_seg_batch"]),
+                new_d_pose=composite["d_pose_batch"],
+                pose_output_l2_delta=composite_pose_delta,
+            )
             composite_delta_score_nonrate = (
                 None
                 if composite_nonrate is None or initial_nonrate is None
                 else float(composite_nonrate - initial_nonrate)
             )
-            pose_cap_ok = composite_pose_delta is None or composite_pose_delta <= float(max_pose_output_delta_l2)
+            raw_cap_ok = composite_decision["raw_cap_decision"] == "satisfied"
+            exact_score_ok = composite_decision["exact_score_decision"] == "accepted"
+            catastrophic_guard_ok = composite_decision["catastrophic_guard_decision"] == "satisfied"
             joint_improved = (
                 composite_nonrate is not None
                 and best_nonrate_value is not None
-                and composite_nonrate < best_nonrate_value
+                and composite_nonrate < best_nonrate_value - float(exact_score_epsilon_batch_local)
             )
-            accepted = bool(joint_improved and pose_cap_ok and applied_compensation_names)
+            accepted = bool(
+                joint_improved
+                and exact_score_ok
+                and catastrophic_guard_ok
+                and applied_compensation_names
+            )
             record: dict[str, Any] = {
                 "attempted": True,
                 "frame": 0,
@@ -3482,7 +3697,22 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "composite_pose_output_delta_l2": (
                     None if composite_pose_delta is None else float(composite_pose_delta)
                 ),
-                "composite_pose_cap_satisfied": bool(pose_cap_ok),
+                "composite_pose_cap_satisfied": bool(raw_cap_ok),
+                "composite_raw_cap_decision": composite_decision["raw_cap_decision"],
+                "composite_exact_score_decision": composite_decision["exact_score_decision"],
+                "composite_catastrophic_guard_decision": composite_decision["catastrophic_guard_decision"],
+                "would_accept_exact_score_if_raw_cap_disabled": bool(
+                    composite_decision["would_accept_exact_score_if_raw_cap_disabled"]
+                ),
+                "would_accept_without_catastrophic_guard": bool(
+                    composite_decision["would_accept_without_catastrophic_guard"]
+                ),
+                "rejection_source": composite_decision["rejection_source"],
+                "admission_decision": {
+                    key: value
+                    for key, value in composite_decision.items()
+                    if key not in {"old_d_seg", "new_d_seg", "old_d_pose", "new_d_pose"}
+                },
                 "composite_d_seg_batch": float(composite["d_seg_batch"]),
                 "composite_d_pose_batch": (
                     None if composite["d_pose_batch"] is None else float(composite["d_pose_batch"])
@@ -3559,6 +3789,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         max_backtracking_attempts = 8
         min_lr = lr * (0.5**max_backtracking_attempts)
         candidate_attempt_records: list[dict[str, Any]] = []
+        target_geometry_exhausted = False
 
         def _gate_with_optional_compensation(
             *,
@@ -3694,9 +3925,27 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     candidate["d_pose_batch"],
                 )
 
-                pose_cap_rejects = pose_delta is not None and pose_delta > float(max_pose_output_delta_l2)
+                candidate_decision = _target_birth_admission_decision(
+                    new_d_seg=float(candidate["d_seg_batch"]),
+                    new_d_pose=candidate["d_pose_batch"],
+                    pose_output_l2_delta=pose_delta,
+                )
+                pose_missing_research_smoke = bool(
+                    candidate_decision.get("pose_trust_evidence_missing_but_not_required")
+                )
+                raw_cap_rejects = candidate_decision["raw_cap_decision"] not in {
+                    "satisfied",
+                    "not_applicable",
+                }
+                exact_score_rejects = (
+                    candidate_decision["exact_score_decision"] != "accepted"
+                    and not pose_missing_research_smoke
+                )
+                catastrophic_rejects = candidate_decision["catastrophic_guard_decision"] != "satisfied"
                 joint_rejects = (
-                    candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate >= best_nonrate
+                    candidate_nonrate is not None
+                    and best_nonrate is not None
+                    and candidate_nonrate >= best_nonrate - float(exact_score_epsilon_batch_local)
                 )
                 candidate_attempt_count += 1
                 candidate_region_hard_won_delta = int(tail_hard_won_delta)
@@ -3757,11 +4006,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     no_progress_candidate_count += 1
                     if support_spill:
                         spill_rejected_candidate_count += 1
-                if not pose_cap_rejects:
+                if not raw_cap_rejects:
                     pose_cap_satisfied_candidate_count += 1
                 if candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate < best_nonrate:
                     joint_score_improved_candidate_count += 1
-                if pose_cap_rejects:
+                if raw_cap_rejects:
                     pose_rejected_candidate_count += 1
                     max_pose_rejected_receiver_uint8_changed_pixels_region = max(
                         max_pose_rejected_receiver_uint8_changed_pixels_region,
@@ -3787,7 +4036,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 candidate_attempt_record: dict[str, Any] = {
                     "step_index": int(len(loss_history) - 1),
                     "attempt_learning_rate": float(attempt_lr),
+                    "target_geometry_mode": geometry_mode,
+                    "active_tail_pixel_count_before_attempt": int(active_tail_pixels),
+                    "active_tail_geometry": dict(active_tail_geometry),
                     "receiver_uint8_changed_pixels_region": int(changed_in_region),
+                    "receiver_uint8_changed_pixels_active_tail": int(
+                        np.count_nonzero(np.any(step_base_uint8 != candidate["uint8"], axis=-1) & (active_tail_mask_np > 0.0))
+                    ),
                     "receiver_uint8_changed_pixels_unsolved_tail": int(
                         np.count_nonzero(np.any(step_base_uint8 != candidate["uint8"], axis=-1) & unsolved_tail_bool_np)
                     ),
@@ -3803,8 +4058,28 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "support_spill": bool(support_spill),
                     "region_progress": bool(region_progress),
                     "pose_output_delta_l2": (None if pose_delta is None else float(pose_delta)),
-                    "pose_cap_satisfied": bool(not pose_cap_rejects),
-                    "joint_score_improved": bool(not joint_rejects),
+                    "pose_cap_satisfied": bool(not raw_cap_rejects),
+                    "raw_cap_decision": candidate_decision["raw_cap_decision"],
+                    "raw_pose_cap_result": candidate_decision["raw_pose_cap_result"],
+                    "exact_score_decision": candidate_decision["exact_score_decision"],
+                    "catastrophic_guard_decision": candidate_decision["catastrophic_guard_decision"],
+                    "catastrophic_guard_reasons": list(candidate_decision["catastrophic_guard_reasons"]),
+                    "would_accept_exact_score_if_raw_cap_disabled": bool(
+                        candidate_decision["would_accept_exact_score_if_raw_cap_disabled"]
+                    ),
+                    "would_accept_without_catastrophic_guard": bool(
+                        candidate_decision["would_accept_without_catastrophic_guard"]
+                    ),
+                    "rejected_by_raw_pose_cap": bool(candidate_decision["rejected_by_raw_pose_cap"]),
+                    "rejected_by_exact_delta_score": bool(candidate_decision["rejected_by_exact_delta_score"]),
+                    "rejected_by_catastrophic_pose_guard": bool(
+                        candidate_decision["rejected_by_catastrophic_pose_guard"]
+                    ),
+                    "rejection_source": candidate_decision["rejection_source"],
+                    "seg_score_delta": candidate_decision["seg_score_delta"],
+                    "pose_score_delta": candidate_decision["pose_score_delta"],
+                    "exact_delta_score_nonrate": candidate_decision["exact_delta_score_nonrate"],
+                    "joint_score_improved": bool(not joint_rejects and not exact_score_rejects),
                     "candidate_nonrate_score": (
                         None if candidate_nonrate is None else float(candidate_nonrate)
                     ),
@@ -3814,11 +4089,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "decision": "pending",
                 }
 
-                if pose_cap_rejects or joint_rejects:
+                if catastrophic_rejects or exact_score_rejects or joint_rejects:
                     # The frame1 birth step is receiver-visible but loses the
-                    # pose cap or the exact joint gate. BEFORE backtracking the
-                    # learning rate, attempt ONE frame0-only compensation iff
-                    # region progress holds and a pose teacher is available.
+                    # exact score gate, catastrophic guard, or monotone best
+                    # gate. BEFORE backtracking the learning rate, attempt ONE
+                    # frame0-only compensation iff region progress holds and a
+                    # pose teacher is available. Raw cap violation alone is now
+                    # counterfactual telemetry and must not suppress exact wins.
                     pose_violation_seen = True
                     composite_accepted = _gate_with_optional_compensation(
                         region_progress=region_progress,
@@ -3832,6 +4109,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         last_grad_norm_by_group = grad_norms
                         last_update_norm_by_group = update_norms
                         best_unsolved_tail_stats = dict(composite_state["unsolved_tail_stats"])
+                        target_geometry_exhausted = not _refresh_active_tail_mask(
+                            composite_state["argmax_np"],
+                            step_index=int(len(loss_history) - 1),
+                            reason="accepted_with_frame0_pose_compensation",
+                        )
                         composite_nonrate = _nonrate_score(
                             composite_state["d_seg_batch"],
                             composite_state["d_pose_batch"],
@@ -3851,14 +4133,21 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     if attempt_lr * 0.5 >= min_lr:
                         backtracking_attempt_count += 1
                         candidate_attempt_record["decision"] = (
-                            "backtrack_pose_cap" if pose_cap_rejects else "backtrack_joint_score"
+                            "backtrack_catastrophic_pose_guard"
+                            if catastrophic_rejects
+                            else "backtrack_exact_delta_score"
+                            if exact_score_rejects
+                            else "backtrack_joint_score"
                         )
                         candidate_attempt_records.append(candidate_attempt_record)
                         attempt_lr *= 0.5
                         continue
-                    if pose_cap_rejects:
+                    if catastrophic_rejects:
                         pose_guard_rejected_step_count += 1
-                        candidate_attempt_record["decision"] = "rejected_pose_cap"
+                        candidate_attempt_record["decision"] = "rejected_catastrophic_pose_guard"
+                    elif exact_score_rejects:
+                        joint_score_rejected_step_count += 1
+                        candidate_attempt_record["decision"] = "rejected_exact_delta_score"
                     else:
                         joint_score_rejected_step_count += 1
                         candidate_attempt_record["decision"] = "rejected_joint_score"
@@ -3891,6 +4180,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         max_accepted_pose_delta_l2,
                         pose_delta,
                     )
+                target_geometry_exhausted = not _refresh_active_tail_mask(
+                    candidate["argmax_np"],
+                    step_index=int(len(loss_history) - 1),
+                    reason="accepted",
+                )
                 current_lr = attempt_lr
                 candidate_attempt_record["decision"] = "accepted"
                 candidate_attempt_records.append(candidate_attempt_record)
@@ -3902,6 +4196,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 break
             if step_accepted:
                 consecutive_rejected_steps = 0
+                if target_geometry_exhausted:
+                    break
             else:
                 consecutive_rejected_steps += 1
                 # One chaotic step must not end a long fit; three fully
@@ -3968,6 +4264,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_input_width": int(target1.shape[2]),
             "pose_input_contest_resolution": bool(pose_input_contest_resolution),
             "max_pose_output_delta_l2": float(max_pose_output_delta_l2),
+            "raw_pose_cap_l2": float(max_pose_output_delta_l2),
+            "raw_pose_cap_is_counterfactual_only": True,
+            "exact_score_epsilon_batch_local": float(exact_score_epsilon_batch_local),
+            "catastrophic_pose_relative_cap": float(catastrophic_pose_relative_cap),
+            "catastrophic_pose_score_regression_cap": float(catastrophic_pose_score_regression_cap),
+            "catastrophic_pose_output_l2_hard_cap": (
+                None
+                if catastrophic_pose_output_l2_hard_cap is None
+                else float(catastrophic_pose_output_l2_hard_cap)
+            ),
             "max_accepted_pose_output_delta_l2": float(max_accepted_pose_delta_l2),
             "final_pose_output_delta_l2": (None if final_pose_delta is None else float(final_pose_delta)),
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
@@ -4003,6 +4309,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "lambda_pose_target": float(lambda_pose_target),
                 "outside_region_pixel_count": int(outside_region_pixels),
                 "pose_trust_cap_l2": float(max_pose_output_delta_l2),
+            },
+            "target_geometry": {
+                "mode": geometry_mode,
+                "frontier_dilation": int(frontier_dilation),
+                "initial_active_tail_pixel_count": int(
+                    initial_active_tail_geometry["active_tail_pixel_count"]
+                ),
+                "final_active_tail_pixel_count": int(active_tail_geometry["active_tail_pixel_count"]),
+                "active_tail_refresh_count": int(active_tail_refresh_count),
+                "history": active_tail_geometry_history,
+                "parent_region_pixel_count": int(worst.region_pixel_count),
+                "parent_unsolved_tail_pixel_count": int(unsolved_tail_pixel_count),
+                "parent_already_won_pixel_count": int(already_won_pixel_count),
             },
             "unsolved_tail_pixel_count": int(unsolved_tail_pixel_count),
             "already_won_region_pixel_count": int(already_won_pixel_count),
@@ -4054,6 +4373,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "composite_new_nonrate_score": record["composite_new_nonrate_score"],
                 "composite_pose_output_delta_l2": record["composite_pose_output_delta_l2"],
                 "composite_pose_cap_satisfied": bool(record["composite_pose_cap_satisfied"]),
+                "composite_raw_cap_decision": record.get("composite_raw_cap_decision"),
+                "composite_exact_score_decision": record.get("composite_exact_score_decision"),
+                "composite_catastrophic_guard_decision": record.get(
+                    "composite_catastrophic_guard_decision"
+                ),
+                "would_accept_exact_score_if_raw_cap_disabled": bool(
+                    record.get("would_accept_exact_score_if_raw_cap_disabled")
+                ),
+                "would_accept_without_catastrophic_guard": bool(
+                    record.get("would_accept_without_catastrophic_guard")
+                ),
+                "rejection_source": record.get("rejection_source"),
+                "admission_decision": dict(record.get("admission_decision") or {}),
                 "composite_d_seg_batch": record["composite_d_seg_batch"],
                 "composite_d_pose_batch": record["composite_d_pose_batch"],
             }
@@ -4151,6 +4483,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "after_region_hard_ratio": float(after_stats["region_hard_ratio"]),
             "before_unsolved_tail_hard_ratio": float(before_unsolved_tail_stats["region_hard_ratio"]),
             "after_unsolved_tail_hard_ratio": float(after_unsolved_tail_stats["region_hard_ratio"]),
+            "target_geometry_mode": geometry_mode,
+            "target_geometry_frontier_dilation": int(frontier_dilation),
+            "initial_active_tail_pixel_count": int(initial_active_tail_geometry["active_tail_pixel_count"]),
+            "final_active_tail_pixel_count": int(active_tail_geometry["active_tail_pixel_count"]),
+            "active_tail_refresh_count": int(active_tail_refresh_count),
+            "active_tail_geometry_history": active_tail_geometry_history,
             "target_min_region_ratio": float(target_min_region_ratio),
             "target_min_region_ratio_reached": bool(after_stats["region_hard_ratio"] >= float(target_min_region_ratio)),
             "accepted_step_count": int(accepted_step_count),

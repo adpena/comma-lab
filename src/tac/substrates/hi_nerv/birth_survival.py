@@ -489,6 +489,11 @@ def _pose_compensation_survival_on_surface(
 
     from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
 
+    def _receiver_uint8_roundtrip_ste_nhwc01(rgb: Any) -> Any:
+        clamped = mx.clip(rgb, 0.0, 1.0)  # type: ignore[union-attr]
+        receiver = mx.round(clamped * 255.0) / 255.0  # type: ignore[union-attr]
+        return rgb + mx.stop_gradient(receiver - rgb)  # type: ignore[union-attr]
+
     if target_rgb_0 is None or target_rgb_1 is None:
         target_pose_fn = getattr(pose_teacher, "teacher_pose_for_indices", None)
         if not callable(target_pose_fn):
@@ -503,9 +508,14 @@ def _pose_compensation_survival_on_surface(
     else:
         target0 = mx.array(target_rgb_0).astype(mx.float32)  # type: ignore[union-attr]
         target1 = mx.array(target_rgb_1).astype(mx.float32)  # type: ignore[union-attr]
+        target0_receiver = _receiver_uint8_roundtrip_ste_nhwc01(target0)
+        target1_receiver = _receiver_uint8_roundtrip_ste_nhwc01(target1)
         target_pose = pose_fn(
             mx.concatenate(  # type: ignore[union-attr]
-                [rgb_to_yuv6_mlx(target0 * 255.0), rgb_to_yuv6_mlx(target1 * 255.0)],
+                [
+                    rgb_to_yuv6_mlx(target0_receiver * 255.0),
+                    rgb_to_yuv6_mlx(target1_receiver * 255.0),
+                ],
                 axis=-1,
             )
         )
@@ -513,9 +523,14 @@ def _pose_compensation_survival_on_surface(
         pred0, pred1 = _predict_pair01_nhwc01(model, pair_indices)
     else:
         pred0, pred1 = surface_pair01_nhwc01
+    pred0_receiver = _receiver_uint8_roundtrip_ste_nhwc01(pred0)
+    pred1_receiver = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
     surface_pose = pose_fn(
         mx.concatenate(  # type: ignore[union-attr]
-            [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+            [
+                rgb_to_yuv6_mlx(pred0_receiver * 255.0),
+                rgb_to_yuv6_mlx(pred1_receiver * 255.0),
+            ],
             axis=-1,
         )
     )
@@ -541,6 +556,7 @@ def _pose_compensation_survival_on_surface(
         "surface_d_pose_batch": surface_d_pose,
         "d_pose_tolerance_abs": float(d_pose_tolerance_abs),
         "d_pose_tolerance_rel": float(d_pose_tolerance_rel),
+        "pose_surface_receiver_uint8_roundtrip": True,
         "surface_pose_score_term": float(np.sqrt(10.0 * max(surface_d_pose, 0.0))),
         "live_pose_score_term": float(np.sqrt(10.0 * max(float(live_d_pose), 0.0))),
     }

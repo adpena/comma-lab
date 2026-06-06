@@ -42,6 +42,7 @@ from tac.analysis.nerv_decoder_weight_waterfill import (
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
     TRUSTED_RECEIVER_PROOF_STATUSES,
 )
+from tac.analysis.nerv_long_run_launch_gate import NERV_LONG_RUN_LAUNCH_GATE_SCHEMA
 from tac.analysis.nerv_modelsize_budget import (
     NervModelSizeBudgetError,
     decoder_codec_nominal_bits,
@@ -78,6 +79,9 @@ from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
 )
 from tac.analysis.snerv_lf_payload_archive_recode import (
     build_snerv_lf_payload_recode_admission_plan,
+)
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
 )
 from tac.contest_eval_contract import build_score_allocation_contract
 from tac.optimization.recon_pixel_weight_surface import (
@@ -698,6 +702,7 @@ def build_nerv_long_training_campaign_plan(
     snerv_snar_header_minimization_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
     snerv_official_source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
+    snerv_long_run_launch_gate_verdict: Mapping[str, Any] | None = None,
     snerv_official_replacement_authority_gates: Sequence[Mapping[str, Any]] = (),
     snerv_value_domain_xray_reports: Sequence[Mapping[str, Any]] = (),
     snerv_hf_residual_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
@@ -851,6 +856,7 @@ def build_nerv_long_training_campaign_plan(
                 pr95_distortion_source_inventory=pr95_distortion_source_inventory,
                 snerv_scorer_tether_smoke_gate=snerv_scorer_tether_smoke_gate,
                 snerv_source_forward_evidence=snerv_source_forward_evidence,
+                snerv_long_run_launch_gate_verdict=snerv_long_run_launch_gate_verdict,
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
@@ -1742,6 +1748,7 @@ def _snerv_campaign_row(
     pr95_distortion_source_inventory: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_gate: Mapping[str, Any] | None = None,
     snerv_source_forward_evidence: Mapping[str, Any] | None = None,
+    snerv_long_run_launch_gate_verdict: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
@@ -2138,6 +2145,10 @@ def _snerv_campaign_row(
         candidate,
         lf_recode_admission_plan=lf_recode_admission_plan,
     )
+    snerv_launch_gate_status = _snerv_long_run_launch_gate_status(
+        snerv_long_run_launch_gate_verdict,
+        bounded_proof_only=bool(bounded_proof_only),
+    )
     blockers = _dedupe(
         [
             ("snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" if bounded_proof_only else ""),
@@ -2161,6 +2172,7 @@ def _snerv_campaign_row(
             *list(renderer_nondegenerate_gate.get("blockers") or []),
             *list(pre_long_run_evidence_gate.get("blockers") or []),
             *list(source_parity["required_blockers"]),
+            *list(snerv_launch_gate_status.get("blockers") or []),
             *curriculum_blockers,
             *feedback_evidence_blockers,
             *_snerv_lf_payload_recode_campaign_blockers(lf_recode_admission_plan),
@@ -2192,10 +2204,14 @@ def _snerv_campaign_row(
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
     renderer_nondegenerate_ready = not renderer_nondegenerate_gate.get("blockers")
     pre_long_run_evidence_ready = not pre_long_run_evidence_gate.get("blockers")
+    launch_gate_ready = bool(
+        bounded_proof_only or snerv_launch_gate_status.get("approved")
+    )
     prelaunch_proof_ready = bool(
         scorer_tether_smoke_ready
         and renderer_nondegenerate_ready
         and pre_long_run_evidence_ready
+        and launch_gate_ready
     )
     bounded_proof_launch_ready = bool(
         bounded_proof_only
@@ -2231,6 +2247,8 @@ def _snerv_campaign_row(
             if not renderer_nondegenerate_ready
             else "native_rate_aware_long_training_evidence_gate_blocked"
             if not pre_long_run_evidence_ready
+            else "snerv_long_run_launch_gate_blocked"
+            if not launch_gate_ready
             else "snerv_scoreaware_curriculum_blocked"
             if not curriculum_ready
             else (
@@ -2280,6 +2298,7 @@ def _snerv_campaign_row(
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
             "snerv_pre_long_run_evidence_gate": pre_long_run_evidence_gate,
+            "snerv_long_run_launch_gate": snerv_launch_gate_status,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
@@ -3147,6 +3166,7 @@ def _experiment_launch_blockers(
         "snerv_official_mfu_hfr_tub_",
         "snerv_official_trained_checkpoint_",
         "snerv_official_tub_",
+        "snerv_long_run_launch_gate_",
         "source_parity:",
         "hi_nerv_pr95_distortion_",
         "snerv_pr95_distortion_",
@@ -3582,6 +3602,65 @@ def _snerv_source_forward_evidence_active(
         isinstance(source_forward_evidence, Mapping)
         and _positive_int_or_none(source_forward_evidence.get("artifact_count")) is not None
     )
+
+
+def _snerv_long_run_launch_gate_status(
+    verdict: Mapping[str, Any] | None,
+    *,
+    bounded_proof_only: bool,
+) -> dict[str, Any]:
+    if bounded_proof_only:
+        return {
+            "schema": "snerv_long_run_launch_gate_consumption.v1",
+            "required": False,
+            "approved": True,
+            "reason": "bounded_proof_only_rows_are_allowed_to_produce_gate_evidence",
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+    blockers: list[str] = []
+    if not isinstance(verdict, Mapping):
+        blockers.append("snerv_long_run_launch_gate_verdict_missing")
+        return {
+            "schema": "snerv_long_run_launch_gate_consumption.v1",
+            "required": True,
+            "approved": False,
+            "verdict_schema": None,
+            "gate_highest_level": None,
+            "gate_blocking_evidence": [],
+            "source_forward_action_effect_indexed": False,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    if verdict.get("schema") != NERV_LONG_RUN_LAUNCH_GATE_SCHEMA:
+        blockers.append("snerv_long_run_launch_gate_schema_invalid")
+    if str(verdict.get("family") or "").strip().lower().replace("-", "_") != "snerv":
+        blockers.append("snerv_long_run_launch_gate_family_invalid")
+    if verdict.get("approved") is not True:
+        blockers.append("snerv_long_run_launch_gate_not_approved")
+    if str(verdict.get("highest_level") or "") != "L4":
+        blockers.append("snerv_long_run_launch_gate_not_l4")
+    gate_blockers = [str(v) for v in verdict.get("blocking_evidence") or [] if v]
+    blockers.extend(f"snerv_long_run_launch_gate_blocker:{value}" for value in gate_blockers)
+    evidence_index = verdict.get("evidence_index")
+    source_forward_indexed = (
+        isinstance(evidence_index, Mapping)
+        and bool(evidence_index.get(SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA))
+    )
+    if not source_forward_indexed:
+        blockers.append("snerv_long_run_launch_gate_source_forward_action_effect_missing")
+    blockers = _dedupe(blockers)
+    return {
+        "schema": "snerv_long_run_launch_gate_consumption.v1",
+        "required": True,
+        "approved": not blockers,
+        "verdict_schema": verdict.get("schema"),
+        "gate_highest_level": verdict.get("highest_level"),
+        "gate_blocking_evidence": gate_blockers,
+        "source_forward_action_effect_indexed": bool(source_forward_indexed),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _looks_like_sha256(value: Any) -> bool:

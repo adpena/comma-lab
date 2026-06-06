@@ -1494,6 +1494,7 @@ def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blocke
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
         max_candidates_per_family=1,
         snerv_official_source_forward_artifacts=(source_forward,),
+        snerv_long_run_launch_gate_verdict=_approved_snerv_long_run_gate_verdict(),
     )
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
@@ -1623,6 +1624,100 @@ def test_campaign_plan_does_not_promote_metadata_only_source_authority() -> None
         "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
         in pr95_guard["blockers"]
     )
+
+
+def test_campaign_plan_requires_snerv_long_run_launch_gate_for_full_run(
+    tmp_path: Path,
+) -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.pop("pr95_scorer_atom_actuator_execution_evidence", None)
+    state_dict_path = _write_official_state_dict_npz(tmp_path)
+    feedback = _snerv_scorer_input_distribution_guard_feedback_row()
+    feedback.update(
+        {
+            "candidate_id": candidate["candidate_id"],
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 600,
+            "scope_matches_candidate": True,
+            "blockers": [],
+            "snerv_mlx_native_export_blockers": [],
+            "snerv_official_trained_checkpoint_mapping_blockers": [],
+        }
+    )
+    source_forward = _snerv_source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+        trained_checkpoint_loaded=True,
+        state_dict_path=state_dict_path,
+        numerical_proof_complete=True,
+    )
+    mapping = dict(source_forward["official_trained_checkpoint_mapping_manifest"])
+    mapping.update(
+        {
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_tub_temporal_encoder_weight_mapping_proven": True,
+            "official_tub_output2_decoder_weight_mapping_proven": True,
+            "closed_campaign_blockers": [],
+            "blockers": [],
+        }
+    )
+    source_forward.update(
+        {
+            "source_forward_replay_authority": True,
+            "official_trained_checkpoint_state_dict_mapping_verified": True,
+            "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+            "official_tub_temporal_encoder_weight_mapping_proven": True,
+            "official_tub_output2_decoder_weight_mapping_proven": True,
+            "official_trained_checkpoint_mapping_manifest": mapping,
+            "blockers": [],
+        }
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        candidate_feedback_sources=(feedback,),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_official_source_forward_artifacts=(source_forward,),
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert "snerv_long_run_launch_gate_verdict_missing" in snerv_row["blockers"]
+    assert snerv_row["snerv_long_run_launch_gate"]["approved"] is False
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert (
+        "snerv_long_run_launch_gate_verdict_missing"
+        in snerv_row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_launch_blockers"
+        ]
+    )
+
+    approved = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        candidate_feedback_sources=(feedback,),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_official_source_forward_artifacts=(source_forward,),
+        snerv_long_run_launch_gate_verdict=_approved_snerv_long_run_gate_verdict(),
+    )
+    approved_row = next(
+        row for row in approved["campaign_rows"] if row["family"] == "snerv"
+    )
+    assert "snerv_long_run_launch_gate_verdict_missing" not in approved_row["blockers"]
+    assert approved_row["snerv_long_run_launch_gate"]["approved"] is True
 
 
 def test_campaign_plan_auto_discovers_candidate_byte_feedback_guard_split(
@@ -8338,6 +8433,25 @@ def _snerv_source_forward_numerical_proof() -> dict:
         "pose_linf_official_parseback": 0.0,
         "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
         "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
+    }
+
+
+def _approved_snerv_long_run_gate_verdict() -> dict:
+    return {
+        "schema": "nerv_long_run_launch_gate.v1",
+        "family": "snerv",
+        "approved": True,
+        "highest_level": "L4",
+        "blocking_evidence": [],
+        "missing_evidence_keys": [],
+        "evidence_index": {
+            "snerv_source_forward_proof_action_effect.v1": [
+                "/Volumes/VertigoDataTier/pact/unit/source_forward_proof.json"
+            ]
+        },
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
     }
 
 

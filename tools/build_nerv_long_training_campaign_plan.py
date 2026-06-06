@@ -264,6 +264,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-long-run-launch-gate-verdict",
+        type=Path,
+        help=(
+            "nerv_long_run_launch_gate.v1 JSON from "
+            "tools/validate_nerv_long_run_gate.py. Full SNeRV long-run rows "
+            "remain disabled unless this verdict is approved and indexes a "
+            "snerv_source_forward_proof_action_effect.v1 row."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-replacement-authority-gate",
         action="append",
         default=[],
@@ -490,6 +500,11 @@ def main(argv: list[str] | None = None) -> int:
         snerv_official_source_forward_artifacts=tuple(
             _load_with_source_identity(path)
             for path in args.snerv_official_source_forward_artifact
+        ),
+        snerv_long_run_launch_gate_verdict=(
+            None
+            if args.snerv_long_run_launch_gate_verdict is None
+            else _load_with_source_identity(args.snerv_long_run_launch_gate_verdict)
         ),
         snerv_official_replacement_authority_gates=tuple(
             _load_with_source_identity(path)

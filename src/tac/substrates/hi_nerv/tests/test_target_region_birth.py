@@ -26,6 +26,7 @@ from tac.substrates.hi_nerv.target_region_birth import (
     birth_action_id,
     build_target_region_birth_receipt,
     find_target_region_debts,
+    pose_trusted_birth_admission_decision,
     region_argmax_transition_counts,
     region_margin_stats,
     select_worst_target_region,
@@ -75,6 +76,56 @@ def test_allowed_birth_update_name_scopes_late_tensors_only() -> None:
     assert not allowed_birth_update_name("latent_embed.weight")
     assert not allowed_birth_update_name("blocks.0.conv.weight")
     assert not allowed_birth_update_name("mid_injector.proj.weight")
+
+
+def test_pose_trusted_birth_admission_accepts_exact_win_despite_raw_cap_counterfactual() -> None:
+    decision = pose_trusted_birth_admission_decision(
+        old_d_seg=0.49237060546875,
+        new_d_seg=0.4360555013020833,
+        old_d_pose=194.20106506347656,
+        new_d_pose=196.9571990966797,
+        pose_output_l2_delta=0.37355837225914,
+        raw_pose_cap_l2=0.05,
+        exact_score_epsilon=1.0e-6,
+        catastrophic_relative_cap=0.25,
+        catastrophic_pose_score_regression_cap=0.5,
+    )
+
+    assert decision["exact_score_decision"] == "accepted"
+    assert decision["raw_cap_decision"] == "violated_counterfactual_only"
+    assert decision["raw_cap_is_counterfactual_only"] is True
+    assert decision["catastrophic_guard_decision"] == "satisfied"
+    assert decision["accepted"] is True
+    assert decision["would_accept_exact_score_if_raw_cap_disabled"] is True
+    assert decision["rejected_by_raw_pose_cap"] is False
+    assert decision["would_reject_under_raw_pose_cap"] is True
+    assert decision["rejection_source"] is None
+    assert decision["pose_score_delta"] < 0.5
+    assert decision["exact_delta_score_nonrate"] == pytest.approx(-5.319900136951347)
+
+
+def test_pose_trusted_birth_admission_catastrophic_guard_blocks_exact_win() -> None:
+    decision = pose_trusted_birth_admission_decision(
+        old_d_seg=0.50,
+        new_d_seg=0.00,
+        old_d_pose=194.20106506347656,
+        new_d_pose=300.0,
+        pose_output_l2_delta=0.01,
+        raw_pose_cap_l2=0.05,
+        exact_score_epsilon=1.0e-6,
+        catastrophic_relative_cap=0.25,
+        catastrophic_pose_score_regression_cap=0.5,
+    )
+
+    assert decision["exact_score_decision"] == "accepted"
+    assert decision["raw_cap_decision"] == "satisfied"
+    assert decision["catastrophic_guard_decision"] == "rejected"
+    assert decision["accepted"] is False
+    assert decision["would_accept_without_catastrophic_guard"] is True
+    assert decision["would_accept_exact_score_if_raw_cap_disabled"] is False
+    assert decision["rejection_source"] == "rejected_by_catastrophic_pose_guard"
+    assert "d_pose_relative_cap_exceeded" in decision["catastrophic_guard_reasons"]
+    assert "pose_score_regression_cap_exceeded" in decision["catastrophic_guard_reasons"]
 
 
 def _two_region_labels() -> tuple[np.ndarray, np.ndarray]:
@@ -668,6 +719,18 @@ def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() ->
     assert telemetry["final_already_won_lost_count"] == 0
     assert telemetry["unsolved_tail_pixel_count"] == 24
     assert telemetry["already_won_region_pixel_count"] == 24
+    assert payload["target_geometry_mode"] == "frontier_band"
+    assert payload["target_geometry_frontier_dilation"] == 1
+    assert payload["initial_active_tail_pixel_count"] == 6
+    assert payload["active_tail_refresh_count"] >= 1
+    geometry = telemetry["target_geometry"]
+    assert geometry["mode"] == "frontier_band"
+    assert geometry["initial_active_tail_pixel_count"] == 6
+    assert geometry["parent_unsolved_tail_pixel_count"] == 24
+    assert geometry["parent_already_won_pixel_count"] == 24
+    assert geometry["history"][0]["reason"] == "initial"
+    assert geometry["history"][0]["active_tail_pixel_count"] == 6
+    assert any(record["active_tail_pixel_count_before_attempt"] == 6 for record in telemetry["attempts"])
     controls = telemetry["trust_region_controls"]
     assert controls["lambda_support_preserve"] == pytest.approx(64.0)
     assert controls["lambda_already_won_hard_preserve"] == pytest.approx(0.0)
@@ -872,12 +935,14 @@ def test_target_region_birth_pose_guard_blocks_visible_pose_harm() -> None:
         max_steps=4,
         learning_rate=2.0e-3,
         max_pose_output_delta_l2=1.0e-6,
+        catastrophic_pose_output_l2_hard_cap=1.0e-6,
     )
 
-    # Any uint8-visible step breaches the (deliberately impossible) pose cap,
-    # so nothing may be accepted and pose telemetry must be present.
+    # Raw cap is only counterfactual in v6; an explicit catastrophic hard cap is
+    # what makes this a fail-closed rejection/restoration test.
     assert payload["accepted"] is False
     assert payload["pose_guard"]["available"] is True
+    assert payload["pose_guard"]["raw_pose_cap_is_counterfactual_only"] is True
     assert payload["pose_guard_rejected_step_count"] >= 1 or payload["subquantum_rejected_step_count"] >= 1
     assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in payload["blockers"]
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
@@ -1164,10 +1229,14 @@ def test_frame0_compensation_admits_composite_when_frame1_pose_harm_is_compensab
     assert pc["frame1_receiver_uint8_unchanged_by_compensation"] is True
     assert pc["compensation_scope"] == "head_rgb_0"
     assert all(rec["frame1_receiver_uint8_unchanged"] for rec in pc["attempts"])
-    # The accepted composite satisfied the pose cap.
+    # The accepted composite satisfies the exact nonlinear score and
+    # catastrophic guard.  The old raw cap is retained only as counterfactual
+    # telemetry, so accepted records may exceed it.
     accepted_attempts = [rec for rec in pc["attempts"] if rec["accepted"]]
     assert accepted_attempts
-    assert all(rec["composite_pose_cap_satisfied"] for rec in accepted_attempts)
+    assert all(rec["composite_exact_score_decision"] == "accepted" for rec in accepted_attempts)
+    assert all(rec["composite_catastrophic_guard_decision"] == "satisfied" for rec in accepted_attempts)
+    assert all(rec["would_accept_exact_score_if_raw_cap_disabled"] for rec in accepted_attempts)
     # The receipt carries the same composite record and still refuses the birth
     # scope leak (built via the scope-validated receipt builder).
     receipt = payload["receipt"]
@@ -1219,9 +1288,11 @@ def test_frame0_compensation_rejects_and_restores_when_pose_harm_is_uncompensabl
         pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
         target_segnet_argmax_1=mx.array(labels_np),
         # frame1-only pose => any visible frame1 birth step moves pose and frame0
-        # cannot undo it. k large + cap tiny guarantees the cap rejects.
+        # cannot undo it. The raw cap is counterfactual, so the explicit
+        # catastrophic hard cap supplies the reject/restoration surface.
         pose_teacher=_Frame1OnlyPoseTeacher(mx, k=50.0),
         max_pose_output_delta_l2=1.0e-4,
+        catastrophic_pose_output_l2_hard_cap=1.0e-4,
         max_steps=6,
         learning_rate=2.0e-3,
     )
@@ -1432,14 +1503,13 @@ def test_compensation_never_relaxes_birth_allow_list_invariant() -> None:
 
 
 @skip_no_mlx
-def test_frame0_compensation_is_priced_against_initial_pose_cap_surface() -> None:
-    """Compensation must target the exact Pose trust cap surface.
+def test_frame0_compensation_records_initial_raw_pose_cap_counterfactual() -> None:
+    """Compensation must record the exact initial raw-pose-cap surface.
 
     The cap checks movement from the initial live pose.  A compensator trained
     against source-video target pose can look useful while still violating that
-    cap.  The accepted composite fixture proves the current implementation
-    lowers the initial-pose movement enough to satisfy the guard, and the
-    per-attempt telemetry records that exact cap result.
+    cap.  In v6 that cap is counterfactual telemetry only; exact nonlinear
+    score plus catastrophic guard owns admission.
     """
 
     import mlx.core as mx
@@ -1468,7 +1538,8 @@ def test_frame0_compensation_is_priced_against_initial_pose_cap_surface() -> Non
 
     assert payload["accepted"] is True
     assert payload["composite_accepted"] is True
-    assert payload["pose_guard"]["max_accepted_pose_output_delta_l2"] <= payload["pose_guard"][
+    assert payload["pose_guard"]["raw_pose_cap_is_counterfactual_only"] is True
+    assert payload["pose_guard"]["max_accepted_pose_output_delta_l2"] > payload["pose_guard"][
         "max_pose_output_delta_l2"
     ]
     pc = payload["pose_compensation"]
@@ -1476,6 +1547,9 @@ def test_frame0_compensation_is_priced_against_initial_pose_cap_surface() -> Non
     accepted_attempts = [record for record in pc["attempts"] if record["accepted"]]
     assert accepted_attempts
     for record in accepted_attempts:
-        assert record["composite_pose_cap_satisfied"] is True
-        assert record["composite_pose_output_delta_l2"] <= payload["pose_guard"]["max_pose_output_delta_l2"]
+        assert record["composite_raw_cap_decision"] == "violated_counterfactual_only"
+        assert record["composite_pose_output_delta_l2"] > payload["pose_guard"]["max_pose_output_delta_l2"]
+        assert record["composite_exact_score_decision"] == "accepted"
+        assert record["composite_catastrophic_guard_decision"] == "satisfied"
+        assert record["would_accept_exact_score_if_raw_cap_disabled"] is True
         assert record["composite_delta_score_nonrate"] < 0.0

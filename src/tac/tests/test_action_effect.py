@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 import math
+import subprocess
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -19,7 +23,10 @@ from tac.analysis.action_effect import (
     build_action_effect,
     build_action_effect_ledger,
     compute_delta_scores,
+    exact_delta_score,
     read_action_effects,
+    validate_action_effect_payload,
+    value_per_byte,
 )
 from tac.analysis.nerv_pair_local_distortion_servo import (
     PairLocalScoreState,
@@ -490,6 +497,14 @@ def test_v1_value_per_byte_hand_checked_number() -> None:
     assert ds.value_per_byte > 0.0
 
 
+def test_v1_public_exact_delta_and_value_helpers_are_single_source() -> None:
+    old = (0.0012, 2.0e-4, 178258)
+    new = (0.0012, 2.0e-4, 178221)
+    delta = exact_delta_score(old[0], new[0], old[1], new[1], old[2], new[2])
+    assert delta == pytest.approx(25.0 * (new[2] - old[2]) / CONTEST_REFERENCE_BYTES, abs=1e-15)
+    assert value_per_byte(delta, new[2] - old[2]) == pytest.approx(25.0 / CONTEST_REFERENCE_BYTES, abs=1e-18)
+
+
 def test_v1_value_per_byte_none_when_bytes_unchanged() -> None:
     ds = compute_delta_scores(0.0010, 0.0008, 1.0e-4, 1.0e-4, 178258, 178258)
     assert ds.delta_bytes == 0
@@ -527,30 +542,10 @@ def test_v1_authority_required_empty_raises() -> None:
 def test_v1_promotion_eligible_true_raises() -> None:
     base = ActionEffect.build(action_id="a1", family="hinerv", authority="parseback_mlx", producer="p")
     payload = base.as_dict()
+    payload.pop("old_archive_bytes")
+    payload.pop("new_archive_bytes")
     with pytest.raises(ValueError, match="promotion_eligible"):
-        ActionEffect(
-            schema=payload["schema"],
-            action_id=payload["action_id"],
-            family=payload["family"],
-            authority=payload["authority"],
-            producer=payload["producer"],
-            consumer=None,
-            pair_ids=(),
-            region_ids=(),
-            payload_sections=(),
-            old_d_seg=None,
-            new_d_seg=None,
-            old_d_pose=None,
-            new_d_pose=None,
-            old_bytes=None,
-            new_bytes=None,
-            delta_score_nonrate=None,
-            delta_score_total=None,
-            value_per_byte=None,
-            parseback_survived=None,
-            inflate_survived=None,
-            promotion_eligible=True,
-        )
+        ActionEffect(**{**payload, "promotion_eligible": True})
 
 
 def test_v1_action_id_required_nonempty() -> None:
@@ -623,6 +618,78 @@ def test_v1_from_hinerv_birth_receipt_no_pose_teacher_leaves_distortion_none() -
     assert eff.delta_score_nonrate is None  # never fabricated
 
 
+def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields() -> None:
+    receipt, action_id = _real_birth_receipt(
+        old_d_seg=0.49237060546875,
+        new_d_seg=0.4360555013020833,
+        old_d_pose=194.20106506347656,
+        new_d_pose=196.9571990966797,
+    )
+    receipt["action_kind"] = "four_arm_composite_ablation"
+    receipt["candidate_frontier_telemetry"] = {
+        "attempts": [
+            {
+                "arm": "A",
+                "exact_score_decision": "rejected",
+                "raw_cap_decision": "violated_counterfactual_only",
+                "catastrophic_guard_decision": "satisfied",
+                "would_accept_exact_score_if_raw_cap_disabled": False,
+                "would_accept_without_catastrophic_guard": False,
+                "pose_output_l2_delta": 0.37355837225914,
+                "seg_score_delta": 0.0,
+                "pose_score_delta": 0.0,
+                "rejection_source": "rejected_by_exact_delta_score",
+            },
+            {
+                "arm": "C",
+                "decision": "backtrack_no_unsolved_tail_progress",
+                "exact_score_decision": "accepted",
+                "raw_cap_decision": "violated_counterfactual_only",
+                "catastrophic_guard_decision": "satisfied",
+                "would_accept_exact_score_if_raw_cap_disabled": True,
+                "would_accept_without_catastrophic_guard": True,
+                "pose_output_l2_delta": 1.1900334358215332,
+                "seg_score_delta": 1.384989420572913,
+                "pose_score_delta": -2.9173961550826245,
+                "rejection_source": None,
+            },
+            {
+                "arm": "D",
+                "decision": "accepted",
+                "exact_score_decision": "accepted",
+                "raw_cap_decision": "violated_counterfactual_only",
+                "catastrophic_guard_decision": "satisfied",
+                "would_accept_exact_score_if_raw_cap_disabled": True,
+                "would_accept_without_catastrophic_guard": True,
+                "pose_output_l2_delta": 0.37355837225914,
+                "seg_score_delta": -5.631510416666668,
+                "pose_score_delta": 0.3116102797153206,
+                "rejection_source": None,
+            },
+        ],
+    }
+
+    eff = ActionEffect.from_hinerv_birth_receipt(receipt)
+
+    assert eff.action_id == action_id
+    assert eff.action_kind == "four_arm_composite_ablation"
+    assert eff.arm == "D"
+    assert eff.exact_score_decision == "accept"
+    assert eff.raw_cap_decision == "violated_counterfactual_only"
+    assert eff.catastrophic_guard_decision == "satisfied"
+    assert eff.would_accept_exact_score_if_raw_cap_disabled is True
+    assert eff.would_accept_without_catastrophic_guard is True
+    assert eff.pose_output_l2_delta == pytest.approx(0.37355837225914)
+    assert eff.seg_score_delta == pytest.approx(-5.631510416666668)
+    assert eff.pose_score_delta == pytest.approx(0.3116102797153206)
+    assert eff.rejection_source is None
+    roundtrip = ActionEffect.from_dict(eff.as_dict())
+    assert roundtrip.arm == "D"
+    assert roundtrip.raw_cap_decision == "violated_counterfactual_only"
+    assert roundtrip.would_accept_exact_score_if_raw_cap_disabled is True
+    assert roundtrip.pose_output_l2_delta == pytest.approx(0.37355837225914)
+
+
 # ── constructor: pair-local servo (real schema) ────────────────────────────
 
 
@@ -690,6 +757,71 @@ def test_v1_from_pr110_selector_candidate() -> None:
     assert eff.old_bytes == 178674 - 157
     assert eff.payload_sections == ("lapose_foveation_tuples.lfv1", "x")
     assert eff.delta_score_total == pytest.approx(25.0 * 157 / CONTEST_REFERENCE_BYTES, abs=1e-15)
+
+
+def test_v1_from_pr110_exact_replay_carries_cpu_authority_and_exact_delta() -> None:
+    row = _pr110_selector_candidate()
+    row.update(
+        {
+            "action_kind": "selector_mode",
+            "authority": "contest_cpu",
+            "old_d_seg": 0.00056039,
+            "new_d_seg": 0.00055979,
+            "old_d_pose": 2.943e-05,
+            "new_d_pose": 2.943e-05,
+            "old_archive_bytes": 178517,
+            "new_archive_bytes": 178493,
+            "official_inflate_control_passed": True,
+            "archive_sha256": "b" * 64,
+        }
+    )
+    eff = ActionEffect.from_pr110_selector_row(row)
+    assert eff.authority == "contest_cpu"
+    assert eff.normalization_scope == "full_video_exact"
+    assert eff.old_bytes == 178517
+    assert eff.new_bytes == 178493
+    assert eff.delta_score_total == pytest.approx(
+        exact_delta_score(0.00056039, 0.00055979, 2.943e-05, 2.943e-05, 178517, 178493),
+        abs=1e-15,
+    )
+    assert eff.value_per_byte is not None
+    assert eff.promotion_eligible is False
+    assert "score_claim" not in eff.as_dict()
+
+
+def test_v1_from_frontier_rate_materializer_prices_current_final_rate_saving() -> None:
+    manifest = {
+        "schema": "fp11_source_brotli_recode_manifest.v1",
+        "operation_family": "fp11_source_brotli_recode_v1",
+        "source_archive": {"bytes": 178530, "sha256": "1" * 64},
+        "candidate_archive": {
+            "bytes": 178493,
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+        },
+        "selected_member_names": ["x"],
+        "receiver_contract_satisfied": True,
+        "receiver_proof_ready": True,
+        "score_claim": False,
+    }
+    auth_eval = {
+        "lane_tag": "[contest-CPU]",
+        "score_axis": "contest_cpu",
+        "archive_size_bytes": 178493,
+        "avg_segnet_dist": 0.00055979,
+        "avg_posenet_dist": 2.943e-05,
+    }
+    eff = ActionEffect.from_frontier_rate_materializer(manifest, auth_eval=auth_eval)
+    assert eff.family == "frontier_rate_attack"
+    assert eff.authority == "[contest-CPU] frontier_final_rate_attack"
+    assert eff.normalization_scope == "full_video_exact"
+    assert eff.payload_sections == ("x",)
+    assert eff.old_bytes == 178530
+    assert eff.new_bytes == 178493
+    assert eff.delta_score_total == pytest.approx(25.0 * -37 / CONTEST_REFERENCE_BYTES, abs=1e-15)
+    assert eff.value_per_byte == pytest.approx(25.0 / CONTEST_REFERENCE_BYTES, abs=1e-18)
+    assert eff.parseback_survived is True
+    assert eff.inflate_survived is True
+    assert eff.archive_sha256 == "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
 
 
 def test_v1_from_pr110_tolerant_on_unknown_shape() -> None:
@@ -766,3 +898,89 @@ def test_v1_ledger_read_skips_malformed_lines(tmp_path) -> None:
         fh.write("\n")
     rows = read_action_effects(ledger)
     assert [r.action_id for r in rows] == ["ok"]
+
+
+def test_v1_validation_rejects_nested_score_authority_and_survival_mismatch() -> None:
+    eff = ActionEffect.build(
+        action_id="same-action",
+        family="hinerv",
+        authority="batch_local_live_mlx",
+        producer="fixture",
+        receiver_surface={"uint8_changed_pixels": 1},
+    )
+    payload = eff.as_dict()
+    payload["receiver_surface"]["official_score"] = 0.1
+    status = validate_action_effect_payload(payload)
+    assert status["passed"] is False
+    assert any(str(item).startswith("action_effect_forbidden_score_authority") for item in status["blockers"])
+
+    mismatch = eff.as_dict()
+    mismatch["parseback_survival"] = {"action_id": "different-action"}
+    status = validate_action_effect_payload(mismatch)
+    assert status["passed"] is False
+    assert "action_id_survival_mismatch" in status["blockers"]
+
+
+def test_validate_action_effect_rows_cli_accepts_good_ledger(tmp_path: Path) -> None:
+    ledger = tmp_path / "rows.jsonl"
+    append_action_effect(
+        ActionEffect.build(
+            action_id="ok",
+            family="hinerv",
+            authority="batch_local_live_mlx",
+            producer="fixture",
+            old_bytes=100,
+            new_bytes=90,
+        ),
+        ledger,
+    )
+    append_action_effect(
+        ActionEffect.build(
+            action_id="ok2",
+            family="pr110",
+            authority="contest_cpu",
+            producer="fixture",
+            old_bytes=100,
+            new_bytes=90,
+        ),
+        ledger,
+    )
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [sys.executable, str(repo_root / "tools" / "validate_action_effect_rows.py"), str(ledger)],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["row_count"] == 2
+    assert summary["failed_count"] == 0
+
+
+def test_validate_action_effect_rows_cli_rejects_bad_ledger(tmp_path: Path) -> None:
+    rows = tmp_path / "bad.jsonl"
+    payload = ActionEffect.build(
+        action_id="bad",
+        family="hinerv",
+        authority="batch_local_live_mlx",
+        producer="fixture",
+    ).as_dict()
+    payload["score_claim_valid"] = True
+    rows.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [sys.executable, str(repo_root / "tools" / "validate_action_effect_rows.py"), str(rows)],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 1
+    summary = json.loads(proc.stdout)
+    assert summary["failed_count"] == 1
+    assert any(
+        str(item).startswith("action_effect_forbidden_score_authority")
+        for item in summary["rows"][0]["blockers"]
+    )

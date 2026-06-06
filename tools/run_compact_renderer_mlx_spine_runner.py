@@ -8925,6 +8925,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor: float = 1.0,
     scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight: float = 0.0,
     scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode: str = "frontier_band",
+    scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation: int = 1,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = (
@@ -10064,6 +10066,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight=float(
                 scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode=str(
+                scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation=int(
+                scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
             ),
             allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
             scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
@@ -15298,6 +15306,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor: float = 1.0,
     scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight: float = 0.0,
     scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode: str = "frontier_band",
+    scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation: int = 1,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -15656,6 +15666,19 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     ):
         if not math.isfinite(float(value)) or float(value) < 0.0:
             raise CompactRendererMlxSpineRunnerError(f"{name} must be finite and non-negative")
+    if str(scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode) not in {
+        "frontier_band",
+        "largest_unsolved_component",
+        "full_tail",
+    }:
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode must be one of "
+            "['frontier_band', 'largest_unsolved_component', 'full_tail']"
+        )
+    if int(scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation) < 1:
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation must be >= 1"
+        )
     if (
         not math.isfinite(float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor))
         or float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor) < 0.0
@@ -16451,6 +16474,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                                 effective_hard_birth_pose_trust_preserve_weight
                             ),
                             lambda_pose_target=float(requested_hard_birth_pose_target_weight),
+                            target_geometry_mode=str(
+                                scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
+                            ),
+                            target_geometry_frontier_dilation=int(
+                                scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
+                            ),
                             grad_clip_max_norm=None,
                         )
                     )
@@ -16507,6 +16536,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             hard_birth_pose_trust_preserve_defaulted
         )
         bootstrap_payload["segnet_hard_birth_pose_target_requested_weight"] = requested_hard_birth_pose_target_weight
+        bootstrap_payload["segnet_hard_birth_target_geometry_mode"] = str(
+            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
+        )
+        bootstrap_payload["segnet_hard_birth_target_geometry_frontier_dilation"] = int(
+            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
+        )
         bootstrap_payload["segnet_hard_birth_pose_teacher_requested"] = hard_birth_pose_teacher_requested
         bootstrap_payload["actuators_enabled_effective"] = {
             "segnet_teacher": bootstrap_scorer_teacher is not None,
@@ -18399,7 +18434,10 @@ def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> 
     pose_cap = pose_guard.get("max_pose_output_delta_l2")
     if not isinstance(accepted_delta, (int, float)) or not isinstance(pose_cap, (int, float)):
         blockers.append("hi_nerv_pose_trusted_birth_pose_cap_telemetry_missing")
-    elif float(accepted_delta) > float(pose_cap):
+    elif (
+        float(accepted_delta) > float(pose_cap)
+        and pose_guard.get("raw_pose_cap_is_counterfactual_only") is not True
+    ):
         blockers.append("hi_nerv_pose_trusted_birth_pose_cap_exceeded")
 
     nonrate_raw = row.get("exact_nonrate")
@@ -18434,6 +18472,35 @@ def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> 
             if name in birth_names:
                 blockers.append("hi_nerv_pose_trusted_birth_compensation_in_birth_scope")
                 break
+
+    admission_rows: list[Mapping[str, Any]] = []
+    frontier_attempts = frontier.get("attempts")
+    if isinstance(frontier_attempts, Sequence) and not isinstance(frontier_attempts, (str, bytes)):
+        admission_rows.extend(row for row in frontier_attempts if isinstance(row, Mapping))
+    if compensation is not None:
+        compensation_attempts = compensation.get("attempts")
+        if isinstance(compensation_attempts, Sequence) and not isinstance(compensation_attempts, (str, bytes)):
+            admission_rows.extend(row for row in compensation_attempts if isinstance(row, Mapping))
+
+    def _decision_text(source: Mapping[str, Any], *keys: str) -> str:
+        for key in keys:
+            value = source.get(key)
+            if value is not None:
+                return str(value)
+        return ""
+
+    v6_decision_seen = any(
+        _decision_text(row, "exact_score_decision", "composite_exact_score_decision")
+        or _decision_text(row, "catastrophic_guard_decision", "composite_catastrophic_guard_decision")
+        for row in admission_rows
+    )
+    if v6_decision_seen and not any(
+        _decision_text(row, "exact_score_decision", "composite_exact_score_decision") == "accepted"
+        and _decision_text(row, "catastrophic_guard_decision", "composite_catastrophic_guard_decision")
+        == "satisfied"
+        for row in admission_rows
+    ):
+        blockers.append("hi_nerv_pose_trusted_birth_v6_admission_decision_missing")
 
     return _dedupe(blockers)
 
@@ -18558,6 +18625,7 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     )
 
     fake_path = out / "hi_nerv_birth_fakequant_survival.json"
+    action_effect_ledger_path = out / "hi_nerv_birth_action_effects.jsonl"
     try:
         fake_row = dict(
             measure_birth_survival(
@@ -18587,6 +18655,22 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     summary["fakequant_survival_path"] = fake_path.as_posix()
     summary["fakequant_survived"] = fake_row.get("survived")
     summary["fakequant_blockers"] = [str(value) for value in fake_row.get("blockers") or []]
+    summary["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+    try:
+        from tac.analysis.action_effect import ActionEffect, append_action_effect
+
+        source_receipt = dict(receipt or live_birth_payload)
+        source_receipt["fakequant_survived"] = fake_row.get("survived") is True
+        action_effect = ActionEffect.from_hinerv_birth_receipt(
+            source_receipt,
+            consumer="nerv_long_run_launch_gate",
+        )
+        append_action_effect(action_effect, action_effect_ledger_path)
+        summary["action_effect_rows_written"] = 1
+    except Exception as exc:
+        blocker = f"hi_nerv_birth_action_effect_write_failed:{type(exc).__name__}:{exc}"
+        summary["action_effect_rows_written"] = 0
+        summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], blocker])
 
     hyst_path = out / "hi_nerv_birth_hysteresis.json"
     snapshot: list[tuple[Any, Any]] | None = None
@@ -18622,6 +18706,7 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     summary["hysteresis_passed"] = hyst_row.get("passed")
     summary["hysteresis_blockers"] = [str(value) for value in hyst_row.get("blockers") or []]
     summary["blockers"] = [
+        *[str(value) for value in summary.get("blockers") or []],
         *summary.get("fakequant_blockers", []),
         *summary.get("hysteresis_blockers", []),
     ]
@@ -18756,6 +18841,30 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
         row["canonical_launch_gate_schema"] = False
     row["artifact_path"] = row_path.as_posix()
     row["producer"] = "hi_nerv_runner_archive_selection_birth_parseback_survival"
+    action_effect_ledger_path = row_path.with_name("hi_nerv_birth_action_effects.jsonl")
+    try:
+        from tac.analysis.action_effect import ActionEffect, append_action_effect
+
+        action_effect = ActionEffect.build(
+            action_id=action_id,
+            family="hinerv",
+            authority="parseback_mlx",
+            producer="hi_nerv_runner_archive_selection_birth_parseback_survival",
+            consumer="nerv_long_run_launch_gate",
+            parseback_survived=row.get("survived") is True,
+        )
+        append_action_effect(action_effect, action_effect_ledger_path)
+        row["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+        row["action_effect_rows_written"] = 1
+    except Exception as exc:
+        row["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+        row["action_effect_rows_written"] = 0
+        row["blockers"] = _dedupe(
+            [
+                *[str(value) for value in row.get("blockers") or []],
+                f"hi_nerv_birth_parseback_action_effect_write_failed:{type(exc).__name__}:{exc}",
+            ]
+        )
     _write_json(row_path, row)
     return row
 
@@ -25157,6 +25266,23 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-target-geometry-mode",
+        choices=["frontier_band", "largest_unsolved_component", "full_tail"],
+        default="frontier_band",
+        help=(
+            "Geometry mask consumed by the HiNeRV hard-birth actuator. "
+            "frontier_band recursively drives unsolved pixels adjacent to "
+            "already-won support while the receipt still prices the whole "
+            "parent target region."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-target-geometry-frontier-dilation",
+        default=1,
+        type=int,
+        help="4-connected dilation radius for frontier_band hard-birth geometry.",
+    )
+    parser.add_argument(
         "--no-scorer-space-step-guard",
         action="store_false",
         dest="scorer_space_step_guard_enabled",
@@ -27396,6 +27522,12 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight=float(
                 args.scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode=str(
+                args.scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation=int(
+                args.scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
             ),
             scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(

@@ -27,6 +27,7 @@ from scipy import ndimage
 
 TARGET_REGION_DEBT_SCHEMA = "hi_nerv_target_region_debt.v1"
 TARGET_REGION_BIRTH_RECEIPT_SCHEMA = "hi_nerv_target_region_birth_receipt.v1"
+POSE_TRUSTED_BIRTH_ADMISSION_DECISION_SCHEMA = "hi_nerv_pose_trusted_birth_admission_decision.v1"
 
 # Archive-charged tensors the birth actuator may update.  This mirrors the
 # live-SegNet-scoped bootstrap list in ``mlx_renderer`` (late surfaces with
@@ -330,6 +331,121 @@ def region_argmax_transition_counts(
         "target_hard_won_count": wrong_to_target,
         "target_hard_lost_count": target_to_wrong,
         "net_target_support_delta": wrong_to_target - target_to_wrong,
+    }
+
+
+def pose_trusted_birth_admission_decision(
+    *,
+    old_d_seg: float,
+    new_d_seg: float,
+    old_d_pose: float | None,
+    new_d_pose: float | None,
+    pose_output_l2_delta: float | None,
+    raw_pose_cap_l2: float,
+    exact_score_epsilon: float = 1.0e-6,
+    catastrophic_relative_cap: float = 0.25,
+    catastrophic_pose_score_regression_cap: float = 0.5,
+    catastrophic_pose_output_l2_hard_cap: float | None = None,
+) -> dict[str, Any]:
+    """Return the v6 pose-trusted birth admission decision.
+
+    The exact nonlinear non-rate score is the primary authority:
+    ``100*Delta d_seg + sqrt(10*d_pose_new) - sqrt(10*d_pose_old)``.  The old
+    raw pose-output cap is retained only as a counterfactual decision surface.
+    Catastrophic pose guard is a blow-up catcher, not a tradeoff policer.
+    """
+
+    for name, value in (
+        ("old_d_seg", old_d_seg),
+        ("new_d_seg", new_d_seg),
+        ("raw_pose_cap_l2", raw_pose_cap_l2),
+        ("exact_score_epsilon", exact_score_epsilon),
+        ("catastrophic_relative_cap", catastrophic_relative_cap),
+        ("catastrophic_pose_score_regression_cap", catastrophic_pose_score_regression_cap),
+    ):
+        if not math.isfinite(float(value)) or float(value) < 0.0:
+            raise ValueError(f"{name} must be finite and non-negative; got {value}")
+    for name, value in (
+        ("old_d_pose", old_d_pose),
+        ("new_d_pose", new_d_pose),
+        ("pose_output_l2_delta", pose_output_l2_delta),
+        ("catastrophic_pose_output_l2_hard_cap", catastrophic_pose_output_l2_hard_cap),
+    ):
+        if value is not None and (not math.isfinite(float(value)) or float(value) < 0.0):
+            raise ValueError(f"{name} must be None or finite and non-negative; got {value}")
+
+    seg_score_delta = 100.0 * (float(new_d_seg) - float(old_d_seg))
+    pose_score_delta: float | None = None
+    exact_delta_score_nonrate: float | None = None
+    if old_d_pose is not None and new_d_pose is not None:
+        pose_score_delta = math.sqrt(10.0 * float(new_d_pose)) - math.sqrt(10.0 * float(old_d_pose))
+        exact_delta_score_nonrate = seg_score_delta + pose_score_delta
+
+    raw_cap_satisfied = pose_output_l2_delta is None or float(pose_output_l2_delta) <= float(raw_pose_cap_l2)
+    exact_score_satisfied = (
+        exact_delta_score_nonrate is not None
+        and float(exact_delta_score_nonrate) < -float(exact_score_epsilon)
+    )
+
+    catastrophic_reasons: list[str] = []
+    if old_d_pose is None or new_d_pose is None or pose_score_delta is None:
+        catastrophic_reasons.append("pose_distortion_endpoint_missing")
+    else:
+        if float(new_d_pose) > float(old_d_pose) * (1.0 + float(catastrophic_relative_cap)):
+            catastrophic_reasons.append("d_pose_relative_cap_exceeded")
+        if float(pose_score_delta) > float(catastrophic_pose_score_regression_cap):
+            catastrophic_reasons.append("pose_score_regression_cap_exceeded")
+    if (
+        catastrophic_pose_output_l2_hard_cap is not None
+        and pose_output_l2_delta is not None
+        and float(pose_output_l2_delta) > float(catastrophic_pose_output_l2_hard_cap)
+    ):
+        catastrophic_reasons.append("pose_output_l2_hard_cap_exceeded")
+    catastrophic_guard_satisfied = not catastrophic_reasons
+    accepted = bool(exact_score_satisfied and catastrophic_guard_satisfied)
+    would_accept_exact_score_if_raw_cap_disabled = bool(exact_score_satisfied and catastrophic_guard_satisfied)
+    would_accept_without_catastrophic_guard = bool(exact_score_satisfied)
+    rejection_source: str | None = None
+    if not accepted:
+        if not exact_score_satisfied:
+            rejection_source = "rejected_by_exact_delta_score"
+        elif not catastrophic_guard_satisfied:
+            rejection_source = "rejected_by_catastrophic_pose_guard"
+
+    return {
+        "schema": POSE_TRUSTED_BIRTH_ADMISSION_DECISION_SCHEMA,
+        "old_d_seg": float(old_d_seg),
+        "new_d_seg": float(new_d_seg),
+        "old_d_pose": (None if old_d_pose is None else float(old_d_pose)),
+        "new_d_pose": (None if new_d_pose is None else float(new_d_pose)),
+        "seg_score_delta": float(seg_score_delta),
+        "pose_score_delta": pose_score_delta,
+        "exact_delta_score_nonrate": exact_delta_score_nonrate,
+        "delta_score_nonrate": exact_delta_score_nonrate,
+        "pose_output_l2_delta": (None if pose_output_l2_delta is None else float(pose_output_l2_delta)),
+        "raw_pose_cap_l2": float(raw_pose_cap_l2),
+        "raw_cap_decision": "satisfied" if raw_cap_satisfied else "violated_counterfactual_only",
+        "raw_pose_cap_result": "satisfied" if raw_cap_satisfied else "violated_counterfactual_only",
+        "exact_score_epsilon": float(exact_score_epsilon),
+        "exact_score_decision": "accepted" if exact_score_satisfied else "rejected",
+        "catastrophic_relative_cap": float(catastrophic_relative_cap),
+        "catastrophic_pose_score_regression_cap": float(catastrophic_pose_score_regression_cap),
+        "catastrophic_pose_output_l2_hard_cap": (
+            None
+            if catastrophic_pose_output_l2_hard_cap is None
+            else float(catastrophic_pose_output_l2_hard_cap)
+        ),
+        "catastrophic_guard_decision": "satisfied" if catastrophic_guard_satisfied else "rejected",
+        "catastrophic_guard_reasons": catastrophic_reasons,
+        "accepted": accepted,
+        "would_accept_exact_score_if_raw_cap_disabled": would_accept_exact_score_if_raw_cap_disabled,
+        "would_accept_without_catastrophic_guard": would_accept_without_catastrophic_guard,
+        "rejected_by_raw_pose_cap": False,
+        "would_reject_under_raw_pose_cap": bool(not raw_cap_satisfied),
+        "rejected_by_exact_delta_score": bool(rejection_source == "rejected_by_exact_delta_score"),
+        "rejected_by_catastrophic_pose_guard": bool(rejection_source == "rejected_by_catastrophic_pose_guard"),
+        "rejection_source": rejection_source,
+        "raw_cap_is_counterfactual_only": True,
     }
 
 

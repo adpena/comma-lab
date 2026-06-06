@@ -246,7 +246,12 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
         {
             "schema": REPRESENTATIVE_COVERAGE_SCHEMA,
             "fixture_not_real": True,
+            "passed": True,
             "region_classes_covered": 3,
+            "distinct_classes_accepted": 2,
+            "accepted_count": 3,
+            "min_distinct_classes": 2,
+            "min_distinct_class_size_buckets": 3,
         },
     )
     return root
@@ -404,6 +409,60 @@ def test_full_ladder_with_fresh_pointer_approves(tmp_path: Path) -> None:
     assert verdict["blocking_evidence"] == []
     assert verdict["highest_level"] == "L5"
     assert verdict["approved"] is True
+
+
+def test_failed_representative_coverage_blocks_l5(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "coverage.json",
+        {
+            "schema": REPRESENTATIVE_COVERAGE_SCHEMA,
+            "fixture_not_real": True,
+            "passed": False,
+            "region_classes_covered": 3,
+            "distinct_classes_accepted": 2,
+            "accepted_count": 3,
+            "min_distinct_classes": 2,
+            "min_distinct_class_size_buckets": 3,
+        },
+    )
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+    assert verdict["approved"] is False
+    assert verdict["highest_level"] == "L4"
+    assert "representative_region_coverage_not_passed" in verdict["blocking_evidence"]
+
+
+def test_contradictory_representative_coverage_blocks_l5(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "coverage.json",
+        {
+            "schema": REPRESENTATIVE_COVERAGE_SCHEMA,
+            "fixture_not_real": True,
+            "passed": True,
+            "region_classes_covered": 1,
+            "distinct_classes_accepted": 1,
+            "accepted_count": 1,
+            "min_distinct_classes": 2,
+            "min_distinct_class_size_buckets": 3,
+        },
+    )
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+    assert verdict["approved"] is False
+    assert verdict["highest_level"] == "L4"
+    blocking = verdict["blocking_evidence"]
+    assert "representative_region_coverage_region_classes_below_threshold" in blocking
+    assert "representative_region_coverage_distinct_classes_below_threshold" in blocking
 
 
 def test_hinerv_family_alias_is_canonicalized(tmp_path: Path) -> None:

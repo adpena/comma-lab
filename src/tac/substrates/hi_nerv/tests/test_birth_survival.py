@@ -437,6 +437,7 @@ def test_fakequant_survival_remeasures_pose_compensation_for_composite_birth() -
     assert pose["live_composite_d_pose_batch"] == pytest.approx(10_000.0)
     assert pose["surface_d_pose_batch"] >= 0.0
     assert pose["surface_d_pose_batch"] <= pose["live_composite_d_pose_batch"]
+    assert pose["pose_surface_receiver_uint8_roundtrip"] is True
     assert pose["surface_pose_score_term"] >= 0.0
 
 
@@ -790,6 +791,7 @@ def test_parseback_survival_remeasures_pose_compensation_for_composite_birth(tmp
     assert row["pose_compensation_survived"] is True
     assert row["pose_compensation_survival"]["surface_d_pose_batch"] >= 0.0
     assert row["pose_compensation_survival"]["live_composite_d_pose_batch"] == pytest.approx(10_000.0)
+    assert row["pose_compensation_survival"]["pose_surface_receiver_uint8_roundtrip"] is True
     assert "pose_compensation_survival_pose_teacher_missing" not in row["blockers"]
 
 
