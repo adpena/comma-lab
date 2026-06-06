@@ -505,7 +505,22 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     hard_birth = payload["segnet_hard_birth_bootstrap"]
     assert hard_birth["enabled"] is True
     assert hard_birth["source"] == "live_mlx_segnet_candidate_logits_worst_target_class_birth"
+    assert hard_birth["worst_loss_selection"] == "score_weighted_unsolved_argmax_mass"
     assert payload["segnet_hard_birth_bootstrap_weight"] == pytest.approx(2.0)
+    assert (
+        payload["bootstrap_update_scope"]
+        == "live_segnet_scoped_late_feature_grid_fine_latent_head_rgb_1"
+    )
+    assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]
+    assert "head_rgb_0.*" not in payload["archive_charged_decoder_tensors"]
+    for name in payload["bootstrap_update_applied_tensor_names"]:
+        assert (
+            name == "latents_fine"
+            or name.startswith("latents_fine.")
+            or name.startswith("feature_grids.")
+            or name.startswith("fine_injector.")
+            or name.startswith("head_rgb_1.")
+        )
     assert payload["segnet_score_debt_preserving_acceptance"] is True
     assert payload["segnet_score_debt_rejected_step_count"] >= 0
     assert payload["segnet_margin_bootstrap_loss_delta"] >= 0.0
@@ -521,6 +536,12 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     assert (
         "segnet_hard_birth_bootstrap_class_1_seed_prob_deficit"
         in payload["metrics_after"]
+    )
+    assert (
+        payload["metrics_after"][
+            "segnet_hard_birth_bootstrap_worst_loss_class_index"
+        ]
+        == payload["metrics_after"]["segnet_hard_birth_bootstrap_worst_class_index"]
     )
     assert payload["runtime_sidecar_bytes"] == 0
     assert "head_rgb_1.*" in payload["archive_charged_decoder_tensors"]
@@ -592,6 +613,16 @@ def test_mlx_scorer_domain_bootstrap_hard_birth_can_actuate_without_margin_weigh
 
     assert payload["segnet_margin_bootstrap"]["enabled"] is False
     assert payload["segnet_hard_birth_bootstrap"]["enabled"] is True
+    assert (
+        payload["segnet_hard_birth_bootstrap"]["worst_loss_selection"]
+        == "score_weighted_unsolved_argmax_mass"
+    )
+    assert (
+        payload["bootstrap_update_scope"]
+        == "live_segnet_scoped_late_feature_grid_fine_latent_head_rgb_1"
+    )
+    assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]
+    assert "head_rgb_0.*" not in payload["archive_charged_decoder_tensors"]
     assert payload["segnet_score_debt_preserving_acceptance"] is True
     assert payload["metrics_before"]["segnet_hard_birth_bootstrap_loss"] > 0.0
     assert (

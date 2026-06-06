@@ -1995,8 +1995,19 @@ def _snerv_campaign_row(
     pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("snerv")
     pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("snerv")
     pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("snerv")
-    pr95_actuator_execution_evidence = candidate.get(
+    explicit_pr95_actuator_execution_evidence = candidate.get(
         "pr95_scorer_atom_actuator_execution_evidence"
+    )
+    derived_pr95_actuator_execution_evidence = (
+        _snerv_pr95_actuator_execution_evidence_from_source_forward(
+            snerv_source_forward_evidence
+        )
+    )
+    pr95_actuator_execution_evidence = (
+        explicit_pr95_actuator_execution_evidence
+        if isinstance(explicit_pr95_actuator_execution_evidence, Mapping)
+        and explicit_pr95_actuator_execution_evidence
+        else derived_pr95_actuator_execution_evidence
     )
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
@@ -3260,6 +3271,82 @@ def _snerv_source_forward_evidence_active(
         isinstance(source_forward_evidence, Mapping)
         and _positive_int_or_none(source_forward_evidence.get("artifact_count")) is not None
     )
+
+
+def _snerv_pr95_actuator_execution_evidence_from_source_forward(
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Translate canonical SNeRV source-forward proof into PR95 actuator evidence.
+
+    The PR95 guard expects family-local execution evidence, not another copy of
+    the source-forward summary.  This bridge only materializes that guard input
+    after the stricter SNeRV source-forward summary has already proven the
+    byte-bound checkpoint artifact, full TUB source-forward parity, and output2
+    receiver binding.
+    """
+
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return None
+    assert source_forward_evidence is not None
+    artifact_bytes = _positive_int_or_none(
+        source_forward_evidence.get(
+            "official_trained_checkpoint_state_dict_slice_bytes"
+        )
+    )
+    artifact_sha256 = str(
+        source_forward_evidence.get(
+            "official_trained_checkpoint_state_dict_slice_sha256"
+        )
+        or ""
+    ).strip()
+    if (
+        source_forward_evidence.get(
+            "official_trained_checkpoint_state_dict_value_artifact_ready"
+        )
+        is not True
+        or source_forward_evidence.get("source_forward_replay_authority") is not True
+        or source_forward_evidence.get("full_tub_source_forward_parity_proven")
+        is not True
+        or source_forward_evidence.get("receiver_frame_decode_consumes_output2")
+        is not True
+        or source_forward_evidence.get("official_checkpoint_export_bound")
+        is not True
+        or artifact_bytes is None
+        or len(artifact_sha256) != 64
+    ):
+        return None
+    return {
+        "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+        "family": "snerv",
+        "source": "snerv_lf_hf_source_forward_evidence",
+        "source_schema": source_forward_evidence.get("schema"),
+        "source_path": source_forward_evidence.get("source_path"),
+        "source_sha256": source_forward_evidence.get("source_sha256"),
+        "state_artifact_schema": "snerv_official_source_forward_state_artifact.v1",
+        "official_state_dict_value_artifact_bytes": int(artifact_bytes),
+        "official_state_dict_value_artifact_sha256": artifact_sha256,
+        "official_state_dict_value_artifact_path": source_forward_evidence.get(
+            "official_trained_checkpoint_state_dict_slice_path"
+        ),
+        "official_state_dict_value_artifact_member_count": (
+            source_forward_evidence.get(
+                "official_trained_checkpoint_state_dict_slice_member_count"
+            )
+        ),
+        "official_state_dict_value_artifact_member_names": list(
+            source_forward_evidence.get(
+                "official_trained_checkpoint_state_dict_slice_member_names"
+            )
+            or []
+        ),
+        "checkpoint_export_lineage_bound": True,
+        "mfu_hfr_tub_source_forward_parity_proven": True,
+        "tub_output2_source_forward_parity_proven": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _snerv_source_forward_closed_blockers(

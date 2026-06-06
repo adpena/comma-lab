@@ -1269,12 +1269,42 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "head_rgb_0.*",
             "head_rgb_1.*",
         ]
+        live_segnet_scoped_bootstrap_tensors = [
+            "latents_fine",
+            "feature_grids.*",
+            "fine_injector.*",
+            "head_rgb_1.*",
+        ]
         segnet_margin_live_fn = None
         segnet_margin_target_labels = None
         segnet_live_bootstrap_requested = bool(
             weights["segnet_margin_bootstrap_weight"] > 0.0
             or weights["segnet_hard_birth_bootstrap_weight"] > 0.0
         )
+        if segnet_live_bootstrap_requested:
+            archive_charged_bootstrap_tensors = live_segnet_scoped_bootstrap_tensors
+        bootstrap_update_scope = (
+            "live_segnet_scoped_late_feature_grid_fine_latent_head_rgb_1"
+            if segnet_live_bootstrap_requested
+            else "full_archive_charged_scorer_domain_prefit"
+        )
+
+        def _flat_param_name(raw_name: Any) -> str:
+            if isinstance(raw_name, (tuple, list)):
+                return ".".join(str(part) for part in raw_name)
+            return str(raw_name)
+
+        def _bootstrap_update_name_allowed(raw_name: Any) -> bool:
+            if not segnet_live_bootstrap_requested:
+                return True
+            name = _flat_param_name(raw_name)
+            return (
+                name == "latents_fine"
+                or name.startswith("latents_fine.")
+                or name.startswith("feature_grids.")
+                or name.startswith("fine_injector.")
+                or name.startswith("head_rgb_1.")
+            )
         segnet_margin_metadata: dict[str, Any] = {
             "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
             "enabled": False,
@@ -1291,6 +1321,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "weight": float(weights["segnet_hard_birth_bootstrap_weight"]),
             "min_ratio_floor": float(segnet_hard_birth_floor),
             "reason": "segnet_hard_birth_bootstrap_weight_not_positive",
+            "worst_loss_selection": "score_weighted_unsolved_argmax_mass",
             "runtime_sidecar_bytes": 0,
             "archive_charged_decoder_tensors": [],
             "human_visual_fidelity_objective": False,
@@ -1360,6 +1391,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "weight": float(weights["segnet_hard_birth_bootstrap_weight"]),
                 "min_ratio_floor": float(segnet_hard_birth_floor),
                 "source": "live_mlx_segnet_candidate_logits_worst_target_class_birth",
+                "worst_loss_selection": "score_weighted_unsolved_argmax_mass",
                 "target_index_semantics": "local_bootstrap_batch_indices",
                 "runtime_sidecar_bytes": 0,
                 "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
@@ -1448,6 +1480,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             hard_birth_worst_loss = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
             hard_birth_worst_unsolved = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
             hard_birth_worst_class = mx.array(-1.0, dtype=mx.float32)  # type: ignore[union-attr]
+            hard_birth_worst_loss_class = mx.array(-1.0, dtype=mx.float32)  # type: ignore[union-attr]
             hard_birth_min_ratio = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
             metrics: dict[str, Any] = {}
             for class_index in range(class_count):
@@ -1621,13 +1654,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 hard_birth_loss = hard_birth_boost * hard_birth_loss_raw
                 hard_birth_total_loss = hard_birth_total_loss + hard_birth_loss
                 hard_birth_active_count = hard_birth_active_count + hard_birth_active
-                hard_birth_better_loss = hard_birth_loss > hard_birth_worst_loss
+                hard_birth_better_unsolved = (
+                    score_weighted_unsolved > hard_birth_worst_unsolved
+                )
                 hard_birth_worst_loss = mx.where(  # type: ignore[union-attr]
-                    hard_birth_better_loss,
+                    hard_birth_better_unsolved,
                     hard_birth_loss,
                     hard_birth_worst_loss,
                 )
-                hard_birth_better_unsolved = score_weighted_unsolved > hard_birth_worst_unsolved
+                hard_birth_worst_loss_class = mx.where(  # type: ignore[union-attr]
+                    hard_birth_better_unsolved,
+                    mx.array(float(class_index), dtype=mx.float32),
+                    hard_birth_worst_loss_class,
+                )
                 hard_birth_worst_unsolved = mx.where(  # type: ignore[union-attr]
                     hard_birth_better_unsolved,
                     score_weighted_unsolved,
@@ -1726,6 +1765,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     hard_birth_min_ratio
                 ),
                 "segnet_hard_birth_bootstrap_worst_class_index": hard_birth_worst_class,
+                "segnet_hard_birth_bootstrap_worst_loss_class_index": (
+                    hard_birth_worst_loss_class
+                ),
                 "segnet_hard_birth_bootstrap_active_class_count": (
                     hard_birth_active_count
                 ),
@@ -1857,22 +1899,29 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             base_snapshot: list[tuple[Any, Any]],
             grads_tree: Any,
             step_lr: float,
-        ) -> int:
+        ) -> tuple[int, list[str], int]:
             grad_by_name = dict(tree_flatten(grads_tree))  # type: ignore[operator]
             updated: list[tuple[Any, Any]] = []
             applied = 0
+            applied_names: list[str] = []
+            scoped_out = 0
             for raw_name, leaf in base_snapshot:
                 grad = grad_by_name.get(raw_name)
                 if leaf is None or grad is None:
                     updated.append((raw_name, leaf))
                     continue
+                if not _bootstrap_update_name_allowed(raw_name):
+                    updated.append((raw_name, leaf))
+                    scoped_out += 1
+                    continue
                 param = mx.array(leaf)  # type: ignore[union-attr]
                 update = param - float(step_lr) * (grad + wd * param)
                 updated.append((raw_name, update))
                 applied += 1
+                applied_names.append(_flat_param_name(raw_name))
             self.update(tree_unflatten(updated))
             mx.eval(self.parameters())  # type: ignore[union-attr]
-            return applied
+            return applied, applied_names, scoped_out
 
         current_loss = _loss_scalar(self)
         current_contrast_floor = _contrast_floor_scalar(self)
@@ -1887,6 +1936,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         contrast_floor_rejected_step_count = 0
         segnet_score_debt_rejected_step_count = 0
         backtracking_attempt_count = 0
+        bootstrap_scoped_out_gradient_tensor_count = 0
+        accepted_bootstrap_update_tensor_names: set[str] = set()
         min_accepted_step_lr = lr
         max_backtracking_attempts = 8
         for _step in range(step_count):
@@ -1904,12 +1955,20 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             accepted = False
             step_lr = lr
             applied_tensor_count = 0
+            applied_tensor_names: list[str] = []
             for _attempt in range(max_backtracking_attempts):
                 backtracking_attempt_count += 1
-                applied_tensor_count = _apply_gradient_step(
+                (
+                    applied_tensor_count,
+                    applied_tensor_names,
+                    scoped_out_tensor_count,
+                ) = _apply_gradient_step(
                     base_snapshot=base_snapshot,
                     grads_tree=grads,
                     step_lr=step_lr,
+                )
+                bootstrap_scoped_out_gradient_tensor_count += int(
+                    scoped_out_tensor_count
                 )
                 candidate_loss = _loss_scalar(self)
                 candidate_contrast_floor = _contrast_floor_scalar(self)
@@ -1935,6 +1994,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     loss_history.append(candidate_loss)
                     accepted = True
                     accepted_step_count += 1
+                    accepted_bootstrap_update_tensor_names.update(applied_tensor_names)
                     break
                 if not contrast_floor_ok:
                     contrast_floor_rejected_step_count += 1
@@ -1964,6 +2024,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "rgb_std_min_ratio": rgb_std_floor,
             "yuv6_temporal_std_min_ratio": temporal_std_floor,
             "grad_clip_clipped_step_count": int(clipped_count),
+            "bootstrap_update_scope": bootstrap_update_scope,
+            "bootstrap_update_allowlist_patterns": list(
+                archive_charged_bootstrap_tensors
+            ),
+            "bootstrap_update_applied_tensor_count": len(
+                accepted_bootstrap_update_tensor_names
+            ),
+            "bootstrap_update_applied_tensor_names": sorted(
+                accepted_bootstrap_update_tensor_names
+            ),
+            "bootstrap_scoped_out_gradient_tensor_count": int(
+                bootstrap_scoped_out_gradient_tensor_count
+            ),
             "accepted_step_count": int(accepted_step_count),
             "rejected_step_count": int(rejected_step_count),
             "contrast_floor_preserving_acceptance": preserve_contrast_floor,

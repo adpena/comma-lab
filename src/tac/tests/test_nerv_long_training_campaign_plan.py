@@ -1272,6 +1272,7 @@ def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blocke
     tmp_path: Path,
 ) -> None:
     candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.pop("pr95_scorer_atom_actuator_execution_evidence", None)
     state_dict_path = _write_official_state_dict_npz(tmp_path)
     stale_blockers = [
         "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping",
@@ -1363,10 +1364,31 @@ def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blocke
     split = snerv_row["snerv_official_runtime_authority_split"]
     assert split["source_forward_replay_authority"] is True
     assert not set(split["blockers"]).intersection(stale_blockers)
+    pr95_evidence = snerv_row["pr95_scorer_atom_actuator_execution_evidence"]
+    assert pr95_evidence["schema"] == "pr95_scorer_atom_actuator_execution_evidence.v1"
+    assert pr95_evidence["source"] == "snerv_lf_hf_source_forward_evidence"
+    assert pr95_evidence["state_artifact_schema"] == (
+        "snerv_official_source_forward_state_artifact.v1"
+    )
+    assert pr95_evidence["official_state_dict_value_artifact_bytes"] == (
+        state_dict_path.stat().st_size
+    )
+    assert pr95_evidence["official_state_dict_value_artifact_sha256"] == (
+        _sha256(state_dict_path)
+    )
+    assert pr95_evidence["mfu_hfr_tub_source_forward_parity_proven"] is True
+    assert pr95_evidence["tub_output2_source_forward_parity_proven"] is True
+    assert pr95_evidence["score_claim"] is False
+    pr95_guard = snerv_row["pr95_distortion_practices_guard"]
+    assert (
+        "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        not in pr95_guard["blockers"]
+    )
 
 
 def test_campaign_plan_does_not_promote_metadata_only_source_authority() -> None:
     candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.pop("pr95_scorer_atom_actuator_execution_evidence", None)
     stale_blockers = [
         "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
         "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
@@ -1438,6 +1460,12 @@ def test_campaign_plan_does_not_promote_metadata_only_source_authority() -> None
     assert (
         "snerv_official_trained_checkpoint_state_dict_value_artifact_missing"
         in row_blockers
+    )
+    pr95_guard = snerv_row["pr95_distortion_practices_guard"]
+    assert snerv_row["pr95_scorer_atom_actuator_execution_evidence"] is None
+    assert (
+        "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in pr95_guard["blockers"]
     )
 
 
