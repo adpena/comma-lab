@@ -18,7 +18,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from tac.analysis.action_effect import ActionEffect
+from tac.analysis.action_effect import ActionEffect, validate_action_effect_payload
 from tac.analysis.nerv_modelsize_budget import enumerate_snerv_modelsize_candidates
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
@@ -8166,6 +8166,22 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     bootstrap_metadata = artifact.as_dict()["substrate_artifact_metadata"]["score_aware_training"][
         "output_head_target_bias_init"
     ]["scorer_domain_bootstrap"]
+    assert bootstrap_metadata["action_effect_rows_written"] == 1
+    action_effect_ledger = Path(bootstrap_metadata["action_effect_ledger_path"])
+    assert action_effect_ledger.is_file()
+    action_effect_rows = [
+        json.loads(line)
+        for line in action_effect_ledger.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(action_effect_rows) == 1
+    action_effect_row = action_effect_rows[0]
+    assert action_effect_row["schema"] == "tac.action_effect.v1"
+    assert action_effect_row["authority"] == "batch_local_live_mlx"
+    assert action_effect_row["action_kind"] == "scorer_domain_hard_birth_bootstrap"
+    assert action_effect_row["promotion_eligible"] is False
+    assert validate_action_effect_payload(action_effect_row)["passed"] is True
+    assert "hinerv_scorer_bootstrap_exact_nonrate_delta_missing" in action_effect_row["blockers"]
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_requested_weight"] == pytest.approx(3.0)
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_effective_weight"] == pytest.approx(3.0)
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_request_consumed"] is True

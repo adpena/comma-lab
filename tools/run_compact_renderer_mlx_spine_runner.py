@@ -16617,6 +16617,39 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         bootstrap_payload["max_pairs"] = int(scorer_domain_bootstrap_max_pairs)
         bootstrap_payload["exact_segnet_target_argmax"] = bootstrap_segnet_teacher_metadata
         bootstrap_payload["exact_posenet_target_pose"] = bootstrap_pose_teacher_metadata
+        bootstrap_action_effect_ledger_path = output_dir / "hi_nerv_scorer_bootstrap_action_effects.jsonl"
+        try:
+            from tac.analysis.action_effect import append_action_effect, validate_action_effect_payload
+            from tac.analysis.hinerv_scorer_bootstrap_action_effect import (
+                build_action_effect_from_hinerv_scorer_bootstrap_row,
+            )
+
+            bootstrap_action_effect = build_action_effect_from_hinerv_scorer_bootstrap_row(
+                bootstrap_payload,
+                artifact_ref=(output_dir / "training_artifact.json").as_posix(),
+                archive_sha256=None,
+                source_bootstrap_path="output_head_target_bias_init.scorer_domain_bootstrap",
+                consumer="nerv_long_run_launch_gate",
+            )
+            bootstrap_action_effect_record = append_action_effect(
+                bootstrap_action_effect,
+                bootstrap_action_effect_ledger_path,
+            )
+            bootstrap_payload["action_effect_ledger_path"] = bootstrap_action_effect_ledger_path.as_posix()
+            bootstrap_payload["action_effect_action_id"] = bootstrap_action_effect_record.get("action_id")
+            bootstrap_payload["action_effect_rows_written"] = 1
+            bootstrap_payload["action_effect_validation"] = validate_action_effect_payload(
+                bootstrap_action_effect_record
+            )
+        except Exception as exc:
+            bootstrap_payload["action_effect_ledger_path"] = bootstrap_action_effect_ledger_path.as_posix()
+            bootstrap_payload["action_effect_rows_written"] = 0
+            bootstrap_payload["blockers"] = _dedupe(
+                [
+                    *[str(value) for value in bootstrap_payload.get("blockers") or []],
+                    f"hi_nerv_scorer_bootstrap_action_effect_write_failed:{type(exc).__name__}:{exc}",
+                ]
+            )
         output_head_target_bias_init_payload["scorer_domain_bootstrap"] = bootstrap_payload
         output_head_target_bias_init_payload["archive_charged_decoder_tensors"] = sorted(
             {
