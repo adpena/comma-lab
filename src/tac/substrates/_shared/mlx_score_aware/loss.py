@@ -593,12 +593,18 @@ def _direct_live_posenet_distillation_loss_and_metrics(
     )
     raw_diff = candidate_pose - teacher_pose
     raw_mse = mx.mean(raw_diff * raw_diff)
-    score_term = mx.sqrt(10.0 * raw_mse + 1.0e-12)
+    pose_score_eps = mx.array(1.0e-12, dtype=mx.float32)
+    score_term = mx.sqrt(10.0 * raw_mse + pose_score_eps)
+    score_marginal = 5.0 / mx.sqrt(10.0 * raw_mse + pose_score_eps)
+    pair_residual_l2 = mx.sqrt(mx.sum(raw_diff * raw_diff, axis=-1) + pose_score_eps)
     metrics = {
         "pose_direct_live_distill": score_term,
         "pose_direct_live_raw_mse": raw_mse,
         "pose_direct_live_score_term": score_term,
+        "pose_direct_live_score_marginal_wrt_raw_mse": score_marginal,
         "pose_direct_live_abs_mean": mx.mean(mx.abs(raw_diff)),
+        "pose_direct_live_pair_residual_l2_mean": mx.mean(pair_residual_l2),
+        "pose_direct_live_pair_residual_l2_max": mx.max(pair_residual_l2),
         "pose_direct_live_candidate_pose_mean": mx.mean(candidate_pose),
         "pose_direct_live_candidate_pose_std": mx.std(candidate_pose),
         "pose_direct_live_target_pose_mean": mx.mean(teacher_pose),
@@ -3411,7 +3417,14 @@ def score_aware_loss(
             teacher_pose=teacher_pose,
             per_dim_scale=per_dim_scale,
         )
-        pose_score_term = mx.sqrt(10.0 * pose_distill_raw_mse + 1.0e-12)
+        pose_score_eps = mx.array(1.0e-12, dtype=mx.float32)
+        pose_score_term = mx.sqrt(10.0 * pose_distill_raw_mse + pose_score_eps)
+        pose_score_marginal = 5.0 / mx.sqrt(
+            10.0 * pose_distill_raw_mse + pose_score_eps
+        )
+        pose_pair_residual_l2 = mx.sqrt(
+            mx.sum((student_pose - teacher_pose) ** 2, axis=-1) + pose_score_eps
+        )
         total = (
             total
             + bundle.pose_distillation_weight
@@ -3422,6 +3435,9 @@ def score_aware_loss(
         parts["pose_distill_train_loss"] = pose_train_loss
         parts["pose_distill_raw_mse"] = pose_distill_raw_mse
         parts["pose_score_term"] = pose_score_term
+        parts["pose_score_marginal_wrt_raw_mse"] = pose_score_marginal
+        parts["pose_pair_residual_l2_mean"] = mx.mean(pose_pair_residual_l2)
+        parts["pose_pair_residual_l2_max"] = mx.max(pose_pair_residual_l2)
 
     pose_direct_live_weight = float(bundle.pose_direct_live_distillation_weight)
     if pose_direct_live_weight > 0.0 and pose_direct_live_stage_weight != 0.0:

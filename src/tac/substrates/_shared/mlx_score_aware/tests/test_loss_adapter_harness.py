@@ -1083,6 +1083,8 @@ def test_pr95_stage_train_step_emits_direct_live_posenet_loss_parts() -> None:
     assert "loss_part_pr95_stage_pose_direct_live_score_term" in metrics
     assert "loss_part_pose_direct_live_score_term" in metrics
     assert "loss_part_pose_direct_live_raw_mse" in metrics
+    assert "loss_part_pose_direct_live_score_marginal_wrt_raw_mse" in metrics
+    assert "loss_part_pose_direct_live_pair_residual_l2_mean" in metrics
     assert "loss_part_weighted_pose_direct_live_score_term" in metrics
     archive_health = adapter.archive_selection_health(
         adapter.model,
@@ -1092,6 +1094,8 @@ def test_pr95_stage_train_step_emits_direct_live_posenet_loss_parts() -> None:
     assert "segnet_direct_live_candidate_target_class_coverage_fraction" in archive_health
     assert "segnet_direct_live_candidate_target_class_min_ratio" in archive_health
     assert "pose_direct_live_score_term" in archive_health
+    assert "pose_direct_live_score_marginal_wrt_raw_mse" in archive_health
+    assert "pose_direct_live_pair_residual_l2_mean" in archive_health
     assert "pose_direct_live_raw_mse" in archive_health
     assert "pose_direct_live_yuv6_pair_std" in archive_health
     assert "pose_direct_live_yuv6_pair_temporal_delta_std" in archive_health
@@ -4307,7 +4311,11 @@ def test_adapter_score_aware_components_both_teachers_populates_seg_and_pose() -
     )
     assert out is not None
     assert out["seg"] >= 0.0
-    assert out["pose"] >= 0.0  # pose-MSE is non-negative
+    metrics = adapter._score_aware_loss_part_metrics(
+        mx.array([0, 1, 2, 3], dtype=mx.int32)
+    )
+    assert "loss_part_pose_score_term" in metrics
+    assert out["pose"] == pytest.approx(metrics["loss_part_pose_score_term"])
     assert out["recon_aux"] >= 0.0
     assert out["archive_bytes"] == 0.0
 
@@ -4370,6 +4378,9 @@ def test_adapter_score_aware_components_direct_live_pose_populates_pose_axis() -
         mx.array([0, 1], dtype=mx.int32),
     )
     assert "loss_part_pose_direct_live_score_term" in metrics
+    assert out["pose"] == pytest.approx(
+        metrics["loss_part_pose_direct_live_score_term"]
+    )
     assert metrics["score_aware_loss_parts_active"] == pytest.approx(1.0)
 
 
@@ -4501,6 +4512,70 @@ def test_run_mlx_score_aware_full_main_forwards_telemetry_flush_interval(
         "loss_part_segnet_direct_live_argmax_disagreement"
     )
     assert captured["config"].checkpoint_selection_tie_break_metric_required is True
+
+
+@mlx_only
+def test_pr95_faithful_full_main_defaults_to_source_ema_decay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.training.long_training_canonical as canonical
+
+    captured = {}
+
+    def _capture_run_long_training(adapter, config, *, on_epoch_end=None):
+        captured["adapter"] = adapter
+        captured["config"] = config
+        return config
+
+    monkeypatch.setattr(canonical, "run_long_training", _capture_run_long_training)
+    bundle = _tiny_dreamer_bundle(num_pairs=8, distill=0.0)
+
+    result = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="dreamer_v3_rssm",
+        lane_id=_LANE,
+        output_dir=tmp_path / "run",
+        epochs=8,
+        batch_pair_indices_per_step=2,
+        pr95_faithful_curriculum_enabled=True,
+        notes="PR95 faithful source EMA default capture",
+    )
+
+    assert result is captured["config"]
+    assert captured["config"].ema_decay == pytest.approx(0.999)
+    assert captured["adapter"]._pr95_faithful_curriculum_enabled is True
+
+
+@mlx_only
+def test_pr95_faithful_full_main_preserves_explicit_ema_override(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.training.long_training_canonical as canonical
+
+    captured = {}
+
+    def _capture_run_long_training(adapter, config, *, on_epoch_end=None):
+        captured["config"] = config
+        return config
+
+    monkeypatch.setattr(canonical, "run_long_training", _capture_run_long_training)
+    bundle = _tiny_dreamer_bundle(num_pairs=8, distill=0.0)
+
+    run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="dreamer_v3_rssm",
+        lane_id=_LANE,
+        output_dir=tmp_path / "run",
+        epochs=8,
+        batch_pair_indices_per_step=2,
+        ema_decay=0.998,
+        pr95_faithful_curriculum_enabled=True,
+        notes="PR95 faithful explicit EMA override capture",
+    )
+
+    assert captured["config"].ema_decay == pytest.approx(0.998)
 
 
 @mlx_only

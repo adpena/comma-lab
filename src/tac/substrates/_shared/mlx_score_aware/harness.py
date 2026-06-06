@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 CONTEST_NORMALIZER: float = 37_545_489.0
 # MLX false-authority canonical marker (sister of pr95_hnerv_mlx FALSE_AUTHORITY).
 MLX_EVIDENCE_GRADE: str = "[macOS-MLX research-signal]"
+PR95_SOURCE_EMA_DECAY: float = 0.999
 
 
 def run_mlx_score_aware_full_main(
@@ -169,7 +170,9 @@ def run_mlx_score_aware_full_main(
         telemetry_flush_interval_epochs: optional per-run override for canonical
             telemetry JSONL flush cadence. Use 1 for long carrier campaigns so
             epoch rows are durable while the process is still running.
-        ema_decay: optional EMA decay override (default = canonical 0.997).
+        ema_decay: optional EMA decay override. Default is canonical 0.997 for
+            generic score-aware runs and PR95 source-faithful 0.999 when
+            ``pr95_faithful_curriculum_enabled=True``.
         early_stopping_patience: optional override (default = epochs + 1, i.e.
             disabled; MLX-local runs are cheap so we run the full budget).
         curriculum_stages: optional ``tuple[CurriculumStage, ...]``; default is
@@ -418,13 +421,21 @@ def run_mlx_score_aware_full_main(
         ),
     )
 
+    effective_ema_decay = (
+        PR95_SOURCE_EMA_DECAY
+        if ema_decay is None and bool(pr95_faithful_curriculum_enabled)
+        else CANONICAL_EMA_DECAY
+        if ema_decay is None
+        else float(ema_decay)
+    )
+
     config = LongTrainingConfig(
         substrate_id=substrate_id,
         lane_id=lane_id,
         epochs=epochs,
         batch_pair_indices_per_step=batch_pair_indices_per_step,
         curriculum_stages=curriculum_stages,
-        ema_decay=CANONICAL_EMA_DECAY if ema_decay is None else float(ema_decay),
+        ema_decay=effective_ema_decay,
         checkpoint_interval_epochs=checkpoint_interval_epochs,
         checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
         checkpoint_retention_keep_best_n=int(checkpoint_retention_keep_best_n),

@@ -8886,8 +8886,9 @@ class MlxScoreAwareAdapter:
 
         - ``distill`` (KL T=2.0 on REAL SegNet teacher logits) IS the seg
           axis scorer-bound surrogate gradient signal;
-        - ``pose_distill`` (MSE on REAL PoseNet teacher pose) IS the pose
-          axis scorer-bound surrogate gradient signal.
+        - ``pose_score_term`` / ``pose_direct_live_score_term`` (the
+          ``sqrt(10*d_pose)`` evaluator term) IS the pose axis scorer-bound
+          surrogate signal; raw pose MSE is an auxiliary diagnostic only.
 
         Per the Z6-v2 + Hinton apparatus-level finding (5th cross-family
         parity instance confirming the Hinton-distilled scorer-bound
@@ -8903,7 +8904,11 @@ class MlxScoreAwareAdapter:
         loss component             AxisDecomposition slot
         =========================  ==========================================
         ``parts["distill"]``       ``seg`` (Hinton-KL on real SegNet teacher)
-        ``parts["pose_distill"]``  ``pose`` (MSE on real PoseNet teacher)
+        ``parts["pose_score_term"]``
+                                  ``pose`` (contest-priced sqrt pose term)
+        ``parts["pose_direct_live_score_term"]``
+                                  ``pose`` (direct-live contest-priced sqrt
+                                  pose term)
         ``parts["recon"]``         ``recon_aux`` (per-pixel; not per-axis
                                    attributable but preserved for telemetry
                                    per Catalog #305 observability surface)
@@ -8985,18 +8990,30 @@ class MlxScoreAwareAdapter:
             out["seg"] = float(value.item())
         else:
             out["seg"] = 0.0
-        # pose axis: only emit when the PoseNet teacher is wired.
-        if "pose_distill" in parts:
-            mx.eval(parts["pose_distill"])
-            out["pose"] = float(parts["pose_distill"].item())
+        # pose axis: emit in the evaluator's nonlinear score units, not raw
+        # MSE units. PR95/evaluate.py price PoseNet as sqrt(10*d_pose), and
+        # mixing raw MSE here misleads checkpoint choice, waterfill diagnostics,
+        # and byte/scorer dual telemetry.
+        if "pose_score_term" in parts:
+            value = parts["pose_score_term"]
+            mx.eval(value)
+            out["pose"] = float(value.item())
+        elif "pose_direct_live_score_term" in parts:
+            value = parts["pose_direct_live_score_term"]
+            mx.eval(value)
+            out["pose"] = float(value.item())
+        elif "pose_distill" in parts:
+            value = parts["pose_distill"]
+            mx.eval(value)
+            out["pose"] = math.sqrt(10.0 * float(value.item()) + 1.0e-12)
         elif "pose_direct_live_raw_mse" in parts:
             value = parts["pose_direct_live_raw_mse"]
             mx.eval(value)
-            out["pose"] = float(value.item())
+            out["pose"] = math.sqrt(10.0 * float(value.item()) + 1.0e-12)
         elif "pose_direct_live_distill" in parts:
             value = parts["pose_direct_live_distill"]
             mx.eval(value)
-            out["pose"] = float(value.item())
+            out["pose"] = math.sqrt(10.0 * float(value.item()) + 1.0e-12)
         else:
             out["pose"] = 0.0
         # recon_aux: telemetry-only per-pixel reconstruction component
@@ -9042,8 +9059,14 @@ class MlxScoreAwareAdapter:
             "segnet_direct_live_candidate_target_material_class_covered_count",
             "segnet_direct_live_argmax_disagreement",
             "pose_score_term",
+            "pose_score_marginal_wrt_raw_mse",
+            "pose_pair_residual_l2_mean",
+            "pose_pair_residual_l2_max",
             "pose_distill_raw_mse",
             "pose_direct_live_score_term",
+            "pose_direct_live_score_marginal_wrt_raw_mse",
+            "pose_direct_live_pair_residual_l2_mean",
+            "pose_direct_live_pair_residual_l2_max",
             "pose_direct_live_raw_mse",
             "pose_direct_live_yuv6_pair_std",
             "pose_direct_live_yuv6_pair_temporal_delta_std",
