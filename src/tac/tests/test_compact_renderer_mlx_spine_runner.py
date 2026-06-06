@@ -580,6 +580,10 @@ def test_hinerv_live_birth_survival_rows_fail_closed_on_rejected_birth(
     assert row["schema"] == "hi_nerv_runner_live_birth_survival_bundle.v1"
     assert row["birth_accepted"] is False
     assert row["blockers"][0] == "birth_survival_live_birth_not_accepted"
+    metadata_row = runner_mod._strip_substrate_metadata_authority_fields(row)
+    assert "score_claim" not in metadata_row
+    assert "promotion_eligible" not in metadata_row
+    assert "ready_for_exact_eval_dispatch" not in metadata_row
     fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
     hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
     assert fake["schema"] == "hi_nerv_target_region_birth_survival_blocked.v1"

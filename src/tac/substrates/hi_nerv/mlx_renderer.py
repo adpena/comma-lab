@@ -2906,15 +2906,40 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "human_visual_fidelity_objective": False,
             }
         birth_class = int(worst.class_index)
-        region_mask = mx.stop_gradient(  # type: ignore[union-attr]
-            mx.array(region_mask_np, dtype=mx.float32)
-        )
-        region_pixels = float(worst.region_pixel_count)
         total_scored_pixels = float(worst.total_scored_pixels)
         before_stats = region_margin_stats(initial_logits_np, region_mask_np, birth_class)
         initial_uint8 = _receiver_uint8_int(base_pred1)
         initial_pose = _pose_output_np(base_pred0, base_pred1)
         region_bool_np = region_mask_np > 0.0
+        unsolved_tail_bool_np = region_bool_np & (initial_argmax_np != birth_class)
+        already_won_bool_np = region_bool_np & (initial_argmax_np == birth_class)
+        unsolved_tail_pixel_count = int(np.count_nonzero(unsolved_tail_bool_np))
+        already_won_pixel_count = int(np.count_nonzero(already_won_bool_np))
+        if unsolved_tail_pixel_count != int(worst.region_unsolved_pixel_count):
+            raise RuntimeError(
+                "target-region unsolved-tail reconstruction drifted from the priced row; "
+                f"tail={unsolved_tail_pixel_count} row={worst.region_unsolved_pixel_count}"
+            )
+        unsolved_tail_mask_np = unsolved_tail_bool_np.astype(np.float32)
+        already_won_mask_np = already_won_bool_np.astype(np.float32)
+        unsolved_tail_mask = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(unsolved_tail_mask_np, dtype=mx.float32)
+        )
+        already_won_mask = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(already_won_mask_np, dtype=mx.float32)
+        )
+        unsolved_tail_pixels = float(unsolved_tail_pixel_count)
+        already_won_pixels = float(already_won_pixel_count)
+        before_unsolved_tail_stats = region_margin_stats(
+            initial_logits_np,
+            unsolved_tail_mask_np,
+            birth_class,
+        )
+        before_already_won_stats = (
+            region_margin_stats(initial_logits_np, already_won_mask_np, birth_class)
+            if already_won_pixel_count > 0
+            else None
+        )
         target_pose_np: np.ndarray | None = None
         if pose_available:
             pose_target_fn = getattr(pose_teacher, "teacher_pose_for_indices", None)
@@ -2982,7 +3007,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 (margin_raw + float(margin_floor)) / float(margin_tau),
                 0.0,
             )
-            loss_margin = mx.sum(crossing * crossing * region_mask) / region_pixels  # type: ignore[union-attr]
+            loss_margin = mx.sum(crossing * crossing * unsolved_tail_mask) / unsolved_tail_pixels  # type: ignore[union-attr]
             shifted = logits - mx.max(logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
             exp_logits = mx.exp(shifted)  # type: ignore[union-attr]
             probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
@@ -2990,25 +3015,39 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 float(prob_floor) - probs[..., birth_class],
                 0.0,
             )
-            loss_prob = mx.sum(prob_deficit * prob_deficit * region_mask) / region_pixels  # type: ignore[union-attr]
+            loss_prob = mx.sum(prob_deficit * prob_deficit * unsolved_tail_mask) / unsolved_tail_pixels  # type: ignore[union-attr]
             margin_detached = mx.stop_gradient(margin_raw)  # type: ignore[union-attr]
             masked_margin = mx.where(  # type: ignore[union-attr]
-                region_mask > 0.0,
+                unsolved_tail_mask > 0.0,
                 margin_detached,
                 mx.array(1.0e30, dtype=margin_detached.dtype),
             )
             margin_min = mx.min(masked_margin)  # type: ignore[union-attr]
-            seed_weight = region_mask * mx.exp(  # type: ignore[union-attr]
+            seed_weight = unsolved_tail_mask * mx.exp(  # type: ignore[union-attr]
                 -(margin_detached - margin_min) / float(seed_temperature)
             )
             seed_weight = seed_weight / mx.maximum(mx.sum(seed_weight), eps)  # type: ignore[union-attr]
             loss_seed = mx.sum(seed_weight * crossing * crossing)  # type: ignore[union-attr]
+            loss_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            if already_won_pixel_count > 0:
+                preserve_violation = mx.maximum(margin_raw, 0.0)  # type: ignore[union-attr]
+                preserve_weight = max(1.0, already_won_pixels / unsolved_tail_pixels)
+                loss_preserve = (  # type: ignore[assignment]
+                    float(preserve_weight)
+                    * mx.sum(preserve_violation * preserve_violation * already_won_mask)
+                    / already_won_pixels
+                )
             pred_class = mx.argmax(logits, axis=-1)  # type: ignore[union-attr]
             unsolved = mx.stop_gradient(  # type: ignore[union-attr]
-                mx.sum(region_mask * (pred_class != birth_class).astype(mx.float32))
+                mx.sum(unsolved_tail_mask * (pred_class != birth_class).astype(mx.float32))
             )
             debt_weight = 1.0 + 100.0 * unsolved / total_scored_pixels
-            return debt_weight * (loss_margin + float(lambda_prob_floor) * loss_prob + float(lambda_seed) * loss_seed)
+            return debt_weight * (
+                loss_margin
+                + float(lambda_prob_floor) * loss_prob
+                + float(lambda_seed) * loss_seed
+                + loss_preserve
+            )
 
         if tree_unflatten is None:
             raise RuntimeError("MLX tree_unflatten unavailable despite successful MLX import")
@@ -3116,13 +3155,41 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(pred0, pred1)  # type: ignore[union-attr]
             logits_np = _candidate_logits_np(pred1)
             stats = region_margin_stats(logits_np, region_mask_np, birth_class)
+            unsolved_tail_stats = region_margin_stats(
+                logits_np,
+                unsolved_tail_mask_np,
+                birth_class,
+            )
+            already_won_stats = (
+                region_margin_stats(logits_np, already_won_mask_np, birth_class)
+                if already_won_pixel_count > 0
+                else None
+            )
             uint8 = _receiver_uint8_int(pred1)
             pose = _pose_output_np(pred0, pred1)
             float_delta = mx.max(mx.abs(pred1 - base_pred1))  # type: ignore[union-attr]
             mx.eval(float_delta)  # type: ignore[union-attr]
             argmax_np = np.argmax(logits_np, axis=-1)
+            region_transitions = region_argmax_transition_counts(
+                initial_argmax_np,
+                argmax_np,
+                region_bool_np,
+                birth_class,
+            )
+            unsolved_tail_transitions = region_argmax_transition_counts(
+                initial_argmax_np,
+                argmax_np,
+                unsolved_tail_bool_np,
+                birth_class,
+            )
+            already_won_lost_count = int(np.count_nonzero(already_won_bool_np & (argmax_np != birth_class)))
             return {
                 "stats": stats,
+                "unsolved_tail_stats": unsolved_tail_stats,
+                "already_won_stats": already_won_stats,
+                "region_argmax_transitions": region_transitions,
+                "unsolved_tail_argmax_transitions": unsolved_tail_transitions,
+                "already_won_lost_count": already_won_lost_count,
                 "uint8": uint8,
                 "pose": pose,
                 "logits_np": logits_np,
@@ -3303,7 +3370,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         last_grad_norm_by_group: dict[str, float] = {}
         last_update_norm_by_group: dict[str, float] = {}
         max_accepted_pose_delta_l2 = 0.0
-        best_stats = dict(before_stats)
+        best_unsolved_tail_stats = dict(before_unsolved_tail_stats)
         candidate_attempt_count = 0
         region_progress_candidate_count = 0
         pose_cap_satisfied_candidate_count = 0
@@ -3437,13 +3504,35 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 # eligibility test at the pose/joint gates below). The frame1
                 # birth step is receiver-visible at this point; the only open
                 # questions are pose cap, joint score, and region progress.
-                stats = candidate["stats"]
-                ratio_progress = stats["region_hard_won_pixels"] > best_stats["region_hard_won_pixels"]
+                tail_stats = candidate["unsolved_tail_stats"]
+                region_transitions = candidate["region_argmax_transitions"]
+                tail_hard_won_delta = float(
+                    tail_stats["region_hard_won_pixels"]
+                    - best_unsolved_tail_stats["region_hard_won_pixels"]
+                )
+                tail_hard_ratio_delta = float(
+                    tail_stats["region_hard_ratio"]
+                    - best_unsolved_tail_stats["region_hard_ratio"]
+                )
+                tail_margin_mean_improvement = float(
+                    best_unsolved_tail_stats["margin_mean"]
+                    - tail_stats["margin_mean"]
+                )
+                tail_margin_p50_improvement = float(
+                    best_unsolved_tail_stats["margin_p50"]
+                    - tail_stats["margin_p50"]
+                )
+                net_target_support_delta = int(region_transitions["net_target_support_delta"])
+                already_won_lost_count = int(candidate["already_won_lost_count"])
+                ratio_progress = bool(net_target_support_delta > 0 or tail_hard_won_delta > 0.0)
                 # Mean margin registers single-pixel receiver motion; the
                 # median stays pure telemetry because one flipped pixel cannot
                 # move it, which would re-open the quantum-growth/backtrack
                 # ping-pong this acceptance rule exists to terminate.
-                margin_progress = stats["margin_mean"] < best_stats["margin_mean"] - float(min_margin_mean_drop)
+                margin_progress = bool(
+                    tail_margin_mean_improvement > float(min_margin_mean_drop)
+                    and already_won_lost_count == 0
+                )
                 region_progress = bool(ratio_progress or margin_progress)
                 pose_delta = _pose_delta_l2(candidate["pose"])
                 candidate_nonrate = _nonrate_score(
@@ -3456,14 +3545,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate >= best_nonrate
                 )
                 candidate_attempt_count += 1
-                candidate_region_hard_won_delta = int(
-                    stats["region_hard_won_pixels"] - best_stats["region_hard_won_pixels"]
-                )
-                candidate_region_hard_ratio_delta = float(
-                    stats["region_hard_ratio"] - best_stats["region_hard_ratio"]
-                )
-                candidate_margin_mean_improvement = float(best_stats["margin_mean"] - stats["margin_mean"])
-                candidate_margin_p50_improvement = float(best_stats["margin_p50"] - stats["margin_p50"])
+                candidate_region_hard_won_delta = int(tail_hard_won_delta)
+                candidate_region_hard_ratio_delta = float(tail_hard_ratio_delta)
+                candidate_margin_mean_improvement = float(tail_margin_mean_improvement)
+                candidate_margin_p50_improvement = float(tail_margin_p50_improvement)
                 candidate_argmax_flipped_region = int(
                     np.count_nonzero((candidate["argmax_np"] != initial_argmax_np) & region_bool_np)
                 )
@@ -3557,7 +3642,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         accepted_update_names.update(applied_names)
                         last_grad_norm_by_group = grad_norms
                         last_update_norm_by_group = update_norms
-                        best_stats = dict(composite_state["stats"])
+                        best_unsolved_tail_stats = dict(composite_state["unsolved_tail_stats"])
                         composite_nonrate = _nonrate_score(
                             composite_state["d_seg_batch"],
                             composite_state["d_pose_batch"],
@@ -3596,7 +3681,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 accepted_update_names.update(applied_names)
                 last_grad_norm_by_group = grad_norms
                 last_update_norm_by_group = update_norms
-                best_stats = dict(stats)
+                best_unsolved_tail_stats = dict(tail_stats)
                 if candidate_nonrate is not None:
                     best_nonrate = candidate_nonrate
                 if pose_delta is not None:
@@ -3634,6 +3719,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             blockers.append("hinerv_target_region_birth_out_of_scope_state_mutated")
         final = _region_candidate_state()
         after_stats = final["stats"]
+        after_unsolved_tail_stats = final["unsolved_tail_stats"]
+        after_already_won_stats = final["already_won_stats"]
         final_argmax_np = final["argmax_np"]
         argmax_flipped_region = int(np.count_nonzero((final_argmax_np != initial_argmax_np) & region_bool_np))
         argmax_transitions = region_argmax_transition_counts(
@@ -3699,6 +3786,22 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "max_candidate_region_hard_ratio_delta": float(max_candidate_region_hard_ratio_delta),
             "max_candidate_margin_mean_improvement": float(max_candidate_margin_mean_improvement),
             "max_candidate_margin_p50_improvement": float(max_candidate_margin_p50_improvement),
+            "progress_reference": "initial_unsolved_tail_with_already_won_preservation",
+            "unsolved_tail_pixel_count": int(unsolved_tail_pixel_count),
+            "already_won_region_pixel_count": int(already_won_pixel_count),
+            "before_unsolved_tail_margin_stats": dict(before_unsolved_tail_stats),
+            "after_unsolved_tail_margin_stats": dict(after_unsolved_tail_stats),
+            "before_already_won_margin_stats": (
+                dict(before_already_won_stats)
+                if before_already_won_stats is not None
+                else None
+            ),
+            "after_already_won_margin_stats": (
+                dict(after_already_won_stats)
+                if after_already_won_stats is not None
+                else None
+            ),
+            "final_already_won_lost_count": int(final["already_won_lost_count"]),
             "max_candidate_nonrate_improvement": float(max_candidate_nonrate_improvement),
             "max_candidate_pose_output_delta_l2": (
                 None if max_candidate_pose_delta_l2 is None else float(max_candidate_pose_delta_l2)
@@ -3822,8 +3925,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "worst_region": worst.as_dict(),
             "before_region_margin_stats": dict(before_stats),
             "after_region_margin_stats": dict(after_stats),
+            "before_unsolved_tail_margin_stats": dict(before_unsolved_tail_stats),
+            "after_unsolved_tail_margin_stats": dict(after_unsolved_tail_stats),
+            "unsolved_tail_pixel_count": int(unsolved_tail_pixel_count),
+            "already_won_region_pixel_count": int(already_won_pixel_count),
             "before_region_hard_ratio": float(before_stats["region_hard_ratio"]),
             "after_region_hard_ratio": float(after_stats["region_hard_ratio"]),
+            "before_unsolved_tail_hard_ratio": float(before_unsolved_tail_stats["region_hard_ratio"]),
+            "after_unsolved_tail_hard_ratio": float(after_unsolved_tail_stats["region_hard_ratio"]),
             "target_min_region_ratio": float(target_min_region_ratio),
             "target_min_region_ratio_reached": bool(after_stats["region_hard_ratio"] >= float(target_min_region_ratio)),
             "accepted_step_count": int(accepted_step_count),

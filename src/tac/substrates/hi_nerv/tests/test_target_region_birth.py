@@ -479,6 +479,21 @@ class _SubquantumSegNetTeacher(_BehavioralSegNetTeacher):
         return self._mx.stack([class0, class1], axis=-1)
 
 
+class _PartialRegionSegNetTeacher(_BehavioralSegNetTeacher):
+    """One connected target region starts partly solved and partly wrong."""
+
+    def __init__(self, mx, labels, already_won_mask):
+        super().__init__(mx, labels)
+        self._already_won_mask = mx.array(already_won_mask.astype(np.float32))
+
+    def teacher_logits_for_frames_nhwc01(self, frames):
+        red = frames[..., 0]
+        green = frames[..., 1]
+        class0 = green - red
+        class1 = red - green + 2.0 * self._already_won_mask
+        return self._mx.stack([class0, class1], axis=-1)
+
+
 class _MeanTrackingPoseTeacher:
     """Pose output amplifies frame-1 mean so any visible edit breaches the cap."""
 
@@ -560,6 +575,12 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     assert transitions["target_hard_won_count"] > 0
     assert transitions["net_target_support_delta"] > 0
     assert transitions["argmax_changed_count_region"] >= transitions["target_hard_won_count"]
+    frontier = payload["candidate_frontier_telemetry"]
+    assert frontier["schema"] == "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1"
+    assert frontier["candidate_attempt_count"] >= payload["accepted_step_count"]
+    assert frontier["region_progress_candidate_count"] >= payload["accepted_step_count"]
+    assert frontier["max_candidate_receiver_uint8_changed_pixels_region"] > 0
+    assert payload["receipt"]["candidate_frontier_telemetry"] == frontier
     # No pose teacher -> exact joint term explicitly unavailable, not faked.
     assert payload["exact_nonrate"]["pose_term_available"] is False
     assert payload["exact_nonrate"]["delta_score_nonrate"] is None
@@ -575,6 +596,51 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     after_hashes = payload["parameter_group_sha256_after"]
     assert before_hashes["out_of_scope"] == after_hashes["out_of_scope"]
     assert any(before_hashes[group] != after_hashes[group] for group in before_hashes if group != "out_of_scope")
+
+
+@skip_no_mlx
+def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    already_won = np.zeros_like(labels_np, dtype=np.float32)
+    already_won[0, 4:10, 6:10] = 1.0
+    teacher = _PartialRegionSegNetTeacher(mx, mx.array(labels_np), already_won)
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=24,
+        learning_rate=2.0e-3,
+        target_min_region_ratio=0.02,
+    )
+
+    assert payload["accepted"] is True
+    assert payload["before_region_hard_ratio"] == pytest.approx(0.5)
+    assert payload["after_region_hard_ratio"] == pytest.approx(1.0)
+    assert payload["unsolved_tail_pixel_count"] == 24
+    assert payload["already_won_region_pixel_count"] == 24
+    assert payload["before_unsolved_tail_hard_ratio"] == 0.0
+    assert payload["after_unsolved_tail_hard_ratio"] == pytest.approx(1.0)
+    transitions = payload["argmax_transitions"]
+    assert transitions["wrong_to_target_count"] == 24
+    assert transitions["target_to_wrong_count"] == 0
+    telemetry = payload["candidate_frontier_telemetry"]
+    assert telemetry["progress_reference"] == "initial_unsolved_tail_with_already_won_preservation"
+    assert telemetry["final_already_won_lost_count"] == 0
+    assert telemetry["unsolved_tail_pixel_count"] == 24
+    assert telemetry["already_won_region_pixel_count"] == 24
+    assert telemetry["max_candidate_region_hard_won_delta"] >= 24
 
 
 @skip_no_mlx

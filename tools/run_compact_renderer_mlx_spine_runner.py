@@ -17254,7 +17254,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             if isinstance(row, Mapping):
                 artifact_metadata["score_aware_training"][
                     "last_birth_parseback_survival"
-                ] = {
+                ] = _strip_substrate_metadata_authority_fields({
                     "schema": row.get("schema"),
                     "surface": row.get("surface"),
                     "action_id": row.get("action_id"),
@@ -17267,7 +17267,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
-                }
+                })
         return components
 
     bundle_kwargs: dict[str, Any] = {
@@ -17386,7 +17386,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             hysteresis_learning_rate=float(scorer_domain_bootstrap_learning_rate),
         )
         if live_survival:
-            artifact_metadata["score_aware_training"]["live_birth_survival"] = live_survival
+            artifact_metadata["score_aware_training"]["live_birth_survival"] = (
+                _strip_substrate_metadata_authority_fields(live_survival)
+            )
     bundle = RendererBundle(
         **bundle_kwargs,
         recon_pixel_weight=recon_pixel_weight,
