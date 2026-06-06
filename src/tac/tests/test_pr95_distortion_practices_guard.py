@@ -364,6 +364,26 @@ def test_pr95_distortion_guard_blocks_fake_parity_without_scorer_telemetry_contr
     assert rows["scorer_domain_telemetry_contract"]["observed"] is False
 
 
+def test_pr95_distortion_guard_blocks_axis_contract_without_measured_replay() -> None:
+    row = _hinerv_row()
+    del row["pr95_distortion_axis_trace_measurements"]
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "hi_nerv_pr95_distortion_archive_parseback_distortion_axis_trace_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    axis_row = rows["archive_parseback_distortion_axis_trace"]
+    assert axis_row["observed"] is False
+    assert not any(
+        str(item).startswith("measured_axes=")
+        for item in axis_row["observed_evidence"]
+    )
+
+
 def test_pr95_distortion_axis_trace_contract_names_parseback_chain() -> None:
     contract = build_pr95_distortion_axis_trace_contract("hi_nerv")
 
@@ -582,6 +602,45 @@ def _snerv_actuator_execution_evidence() -> dict:
     }
 
 
+def _axis_trace_measurements() -> list[dict[str, float | str | bool]]:
+    return [
+        {
+            "axis": "live_forward",
+            "measured": True,
+            "score_delta": -0.01,
+            "d_seg": 0.02,
+            "d_pose": 0.002,
+        },
+        {
+            "axis": "fakequant_forward",
+            "measured": True,
+            "score_delta": -0.009,
+            "d_seg": 0.021,
+            "d_pose": 0.0021,
+        },
+        {
+            "axis": "archive_parseback",
+            "measured": True,
+            "score_delta": -0.008,
+            "d_seg": 0.022,
+            "d_pose": 0.0022,
+        },
+        {
+            "axis": "inflate_replay",
+            "measured": True,
+            "score_delta": -0.007,
+            "d_seg": 0.023,
+            "d_pose": 0.0023,
+        },
+        {
+            "axis": "official_evaluate_py",
+            "measured": True,
+            "score": 0.2,
+            "archive_bytes": 178000,
+        },
+    ]
+
+
 def _hinerv_row() -> dict:
     command = _base_command("hi_nerv")
     command.extend(
@@ -604,6 +663,7 @@ def _hinerv_row() -> dict:
         "pr95_distortion_axis_trace_contract": (
             build_pr95_distortion_axis_trace_contract("hi_nerv")
         ),
+        "pr95_distortion_axis_trace_measurements": _axis_trace_measurements(),
         "pr95_posenet_marginal_telemetry_contract": (
             build_pr95_posenet_marginal_telemetry_contract("hi_nerv")
         ),
@@ -644,6 +704,7 @@ def _snerv_row() -> dict:
         "pr95_distortion_axis_trace_contract": (
             build_pr95_distortion_axis_trace_contract("snerv")
         ),
+        "pr95_distortion_axis_trace_measurements": _axis_trace_measurements(),
         "pr95_posenet_marginal_telemetry_contract": (
             build_pr95_posenet_marginal_telemetry_contract("snerv")
         ),

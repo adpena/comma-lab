@@ -1832,9 +1832,16 @@ def _observe_practice(
         }.issubset(gate_names)
         if gates_ok:
             evidence.append("stage_gates=" + ",".join(sorted(gate_names)))
+        measured_axes = _axis_trace_measured_axes(row)
+        measured_axes_ok = required_axes.issubset(measured_axes)
+        if measured_axes_ok:
+            evidence.append(
+                "measured_axes=" + ",".join(sorted(measured_axes & required_axes))
+            )
         return bool(
             schema_ok
             and axes_ok
+            and measured_axes_ok
             and fail_closed
             and live_false_authority
             and parseback_gate
@@ -2455,6 +2462,52 @@ def _snerv_execution_has_numerical_source_forward_proof(
     if hash_ok and numeric_ok and groups_ok:
         evidence.append("snerv_complete_numerical_source_forward_proof_present")
     return bool(hash_ok and numeric_ok and groups_ok)
+
+
+def _axis_trace_measured_axes(row: Mapping[str, Any]) -> set[str]:
+    rows: list[Mapping[str, Any]] = []
+    for key in (
+        "pr95_distortion_axis_trace_measurements",
+        "distortion_axis_trace_measurements",
+        "axis_trace_measurements",
+        "axis_trace_rows",
+    ):
+        rows.extend(_mapping_list(row.get(key)))
+    metadata = row.get("metadata")
+    if isinstance(metadata, Mapping):
+        for key in (
+            "pr95_distortion_axis_trace_measurements",
+            "distortion_axis_trace_measurements",
+            "axis_trace_measurements",
+            "axis_trace_rows",
+        ):
+            rows.extend(_mapping_list(metadata.get(key)))
+    measured: set[str] = set()
+    for axis_row in rows:
+        axis = str(axis_row.get("axis") or axis_row.get("stage") or "").strip()
+        if not axis or axis_row.get("measured") is False:
+            continue
+        if _axis_trace_row_has_numeric_payload(axis_row):
+            measured.add(axis)
+    return measured
+
+
+def _axis_trace_row_has_numeric_payload(row: Mapping[str, Any]) -> bool:
+    return any(
+        _finite_float_value(row.get(key)) is not None
+        for key in (
+            "score",
+            "score_delta",
+            "d_seg",
+            "segnet_dist",
+            "segnet_distortion",
+            "d_pose",
+            "posenet_dist",
+            "posenet_distortion",
+            "archive_bytes",
+            "delta_archive_bytes",
+        )
+    )
 
 
 def _is_sha256_text(value: Any) -> bool:
