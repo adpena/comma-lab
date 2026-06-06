@@ -670,6 +670,7 @@ def test_launch_gate_consumes_fakequant_survival_row(tmp_path) -> None:
 @skip_no_mlx
 def test_parseback_survival_row_consumes_archive_report_same_action(tmp_path) -> None:
     import mlx.core as mx
+
     from tac.analysis.nerv_long_run_launch_gate import evaluate_nerv_long_run_launch_gate
 
     cfg, model, teacher, target0, target1, labels_np = _setup(mx)
