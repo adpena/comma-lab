@@ -2465,6 +2465,28 @@ def _source_forward_artifact(
         if state_dict_path is not None and state_dict_path.is_file()
         else None
     )
+    source_forward_replay_proof = (
+        {
+            "official_torch_frame_hash": "1" * 64,
+            "mlx_frame_hash": "2" * 64,
+            "numpy_receiver_frame_hash": "3" * 64,
+            "parseback_frame_hash": "4" * 64,
+            "tub_output_2_hash": "5" * 64,
+            "max_abs_frame_delta_official_mlx": 0.0,
+            "max_abs_yuv6_delta_official_numpy": 0.0,
+            "seg_logit_linf_official_parseback": 0.0,
+            "pose_linf_official_parseback": 0.0,
+            "mfu_tensor_hashes": {
+                "encoder.1.weight": "6" * 64,
+                "encoder.2.weight": "7" * 64,
+            },
+            "hfr_tensor_hashes": {
+                "decoder.4.weight": "8" * 64,
+            },
+        }
+        if source_authority
+        else None
+    )
     state_dict_section = {
         "official_trained_checkpoint_state_dict_path": (
             None if state_dict_path is None else state_dict_path.as_posix()
@@ -2627,6 +2649,7 @@ def _source_forward_artifact(
             "frame_producing_official_payload_replay_proven": True,
             "receiver_frame_decode_consumes_output2": receiver_consumes_output2,
             "source_forward_replay_authority": source_authority,
+            "source_forward_replay_proof": source_forward_replay_proof,
             "decoded_frames_shape": [2, 3, 16, 24],
             "decoded_frames_sha256": "b" * 64,
             "payload_bytes": 13052,
