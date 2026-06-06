@@ -219,6 +219,39 @@ class _ArchiveSelectionTargetCoverageAdapter:
         return archive, hashlib.sha256(payload).hexdigest(), len(payload)
 
 
+class _ArchiveSelectionParsebackAdapter(_ArchiveSelectionTargetCoverageAdapter):
+    def score_aware_components(
+        self,
+        model: _ArchiveSelectionUnitModel,
+        _batch: object,
+    ) -> dict[str, float]:
+        # Local proxy is misleading: live looks cheaper before archive replay.
+        return {"d_seg_proxy": 0.0 if model.value == 2.0 else 3.0}
+
+    def archive_replay_components(
+        self,
+        archive_path: Path,
+        _batch: object,
+        *,
+        candidate_kind: str,
+    ) -> dict[str, float]:
+        payload = archive_path.read_bytes()
+        if candidate_kind == "live":
+            assert payload == b"value=2.0"
+            return {
+                "d_seg_parseback": 4.0,
+                "selection_health_segnet_direct_live_candidate_target_class_coverage_fraction": 0.4,
+                "selection_health_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+            }
+        assert candidate_kind == "ema"
+        assert payload == b"value=1.0"
+        return {
+            "d_seg_parseback": 0.25,
+            "selection_health_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+            "selection_health_segnet_direct_live_candidate_target_class_min_ratio": 0.7,
+        }
+
+
 def test_archive_selection_failure_preserves_written_archive_evidence(
     tmp_path: Path,
 ) -> None:
@@ -316,3 +349,104 @@ def test_archive_selection_exports_target_coverage_health_before_proxy_score(
     assert rows["ema"]["score_components"][
         "selection_health_segnet_direct_live_candidate_target_class_coverage_fraction"
     ] == pytest.approx(1.0)
+
+
+def test_archive_selection_prefers_parseback_replay_over_local_proxy(
+    tmp_path: Path,
+) -> None:
+    adapter = _ArchiveSelectionParsebackAdapter()
+    ema = PolyakEMAShadow(adapter.model, decay=0.5)
+    adapter.model.value = 2.0
+    config = LongTrainingConfig(
+        substrate_id="unit_archive_selection",
+        lane_id="lane_unit_archive_selection",
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        curriculum_stages=(
+            CurriculumStage(
+                name="unit",
+                start_epoch=0,
+                end_epoch=1,
+                loss_weights={"recon": 1.0},
+            ),
+        ),
+        learning_rate=1e-3,
+        seed=7,
+        output_dir=tmp_path,
+        device="cpu",
+        notes="Unit test for parse-back replay authority in live-vs-EMA selection.",
+        ema_archive_selection_enabled=True,
+        archive_selection_replay_required=True,
+    )
+
+    archive_path, archive_sha256, archive_bytes, manifest_path = (
+        _export_live_ema_archive_selection(
+            adapter=adapter,
+            config=config,
+            ema_shadow=ema,
+        )
+    )
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    rows = {row["candidate_kind"]: row for row in manifest["rows"]}
+    assert manifest["authority"] == "archive_parseback_replay_proxy_false_authority"
+    assert manifest["archive_selection_replay_required"] is True
+    assert manifest["selected_candidate_kind"] == "ema"
+    assert archive_path == Path(manifest["selected_archive_path"])
+    assert archive_sha256 == manifest["selected_archive_sha256"]
+    assert archive_bytes == manifest["selected_archive_bytes"]
+    assert rows["live"]["proxy_score"] < rows["ema"]["proxy_score"]
+    assert rows["live"]["selection_proxy_score"] > rows["ema"]["selection_proxy_score"]
+    assert rows["live"]["selection_authority"] == (
+        "archive_parseback_replay_proxy_false_authority"
+    )
+    assert rows["ema"]["parseback_score_components"]["d_seg_parseback"] == pytest.approx(
+        0.25
+    )
+
+
+def test_archive_selection_required_parseback_fails_closed_without_hook(
+    tmp_path: Path,
+) -> None:
+    adapter = _ArchiveSelectionTargetCoverageAdapter()
+    ema = PolyakEMAShadow(adapter.model, decay=0.5)
+    adapter.model.value = 2.0
+    config = LongTrainingConfig(
+        substrate_id="unit_archive_selection",
+        lane_id="lane_unit_archive_selection",
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        curriculum_stages=(
+            CurriculumStage(
+                name="unit",
+                start_epoch=0,
+                end_epoch=1,
+                loss_weights={"recon": 1.0},
+            ),
+        ),
+        learning_rate=1e-3,
+        seed=7,
+        output_dir=tmp_path,
+        device="cpu",
+        notes="Unit test for required parse-back replay hook failure.",
+        ema_archive_selection_enabled=True,
+        archive_selection_replay_required=True,
+    )
+
+    archive_path, archive_sha256, archive_bytes, manifest_path = (
+        _export_live_ema_archive_selection(
+            adapter=adapter,
+            config=config,
+            ema_shadow=ema,
+        )
+    )
+
+    assert archive_path is None
+    assert archive_sha256 is None
+    assert archive_bytes is None
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["selected_candidate_kind"] is None
+    assert manifest["exported_candidate_count"] == 0
+    assert {
+        "RuntimeError:archive_selection_replay_required_but_adapter_missing_archive_replay_components"
+    } == {row["failure"] for row in manifest["rows"]}

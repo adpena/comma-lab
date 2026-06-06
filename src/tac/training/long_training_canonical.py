@@ -704,6 +704,8 @@ class LongTrainingConfig:
     resume_from_checkpoint: Path | None = None
     evidence_grade: str = "[macOS-MLX research-signal]"
     ema_archive_selection_enabled: bool = False
+    archive_selection_replay_required: bool = False
+    archive_selection_replay_batch_size: int | None = None
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -936,6 +938,20 @@ class LongTrainingConfig:
                 "ema_archive_selection_enabled must be bool; got "
                 f"{type(self.ema_archive_selection_enabled).__name__}"
             )
+        if not isinstance(self.archive_selection_replay_required, bool):
+            raise TypeError(
+                "archive_selection_replay_required must be bool; got "
+                f"{type(self.archive_selection_replay_required).__name__}"
+            )
+        if self.archive_selection_replay_batch_size is not None and (
+            isinstance(self.archive_selection_replay_batch_size, bool)
+            or not isinstance(self.archive_selection_replay_batch_size, int)
+            or self.archive_selection_replay_batch_size <= 0
+        ):
+            raise ValueError(
+                "archive_selection_replay_batch_size must be positive int "
+                f"or None; got {self.archive_selection_replay_batch_size!r}"
+            )
         if self.notes:
             _validate_rationale_not_placeholder(self.notes, "LongTrainingConfig.notes")
 
@@ -1034,6 +1050,14 @@ class LongTrainingConfig:
             "evidence_grade": self.evidence_grade,
             "ema_archive_selection_enabled": bool(
                 self.ema_archive_selection_enabled
+            ),
+            "archive_selection_replay_required": bool(
+                self.archive_selection_replay_required
+            ),
+            "archive_selection_replay_batch_size": (
+                None
+                if self.archive_selection_replay_batch_size is None
+                else int(self.archive_selection_replay_batch_size)
             ),
             "notes": self.notes,
         }
@@ -1368,6 +1392,11 @@ class SubstrateLongTrainingAdapter(Protocol):
             returns ``{"d_seg": float, "d_pose": float, "rate": float}``
             OR None if substrate does not expose score-aware components
             at L2.
+        archive_replay_components(archive_path, batch, candidate_kind) -> dict | None:
+            optional source-bound archive parse-back hook for live-vs-EMA archive
+            selection. When ``LongTrainingConfig.archive_selection_replay_required``
+            is True, the selector fails closed unless this hook returns finite
+            scorer-axis components from the exported archive bytes.
 
     Optional method (Style B):
         train_step(batch, learning_rate, loss_weights) -> dict:
@@ -3003,6 +3032,66 @@ def _archive_selection_proxy_score(
     return proxy
 
 
+def _archive_selection_replay_components(
+    adapter: SubstrateLongTrainingAdapter,
+    config: LongTrainingConfig,
+    *,
+    archive_path: Path,
+    seed_offset: int,
+    candidate_kind: str,
+) -> Mapping[str, float] | None:
+    """Return parse-back scorer components for an exported candidate archive."""
+
+    hook = getattr(adapter, "archive_replay_components", None)
+    if not callable(hook):
+        if config.archive_selection_replay_required:
+            raise RuntimeError(
+                "archive_selection_replay_required_but_adapter_missing_archive_replay_components"
+            )
+        return None
+    batch_size = (
+        int(config.archive_selection_replay_batch_size)
+        if config.archive_selection_replay_batch_size is not None
+        else int(config.batch_pair_indices_per_step)
+    )
+    batch = adapter.sample_batch(
+        batch_size,
+        config.seed + int(seed_offset) + 7_000_000,
+    )
+    try:
+        replay = hook(
+            Path(archive_path),
+            batch,
+            candidate_kind=str(candidate_kind),
+        )
+    except TypeError:
+        replay = hook(Path(archive_path), batch)
+    if replay is None:
+        if config.archive_selection_replay_required:
+            raise RuntimeError(
+                "archive_selection_replay_required_but_archive_replay_components_returned_none"
+            )
+        return None
+    if not isinstance(replay, Mapping):
+        raise TypeError(
+            "archive_replay_components must return Mapping[str, float] or None; "
+            f"got {type(replay).__name__}"
+        )
+    out: dict[str, float] = {}
+    for key, value in replay.items():
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(parsed):
+            out[str(key)] = parsed
+    if not out and config.archive_selection_replay_required:
+        raise RuntimeError(
+            "archive_selection_replay_required_but_archive_replay_components_empty"
+        )
+    return out or None
+
+
 def _finite_component(
     components: Mapping[str, Any],
     key: str,
@@ -3029,7 +3118,9 @@ def _archive_selection_health_sort_key(
     fraction retain the previous non-collapse sort behavior.
     """
 
-    components = row.get("score_components")
+    components = row.get("parseback_score_components")
+    if not isinstance(components, Mapping) or not components:
+        components = row.get("score_components")
     if not isinstance(components, Mapping):
         return (0, 0.0, 0.0, 0.0)
     occupied = _finite_component(
@@ -3163,6 +3254,27 @@ def _export_live_ema_archive_selection(
                 components,
                 archive_bytes=archive_bytes,
             )
+            parseback_components = _archive_selection_replay_components(
+                adapter,
+                config,
+                archive_path=archive_path,
+                seed_offset=seed_offset,
+                candidate_kind=kind,
+            )
+            parseback_proxy = (
+                None
+                if parseback_components is None
+                else _archive_selection_proxy_score(
+                    parseback_components,
+                    archive_bytes=archive_bytes,
+                )
+            )
+            selection_proxy = proxy if parseback_proxy is None else parseback_proxy
+            selection_authority = (
+                "local_training_proxy_false_authority"
+                if parseback_proxy is None
+                else "archive_parseback_replay_proxy_false_authority"
+            )
             rows.append(
                 {
                     "schema": "long_training_archive_selection_candidate.v1",
@@ -3173,9 +3285,21 @@ def _export_live_ema_archive_selection(
                     "archive_bytes": archive_bytes,
                     "score_components": dict(components or {}),
                     "proxy_score": float(proxy),
+                    "parseback_score_components": dict(parseback_components or {}),
+                    "parseback_proxy_score": (
+                        None if parseback_proxy is None else float(parseback_proxy)
+                    ),
+                    "selection_proxy_score": float(selection_proxy),
+                    "selection_authority": selection_authority,
                     "proxy_score_terms": {
                         "rate_score_per_byte": CONTEST_RATE_SCORE_PER_BYTE,
                         "score_components_are_local_training_proxy": True,
+                        "parseback_score_components_available": (
+                            parseback_components is not None
+                        ),
+                        "selection_uses_parseback_score_components": (
+                            parseback_proxy is not None
+                        ),
                     },
                     **CANONICAL_NON_PROMOTABLE_MARKERS,
                 }
@@ -3197,7 +3321,7 @@ def _export_live_ema_archive_selection(
             exported,
             key=lambda row: (
                 *_archive_selection_health_sort_key(row),
-                float(row["proxy_score"]),
+                float(row.get("selection_proxy_score", row["proxy_score"])),
                 0 if row.get("candidate_kind") == "ema" else 1,
             ),
         )
@@ -3207,9 +3331,25 @@ def _export_live_ema_archive_selection(
         "substrate_id": config.substrate_id,
         "lane_id": config.lane_id,
         "selection_metric": (
-            "local_score_aware_component_proxy_plus_charged_archive_rate"
+            "archive_parseback_proxy_when_available_else_local_proxy_plus_charged_archive_rate"
         ),
-        "authority": "local_training_proxy_false_authority",
+        "authority": (
+            "archive_parseback_replay_proxy_false_authority"
+            if any(
+                row.get("selection_authority")
+                == "archive_parseback_replay_proxy_false_authority"
+                for row in exported
+            )
+            else "local_training_proxy_false_authority"
+        ),
+        "archive_selection_replay_required": bool(
+            config.archive_selection_replay_required
+        ),
+        "archive_selection_replay_batch_size": (
+            None
+            if config.archive_selection_replay_batch_size is None
+            else int(config.archive_selection_replay_batch_size)
+        ),
         "rate_score_per_byte": CONTEST_RATE_SCORE_PER_BYTE,
         "candidate_count": len(rows),
         "exported_candidate_count": len(exported),
