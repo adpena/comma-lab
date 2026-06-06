@@ -154,14 +154,201 @@ FORBIDDEN_PARALLEL_SURFACE_GLOBS: tuple[str, ...] = (
     "tools/score_program_compiler",
     "tools/score_program_compiler/**",
     "tools/*score_program_compiler*.py",
+    "tools/*mlx_score_program*.py",
+    "tools/*vcm_oracle*.py",
+    "tools/*qrepro_plus*.py",
+    "tools/*qrepro++*.py",
     "tools/*action_byte*.py",
     "tools/*action_atlas*.py",
     "src/tac/*score_program_compiler*.py",
+    "src/tac/*mlx_score_program*.py",
+    "src/tac/*vcm_oracle*.py",
+    "src/tac/*qrepro_plus*.py",
     "src/tac/*action_byte*.py",
     "src/tac/*action_atlas*.py",
     "src/tac/**/*score_program_compiler*.py",
+    "src/tac/**/*mlx_score_program*.py",
+    "src/tac/**/*vcm_oracle*.py",
+    "src/tac/**/*qrepro_plus*.py",
     "src/tac/**/*action_byte*.py",
     "src/tac/**/*action_atlas*.py",
+    "src/comma_lab/*score_program_compiler*.py",
+    "src/comma_lab/*mlx_score_program*.py",
+    "src/comma_lab/*vcm_oracle*.py",
+    "src/comma_lab/*qrepro_plus*.py",
+    "src/comma_lab/*action_byte*.py",
+    "src/comma_lab/*action_atlas*.py",
+    "src/comma_lab/**/*score_program_compiler*.py",
+    "src/comma_lab/**/*mlx_score_program*.py",
+    "src/comma_lab/**/*vcm_oracle*.py",
+    "src/comma_lab/**/*qrepro_plus*.py",
+    "src/comma_lab/**/*action_byte*.py",
+    "src/comma_lab/**/*action_atlas*.py",
+)
+
+MACHINE_VISION_SOURCE_CODE_LINEAGE: tuple[dict[str, Any], ...] = (
+    {
+        "lineage_id": "quantizr_pr55_pose_conditioned_witness_renderer",
+        "source_label": "Quantizr/PR55",
+        "discovery": (
+            "pose-conditioned single-mask witness renderer with evaluator "
+            "rounding/resampling in the training surface"
+        ),
+        "compiler_layers": (
+            "payload_and_residual_basis",
+            "action_candidates",
+        ),
+        "artifact_globs": (
+            ".omx/research/*quantizr*",
+            "src/tac/*quantizr*.py",
+            "src/tac/training_curriculum/quantizr_5_stage_staircase.py",
+            "src/tac/packet_compiler/pr81_quantizr.py",
+        ),
+        "canonical_consumer_source_ids": (
+            "feedback_builders",
+            "operation_set_compiler",
+            "materializer_registry",
+        ),
+        "consumer_globs": (
+            "src/tac/quantizr_faithful_renderer.py",
+            "src/tac/quantizr_faithful_export.py",
+            "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+        ),
+        "text_refs": (
+            {
+                "path": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+                "patterns": ("Quantizr_TTO_scorer_informed_embedding",),
+            },
+            {
+                "path": "src/tac/quantizr_faithful_renderer.py",
+                "patterns": ("build_quantizr_faithful_renderer",),
+            },
+        ),
+    },
+    {
+        "lineage_id": "qrepro_pr90_semantic_pose_qrgb_program",
+        "source_label": "qrepro/PR90",
+        "discovery": (
+            "semantic mask program plus explicit pose controls and sparse "
+            "low-frequency scorer-facing QRGB edits"
+        ),
+        "compiler_layers": (
+            "action_candidates",
+            "entropy_grammar",
+            "payload_and_residual_basis",
+        ),
+        "artifact_globs": (
+            ".omx/research/public_pr90_qrepro_intake_*.md",
+            ".omx/research/pr90_qma9_mask_prior_transfer_worker_*.md",
+            ".omx/research/pr85_qrgb*",
+            ".omx/research/pr85_stbm1br*",
+            "src/tac/stbm1br_mask_codec.py",
+            "src/tac/stbm1br_rust_bridge.py",
+        ),
+        "canonical_consumer_source_ids": (
+            "feedback_builders",
+            "materializer_registry",
+            "operation_set_compiler",
+        ),
+        "consumer_globs": (
+            "src/tac/stbm1br_mask_codec.py",
+            "src/tac/tests/test_build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py",
+            "src/tac/tests/test_plan_pr85_qrgb_transfer_actions.py",
+            "tools/build_public_pr_mining_expansion_backlog.py",
+        ),
+        "text_refs": (
+            {
+                "path": "src/tac/stbm1br_mask_codec.py",
+                "patterns": ("PR90", "qrepro", "STBM1BR"),
+            },
+            {
+                "path": "src/tac/tests/test_build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py",
+                "patterns": ("QRGB", "STBM1BR"),
+            },
+        ),
+    },
+    {
+        "lineage_id": "pr95_hnerv_distortion_servo_parseback_curriculum",
+        "source_label": "PR95",
+        "discovery": (
+            "HNeRV/Muon control arm with staged scorer curriculum, "
+            "QAT/parse-back discipline, and receiver-consumed archive export"
+        ),
+        "compiler_layers": (
+            "payload_and_residual_basis",
+            "action_candidates",
+        ),
+        "artifact_globs": (
+            ".omx/research/pr95_*",
+            ".omx/research/*pr95*",
+            "src/tac/local_acceleration/pr95_hnerv_mlx*.py",
+            "src/tac/substrates/hprc/pr95_adapter.py",
+            "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py",
+        ),
+        "canonical_consumer_source_ids": (
+            "feedback_builders",
+            "materializer_queue",
+            "campaign_planner",
+        ),
+        "consumer_globs": (
+            "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+            "src/tac/local_acceleration/pr95_hnerv_mlx_training.py",
+            "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py",
+            "src/comma_lab/scheduler/experiment_queue_observer.py",
+        ),
+        "text_refs": (
+            {
+                "path": "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py",
+                "patterns": ("PR95", "contest archive"),
+            },
+            {
+                "path": "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+                "patterns": ("PR95",),
+            },
+        ),
+    },
+    {
+        "lineage_id": "pr110_selector_entropy_action_algebra",
+        "source_label": "PR110",
+        "discovery": (
+            "entropy-coded selector/action algebra over scorer free axes, "
+            "including frame0/PoseNet and inverse-scorer repair surfaces"
+        ),
+        "compiler_layers": (
+            "action_candidates",
+            "entropy_grammar",
+        ),
+        "artifact_globs": (
+            ".omx/research/pr110_current_frontier_final_rate_attack_*",
+            ".omx/research/pr110_opt*",
+            ".omx/research/*pr110*",
+            "src/tac/substrates/pr110_opt*",
+            "src/tac/composition/pr110_opt_*",
+            "tools/build_frame_exploit_selector_packet.py",
+        ),
+        "canonical_consumer_source_ids": (
+            "feedback_builders",
+            "materializer_registry",
+            "operation_set_compiler",
+            "materializer_queue",
+        ),
+        "consumer_globs": (
+            "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+            "src/comma_lab/scheduler/byte_shaving_materializer_registry.py",
+            "src/tac/optimization/inverse_steganalysis_operation_set_compiler.py",
+            "tools/build_frame_exploit_selector_packet.py",
+        ),
+        "text_refs": (
+            {
+                "path": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+                "patterns": ("PR110", "inverse_scorer", "selector"),
+            },
+            {
+                "path": "src/comma_lab/scheduler/byte_shaving_materializer_registry.py",
+                "patterns": ("selector_stream", "inverse_scorer"),
+            },
+        ),
+    },
 )
 
 
@@ -210,6 +397,136 @@ def _glob_count_rows(
             }
         )
     return rows
+
+
+def _unique_paths(paths: Iterable[str]) -> list[str]:
+    return sorted(dict.fromkeys(paths))
+
+
+def _read_text_or_empty(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _required_source_exists_by_id(repo_root: Path) -> dict[str, bool]:
+    return {
+        row["surface_id"]: bool(row["exists"])
+        for row in _required_surface_rows(repo_root)
+    }
+
+
+def _lineage_text_ref_rows(
+    repo_root: Path,
+    refs: Iterable[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for ref in refs:
+        rel_path = str(ref.get("path") or "").strip()
+        patterns = tuple(str(pattern) for pattern in ref.get("patterns") or ())
+        path = repo_root / rel_path
+        text = _read_text_or_empty(path)
+        present_patterns = [pattern for pattern in patterns if pattern in text]
+        rows.append(
+            {
+                "path": rel_path,
+                "exists": path.is_file(),
+                "patterns": list(patterns),
+                "present_patterns": present_patterns,
+                "missing_patterns": [
+                    pattern for pattern in patterns if pattern not in present_patterns
+                ],
+                "covered": path.is_file() and len(present_patterns) == len(patterns),
+            }
+        )
+    return rows
+
+
+def _machine_vision_lineage_rows(repo_root: Path) -> list[dict[str, Any]]:
+    required_source_exists = _required_source_exists_by_id(repo_root)
+    known_layers = set(SCORE_PROGRAM_LAYER_TARGET_KINDS)
+    rows: list[dict[str, Any]] = []
+    for spec in MACHINE_VISION_SOURCE_CODE_LINEAGE:
+        artifact_paths = _unique_paths(
+            path
+            for pattern in spec.get("artifact_globs") or ()
+            for path in _glob_paths(repo_root, str(pattern))
+        )
+        consumer_paths = _unique_paths(
+            path
+            for pattern in spec.get("consumer_globs") or ()
+            for path in _glob_paths(repo_root, str(pattern))
+        )
+        canonical_source_ids = tuple(
+            str(source_id)
+            for source_id in spec.get("canonical_consumer_source_ids") or ()
+        )
+        missing_canonical_sources = [
+            source_id
+            for source_id in canonical_source_ids
+            if required_source_exists.get(source_id) is not True
+        ]
+        compiler_layers = tuple(
+            str(layer_id) for layer_id in spec.get("compiler_layers") or ()
+        )
+        missing_layers = [
+            layer_id for layer_id in compiler_layers if layer_id not in known_layers
+        ]
+        text_ref_rows = _lineage_text_ref_rows(repo_root, spec.get("text_refs") or ())
+        missing_text_refs = [
+            row for row in text_ref_rows if row.get("covered") is not True
+        ]
+        blockers: list[str] = []
+        if not artifact_paths:
+            blockers.append("lineage_artifact_surface_missing")
+        if not consumer_paths:
+            blockers.append("lineage_consumer_surface_missing")
+        blockers.extend(
+            f"canonical_consumer_source_missing:{source_id}"
+            for source_id in missing_canonical_sources
+        )
+        blockers.extend(f"compiler_layer_unknown:{layer_id}" for layer_id in missing_layers)
+        blockers.extend(
+            "text_ref_missing:"
+            f"{row.get('path')}:{','.join(map(str, row.get('missing_patterns') or []))}"
+            for row in missing_text_refs
+        )
+        rows.append(
+            {
+                "lineage_id": spec.get("lineage_id"),
+                "source_label": spec.get("source_label"),
+                "discovery": spec.get("discovery"),
+                "compiler_layers": list(compiler_layers),
+                "artifact_globs": list(spec.get("artifact_globs") or ()),
+                "artifact_count": len(artifact_paths),
+                "artifact_sample_paths": artifact_paths[:20],
+                "canonical_consumer_source_ids": list(canonical_source_ids),
+                "missing_canonical_consumer_source_ids": missing_canonical_sources,
+                "consumer_globs": list(spec.get("consumer_globs") or ()),
+                "consumer_count": len(consumer_paths),
+                "consumer_sample_paths": consumer_paths[:20],
+                "text_ref_rows": text_ref_rows,
+                "status": "consumed_by_canonical_stack" if not blockers else "blocked",
+                "blockers": blockers,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return rows
+
+
+def _machine_vision_lineage_blockers(
+    lineage_rows: Iterable[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    for row in lineage_rows:
+        lineage_id = row.get("lineage_id")
+        blockers.extend(
+            f"machine_vision_lineage_blocked:{lineage_id}:{blocker}"
+            for blocker in row.get("blockers") or []
+        )
+    return blockers
 
 
 def _adapters_by_target_kind(manifest: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -312,6 +629,38 @@ def _layer_rows(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
         receiver_contract_count = sum(
             1 for row in adapter_rows if row.get("receiver_contract_bound") is True
         )
+        registered_coverage = (
+            not missing
+            and len(adapter_rows) == len(target_kinds)
+            and all(row.get("adapter_registered") is True for row in adapter_rows)
+        )
+        candidate_archive_coverage = bool(
+            registered_coverage
+            and all(
+                row.get("executable_candidate_archive") is True
+                for row in adapter_rows
+            )
+        )
+        receiver_contract_coverage = bool(
+            registered_coverage and receiver_contract_count == len(target_kinds)
+        )
+        receiver_proof_coverage = bool(
+            registered_coverage
+            and all(
+                (
+                    row.get("receiver_proof_function_bound") is True
+                    and row.get("receiver_verify_function_bound") is True
+                )
+                for row in adapter_rows
+                if row.get("executable_candidate_archive") is True
+            )
+        )
+        production_action_coverage = bool(
+            registered_coverage
+            and candidate_archive_coverage
+            and receiver_contract_coverage
+            and receiver_proof_coverage
+        )
         rows.append(
             {
                 "layer_id": layer_id,
@@ -338,12 +687,12 @@ def _layer_rows(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
                     for row in adapter_rows
                     if row.get("receiver_verify_function_bound") is True
                 ),
-                "covered": (
-                    not missing
-                    and len(adapter_rows) == len(target_kinds)
-                    and executable_candidate_archive_count > 0
-                    and receiver_contract_count == len(target_kinds)
-                ),
+                "registered_coverage": registered_coverage,
+                "candidate_archive_coverage": candidate_archive_coverage,
+                "receiver_contract_coverage": receiver_contract_coverage,
+                "receiver_proof_coverage": receiver_proof_coverage,
+                "production_action_coverage": production_action_coverage,
+                "covered": production_action_coverage,
             }
         )
     return rows
@@ -384,6 +733,8 @@ def build_frontier_rate_attack_consolidation_audit(
     research_rows = _glob_count_rows(root, REQUIRED_RESEARCH_GLOBS)
     layer_rows = _layer_rows(manifest)
     forbidden_surfaces = _forbidden_parallel_surfaces(root)
+    lineage_rows = _machine_vision_lineage_rows(root)
+    lineage_blockers = _machine_vision_lineage_blockers(lineage_rows)
 
     blockers: list[str] = []
     blockers.extend(
@@ -423,10 +774,56 @@ def build_frontier_rate_attack_consolidation_audit(
                     "score_program_target_receiver_contract_missing:"
                     f"{row['layer_id']}:{adapter.get('target_kind')}"
                 )
+    production_action_blockers: list[str] = []
+    for row in layer_rows:
+        if row.get("candidate_archive_coverage") is not True:
+            production_action_blockers.append(
+                f"score_program_layer_has_non_executable_targets:{row['layer_id']}"
+            )
+        if row.get("receiver_proof_coverage") is not True:
+            production_action_blockers.append(
+                f"score_program_layer_receiver_proof_coverage_incomplete:{row['layer_id']}"
+            )
+        for adapter in row.get("adapter_rows") or []:
+            if not isinstance(adapter, Mapping):
+                continue
+            target = adapter.get("target_kind")
+            materializer = adapter.get("materializer_id")
+            if adapter.get("planning_only") is True:
+                production_action_blockers.append(
+                    "score_program_target_planning_only:"
+                    f"{row['layer_id']}:{target}:{materializer}"
+                )
+            if adapter.get("executable_candidate_archive") is not True:
+                production_action_blockers.append(
+                    "score_program_target_not_executable_candidate_archive:"
+                    f"{row['layer_id']}:{target}:{materializer}"
+                )
+            if (
+                adapter.get("executable_candidate_archive") is True
+                and adapter.get("materialize_function_bound") is not True
+            ):
+                production_action_blockers.append(
+                    "score_program_target_materialize_function_missing:"
+                    f"{row['layer_id']}:{target}:{materializer}"
+                )
+            if (
+                adapter.get("executable_candidate_archive") is True
+                and (
+                    adapter.get("receiver_proof_function_bound") is not True
+                    or adapter.get("receiver_verify_function_bound") is not True
+                )
+            ):
+                production_action_blockers.append(
+                    "score_program_target_receiver_proof_or_verify_missing:"
+                    f"{row['layer_id']}:{target}:{materializer}"
+                )
     blockers.extend(
         f"parallel_score_program_compiler_surface_forbidden:{path}"
         for path in forbidden_surfaces
     )
+    blockers.extend(lineage_blockers)
+    production_action_ready = not production_action_blockers
 
     return {
         "schema": FRONTIER_RATE_ATTACK_CONSOLIDATION_SCHEMA,
@@ -453,6 +850,20 @@ def build_frontier_rate_attack_consolidation_audit(
                 {"from": source, "to": target}
                 for source, target in SCORE_PROGRAM_COMPILER_DAG_EDGES
             ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "production_action_ready": production_action_ready,
+        "production_action_blockers": production_action_blockers,
+        "machine_vision_source_code_lineage": {
+            "schema": "machine_vision_source_code_lineage_consumption.v1",
+            "hidden_object": (
+                "compressed evaluator-equivalent witness program whose RGB "
+                "frames carry the exact SegNet/PoseNet messages"
+            ),
+            "rows": lineage_rows,
+            "blockers": lineage_blockers,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -492,7 +903,14 @@ def render_frontier_rate_attack_consolidation_audit(
         if not isinstance(row, Mapping):
             continue
         missing = row.get("missing_target_kinds") or []
-        suffix = "covered" if not missing else f"missing={','.join(map(str, missing))}"
+        if missing:
+            suffix = f"missing={','.join(map(str, missing))}"
+        elif row.get("production_action_coverage") is True:
+            suffix = "production-covered"
+        elif row.get("registered_coverage") is True:
+            suffix = "registered-only"
+        else:
+            suffix = "not-covered"
         lines.append(
             f"  - {row.get('layer_id')}: {suffix}; "
             f"exec_archive={row.get('executable_candidate_archive_count', 0)}; "
@@ -507,6 +925,27 @@ def render_frontier_rate_attack_consolidation_audit(
             f"{len(dag.get('nodes') or [])} node(s), "
             f"{len(dag.get('edges') or [])} edge(s)"
         )
+    production_blockers = audit.get("production_action_blockers") or []
+    lines.append(
+        "production_action: "
+        f"{'ready' if audit.get('production_action_ready') is True else 'blocked'}; "
+        f"blockers={len(production_blockers)}"
+    )
+    lineage = audit.get("machine_vision_source_code_lineage")
+    if isinstance(lineage, Mapping):
+        rows = [row for row in lineage.get("rows") or [] if isinstance(row, Mapping)]
+        blockers = lineage.get("blockers") or []
+        lines.append(
+            "machine_vision_source_code_lineage: "
+            f"{len(rows)} signal(s); blockers={len(blockers)}"
+        )
+        for row in rows:
+            lines.append(
+                f"  - {row.get('source_label')}: {row.get('status')}; "
+                f"artifacts={row.get('artifact_count', 0)}; "
+                f"consumers={row.get('consumer_count', 0)}; "
+                f"layers={','.join(map(str, row.get('compiler_layers') or []))}"
+            )
     lines.append("state:")
     for row in audit.get("state_surfaces") or []:
         if not isinstance(row, Mapping):
