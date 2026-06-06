@@ -3922,6 +3922,7 @@ def _run_snerv_native_mlx_export_attachment(
     allow_overwrite: bool,
     retain_receiver_output: bool,
     receiver_proof_timeout_seconds: int,
+    run_archive_export: bool = True,
     run_scorer_loop_qat: bool,
     scorer_loop_qat_max_trials: int,
     scorer_loop_qat_search_mode: str,
@@ -4106,7 +4107,7 @@ def _run_snerv_native_mlx_export_attachment(
             modelsize_candidate=modelsize_candidate,
             scorer_upstream_dir=Path(scorer_upstream_dir),
             repo_root=Path(repo_root),
-            run_archive_export=True,
+            run_archive_export=bool(run_archive_export),
             pair_indices=None,
             prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
             scorer_error_pair_sampling_weights={
@@ -4328,6 +4329,12 @@ def _run_snerv_native_mlx_export_attachment(
             mlx_prefilter_scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
             mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
             allow_overwrite=bool(allow_overwrite),
+        )
+        artifact["native_mlx_archive_export_requested"] = bool(run_archive_export)
+        artifact["native_mlx_archive_export_policy"] = (
+            "receiver_archive_proof"
+            if run_archive_export
+            else "packet_only_bounded_smoke_no_archive_authority"
         )
         native_training_export_guard = build_snerv_mlx_native_training_export_guard(artifact)
         blockers = [
@@ -5184,6 +5191,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
     run_native_mlx_export: bool = False,
+    run_native_mlx_archive_export: bool = True,
     snerv_native_mlx_receiver_proof_timeout_seconds: int = 1800,
     snerv_native_mlx_decoder_train_steps: int = 0,
     snerv_native_mlx_decoder_train_lr: float = 1.0e-5,
@@ -5866,6 +5874,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             allow_overwrite=bool(allow_overwrite),
             retain_receiver_output=bool(keep_local_replay_inflated),
             receiver_proof_timeout_seconds=int(snerv_native_mlx_receiver_proof_timeout_seconds),
+            run_archive_export=bool(run_native_mlx_archive_export),
             run_scorer_loop_qat=bool(run_scorer_loop_qat),
             scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
             scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
@@ -6806,6 +6815,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         allow_overwrite=bool(allow_overwrite),
         retain_receiver_output=bool(keep_local_replay_inflated),
         receiver_proof_timeout_seconds=int(snerv_native_mlx_receiver_proof_timeout_seconds),
+        run_archive_export=bool(run_native_mlx_archive_export),
         run_scorer_loop_qat=bool(run_scorer_loop_qat),
         scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
         scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
@@ -25858,6 +25868,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--skip-snerv-native-mlx-archive-export",
+        action="store_true",
+        help=(
+            "For --execute-family snerv bounded/training smokes, run the "
+            "MLX-native packet export and telemetry path but skip final "
+            "contest archive.zip packaging plus receiver proof. The output is "
+            "packet-only false authority and remains promotion-blocked."
+        ),
+    )
+    parser.add_argument(
         "--snerv-native-mlx-receiver-proof-timeout",
         default=1800,
         type=int,
@@ -26770,6 +26790,7 @@ def main(argv: list[str] | None = None) -> int:
             scorer_error_pair_sampling_weights=(scorer_error_pair_sampling_weights),
             scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             run_native_mlx_export=not args.skip_snerv_native_mlx_export,
+            run_native_mlx_archive_export=not args.skip_snerv_native_mlx_archive_export,
             snerv_native_mlx_receiver_proof_timeout_seconds=(args.snerv_native_mlx_receiver_proof_timeout),
             snerv_native_mlx_decoder_train_steps=(args.snerv_native_mlx_decoder_train_steps),
             snerv_native_mlx_decoder_train_lr=(args.snerv_native_mlx_decoder_train_lr),

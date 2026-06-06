@@ -2145,6 +2145,9 @@ def _bounded_snerv_smoke_command(
         if path not in existing_modelsize_feedback_paths:
             out.extend(["--modelsize-byte-cap-feedback-json", path])
             existing_modelsize_feedback_paths.add(path)
+    archive_skip_flag = "--skip-snerv-native-mlx-archive-export"
+    if archive_skip_flag not in set(out):
+        out.append(archive_skip_flag)
     return out
 
 

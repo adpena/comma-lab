@@ -4669,6 +4669,21 @@ def train_export_snerv_mlx_native(
         "snerv_mlx_score_aware_long_training_not_executed",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    archive_export_policy = {
+        "schema": "snerv_mlx_native_archive_export_policy.v1",
+        "run_archive_export": bool(run_archive_export),
+        "archive_authority_surface": (
+            "contest_archive_zip_receiver_proof"
+            if run_archive_export
+            else "packet_only_bounded_smoke_no_archive_authority"
+        ),
+        "packet_only_bounded_smoke": not bool(run_archive_export),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if not run_archive_export:
+        blockers.append("snerv_mlx_native_archive_export_disabled_packet_only_smoke")
     blockers.extend(selected_metadata_continuity_blockers)
     if official_primitives_requested:
         blockers.extend(official_primitives_blockers)
@@ -5020,6 +5035,11 @@ def train_export_snerv_mlx_native(
     payload["packet_wire_format"] = selected_packet_wire_format
     payload["packet_contest_submission_wire_format_ready"] = (
         bool(selected_packet_contest_submission_wire_format_ready)
+    )
+    payload["archive_export_policy"] = archive_export_policy
+    payload["native_mlx_archive_export_requested"] = bool(run_archive_export)
+    payload["native_mlx_archive_export_policy"] = str(
+        archive_export_policy["archive_authority_surface"]
     )
     payload["hard_byte_ceiling"] = hard_byte_ceiling
     payload["byte_cap_control"] = byte_cap_control

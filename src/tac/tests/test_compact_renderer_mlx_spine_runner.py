@@ -5668,6 +5668,7 @@ def _write_snerv_lf_hf_replacement_queue_artifact(
         "128",
         "--modelsize-candidate-id",
         "snerv_lf_hf_unit_candidate",
+        "--skip-snerv-native-mlx-archive-export",
         *(command_extra or []),
     ]
     row = {
@@ -11732,6 +11733,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--planner-row-id",
             "snerv::manual::native_rate_aware_training",
             "--skip-snerv-native-mlx-export",
+            "--skip-snerv-native-mlx-archive-export",
             "--snerv-native-mlx-receiver-proof-timeout",
             "123",
             "--snerv-native-mlx-decoder-train-steps",
@@ -11852,6 +11854,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_temporal_context == 4
     assert sn.planner_row_id == "snerv::manual::native_rate_aware_training"
     assert sn.skip_snerv_native_mlx_export is True
+    assert sn.skip_snerv_native_mlx_archive_export is True
     assert sn.snerv_native_mlx_receiver_proof_timeout == 123
     assert sn.snerv_native_mlx_decoder_train_steps == 7
     assert sn.snerv_native_mlx_decoder_train_lr == 0.0003

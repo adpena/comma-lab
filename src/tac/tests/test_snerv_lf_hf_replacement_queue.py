@@ -96,6 +96,7 @@ def test_lf_hf_replacement_queue_emits_bounded_smoke_when_unblocked(
     assert "--snerv-scorer-loop-qat" not in row["command_argv"]
     assert "--snerv-scorer-loop-max-trials" not in row["command_argv"]
     assert "--snerv-scorer-loop-search-mode" not in row["command_argv"]
+    assert "--skip-snerv-native-mlx-archive-export" in row["command_argv"]
     assert row["command_argv"][
         row["command_argv"].index(
             "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction"
@@ -242,6 +243,7 @@ def test_official_replacement_emits_bounded_smoke_from_blocked_parent_template(
     assert row["command_argv"][
         row["command_argv"].index("--planner-row-queue-artifact") + 1
     ] == queue_artifact_path.as_posix()
+    assert "--skip-snerv-native-mlx-archive-export" in row["command_argv"]
     assert row["command_argv"][
         row["command_argv"].index(
             "--snerv-official-trained-checkpoint-state-dict-path"
@@ -363,6 +365,7 @@ def test_lf_hf_queue_blocks_same_candidate_after_terminal_renderer_collapse_feed
     ]
     assert command[command.index("--planner-row-id") + 1] == row["queue_row_id"]
     assert command[command.index("--num-pairs") + 1] == "16"
+    assert "--skip-snerv-native-mlx-archive-export" in command
     assert (
         command[command.index("--snerv-score-aware-long-training-epochs") + 1]
         == "128"
