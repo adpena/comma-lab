@@ -280,7 +280,11 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
         "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
         not in tub["blockers"]
     )
-    assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in tub["blockers"]
+    assert (
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+        in tub["blockers"]
+    )
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in tub["blockers"]
 
     local_gap = artifact["local_receiver_adapter_source_gap"]
     assert local_gap["receiver_safe_adapter_present"] is True
