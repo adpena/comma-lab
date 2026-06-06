@@ -1408,6 +1408,81 @@ def test_torch_scorer_surface_builder_captures_tensors_and_exact_metrics() -> No
     }
 
 
+def test_source_forward_producer_can_capture_scorer_tensors_from_receiver_rgb() -> None:
+    torch = pytest.importorskip("torch")
+    archive = _official_output2_source_forward_archive_fixture()
+    reference = unpack_snerv_archive(archive.packet).source_forward_receiver_tensor_surfaces(
+        [0]
+    )["surface_tensors"]["archive_parseback"]["rgb_pair_uint8"]
+
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="c" * 64,
+        archive_packet=archive.packet,
+        pair_ids=[0],
+        capture_pact_mlx_from_archive=False,
+        capture_torch_scorer_from_rgb=True,
+        reference_pairs_nchw255=reference,
+        posenet=_TinyPoseNet(torch),
+        segnet=_TinySegNet(torch),
+    )
+
+    assert row["producer_status"]["torch_scorer_captured_from_rgb"] is True
+    assert row["producer_status"]["torch_scorer_capture_surfaces"] == [
+        "archive_parseback",
+        "numpy_receiver",
+    ]
+    assert row["tensor_hashes"]["archive_parseback"]["segnet_logits"]
+    assert row["tensor_hashes"]["numpy_receiver"]["posenet_output"]
+    assert row["rgb_uint8_and_scorer_compared"] is False
+    assert row["passed"] is False
+    assert "source_forward_tensor_missing:official_torch:segnet_logits" in row["blockers"]
+    assert "snerv_source_forward_scorer_surface_missing:official_torch" in row["blockers"]
+
+
+def test_source_forward_producer_scorer_capture_can_complete_scorer_surface_set() -> None:
+    torch = pytest.importorskip("torch")
+    archive = _official_output2_source_forward_archive_fixture()
+    reference = unpack_snerv_archive(archive.packet).source_forward_receiver_tensor_surfaces(
+        [0]
+    )["surface_tensors"]["archive_parseback"]["rgb_pair_uint8"]
+    official_tensors = {
+        "coord_time_embedding": np.zeros((1, 1), dtype=np.float32),
+        "mfu_in": np.zeros((1,), dtype=np.float32),
+        "mfu_out": np.zeros((1,), dtype=np.float32),
+        "hfr_in": np.zeros((1,), dtype=np.float32),
+        "hfr_out": np.zeros((1,), dtype=np.float32),
+        "tub_in": np.zeros((1,), dtype=np.float32),
+        "tub_out": np.zeros((1,), dtype=np.float32),
+        "output_2": np.zeros((1,), dtype=np.float32),
+        "rgb_pair_float": reference.astype(np.float32),
+        "rgb_pair_uint8": reference,
+    }
+
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="d" * 64,
+        archive_packet=archive.packet,
+        pair_ids=[0],
+        official_torch_tensors=official_tensors,
+        pact_mlx_tensors=official_tensors,
+        capture_torch_scorer_from_rgb=True,
+        reference_pairs_nchw255=reference,
+        posenet=_TinyPoseNet(torch),
+        segnet=_TinySegNet(torch),
+    )
+
+    assert row["producer_status"]["torch_scorer_capture_surface_count"] == 4
+    assert row["rgb_uint8_and_scorer_compared"] is True
+    assert row["scorer_deltas"]["by_surface"]["archive_parseback"]["d_seg"] == 0.0
+    assert row["scorer_deltas"]["by_surface"]["numpy_receiver"]["d_pose"] == 0.0
+    assert "snerv_source_forward_scorer_by_surface_missing" not in row["blockers"]
+    assert "source_forward_tensor_missing:archive_parseback:segnet_logits" not in row["blockers"]
+    assert row["passed"] is False
+    assert any(
+        blocker.startswith("source_forward_tensor_delta_exceeds_tolerance:")
+        for blocker in row["blockers"]
+    )
+
+
 class _TinyPoseNet:
     def __init__(self, torch_module):
         self._torch = torch_module
@@ -2301,6 +2376,55 @@ def _official_payload_fixture(seed: int = 17) -> dict[str, object]:
         "fc_hw": (2, 2),
         "output2_decoder_output_shape": (2, 8, 4, 4),
     }
+
+
+def _official_output2_source_forward_archive_fixture():
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    bundle["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    bundle["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float64).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.125, dtype=np.float64)
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    return pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=encode_step_maps(
+            [np.ones((1, 1), dtype=np.float32)],
+            bins=4,
+        ).packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
 
 
 def _source_forward_action_effect_fixture() -> dict[str, object]:

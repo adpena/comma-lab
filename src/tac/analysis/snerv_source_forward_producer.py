@@ -29,6 +29,11 @@ def build_snerv_source_forward_proof_from_archive_packet(
     capture_pact_mlx_from_archive: bool = False,
     scorer_tensors_by_surface: Mapping[str, Mapping[str, Any]] | None = None,
     scorer_deltas: Mapping[str, Any] | None = None,
+    capture_torch_scorer_from_rgb: bool = False,
+    reference_pairs_nchw255: Any | None = None,
+    posenet: Any | None = None,
+    segnet: Any | None = None,
+    scorer_device: str | Any = "cpu",
     bitflip_section: str = "decoder_payload",
     bitflip_offset: int = 0,
     bitflip_mask: int = 1,
@@ -77,6 +82,42 @@ def build_snerv_source_forward_proof_from_archive_packet(
     for surface, tensors in dict(scorer_tensors_by_surface or {}).items():
         if surface in tensors_by_surface:
             tensors_by_surface[surface].update(dict(tensors))
+    scorer_capture_by_surface: dict[str, dict[str, Any]] = {}
+    if capture_torch_scorer_from_rgb:
+        if scorer_tensors_by_surface is not None:
+            raise ValueError(
+                "scorer_tensors_by_surface and capture_torch_scorer_from_rgb are mutually exclusive"
+            )
+        if scorer_deltas is not None:
+            raise ValueError(
+                "scorer_deltas and capture_torch_scorer_from_rgb are mutually exclusive"
+            )
+        if reference_pairs_nchw255 is None or posenet is None or segnet is None:
+            raise ValueError(
+                "capture_torch_scorer_from_rgb requires reference_pairs_nchw255, "
+                "posenet, and segnet"
+            )
+        for surface in SOURCE_FORWARD_SURFACES:
+            rgb = _surface_rgb_pair_tensor_for_scorer(tensors_by_surface[surface])
+            if rgb is None:
+                continue
+            scorer_capture = build_torch_scorer_source_forward_surface(
+                candidate_pairs_nchw255=rgb,
+                reference_pairs_nchw255=reference_pairs_nchw255,
+                posenet=posenet,
+                segnet=segnet,
+                device=scorer_device,
+            )
+            scorer_capture_by_surface[surface] = scorer_capture
+            tensors_by_surface[surface].update(dict(scorer_capture["tensors"]))
+        if scorer_capture_by_surface:
+            scorer_deltas = build_snerv_scorer_deltas_from_surface_metrics(
+                {
+                    surface: capture["metrics"]
+                    for surface, capture in scorer_capture_by_surface.items()
+                },
+                allow_missing_reference=True,
+            )
 
     bitflip = build_snerv_archive_payload_bitflip_falsification(
         archive_packet,
@@ -142,7 +183,11 @@ def build_snerv_source_forward_proof_from_archive_packet(
             if pact_mlx_capture is not None
             else None
         ),
-        "scorer_surface_count": len(dict(scorer_tensors_by_surface or {})),
+        "torch_scorer_captured_from_rgb": bool(scorer_capture_by_surface),
+        "torch_scorer_capture_surface_count": len(scorer_capture_by_surface),
+        "torch_scorer_capture_surfaces": sorted(scorer_capture_by_surface),
+        "scorer_surface_count": len(dict(scorer_tensors_by_surface or {}))
+        + len(scorer_capture_by_surface),
     }
     return row
 
@@ -280,6 +325,7 @@ def build_snerv_scorer_deltas_from_surface_metrics(
     score_surface: str = "numpy_receiver",
     reference_surface: str = "official_torch",
     tolerance_by_field: Mapping[str, float] | None = None,
+    allow_missing_reference: bool = False,
 ) -> dict[str, Any]:
     """Build the scorer-delta row consumed by SourceForwardProof validation."""
 
@@ -295,14 +341,17 @@ def build_snerv_scorer_deltas_from_surface_metrics(
     if selected is None:
         raise ValueError(f"score_surface {score_surface!r} missing from scorer metrics")
     if reference is None:
-        raise ValueError(
-            f"reference_surface {reference_surface!r} missing from scorer metrics"
+        if not allow_missing_reference:
+            raise ValueError(
+                f"reference_surface {reference_surface!r} missing from scorer metrics"
+            )
+        delta_score_nonrate = 0.0
+    else:
+        delta_score_nonrate = (
+            100.0 * (float(selected["d_seg"]) - float(reference["d_seg"]))
+            + math.sqrt(max(0.0, 10.0 * float(selected["d_pose"])))
+            - math.sqrt(max(0.0, 10.0 * float(reference["d_pose"])))
         )
-    delta_score_nonrate = (
-        100.0 * (float(selected["d_seg"]) - float(reference["d_seg"]))
-        + math.sqrt(max(0.0, 10.0 * float(selected["d_pose"])))
-        - math.sqrt(max(0.0, 10.0 * float(reference["d_pose"])))
-    )
     return {
         "d_seg": float(selected["d_seg"]),
         "d_pose": float(selected["d_pose"]),
@@ -313,6 +362,15 @@ def build_snerv_scorer_deltas_from_surface_metrics(
             for key, value in dict(tolerance_by_field or {}).items()
         },
     }
+
+
+def _surface_rgb_pair_tensor_for_scorer(surface_tensors: Mapping[str, Any]) -> Any | None:
+    tensors = dict(surface_tensors)
+    if "rgb_pair_uint8" in tensors:
+        return tensors["rgb_pair_uint8"]
+    if "rgb_pair_float" in tensors:
+        return tensors["rgb_pair_float"]
+    return None
 
 
 def _section_sha256(section: bytes) -> str:
