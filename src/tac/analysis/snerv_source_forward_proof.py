@@ -78,6 +78,8 @@ SOURCE_FORWARD_FORBIDDEN_PROVENANCE_TOKENS: tuple[str, ...] = (
     "sidecar",
     "proxy",
     "placeholder",
+    "receiver_bound",
+    "not_upstream",
 )
 
 

@@ -8,6 +8,8 @@ from collections.abc import Mapping, Sequence
 from hashlib import sha256
 from typing import Any
 
+import numpy as np
+
 from tac.analysis.snerv_source_forward_proof import (
     SOURCE_FORWARD_SURFACES,
     build_snerv_source_forward_proof_action_effect,
@@ -25,6 +27,7 @@ def build_snerv_source_forward_proof_from_archive_packet(
     archive_packet: bytes,
     pair_ids: Sequence[int],
     official_torch_tensors: Mapping[str, Any] | None = None,
+    capture_official_torch_from_archive: bool = False,
     pact_mlx_tensors: Mapping[str, Any] | None = None,
     capture_pact_mlx_from_archive: bool = False,
     scorer_tensors_by_surface: Mapping[str, Mapping[str, Any]] | None = None,
@@ -49,6 +52,27 @@ def build_snerv_source_forward_proof_from_archive_packet(
 
     decoded = unpack_snerv_archive(archive_packet)
     receiver_surfaces = decoded.source_forward_receiver_tensor_surfaces(pair_ids)
+    official_torch_capture: dict[str, Any] | None = None
+    if capture_official_torch_from_archive:
+        if official_torch_tensors is not None:
+            raise ValueError(
+                "official_torch_tensors and capture_official_torch_from_archive "
+                "are mutually exclusive"
+            )
+        official_torch_capture = (
+            build_official_torch_primitive_tensors_from_archive_packet(
+                archive_packet=archive_packet,
+                pair_ids=pair_ids,
+                portable_tub_tensors={
+                    key: value
+                    for key, value in receiver_surfaces["surface_tensors"][
+                        "archive_parseback"
+                    ].items()
+                    if key in {"tub_in", "tub_out"}
+                },
+            )
+        )
+        official_torch_tensors = official_torch_capture["tensors"]
     pact_mlx_capture: dict[str, Any] | None = None
     if capture_pact_mlx_from_archive:
         if pact_mlx_tensors is not None:
@@ -144,6 +168,15 @@ def build_snerv_source_forward_proof_from_archive_packet(
             "archive_parseback": "archive_parseback",
             "numpy_receiver": "numpy_receiver",
         },
+        tensor_capture_authority_by_surface=(
+            {
+                "official_torch": (
+                    "receiver_bound_torch_ops_not_upstream_source_forward"
+                )
+            }
+            if official_torch_capture is not None
+            else None
+        ),
     )
     row = build_snerv_source_forward_proof_action_effect(
         action_id=action_id,
@@ -168,6 +201,17 @@ def build_snerv_source_forward_proof_from_archive_packet(
             receiver_surfaces["missing_action_effect_tensor_names"]
         ),
         "official_torch_supplied_tensor_count": len(dict(official_torch_tensors or {})),
+        "official_torch_captured_from_archive": bool(
+            official_torch_capture is not None
+        ),
+        "official_torch_capture_schema": (
+            official_torch_capture.get("schema")
+            if official_torch_capture is not None
+            else None
+        ),
+        "official_torch_capture_authority_blocked": bool(
+            official_torch_capture is not None
+        ),
         "pact_mlx_supplied_tensor_count": len(dict(pact_mlx_tensors or {})),
         "pact_mlx_captured_from_archive": bool(pact_mlx_capture is not None),
         "pact_mlx_capture_schema": (
@@ -245,6 +289,112 @@ def build_pact_mlx_primitive_tensors_from_archive_packet(
             if key in {"tub_in", "tub_out"}
         },
     )
+
+
+def build_official_torch_primitive_tensors_from_archive_packet(
+    *,
+    archive_packet: bytes,
+    pair_ids: Sequence[int],
+    portable_tub_tensors: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Capture receiver-bound official MFU/HFR/output2 tensors with Torch ops.
+
+    This is a diagnostic parity reducer, not upstream trained-checkpoint source
+    authority.  The producer marks its provenance fail-closed when inserted as
+    the ``official_torch`` SourceForwardProof surface.
+    """
+
+    import torch
+
+    decoded = unpack_snerv_archive(archive_packet)
+    payload = decoded.decode_official_mfu_hfr_tub_payload()
+    low, skip_mid, skip_high = payload.mfu_inputs()
+    output2_inputs = payload.tub_output2_inputs()
+    frames = decoded.decode_pair_frames(pair_ids, clip_to_uint8_range=True)
+    if frames.ndim != 5:
+        raise ValueError(
+            "decoded SNeRV archive pair frames must be shaped (pairs,2,3,H,W); "
+            f"got {tuple(frames.shape)}"
+        )
+    mfu = payload.build_mfu()
+    hfr = payload.build_hfr_heads()
+    selected_pair_ids = [int(value) for value in pair_ids]
+    if not selected_pair_ids:
+        raise ValueError("official Torch primitive tensor capture needs pair ids")
+    frame_indices = _pair_ids_to_frame_indices(selected_pair_ids, int(frames.shape[0]))
+    low_t = _torch_take_frames(low, frame_indices)
+    skip_mid_t = _torch_take_frames(skip_mid, frame_indices)
+    skip_high_t = _torch_take_frames(skip_high, frame_indices)
+    mfu_out = _torch_mfu_forward(
+        mfu,
+        low_t,
+        skip_mid_t,
+        skip_high_t,
+    )
+    lh = _torch_hfr_head_forward(hfr.lh_head, mfu_out["pyr_out"])
+    hl = _torch_hfr_head_forward(hfr.hl_head, mfu_out["pyr_out"])
+    hh = _torch_hfr_head_forward(hfr.hh_head, mfu_out["pyr_out"])
+    hfr_out = torch.stack((lh, hl, hh), dim=2)
+    recon = _torch_haar_idwt2_level_nchw(mfu_out["pyr_out"], lh, hl, hh)
+    output2_fused = None
+    if output2_inputs is not None:
+        tub_config = dict(payload.header.get("tub_config") or {})
+        if "fc_hw" not in tub_config:
+            raise ValueError("official Torch output2 capture requires fc_hw")
+        _decoder_input, output2_fused = _torch_output2_fusion(
+            output2_inputs[0],
+            output2_inputs[1],
+            fc_hw=tuple(int(value) for value in tub_config["fc_hw"]),
+        )
+        residual = output2_fused[frame_indices]
+        if tuple(residual.shape) == tuple(recon.shape):
+            recon = torch.clamp(recon + residual, 0.0, 255.0)
+    h, w = (int(frames.shape[-2]), int(frames.shape[-1]))
+    pair = recon.reshape((len(selected_pair_ids), 2, 3, h, w))
+    pair255 = torch.clamp(pair, 0.0, 255.0)
+    tensors: dict[str, Any] = {
+        "mfu_in": _pack_tensor_group(
+            ("low", _torch_to_numpy(low_t)),
+            ("skip_mid", _torch_to_numpy(skip_mid_t)),
+            ("skip_high", _torch_to_numpy(skip_high_t)),
+        ),
+        "mfu_out": _pack_tensor_group(
+            ("up1", _torch_to_numpy(mfu_out["up1"])),
+            ("cat_mid", _torch_to_numpy(mfu_out["cat_mid"])),
+            ("unet1", _torch_to_numpy(mfu_out["unet1"])),
+            ("unet1_up", _torch_to_numpy(mfu_out["unet1_up"])),
+            ("cat_high", _torch_to_numpy(mfu_out["cat_high"])),
+            ("pyr_out", _torch_to_numpy(mfu_out["pyr_out"])),
+        ),
+        "hfr_in": _torch_to_numpy(mfu_out["pyr_out"]),
+        "hfr_out": _torch_to_numpy(hfr_out),
+        "rgb_pair_float": _torch_to_numpy(pair255),
+        "rgb_pair_uint8": np.clip(
+            np.rint(_torch_to_numpy(pair255)),
+            0,
+            255,
+        ).astype(np.uint8),
+    }
+    if output2_fused is not None:
+        tensors["output_2"] = _torch_to_numpy(output2_fused)
+    supplied_portable = dict(portable_tub_tensors or {})
+    for name in ("tub_in", "tub_out"):
+        if name in supplied_portable:
+            tensors[name] = np.asarray(supplied_portable[name], dtype=np.float32)
+    return {
+        "schema": "snerv_official_torch_receiver_bound_primitive_tensor_bundle.v1",
+        "surface": "official_torch",
+        "pair_ids": selected_pair_ids,
+        "tensor_names": sorted(tensors),
+        "tensors": tensors,
+        "mfu_hfr_output2_rgb_backend": "torch",
+        "source_forward_replay_authority": False,
+        "authority_blocker": "receiver_bound_torch_ops_not_upstream_source_forward",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def build_torch_scorer_source_forward_surface(
@@ -373,6 +523,185 @@ def _surface_rgb_pair_tensor_for_scorer(surface_tensors: Mapping[str, Any]) -> A
     return None
 
 
+def _pair_ids_to_frame_indices(pair_ids: Sequence[int], pair_count: int) -> list[int]:
+    out: list[int] = []
+    for pair_id in pair_ids:
+        idx = int(pair_id)
+        if idx < 0 or idx >= int(pair_count):
+            raise ValueError(
+                f"pair id {idx} outside available range [0,{int(pair_count)})"
+            )
+        out.extend((2 * idx, 2 * idx + 1))
+    return out
+
+
+def _torch_take_frames(value: Any, frame_indices: Sequence[int]) -> Any:
+    import torch
+
+    arr = torch.as_tensor(np.asarray(value, dtype=np.float32), dtype=torch.float32)
+    return arr[torch.as_tensor(list(frame_indices), dtype=torch.long)].contiguous()
+
+
+def _torch_conv2d(conv: Any, x: Any) -> Any:
+    import torch.nn.functional as F
+
+    weight = _torch_weight(conv.weight)
+    bias = None if conv.bias is None else _torch_bias(conv.bias)
+    return F.conv2d(
+        x,
+        weight,
+        bias=bias,
+        stride=int(conv.stride),
+        padding=int(conv.padding),
+    )
+
+
+def _torch_conv_transpose2d(conv: Any, x: Any) -> Any:
+    import torch.nn.functional as F
+
+    weight = _torch_weight(conv.weight)
+    bias = None if conv.bias is None else _torch_bias(conv.bias)
+    return F.conv_transpose2d(
+        x,
+        weight,
+        bias=bias,
+        stride=tuple(int(value) for value in conv.stride),
+        padding=tuple(int(value) for value in conv.padding),
+        output_padding=tuple(int(value) for value in conv.output_padding),
+        dilation=tuple(int(value) for value in conv.dilation),
+        groups=int(conv.groups),
+    )
+
+
+def _torch_residual_block_forward(block: Any, x: Any) -> Any:
+    import torch.nn.functional as F
+
+    hidden = F.leaky_relu(_torch_conv2d(block.conv1, x), negative_slope=0.1)
+    return x + _torch_conv2d(block.conv2, hidden)
+
+
+def _torch_residual_blocks_forward(blocks: Any, x: Any) -> Any:
+    out = _torch_conv2d(blocks.input_conv, x)
+    for block in blocks.residual_blocks:
+        out = _torch_residual_block_forward(block, out)
+    return out
+
+
+def _torch_mfu_forward(mfu: Any, low: Any, skip_mid: Any, skip_high: Any) -> dict[str, Any]:
+    up1 = _torch_conv_transpose2d(mfu.upsample_mid, low)
+    cat_mid = _torch_cat_channels((up1, skip_mid))
+    unet1 = _torch_residual_blocks_forward(mfu.rb_mid, cat_mid)
+    unet1_up = _torch_conv_transpose2d(mfu.upsample_high, unet1)
+    cat_high = _torch_cat_channels((unet1_up, skip_high))
+    pyr_out = _torch_residual_blocks_forward(mfu.rb_high, cat_high)
+    return {
+        "up1": up1,
+        "cat_mid": cat_mid,
+        "unet1": unet1,
+        "unet1_up": unet1_up,
+        "cat_high": cat_high,
+        "pyr_out": pyr_out,
+    }
+
+
+def _torch_hfr_head_forward(head: Any, pyr_out: Any) -> Any:
+    import torch.nn.functional as F
+
+    hidden = F.leaky_relu(_torch_conv2d(head.conv1, pyr_out), negative_slope=0.1)
+    return _torch_conv2d(head.conv2, hidden)
+
+
+def _torch_cat_channels(values: Sequence[Any]) -> Any:
+    import torch
+
+    return torch.cat(tuple(values), dim=1)
+
+
+def _torch_haar_idwt2_level_nchw(ll: Any, lh: Any, hl: Any, hh: Any) -> Any:
+    import torch
+
+    detail_channels = int(lh.shape[1])
+    ll_channels = int(ll.shape[1])
+    if ll_channels not in (1, detail_channels):
+        raise ValueError(
+            "official Torch MFU pyr_out channels must be 1 or match HFR detail "
+            f"channels ({ll_channels} vs {detail_channels})"
+        )
+    if ll_channels == 1 and detail_channels != 1:
+        ll = ll.expand(int(ll.shape[0]), detail_channels, int(ll.shape[2]), int(ll.shape[3]))
+    a = (ll + lh + hl + hh) * 0.5
+    b = (ll + lh - hl - hh) * 0.5
+    c = (ll - lh + hl - hh) * 0.5
+    d = (ll - lh - hl + hh) * 0.5
+    n, c_count, h, w = (
+        int(ll.shape[0]),
+        int(ll.shape[1]),
+        int(ll.shape[2]),
+        int(ll.shape[3]),
+    )
+    row0 = torch.stack((a, b), dim=-1).reshape((n, c_count, h, w * 2))
+    row1 = torch.stack((c, d), dim=-1).reshape((n, c_count, h, w * 2))
+    return torch.stack((row0, row1), dim=-2).reshape((n, c_count, h * 2, w * 2))
+
+
+def _torch_output2_fusion(
+    temporal_encoder_concat: Any,
+    decoder_output: Any,
+    *,
+    fc_hw: tuple[int, int],
+) -> tuple[Any, Any]:
+    import torch
+
+    temporal = torch.as_tensor(
+        np.asarray(temporal_encoder_concat, dtype=np.float32),
+        dtype=torch.float32,
+    )
+    raw = torch.as_tensor(
+        np.asarray(decoder_output, dtype=np.float32),
+        dtype=torch.float32,
+    )
+    emb_ch = int(temporal.shape[1]) // 2
+    decoder_input = torch.cat((temporal[:, :emb_ch], temporal[:, emb_ch:]), dim=0)
+    fc_h, fc_w = (int(fc_hw[0]), int(fc_hw[1]))
+    out_n, _out_c, out_h, out_w = (
+        int(raw.shape[0]),
+        int(raw.shape[1]),
+        int(raw.shape[2]),
+        int(raw.shape[3]),
+    )
+    fused = (
+        raw.reshape((out_n, -1, fc_h, fc_w, out_h, out_w))
+        .permute((0, 1, 4, 2, 5, 3))
+        .reshape((out_n, -1, fc_h * out_h, fc_w * out_w))
+    )
+    return decoder_input, fused
+
+
+def _torch_weight(value: Any) -> Any:
+    import torch
+
+    return torch.as_tensor(np.asarray(value, dtype=np.float32), dtype=torch.float32)
+
+
+def _torch_bias(value: Any) -> Any:
+    import torch
+
+    return torch.as_tensor(np.asarray(value, dtype=np.float32), dtype=torch.float32)
+
+
+def _pack_tensor_group(*items: tuple[str, Any]) -> np.ndarray:
+    arrays: list[np.ndarray] = []
+    for name, value in items:
+        arr = np.asarray(value, dtype=np.float32)
+        header = np.asarray([len(name), arr.ndim, *arr.shape], dtype=np.float32)
+        arrays.append(header.reshape(-1))
+        arrays.append(np.frombuffer(name.encode("utf-8"), dtype=np.uint8).astype(np.float32))
+        arrays.append(arr.reshape(-1))
+    if not arrays:
+        return np.zeros((0,), dtype=np.float32)
+    return np.concatenate(arrays).astype(np.float32, copy=False)
+
+
 def _section_sha256(section: bytes) -> str:
     return sha256(bytes(section)).hexdigest()
 
@@ -420,6 +749,7 @@ def _torch_to_numpy(tensor: Any) -> Any:
 
 
 __all__ = [
+    "build_official_torch_primitive_tensors_from_archive_packet",
     "build_pact_mlx_primitive_tensors_from_archive_packet",
     "build_snerv_scorer_deltas_from_surface_metrics",
     "build_snerv_source_forward_proof_from_archive_packet",

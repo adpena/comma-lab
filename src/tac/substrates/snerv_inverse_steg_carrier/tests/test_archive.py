@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from tac.analysis.snerv_source_forward_producer import (
+    build_official_torch_primitive_tensors_from_archive_packet,
     build_pact_mlx_primitive_tensors_from_archive_packet,
     build_snerv_scorer_deltas_from_surface_metrics,
     build_snerv_source_forward_proof_from_archive_packet,
@@ -1481,6 +1482,45 @@ def test_source_forward_producer_scorer_capture_can_complete_scorer_surface_set(
         blocker.startswith("source_forward_tensor_delta_exceeds_tolerance:")
         for blocker in row["blockers"]
     )
+
+
+def test_official_torch_receiver_bound_capture_is_real_but_not_authority() -> None:
+    pytest.importorskip("torch")
+    archive = _official_output2_source_forward_archive_fixture()
+    receiver_surfaces = unpack_snerv_archive(
+        archive.packet
+    ).source_forward_receiver_tensor_surfaces([0])
+
+    capture = build_official_torch_primitive_tensors_from_archive_packet(
+        archive_packet=archive.packet,
+        pair_ids=[0],
+        portable_tub_tensors=receiver_surfaces["surface_tensors"]["archive_parseback"],
+    )
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="e" * 64,
+        archive_packet=archive.packet,
+        pair_ids=[0],
+        capture_official_torch_from_archive=True,
+    )
+
+    assert capture["surface"] == "official_torch"
+    assert capture["mfu_hfr_output2_rgb_backend"] == "torch"
+    assert capture["authority_blocker"] == "receiver_bound_torch_ops_not_upstream_source_forward"
+    assert {"mfu_in", "mfu_out", "hfr_out", "output_2", "rgb_pair_uint8"}.issubset(
+        capture["tensors"]
+    )
+    np.testing.assert_array_equal(
+        capture["tensors"]["rgb_pair_uint8"],
+        receiver_surfaces["surface_tensors"]["archive_parseback"]["rgb_pair_uint8"],
+    )
+    assert row["producer_status"]["official_torch_captured_from_archive"] is True
+    assert row["producer_status"]["official_torch_capture_authority_blocked"] is True
+    assert row["tensor_hashes"]["official_torch"]["mfu_out"]
+    assert row["passed"] is False
+    assert (
+        "snerv_source_forward_surface_provenance_authority_not_real:"
+        "official_torch:tensor_capture_authority"
+    ) in row["blockers"]
 
 
 class _TinyPoseNet:
