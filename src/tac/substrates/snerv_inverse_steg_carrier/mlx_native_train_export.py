@@ -12017,6 +12017,21 @@ def _receiver_bound_official_primitives_export_binding(
     out["official_receiver_payload_frame_replay"] = selected_authority.get(
         "official_receiver_payload_frame_replay"
     )
+    for key in (
+        "official_tub_output2_storage",
+        "official_tub_output2_payload_source_available",
+        "official_tub_output2_payload_export_bound",
+        "official_tub_output2_payload_stored",
+        "official_tub_output2_receiver_fusion_from_payload",
+        "official_tub_output2_receiver_executed",
+        "official_tub_output2_fusion_executed",
+        "receiver_frame_decode_consumes_output2",
+        "official_tub_output2_receiver_frame_bound",
+        "official_tub_output2_receiver_output2_frame_shape_match",
+        "official_tub_output2_receiver_frame_decode_blockers",
+    ):
+        if key in selected_authority:
+            out[key] = selected_authority[key]
     out["unclosed_official_blockers"] = blockers
     out["blockers"] = blockers
     out["export_consumed_official_mfu"] = False
@@ -12287,6 +12302,60 @@ def _official_receiver_tensor_category(name: str) -> str:
     return "official_decoder_graph_topology_payload"
 
 
+def _official_tub_output2_receiver_frame_replay_fields(
+    header: Mapping[str, Any],
+    primitive_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    storage_raw = header.get("tub_output2_storage")
+    storage = dict(storage_raw) if isinstance(storage_raw, Mapping) else {}
+    executed_raw = primitive_proof.get("executed_components")
+    executed = dict(executed_raw) if isinstance(executed_raw, Mapping) else {}
+    stored = bool(storage.get("stored") is True)
+    source_available = bool(storage.get("source_payload_present") is True)
+    receiver_fusion_from_payload = bool(
+        storage.get("receiver_executes_output2_fusion_from_payload") is True
+    )
+    fusion_executed = bool(executed.get("official_tub_output2_fusion") is True)
+    receiver_consumes = bool(storage.get("receiver_frame_decode_consumes_output2") is True)
+    shape_matches = bool(storage.get("receiver_output2_frame_shape_match") is True)
+    blockers: list[str] = []
+    if stored and not receiver_fusion_from_payload:
+        blockers.append("snerv_official_tub_output2_receiver_fusion_not_payload_bound")
+    if stored and not fusion_executed:
+        blockers.append("snerv_official_tub_output2_receiver_fusion_not_executed")
+    if stored and not receiver_consumes:
+        blockers.append("snerv_official_tub_output2_receiver_frame_decode_not_bound")
+    if stored and not shape_matches:
+        blockers.append("snerv_official_tub_output2_receiver_frame_shape_mismatch")
+    storage_blockers = storage.get("frame_decode_blockers")
+    if isinstance(storage_blockers, Sequence) and not isinstance(
+        storage_blockers,
+        (str, bytes),
+    ):
+        blockers.extend(str(blocker) for blocker in storage_blockers)
+    blockers = _ordered_unique(blockers)
+    return {
+        "official_tub_output2_storage": storage,
+        "official_tub_output2_payload_source_available": source_available,
+        "official_tub_output2_payload_export_bound": stored,
+        "official_tub_output2_payload_stored": stored,
+        "official_tub_output2_receiver_fusion_from_payload": receiver_fusion_from_payload,
+        "official_tub_output2_receiver_executed": fusion_executed,
+        "official_tub_output2_fusion_executed": fusion_executed,
+        "receiver_frame_decode_consumes_output2": receiver_consumes,
+        "official_tub_output2_receiver_frame_bound": bool(
+            stored
+            and receiver_fusion_from_payload
+            and fusion_executed
+            and receiver_consumes
+            and shape_matches
+            and not blockers
+        ),
+        "official_tub_output2_receiver_output2_frame_shape_match": shape_matches,
+        "official_tub_output2_receiver_frame_decode_blockers": blockers,
+    }
+
+
 def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, Any]:
     """Prove selected official payload bytes are the archive frame producer."""
 
@@ -12308,6 +12377,8 @@ def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, A
         "blockers": [],
         **FALSE_AUTHORITY,
     }
+    output2_fields: dict[str, Any] = {}
+    output2_blockers: list[str] = []
     try:
         decoded = unpack_snerv_archive(packet)
         decoder_payload = decoded.sections["decoder_payload"]
@@ -12328,6 +12399,14 @@ def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, A
 
         payload_obj = decode_official_mfu_hfr_tub_decoder_payload(decoder_payload)
         primitive_proof = payload_obj.execute()
+        output2_fields = _official_tub_output2_receiver_frame_replay_fields(
+            header,
+            primitive_proof,
+        )
+        output2_blockers = list(
+            output2_fields.get("official_tub_output2_receiver_frame_decode_blockers")
+            or []
+        )
         payload_flat = np.asarray(payload_obj.decode_frames(), dtype=np.float32)
         archive_pairs = np.asarray(decode_snerv_archive_frames(packet), dtype=np.float32)
         if archive_pairs.ndim != 5:
@@ -12355,8 +12434,9 @@ def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, A
             and archive_finite
             and shape_matches
             and frame_hashes_match
+            and not output2_blockers
         )
-        blockers = []
+        blockers = list(output2_blockers)
         if primitive_proof.get("receiver_runtime_decode_proven") is not True:
             blockers.append(
                 "snerv_official_mfu_hfr_tub_receiver_runtime_decode_not_proven"
@@ -12375,6 +12455,7 @@ def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, A
             )
         return {
             **out,
+            **output2_fields,
             "decoder_payload_sha256": _sha256_bytes(decoder_payload),
             "decoder_payload_bytes": len(decoder_payload),
             "official_receiver_runtime_decode_proven": bool(
@@ -12400,11 +12481,15 @@ def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, A
     except Exception as exc:
         return {
             **out,
+            **output2_fields,
             "failure": f"{type(exc).__name__}: {exc}",
-            "blockers": [
-                "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay_failed",
-                f"snerv_official_mfu_hfr_tub_receiver_payload_frame_replay_exception_{type(exc).__name__}",
-            ],
+            "blockers": _ordered_unique(
+                [
+                    "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay_failed",
+                    f"snerv_official_mfu_hfr_tub_receiver_payload_frame_replay_exception_{type(exc).__name__}",
+                    *output2_blockers,
+                ]
+            ),
         }
 
 
@@ -12444,6 +12529,21 @@ def _selected_packet_official_payload_authority(packet: bytes) -> dict[str, Any]
         if out["official_decoder_payload_selected"]:
             frame_replay = _selected_packet_official_payload_frame_replay(packet)
             out["official_receiver_payload_frame_replay"] = frame_replay
+            for key in (
+                "official_tub_output2_storage",
+                "official_tub_output2_payload_source_available",
+                "official_tub_output2_payload_export_bound",
+                "official_tub_output2_payload_stored",
+                "official_tub_output2_receiver_fusion_from_payload",
+                "official_tub_output2_receiver_executed",
+                "official_tub_output2_fusion_executed",
+                "receiver_frame_decode_consumes_output2",
+                "official_tub_output2_receiver_frame_bound",
+                "official_tub_output2_receiver_output2_frame_shape_match",
+                "official_tub_output2_receiver_frame_decode_blockers",
+            ):
+                if key in frame_replay:
+                    out[key] = frame_replay[key]
             out["receiver_payload_frame_replay_passed"] = bool(
                 frame_replay.get("receiver_payload_frame_replay_passed") is True
             )

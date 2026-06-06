@@ -5368,6 +5368,194 @@ def test_official_mfu_hfr_tub_packet_binds_output2_to_receiver_frames_when_reque
     assert rich_metadata["score_claim"] is False
 
 
+def test_selected_official_packet_authority_threads_output2_frame_bound_replay(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+        official_tub_output2_export_mode="receiver_frame_bound",
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    components["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    components["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    components["tub_temporal_encoder_concat"] = np.linspace(
+        0.0,
+        1.0,
+        np.prod(components["temporal_encoder_output_shape"]),
+        dtype=np.float64,
+    ).reshape(components["temporal_encoder_output_shape"])
+    components["tub_output2_raw"] = np.full(
+        components["output2_decoder_output_shape"],
+        0.125,
+        dtype=np.float64,
+    )
+    packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=[4],
+        model_size=model_size,
+        metadata_extra={"allocation_mode": "unit_output2_receiver_authority"},
+    )
+
+    authority = mod._selected_packet_official_payload_authority(packet.packet)
+    replay = authority["official_receiver_payload_frame_replay"]
+
+    assert authority["status"] == "frame_producing_official_export"
+    assert authority["receiver_payload_frame_replay_passed"] is True
+    assert authority["official_payload_runtime_decode_authority"] is True
+    assert authority["receiver_frame_decode_consumes_output2"] is True
+    assert authority["official_tub_output2_receiver_frame_bound"] is True
+    assert replay["official_tub_output2_payload_export_bound"] is True
+    assert replay["official_tub_output2_payload_stored"] is True
+    assert replay["official_tub_output2_receiver_fusion_from_payload"] is True
+    assert replay["official_tub_output2_fusion_executed"] is True
+    assert replay["receiver_frame_decode_consumes_output2"] is True
+    assert replay["official_tub_output2_receiver_frame_bound"] is True
+    assert replay["official_tub_output2_receiver_frame_decode_blockers"] == []
+    assert (
+        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
+        not in replay["blockers"]
+    )
+
+    binding = mod._receiver_bound_official_primitives_export_binding(
+        {
+            "schema": "snerv_official_mfu_hfr_tub_export_binding.v2",
+            "official_receiver_runtime_decode_contract": {
+                "receiver_runtime_decode_proven": True,
+            },
+            "blockers": [
+                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+            ],
+        },
+        packet_path=tmp_path / "candidate.snar",
+        packet_bytes=len(packet.packet),
+        packet_sha256=hashlib.sha256(packet.packet).hexdigest(),
+        selected_packet=packet.packet,
+        selected_archive_metadata=packet.metadata,
+        package=None,
+        receiver_proof={
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+        },
+    )
+
+    assert binding["receiver_runtime_decode_authority"] is True
+    assert binding["receiver_frame_decode_consumes_output2"] is True
+    assert binding["official_tub_output2_receiver_frame_bound"] is True
+    assert binding["official_tub_output2_fusion_executed"] is True
+    assert binding["source_forward_replay_authority"] is False
+    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" in binding["blockers"]
+
+
+def test_selected_official_packet_authority_blocks_stored_output2_not_frame_bound() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+        official_tub_output2_export_mode="proof_only",
+        official_tub_output2_store_for_receiver_proof=True,
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    components["tub_temporal_encoder_concat"] = np.arange(
+        np.prod(components["temporal_encoder_output_shape"]),
+        dtype=np.float64,
+    ).reshape(components["temporal_encoder_output_shape"])
+    components["tub_output2_raw"] = (
+        np.arange(
+            np.prod(components["output2_decoder_output_shape"]),
+            dtype=np.float64,
+        ).reshape(components["output2_decoder_output_shape"])
+        / 19.0
+    )
+    low = np.asarray(components["low"], dtype=np.float64)
+    skip_mid = np.asarray(components["skip_mid"], dtype=np.float64)
+    skip_high = np.asarray(components["skip_high"], dtype=np.float64)
+    skip_high_full_shape = tuple(
+        int(v) for v in components.get("skip_high_full_shape") or skip_high.shape
+    )
+    official_payload = mod.encode_official_mfu_hfr_tub_decoder_payload(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=np.asarray(components["tub_current"], dtype=np.float64),
+        tub_previous=np.asarray(components["tub_previous"], dtype=np.float64),
+        tub_next_frame=np.asarray(components["tub_next_frame"], dtype=np.float64),
+        temporal_encoder_output_shape=tuple(
+            int(v) for v in components["temporal_encoder_output_shape"]
+        ),
+        fc_hw=tuple(int(v) for v in components["fc_hw"]),
+        output2_decoder_output_shape=tuple(
+            int(v) for v in components["output2_decoder_output_shape"]
+        ),
+        mfu_input_codec=mod._official_mfu_input_codec_for_export(low, skip_mid),
+        skip_high_codec=str(components.get("skip_high_mode") or "full"),
+        skip_high_source_shape=skip_high_full_shape,
+        tub_input_codec="unused_synthetic",
+        tub_temporal_encoder_concat=np.asarray(
+            components["tub_temporal_encoder_concat"],
+            dtype=np.float64,
+        ),
+        tub_output2_raw=np.asarray(components["tub_output2_raw"], dtype=np.float64),
+        store_tub_output2_for_receiver_proof=True,
+    )
+    step_packet = mod.encode_step_maps_waterfill(
+        [np.ones((1, 1), dtype=np.float32)],
+        map_importance=np.ones((1,), dtype=np.float64),
+        target_bits_per_coeff=1.0,
+    )
+    packet = mod.pack_snerv_archive_snar2(
+        metadata_payload=mod.encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=mod.encode_lf_quant_payload(
+            [np.zeros((1, 1), dtype=np.int64)],
+            codec="spatial_delta_zigzag_leb128_lzma",
+        ),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "carrier_hw": [16, 16],
+            "orig_hw": [16, 16],
+        },
+    )
+
+    authority = mod._selected_packet_official_payload_authority(packet.packet)
+    replay = authority["official_receiver_payload_frame_replay"]
+
+    assert authority["status"] == "official_payload_selected_not_frame_producing"
+    assert authority["official_tub_output2_payload_stored"] is True
+    assert authority["official_tub_output2_fusion_executed"] is True
+    assert authority["receiver_frame_decode_consumes_output2"] is False
+    assert authority["official_tub_output2_receiver_frame_bound"] is False
+    assert replay["official_tub_output2_receiver_output2_frame_shape_match"] is False
+    assert "snerv_tub_output2_receiver_frame_shape_mismatch" in replay["blockers"]
+    assert (
+        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
+        in replay["blockers"]
+    )
+    assert (
+        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
+        in authority["blockers"]
+    )
+
+
 def test_official_mfu_hfr_tub_packet_fails_closed_when_receiver_frame_bound_missing() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
