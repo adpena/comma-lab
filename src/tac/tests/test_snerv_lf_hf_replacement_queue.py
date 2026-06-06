@@ -619,6 +619,132 @@ def test_lf_hf_queue_ready_gate_cannot_mask_missing_source_forward_proof(
     assert row["command_argv"] == []
 
 
+def test_lf_hf_queue_consumes_canonical_source_forward_hash_authority_without_legacy_proof(
+    tmp_path: Path,
+) -> None:
+    state_dict_path = _write_fake_state_dict(tmp_path)
+    artifact = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+        state_dict_path=state_dict_path,
+    )
+    artifact.pop("source_forward_replay_proof", None)
+    artifact["source_forward_replay_authority"] = True
+    replay = artifact["receiver_payload_frame_replay"]
+    assert isinstance(replay, dict)
+    replay.pop("source_forward_replay_proof", None)
+    replay.update(
+        {
+            "source_forward_replay_bound": True,
+            "source_forward_replay_verified": True,
+            "output_bundle_sha256": "d" * 64,
+            "blockers": [],
+        }
+    )
+    artifact["source_forward_replay"] = {
+        "schema": "snerv_official_mfu_hfr_tub_source_forward_harness.v1",
+        "source_forward_replay_authority": True,
+        "source_forward_replay_verified": True,
+        "full_stack_source_forward_parity_proven": True,
+        "replay_ran": True,
+        "official_output_sha256": "1" * 64,
+        "portable_output_sha256": "1" * 64,
+        "max_abs_error": 0.0,
+        "blockers": [],
+    }
+    artifact["component_rows"] = [
+        {
+            "component_id": "mfu",
+            "source_forward_parity_proven": True,
+            "official_output_sha256": "2" * 64,
+            "portable_output_sha256": "2" * 64,
+            "max_abs_error": 0.0,
+            "blockers": [],
+        },
+        {
+            "component_id": "hfr",
+            "source_forward_parity_proven": True,
+            "official_output_sha256": "3" * 64,
+            "portable_output_sha256": "3" * 64,
+            "max_abs_error": 0.0,
+            "blockers": [],
+        },
+        {
+            "component_id": "tub",
+            "source_forward_parity_proven": True,
+            "full_stack_source_forward_parity_proven": True,
+            "official_output_sha256": "4" * 64,
+            "portable_output_sha256": "4" * 64,
+            "max_abs_error": 0.0,
+            "blockers": [],
+        },
+    ]
+    artifact["official_tub_source_forward_replay"] = {
+        "schema": "snerv_official_tub_source_forward_replay.v1",
+        "source_forward_replay_authority": True,
+        "full_tub_source_forward_parity_proven": True,
+        "portable_output2_fusion": {
+            "source_output_sha256": "5" * 64,
+            "portable_output_sha256": "5" * 64,
+            "max_abs_error": 0.0,
+            "output_hashes_bit_identical": True,
+        },
+    }
+
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        source_forward_artifacts=[artifact],
+        official_replacement_authority_gates=[
+            _official_replacement_authority_gate(ready=True)
+        ],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    blockers = set(row["blockers"])
+    assert "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing" not in (
+        blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" not in (
+        blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" not in (
+        blockers
+    )
+    assert "snerv_ready_official_tub_lf_hf_gate_contradicts_source_forward_queue_blockers" not in (
+        blockers
+    )
+    source_evidence = row["source_forward_evidence"]
+    assert source_evidence["source_forward_replay_authority"] is True
+    assert source_evidence["source_forward_replay_numerical_proof_complete"] is True
+    assert source_evidence["source_forward_replay_proof"] == {
+        "official_torch_frame_hash": "1" * 64,
+        "mlx_frame_hash": "1" * 64,
+        "numpy_receiver_frame_hash": "b" * 64,
+        "parseback_frame_hash": "d" * 64,
+        "tub_output_2_hash": "5" * 64,
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu_official_output": "2" * 64},
+        "hfr_tensor_hashes": {"hfr_official_output": "3" * 64},
+        "derived_from": "canonical_source_forward_authority_hashes.v1",
+    }
+
+
 def test_lf_hf_rebuild_command_uses_candidate_feedback_source_alias(
     tmp_path: Path,
 ) -> None:

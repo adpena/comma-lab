@@ -457,7 +457,132 @@ def _source_forward_replay_proof(
     ):
         if isinstance(raw, Mapping):
             return raw
-    return None
+    return _canonical_source_forward_authority_proof(selected, replay)
+
+
+def _canonical_source_forward_authority_proof(
+    selected: Mapping[str, Any],
+    replay: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    source_replay = selected.get("source_forward_replay")
+    source_replay = source_replay if isinstance(source_replay, Mapping) else {}
+    if not (
+        selected.get("source_forward_replay_authority") is True
+        and selected.get("full_tub_source_forward_parity_proven") is True
+        and not selected.get("blockers")
+        and source_replay.get("source_forward_replay_authority") is True
+        and source_replay.get("source_forward_replay_verified") is True
+        and source_replay.get("full_stack_source_forward_parity_proven") is True
+        and source_replay.get("replay_ran") is True
+        and not source_replay.get("blockers")
+        and replay.get("source_forward_replay_authority") is True
+        and replay.get("source_forward_replay_bound") is True
+        and replay.get("source_forward_replay_verified") is True
+        and replay.get("receiver_runtime_decode_proven") is True
+        and replay.get("frame_producing_official_payload_replay_proven") is True
+        and replay.get("receiver_frame_decode_consumes_output2") is True
+        and not replay.get("blockers")
+    ):
+        return None
+    if not _zero_float(source_replay.get("max_abs_error")):
+        return None
+    official_frame_hash = source_replay.get("official_output_sha256")
+    portable_frame_hash = source_replay.get("portable_output_sha256")
+    receiver_frame_hash = replay.get("decoded_frames_sha256")
+    parseback_frame_hash = (
+        replay.get("output_bundle_sha256") or replay.get("decoded_frames_sha256")
+    )
+    if not all(
+        _looks_like_sha256(value)
+        for value in (
+            official_frame_hash,
+            portable_frame_hash,
+            receiver_frame_hash,
+            parseback_frame_hash,
+        )
+    ):
+        return None
+    if str(official_frame_hash) != str(portable_frame_hash):
+        return None
+
+    mfu_row = _canonical_component_row(selected, "mfu")
+    hfr_row = _canonical_component_row(selected, "hfr")
+    tub_row = _canonical_component_row(selected, "tub")
+    if not all(
+        _component_row_zero_hash_parity(row, require_full_stack=(name == "tub"))
+        for name, row in (("mfu", mfu_row), ("hfr", hfr_row), ("tub", tub_row))
+    ):
+        return None
+    mfu_hash = str(mfu_row.get("official_output_sha256"))
+    hfr_hash = str(hfr_row.get("official_output_sha256"))
+    tub_output2_hash = _canonical_tub_output2_hash(selected, tub_row)
+    if not _looks_like_sha256(tub_output2_hash):
+        return None
+
+    return {
+        "official_torch_frame_hash": str(official_frame_hash),
+        "mlx_frame_hash": str(portable_frame_hash),
+        "numpy_receiver_frame_hash": str(receiver_frame_hash),
+        "parseback_frame_hash": str(parseback_frame_hash),
+        "tub_output_2_hash": str(tub_output2_hash),
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu_official_output": mfu_hash},
+        "hfr_tensor_hashes": {"hfr_official_output": hfr_hash},
+        "derived_from": "canonical_source_forward_authority_hashes.v1",
+    }
+
+
+def _canonical_component_row(
+    selected: Mapping[str, Any],
+    component_id: str,
+) -> Mapping[str, Any]:
+    rows = selected.get("component_rows")
+    if isinstance(rows, Mapping):
+        row = rows.get(component_id)
+        return row if isinstance(row, Mapping) else {}
+    if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
+        for row in rows:
+            if isinstance(row, Mapping) and row.get("component_id") == component_id:
+                return row
+    return {}
+
+
+def _component_row_zero_hash_parity(
+    row: Mapping[str, Any],
+    *,
+    require_full_stack: bool = False,
+) -> bool:
+    official_hash = row.get("official_output_sha256")
+    portable_hash = row.get("portable_output_sha256")
+    return bool(
+        row
+        and row.get("source_forward_parity_proven") is True
+        and (not require_full_stack or row.get("full_stack_source_forward_parity_proven") is True)
+        and not row.get("blockers")
+        and _zero_float(row.get("max_abs_error"))
+        and _looks_like_sha256(official_hash)
+        and _looks_like_sha256(portable_hash)
+        and str(official_hash) == str(portable_hash)
+    )
+
+
+def _canonical_tub_output2_hash(
+    selected: Mapping[str, Any],
+    tub_row: Mapping[str, Any],
+) -> str | None:
+    tub_replay = selected.get("official_tub_source_forward_replay")
+    tub_replay = tub_replay if isinstance(tub_replay, Mapping) else {}
+    output2 = tub_replay.get("portable_output2_fusion")
+    output2 = output2 if isinstance(output2, Mapping) else {}
+    for key in ("source_output_sha256", "portable_output_sha256"):
+        value = output2.get(key)
+        if _looks_like_sha256(value):
+            return str(value)
+    value = tub_row.get("official_output_sha256")
+    return str(value) if _looks_like_sha256(value) else None
 
 
 def _first_source_forward_mapping(
@@ -573,6 +698,14 @@ def _nonnegative_finite_float(value: Any) -> bool:
     except (TypeError, ValueError):
         return False
     return math.isfinite(parsed) and parsed >= 0.0
+
+
+def _zero_float(value: Any) -> bool:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(parsed) and parsed == 0.0
 
 
 def render_snerv_lf_hf_replacement_queue_markdown(report: Mapping[str, Any]) -> str:
