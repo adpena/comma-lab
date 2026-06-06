@@ -169,10 +169,23 @@ def _survival(
     }
 
 
-def _hi_nerv_action_effect() -> dict:
+def _hi_nerv_action_effect(
+    *,
+    arm: str | None = None,
+    action_kind: str = "target_region_birth",
+    exact_score_decision: str = "accept",
+    new_d_seg: float = 0.0008,
+    new_d_pose: float = 9.0e-5,
+    raw_cap_decision: str = "satisfied",
+    catastrophic_guard_decision: str = "satisfied",
+    rejected_by_raw_cap: bool = False,
+    rejected_by_exact_score: bool = False,
+    rejected_by_catastrophic_guard: bool = False,
+) -> dict:
     return ActionEffect.build(
         action_id=ACTION,
         family="hinerv",
+        action_kind=action_kind,
         authority="archive_parseback_planning_false_authority",
         producer="hinerv_v6_four_arm_composite_ablation",
         consumer="nerv_long_run_launch_gate",
@@ -180,11 +193,19 @@ def _hi_nerv_action_effect() -> dict:
         region_ids=["b0/c2/r1"],
         payload_sections=["head_rgb_1.weight"],
         old_d_seg=0.0010,
-        new_d_seg=0.0008,
+        new_d_seg=new_d_seg,
         old_d_pose=1.0e-4,
-        new_d_pose=9.0e-5,
+        new_d_pose=new_d_pose,
         old_bytes=178_258,
         new_bytes=178_258,
+        exact_score_decision=exact_score_decision,
+        raw_cap_decision=raw_cap_decision,
+        catastrophic_guard_decision=catastrophic_guard_decision,
+        would_accept_exact_score_if_raw_cap_disabled=exact_score_decision == "accept",
+        would_accept_without_catastrophic_guard=exact_score_decision == "accept",
+        rejected_by_raw_cap=rejected_by_raw_cap,
+        rejected_by_exact_score=rejected_by_exact_score,
+        rejected_by_catastrophic_guard=rejected_by_catastrophic_guard,
         parseback_survived=True,
         inflate_survived=True,
         fakequant_survived=True,
@@ -196,7 +217,36 @@ def _hi_nerv_action_effect() -> dict:
         uint8_changed_count_region=4096,
         seg_input_delta_linf_region=1.0 / 255.0,
         posenet_input_delta_linf_pair=1.0 / 255.0,
+        arm=arm,
     ).as_dict()
+
+
+def _hi_nerv_four_arm_action_effects(*, omit_arm: str | None = None) -> list[dict]:
+    rows = [
+        _hi_nerv_action_effect(arm="A", action_kind="birth_only"),
+        _hi_nerv_action_effect(
+            arm="B",
+            action_kind="frame0_pose_target_only",
+            new_d_seg=0.0010,
+            new_d_pose=8.0e-5,
+        ),
+        _hi_nerv_action_effect(
+            arm="C",
+            action_kind="independent_birth_plus_frame0_pose",
+            new_d_seg=0.00075,
+            new_d_pose=8.0e-5,
+        ),
+        _hi_nerv_action_effect(
+            arm="D",
+            action_kind="joint_line_search_composite",
+            new_d_seg=0.0007,
+            new_d_pose=8.0e-5,
+            raw_cap_decision="violated_counterfactual_only",
+        ),
+    ]
+    if omit_arm is not None:
+        rows = [row for row in rows if row.get("arm") != omit_arm]
+    return rows
 
 
 def _parseback_selection_contract() -> dict:
@@ -229,7 +279,15 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
     _write(root / "fakequant.json", _survival("fakequant_mlx"))
     _write(root / "parseback.json", _survival("parseback_mlx"))
     _write(root / "inflate.json", _survival("inflated_torch_cpu"))
-    _write(root / "action_effect.json", _hi_nerv_action_effect())
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(),
+                *_hi_nerv_four_arm_action_effects(),
+            ],
+        },
+    )
     _write(root / "parseback_contract.json", _parseback_selection_contract())
     _write(root / "source_metrics.json", _source_qualified_metrics())
     _write(
@@ -409,6 +467,29 @@ def test_full_ladder_with_fresh_pointer_approves(tmp_path: Path) -> None:
     assert verdict["blocking_evidence"] == []
     assert verdict["highest_level"] == "L5"
     assert verdict["approved"] is True
+
+
+def test_missing_hinerv_four_arm_action_effect_blocks_ladder(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(),
+                *_hi_nerv_four_arm_action_effects(omit_arm="D"),
+            ],
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "action_effect_four_arm_missing:D" in verdict["blocking_evidence"]
 
 
 def test_failed_representative_coverage_blocks_l5(tmp_path: Path) -> None:

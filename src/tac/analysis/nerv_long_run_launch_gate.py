@@ -65,6 +65,12 @@ SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
 SURVIVAL_SURFACE_L5 = "inflated_torch_cpu"
 FRONTIER_POINTER_MAX_AGE_HOURS = 24.0
 _MAX_EVIDENCE_FILE_BYTES = 64 * 1024 * 1024
+HINERV_REQUIRED_FOUR_ARM_ACTION_KINDS = {
+    "A": "birth_only",
+    "B": "frame0_pose_target_only",
+    "C": "independent_birth_plus_frame0_pose",
+    "D": "joint_line_search_composite",
+}
 
 
 class NervLongRunLaunchGateError(ValueError):
@@ -346,6 +352,58 @@ def _require_hi_nerv_action_effect_evidence(
             blockers.append(f"value_per_byte_ledger_missing:{action_id}")
 
 
+def _require_hi_nerv_four_arm_action_effect_evidence(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    blockers: list[str],
+) -> None:
+    matches = [
+        row
+        for row in _action_effect_rows_for_action(rows, action_id=action_id)
+        if str(row.get("arm") or "").strip()
+    ]
+    if not matches:
+        blockers.append("action_effect_four_arm_missing")
+        for arm in HINERV_REQUIRED_FOUR_ARM_ACTION_KINDS:
+            blockers.append(f"action_effect_four_arm_missing:{arm}")
+        return
+
+    by_arm: dict[str, dict[str, Any]] = {}
+    for row in matches:
+        arm = str(row.get("arm") or "").strip().upper()
+        by_arm.setdefault(arm, row)
+
+    for arm, expected_kind in HINERV_REQUIRED_FOUR_ARM_ACTION_KINDS.items():
+        row = by_arm.get(arm)
+        if row is None:
+            blockers.append(f"action_effect_four_arm_missing:{arm}")
+            continue
+        if str(row.get("action_kind") or "") != expected_kind:
+            blockers.append(f"action_effect_four_arm_kind_mismatch:{arm}")
+        if not _finite_number(row.get("delta_score_nonrate")):
+            blockers.append(f"action_effect_four_arm_delta_score_nonrate_missing:{arm}")
+        if not _finite_number(row.get("old_d_seg")) or not _finite_number(row.get("new_d_seg")):
+            blockers.append(f"action_effect_four_arm_seg_endpoint_missing:{arm}")
+        if not _finite_number(row.get("old_d_pose")) or not _finite_number(row.get("new_d_pose")):
+            blockers.append(f"action_effect_four_arm_pose_endpoint_missing:{arm}")
+        exact_decision = str(row.get("exact_score_decision") or "")
+        if exact_decision not in {"accept", "reject"}:
+            blockers.append(f"action_effect_four_arm_exact_decision_missing:{arm}")
+        if row.get("raw_cap_decision") in (None, ""):
+            blockers.append(f"action_effect_four_arm_raw_cap_decision_missing:{arm}")
+        if row.get("catastrophic_guard_decision") in (None, ""):
+            blockers.append(f"action_effect_four_arm_catastrophic_decision_missing:{arm}")
+        if row.get("would_accept_exact_score_if_raw_cap_disabled") is None:
+            blockers.append(f"action_effect_four_arm_raw_cap_counterfactual_missing:{arm}")
+        if row.get("rejected_by_raw_cap") is None:
+            blockers.append(f"action_effect_four_arm_rejected_by_raw_cap_missing:{arm}")
+        if row.get("rejected_by_exact_score") is None:
+            blockers.append(f"action_effect_four_arm_rejected_by_exact_score_missing:{arm}")
+        if row.get("rejected_by_catastrophic_guard") is None:
+            blockers.append(f"action_effect_four_arm_rejected_by_catastrophic_guard_missing:{arm}")
+
+
 def _representative_coverage_ok(
     rows: list[dict[str, Any]],
     *,
@@ -537,6 +595,11 @@ def evaluate_nerv_long_run_launch_gate(
                 blockers.append("pose_trusted_birth_receipt_missing")
             action_id = str(live.get("action_id"))
             _require_hi_nerv_action_effect_evidence(action_effect_rows, action_id=action_id, blockers=blockers)
+            _require_hi_nerv_four_arm_action_effect_evidence(
+                action_effect_rows,
+                action_id=action_id,
+                blockers=blockers,
+            )
             l4_ok = highest_level == "L3"
             for surface in SURVIVAL_SURFACES_L4:
                 row = _survival_rows_for_action(

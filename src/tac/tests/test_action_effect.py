@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import subprocess
@@ -676,6 +677,9 @@ def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields()
                 "catastrophic_guard_decision": "satisfied",
                 "would_accept_exact_score_if_raw_cap_disabled": False,
                 "would_accept_without_catastrophic_guard": False,
+                "rejected_by_raw_pose_cap": False,
+                "rejected_by_exact_delta_score": True,
+                "rejected_by_catastrophic_pose_guard": False,
                 "pose_output_l2_delta": 0.37355837225914,
                 "seg_score_delta": 0.0,
                 "pose_score_delta": 0.0,
@@ -689,6 +693,9 @@ def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields()
                 "catastrophic_guard_decision": "satisfied",
                 "would_accept_exact_score_if_raw_cap_disabled": True,
                 "would_accept_without_catastrophic_guard": True,
+                "rejected_by_raw_pose_cap": False,
+                "rejected_by_exact_delta_score": False,
+                "rejected_by_catastrophic_pose_guard": False,
                 "pose_output_l2_delta": 1.1900334358215332,
                 "seg_score_delta": 1.384989420572913,
                 "pose_score_delta": -2.9173961550826245,
@@ -702,6 +709,9 @@ def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields()
                 "catastrophic_guard_decision": "satisfied",
                 "would_accept_exact_score_if_raw_cap_disabled": True,
                 "would_accept_without_catastrophic_guard": True,
+                "rejected_by_raw_pose_cap": False,
+                "rejected_by_exact_delta_score": False,
+                "rejected_by_catastrophic_pose_guard": False,
                 "pose_output_l2_delta": 0.37355837225914,
                 "seg_score_delta": -5.631510416666668,
                 "pose_score_delta": 0.3116102797153206,
@@ -720,6 +730,9 @@ def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields()
     assert eff.catastrophic_guard_decision == "satisfied"
     assert eff.would_accept_exact_score_if_raw_cap_disabled is True
     assert eff.would_accept_without_catastrophic_guard is True
+    assert eff.rejected_by_raw_cap is False
+    assert eff.rejected_by_exact_score is False
+    assert eff.rejected_by_catastrophic_guard is False
     assert eff.pose_output_l2_delta == pytest.approx(0.37355837225914)
     assert eff.seg_score_delta == pytest.approx(-5.631510416666668)
     assert eff.pose_score_delta == pytest.approx(0.3116102797153206)
@@ -728,6 +741,7 @@ def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields()
     assert roundtrip.arm == "D"
     assert roundtrip.raw_cap_decision == "violated_counterfactual_only"
     assert roundtrip.would_accept_exact_score_if_raw_cap_disabled is True
+    assert roundtrip.rejected_by_exact_score is False
     assert roundtrip.pose_output_l2_delta == pytest.approx(0.37355837225914)
 
 
@@ -780,6 +794,9 @@ def test_v1_from_hinerv_four_arm_ablation_expands_all_real_arm_rows() -> None:
                 "catastrophic_guard_decision": "satisfied",
                 "would_accept_exact_score_if_raw_cap_disabled": not blockers,
                 "would_accept_without_catastrophic_guard": not blockers,
+                "rejected_by_raw_pose_cap": False,
+                "rejected_by_exact_delta_score": bool(blockers),
+                "rejected_by_catastrophic_pose_guard": False,
                 "pose_output_l2_delta": 0.2,
                 "seg_score_delta": 100.0 * (new_d_seg - old_d_seg),
                 "pose_score_delta": math.sqrt(10.0 * new_d_pose) - math.sqrt(10.0 * old_d_pose),
@@ -813,11 +830,13 @@ def test_v1_from_hinerv_four_arm_ablation_expands_all_real_arm_rows() -> None:
     ]
     assert effects[0].exact_score_decision == "accept"
     assert effects[1].exact_score_decision == "reject"
+    assert effects[1].rejected_by_exact_score is True
     assert effects[1].blockers == ("b_has_no_seg_birth",)
     assert effects[2].interaction_or_commutator == pytest.approx(-0.125)
     assert effects[3].wrong_to_target == 3
     roundtrip = [ActionEffect.from_dict(effect.as_dict()) for effect in effects]
     assert roundtrip[1].blockers == ("b_has_no_seg_birth",)
+    assert roundtrip[1].rejected_by_exact_score is True
     assert roundtrip[3].arm == "D"
 
 
@@ -953,6 +972,73 @@ def test_v1_from_frontier_rate_materializer_prices_current_final_rate_saving() -
     assert eff.parseback_survived is True
     assert eff.inflate_survived is True
     assert eff.archive_sha256 == "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+
+
+def test_frontier_rate_materializer_cli_emits_valid_action_effect(tmp_path: Path) -> None:
+    proof_path = tmp_path / "runtime_proof.json"
+    proof_payload = {
+        "schema": "fp11_source_brotli_recode_runtime_consumption_proof.v1",
+        "runtime_consumption_proof_passed": True,
+        "passed": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    proof_path.write_text(json.dumps(proof_payload), encoding="utf-8")
+    proof_sha = hashlib.sha256(proof_path.read_bytes()).hexdigest()
+    manifest_path = tmp_path / "fp11_source_brotli_recode_manifest.json"
+    manifest = {
+        "schema": "fp11_source_brotli_recode_manifest.v1",
+        "target_kind": "fp11_source_brotli_recode_v1",
+        "operation_family": "source_brotli_recode",
+        "materializer_id": "fp11_source_brotli_recode_adapter",
+        "source_archive": {"bytes": 178530, "sha256": "1" * 64},
+        "candidate_archive": {
+            "bytes": 178493,
+            "sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+        },
+        "selected_member_names": ["x"],
+        "receiver_contract_satisfied": True,
+        "receiver_proof_ready": True,
+        "runtime_consumption_proof_path": proof_path.as_posix(),
+        "runtime_consumption_proof_sha256": proof_sha,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    out_jsonl = tmp_path / "action_effect_rows.jsonl"
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "convert_frontier_rate_materializer_to_action_effect.py"),
+            "--manifest",
+            str(manifest_path),
+            "--output-jsonl",
+            str(out_jsonl),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["validation"]["passed"] is True
+    rows = [json.loads(line) for line in out_jsonl.read_text().splitlines()]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["schema"] == ACTION_EFFECT_V1_SCHEMA
+    assert row["family"] == "frontier_rate_attack"
+    assert row["authority"] == "receiver_closed_frontier_rate_attack"
+    assert row["old_archive_bytes"] == 178530
+    assert row["new_archive_bytes"] == 178493
+    assert row["delta_score_total"] == pytest.approx(25.0 * -37 / CONTEST_REFERENCE_BYTES, abs=1e-15)
+    assert row["value_per_byte"] == pytest.approx(25.0 / CONTEST_REFERENCE_BYTES, abs=1e-18)
+    assert row["artifact_ref"] == manifest_path.resolve(strict=False).as_posix()
+    assert row["inflate_survived"] is True
+    assert row["restore_state_pass"] is True
+    assert "score_claim" not in row
 
 
 def test_v1_from_pr110_tolerant_on_unknown_shape() -> None:

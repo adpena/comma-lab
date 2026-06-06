@@ -855,6 +855,9 @@ class ActionEffect:
     catastrophic_guard_decision: str | None = None
     would_accept_exact_score_if_raw_cap_disabled: bool | None = None
     would_accept_without_catastrophic_guard: bool | None = None
+    rejected_by_raw_cap: bool | None = None
+    rejected_by_exact_score: bool | None = None
+    rejected_by_catastrophic_guard: bool | None = None
     parseback_survived: bool | None = None
     inflate_survived: bool | None = None
     restore_state_pass: bool | None = None
@@ -1004,6 +1007,9 @@ class ActionEffect:
         catastrophic_guard_decision: str | None = None,
         would_accept_exact_score_if_raw_cap_disabled: bool | None = None,
         would_accept_without_catastrophic_guard: bool | None = None,
+        rejected_by_raw_cap: bool | None = None,
+        rejected_by_exact_score: bool | None = None,
+        rejected_by_catastrophic_guard: bool | None = None,
         parseback_survived: bool | None = None,
         inflate_survived: bool | None = None,
         restore_state_pass: bool | None = None,
@@ -1094,6 +1100,9 @@ class ActionEffect:
             would_accept_without_catastrophic_guard=_v1_bool_or_none(
                 would_accept_without_catastrophic_guard
             ),
+            rejected_by_raw_cap=_v1_bool_or_none(rejected_by_raw_cap),
+            rejected_by_exact_score=_v1_bool_or_none(rejected_by_exact_score),
+            rejected_by_catastrophic_guard=_v1_bool_or_none(rejected_by_catastrophic_guard),
             parseback_survived=parseback_survived,
             inflate_survived=inflate_survived,
             restore_state_pass=restore_state_pass,
@@ -1331,6 +1340,45 @@ class ActionEffect:
                 admission_decision.get("would_accept_without_catastrophic_guard")
                 if admission_decision
                 else receipt.get("would_accept_without_catastrophic_guard")
+            ),
+            rejected_by_raw_cap=_v1_bool_or_none(
+                _v1_first_bool(
+                    admission_decision,
+                    "rejected_by_raw_cap",
+                    "rejected_by_raw_pose_cap",
+                )
+                if admission_decision
+                else _v1_first_bool(
+                    receipt,
+                    "rejected_by_raw_cap",
+                    "rejected_by_raw_pose_cap",
+                )
+            ),
+            rejected_by_exact_score=_v1_bool_or_none(
+                _v1_first_bool(
+                    admission_decision,
+                    "rejected_by_exact_score",
+                    "rejected_by_exact_delta_score",
+                )
+                if admission_decision
+                else _v1_first_bool(
+                    receipt,
+                    "rejected_by_exact_score",
+                    "rejected_by_exact_delta_score",
+                )
+            ),
+            rejected_by_catastrophic_guard=_v1_bool_or_none(
+                _v1_first_bool(
+                    admission_decision,
+                    "rejected_by_catastrophic_guard",
+                    "rejected_by_catastrophic_pose_guard",
+                )
+                if admission_decision
+                else _v1_first_bool(
+                    receipt,
+                    "rejected_by_catastrophic_guard",
+                    "rejected_by_catastrophic_pose_guard",
+                )
             ),
             parseback_survived=parseback_survived,
             inflate_survived=inflate_survived,
@@ -1898,6 +1946,9 @@ class ActionEffect:
             would_accept_without_catastrophic_guard=_v1_bool_or_none(
                 payload.get("would_accept_without_catastrophic_guard")
             ),
+            rejected_by_raw_cap=_v1_bool_or_none(payload.get("rejected_by_raw_cap")),
+            rejected_by_exact_score=_v1_bool_or_none(payload.get("rejected_by_exact_score")),
+            rejected_by_catastrophic_guard=_v1_bool_or_none(payload.get("rejected_by_catastrophic_guard")),
             parseback_survived=_v1_bool_or_none(payload.get("parseback_survived")),
             inflate_survived=_v1_bool_or_none(payload.get("inflate_survived")),
             restore_state_pass=_v1_bool_or_none(payload.get("restore_state_pass")),
