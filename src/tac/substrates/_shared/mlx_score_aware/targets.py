@@ -138,6 +138,14 @@ def _resize_full_camera_frames_to_scorer_hw(
     return np.concatenate(resized_chunks, axis=0)
 
 
+def _decode_video_frames(video_path: Any, **kwargs: Any) -> list[Any]:
+    """Import the heavy video stack only at the real decode boundary."""
+
+    from tac.data import decode_video
+
+    return decode_video(video_path, **kwargs)
+
+
 def decode_mlx_targets(
     video_path: Any,
     *,
@@ -193,8 +201,6 @@ def decode_mlx_targets(
     import numpy as np
 
     mx = require_mlx_for_harness()
-
-    from tac.data import decode_video
 
     if pair_indices is None:
         if int(num_pairs) < 1:
@@ -262,7 +268,7 @@ def decode_mlx_targets(
             if official_scorer_surface and target_is_scorer_hw
             else output_width
         )
-        frames = decode_video(
+        frames = _decode_video_frames(
             video_path,
             target_h=decode_height,
             target_w=decode_width,

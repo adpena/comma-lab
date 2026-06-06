@@ -7,6 +7,7 @@ import ast
 import hashlib
 import inspect
 import json
+import shutil
 import sys
 import types
 from collections.abc import Mapping
@@ -67,6 +68,25 @@ def _tiny_pairs(*, pairs: int = 1) -> np.ndarray:
                     + yy * (0.4 + 0.1 * frame_idx)
                 )
     return np.clip(out, 0.0, 255.0)
+
+
+def _durable_pytest_output(tmp_path: Path, name: str) -> Path:
+    roots = (
+        Path("/Volumes/VertigoDataTier/pact/experiments/results/.pytest_tmp_outputs"),
+        Path("/Volumes/APDataStore/pact/experiments/results/.pytest_tmp_outputs"),
+        Path(__file__).resolve().parents[5]
+        / "experiments"
+        / "results"
+        / ".pytest_tmp_outputs",
+    )
+    for root in roots:
+        if root.parent.exists():
+            out = root / tmp_path.name / name
+            if out.exists():
+                shutil.rmtree(out)
+            out.mkdir(parents=True, exist_ok=True)
+            return out
+    raise AssertionError("no durable pytest output root is available")
 
 
 def _fake_tub_fixture_replay_passed() -> dict[str, object]:
@@ -3439,7 +3459,6 @@ def test_mlx_target_hydration_selects_arbitrary_pair_indices(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mx = pytest.importorskip("mlx.core")
-    import tac.data as data_mod
     import tac.substrates._shared.mlx_score_aware.targets as target_mod
 
     class FakeFrame:
@@ -3456,7 +3475,7 @@ def test_mlx_target_hydration_selects_arbitrary_pair_indices(
         return [FakeFrame(idx) for idx in range(int(kwargs["max_frames"]))]
 
     monkeypatch.setattr(target_mod, "require_mlx_for_harness", lambda: mx)
-    monkeypatch.setattr(data_mod, "decode_video", fake_decode_video)
+    monkeypatch.setattr(target_mod, "_decode_video_frames", fake_decode_video)
 
     target0, target1 = target_mod.decode_mlx_targets(
         "unit.mkv",
@@ -4220,7 +4239,7 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "score_aware_long_train",
+        output_dir=_durable_pytest_output(tmp_path, "score_aware_long_train"),
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
@@ -5752,7 +5771,7 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     )
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "official_long_training_bound",
+        output_dir=_durable_pytest_output(tmp_path, "official_long_training_bound"),
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
@@ -6067,7 +6086,10 @@ def test_official_primitives_long_training_consumes_checkpoint_mapping(
     mx = pytest.importorskip("mlx.core")
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
-    state_path = tmp_path / "official_state_dict_slice.npz"
+    state_path = (
+        _durable_pytest_output(tmp_path, "official_checkpoint_input")
+        / "official_state_dict_slice.npz"
+    )
     np.savez(state_path, **_minimal_full_official_decoder_state())
 
     pairs = _tiny_pairs(pairs=2)
@@ -6085,7 +6107,10 @@ def test_official_primitives_long_training_consumes_checkpoint_mapping(
     )
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "official_long_training_checkpoint_bound",
+        output_dir=_durable_pytest_output(
+            tmp_path,
+            "official_long_training_checkpoint_bound",
+        ),
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
@@ -6198,7 +6223,10 @@ def test_official_long_training_keeps_trained_packet_with_nonrender_blocker(
     )
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "official_long_training_blocked_but_trained",
+        output_dir=_durable_pytest_output(
+            tmp_path,
+            "official_long_training_blocked_but_trained",
+        ),
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
@@ -6273,9 +6301,17 @@ def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
         return target0, target1
 
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        lambda: _fake_tub_fixture_replay_passed(),
+    )
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / f"official_long_training_{mode}",
+        output_dir=_durable_pytest_output(
+            tmp_path,
+            f"official_long_training_{mode}",
+        ),
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={

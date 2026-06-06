@@ -1180,6 +1180,35 @@ def test_pr95_stage_direct_live_region_recon_gets_target_frame() -> None:
 
 
 @mlx_only
+def test_pr95_stage_direct_live_region_recon_refuses_missing_teacher() -> None:
+    import mlx.core as mx
+
+    base = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_class_region_recon_weight=0.75,
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+    )
+
+    with pytest.raises(ValueError, match="direct-live SegNet stage loss"):
+        adapter.train_step(
+            mx.array([0, 1], dtype=mx.int32),
+            learning_rate=1e-3,
+            loss_weights={"segnet_direct_live_class_region_recon": 1.0},
+        )
+
+
+@mlx_only
 def test_pr95_faithful_train_step_emits_scorer_space_guard_metrics() -> None:
     import mlx.core as mx
 

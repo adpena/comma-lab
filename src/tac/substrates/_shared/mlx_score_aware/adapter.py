@@ -5523,13 +5523,20 @@ class MlxScoreAwareAdapter:
         seg_surrogate_active = bool(float(effective_seg_weight) != 0.0)
         pose_surrogate_active = bool(float(effective_pose_weight) != 0.0)
 
-        if self.bundle.scorer_teacher is None or (
-            seg_surrogate_active and self.bundle.learnable_student_head is None
+        if seg_surrogate_active and (
+            self.bundle.scorer_teacher is None
+            or self.bundle.learnable_student_head is None
         ):
             raise ValueError(
                 "PR95-faithful stage loss requires a real SegNet teacher and "
                 "learnable_student_head; refusing to fall back to generic "
                 "score_aware_loss."
+            )
+        if direct_live_active and self.bundle.scorer_teacher is None:
+            raise ValueError(
+                "PR95-faithful direct-live SegNet stage loss requires a real "
+                "SegNet teacher; refusing to silently convert the scorer "
+                "surface into a reconstruction-only proxy."
             )
         if (
             pose_surrogate_active
