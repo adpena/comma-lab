@@ -22,7 +22,9 @@ from comma_lab.scheduler.staircase_dag import (
     plan_staircase_dispatch,
 )
 from tac.analysis.nerv_pair_local_distortion_servo import (
+    PAIR_LOCAL_DISTORTION_SERVO_REPORT_SCHEMA,
     PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA,
+    build_pr95_grade_pair_local_servo_report,
     pair_local_servo_static_contract,
 )
 from tac.optimization.proxy_candidate_contract import (
@@ -49,6 +51,8 @@ def build_nerv_witness_readiness_dag(
     source_boundary_audit_report: str | Path | None = None,
     hinerv_smoke_report: str | Path | None = None,
     snerv_authority_gate_report: str | Path | None = None,
+    pair_local_servo_report: str | Path | None = None,
+    pair_local_servo_receipt: str | Path | None = None,
     partner_source_refs: Sequence[str | Path] = (),
     dag_id: str = DEFAULT_QUEUE_ID,
     max_nodes: int = 8,
@@ -74,6 +78,10 @@ def build_nerv_witness_readiness_dag(
     snerv_evidence = _snerv_authority_gate_evidence(snerv_authority_gate_report)
     parseback = _parseback_contract_evidence(repo)
     pair_servo = _pair_local_servo_contract_evidence(repo)
+    pair_servo_admission = _pair_local_servo_admission_evidence(
+        pair_local_servo_report=pair_local_servo_report,
+        pair_local_servo_receipt=pair_local_servo_receipt,
+    )
 
     nodes = _node_specs(
         repo_root=repo,
@@ -83,6 +91,7 @@ def build_nerv_witness_readiness_dag(
         snerv_evidence=snerv_evidence,
         parseback_evidence=parseback,
         pair_servo_evidence=pair_servo,
+        pair_servo_admission_evidence=pair_servo_admission,
     )
     queue = _queue_from_nodes(nodes, queue_id=dag_id)
     dag = build_staircase_dag_from_experiment_queue(
@@ -170,6 +179,7 @@ def build_nerv_witness_readiness_dag(
             "snerv_authority_gate_evidence": snerv_evidence,
             "parseback_contract_evidence": parseback,
             "pair_local_servo_contract_evidence": pair_servo,
+            "pair_local_servo_admission_evidence": pair_servo_admission,
             "long_training_approved": False,
             "hinerv_long_training_approved": False,
             "snerv_long_training_approved": False,
@@ -193,6 +203,8 @@ def check_witness_gate_status(
     source_boundary_audit_report: str | Path | None = None,
     hinerv_smoke_report: str | Path | None = None,
     snerv_authority_gate_report: str | Path | None = None,
+    pair_local_servo_report: str | Path | None = None,
+    pair_local_servo_receipt: str | Path | None = None,
     repo_root: str | Path = ".",
 ) -> dict[str, Any]:
     """Return a machine-readable status for a DAG check command."""
@@ -205,6 +217,8 @@ def check_witness_gate_status(
         source_boundary_audit_report=source_boundary_audit_report,
         hinerv_smoke_report=hinerv_smoke_report,
         snerv_authority_gate_report=snerv_authority_gate_report,
+        pair_local_servo_report=pair_local_servo_report,
+        pair_local_servo_receipt=pair_local_servo_receipt,
         max_nodes=1,
     )
     nodes = {
@@ -321,6 +335,154 @@ def _pair_local_servo_contract_evidence(repo: Path) -> dict[str, Any]:
             "-q",
         ],
         **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def _pair_local_servo_admission_evidence(
+    *,
+    pair_local_servo_report: str | Path | None,
+    pair_local_servo_receipt: str | Path | None,
+) -> dict[str, Any]:
+    """Load or derive the parseback-surviving pair-local servo admission proof."""
+
+    if pair_local_servo_report is None and pair_local_servo_receipt is None:
+        return {
+            "schema": "nerv_pair_local_distortion_servo_admission_evidence.v1",
+            "report_path": None,
+            "receipt_path": None,
+            "report_loaded": False,
+            "receipt_loaded": False,
+            "long_run_admission_ready": False,
+            "admitted": False,
+            "blockers": ["pair_local_servo_receipt_or_report_missing"],
+            **PROXY_FALSE_AUTHORITY_FIELDS,
+        }
+
+    report_payload: dict[str, Any] | None = None
+    generated_report: dict[str, Any] | None = None
+    blockers: list[str] = []
+    report_path_str: str | None = None
+    receipt_path_str: str | None = None
+    report_loaded = False
+    receipt_loaded = False
+
+    if pair_local_servo_report is not None:
+        report_path = Path(pair_local_servo_report).expanduser().resolve(strict=False)
+        report_path_str = report_path.as_posix()
+        report_payload = _read_json_or_none(report_path)
+        report_loaded = report_payload is not None
+        if report_payload is None:
+            blockers.append("pair_local_servo_report_invalid")
+        else:
+            require_no_truthy_authority_fields(
+                report_payload,
+                context="pair_local_servo_report",
+            )
+            blockers.extend(_servo_report_blockers(report_payload))
+
+    if pair_local_servo_receipt is not None:
+        receipt_path = Path(pair_local_servo_receipt).expanduser().resolve(strict=False)
+        receipt_path_str = receipt_path.as_posix()
+        receipt_payload = _read_json_or_none(receipt_path)
+        receipt_loaded = receipt_payload is not None
+        if receipt_payload is None:
+            blockers.append("pair_local_servo_receipt_invalid")
+        else:
+            require_no_truthy_authority_fields(
+                receipt_payload,
+                context="pair_local_servo_receipt",
+            )
+            try:
+                generated_report = build_pr95_grade_pair_local_servo_report(
+                    receipt_payload,
+                )
+            except (TypeError, ValueError) as exc:
+                blockers.append(f"pair_local_servo_receipt_invalid:{exc}")
+            else:
+                require_no_truthy_authority_fields(
+                    generated_report,
+                    context="generated_pair_local_servo_report",
+                )
+                blockers.extend(_servo_report_blockers(generated_report))
+
+    report_for_summary = report_payload or generated_report or {}
+    blockers = _ordered_unique(blockers)
+    ready = not blockers and bool(
+        report_for_summary.get("long_run_admission_ready")
+        and report_for_summary.get("admitted")
+    )
+    if not ready and not blockers:
+        blockers.append("pair_local_servo_report_not_admission_ready")
+    return {
+        "schema": "nerv_pair_local_distortion_servo_admission_evidence.v1",
+        "report_path": report_path_str,
+        "receipt_path": receipt_path_str,
+        "report_loaded": report_loaded,
+        "receipt_loaded": receipt_loaded,
+        "source": (
+            "report_and_receipt"
+            if report_loaded and receipt_loaded
+            else "report"
+            if report_loaded
+            else "receipt_generated_report"
+            if receipt_loaded
+            else "missing"
+        ),
+        "long_run_admission_ready": ready,
+        "admitted": ready,
+        "blockers": blockers,
+        "report_summary": _servo_report_summary(report_for_summary),
+        "generated_report": generated_report,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def _servo_report_blockers(report: Mapping[str, Any]) -> list[str]:
+    blockers = [str(item) for item in report.get("blockers") or [] if str(item)]
+    if report.get("schema") != PAIR_LOCAL_DISTORTION_SERVO_REPORT_SCHEMA:
+        blockers.append("pair_local_servo_report_schema_mismatch")
+    if report.get("long_run_admission_ready") is not True:
+        blockers.append("pair_local_servo_report_not_long_run_ready")
+    if report.get("admitted") is not True:
+        blockers.append("pair_local_servo_report_not_admitted")
+    surfaces = report.get("surfaces")
+    if not isinstance(surfaces, Mapping):
+        blockers.append("pair_local_servo_report_surfaces_missing")
+    else:
+        for key in (
+            "uint8_motion",
+            "scorer_preprocess_motion",
+            "live_scorer_motion",
+            "fakequant_survival",
+            "parseback_survival",
+        ):
+            if surfaces.get(key) is not True:
+                blockers.append(f"pair_local_servo_report_{key}_missing")
+    exact_delta = _finite_number(report.get("exact_score_delta"))
+    if exact_delta is None or exact_delta >= 0.0:
+        blockers.append("pair_local_servo_report_exact_nonlinear_delta_not_negative")
+    return _ordered_unique(blockers)
+
+
+def _servo_report_summary(report: Mapping[str, Any]) -> dict[str, Any]:
+    if not report:
+        return {}
+    return {
+        "schema": report.get("schema"),
+        "family": report.get("family"),
+        "pair_ids": list(report.get("pair_ids") or []),
+        "authority": report.get("authority"),
+        "long_run_admission_ready": bool(report.get("long_run_admission_ready")),
+        "admitted": bool(report.get("admitted")),
+        "blockers": list(report.get("blockers") or []),
+        "score_before": _finite_number(report.get("score_before")),
+        "score_after": _finite_number(report.get("score_after")),
+        "exact_score_delta": _finite_number(report.get("exact_score_delta")),
+        "delta_score_nonrate": _finite_number(report.get("delta_score_nonrate")),
+        "rate_score_delta": _finite_number(report.get("rate_score_delta")),
+        "value_per_byte": _finite_number(report.get("value_per_byte")),
+        "byte_price": _finite_number(report.get("byte_price")),
+        "surfaces": dict(report.get("surfaces") or {}),
     }
 
 
@@ -576,9 +738,13 @@ def _node_specs(
     snerv_evidence: Mapping[str, Any],
     parseback_evidence: Mapping[str, Any],
     pair_servo_evidence: Mapping[str, Any],
+    pair_servo_admission_evidence: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     parseback_ok = bool(parseback_evidence.get("implemented_contract_present"))
     pair_servo_ok = bool(pair_servo_evidence.get("implemented_contract_present"))
+    pair_servo_admission_ok = bool(
+        pair_servo_admission_evidence.get("long_run_admission_ready")
+    )
     source_boundary_ok = bool(source_boundary_evidence.get("source_boundary_clean"))
     source_boundary_blockers = list(source_boundary_evidence.get("blockers") or [])
     oracle_cache = {
@@ -753,28 +919,18 @@ def _node_specs(
             family="shared",
             stage="joint_seg_pose_trust_region",
             priority=7,
-            command=[
-                "uv",
-                "run",
-                "pytest",
-                "src/tac/substrates/hi_nerv/tests/test_short_scorer_readiness.py",
-                "-q",
-            ],
+            command=_pair_local_servo_check_command(pair_servo_admission_evidence),
             dependencies=[
                 "shared.distortion_birth_before_rate_pressure",
                 "shared.pair_local_distortion_servo_contract",
             ],
-            satisfied=False,
-            blockers=["joint_seg_pose_exact_delta_admission_not_yet_proven_in_smoke"],
-            evidence={
-                "required_delta": (
-                    "100*delta_d_seg + sqrt(10*d_pose_new) - "
-                    "sqrt(10*d_pose_old) + rate_delta"
-                ),
-                "rate_pressure_precondition": (
-                    "distortion birth must survive receiver uint8 surface first"
-                ),
-            },
+            satisfied=pair_servo_admission_ok,
+            blockers=(
+                []
+                if pair_servo_admission_ok
+                else list(pair_servo_admission_evidence.get("blockers") or [])
+            ),
+            evidence=pair_servo_admission_evidence,
             acceptance="accepted updates reduce exact nonlinear Seg/Pose/rate score units",
         ),
         _node(
@@ -1014,6 +1170,27 @@ def _next_actions(
     return _ordered_unique(actions)
 
 
+def _pair_local_servo_check_command(
+    evidence: Mapping[str, Any],
+) -> list[str]:
+    command = [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "shared.joint_seg_pose_trust_region",
+    ]
+    report_path = evidence.get("report_path")
+    receipt_path = evidence.get("receipt_path")
+    if report_path:
+        command.extend(["--pair-local-servo-report", str(report_path)])
+    if receipt_path:
+        command.extend(["--pair-local-servo-receipt", str(receipt_path)])
+    return command
+
+
 def _default_hinerv_smoke_command(output_root: Path) -> list[str]:
     return [
         "uv",
@@ -1061,10 +1238,9 @@ def _find_number(payload: Any, key: str) -> float | None:
         item = queue.popleft()
         if isinstance(item, Mapping):
             if key in item:
-                value = item[key]
-                if isinstance(value, int | float) and not isinstance(value, bool):
-                    value = float(value)
-                    return value if math.isfinite(value) else None
+                value = _finite_number(item[key])
+                if value is not None:
+                    return value
             queue.extend(item.values())
         elif isinstance(item, list | tuple):
             queue.extend(item)
@@ -1080,6 +1256,16 @@ def _metric(evidence: Mapping[str, Any], key: str) -> float:
         value = float(value)
         return value if math.isfinite(value) else 0.0
     return 0.0
+
+
+def _finite_number(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if math.isfinite(out) else None
 
 
 def _ordered_unique(values: Iterable[str]) -> list[str]:

@@ -34,6 +34,8 @@ def main(argv: list[str] | None = None) -> int:
             source_boundary_audit_report=args.source_boundary_audit_report,
             hinerv_smoke_report=args.hinerv_smoke_report,
             snerv_authority_gate_report=args.snerv_authority_gate_report,
+            pair_local_servo_report=args.pair_local_servo_report,
+            pair_local_servo_receipt=args.pair_local_servo_receipt,
             repo_root=REPO_ROOT,
         )
         print(json.dumps(status, sort_keys=True))
@@ -52,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
         source_boundary_audit_report=args.source_boundary_audit_report,
         hinerv_smoke_report=args.hinerv_smoke_report,
         snerv_authority_gate_report=args.snerv_authority_gate_report,
+        pair_local_servo_report=args.pair_local_servo_report,
+        pair_local_servo_receipt=args.pair_local_servo_receipt,
         partner_source_refs=args.partner_source_ref,
         dag_id=args.dag_id,
         max_nodes=args.max_nodes,
@@ -118,6 +122,8 @@ def _add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--source-boundary-audit-report", type=Path)
     parser.add_argument("--hinerv-smoke-report", type=Path)
     parser.add_argument("--snerv-authority-gate-report", type=Path)
+    parser.add_argument("--pair-local-servo-report", type=Path)
+    parser.add_argument("--pair-local-servo-receipt", type=Path)
 
 
 def _stamp() -> str:
