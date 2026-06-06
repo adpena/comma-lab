@@ -1,0 +1,1184 @@
+{
+  "blockers": [],
+  "canonical_rule": "Extend the existing final-rate/byte-shaving/materializer/inverse-steganalysis stack; do not add parallel score-program, action-byte, or action-atlas compiler trees.",
+  "canonical_surface": "frontier_final_rate_attack_materializer_stack",
+  "forbidden_parallel_surface_globs": [
+    "tools/score_program_compiler",
+    "tools/score_program_compiler/**",
+    "tools/*score_program_compiler*.py",
+    "tools/*mlx_score_program*.py",
+    "tools/*vcm_oracle*.py",
+    "tools/*qrepro_plus*.py",
+    "tools/*qrepro++*.py",
+    "tools/*action_byte*.py",
+    "tools/*action_atlas*.py",
+    "src/tac/*score_program_compiler*.py",
+    "src/tac/*mlx_score_program*.py",
+    "src/tac/*vcm_oracle*.py",
+    "src/tac/*qrepro_plus*.py",
+    "src/tac/*action_byte*.py",
+    "src/tac/*action_atlas*.py",
+    "src/tac/**/*score_program_compiler*.py",
+    "src/tac/**/*mlx_score_program*.py",
+    "src/tac/**/*vcm_oracle*.py",
+    "src/tac/**/*qrepro_plus*.py",
+    "src/tac/**/*action_byte*.py",
+    "src/tac/**/*action_atlas*.py",
+    "src/comma_lab/*score_program_compiler*.py",
+    "src/comma_lab/*mlx_score_program*.py",
+    "src/comma_lab/*vcm_oracle*.py",
+    "src/comma_lab/*qrepro_plus*.py",
+    "src/comma_lab/*action_byte*.py",
+    "src/comma_lab/*action_atlas*.py",
+    "src/comma_lab/**/*score_program_compiler*.py",
+    "src/comma_lab/**/*mlx_score_program*.py",
+    "src/comma_lab/**/*vcm_oracle*.py",
+    "src/comma_lab/**/*qrepro_plus*.py",
+    "src/comma_lab/**/*action_byte*.py",
+    "src/comma_lab/**/*action_atlas*.py"
+  ],
+  "forbidden_parallel_surfaces": [],
+  "formal_name": "score_program_compiler_over_frozen_evaluator_quotient",
+  "legacy_name": "frontier_final_rate_attack",
+  "machine_vision_source_code_lineage": {
+    "blockers": [],
+    "hidden_object": "compressed evaluator-equivalent witness program whose RGB frames carry the exact SegNet/PoseNet messages",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "artifact_count": 13,
+        "artifact_globs": [
+          ".omx/research/*quantizr*",
+          "src/tac/*quantizr*.py",
+          "src/tac/training_curriculum/quantizr_5_stage_staircase.py",
+          "src/tac/packet_compiler/pr81_quantizr.py"
+        ],
+        "artifact_sample_paths": [
+          ".omx/research/claude_md_quantizr_canonical_3_stack_amendment_proposal_20260529.md",
+          ".omx/research/council_t2_finding_8_ema_decay_formula_recovers_quantizr_anchor_20260518.md",
+          ".omx/research/omx_parent_markdown_cargo_cult_and_quantizr_staircase_review_20260517_codex.md",
+          ".omx/research/pr_95_quantizr_emulation_study_20260519T185329Z.md",
+          ".omx/research/quantizr_canonical_3_stack_audit_design_20260529.md",
+          ".omx/research/quantizr_replica_audit_20260428.md",
+          ".omx/research/retroactive_sweep_for_quantizr_canonical_3_stack_audit_20260529T075400Z.md",
+          "src/tac/packet_compiler/pr81_quantizr.py",
+          "src/tac/quantizr_faithful_export.py",
+          "src/tac/quantizr_faithful_renderer.py",
+          "src/tac/quantizr_qzs3_codec.py",
+          "src/tac/quantizr_torch_fp4_codec.py",
+          "src/tac/training_curriculum/quantizr_5_stage_staircase.py"
+        ],
+        "blockers": [],
+        "canonical_consumer_source_ids": [
+          "feedback_builders",
+          "operation_set_compiler",
+          "materializer_registry"
+        ],
+        "compiler_layers": [
+          "payload_and_residual_basis",
+          "action_candidates"
+        ],
+        "consumer_count": 3,
+        "consumer_globs": [
+          "src/tac/quantizr_faithful_renderer.py",
+          "src/tac/quantizr_faithful_export.py",
+          "src/comma_lab/scheduler/frontier_rate_attack_feedback.py"
+        ],
+        "consumer_sample_paths": [
+          "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+          "src/tac/quantizr_faithful_export.py",
+          "src/tac/quantizr_faithful_renderer.py"
+        ],
+        "discovery": "pose-conditioned single-mask witness renderer with evaluator rounding/resampling in the training surface",
+        "lineage_id": "quantizr_pr55_pose_conditioned_witness_renderer",
+        "missing_canonical_consumer_source_ids": [],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_label": "Quantizr/PR55",
+        "status": "consumed_by_canonical_stack",
+        "text_ref_rows": [
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+            "patterns": [
+              "Quantizr_TTO_scorer_informed_embedding"
+            ],
+            "present_patterns": [
+              "Quantizr_TTO_scorer_informed_embedding"
+            ]
+          },
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/tac/quantizr_faithful_renderer.py",
+            "patterns": [
+              "build_quantizr_faithful_renderer"
+            ],
+            "present_patterns": [
+              "build_quantizr_faithful_renderer"
+            ]
+          }
+        ]
+      },
+      {
+        "artifact_count": 17,
+        "artifact_globs": [
+          ".omx/research/public_pr90_qrepro_intake_*.md",
+          ".omx/research/pr90_qma9_mask_prior_transfer_worker_*.md",
+          ".omx/research/pr85_qrgb*",
+          ".omx/research/pr85_stbm1br*",
+          "src/tac/stbm1br_mask_codec.py",
+          "src/tac/stbm1br_rust_bridge.py"
+        ],
+        "artifact_sample_paths": [
+          ".omx/research/pr85_qrgb_pair_action_lowering_20260504_codex.md",
+          ".omx/research/pr85_qrgb_pair_atom_archive_candidates_20260504_codex.md",
+          ".omx/research/pr85_qrgb_region_pair_atom_archive_candidates_20260504_codex.md",
+          ".omx/research/pr85_qrgb_transfer_archive_candidates_20260504_codex.md",
+          ".omx/research/pr85_qrgb_transfer_archive_candidates_20260504_worker.md",
+          ".omx/research/pr85_qrgb_transfer_worker_20260504.md",
+          ".omx/research/pr85_stbm1br_mask_recode_20260504_worker.md",
+          ".omx/research/pr85_stbm1br_model_recode_fail_closed_contract_20260504_codex.md",
+          ".omx/research/pr85_stbm1br_model_recode_feasibility_20260504_codex.md",
+          ".omx/research/pr85_stbm1br_plus_qrgb_randmulti_candidates_20260504_codex.md",
+          ".omx/research/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker.md",
+          ".omx/research/pr85_stbm1br_qrgb_randmulti_stack_builder_20260504_codex.md",
+          ".omx/research/pr85_stbm1br_rmb1_exact_eval_readiness_review_20260504_codex.md",
+          ".omx/research/pr90_qma9_mask_prior_transfer_worker_20260504.md",
+          ".omx/research/public_pr90_qrepro_intake_20260504_worker.md",
+          "src/tac/stbm1br_mask_codec.py",
+          "src/tac/stbm1br_rust_bridge.py"
+        ],
+        "blockers": [],
+        "canonical_consumer_source_ids": [
+          "feedback_builders",
+          "materializer_registry",
+          "operation_set_compiler"
+        ],
+        "compiler_layers": [
+          "action_candidates",
+          "entropy_grammar",
+          "payload_and_residual_basis"
+        ],
+        "consumer_count": 4,
+        "consumer_globs": [
+          "src/tac/stbm1br_mask_codec.py",
+          "src/tac/tests/test_build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py",
+          "src/tac/tests/test_plan_pr85_qrgb_transfer_actions.py",
+          "tools/build_public_pr_mining_expansion_backlog.py"
+        ],
+        "consumer_sample_paths": [
+          "src/tac/stbm1br_mask_codec.py",
+          "src/tac/tests/test_build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py",
+          "src/tac/tests/test_plan_pr85_qrgb_transfer_actions.py",
+          "tools/build_public_pr_mining_expansion_backlog.py"
+        ],
+        "discovery": "semantic mask program plus explicit pose controls and sparse low-frequency scorer-facing QRGB edits",
+        "lineage_id": "qrepro_pr90_semantic_pose_qrgb_program",
+        "missing_canonical_consumer_source_ids": [],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_label": "qrepro/PR90",
+        "status": "consumed_by_canonical_stack",
+        "text_ref_rows": [
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/tac/stbm1br_mask_codec.py",
+            "patterns": [
+              "PR90",
+              "qrepro",
+              "STBM1BR"
+            ],
+            "present_patterns": [
+              "PR90",
+              "qrepro",
+              "STBM1BR"
+            ]
+          },
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/tac/tests/test_build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py",
+            "patterns": [
+              "QRGB",
+              "STBM1BR"
+            ],
+            "present_patterns": [
+              "QRGB",
+              "STBM1BR"
+            ]
+          }
+        ]
+      },
+      {
+        "artifact_count": 200,
+        "artifact_globs": [
+          ".omx/research/pr95_*",
+          ".omx/research/*pr95*",
+          "src/tac/local_acceleration/pr95_hnerv_mlx*.py",
+          "src/tac/substrates/hprc/pr95_adapter.py",
+          "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py"
+        ],
+        "artifact_sample_paths": [
+          ".omx/research/beat_pr95_curriculum_substrate_training_design_20260513.md",
+          ".omx/research/codex_findings_hprc_pr95_archive_runnable_score_movement_20260601T005855Z_codex.md",
+          ".omx/research/codex_findings_hprc_pr95_pose_guard_curriculum_and_config_audit_20260601T122908Z_codex.md",
+          ".omx/research/codex_findings_hprc_pr95_week1_train_export_parity_20260531T234000Z_codex.md",
+          ".omx/research/codex_findings_pr95_compact_carrier_controls_and_latent_guard_20260601T122243Z_codex.md",
+          ".omx/research/codex_findings_pr95_full600_mlx_section_value_contract_20260602T041031Z_codex.md",
+          ".omx/research/codex_findings_pr95_full600_section_value_baseline_reuse_20260602T044410Z_codex.md",
+          ".omx/research/codex_findings_pr95_hnerv_mlx_queue_fanout_harvest_20260524T082402Z_codex.md",
+          ".omx/research/codex_findings_pr95_hnerv_mlx_queue_plan_bridge_20260524T081914Z_codex.md",
+          ".omx/research/codex_findings_pr95_hnerv_mlx_reproduction_20260524T081118Z_codex.md",
+          ".omx/research/codex_findings_pr95_hnerv_shared_spine_runner_20260601T154100Z_codex.md",
+          ".omx/research/codex_findings_pr95_local_auth_eval_integrated_bridge_20260519T165732Z_codex.md",
+          ".omx/research/codex_findings_pr95_local_auth_eval_integrated_bridge_20260519T_current_codex.md",
+          ".omx/research/codex_findings_pr95_local_mps_25ep_auth_eval_bridge_20260519T163512Z_codex.md",
+          ".omx/research/codex_findings_pr95_local_mps_training_pivot_and_z7_mps_guardrails_20260519T161051Z_codex.md",
+          ".omx/research/codex_findings_pr95_mlx_and_family_materializer_bridge_20260524T153502Z_codex.md",
+          ".omx/research/codex_findings_pr95_mlx_automated_scope_search_20260528T1245Z_codex.md",
+          ".omx/research/codex_findings_pr95_mlx_c36_conv_scope_drift_20260528T1219Z_codex.md",
+          ".omx/research/codex_findings_pr95_mlx_c36_gpu_drift_crux_20260528T0710Z_codex.md",
+          ".omx/research/codex_findings_pr95_mlx_c36_minimal_blocks01_drift_20260528T1230Z_codex.md"
+        ],
+        "blockers": [],
+        "canonical_consumer_source_ids": [
+          "feedback_builders",
+          "materializer_queue",
+          "campaign_planner"
+        ],
+        "compiler_layers": [
+          "payload_and_residual_basis",
+          "action_candidates"
+        ],
+        "consumer_count": 4,
+        "consumer_globs": [
+          "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+          "src/tac/local_acceleration/pr95_hnerv_mlx_training.py",
+          "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py",
+          "src/comma_lab/scheduler/experiment_queue_observer.py"
+        ],
+        "consumer_sample_paths": [
+          "src/comma_lab/scheduler/experiment_queue_observer.py",
+          "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+          "src/tac/local_acceleration/pr95_hnerv_mlx_training.py",
+          "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py"
+        ],
+        "discovery": "HNeRV/Muon control arm with staged scorer curriculum, QAT/parse-back discipline, and receiver-consumed archive export",
+        "lineage_id": "pr95_hnerv_distortion_servo_parseback_curriculum",
+        "missing_canonical_consumer_source_ids": [],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_label": "PR95",
+        "status": "consumed_by_canonical_stack",
+        "text_ref_rows": [
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "tools/package_pr95_mlx_pytorch_state_dict_to_contest_archive.py",
+            "patterns": [
+              "PR95",
+              "contest archive"
+            ],
+            "present_patterns": [
+              "PR95",
+              "contest archive"
+            ]
+          },
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/tac/local_acceleration/pr95_hnerv_mlx.py",
+            "patterns": [
+              "PR95"
+            ],
+            "present_patterns": [
+              "PR95"
+            ]
+          }
+        ]
+      },
+      {
+        "artifact_count": 84,
+        "artifact_globs": [
+          ".omx/research/pr110_current_frontier_final_rate_attack_*",
+          ".omx/research/pr110_opt*",
+          ".omx/research/*pr110*",
+          "src/tac/substrates/pr110_opt*",
+          "src/tac/composition/pr110_opt_*",
+          "tools/build_frame_exploit_selector_packet.py"
+        ],
+        "artifact_sample_paths": [
+          ".omx/research/boostnerv_pr110_bpr1_variant_b_sweep_results_20260526",
+          ".omx/research/boostnerv_pr110_gain_clamp_sweep_landed_20260526.md",
+          ".omx/research/boostnerv_pr110_gain_clamp_sweep_pre_execution_gate_report_20260526.md",
+          ".omx/research/boostnerv_pr110_gain_clamp_sweep_results_20260526",
+          ".omx/research/boostnerv_pr110_l1_empirical_landed_20260526.md",
+          ".omx/research/boostnerv_pr110_l1_empirical_pre_execution_gate_report_20260526.md",
+          ".omx/research/canonical_stack_synergy_compounding_analysis_vs_pr107_pr110_own_cpu_cuda_canonical_frontiers_competitor_pr101_pr102_pr103_scores_per_operator_binding_directive_9_20260529.md",
+          ".omx/research/codex_findings_pr110_opt11_partner_lint_repair_20260531T002704Z_codex.md",
+          ".omx/research/codex_findings_pr110_source_map_recursive_review_20260520T140229Z_codex.md",
+          ".omx/research/codex_findings_xhigh_pr110_safety_and_custody_review_20260520T2115Z_codex.md",
+          ".omx/research/codex_pr110_frontier_cache_profile_and_lfv1_findings_20260520T175348Z_codex.md",
+          ".omx/research/council_per_substrate_symposium_pr110_x_synthesize_frame_super_additive_20260529.md",
+          ".omx/research/frontier_execution_queue_pr110_postreview_20260520T141254Z_codex.json",
+          ".omx/research/frontier_execution_queue_pr110_postreview_20260520T141254Z_codex.md",
+          ".omx/research/nirvana_pr110_l1_empirical_landed_20260526.md",
+          ".omx/research/nscs06_v8_phase_4_paired_modal_t4_dispatch_operator_authorized_pr110_baseline_landed_20260521.md",
+          ".omx/research/path_3_e_boost_nerv_against_pr110_L0_scaffold_landed_20260526.md",
+          ".omx/research/path_3_e_boost_nerv_against_pr110_substrate_design_20260526.md",
+          ".omx/research/per_substrate_symposium_pr110_opt11_multi_mode_per_pair_composition_20260530.md",
+          ".omx/research/per_substrate_symposium_pr110_opt7_via_yousfi_t1_20260530.md"
+        ],
+        "blockers": [],
+        "canonical_consumer_source_ids": [
+          "feedback_builders",
+          "materializer_registry",
+          "operation_set_compiler",
+          "materializer_queue"
+        ],
+        "compiler_layers": [
+          "action_candidates",
+          "entropy_grammar"
+        ],
+        "consumer_count": 4,
+        "consumer_globs": [
+          "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+          "src/comma_lab/scheduler/byte_shaving_materializer_registry.py",
+          "src/tac/optimization/inverse_steganalysis_operation_set_compiler.py",
+          "tools/build_frame_exploit_selector_packet.py"
+        ],
+        "consumer_sample_paths": [
+          "src/comma_lab/scheduler/byte_shaving_materializer_registry.py",
+          "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+          "src/tac/optimization/inverse_steganalysis_operation_set_compiler.py",
+          "tools/build_frame_exploit_selector_packet.py"
+        ],
+        "discovery": "entropy-coded selector/action algebra over scorer free axes, including frame0/PoseNet and inverse-scorer repair surfaces",
+        "lineage_id": "pr110_selector_entropy_action_algebra",
+        "missing_canonical_consumer_source_ids": [],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_label": "PR110",
+        "status": "consumed_by_canonical_stack",
+        "text_ref_rows": [
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+            "patterns": [
+              "PR110",
+              "inverse_scorer",
+              "selector"
+            ],
+            "present_patterns": [
+              "PR110",
+              "inverse_scorer",
+              "selector"
+            ]
+          },
+          {
+            "covered": true,
+            "exists": true,
+            "missing_patterns": [],
+            "path": "src/comma_lab/scheduler/byte_shaving_materializer_registry.py",
+            "patterns": [
+              "selector_stream",
+              "inverse_scorer"
+            ],
+            "present_patterns": [
+              "selector_stream",
+              "inverse_scorer"
+            ]
+          }
+        ]
+      }
+    ],
+    "schema": "machine_vision_source_code_lineage_consumption.v1",
+    "score_claim": false
+  },
+  "production_action_blockers": [
+    "score_program_layer_has_non_executable_targets:action_candidates",
+    "score_program_layer_receiver_proof_coverage_incomplete:action_candidates",
+    "score_program_target_materialize_function_missing:action_candidates:dqs1_pairset_drop_pair:dqs1_pairset_drop_pair_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:action_candidates:dqs1_pairset_drop_pair:dqs1_pairset_drop_pair_adapter",
+    "score_program_target_planning_only:action_candidates:inverse_scorer_action_functional_v1:inverse_scorer_action_functional_adapter",
+    "score_program_target_not_executable_candidate_archive:action_candidates:inverse_scorer_action_functional_v1:inverse_scorer_action_functional_adapter",
+    "score_program_target_planning_only:action_candidates:inverse_steganalysis_high_level_operation_set_v1:inverse_steganalysis_operation_set_compiler_required",
+    "score_program_target_not_executable_candidate_archive:action_candidates:inverse_steganalysis_high_level_operation_set_v1:inverse_steganalysis_operation_set_compiler_required",
+    "score_program_layer_has_non_executable_targets:entropy_grammar",
+    "score_program_layer_receiver_proof_coverage_incomplete:entropy_grammar",
+    "score_program_target_not_executable_candidate_archive:entropy_grammar:byte_range_entropy_recode_v1:byte_range_entropy_recode_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:selector_stream_context_recode_v1:feca_selector_reparameterize_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:fp11_source_brotli_recode_v1:fp11_source_brotli_recode_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:archive_section_entropy_recode_v1:archive_section_entropy_recode_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:archive_zip_repack_v1:archive_zip_repack_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:packet_member_recompress_v1:packet_member_recompress_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:packet_member_merge_v1:packet_member_merge_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:entropy_grammar:packet_member_zip_header_elide_v1:packet_member_zip_header_elide_adapter",
+    "score_program_layer_has_non_executable_targets:payload_and_residual_basis",
+    "score_program_layer_receiver_proof_coverage_incomplete:payload_and_residual_basis",
+    "score_program_target_receiver_proof_or_verify_missing:payload_and_residual_basis:renderer_payload_dfl1_v1:renderer_payload_dfl1_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:payload_and_residual_basis:tensor_factorize_v1:tensor_factorize_adapter",
+    "score_program_target_not_executable_candidate_archive:payload_and_residual_basis:tensor_prune_v1:tensor_prune_adapter",
+    "score_program_target_not_executable_candidate_archive:payload_and_residual_basis:tensor_quantize_v1:tensor_quantize_adapter",
+    "score_program_target_not_executable_candidate_archive:payload_and_residual_basis:tensor_shared_codebook_v1:tensor_shared_codebook_adapter",
+    "score_program_target_receiver_proof_or_verify_missing:payload_and_residual_basis:z8_hpc1_detail_entropy_delta_v1:z8_hpc1_detail_entropy_delta_adapter"
+  ],
+  "production_action_ready": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "registry": {
+    "adapter_count": 22,
+    "candidate_archive_emitter_count": 20,
+    "executable_count": 13,
+    "planning_only_count": 2,
+    "schema": "byte_shaving_materializer_registry.v1",
+    "target_kind_count": 22
+  },
+  "required_sources": [
+    {
+      "exists": true,
+      "path": "src/comma_lab/scheduler/frontier_final_rate_attack_autoloop.py",
+      "surface_id": "queue_autoloop"
+    },
+    {
+      "exists": true,
+      "path": "src/comma_lab/scheduler/frontier_rate_attack_feedback_cycle.py",
+      "surface_id": "feedback_cycle"
+    },
+    {
+      "exists": true,
+      "path": "src/comma_lab/scheduler/frontier_rate_attack_feedback.py",
+      "surface_id": "feedback_builders"
+    },
+    {
+      "exists": true,
+      "path": "src/comma_lab/scheduler/frontier_rate_attack_bootstrap.py",
+      "surface_id": "frontier_bootstrap"
+    },
+    {
+      "exists": true,
+      "path": "src/comma_lab/scheduler/byte_shaving_materializer_registry.py",
+      "surface_id": "materializer_registry"
+    },
+    {
+      "exists": true,
+      "path": "src/comma_lab/scheduler/byte_shaving_campaign_queue.py",
+      "surface_id": "materializer_queue"
+    },
+    {
+      "exists": true,
+      "path": "src/tac/optimization/byte_shaving_campaign.py",
+      "surface_id": "campaign_planner"
+    },
+    {
+      "exists": true,
+      "path": "src/tac/optimization/inverse_steganalysis_operation_set_compiler.py",
+      "surface_id": "operation_set_compiler"
+    },
+    {
+      "exists": true,
+      "path": "tools/build_frontier_final_rate_attack_queue.py",
+      "surface_id": "queue_builder_cli"
+    },
+    {
+      "exists": true,
+      "path": "tools/run_frontier_rate_attack_feedback_cycle.py",
+      "surface_id": "feedback_cycle_cli"
+    },
+    {
+      "exists": true,
+      "path": "tools/run_byte_shaving_materializer_campaign.py",
+      "surface_id": "materializer_campaign_cli"
+    },
+    {
+      "exists": true,
+      "path": "tools/build_materializer_exact_eval_consumer.py",
+      "surface_id": "exact_eval_consumer_cli"
+    },
+    {
+      "exists": true,
+      "path": "tools/build_materializer_exact_eval_dispatch_plan.py",
+      "surface_id": "exact_eval_dispatch_plan_cli"
+    },
+    {
+      "exists": true,
+      "path": "tools/operator_briefing.py",
+      "surface_id": "operator_briefing"
+    },
+    {
+      "exists": true,
+      "path": "tools/all_lanes_preflight.py",
+      "surface_id": "all_lanes_preflight"
+    }
+  ],
+  "research_surfaces": [
+    {
+      "count": 131,
+      "glob": ".omx/research/*frontier*rate*attack*",
+      "sample_paths": [
+        ".omx/research/codex_findings_frontier_final_rate_attack_autoresolve_20260527T145500Z_codex.md",
+        ".omx/research/codex_findings_frontier_final_rate_attack_bootstrap_20260525T130851Z_codex.md",
+        ".omx/research/codex_findings_frontier_final_rate_attack_runtime_identity_20260527T145051Z_codex.md",
+        ".omx/research/codex_findings_frontier_rate_attack_feedback_compiler_20260525T133356Z_codex.md",
+        ".omx/research/codex_findings_frontier_rate_attack_target_scope_20260527T1552Z_codex.md",
+        ".omx/research/codex_frontier_rate_attack_component_marginal_cycle_20260525T212704Z",
+        ".omx/research/codex_frontier_rate_attack_feedback_compiler_20260525T133356Z",
+        ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T135319Z",
+        ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T221223Z",
+        ".omx/research/codex_frontier_rate_attack_feedback_cycle_20260525T221326Z"
+      ],
+      "surface_id": "frontier_rate_attack_research_artifacts"
+    },
+    {
+      "count": 41,
+      "glob": ".omx/research/*byte*shaving*",
+      "sample_paths": [
+        ".omx/research/byte_shaving_campaign_master_gradient_action_summary_20260523T144718Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_byte_range_suggested_contract_action_summary_20260523T154232Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_byte_range_suggested_contract_materializer_backlog_20260523T154232Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_byte_range_suggested_contract_portfolio_20260523T154232Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_byte_range_suggested_contract_smoke_20260523T154232Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materialization_20260523T144718Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_action_summary_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_portfolio_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_smoke_20260523T152725Z.json"
+      ],
+      "surface_id": "byte_shaving_research_artifacts"
+    },
+    {
+      "count": 125,
+      "glob": ".omx/research/*materializer*",
+      "sample_paths": [
+        ".omx/research/byte_shaving_campaign_master_gradient_byte_range_suggested_contract_materializer_backlog_20260523T154232Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_action_summary_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_portfolio_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_backlog_smoke_20260523T152725Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_registry_action_summary_20260523T150754Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_registry_portfolio_20260523T150754Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_materializer_registry_smoke_20260523T150754Z.json",
+        ".omx/research/byte_shaving_campaign_master_gradient_swarm_followup_materializer_backlog_20260523T153126Z.json",
+        ".omx/research/byte_shaving_materializer_proactive_cleanup_20260524T174536Z.json"
+      ],
+      "surface_id": "materializer_research_artifacts"
+    }
+  ],
+  "schema": "frontier_rate_attack_consolidation_audit.v1",
+  "score_claim": false,
+  "score_program_dag": {
+    "edges": [
+      {
+        "from": "oracle_target_fiber",
+        "to": "action_candidates"
+      },
+      {
+        "from": "base_witness_archive",
+        "to": "action_candidates"
+      },
+      {
+        "from": "action_candidates",
+        "to": "payload_and_residual_basis"
+      },
+      {
+        "from": "action_candidates",
+        "to": "entropy_grammar"
+      },
+      {
+        "from": "payload_and_residual_basis",
+        "to": "entropy_grammar"
+      },
+      {
+        "from": "entropy_grammar",
+        "to": "receiver_parseback_replay"
+      },
+      {
+        "from": "receiver_parseback_replay",
+        "to": "exact_eval_handoff"
+      }
+    ],
+    "nodes": [
+      "action_candidates",
+      "base_witness_archive",
+      "entropy_grammar",
+      "exact_eval_handoff",
+      "oracle_target_fiber",
+      "payload_and_residual_basis",
+      "receiver_parseback_replay"
+    ],
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "score_program_layers": [
+    {
+      "adapter_count": 4,
+      "adapter_rows": [
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": false,
+          "materializer_id": "dqs1_pairset_drop_pair_adapter",
+          "operation_family": "drop_pair",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "dqs1_pairset_decoderq_receiver.v1",
+          "receiver_contract_kind": "archive_charged_pairset_runtime_selector",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "dqs1_base_pair_indices"
+          ],
+          "target_kind": "dqs1_pairset_drop_pair",
+          "unit_kind": "pair"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "inverse_scorer_cell_candidate_adapter",
+          "operation_family": "materialize_inverse_scorer_cell_candidate",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "inverse_scorer_cell_receiver.v1",
+          "receiver_contract_kind": "inverse_scorer_coordinate_candidate",
+          "receiver_proof_function_bound": true,
+          "receiver_verify_function_bound": true,
+          "required_context_fields": [
+            "raw_contest_video_digest",
+            "candidate_archive_template",
+            "inverse_action_functional",
+            "output_dir",
+            "inflate_runtime_dir_or_source_and_candidate_inflate_output_dirs"
+          ],
+          "target_kind": "inverse_scorer_cell_candidate_v1",
+          "unit_kind": "scorer_inverse_surface_cell"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": false,
+          "emits_candidate_archive": false,
+          "executable": true,
+          "executable_candidate_archive": false,
+          "materialize_function_bound": false,
+          "materializer_id": "inverse_scorer_action_functional_adapter",
+          "operation_family": "probe_inverse_scorer_surface_cell",
+          "planning_only": true,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "inverse_scorer_action_functional_receiver.v1",
+          "receiver_contract_kind": "planning_only_inverse_scorer_action_functional",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "output",
+            "inverse_action_source_surface"
+          ],
+          "target_kind": "inverse_scorer_action_functional_v1",
+          "unit_kind": "scorer_inverse_surface_cell"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": false,
+          "executable": false,
+          "executable_candidate_archive": false,
+          "materialize_function_bound": false,
+          "materializer_id": "inverse_steganalysis_operation_set_compiler_required",
+          "operation_family": "compile_inverse_steganalysis_operation_set",
+          "planning_only": true,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "inverse_steganalysis_high_level_operation_set.receiver.v1",
+          "receiver_contract_kind": "portfolio_level_inverse_steganalysis_operation_set",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "candidate_family",
+            "archive_grammar",
+            "receiver_contract_kind",
+            "operation_set_compiler",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "inverse_steganalysis_high_level_operation_set_v1",
+          "unit_kind": "scorer_inverse_surface_cell"
+        }
+      ],
+      "candidate_archive_coverage": false,
+      "covered": false,
+      "executable_candidate_archive_count": 2,
+      "layer_id": "action_candidates",
+      "missing_target_kinds": [],
+      "planning_only_count": 2,
+      "production_action_coverage": false,
+      "receiver_contract_count": 4,
+      "receiver_contract_coverage": true,
+      "receiver_proof_coverage": false,
+      "receiver_proof_hook_count": 1,
+      "receiver_verify_hook_count": 1,
+      "registered_coverage": true,
+      "target_kinds": [
+        "dqs1_pairset_drop_pair",
+        "inverse_scorer_cell_candidate_v1",
+        "inverse_scorer_action_functional_v1",
+        "inverse_steganalysis_high_level_operation_set_v1"
+      ]
+    },
+    {
+      "adapter_count": 8,
+      "adapter_rows": [
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": false,
+          "executable_candidate_archive": false,
+          "materialize_function_bound": true,
+          "materializer_id": "byte_range_entropy_recode_adapter",
+          "operation_family": "entropy_recode",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "byte_range_entropy_recode_receiver.v1",
+          "receiver_contract_kind": "archive_charged_byte_range_entropy_recode",
+          "receiver_proof_function_bound": true,
+          "receiver_verify_function_bound": true,
+          "required_context_fields": [
+            "archive_member_name",
+            "archive_byte_range",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "byte_range_entropy_recode_v1",
+          "unit_kind": "byte_range"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "feca_selector_reparameterize_adapter",
+          "operation_family": "selector_context_recode",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "selector_stream_context_recode_v1.receiver.v1",
+          "receiver_contract_kind": "source_runtime_native_selector_context_recode",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "source_submission_dir",
+            "output_dir"
+          ],
+          "target_kind": "selector_stream_context_recode_v1",
+          "unit_kind": "selector_stream"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "fp11_source_brotli_recode_adapter",
+          "operation_family": "source_brotli_recode",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "fp11_source_brotli_recode_v1.receiver.v1",
+          "receiver_contract_kind": "source_runtime_native_fp11_source_brotli_recode",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "source_submission_dir",
+            "output_dir"
+          ],
+          "target_kind": "fp11_source_brotli_recode_v1",
+          "unit_kind": "selector_stream"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "archive_section_entropy_recode_adapter",
+          "operation_family": "section_entropy_recode",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "archive_section_entropy_recode_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_archive_section_entropy_recode",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "section_manifest",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "archive_section_entropy_recode_v1",
+          "unit_kind": "archive_section"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "archive_zip_repack_adapter",
+          "operation_family": "archive_zip_repack",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "archive_zip_repack_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_archive_zip_repack",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "archive_zip_repack_v1",
+          "unit_kind": "archive"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "packet_member_recompress_adapter",
+          "operation_family": "member_recompress",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "packet_member_recompress_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_packet_member_recompress",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "packet_member_recompress_v1",
+          "unit_kind": "packet_member"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "packet_member_merge_adapter",
+          "operation_family": "member_merge",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "packet_member_merge_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_packet_member_merge",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "merge_contract",
+            "packet_member_merge_source_runtime_dir",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "packet_member_merge_v1",
+          "unit_kind": "packet_member"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "packet_member_zip_header_elide_adapter",
+          "operation_family": "zip_header_elide",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "packet_member_zip_header_elide_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_packet_member_zip_header_elide",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "packet_member_zip_header_elide_v1",
+          "unit_kind": "packet_member"
+        }
+      ],
+      "candidate_archive_coverage": false,
+      "covered": false,
+      "executable_candidate_archive_count": 7,
+      "layer_id": "entropy_grammar",
+      "missing_target_kinds": [],
+      "planning_only_count": 0,
+      "production_action_coverage": false,
+      "receiver_contract_count": 8,
+      "receiver_contract_coverage": true,
+      "receiver_proof_coverage": false,
+      "receiver_proof_hook_count": 1,
+      "receiver_verify_hook_count": 1,
+      "registered_coverage": true,
+      "target_kinds": [
+        "byte_range_entropy_recode_v1",
+        "selector_stream_context_recode_v1",
+        "fp11_source_brotli_recode_v1",
+        "archive_section_entropy_recode_v1",
+        "archive_zip_repack_v1",
+        "packet_member_recompress_v1",
+        "packet_member_merge_v1",
+        "packet_member_zip_header_elide_v1"
+      ]
+    },
+    {
+      "adapter_count": 6,
+      "adapter_rows": [
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "renderer_payload_dfl1_adapter",
+          "operation_family": "native_renderer_payload",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "renderer_payload_dfl1_v1.receiver.v1",
+          "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "renderer_payload_dfl1_v1",
+          "unit_kind": "packet_member"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "tensor_factorize_adapter",
+          "operation_family": "factorize_tensor",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "tensor_factorize_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_tensor_factorize",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "tensor_manifest",
+            "factorization_contract",
+            "output_archive",
+            "output_manifest"
+          ],
+          "target_kind": "tensor_factorize_v1",
+          "unit_kind": "tensor"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": false,
+          "executable_candidate_archive": false,
+          "materialize_function_bound": false,
+          "materializer_id": "tensor_prune_adapter",
+          "operation_family": "prune_tensor",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "tensor_prune_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_tensor_prune",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "tensor_manifest",
+            "pruning_contract",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "tensor_prune_v1",
+          "unit_kind": "tensor"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": false,
+          "executable_candidate_archive": false,
+          "materialize_function_bound": false,
+          "materializer_id": "tensor_quantize_adapter",
+          "operation_family": "quantize_tensor",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "tensor_quantize_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_tensor_quantize",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "tensor_manifest",
+            "quantization_contract",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "tensor_quantize_v1",
+          "unit_kind": "tensor"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": false,
+          "executable_candidate_archive": false,
+          "materialize_function_bound": false,
+          "materializer_id": "tensor_shared_codebook_adapter",
+          "operation_family": "shared_codebook_tensor",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "tensor_shared_codebook_v1.receiver.v1",
+          "receiver_contract_kind": "family_agnostic_tensor_shared_codebook",
+          "receiver_proof_function_bound": false,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_path",
+            "tensor_manifest",
+            "codebook_contract",
+            "runtime_consumption_proof"
+          ],
+          "target_kind": "tensor_shared_codebook_v1",
+          "unit_kind": "tensor"
+        },
+        {
+          "adapter_registered": true,
+          "cooperative_receiver_required": true,
+          "emits_candidate_archive": true,
+          "executable": true,
+          "executable_candidate_archive": true,
+          "materialize_function_bound": true,
+          "materializer_id": "z8_hpc1_detail_entropy_delta_adapter",
+          "operation_family": "z8_detail_entropy_delta",
+          "planning_only": false,
+          "receiver_contract_bound": true,
+          "receiver_contract_id": "z8_hpc1_generated_inflate_sh_decode_only_receiver.v1",
+          "receiver_contract_kind": "z8_hpc1_generated_inflate_sh_decode_only_receiver",
+          "receiver_proof_function_bound": true,
+          "receiver_verify_function_bound": false,
+          "required_context_fields": [
+            "archive_bin",
+            "entropy_delta_schedule_json",
+            "output_dir"
+          ],
+          "target_kind": "z8_hpc1_detail_entropy_delta_v1",
+          "unit_kind": "z8_hpc1_archive"
+        }
+      ],
+      "candidate_archive_coverage": false,
+      "covered": false,
+      "executable_candidate_archive_count": 3,
+      "layer_id": "payload_and_residual_basis",
+      "missing_target_kinds": [],
+      "planning_only_count": 0,
+      "production_action_coverage": false,
+      "receiver_contract_count": 6,
+      "receiver_contract_coverage": true,
+      "receiver_proof_coverage": false,
+      "receiver_proof_hook_count": 1,
+      "receiver_verify_hook_count": 0,
+      "registered_coverage": true,
+      "target_kinds": [
+        "renderer_payload_dfl1_v1",
+        "tensor_factorize_v1",
+        "tensor_prune_v1",
+        "tensor_quantize_v1",
+        "tensor_shared_codebook_v1",
+        "z8_hpc1_detail_entropy_delta_v1"
+      ]
+    }
+  ],
+  "state_surfaces": [
+    {
+      "count": 216,
+      "glob": ".omx/state/experiment_queue_frontier_final_rate_attack*.sqlite",
+      "sample_paths": [
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260525_section_manifest_bridge.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T215848Z.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220102Z.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220102Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_autonomous_chain_optimization.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_component_correction.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_receiver_repair.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_repair_budget_waterfill.sqlite"
+      ],
+      "surface_id": "frontier_final_rate_attack_queues"
+    },
+    {
+      "count": 27,
+      "glob": ".omx/state/experiment_queue_frontier_final_rate_attack*_post_execute_feedback_chain_compiler.sqlite",
+      "sample_paths": [
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220102Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T221514Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527T2230Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_activation_plan_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_activation_posterior_smoke_20260527T2021Z_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_all_exec_autoloop_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_child_smoke2_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_child_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_autoloop_progress_smoke_20260527Tlocal_post_execute_feedback_chain_compiler.sqlite"
+      ],
+      "surface_id": "post_feedback_chain_compiler_queues"
+    },
+    {
+      "count": 15,
+      "glob": ".omx/state/experiment_queue_frontier_final_rate_attack*_post_execute_feedback_repair_budget_waterfill.sqlite",
+      "sample_paths": [
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T220645Z_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_20260527T221514Z_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_autowired_smoke2_20260527Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_autowired_smoke_20260527Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_current_cpu_20260528T0508Z_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_false_authority_smoke_20260527Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec2_20260528Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec3_20260528Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec4_20260528Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite",
+        ".omx/state/experiment_queue_frontier_final_rate_attack_feca_default_exec5_20260528Tlocal_post_execute_feedback_repair_budget_waterfill.sqlite"
+      ],
+      "surface_id": "post_feedback_repair_budget_queues"
+    }
+  ],
+  "status": "PASS"
+}

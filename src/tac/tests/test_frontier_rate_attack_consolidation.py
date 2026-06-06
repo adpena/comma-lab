@@ -46,6 +46,24 @@ def test_frontier_rate_attack_consolidation_audit_covers_compiler_layers() -> No
     assert all(row["count"] > 0 for row in audit["state_surfaces"])
     assert audit["score_program_dag"]["score_claim"] is False
     assert audit["score_program_dag"]["ready_for_exact_eval_dispatch"] is False
+    lineage = audit["machine_vision_source_code_lineage"]
+    assert lineage["blockers"] == []
+    assert lineage["score_claim"] is False
+    assert lineage["promotion_eligible"] is False
+    assert lineage["ready_for_exact_eval_dispatch"] is False
+    lineage_rows = {row["lineage_id"]: row for row in lineage["rows"]}
+    assert set(lineage_rows) == {
+        "quantizr_pr55_pose_conditioned_witness_renderer",
+        "qrepro_pr90_semantic_pose_qrgb_program",
+        "pr95_hnerv_distortion_servo_parseback_curriculum",
+        "pr110_selector_entropy_action_algebra",
+    }
+    for row in lineage_rows.values():
+        assert row["status"] == "consumed_by_canonical_stack"
+        assert row["artifact_count"] > 0
+        assert row["consumer_count"] > 0
+        assert row["blockers"] == []
+        assert all(text_ref["covered"] is True for text_ref in row["text_ref_rows"])
     assert {
         (edge["from"], edge["to"])
         for edge in audit["score_program_dag"]["edges"]
@@ -75,6 +93,11 @@ def test_frontier_rate_attack_consolidation_render_names_formal_and_legacy_surfa
     assert "receiver_contracts=" in text
     assert "dag:" in text
     assert "production_action: blocked" in text
+    assert "machine_vision_source_code_lineage: 4 signal(s); blockers=0" in text
+    assert "Quantizr/PR55: consumed_by_canonical_stack" in text
+    assert "qrepro/PR90: consumed_by_canonical_stack" in text
+    assert "PR95: consumed_by_canonical_stack" in text
+    assert "PR110: consumed_by_canonical_stack" in text
     assert "entropy_grammar: registered-only" in text
     assert "payload_and_residual_basis: registered-only" in text
 
