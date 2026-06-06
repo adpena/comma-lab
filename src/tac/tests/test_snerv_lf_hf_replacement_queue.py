@@ -135,6 +135,14 @@ def test_lf_hf_replacement_queue_emits_bounded_smoke_when_unblocked(
         + 1
     ] == "0.5"
     assert row["command_argv"][
+        row["command_argv"].index("--segnet-direct-live-escape-warmup-epochs")
+        + 1
+    ] == "32"
+    assert row["command_argv"][
+        row["command_argv"].index("--segnet-direct-live-escape-class-multiplier")
+        + 1
+    ] == "16"
+    assert row["command_argv"][
         row["command_argv"].index("--posenet-yuv6-geometry-tether-weight") + 1
     ] == "0.5"
     assert row["command_argv"][
@@ -364,6 +372,12 @@ def test_lf_hf_queue_blocks_same_candidate_after_terminal_renderer_collapse_feed
     assert command[
         command.index("--segnet-direct-live-target-min-ratio-floor-weight") + 1
     ] == "0.5"
+    assert command[
+        command.index("--segnet-direct-live-escape-warmup-epochs") + 1
+    ] == "32"
+    assert command[
+        command.index("--segnet-direct-live-escape-class-multiplier") + 1
+    ] == "16"
     assert report["next_unblock_command_argv"] == command
     unblock_contract = row["unblock_launch_authority_contract"]
     assert unblock_contract["schema"] == "snerv_lf_hf_queue_unblock_launch_contract.v1"

@@ -12522,6 +12522,67 @@ def test_recon_pixel_weight_loader_carries_verified_gradient_manifest(
     assert producer["gradient_health"] == health
 
 
+def test_recon_pixel_weight_loader_carries_hard_region_manifest_false_authority(
+    tmp_path: Path,
+) -> None:
+    weight_path = tmp_path / "receiver_replay_hard_region_recon_pixel_weight.npz"
+    np.savez_compressed(
+        weight_path,
+        weight=np.ones((1, 2, 384, 512, 1), dtype=np.float32),
+    )
+    source_identity = {
+        "candidate_argmax_sha256": "c" * 64,
+        "reference_argmax_sha256": "r" * 64,
+    }
+    (tmp_path / "receiver_replay_hard_region_recon_pixel_weight_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema": "receiver_replay_hard_region_recon_pixel_weight_manifest.v1",
+                "weight_path": weight_path.as_posix(),
+                "weight_sha256": runner_mod._sha256_file(weight_path),
+                "weight_array_sha256": "a" * 64,
+                "metadata": {
+                    "schema": "receiver_replay_hard_region_recon_pixel_weight.v1",
+                    "source_report_schema": "receiver_replay_scorer_hard_regions.v1",
+                    "source_report_label": "guarded_hinerv_receiver_replay",
+                    "evidence_grade": "local_receiver_replay_scorer_hard_region_false_authority",
+                    "evidence_tag": "[local receiver-replay hard-region signal]",
+                    "target_frame_index": 1,
+                    "applied_hard_region_records": 5,
+                    "applied_component_bboxes": 4,
+                    "source_report_identity": source_identity,
+                },
+                "consumption": {
+                    "training_arg": "--recon-pixel-weight-path",
+                    "training_consumption_recommended": True,
+                    "auto_discovery_eligible": False,
+                    "reason": "explicit_hard_region_smoke",
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _, metadata = runner_mod._load_recon_pixel_weight(
+        weight_path,
+        base=tmp_path,
+        expected_pairs=1,
+        normalize="mean",
+    )
+
+    producer = metadata["producer_manifest"]
+    assert producer["status"] == "receiver_replay_hard_region_manifest_false_authority"
+    assert producer["consumption_certified"] is False
+    assert producer["training_consumption_recommended"] is True
+    assert producer["auto_discovery_eligible"] is False
+    assert producer["applied_hard_region_records"] == 5
+    assert producer["target_frame_index"] == 1
+    assert producer["source_report_identity"] == source_identity
+
+
 def test_recon_pixel_weight_loader_refuses_stale_manifest_without_gradient_health(
     tmp_path: Path,
 ) -> None:

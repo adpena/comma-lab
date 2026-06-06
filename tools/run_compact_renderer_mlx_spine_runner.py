@@ -14981,43 +14981,35 @@ def _recon_pixel_weight_producer_manifest(
 ) -> dict[str, Any]:
     """Return fail-closed producer-manifest custody for a recon weight file."""
 
-    manifest_path = weight_path.with_name(
-        "joint_p18_p19_recon_pixel_weight_manifest.json"
+    manifest_path = weight_path.with_name("joint_p18_p19_recon_pixel_weight_manifest.json")
+    hard_region_manifest_path = weight_path.with_name(
+        "receiver_replay_hard_region_recon_pixel_weight_manifest.json"
     )
     if not manifest_path.is_file():
+        if hard_region_manifest_path.is_file():
+            return _hard_region_recon_pixel_weight_producer_manifest(
+                hard_region_manifest_path,
+                weight_path=weight_path,
+                expected_weight_sha256=expected_weight_sha256,
+            )
         return {
             "schema": "compact_recon_pixel_weight_producer_manifest.v1",
             "status": "not_found_unverified_manual_or_legacy_weight",
             "path": manifest_path.as_posix(),
+            "searched_paths": [
+                manifest_path.as_posix(),
+                hard_region_manifest_path.as_posix(),
+            ],
             "consumption_certified": False,
         }
 
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise CompactRendererMlxSpineRunnerError(
-            f"recon pixel weight producer manifest is not valid JSON: {manifest_path}"
-        ) from exc
-    if not isinstance(manifest, dict):
-        raise CompactRendererMlxSpineRunnerError(
-            f"recon pixel weight producer manifest must be an object: {manifest_path}"
-        )
-
-    manifest_weight_path = manifest.get("weight_path")
-    if manifest_weight_path is not None:
-        manifest_resolved = _resolve_existing(manifest_weight_path, base=weight_path.parent)
-        if manifest_resolved != weight_path:
-            raise CompactRendererMlxSpineRunnerError(
-                "recon pixel weight producer manifest points at a different "
-                f"weight file: {manifest_resolved} != {weight_path}"
-            )
-    manifest_weight_sha = manifest.get("weight_sha256")
-    if manifest_weight_sha is not None and str(manifest_weight_sha) != expected_weight_sha256:
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight producer manifest SHA does not match loaded "
-            f"weight file: {manifest_weight_sha} != {expected_weight_sha256}"
-        )
-
+    manifest = _load_recon_pixel_weight_manifest_object(manifest_path)
+    _validate_recon_pixel_weight_manifest_identity(
+        manifest,
+        manifest_path=manifest_path,
+        weight_path=weight_path,
+        expected_weight_sha256=expected_weight_sha256,
+    )
     producer_metadata = manifest.get("metadata")
     if not isinstance(producer_metadata, dict):
         raise CompactRendererMlxSpineRunnerError(
@@ -15058,6 +15050,114 @@ def _recon_pixel_weight_producer_manifest(
         "training_consumption_recommended": consumption_recommended,
         "consumption_certified": True,
     }
+
+
+def _hard_region_recon_pixel_weight_producer_manifest(
+    manifest_path: Path,
+    *,
+    weight_path: Path,
+    expected_weight_sha256: str,
+) -> dict[str, Any]:
+    """Carry false-authority receiver hard-region custody into trainer telemetry."""
+
+    manifest = _load_recon_pixel_weight_manifest_object(manifest_path)
+    _validate_recon_pixel_weight_manifest_identity(
+        manifest,
+        manifest_path=manifest_path,
+        weight_path=weight_path,
+        expected_weight_sha256=expected_weight_sha256,
+    )
+    if str(manifest.get("schema") or "") != (
+        "receiver_replay_hard_region_recon_pixel_weight_manifest.v1"
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "receiver hard-region recon pixel weight manifest has unexpected "
+            f"schema: {manifest.get('schema')!r}"
+        )
+    producer_metadata = manifest.get("metadata")
+    if not isinstance(producer_metadata, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            "receiver hard-region recon pixel weight manifest is missing metadata object"
+        )
+    consumption = manifest.get("consumption")
+    if not isinstance(consumption, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            "receiver hard-region recon pixel weight manifest is missing consumption object"
+        )
+    applied_records = int(producer_metadata.get("applied_hard_region_records") or 0)
+    if applied_records <= 0 or not bool(consumption.get("training_consumption_recommended")):
+        raise CompactRendererMlxSpineRunnerError(
+            "receiver hard-region recon pixel weight manifest has no active "
+            f"training pressure: applied_hard_region_records={applied_records}"
+        )
+
+    return {
+        "schema": "compact_recon_pixel_weight_producer_manifest.v1",
+        "status": "receiver_replay_hard_region_manifest_false_authority",
+        "path": manifest_path.as_posix(),
+        "sha256": _sha256_file(manifest_path),
+        "producer_schema": manifest.get("schema"),
+        "producer_metadata_schema": producer_metadata.get("schema"),
+        "weight_path": Path(str(manifest.get("weight_path", weight_path))).as_posix(),
+        "weight_sha256": expected_weight_sha256,
+        "weight_array_sha256": manifest.get("weight_array_sha256"),
+        "evidence_grade": producer_metadata.get("evidence_grade"),
+        "evidence_tag": producer_metadata.get("evidence_tag"),
+        "source_report_schema": producer_metadata.get("source_report_schema"),
+        "source_report_label": producer_metadata.get("source_report_label"),
+        "source_report_identity": dict(producer_metadata.get("source_report_identity") or {}),
+        "applied_hard_region_records": applied_records,
+        "applied_component_bboxes": int(producer_metadata.get("applied_component_bboxes") or 0),
+        "target_frame_index": int(producer_metadata.get("target_frame_index") or 0),
+        "training_arg": consumption.get("training_arg"),
+        "training_consumption_recommended": bool(
+            consumption.get("training_consumption_recommended")
+        ),
+        "auto_discovery_eligible": bool(consumption.get("auto_discovery_eligible")),
+        "consumption_reason": consumption.get("reason"),
+        "consumption_certified": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _load_recon_pixel_weight_manifest_object(manifest_path: Path) -> dict[str, Any]:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight producer manifest is not valid JSON: {manifest_path}"
+        ) from exc
+    if not isinstance(manifest, dict):
+        raise CompactRendererMlxSpineRunnerError(
+            f"recon pixel weight producer manifest must be an object: {manifest_path}"
+        )
+    return manifest
+
+
+def _validate_recon_pixel_weight_manifest_identity(
+    manifest: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    weight_path: Path,
+    expected_weight_sha256: str,
+) -> None:
+    manifest_weight_path = manifest.get("weight_path")
+    if manifest_weight_path is not None:
+        manifest_resolved = _resolve_existing(manifest_weight_path, base=weight_path.parent)
+        if manifest_resolved != weight_path:
+            raise CompactRendererMlxSpineRunnerError(
+                "recon pixel weight producer manifest points at a different "
+                f"weight file: {manifest_resolved} != {weight_path}"
+            )
+    manifest_weight_sha = manifest.get("weight_sha256")
+    if manifest_weight_sha is not None and str(manifest_weight_sha) != expected_weight_sha256:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight producer manifest SHA does not match loaded "
+            f"weight file: {manifest_weight_sha} != {expected_weight_sha256}; "
+            f"manifest={manifest_path}"
+        )
 
 
 def _segnet_boundary_recon_pixel_weight(

@@ -353,6 +353,8 @@ def write_hard_region_recon_pixel_weight_artifact(
     """Write a false-authority hard-region recon-weight NPZ + manifest."""
 
     out = Path(output_dir).expanduser().resolve(strict=False)
+    if out.exists() and not out.is_dir():
+        raise FileExistsError(f"output_dir exists but is not a directory: {out}")
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise FileExistsError(f"output_dir is non-empty; pass allow_overwrite=True: {out}")
     out.mkdir(parents=True, exist_ok=True)
