@@ -22,6 +22,7 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     TUB_CLOSED_BY_FIXTURE_REPLAY,
     TUB_PRESERVED_BLOCKERS,
     build_snerv_official_tub_source_forward_replay_artifact,
+    build_snerv_official_tub_source_forward_tensor_bundle,
     main,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
@@ -90,6 +91,37 @@ def test_snerv_official_tub_source_forward_replay_executes_output2_path() -> Non
         assert blocker in artifact["closed_blockers"]
     for blocker in TUB_PRESERVED_BLOCKERS:
         assert blocker in artifact["preserved_blockers"]
+
+
+def test_snerv_official_tub_source_forward_tensor_bundle_names_proof_tensors() -> None:
+    bundle = build_snerv_official_tub_source_forward_tensor_bundle(
+        official_repo_dir=_official_repo(),
+    )
+
+    assert bundle["schema"] == "snerv_official_tub_source_forward_tensor_bundle.v1"
+    assert bundle["surface"] == "official_torch"
+    assert bundle["model_source_lines"] == "model/snerv_t.py:125-184"
+    assert len(bundle["model_source_sha256"]) == 64
+    assert len(bundle["state_dict_sha256"]) == 64
+    assert len(bundle["checkpoint_sha256"]) == 64
+    assert bundle["upstream_forward_replay_verified"] is True
+    assert bundle["receiver_bound_capture"] is False
+    tensors = bundle["tensors"]
+    assert {
+        "coord_time_embedding",
+        "mfu_in",
+        "mfu_out",
+        "hfr_in",
+        "hfr_out",
+        "tub_in",
+        "tub_out",
+        "output_2",
+        "rgb_pair_float",
+        "rgb_pair_uint8",
+    }.issubset(tensors)
+    assert tensors["rgb_pair_float"].shape == (1, 2, 3, 32, 32)
+    assert tensors["rgb_pair_uint8"].dtype == np.uint8
+    assert tensors["hfr_out"].shape == (1, 3, 3, 16, 16)
 
 
 def test_snerv_official_tub_replay_preserves_dependency_and_checkpoint_blockers() -> None:

@@ -605,6 +605,32 @@ def _run_source_fixture(
         if checkpoint_loaded
         else "official_snerv_t_one_step_trained_source_smoke_state_dict"
     )
+    source_pins = _source_pins(official_root)
+    source_tensor_bundle = _source_forward_tensor_bundle_from_manual(
+        manual=manual,
+        current=current,
+        previous=previous,
+        next_frame=next_frame,
+        official_img_out=_tensor_array(img_out),
+        pair_ids=[0],
+        model_source_sha256=source_pins.get("snerv_t_py_sha256"),
+        state_dict_sha256=_hash_state_dict_exact(
+            checkpoint_state_dict
+            if checkpoint_loaded and checkpoint_state_dict is not None
+            else state_dict
+        ),
+        checkpoint_sha256=(
+            str(checkpoint_public.get("state_dict_sha256"))
+            if checkpoint_loaded and checkpoint_public.get("state_dict_sha256")
+            else _hash_state_dict_exact(state_dict)
+        ),
+        decoder_len=int(model.decoder_len),
+        source_scope=(
+            "official_trained_checkpoint"
+            if checkpoint_loaded
+            else "official_source_fixture_state"
+        ),
+    )
     return {
         "source_fixture_config": asdict(cfg),
         "source_training_smoke": training_smoke,
@@ -627,6 +653,7 @@ def _run_source_fixture(
                 decoder_len=int(model.decoder_len),
             )
         ),
+        "source_forward_tensor_bundle": source_tensor_bundle,
         "graph_input_parity": {
             "schema": COMPONENT_SCHEMA,
             "component_id": "tub_graph_inputs",
@@ -1375,14 +1402,15 @@ def _manual_tub_source_replay(
         else:
             output, output2 = layer(output, output2)
         embed_list.append(output)
-    up1 = model.decoder[model.decoder_len + 3](embed_list[-3])
-    unet1 = model.decoder[model.decoder_len + 4](
-        torch.cat([up1, embed_list[-2]], dim=1)
-    )
+    mfu_low = embed_list[-3]
+    mfu_skip_mid = embed_list[-2]
+    mfu_skip_high = embed_list[-1]
+    up1 = model.decoder[model.decoder_len + 3](mfu_low)
+    mfu_cat_mid = torch.cat([up1, mfu_skip_mid], dim=1)
+    unet1 = model.decoder[model.decoder_len + 4](mfu_cat_mid)
     unet1_up = model.decoder[model.decoder_len + 5](unet1)
-    pyr_out = model.decoder[model.decoder_len + 6](
-        torch.cat([unet1_up, embed_list[-1]], dim=1)
-    )
+    mfu_cat_high = torch.cat([unet1_up, mfu_skip_high], dim=1)
+    pyr_out = model.decoder[model.decoder_len + 6](mfu_cat_high)
     img_yl = OutImg(model.head_layer(pyr_out), model.out_bias)
     lh_out = model.decoder[model.decoder_len](pyr_out)
     hl_out = model.decoder[model.decoder_len + 1](pyr_out)
@@ -1413,9 +1441,14 @@ def _manual_tub_source_replay(
         "output2_raw": _tensor_array(output2_raw),
         "output2_shuffled": _tensor_array(output2_shuffled),
         "final_decoder_output": _tensor_array(output),
+        "mfu_low": _tensor_array(mfu_low),
+        "mfu_skip_mid": _tensor_array(mfu_skip_mid),
+        "mfu_skip_high": _tensor_array(mfu_skip_high),
         "mfu_up1": _tensor_array(up1),
+        "mfu_cat_mid": _tensor_array(mfu_cat_mid),
         "mfu_unet1": _tensor_array(unet1),
         "mfu_unet1_up": _tensor_array(unet1_up),
+        "mfu_cat_high": _tensor_array(mfu_cat_high),
         "mfu_pyr_out": _tensor_array(pyr_out),
         "img_yl": _tensor_array(img_yl),
         "yh_out": _tensor_array(yh_out),
@@ -1423,6 +1456,132 @@ def _manual_tub_source_replay(
         "frame_reconstruction": frame_reconstruction.frame,
         "frame_reconstruction_metadata": frame_reconstruction.as_jsonable_metadata(),
     }
+
+
+def build_snerv_official_tub_source_forward_tensor_bundle(
+    *,
+    official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
+    train_one_step: bool = False,
+    output_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+) -> dict[str, Any]:
+    """Capture SourceForwardProof tensors from the real upstream ``SNeRV_T`` graph."""
+
+    payload = _run_source_fixture(
+        Path(official_repo_dir),
+        train_one_step=train_one_step,
+        output_state_dict_path=output_state_dict_path,
+        official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+        official_trained_checkpoint_state_dict_path=(
+            official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            official_trained_checkpoint_state_dict_kind
+        ),
+    )
+    return dict(payload["source_forward_tensor_bundle"])
+
+
+def _source_forward_tensor_bundle_from_manual(
+    *,
+    manual: Mapping[str, Any],
+    current: Any,
+    previous: Any,
+    next_frame: Any,
+    official_img_out: Any,
+    pair_ids: Sequence[int],
+    model_source_sha256: str | None,
+    state_dict_sha256: str,
+    checkpoint_sha256: str,
+    decoder_len: int,
+    source_scope: str,
+) -> dict[str, Any]:
+    frame = np.asarray(manual["frame_reconstruction"], dtype=np.float32)
+    official_frame = np.asarray(official_img_out, dtype=np.float32)
+    if frame.ndim == 4:
+        frame = frame[0]
+    if official_frame.ndim == 4:
+        official_frame = official_frame[0]
+    rgb_pair_float = np.stack((frame, official_frame), axis=0)[None]
+    rgb_pair_uint8 = np.clip(np.rint(rgb_pair_float), 0, 255).astype(np.uint8)
+    tensors = {
+        "coord_time_embedding": _pack_source_forward_group(
+            ("embed_curr", manual["embed_curr"]),
+            ("temporal_encoder_concat", manual["temporal_encoder_concat"]),
+            ("yl_norm", np.asarray([
+                np.asarray(manual["lf_triplet"]).min(),
+                np.asarray(manual["lf_triplet"]).max(),
+            ], dtype=np.float64)),
+        ),
+        "mfu_in": _pack_source_forward_group(
+            ("low", manual["mfu_low"]),
+            ("skip_mid", manual["mfu_skip_mid"]),
+            ("skip_high", manual["mfu_skip_high"]),
+        ),
+        "mfu_out": _pack_source_forward_group(
+            ("up1", manual["mfu_up1"]),
+            ("cat_mid", manual["mfu_cat_mid"]),
+            ("unet1", manual["mfu_unet1"]),
+            ("unet1_up", manual["mfu_unet1_up"]),
+            ("cat_high", manual["mfu_cat_high"]),
+            ("pyr_out", manual["mfu_pyr_out"]),
+        ),
+        "hfr_in": np.asarray(manual["mfu_pyr_out"], dtype=np.float32),
+        "hfr_out": np.asarray(manual["yh_out"], dtype=np.float32),
+        "tub_in": _pack_source_forward_group(
+            ("current", current),
+            ("previous", previous),
+            ("next_frame", next_frame),
+        ),
+        "tub_out": _pack_source_forward_group(
+            ("normalized_lf", manual["normalized_lf"]),
+            ("prev_lowpass_over_2", manual["prev_lowpass_over_2"]),
+            ("next_lowpass_over_2", manual["next_lowpass_over_2"]),
+        ),
+        "output_2": np.asarray(manual["output2_shuffled"], dtype=np.float32),
+        "rgb_pair_float": rgb_pair_float,
+        "rgb_pair_uint8": rgb_pair_uint8,
+    }
+    return {
+        "schema": "snerv_official_tub_source_forward_tensor_bundle.v1",
+        "surface": "official_torch",
+        "producer": "pinned_upstream_snerv_t_forward_source_fixture",
+        "pair_ids": [int(value) for value in pair_ids],
+        "tensor_names": sorted(tensors),
+        "tensors": tensors,
+        "model_class": "SNeRV_T",
+        "model_source_path": "model/snerv_t.py",
+        "model_source_lines": "model/snerv_t.py:125-184",
+        "model_source_sha256": model_source_sha256,
+        "state_dict_sha256": state_dict_sha256,
+        "checkpoint_sha256": checkpoint_sha256,
+        "decoder_len": int(decoder_len),
+        "source_scope": str(source_scope),
+        "upstream_forward_replay_verified": True,
+        "receiver_bound_capture": False,
+        "source_forward_replay_authority": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _pack_source_forward_group(*items: tuple[str, Any]) -> np.ndarray:
+    arrays: list[np.ndarray] = []
+    for name, value in items:
+        arr = np.asarray(value, dtype=np.float32)
+        header = np.asarray([len(name), arr.ndim, *arr.shape], dtype=np.float32)
+        arrays.append(header.reshape(-1))
+        arrays.append(np.frombuffer(name.encode("utf-8"), dtype=np.uint8).astype(np.float32))
+        arrays.append(arr.reshape(-1))
+    if not arrays:
+        return np.zeros((0,), dtype=np.float32)
+    return np.concatenate(arrays).astype(np.float32, copy=False)
 
 
 @contextmanager
@@ -1808,5 +1967,6 @@ __all__ = [
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
     "TUB_PRESERVED_BLOCKERS",
     "build_snerv_official_tub_source_forward_replay_artifact",
+    "build_snerv_official_tub_source_forward_tensor_bundle",
     "main",
 ]

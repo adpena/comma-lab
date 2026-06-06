@@ -11,12 +11,17 @@ import warnings
 import numpy as np
 import pytest
 
+from tac.analysis.snerv_official_tub_source_forward_replay import (
+    DEFAULT_OFFICIAL_SNERV_REPO,
+)
 from tac.analysis.snerv_source_forward_producer import (
     build_official_torch_primitive_tensors_from_archive_packet,
     build_pact_mlx_primitive_tensors_from_archive_packet,
+    build_snerv_official_torch_upstream_capture_manifest,
     build_snerv_scorer_deltas_from_surface_metrics,
     build_snerv_source_forward_proof_from_archive_packet,
     build_torch_scorer_source_forward_surface,
+    validate_snerv_official_torch_upstream_capture_manifest,
 )
 from tac.analysis.snerv_source_forward_proof import (
     build_snerv_payload_bitflip_falsification,
@@ -1458,12 +1463,21 @@ def test_source_forward_producer_scorer_capture_can_complete_scorer_surface_set(
         "rgb_pair_float": reference.astype(np.float32),
         "rgb_pair_uint8": reference,
     }
+    official_manifest = build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[0],
+        tensor_names=official_tensors.keys(),
+        model_source_sha256="1" * 64,
+        checkpoint_sha256="2" * 64,
+        state_dict_sha256="3" * 64,
+        decoder_len=6,
+    )
 
     row = build_snerv_source_forward_proof_from_archive_packet(
         action_id="d" * 64,
         archive_packet=archive.packet,
         pair_ids=[0],
         official_torch_tensors=official_tensors,
+        official_torch_capture_manifest=official_manifest,
         pact_mlx_tensors=official_tensors,
         capture_torch_scorer_from_rgb=True,
         reference_pairs_nchw255=reference,
@@ -1472,16 +1486,125 @@ def test_source_forward_producer_scorer_capture_can_complete_scorer_surface_set(
     )
 
     assert row["producer_status"]["torch_scorer_capture_surface_count"] == 4
+    assert row["producer_status"]["official_torch_upstream_capture_manifest_passed"] is True
     assert row["rgb_uint8_and_scorer_compared"] is True
     assert row["scorer_deltas"]["by_surface"]["archive_parseback"]["d_seg"] == 0.0
     assert row["scorer_deltas"]["by_surface"]["numpy_receiver"]["d_pose"] == 0.0
     assert "snerv_source_forward_scorer_by_surface_missing" not in row["blockers"]
     assert "source_forward_tensor_missing:archive_parseback:segnet_logits" not in row["blockers"]
     assert row["passed"] is False
+    assert not any(
+        blocker
+        == (
+            "snerv_source_forward_surface_provenance_authority_not_real:"
+            "official_torch:tensor_capture_authority"
+        )
+        for blocker in row["blockers"]
+    )
     assert any(
         blocker.startswith("source_forward_tensor_delta_exceeds_tolerance:")
         for blocker in row["blockers"]
     )
+
+
+def test_official_torch_supplied_tensors_require_upstream_manifest() -> None:
+    archive = _official_output2_source_forward_archive_fixture()
+    reference = unpack_snerv_archive(archive.packet).source_forward_receiver_tensor_surfaces(
+        [0]
+    )["surface_tensors"]["archive_parseback"]["rgb_pair_uint8"]
+    official_tensors = {
+        name: np.zeros((1,), dtype=np.float32)
+        for name in (
+            "coord_time_embedding",
+            "mfu_in",
+            "mfu_out",
+            "hfr_in",
+            "hfr_out",
+            "tub_in",
+            "tub_out",
+            "output_2",
+        )
+    }
+    official_tensors["rgb_pair_float"] = reference.astype(np.float32)
+    official_tensors["rgb_pair_uint8"] = reference
+
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="f" * 64,
+        archive_packet=archive.packet,
+        pair_ids=[0],
+        official_torch_tensors=official_tensors,
+    )
+
+    assert row["producer_status"]["official_torch_upstream_capture_manifest_passed"] is False
+    assert row["producer_status"]["official_torch_upstream_capture_manifest_status"][
+        "blockers"
+    ] == ["snerv_official_torch_upstream_capture_manifest_missing"]
+    assert (
+        "snerv_source_forward_surface_provenance_authority_not_real:"
+        "official_torch:tensor_capture_authority"
+    ) in row["blockers"]
+
+
+def test_official_torch_upstream_manifest_fails_closed_on_pair_or_hash_drift() -> None:
+    manifest = build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[1],
+        tensor_names=["mfu_in", "rgb_pair_uint8"],
+        model_source_sha256="1" * 64,
+        checkpoint_sha256="not-a-sha",
+        state_dict_sha256="3" * 64,
+        decoder_len=6,
+    )
+
+    status = validate_snerv_official_torch_upstream_capture_manifest(
+        manifest,
+        pair_ids=[0],
+        tensor_names=["mfu_in", "rgb_pair_uint8", "hfr_in"],
+    )
+
+    assert status["passed"] is False
+    assert "snerv_official_torch_checkpoint_sha256_invalid" in status["blockers"]
+    assert "snerv_official_torch_pair_ids_mismatch" in status["blockers"]
+    assert (
+        "snerv_official_torch_manifest_missing_supplied_tensors:hfr_in"
+        in status["blockers"]
+    )
+
+
+def test_source_forward_producer_can_capture_upstream_official_torch_fixture() -> None:
+    pytest.importorskip("torch")
+    if not DEFAULT_OFFICIAL_SNERV_REPO.exists():
+        pytest.skip(f"official SNeRV checkout is absent: {DEFAULT_OFFICIAL_SNERV_REPO}")
+    archive = _official_output2_source_forward_archive_fixture()
+
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="7" * 64,
+        archive_packet=archive.packet,
+        pair_ids=[0],
+        capture_official_torch_from_upstream_fixture=True,
+        official_snerv_repo_dir=DEFAULT_OFFICIAL_SNERV_REPO.as_posix(),
+    )
+
+    status = row["producer_status"]
+    assert status["official_torch_captured_from_upstream_fixture"] is True
+    assert status["official_torch_upstream_capture_manifest_passed"] is True
+    assert status["official_torch_upstream_capture_schema"] == (
+        "snerv_official_tub_source_forward_tensor_bundle.v1"
+    )
+    assert row["tensor_hashes"]["official_torch"]["mfu_in"]
+    assert row["tensor_hashes"]["official_torch"]["output_2"]
+    assert row["tensor_hashes"]["official_torch"]["rgb_pair_uint8"]
+    assert row["passed"] is False
+    assert not any(
+        blocker
+        == (
+            "snerv_source_forward_surface_provenance_authority_not_real:"
+            "official_torch:tensor_capture_authority"
+        )
+        for blocker in row["blockers"]
+    )
+    assert "source_forward_tensor_shape_mismatch:archive_parseback:mfu_in" in row[
+        "blockers"
+    ]
 
 
 def test_official_torch_receiver_bound_capture_is_real_but_not_authority() -> None:

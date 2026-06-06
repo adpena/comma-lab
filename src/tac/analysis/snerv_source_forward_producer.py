@@ -12,6 +12,7 @@ import numpy as np
 
 from tac.analysis.snerv_source_forward_proof import (
     SOURCE_FORWARD_SURFACES,
+    SOURCE_FORWARD_TENSOR_NAMES,
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
 )
@@ -27,7 +28,16 @@ def build_snerv_source_forward_proof_from_archive_packet(
     archive_packet: bytes,
     pair_ids: Sequence[int],
     official_torch_tensors: Mapping[str, Any] | None = None,
+    official_torch_capture_manifest: Mapping[str, Any] | None = None,
     capture_official_torch_from_archive: bool = False,
+    capture_official_torch_from_upstream_fixture: bool = False,
+    official_snerv_repo_dir: str | None = None,
+    official_torch_train_one_step: bool = False,
+    official_torch_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_torch_checkpoint_state_dict_path: str | None = None,
+    official_torch_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
     pact_mlx_tensors: Mapping[str, Any] | None = None,
     capture_pact_mlx_from_archive: bool = False,
     scorer_tensors_by_surface: Mapping[str, Mapping[str, Any]] | None = None,
@@ -53,6 +63,16 @@ def build_snerv_source_forward_proof_from_archive_packet(
     decoded = unpack_snerv_archive(archive_packet)
     receiver_surfaces = decoded.source_forward_receiver_tensor_surfaces(pair_ids)
     official_torch_capture: dict[str, Any] | None = None
+    official_torch_upstream_capture: dict[str, Any] | None = None
+    official_torch_manifest_status = (
+        validate_snerv_official_torch_upstream_capture_manifest(
+            official_torch_capture_manifest,
+            pair_ids=pair_ids,
+            tensor_names=official_torch_tensors.keys()
+            if official_torch_tensors is not None
+            else (),
+        )
+    )
     if capture_official_torch_from_archive:
         if official_torch_tensors is not None:
             raise ValueError(
@@ -73,6 +93,63 @@ def build_snerv_source_forward_proof_from_archive_packet(
             )
         )
         official_torch_tensors = official_torch_capture["tensors"]
+        official_torch_manifest_status = (
+            validate_snerv_official_torch_upstream_capture_manifest(
+                official_torch_capture_manifest,
+                pair_ids=pair_ids,
+                tensor_names=official_torch_tensors.keys(),
+            )
+        )
+    if capture_official_torch_from_upstream_fixture:
+        if official_torch_tensors is not None:
+            raise ValueError(
+                "official_torch_tensors and "
+                "capture_official_torch_from_upstream_fixture are mutually exclusive"
+            )
+        if capture_official_torch_from_archive:
+            raise ValueError(
+                "capture_official_torch_from_archive and "
+                "capture_official_torch_from_upstream_fixture are mutually exclusive"
+            )
+        official_torch_upstream_capture = (
+            build_official_torch_upstream_fixture_tensors(
+                official_repo_dir=official_snerv_repo_dir,
+                train_one_step=official_torch_train_one_step,
+                official_trained_checkpoint_state_dict=(
+                    official_torch_checkpoint_state_dict
+                ),
+                official_trained_checkpoint_state_dict_path=(
+                    official_torch_checkpoint_state_dict_path
+                ),
+                official_trained_checkpoint_state_dict_kind=(
+                    official_torch_checkpoint_state_dict_kind
+                ),
+            )
+        )
+        official_torch_tensors = official_torch_upstream_capture["tensors"]
+        official_torch_capture_manifest = (
+            build_snerv_official_torch_upstream_capture_manifest(
+                pair_ids=pair_ids,
+                tensor_names=official_torch_tensors.keys(),
+                model_source_sha256=official_torch_upstream_capture.get(
+                    "model_source_sha256"
+                ),
+                checkpoint_sha256=official_torch_upstream_capture.get(
+                    "checkpoint_sha256"
+                ),
+                state_dict_sha256=official_torch_upstream_capture.get(
+                    "state_dict_sha256"
+                ),
+                decoder_len=official_torch_upstream_capture.get("decoder_len"),
+            )
+        )
+        official_torch_manifest_status = (
+            validate_snerv_official_torch_upstream_capture_manifest(
+                official_torch_capture_manifest,
+                pair_ids=pair_ids,
+                tensor_names=official_torch_tensors.keys(),
+            )
+        )
     pact_mlx_capture: dict[str, Any] | None = None
     if capture_pact_mlx_from_archive:
         if pact_mlx_tensors is not None:
@@ -168,15 +245,13 @@ def build_snerv_source_forward_proof_from_archive_packet(
             "archive_parseback": "archive_parseback",
             "numpy_receiver": "numpy_receiver",
         },
-        tensor_capture_authority_by_surface=(
-            {
-                "official_torch": (
-                    "receiver_bound_torch_ops_not_upstream_source_forward"
-                )
-            }
-            if official_torch_capture is not None
-            else None
-        ),
+        tensor_capture_authority_by_surface={
+            "official_torch": _official_torch_tensor_capture_authority(
+                official_torch_tensors=official_torch_tensors,
+                receiver_bound_capture=official_torch_capture is not None,
+                manifest_status=official_torch_manifest_status,
+            )
+        },
     )
     row = build_snerv_source_forward_proof_action_effect(
         action_id=action_id,
@@ -201,8 +276,32 @@ def build_snerv_source_forward_proof_from_archive_packet(
             receiver_surfaces["missing_action_effect_tensor_names"]
         ),
         "official_torch_supplied_tensor_count": len(dict(official_torch_tensors or {})),
+        "official_torch_upstream_capture_manifest": (
+            dict(official_torch_capture_manifest or {})
+            if official_torch_capture_manifest is not None
+            else None
+        ),
+        "official_torch_upstream_capture_manifest_status": (
+            official_torch_manifest_status
+        ),
+        "official_torch_upstream_capture_manifest_passed": bool(
+            official_torch_manifest_status["passed"]
+        ),
         "official_torch_captured_from_archive": bool(
             official_torch_capture is not None
+        ),
+        "official_torch_captured_from_upstream_fixture": bool(
+            official_torch_upstream_capture is not None
+        ),
+        "official_torch_upstream_capture_schema": (
+            official_torch_upstream_capture.get("schema")
+            if official_torch_upstream_capture is not None
+            else None
+        ),
+        "official_torch_upstream_capture_source_scope": (
+            official_torch_upstream_capture.get("source_scope")
+            if official_torch_upstream_capture is not None
+            else None
         ),
         "official_torch_capture_schema": (
             official_torch_capture.get("schema")
@@ -234,6 +333,140 @@ def build_snerv_source_forward_proof_from_archive_packet(
         + len(scorer_capture_by_surface),
     }
     return row
+
+
+SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA = (
+    "snerv_official_torch_upstream_capture_manifest.v1"
+)
+SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY = (
+    "upstream_snerv_t_forward_source_graph"
+)
+SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES = "model/snerv_t.py:125-184"
+
+
+def build_snerv_official_torch_upstream_capture_manifest(
+    *,
+    pair_ids: Sequence[int],
+    tensor_names: Sequence[str],
+    official_repo_dir: str | None = None,
+    model_source_sha256: str | None = None,
+    checkpoint_sha256: str | None = None,
+    state_dict_sha256: str | None = None,
+    decoder_len: int | None = None,
+    capture_authority: str = SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY,
+) -> dict[str, Any]:
+    """Build the manifest required for official Torch SourceForward authority.
+
+    The manifest is intentionally source-bound: a caller must provide checkpoint
+    and state-dict hashes from the actual upstream replay, not just receiver
+    tensors that look numerically plausible.
+    """
+
+    if model_source_sha256 is None and official_repo_dir is not None:
+        from pathlib import Path
+
+        source_path = Path(official_repo_dir) / "model" / "snerv_t.py"
+        if source_path.is_file():
+            model_source_sha256 = sha256(source_path.read_bytes()).hexdigest()
+    return {
+        "schema": SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA,
+        "capture_authority": str(capture_authority),
+        "model_class": "SNeRV_T",
+        "model_source_path": "model/snerv_t.py",
+        "model_source_lines": SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES,
+        "model_source_sha256": model_source_sha256,
+        "checkpoint_sha256": checkpoint_sha256,
+        "state_dict_sha256": state_dict_sha256,
+        "decoder_len": None if decoder_len is None else int(decoder_len),
+        "pair_ids": [int(value) for value in pair_ids],
+        "tensor_names": sorted(str(name) for name in tensor_names),
+        "upstream_forward_replay_verified": True,
+        "receiver_bound_capture": False,
+        "source_forward_replay_authority": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def validate_snerv_official_torch_upstream_capture_manifest(
+    manifest: Mapping[str, Any] | None,
+    *,
+    pair_ids: Sequence[int],
+    tensor_names: Sequence[str],
+) -> dict[str, Any]:
+    """Fail closed unless official Torch tensors are tied to upstream replay."""
+
+    blockers: list[str] = []
+    if manifest is None:
+        return {
+            "passed": False,
+            "blockers": [
+                "snerv_official_torch_upstream_capture_manifest_missing"
+            ],
+        }
+    row = dict(manifest)
+    if row.get("schema") != SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA:
+        blockers.append("snerv_official_torch_upstream_capture_manifest_schema_invalid")
+    if (
+        str(row.get("capture_authority") or "")
+        != SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
+    ):
+        blockers.append(
+            "snerv_official_torch_upstream_capture_authority_not_source_graph"
+        )
+    if row.get("upstream_forward_replay_verified") is not True:
+        blockers.append("snerv_official_torch_upstream_forward_replay_not_verified")
+    if row.get("receiver_bound_capture") is True:
+        blockers.append("snerv_official_torch_capture_is_receiver_bound")
+    if row.get("source_forward_replay_authority") is not True:
+        blockers.append("snerv_official_torch_source_forward_authority_false")
+    if row.get("model_class") != "SNeRV_T":
+        blockers.append("snerv_official_torch_model_class_not_snerv_t")
+    if row.get("model_source_path") != "model/snerv_t.py":
+        blockers.append("snerv_official_torch_model_source_path_invalid")
+    if row.get("model_source_lines") != SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES:
+        blockers.append("snerv_official_torch_model_source_lines_invalid")
+    for field in ("model_source_sha256", "checkpoint_sha256", "state_dict_sha256"):
+        if not _looks_like_sha256(row.get(field)):
+            blockers.append(f"snerv_official_torch_{field}_invalid")
+    manifest_pair_ids = _normalize_pair_ids(row.get("pair_ids"))
+    expected_pair_ids = _normalize_pair_ids(pair_ids)
+    if manifest_pair_ids != expected_pair_ids:
+        blockers.append("snerv_official_torch_pair_ids_mismatch")
+    manifest_tensor_names = {str(name) for name in row.get("tensor_names") or ()}
+    supplied_tensor_names = {str(name) for name in tensor_names}
+    missing_from_manifest = sorted(supplied_tensor_names - manifest_tensor_names)
+    if missing_from_manifest:
+        blockers.append(
+            "snerv_official_torch_manifest_missing_supplied_tensors:"
+            + ",".join(missing_from_manifest)
+        )
+    unknown = sorted(manifest_tensor_names - set(SOURCE_FORWARD_TENSOR_NAMES))
+    if unknown:
+        blockers.append(
+            "snerv_official_torch_manifest_unknown_tensors:" + ",".join(unknown)
+        )
+    return {
+        "passed": not _ordered_unique(blockers),
+        "blockers": _ordered_unique(blockers),
+    }
+
+
+def _official_torch_tensor_capture_authority(
+    *,
+    official_torch_tensors: Mapping[str, Any] | None,
+    receiver_bound_capture: bool,
+    manifest_status: Mapping[str, Any],
+) -> str:
+    if receiver_bound_capture:
+        return "receiver_bound_torch_ops_not_upstream_source_forward"
+    if official_torch_tensors is None:
+        return "missing_metadata_only_official_torch_surface"
+    if manifest_status.get("passed") is True:
+        return SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
+    return "metadata_only_missing_upstream_source_manifest"
 
 
 def build_pact_mlx_primitive_tensors_from_archive_packet(
@@ -395,6 +628,36 @@ def build_official_torch_primitive_tensors_from_archive_packet(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def build_official_torch_upstream_fixture_tensors(
+    *,
+    official_repo_dir: str | None = None,
+    train_one_step: bool = False,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+) -> dict[str, Any]:
+    """Capture official Torch tensors from pinned upstream ``SNeRV_T.forward``."""
+
+    from tac.analysis.snerv_official_tub_source_forward_replay import (
+        DEFAULT_OFFICIAL_SNERV_REPO,
+        build_snerv_official_tub_source_forward_tensor_bundle,
+    )
+
+    return build_snerv_official_tub_source_forward_tensor_bundle(
+        official_repo_dir=official_repo_dir or DEFAULT_OFFICIAL_SNERV_REPO,
+        train_one_step=train_one_step,
+        official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+        official_trained_checkpoint_state_dict_path=(
+            official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            official_trained_checkpoint_state_dict_kind
+        ),
+    )
 
 
 def build_torch_scorer_source_forward_surface(
@@ -748,10 +1011,46 @@ def _torch_to_numpy(tensor: Any) -> Any:
     return tensor.detach().cpu().numpy().copy()
 
 
+def _looks_like_sha256(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _normalize_pair_ids(value: Any) -> list[int]:
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        return []
+    if not value:
+        return []
+    try:
+        out = [int(item) for item in value]
+    except (TypeError, ValueError):
+        return []
+    if any(item < 0 for item in out):
+        return []
+    return out
+
+
+def _ordered_unique(values: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
+
+
 __all__ = [
+    "SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY",
+    "SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA",
+    "SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES",
     "build_official_torch_primitive_tensors_from_archive_packet",
+    "build_official_torch_upstream_fixture_tensors",
     "build_pact_mlx_primitive_tensors_from_archive_packet",
+    "build_snerv_official_torch_upstream_capture_manifest",
     "build_snerv_scorer_deltas_from_surface_metrics",
     "build_snerv_source_forward_proof_from_archive_packet",
     "build_torch_scorer_source_forward_surface",
+    "validate_snerv_official_torch_upstream_capture_manifest",
 ]
