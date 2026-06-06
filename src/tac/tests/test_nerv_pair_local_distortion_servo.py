@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 
+from tac.analysis.action_effect import ACTION_EFFECT_SCHEMA
 from tac.analysis.nerv_pair_local_distortion_servo import (
     PAIR_LOCAL_DISTORTION_SERVO_ADMISSION_SCHEMA,
     PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
@@ -174,6 +175,12 @@ def test_pr95_grade_report_accepts_parseback_priced_hinerv_receipt() -> None:
     assert report["blockers"] == []
     assert report["authority"] == "parseback_mlx"
     assert report["value_per_byte"] > report["byte_price"]
+    assert report["action_effect"]["schema"] == ACTION_EFFECT_SCHEMA
+    assert report["action_effect"]["action_effect_admitted"] is True
+    assert report["action_effect"]["delta_score_total"] == report[
+        "exact_score_delta"
+    ]
+    assert report["action_effect"]["receiver_visible"] is True
     assert report["score_claim"] is False
 
 

@@ -16,6 +16,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
+from tac.analysis.action_effect import action_effect_from_pair_local_servo
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.score_geometry import (
     CONTEST_REFERENCE_BYTES,
@@ -628,6 +629,7 @@ def build_pr95_grade_pair_local_servo_report(
             if row["green"] is not True and row.get("blocker")
         ],
     ]
+    receiver_surface = _action_effect_receiver_surface(trace, admission)
     report = {
         "schema": PAIR_LOCAL_DISTORTION_SERVO_REPORT_SCHEMA,
         "receipt_schema": receipt.get("schema"),
@@ -652,6 +654,21 @@ def build_pr95_grade_pair_local_servo_report(
         "value_per_byte": _measured_value_per_byte(receipt, before=before, after=after),
         "byte_price": 25.0 / reference_bytes,
         "surfaces": dict(admission.surfaces),
+        "action_effect": action_effect_from_pair_local_servo(
+            receipt=receipt,
+            report={
+                "family": family_key,
+                "pair_ids": list(_pair_ids(receipt)),
+                "authority": receipt.get("authority"),
+                "value_per_byte": _measured_value_per_byte(
+                    receipt,
+                    before=before,
+                    after=after,
+                ),
+                "surfaces": dict(admission.surfaces),
+            },
+            receiver_surface=receiver_surface,
+        ),
         "static_contract": pair_local_servo_static_contract(),
         "policy": {
             "human_visual_fidelity_is_not_authority": True,
@@ -665,6 +682,51 @@ def build_pr95_grade_pair_local_servo_report(
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
     return report
+
+
+def _action_effect_receiver_surface(
+    trace: PairLocalSurfaceTrace,
+    admission: PairLocalServoAdmission,
+) -> dict[str, float | int | bool | str]:
+    return {
+        "receiver_surface": "clamp_round_uint8_rgb_to_scorer_preprocess",
+        "frame_scope": trace.frame_scope,
+        "actuator_id": trace.actuator_id,
+        "uint8_motion": bool(admission.surfaces.get("uint8_motion")),
+        "scorer_preprocess_motion": bool(
+            admission.surfaces.get("scorer_preprocess_motion")
+        ),
+        "live_scorer_motion": bool(admission.surfaces.get("live_scorer_motion")),
+        "fakequant_survival": bool(admission.surfaces.get("fakequant_survival")),
+        "parseback_survival": bool(admission.surfaces.get("parseback_survival")),
+        **_present_surface_numbers(
+            {
+                "float_rgb_delta_linf": trace.float_rgb_delta_linf,
+                "uint8_changed_pixels": trace.uint8_changed_pixels,
+                "uint8_delta_abs_max": trace.uint8_delta_abs_max,
+                "segnet_input_delta_linf": trace.segnet_input_delta_linf,
+                "posenet_input_delta_linf": trace.posenet_input_delta_linf,
+                "segnet_margin_delta": trace.segnet_margin_delta,
+                "argmax_flipped_pixels": trace.segnet_argmax_flipped_pixels,
+                "pose_output_delta_l2": trace.pose_output_delta_l2,
+                "fakequant_argmax_flipped_pixels": (
+                    trace.fakequant_argmax_flipped_pixels
+                ),
+                "parseback_argmax_flipped_pixels": (
+                    trace.parseback_argmax_flipped_pixels
+                ),
+                "inflated_argmax_flipped_pixels": (
+                    trace.inflated_argmax_flipped_pixels
+                ),
+            }
+        ),
+    }
+
+
+def _present_surface_numbers(
+    values: Mapping[str, float | int | None],
+) -> dict[str, float | int]:
+    return {key: value for key, value in values.items() if value is not None}
 
 
 def pair_local_servo_receipt_ready(
