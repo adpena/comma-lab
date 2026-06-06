@@ -5803,7 +5803,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_optimizer: str = "pact_muon_adamw",
     snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
-    snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
+    snerv_score_aware_long_training_eval_roundtrip_ste: bool = True,
     snerv_score_aware_long_training_scorer_tether_smoke_steps: int = 2,
     recon_loss_stage_weight: float = 1.0,
     segnet_loss_stage_weight: float = 1.0,
@@ -28915,9 +28915,21 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--snerv-score-aware-long-training-eval-roundtrip-ste",
         action="store_true",
+        default=True,
         help=(
             "Apply the PR95-style differentiable eval roundtrip during SNeRV "
-            "score-aware MLX long training."
+            "score-aware MLX long training. This is on by default for "
+            "score-aware SNeRV launches."
+        ),
+    )
+    parser.add_argument(
+        "--no-snerv-score-aware-long-training-eval-roundtrip-ste",
+        dest="snerv_score_aware_long_training_eval_roundtrip_ste",
+        action="store_false",
+        help=(
+            "Disable the SNeRV differentiable eval roundtrip for explicit "
+            "research ablations only; nonzero score-aware native epochs will "
+            "fail closed in the native trainer."
         ),
     )
     parser.add_argument(

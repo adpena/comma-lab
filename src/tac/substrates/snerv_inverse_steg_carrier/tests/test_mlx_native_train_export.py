@@ -242,6 +242,12 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         is True
     )
     assert (
+        public_sig.parameters[
+            "score_aware_long_training_eval_roundtrip_ste"
+        ].default
+        is True
+    )
+    assert (
         public_sig.parameters["scorer_loop_qat_component_guard_mode"].default
         == "pose_seg_hard"
     )
@@ -277,6 +283,7 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     assert public_sig.parameters["scorer_loop_qat_seg_slack"].default == 0.0
     assert public_sig.parameters["scorer_loop_qat_seed"].default == 1337
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
+    assert attachment_sig.parameters["eval_roundtrip_ste"].default is inspect.Parameter.empty
     assert "pr95_muon_policy" in attachment_sig.parameters
     assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters
     assert "scorer_input_contrast_floor_weight" in attachment_sig.parameters
@@ -1067,6 +1074,10 @@ def test_score_aware_long_training_rejects_invalid_contrast_floor_controls(
     )
 
     assert report["executed"] is False
+    assert (
+        "snerv_score_aware_long_training_eval_roundtrip_ste_required_for_nonzero_epochs"
+        in report["validation_failures"]
+    )
     assert (
         "snerv_score_aware_long_training_scorer_input_contrast_floor_weight_invalid"
         in report["validation_failures"]

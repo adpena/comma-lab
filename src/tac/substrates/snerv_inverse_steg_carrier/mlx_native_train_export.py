@@ -3283,7 +3283,7 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_optimizer: str = "pact_muon_adamw",
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
-    score_aware_long_training_eval_roundtrip_ste: bool = False,
+    score_aware_long_training_eval_roundtrip_ste: bool = True,
     score_aware_long_training_scorer_input_distribution_guard_weight: float = (
         DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT
     ),
@@ -6293,6 +6293,10 @@ def _run_score_aware_long_training_attachment(
         **FALSE_AUTHORITY,
     }
     validation_blockers: list[str] = []
+    if int(requested_epochs) > 0 and not bool(eval_roundtrip_ste):
+        validation_blockers.append(
+            "snerv_score_aware_long_training_eval_roundtrip_ste_required_for_nonzero_epochs"
+        )
     if seg_weight < 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_segnet_distillation_weight_negative"

@@ -10868,6 +10868,7 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
             runner_mod.HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
         )
     )
+
     assert args.scorer_space_step_guard_max_post_segnet_contrast_ratio == (
         pytest.approx(4.25)
     )
@@ -10939,6 +10940,22 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     assert args.checkpoint_dir is None
     assert args.resume_from_checkpoint is None
     assert args.hi_nerv_pr95_curriculum_total_epochs is None
+
+
+def test_snerv_score_aware_parser_defaults_eval_roundtrip_on() -> None:
+    default_args = _parse_args(["--execute-family", "snerv", "--num-pairs", "1"])
+    ablation_args = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--num-pairs",
+            "1",
+            "--no-snerv-score-aware-long-training-eval-roundtrip-ste",
+        ]
+    )
+
+    assert default_args.snerv_score_aware_long_training_eval_roundtrip_ste is True
+    assert ablation_args.snerv_score_aware_long_training_eval_roundtrip_ste is False
 
 
 def test_hinerv_main_forwards_direct_live_pose_weight(
