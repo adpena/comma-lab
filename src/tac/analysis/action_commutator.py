@@ -304,6 +304,13 @@ def _needs_measurement_row(
         "--pair-effects <composite_action_effects.jsonl> "
         "--output <commutator_output_dir>"
     )
+    blockers = (
+        ["composite_action_effect_row_missing"]
+        if reason == "no_measured_composite_for_ordered_pair"
+        else ["measured_composite_incompatible"]
+    )
+    if not parts_share_authority:
+        blockers.append("action_effect_authority_mismatch")
     return {
         "schema": ACTION_COMMUTATOR_NEEDS_MEASUREMENT_SCHEMA,
         "first_action_id": first.action_id,
@@ -332,7 +339,7 @@ def _needs_measurement_row(
         "comm": None,
         "classification": None,
         "first_measurement_command": command,
-        "measurement_command_blockers": ["composite_action_effect_row_missing"],
+        "measurement_command_blockers": blockers,
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
 

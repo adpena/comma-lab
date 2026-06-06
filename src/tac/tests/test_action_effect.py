@@ -1041,6 +1041,99 @@ def test_frontier_rate_materializer_cli_emits_valid_action_effect(tmp_path: Path
     assert "score_claim" not in row
 
 
+def test_pr110_selector_replay_cli_emits_advisory_action_effect(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest = {
+        "candidate_id": "lfv1v2_k01_a0p00002_r0p45_p0p8_oy0p38_9b8548d951cd",
+        "archive": {
+            "bytes": 178674,
+            "delta_bytes_vs_source_archive": 157,
+            "sha256": "5" * 64,
+            "members": [
+                {"name": "lapose_foveation_tuples.lfv1", "bytes": 25},
+                {"name": "x", "bytes": 178417},
+            ],
+        },
+        "source_archive": {"bytes": 178517, "sha256": "6" * 64},
+        "selection": {"selected_pairs": [43]},
+        "official_inflate_control": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    summary_path = tmp_path / "summary.json"
+    summary = {
+        "schema": "contest_oracle_batch_summary_v1",
+        "baseline": {
+            "axis": "[macOS-CPU advisory]",
+            "archive_bytes": 178517,
+            "avg_segnet_dist": 0.00056039,
+            "avg_posenet_dist": 2.943e-05,
+        },
+        "rows": [
+            {
+                "candidate_id": "lfv1v2_k01_a0p00002_r0p45_p0p8_oy0p38_9b8548d951cd",
+                "axis": "[macOS-CPU advisory]",
+                "archive_bytes": 178674,
+                "archive_delta_bytes": 157,
+                "archive_sha256": "5" * 64,
+                "avg_segnet_dist": 0.00056039,
+                "avg_posenet_dist": 2.943e-05,
+                "selected_pairs": [43],
+                "official_inflate_returncode": 0,
+                "locality_control_passed": True,
+                "manifest_path": manifest_path.as_posix(),
+                "score_claim": False,
+                "promotion_eligible": False,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    out_jsonl = tmp_path / "action_effect_rows.jsonl"
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "convert_pr110_selector_replay_to_action_effect.py"),
+            "--summary",
+            str(summary_path),
+            "--output-jsonl",
+            str(out_jsonl),
+        ],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    summary_payload = json.loads(proc.stdout)
+    assert summary_payload["validation"]["passed"] is True
+    rows = [json.loads(line) for line in out_jsonl.read_text().splitlines()]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["schema"] == ACTION_EFFECT_V1_SCHEMA
+    assert row["family"] == "pr110"
+    assert row["action_kind"] == "selector_replay"
+    assert row["authority"] == "[macOS-CPU advisory] pr110_selector_replay"
+    assert row["normalization_scope"] == "full_video_equiv_estimate"
+    assert row["pair_ids"] == [43]
+    assert row["payload_sections"] == ["lapose_foveation_tuples.lfv1", "x"]
+    assert row["old_archive_bytes"] == 178517
+    assert row["new_archive_bytes"] == 178674
+    assert row["delta_score_total"] == pytest.approx(
+        exact_delta_score(0.00056039, 0.00056039, 2.943e-05, 2.943e-05, 178517, 178674),
+        abs=1e-15,
+    )
+    assert row["value_per_byte"] < 0.0
+    assert row["parseback_survived"] is True
+    assert row["inflate_survived"] is True
+    assert row["promotion_eligible"] is False
+    assert "score_claim" not in row
+
+
 def test_v1_from_pr110_tolerant_on_unknown_shape() -> None:
     eff = ActionEffect.from_pr110_selector_row({"unrecognized": True})
     assert eff.action_id == "pr110_selector_action"

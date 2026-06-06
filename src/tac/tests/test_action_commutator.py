@@ -318,6 +318,7 @@ def test_ledger_queues_pair_with_incompatible_authority_never_fabricates():
     assert len(incompat) == 1
     assert incompat[0]["authority_compatible"] is False
     assert "incompatible" in incompat[0]["reason"]
+    assert "action_effect_authority_mismatch" in incompat[0]["measurement_command_blockers"]
 
 
 def test_measurement_queue_ranks_authority_compatible_before_cross_authority():
