@@ -5286,6 +5286,122 @@ def test_official_mfu_hfr_tub_packet_elides_output2_payload_from_components() ->
     assert rich_metadata["score_claim"] is False
 
 
+def test_official_mfu_hfr_tub_packet_binds_output2_to_receiver_frames_when_requested() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+        official_tub_output2_export_mode="receiver_frame_bound",
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    components["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    components["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    components["tub_temporal_encoder_concat"] = np.linspace(
+        0.0,
+        1.0,
+        np.prod(components["temporal_encoder_output_shape"]),
+        dtype=np.float64,
+    ).reshape(components["temporal_encoder_output_shape"])
+    components["tub_output2_raw"] = np.full(
+        components["output2_decoder_output_shape"],
+        0.125,
+        dtype=np.float64,
+    )
+
+    packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=[4],
+        model_size=model_size,
+        metadata_extra={"allocation_mode": "unit_output2_receiver_frame_bound"},
+    )
+    decoded = unpack_snerv_archive(packet.packet)
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    proof = official_payload.execute()
+    rich_metadata = packet.metadata
+    storage = rich_metadata["official_tub_output2_storage"]
+
+    assert model_size.official_tub_output2_store_for_receiver_proof is True
+    assert rich_metadata["official_tub_output2_export_mode"] == "receiver_frame_bound"
+    assert rich_metadata["official_tub_output2_receiver_frame_bound_required"] is True
+    assert rich_metadata["official_tub_output2_payload_export_bound"] is True
+    assert rich_metadata["official_tub_output2_receiver_executed"] is True
+    assert rich_metadata["official_tub_output2_receiver_frame_bound"] is True
+    assert rich_metadata["official_tub_output2_payload_selected_runtime_bytes"] > 0
+    assert storage["stored"] is True
+    assert storage["proof_only_false_authority_metadata"] is False
+    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["receiver_frame_decode_consumes_output2"] is True
+    assert storage["receiver_output2_frame_shape_match"] is True
+    assert storage["frame_decode_blockers"] == []
+    assert storage["score_lagrangian_action"] == (
+        "keep_only_for_receiver_proof_until_trained_source_forward_parity"
+    )
+    assert set(rich_metadata["official_tub_output2_payload_tensor_names"]) == {
+        "tub.temporal_encoder_concat",
+        "tub.output2_raw",
+    }
+    rows = {row["name"]: row for row in proof["output_tensors"]}
+    assert rows["tub.output2_decoder_input"]["shape"] == [2, 3, 8, 8]
+    assert rows["tub.output2_fused"]["shape"] == [2, 3, 16, 16]
+
+    frames = decode_snerv_archive_frames(packet.packet, clip_to_uint8_range=False)
+    components["tub_output2_raw"] = np.asarray(components["tub_output2_raw"]) + 0.25
+    mutated_packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=[4],
+        model_size=model_size,
+        metadata_extra={"allocation_mode": "unit_output2_receiver_frame_bound_mutated"},
+    )
+    mutated_frames = decode_snerv_archive_frames(
+        mutated_packet.packet,
+        clip_to_uint8_range=False,
+    )
+    assert not np.allclose(frames, mutated_frames)
+    assert rich_metadata["source_faithful_stack"] is False
+    assert rich_metadata["score_claim"] is False
+
+
+def test_official_mfu_hfr_tub_packet_fails_closed_when_receiver_frame_bound_missing() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+        official_tub_output2_export_mode="receiver_frame_bound",
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    components["tub_temporal_encoder_concat"] = np.zeros(
+        components["temporal_encoder_output_shape"],
+        dtype=np.float64,
+    )
+    components["tub_output2_raw"] = np.zeros(
+        components["output2_decoder_output_shape"],
+        dtype=np.float64,
+    )
+
+    with pytest.raises(
+        SnervMlxNativeExportError,
+        match="snerv_official_tub_output2_receiver_frame_decode_not_bound",
+    ):
+        mod._build_official_mfu_hfr_tub_packet_from_components(
+            components,
+            source_pair_indices=[4],
+            model_size=model_size,
+            metadata_extra={"allocation_mode": "unit_output2_receiver_frame_bound_bad"},
+        )
+
+
 def test_official_renderer_elides_output2_from_selected_receiver_packet() -> None:
     pytest.importorskip("mlx.core")
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
@@ -6903,6 +7019,23 @@ def test_native_export_modelsize_honors_explicit_tub_output2_proof_only_mode() -
     assert model_size.official_tub_output2_store_for_receiver_proof_requested is True
     assert model_size.official_tub_output2_store_for_receiver_proof is True
     assert model_size.official_tub_output2_export_mode == "proof_only"
+
+
+def test_native_export_modelsize_accepts_tub_output2_receiver_frame_bound_mode() -> None:
+    model_size = _model_size_from_candidate(
+        {
+            "candidate_id": "receiver-bound-tub-output2",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "official_tub_output2_export_mode": "receiver_frame_bound",
+        }
+    )
+
+    assert model_size.official_tub_output2_store_for_receiver_proof_requested is True
+    assert model_size.official_tub_output2_store_for_receiver_proof is True
+    assert model_size.official_tub_output2_export_mode == "receiver_frame_bound"
+    assert model_size.as_jsonable()[
+        "official_tub_output2_store_for_receiver_proof"
+    ] is True
 
 
 def test_native_export_modelsize_rejects_unknown_tub_output2_export_mode() -> None:

@@ -209,6 +209,12 @@ class SnervModelSizeConfig:
                 "official_tub_output2_export_mode",
                 "proof_only",
             )
+        if self.official_tub_output2_export_mode == "receiver_frame_bound":
+            object.__setattr__(
+                self,
+                "official_tub_output2_store_for_receiver_proof",
+                True,
+            )
         object.__setattr__(
             self,
             "official_tub_output2_store_for_receiver_proof_requested",
@@ -247,10 +253,11 @@ class SnervModelSizeConfig:
         if self.official_tub_output2_export_mode not in {
             "auto_elide",
             "proof_only",
+            "receiver_frame_bound",
         }:
             raise SnervCarrierError(
                 "official_tub_output2_export_mode must be one of "
-                "['auto_elide', 'proof_only']"
+                "['auto_elide', 'proof_only', 'receiver_frame_bound']"
             )
         if not self.fc_dim_source:
             raise SnervCarrierError("fc_dim_source must be non-empty")

@@ -9932,6 +9932,41 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         payload_header=official_payload_header,
         payload_proof=official_payload_proof,
     )
+    if model_size.official_tub_output2_export_mode == "receiver_frame_bound":
+        output2_blockers: list[str] = []
+        if (
+            official_tub_output2_metadata.get(
+                "official_tub_output2_payload_export_bound"
+            )
+            is not True
+        ):
+            output2_blockers.append(
+                "snerv_official_tub_output2_receiver_frame_bound_payload_not_export_bound"
+            )
+        if (
+            official_tub_output2_metadata.get(
+                "official_tub_output2_receiver_executed"
+            )
+            is not True
+        ):
+            output2_blockers.append(
+                "snerv_official_tub_output2_receiver_frame_bound_fusion_not_executed"
+            )
+        if (
+            official_tub_output2_metadata.get(
+                "official_tub_output2_receiver_frame_bound"
+            )
+            is not True
+        ):
+            output2_blockers.append(
+                "snerv_official_tub_output2_receiver_frame_decode_not_bound"
+            )
+        if output2_blockers:
+            raise SnervMlxNativeExportError(
+                "official_tub_output2_export_mode=receiver_frame_bound requires "
+                "selected runtime output2 bytes to execute through receiver frame "
+                f"decode; blockers={','.join(output2_blockers)}"
+            )
     metadata_extra_payload = dict(metadata_extra or {})
     tub_source_fixture_binding = _official_tub_source_fixture_binding_from_metadata(
         metadata_extra_payload
@@ -9992,6 +10027,12 @@ def _build_official_mfu_hfr_tub_packet_from_components(
             mfu_input_codec if mfu_input_codec is not None else "full"
         ),
         "official_tub_input_storage_mode": "unused_synthetic",
+        "official_tub_output2_export_mode": (
+            model_size.official_tub_output2_export_mode
+        ),
+        "official_tub_output2_receiver_frame_bound_required": bool(
+            model_size.official_tub_output2_export_mode == "receiver_frame_bound"
+        ),
         **(
             {"official_hfr_bootstrap": components["official_hfr_bootstrap"]}
             if isinstance(components.get("official_hfr_bootstrap"), Mapping)
@@ -12725,16 +12766,25 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
             ),
         )
     ).strip().lower()
-    if tub_output2_export_mode not in {"auto_elide", "proof_only"}:
+    if tub_output2_export_mode not in {
+        "auto_elide",
+        "proof_only",
+        "receiver_frame_bound",
+    }:
         raise SnervCarrierError(
             "official_tub_output2_export_mode must be one of "
-            "['auto_elide', 'proof_only']"
+            "['auto_elide', 'proof_only', 'receiver_frame_bound']"
         )
-    # Candidate parsing is the train/export automation boundary. TUB output_2
-    # is source-parity useful, but it is not frame-decode score-causal in the
-    # current receiver. Only an explicit proof-only candidate may pay for it.
+    # Candidate parsing is the train/export automation boundary. TUB output_2 is
+    # source-parity evidence in proof-only mode. In receiver_frame_bound mode it
+    # becomes stricter: selected runtime bytes must execute through receiver
+    # frame decode before the candidate can leave export.
     store_tub_output2 = bool(
-        requested_tub_output2_store and tub_output2_export_mode == "proof_only"
+        tub_output2_export_mode == "receiver_frame_bound"
+        or (
+            requested_tub_output2_store
+            and tub_output2_export_mode == "proof_only"
+        )
     )
     return SnervModelSizeConfig(
         fc_dim=fc_dim,
