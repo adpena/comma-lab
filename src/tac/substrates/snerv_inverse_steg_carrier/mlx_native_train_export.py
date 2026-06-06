@@ -715,9 +715,7 @@ def _snerv_checkpoint_selection_row_is_better(
                 )
             return False
         if incumbent_support is None:
-            if candidate_support[0] <= 0.0:
-                return False
-            return True
+            return candidate_support[0] > 0.0
         for candidate_value, incumbent_value in zip(
             candidate_support,
             incumbent_support,

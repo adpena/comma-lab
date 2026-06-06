@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import copy
 import json
 import os
 from hashlib import sha256
@@ -29,6 +30,35 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
 )
 from tools import build_nerv_long_training_campaign_plan as cli
+
+_SOURCE_PARITY_CONTRACT_CACHE: dict[tuple[str, tuple[str, ...]], dict] = {}
+
+
+@pytest.fixture(autouse=True)
+def _cache_default_source_parity_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    original = plan_module.build_nerv_source_parity_contract
+
+    def cached_source_parity_contract(*, repo_root, families, snerv_official_source_audit=None):
+        if snerv_official_source_audit is not None:
+            return original(
+                repo_root=repo_root,
+                families=families,
+                snerv_official_source_audit=snerv_official_source_audit,
+            )
+        key = (Path(repo_root).resolve(strict=False).as_posix(), tuple(str(family) for family in families))
+        if key not in _SOURCE_PARITY_CONTRACT_CACHE:
+            _SOURCE_PARITY_CONTRACT_CACHE[key] = original(
+                repo_root=repo_root,
+                families=families,
+                snerv_official_source_audit=None,
+            )
+        return copy.deepcopy(_SOURCE_PARITY_CONTRACT_CACHE[key])
+
+    monkeypatch.setattr(
+        plan_module,
+        "build_nerv_source_parity_contract",
+        cached_source_parity_contract,
+    )
 
 
 def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
