@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
 from typing import Any
@@ -201,11 +202,168 @@ def build_pact_mlx_primitive_tensors_from_archive_packet(
     )
 
 
+def build_torch_scorer_source_forward_surface(
+    *,
+    candidate_pairs_nchw255: Any,
+    reference_pairs_nchw255: Any,
+    posenet: Any,
+    segnet: Any,
+    device: str | Any = "cpu",
+) -> dict[str, Any]:
+    """Capture official scorer tensors and metrics for one SourceForward surface."""
+
+    import torch
+
+    dev = torch.device(device)
+    candidate = _torch_pair_tensor_nchw255(
+        candidate_pairs_nchw255,
+        device=dev,
+        name="candidate_pairs_nchw255",
+    )
+    reference = _torch_pair_tensor_nchw255(
+        reference_pairs_nchw255,
+        device=dev,
+        name="reference_pairs_nchw255",
+    )
+    if tuple(candidate.shape) != tuple(reference.shape):
+        raise ValueError(
+            "candidate/reference scorer pair tensors must have identical shape; "
+            f"got {tuple(candidate.shape)} vs {tuple(reference.shape)}"
+        )
+    posenet = posenet.to(dev) if hasattr(posenet, "to") else posenet
+    segnet = segnet.to(dev) if hasattr(segnet, "to") else segnet
+    if hasattr(posenet, "eval"):
+        posenet.eval()
+    if hasattr(segnet, "eval"):
+        segnet.eval()
+    with torch.no_grad():
+        pos_in = posenet.preprocess_input(candidate)
+        ref_pos_in = posenet.preprocess_input(reference)
+        pos_out = _pose_output_tensor(posenet(pos_in))
+        ref_pos_out = _pose_output_tensor(posenet(ref_pos_in))
+        pose = pos_out[..., :6]
+        ref_pose = ref_pos_out[..., :6]
+        d_pose = float(torch.mean((pose - ref_pose) ** 2).detach().cpu().item())
+
+        seg_in = segnet.preprocess_input(candidate)
+        ref_seg_in = segnet.preprocess_input(reference)
+        seg_logits = _tensor_from_model_output(segnet(seg_in), key="logits")
+        ref_seg_logits = _tensor_from_model_output(segnet(ref_seg_in), key="logits")
+        seg_argmax = torch.argmax(seg_logits, dim=1)
+        ref_seg_argmax = torch.argmax(ref_seg_logits, dim=1)
+        disagree = (seg_argmax != ref_seg_argmax).to(torch.float32)
+        d_seg = float(torch.mean(disagree).detach().cpu().item())
+    return {
+        "schema": "snerv_torch_scorer_source_forward_surface.v1",
+        "tensors": {
+            "segnet_input": _torch_to_numpy(seg_in),
+            "posenet_input": _torch_to_numpy(pos_in),
+            "segnet_logits": _torch_to_numpy(seg_logits),
+            "segnet_argmax": _torch_to_numpy(seg_argmax),
+            "posenet_output": _torch_to_numpy(pose),
+        },
+        "metrics": {
+            "d_seg": d_seg,
+            "d_pose": d_pose,
+        },
+        "surface_scorer_capture_authority": "real_torch_scorer_forward_capture",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def build_snerv_scorer_deltas_from_surface_metrics(
+    metrics_by_surface: Mapping[str, Mapping[str, Any]],
+    *,
+    score_surface: str = "numpy_receiver",
+    reference_surface: str = "official_torch",
+    tolerance_by_field: Mapping[str, float] | None = None,
+) -> dict[str, Any]:
+    """Build the scorer-delta row consumed by SourceForwardProof validation."""
+
+    metrics = {
+        str(surface): {
+            "d_seg": float(values["d_seg"]),
+            "d_pose": float(values["d_pose"]),
+        }
+        for surface, values in dict(metrics_by_surface).items()
+    }
+    selected = metrics.get(str(score_surface))
+    reference = metrics.get(str(reference_surface))
+    if selected is None:
+        raise ValueError(f"score_surface {score_surface!r} missing from scorer metrics")
+    if reference is None:
+        raise ValueError(
+            f"reference_surface {reference_surface!r} missing from scorer metrics"
+        )
+    delta_score_nonrate = (
+        100.0 * (float(selected["d_seg"]) - float(reference["d_seg"]))
+        + math.sqrt(max(0.0, 10.0 * float(selected["d_pose"])))
+        - math.sqrt(max(0.0, 10.0 * float(reference["d_pose"])))
+    )
+    return {
+        "d_seg": float(selected["d_seg"]),
+        "d_pose": float(selected["d_pose"]),
+        "delta_score_nonrate": float(delta_score_nonrate),
+        "by_surface": metrics,
+        "tolerance_by_field": {
+            str(key): float(value)
+            for key, value in dict(tolerance_by_field or {}).items()
+        },
+    }
+
+
 def _section_sha256(section: bytes) -> str:
     return sha256(bytes(section)).hexdigest()
 
 
+def _torch_pair_tensor_nchw255(value: Any, *, device: Any, name: str) -> Any:
+    import torch
+
+    tensor = torch.as_tensor(value, dtype=torch.float32, device=device)
+    if tensor.ndim != 5 or int(tensor.shape[1]) != 2 or int(tensor.shape[2]) != 3:
+        raise ValueError(
+            f"{name} must be shaped (pairs,2,3,H,W) in [0,255]; "
+            f"got {tuple(tensor.shape)}"
+        )
+    if not torch.isfinite(tensor).all():
+        raise ValueError(f"{name} contains non-finite values")
+    return tensor.contiguous()
+
+
+def _pose_output_tensor(output: Any) -> Any:
+    if isinstance(output, Mapping):
+        if "pose" not in output:
+            raise ValueError("PoseNet output mapping must contain key 'pose'")
+        return _tensor_from_model_output(output["pose"], key="pose")
+    return _tensor_from_model_output(output, key="pose")
+
+
+def _tensor_from_model_output(output: Any, *, key: str) -> Any:
+    import torch
+
+    if isinstance(output, Mapping):
+        if key in output:
+            output = output[key]
+        elif len(output) == 1:
+            output = next(iter(output.values()))
+        else:
+            raise ValueError(f"model output mapping does not contain key {key!r}")
+    tensor = output if isinstance(output, torch.Tensor) else torch.as_tensor(output)
+    if not torch.isfinite(tensor).all():
+        raise ValueError(f"model output {key!r} contains non-finite values")
+    return tensor
+
+
+def _torch_to_numpy(tensor: Any) -> Any:
+    return tensor.detach().cpu().numpy().copy()
+
+
 __all__ = [
     "build_pact_mlx_primitive_tensors_from_archive_packet",
+    "build_snerv_scorer_deltas_from_surface_metrics",
     "build_snerv_source_forward_proof_from_archive_packet",
+    "build_torch_scorer_source_forward_surface",
 ]

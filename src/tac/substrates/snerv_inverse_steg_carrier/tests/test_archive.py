@@ -13,7 +13,9 @@ import pytest
 
 from tac.analysis.snerv_source_forward_producer import (
     build_pact_mlx_primitive_tensors_from_archive_packet,
+    build_snerv_scorer_deltas_from_surface_metrics,
     build_snerv_source_forward_proof_from_archive_packet,
+    build_torch_scorer_source_forward_surface,
 )
 from tac.analysis.snerv_source_forward_proof import (
     build_snerv_payload_bitflip_falsification,
@@ -1359,6 +1361,87 @@ def test_source_forward_producer_can_capture_pact_mlx_surface_from_archive() -> 
     assert row["passed"] is False
     assert "source_forward_tensor_missing:official_torch:mfu_in" in row["blockers"]
     assert "source_forward_tensor_missing:pact_mlx:segnet_logits" in row["blockers"]
+
+
+def test_torch_scorer_surface_builder_captures_tensors_and_exact_metrics() -> None:
+    torch = pytest.importorskip("torch")
+    candidate = np.zeros((1, 2, 3, 4, 4), dtype=np.float32)
+    reference = np.zeros((1, 2, 3, 4, 4), dtype=np.float32)
+    candidate[:, :, 0] = 255.0
+
+    surface = build_torch_scorer_source_forward_surface(
+        candidate_pairs_nchw255=candidate,
+        reference_pairs_nchw255=reference,
+        posenet=_TinyPoseNet(torch),
+        segnet=_TinySegNet(torch),
+    )
+    deltas = build_snerv_scorer_deltas_from_surface_metrics(
+        dict.fromkeys(
+            (
+                "official_torch",
+                "pact_mlx",
+                "archive_parseback",
+                "numpy_receiver",
+            ),
+            surface["metrics"],
+        ),
+        score_surface="archive_parseback",
+    )
+
+    assert {
+        "segnet_input",
+        "posenet_input",
+        "segnet_logits",
+        "segnet_argmax",
+        "posenet_output",
+    }.issubset(surface["tensors"])
+    assert surface["metrics"]["d_seg"] == 1.0
+    assert surface["metrics"]["d_pose"] > 0.0
+    assert deltas["d_seg"] == surface["metrics"]["d_seg"]
+    assert deltas["d_pose"] == surface["metrics"]["d_pose"]
+    assert deltas["delta_score_nonrate"] == 0.0
+    assert set(deltas["by_surface"]) == {
+        "official_torch",
+        "pact_mlx",
+        "archive_parseback",
+        "numpy_receiver",
+    }
+
+
+class _TinyPoseNet:
+    def __init__(self, torch_module):
+        self._torch = torch_module
+
+    def to(self, _device):
+        return self
+
+    def eval(self):
+        return self
+
+    def preprocess_input(self, x):
+        return x / 255.0
+
+    def __call__(self, x):
+        mean = x.mean(dim=(1, 2, 3, 4), keepdim=False).reshape((-1, 1))
+        return {"pose": mean.repeat(1, 6)}
+
+
+class _TinySegNet:
+    def __init__(self, torch_module):
+        self._torch = torch_module
+
+    def to(self, _device):
+        return self
+
+    def eval(self):
+        return self
+
+    def preprocess_input(self, x):
+        return x[:, -1]
+
+    def __call__(self, x):
+        red = x[:, 0]
+        return self._torch.stack((255.0 - red, red), dim=1)
 
 
 def test_official_mfu_hfr_tub_archive_frames_ignore_dummy_lf_sections() -> None:
