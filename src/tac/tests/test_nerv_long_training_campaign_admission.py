@@ -83,6 +83,9 @@ def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
     assert (
         output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl"
     ).as_posix() in artifact_paths
+    assert (
+        output_dir / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json"
+    ).as_posix() in artifact_paths
     json_postcondition_paths = {
         condition["path"]
         for condition in selected["steps"][0]["postconditions"]

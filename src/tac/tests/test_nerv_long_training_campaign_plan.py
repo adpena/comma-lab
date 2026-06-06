@@ -476,6 +476,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         path.endswith("hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl")
         for path in hi_step["telemetry"]["artifact_paths"]
     )
+    assert any(
+        path.endswith("hi_nerv_mlx_training/nerv_crux_trace_rows.json")
+        for path in hi_step["telemetry"]["artifact_paths"]
+    )
     assert "--planner-row-id" in hi_rows[0]["command_argv"]
     assert hi_rows[0]["command_argv"][hi_rows[0]["command_argv"].index("--planner-row-id") + 1] == hi_rows[0]["row_id"]
     assert hi_step["resources"]["kind"] == "local_mlx"

@@ -3605,6 +3605,7 @@ def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
             [
                 (output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl").as_posix(),
                 (output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl").as_posix(),
+                (output_dir / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json").as_posix(),
             ]
         )
     elif str(family) == "snerv":
@@ -3632,6 +3633,7 @@ def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
                     / "long_training"
                     / "telemetry.jsonl"
                 ).as_posix(),
+                (output_dir / "snerv_mlx_training" / "nerv_crux_trace_rows.json").as_posix(),
             ]
         )
     return artifacts

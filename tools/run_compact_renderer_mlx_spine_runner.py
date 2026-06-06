@@ -73,6 +73,9 @@ from tac.analysis.nerv_candidate_curriculum import (  # noqa: E402
 from tac.analysis.nerv_candidate_feedback import (  # noqa: E402
     write_nerv_candidate_feedback_files,
 )
+from tac.analysis.nerv_crux_trace import (  # noqa: E402
+    write_trace_rows_for_training_artifact,
+)
 from tac.analysis.nerv_decoder_weight_waterfill import (  # noqa: E402
     DEFAULT_ACTION_BITS as NERV_DECODER_WEIGHT_WATERFILL_ACTION_BITS,
 )
@@ -12468,6 +12471,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     short_scorer_smoke_readiness_summary = (
         hinerv_short_scorer_smoke_readiness_summary(short_scorer_smoke_readiness)
     )
+    nerv_crux_trace = _write_hi_nerv_runner_crux_trace(
+        artifact_dict=artifact_dict,
+        output_dir=training_dir,
+        require_direct_live_posenet=True,
+        require_direct_live_segnet=True,
+    )
     trained_archive_byte_oracle = _write_hi_nerv_trained_archive_byte_oracle(
         output_dir=out,
         artifact_dict=artifact_dict,
@@ -12620,6 +12629,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers.extend(archive_codec_custody.get("blockers") or [])
     blockers.extend(trained_archive_byte_oracle.get("blockers") or [])
     blockers.extend(decoder_weight_waterfill_from_trained_ladder.get("blockers") or [])
+    blockers.extend(nerv_crux_trace.get("blockers") or [])
+    if not bool(nerv_crux_trace.get("written")):
+        blockers.append("hi_nerv_crux_trace_missing")
     blockers.extend(short_scorer_smoke_readiness.get("actionable_blockers") or [])
     if not bool(short_scorer_smoke_readiness.get("ready_for_long_run")):
         blockers.append("hi_nerv_short_scorer_smoke_not_ready_for_long_run")
@@ -13109,6 +13121,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "short_scorer_teacher_smoke_readiness": (
                     short_scorer_smoke_readiness_summary
                 ),
+                "nerv_crux_trace": nerv_crux_trace,
                 "train_receiver_class_escape_contract": (
                     train_receiver_class_escape_contract
                 ),
@@ -15956,6 +15969,83 @@ def _attach_hi_nerv_runner_archive_resolution(
         json.dumps(artifact, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _write_hi_nerv_runner_crux_trace(
+    *,
+    artifact_dict: dict[str, Any],
+    output_dir: str | Path,
+    require_direct_live_posenet: bool = True,
+    require_direct_live_segnet: bool = True,
+) -> dict[str, Any]:
+    """Emit and attach the scorer-space crux trace for the training artifact."""
+
+    training_dir = Path(output_dir).expanduser().resolve(strict=False)
+    artifact_path = training_dir / "training_artifact.json"
+    trace_path = training_dir / "nerv_crux_trace_rows.json"
+    if not artifact_path.is_file():
+        return {
+            "schema": "hi_nerv_runner_crux_trace_attachment.v1",
+            "written": False,
+            "path": trace_path.as_posix(),
+            "source_path": artifact_path.as_posix(),
+            "blockers": ["hi_nerv_training_artifact_missing_for_crux_trace"],
+            **FALSE_AUTHORITY,
+        }
+    try:
+        trace = write_trace_rows_for_training_artifact(
+            artifact_path,
+            output_path=trace_path,
+            require_direct_live_posenet=bool(require_direct_live_posenet),
+            require_direct_live_segnet=bool(require_direct_live_segnet),
+        )
+    except Exception as exc:  # pragma: no cover - defensive runner custody path
+        return {
+            "schema": "hi_nerv_runner_crux_trace_attachment.v1",
+            "written": False,
+            "path": trace_path.as_posix(),
+            "source_path": artifact_path.as_posix(),
+            "error": f"{type(exc).__name__}:{exc}",
+            "blockers": ["hi_nerv_crux_trace_write_failed"],
+            **FALSE_AUTHORITY,
+        }
+    trace_attachment = {
+        "schema": "hi_nerv_runner_crux_trace_attachment.v1",
+        "written": True,
+        **trace,
+        **FALSE_AUTHORITY,
+    }
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["nerv_crux_trace"] = dict(trace_attachment)
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["nerv_crux_trace"] = {
+                "path": trace_attachment["path"],
+                "sha256": trace_attachment["sha256"],
+                "row_count": trace_attachment["row_count"],
+                "blockers": list(trace_attachment.get("blockers") or []),
+            }
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return trace_attachment
+    artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    artifact_metadata["nerv_crux_trace"] = dict(trace_attachment)
+    score_training = artifact_metadata.get("score_aware_training")
+    if isinstance(score_training, dict):
+        score_training["nerv_crux_trace"] = {
+            "path": trace_attachment["path"],
+            "sha256": trace_attachment["sha256"],
+            "row_count": trace_attachment["row_count"],
+            "blockers": list(trace_attachment.get("blockers") or []),
+        }
+    artifact["substrate_artifact_metadata"] = artifact_metadata
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return trace_attachment
 
 
 def _hi_nerv_archive_codec_custody(

@@ -1089,6 +1089,59 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     ] is False
 
 
+def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "hi_nerv_mlx_training"
+    training_dir.mkdir()
+    artifact_path = training_dir / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "archive_bytes": 178_000,
+                "per_epoch_metrics": [
+                    {
+                        "loss_components": {
+                            "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                            "loss_part_pose_direct_live_raw_mse": 0.0025,
+                        }
+                    }
+                ],
+                "substrate_artifact_metadata": {
+                    "score_aware_training": {"schema": "unit"}
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_dict = {
+        "substrate_artifact_metadata": {
+            "score_aware_training": {"schema": "unit"}
+        }
+    }
+
+    report = runner_mod._write_hi_nerv_runner_crux_trace(
+        artifact_dict=artifact_dict,
+        output_dir=training_dir,
+    )
+
+    trace_path = training_dir / "nerv_crux_trace_rows.json"
+    assert report["written"] is True
+    assert report["path"] == trace_path.as_posix()
+    assert report["blockers"] == []
+    assert trace_path.is_file()
+    persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
+    trace_metadata = persisted["substrate_artifact_metadata"]["nerv_crux_trace"]
+    assert trace_metadata["path"] == trace_path.as_posix()
+    assert trace_metadata["row_count"] > 0
+    assert (
+        artifact_dict["substrate_artifact_metadata"]["score_aware_training"][
+            "nerv_crux_trace"
+        ]["path"]
+        == trace_path.as_posix()
+    )
+
+
 def test_hinerv_runner_archive_resolution_uses_emitted_overcap_ema_archives(
     tmp_path: Path,
 ) -> None:
@@ -1215,6 +1268,7 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
                     "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
                     "loss_part_segnet_direct_live_target_mass_floor_loss": 0.05,
                     "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 0.04,
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 0.0,
                     "loss_part_scorer_input_contrast_floor": 0.01,
                     "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
                     "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
@@ -1225,6 +1279,10 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
                     "loss_part_posenet_temporal_signal_floor": 0.03,
                     "loss_part_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
                     "loss_part_posenet_temporal_signal_floor_mean_abs_ratio": 0.72,
+                    "loss_part_pose_score_term": 0.2,
+                    "loss_part_pose_distill_raw_mse": 0.004,
+                    "loss_part_pose_score_marginal_wrt_raw_mse": 25.0,
+                    "loss_part_pose_distill_score_marginal_wrt_raw_mse": 25.0,
                     "dual_ascent_active": 1.0,
                     "dual_ascent_constraint_count": 4.0,
                     "dual_ascent_metric__hi_nerv_segnet_direct_live_distill": 0.12,

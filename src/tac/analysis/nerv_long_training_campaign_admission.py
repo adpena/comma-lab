@@ -602,6 +602,7 @@ def _observable_artifact_paths(command: Sequence[str], *, family: str) -> list[s
             [
                 out_dir / "hi_nerv_mlx_training" / "telemetry.jsonl",
                 out_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+                out_dir / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json",
             ]
         )
     elif family == "snerv":
@@ -609,6 +610,7 @@ def _observable_artifact_paths(command: Sequence[str], *, family: str) -> list[s
             [
                 out_dir / "snerv_mlx_training" / "telemetry.jsonl",
                 out_dir / "snerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+                out_dir / "snerv_mlx_training" / "nerv_crux_trace_rows.json",
             ]
         )
     out: list[str] = []
@@ -627,8 +629,10 @@ def _existing_output_artifact_paths(output_dir: Path) -> list[Path]:
         output_dir / "compact_renderer_mlx_spine_runner_startup.json",
         output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl",
         output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+        output_dir / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json",
         output_dir / "snerv_mlx_training" / "telemetry.jsonl",
         output_dir / "snerv_mlx_training" / "local_mlx_prefilter_progress.jsonl",
+        output_dir / "snerv_mlx_training" / "nerv_crux_trace_rows.json",
         output_dir / "nerv_candidate_byte_feedback_row.json",
         output_dir / "nerv_candidate_byte_feedback.jsonl",
     )
