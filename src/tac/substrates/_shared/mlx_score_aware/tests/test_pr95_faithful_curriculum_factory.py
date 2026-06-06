@@ -1087,8 +1087,8 @@ def test_pr95_stage_qat_uses_dual_adjusted_extra_loss_weights_NO_FAKE() -> None:
 
 
 @requires_mlx
-def test_pr95_stage_can_force_weighted_qat_for_short_admission_proof() -> None:
-    """Short bounded proofs can verify weighted byte QAT before PR95 stage 4."""
+def test_pr95_stage_does_not_force_qat_without_stage_proof_marker() -> None:
+    """A constructor request alone must not break PR95's early distortion stages."""
     import mlx.core as mx
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
@@ -1120,10 +1120,79 @@ def test_pr95_stage_can_force_weighted_qat_for_short_admission_proof() -> None:
     )
     mx.eval(total, *parts.values())
 
+    assert "coder_qat_quant_residual" not in parts
+    assert float(parts["pr95_stage_forced_extra_qat_requested"].item()) == pytest.approx(
+        1.0
+    )
+    assert float(parts["pr95_stage_forced_extra_qat_active"].item()) == pytest.approx(
+        0.0
+    )
+    assert metrics["loss_part_pr95_stage_forced_extra_qat_requested"] == pytest.approx(
+        1.0
+    )
+    assert metrics["loss_part_pr95_stage_forced_extra_qat_active"] == pytest.approx(0.0)
+    assert "loss_part_coder_qat_quant_residual" not in metrics
+
+
+@requires_mlx
+def test_pr95_stage_can_force_weighted_qat_for_short_admission_proof() -> None:
+    """Short bounded proofs can verify weighted byte QAT before PR95 stage 4."""
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import (
+        PR95_FORCE_WEIGHTED_EXTRA_QAT_ADMISSION_PROOF_WEIGHT,
+        MlxScoreAwareAdapter,
+    )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.extra_loss_terms = lambda _model, _idx: {
+        "coder_qat_quant_residual": mx.array(3.0, dtype=mx.float32)
+    }
+    bundle.extra_loss_weights = {"coder_qat_quant_residual": 0.5}
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+        pr95_force_weighted_extra_qat_when_stage_inactive=True,
+    )
+    stage_1 = adapter._pr95_curriculum_factory.current_stage_verdict(0)
+    assert stage_1.qat_active is False
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+    loss_weights = {
+        PR95_FORCE_WEIGHTED_EXTRA_QAT_ADMISSION_PROOF_WEIGHT: 1.0,
+    }
+
+    total, parts = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_1,
+        model=adapter.model,
+        loss_weights=loss_weights,
+    )
+    metrics = adapter._pr95_stage_loss_part_metrics(
+        batch,
+        stage_verdict=stage_1,
+        loss_weights=loss_weights,
+    )
+    mx.eval(total, *parts.values())
+
     assert "coder_qat_quant_residual" in parts
+    assert float(parts["pr95_stage_forced_extra_qat_requested"].item()) == pytest.approx(
+        1.0
+    )
+    assert float(
+        parts["pr95_stage_forced_extra_qat_stage_enabled"].item()
+    ) == pytest.approx(1.0)
     assert float(parts["pr95_stage_forced_extra_qat_active"].item()) == pytest.approx(
         1.0
     )
+    assert metrics["loss_part_pr95_stage_forced_extra_qat_requested"] == pytest.approx(
+        1.0
+    )
+    assert metrics[
+        "loss_part_pr95_stage_forced_extra_qat_stage_enabled"
+    ] == pytest.approx(1.0)
+    assert metrics["loss_part_pr95_stage_forced_extra_qat_active"] == pytest.approx(1.0)
     assert metrics["loss_part_coder_qat_quant_residual"] == pytest.approx(3.0)
     assert metrics["loss_part_weighted_coder_qat_quant_residual"] == pytest.approx(
         1.5

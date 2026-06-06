@@ -49,6 +49,10 @@ from tac.training.long_training_canonical import (
     CANONICAL_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
 )
 
+PR95_FORCE_WEIGHTED_EXTRA_QAT_ADMISSION_PROOF_WEIGHT = (
+    "pr95_force_weighted_extra_qat_admission_proof"
+)
+
 if TYPE_CHECKING:
     from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
 
@@ -930,11 +934,13 @@ class MlxScoreAwareAdapter:
             pr95_force_weighted_extra_qat_when_stage_inactive: default-off
                 bounded-proof escape hatch for non-PR95 archive-section byte
                 controls. When true and ``RendererBundle.extra_loss_weights``
-                contains positive weights, the PR95 stage loss evaluates those
-                extra QAT terms even in source stages whose native PR95
-                ``qat_active`` flag is false. This preserves PR95 reproduction
-                semantics by default while letting short SNeRV admission runs
-                prove requested byte actuators before thousands of epochs pass.
+                contains positive weights, the active curriculum stage may
+                evaluate those extra QAT terms even in source stages whose
+                native PR95 ``qat_active`` flag is false. The stage must also
+                set ``pr95_force_weighted_extra_qat_admission_proof`` > 0 in
+                ``loss_weights``; this preserves PR95 long-run distortion
+                semantics by default while letting short bounded admission
+                runs prove requested byte actuators deliberately.
             grad_clip_max_norm: Wave N+11 stabilizer. If not None and > 0,
                 applies ``mlx.optimizers.clip_grad_norm(grads, max_norm)``
                 after value_and_grad but before optimizer.update. Mamba-2
@@ -5057,7 +5063,7 @@ class MlxScoreAwareAdapter:
             pose_pred = None
             pose_target = None
 
-        force_weighted_extra_qat = bool(
+        force_weighted_extra_qat_requested = bool(
             self._pr95_force_weighted_extra_qat_when_stage_inactive
             and self.bundle.extra_loss_terms is not None
             and any(
@@ -5065,6 +5071,16 @@ class MlxScoreAwareAdapter:
                 for value in dict(self.bundle.extra_loss_weights or {}).values()
             )
         )
+        force_weighted_extra_qat_stage_enabled = bool(
+            force_weighted_extra_qat_requested
+            and component_loss_weight(
+                loss_weights,
+                PR95_FORCE_WEIGHTED_EXTRA_QAT_ADMISSION_PROOF_WEIGHT,
+                default=0.0,
+            )
+            > 0.0
+        )
+        force_weighted_extra_qat = bool(force_weighted_extra_qat_stage_enabled)
         extra_qat_total, extra_qat_parts = self._extra_loss_terms_and_weighted_total(
             model,
             batch,
@@ -5352,6 +5368,14 @@ class MlxScoreAwareAdapter:
             ),
             "pr95_stage_forced_extra_qat_active": mx.array(
                 1.0 if force_weighted_extra_qat else 0.0,
+                dtype=mx.float32,
+            ),
+            "pr95_stage_forced_extra_qat_requested": mx.array(
+                1.0 if force_weighted_extra_qat_requested else 0.0,
+                dtype=mx.float32,
+            ),
+            "pr95_stage_forced_extra_qat_stage_enabled": mx.array(
+                1.0 if force_weighted_extra_qat_stage_enabled else 0.0,
                 dtype=mx.float32,
             ),
         }
