@@ -1058,6 +1058,240 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "human_visual_fidelity_objective": False,
         }
 
+    def build_pair_local_actuator_smoke_from_targets(
+        self,
+        target_rgb_0: Any,
+        target_rgb_1: Any,
+        *,
+        pair_indices: Any,
+        learning_rate: float = 1.0e-2,
+    ) -> dict[str, Any]:
+        """Probe true per-pair latent controllability without writing artifacts."""
+
+        _require_mlx()
+        if tree_flatten is None:
+            raise RuntimeError("MLX tree_flatten unavailable despite successful MLX import")
+        if tree_unflatten is None:
+            raise RuntimeError("MLX tree_unflatten unavailable despite successful MLX import")
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim != 1:
+            raise ValueError(f"pair_indices must be 1-D; got shape {tuple(idx.shape)}")
+        pair_count = int(idx.shape[0])
+        if pair_count <= 0:
+            raise ValueError("pair_indices must contain at least one pair")
+        target0 = mx.array(target_rgb_0, dtype=mx.float32)  # type: ignore[union-attr]
+        target1 = mx.array(target_rgb_1, dtype=mx.float32)  # type: ignore[union-attr]
+        if target0.ndim != 4 or target1.ndim != 4 or int(target0.shape[-1]) != 3 or int(target1.shape[-1]) != 3:
+            raise ValueError("target_rgb_0 and target_rgb_1 must be NHWC RGB tensors")
+        if int(target0.shape[0]) != pair_count or int(target1.shape[0]) != pair_count:
+            raise ValueError("target RGB batch dimension must match pair_indices")
+        target_index = int(np.asarray(idx[0], dtype=np.int32).reshape(-1)[0])
+        if target_index < 0 or target_index >= int(self.latents_fine.shape[0]):
+            raise ValueError(f"target pair index out of range: {target_index}")
+        non_target_index = next(
+            (
+                int(value)
+                for value in range(int(self.latents_fine.shape[0]))
+                if int(value) != target_index
+            ),
+            None,
+        )
+        step_lr = float(learning_rate)
+        if not math.isfinite(step_lr) or step_lr <= 0.0:
+            raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
+        target_pair = mx.array([target_index], dtype=mx.int32)  # type: ignore[union-attr]
+        target0_one = target0[:1]
+        target1_one = target1[:1]
+
+        def _predict_nhwc01(pair_ids: Any) -> tuple[Any, Any]:
+            pair01 = self(pair_ids) / 255.0
+            return (
+                mx.transpose(pair01[:, 0], (0, 2, 3, 1)),  # type: ignore[union-attr]
+                mx.transpose(pair01[:, 1], (0, 2, 3, 1)),  # type: ignore[union-attr]
+            )
+
+        before_target0, before_target1 = _predict_nhwc01(target_pair)
+        before_target0 = mx.stop_gradient(mx.array(before_target0))  # type: ignore[union-attr]
+        before_target1 = mx.stop_gradient(mx.array(before_target1))  # type: ignore[union-attr]
+        mx.eval(before_target0, before_target1)  # type: ignore[union-attr]
+        if non_target_index is None:
+            before_non_target0 = before_non_target1 = None
+            non_target_pair = None
+        else:
+            non_target_pair = mx.array([non_target_index], dtype=mx.int32)  # type: ignore[union-attr]
+            before_non_target0, before_non_target1 = _predict_nhwc01(non_target_pair)
+            before_non_target0 = mx.stop_gradient(mx.array(before_non_target0))  # type: ignore[union-attr]
+            before_non_target1 = mx.stop_gradient(mx.array(before_non_target1))  # type: ignore[union-attr]
+            mx.eval(before_non_target0, before_non_target1)  # type: ignore[union-attr]
+
+        def _loss_fn(model_obj: Any) -> Any:
+            pair01 = model_obj(target_pair) / 255.0
+            pred0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
+            pred1 = mx.transpose(pair01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
+            return 0.5 * (
+                mx.mean((pred0 - target0_one) * (pred0 - target0_one))  # type: ignore[union-attr]
+                + mx.mean((pred1 - target1_one) * (pred1 - target1_one))  # type: ignore[union-attr]
+            )
+
+        original_latents_fine = mx.array(self.latents_fine)  # type: ignore[union-attr]
+        loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
+        loss, grads = loss_and_grad_fn(self)
+        mx.eval(loss)  # type: ignore[union-attr]
+        grad_fine = None
+        for raw_name, grad in tree_flatten(grads):  # type: ignore[operator]
+            name = ".".join(str(part) for part in raw_name) if isinstance(raw_name, (tuple, list)) else str(raw_name)
+            if name == "latents_fine":
+                grad_fine = grad
+                break
+        if grad_fine is None:
+            return {
+                "schema": "hinerv_pair_local_actuator_smoke.v1",
+                "family": "hi_nerv",
+                "execution_attempted": True,
+                "execution_completed": False,
+                "blockers": ["hinerv_pair_local_latents_fine_gradient_missing"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        grad_np = np.asarray(grad_fine, dtype=np.float32)
+        original_np = np.asarray(original_latents_fine, dtype=np.float32)
+        grad_row = np.ascontiguousarray(grad_np[target_index])
+        grad_norm = float(np.linalg.norm(grad_row))
+        updated_np = np.array(original_np, copy=True)
+        updated_np[target_index] = updated_np[target_index] - step_lr * grad_row
+        updated_row = np.ascontiguousarray(updated_np[target_index])
+        digest = hashlib.sha256()
+        digest.update(b"latents_fine")
+        digest.update(np.asarray([target_index], dtype=np.int64).tobytes())
+        digest.update(str(updated_row.dtype).encode("utf-8"))
+        digest.update(np.asarray(updated_row.shape, dtype=np.int64).tobytes())
+        digest.update(updated_row.tobytes())
+        adapter_sha256 = digest.hexdigest()
+        adapter_bytes = int(updated_row.nbytes)
+        try:
+            self.update({"latents_fine": mx.array(updated_np)})  # type: ignore[union-attr]
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+            after_target0, after_target1 = _predict_nhwc01(target_pair)
+            selected_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
+                0.5
+                * (
+                    mx.mean((after_target0 - before_target0) ** 2)  # type: ignore[union-attr]
+                    + mx.mean((after_target1 - before_target1) ** 2)  # type: ignore[union-attr]
+                )
+            )
+            selected_delta_max_abs_tensor = mx.max(  # type: ignore[union-attr]
+                mx.concatenate(  # type: ignore[union-attr]
+                    [
+                        mx.reshape(mx.abs(after_target0 - before_target0), (-1,)),  # type: ignore[union-attr]
+                        mx.reshape(mx.abs(after_target1 - before_target1), (-1,)),  # type: ignore[union-attr]
+                    ]
+                )
+            )
+            if non_target_pair is None:
+                non_target_delta_l2_tensor = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            else:
+                after_non_target0, after_non_target1 = _predict_nhwc01(non_target_pair)
+                non_target_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
+                    0.5
+                    * (
+                        mx.mean((after_non_target0 - before_non_target0) ** 2)  # type: ignore[operator,union-attr]
+                        + mx.mean((after_non_target1 - before_non_target1) ** 2)  # type: ignore[operator,union-attr]
+                    )
+                )
+            mx.eval(
+                selected_delta_l2_tensor,
+                selected_delta_max_abs_tensor,
+                non_target_delta_l2_tensor,
+            )  # type: ignore[union-attr]
+            selected_delta_l2 = float(selected_delta_l2_tensor.item())
+            selected_delta_max_abs = float(selected_delta_max_abs_tensor.item())
+            non_target_delta_l2 = float(non_target_delta_l2_tensor.item())
+        finally:
+            self.update({"latents_fine": original_latents_fine})
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+        value_per_byte = selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
+        blockers: list[str] = []
+        if not math.isfinite(float(loss.item())):
+            blockers.append("hinerv_pair_local_loss_not_finite")
+        if not math.isfinite(grad_norm) or grad_norm <= 0.0:
+            blockers.append("hinerv_pair_local_grad_norm_not_positive")
+        if not math.isfinite(selected_delta_l2) or selected_delta_l2 <= 0.0:
+            blockers.append("hinerv_pair_local_output_delta_not_positive")
+        pair_locality_verified = non_target_delta_l2 <= 1.0e-12
+        if not pair_locality_verified:
+            blockers.append("hinerv_pair_local_non_target_pair_delta_detected")
+        section_rows = [
+            {
+                "section": "pair_local_latents_fine",
+                "bytes": adapter_bytes,
+                "grad_norm": grad_norm,
+                "output_delta_l2": selected_delta_l2,
+                "value_per_byte": value_per_byte,
+                "score_claim": False,
+            }
+        ]
+        summary = {
+            "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+            "family": "hi_nerv",
+            "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+            "pair_local_adapter_bytes": adapter_bytes,
+            "pair_local_adapter_sha256": adapter_sha256,
+            "pair_local_grad_norm": grad_norm,
+            "pair_local_grad_norm_by_group": {"latents_fine": grad_norm},
+            "pair_local_output_delta_l2": selected_delta_l2,
+            "section_value_per_byte_rows": section_rows,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        return {
+            "schema": "hinerv_pair_local_actuator_smoke.v1",
+            "family": "hi_nerv",
+            "axis_tag": MLX_EVIDENCE_GRADE,
+            "evidence_grade": "macOS-MLX-research-signal",
+            "execution_attempted": True,
+            "execution_completed": not blockers,
+            "pair_indices": [target_index],
+            "pair_index_semantics": "source_non_overlapping_seq2_pair_index",
+            "actuator": {
+                "kind": "pair_local_latent_row",
+                "tensor_name": "latents_fine",
+                "row_indices": [target_index],
+                "adapter_bytes": adapter_bytes,
+                "adapter_sha256": adapter_sha256,
+                "archive_charged_decoder_tensors": ["latents_fine"],
+                "runtime_sidecar_bytes": 0,
+            },
+            "gradient": {
+                "value_and_grad_checked": True,
+                "loss_finite": math.isfinite(float(loss.item())),
+                "grad_finite": math.isfinite(grad_norm),
+                "pair_local_grad_norm": grad_norm,
+                "pair_local_grad_norm_by_group": {"latents_fine": grad_norm},
+                "updated_tensor_names": ["latents_fine"],
+            },
+            "output_delta": {
+                "pair_local_output_delta_l2": selected_delta_l2,
+                "pair_local_output_delta_max_abs": selected_delta_max_abs,
+                "non_target_pair_output_delta_l2_max": non_target_delta_l2,
+                "pair_locality_verified": pair_locality_verified,
+            },
+            "pair_local_adapter_bytes": adapter_bytes,
+            "pair_local_adapter_sha256": adapter_sha256,
+            "pair_local_grad_norm": grad_norm,
+            "pair_local_output_delta_l2": selected_delta_l2,
+            "section_value_per_byte_rows": section_rows,
+            "blockers": blockers,
+            "summary_for_pr95_guard": summary if not blockers else None,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
     def fit_scorer_domain_bootstrap_from_targets(
         self,
         target_rgb_0: Any,
@@ -1306,23 +1540,6 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 or name.startswith("fine_injector.")
                 or name.startswith("head_rgb_1.")
             )
-
-        def _bootstrap_parameter_byte_summary() -> tuple[int, str, list[str]]:
-            digest = hashlib.sha256()
-            total_bytes = 0
-            names: list[str] = []
-            for raw_name, leaf in tree_flatten(self.parameters()):  # type: ignore[operator]
-                if leaf is None or not _bootstrap_update_name_allowed(raw_name):
-                    continue
-                name = _flat_param_name(raw_name)
-                arr = np.ascontiguousarray(np.asarray(leaf))
-                digest.update(name.encode("utf-8"))
-                digest.update(str(arr.dtype).encode("utf-8"))
-                digest.update(np.asarray(arr.shape, dtype=np.int64).tobytes())
-                digest.update(arr.tobytes())
-                total_bytes += int(arr.nbytes)
-                names.append(name)
-            return total_bytes, digest.hexdigest(), sorted(names)
 
         segnet_margin_metadata: dict[str, Any] = {
             "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
@@ -1872,10 +2089,6 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             )
             return out
 
-        before_pred0_snapshot, before_pred1_snapshot = _predict_pair01(self)
-        before_pred0_snapshot = mx.stop_gradient(mx.array(before_pred0_snapshot))  # type: ignore[union-attr]
-        before_pred1_snapshot = mx.stop_gradient(mx.array(before_pred1_snapshot))  # type: ignore[union-attr]
-        mx.eval(before_pred0_snapshot, before_pred1_snapshot)  # type: ignore[union-attr]
         before = _scalar_metrics(self)
         loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
         if tree_unflatten is None:
@@ -2032,72 +2245,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 if applied_tensor_count == 0:
                     break
         after = _scalar_metrics(self)
-        after_pred0, after_pred1 = _predict_pair01(self)
-        output_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
-            0.5
-            * (
-                mx.mean((after_pred0 - before_pred0_snapshot) ** 2)  # type: ignore[union-attr]
-                + mx.mean((after_pred1 - before_pred1_snapshot) ** 2)  # type: ignore[union-attr]
-            )
+        pair_local_smoke = self.build_pair_local_actuator_smoke_from_targets(
+            target0,
+            target1,
+            pair_indices=idx,
+            learning_rate=min(lr, 1.0e-2),
         )
-        mx.eval(output_delta_l2_tensor)  # type: ignore[union-attr]
-        pair_local_output_delta_l2 = float(output_delta_l2_tensor.item())
-        finite_grad_norms = [
-            float(value)
-            for value in grad_norm_history
-            if math.isfinite(float(value)) and float(value) > 0.0
-        ]
-        pair_local_grad_norm = max(finite_grad_norms) if finite_grad_norms else None
-        (
-            pair_local_adapter_bytes,
-            pair_local_adapter_sha256,
-            pair_local_adapter_tensor_names,
-        ) = _bootstrap_parameter_byte_summary()
-        pair_local_value_per_byte = (
-            pair_local_output_delta_l2 / float(pair_local_adapter_bytes)
-            if pair_local_adapter_bytes > 0
-            else 0.0
+        pr95_actuator_execution_evidence = (
+            pair_local_smoke.get("summary_for_pr95_guard")
+            if isinstance(pair_local_smoke, Mapping)
+            else None
         )
-        section_value_per_byte_rows = [
-            {
-                "section": "hi_nerv_pair_local_bootstrap_allowlist",
-                "bytes": int(pair_local_adapter_bytes),
-                "score_value": pair_local_output_delta_l2,
-                "value_per_byte": pair_local_value_per_byte,
-            }
-        ]
-        pair_local_smoke = {
-            "schema": "hinerv_pair_local_actuator_smoke.v1",
-            "family": "hi_nerv",
-            "source": "hi_nerv_scorer_domain_bootstrap",
-            "bootstrap_update_scope": bootstrap_update_scope,
-            "pair_count": int(idx.shape[0]),
-            "pair_local_adapter_bytes": int(pair_local_adapter_bytes),
-            "pair_local_adapter_sha256": pair_local_adapter_sha256,
-            "pair_local_adapter_tensor_names": pair_local_adapter_tensor_names,
-            "pair_local_grad_norm": pair_local_grad_norm,
-            "pair_local_output_delta_l2": pair_local_output_delta_l2,
-            "section_value_per_byte_rows": section_value_per_byte_rows,
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
-        }
-        pr95_actuator_execution_evidence = {
-            "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
-            "family": "hi_nerv",
-            "source": "hi_nerv_scorer_domain_bootstrap",
-            "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
-            "pair_local_adapter_bytes": int(pair_local_adapter_bytes),
-            "pair_local_adapter_sha256": pair_local_adapter_sha256,
-            "pair_local_grad_norm": pair_local_grad_norm,
-            "pair_local_output_delta_l2": pair_local_output_delta_l2,
-            "section_value_per_byte_rows": section_value_per_byte_rows,
-            "score_claim": False,
-            "promotion_eligible": False,
-            "rank_or_kill_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
-        }
 
         def _improvement(key: str) -> float:
             return float(before[key] - after[key])

@@ -307,6 +307,54 @@ def test_mlx_output_head_target_contrast_init_scales_archive_head_weights() -> N
 
 
 @skip_no_mlx
+def test_mlx_pair_local_actuator_smoke_is_latent_row_local() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(12)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    ramp = mx.reshape(
+        mx.linspace(0.05, 0.95, cfg.output_height * cfg.output_width),
+        (1, cfg.output_height, cfg.output_width, 1),
+    )
+    target0 = mx.tile(
+        mx.concatenate([ramp, 1.0 - ramp, 0.5 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    target1 = mx.tile(
+        mx.concatenate([1.0 - ramp, ramp, 0.25 + 0.5 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+
+    smoke = model.build_pair_local_actuator_smoke_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        learning_rate=1.0e-2,
+    )
+
+    assert smoke["schema"] == "hinerv_pair_local_actuator_smoke.v1"
+    assert smoke["execution_completed"] is True
+    assert smoke["actuator"]["kind"] == "pair_local_latent_row"
+    assert smoke["actuator"]["tensor_name"] == "latents_fine"
+    assert smoke["actuator"]["runtime_sidecar_bytes"] == 0
+    assert smoke["gradient"]["value_and_grad_checked"] is True
+    assert smoke["pair_local_adapter_bytes"] > 0
+    assert len(smoke["pair_local_adapter_sha256"]) == 64
+    assert smoke["pair_local_grad_norm"] > 0.0
+    assert smoke["pair_local_output_delta_l2"] > 0.0
+    assert smoke["output_delta"]["pair_locality_verified"] is True
+    assert smoke["output_delta"]["non_target_pair_output_delta_l2_max"] <= 1.0e-12
+    summary = smoke["summary_for_pr95_guard"]
+    assert summary["pair_local_smoke_schema"] == "hinerv_pair_local_actuator_smoke.v1"
+    assert summary["pair_local_adapter_sha256"] == smoke["pair_local_adapter_sha256"]
+    assert summary["section_value_per_byte_rows"][0]["value_per_byte"] > 0.0
+    assert summary["score_claim"] is False
+
+
+@skip_no_mlx
 def test_mlx_scorer_domain_bootstrap_reduces_rgb_yuv6_loss() -> None:
     import mlx.core as mx
 
@@ -513,32 +561,34 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     )
     smoke = payload["hinerv_pair_local_actuator_smoke"]
     assert smoke["schema"] == "hinerv_pair_local_actuator_smoke.v1"
+    assert smoke["execution_completed"] is True
+    assert smoke["actuator"]["kind"] == "pair_local_latent_row"
+    assert smoke["actuator"]["tensor_name"] == "latents_fine"
+    assert smoke["gradient"]["updated_tensor_names"] == ["latents_fine"]
     assert smoke["pair_local_adapter_bytes"] > 0
     assert len(smoke["pair_local_adapter_sha256"]) == 64
-    assert smoke["pair_local_output_delta_l2"] >= 0.0
+    assert smoke["pair_local_grad_norm"] > 0.0
+    assert smoke["pair_local_output_delta_l2"] > 0.0
+    assert smoke["output_delta"]["pair_locality_verified"] is True
+    assert smoke["output_delta"]["non_target_pair_output_delta_l2_max"] <= 1.0e-12
     assert smoke["section_value_per_byte_rows"][0]["bytes"] == (
         smoke["pair_local_adapter_bytes"]
     )
+    assert smoke["section_value_per_byte_rows"][0]["value_per_byte"] > 0.0
     execution = payload["pr95_scorer_atom_actuator_execution_evidence"]
     assert execution["schema"] == "pr95_scorer_atom_actuator_execution_evidence.v1"
+    assert execution["pair_local_smoke_schema"] == (
+        "hinerv_pair_local_actuator_smoke.v1"
+    )
     assert execution["pair_local_adapter_sha256"] == (
         smoke["pair_local_adapter_sha256"]
     )
     assert execution["score_claim"] is False
     assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]
     assert "head_rgb_0.*" not in payload["archive_charged_decoder_tensors"]
-    pair_local = payload["hinerv_pair_local_actuator_smoke"]
-    assert pair_local["schema"] == "hinerv_pair_local_actuator_smoke.v1"
-    assert pair_local["bootstrap_update_scope"] == payload["bootstrap_update_scope"]
-    assert pair_local["pair_local_adapter_bytes"] > 0
-    assert pair_local["score_claim"] is False
-    execution = payload["pr95_scorer_atom_actuator_execution_evidence"]
-    assert execution["pair_local_adapter_sha256"] == pair_local[
-        "pair_local_adapter_sha256"
-    ]
-    assert execution["section_value_per_byte_rows"][0]["bytes"] == pair_local[
-        "pair_local_adapter_bytes"
-    ]
+    assert execution["section_value_per_byte_rows"][0]["bytes"] == (
+        smoke["pair_local_adapter_bytes"]
+    )
     for name in payload["bootstrap_update_applied_tensor_names"]:
         assert (
             name == "latents_fine"

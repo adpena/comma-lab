@@ -428,6 +428,14 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
     assert "ema_archive_selection_enabled" in params, (
         "harness signature missing EMA archive selector kwarg; wire-in is FAKE if absent"
     )
+    assert "archive_selection_replay_required" in params, (
+        "harness signature missing archive parse-back selector kwarg; "
+        "PR95-style archive selection is FAKE if absent"
+    )
+    assert "archive_selection_replay_batch_size" in params, (
+        "harness signature missing archive parse-back batch-size kwarg; "
+        "receiver replay selection cannot be calibrated if absent"
+    )
     assert "checkpoint_selection_metric_key" in params, (
         "harness signature missing checkpoint metric selector kwarg; "
         "score-facing archive selection is FAKE if absent"
@@ -454,6 +462,8 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
     assert params["pr95_muon_policy"].default == "faithful_stage8_only"
     assert params["pr95_stage_source_weight_amplification_enabled"].default is False
     assert params["ema_archive_selection_enabled"].default is False
+    assert params["archive_selection_replay_required"].default is False
+    assert params["archive_selection_replay_batch_size"].default is None
     assert params["checkpoint_selection_metric_key"].default == "total"
     assert params["checkpoint_selection_metric_mode"].default == "min"
     assert params["checkpoint_selection_metric_required"].default is False
@@ -489,6 +499,34 @@ def test_harness_source_constructs_adapter_with_pr95_kwargs() -> None:
         assert not missing, (
             f"MlxScoreAwareAdapter construction missing canonical kwargs "
             f"{missing}; the harness wire-in is FAKE if absent"
+        )
+
+
+def test_harness_source_forwards_archive_replay_kwargs_to_config() -> None:
+    """AST scan: parse-back selector kwargs reach LongTrainingConfig."""
+    from tac.substrates._shared.mlx_score_aware import harness
+
+    source = Path(harness.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    found_calls: list[ast.Call] = []
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "LongTrainingConfig"
+        ):
+            found_calls.append(node)
+    assert found_calls, "LongTrainingConfig is not constructed in harness module"
+    required = {
+        "archive_selection_replay_required",
+        "archive_selection_replay_batch_size",
+    }
+    for call in found_calls:
+        kw_names = {kw.arg for kw in call.keywords if kw.arg is not None}
+        missing = required - kw_names
+        assert not missing, (
+            "LongTrainingConfig construction missing archive replay kwargs "
+            f"{missing}; parse-back selection can silently remain inert"
         )
 
 

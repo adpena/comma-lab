@@ -176,11 +176,40 @@ def _dual_metrics(
 def _output_head_bootstrap_metadata(
     *,
     accepted_step_count: float = 1.0,
+    hard_birth_before_min_ratio: float = 0.0,
     hard_birth_after_min_ratio: float = 0.25,
+    hard_birth_before_debt: float = 0.0,
     hard_birth_remaining_debt: float = 0.0,
+    hard_birth_before_worst_debt: float | None = None,
+    hard_birth_after_worst_debt: float | None = None,
+    hard_birth_loss_delta: float = 1.0,
     bootstrap_enabled: bool = True,
     hard_birth_enabled: bool = True,
 ) -> dict[str, object]:
+    metrics_before: dict[str, float] = {
+        "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
+            float(hard_birth_before_min_ratio)
+        ),
+        "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (
+            float(hard_birth_before_debt)
+        ),
+    }
+    metrics_after: dict[str, float] = {
+        "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
+            float(hard_birth_after_min_ratio)
+        ),
+        "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (
+            float(hard_birth_remaining_debt)
+        ),
+    }
+    if hard_birth_before_worst_debt is not None:
+        metrics_before[
+            "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"
+        ] = float(hard_birth_before_worst_debt)
+    if hard_birth_after_worst_debt is not None:
+        metrics_after[
+            "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass"
+        ] = float(hard_birth_after_worst_debt)
     return {
         "schema": "hi_nerv_output_head_target_bias_init.v1",
         "enabled": True,
@@ -196,14 +225,15 @@ def _output_head_bootstrap_metadata(
                 "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_hard_birth.v1",
                 "enabled": bool(hard_birth_enabled),
             },
-            "metrics_after": {
-                "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": (
-                    float(hard_birth_after_min_ratio)
-                ),
-                "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": (
-                    float(hard_birth_remaining_debt)
-                ),
-            },
+            "metrics_before": metrics_before,
+            "metrics_after": metrics_after,
+            "segnet_hard_birth_bootstrap_loss_delta": float(hard_birth_loss_delta),
+            "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio_delta": (
+                float(hard_birth_after_min_ratio) - float(hard_birth_before_min_ratio)
+            ),
+            "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
+                float(hard_birth_remaining_debt) - float(hard_birth_before_debt)
+            ),
         },
     }
 
@@ -679,6 +709,50 @@ def test_scorer_domain_hard_birth_bootstrap_blocks_zero_steps_with_debt() -> Non
     assert (
         "hi_nerv_short_smoke_scorer_domain_hard_birth_no_accepted_steps_with_debt"
         in report["actionable_blockers"]
+    )
+
+
+def test_scorer_domain_hard_birth_bootstrap_classifies_soft_only_progress() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(),
+        final_loss_components={
+            **_base_metrics(),
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata=_output_head_bootstrap_metadata(
+            accepted_step_count=10.0,
+            hard_birth_before_min_ratio=0.0,
+            hard_birth_after_min_ratio=0.0,
+            hard_birth_before_debt=50.0,
+            hard_birth_remaining_debt=50.0,
+            hard_birth_before_worst_debt=25.0,
+            hard_birth_after_worst_debt=25.0,
+            hard_birth_loss_delta=663.0,
+        ),
+    )
+
+    assert report["ready_for_long_run"] is False
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_soft_progress_only_no_argmax_debt_move"
+        in report["actionable_blockers"]
+    )
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_accepted_steps_without_argmax_debt_move"
+        in report["actionable_blockers"]
+    )
+    gate = report["scorer_domain_hard_birth_bootstrap_gate"]
+    assert gate["birth_progress_stage"] == (
+        "soft_loss_progress_only_no_argmax_debt_move"
+    )
+    assert gate["soft_loss_progress"] is True
+    assert gate["hard_argmax_birth_progress"] is False
+    assert gate["delta_candidate_target_class_min_ratio"] == pytest.approx(0.0)
+    assert gate["delta_score_weighted_total_unsolved_argmax_mass"] == pytest.approx(
+        0.0
     )
 
 

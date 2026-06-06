@@ -818,6 +818,53 @@ def test_candidate_feedback_evidence_blockers_are_family_scoped() -> None:
     ]
 
 
+def test_long_training_campaign_plan_consumes_hinerv_pair_local_feedback_evidence() -> None:
+    candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    candidate.pop("pr95_scorer_atom_actuator_execution_evidence", None)
+    evidence = _hinerv_actuator_execution_evidence()
+    evidence["source"] = "hi_nerv_scorer_domain_bootstrap"
+    feedback = {
+        "schema": "nerv_candidate_feedback_row.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate["candidate_id"],
+        "candidate_num_pairs": 600,
+        "measured_num_pairs": 600,
+        "scope_matches_candidate": True,
+        "feedback_ready": True,
+        "pr95_scorer_atom_actuator_execution_evidence": evidence,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget={
+            "schema": "nerv_modelsize_budget.v1",
+            "selected_candidates": [candidate],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        snerv_modelsize_budget=_snerv_budget(),
+        candidate_feedback_sources=(
+            feedback,
+            _snerv_scorer_input_distribution_guard_feedback_row(),
+        ),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    hi_row = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi_row["pr95_scorer_atom_actuator_execution_evidence"] == evidence
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        not in hi_row["pr95_distortion_practices_guard"]["blockers"]
+    )
+    assert hi_row["score_claim"] is False
+
+
 def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

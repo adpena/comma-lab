@@ -130,6 +130,8 @@ def run_mlx_score_aware_full_main(
     scorer_support_ladder_base_loss_max_when_active: float = 0.25,
     scorer_support_ladder_activation_weights: Mapping[str, Any] | None = None,
     ema_archive_selection_enabled: bool = False,
+    archive_selection_replay_required: bool = False,
+    archive_selection_replay_batch_size: int | None = None,
     checkpoint_selection_metric_key: str = "total",
     checkpoint_selection_metric_mode: str = "min",
     checkpoint_selection_metric_required: bool = False,
@@ -467,6 +469,8 @@ def run_mlx_score_aware_full_main(
         device="mlx",
         evidence_grade=MLX_EVIDENCE_GRADE,
         ema_archive_selection_enabled=bool(ema_archive_selection_enabled),
+        archive_selection_replay_required=bool(archive_selection_replay_required),
+        archive_selection_replay_batch_size=archive_selection_replay_batch_size,
         checkpoint_selection_metric_key=str(checkpoint_selection_metric_key),
         checkpoint_selection_metric_mode=str(checkpoint_selection_metric_mode),
         checkpoint_selection_metric_required=bool(

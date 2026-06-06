@@ -546,6 +546,14 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_min_ratio_collapsed"
             )
+        if scorer_domain_hard_birth_gate["soft_progress_only_no_argmax_debt_move"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_soft_progress_only_no_argmax_debt_move"
+            )
+        if scorer_domain_hard_birth_gate["accepted_steps_without_argmax_debt_move"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_accepted_steps_without_argmax_debt_move"
+            )
         if scorer_domain_hard_birth_gate["no_accepted_steps_with_remaining_debt"]:
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_no_accepted_steps_with_debt"
@@ -1333,15 +1341,50 @@ def _scorer_domain_hard_birth_gate(
         }
     hard_birth = metadata.get("segnet_hard_birth_bootstrap")
     hard_birth = hard_birth if isinstance(hard_birth, Mapping) else {}
+    before = metadata.get("metrics_before")
+    before = before if isinstance(before, Mapping) else {}
     after = metadata.get("metrics_after")
     after = after if isinstance(after, Mapping) else {}
     after_min_ratio = _finite_mapping_value(
         after,
         "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio",
     )
+    before_min_ratio = _finite_mapping_value(
+        before,
+        "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio",
+    )
+    min_ratio_delta = _finite_mapping_value(
+        metadata,
+        "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio_delta",
+    )
+    if min_ratio_delta is None:
+        min_ratio_delta = _delta(after_min_ratio, before_min_ratio)
     remaining_debt = _finite_mapping_value(
         after,
         "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass",
+    )
+    before_debt = _finite_mapping_value(
+        before,
+        "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass",
+    )
+    debt_delta = _finite_mapping_value(
+        metadata,
+        "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass_delta",
+    )
+    if debt_delta is None:
+        debt_delta = _delta(remaining_debt, before_debt)
+    after_worst_debt = _finite_mapping_value(
+        after,
+        "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass",
+    )
+    before_worst_debt = _finite_mapping_value(
+        before,
+        "segnet_hard_birth_bootstrap_score_weighted_worst_unsolved_argmax_mass",
+    )
+    worst_debt_delta = _delta(after_worst_debt, before_worst_debt)
+    loss_delta = _finite_mapping_value(
+        metadata,
+        "segnet_hard_birth_bootstrap_loss_delta",
     )
     accepted_step_count = _finite_mapping_value(metadata, "accepted_step_count")
     debt_remains = bool(
@@ -1351,21 +1394,83 @@ def _scorer_domain_hard_birth_gate(
     no_accepted_steps = bool(
         accepted_step_count is not None and accepted_step_count <= 0.0
     )
+    argmax_ratio_moved = bool(
+        min_ratio_delta is not None
+        and min_ratio_delta > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+    )
+    score_debt_moved = bool(
+        debt_delta is not None
+        and debt_delta < -HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+    )
+    worst_score_debt_moved = bool(
+        worst_debt_delta is not None
+        and worst_debt_delta < -HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+    )
+    loss_moved = bool(
+        loss_delta is not None
+        and loss_delta > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+    )
+    accepted_steps_present = bool(
+        accepted_step_count is not None and accepted_step_count > 0.0
+    )
+    hard_argmax_birth_progress = bool(
+        argmax_ratio_moved or score_debt_moved or worst_score_debt_moved
+    )
+    after_min_ratio_cleared = bool(
+        after_min_ratio is not None
+        and not _below_floor(after_min_ratio, min_target_min_ratio)
+    )
+    soft_progress_only = bool(
+        loss_moved
+        and not hard_argmax_birth_progress
+        and not after_min_ratio_cleared
+    )
+    accepted_without_argmax_debt_move = bool(
+        accepted_steps_present
+        and debt_remains
+        and not hard_argmax_birth_progress
+    )
     return {
         "schema": "hi_nerv_scorer_domain_hard_birth_bootstrap_gate.v1",
         "required": True,
         "bootstrap_enabled": bool(metadata.get("enabled")),
         "hard_birth_enabled": bool(hard_birth.get("enabled")),
         "accepted_step_count": accepted_step_count,
+        "before_candidate_target_class_min_ratio": before_min_ratio,
         "after_candidate_target_class_min_ratio": after_min_ratio,
+        "delta_candidate_target_class_min_ratio": min_ratio_delta,
         "min_candidate_target_class_min_ratio_for_fit_gate": min_target_min_ratio,
+        "before_score_weighted_total_unsolved_argmax_mass": before_debt,
         "after_score_weighted_total_unsolved_argmax_mass": remaining_debt,
+        "delta_score_weighted_total_unsolved_argmax_mass": debt_delta,
+        "before_score_weighted_worst_unsolved_argmax_mass": before_worst_debt,
+        "after_score_weighted_worst_unsolved_argmax_mass": after_worst_debt,
+        "delta_score_weighted_worst_unsolved_argmax_mass": worst_debt_delta,
+        "loss_delta": loss_delta,
         "after_min_ratio_present": after_min_ratio is not None,
-        "after_min_ratio_cleared": bool(
-            after_min_ratio is not None
-            and not _below_floor(after_min_ratio, min_target_min_ratio)
-        ),
+        "after_min_ratio_cleared": after_min_ratio_cleared,
         "remaining_debt_present": debt_remains,
+        "accepted_steps_present": accepted_steps_present,
+        "argmax_min_ratio_moved": argmax_ratio_moved,
+        "score_weighted_total_unsolved_argmax_mass_reduced": score_debt_moved,
+        "score_weighted_worst_unsolved_argmax_mass_reduced": worst_score_debt_moved,
+        "hard_argmax_birth_progress": hard_argmax_birth_progress,
+        "soft_loss_progress": loss_moved,
+        "soft_progress_only_no_argmax_debt_move": soft_progress_only,
+        "accepted_steps_without_argmax_debt_move": accepted_without_argmax_debt_move,
+        "birth_progress_stage": (
+            "hard_argmax_birth_or_debt_progress"
+            if hard_argmax_birth_progress
+            else (
+                "soft_loss_progress_only_no_argmax_debt_move"
+                if soft_progress_only
+                else (
+                    "accepted_steps_without_argmax_debt_move"
+                    if accepted_without_argmax_debt_move
+                    else "hard_birth_progress_not_observed"
+                )
+            )
+        ),
         "no_accepted_steps_with_remaining_debt": bool(
             no_accepted_steps and debt_remains
         ),

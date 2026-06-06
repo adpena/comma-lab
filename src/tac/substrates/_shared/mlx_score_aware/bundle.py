@@ -376,6 +376,13 @@ class RendererBundle:
         export_archive_fn: optional ``(model, output_dir) -> (path, sha, bytes)``
             numpy-portable archive builder; threaded into the adapter's
             ``export_archive``.
+        archive_replay_components_fn: optional
+            ``(archive_path, batch, candidate_kind) -> mapping`` hook used by
+            live-vs-EMA archive selection. This must parse the exported archive
+            bytes and return finite local scorer/proxy components from the
+            receiver-decoded candidate, not from the live model. When absent,
+            strict parse-back selection fails closed at the canonical
+            ``LongTrainingConfig`` gate.
         substrate_artifact_metadata: optional JSON-safe substrate metadata
             threaded into the canonical long-training artifact. This is for
             non-authority facts such as backend lineage, math fidelity class,
@@ -539,6 +546,9 @@ class RendererBundle:
     export_state_dict_fn: Callable[[Any, Path], None] | None = None
     export_archive_fn: (
         Callable[[Any, Path], tuple[Path, str, int] | None] | None
+    ) = None
+    archive_replay_components_fn: (
+        Callable[[Path, Any, str], Mapping[str, float] | None] | None
     ) = None
     substrate_artifact_metadata: Mapping[str, Any] = field(default_factory=dict)
     recon_pixel_weight: Any | None = None

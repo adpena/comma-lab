@@ -8867,6 +8867,20 @@ class MlxScoreAwareAdapter:
         output_dir.mkdir(parents=True, exist_ok=True)
         return self.bundle.export_archive_fn(model, output_dir)
 
+    def archive_replay_components(
+        self,
+        archive_path: Path,
+        batch: Any,
+        *,
+        candidate_kind: str = "",
+    ) -> Mapping[str, float] | None:
+        """Return receiver-parse-back local scorer components for an archive."""
+
+        hook = self.bundle.archive_replay_components_fn
+        if hook is None:
+            return None
+        return hook(Path(archive_path), batch, str(candidate_kind))
+
     def score_aware_components(
         self, model: Any, batch: Any
     ) -> Mapping[str, float] | None:

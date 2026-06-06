@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 from tac.substrates._shared.mlx_score_aware.bundle import (
     FORWARD_CONVENTIONS,
     RendererBundle,
@@ -457,6 +458,48 @@ def test_substrate_artifact_metadata_rejects_duplicate_authority_keys() -> None:
             num_pairs=4,
             substrate_artifact_metadata={"ready_for_exact_eval_dispatch": False},
         )
+
+
+def test_archive_replay_components_hook_flows_through_adapter(tmp_path) -> None:
+    observed: dict[str, object] = {}
+
+    def _replay_hook(archive_path, batch, candidate_kind):
+        observed["archive_path"] = archive_path
+        observed["batch"] = batch
+        observed["candidate_kind"] = candidate_kind
+        return {
+            "d_seg": 0.125,
+            "d_pose": 0.25,
+            "segnet_direct_live_target_class_min_ratio": 0.5,
+        }
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=4,
+        archive_replay_components_fn=_replay_hook,
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="unit")
+    archive_path = tmp_path / "archive.zip"
+    batch = {"pair_indices": [0, 1]}
+
+    out = adapter.archive_replay_components(
+        archive_path,
+        batch,
+        candidate_kind="ema",
+    )
+
+    assert out == {
+        "d_seg": 0.125,
+        "d_pose": 0.25,
+        "segnet_direct_live_target_class_min_ratio": 0.5,
+    }
+    assert observed == {
+        "archive_path": archive_path,
+        "batch": batch,
+        "candidate_kind": "ema",
+    }
 
     with pytest.raises(
         MlxScoreAwareHarnessError,
