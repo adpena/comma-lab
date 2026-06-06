@@ -1459,8 +1459,17 @@ def _hinerv_campaign_row(
     pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("hi_nerv")
     pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("hi_nerv")
     pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("hi_nerv")
-    pr95_actuator_execution_evidence = candidate.get(
+    explicit_pr95_actuator_execution_evidence = candidate.get(
         "pr95_scorer_atom_actuator_execution_evidence"
+    )
+    derived_pr95_actuator_execution_evidence = (
+        _hinerv_pr95_actuator_execution_evidence_from_feedback(feedback)
+    )
+    pr95_actuator_execution_evidence = (
+        explicit_pr95_actuator_execution_evidence
+        if isinstance(explicit_pr95_actuator_execution_evidence, Mapping)
+        and explicit_pr95_actuator_execution_evidence
+        else derived_pr95_actuator_execution_evidence
     )
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
@@ -3271,6 +3280,22 @@ def _snerv_source_forward_evidence_active(
         isinstance(source_forward_evidence, Mapping)
         and _positive_int_or_none(source_forward_evidence.get("artifact_count")) is not None
     )
+
+
+def _hinerv_pr95_actuator_execution_evidence_from_feedback(
+    feedback: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(feedback, Mapping):
+        return None
+    direct = feedback.get("pr95_scorer_atom_actuator_execution_evidence")
+    if isinstance(direct, Mapping):
+        return dict(direct)
+    bootstrap = feedback.get("hi_nerv_scorer_domain_bootstrap")
+    if isinstance(bootstrap, Mapping):
+        nested = bootstrap.get("pr95_scorer_atom_actuator_execution_evidence")
+        if isinstance(nested, Mapping):
+            return dict(nested)
+    return None
 
 
 def _snerv_pr95_actuator_execution_evidence_from_source_forward(

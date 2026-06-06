@@ -173,6 +173,61 @@ def test_hinerv_archive_ladder_feedback_preserves_rate_proof_without_score_autho
     assert row["promotion_eligible"] is False
 
 
+def test_build_nerv_candidate_feedback_row_preserves_hinerv_pair_local_pr95_evidence(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    evidence = {
+        "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+        "family": "hi_nerv",
+        "source": "hi_nerv_scorer_domain_bootstrap",
+        "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_adapter_bytes": 384,
+        "pair_local_adapter_sha256": "c" * 64,
+        "pair_local_grad_norm": 0.5,
+        "pair_local_output_delta_l2": 0.125,
+        "section_value_per_byte_rows": [
+            {
+                "section": "hi_nerv_pair_local_bootstrap_allowlist",
+                "bytes": 384,
+                "value_per_byte": 0.001,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    smoke = {
+        "schema": "hinerv_pair_local_actuator_smoke.v1",
+        "family": "hi_nerv",
+        "pair_local_adapter_bytes": 384,
+        "pair_local_adapter_sha256": "c" * 64,
+        "pair_local_grad_norm": 0.5,
+        "pair_local_output_delta_l2": 0.125,
+        "section_value_per_byte_rows": evidence["section_value_per_byte_rows"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    report["score_aware_training"] = {
+        "scorer_domain_bootstrap": {
+            "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+            "hinerv_pair_local_actuator_smoke": smoke,
+            "pr95_scorer_atom_actuator_execution_evidence": evidence,
+        }
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["hinerv_pair_local_actuator_smoke"] == smoke
+    assert row["pr95_scorer_atom_actuator_execution_evidence"] == evidence
+    assert row["hi_nerv_scorer_domain_bootstrap"]["schema"] == (
+        "hi_nerv_scorer_domain_bootstrap.v1"
+    )
+    assert row["score_claim"] is False
+
+
 def test_hinerv_archive_ladder_feedback_cli_writes_json_and_jsonl(tmp_path: Path) -> None:
     proof = tmp_path / "receiver_proof.json"
     proof.write_text("{}\n", encoding="utf-8")
@@ -662,6 +717,65 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["blockers"] == ["partial_pair_byte_feedback_only"]
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_candidate_feedback_preserves_hinerv_pair_local_actuator_evidence(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    actuator_smoke = {
+        "schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_adapter_bytes": 4096,
+        "pair_local_adapter_sha256": "c" * 64,
+        "pair_local_grad_norm": 0.25,
+        "pair_local_output_delta_l2": 0.031,
+        "section_value_per_byte_rows": [
+            {
+                "section": "hi_nerv_pair_local_bootstrap_allowlist",
+                "bytes": 4096,
+                "score_value": 0.031,
+                "value_per_byte": 7.568359375e-6,
+            }
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    execution_evidence = {
+        "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+        "family": "hi_nerv",
+        "source": "hi_nerv_scorer_domain_bootstrap",
+        "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_adapter_bytes": 4096,
+        "pair_local_adapter_sha256": "c" * 64,
+        "pair_local_grad_norm": 0.25,
+        "pair_local_output_delta_l2": 0.031,
+        "section_value_per_byte_rows": actuator_smoke[
+            "section_value_per_byte_rows"
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    report["score_aware_training"] = {
+        "scorer_domain_bootstrap": {
+            "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+            "hinerv_pair_local_actuator_smoke": actuator_smoke,
+            "pr95_scorer_atom_actuator_execution_evidence": execution_evidence,
+        }
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["hi_nerv_scorer_domain_bootstrap"]["schema"] == (
+        "hi_nerv_scorer_domain_bootstrap.v1"
+    )
+    assert row["hinerv_pair_local_actuator_smoke"] == actuator_smoke
+    assert row["pr95_scorer_atom_actuator_execution_evidence"] == (
+        execution_evidence
+    )
+    assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
 

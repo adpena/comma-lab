@@ -4388,6 +4388,52 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     assert snerv["execution_epochs"] == 29_650
 
 
+def test_long_training_campaign_plan_derives_hinerv_actuator_evidence_from_feedback() -> None:
+    hinerv_budget = _hinerv_budget()
+    hinerv_budget["selected_candidates"][0].pop(
+        "pr95_scorer_atom_actuator_execution_evidence",
+        None,
+    )
+    evidence = _hinerv_actuator_execution_evidence()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "scope_matches_candidate": True,
+                "receiver_proof_attached": True,
+                "full_video_local_prefilter_attached": True,
+                "local_cpu_replay_gate_attached": True,
+                "measured_archive_bytes": 111_000,
+                "feedback_ready": True,
+                "pr95_scorer_atom_actuator_execution_evidence": evidence,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["pr95_scorer_atom_actuator_execution_evidence"] == evidence
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        not in hi["pr95_distortion_practices_guard"]["blockers"]
+    )
+    assert hi["candidate_feedback"]["pr95_scorer_atom_actuator_execution_evidence"] == (
+        evidence
+    )
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_raw_snerv_native_export_uses_nested_qat_truth() -> None:
     row = plan_module._normalize_candidate_feedback_source(
         {

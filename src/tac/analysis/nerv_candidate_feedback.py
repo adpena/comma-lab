@@ -1173,6 +1173,22 @@ def build_nerv_candidate_feedback_row(
         if _family_key(str(runner_report.get("execute_family") or "")) == "hi_nerv"
         else {}
     )
+    hi_nerv_scorer_domain_bootstrap = _mapping_or_empty(
+        score_aware_training.get("scorer_domain_bootstrap")
+        or _mapping_or_empty(runner_report.get("output_head_target_bias_init")).get(
+            "scorer_domain_bootstrap"
+        )
+        or runner_report.get("scorer_domain_bootstrap")
+    )
+    hi_nerv_pair_local_actuator_smoke = _mapping_or_empty(
+        hi_nerv_scorer_domain_bootstrap.get("hinerv_pair_local_actuator_smoke")
+    )
+    hi_nerv_pr95_actuator_execution_evidence = _mapping_or_empty(
+        hi_nerv_scorer_domain_bootstrap.get(
+            "pr95_scorer_atom_actuator_execution_evidence"
+        )
+        or runner_report.get("pr95_scorer_atom_actuator_execution_evidence")
+    )
     sample_generalization_gate = _sample_generalization_gate(
         runner_report=runner_report,
         curriculum=curriculum,
@@ -1362,6 +1378,15 @@ def build_nerv_candidate_feedback_row(
             hi_nerv_receiver_cache_control.get("segnet_response_too_high")
             if hi_nerv_receiver_cache_control
             else None
+        ),
+        "hi_nerv_scorer_domain_bootstrap": (
+            hi_nerv_scorer_domain_bootstrap or None
+        ),
+        "hinerv_pair_local_actuator_smoke": (
+            hi_nerv_pair_local_actuator_smoke or None
+        ),
+        "pr95_scorer_atom_actuator_execution_evidence": (
+            hi_nerv_pr95_actuator_execution_evidence or None
         ),
         "recommended_launch_mutations": recommended_launch_mutations,
         "launch_control_feedback_ready": bool(
