@@ -23,6 +23,10 @@ from tac.analysis.nerv_long_training_campaign_plan import (
     render_nerv_long_training_campaign_plan_markdown,
 )
 from tac.analysis.nerv_modelsize_budget import analyze_snerv_modelsize_candidate
+from tac.analysis.nerv_pair_local_distortion_servo import (
+    PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
+    PR95_SERVO_CURRICULUM_STAGES,
+)
 from tac.substrates._shared.mlx_score_aware.adapter import (
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
@@ -199,15 +203,30 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["command_argv"][row["command_argv"].index("--pose-direct-live-distillation-weight") + 1] == "0.25"
         for row in hi_rows
     )
-    assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
-    assert all(qat_flags.issubset(set(row["command_argv"])) for row in hi_rows)
+    assert all("--coder-aware-qat" not in row["command_argv"] for row in hi_rows)
+    assert all(qat_flags.isdisjoint(set(row["command_argv"])) for row in hi_rows)
     assert all(
-        row["coder_qat_control"]["c1a_source"].startswith("PR95") and row["coder_qat_control"]["score_claim"] is False
+        row["coder_qat_control"]["enabled"] is False
+        and row["coder_qat_control"]["blocked_until_distortion_birth_gate_passes"]
+        is True
+        and row["coder_qat_control"]["c1a_source"].startswith("PR95")
+        and row["coder_qat_control"]["score_claim"] is False
+        for row in hi_rows
+    )
+    assert all(row["rate_pressure_controls_enabled"] is False for row in hi_rows)
+    assert all(
+        row["hinerv_distortion_birth_before_rate_pressure_gate"]["passed"] is False
+        for row in hi_rows
+    )
+    assert all(
+        "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked"
+        in row["blockers"]
         for row in hi_rows
     )
     assert all(row["command_argv"][row["command_argv"].index("--distillation-device") + 1] == "gpu" for row in hi_rows)
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv["optimizer_kind"] == "pact_muon_adamw"
+    assert snerv["pr95_distortion_practices_guard"]["launch_allowed"] is True
     assert qat_flags.issubset(set(snerv["command_argv"]))
     assert snerv["coder_qat_control"]["quant_bits"] == snerv["quant_bits"]
     assert snerv["coder_qat_control"]["c1a_entropy_weight"] == pytest.approx(1.0e-4)
@@ -432,6 +451,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         {
             "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
             "hinerv_decoder_weight_waterfill_plan_missing",
+            "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked",
             "hinerv_trained_archive_byte_oracle_feedback_missing",
         }.issubset(
             set(
@@ -599,6 +619,55 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
     assert "hi_nerv::hinerv_tiny::lion" in markdown
+
+
+def test_long_training_campaign_plan_unlocks_hinerv_rate_pressure_after_birth_gate() -> None:
+    qat_flags = {
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "--coder-qat-quant-residual-weight",
+        "--coder-qat-magnitude-weight",
+        "--coder-qat-delta-weight",
+        "--coder-qat-c1a-entropy-weight",
+        "--coder-qat-c1a-sigma",
+        "--coder-qat-c1a-sample-size",
+    }
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        batch_pairs=8,
+        learning_rate=3.0e-4,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        hinerv_distortion_birth_evidence_sources=(
+            _hinerv_distortion_birth_evidence(candidate_id="hinerv_tiny"),
+        ),
+    )
+
+    assert report["hinerv_distortion_birth_evidence_source_count"] == 1
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    gate = hi["hinerv_distortion_birth_before_rate_pressure_gate"]
+    assert gate["passed"] is True
+    assert gate["distortion_birth_before_rate_pressure_satisfied"] is True
+    assert gate["blockers"] == []
+    assert hi["rate_pressure_controls_enabled"] is True
+    assert "--coder-aware-qat" in hi["command_argv"]
+    assert qat_flags.issubset(set(hi["command_argv"]))
+    assert hi["curriculum_plan"]["coder_pressure"]["fake_quant_forward_enabled"] is True
+    assert hi["coder_qat_control"]["enabled"] is True
+    assert hi["coder_qat_control"]["blocked_until_distortion_birth_gate_passes"] is False
+    assert (
+        "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked"
+        not in hi["blockers"]
+    )
+    assert (
+        "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked"
+        not in hi["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_launch_blockers"
+        ]
+    )
 
 
 def test_long_training_campaign_plan_binds_upstream_evaluate_contract() -> None:
@@ -2792,6 +2861,9 @@ def test_long_training_campaign_plan_attaches_hinerv_decoder_weight_waterfill(
         output_root=tmp_path / "campaigns",
         max_candidates_per_family=1,
         decoder_weight_waterfill_sources=(waterfill,),
+        hinerv_distortion_birth_evidence_sources=(
+            _hinerv_distortion_birth_evidence(),
+        ),
     )
 
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
@@ -7747,6 +7819,9 @@ def _hinerv_budget() -> dict:
                 "pr95_scorer_atom_actuator_execution_evidence": (
                     _hinerv_actuator_execution_evidence()
                 ),
+                "pr95_distortion_axis_trace_measurements": (
+                    _pr95_axis_trace_measurements()
+                ),
             }
         ],
         "score_claim": False,
@@ -7790,6 +7865,9 @@ def _snerv_budget() -> dict:
                 "pr95_scorer_atom_actuator_execution_evidence": (
                     _snerv_actuator_execution_evidence()
                 ),
+                "pr95_distortion_axis_trace_measurements": (
+                    _pr95_axis_trace_measurements()
+                ),
             }
         ],
         "score_claim": False,
@@ -7810,7 +7888,6 @@ def _snerv_budget_with_candidates(candidates: tuple[dict, ...]) -> dict:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
-
 
 def _hinerv_actuator_execution_evidence() -> dict:
     return {
@@ -7852,9 +7929,18 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "state_restored_after_smoke": True,
         "pair_local_latents_fine_original_row_sha256": "c" * 64,
         "pair_local_latents_fine_restored_row_sha256": "c" * 64,
-        "section_value_per_byte_rows": [
-            {"section": "pair_local_latents_fine", "value_per_byte": 0.004}
+        "section_output_delta_per_byte_rows": [
+            {
+                "section": "pair_local_latents_fine",
+                "output_delta_l2_per_byte": 0.004,
+                "value_semantics": "receiver_output_l2_per_byte_not_score_value",
+                "score_value_per_byte_measured": False,
+            }
         ],
+        "section_value_per_byte_rows": [],
+        "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
+            "hi_nerv"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
     }
@@ -7870,9 +7956,146 @@ def _snerv_actuator_execution_evidence() -> dict:
         "checkpoint_export_lineage_bound": True,
         "mfu_hfr_tub_source_forward_parity_proven": True,
         "tub_output2_source_forward_parity_proven": True,
+        "source_forward_replay_proof": _snerv_source_forward_numerical_proof(),
+        "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
+            "snerv"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
     }
+
+
+def _pair_local_distortion_servo_receipt(family: str) -> dict:
+    if family == "snerv":
+        actuation = {
+            "pair_local": True,
+            "trained_param_groups": ["tub.output_2", "mfu.adapter"],
+            "source_forward_replay_bound": True,
+            "mfu_hfr_tub_source_forward_parity_proven": True,
+        }
+        trained_groups = ["tub.output_2", "mfu.adapter"]
+        grad = {"tub.output_2": 0.4, "mfu.adapter": 0.2}
+        update = {"tub.output_2": 0.05, "mfu.adapter": 0.02}
+        actuator_id = "snerv_tub_output2_pair_birth"
+        actuator_kind = "pair_conditioned_mfu_hfr_tub_adapter"
+    else:
+        actuation = {
+            "pair_local": True,
+            "trained_param_groups": ["latents_fine", "output_head.rgb_1"],
+        }
+        trained_groups = ["latents_fine", "output_head.rgb_1"]
+        grad = {"latents_fine": 0.25, "output_head.rgb_1": 0.13}
+        update = {"latents_fine": 0.04, "output_head.rgb_1": 0.02}
+        actuator_id = "hinerv_target_region_birth_pair17"
+        actuator_kind = "pair_local_latent_row"
+    return {
+        "schema": PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
+        "family": family,
+        "pair_ids": [17],
+        "authority": "parseback_mlx",
+        "old_d_seg": 0.020,
+        "new_d_seg": 0.019,
+        "old_d_pose": 0.0020,
+        "new_d_pose": 0.00195,
+        "old_archive_bytes": 178_000,
+        "new_archive_bytes": 178_128,
+        "value_per_byte": 0.0007,
+        "float_rgb_delta_linf": 0.007,
+        "uint8_changed_pixels": 12,
+        "segnet_input_delta_linf": 0.002,
+        "posenet_input_delta_linf": 0.001,
+        "segnet_margin_delta": 0.32,
+        "segnet_argmax_flipped_pixels": 7,
+        "pose_output_delta_l2": 0.015,
+        "fakequant_segnet_margin_delta": 0.24,
+        "fakequant_argmax_flipped_pixels": 5,
+        "parseback_segnet_margin_delta": 0.21,
+        "parseback_argmax_flipped_pixels": 4,
+        "frame_scope": "frame1_seg_pose_joint",
+        "actuator_id": actuator_id,
+        "actuator_kind": actuator_kind,
+        "worst_scorer_debt": {
+            "target_id": "pair17_class4_region2",
+            "score_debt_before": 2.4,
+            "score_debt_after": 1.1,
+        },
+        "frame_incidence": {
+            "frame0_pose_only": True,
+            "frame0_posenet_incidence": True,
+            "frame0_segnet_incidence": False,
+            "frame1_segnet_incidence": True,
+            "frame1_posenet_incidence": True,
+            "frame0_frame1_control_split": True,
+            "separate_frame_heads": True,
+        },
+        "stage_manifest": {
+            "completed_stage_ids": list(PR95_SERVO_CURRICULUM_STAGES),
+            "stage_order_respected": True,
+            "byte_pressure_after_birth": True,
+            "qat_after_round_ste": True,
+            "final_optimizer_after_survival": True,
+        },
+        "actuation": actuation,
+        "trained_param_groups": trained_groups,
+        "grad_norm_by_group": grad,
+        "update_norm_by_group": update,
+        "action_algebra_trace": {
+            "selected_action_id": "target_region_rgb_bias_then_pair_adapter",
+            "frame_scope": "frame1_seg_pose_joint",
+            "effect_delta_seg": -0.001,
+            "effect_delta_pose": -0.00005,
+            "effect_delta_bytes": 128,
+            "runtime_delta_ms": 0.4,
+            "selector_bits": 12,
+            "noncommutative_interactions_checked": True,
+        },
+        "hardware_margin_trace": {
+            "target_authority": "parseback_mlx",
+            "target_authority_margin_checked": True,
+            "hardware_drift_risk": "bounded",
+            "segnet_margin_min": 0.03,
+            "pose_error_slack": 0.0002,
+        },
+    }
+
+
+def _pr95_axis_trace_measurements() -> list[dict[str, float | int | str | bool]]:
+    return [
+        {
+            "axis": "live_forward",
+            "measured": True,
+            "score_delta": -0.010,
+            "d_seg": 0.020,
+            "d_pose": 0.0020,
+        },
+        {
+            "axis": "fakequant_forward",
+            "measured": True,
+            "score_delta": -0.009,
+            "d_seg": 0.021,
+            "d_pose": 0.0021,
+        },
+        {
+            "axis": "archive_parseback",
+            "measured": True,
+            "score_delta": -0.008,
+            "d_seg": 0.022,
+            "d_pose": 0.0022,
+        },
+        {
+            "axis": "inflate_replay",
+            "measured": True,
+            "score_delta": -0.007,
+            "d_seg": 0.023,
+            "d_pose": 0.0023,
+        },
+        {
+            "axis": "official_evaluate_py",
+            "measured": True,
+            "score": 0.2,
+            "archive_bytes": 178_000,
+        },
+    ]
 
 
 def _passing_snerv_tether_smoke_report() -> dict:
@@ -8052,6 +8275,12 @@ def _snerv_source_forward_artifact(
                 "complete_numerical_source_forward_proof_present"
             ),
         }
+        out["pair_local_distortion_servo_receipt"] = (
+            _pair_local_distortion_servo_receipt("snerv")
+        )
+        out["pr95_distortion_axis_trace_measurements"] = (
+            _pr95_axis_trace_measurements()
+        )
     return out
 
 
@@ -8724,6 +8953,25 @@ def _archive_section_telemetry(
             "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY" if cache_quality_passed else "FIT_OR_SCALE_FAILURE"
         ),
         "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _hinerv_distortion_birth_evidence(*, candidate_id: str = "hinerv_tiny") -> dict:
+    return {
+        "schema": "compact_renderer_mlx_spine_runner.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "receiver_quantum_attempt_count": 3.0,
+        "hard_birth_argmax_progress_accepted_step_count": 1.0,
+        "max_candidate_segnet_worst_debt_reduction": 0.125,
+        "max_candidate_segnet_min_ratio_increase": 0.0625,
+        "max_candidate_segnet_total_debt_spill_given_worst_improvement": 0.0,
+        "max_accepted_frame1_receiver_uint8_changed_count": 512.0,
+        "max_accepted_frame1_receiver_uint8_delta_abs": 2048.0,
+        "max_candidate_pose_exact_delta": 0.0,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

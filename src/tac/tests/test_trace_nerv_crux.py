@@ -39,6 +39,24 @@ def _by_metric(rows: list[dict]) -> dict[str, dict]:
     return {str(row["metric"]): row for row in rows}
 
 
+def _receiver_surface_trace(**overrides: float) -> dict[str, float]:
+    trace = {
+        "receiver_surface_loss_delta": -0.01,
+        "receiver_surface_float_rgb_delta_linf": 0.02,
+        "receiver_surface_uint8_changed_pixels": 7.0,
+        "receiver_surface_segnet_input_delta_linf": 0.015,
+        "receiver_surface_worst_region_margin_p50_delta": 0.0002,
+        "receiver_surface_argmax_flipped_pixels": 3.0,
+        "receiver_surface_posenet_input_delta_linf": 0.03,
+        "receiver_surface_pose_output_delta": -0.05,
+        "receiver_surface_fakequant_argmax_flipped_pixels": 3.0,
+        "receiver_surface_parseback_argmax_flipped_pixels": 3.0,
+        "receiver_surface_inflated_argmax_flipped_pixels": 3.0,
+    }
+    trace.update(overrides)
+    return trace
+
+
 def test_trace_nerv_crux_emits_contest_unit_rows_without_score_claim(tmp_path: Path) -> None:
     rows = _run_trace(
         tmp_path,
@@ -55,7 +73,8 @@ def test_trace_nerv_crux_emits_contest_unit_rows_without_score_claim(tmp_path: P
                 "loss_part_pose_direct_live_yuv6_pair_std": 0.22,
                 "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std": 0.08,
                 "train_time_archive_bytes": 150_000,
-            }
+            },
+            "receiver_surface_trace": _receiver_surface_trace(),
         },
     )
 
@@ -70,6 +89,12 @@ def test_trace_nerv_crux_emits_contest_unit_rows_without_score_claim(tmp_path: P
     assert metrics["archive_rate_score"]["score_units"] == pytest.approx(
         25.0 * 150_000 / 37_545_489
     )
+    assert metrics["receiver_surface_uint8_changed_pixels"]["value"] == pytest.approx(
+        7.0
+    )
+    assert metrics["receiver_surface_parseback_argmax_flipped_pixels"][
+        "value"
+    ] == pytest.approx(3.0)
     assert {row["authority"] for row in rows} == {
         "macos_mlx_false_authority_no_score_claim"
     }
@@ -121,6 +146,210 @@ def test_trace_nerv_crux_blocks_segnet_path_without_target_region_debt(
     assert "missing_direct_live_segnet_target_region_debt" in blockers
 
 
+def test_trace_nerv_crux_blocks_missing_receiver_surface_trace(
+    tmp_path: Path,
+) -> None:
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            }
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "missing_receiver_surface_trace" in blockers
+
+
+def test_trace_nerv_crux_allows_missing_receiver_surface_for_forensic_read(
+    tmp_path: Path,
+) -> None:
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            }
+        },
+        "--allow-missing-receiver-surface-trace",
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "missing_receiver_surface_trace" not in blockers
+
+
+def test_trace_nerv_crux_blocks_loss_improvement_without_uint8_motion(
+    tmp_path: Path,
+) -> None:
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": _receiver_surface_trace(
+                receiver_surface_loss_delta=-0.25,
+                receiver_surface_uint8_changed_pixels=0.0,
+            ),
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "receiver_surface_loss_improved_without_uint8_motion" in blockers
+
+
+def test_trace_nerv_crux_blocks_uint8_motion_without_argmax_or_margin_motion(
+    tmp_path: Path,
+) -> None:
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": _receiver_surface_trace(
+                receiver_surface_uint8_changed_pixels=5.0,
+                receiver_surface_worst_region_margin_p50_delta=0.0,
+                receiver_surface_argmax_flipped_pixels=0.0,
+            ),
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "receiver_surface_uint8_motion_without_argmax_or_margin_motion" in blockers
+
+
+def test_trace_nerv_crux_refuses_pair_local_smoke_as_receiver_trace(
+    tmp_path: Path,
+) -> None:
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "substrate_artifact_metadata": {
+                "substrate_supplied_score_aware_training": {
+                    "output_head_target_bias_init": {
+                        "scorer_domain_bootstrap": {
+                            "max_accepted_frame1_delta_abs": 0.48111245036125183,
+                            "max_accepted_frame1_receiver_uint8_changed_count": 556860,
+                        }
+                    }
+                }
+            },
+        },
+    )
+
+    metrics = _by_metric(rows)
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert metrics["receiver_surface_trace_present"]["value"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_float_rgb_delta_linf"]["value"] is None
+    assert metrics["receiver_surface_uint8_changed_pixels"]["value"] is None
+    assert "missing_receiver_surface_trace" in blockers
+
+
+def test_trace_nerv_crux_blocks_argmax_motion_without_fakequant_survival(
+    tmp_path: Path,
+) -> None:
+    trace = _receiver_surface_trace()
+    trace.pop("receiver_surface_fakequant_argmax_flipped_pixels")
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": trace,
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "receiver_surface_fakequant_survival_missing" in blockers
+
+
+def test_trace_nerv_crux_blocks_fakequant_motion_without_parseback_survival(
+    tmp_path: Path,
+) -> None:
+    trace = _receiver_surface_trace()
+    trace.pop("receiver_surface_parseback_argmax_flipped_pixels")
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": trace,
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "receiver_surface_parseback_survival_missing" in blockers
+
+
+def test_trace_nerv_crux_blocks_parseback_motion_without_inflate_survival(
+    tmp_path: Path,
+) -> None:
+    trace = _receiver_surface_trace()
+    trace.pop("receiver_surface_inflated_argmax_flipped_pixels")
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": trace,
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "receiver_surface_inflate_survival_missing" in blockers
+
+
+def test_trace_nerv_crux_ignores_legacy_receiver_surface_aliases(
+    tmp_path: Path,
+) -> None:
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": {
+                "loss_delta": -0.01,
+                "float_rgb_delta_linf": 0.02,
+                "uint8_changed_pixels": 7.0,
+                "argmax_flipped_pixels": 3.0,
+            },
+        },
+    )
+
+    metrics = _by_metric(rows)
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert metrics["receiver_surface_trace_present"]["value"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_uint8_changed_pixels"]["value"] is None
+    assert "missing_receiver_surface_trace" in blockers
+
+
 def test_trace_nerv_crux_reads_nested_readiness_metrics_and_derives_pose_terms(
     tmp_path: Path,
 ) -> None:
@@ -140,6 +369,7 @@ def test_trace_nerv_crux_reads_nested_readiness_metrics_and_derives_pose_terms(
                 }
             },
             "metrics": {"archive_bytes": 1_024},
+            "receiver_surface_trace": _receiver_surface_trace(),
         },
     )
 
@@ -187,6 +417,7 @@ def test_trace_nerv_crux_reads_runner_per_epoch_metrics_and_top_level_rate(
                     }
                 },
             ],
+            "receiver_surface_trace": _receiver_surface_trace(),
         },
     )
 
@@ -241,6 +472,7 @@ def test_trace_nerv_crux_uses_telemetry_jsonl_fallback(tmp_path: Path) -> None:
         {
             "archive_bytes": 10_000,
             "telemetry_path": telemetry.as_posix(),
+            "receiver_surface_trace": _receiver_surface_trace(),
         },
     )
 

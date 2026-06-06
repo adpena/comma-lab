@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.nerv_pair_local_distortion_servo import (
+    build_pr95_grade_pair_local_servo_report,
+)
 from tac.analysis.pr95_stack_binding_requirements import FALSE_AUTHORITY
 from tac.contest_eval_contract import build_score_allocation_contract
 
@@ -783,6 +786,10 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
                 "pair_local_output_delta",
                 "receiver_uint8_changed_count",
                 "section_output_delta_per_byte_rows",
+                "nerv_pair_local_distortion_servo_receipt.v1",
+                "exact_pair_local_score_delta",
+                "fakequant_archive_parseback_survival",
+                "value_per_byte_exact_score_units",
             ]
             if family_key == "hi_nerv"
             else [
@@ -791,6 +798,10 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
                 "checkpoint_export_lineage_bound",
                 "mfu_hfr_tub_source_forward_parity_proven",
                 "tub_output2_source_forward_parity_proven",
+                "nerv_pair_local_distortion_servo_receipt.v1",
+                "exact_pair_local_score_delta",
+                "fakequant_archive_parseback_survival",
+                "value_per_byte_exact_score_units",
             ]
         ),
         "acceptance_policy": {
@@ -799,6 +810,11 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
             "execution_evidence_required_before_long_run": True,
             "cross_family_evidence_rejected": True,
             "actuator_must_report_grad_norm_by_group": True,
+            "pr95_grade_pair_local_distortion_servo_receipt_required": True,
+            "servo_must_bind_worst_debt_frame_incidence_curriculum_and_action": True,
+            "servo_must_survive_uint8_preprocess_fakequant_parseback": True,
+            "servo_must_use_exact_nonlinear_score_admission": True,
+            "servo_must_price_bytes_by_exact_value_per_byte": True,
             "output_delta_per_byte_is_not_score_value_per_byte": True,
             "promotion_requires_score_value_per_byte_with_component_deltas": True,
         },
@@ -1455,6 +1471,7 @@ def _build_stage_dag(
     family: str,
 ) -> dict[str, Any]:
     signals = _stage_observed_signals(row=row, command=command, family=family)
+    rate_pressure_deferred = _rate_pressure_deferred_until_distortion_birth(row)
     stage_green: dict[str, bool] = {}
     nodes: list[dict[str, Any]] = []
     first_failed: list[str] = []
@@ -1470,6 +1487,15 @@ def _build_stage_dag(
             for signal in stage.get("required_signals", [])
             if signals.get(str(signal)) is not True
         ]
+        deferred_signals = [
+            signal
+            for signal in missing_signals
+            if rate_pressure_deferred and signal in {"coder_qat", "c1a_entropy"}
+        ]
+        if deferred_signals:
+            missing_signals = [
+                signal for signal in missing_signals if signal not in deferred_signals
+            ]
         green = not missing_prerequisites and not missing_signals
         stage_green[stage_id] = green
         if not green and not missing_prerequisites:
@@ -1491,6 +1517,10 @@ def _build_stage_dag(
                 "required_signals": list(stage.get("required_signals", [])),
                 "missing_prerequisites": missing_prerequisites,
                 "missing_signals": missing_signals,
+                "deferred_signals": deferred_signals,
+                "rate_pressure_deferred_until_distortion_birth_gate": (
+                    rate_pressure_deferred
+                ),
                 "green": green,
                 "status": (
                     "green"
@@ -1778,6 +1808,14 @@ def _observe_practice(
             or snerv_curriculum
             or _deep_truthy(row, {"pr95_faithful_curriculum_enabled", "pr95_staged_curriculum"})
         )
+        if (
+            family == "hi_nerv"
+            and curriculum
+            and _rate_pressure_deferred_until_distortion_birth(row)
+        ):
+            evidence.append("rate_pressure_deferred_until_distortion_birth_gate")
+            evidence.append("coder_qat_c1a_correctly_withheld_before_birth")
+            return True, evidence
         return bool(curriculum and coder_qat and c1a_weight), evidence
 
     if practice_id == "archive_parseback_distortion_axis_trace":
@@ -1978,19 +2016,66 @@ def _family_actuator_execution_evidence(
     if family_ok:
         evidence.append(f"actuator_execution_family={family}")
     if family == "hi_nerv":
-        return _hinerv_actuator_execution_evidence_ok(
+        family_ready, family_evidence = _hinerv_actuator_execution_evidence_ok(
             execution,
             base_ok=bool(schema_ok and family_ok),
             evidence=evidence,
         )
+        servo_ready, servo_evidence = _pair_local_distortion_servo_receipt_ok(
+            execution,
+            family=family,
+        )
+        family_evidence.extend(servo_evidence)
+        return bool(family_ready and servo_ready), family_evidence
     if family == "snerv":
-        return _snerv_actuator_execution_evidence_ok(
+        family_ready, family_evidence = _snerv_actuator_execution_evidence_ok(
             execution,
             base_ok=bool(schema_ok and family_ok),
             evidence=evidence,
         )
+        servo_ready, servo_evidence = _pair_local_distortion_servo_receipt_ok(
+            execution,
+            family=family,
+        )
+        family_evidence.extend(servo_evidence)
+        return bool(family_ready and servo_ready), family_evidence
     evidence.append("actuator_execution_family_unknown")
     return False, evidence
+
+
+def _pair_local_distortion_servo_receipt_ok(
+    execution: Mapping[str, Any],
+    *,
+    family: str,
+) -> tuple[bool, list[str]]:
+    receipt = _first_mapping(
+        execution,
+        (
+            "pair_local_distortion_servo_receipt",
+            "nerv_pair_local_distortion_servo_receipt",
+            "servo_receipt",
+        ),
+    )
+    if not receipt:
+        return False, ["pair_local_distortion_servo_receipt_missing"]
+    try:
+        report = build_pr95_grade_pair_local_servo_report(
+            receipt,
+            family=family,
+        )
+    except (TypeError, ValueError) as exc:
+        return False, [f"pair_local_distortion_servo_receipt_invalid:{exc}"]
+    evidence = [
+        f"pair_local_distortion_servo_receipt_schema={receipt.get('schema')}",
+        f"pair_local_distortion_servo_report_schema={report.get('schema')}",
+        f"pair_local_distortion_servo_exact_score_delta={report.get('exact_score_delta')}",
+        f"pair_local_distortion_servo_value_per_byte={report.get('value_per_byte')}",
+        f"pair_local_distortion_servo_authority={report.get('authority')}",
+    ]
+    if report.get("long_run_admission_ready") is True:
+        evidence.append("pair_local_distortion_servo_pr95_grade_ready")
+        return True, evidence
+    return False, [*evidence, *_string_list(report.get("blockers"))]
 
 
 def _receiver_compiler_observed_signals(
@@ -2233,6 +2318,33 @@ def _receiver_compiler_observed_signals(
             "axis_trace_contract_or_replay_evidence"
         ]
     return out
+
+
+def _rate_pressure_deferred_until_distortion_birth(row: Mapping[str, Any]) -> bool:
+    gate = _first_mapping(
+        row,
+        (
+            "hinerv_distortion_birth_before_rate_pressure_gate",
+            "distortion_birth_before_rate_pressure_gate",
+        ),
+    )
+    if gate.get("passed") is True:
+        return False
+    blocked_controls = set(
+        _string_list(gate.get("rate_pressure_controls_blocked_until_satisfied"))
+    )
+    coder_blocked_by_gate = bool(
+        {"coder_qat", "section_byte_duals", "c1a_entropy_pressure"}.intersection(
+            blocked_controls
+        )
+    )
+    coder_qat_control = _first_mapping(row, ("coder_qat_control",))
+    coder_control_deferred = bool(
+        coder_qat_control.get("enabled") is False
+        and coder_qat_control.get("blocked_until_distortion_birth_gate_passes")
+        is True
+    )
+    return bool(coder_blocked_by_gate and coder_control_deferred)
 
 
 def _hinerv_actuator_execution_evidence_ok(

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -49,6 +50,9 @@ from tac.analysis.nerv_scorer_objective import (
     PEIRCE_P1_CONTEST_SCORER_GEOMETRY,
 )
 from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
+from tac.analysis.nerv_witness_readiness_dag import (
+    build_distortion_birth_before_rate_pressure_evidence,
+)
 from tac.analysis.pr95_distortion_practices_guard import (
     build_pr95_distortion_axis_trace_contract,
     build_pr95_distortion_practices_row_guard,
@@ -90,6 +94,16 @@ ROW_SCHEMA = "nerv_long_training_campaign_row.v1"
 EXPERIMENT_QUEUE_SCHEMA = "experiment_queue.v1"
 DEFAULT_EXPERIMENT_QUEUE_ID = "nerv_long_training_campaign_queue.v1"
 SCORE_LOWERING_GATE_SCHEMA = "nerv_long_training_score_lowering_gate.v1"
+RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA = "nerv_receiver_surface_trace_contract.v1"
+ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA = (
+    "nerv_archive_parseback_selection_contract.v1"
+)
+HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA = (
+    "hinerv_distortion_birth_before_rate_pressure_gate.v1"
+)
+DISTORTION_BIRTH_RATE_EVIDENCE_SCHEMA = (
+    "nerv_distortion_birth_before_rate_pressure_evidence.v1"
+)
 DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
@@ -670,6 +684,7 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
     candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
     modelsize_byte_cap_feedback_paths: Sequence[str | Path] = (),
+    hinerv_distortion_birth_evidence_sources: Sequence[Mapping[str, Any]] = (),
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
     archive_section_telemetry_sources: Sequence[Mapping[str, Any]] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
@@ -728,6 +743,10 @@ def build_nerv_long_training_campaign_plan(
         raise NervLongTrainingCampaignPlanError("experiment_queue_id must be non-empty")
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(joint_recon_weight_manifest_paths)
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
+    hinerv_distortion_birth_evidence = tuple(
+        _normalize_hinerv_distortion_birth_evidence_source(source)
+        for source in hinerv_distortion_birth_evidence_sources
+    )
     decoder_weight_waterfill_index = _decoder_weight_waterfill_index(decoder_weight_waterfill_sources)
     archive_section_telemetry_index = _archive_section_telemetry_index(archive_section_telemetry_sources)
     byte_cap_feedback_paths = tuple(Path(path).as_posix() for path in modelsize_byte_cap_feedback_paths)
@@ -794,6 +813,9 @@ def build_nerv_long_training_campaign_plan(
                     output_root=Path(output_root),
                     joint_recon_weight_artifacts=joint_recon_weight_artifacts,
                     candidate_feedback_index=candidate_feedback_index,
+                    hinerv_distortion_birth_evidence_sources=(
+                        hinerv_distortion_birth_evidence
+                    ),
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
                     archive_section_telemetry_index=archive_section_telemetry_index,
                     source_parity_contract=source_parity_contract,
@@ -956,6 +978,9 @@ def build_nerv_long_training_campaign_plan(
         "candidate_feedback_source_count": len(candidate_feedback_sources),
         "modelsize_byte_cap_feedback_paths": list(byte_cap_feedback_paths),
         "modelsize_byte_cap_feedback_path_count": len(byte_cap_feedback_paths),
+        "hinerv_distortion_birth_evidence_source_count": len(
+            hinerv_distortion_birth_evidence_sources
+        ),
         "snerv_bounded_proof_only": bool(snerv_bounded_proof_only),
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
         "snerv_bounded_proof_pair_count": int(snerv_bounded_proof_pair_count),
@@ -1185,6 +1210,7 @@ def _hinerv_campaign_row(
     output_root: Path,
     joint_recon_weight_artifacts: Mapping[int, Mapping[str, Any]] | None = None,
     candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
+    hinerv_distortion_birth_evidence_sources: Sequence[Mapping[str, Any]] = (),
     decoder_weight_waterfill_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     archive_section_telemetry_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     source_parity_contract: Mapping[str, Any] | None = None,
@@ -1268,6 +1294,21 @@ def _hinerv_campaign_row(
     effective_learning_rate = float(launch_feedback_adjustment.get("learning_rate") or learning_rate)
     effective_segnet_distillation_weight = float(launch_feedback_adjustment.get("segnet_distillation_weight") or 1.0)
     effective_pose_distillation_weight = float(launch_feedback_adjustment.get("pose_distillation_weight") or 1.0)
+    distortion_birth_gate = _hinerv_distortion_birth_before_rate_pressure_gate(
+        candidate=candidate,
+        evidence_sources=hinerv_distortion_birth_evidence_sources,
+    )
+    rate_pressure_allowed = bool(distortion_birth_gate.get("passed"))
+    coder_qat_control = {
+        **_coder_qat_control(quant_bits=int(quant_bits)),
+        "enabled": rate_pressure_allowed,
+        "blocked_until_distortion_birth_gate_passes": (
+            not rate_pressure_allowed
+        ),
+        "distortion_birth_before_rate_pressure_gate_passed": (
+            rate_pressure_allowed
+        ),
+    }
     output_dir_basename = _campaign_output_basename(
         row_id=f"hi_nerv::{candidate_id}::{optimizer_kind}",
         launch_feedback_adjustment=launch_feedback_adjustment,
@@ -1278,7 +1319,7 @@ def _hinerv_campaign_row(
         num_pairs=num_pairs,
         segnet_distillation_weight=effective_segnet_distillation_weight,
         pose_distillation_weight=effective_pose_distillation_weight,
-        coder_aware_qat=True,
+        coder_aware_qat=rate_pressure_allowed,
         coder_qat_quant_bits=int(quant_bits),
         recon_pixel_weight_attached=True,
         eval_roundtrip_ste_attached=True,
@@ -1360,10 +1401,6 @@ def _hinerv_campaign_row(
         _float_token(
             DEFAULT_HINERV_SEGNET_DIRECT_LIVE_TARGET_MIN_RATIO_FLOOR_WEIGHT
         ),
-        "--coder-aware-qat",
-        "--coder-qat-quant-bits",
-        str(int(quant_bits)),
-        *_coder_qat_command_args(quant_bits=int(quant_bits)),
         "--optimizer-kind",
         str(optimizer_kind),
         "--hi-nerv-optimizer-policy",
@@ -1402,6 +1439,15 @@ def _hinerv_campaign_row(
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
     ]
+    if rate_pressure_allowed:
+        command.extend(
+            [
+                "--coder-aware-qat",
+                "--coder-qat-quant-bits",
+                str(int(quant_bits)),
+                *_coder_qat_command_args(quant_bits=int(quant_bits)),
+            ]
+        )
     if planner_row_queue_artifact_path:
         command.extend(["--planner-row-queue-artifact", planner_row_queue_artifact_path])
     for path in modelsize_byte_cap_feedback_paths:
@@ -1457,6 +1503,10 @@ def _hinerv_campaign_row(
         )
     pr95_telemetry_contract = build_pr95_evaluate_scorer_domain_telemetry_contract("hi_nerv")
     pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("hi_nerv")
+    pr95_axis_trace_measurements = _axis_trace_measurements_from_sources(
+        candidate,
+        feedback,
+    )
     pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("hi_nerv")
     pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("hi_nerv")
     explicit_pr95_actuator_execution_evidence = candidate.get(
@@ -1480,11 +1530,16 @@ def _hinerv_campaign_row(
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": pr95_telemetry_contract,
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_distortion_axis_trace_measurements": pr95_axis_trace_measurements,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "pr95_scorer_atom_actuator_execution_evidence": (
                 pr95_actuator_execution_evidence
             ),
+            "hinerv_distortion_birth_before_rate_pressure_gate": (
+                distortion_birth_gate
+            ),
+            "coder_qat_control": coder_qat_control,
             "curriculum_plan": curriculum,
             "pr95_staged_curriculum": bool((curriculum.get("pr95_stage_plan") or {}).get("enabled")),
             "eval_roundtrip_ste_attached": bool(
@@ -1498,6 +1553,7 @@ def _hinerv_campaign_row(
     candidate_authority_blockers = list(candidate.get("_candidate_authority_blockers") or [])
     blockers = [
         ("" if joint_recon_weight else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"),
+        *list(distortion_birth_gate.get("blockers") or []),
         ("" if decoder_weight_waterfill else "hinerv_decoder_weight_waterfill_plan_missing"),
         (
             ""
@@ -1554,6 +1610,8 @@ def _hinerv_campaign_row(
         implementation_status = "hinerv_official_controls_required_for_launch"
     elif optimizer_launch_blockers:
         implementation_status = "optimizer_timing_smoke_required_before_campaign_launch"
+    elif not distortion_birth_gate.get("passed"):
+        implementation_status = "hinerv_distortion_birth_before_rate_pressure_blocked"
     elif pr95_distortion_blockers:
         implementation_status = "pr95_distortion_practices_required_for_launch"
     elif source_parity["required_blockers"]:
@@ -1597,6 +1655,7 @@ def _hinerv_campaign_row(
             "pr95_baseline_identity_binding": pr95_baseline_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": (pr95_telemetry_contract),
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_distortion_axis_trace_measurements": pr95_axis_trace_measurements,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "pr95_scorer_atom_actuator_execution_evidence": (
@@ -1608,7 +1667,11 @@ def _hinerv_campaign_row(
                 optimizer_policy=optimizer_policy,
             ),
             "quant_bits": int(quant_bits),
-            "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
+            "hinerv_distortion_birth_before_rate_pressure_gate": (
+                distortion_birth_gate
+            ),
+            "rate_pressure_controls_enabled": rate_pressure_allowed,
+            "coder_qat_control": coder_qat_control,
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
             "decoder_weight_waterfill_plan": (
                 _decoder_weight_waterfill_row_metadata(decoder_weight_waterfill)
@@ -2002,6 +2065,11 @@ def _snerv_campaign_row(
         )
     pr95_telemetry_contract = build_pr95_evaluate_scorer_domain_telemetry_contract("snerv")
     pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("snerv")
+    pr95_axis_trace_measurements = _axis_trace_measurements_from_sources(
+        candidate,
+        feedback,
+        snerv_source_forward_evidence,
+    )
     pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("snerv")
     pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("snerv")
     explicit_pr95_actuator_execution_evidence = candidate.get(
@@ -2027,6 +2095,7 @@ def _snerv_campaign_row(
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": pr95_telemetry_contract,
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_distortion_axis_trace_measurements": pr95_axis_trace_measurements,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "pr95_scorer_atom_actuator_execution_evidence": (
@@ -2095,7 +2164,6 @@ def _snerv_campaign_row(
         not source_control_blockers
         and not candidate.get("_candidate_authority_blockers")
         and not modelsize_byte_cap_blockers
-        and not pr95_distortion_blockers
     )
     curriculum_ready = not curriculum_blockers
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
@@ -2179,6 +2247,7 @@ def _snerv_campaign_row(
             "pr95_baseline_identity_binding": pr95_baseline_binding,
             "pr95_evaluate_scorer_domain_telemetry_contract": (pr95_telemetry_contract),
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
+            "pr95_distortion_axis_trace_measurements": pr95_axis_trace_measurements,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
             "pr95_scorer_atom_actuator_execution_evidence": (
@@ -2371,6 +2440,13 @@ def _experiment_for_row(
 ) -> dict[str, Any]:
     output_dir = _row_output_dir(command_argv)
     output_json = (output_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+    receiver_surface_trace_contract = _receiver_surface_trace_contract(
+        family=str(family),
+        output_dir=output_dir,
+    )
+    receiver_surface_trace_path = str(
+        receiver_surface_trace_contract["trace_artifact_path"]
+    )
     telemetry_artifacts = _row_observable_artifacts(
         family=str(family),
         output_dir=output_dir,
@@ -2399,6 +2475,10 @@ def _experiment_for_row(
             "path": output_json,
             "key": "promotion_eligible",
             "equals": False,
+        },
+        {
+            "type": "path_exists",
+            "path": receiver_surface_trace_path,
         },
     ]
     if str(family) == "hi_nerv":
@@ -2451,8 +2531,21 @@ def _experiment_for_row(
     pr95_baseline_binding = metadata.get("pr95_baseline_identity_binding")
     pr95_telemetry_contract = metadata.get("pr95_evaluate_scorer_domain_telemetry_contract")
     pr95_axis_trace_contract = metadata.get("pr95_distortion_axis_trace_contract")
+    archive_parseback_selection_contract = _archive_parseback_selection_contract(
+        family=str(family),
+        axis_trace_contract=pr95_axis_trace_contract,
+    )
+    pr95_axis_trace_measurements = metadata.get(
+        "pr95_distortion_axis_trace_measurements"
+    )
+    hinerv_distortion_birth_gate = metadata.get(
+        "hinerv_distortion_birth_before_rate_pressure_gate"
+    )
     pr95_pose_marginal_contract = metadata.get("pr95_posenet_marginal_telemetry_contract")
     pr95_actuator_contract = metadata.get("pr95_scorer_atom_actuator_contract")
+    pr95_actuator_execution_evidence = metadata.get(
+        "pr95_scorer_atom_actuator_execution_evidence"
+    )
     pr95_distortion_guard = metadata.get("pr95_distortion_practices_guard")
     family_optimal_strategy = metadata.get("family_optimal_strategy")
     snerv_runtime_authority_split = metadata.get("snerv_official_runtime_authority_split")
@@ -2528,6 +2621,8 @@ def _experiment_for_row(
                 pr95_axis_trace_contract,
                 Mapping,
             ),
+            "receiver_surface_trace_contract_consumed": True,
+            "archive_parseback_selection_contract_consumed": True,
             "pr95_posenet_marginal_telemetry_contract_consumed": isinstance(
                 pr95_pose_marginal_contract,
                 Mapping,
@@ -2574,6 +2669,25 @@ def _experiment_for_row(
                 if isinstance(pr95_axis_trace_contract, Mapping)
                 else None
             ),
+            "receiver_surface_trace_contract": receiver_surface_trace_contract,
+            "archive_parseback_selection_contract": (
+                archive_parseback_selection_contract
+            ),
+            "pr95_distortion_axis_trace_measurements": (
+                [
+                    dict(item)
+                    for item in pr95_axis_trace_measurements
+                    if isinstance(item, Mapping)
+                ]
+                if isinstance(pr95_axis_trace_measurements, Sequence)
+                and not isinstance(pr95_axis_trace_measurements, (str, bytes))
+                else []
+            ),
+            "hinerv_distortion_birth_before_rate_pressure_gate": (
+                hinerv_distortion_birth_gate
+                if isinstance(hinerv_distortion_birth_gate, Mapping)
+                else None
+            ),
             "pr95_posenet_marginal_telemetry_contract": (
                 pr95_pose_marginal_contract
                 if isinstance(pr95_pose_marginal_contract, Mapping)
@@ -2582,6 +2696,11 @@ def _experiment_for_row(
             "pr95_scorer_atom_actuator_contract": (
                 pr95_actuator_contract
                 if isinstance(pr95_actuator_contract, Mapping)
+                else None
+            ),
+            "pr95_scorer_atom_actuator_execution_evidence": (
+                pr95_actuator_execution_evidence
+                if isinstance(pr95_actuator_execution_evidence, Mapping)
                 else None
             ),
             "pr95_distortion_practices_guard": (
@@ -2773,6 +2892,7 @@ def _experiment_launch_blockers(
         "aurora_requires_local_timing_convergence_smoke",
         "full600_or_hardpair_distortion_replay_required",
         "hi_nerv_archive_in_loop_byte_oracle_missing",
+        "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked",
         "hinerv_candidate_curriculum_recon_pixel_weight_missing",
         "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted",
         "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling",
@@ -3402,7 +3522,7 @@ def _snerv_pr95_actuator_execution_evidence_from_source_forward(
         or len(artifact_sha256) != 64
     ):
         return None
-    return {
+    evidence = {
         "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
         "family": "snerv",
         "source": "snerv_lf_hf_source_forward_evidence",
@@ -3426,6 +3546,19 @@ def _snerv_pr95_actuator_execution_evidence_from_source_forward(
             )
             or []
         ),
+        "source_forward_replay_proof": (
+            dict(source_forward_evidence["source_forward_replay_proof"])
+            if isinstance(source_forward_evidence.get("source_forward_replay_proof"), Mapping)
+            else None
+        ),
+        "source_forward_replay_proof_status": (
+            dict(source_forward_evidence["source_forward_replay_proof_status"])
+            if isinstance(
+                source_forward_evidence.get("source_forward_replay_proof_status"),
+                Mapping,
+            )
+            else None
+        ),
         "checkpoint_export_lineage_bound": True,
         "mfu_hfr_tub_source_forward_parity_proven": True,
         "tub_output2_source_forward_parity_proven": True,
@@ -3434,6 +3567,10 @@ def _snerv_pr95_actuator_execution_evidence_from_source_forward(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    servo_receipt = source_forward_evidence.get("pair_local_distortion_servo_receipt")
+    if isinstance(servo_receipt, Mapping):
+        evidence["pair_local_distortion_servo_receipt"] = dict(servo_receipt)
+    return evidence
 
 
 def _snerv_source_forward_closed_blockers(
@@ -3825,6 +3962,93 @@ def _row_output_dir(command_argv: Sequence[str]) -> Path:
     except (ValueError, IndexError):
         out_dir = DEFAULT_OUTPUT_ROOT
     return Path(out_dir)
+
+
+def _row_receiver_surface_trace_path(*, family: str, output_dir: Path) -> Path:
+    family_key = str(family).strip().lower().replace("-", "_")
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    if family_key == "snerv":
+        return output_dir / "snerv_mlx_training" / "nerv_crux_trace_rows.json"
+    return output_dir / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json"
+
+
+def _receiver_surface_trace_contract(*, family: str, output_dir: Path) -> dict[str, Any]:
+    family_key = str(family).strip().lower().replace("-", "_")
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    if family_key not in {"hi_nerv", "snerv"}:
+        family_key = "hi_nerv"
+    return {
+        "schema": RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA,
+        "family": family_key,
+        "trace_artifact_path": _row_receiver_surface_trace_path(
+            family=family_key,
+            output_dir=output_dir,
+        ).as_posix(),
+        "trace_row_schema": "nerv_crux_trace_rows.v1",
+        "trace_source": "accepted_live_mlx_updates_only",
+        "canonical_metric_prefix": "receiver_surface_",
+        "accepted_update_trace_required": True,
+        "legacy_aliases_accepted": False,
+        "required_canonical_metrics": [
+            "receiver_surface_trace_present",
+            "receiver_surface_loss_delta",
+            "receiver_surface_uint8_changed_pixels",
+            "receiver_surface_segnet_input_delta_linf",
+            "receiver_surface_worst_region_margin_p50_delta",
+            "receiver_surface_argmax_flipped_pixels",
+            "receiver_surface_pose_output_delta",
+            "receiver_surface_fakequant_argmax_flipped_pixels",
+            "receiver_surface_parseback_argmax_flipped_pixels",
+            "receiver_surface_inflated_argmax_flipped_pixels",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _archive_parseback_selection_contract(
+    *,
+    family: str,
+    axis_trace_contract: Any,
+) -> dict[str, Any]:
+    family_key = str(family).strip().lower().replace("-", "_")
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    if family_key not in {"hi_nerv", "snerv"}:
+        family_key = "hi_nerv"
+    axis_contract = axis_trace_contract if isinstance(axis_trace_contract, Mapping) else {}
+    axes = [str(axis) for axis in axis_contract.get("required_axes") or ()]
+    policy = axis_contract.get("acceptance_policy")
+    policy = policy if isinstance(policy, Mapping) else {}
+    return {
+        "schema": ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
+        "family": family_key,
+        "source_axis_trace_contract_schema": axis_contract.get("schema"),
+        "archive_parseback_axis_required": "archive_parseback" in set(axes),
+        "parseback_selection_required": True,
+        "parseback_score_delta_must_be_bounded_before_stage6": (
+            policy.get("parseback_score_delta_must_be_bounded_before_stage6") is True
+        ),
+        "live_only_improvement_is_false_authority": (
+            policy.get("live_only_improvement_is_false_authority") is True
+        ),
+        "fail_closed_on_axis_divergence": (
+            policy.get("fail_closed_on_axis_divergence") is True
+        ),
+        "selection_authority_order": [
+            "live_forward",
+            "fakequant_forward",
+            "archive_parseback",
+            "inflate_replay",
+            "official_evaluate_py",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
@@ -4246,6 +4470,27 @@ def _truthy_authority_value(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() not in {"", "0", "false", "no", "none", "null"}
     return bool(value)
+
+
+def _find_nested_finite_number(value: Any, key: str) -> float | None:
+    if isinstance(value, Mapping):
+        if key in value:
+            try:
+                numeric = float(value[key])
+            except (TypeError, ValueError):
+                numeric = math.nan
+            if math.isfinite(numeric):
+                return numeric
+        for child in value.values():
+            found = _find_nested_finite_number(child, key)
+            if found is not None:
+                return found
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for child in value:
+            found = _find_nested_finite_number(child, key)
+            if found is not None:
+                return found
+    return None
 
 
 def _snerv_rate_plausible_for_long_training(candidate: Mapping[str, Any]) -> bool:
@@ -5587,6 +5832,162 @@ def _hinerv_optimizer_policy_control(
     }
 
 
+def _normalize_hinerv_distortion_birth_evidence_source(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    row = dict(source)
+    family = str(row.get("family") or row.get("execute_family") or "hi_nerv")
+    candidate_id = _first_non_auto_candidate_id(
+        row.get("candidate_id"),
+        row.get("modelsize_candidate_id"),
+        row.get("budget_candidate_id"),
+    )
+    source_path = row.get("_source_path") or row.get("report_path") or row.get("path")
+    if row.get("schema") == HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA:
+        return row
+    if row.get("schema") == DISTORTION_BIRTH_RATE_EVIDENCE_SCHEMA:
+        evidence = dict(row)
+    else:
+        evidence = build_distortion_birth_before_rate_pressure_evidence(
+            {
+                "report_loaded": True,
+                "metrics": {
+                    key: _find_nested_finite_number(row, key)
+                    for key in (
+                        "receiver_quantum_attempt_count",
+                        "hard_birth_argmax_progress_accepted_step_count",
+                        "max_candidate_segnet_worst_debt_reduction",
+                        "max_candidate_segnet_min_ratio_increase",
+                        "max_candidate_segnet_total_debt_spill_given_worst_improvement",
+                        "max_accepted_frame1_receiver_uint8_changed_count",
+                        "max_accepted_frame1_receiver_uint8_delta_abs",
+                        "max_candidate_pose_exact_delta",
+                    )
+                },
+            }
+        )
+    blockers = [str(blocker) for blocker in evidence.get("blockers") or []]
+    if family != "hi_nerv":
+        blockers.append("hinerv_distortion_birth_evidence_family_mismatch")
+    for path in _iter_truthy_authority_paths(row):
+        blockers.append(f"hinerv_distortion_birth_authority_flag_true:{path}")
+    passed = bool(
+        evidence.get("distortion_birth_before_rate_pressure_satisfied")
+    ) and not blockers
+    return {
+        "schema": HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA,
+        "family": "hi_nerv",
+        "candidate_id": candidate_id or None,
+        "candidate_binding": (
+            "candidate_bound" if candidate_id else "global_hinerv_mechanism_gate"
+        ),
+        "source_path": None if source_path is None else str(source_path),
+        "source_schema": row.get("schema"),
+        "attached": True,
+        "passed": passed,
+        "distortion_birth_before_rate_pressure_satisfied": passed,
+        "evidence": evidence,
+        "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hinerv_distortion_birth_before_rate_pressure_gate(
+    *,
+    candidate: Mapping[str, Any],
+    evidence_sources: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    candidate_id = str(candidate.get("candidate_id") or "")
+    candidates: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    raw_sources: list[Mapping[str, Any]] = [
+        raw for raw in evidence_sources if isinstance(raw, Mapping)
+    ]
+    for key in (
+        "hinerv_distortion_birth_before_rate_pressure_gate",
+        "distortion_birth_before_rate_pressure_evidence",
+        "hinerv_distortion_birth_evidence",
+    ):
+        embedded = candidate.get(key)
+        if isinstance(embedded, Mapping):
+            raw_sources.append(embedded)
+    for raw in raw_sources:
+        gate = _normalize_hinerv_distortion_birth_evidence_source(raw)
+        gate_candidate_id = str(gate.get("candidate_id") or "")
+        if gate_candidate_id and gate_candidate_id != candidate_id:
+            skipped.append(
+                {
+                    "candidate_id": gate_candidate_id,
+                    "source_path": gate.get("source_path"),
+                    "reason": "candidate_id_mismatch",
+                }
+            )
+            continue
+        candidates.append(gate)
+    if not candidates:
+        blockers = [
+            "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked",
+            "distortion_birth_smoke_report_missing",
+        ]
+        return {
+            "schema": HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA,
+            "family": "hi_nerv",
+            "candidate_id": candidate_id or None,
+            "required": True,
+            "attached": False,
+            "passed": False,
+            "distortion_birth_before_rate_pressure_satisfied": False,
+            "source_count": len(raw_sources),
+            "skipped_sources": skipped,
+            "rate_pressure_controls_blocked_until_satisfied": [
+                "coder_qat",
+                "section_byte_duals",
+                "c1a_entropy_pressure",
+                "byte_compiler_selection",
+                "muon_late_polish",
+            ],
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    selected = next((gate for gate in candidates if gate.get("passed") is True), candidates[0])
+    selected_blockers = [str(blocker) for blocker in selected.get("blockers") or []]
+    blockers = (
+        []
+        if selected.get("passed") is True
+        else [
+            "hinerv_distortion_birth_before_rate_pressure_missing_or_blocked",
+            *selected_blockers,
+        ]
+    )
+    blockers = _dedupe(blockers)
+    return {
+        "schema": HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA,
+        "family": "hi_nerv",
+        "candidate_id": candidate_id or None,
+        "required": True,
+        "attached": True,
+        "passed": bool(selected.get("passed") is True and not blockers),
+        "distortion_birth_before_rate_pressure_satisfied": bool(
+            selected.get("passed") is True and not blockers
+        ),
+        "source_count": len(raw_sources),
+        "matched_source_count": len(candidates),
+        "selected_source_path": selected.get("source_path"),
+        "selected_candidate_binding": selected.get("candidate_binding"),
+        "selected_evidence": selected.get("evidence"),
+        "skipped_sources": skipped,
+        "rate_pressure_controls_blocked_until_satisfied": [
+            "coder_qat",
+            "section_byte_duals",
+            "c1a_entropy_pressure",
+            "byte_compiler_selection",
+            "muon_late_polish",
+        ],
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _candidate_feedback_index(
     sources: Sequence[Mapping[str, Any]],
 ) -> dict[tuple[str, str], list[dict[str, Any]]]:
@@ -6088,6 +6489,28 @@ def _first_mapping_value(key: str, *sources: Any) -> Any:
         if isinstance(source, Mapping) and source.get(key) is not None:
             return source.get(key)
     return None
+
+
+def _axis_trace_measurements_from_sources(*sources: Any) -> list[Mapping[str, Any]]:
+    rows: list[Mapping[str, Any]] = []
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        for key in (
+            "pr95_distortion_axis_trace_measurements",
+            "distortion_axis_trace_measurements",
+            "axis_trace_measurements",
+            "axis_trace_rows",
+        ):
+            value = source.get(key)
+            if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+                rows.extend(item for item in value if isinstance(item, Mapping))
+        nested = source.get("pr95_distortion_axis_trace")
+        if isinstance(nested, Mapping):
+            value = nested.get("measurements") or nested.get("rows")
+            if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+                rows.extend(item for item in value if isinstance(item, Mapping))
+    return rows
 
 
 def _snerv_native_artifact_evidence_from_feedback(
@@ -8143,6 +8566,8 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "pr95_baseline_identity_binding",
         "pr95_evaluate_scorer_domain_telemetry_contract",
         "pr95_distortion_axis_trace_contract",
+        "pr95_distortion_axis_trace_measurements",
+        "hinerv_distortion_birth_before_rate_pressure_gate",
         "pr95_posenet_marginal_telemetry_contract",
         "pr95_scorer_atom_actuator_contract",
         "pr95_scorer_atom_actuator_execution_evidence",

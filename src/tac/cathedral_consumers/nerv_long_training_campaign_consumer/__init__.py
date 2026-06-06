@@ -14,6 +14,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from tac.analysis.nerv_long_training_campaign_plan import (
+    ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
+    RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA,
+)
 from tac.cathedral.consumer_contract import HookNumber
 
 CONSUMER_NAME = "nerv_long_training_campaign_consumer"
@@ -235,6 +239,8 @@ def render_markdown(result: Mapping[str, Any]) -> str:
 def _local_mlx_ready(experiment: Mapping[str, Any]) -> bool:
     gate = _mapping(experiment.get("score_lowering_gate"))
     contract = _mapping(experiment.get("launch_authority_contract"))
+    receiver_surface_contract = _mapping(contract.get("receiver_surface_trace_contract"))
+    parseback_contract = _mapping(contract.get("archive_parseback_selection_contract"))
     return (
         str(experiment.get("status") or "") in {"ready", "queued"}
         and experiment.get("blocked") is not True
@@ -245,6 +251,10 @@ def _local_mlx_ready(experiment: Mapping[str, Any]) -> bool:
         and contract.get("queue_status_is_receiver_proof") is not True
         and contract.get("queue_status_is_cpu_replay_proof") is not True
         and contract.get("queue_status_is_exact_eval_authority") is not True
+        and receiver_surface_contract.get("schema")
+        == RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA
+        and parseback_contract.get("schema")
+        == ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA
         and gate.get("local_mlx_executable") is True
         and gate.get("cpu_replay_ready") is not True
         and gate.get("exact_gate_ready") is not True
@@ -304,6 +314,12 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
             "queue_status_is_exact_eval_authority": (
                 launch_contract.get("queue_status_is_exact_eval_authority") is True
             ),
+            "receiver_surface_trace_contract": _maybe_mapping(
+                launch_contract.get("receiver_surface_trace_contract")
+            ),
+            "archive_parseback_selection_contract": _maybe_mapping(
+                launch_contract.get("archive_parseback_selection_contract")
+            ),
         },
         "metadata": _compact_metadata(metadata),
         "score_claim": False,
@@ -314,15 +330,38 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
         "upstream_evaluate_score_binding",
         "pr95_evaluate_scorer_domain_telemetry_contract",
         "pr95_distortion_axis_trace_contract",
+        "pr95_distortion_axis_trace_measurements",
         "pr95_posenet_marginal_telemetry_contract",
         "pr95_scorer_atom_actuator_contract",
         "pr95_scorer_atom_actuator_execution_evidence",
         "pr95_distortion_practices_guard",
+        "hinerv_distortion_birth_before_rate_pressure_gate",
+        "coder_qat_control",
     ):
-        value = metadata.get(key)
+        value = _first_compact_value(
+            key,
+            metadata=metadata,
+            launch_contract=launch_contract,
+        )
         if isinstance(value, Mapping):
             compact[key] = dict(value)
+        elif key == "pr95_distortion_axis_trace_measurements":
+            rows = _mapping_list(value)
+            if rows:
+                compact[key] = [dict(row) for row in rows]
     return compact
+
+
+def _first_compact_value(
+    key: str,
+    *,
+    metadata: Mapping[str, Any],
+    launch_contract: Mapping[str, Any],
+) -> Any:
+    value = metadata.get(key)
+    if value is not None:
+        return value
+    return launch_contract.get(key)
 
 
 def _compact_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
@@ -411,6 +450,15 @@ def _launch_authority_contract_blockers(
     ):
         if contract.get(key) is True:
             blockers.append(f"{label}_{key}_overclaimed")
+    receiver_surface_contract = _mapping(contract.get("receiver_surface_trace_contract"))
+    if (
+        receiver_surface_contract.get("schema")
+        != RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA
+    ):
+        blockers.append(f"{label}_receiver_surface_trace_contract_missing")
+    parseback_contract = _mapping(contract.get("archive_parseback_selection_contract"))
+    if parseback_contract.get("schema") != ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA:
+        blockers.append(f"{label}_archive_parseback_selection_contract_missing")
     if _truthy_authority(contract):
         blockers.append(f"{label}_launch_authority_contract_false_authority")
     return blockers
@@ -463,6 +511,10 @@ def _truthy_authority(payload: Mapping[str, Any]) -> bool:
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _maybe_mapping(value: Any) -> dict[str, Any] | None:
+    return dict(value) if isinstance(value, Mapping) else None
 
 
 def _mapping_list(value: Any) -> list[Mapping[str, Any]]:

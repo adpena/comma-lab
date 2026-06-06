@@ -15,6 +15,10 @@ from tac.analysis.nerv_long_training_campaign_admission import (
 from tac.analysis.nerv_long_training_campaign_plan import (
     build_nerv_long_training_campaign_plan,
 )
+from tac.analysis.nerv_pair_local_distortion_servo import (
+    PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
+    PR95_SERVO_CURRICULUM_STAGES,
+)
 from tac.analysis.pr95_distortion_practices_guard import (
     AXIS_TRACE_CONTRACT_SCHEMA,
     POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA,
@@ -402,6 +406,9 @@ def _campaign_plan(output_root: Path) -> dict:
                     "pr95_scorer_atom_actuator_execution_evidence": (
                         _hinerv_actuator_execution_evidence()
                     ),
+                    "pr95_distortion_axis_trace_measurements": (
+                        _pr95_axis_trace_measurements()
+                    ),
                 }
             ],
             "score_claim": False,
@@ -423,6 +430,9 @@ def _campaign_plan(output_root: Path) -> dict:
                     "pr95_scorer_atom_actuator_execution_evidence": (
                         _snerv_actuator_execution_evidence()
                     ),
+                    "pr95_distortion_axis_trace_measurements": (
+                        _pr95_axis_trace_measurements()
+                    ),
                 }
             ],
             "score_claim": False,
@@ -435,21 +445,63 @@ def _campaign_plan(output_root: Path) -> dict:
         learning_rate=3.0e-4,
         output_root=output_root,
         max_candidates_per_family=1,
+        hinerv_distortion_birth_evidence_sources=(
+            _hinerv_distortion_birth_evidence(),
+        ),
     )
-
 
 def _hinerv_actuator_execution_evidence() -> dict:
     return {
         "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
         "family": "hi_nerv",
         "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_smoke_artifact_schema": (
+            "hinerv_pair_local_actuator_smoke_artifact.v1"
+        ),
+        "pair_local_smoke_artifact_path": (
+            "/Volumes/VertigoDataTier/pact/test_admission/"
+            "hi_nerv_pair_local_actuator_smoke/"
+            "hinerv_pair_local_actuator_smoke_pair000000_aaaaaaaaaaaa.json"
+        ),
+        "pair_local_smoke_artifact_sha256": "d" * 64,
+        "pair_local_smoke_artifact_bytes": 2048,
+        "actuator_kind": "pair_local_latent_row",
+        "actuator_tensor_name": "latents_fine",
+        "updated_tensor_names": ["latents_fine"],
+        "state_mutation_scope": "latents_fine_row_only",
+        "runtime_sidecar_bytes": 0,
         "pair_local_adapter_bytes": 128,
         "pair_local_adapter_sha256": "a" * 64,
         "pair_local_grad_norm": 0.25,
+        "pair_local_grad_norm_by_group": {"latents_fine": 0.25},
         "pair_local_output_delta_l2": 0.031,
-        "section_value_per_byte_rows": [
-            {"section": "pair_local_adapter", "value_per_byte": 0.004}
+        "pair_local_output_delta_max_abs": 0.004,
+        "pair_local_output_delta_max_abs_uint8": 1.02,
+        "receiver_uint8_half_step_normalized": 0.5 / 255.0,
+        "receiver_uint8_crossing_potential": True,
+        "receiver_uint8_changed": True,
+        "receiver_uint8_changed_count": 12,
+        "receiver_uint8_changed_fraction": 0.001,
+        "receiver_uint8_delta_abs_max": 2,
+        "non_target_pair_receiver_uint8_changed_count": 0,
+        "non_target_pair_receiver_uint8_delta_abs_max": 0,
+        "pair_locality_verified": True,
+        "non_target_pair_output_delta_l2_max": 0.0,
+        "state_restored_after_smoke": True,
+        "pair_local_latents_fine_original_row_sha256": "c" * 64,
+        "pair_local_latents_fine_restored_row_sha256": "c" * 64,
+        "section_output_delta_per_byte_rows": [
+            {
+                "section": "pair_local_latents_fine",
+                "output_delta_l2_per_byte": 0.004,
+                "value_semantics": "receiver_output_l2_per_byte_not_score_value",
+                "score_value_per_byte_measured": False,
+            }
         ],
+        "section_value_per_byte_rows": [],
+        "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
+            "hi_nerv"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
     }
@@ -465,8 +517,183 @@ def _snerv_actuator_execution_evidence() -> dict:
         "checkpoint_export_lineage_bound": True,
         "mfu_hfr_tub_source_forward_parity_proven": True,
         "tub_output2_source_forward_parity_proven": True,
+        "source_forward_replay_proof": _snerv_source_forward_numerical_proof(),
+        "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
+            "snerv"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
+    }
+
+
+def _pair_local_distortion_servo_receipt(family: str) -> dict:
+    if family == "snerv":
+        actuation = {
+            "pair_local": True,
+            "trained_param_groups": ["tub.output_2", "mfu.adapter"],
+            "source_forward_replay_bound": True,
+            "mfu_hfr_tub_source_forward_parity_proven": True,
+        }
+        trained_groups = ["tub.output_2", "mfu.adapter"]
+        grad = {"tub.output_2": 0.4, "mfu.adapter": 0.2}
+        update = {"tub.output_2": 0.05, "mfu.adapter": 0.02}
+        actuator_id = "snerv_tub_output2_pair_birth"
+        actuator_kind = "pair_conditioned_mfu_hfr_tub_adapter"
+    else:
+        actuation = {
+            "pair_local": True,
+            "trained_param_groups": ["latents_fine", "output_head.rgb_1"],
+        }
+        trained_groups = ["latents_fine", "output_head.rgb_1"]
+        grad = {"latents_fine": 0.25, "output_head.rgb_1": 0.13}
+        update = {"latents_fine": 0.04, "output_head.rgb_1": 0.02}
+        actuator_id = "hinerv_target_region_birth_pair17"
+        actuator_kind = "pair_local_latent_row"
+    return {
+        "schema": PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
+        "family": family,
+        "pair_ids": [17],
+        "authority": "parseback_mlx",
+        "old_d_seg": 0.020,
+        "new_d_seg": 0.019,
+        "old_d_pose": 0.0020,
+        "new_d_pose": 0.00195,
+        "old_archive_bytes": 178_000,
+        "new_archive_bytes": 178_128,
+        "value_per_byte": 0.0007,
+        "float_rgb_delta_linf": 0.007,
+        "uint8_changed_pixels": 12,
+        "segnet_input_delta_linf": 0.002,
+        "posenet_input_delta_linf": 0.001,
+        "segnet_margin_delta": 0.32,
+        "segnet_argmax_flipped_pixels": 7,
+        "pose_output_delta_l2": 0.015,
+        "fakequant_segnet_margin_delta": 0.24,
+        "fakequant_argmax_flipped_pixels": 5,
+        "parseback_segnet_margin_delta": 0.21,
+        "parseback_argmax_flipped_pixels": 4,
+        "frame_scope": "frame1_seg_pose_joint",
+        "actuator_id": actuator_id,
+        "actuator_kind": actuator_kind,
+        "worst_scorer_debt": {
+            "target_id": "pair17_class4_region2",
+            "score_debt_before": 2.4,
+            "score_debt_after": 1.1,
+        },
+        "frame_incidence": {
+            "frame0_pose_only": True,
+            "frame0_posenet_incidence": True,
+            "frame0_segnet_incidence": False,
+            "frame1_segnet_incidence": True,
+            "frame1_posenet_incidence": True,
+            "frame0_frame1_control_split": True,
+            "separate_frame_heads": True,
+        },
+        "stage_manifest": {
+            "completed_stage_ids": list(PR95_SERVO_CURRICULUM_STAGES),
+            "stage_order_respected": True,
+            "byte_pressure_after_birth": True,
+            "qat_after_round_ste": True,
+            "final_optimizer_after_survival": True,
+        },
+        "actuation": actuation,
+        "trained_param_groups": trained_groups,
+        "grad_norm_by_group": grad,
+        "update_norm_by_group": update,
+        "action_algebra_trace": {
+            "selected_action_id": "target_region_rgb_bias_then_pair_adapter",
+            "frame_scope": "frame1_seg_pose_joint",
+            "effect_delta_seg": -0.001,
+            "effect_delta_pose": -0.00005,
+            "effect_delta_bytes": 128,
+            "runtime_delta_ms": 0.4,
+            "selector_bits": 12,
+            "noncommutative_interactions_checked": True,
+        },
+        "hardware_margin_trace": {
+            "target_authority": "parseback_mlx",
+            "target_authority_margin_checked": True,
+            "hardware_drift_risk": "bounded",
+            "segnet_margin_min": 0.03,
+            "pose_error_slack": 0.0002,
+        },
+    }
+
+
+def _pr95_axis_trace_measurements() -> list[dict[str, float | int | str | bool]]:
+    return [
+        {
+            "axis": "live_forward",
+            "measured": True,
+            "score_delta": -0.010,
+            "d_seg": 0.020,
+            "d_pose": 0.0020,
+        },
+        {
+            "axis": "fakequant_forward",
+            "measured": True,
+            "score_delta": -0.009,
+            "d_seg": 0.021,
+            "d_pose": 0.0021,
+        },
+        {
+            "axis": "archive_parseback",
+            "measured": True,
+            "score_delta": -0.008,
+            "d_seg": 0.022,
+            "d_pose": 0.0022,
+        },
+        {
+            "axis": "inflate_replay",
+            "measured": True,
+            "score_delta": -0.007,
+            "d_seg": 0.023,
+            "d_pose": 0.0023,
+        },
+        {
+            "axis": "official_evaluate_py",
+            "measured": True,
+            "score": 0.2,
+            "archive_bytes": 178_000,
+        },
+    ]
+
+
+def _snerv_source_forward_numerical_proof() -> dict:
+    return {
+        "official_torch_frame_hash": "1" * 64,
+        "mlx_frame_hash": "2" * 64,
+        "numpy_receiver_frame_hash": "3" * 64,
+        "parseback_frame_hash": "4" * 64,
+        "tub_output_2_hash": "5" * 64,
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
+        "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
+    }
+
+
+def _hinerv_distortion_birth_evidence(
+    *,
+    candidate_id: str = "hinerv_tiny",
+) -> dict:
+    return {
+        "schema": "compact_renderer_mlx_spine_runner.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "receiver_quantum_attempt_count": 3.0,
+        "hard_birth_argmax_progress_accepted_step_count": 1.0,
+        "max_candidate_segnet_worst_debt_reduction": 0.125,
+        "max_candidate_segnet_min_ratio_increase": 0.0625,
+        "max_candidate_segnet_total_debt_spill_given_worst_improvement": 0.0,
+        "max_accepted_frame1_receiver_uint8_changed_count": 512.0,
+        "max_accepted_frame1_receiver_uint8_delta_abs": 2048.0,
+        "max_candidate_pose_exact_delta": 0.0,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

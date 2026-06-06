@@ -729,6 +729,20 @@ def _distortion_birth_stage_evidence(
     }
 
 
+def build_distortion_birth_before_rate_pressure_evidence(
+    hinerv_evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build the shared HiNeRV birth-before-rate evidence predicate.
+
+    This is the production gate for admitting QAT, section-byte duals, entropy
+    pressure, byte-compiler selection, and late optimizer polish. Callers must
+    feed real short-smoke witness evidence or an already materialized gate
+    payload; do not infer it from unrelated training progress.
+    """
+
+    return _distortion_birth_stage_evidence(hinerv_evidence)
+
+
 def _node_specs(
     *,
     repo_root: Path,

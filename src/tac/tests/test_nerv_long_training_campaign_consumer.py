@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 from tac.analysis.nerv_long_training_campaign_plan import (
+    ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
+    RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA,
     build_nerv_long_training_campaign_plan,
 )
 from tac.cathedral.consumer_contract import HookNumber, validate_consumer_module
@@ -54,6 +56,12 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert launch_contract["queue_status_is_receiver_proof"] is False
     assert launch_contract["queue_status_is_cpu_replay_proof"] is False
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
+    assert launch_contract["receiver_surface_trace_contract"]["schema"] == (
+        RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA
+    )
+    assert launch_contract["archive_parseback_selection_contract"]["schema"] == (
+        ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA
+    )
     assert first["upstream_evaluate_score_binding"]["schema"] == (
         "nerv_row_upstream_evaluate_binding.v1"
     )
@@ -86,6 +94,28 @@ def test_long_training_campaign_consumer_requires_launch_authority_contract() ->
     assert verdict["ready_local_mlx_experiment_count"] == 0
     assert any(
         blocker.endswith("_launch_authority_contract_missing")
+        for blocker in verdict["blockers"]
+    )
+
+
+def test_long_training_campaign_consumer_requires_receiver_and_parseback_contracts(
+) -> None:
+    queue = _runnable_snerv_queue()
+    snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
+    snerv["launch_authority_contract"].pop("receiver_surface_trace_contract")
+    snerv["launch_authority_contract"].pop("archive_parseback_selection_contract")
+
+    verdict = consumer.consume_candidate(queue)
+
+    assert verdict["planner_action"] == "close_campaign_row_blockers_then_reconsume"
+    assert verdict["local_mlx_route_recommended"] is False
+    assert verdict["ready_local_mlx_experiment_count"] == 0
+    assert any(
+        blocker.endswith("_receiver_surface_trace_contract_missing")
+        for blocker in verdict["blockers"]
+    )
+    assert any(
+        blocker.endswith("_archive_parseback_selection_contract_missing")
         for blocker in verdict["blockers"]
     )
 

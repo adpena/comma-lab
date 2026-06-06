@@ -29,6 +29,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     MlxScoreAwareHarnessError,
     require_mlx_for_harness,
@@ -39,10 +41,14 @@ from tac.substrates._shared.mlx_score_aware.dual_ascent import (
     safe_dual_metric_key,
 )
 from tac.substrates._shared.mlx_score_aware.loss import (
+    _apply_eval_roundtrip_ste_nhwc01,
     _direct_live_posenet_distillation_loss_and_metrics,
+    _exact_segnet_target_argmax_for_indices,
     _segnet_direct_live_subcontrol_active,
     component_loss_weight,
+    decode_frames_nhwc01,
     posenet_yuv6_geometry_tether_loss,
+    posenet_yuv6_pair_nhwc255,
     score_aware_loss,
 )
 from tac.training.long_training_canonical import (
@@ -2154,6 +2160,403 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_reject_reason_post_direct_nonrate_score_worsened"
         ] = float("post_direct_nonrate_score_worsened" in reject_reasons)
 
+    def _receiver_surface_trace_metrics_from_step_guard(
+        self,
+        metrics: Mapping[str, Any],
+    ) -> dict[str, float]:
+        """Project an accepted live MLX step into receiver-surface trace telemetry."""
+
+        def _metric(*keys: str) -> float | None:
+            for key in keys:
+                value = self._finite_metric(metrics, key)
+                if value is not None:
+                    return value
+            return None
+
+        enabled = bool(_metric("scorer_space_step_guard_enabled"))
+        eligible = bool(_metric("scorer_space_step_guard_eligible"))
+        rejected = bool(_metric("scorer_space_step_guard_rejected"))
+        backtracking_accepted = bool(
+            _metric("scorer_space_step_guard_backtracking_accepted")
+        )
+        accepted = bool(enabled and eligible and not rejected)
+        out: dict[str, float] = {
+            "receiver_surface_source_live_mlx_step_guard": 1.0,
+            "receiver_surface_step_guard_enabled": float(enabled),
+            "receiver_surface_step_guard_eligible": float(eligible),
+            "receiver_surface_update_accepted": float(accepted),
+            "receiver_surface_update_rejected": float(rejected),
+            "receiver_surface_backtracking_accepted": float(backtracking_accepted),
+            "receiver_surface_authority_live_mlx": 1.0,
+        }
+        if not accepted:
+            return out
+
+        final_suffix = (
+            "after_backtracking" if backtracking_accepted else "before_restore"
+        )
+        pre_nonrate = _metric("scorer_space_step_guard_pre_direct_nonrate_score")
+        post_nonrate = _metric(
+            f"scorer_space_step_guard_post_direct_nonrate_score_{final_suffix}"
+        )
+        if pre_nonrate is not None and post_nonrate is not None:
+            loss_delta = float(post_nonrate - pre_nonrate)
+            out["receiver_surface_loss_delta"] = loss_delta
+            out["receiver_surface_delta_score_nonrate"] = loss_delta
+            out["receiver_surface_nonrate_score_unit_movement"] = -loss_delta
+
+        pre_pose = _metric(
+            "scorer_space_step_guard_pre_pose_direct_live_score_term",
+            "scorer_space_step_guard_pre_pose_score_term",
+        )
+        post_pose = _metric(
+            f"scorer_space_step_guard_post_pose_direct_live_score_term_{final_suffix}",
+            f"scorer_space_step_guard_post_pose_score_term_{final_suffix}",
+        )
+        if pre_pose is not None and post_pose is not None:
+            pose_delta = float(post_pose - pre_pose)
+            out["receiver_surface_pose_output_delta"] = pose_delta
+            out["receiver_surface_pose_score_unit_movement"] = -pose_delta
+
+        pre_argmax = _metric("scorer_space_step_guard_pre_segnet_argmax_disagreement")
+        post_argmax = _metric(
+            f"scorer_space_step_guard_post_segnet_argmax_disagreement_{final_suffix}"
+        )
+        if pre_argmax is not None and post_argmax is not None:
+            argmax_delta = float(post_argmax - pre_argmax)
+            out["receiver_surface_segnet_argmax_disagreement_delta"] = argmax_delta
+            out["receiver_surface_segnet_argmax_disagreement_movement"] = -argmax_delta
+
+        segnet_debt_delta = _metric(
+            "scorer_space_step_guard_backtracking_last_segnet_score_debt_delta"
+            if backtracking_accepted
+            else "scorer_space_step_guard_segnet_score_debt_delta"
+        )
+        if segnet_debt_delta is not None:
+            out["receiver_surface_segnet_score_debt_delta"] = float(
+                segnet_debt_delta
+            )
+            out["receiver_surface_segnet_score_unit_movement"] = float(
+                -segnet_debt_delta
+            )
+
+        crossing_debt_delta = _metric(
+            "scorer_space_step_guard_backtracking_last_segnet_crossing_score_debt_delta"
+            if backtracking_accepted
+            else "scorer_space_step_guard_segnet_crossing_score_debt_delta"
+        )
+        if crossing_debt_delta is not None:
+            out["receiver_surface_worst_region_margin_proxy_delta"] = float(
+                crossing_debt_delta
+            )
+            out["receiver_surface_worst_region_margin_proxy_movement"] = float(
+                -crossing_debt_delta
+            )
+
+        pre_pose_marginal = _metric(
+            "scorer_space_step_guard_pre_pose_direct_live_score_marginal_wrt_raw_mse"
+        )
+        post_pose_marginal = _metric(
+            f"scorer_space_step_guard_post_pose_direct_live_score_marginal_wrt_raw_mse_{final_suffix}"
+        )
+        if pre_pose_marginal is not None:
+            out[
+                "receiver_surface_pose_direct_live_score_marginal_wrt_raw_mse_pre"
+            ] = float(pre_pose_marginal)
+        if post_pose_marginal is not None:
+            out[
+                "receiver_surface_pose_direct_live_score_marginal_wrt_raw_mse_post"
+            ] = float(post_pose_marginal)
+
+        out.update(
+            {
+                "receiver_surface_float_rgb_delta_linf_evidence_missing": 1.0,
+                "receiver_surface_uint8_changed_pixels_evidence_missing": 1.0,
+                "receiver_surface_segnet_input_delta_linf_evidence_missing": 1.0,
+                "receiver_surface_argmax_flipped_pixels_evidence_missing": 1.0,
+                "receiver_surface_worst_region_margin_p50_delta_evidence_missing": (
+                    1.0
+                ),
+                "receiver_surface_posenet_input_delta_linf_evidence_missing": 1.0,
+                "receiver_surface_fakequant_argmax_flipped_pixels_evidence_missing": (
+                    1.0
+                ),
+                "receiver_surface_parseback_argmax_flipped_pixels_evidence_missing": (
+                    1.0
+                ),
+                "receiver_surface_inflated_argmax_flipped_pixels_evidence_missing": (
+                    1.0
+                ),
+            }
+        )
+        return out
+
+    def _receiver_surface_snapshot(self, batch: Any) -> dict[str, Any]:
+        """Capture exact local receiver tensors for the current model state."""
+
+        mx = self._mx
+        rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+        eval_rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
+        eval_rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
+        raw_rgb_pair = mx.stack([rgb_0, rgb_1], axis=1)
+        uint8_rgb_pair = mx.floor(mx.clip(raw_rgb_pair, 0.0, 1.0) * 255.0 + 0.5)
+        raw_segnet_input = (
+            rgb_1 if self.bundle.segnet_teacher_frame_index == 1 else rgb_0
+        )
+        segnet_input = (
+            eval_rgb_1 if self.bundle.segnet_teacher_frame_index == 1 else eval_rgb_0
+        )
+        snapshot: dict[str, Any] = {
+            "float_rgb": raw_rgb_pair,
+            "uint8_rgb": uint8_rgb_pair,
+            "segnet_input": segnet_input,
+            "posenet_input": posenet_yuv6_pair_nhwc255(
+                self.bundle,
+                eval_rgb_0,
+                eval_rgb_1,
+            ),
+        }
+
+        segnet_live_fn = getattr(
+            self.bundle.scorer_teacher,
+            "teacher_logits_for_frames_nhwc01",
+            None,
+        )
+        if callable(segnet_live_fn):
+            segnet_logits = segnet_live_fn(raw_segnet_input)
+            snapshot["segnet_logits"] = segnet_logits
+            snapshot["segnet_argmax"] = mx.argmax(segnet_logits, axis=-1)
+            if self.bundle.eval_roundtrip_ste_enabled:
+                fakequant_logits = segnet_live_fn(segnet_input)
+                snapshot["fakequant_segnet_logits"] = fakequant_logits
+                snapshot["fakequant_segnet_argmax"] = mx.argmax(
+                    fakequant_logits,
+                    axis=-1,
+                )
+            target_logits = self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
+            snapshot["segnet_target_argmax"] = _exact_segnet_target_argmax_for_indices(
+                self.bundle.scorer_teacher,
+                batch,
+                target_logits,
+            )
+
+        pose_live_fn = getattr(
+            self.bundle.pose_scorer_teacher,
+            "teacher_pose_for_yuv6_pair_nhwc",
+            None,
+        )
+        if callable(pose_live_fn):
+            snapshot["posenet_output"] = pose_live_fn(snapshot["posenet_input"])
+
+        mx.eval(*snapshot.values())
+        return snapshot
+
+    def _receiver_surface_delta_metrics(
+        self,
+        *,
+        pre: Mapping[str, Any],
+        post: Mapping[str, Any],
+    ) -> dict[str, float]:
+        """Return exact receiver deltas between two captured local snapshots."""
+
+        mx = self._mx
+        out: dict[str, float] = {
+            "receiver_surface_exact_projection_present": 1.0,
+        }
+        eval_targets: list[Any] = []
+
+        def _pair(name: str) -> tuple[Any, Any] | None:
+            pre_value = pre.get(name)
+            post_value = post.get(name)
+            if pre_value is None or post_value is None:
+                return None
+            return pre_value, post_value
+
+        def _linf_metric(name: str, metric: str) -> None:
+            pair = _pair(name)
+            if pair is None:
+                return
+            value = mx.max(mx.abs(pair[1] - pair[0]))
+            out[metric] = value
+            eval_targets.append(value)
+
+        _linf_metric("float_rgb", "receiver_surface_float_rgb_delta_linf")
+        _linf_metric("segnet_input", "receiver_surface_segnet_input_delta_linf")
+        _linf_metric("posenet_input", "receiver_surface_posenet_input_delta_linf")
+
+        uint8_pair = _pair("uint8_rgb")
+        if uint8_pair is not None:
+            changed_channels = (uint8_pair[1] != uint8_pair[0]).astype(mx.float32)
+            changed_pixels = mx.sum(mx.max(changed_channels, axis=-1))
+            changed_channel_values = mx.sum(changed_channels)
+            out["receiver_surface_uint8_changed_pixels"] = changed_pixels
+            out["receiver_surface_uint8_changed_channel_values"] = (
+                changed_channel_values
+            )
+            eval_targets.extend([changed_pixels, changed_channel_values])
+
+        def _argmax_flip_count(name: str, metric: str) -> None:
+            argmax_pair = _pair(name)
+            if argmax_pair is None:
+                return
+            argmax_flipped = mx.sum(
+                (argmax_pair[1] != argmax_pair[0]).astype(mx.float32)
+            )
+            out[metric] = argmax_flipped
+            eval_targets.append(argmax_flipped)
+
+        _argmax_flip_count("segnet_argmax", "receiver_surface_argmax_flipped_pixels")
+        _argmax_flip_count(
+            "fakequant_segnet_argmax",
+            "receiver_surface_fakequant_argmax_flipped_pixels",
+        )
+
+        pre_margin_p50 = self._receiver_surface_worst_connected_region_margin_p50(
+            logits=pre.get("segnet_logits"),
+            target_argmax=pre.get("segnet_target_argmax"),
+        )
+        post_margin_p50 = self._receiver_surface_worst_connected_region_margin_p50(
+            logits=post.get("segnet_logits"),
+            target_argmax=post.get("segnet_target_argmax"),
+        )
+        if pre_margin_p50 is not None and post_margin_p50 is not None:
+            out["receiver_surface_worst_region_margin_p50_pre"] = pre_margin_p50[0]
+            out["receiver_surface_worst_region_margin_p50_post"] = post_margin_p50[0]
+            out["receiver_surface_worst_region_margin_p50_delta"] = (
+                post_margin_p50[0] - pre_margin_p50[0]
+            )
+            out["receiver_surface_worst_region_margin_p50_pre_class_id"] = float(
+                pre_margin_p50[1]
+            )
+            out["receiver_surface_worst_region_margin_p50_post_class_id"] = float(
+                post_margin_p50[1]
+            )
+            out[
+                "receiver_surface_worst_region_margin_p50_pre_component_size"
+            ] = float(pre_margin_p50[2])
+            out[
+                "receiver_surface_worst_region_margin_p50_post_component_size"
+            ] = float(post_margin_p50[2])
+            out[
+                "receiver_surface_worst_region_margin_p50_connected_component_authority"
+            ] = 1.0
+
+        pose_pair = _pair("posenet_output")
+        if pose_pair is not None:
+            pose_diff = pose_pair[1] - pose_pair[0]
+            pose_linf = mx.max(mx.abs(pose_diff))
+            pose_l2_mean = mx.mean(mx.sqrt(mx.sum(pose_diff * pose_diff, axis=-1)))
+            out["receiver_surface_posenet_output_delta_linf"] = pose_linf
+            out["receiver_surface_posenet_output_delta_l2_mean"] = pose_l2_mean
+            eval_targets.extend([pose_linf, pose_l2_mean])
+
+        if eval_targets:
+            mx.eval(*eval_targets)
+        float_out: dict[str, float] = {}
+        for key, value in out.items():
+            if isinstance(value, float):
+                float_out[key] = value
+            else:
+                float_out[key] = float(value.item())
+
+        exact_field_to_missing_flag = {
+            "receiver_surface_float_rgb_delta_linf": (
+                "receiver_surface_float_rgb_delta_linf_evidence_missing"
+            ),
+            "receiver_surface_uint8_changed_pixels": (
+                "receiver_surface_uint8_changed_pixels_evidence_missing"
+            ),
+            "receiver_surface_segnet_input_delta_linf": (
+                "receiver_surface_segnet_input_delta_linf_evidence_missing"
+            ),
+            "receiver_surface_argmax_flipped_pixels": (
+                "receiver_surface_argmax_flipped_pixels_evidence_missing"
+            ),
+            "receiver_surface_posenet_input_delta_linf": (
+                "receiver_surface_posenet_input_delta_linf_evidence_missing"
+            ),
+            "receiver_surface_fakequant_argmax_flipped_pixels": (
+                "receiver_surface_fakequant_argmax_flipped_pixels_evidence_missing"
+            ),
+            "receiver_surface_worst_region_margin_p50_delta": (
+                "receiver_surface_worst_region_margin_p50_delta_evidence_missing"
+            ),
+        }
+        for exact_key, missing_key in exact_field_to_missing_flag.items():
+            if exact_key in float_out:
+                float_out[missing_key] = 0.0
+        return float_out
+
+    def _receiver_surface_worst_connected_region_margin_p50(
+        self,
+        *,
+        logits: Any,
+        target_argmax: Any,
+    ) -> tuple[float, int, int] | None:
+        """Return worst 4-connected target-component p50 margin, class id, and size."""
+
+        if logits is None or target_argmax is None:
+            return None
+        mx = self._mx
+        mx.eval(logits, target_argmax)
+        logits_np = np.asarray(logits)
+        target_np = np.asarray(target_argmax)
+        if logits_np.ndim != 4 or target_np.ndim != 3:
+            return None
+        if tuple(logits_np.shape[:-1]) != tuple(target_np.shape):
+            return None
+        class_count = int(logits_np.shape[-1])
+        best: tuple[float, int, int] | None = None
+        for batch_index in range(int(target_np.shape[0])):
+            labels = target_np[batch_index].astype(np.int32, copy=False)
+            visited = np.zeros(labels.shape, dtype=bool)
+            height, width = labels.shape
+            for row in range(height):
+                for col in range(width):
+                    if visited[row, col]:
+                        continue
+                    class_index = int(labels[row, col])
+                    visited[row, col] = True
+                    if class_index < 0 or class_index >= class_count:
+                        continue
+                    stack = [(row, col)]
+                    coords: list[tuple[int, int]] = []
+                    while stack:
+                        cur_row, cur_col = stack.pop()
+                        coords.append((cur_row, cur_col))
+                        for next_row, next_col in (
+                            (cur_row - 1, cur_col),
+                            (cur_row + 1, cur_col),
+                            (cur_row, cur_col - 1),
+                            (cur_row, cur_col + 1),
+                        ):
+                            if (
+                                next_row < 0
+                                or next_row >= height
+                                or next_col < 0
+                                or next_col >= width
+                                or visited[next_row, next_col]
+                                or int(labels[next_row, next_col]) != class_index
+                            ):
+                                continue
+                            visited[next_row, next_col] = True
+                            stack.append((next_row, next_col))
+                    component_logits = logits_np[
+                        batch_index,
+                        [item[0] for item in coords],
+                        [item[1] for item in coords],
+                        :,
+                    ]
+                    class_logits = component_logits[:, class_index]
+                    other_logits = component_logits.copy()
+                    other_logits[:, class_index] = -np.inf
+                    margins = class_logits - np.max(other_logits, axis=-1)
+                    margin_p50 = float(np.percentile(margins, 50.0))
+                    component_size = len(coords)
+                    if best is None or margin_p50 < best[0]:
+                        best = (margin_p50, class_index, component_size)
+        return best
+
     def _apply_scorer_space_step_guard(
         self,
         *,
@@ -2162,6 +2565,7 @@ class MlxScoreAwareAdapter:
         pre_update_loss_part_metrics: Mapping[str, Any],
         post_update_loss_part_metrics: Mapping[str, Any],
         pre_update_param_trace: Mapping[str, Any],
+        pre_update_receiver_surface_snapshot: Mapping[str, Any] | None = None,
     ) -> dict[str, float]:
         """Reject optimizer steps that destroy scorer-visible class occupancy."""
 
@@ -2428,8 +2832,22 @@ class MlxScoreAwareAdapter:
                 recovery_floor = 0.85
             return min(1.0, max(base, recovery_floor)), recovery_floor
 
-        if not self._scorer_space_step_guard_enabled:
+        def _return_with_receiver_surface_trace() -> dict[str, float]:
+            metrics.update(self._receiver_surface_trace_metrics_from_step_guard(metrics))
+            if (
+                pre_update_receiver_surface_snapshot is not None
+                and metrics.get("receiver_surface_update_accepted", 0.0) > 0.0
+            ):
+                metrics.update(
+                    self._receiver_surface_delta_metrics(
+                        pre=pre_update_receiver_surface_snapshot,
+                        post=self._receiver_surface_snapshot(batch),
+                    )
+                )
             return metrics
+
+        if not self._scorer_space_step_guard_enabled:
+            return _return_with_receiver_surface_trace()
 
         pre_occ = self._finite_metric(
             pre_update_loss_part_metrics,
@@ -2517,6 +2935,14 @@ class MlxScoreAwareAdapter:
         post_pose_direct_live_score_term = self._finite_metric(
             post_update_loss_part_metrics,
             "loss_part_pose_direct_live_score_term",
+        )
+        pre_pose_direct_live_score_marginal = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_pose_direct_live_score_marginal_wrt_raw_mse",
+        )
+        post_pose_direct_live_score_marginal = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_pose_direct_live_score_marginal_wrt_raw_mse",
         )
         pre_escape_selection = self._finite_metric(
             pre_update_loss_part_metrics,
@@ -2679,6 +3105,8 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_post_pose_score_term_before_restore": post_pose_score_term,
             "scorer_space_step_guard_pre_pose_direct_live_score_term": pre_pose_direct_live_score_term,
             "scorer_space_step_guard_post_pose_direct_live_score_term_before_restore": post_pose_direct_live_score_term,
+            "scorer_space_step_guard_pre_pose_direct_live_score_marginal_wrt_raw_mse": pre_pose_direct_live_score_marginal,
+            "scorer_space_step_guard_post_pose_direct_live_score_marginal_wrt_raw_mse_before_restore": post_pose_direct_live_score_marginal,
             "scorer_space_step_guard_pre_segnet_escape_selection": pre_escape_selection,
             "scorer_space_step_guard_post_segnet_escape_selection_before_restore": post_escape_selection,
             "scorer_space_step_guard_pre_rare_class_logit_loss": pre_rare_class_logit_loss,
@@ -2745,7 +3173,7 @@ class MlxScoreAwareAdapter:
         metrics["scorer_space_step_guard_pre_metric_present"] = float(pre_occ is not None)
         metrics["scorer_space_step_guard_post_metric_present"] = float(post_occ is not None)
         if pre_occ is None:
-            return metrics
+            return _return_with_receiver_surface_trace()
 
         max_contrast = self._scorer_space_step_guard_max_post_segnet_contrast_ratio
         max_segnet_distribution_mae = (
@@ -3453,7 +3881,7 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_eligible_direct_nonrate_score_worsened"
         ] = float(direct_nonrate_worsened_too_much)
         if not eligible:
-            return metrics
+            return _return_with_receiver_surface_trace()
 
         reject_reasons = self._scorer_space_step_guard_reject_reasons(
             post_occ=post_occ,
@@ -3546,7 +3974,7 @@ class MlxScoreAwareAdapter:
                     self._scorer_space_step_guard_learning_rate_scale * 1.05,
                     reason="full_accept",
                 )
-            return metrics
+            return _return_with_receiver_surface_trace()
 
         post_update_param_trace = self._capture_parameter_trace_leaves()
         step_scale = 1.0
@@ -4489,7 +4917,7 @@ class MlxScoreAwareAdapter:
                     ),
                 }
             )
-            return metrics
+            return _return_with_receiver_surface_trace()
 
         restore_metrics = self._restore_parameter_trace_leaves(pre_update_param_trace)
         metrics.update(restore_metrics)
@@ -4511,7 +4939,7 @@ class MlxScoreAwareAdapter:
         metrics["scorer_space_step_guard_intervened"] = 1.0
         self._add_scorer_space_step_guard_reason_metrics(metrics, reject_reasons)
         metrics["scorer_space_step_guard_optimizer_state_advanced"] = 1.0
-        return metrics
+        return _return_with_receiver_surface_trace()
 
     def _group_norm_trace_metrics(
         self,
@@ -8016,6 +8444,11 @@ class MlxScoreAwareAdapter:
             loss_weights=effective_loss_weights,
             prefix="dynamics_pre_update",
         )
+        pre_update_receiver_surface_snapshot = (
+            self._receiver_surface_snapshot(batch)
+            if self._scorer_space_step_guard_enabled
+            else None
+        )
         dynamics_gradient_metrics = self._group_norm_trace_metrics(
             self._flatten_trace_leaves(grads),
             prefix="dynamics_gradient",
@@ -8059,6 +8492,7 @@ class MlxScoreAwareAdapter:
             pre_update_loss_part_metrics=pre_update_loss_part_metrics,
             post_update_loss_part_metrics=post_update_loss_part_metrics_before_guard,
             pre_update_param_trace=pre_update_param_trace,
+            pre_update_receiver_surface_snapshot=pre_update_receiver_surface_snapshot,
         )
         guard_rejected = bool(
             scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
@@ -8249,6 +8683,11 @@ class MlxScoreAwareAdapter:
             loss_weights=loss_weights,
             prefix="dynamics_pre_update",
         )
+        pre_update_receiver_surface_snapshot = (
+            self._receiver_surface_snapshot(batch)
+            if self._scorer_space_step_guard_enabled
+            else None
+        )
         dynamics_gradient_metrics = self._group_norm_trace_metrics(
             self._flatten_trace_leaves(grads),
             prefix="dynamics_gradient",
@@ -8319,6 +8758,7 @@ class MlxScoreAwareAdapter:
             pre_update_loss_part_metrics=pre_update_loss_part_metrics,
             post_update_loss_part_metrics=post_update_loss_part_metrics_before_guard,
             pre_update_param_trace=pre_update_param_trace,
+            pre_update_receiver_surface_snapshot=pre_update_receiver_surface_snapshot,
         )
         guard_rejected = bool(
             scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
@@ -8512,6 +8952,11 @@ class MlxScoreAwareAdapter:
             loss_weights=loss_weights,
             prefix="dynamics_pre_update",
         )
+        pre_update_receiver_surface_snapshot = (
+            self._receiver_surface_snapshot(batch)
+            if self._scorer_space_step_guard_enabled
+            else None
+        )
         dynamics_gradient_metrics = self._group_norm_trace_metrics(
             self._flatten_trace_leaves(grads),
             prefix="dynamics_gradient",
@@ -8579,6 +9024,7 @@ class MlxScoreAwareAdapter:
             pre_update_loss_part_metrics=pre_update_loss_part_metrics,
             post_update_loss_part_metrics=post_update_loss_part_metrics_before_guard,
             pre_update_param_trace=pre_update_param_trace,
+            pre_update_receiver_surface_snapshot=pre_update_receiver_surface_snapshot,
         )
         guard_rejected = bool(
             scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")

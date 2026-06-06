@@ -35,12 +35,25 @@ def main() -> None:
         help="Do not emit fail-closed blockers when SegNet direct-live metrics are absent.",
     )
     parser.add_argument(
+        "--allow-missing-receiver-surface-trace",
+        action="store_true",
+        help=(
+            "Do not emit fail-closed blockers when receiver-surface update "
+            "motion metrics are absent."
+        ),
+    )
+    parser.add_argument(
         "--require-direct-live-posenet",
         action="store_true",
         help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--require-direct-live-segnet",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--require-receiver-surface-trace",
         action="store_true",
         help=argparse.SUPPRESS,
     )
@@ -53,6 +66,8 @@ def main() -> None:
         or not bool(args.allow_missing_direct_live_posenet),
         require_direct_live_segnet=bool(args.require_direct_live_segnet)
         or not bool(args.allow_missing_direct_live_segnet),
+        require_receiver_surface_trace=bool(args.require_receiver_surface_trace)
+        or not bool(args.allow_missing_receiver_surface_trace),
     )
 
 

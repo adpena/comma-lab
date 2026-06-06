@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from tac.analysis.nerv_pair_local_distortion_servo import (
+    PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
+    PR95_SERVO_CURRICULUM_STAGES,
+)
 from tac.analysis.pr95_distortion_practices_guard import (
     AXIS_TRACE_CONTRACT_SCHEMA,
     PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA,
@@ -276,6 +280,46 @@ def test_pr95_distortion_guard_rejects_inline_only_hinerv_actuator_evidence() ->
     )
 
 
+def test_pr95_distortion_guard_requires_pr95_grade_pair_local_servo_receipt() -> None:
+    row = _hinerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence.pop("pair_local_distortion_servo_receipt")
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert actuator_row["observed"] is False
+    assert "pair_local_distortion_servo_receipt_missing" in actuator_row[
+        "observed_evidence"
+    ]
+
+
+def test_pr95_distortion_guard_rejects_servo_receipt_that_loses_parseback() -> None:
+    row = _hinerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    receipt = dict(evidence["pair_local_distortion_servo_receipt"])
+    receipt["parseback_argmax_flipped_pixels"] = 0
+    receipt["parseback_segnet_margin_delta"] = 0.0
+    evidence["pair_local_distortion_servo_receipt"] = receipt
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert "pair_local_servo_archive_parseback_survival_missing" in (
+        actuator_row["observed_evidence"]
+    )
+
+
 def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
     row = _snerv_row()
     command = row["command"]
@@ -452,11 +496,24 @@ def test_pr95_family_actuator_contract_splits_hinerv_and_snerv() -> None:
     assert "section_output_delta_per_byte_rows" in hi[
         "required_execution_evidence"
     ]
+    assert "nerv_pair_local_distortion_servo_receipt.v1" in hi[
+        "required_execution_evidence"
+    ]
+    assert "exact_pair_local_score_delta" in hi["required_execution_evidence"]
+    assert hi["acceptance_policy"][
+        "pr95_grade_pair_local_distortion_servo_receipt_required"
+    ] is True
+    assert hi["acceptance_policy"][
+        "servo_must_survive_uint8_preprocess_fakequant_parseback"
+    ] is True
     assert "section_value_per_byte_rows" not in hi["required_execution_evidence"]
     assert hi["acceptance_policy"][
         "output_delta_per_byte_is_not_score_value_per_byte"
     ] is True
     assert "snerv_official_source_forward_state_artifact.v1" in snerv[
+        "required_execution_evidence"
+    ]
+    assert "nerv_pair_local_distortion_servo_receipt.v1" in snerv[
         "required_execution_evidence"
     ]
     assert snerv["score_claim"] is False
@@ -569,6 +626,9 @@ def _hinerv_actuator_execution_evidence() -> dict:
             }
         ],
         "section_value_per_byte_rows": [],
+        "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
+            "hi_nerv"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
     }
@@ -597,8 +657,106 @@ def _snerv_actuator_execution_evidence() -> dict:
             "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
             "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
         },
+        "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
+            "snerv"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
+    }
+
+
+def _pair_local_distortion_servo_receipt(family: str) -> dict:
+    if family == "snerv":
+        actuation = {
+            "pair_local": True,
+            "trained_param_groups": ["tub.output_2", "mfu.adapter"],
+            "source_forward_replay_bound": True,
+            "mfu_hfr_tub_source_forward_parity_proven": True,
+        }
+        trained_groups = ["tub.output_2", "mfu.adapter"]
+        grad = {"tub.output_2": 0.4, "mfu.adapter": 0.2}
+        update = {"tub.output_2": 0.05, "mfu.adapter": 0.02}
+        actuator_id = "snerv_tub_output2_pair_birth"
+        actuator_kind = "pair_conditioned_mfu_hfr_tub_adapter"
+    else:
+        actuation = {
+            "pair_local": True,
+            "trained_param_groups": ["latents_fine", "output_head.rgb_1"],
+        }
+        trained_groups = ["latents_fine", "output_head.rgb_1"]
+        grad = {"latents_fine": 0.25, "output_head.rgb_1": 0.13}
+        update = {"latents_fine": 0.04, "output_head.rgb_1": 0.02}
+        actuator_id = "hinerv_target_region_birth_pair17"
+        actuator_kind = "pair_local_latent_row"
+    return {
+        "schema": PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
+        "family": family,
+        "pair_ids": [17],
+        "stage": "archive_parseback_survival",
+        "authority": "parseback_mlx",
+        "old_d_seg": 0.020,
+        "new_d_seg": 0.019,
+        "old_d_pose": 0.0020,
+        "new_d_pose": 0.00195,
+        "old_archive_bytes": 178_000,
+        "new_archive_bytes": 178_128,
+        "value_per_byte": 0.0007,
+        "float_rgb_delta_linf": 0.007,
+        "uint8_changed_pixels": 12,
+        "segnet_input_delta_linf": 0.002,
+        "posenet_input_delta_linf": 0.001,
+        "segnet_margin_delta": 0.32,
+        "segnet_argmax_flipped_pixels": 7,
+        "pose_output_delta_l2": 0.015,
+        "fakequant_segnet_margin_delta": 0.24,
+        "fakequant_argmax_flipped_pixels": 5,
+        "parseback_segnet_margin_delta": 0.21,
+        "parseback_argmax_flipped_pixels": 4,
+        "frame_scope": "frame1_seg_pose_joint",
+        "actuator_id": actuator_id,
+        "actuator_kind": actuator_kind,
+        "worst_scorer_debt": {
+            "target_id": "pair17_class4_region2",
+            "score_debt_before": 2.4,
+            "score_debt_after": 1.1,
+        },
+        "frame_incidence": {
+            "frame0_pose_only": True,
+            "frame0_posenet_incidence": True,
+            "frame0_segnet_incidence": False,
+            "frame1_segnet_incidence": True,
+            "frame1_posenet_incidence": True,
+            "frame0_frame1_control_split": True,
+            "separate_frame_heads": True,
+        },
+        "stage_manifest": {
+            "completed_stage_ids": list(PR95_SERVO_CURRICULUM_STAGES),
+            "stage_order_respected": True,
+            "byte_pressure_after_birth": True,
+            "qat_after_round_ste": True,
+            "final_optimizer_after_survival": True,
+        },
+        "actuation": actuation,
+        "trained_param_groups": trained_groups,
+        "grad_norm_by_group": grad,
+        "update_norm_by_group": update,
+        "action_algebra_trace": {
+            "selected_action_id": "target_region_rgb_bias_then_pair_adapter",
+            "frame_scope": "frame1_seg_pose_joint",
+            "effect_delta_seg": -0.001,
+            "effect_delta_pose": -0.00005,
+            "effect_delta_bytes": 128,
+            "runtime_delta_ms": 0.4,
+            "selector_bits": 12,
+            "noncommutative_interactions_checked": True,
+        },
+        "hardware_margin_trace": {
+            "target_authority": "parseback_mlx",
+            "target_authority_margin_checked": True,
+            "hardware_drift_risk": "bounded",
+            "segnet_margin_min": 0.03,
+            "pose_error_slack": 0.0002,
+        },
     }
 
 

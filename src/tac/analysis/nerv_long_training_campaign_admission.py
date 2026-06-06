@@ -24,6 +24,10 @@ from comma_lab.scheduler.experiment_queue import (
 from comma_lab.scheduler.storage_preflight import (
     build_scheduler_storage_preflight_experiment,
 )
+from tac.analysis.nerv_long_training_campaign_plan import (
+    ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
+    RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA,
+)
 from tac.analysis.pr95_distortion_practices_guard import (
     build_pr95_distortion_practices_row_guard,
     build_pr95_distortion_source_inventory,
@@ -374,6 +378,15 @@ def _admitted_experiment(
                 "equals": False,
             }
         ]
+    postconditions = _dedupe_postconditions(
+        [
+            *postconditions,
+            *_receiver_surface_trace_postconditions(
+                command,
+                family=str(row.get("family") or "unknown"),
+            ),
+        ]
+    )
     return {
         "id": str(row.get("id") or "nerv_local_mlx_campaign_row"),
         "status": "queued",
@@ -413,6 +426,124 @@ def _admitted_experiment(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _receiver_surface_trace_contract(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    launch = row.get("launch_authority_contract")
+    if not isinstance(launch, Mapping):
+        return {}
+    contract = launch.get("receiver_surface_trace_contract")
+    return contract if isinstance(contract, Mapping) else {}
+
+
+def _archive_parseback_selection_contract(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    launch = row.get("launch_authority_contract")
+    if not isinstance(launch, Mapping):
+        return {}
+    contract = launch.get("archive_parseback_selection_contract")
+    return contract if isinstance(contract, Mapping) else {}
+
+
+def _receiver_surface_trace_contract_blockers(
+    contract: Mapping[str, Any],
+    *,
+    command: Sequence[str],
+    family: str,
+) -> list[str]:
+    if not contract:
+        return ["selected_row_receiver_surface_trace_contract_missing"]
+    blockers: list[str] = []
+    try:
+        _require_no_authority(
+            contract,
+            label="selected_row_receiver_surface_trace_contract",
+        )
+    except NervLongTrainingCampaignAdmissionError as exc:
+        blockers.append(_safe_blocker_text(str(exc)))
+    if contract.get("schema") != RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA:
+        blockers.append("selected_row_receiver_surface_trace_contract_schema_mismatch")
+    family_key = _normalize_family(family)
+    if contract.get("family") != family_key:
+        blockers.append("selected_row_receiver_surface_trace_contract_family_mismatch")
+    expected_path = _receiver_surface_trace_path(command, family=family_key)
+    if expected_path is None:
+        blockers.append("selected_row_receiver_surface_trace_path_unresolved")
+    elif contract.get("trace_artifact_path") != expected_path:
+        blockers.append("selected_row_receiver_surface_trace_artifact_path_mismatch")
+    if contract.get("trace_source") != "accepted_live_mlx_updates_only":
+        blockers.append("selected_row_receiver_surface_trace_source_not_accepted_live_mlx")
+    if contract.get("canonical_metric_prefix") != "receiver_surface_":
+        blockers.append("selected_row_receiver_surface_trace_prefix_not_canonical")
+    if contract.get("accepted_update_trace_required") is not True:
+        blockers.append("selected_row_receiver_surface_trace_not_required")
+    if contract.get("legacy_aliases_accepted") is not False:
+        blockers.append("selected_row_receiver_surface_trace_legacy_aliases_not_forbidden")
+    required_metrics = set(_string_list(contract.get("required_canonical_metrics")))
+    missing_metrics = sorted(_RECEIVER_SURFACE_REQUIRED_METRICS - required_metrics)
+    blockers.extend(
+        f"selected_row_receiver_surface_trace_metric_missing:{metric}"
+        for metric in missing_metrics
+    )
+    return blockers
+
+
+def _archive_parseback_selection_contract_blockers(
+    contract: Mapping[str, Any],
+) -> list[str]:
+    if not contract:
+        return ["selected_row_archive_parseback_selection_contract_missing"]
+    blockers: list[str] = []
+    try:
+        _require_no_authority(
+            contract,
+            label="selected_row_archive_parseback_selection_contract",
+        )
+    except NervLongTrainingCampaignAdmissionError as exc:
+        blockers.append(_safe_blocker_text(str(exc)))
+    if contract.get("schema") != ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA:
+        blockers.append("selected_row_archive_parseback_selection_contract_schema_mismatch")
+    for key, blocker in (
+        (
+            "archive_parseback_axis_required",
+            "selected_row_archive_parseback_axis_not_required",
+        ),
+        (
+            "parseback_selection_required",
+            "selected_row_parseback_selection_not_required",
+        ),
+        (
+            "parseback_score_delta_must_be_bounded_before_stage6",
+            "selected_row_parseback_score_delta_not_bounded",
+        ),
+        (
+            "live_only_improvement_is_false_authority",
+            "selected_row_live_only_improvement_not_false_authority",
+        ),
+        (
+            "fail_closed_on_axis_divergence",
+            "selected_row_parseback_axis_divergence_not_fail_closed",
+        ),
+    ):
+        if contract.get(key) is not True:
+            blockers.append(blocker)
+    authority_order = _string_list(contract.get("selection_authority_order"))
+    if "archive_parseback" not in authority_order:
+        blockers.append("selected_row_archive_parseback_missing_from_authority_order")
+    return blockers
+
+
+_RECEIVER_SURFACE_REQUIRED_METRICS = {
+    "receiver_surface_trace_present",
+    "receiver_surface_loss_delta",
+    "receiver_surface_uint8_changed_pixels",
+    "receiver_surface_segnet_input_delta_linf",
+    "receiver_surface_worst_region_margin_p50_delta",
+    "receiver_surface_argmax_flipped_pixels",
+    "receiver_surface_pose_output_delta",
+    "receiver_surface_fakequant_argmax_flipped_pixels",
+    "receiver_surface_parseback_argmax_flipped_pixels",
+    "receiver_surface_inflated_argmax_flipped_pixels",
+}
 
 
 def _select_rows(
@@ -474,6 +605,20 @@ def _row_record(
             blockers.append("selected_row_gate_not_local_mlx_executable")
         if gate.get("cpu_replay_ready") is True or gate.get("exact_gate_ready") is True:
             blockers.append("selected_row_gate_overclaims_replay_or_exact_ready")
+    receiver_surface_trace_contract = _receiver_surface_trace_contract(row)
+    blockers.extend(
+        _receiver_surface_trace_contract_blockers(
+            receiver_surface_trace_contract,
+            command=command,
+            family=family,
+        )
+    )
+    archive_parseback_selection_contract = _archive_parseback_selection_contract(row)
+    blockers.extend(
+        _archive_parseback_selection_contract_blockers(
+            archive_parseback_selection_contract,
+        )
+    )
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         row,
         repo_root=repo_root,
@@ -498,6 +643,8 @@ def _row_record(
             ]
         ),
         "command": command,
+        "receiver_surface_trace_contract": receiver_surface_trace_contract,
+        "archive_parseback_selection_contract": archive_parseback_selection_contract,
         "pr95_distortion_practices_guard": pr95_distortion_guard,
         "admitted": not blockers,
         "blockers": _dedupe(blockers),
@@ -629,6 +776,29 @@ def _observable_artifact_paths(command: Sequence[str], *, family: str) -> list[s
     return out
 
 
+def _receiver_surface_trace_path(command: Sequence[str], *, family: str) -> str | None:
+    out_dir = _output_dir(command)
+    if out_dir is None:
+        return None
+    family_key = _normalize_family(family)
+    if family_key == "snerv":
+        return (out_dir / "snerv_mlx_training" / "nerv_crux_trace_rows.json").as_posix()
+    if family_key == "hi_nerv":
+        return (out_dir / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json").as_posix()
+    return None
+
+
+def _receiver_surface_trace_postconditions(
+    command: Sequence[str],
+    *,
+    family: str,
+) -> list[dict[str, Any]]:
+    trace_path = _receiver_surface_trace_path(command, family=family)
+    if trace_path is None:
+        return []
+    return [{"type": "path_exists", "path": trace_path}]
+
+
 def _existing_output_artifact_paths(output_dir: Path) -> list[Path]:
     candidates = (
         output_dir / "compact_renderer_mlx_spine_runner_report.json",
@@ -677,6 +847,15 @@ def _common_output_parent(output_dirs: Sequence[Path]) -> Path | None:
     return None
 
 
+def _normalize_family(value: Any) -> str:
+    text = str(value or "").strip().lower().replace("-", "_")
+    if text in {"hinerv", "hi_nerv"}:
+        return "hi_nerv"
+    if text == "snerv":
+        return "snerv"
+    return text or "unknown"
+
+
 def _resolve_path(path: str | Path, *, repo_root: Path) -> Path:
     value = Path(path).expanduser()
     return value if value.is_absolute() else repo_root / value
@@ -702,10 +881,31 @@ def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
     return []
 
 
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [str(item) for item in value if str(item)]
+    return []
+
+
 def _list(value: Any) -> list[Any]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         return list(value)
     return []
+
+
+def _dedupe_postconditions(
+    postconditions: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for condition in postconditions:
+        entry = dict(condition)
+        key = json.dumps(entry, sort_keys=True, separators=(",", ":"), default=str)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(entry)
+    return out
 
 
 def _dedupe(values: Sequence[str]) -> list[str]:

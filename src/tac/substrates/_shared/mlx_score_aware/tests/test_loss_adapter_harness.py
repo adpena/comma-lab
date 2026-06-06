@@ -3545,12 +3545,14 @@ def test_adapter_scorer_space_step_guard_prices_target_region_score_debt_before_
             return {
                 **stable_support,
                 "loss_part_segnet_direct_live_argmax_disagreement": 0.52,
+                "loss_part_pose_direct_live_score_marginal_wrt_raw_mse": 0.25,
                 "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 35.0,
                 "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss": 100.0,
             }
         return {
             **stable_support,
             "loss_part_segnet_direct_live_argmax_disagreement": 0.60,
+            "loss_part_pose_direct_live_score_marginal_wrt_raw_mse": 0.24,
             "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 20.0,
             "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_crossing_loss": 90.0,
         }
@@ -3585,6 +3587,146 @@ def test_adapter_scorer_space_step_guard_prices_target_region_score_debt_before_
         "scorer_space_step_guard_reject_reason_post_segnet_target_class_min_ratio_below_floor"
     ] == pytest.approx(0.0)
     assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_source_live_mlx_step_guard"] == pytest.approx(
+        1.0
+    )
+    assert metrics["receiver_surface_update_accepted"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_loss_delta"] == pytest.approx(-15.0)
+    assert metrics["receiver_surface_nonrate_score_unit_movement"] == pytest.approx(
+        15.0
+    )
+    assert metrics["receiver_surface_pose_output_delta"] == pytest.approx(0.0)
+    assert metrics[
+        "receiver_surface_pose_direct_live_score_marginal_wrt_raw_mse_pre"
+    ] == pytest.approx(0.25)
+    assert metrics[
+        "receiver_surface_pose_direct_live_score_marginal_wrt_raw_mse_post"
+    ] == pytest.approx(0.24)
+    assert metrics["receiver_surface_exact_projection_present"] == pytest.approx(1.0)
+    assert metrics[
+        "receiver_surface_float_rgb_delta_linf_evidence_missing"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "receiver_surface_uint8_changed_pixels_evidence_missing"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "receiver_surface_segnet_input_delta_linf_evidence_missing"
+    ] == pytest.approx(0.0)
+    assert metrics["receiver_surface_float_rgb_delta_linf"] >= 0.0
+    assert metrics["receiver_surface_uint8_changed_pixels"] >= 0.0
+    assert metrics["receiver_surface_segnet_input_delta_linf"] >= 0.0
+    assert metrics[
+        "receiver_surface_argmax_flipped_pixels_evidence_missing"
+    ] == pytest.approx(1.0)
+
+
+@mlx_only
+def test_adapter_receiver_surface_delta_metrics_counts_exact_receiver_motion() -> None:
+    import mlx.core as mx
+
+    adapter = MlxScoreAwareAdapter(
+        _tiny_dreamer_bundle(num_pairs=1, distill=0.0),
+        substrate_id="dreamer_v3_rssm",
+    )
+    pre = {
+        "float_rgb": mx.zeros((1, 2, 1, 2, 3), dtype=mx.float32),
+        "uint8_rgb": mx.zeros((1, 2, 1, 2, 3), dtype=mx.float32),
+        "segnet_input": mx.zeros((1, 1, 2, 3), dtype=mx.float32),
+        "segnet_logits": mx.array(
+            [[[[2.0, 1.0, 0.0], [3.0, 1.0, 0.0]]]],
+            dtype=mx.float32,
+        ),
+        "segnet_target_argmax": mx.array([[[0, 1]]], dtype=mx.int32),
+        "segnet_argmax": mx.array([[[0, 1]]], dtype=mx.int32),
+        "fakequant_segnet_argmax": mx.array([[[0, 1]]], dtype=mx.int32),
+        "posenet_input": mx.zeros((1, 1, 1, 12), dtype=mx.float32),
+        "posenet_output": mx.zeros((1, 6), dtype=mx.float32),
+    }
+    post = {
+        "float_rgb": mx.array(
+            [[[[[0.0, 0.0, 0.0], [0.25, 0.0, 0.0]]], [[[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]]],
+            dtype=mx.float32,
+        ),
+        "uint8_rgb": mx.array(
+            [[[[[0.0, 0.0, 0.0], [1.0, 2.0, 0.0]]], [[[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]]],
+            dtype=mx.float32,
+        ),
+        "segnet_input": mx.array(
+            [[[[0.0, 0.0, 0.0], [0.5, 0.0, 0.0]]]],
+            dtype=mx.float32,
+        ),
+        "segnet_logits": mx.array(
+            [[[[2.0, 1.0, 0.0], [3.0, 4.0, 0.0]]]],
+            dtype=mx.float32,
+        ),
+        "segnet_target_argmax": mx.array([[[0, 1]]], dtype=mx.int32),
+        "segnet_argmax": mx.array([[[0, 2]]], dtype=mx.int32),
+        "fakequant_segnet_argmax": mx.array([[[0, 1]]], dtype=mx.int32),
+        "posenet_input": mx.ones((1, 1, 1, 12), dtype=mx.float32),
+        "posenet_output": mx.array([[0.0, 3.0, 4.0, 0.0, 0.0, 0.0]], dtype=mx.float32),
+    }
+
+    metrics = adapter._receiver_surface_delta_metrics(pre=pre, post=post)
+
+    assert metrics["receiver_surface_exact_projection_present"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_float_rgb_delta_linf"] == pytest.approx(0.25)
+    assert metrics["receiver_surface_uint8_changed_pixels"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_uint8_changed_channel_values"] == pytest.approx(
+        2.0
+    )
+    assert metrics["receiver_surface_segnet_input_delta_linf"] == pytest.approx(0.5)
+    assert metrics["receiver_surface_argmax_flipped_pixels"] == pytest.approx(1.0)
+    assert metrics[
+        "receiver_surface_fakequant_argmax_flipped_pixels"
+    ] == pytest.approx(0.0)
+    assert metrics["receiver_surface_worst_region_margin_p50_pre"] == pytest.approx(
+        -2.0
+    )
+    assert metrics["receiver_surface_worst_region_margin_p50_post"] == pytest.approx(
+        1.0
+    )
+    assert metrics["receiver_surface_worst_region_margin_p50_delta"] == pytest.approx(
+        3.0
+    )
+    assert metrics[
+        "receiver_surface_worst_region_margin_p50_delta_evidence_missing"
+    ] == pytest.approx(0.0)
+    assert metrics["receiver_surface_posenet_input_delta_linf"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_posenet_output_delta_linf"] == pytest.approx(4.0)
+    assert metrics["receiver_surface_posenet_output_delta_l2_mean"] == pytest.approx(
+        5.0
+    )
+
+
+@mlx_only
+def test_adapter_receiver_surface_worst_region_margin_p50_uses_connected_components() -> None:
+    import mlx.core as mx
+
+    adapter = MlxScoreAwareAdapter(
+        _tiny_dreamer_bundle(num_pairs=1, distill=0.0),
+        substrate_id="dreamer_v3_rssm",
+    )
+    logits = mx.array(
+        [
+            [
+                [[3.0, 1.0, 0.0], [0.0, 2.0, 1.0], [0.0, 3.0, 1.0]],
+                [[3.0, 1.0, 0.0], [0.0, 2.0, 1.0], [0.0, 3.0, 1.0]],
+            ]
+        ],
+        dtype=mx.float32,
+    )
+    target_argmax = mx.array([[[0, 1, 0], [0, 1, 0]]], dtype=mx.int32)
+
+    margin_p50, class_id, component_size = (
+        adapter._receiver_surface_worst_connected_region_margin_p50(
+            logits=logits,
+            target_argmax=target_argmax,
+        )
+    )
+
+    assert margin_p50 == pytest.approx(-3.0)
+    assert class_id == 0
+    assert component_size == 2
 
 
 @mlx_only
