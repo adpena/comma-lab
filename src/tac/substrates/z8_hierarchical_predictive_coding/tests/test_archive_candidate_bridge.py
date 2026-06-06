@@ -30,6 +30,11 @@ from tac.substrates.z8_hierarchical_predictive_coding.canonical_quadruple_bindin
     parse_pair_blobs_from_wavelet_blob,
     reconstruct_pair_rgb_from_pyramid,
 )
+from tac.substrates.z8_hierarchical_predictive_coding.entropy_delta_schedule import (
+    Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA,
+    verify_z8_hpc1_detail_entropy_delta_receiver_contract,
+)
+from tac.substrates.z8_hierarchical_predictive_coding.inflate import CONTEST_RAW_BYTES
 from tac.substrates.z8_hierarchical_predictive_coding.mlx_renderer import (
     Z8HierarchicalConfig,
 )
@@ -282,6 +287,70 @@ def test_z8_archive_export_can_measure_rate_without_runtime_bridge_report(
     assert archive_bytes == archive_zip.stat().st_size
     assert not (tmp_path / "z8_hpc1_runtime_payload_bridge_report.json").exists()
     assert not (tmp_path / "z8_hpc1_byte_mutation_proof.json").exists()
+
+
+def test_z8_entropy_delta_receiver_verifier_is_fail_closed(tmp_path: Path) -> None:
+    proof = {
+        "schema": Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA,
+        "candidate_label": "z8_hpc1",
+        "archive_path": "candidate/archive.zip",
+        "archive_sha256": "a" * 64,
+        "archive_bytes": 1234,
+        "submission_dir": "candidate/submission",
+        "runtime_tree_sha256": "b" * 64,
+        "inflate_argv": [
+            "candidate/submission/inflate.sh",
+            "candidate/submission",
+            "receiver_out",
+            "file_list.txt",
+        ],
+        "file_list_path": "receiver_proof/file_list.txt",
+        "receiver_output_path": "receiver_proof/runtime_out/0.raw",
+        "receiver_output_kind": "file",
+        "receiver_output_sha256": "c" * 64,
+        "receiver_output_bytes": CONTEST_RAW_BYTES,
+        "expected_receiver_output_bytes": CONTEST_RAW_BYTES,
+        "returncode": 0,
+        "timed_out": False,
+        "runtime_consumption_proof_ready": True,
+        "runtime_consumption_proof_passed": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof_path = tmp_path / "z8_hpc1_receiver_proof.json"
+    proof_path.write_text(json.dumps(proof, sort_keys=True), encoding="utf-8")
+
+    verified = verify_z8_hpc1_detail_entropy_delta_receiver_contract(
+        runtime_consumption_proof=proof_path,
+        required_candidate_archive_sha256="a" * 64,
+        required_candidate_archive_bytes=1234,
+    )
+
+    assert verified["receiver_contract_satisfied"] is True
+    assert verified["runtime_consumption_proof_ready"] is True
+    assert verified["blockers"] == []
+
+    stale = dict(proof)
+    stale["schema"] = "legacy_z8_receiver_proof.v0"
+    stale["receiver_output_bytes"] = 1
+    stale["score_claim"] = True
+    rejected = verify_z8_hpc1_detail_entropy_delta_receiver_contract(
+        runtime_consumption_proof=stale,
+        required_candidate_archive_sha256="a" * 64,
+        required_candidate_archive_bytes=1234,
+    )
+
+    assert rejected["receiver_contract_satisfied"] is False
+    assert "runtime_consumption_proof_schema_mismatch" in rejected["blockers"]
+    assert "generated_inflate_receiver_output_bytes_mismatch" in rejected["blockers"]
+    assert any(
+        "forbidden truthy authority fields" in blocker
+        for blocker in rejected["blockers"]
+    )
 
 
 def test_z8_archive_bound_package_stays_false_authority_when_receiver_blocked(

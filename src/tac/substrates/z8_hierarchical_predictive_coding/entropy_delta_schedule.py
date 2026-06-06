@@ -17,6 +17,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.optimization.proxy_candidate_contract import (
+    ordered_unique,
+    require_no_truthy_authority_fields,
+)
+
 NON_PROMOTABLE_MARKERS: dict[str, Any] = {
     "evidence_grade": "macOS-CPU-advisory",
     "axis_tag": "[macOS-CPU advisory]",
@@ -27,6 +32,15 @@ NON_PROMOTABLE_MARKERS: dict[str, Any] = {
 }
 Z8_ENTROPY_DELTA_MATERIALIZER_WORK_ORDER_SCHEMA = (
     "z8_entropy_delta_materializer_work_order.v1"
+)
+Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_ID = (
+    "z8_hpc1_generated_inflate_sh_decode_only_receiver.v1"
+)
+Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_KIND = (
+    "z8_hpc1_generated_inflate_sh_decode_only_receiver"
+)
+Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA = (
+    "z8_hierarchical_predictive_coding_generated_receiver_proof.v1"
 )
 
 
@@ -229,6 +243,44 @@ def _path_exists(path_text: str, *, repo_root: str | Path | None = None) -> bool
     return path.is_file()
 
 
+def _resolve_repo_path(path: str | Path, *, repo_root: str | Path | None = None) -> Path:
+    resolved = Path(path)
+    if resolved.is_absolute() or repo_root is None:
+        return resolved
+    return Path(repo_root) / resolved
+
+
+def _load_receiver_proof(
+    runtime_consumption_proof: str | Path | Mapping[str, Any],
+    *,
+    repo_root: str | Path | None = None,
+) -> tuple[dict[str, Any] | None, str | None, list[str]]:
+    if isinstance(runtime_consumption_proof, Mapping):
+        return dict(runtime_consumption_proof), None, []
+    proof_path = _resolve_repo_path(runtime_consumption_proof, repo_root=repo_root)
+    if not proof_path.is_file():
+        return None, proof_path.as_posix(), [
+            f"runtime_consumption_proof_missing_on_disk:{proof_path.as_posix()}"
+        ]
+    try:
+        payload = json.loads(proof_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return None, proof_path.as_posix(), [
+            f"runtime_consumption_proof_json_invalid:{exc.msg}"
+        ]
+    if not isinstance(payload, dict):
+        return None, proof_path.as_posix(), ["runtime_consumption_proof_not_object"]
+    return payload, proof_path.as_posix(), []
+
+
+def _z8_receiver_output_bytes() -> int:
+    from tac.substrates.z8_hierarchical_predictive_coding.inflate import (
+        CONTEST_RAW_BYTES,
+    )
+
+    return int(CONTEST_RAW_BYTES)
+
+
 def build_entropy_delta_materializer_work_order(
     schedule: Mapping[str, Any],
     *,
@@ -382,13 +434,177 @@ def build_entropy_delta_campaign_plan(
     }
 
 
+def build_z8_hpc1_detail_entropy_delta_receiver_proof(
+    *,
+    output_dir: str | Path,
+    archive_bytes: bytes | bytearray | memoryview | None = None,
+    archive_bin: str | Path | None = None,
+    repo_root: str | Path | None = None,
+    retain_receiver_proof_output: bool = False,
+    mlx_triage_argv: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Build the generated-runtime receiver proof for Z8 entropy-delta bytes."""
+
+    if archive_bytes is None:
+        if archive_bin is None:
+            raise ValueError("archive_bytes or archive_bin is required")
+        archive_payload = _resolve_repo_path(
+            archive_bin,
+            repo_root=repo_root,
+        ).read_bytes()
+    else:
+        archive_payload = bytes(archive_bytes)
+    from tac.substrates.z8_hierarchical_predictive_coding.archive_candidate import (
+        export_z8hpc1_archive_bytes,
+    )
+
+    archive_zip_path, archive_sha256, archive_zip_bytes = export_z8hpc1_archive_bytes(
+        archive_payload,
+        output_dir,
+        repo_root=repo_root,
+        emit_archive_bound_candidate_package=True,
+        emit_byte_mutation_proof=False,
+        emit_runtime_payload_bridge_report=True,
+        retain_receiver_proof_output=bool(retain_receiver_proof_output),
+        mlx_triage_argv=mlx_triage_argv,
+    )
+    proof_path = (
+        Path(archive_zip_path).parent / "receiver_proof" / "z8_hpc1_receiver_proof.json"
+    )
+    proof, _proof_path_text, blockers = _load_receiver_proof(
+        proof_path,
+        repo_root=repo_root,
+    )
+    if proof is None:
+        raise RuntimeError(
+            "Z8HPC1 receiver proof was not emitted: "
+            + ", ".join(blockers or ["runtime_consumption_proof_missing"])
+        )
+    proof = dict(proof)
+    proof["receiver_contract_id"] = Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_ID
+    proof["receiver_contract_kind"] = (
+        Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_KIND
+    )
+    proof["archive_sha256"] = archive_sha256
+    proof["archive_bytes"] = int(archive_zip_bytes)
+    proof["archive_path"] = Path(archive_zip_path).as_posix()
+    proof["proof_path"] = proof_path.as_posix()
+    return proof
+
+
+def verify_z8_hpc1_detail_entropy_delta_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_archive_bytes: int | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate the generated-runtime proof emitted by the Z8 entropy materializer."""
+
+    blockers: list[str] = []
+    proof_path: str | None = None
+    proof: dict[str, Any] | None = None
+    if runtime_consumption_proof is None:
+        blockers.append("runtime_consumption_proof_missing")
+    else:
+        proof, proof_path, load_blockers = _load_receiver_proof(
+            runtime_consumption_proof,
+            repo_root=repo_root,
+        )
+        blockers.extend(load_blockers)
+    if proof is not None:
+        try:
+            require_no_truthy_authority_fields(
+                proof,
+                context="z8_hpc1_detail_entropy_delta_receiver_proof",
+            )
+        except ValueError as exc:
+            blockers.append(str(exc))
+        if proof.get("schema") != Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA:
+            blockers.append("runtime_consumption_proof_schema_mismatch")
+        if proof.get("candidate_label") != "z8_hpc1":
+            blockers.append("runtime_consumption_proof_candidate_label_mismatch")
+        if proof.get("runtime_consumption_proof_ready") is not True:
+            blockers.append("runtime_consumption_proof_not_ready")
+        if proof.get("runtime_consumption_proof_passed") is not True:
+            blockers.append("runtime_consumption_proof_not_passed")
+        if proof.get("receiver_contract_satisfied") is not True:
+            blockers.append("receiver_contract_not_satisfied")
+        if proof.get("returncode") != 0:
+            blockers.append("generated_inflate_returncode_not_zero")
+        if proof.get("timed_out") is True:
+            blockers.append("generated_inflate_timed_out")
+        if proof.get("receiver_output_kind") != "file":
+            blockers.append("generated_inflate_receiver_output_not_file")
+        expected_receiver_output_bytes = _z8_receiver_output_bytes()
+        output_bytes = proof.get("receiver_output_bytes")
+        if output_bytes != expected_receiver_output_bytes:
+            blockers.append("generated_inflate_receiver_output_bytes_mismatch")
+        expected_output_bytes = proof.get("expected_receiver_output_bytes")
+        if expected_output_bytes != expected_receiver_output_bytes:
+            blockers.append("generated_inflate_expected_output_bytes_mismatch")
+        archive_sha256 = str(proof.get("archive_sha256") or "")
+        if not archive_sha256:
+            blockers.append("runtime_consumption_proof_archive_sha256_missing")
+        elif (
+            required_candidate_archive_sha256 is not None
+            and archive_sha256 != str(required_candidate_archive_sha256)
+        ):
+            blockers.append("runtime_consumption_proof_archive_sha256_mismatch")
+        archive_bytes = proof.get("archive_bytes")
+        if not isinstance(archive_bytes, int) or archive_bytes <= 0:
+            blockers.append("runtime_consumption_proof_archive_bytes_missing")
+        elif (
+            required_candidate_archive_bytes is not None
+            and int(archive_bytes) != int(required_candidate_archive_bytes)
+        ):
+            blockers.append("runtime_consumption_proof_archive_bytes_mismatch")
+        for key in (
+            "archive_path",
+            "submission_dir",
+            "runtime_tree_sha256",
+            "inflate_argv",
+            "file_list_path",
+            "receiver_output_path",
+            "receiver_output_sha256",
+        ):
+            if not proof.get(key):
+                blockers.append(f"runtime_consumption_proof_{key}_missing")
+        blockers.extend(str(item) for item in proof.get("blockers") or [])
+    return {
+        "schema": "z8_hpc1_detail_entropy_delta_receiver_contract_verification.v1",
+        "receiver_contract_id": Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_ID,
+        "receiver_contract_kind": Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_KIND,
+        "receiver_contract_satisfied": not blockers,
+        "runtime_consumption_proof_ready": bool(
+            proof is not None
+            and proof.get("runtime_consumption_proof_ready") is True
+            and not blockers
+        ),
+        "proof_present": proof is not None,
+        "proof_path": proof_path,
+        "proof_schema": proof.get("schema") if proof else None,
+        "candidate_label": proof.get("candidate_label") if proof else None,
+        "archive_sha256": proof.get("archive_sha256") if proof else None,
+        "archive_bytes": proof.get("archive_bytes") if proof else None,
+        "runtime_tree_sha256": proof.get("runtime_tree_sha256") if proof else None,
+        "blockers": ordered_unique(blockers),
+        **NON_PROMOTABLE_MARKERS,
+    }
+
+
 __all__ = [
     "NON_PROMOTABLE_MARKERS",
     "Z8_ENTROPY_DELTA_MATERIALIZER_WORK_ORDER_SCHEMA",
+    "Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_ID",
+    "Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_CONTRACT_KIND",
+    "Z8_HPC1_DETAIL_ENTROPY_DELTA_RECEIVER_PROOF_SCHEMA",
     "build_entropy_delta_campaign_plan",
     "build_entropy_delta_materializer_work_order",
     "build_entropy_delta_schedule_from_headroom_report",
+    "build_z8_hpc1_detail_entropy_delta_receiver_proof",
     "coerce_entropy_detail_quantization_steps",
     "load_entropy_detail_quantization_steps_json",
     "parse_aggregate_subband_key",
+    "verify_z8_hpc1_detail_entropy_delta_receiver_contract",
 ]

@@ -661,6 +661,12 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         plan_function="build_entropy_delta_materializer_work_order",
         materialize_function="tools/materialize_z8_joint_p18_p19_deadzone_candidate.py",
+        receiver_proof_function=(
+            "build_z8_hpc1_detail_entropy_delta_receiver_proof"
+        ),
+        receiver_verify_function=(
+            "verify_z8_hpc1_detail_entropy_delta_receiver_contract"
+        ),
     ),
 )
 

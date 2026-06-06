@@ -1278,8 +1278,14 @@ def test_byte_shaving_materializer_registry_registers_z8_hpc1_entropy_delta() ->
     )
     assert resolved.adapter.plan_function == "build_entropy_delta_materializer_work_order"
     assert resolved.adapter.receiver_contract_kind == "z8_hpc1_generated_inflate_sh_decode_only_receiver"
-    assert resolved.adapter.receiver_proof_function == ""
-    assert resolved.adapter.receiver_verify_function == ""
+    assert (
+        resolved.adapter.receiver_proof_function
+        == "build_z8_hpc1_detail_entropy_delta_receiver_proof"
+    )
+    assert (
+        resolved.adapter.receiver_verify_function
+        == "verify_z8_hpc1_detail_entropy_delta_receiver_contract"
+    )
 
 
 def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None:
