@@ -277,6 +277,7 @@ def test_score_dynamics_diagnosis_prices_target_region_pose_and_rate() -> None:
             "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_unsolved_argmax_mass": 50.0,
             "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_target_region_unsolved_argmax_mass": 0.5,
             "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_crossing_loss": 125.0,
+            "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_decision_crossing_score_debt_boost": 33.0,
             "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_target_fraction": 0.5,
             "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_region_ratio": 0.0,
             "loss_part_segnet_direct_live_target_min_ratio_floor_class_1_region_deficit": 0.2,
@@ -306,6 +307,9 @@ def test_score_dynamics_diagnosis_prices_target_region_pose_and_rate() -> None:
         -5.0
     )
     assert diagnosis["segnet"]["worst_target_region_atom"]["class_index"] == 1
+    assert diagnosis["segnet"]["worst_target_region_atom"][
+        "decision_crossing_score_debt_boost"
+    ] == pytest.approx(33.0)
     assert diagnosis["posenet"]["accepted_update_reduced_pose_term"] is False
     assert diagnosis["joint"]["seg_pose_tradeoff"] == "segnet_improved_posenet_worsened"
     assert diagnosis["rate"]["archive_rate_score"] == pytest.approx(0.09987884296832571)
