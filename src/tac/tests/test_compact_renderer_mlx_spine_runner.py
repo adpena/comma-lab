@@ -530,6 +530,88 @@ def test_hinerv_selected_birth_parseback_survival_promotes_only_selected_candida
     assert persisted_training["selected_birth_parseback_survival"]["survived"] is True
 
 
+def test_hinerv_live_birth_survival_rows_fail_closed_on_missing_inputs(tmp_path: Path) -> None:
+    row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
+        model=object(),
+        output_dir=tmp_path,
+        live_birth_payload={"action_id": "c" * 64},
+        scorer_teacher=None,
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+    )
+
+    assert row["schema"] == "hi_nerv_runner_live_birth_survival_bundle.v1"
+    assert row["blockers"] == ["birth_survival_live_scorer_teacher_missing"]
+    fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
+    hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
+    assert fake["schema"] == "hi_nerv_target_region_birth_survival_blocked.v1"
+    assert hyst["schema"] == "hi_nerv_target_region_birth_hysteresis_blocked.v1"
+    assert fake["score_claim"] is False
+    assert hyst["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    class DummyModel:
+        def __init__(self) -> None:
+            self.weight = mx.array([1.0], dtype=mx.float32)
+
+        def parameters(self):
+            return {"weight": self.weight}
+
+        def update(self, params):
+            self.weight = params["weight"]
+
+    model = DummyModel()
+
+    import tac.substrates.hi_nerv.birth_survival as survival_mod
+
+    def fake_measure_birth_survival(*_args, **_kwargs):
+        return {
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "fakequant_mlx",
+            "action_id": "d" * 64,
+            "survived": True,
+            "blockers": [],
+        }
+
+    def fake_measure_birth_hysteresis(model_arg, **_kwargs):
+        model_arg.update({"weight": mx.array([9.0], dtype=mx.float32)})
+        mx.eval(model_arg.parameters())
+        return {
+            "schema": "hi_nerv_target_region_birth_hysteresis.v1",
+            "surface": "live_mlx_continued",
+            "action_id": "d" * 64,
+            "passed": True,
+        }
+
+    monkeypatch.setattr(survival_mod, "measure_birth_survival", fake_measure_birth_survival)
+    monkeypatch.setattr(survival_mod, "measure_birth_hysteresis", fake_measure_birth_hysteresis)
+
+    row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
+        model=model,
+        output_dir=tmp_path,
+        live_birth_payload={"action_id": "d" * 64, "accepted": True},
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+        target_rgb_0=np.zeros((1, 2, 2, 3), dtype=np.float32),
+        target_rgb_1=np.zeros((1, 2, 2, 3), dtype=np.float32),
+    )
+
+    assert row["fakequant_survived"] is True
+    assert row["hysteresis_passed"] is True
+    assert float(np.asarray(model.weight)[0]) == pytest.approx(1.0)
+    fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
+    hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
+    assert fake["producer"] == "hi_nerv_runner_live_birth_survival"
+    assert hyst["producer"] == "hi_nerv_runner_live_birth_survival"
+
+
 def _receiver_replay_selection_manifest(
     *,
     old_summary: dict[str, object],

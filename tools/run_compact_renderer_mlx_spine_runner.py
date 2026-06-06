@@ -17223,7 +17223,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "training_executed": True,
         "score_authority": "false_macos_mlx_research_signal",
     }
-
     def _hi_nerv_archive_replay_components_with_birth_survival(
         archive_path: str | Path,
         batch: Any,
@@ -17375,6 +17374,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 input_channels=6,
                 seed=int(random_seed) + 1,
             )
+    if (
+        isinstance(target_region_birth_payload, Mapping)
+        and target_region_birth_payload.get("accepted") is True
+    ):
+        live_survival = _write_hi_nerv_runner_live_birth_survival_rows(
+            model=model,
+            output_dir=output_dir,
+            live_birth_payload=target_region_birth_payload,
+            scorer_teacher=scorer_teacher,
+            pose_teacher=pose_scorer_teacher,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            target_labels=target_segnet_argmax_1,
+            pair_indices=bootstrap_pair_indices,
+            fakequant_bits=int(coder_qat_quant_bits),
+            hysteresis_learning_rate=float(scorer_domain_bootstrap_learning_rate),
+        )
+        if live_survival:
+            artifact_metadata["score_aware_training"]["live_birth_survival"] = live_survival
     bundle = RendererBundle(
         **bundle_kwargs,
         recon_pixel_weight=recon_pixel_weight,
@@ -18158,6 +18176,184 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
+
+
+def _snapshot_mlx_model_parameters(model: Any) -> list[tuple[Any, Any]]:
+    try:
+        import mlx.core as mx
+        from mlx.utils import tree_flatten
+    except Exception as exc:  # pragma: no cover - environment guard
+        raise CompactRendererMlxSpineRunnerError(
+            "MLX parameter snapshot requires mlx.utils.tree_flatten"
+        ) from exc
+    snapshot: list[tuple[Any, Any]] = []
+    for raw_name, leaf in tree_flatten(model.parameters()):
+        snapshot.append((raw_name, mx.array(leaf)))
+    mx.eval(*[leaf for _name, leaf in snapshot])
+    return snapshot
+
+
+def _restore_mlx_model_parameters(model: Any, snapshot: list[tuple[Any, Any]]) -> None:
+    try:
+        import mlx.core as mx
+        from mlx.utils import tree_unflatten
+    except Exception as exc:  # pragma: no cover - environment guard
+        raise CompactRendererMlxSpineRunnerError(
+            "MLX parameter restore requires mlx.utils.tree_unflatten"
+        ) from exc
+    model.update(tree_unflatten([(name, mx.array(value)) for name, value in snapshot]))
+    mx.eval(model.parameters())
+
+
+def _write_hi_nerv_runner_live_birth_survival_rows(
+    *,
+    model: Any,
+    output_dir: str | Path,
+    live_birth_payload: Mapping[str, Any] | None,
+    scorer_teacher: Any | None,
+    target_labels: Any | None,
+    pair_indices: Any | None,
+    pose_teacher: Any | None = None,
+    target_rgb_0: Any | None = None,
+    target_rgb_1: Any | None = None,
+    fakequant_bits: int = 8,
+    hysteresis_extra_steps: int = 3,
+    hysteresis_learning_rate: float = 2.0e-3,
+) -> dict[str, Any]:
+    """Write live hard-birth survival rows that do not mutate training state."""
+
+    if not isinstance(live_birth_payload, Mapping):
+        return {}
+    receipt = live_birth_payload.get("receipt")
+    receipt = receipt if isinstance(receipt, Mapping) else {}
+    action_id = str(live_birth_payload.get("action_id") or receipt.get("action_id") or "")
+    if not action_id:
+        return {}
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+
+    def _blocked(schema: str, path: Path, blocker: str, reason: str | None = None) -> dict[str, Any]:
+        row = {
+            "schema": schema,
+            "action_id": action_id,
+            "blocked": True,
+            "blocker": blocker,
+            "blockers": [blocker],
+            "reason": reason or blocker,
+            "producer": "hi_nerv_runner_live_birth_survival",
+            "human_visual_fidelity_objective": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        row["artifact_path"] = path.as_posix()
+        _write_json(path, row)
+        return row
+
+    summary: dict[str, Any] = {
+        "schema": "hi_nerv_runner_live_birth_survival_bundle.v1",
+        "action_id": action_id,
+        "producer": "hi_nerv_runner_live_birth_survival",
+        "fakequant_survival_path": None,
+        "hysteresis_path": None,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if scorer_teacher is None or target_labels is None or pair_indices is None:
+        missing = []
+        if scorer_teacher is None:
+            missing.append("birth_survival_live_scorer_teacher_missing")
+        if target_labels is None:
+            missing.append("birth_survival_live_target_labels_missing")
+        if pair_indices is None:
+            missing.append("birth_survival_live_pair_indices_missing")
+        summary["blockers"] = missing
+        fake_path = out / "hi_nerv_birth_fakequant_survival.json"
+        hyst_path = out / "hi_nerv_birth_hysteresis.json"
+        _blocked("hi_nerv_target_region_birth_survival_blocked.v1", fake_path, missing[0])
+        _blocked("hi_nerv_target_region_birth_hysteresis_blocked.v1", hyst_path, missing[0])
+        summary["fakequant_survival_path"] = fake_path.as_posix()
+        summary["hysteresis_path"] = hyst_path.as_posix()
+        return summary
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        measure_birth_hysteresis,
+        measure_birth_survival,
+    )
+
+    fake_path = out / "hi_nerv_birth_fakequant_survival.json"
+    try:
+        fake_row = dict(
+            measure_birth_survival(
+                model,
+                scorer_teacher=scorer_teacher,
+                pose_teacher=pose_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                surface="fakequant_mlx",
+                pair_indices=pair_indices,
+                fakequant_bits=int(fakequant_bits),
+            )
+        )
+    except Exception as exc:
+        fake_row = _blocked(
+            "hi_nerv_target_region_birth_survival_blocked.v1",
+            fake_path,
+            "birth_survival_fakequant_remeasurement_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+    else:
+        fake_row["artifact_path"] = fake_path.as_posix()
+        fake_row["producer"] = "hi_nerv_runner_live_birth_survival"
+        _write_json(fake_path, fake_row)
+    summary["fakequant_survival_path"] = fake_path.as_posix()
+    summary["fakequant_survived"] = fake_row.get("survived")
+    summary["fakequant_blockers"] = [str(value) for value in fake_row.get("blockers") or []]
+
+    hyst_path = out / "hi_nerv_birth_hysteresis.json"
+    snapshot: list[tuple[Any, Any]] | None = None
+    try:
+        snapshot = _snapshot_mlx_model_parameters(model)
+        hyst_row = dict(
+            measure_birth_hysteresis(
+                model,
+                scorer_teacher=scorer_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                pair_indices=pair_indices,
+                extra_steps=int(hysteresis_extra_steps),
+                learning_rate=float(hysteresis_learning_rate),
+            )
+        )
+    except Exception as exc:
+        hyst_row = _blocked(
+            "hi_nerv_target_region_birth_hysteresis_blocked.v1",
+            hyst_path,
+            "birth_hysteresis_remeasurement_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+    finally:
+        if snapshot is not None:
+            _restore_mlx_model_parameters(model, snapshot)
+    hyst_row["artifact_path"] = hyst_path.as_posix()
+    hyst_row["producer"] = "hi_nerv_runner_live_birth_survival"
+    _write_json(hyst_path, hyst_row)
+    summary["hysteresis_path"] = hyst_path.as_posix()
+    summary["hysteresis_passed"] = hyst_row.get("passed")
+    summary["hysteresis_blockers"] = [str(value) for value in hyst_row.get("blockers") or []]
+    summary["blockers"] = [
+        *summary.get("fakequant_blockers", []),
+        *summary.get("hysteresis_blockers", []),
+    ]
+    return summary
 
 
 def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
