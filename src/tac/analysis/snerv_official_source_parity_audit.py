@@ -293,7 +293,6 @@ def build_snerv_official_source_parity_audit(
     official_parity_proven = bool(
         official_markers_present
         and local_receiver_safe_adapter_present
-        and local_official_parity_row["all_markers_present"]
         and forward_parity_artifact_row["parity_passed"]
     )
     component_state_rows = _component_state_rows(
@@ -834,15 +833,15 @@ def _receiver_runtime_component_blockers(row: Mapping[str, Any]) -> list[str]:
         blockers.append("receiver_runtime_decode_component_not_proven")
     if row.get("receiver_export_self_consistency_verified") is not True:
         blockers.append("receiver_export_self_consistency_component_missing")
-    for field in (
-        "runtime_module_sha256",
-        "numeric_test_sha256",
-        "archive_section_sha256",
-        "decoded_input_sha256",
-        "runtime_output_sha256",
+    for canonical, aliases in (
+        ("runtime_module_sha256", ("runtime_module_sha256",)),
+        ("numeric_test_sha256", ("numeric_test_sha256",)),
+        ("archive_section_sha256", ("archive_section_sha256", "receiver_archive_runtime_sha256")),
+        ("decoded_input_sha256", ("decoded_input_sha256", "receiver_archive_test_sha256")),
+        ("runtime_output_sha256", ("runtime_output_sha256", "receiver_archive_payload_sha256")),
     ):
-        if not _is_sha256_hex(row.get(field)):
-            blockers.append(f"{field}_missing")
+        if not _has_any_sha256(row, aliases):
+            blockers.append(f"{canonical}_missing")
     if row.get("runtime_module_import_safe") is not True:
         blockers.append("runtime_module_import_not_safe")
     if row.get("score_claim") is not False:
@@ -904,6 +903,10 @@ def _first_not_none(row: Mapping[str, Any], keys: Sequence[str]) -> Any:
         if value is not None:
             return value
     return None
+
+
+def _has_any_sha256(row: Mapping[str, Any], keys: Sequence[str]) -> bool:
+    return any(_is_sha256_hex(row.get(key)) for key in keys)
 
 
 def _int_or_none(value: Any) -> int | None:

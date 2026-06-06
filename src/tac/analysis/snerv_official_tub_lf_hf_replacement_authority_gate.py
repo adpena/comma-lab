@@ -593,13 +593,17 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         *(nested_tub.get("blockers") or ()),
         *(nested_tub.get("preserved_blockers") or ()),
     ]
+    source_artifact_closed = _source_artifact_closed_blockers(source)
     closed_residual_blockers = _source_residual_blockers_closed_by_mapping_manifest(
         source
+    )
+    closed_source_blockers = set(source_artifact_closed) | set(
+        closed_residual_blockers
     )
     raw_source_blocker_items = [
         blocker
         for blocker in raw_source_blocker_items
-        if str(blocker) not in set(closed_residual_blockers)
+        if str(blocker) not in closed_source_blockers
     ]
     raw_source_blockers = {str(blocker) for blocker in raw_source_blocker_items}
     source_forward_authority_residual_blockers = (
@@ -638,6 +642,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
     closed.extend(nested_tub_closed)
     if source_authority:
         closed.extend([SOURCE_AUTHORITY_BLOCKER, FULL_REPLAY_BLOCKER])
+    closed.extend(source_artifact_closed)
     closed.extend(closed_residual_blockers)
     receiver_blockers = []
     if not receiver_ready:
@@ -688,7 +693,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
                 *[
                     blocker
                     for blocker in (source.get("blockers") or ())
-                    if str(blocker) not in set(closed_residual_blockers)
+                    if str(blocker) not in closed_source_blockers
                 ],
                 *receiver_blockers,
                 *source_blockers,
@@ -696,6 +701,18 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         ),
         **QUEUE_FALSE_AUTHORITY,
     }
+
+
+def _source_artifact_closed_blockers(source: Mapping[str, Any]) -> list[str]:
+    closed = [
+        *(source.get("source_forward_replay_closed_blockers") or ()),
+        *(source.get("source_forward_component_closed_blockers") or ()),
+        *(source.get("source_forward_authority_closed_blockers") or ()),
+        *(source.get("closed_campaign_blockers") or ()),
+    ]
+    if source.get("source_forward_replay_authority") is True:
+        closed.extend([SOURCE_AUTHORITY_BLOCKER, FULL_REPLAY_BLOCKER])
+    return _dedupe(closed)
 
 
 def _checkpoint_state(

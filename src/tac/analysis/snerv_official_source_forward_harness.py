@@ -482,8 +482,18 @@ def build_snerv_official_source_forward_harness_artifact(
         "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
         "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
     } if source_forward_replay_verified else set()
+    closed_by_component_proof = (
+        _source_forward_residual_blockers_closed_by_proven_components(
+            component_rows,
+            tub_source_replay=tub_source_replay,
+        )
+        if source_forward_replay_verified
+        else set()
+    )
     closed_by_source_authority: set[str] = set()
-    closed_by_source_forward = closed_by_source_replay | closed_by_source_authority
+    closed_by_source_forward = (
+        closed_by_source_replay | closed_by_component_proof | closed_by_source_authority
+    )
     if source_forward_replay_verified:
         nested_closed_blockers = closed_by_trained_checkpoint | closed_by_source_forward
         source_replay = {
@@ -680,6 +690,9 @@ def build_snerv_official_source_forward_harness_artifact(
         "source_forward_replay_closed_blockers": _ordered_unique(
             sorted(closed_by_source_replay)
         ),
+        "source_forward_component_closed_blockers": _ordered_unique(
+            sorted(closed_by_component_proof)
+        ),
         "source_forward_authority_closed_blockers": _ordered_unique(
             sorted(closed_by_source_authority)
         ),
@@ -724,6 +737,78 @@ def _source_forward_authority_residual_blockers(
             if str(blocker) in SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS
         ]
     )
+
+
+def _source_forward_residual_blockers_closed_by_proven_components(
+    component_rows: Sequence[Mapping[str, Any]],
+    *,
+    tub_source_replay: Mapping[str, Any],
+) -> set[str]:
+    """Return stale residual blockers closed by bit-identical component proof."""
+
+    rows_by_component = {
+        str(row.get("component_id") or ""): row
+        for row in component_rows
+        if isinstance(row, Mapping)
+    }
+    closed: set[str] = set()
+    mfu_row = rows_by_component.get("mfu") or {}
+    if _component_row_has_bit_identical_source_output(mfu_row):
+        closed.update(
+            {
+                "official_weight_tensor_mapping_not_loaded",
+                "full_official_mfu_forward_artifact_not_emitted",
+            }
+        )
+    hfr_row = rows_by_component.get("hfr") or {}
+    if _component_row_has_bit_identical_source_output(hfr_row):
+        closed.update(
+            {
+                "official_hfr_weight_tensor_mapping_not_loaded",
+                "full_official_hfr_forward_artifact_not_emitted",
+            }
+        )
+    tub_row = rows_by_component.get("tub") or {}
+    if (
+        _component_row_has_bit_identical_source_output(tub_row)
+        and (
+            tub_source_replay.get(
+                "official_pytorch_wavelets_runtime_dependency_installed"
+            )
+            is True
+            or _module_installed("pytorch_wavelets")
+        )
+    ):
+        closed.add("snerv_official_pytorch_wavelets_runtime_dependency_missing")
+    return closed
+
+
+def _component_row_has_bit_identical_source_output(row: Mapping[str, Any]) -> bool:
+    official_hash = str(row.get("official_output_sha256") or "").strip()
+    portable_hash = str(row.get("portable_output_sha256") or "").strip()
+    return bool(
+        row.get("source_forward_parity_proven") is True
+        and row.get("output_hashes_bit_identical") is True
+        and official_hash == portable_hash
+        and _looks_like_sha256(official_hash)
+    )
+
+
+def _looks_like_sha256(value: str) -> bool:
+    if len(value) != 64:
+        return False
+    try:
+        int(value, 16)
+    except ValueError:
+        return False
+    return True
+
+
+def _module_installed(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
 
 
 def _checkpoint_export_binding_evidence(
@@ -1014,6 +1099,10 @@ def _tub_component_row_from_source_replay(
         "full_tub_source_forward_parity_proven": full_tub_parity,
         "tolerance": 0.0,
         "max_abs_error": _max_nested_abs_error(artifact),
+        "input_sha256": _nested_value(
+            artifact,
+            ("graph_input_parity", "official_output_sha256"),
+        ),
         "graph_input_max_abs_error": _nested_float(
             artifact,
             ("graph_input_parity", "max_abs_error"),
@@ -1029,6 +1118,17 @@ def _tub_component_row_from_source_replay(
         "portable_output_sha256": _nested_value(
             artifact,
             ("full_forward_equivalence", "manual_replay_sha256"),
+        ),
+        "official_weight_sha256": _nested_value(
+            artifact,
+            (
+                "official_trained_checkpoint_mapping_manifest",
+                "mapped_weight_entries_sha256",
+            ),
+        )
+        or _nested_value(
+            artifact,
+            ("official_trained_checkpoint_mapping_manifest", "state_dict_sha256"),
         ),
         "output_hashes_bit_identical": _nested_bool(
             artifact,

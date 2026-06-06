@@ -322,6 +322,63 @@ def test_snerv_official_forward_parity_artifact_accepts_numeric_replay_evidence(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_official_forward_parity_artifact_does_not_require_marker_string(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_snerv_repo(tmp_path)
+    local = _write_marker_only_local_snerv_repo(tmp_path)
+    carrier = local / "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+    carrier.write_text(
+        carrier.read_text(encoding="utf-8").replace(
+            "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF = True\n",
+            "",
+        ),
+        encoding="utf-8",
+    )
+    artifact_path = tmp_path / "numeric_pass_without_marker.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+                "official_weight_manifest": {
+                    "state_dict_sha256": "1" * 64,
+                    "state_dict_key_count": 9,
+                },
+                "source_forward_replay": {
+                    "backend": "torch_vs_numpy",
+                    "input_bundle_sha256": "2" * 64,
+                },
+                "receiver_runtime_decode": _receiver_runtime_decode_contract(),
+                "official_mfu_hfr_tub_forward_parity_passed": True,
+                "official_mfu_hfr_tub_forward_parity_falsified": False,
+                "component_rows": [
+                    _numeric_component_row("mfu"),
+                    _numeric_component_row("hfr"),
+                    _numeric_component_row("tub"),
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_snerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=local,
+        official_forward_parity_artifact_path=artifact_path,
+        generated_utc="20260603T000000Z",
+    )
+
+    assert report["local_official_parity_marker_row"]["all_markers_present"] is False
+    assert report["official_forward_parity_artifact_row"]["parity_passed"] is True
+    assert report["official_mfu_hfr_tub_parity_proven"] is True
+    assert report["blockers"] == []
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_official_forward_parity_artifact_accepts_exact_zero_tolerance(
     tmp_path: Path,
 ) -> None:

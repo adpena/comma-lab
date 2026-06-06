@@ -159,6 +159,64 @@ def test_authority_gate_keeps_residual_source_forward_blockers_sticky(
     )
 
 
+def test_authority_gate_consumes_source_artifact_closed_blockers(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+    )
+    source["blockers"] = []
+    source["source_forward_replay_closed_blockers"] = [
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        "snerv_official_trained_checkpoint_source_forward_replay_missing",
+    ]
+    source["source_forward_authority_closed_blockers"] = [
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+    ]
+    source["source_forward_component_closed_blockers"] = [
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "official_hfr_weight_tensor_mapping_not_loaded",
+        "full_official_hfr_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+    source["source_forward_replay_authority"] = True
+    source["official_tub_source_forward_replay"]["blockers"] = [
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+    source["official_tub_source_forward_replay"]["preserved_blockers"] = [
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        source_forward_artifacts=[source],
+        checkpoint_export_reports=[_checkpoint_export_report(trained_mapping=True)],
+        output_root=tmp_path / "gate",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["official_tub_lf_hf_decoder_replacement_ready"] is True
+    assert report["queue_blockers"] == []
+    assert report["source_forward_authority_residual_blockers"] == []
+    assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in report[
+        "closed_campaign_blockers"
+    ]
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in report["closed_campaign_blockers"]
+    )
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_authority_gate_closes_stale_source_mapping_residuals_from_source_manifest(
     tmp_path: Path,
 ) -> None:

@@ -387,6 +387,58 @@ def test_snerv_official_source_authority_residual_blockers_reject_stale_true_aut
     ]
 
 
+def test_snerv_official_source_forward_closes_stale_residuals_from_components(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        harness_mod,
+        "_module_installed",
+        lambda name: name == "pytorch_wavelets",
+    )
+    sha = "a" * 64
+    rows = [
+        _proven_component_row("mfu", sha),
+        _proven_component_row("hfr", sha),
+        _proven_component_row("tub", sha),
+    ]
+
+    closed = harness_mod._source_forward_residual_blockers_closed_by_proven_components(
+        rows,
+        tub_source_replay={},
+    )
+
+    assert closed == {
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "official_hfr_weight_tensor_mapping_not_loaded",
+        "full_official_hfr_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    }
+
+
+def test_snerv_official_source_forward_keeps_residuals_on_hash_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        harness_mod,
+        "_module_installed",
+        lambda name: name == "pytorch_wavelets",
+    )
+    row = {
+        **_proven_component_row("mfu", "a" * 64),
+        "portable_output_sha256": "b" * 64,
+    }
+
+    closed = harness_mod._source_forward_residual_blockers_closed_by_proven_components(
+        [row],
+        tub_source_replay={
+            "official_pytorch_wavelets_runtime_dependency_installed": True,
+        },
+    )
+
+    assert closed == set()
+
+
 def test_snerv_official_source_forward_harness_consumes_receiver_bound_export_without_source_authority() -> None:
     export_report = {
         "schema": "snerv_checkpoint_archive_export.v1",
@@ -645,3 +697,13 @@ def _minimal_native_receiver_state() -> dict[str, np.ndarray]:
         state[f"hfr_{name}_conv2_weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
         state[f"hfr_{name}_conv2_bias"] = np.zeros((3,), dtype=np.float32)
     return state
+
+
+def _proven_component_row(component_id: str, sha: str) -> dict[str, object]:
+    return {
+        "component_id": component_id,
+        "source_forward_parity_proven": True,
+        "output_hashes_bit_identical": True,
+        "official_output_sha256": sha,
+        "portable_output_sha256": sha,
+    }
