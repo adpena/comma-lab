@@ -316,6 +316,7 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
         "pr95_distortion_axis_trace_contract",
         "pr95_posenet_marginal_telemetry_contract",
         "pr95_scorer_atom_actuator_contract",
+        "pr95_scorer_atom_actuator_execution_evidence",
         "pr95_distortion_practices_guard",
     ):
         value = metadata.get(key)

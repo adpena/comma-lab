@@ -27,6 +27,9 @@ STAGE_DAG_SCHEMA = "pr95_eight_stage_optimization_dag.v1"
 AXIS_TRACE_CONTRACT_SCHEMA = "pr95_distortion_axis_trace_contract.v1"
 SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA = "pr95_scorer_atom_actuator_contract.v1"
 POSE_MARGINAL_TELEMETRY_CONTRACT_SCHEMA = "pr95_posenet_marginal_telemetry_contract.v1"
+SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA = (
+    "pr95_scorer_atom_actuator_execution_evidence.v1"
+)
 
 PR95_SOURCE_REL = Path(
     "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
@@ -487,9 +490,27 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
             "archive_section_value_per_byte",
         ],
         "family_actuators": family_actuators,
+        "required_execution_evidence": (
+            [
+                "hinerv_pair_local_actuator_smoke.v1",
+                "adapter_bytes_and_sha256",
+                "pair_local_grad_norm_by_group",
+                "pair_local_output_delta",
+                "section_value_per_byte_rows",
+            ]
+            if family_key == "hi_nerv"
+            else [
+                "snerv_official_source_forward_state_artifact.v1",
+                "official_state_dict_value_artifact_sha256",
+                "checkpoint_export_lineage_bound",
+                "mfu_hfr_tub_source_forward_parity_proven",
+                "tub_output2_source_forward_parity_proven",
+            ]
+        ),
         "acceptance_policy": {
             "family_specific_actuators_are_not_interchangeable": True,
             "pair_local_smoke_required_before_long_run": True,
+            "execution_evidence_required_before_long_run": True,
             "cross_family_evidence_rejected": True,
             "actuator_must_report_grad_norm_by_group": True,
         },
@@ -1510,16 +1531,150 @@ def _observe_practice(
         policy_ok = (
             policy.get("family_specific_actuators_are_not_interchangeable") is True
             and policy.get("pair_local_smoke_required_before_long_run") is True
+            and policy.get("execution_evidence_required_before_long_run") is True
             and policy.get("cross_family_evidence_rejected") is True
             and policy.get("actuator_must_report_grad_norm_by_group") is True
         )
         if policy_ok:
             evidence.append("family_local_actuator_fail_closed_policy")
+        execution_evidence_ok, execution_evidence = _family_actuator_execution_evidence(
+            row,
+            family=family,
+        )
+        evidence.extend(execution_evidence)
         return bool(
-            schema_ok and family_ok and atoms_ok and family_actuators_ok and policy_ok
+            schema_ok
+            and family_ok
+            and atoms_ok
+            and family_actuators_ok
+            and policy_ok
+            and execution_evidence_ok
         ), evidence
 
     return False, []
+
+
+def _family_actuator_execution_evidence(
+    row: Mapping[str, Any],
+    *,
+    family: str,
+) -> tuple[bool, list[str]]:
+    execution = _first_mapping(
+        row,
+        (
+            "pr95_scorer_atom_actuator_execution_evidence",
+            "scorer_atom_actuator_execution_evidence",
+            "family_local_scorer_atom_actuator_execution_evidence",
+        ),
+    )
+    evidence: list[str] = []
+    if not execution:
+        return False, ["actuator_execution_evidence_missing"]
+    schema_ok = execution.get("schema") == SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA
+    if schema_ok:
+        evidence.append(f"actuator_execution_schema={execution.get('schema')}")
+    family_ok = str(execution.get("family") or "") == family
+    if family_ok:
+        evidence.append(f"actuator_execution_family={family}")
+    if family == "hi_nerv":
+        return _hinerv_actuator_execution_evidence_ok(
+            execution,
+            base_ok=bool(schema_ok and family_ok),
+            evidence=evidence,
+        )
+    if family == "snerv":
+        return _snerv_actuator_execution_evidence_ok(
+            execution,
+            base_ok=bool(schema_ok and family_ok),
+            evidence=evidence,
+        )
+    evidence.append("actuator_execution_family_unknown")
+    return False, evidence
+
+
+def _hinerv_actuator_execution_evidence_ok(
+    execution: Mapping[str, Any],
+    *,
+    base_ok: bool,
+    evidence: list[str],
+) -> tuple[bool, list[str]]:
+    smoke_schema = str(execution.get("pair_local_smoke_schema") or "").strip()
+    smoke_ok = smoke_schema == "hinerv_pair_local_actuator_smoke.v1"
+    if smoke_ok:
+        evidence.append(f"hinerv_pair_local_smoke_schema={smoke_schema}")
+    adapter_bytes = _positive_int_value(execution.get("pair_local_adapter_bytes"))
+    adapter_sha_ok = _is_sha256_text(execution.get("pair_local_adapter_sha256"))
+    if adapter_bytes is not None and adapter_sha_ok:
+        evidence.append("hinerv_pair_local_adapter_bytes_and_sha256")
+    grad_norm = _positive_float_value(
+        execution.get("pair_local_grad_norm")
+        or execution.get("pair_local_grad_norm_by_group")
+    )
+    if grad_norm is not None:
+        evidence.append("hinerv_pair_local_grad_norm_positive")
+    output_delta = _positive_float_value(execution.get("pair_local_output_delta_l2"))
+    if output_delta is not None:
+        evidence.append("hinerv_pair_local_output_delta_positive")
+    section_rows = _mapping_list(execution.get("section_value_per_byte_rows"))
+    section_rows_ok = any(
+        _positive_float_value(row.get("value_per_byte")) is not None
+        or _positive_float_value(row.get("score_value_per_byte")) is not None
+        for row in section_rows
+    )
+    if section_rows_ok:
+        evidence.append("hinerv_section_value_per_byte_rows")
+    return bool(
+        base_ok
+        and smoke_ok
+        and adapter_bytes is not None
+        and adapter_sha_ok
+        and grad_norm is not None
+        and output_delta is not None
+        and section_rows_ok
+    ), evidence
+
+
+def _snerv_actuator_execution_evidence_ok(
+    execution: Mapping[str, Any],
+    *,
+    base_ok: bool,
+    evidence: list[str],
+) -> tuple[bool, list[str]]:
+    state_schema = str(execution.get("state_artifact_schema") or "").strip()
+    state_schema_ok = state_schema == "snerv_official_source_forward_state_artifact.v1"
+    if state_schema_ok:
+        evidence.append(f"snerv_state_artifact_schema={state_schema}")
+    state_sha_ok = _is_sha256_text(
+        execution.get("official_state_dict_value_artifact_sha256")
+    )
+    state_bytes = _positive_int_value(
+        execution.get("official_state_dict_value_artifact_bytes")
+    )
+    if state_sha_ok and state_bytes is not None:
+        evidence.append("snerv_official_state_dict_value_artifact_bound")
+    lineage_ok = execution.get("checkpoint_export_lineage_bound") is True
+    if lineage_ok:
+        evidence.append("snerv_checkpoint_export_lineage_bound")
+    mfu_hfr_tub_ok = execution.get("mfu_hfr_tub_source_forward_parity_proven") is True
+    if mfu_hfr_tub_ok:
+        evidence.append("snerv_mfu_hfr_tub_source_forward_parity_proven")
+    output2_ok = execution.get("tub_output2_source_forward_parity_proven") is True
+    if output2_ok:
+        evidence.append("snerv_tub_output2_source_forward_parity_proven")
+    return bool(
+        base_ok
+        and state_schema_ok
+        and state_sha_ok
+        and state_bytes is not None
+        and lineage_ok
+        and mfu_hfr_tub_ok
+        and output2_ok
+    ), evidence
+
+
+def _is_sha256_text(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def _source_record(path: Path, *, repo_root: Path) -> dict[str, Any]:
@@ -1748,6 +1903,7 @@ __all__ = [
     "PRACTICE_ROW_SCHEMA",
     "SCHEMA",
     "SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA",
+    "SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA",
     "SOURCE_INVENTORY_SCHEMA",
     "STAGE_DAG_SCHEMA",
     "TELEMETRY_CONTRACT_SCHEMA",

@@ -7621,6 +7621,9 @@ def _hinerv_budget() -> dict:
                 "nominal_under_ceiling": True,
                 "use_hierarchical_feature_grid": True,
                 "use_convnext_blocks": True,
+                "pr95_scorer_atom_actuator_execution_evidence": (
+                    _hinerv_actuator_execution_evidence()
+                ),
             }
         ],
         "score_claim": False,
@@ -7661,6 +7664,9 @@ def _snerv_budget() -> dict:
                 "decoder_feature_count": 16,
                 "nominal_total_payload_bytes": 190_000,
                 "nominal_under_ceiling": False,
+                "pr95_scorer_atom_actuator_execution_evidence": (
+                    _snerv_actuator_execution_evidence()
+                ),
             }
         ],
         "score_claim": False,
@@ -7680,6 +7686,38 @@ def _snerv_budget_with_candidates(candidates: tuple[dict, ...]) -> dict:
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _hinerv_actuator_execution_evidence() -> dict:
+    return {
+        "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+        "family": "hi_nerv",
+        "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_adapter_bytes": 128,
+        "pair_local_adapter_sha256": "a" * 64,
+        "pair_local_grad_norm": 0.25,
+        "pair_local_output_delta_l2": 0.031,
+        "section_value_per_byte_rows": [
+            {"section": "pair_local_adapter", "value_per_byte": 0.004}
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def _snerv_actuator_execution_evidence() -> dict:
+    return {
+        "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
+        "family": "snerv",
+        "state_artifact_schema": "snerv_official_source_forward_state_artifact.v1",
+        "official_state_dict_value_artifact_bytes": 512,
+        "official_state_dict_value_artifact_sha256": "b" * 64,
+        "checkpoint_export_lineage_bound": True,
+        "mfu_hfr_tub_source_forward_parity_proven": True,
+        "tub_output2_source_forward_parity_proven": True,
+        "score_claim": False,
+        "promotion_eligible": False,
     }
 
 

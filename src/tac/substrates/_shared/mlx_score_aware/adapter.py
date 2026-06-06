@@ -9060,6 +9060,7 @@ class MlxScoreAwareAdapter:
             "segnet_direct_live_argmax_disagreement",
             "pose_score_term",
             "pose_score_marginal_wrt_raw_mse",
+            "pose_distill_score_marginal_wrt_raw_mse",
             "pose_pair_residual_l2_mean",
             "pose_pair_residual_l2_max",
             "pose_distill_raw_mse",

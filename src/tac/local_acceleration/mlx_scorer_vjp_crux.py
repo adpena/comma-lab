@@ -25,6 +25,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (
     nhwc_to_nchw,
     temporary_mlx_device,
     torch_distortion_net_to_mlx,
+    torch_posenet_to_mlx,
 )
 from tac.local_acceleration.mlx_scorer_response import (
     MANIFEST_CACHE_INTEGRITY_MODE,
@@ -34,6 +35,7 @@ from tac.local_acceleration.mlx_scorer_response import (
 )
 
 SCHEMA_VERSION = "mlx_scorer_vjp_crux.v1"
+POSENET_YUV6_VJP_PARITY_SCHEMA_VERSION = "mlx_posenet_yuv6_vjp_parity.v1"
 BRANCHES = ("pose", "seg", "joint")
 
 FALSE_AUTHORITY: dict[str, bool] = {
@@ -204,11 +206,325 @@ def write_mlx_scorer_vjp_crux_manifest(manifest: dict[str, Any], path: str | Pat
     out.write_text(json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def build_posenet_yuv6_vjp_parity_record(
+    *,
+    torch_posenet: Any,
+    reference_yuv6_pair_nchw: np.ndarray,
+    candidate_yuv6_pair_nchw: np.ndarray,
+    full_video_pair_count: int,
+    full_video_d_pose: float,
+    pose_eps: float = 1.0e-12,
+    device_type: Literal["cpu", "gpu"] = "cpu",
+    max_abs_pose_delta_warn: float = 2.0e-3,
+    max_abs_grad_delta_warn: float = 2.0e-4,
+    measured_passes: int = 1,
+) -> dict[str, Any]:
+    """Compare fixed-YUV6 PoseNet VJP parity for PyTorch CPU and MLX.
+
+    This intentionally bypasses RGB/YUV preprocessing and does not write VJP
+    shards. It proves the local PoseNet acquisition-gradient surface only.
+    """
+
+    reference = np.asarray(reference_yuv6_pair_nchw, dtype=np.float32)
+    candidate = np.asarray(candidate_yuv6_pair_nchw, dtype=np.float32)
+    if reference.shape != candidate.shape:
+        raise ValueError(
+            "reference_yuv6_pair_nchw and candidate_yuv6_pair_nchw must have "
+            f"matching shapes, got {reference.shape} and {candidate.shape}"
+        )
+    if reference.ndim != 4 or int(reference.shape[1]) != 12:
+        raise ValueError(
+            "PoseNet YUV6 tensors must be NCHW with 12 channels, "
+            f"got {reference.shape}"
+        )
+    if int(full_video_pair_count) < int(reference.shape[0]):
+        raise ValueError(
+            "full_video_pair_count must cover the compared pair batch, "
+            f"got {full_video_pair_count} for batch {reference.shape[0]}"
+        )
+    if float(pose_eps) <= 0.0:
+        raise ValueError(f"pose_eps must be > 0, got {pose_eps}")
+    if not math.isfinite(float(full_video_d_pose)) or float(full_video_d_pose) < 0.0:
+        raise ValueError(
+            f"full_video_d_pose must be finite and >= 0, got {full_video_d_pose}"
+        )
+    if int(measured_passes) < 1:
+        raise ValueError(f"measured_passes must be >= 1, got {measured_passes}")
+
+    torch_result = _torch_posenet_yuv6_vjp(
+        torch_posenet=torch_posenet,
+        reference_yuv6_pair_nchw=reference,
+        candidate_yuv6_pair_nchw=candidate,
+        full_video_pair_count=int(full_video_pair_count),
+        full_video_d_pose=float(full_video_d_pose),
+        pose_eps=float(pose_eps),
+    )
+    mlx_result = _mlx_posenet_yuv6_vjp(
+        torch_posenet=torch_posenet,
+        reference_yuv6_pair_nchw=reference,
+        candidate_yuv6_pair_nchw=candidate,
+        full_video_pair_count=int(full_video_pair_count),
+        full_video_d_pose=float(full_video_d_pose),
+        pose_eps=float(pose_eps),
+        device_type=device_type,
+        measured_passes=int(measured_passes),
+    )
+    pose_delta = np.asarray(mlx_result["candidate_pose"], dtype=np.float32) - np.asarray(
+        torch_result["candidate_pose"],
+        dtype=np.float32,
+    )
+    grad_delta = np.asarray(mlx_result["candidate_grad"], dtype=np.float32) - np.asarray(
+        torch_result["candidate_grad"],
+        dtype=np.float32,
+    )
+    pose_delta_stats = _stats(pose_delta)
+    grad_delta_stats = _stats(grad_delta)
+    loss_abs_delta = abs(float(mlx_result["loss"]) - float(torch_result["loss"]))
+    blockers: list[str] = []
+    if int(torch_result["candidate_grad_stats"]["nonfinite_count"]) > 0:
+        blockers.append("torch_posenet_yuv6_grad_nonfinite")
+    if int(mlx_result["candidate_grad_stats"]["nonfinite_count"]) > 0:
+        blockers.append(f"mlx_{device_type}_posenet_yuv6_grad_nonfinite")
+    if float(torch_result["candidate_grad_stats"]["abs_max"] or 0.0) == 0.0:
+        blockers.append("torch_posenet_yuv6_grad_zero")
+    if float(mlx_result["candidate_grad_stats"]["abs_max"] or 0.0) == 0.0:
+        blockers.append(f"mlx_{device_type}_posenet_yuv6_grad_zero")
+    pose_abs_max = float(pose_delta_stats["abs_max"] or 0.0)
+    grad_abs_max = float(grad_delta_stats["abs_max"] or 0.0)
+    measured_pose_spread_abs_max = float(
+        mlx_result.get("measured_candidate_pose_spread_stats", {}).get("abs_max")
+        or 0.0
+    )
+    measured_grad_spread_abs_max = float(
+        mlx_result.get("measured_candidate_grad_spread_stats", {}).get("abs_max")
+        or 0.0
+    )
+    if pose_abs_max > float(max_abs_pose_delta_warn):
+        blockers.append(
+            "posenet_yuv6_pose_forward_delta_exceeds:"
+            f"{pose_abs_max:.12g}>{float(max_abs_pose_delta_warn):.12g}"
+        )
+    if grad_abs_max > float(max_abs_grad_delta_warn):
+        blockers.append(
+            "posenet_yuv6_vjp_grad_delta_exceeds:"
+            f"{grad_abs_max:.12g}>{float(max_abs_grad_delta_warn):.12g}"
+        )
+    if measured_pose_spread_abs_max > float(max_abs_pose_delta_warn):
+        blockers.append(
+            f"mlx_{device_type}_posenet_yuv6_measured_pose_spread_exceeds:"
+            f"{measured_pose_spread_abs_max:.12g}>{float(max_abs_pose_delta_warn):.12g}"
+        )
+    if measured_grad_spread_abs_max > float(max_abs_grad_delta_warn):
+        blockers.append(
+            f"mlx_{device_type}_posenet_yuv6_measured_grad_spread_exceeds:"
+            f"{measured_grad_spread_abs_max:.12g}>{float(max_abs_grad_delta_warn):.12g}"
+        )
+
+    return {
+        "schema_version": POSENET_YUV6_VJP_PARITY_SCHEMA_VERSION,
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_axis": EVIDENCE_TAG_MLX,
+        "branch": "pose",
+        "device_type": device_type,
+        "passed": not blockers,
+        "verdict": "PASS_POSENET_YUV6_VJP_PARITY" if not blockers else "FAIL_POSENET_YUV6_VJP_PARITY",
+        "blockers": blockers,
+        "full_video_pair_count": int(full_video_pair_count),
+        "full_video_d_pose": float(full_video_d_pose),
+        "pose_gain": _pose_gain(float(full_video_d_pose), float(pose_eps)),
+        "max_abs_pose_delta_warn": float(max_abs_pose_delta_warn),
+        "max_abs_grad_delta_warn": float(max_abs_grad_delta_warn),
+        "measured_passes": int(measured_passes),
+        "torch_cpu": _posenet_vjp_summary(torch_result),
+        f"mlx_{device_type}": _posenet_vjp_summary(mlx_result),
+        "comparison": {
+            "loss_abs_delta": loss_abs_delta,
+            "candidate_pose_delta": pose_delta_stats,
+            "candidate_grad_delta": grad_delta_stats,
+        },
+        "authority_status": (
+            "Fixed-cache PoseNet YUV6 VJP parity is diagnostic local "
+            "implementation evidence only; it does not provide contest score, "
+            "receiver proof, promotion, or exact-eval authority."
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _prepare_torch(dist: Any) -> Any:
     dist = dist.to("cpu").eval()
     for param in dist.parameters():
         param.requires_grad_(False)
     return dist
+
+
+def _torch_posenet_yuv6_vjp(
+    *,
+    torch_posenet: Any,
+    reference_yuv6_pair_nchw: np.ndarray,
+    candidate_yuv6_pair_nchw: np.ndarray,
+    full_video_pair_count: int,
+    full_video_d_pose: float,
+    pose_eps: float,
+) -> dict[str, Any]:
+    import torch
+
+    model = torch_posenet.to("cpu").eval()
+    for param in model.parameters():
+        param.requires_grad_(False)
+    ref = torch.from_numpy(
+        np.array(reference_yuv6_pair_nchw, dtype=np.float32, copy=True)
+    )
+    cand = torch.from_numpy(
+        np.array(candidate_yuv6_pair_nchw, dtype=np.float32, copy=True)
+    ).requires_grad_(True)
+    with torch.no_grad():
+        ref_pose = model(ref)["pose"][..., :6]
+    cand_pose = model(cand)["pose"][..., :6]
+    diff = cand_pose - ref_pose
+    per_pair = diff.square().mean(dim=tuple(range(1, cand_pose.ndim)))
+    loss = (
+        _pose_gain(full_video_d_pose, pose_eps)
+        * per_pair.sum()
+        / float(full_video_pair_count)
+    )
+    loss.backward()
+    grad = cand.grad.detach().cpu().numpy().astype(np.float32, copy=True)
+    return {
+        "loss": float(loss.detach().cpu().item()),
+        "reference_pose": ref_pose.detach().cpu().numpy().astype(np.float32, copy=True),
+        "candidate_pose": cand_pose.detach().cpu().numpy().astype(np.float32, copy=True),
+        "candidate_grad": grad,
+        "candidate_grad_stats": _stats(grad),
+        "candidate_pose_stats": _stats(
+            cand_pose.detach().cpu().numpy().astype(np.float32, copy=True)
+        ),
+    }
+
+
+def _mlx_posenet_yuv6_vjp(
+    *,
+    torch_posenet: Any,
+    reference_yuv6_pair_nchw: np.ndarray,
+    candidate_yuv6_pair_nchw: np.ndarray,
+    full_video_pair_count: int,
+    full_video_d_pose: float,
+    pose_eps: float,
+    device_type: Literal["cpu", "gpu"],
+    measured_passes: int,
+) -> dict[str, Any]:
+    import mlx.core as mx
+
+    with temporary_mlx_device(device_type):
+        adapter = torch_posenet_to_mlx(torch_posenet)
+        ref = mx.array(nchw_to_nhwc(reference_yuv6_pair_nchw))
+        cand = mx.array(nchw_to_nhwc(candidate_yuv6_pair_nchw))
+        ref_pose_lazy = adapter(ref)["pose"][..., :6]
+        mx.eval(ref_pose_lazy)
+        try:
+            mx.synchronize()
+        except AttributeError:
+            pass
+        # Keep the VJP reference pose as a host-materialized constant. Reusing
+        # the lazy reference-forward graph inside value_and_grad can make
+        # repeated MLX CPU PoseNet VJP parity probes report inflated losses.
+        ref_pose_np = np.asarray(ref_pose_lazy, dtype=np.float32)
+        ref_pose = mx.stop_gradient(mx.array(ref_pose_np))
+        gain = _pose_gain(full_video_d_pose, pose_eps)
+
+        def loss_fn(candidate_x: Any) -> Any:
+            cand_pose = adapter(candidate_x)["pose"][..., :6]
+            diff = cand_pose - ref_pose
+            per_pair = mx.mean(mx.square(diff), axis=tuple(range(1, len(diff.shape))))
+            return gain * mx.sum(per_pair) / float(full_video_pair_count)
+
+        warmup_loss, warmup_grad = mx.value_and_grad(loss_fn)(cand)
+        warmup_pose = adapter(cand)["pose"][..., :6]
+        mx.eval(warmup_loss, warmup_grad, warmup_pose)
+        try:
+            mx.synchronize()
+        except AttributeError:
+            pass
+        measured: list[dict[str, Any]] = []
+        for _ in range(int(measured_passes)):
+            loss, grad = mx.value_and_grad(loss_fn)(cand)
+            cand_pose = adapter(cand)["pose"][..., :6]
+            mx.eval(loss, grad, cand_pose)
+            try:
+                mx.synchronize()
+            except AttributeError:
+                pass
+            measured.append(
+                {
+                    "loss": float(np.asarray(loss)),
+                    "candidate_pose": np.asarray(cand_pose, dtype=np.float32),
+                    "candidate_grad": nhwc_to_nchw(
+                        np.asarray(grad, dtype=np.float32)
+                    ),
+                }
+            )
+        losses = np.asarray([row["loss"] for row in measured], dtype=np.float64)
+        selected_index = int(np.argsort(losses)[len(losses) // 2])
+        selected = measured[selected_index]
+        grad_np = np.asarray(selected["candidate_grad"], dtype=np.float32)
+        cand_pose_np = np.asarray(selected["candidate_pose"], dtype=np.float32)
+        pose_stack = np.stack(
+            [np.asarray(row["candidate_pose"], dtype=np.float32) for row in measured],
+            axis=0,
+        )
+        grad_stack = np.stack(
+            [np.asarray(row["candidate_grad"], dtype=np.float32) for row in measured],
+            axis=0,
+        )
+        pose_spread = np.max(pose_stack, axis=0) - np.min(pose_stack, axis=0)
+        grad_spread = np.max(grad_stack, axis=0) - np.min(grad_stack, axis=0)
+        return {
+            "loss": float(selected["loss"]),
+            "warmup_loss": float(np.asarray(warmup_loss)),
+            "warmup_grad_stats": _stats(
+                nhwc_to_nchw(np.asarray(warmup_grad, dtype=np.float32))
+            ),
+            "warmup_candidate_pose_stats": _stats(
+                np.asarray(warmup_pose, dtype=np.float32)
+            ),
+            "measured_passes": int(measured_passes),
+            "measured_loss_min": float(np.min(losses)),
+            "measured_loss_max": float(np.max(losses)),
+            "measured_loss_spread": float(np.max(losses) - np.min(losses)),
+            "measured_candidate_pose_spread_stats": _stats(pose_spread),
+            "measured_candidate_grad_spread_stats": _stats(grad_spread),
+            "reference_pose": ref_pose_np,
+            "candidate_pose": cand_pose_np,
+            "candidate_grad": grad_np,
+            "candidate_grad_stats": _stats(grad_np),
+            "candidate_pose_stats": _stats(cand_pose_np),
+        }
+
+
+def _posenet_vjp_summary(result: dict[str, Any]) -> dict[str, Any]:
+    summary = {
+        "loss": float(result["loss"]),
+        "reference_pose_stats": _stats(np.asarray(result["reference_pose"])),
+        "candidate_pose_stats": dict(result["candidate_pose_stats"]),
+        "candidate_grad_stats": dict(result["candidate_grad_stats"]),
+    }
+    if "warmup_loss" in result:
+        summary["warmup_loss"] = float(result["warmup_loss"])
+    if "warmup_grad_stats" in result:
+        summary["warmup_grad_stats"] = dict(result["warmup_grad_stats"])
+    for key in (
+        "measured_passes",
+        "measured_loss_min",
+        "measured_loss_max",
+        "measured_loss_spread",
+        "measured_candidate_pose_spread_stats",
+        "measured_candidate_grad_spread_stats",
+    ):
+        if key in result:
+            value = result[key]
+            summary[key] = dict(value) if isinstance(value, dict) else value
+    return summary
 
 
 def _pose_gain(full_video_d_pose: float, pose_eps: float) -> float:
@@ -437,7 +753,9 @@ def _jsonable(value: Any) -> Any:
 __all__ = [
     "BRANCHES",
     "FALSE_AUTHORITY",
+    "POSENET_YUV6_VJP_PARITY_SCHEMA_VERSION",
     "SCHEMA_VERSION",
     "build_mlx_scorer_vjp_crux_manifest",
+    "build_posenet_yuv6_vjp_parity_record",
     "write_mlx_scorer_vjp_crux_manifest",
 ]

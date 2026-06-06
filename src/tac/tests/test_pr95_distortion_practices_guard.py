@@ -11,6 +11,7 @@ from tac.analysis.pr95_distortion_practices_guard import (
     PRACTICES,
     SCHEMA,
     SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA,
+    SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA,
     SOURCE_INVENTORY_SCHEMA,
     STAGE_DAG_SCHEMA,
     TELEMETRY_CONTRACT_SCHEMA,
@@ -68,6 +69,23 @@ def test_pr95_distortion_guard_accepts_hinerv_pr95_curriculum_row() -> None:
     ] is True
     assert guard["score_claim"] is False
     assert guard["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pr95_distortion_guard_rejects_metadata_only_actuator_contract() -> None:
+    row = _hinerv_row()
+    del row["pr95_scorer_atom_actuator_execution_evidence"]
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert actuator_row["observed"] is False
+    assert "actuator_execution_evidence_missing" in actuator_row["observed_evidence"]
 
 
 def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
@@ -213,6 +231,15 @@ def test_pr95_family_actuator_contract_splits_hinerv_and_snerv() -> None:
     assert "tub_output2_segnet_last_frame_binding" in snerv["family_actuators"]
     assert hi["family_actuators"] != snerv["family_actuators"]
     assert hi["acceptance_policy"]["cross_family_evidence_rejected"] is True
+    assert hi["acceptance_policy"][
+        "execution_evidence_required_before_long_run"
+    ] is True
+    assert "hinerv_pair_local_actuator_smoke.v1" in hi[
+        "required_execution_evidence"
+    ]
+    assert "snerv_official_source_forward_state_artifact.v1" in snerv[
+        "required_execution_evidence"
+    ]
     assert snerv["score_claim"] is False
 
 
@@ -273,6 +300,38 @@ def _base_command(family: str) -> list[str]:
     ]
 
 
+def _hinerv_actuator_execution_evidence() -> dict:
+    return {
+        "schema": SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA,
+        "family": "hi_nerv",
+        "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_adapter_bytes": 128,
+        "pair_local_adapter_sha256": "a" * 64,
+        "pair_local_grad_norm": 0.25,
+        "pair_local_output_delta_l2": 0.031,
+        "section_value_per_byte_rows": [
+            {"section": "pair_local_adapter", "value_per_byte": 0.004}
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
+def _snerv_actuator_execution_evidence() -> dict:
+    return {
+        "schema": SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA,
+        "family": "snerv",
+        "state_artifact_schema": "snerv_official_source_forward_state_artifact.v1",
+        "official_state_dict_value_artifact_bytes": 512,
+        "official_state_dict_value_artifact_sha256": "b" * 64,
+        "checkpoint_export_lineage_bound": True,
+        "mfu_hfr_tub_source_forward_parity_proven": True,
+        "tub_output2_source_forward_parity_proven": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+
+
 def _hinerv_row() -> dict:
     command = _base_command("hi_nerv")
     command.extend(
@@ -300,6 +359,9 @@ def _hinerv_row() -> dict:
         ),
         "pr95_scorer_atom_actuator_contract": (
             build_pr95_scorer_atom_actuator_contract("hi_nerv")
+        ),
+        "pr95_scorer_atom_actuator_execution_evidence": (
+            _hinerv_actuator_execution_evidence()
         ),
         "score_lowering_gate": {
             "schema": "nerv_long_training_score_lowering_gate.v1",
@@ -337,6 +399,9 @@ def _snerv_row() -> dict:
         ),
         "pr95_scorer_atom_actuator_contract": (
             build_pr95_scorer_atom_actuator_contract("snerv")
+        ),
+        "pr95_scorer_atom_actuator_execution_evidence": (
+            _snerv_actuator_execution_evidence()
         ),
         "score_lowering_gate": {
             "schema": "nerv_long_training_score_lowering_gate.v1",

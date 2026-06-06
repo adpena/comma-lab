@@ -1459,6 +1459,9 @@ def _hinerv_campaign_row(
     pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("hi_nerv")
     pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("hi_nerv")
     pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("hi_nerv")
+    pr95_actuator_execution_evidence = candidate.get(
+        "pr95_scorer_atom_actuator_execution_evidence"
+    )
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
             "id": row_id,
@@ -1470,6 +1473,9 @@ def _hinerv_campaign_row(
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
+            "pr95_scorer_atom_actuator_execution_evidence": (
+                pr95_actuator_execution_evidence
+            ),
             "curriculum_plan": curriculum,
             "pr95_staged_curriculum": bool((curriculum.get("pr95_stage_plan") or {}).get("enabled")),
             "eval_roundtrip_ste_attached": bool(
@@ -1584,6 +1590,9 @@ def _hinerv_campaign_row(
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
+            "pr95_scorer_atom_actuator_execution_evidence": (
+                pr95_actuator_execution_evidence
+            ),
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
@@ -1986,6 +1995,9 @@ def _snerv_campaign_row(
     pr95_axis_trace_contract = build_pr95_distortion_axis_trace_contract("snerv")
     pr95_pose_marginal_contract = build_pr95_posenet_marginal_telemetry_contract("snerv")
     pr95_actuator_contract = build_pr95_scorer_atom_actuator_contract("snerv")
+    pr95_actuator_execution_evidence = candidate.get(
+        "pr95_scorer_atom_actuator_execution_evidence"
+    )
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
             "id": row_id,
@@ -1997,6 +2009,9 @@ def _snerv_campaign_row(
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
+            "pr95_scorer_atom_actuator_execution_evidence": (
+                pr95_actuator_execution_evidence
+            ),
             "curriculum_plan": curriculum,
             "pr95_faithful_curriculum_enabled": bool(pr95_curriculum_bound),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_bound),
@@ -2146,6 +2161,9 @@ def _snerv_campaign_row(
             "pr95_distortion_axis_trace_contract": pr95_axis_trace_contract,
             "pr95_posenet_marginal_telemetry_contract": pr95_pose_marginal_contract,
             "pr95_scorer_atom_actuator_contract": pr95_actuator_contract,
+            "pr95_scorer_atom_actuator_execution_evidence": (
+                pr95_actuator_execution_evidence
+            ),
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
@@ -7916,6 +7934,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "pr95_distortion_axis_trace_contract",
         "pr95_posenet_marginal_telemetry_contract",
         "pr95_scorer_atom_actuator_contract",
+        "pr95_scorer_atom_actuator_execution_evidence",
         "pr95_distortion_practices_guard",
         "source_faithfulness_controls",
         "source_bound_capacity_controls",

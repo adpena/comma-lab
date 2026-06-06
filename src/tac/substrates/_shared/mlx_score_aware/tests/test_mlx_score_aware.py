@@ -2324,6 +2324,9 @@ def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
     assert _scalar(parts["pose_score_marginal_wrt_raw_mse"]) == pytest.approx(
         5.0 / (10.0**0.5)
     )
+    assert _scalar(parts["pose_distill_score_marginal_wrt_raw_mse"]) == pytest.approx(
+        5.0 / (10.0**0.5)
+    )
     assert _scalar(parts["pose_pair_residual_l2_mean"]) == pytest.approx(6.0**0.5)
     assert _scalar(parts["pose_pair_residual_l2_max"]) == pytest.approx(6.0**0.5)
     assert _scalar(total) == pytest.approx(2.0 * (10.0**0.5))
@@ -2419,6 +2422,9 @@ def test_pose_distill_huber_keeps_raw_mse_telemetry() -> None:
     assert _scalar(parts["pose_score_marginal_wrt_raw_mse"]) == pytest.approx(
         5.0 / ((10.0 * 100.0) ** 0.5)
     )
+    assert _scalar(parts["pose_distill_score_marginal_wrt_raw_mse"]) == pytest.approx(
+        5.0 / ((10.0 * 100.0) ** 0.5)
+    )
     assert _scalar(total) == pytest.approx((10.0 * 100.0) ** 0.5)
 
 
@@ -2453,6 +2459,9 @@ def test_pose_score_term_uses_raw_mse_not_per_dim_scaled_train_loss() -> None:
     assert _scalar(parts["pose_distill_train_loss"]) == pytest.approx(100.0)
     assert _scalar(parts["pose_score_term"]) == pytest.approx(10.0**0.5)
     assert _scalar(parts["pose_score_marginal_wrt_raw_mse"]) == pytest.approx(
+        5.0 / (10.0**0.5)
+    )
+    assert _scalar(parts["pose_distill_score_marginal_wrt_raw_mse"]) == pytest.approx(
         5.0 / (10.0**0.5)
     )
     assert _scalar(total) == pytest.approx(10.0**0.5)

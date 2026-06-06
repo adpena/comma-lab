@@ -3436,6 +3436,7 @@ def score_aware_loss(
         parts["pose_distill_raw_mse"] = pose_distill_raw_mse
         parts["pose_score_term"] = pose_score_term
         parts["pose_score_marginal_wrt_raw_mse"] = pose_score_marginal
+        parts["pose_distill_score_marginal_wrt_raw_mse"] = pose_score_marginal
         parts["pose_pair_residual_l2_mean"] = mx.mean(pose_pair_residual_l2)
         parts["pose_pair_residual_l2_max"] = mx.max(pose_pair_residual_l2)
 
