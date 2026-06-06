@@ -226,6 +226,16 @@ class _BehavioralSegNetTeacher:
         return self._mx.stack([class0, class1], axis=-1)
 
 
+class _FramePairMeanPoseTeacher:
+    """Pose stand-in whose small output depends on both frame0 and frame1."""
+
+    def __init__(self, mx):
+        self._mx = mx
+
+    def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+        return self._mx.mean(yuv6_pair, axis=(1, 2)) * 1.0e-6
+
+
 def _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg):
     """Run the REAL birth actuator and return an accepted live payload."""
 
@@ -253,6 +263,29 @@ def _setup(mx):
     labels_np = _block_labels(cfg, np)
     teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
     return cfg, model, teacher, target0, target1, labels_np
+
+
+def _with_accepted_pose_compensation(payload: dict, *, d_pose: float = 10_000.0) -> dict:
+    compensation = {
+        "pose_compensation_attempted": True,
+        "pose_compensation_frame": 0,
+        "composite_accepted": True,
+        "composite_d_pose_batch": float(d_pose),
+        "attempts": [
+            {
+                "accepted": True,
+                "composite_d_pose_batch": float(d_pose),
+            }
+        ],
+    }
+    return {
+        **payload,
+        "pose_compensation": compensation,
+        "receipt": {
+            **payload["receipt"],
+            "pose_compensation": compensation,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -295,6 +328,69 @@ def test_fakequant_survival_row_carries_live_action_id_and_real_survived() -> No
     assert row["target_hard_won_count"] == row["region_hard_won_count"]
     assert row["receiver_surface_target_hard_won_count"] == row["region_hard_won_count"]
     assert row["argmax_transitions"]["net_target_support_delta"] == row["net_target_support_delta"]
+
+
+@skip_no_mlx
+def test_fakequant_survival_remeasures_pose_compensation_for_composite_birth() -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    payload = _with_accepted_pose_compensation(payload)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        pose_teacher=_FramePairMeanPoseTeacher(mx),
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="fakequant_mlx",
+        pair_indices=idx,
+    )
+
+    assert row["region_hard_won_count"] >= 1
+    assert row["net_target_support_delta"] > 0
+    assert row["pose_compensation_required"] is True
+    assert row["pose_compensation_survived"] is True
+    assert row["survived"] is True
+    assert row["blockers"] == []
+    pose = row["pose_compensation_survival"]
+    assert pose["required"] is True
+    assert pose["survived"] is True
+    assert pose["live_composite_d_pose_batch"] == pytest.approx(10_000.0)
+    assert pose["surface_d_pose_batch"] >= 0.0
+    assert pose["surface_d_pose_batch"] <= pose["live_composite_d_pose_batch"]
+    assert pose["surface_pose_score_term"] >= 0.0
+
+
+@skip_no_mlx
+def test_fakequant_survival_blocks_composite_birth_without_pose_teacher() -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    payload = _with_accepted_pose_compensation(payload)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="fakequant_mlx",
+        pair_indices=idx,
+    )
+
+    assert row["region_hard_won_count"] >= 1
+    assert row["net_target_support_delta"] > 0
+    assert row["pose_compensation_required"] is True
+    assert row["pose_compensation_survived"] is False
+    assert row["survived"] is False
+    assert row["blockers"] == ["pose_compensation_survival_pose_teacher_missing"]
+    assert row["pose_compensation_survival"]["surface_d_pose_batch"] is None
 
 
 @skip_no_mlx

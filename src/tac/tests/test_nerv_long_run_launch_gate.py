@@ -210,6 +210,26 @@ def test_not_survived_row_blocks(tmp_path: Path) -> None:
     assert verdict["approved"] is False
 
 
+def test_pose_compensation_must_survive_even_when_target_support_survives(tmp_path: Path) -> None:
+    root = tmp_path / "run"
+    _write(root / "birth.json", _live_birth_receipt())
+    row = _survival("fakequant_mlx")
+    row["pose_compensation_required"] = True
+    row["pose_compensation_survived"] = False
+    _write(root / "fakequant.json", row)
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+    blocking = verdict["blocking_evidence"]
+    assert "birth_survival_pose_compensation_not_survived:fakequant_mlx" in blocking
+    assert "birth_survival_receipt_missing:fakequant_mlx" in blocking
+    assert verdict["highest_level"] == "L3"
+    assert verdict["approved"] is False
+
+
 def test_survived_row_without_target_support_blocks(tmp_path: Path) -> None:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt())
