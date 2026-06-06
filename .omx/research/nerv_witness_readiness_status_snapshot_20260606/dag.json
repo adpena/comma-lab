@@ -1,0 +1,2930 @@
+{
+  "actionable_blockers": [
+    "shared.source_boundary_compliance_audit:nerv_witness_source_boundary_audit_missing",
+    "shared.exact_scorer_oracle_cache:nerv_exact_scorer_oracle_cache_missing",
+    "shared.distortion_trace_harness:live_fakequant_receiver_trace_missing",
+    "hinerv.short_receiver_surface_smoke:hinerv_short_receiver_surface_smoke_missing",
+    "shared.distortion_birth_before_rate_pressure:distortion_birth_smoke_report_missing",
+    "shared.distortion_birth_before_rate_pressure:receiver_quantum_attempt_telemetry_missing",
+    "shared.distortion_birth_before_rate_pressure:receiver_visible_hard_birth_update_not_accepted",
+    "shared.distortion_birth_before_rate_pressure:worst_region_debt_reduction_missing",
+    "shared.distortion_birth_before_rate_pressure:target_region_min_ratio_lift_missing",
+    "shared.distortion_birth_before_rate_pressure:accepted_update_receiver_uint8_movement_missing",
+    "shared.distortion_birth_before_rate_pressure:accepted_update_receiver_uint8_delta_missing",
+    "shared.joint_seg_pose_trust_region:joint_seg_pose_exact_delta_admission_not_yet_proven_in_smoke",
+    "hinerv.localized_target_region_projection_actuator:hinerv_short_receiver_surface_smoke_missing",
+    "snerv.official_mfu_hfr_tub_source_forward:snerv_official_mfu_hfr_tub_authority_gate_missing",
+    "snerv.lf_hf_representation_collapse_smoke:snerv_score_aware_lf_hf_replacement_smoke_missing",
+    "hinerv.long_mlx_training_launch_gate:hinerv_localized_target_region_projection_gate_not_satisfied",
+    "snerv.long_mlx_training_launch_gate:snerv_official_source_forward_and_lf_hf_gates_not_satisfied"
+  ],
+  "axis_tag": "[planning/control]",
+  "charged_bits_changed": false,
+  "contest_cuda_auth_eval": false,
+  "dag": {
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "controls": {
+      "allow_cloud": false,
+      "diversity_bucket_limit": 2,
+      "max_concurrency": {
+        "local_cpu": 4,
+        "local_mlx": 1
+      },
+      "max_ready_nodes": 32,
+      "mode": "running"
+    },
+    "dag_hash": "e3c0c0843581430d5b3c045c764f70dac3a27567dd52b7b5d03b762cf17bbd9c",
+    "dag_id": "nerv_witness_long_training_readiness_dag.v1",
+    "dependent_queue_refs": [],
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "staircase_dag_is_planning_only"
+    ],
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "nodes": [
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "shared.source_boundary_compliance_audit"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "shared",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "shared__source_boundary_compliance_audit.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "shared__source_boundary_compliance_audit",
+          "experiment_metadata": {
+            "acceptance": "charged learned payload never leaks into uncharged source",
+            "blockers": [
+              "nerv_witness_source_boundary_audit_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "blockers": [
+                "nerv_witness_source_boundary_audit_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "ready_for_witness_compile": false,
+              "report_loaded": false,
+              "report_path": null,
+              "required_outputs": [
+                "charged_vs_free_boundary.md",
+                "conservative_mode_rules.md",
+                "aggressive_mode_rules.md",
+                "inflate_source_constant_audit.json"
+              ],
+              "schema": "nerv_witness_source_boundary_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "source_boundary_clean": false
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "shared.source_boundary_compliance_audit",
+            "stage": "source_boundary_compliance"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "shared.source_boundary_compliance_audit",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "8962cac181d7282caf2eca5e4a64452dce51eace02511abdac66706d8f15619c",
+            "definition_hash": "abfe41bed5ee47a966abc8f4750f3f0c68ace636b9539f2fd46db4c859b14a7b",
+            "postcondition_hash": "488015a9a25d3268c0375116c876f4c4269a2a0735482755378d6d935ba3cc30"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "shared__source_boundary_compliance_audit.gate",
+        "priority": 100,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "shared.exact_scorer_oracle_cache"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__source_boundary_compliance_audit.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "shared",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "shared__exact_scorer_oracle_cache.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "shared__exact_scorer_oracle_cache",
+          "experiment_metadata": {
+            "acceptance": "source video scorer sufficient statistics are cached with authority hashes",
+            "blockers": [
+              "nerv_exact_scorer_oracle_cache_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "blockers": [
+                "nerv_exact_scorer_oracle_cache_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "required_outputs": [
+                "seg_target_masks",
+                "pose_target_vectors",
+                "region_components",
+                "pose_jacobian_sketches",
+                "authority_hashes"
+              ],
+              "schema": "nerv_witness_exact_scorer_oracle_cache_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "shared.exact_scorer_oracle_cache",
+            "stage": "exact_scorer_oracle_cache"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "shared.exact_scorer_oracle_cache",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "8eea3e329c72e11d0fd3102382fda7892087dd582d874f3c11b8d509a948c3bc",
+            "definition_hash": "b6a25d5892b430fd7771fa7eeca08a94b17d215314fb1015f47092d0d01335aa",
+            "postcondition_hash": "3096d47972880d6597bd2501467ef0155ab4a14170ec6e63a3db2fec2f715741"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "shared__exact_scorer_oracle_cache.gate",
+        "priority": 1,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "pytest",
+          "src/tac/tests/test_long_training_archive_selection.py",
+          "-q"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "shared",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "shared__parseback_selection_contract.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "shared__parseback_selection_contract",
+          "experiment_metadata": {
+            "acceptance": "archive replay hook exists and required parse-back selection fails closed",
+            "blockers": [],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "implemented_contract_present": true,
+              "missing_needles": [],
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "recommended_validation_command": [
+                "uv",
+                "run",
+                "pytest",
+                "src/tac/tests/test_long_training_archive_selection.py",
+                "-q"
+              ],
+              "schema": "nerv_parseback_selection_static_contract_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "source_path": "/Users/adpena/Projects/pact/src/tac/training/long_training_canonical.py",
+              "test_path": "/Users/adpena/Projects/pact/src/tac/tests/test_long_training_archive_selection.py"
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "shared.parseback_selection_contract",
+            "stage": "parseback_selection_contract"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "shared.parseback_selection_contract",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "cc9888ce1453b8a8f78db1c51aaa6e56f18e525f858cb62ecabcd2cb6a5e9aa2",
+            "definition_hash": "4713fddc9f965d197c6d98a6f82de0d9ba9f6691f99dd1eb7bc42b585162c5db",
+            "postcondition_hash": "25f0a3cfedaecb498fc5b65ea52a5eb368d435244fa730627f51843c23e17f9f"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "shared__parseback_selection_contract.gate",
+        "priority": 2,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "shared.distortion_trace_harness"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__parseback_selection_contract.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "shared",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "shared__distortion_trace_harness.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "shared__distortion_trace_harness",
+          "experiment_metadata": {
+            "acceptance": "live/fakequant/receiver surface emits crux telemetry",
+            "blockers": [
+              "live_fakequant_receiver_trace_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "blockers": [
+                "hinerv_short_receiver_surface_smoke_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "direct_smoke_rerun_argv": [
+                "uv",
+                "run",
+                "python",
+                "tools/run_compact_renderer_mlx_spine_runner.py",
+                "--execute-family",
+                "hi_nerv",
+                "--planner-row-id",
+                "hi_nerv::witness_readiness_short_smoke",
+                "--allow-bounded-planner-row-timing-smoke-waiver",
+                "--source-video-path",
+                "upstream/videos/0.mkv",
+                "--output-dir",
+                "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+                "--overwrite",
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "1",
+                "--batch-pairs",
+                "1",
+                "--scorer-domain-bootstrap",
+                "--scorer-domain-bootstrap-steps",
+                "2",
+                "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+                "2.0",
+                "--coder-aware-qat",
+                "--receiver-cache-quality-mlx-scorer-response-device-type",
+                "cpu"
+              ],
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "report_loaded": false,
+              "report_path": null,
+              "schema": "hinerv_short_smoke_witness_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "status": "missing"
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "shared.distortion_trace_harness",
+            "stage": "distortion_trace"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "shared.distortion_trace_harness",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "be589f29a836e89e8daac475133e9f1f41362c78258197cc67b8eceb552268d1",
+            "definition_hash": "ce2c6b7c729bfdc05c8396b95e397961fb5481ee304c9ac9a36fbd147569087c",
+            "postcondition_hash": "21a638dd345b549ee22ebb2496392918c80d24663601318c70ab33bbbc744704"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "shared__distortion_trace_harness.gate",
+        "priority": 3,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/run_compact_renderer_mlx_spine_runner.py",
+          "--execute-family",
+          "hi_nerv",
+          "--planner-row-id",
+          "hi_nerv::witness_readiness_short_smoke",
+          "--allow-bounded-planner-row-timing-smoke-waiver",
+          "--source-video-path",
+          "upstream/videos/0.mkv",
+          "--output-dir",
+          "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+          "--overwrite",
+          "--num-pairs",
+          "1",
+          "--epochs",
+          "1",
+          "--batch-pairs",
+          "1",
+          "--scorer-domain-bootstrap",
+          "--scorer-domain-bootstrap-steps",
+          "2",
+          "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+          "2.0",
+          "--coder-aware-qat",
+          "--receiver-cache-quality-mlx-scorer-response-device-type",
+          "cpu"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__parseback_selection_contract.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "hi_nerv",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "hinerv__short_receiver_surface_smoke.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "hinerv__short_receiver_surface_smoke",
+          "experiment_metadata": {
+            "acceptance": "bounded real-scorer MLX smoke artifact exists",
+            "blockers": [
+              "hinerv_short_receiver_surface_smoke_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "blockers": [
+                "hinerv_short_receiver_surface_smoke_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "direct_smoke_rerun_argv": [
+                "uv",
+                "run",
+                "python",
+                "tools/run_compact_renderer_mlx_spine_runner.py",
+                "--execute-family",
+                "hi_nerv",
+                "--planner-row-id",
+                "hi_nerv::witness_readiness_short_smoke",
+                "--allow-bounded-planner-row-timing-smoke-waiver",
+                "--source-video-path",
+                "upstream/videos/0.mkv",
+                "--output-dir",
+                "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+                "--overwrite",
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "1",
+                "--batch-pairs",
+                "1",
+                "--scorer-domain-bootstrap",
+                "--scorer-domain-bootstrap-steps",
+                "2",
+                "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+                "2.0",
+                "--coder-aware-qat",
+                "--receiver-cache-quality-mlx-scorer-response-device-type",
+                "cpu"
+              ],
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "report_loaded": false,
+              "report_path": null,
+              "schema": "hinerv_short_smoke_witness_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "status": "missing"
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "hinerv.short_receiver_surface_smoke",
+            "stage": "short_receiver_surface_smoke"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "hinerv.short_receiver_surface_smoke",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_mlx"
+          },
+          "step_hashes": {
+            "command_hash": "ff066a3362a3562ee30cbf017f451de0dbc741854a3132382bf50347757b7777",
+            "definition_hash": "b1979c249b9f274abae7039fecc7138aded96e6d20b466390cc1881baca47d58",
+            "postcondition_hash": "34a42f6667d80f915dcfe01c9e6395c53aa7edaf5dcb9861fa103bb33423bf20"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "hinerv__short_receiver_surface_smoke.gate",
+        "priority": 4,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_mlx",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "shared.distortion_birth_before_rate_pressure"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__distortion_trace_harness.gate",
+          "hinerv__short_receiver_surface_smoke.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "shared",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "shared__distortion_birth_before_rate_pressure.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "shared__distortion_birth_before_rate_pressure",
+          "experiment_metadata": {
+            "acceptance": "receiver-visible class birth and target-region debt movement are proven before QAT, byte duals, entropy pressure, or late optimizer polish can be treated as launch evidence",
+            "blockers": [
+              "distortion_birth_smoke_report_missing",
+              "receiver_quantum_attempt_telemetry_missing",
+              "receiver_visible_hard_birth_update_not_accepted",
+              "worst_region_debt_reduction_missing",
+              "target_region_min_ratio_lift_missing",
+              "accepted_update_receiver_uint8_movement_missing",
+              "accepted_update_receiver_uint8_delta_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "acceptance_policy": {
+                "coverage_without_target_min_ratio_lift_blocks": true,
+                "loss_only_improvement_is_not_enough": true,
+                "receiver_uint8_movement_required": true,
+                "score_claim": false,
+                "total_seg_spill_blocks": true
+              },
+              "blockers": [
+                "distortion_birth_smoke_report_missing",
+                "receiver_quantum_attempt_telemetry_missing",
+                "receiver_visible_hard_birth_update_not_accepted",
+                "worst_region_debt_reduction_missing",
+                "target_region_min_ratio_lift_missing",
+                "accepted_update_receiver_uint8_movement_missing",
+                "accepted_update_receiver_uint8_delta_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "distortion_birth_before_rate_pressure_satisfied": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "metrics": {
+                "hard_birth_argmax_progress_accepted_step_count": 0.0,
+                "max_accepted_frame1_receiver_uint8_changed_count": 0.0,
+                "max_accepted_frame1_receiver_uint8_delta_abs": 0.0,
+                "max_candidate_pose_exact_delta": 0.0,
+                "max_candidate_segnet_min_ratio_increase": 0.0,
+                "max_candidate_segnet_total_debt_spill_given_worst_improvement": 0.0,
+                "max_candidate_segnet_worst_debt_reduction": 0.0,
+                "receiver_quantum_attempt_count": 0.0
+              },
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "rate_pressure_controls_blocked_until_satisfied": [
+                "coder_qat",
+                "section_byte_duals",
+                "c1a_entropy_pressure",
+                "byte_compiler_selection",
+                "muon_late_polish"
+              ],
+              "ready_for_exact_eval_dispatch": false,
+              "schema": "nerv_distortion_birth_before_rate_pressure_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "source": "hinerv_short_receiver_surface_smoke",
+              "stage_order": [
+                "class_birth",
+                "target_region_margin_crossing",
+                "smooth_argmax_disagreement",
+                "fakequant_survival",
+                "archive_parseback_survival",
+                "entropy_coder_pressure",
+                "late_optimizer_polish"
+              ]
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "shared.distortion_birth_before_rate_pressure",
+            "stage": "distortion_birth_before_rate_pressure"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "shared.distortion_birth_before_rate_pressure",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "9fefefb9582f2eacfb8192d2a4c6eced876f19582625b4ccc6f39b6a0e3b805e",
+            "definition_hash": "d4c86932f1875dd96c2d05926f2f207d08c54fcc87a5bb6065fe1ece29786ead",
+            "postcondition_hash": "7c00a49320a2d772964e2dde23ca59b1b6a17eae860f86591c3847e10e3af3e8"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "shared__distortion_birth_before_rate_pressure.gate",
+        "priority": 5,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "pytest",
+          "src/tac/substrates/hi_nerv/tests/test_short_scorer_readiness.py",
+          "-q"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__distortion_birth_before_rate_pressure.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "shared",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "shared__joint_seg_pose_trust_region.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "shared__joint_seg_pose_trust_region",
+          "experiment_metadata": {
+            "acceptance": "accepted updates reduce exact nonlinear Seg/Pose/rate score units",
+            "blockers": [
+              "joint_seg_pose_exact_delta_admission_not_yet_proven_in_smoke"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "rate_pressure_precondition": "distortion birth must survive receiver uint8 surface first",
+              "required_delta": "100*delta_d_seg + sqrt(10*d_pose_new) - sqrt(10*d_pose_old) + rate_delta"
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "shared.joint_seg_pose_trust_region",
+            "stage": "joint_seg_pose_trust_region"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "shared.joint_seg_pose_trust_region",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "1225e6040b6fb2257d0b2eaa01979831600ba19d72985b9982d434c4b1904576",
+            "definition_hash": "27510cf409386ad24705dba833ddfe7d1d207894b4510b69859be51826ebb731",
+            "postcondition_hash": "2576f0c7664f558c43d51c2726af0e5d89fc3b993e68a0b9de701e14fa9435a0"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "shared__joint_seg_pose_trust_region.gate",
+        "priority": 6,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "hinerv.localized_target_region_projection_actuator"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "hinerv__short_receiver_surface_smoke.gate",
+          "shared__joint_seg_pose_trust_region.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "hi_nerv",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "hinerv__localized_target_region_projection_actuator.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "hinerv__localized_target_region_projection_actuator",
+          "experiment_metadata": {
+            "acceptance": "worst target-region debt or min-ratio improves without total Seg spill or Pose regression",
+            "blockers": [
+              "hinerv_short_receiver_surface_smoke_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "blockers": [
+                "hinerv_short_receiver_surface_smoke_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "direct_smoke_rerun_argv": [
+                "uv",
+                "run",
+                "python",
+                "tools/run_compact_renderer_mlx_spine_runner.py",
+                "--execute-family",
+                "hi_nerv",
+                "--planner-row-id",
+                "hi_nerv::witness_readiness_short_smoke",
+                "--allow-bounded-planner-row-timing-smoke-waiver",
+                "--source-video-path",
+                "upstream/videos/0.mkv",
+                "--output-dir",
+                "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+                "--overwrite",
+                "--num-pairs",
+                "1",
+                "--epochs",
+                "1",
+                "--batch-pairs",
+                "1",
+                "--scorer-domain-bootstrap",
+                "--scorer-domain-bootstrap-steps",
+                "2",
+                "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+                "2.0",
+                "--coder-aware-qat",
+                "--receiver-cache-quality-mlx-scorer-response-device-type",
+                "cpu"
+              ],
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "report_loaded": false,
+              "report_path": null,
+              "schema": "hinerv_short_smoke_witness_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "status": "missing"
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "hinerv.localized_target_region_projection_actuator",
+            "stage": "localized_target_region_projection"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "hinerv.localized_target_region_projection_actuator",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_mlx"
+          },
+          "step_hashes": {
+            "command_hash": "8b13966ca0103dd516c6dc99ebcacb5f4f490dce232c8281f4ab8a498085d06a",
+            "definition_hash": "7f7831a9eab3ce76bd45768f5fae86360fe7debb7d38ff8c39c79b70cab62cf2",
+            "postcondition_hash": "a85f87f66697473d2e8e126888abc4784a5b99fabf829629593bef7e9cc54347"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "hinerv__localized_target_region_projection_actuator.gate",
+        "priority": 7,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_mlx",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_snerv_official_tub_lf_hf_replacement_authority_gate.py",
+          "--output-root",
+          "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/snerv_official_tub_lf_hf_gate"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__parseback_selection_contract.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "snerv",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "snerv__official_mfu_hfr_tub_source_forward.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "snerv__official_mfu_hfr_tub_source_forward",
+          "experiment_metadata": {
+            "acceptance": "official MFU/HFR/TUB source-forward parity binds train/export/runtime",
+            "blockers": [
+              "snerv_official_mfu_hfr_tub_authority_gate_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {
+              "blockers": [
+                "snerv_official_mfu_hfr_tub_authority_gate_missing"
+              ],
+              "charged_bits_changed": false,
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "report_loaded": false,
+              "report_path": null,
+              "schema": "snerv_official_source_forward_gate_evidence.v1",
+              "score_affecting_payload_changed": false,
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "status": "missing"
+            },
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "snerv.official_mfu_hfr_tub_source_forward",
+            "stage": "official_mfu_hfr_tub_source_forward"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "snerv.official_mfu_hfr_tub_source_forward",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_cpu"
+          },
+          "step_hashes": {
+            "command_hash": "8c16ef4cad6e2ef75039369e1950e0f7c65ecd2a83985a13abf1a78d61855e00",
+            "definition_hash": "e2f0401a9f0ca70fd312d68adea112ca23c52a62fb9ea77f0d1c00954a0dadf3",
+            "postcondition_hash": "f48c9a3d29852c46d692b978741f665b93827ac4f4b647a6d2f32d948aeed207"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "snerv__official_mfu_hfr_tub_source_forward.gate",
+        "priority": 8,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_cpu",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "snerv.lf_hf_representation_collapse_smoke"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "snerv__official_mfu_hfr_tub_source_forward.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "snerv",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "snerv__lf_hf_representation_collapse_smoke.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "snerv__lf_hf_representation_collapse_smoke",
+          "experiment_metadata": {
+            "acceptance": "LF/HF replacement lowers scorer distortion enough under measured bytes",
+            "blockers": [
+              "snerv_score_aware_lf_hf_replacement_smoke_missing"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {},
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "snerv.lf_hf_representation_collapse_smoke",
+            "stage": "lf_hf_representation_collapse"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "snerv.lf_hf_representation_collapse_smoke",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_mlx"
+          },
+          "step_hashes": {
+            "command_hash": "733c2ee5bf8fc8d848cedc7089f505daf8c1816ecb2ce28aa812ea021e9c4bcc",
+            "definition_hash": "ccc2aff0d982c92870390b391d8530d169a6c0e68ef6ee5970289f7b85e70d9b",
+            "postcondition_hash": "db4bbee80df4d82aa60ca73ff1247dcb116959af05ad8021b642331930c2f8ba"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "snerv__lf_hf_representation_collapse_smoke.gate",
+        "priority": 9,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_mlx",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "hinerv.long_mlx_training_launch_gate"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__source_boundary_compliance_audit.gate",
+          "shared__exact_scorer_oracle_cache.gate",
+          "shared__distortion_birth_before_rate_pressure.gate",
+          "hinerv__localized_target_region_projection_actuator.gate",
+          "shared__distortion_trace_harness.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "hi_nerv",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "hinerv__long_mlx_training_launch_gate.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "hinerv__long_mlx_training_launch_gate",
+          "experiment_metadata": {
+            "acceptance": "short smoke, receiver proof, section telemetry, full-video MLX replay clean",
+            "blockers": [
+              "hinerv_localized_target_region_projection_gate_not_satisfied"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {},
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "hinerv.long_mlx_training_launch_gate",
+            "stage": "long_mlx_training_launch_gate"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "hinerv.long_mlx_training_launch_gate",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_mlx"
+          },
+          "step_hashes": {
+            "command_hash": "d447c5514edd818c4967b4dcf901419601437a1560ca1805ce1be971b105d413",
+            "definition_hash": "7bcf8904ee27035fcc35ae16da072c7ca5b7d61031a1eb26ee95db40a31f931a",
+            "postcondition_hash": "23f886c72101e63e383fe2cc3ffe0a93d43627bcdb72ec0068210b5dae6cb35c"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "hinerv__long_mlx_training_launch_gate.gate",
+        "priority": 10,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_mlx",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      },
+      {
+        "charged_bits_changed": false,
+        "command": [
+          "uv",
+          "run",
+          "python",
+          "tools/build_nerv_witness_readiness_dag.py",
+          "check-evidence",
+          "--node-id",
+          "snerv.long_mlx_training_launch_gate"
+        ],
+        "contest_cuda_auth_eval": false,
+        "dependencies": [
+          "shared__source_boundary_compliance_audit.gate",
+          "shared__exact_scorer_oracle_cache.gate",
+          "shared__distortion_birth_before_rate_pressure.gate",
+          "snerv__official_mfu_hfr_tub_source_forward.gate",
+          "snerv__lf_hf_representation_collapse_smoke.gate"
+        ],
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "staircase_dag_is_planning_only"
+        ],
+        "estimated_cost": null,
+        "exact_cuda_auth_eval": false,
+        "expected_value": null,
+        "family": "snerv",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "id": "snerv__long_mlx_training_launch_gate.gate",
+        "metadata": {
+          "allowed_use": null,
+          "artifact_mobility": {},
+          "experiment_id": "snerv__long_mlx_training_launch_gate",
+          "experiment_metadata": {
+            "acceptance": "official runtime binding plus LF/HF collapse plus receiver replay clean",
+            "blockers": [
+              "snerv_official_source_forward_and_lf_hf_gates_not_satisfied"
+            ],
+            "charged_bits_changed": false,
+            "contest_cuda_auth_eval": false,
+            "dispatch_attempted": false,
+            "evidence": {},
+            "exact_cuda_auth_eval": false,
+            "field_selection_ready_for_exact_eval_dispatch": false,
+            "gpu_launched": false,
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_witness_readiness_node.v1",
+            "score_affecting_payload_changed": false,
+            "score_claim": false,
+            "score_claim_eligible": false,
+            "score_claim_valid": false,
+            "source_node_id": "snerv.long_mlx_training_launch_gate",
+            "stage": "long_mlx_training_launch_gate"
+          },
+          "materializer_id": null,
+          "operation_family": null,
+          "postconditions": [
+            {
+              "node_id": "snerv.long_mlx_training_launch_gate",
+              "type": "false_authority_gate"
+            }
+          ],
+          "queue_id": "nerv_witness_long_training_readiness_dag.v1",
+          "receiver_contract_id": null,
+          "receiver_contract_kind": null,
+          "resource_requirements": {
+            "kind": "local_mlx"
+          },
+          "step_hashes": {
+            "command_hash": "278dd90806b437919e7c1900da02d05e76569ba89cc2adf3851e142beda4a719",
+            "definition_hash": "317576167f35fc7d0f40735666902718bb09ea02eb661accd4a8cf4b46836b8b",
+            "postcondition_hash": "c16e5be1449470bb0e9e24ae5500ee8e63715c1477c93ea26347b650d182ad11"
+          },
+          "step_id": "gate",
+          "step_telemetry": {},
+          "target_kind": null,
+          "timeout_seconds": null,
+          "unit_kind": null
+        },
+        "node_id": "snerv__long_mlx_training_launch_gate.gate",
+        "priority": 11,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "resource_kind": "local_mlx",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "stage": "gate",
+        "tags": [],
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ]
+      }
+    ],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "resource_pools": [
+      {
+        "disk_gb": 80.0,
+        "id": "m5_max_local_mlx",
+        "label": "M5 Max local MLX witness-readiness worker",
+        "memory_gb": 128.0,
+        "slots": {
+          "local_cpu": 8,
+          "local_mlx": 1
+        },
+        "tags": [
+          "darwin",
+          "arm64",
+          "mlx",
+          "witness_readiness"
+        ]
+      }
+    ],
+    "schema": "staircase_dag.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_refs": [
+      {
+        "kind": "experiment_queue",
+        "queue_hash": "a052f5825b022d547fdcea645e331266817f2f9d98925d8442a5f80d654cb3ac",
+        "queue_id": "nerv_witness_long_training_readiness_dag.v1"
+      }
+    ],
+    "storage": null,
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "optimizer_candidate_queue_is_planning_only",
+    "requires_exact_eval_readiness_gate",
+    "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+    "requires_non_proxy_score_evidence_before_promotion",
+    "witness_readiness_dag_is_planning_only",
+    "long_training_requires_all_gate_nodes_succeeded",
+    "exact_score_claim_requires_receiver_closed_cpu_cuda_replay"
+  ],
+  "dispatch_plan": {
+    "blocked_count": 0,
+    "blocked_nodes": [],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dag_hash": "e3c0c0843581430d5b3c045c764f70dac3a27567dd52b7b5d03b762cf17bbd9c",
+    "dag_id": "nerv_witness_long_training_readiness_dag.v1",
+    "dask_task_specs": [],
+    "dependent_queue_refs": [],
+    "deployment_target": "desktop_research",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "optimizer_candidate_queue_is_planning_only",
+      "requires_exact_eval_readiness_gate",
+      "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+      "requires_non_proxy_score_evidence_before_promotion",
+      "staircase_dispatch_plan_is_planning_only",
+      "executor_must_update_canonical_queue_state",
+      "score_authority_requires_exact_auth_eval_axis"
+    ],
+    "exact_cuda_auth_eval": false,
+    "executor_boundary": "planning_only_dask_or_local_executor_must_write_back_to_queue_state",
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "plan_hash": "3c0535d475922f30fbf4fd500a41ab9ed8edf8407cd79092686818d205163273",
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_count": 0,
+    "ready_for_exact_eval_dispatch": false,
+    "resource_pools": [
+      {
+        "disk_gb": 80.0,
+        "id": "m5_max_local_mlx",
+        "label": "M5 Max local MLX witness-readiness worker",
+        "memory_gb": 128.0,
+        "slots": {
+          "local_cpu": 8,
+          "local_mlx": 1
+        },
+        "tags": [
+          "darwin",
+          "arm64",
+          "mlx",
+          "witness_readiness"
+        ]
+      }
+    ],
+    "schema": "staircase_dispatch_plan.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "selected_count": 0,
+    "selected_nodes": [],
+    "source_refs": [
+      {
+        "kind": "experiment_queue",
+        "queue_hash": "a052f5825b022d547fdcea645e331266817f2f9d98925d8442a5f80d654cb3ac",
+        "queue_id": "nerv_witness_long_training_readiness_dag.v1"
+      }
+    ],
+    "storage": null,
+    "target_modes": [
+      "contest_exact_eval_planning"
+    ]
+  },
+  "exact_cuda_auth_eval": false,
+  "field_selection_ready_for_exact_eval_dispatch": false,
+  "gate_nodes": [
+    {
+      "acceptance": "charged learned payload never leaks into uncharged source",
+      "blockers": [
+        "nerv_witness_source_boundary_audit_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "shared.source_boundary_compliance_audit"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "blockers": [
+          "nerv_witness_source_boundary_audit_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_witness_compile": false,
+        "report_loaded": false,
+        "report_path": null,
+        "required_outputs": [
+          "charged_vs_free_boundary.md",
+          "conservative_mode_rules.md",
+          "aggressive_mode_rules.md",
+          "inflate_source_constant_audit.json"
+        ],
+        "schema": "nerv_witness_source_boundary_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_boundary_clean": false
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "shared",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "shared.source_boundary_compliance_audit",
+      "priority": 0,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "source_boundary_compliance",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "source video scorer sufficient statistics are cached with authority hashes",
+      "blockers": [
+        "nerv_exact_scorer_oracle_cache_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "shared.exact_scorer_oracle_cache"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.source_boundary_compliance_audit"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "blockers": [
+          "nerv_exact_scorer_oracle_cache_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "required_outputs": [
+          "seg_target_masks",
+          "pose_target_vectors",
+          "region_components",
+          "pose_jacobian_sketches",
+          "authority_hashes"
+        ],
+        "schema": "nerv_witness_exact_scorer_oracle_cache_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "shared",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "shared.exact_scorer_oracle_cache",
+      "priority": 1,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "exact_scorer_oracle_cache",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "archive replay hook exists and required parse-back selection fails closed",
+      "blockers": [],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "src/tac/tests/test_long_training_archive_selection.py",
+        "-q"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "implemented_contract_present": true,
+        "missing_needles": [],
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "recommended_validation_command": [
+          "uv",
+          "run",
+          "pytest",
+          "src/tac/tests/test_long_training_archive_selection.py",
+          "-q"
+        ],
+        "schema": "nerv_parseback_selection_static_contract_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source_path": "/Users/adpena/Projects/pact/src/tac/training/long_training_canonical.py",
+        "test_path": "/Users/adpena/Projects/pact/src/tac/tests/test_long_training_archive_selection.py"
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "shared",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "shared.parseback_selection_contract",
+      "priority": 2,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": true,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "parseback_selection_contract",
+      "status": "succeeded",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "live/fakequant/receiver surface emits crux telemetry",
+      "blockers": [
+        "live_fakequant_receiver_trace_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "shared.distortion_trace_harness"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.parseback_selection_contract"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "blockers": [
+          "hinerv_short_receiver_surface_smoke_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "direct_smoke_rerun_argv": [
+          "uv",
+          "run",
+          "python",
+          "tools/run_compact_renderer_mlx_spine_runner.py",
+          "--execute-family",
+          "hi_nerv",
+          "--planner-row-id",
+          "hi_nerv::witness_readiness_short_smoke",
+          "--allow-bounded-planner-row-timing-smoke-waiver",
+          "--source-video-path",
+          "upstream/videos/0.mkv",
+          "--output-dir",
+          "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+          "--overwrite",
+          "--num-pairs",
+          "1",
+          "--epochs",
+          "1",
+          "--batch-pairs",
+          "1",
+          "--scorer-domain-bootstrap",
+          "--scorer-domain-bootstrap-steps",
+          "2",
+          "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+          "2.0",
+          "--coder-aware-qat",
+          "--receiver-cache-quality-mlx-scorer-response-device-type",
+          "cpu"
+        ],
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "report_loaded": false,
+        "report_path": null,
+        "schema": "hinerv_short_smoke_witness_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "status": "missing"
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "shared",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "shared.distortion_trace_harness",
+      "priority": 3,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "distortion_trace",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "bounded real-scorer MLX smoke artifact exists",
+      "blockers": [
+        "hinerv_short_receiver_surface_smoke_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/run_compact_renderer_mlx_spine_runner.py",
+        "--execute-family",
+        "hi_nerv",
+        "--planner-row-id",
+        "hi_nerv::witness_readiness_short_smoke",
+        "--allow-bounded-planner-row-timing-smoke-waiver",
+        "--source-video-path",
+        "upstream/videos/0.mkv",
+        "--output-dir",
+        "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+        "--overwrite",
+        "--num-pairs",
+        "1",
+        "--epochs",
+        "1",
+        "--batch-pairs",
+        "1",
+        "--scorer-domain-bootstrap",
+        "--scorer-domain-bootstrap-steps",
+        "2",
+        "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+        "2.0",
+        "--coder-aware-qat",
+        "--receiver-cache-quality-mlx-scorer-response-device-type",
+        "cpu"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.parseback_selection_contract"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "blockers": [
+          "hinerv_short_receiver_surface_smoke_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "direct_smoke_rerun_argv": [
+          "uv",
+          "run",
+          "python",
+          "tools/run_compact_renderer_mlx_spine_runner.py",
+          "--execute-family",
+          "hi_nerv",
+          "--planner-row-id",
+          "hi_nerv::witness_readiness_short_smoke",
+          "--allow-bounded-planner-row-timing-smoke-waiver",
+          "--source-video-path",
+          "upstream/videos/0.mkv",
+          "--output-dir",
+          "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+          "--overwrite",
+          "--num-pairs",
+          "1",
+          "--epochs",
+          "1",
+          "--batch-pairs",
+          "1",
+          "--scorer-domain-bootstrap",
+          "--scorer-domain-bootstrap-steps",
+          "2",
+          "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+          "2.0",
+          "--coder-aware-qat",
+          "--receiver-cache-quality-mlx-scorer-response-device-type",
+          "cpu"
+        ],
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "report_loaded": false,
+        "report_path": null,
+        "schema": "hinerv_short_smoke_witness_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "status": "missing"
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "hi_nerv",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "hinerv.short_receiver_surface_smoke",
+      "priority": 4,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_mlx",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "short_receiver_surface_smoke",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "receiver-visible class birth and target-region debt movement are proven before QAT, byte duals, entropy pressure, or late optimizer polish can be treated as launch evidence",
+      "blockers": [
+        "distortion_birth_smoke_report_missing",
+        "receiver_quantum_attempt_telemetry_missing",
+        "receiver_visible_hard_birth_update_not_accepted",
+        "worst_region_debt_reduction_missing",
+        "target_region_min_ratio_lift_missing",
+        "accepted_update_receiver_uint8_movement_missing",
+        "accepted_update_receiver_uint8_delta_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "shared.distortion_birth_before_rate_pressure"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.distortion_trace_harness",
+        "hinerv.short_receiver_surface_smoke"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "acceptance_policy": {
+          "coverage_without_target_min_ratio_lift_blocks": true,
+          "loss_only_improvement_is_not_enough": true,
+          "receiver_uint8_movement_required": true,
+          "score_claim": false,
+          "total_seg_spill_blocks": true
+        },
+        "blockers": [
+          "distortion_birth_smoke_report_missing",
+          "receiver_quantum_attempt_telemetry_missing",
+          "receiver_visible_hard_birth_update_not_accepted",
+          "worst_region_debt_reduction_missing",
+          "target_region_min_ratio_lift_missing",
+          "accepted_update_receiver_uint8_movement_missing",
+          "accepted_update_receiver_uint8_delta_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "distortion_birth_before_rate_pressure_satisfied": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "metrics": {
+          "hard_birth_argmax_progress_accepted_step_count": 0.0,
+          "max_accepted_frame1_receiver_uint8_changed_count": 0.0,
+          "max_accepted_frame1_receiver_uint8_delta_abs": 0.0,
+          "max_candidate_pose_exact_delta": 0.0,
+          "max_candidate_segnet_min_ratio_increase": 0.0,
+          "max_candidate_segnet_total_debt_spill_given_worst_improvement": 0.0,
+          "max_candidate_segnet_worst_debt_reduction": 0.0,
+          "receiver_quantum_attempt_count": 0.0
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "rate_pressure_controls_blocked_until_satisfied": [
+          "coder_qat",
+          "section_byte_duals",
+          "c1a_entropy_pressure",
+          "byte_compiler_selection",
+          "muon_late_polish"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "nerv_distortion_birth_before_rate_pressure_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "source": "hinerv_short_receiver_surface_smoke",
+        "stage_order": [
+          "class_birth",
+          "target_region_margin_crossing",
+          "smooth_argmax_disagreement",
+          "fakequant_survival",
+          "archive_parseback_survival",
+          "entropy_coder_pressure",
+          "late_optimizer_polish"
+        ]
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "shared",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "shared.distortion_birth_before_rate_pressure",
+      "priority": 5,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "distortion_birth_before_rate_pressure",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "accepted updates reduce exact nonlinear Seg/Pose/rate score units",
+      "blockers": [
+        "joint_seg_pose_exact_delta_admission_not_yet_proven_in_smoke"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "pytest",
+        "src/tac/substrates/hi_nerv/tests/test_short_scorer_readiness.py",
+        "-q"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.distortion_birth_before_rate_pressure"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "rate_pressure_precondition": "distortion birth must survive receiver uint8 surface first",
+        "required_delta": "100*delta_d_seg + sqrt(10*d_pose_new) - sqrt(10*d_pose_old) + rate_delta"
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "shared",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "shared.joint_seg_pose_trust_region",
+      "priority": 6,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "joint_seg_pose_trust_region",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "worst target-region debt or min-ratio improves without total Seg spill or Pose regression",
+      "blockers": [
+        "hinerv_short_receiver_surface_smoke_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "hinerv.localized_target_region_projection_actuator"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "hinerv.short_receiver_surface_smoke",
+        "shared.joint_seg_pose_trust_region"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "blockers": [
+          "hinerv_short_receiver_surface_smoke_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "direct_smoke_rerun_argv": [
+          "uv",
+          "run",
+          "python",
+          "tools/run_compact_renderer_mlx_spine_runner.py",
+          "--execute-family",
+          "hi_nerv",
+          "--planner-row-id",
+          "hi_nerv::witness_readiness_short_smoke",
+          "--allow-bounded-planner-row-timing-smoke-waiver",
+          "--source-video-path",
+          "upstream/videos/0.mkv",
+          "--output-dir",
+          "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+          "--overwrite",
+          "--num-pairs",
+          "1",
+          "--epochs",
+          "1",
+          "--batch-pairs",
+          "1",
+          "--scorer-domain-bootstrap",
+          "--scorer-domain-bootstrap-steps",
+          "2",
+          "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+          "2.0",
+          "--coder-aware-qat",
+          "--receiver-cache-quality-mlx-scorer-response-device-type",
+          "cpu"
+        ],
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "report_loaded": false,
+        "report_path": null,
+        "schema": "hinerv_short_smoke_witness_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "status": "missing"
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "hi_nerv",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "hinerv.localized_target_region_projection_actuator",
+      "priority": 7,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_mlx",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "localized_target_region_projection",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "official MFU/HFR/TUB source-forward parity binds train/export/runtime",
+      "blockers": [
+        "snerv_official_mfu_hfr_tub_authority_gate_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_official_tub_lf_hf_replacement_authority_gate.py",
+        "--output-root",
+        "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/snerv_official_tub_lf_hf_gate"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.parseback_selection_contract"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {
+        "blockers": [
+          "snerv_official_mfu_hfr_tub_authority_gate_missing"
+        ],
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "report_loaded": false,
+        "report_path": null,
+        "schema": "snerv_official_source_forward_gate_evidence.v1",
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false,
+        "status": "missing"
+      },
+      "exact_cuda_auth_eval": false,
+      "family": "snerv",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "snerv.official_mfu_hfr_tub_source_forward",
+      "priority": 8,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_cpu",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "official_mfu_hfr_tub_source_forward",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "LF/HF replacement lowers scorer distortion enough under measured bytes",
+      "blockers": [
+        "snerv_score_aware_lf_hf_replacement_smoke_missing"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "snerv.lf_hf_representation_collapse_smoke"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "snerv.official_mfu_hfr_tub_source_forward"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {},
+      "exact_cuda_auth_eval": false,
+      "family": "snerv",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "snerv.lf_hf_representation_collapse_smoke",
+      "priority": 9,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_mlx",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "lf_hf_representation_collapse",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "short smoke, receiver proof, section telemetry, full-video MLX replay clean",
+      "blockers": [
+        "hinerv_localized_target_region_projection_gate_not_satisfied"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "hinerv.long_mlx_training_launch_gate"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.source_boundary_compliance_audit",
+        "shared.exact_scorer_oracle_cache",
+        "shared.distortion_birth_before_rate_pressure",
+        "hinerv.localized_target_region_projection_actuator",
+        "shared.distortion_trace_harness"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {},
+      "exact_cuda_auth_eval": false,
+      "family": "hi_nerv",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "hinerv.long_mlx_training_launch_gate",
+      "priority": 10,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_mlx",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "long_mlx_training_launch_gate",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    },
+    {
+      "acceptance": "official runtime binding plus LF/HF collapse plus receiver replay clean",
+      "blockers": [
+        "snerv_official_source_forward_and_lf_hf_gates_not_satisfied"
+      ],
+      "charged_bits_changed": false,
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_witness_readiness_dag.py",
+        "check-evidence",
+        "--node-id",
+        "snerv.long_mlx_training_launch_gate"
+      ],
+      "contest_cuda_auth_eval": false,
+      "dependencies": [
+        "shared.source_boundary_compliance_audit",
+        "shared.exact_scorer_oracle_cache",
+        "shared.distortion_birth_before_rate_pressure",
+        "snerv.official_mfu_hfr_tub_source_forward",
+        "snerv.lf_hf_representation_collapse_smoke"
+      ],
+      "deployment_target": "desktop_research",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "optimizer_candidate_queue_is_planning_only",
+        "requires_exact_eval_readiness_gate",
+        "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+        "requires_non_proxy_score_evidence_before_promotion",
+        "witness_gate_node_is_planning_only"
+      ],
+      "evidence": {},
+      "exact_cuda_auth_eval": false,
+      "family": "snerv",
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "gpu_launched": false,
+      "node_id": "snerv.long_mlx_training_launch_gate",
+      "priority": 11,
+      "promotable": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "resource_kind": "local_mlx",
+      "satisfied": false,
+      "schema": "nerv_witness_readiness_node.v1",
+      "score_affecting_payload_changed": false,
+      "score_claim": false,
+      "score_claim_eligible": false,
+      "score_claim_valid": false,
+      "stage": "long_mlx_training_launch_gate",
+      "status": "blocked",
+      "target_modes": [
+        "contest_exact_eval_planning"
+      ]
+    }
+  ],
+  "gpu_launched": false,
+  "hinerv_long_training_approved": false,
+  "hinerv_smoke_evidence": {
+    "blockers": [
+      "hinerv_short_receiver_surface_smoke_missing"
+    ],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "direct_smoke_rerun_argv": [
+      "uv",
+      "run",
+      "python",
+      "tools/run_compact_renderer_mlx_spine_runner.py",
+      "--execute-family",
+      "hi_nerv",
+      "--planner-row-id",
+      "hi_nerv::witness_readiness_short_smoke",
+      "--allow-bounded-planner-row-timing-smoke-waiver",
+      "--source-video-path",
+      "upstream/videos/0.mkv",
+      "--output-dir",
+      "/Users/adpena/Projects/pact/.omx/research/nerv_witness_readiness_status_snapshot_20260606/hinerv_witness_readiness_short_smoke",
+      "--overwrite",
+      "--num-pairs",
+      "1",
+      "--epochs",
+      "1",
+      "--batch-pairs",
+      "1",
+      "--scorer-domain-bootstrap",
+      "--scorer-domain-bootstrap-steps",
+      "2",
+      "--scorer-domain-bootstrap-segnet-hard-birth-weight",
+      "2.0",
+      "--coder-aware-qat",
+      "--receiver-cache-quality-mlx-scorer-response-device-type",
+      "cpu"
+    ],
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "report_loaded": false,
+    "report_path": null,
+    "schema": "hinerv_short_smoke_witness_evidence.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "status": "missing"
+  },
+  "long_training_approved": false,
+  "next_actions": [
+    "fix_or_prove:shared.source_boundary_compliance_audit",
+    "fix_or_prove:shared.exact_scorer_oracle_cache",
+    "fix_or_prove:shared.distortion_trace_harness",
+    "fix_or_prove:hinerv.short_receiver_surface_smoke",
+    "fix_or_prove:shared.distortion_birth_before_rate_pressure",
+    "fix_or_prove:shared.joint_seg_pose_trust_region",
+    "fix_or_prove:hinerv.localized_target_region_projection_actuator",
+    "fix_or_prove:snerv.official_mfu_hfr_tub_source_forward",
+    "fix_or_prove:snerv.lf_hf_representation_collapse_smoke",
+    "fix_or_prove:hinerv.long_mlx_training_launch_gate",
+    "fix_or_prove:snerv.long_mlx_training_launch_gate"
+  ],
+  "objective": {
+    "description": "Find the shortest contest-compliant archive whose inflated frames are witnesses inside the same SegNet argmax cells and PoseNet output cells as the original video.",
+    "distortion_stage_order": [
+      "class_birth",
+      "target_region_margin_crossing",
+      "smooth_argmax_disagreement",
+      "fakequant_survival",
+      "archive_parseback_survival",
+      "entropy_coder_pressure",
+      "late_optimizer_polish"
+    ],
+    "evaluator_capacity_channels": [
+      "segnet_boundary_channel",
+      "posenet_yuv6_channel",
+      "shared_latent_program_channel",
+      "sparse_sidecar_correction_channel"
+    ],
+    "human_visual_fidelity_authority": false,
+    "offline_compiler_eval_time_split": {
+      "eval_time_allowed": [
+        "charged_archive_payload",
+        "deterministic_receiver",
+        "raw_frame_emission_under_official_limit"
+      ],
+      "eval_time_forbidden": [
+        "training",
+        "uncharged_learned_sidecars",
+        "external_artifact_reads"
+      ],
+      "offline_allowed": [
+        "original_video",
+        "frozen_scorers",
+        "oracle_caches",
+        "giant_teachers",
+        "witness_search"
+      ]
+    },
+    "posenet_geometry": "two_frame_official_yuv6_pair",
+    "rate_pressure_requires_receiver_visible_birth": true,
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score_formula": "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489",
+    "segnet_geometry": "last_frame_rgb_argmax_pixels"
+  },
+  "parseback_contract_evidence": {
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "implemented_contract_present": true,
+    "missing_needles": [],
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "recommended_validation_command": [
+      "uv",
+      "run",
+      "pytest",
+      "src/tac/tests/test_long_training_archive_selection.py",
+      "-q"
+    ],
+    "schema": "nerv_parseback_selection_static_contract_evidence.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_path": "/Users/adpena/Projects/pact/src/tac/training/long_training_canonical.py",
+    "test_path": "/Users/adpena/Projects/pact/src/tac/tests/test_long_training_archive_selection.py"
+  },
+  "partner_source_refs": [],
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "nerv_witness_long_training_readiness_dag.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "score_claim_eligible": false,
+  "score_claim_valid": false,
+  "snerv_authority_gate_evidence": {
+    "blockers": [
+      "snerv_official_mfu_hfr_tub_authority_gate_missing"
+    ],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "report_loaded": false,
+    "report_path": null,
+    "schema": "snerv_official_source_forward_gate_evidence.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "status": "missing"
+  },
+  "snerv_long_training_approved": false,
+  "source_boundary_evidence": {
+    "blockers": [
+      "nerv_witness_source_boundary_audit_missing"
+    ],
+    "charged_bits_changed": false,
+    "contest_cuda_auth_eval": false,
+    "dispatch_attempted": false,
+    "exact_cuda_auth_eval": false,
+    "field_selection_ready_for_exact_eval_dispatch": false,
+    "gpu_launched": false,
+    "promotable": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_witness_compile": false,
+    "report_loaded": false,
+    "report_path": null,
+    "required_outputs": [
+      "charged_vs_free_boundary.md",
+      "conservative_mode_rules.md",
+      "aggressive_mode_rules.md",
+      "inflate_source_constant_audit.json"
+    ],
+    "schema": "nerv_witness_source_boundary_evidence.v1",
+    "score_affecting_payload_changed": false,
+    "score_claim": false,
+    "score_claim_eligible": false,
+    "score_claim_valid": false,
+    "source_boundary_clean": false
+  },
+  "status_map": {
+    "hinerv__localized_target_region_projection_actuator.gate": "blocked",
+    "hinerv__long_mlx_training_launch_gate.gate": "blocked",
+    "hinerv__short_receiver_surface_smoke.gate": "blocked",
+    "shared__distortion_birth_before_rate_pressure.gate": "blocked",
+    "shared__distortion_trace_harness.gate": "blocked",
+    "shared__exact_scorer_oracle_cache.gate": "blocked",
+    "shared__joint_seg_pose_trust_region.gate": "blocked",
+    "shared__parseback_selection_contract.gate": "succeeded",
+    "shared__source_boundary_compliance_audit.gate": "blocked",
+    "snerv__lf_hf_representation_collapse_smoke.gate": "blocked",
+    "snerv__long_mlx_training_launch_gate.gate": "blocked",
+    "snerv__official_mfu_hfr_tub_source_forward.gate": "blocked"
+  },
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ]
+}

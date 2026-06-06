@@ -1,0 +1,2 @@
+def inflate():
+    return None

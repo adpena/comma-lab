@@ -1243,6 +1243,22 @@ def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
         json.dumps(
             {
                 "archive_bytes": 178_000,
+                "receiver_surface_trace": {
+                    "schema": "nerv_receiver_surface_trace.v1",
+                    "receiver_surface_trace_present": True,
+                    "receiver_surface_uint8_changed_pixels": 3,
+                    "receiver_surface_argmax_flipped_pixels": 2,
+                    "receiver_surface_target_hard_won_count": 2,
+                    "receiver_surface_net_target_support_delta": 2,
+                    "receiver_surface_fakequant_argmax_flipped_pixels": 2,
+                    "receiver_surface_parseback_argmax_flipped_pixels": 2,
+                    "receiver_surface_inflated_argmax_flipped_pixels": 2,
+                    "receiver_surface_posenet_input_delta_linf": 0.03,
+                    "receiver_surface_pose_output_delta": 0.01,
+                    "receiver_surface_fakequant_pose_output_delta": 0.01,
+                    "receiver_surface_parseback_pose_output_delta": 0.01,
+                    "receiver_surface_inflated_pose_output_delta": 0.01,
+                },
                 "per_epoch_metrics": [
                     {
                         "loss_components": {
@@ -1256,7 +1272,25 @@ def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
         ),
         encoding="utf-8",
     )
-    artifact_dict = {"substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}}}
+    artifact_dict = {
+        "receiver_surface_trace": {
+            "schema": "nerv_receiver_surface_trace.v1",
+            "receiver_surface_trace_present": True,
+            "receiver_surface_uint8_changed_pixels": 3,
+            "receiver_surface_argmax_flipped_pixels": 2,
+            "receiver_surface_target_hard_won_count": 2,
+            "receiver_surface_net_target_support_delta": 2,
+            "receiver_surface_fakequant_argmax_flipped_pixels": 2,
+            "receiver_surface_parseback_argmax_flipped_pixels": 2,
+            "receiver_surface_inflated_argmax_flipped_pixels": 2,
+            "receiver_surface_posenet_input_delta_linf": 0.03,
+            "receiver_surface_pose_output_delta": 0.01,
+            "receiver_surface_fakequant_pose_output_delta": 0.01,
+            "receiver_surface_parseback_pose_output_delta": 0.01,
+            "receiver_surface_inflated_pose_output_delta": 0.01,
+        },
+        "substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}},
+    }
 
     report = runner_mod._write_hi_nerv_runner_crux_trace(
         artifact_dict=artifact_dict,
@@ -1290,6 +1324,22 @@ def test_snerv_runner_crux_trace_attaches_to_score_aware_long_training(
         json.dumps(
             {
                 "archive_bytes": 99_000,
+                "receiver_surface_trace": {
+                    "schema": "nerv_receiver_surface_trace.v1",
+                    "receiver_surface_trace_present": True,
+                    "receiver_surface_uint8_changed_pixels": 4,
+                    "receiver_surface_argmax_flipped_pixels": 2,
+                    "receiver_surface_target_hard_won_count": 2,
+                    "receiver_surface_net_target_support_delta": 2,
+                    "receiver_surface_fakequant_argmax_flipped_pixels": 2,
+                    "receiver_surface_parseback_argmax_flipped_pixels": 2,
+                    "receiver_surface_inflated_argmax_flipped_pixels": 2,
+                    "receiver_surface_posenet_input_delta_linf": 0.02,
+                    "receiver_surface_pose_output_delta": 0.01,
+                    "receiver_surface_fakequant_pose_output_delta": 0.01,
+                    "receiver_surface_parseback_pose_output_delta": 0.01,
+                    "receiver_surface_inflated_pose_output_delta": 0.01,
+                },
                 "per_epoch_metrics": [
                     {
                         "loss_components": {
