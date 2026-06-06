@@ -1442,23 +1442,119 @@ def _segnet_class_histogram_loss_and_metrics(
     exp_logits = mx.exp(logits)
     candidate_probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)
     candidate_hist = mx.mean(candidate_probs.reshape(-1, class_count), axis=0)
+    candidate_idx = mx.stop_gradient(mx.argmax(candidate_logits, axis=-1))
+    candidate_one_hot = mx.take(eye, candidate_idx.reshape(-1), axis=0)
+    candidate_hard_hist = mx.stop_gradient(mx.mean(candidate_one_hot, axis=0))
     eps = mx.array(1.0e-6, dtype=mx.float32)
     candidate_hist_safe = mx.maximum(candidate_hist, eps)
     cross_entropy = -mx.sum(target_hist * mx.log(candidate_hist_safe))
     l1 = mx.sum(mx.abs(candidate_hist - target_hist))
-    loss = cross_entropy + l1
+    hard_l1 = mx.sum(mx.abs(candidate_hard_hist - target_hist))
+    underproduction = mx.stop_gradient(mx.maximum(target_hist - candidate_hard_hist, 0.0))
+    overproduction = mx.stop_gradient(mx.maximum(candidate_hard_hist - target_hist, 0.0))
+    overproduction_total = mx.sum(overproduction)
+    overproduction_weights = overproduction / mx.maximum(overproduction_total, eps)
+    transfer_total = mx.array(0.0, dtype=mx.float32)
+    transfer_occupied = mx.array(0.0, dtype=mx.float32)
+    transfer_terms = []
     metrics: dict[str, Any] = {
-        "segnet_direct_live_class_histogram_loss": loss,
         "segnet_direct_live_class_histogram_cross_entropy": cross_entropy,
         "segnet_direct_live_class_histogram_l1": l1,
+        "segnet_direct_live_class_histogram_hard_l1": hard_l1,
+        "segnet_direct_live_class_histogram_underproduction_mass": mx.sum(
+            underproduction
+        ),
+        "segnet_direct_live_class_histogram_overproduction_mass": mx.sum(
+            overproduction
+        ),
     }
     for class_index in range(class_count):
+        target_mask = (target_idx == class_index).astype(mx.float32)
+        target_mass = mx.sum(target_mask)
+        class_active = (target_mass > 0.0).astype(mx.float32)
+        class_prob = candidate_probs[..., class_index]
+        target_prob_mean = (
+            mx.sum(target_mask * class_prob) / mx.maximum(target_mass, eps)
+        )
+        target_fraction = target_hist[class_index]
+        candidate_hard_fraction = candidate_hard_hist[class_index]
+        hard_ratio = mx.minimum(
+            candidate_hard_fraction / mx.maximum(target_fraction, eps),
+            mx.array(1.0, dtype=mx.float32),
+        )
+        under_ratio = mx.stop_gradient(mx.maximum(1.0 - hard_ratio, 0.0))
+        target_prob_floor = mx.minimum(
+            mx.array(0.85, dtype=mx.float32),
+            mx.maximum(
+                mx.array(0.55, dtype=mx.float32),
+                mx.array(0.35, dtype=mx.float32) + target_fraction,
+            ),
+        )
+        target_prob_deficit = mx.maximum(target_prob_floor - target_prob_mean, 0.0)
+        overproduced_prob = mx.sum(candidate_probs * overproduction_weights, axis=-1)
+        overproduced_impostor_prob = mx.maximum(
+            overproduced_prob - class_prob * overproduction_weights[class_index],
+            mx.array(0.0, dtype=mx.float32),
+        )
+        overproduced_impostor_loss = (
+            mx.sum(target_mask * overproduced_impostor_prob * overproduced_impostor_prob)
+            / mx.maximum(target_mass, eps)
+        )
+        score_mass_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.array(32.0, dtype=mx.float32) * target_fraction
+        )
+        class_transfer = (
+            class_active
+            * under_ratio
+            * score_mass_boost
+            * (
+                target_prob_deficit * target_prob_deficit
+                + mx.array(4.0, dtype=mx.float32) * overproduced_impostor_loss
+            )
+        )
+        transfer_total = transfer_total + class_transfer
+        transfer_occupied = transfer_occupied + class_active
+        transfer_terms.append(class_transfer)
         metrics[
             f"segnet_direct_live_candidate_soft_class_{class_index}_fraction"
         ] = candidate_hist[class_index]
         metrics[
             f"segnet_direct_live_target_hist_class_{class_index}_fraction"
         ] = target_hist[class_index]
+        metrics[
+            f"segnet_direct_live_candidate_hard_class_{class_index}_fraction"
+        ] = candidate_hard_hist[class_index]
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_underproduction"
+        ] = underproduction[class_index]
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_overproduction"
+        ] = overproduction[class_index]
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_hard_ratio"
+        ] = hard_ratio
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_target_prob_mean"
+        ] = target_prob_mean
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_target_prob_deficit"
+        ] = target_prob_deficit
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_overproduced_impostor_loss"
+        ] = overproduced_impostor_loss
+        metrics[
+            f"segnet_direct_live_class_histogram_class_{class_index}_mass_transfer"
+        ] = class_transfer
+    transfer_stack = mx.stack(transfer_terms)
+    transfer_mean = transfer_total / mx.maximum(transfer_occupied, eps)
+    transfer_worst = mx.max(transfer_stack)
+    mass_transfer = transfer_mean + transfer_worst
+    loss = cross_entropy + l1 + mass_transfer
+    metrics["segnet_direct_live_class_histogram_mass_transfer"] = mass_transfer
+    metrics["segnet_direct_live_class_histogram_mass_transfer_mean"] = transfer_mean
+    metrics["segnet_direct_live_class_histogram_mass_transfer_worst"] = transfer_worst
+    metrics["segnet_direct_live_class_histogram_loss"] = loss
     return loss, metrics
 
 

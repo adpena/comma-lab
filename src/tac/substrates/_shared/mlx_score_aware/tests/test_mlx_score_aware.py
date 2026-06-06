@@ -18,6 +18,7 @@ from tac.substrates._shared.mlx_score_aware import (
     score_aware_loss,
 )
 from tac.substrates._shared.mlx_score_aware.loss import (
+    _segnet_class_histogram_loss_and_metrics,
     _segnet_rare_class_logit_loss_and_metrics,
     _segnet_target_mass_floor_loss_and_metrics,
     _segnet_target_min_ratio_floor_loss_and_metrics,
@@ -1243,10 +1244,17 @@ def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:
         tethered_parts["segnet_direct_live_class_histogram_l1"]
     ) > 0.0
     assert _scalar(
+        tethered_parts["segnet_direct_live_class_histogram_hard_l1"]
+    ) > 0.0
+    assert _scalar(
+        tethered_parts["segnet_direct_live_class_histogram_mass_transfer"]
+    ) > 0.0
+    assert _scalar(
         tethered_parts["segnet_direct_live_class_histogram_loss"]
     ) == pytest.approx(
         _scalar(tethered_parts["segnet_direct_live_class_histogram_cross_entropy"])
         + _scalar(tethered_parts["segnet_direct_live_class_histogram_l1"])
+        + _scalar(tethered_parts["segnet_direct_live_class_histogram_mass_transfer"])
     )
     assert _scalar(
         tethered_parts["segnet_direct_live_distill"]
@@ -1259,6 +1267,76 @@ def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:
     ) > _scalar(
         tethered_parts["segnet_direct_live_candidate_soft_class_0_fraction"]
     )
+    assert _scalar(
+        tethered_parts["segnet_direct_live_candidate_hard_class_1_fraction"]
+    ) == pytest.approx(1.0)
+
+
+def test_direct_live_segnet_class_histogram_mass_transfer_pushes_stolen_regions() -> None:
+    candidate = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    candidate[..., 2] = 6.0
+    candidate[..., 0] = -2.0
+    candidate[..., 4] = -2.0
+    target_logits = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    target_argmax = mx.array(np.array([[[0, 0], [4, 2]]], dtype=np.int32))
+    target_logits_mx = mx.array(target_logits)
+    zero_target = mx.zeros((1, 2, 2, 3), dtype=mx.float32)
+    bundle = RendererBundle(
+        model=ReconstructPairModel(zero_target, zero_target),
+        target_rgb_0=zero_target,
+        target_rgb_1=zero_target,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+
+    def _loss(candidate_logits):
+        loss, _metrics = _segnet_class_histogram_loss_and_metrics(
+            bundle=bundle,
+            candidate_logits=candidate_logits,
+            target_logits=target_logits_mx,
+            target_argmax=target_argmax,
+        )
+        return loss
+
+    loss_before, metrics_before = _segnet_class_histogram_loss_and_metrics(
+        bundle=bundle,
+        candidate_logits=mx.array(candidate),
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+    )
+    _loss_value, grad = mx.value_and_grad(_loss)(mx.array(candidate))
+    repaired = candidate.copy()
+    repaired[:, 0, 0, 0] = 7.0
+    repaired[:, 0, 0, 2] = -1.0
+    repaired[:, 0, 1, 0] = 7.0
+    repaired[:, 0, 1, 2] = -1.0
+    repaired[:, 1, 0, 4] = 7.0
+    repaired[:, 1, 0, 2] = -1.0
+    loss_after, metrics_after = _segnet_class_histogram_loss_and_metrics(
+        bundle=bundle,
+        candidate_logits=mx.array(repaired),
+        target_logits=target_logits_mx,
+        target_argmax=target_argmax,
+    )
+
+    assert _scalar(loss_before) > _scalar(loss_after)
+    assert _scalar(
+        metrics_before["segnet_direct_live_class_histogram_class_0_underproduction"]
+    ) > 0.0
+    assert _scalar(
+        metrics_before["segnet_direct_live_class_histogram_class_2_overproduction"]
+    ) > 0.0
+    assert _scalar(
+        metrics_before[
+            "segnet_direct_live_class_histogram_class_0_overproduced_impostor_loss"
+        ]
+    ) > _scalar(
+        metrics_after[
+            "segnet_direct_live_class_histogram_class_0_overproduced_impostor_loss"
+        ]
+    )
+    assert _scalar(grad[0, 0, 0, 0]) < 0.0
+    assert _scalar(grad[0, 0, 0, 2]) > 0.0
 
 
 def test_direct_live_segnet_class_balanced_hinge_is_train_time_loss() -> None:
