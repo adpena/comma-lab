@@ -88,6 +88,33 @@ def test_pr95_distortion_guard_rejects_metadata_only_actuator_contract() -> None
     assert "actuator_execution_evidence_missing" in actuator_row["observed_evidence"]
 
 
+def test_pr95_distortion_guard_rejects_global_hinerv_actuator_evidence() -> None:
+    row = _hinerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence["updated_tensor_names"] = ["latents_fine", "feature_grids.0"]
+    evidence["state_mutation_scope"] = "late_decoder_global_update"
+    evidence["pair_locality_verified"] = False
+    evidence["non_target_pair_output_delta_l2_max"] = 0.001
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert actuator_row["observed"] is False
+    assert "hinerv_pair_local_latents_fine_row_only_update" not in actuator_row[
+        "observed_evidence"
+    ]
+    assert "hinerv_pair_local_non_target_delta_zero" not in actuator_row[
+        "observed_evidence"
+    ]
+
+
 def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
     row = _snerv_row()
     command = row["command"]
@@ -305,12 +332,23 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "schema": SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA,
         "family": "hi_nerv",
         "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "actuator_kind": "pair_local_latent_row",
+        "actuator_tensor_name": "latents_fine",
+        "updated_tensor_names": ["latents_fine"],
+        "state_mutation_scope": "latents_fine_row_only",
+        "runtime_sidecar_bytes": 0,
         "pair_local_adapter_bytes": 128,
         "pair_local_adapter_sha256": "a" * 64,
         "pair_local_grad_norm": 0.25,
+        "pair_local_grad_norm_by_group": {"latents_fine": 0.25},
         "pair_local_output_delta_l2": 0.031,
+        "pair_locality_verified": True,
+        "non_target_pair_output_delta_l2_max": 0.0,
+        "state_restored_after_smoke": True,
+        "pair_local_latents_fine_original_row_sha256": "c" * 64,
+        "pair_local_latents_fine_restored_row_sha256": "c" * 64,
         "section_value_per_byte_rows": [
-            {"section": "pair_local_adapter", "value_per_byte": 0.004}
+            {"section": "pair_local_latents_fine", "value_per_byte": 0.004}
         ],
         "score_claim": False,
         "promotion_eligible": False,

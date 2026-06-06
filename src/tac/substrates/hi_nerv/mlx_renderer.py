@@ -1133,6 +1133,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + mx.mean((pred1 - target1_one) * (pred1 - target1_one))  # type: ignore[union-attr]
             )
 
+        def _latent_row_digest(row: np.ndarray) -> str:
+            row = np.ascontiguousarray(row)
+            digest = hashlib.sha256()
+            digest.update(b"latents_fine")
+            digest.update(np.asarray([target_index], dtype=np.int64).tobytes())
+            digest.update(str(row.dtype).encode("utf-8"))
+            digest.update(np.asarray(row.shape, dtype=np.int64).tobytes())
+            digest.update(row.tobytes())
+            return digest.hexdigest()
+
         original_latents_fine = mx.array(self.latents_fine)  # type: ignore[union-attr]
         loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
         loss, grads = loss_and_grad_fn(self)
@@ -1157,18 +1167,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             }
         grad_np = np.asarray(grad_fine, dtype=np.float32)
         original_np = np.asarray(original_latents_fine, dtype=np.float32)
+        original_row = np.ascontiguousarray(original_np[target_index])
+        original_row_sha256 = _latent_row_digest(original_row)
         grad_row = np.ascontiguousarray(grad_np[target_index])
         grad_norm = float(np.linalg.norm(grad_row))
         updated_np = np.array(original_np, copy=True)
         updated_np[target_index] = updated_np[target_index] - step_lr * grad_row
         updated_row = np.ascontiguousarray(updated_np[target_index])
-        digest = hashlib.sha256()
-        digest.update(b"latents_fine")
-        digest.update(np.asarray([target_index], dtype=np.int64).tobytes())
-        digest.update(str(updated_row.dtype).encode("utf-8"))
-        digest.update(np.asarray(updated_row.shape, dtype=np.int64).tobytes())
-        digest.update(updated_row.tobytes())
-        adapter_sha256 = digest.hexdigest()
+        adapter_sha256 = _latent_row_digest(updated_row)
         adapter_bytes = int(updated_row.nbytes)
         try:
             self.update({"latents_fine": mx.array(updated_np)})  # type: ignore[union-attr]
@@ -1211,6 +1217,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         finally:
             self.update({"latents_fine": original_latents_fine})
             mx.eval(self.parameters())  # type: ignore[union-attr]
+        restored_np = np.asarray(self.latents_fine, dtype=np.float32)
+        restored_row_sha256 = _latent_row_digest(restored_np[target_index])
+        state_restored = restored_row_sha256 == original_row_sha256
         value_per_byte = selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
         blockers: list[str] = []
         if not math.isfinite(float(loss.item())):
@@ -1222,6 +1231,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pair_locality_verified = non_target_delta_l2 <= 1.0e-12
         if not pair_locality_verified:
             blockers.append("hinerv_pair_local_non_target_pair_delta_detected")
+        if not state_restored:
+            blockers.append("hinerv_pair_local_state_restore_failed")
         section_rows = [
             {
                 "section": "pair_local_latents_fine",
@@ -1236,11 +1247,21 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
             "family": "hi_nerv",
             "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+            "actuator_kind": "pair_local_latent_row",
+            "actuator_tensor_name": "latents_fine",
+            "updated_tensor_names": ["latents_fine"],
+            "state_mutation_scope": "latents_fine_row_only",
+            "runtime_sidecar_bytes": 0,
             "pair_local_adapter_bytes": adapter_bytes,
             "pair_local_adapter_sha256": adapter_sha256,
             "pair_local_grad_norm": grad_norm,
             "pair_local_grad_norm_by_group": {"latents_fine": grad_norm},
             "pair_local_output_delta_l2": selected_delta_l2,
+            "pair_locality_verified": pair_locality_verified,
+            "non_target_pair_output_delta_l2_max": non_target_delta_l2,
+            "state_restored_after_smoke": state_restored,
+            "pair_local_latents_fine_original_row_sha256": original_row_sha256,
+            "pair_local_latents_fine_restored_row_sha256": restored_row_sha256,
             "section_value_per_byte_rows": section_rows,
             "score_claim": False,
             "promotion_eligible": False,
@@ -1278,6 +1299,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "pair_local_output_delta_max_abs": selected_delta_max_abs,
                 "non_target_pair_output_delta_l2_max": non_target_delta_l2,
                 "pair_locality_verified": pair_locality_verified,
+            },
+            "state_restore": {
+                "checked_tensor_name": "latents_fine",
+                "checked_row_indices": [target_index],
+                "state_restored_after_smoke": state_restored,
+                "original_row_sha256": original_row_sha256,
+                "mutated_row_sha256": adapter_sha256,
+                "restored_row_sha256": restored_row_sha256,
             },
             "pair_local_adapter_bytes": adapter_bytes,
             "pair_local_adapter_sha256": adapter_sha256,

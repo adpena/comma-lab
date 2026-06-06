@@ -347,9 +347,20 @@ def test_mlx_pair_local_actuator_smoke_is_latent_row_local() -> None:
     assert smoke["pair_local_output_delta_l2"] > 0.0
     assert smoke["output_delta"]["pair_locality_verified"] is True
     assert smoke["output_delta"]["non_target_pair_output_delta_l2_max"] <= 1.0e-12
+    state_restore = smoke["state_restore"]
+    assert state_restore["checked_tensor_name"] == "latents_fine"
+    assert state_restore["checked_row_indices"] == [0]
+    assert state_restore["state_restored_after_smoke"] is True
+    assert state_restore["original_row_sha256"] == state_restore["restored_row_sha256"]
+    assert state_restore["mutated_row_sha256"] == smoke["pair_local_adapter_sha256"]
+    assert state_restore["mutated_row_sha256"] != state_restore["original_row_sha256"]
     summary = smoke["summary_for_pr95_guard"]
     assert summary["pair_local_smoke_schema"] == "hinerv_pair_local_actuator_smoke.v1"
     assert summary["pair_local_adapter_sha256"] == smoke["pair_local_adapter_sha256"]
+    assert summary["state_restored_after_smoke"] is True
+    assert summary["pair_local_latents_fine_original_row_sha256"] == (
+        summary["pair_local_latents_fine_restored_row_sha256"]
+    )
     assert summary["section_value_per_byte_rows"][0]["value_per_byte"] > 0.0
     assert summary["score_claim"] is False
 
@@ -571,6 +582,13 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     assert smoke["pair_local_output_delta_l2"] > 0.0
     assert smoke["output_delta"]["pair_locality_verified"] is True
     assert smoke["output_delta"]["non_target_pair_output_delta_l2_max"] <= 1.0e-12
+    assert smoke["state_restore"]["state_restored_after_smoke"] is True
+    assert smoke["state_restore"]["original_row_sha256"] == (
+        smoke["state_restore"]["restored_row_sha256"]
+    )
+    assert smoke["state_restore"]["mutated_row_sha256"] == (
+        smoke["pair_local_adapter_sha256"]
+    )
     assert smoke["section_value_per_byte_rows"][0]["bytes"] == (
         smoke["pair_local_adapter_bytes"]
     )
@@ -582,6 +600,10 @@ def test_mlx_scorer_domain_bootstrap_uses_live_segnet_margin_debt() -> None:
     )
     assert execution["pair_local_adapter_sha256"] == (
         smoke["pair_local_adapter_sha256"]
+    )
+    assert execution["state_restored_after_smoke"] is True
+    assert execution["pair_local_latents_fine_original_row_sha256"] == (
+        execution["pair_local_latents_fine_restored_row_sha256"]
     )
     assert execution["score_claim"] is False
     assert "latents_coarse" not in payload["archive_charged_decoder_tensors"]

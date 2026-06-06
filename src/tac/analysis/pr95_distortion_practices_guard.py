@@ -9,6 +9,7 @@ renderer collapse risk before a HiNeRV/SNeRV local-MLX row is admitted.
 from __future__ import annotations
 
 import hashlib
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -1602,23 +1603,56 @@ def _hinerv_actuator_execution_evidence_ok(
     smoke_ok = smoke_schema == "hinerv_pair_local_actuator_smoke.v1"
     if smoke_ok:
         evidence.append(f"hinerv_pair_local_smoke_schema={smoke_schema}")
+    actuator_kind_ok = str(execution.get("actuator_kind") or "") == "pair_local_latent_row"
+    tensor_ok = str(execution.get("actuator_tensor_name") or "") == "latents_fine"
+    updated_names = _string_list(execution.get("updated_tensor_names"))
+    updated_scope_ok = updated_names == ["latents_fine"]
+    state_scope_ok = str(execution.get("state_mutation_scope") or "") == "latents_fine_row_only"
+    runtime_sidecar_ok = _int_value(execution.get("runtime_sidecar_bytes")) == 0
+    if actuator_kind_ok and tensor_ok and updated_scope_ok and state_scope_ok:
+        evidence.append("hinerv_pair_local_latents_fine_row_only_update")
+    if runtime_sidecar_ok:
+        evidence.append("hinerv_pair_local_runtime_sidecar_bytes_zero")
     adapter_bytes = _positive_int_value(execution.get("pair_local_adapter_bytes"))
     adapter_sha_ok = _is_sha256_text(execution.get("pair_local_adapter_sha256"))
     if adapter_bytes is not None and adapter_sha_ok:
         evidence.append("hinerv_pair_local_adapter_bytes_and_sha256")
-    grad_norm = _positive_float_value(
-        execution.get("pair_local_grad_norm")
-        or execution.get("pair_local_grad_norm_by_group")
-    )
-    if grad_norm is not None:
+    grad_norm = _positive_float_value(execution.get("pair_local_grad_norm"))
+    grad_by_group = execution.get("pair_local_grad_norm_by_group")
+    grad_by_group = grad_by_group if isinstance(grad_by_group, Mapping) else {}
+    grad_group_norm = _positive_float_value(grad_by_group.get("latents_fine"))
+    if grad_norm is not None and grad_group_norm is not None:
         evidence.append("hinerv_pair_local_grad_norm_positive")
     output_delta = _positive_float_value(execution.get("pair_local_output_delta_l2"))
     if output_delta is not None:
         evidence.append("hinerv_pair_local_output_delta_positive")
+    locality_ok = execution.get("pair_locality_verified") is True
+    non_target_delta = _non_negative_float_value(
+        execution.get("non_target_pair_output_delta_l2_max")
+    )
+    non_target_ok = non_target_delta is not None and non_target_delta <= 1.0e-12
+    if locality_ok and non_target_ok:
+        evidence.append("hinerv_pair_local_non_target_delta_zero")
+    state_restored_ok = execution.get("state_restored_after_smoke") is True
+    original_sha_ok = _is_sha256_text(
+        execution.get("pair_local_latents_fine_original_row_sha256")
+    )
+    restored_sha_ok = _is_sha256_text(
+        execution.get("pair_local_latents_fine_restored_row_sha256")
+    )
+    state_sha_ok = original_sha_ok and restored_sha_ok and (
+        execution.get("pair_local_latents_fine_original_row_sha256")
+        == execution.get("pair_local_latents_fine_restored_row_sha256")
+    )
+    if state_restored_ok and state_sha_ok:
+        evidence.append("hinerv_pair_local_state_restored_after_smoke")
     section_rows = _mapping_list(execution.get("section_value_per_byte_rows"))
     section_rows_ok = any(
-        _positive_float_value(row.get("value_per_byte")) is not None
-        or _positive_float_value(row.get("score_value_per_byte")) is not None
+        str(row.get("section") or "") == "pair_local_latents_fine"
+        and (
+            _positive_float_value(row.get("value_per_byte")) is not None
+            or _positive_float_value(row.get("score_value_per_byte")) is not None
+        )
         for row in section_rows
     )
     if section_rows_ok:
@@ -1626,10 +1660,20 @@ def _hinerv_actuator_execution_evidence_ok(
     return bool(
         base_ok
         and smoke_ok
+        and actuator_kind_ok
+        and tensor_ok
+        and updated_scope_ok
+        and state_scope_ok
+        and runtime_sidecar_ok
         and adapter_bytes is not None
         and adapter_sha_ok
         and grad_norm is not None
+        and grad_group_norm is not None
         and output_delta is not None
+        and locality_ok
+        and non_target_ok
+        and state_restored_ok
+        and state_sha_ok
         and section_rows_ok
     ), evidence
 
@@ -1768,7 +1812,15 @@ def _positive_float_value(value: Any) -> float | None:
         parsed = float(str(value))
     except (TypeError, ValueError):
         return None
-    return parsed if parsed > 0.0 else None
+    return parsed if math.isfinite(parsed) and parsed > 0.0 else None
+
+
+def _non_negative_float_value(value: Any) -> float | None:
+    try:
+        parsed = float(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) and parsed >= 0.0 else None
 
 
 def _positive_int_value(value: Any) -> int | None:
