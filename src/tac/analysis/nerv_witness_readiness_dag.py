@@ -1216,6 +1216,9 @@ def _default_hinerv_smoke_command(output_root: Path) -> list[str]:
         "--planner-row-id",
         "hi_nerv::witness_readiness_short_smoke",
         "--allow-bounded-planner-row-timing-smoke-waiver",
+        # Required for the bounded research smoke: the runner fails closed on
+        # hi_nerv modelsize auto-near-cap without measured archive feedback.
+        "--allow-unscored-research-smoke",
         "--source-video-path",
         "upstream/videos/0.mkv",
         "--output-dir",
@@ -1227,7 +1230,9 @@ def _default_hinerv_smoke_command(output_root: Path) -> list[str]:
         "1",
         "--batch-pairs",
         "1",
-        "--scorer-domain-bootstrap",
+        # NOTE: the scorer-domain bootstrap is default-ON in the runner; the
+        # former bare "--scorer-domain-bootstrap" token was a dead flag
+        # (ambiguous argparse prefix) that made this rerun argv fail to parse.
         "--scorer-domain-bootstrap-steps",
         "2",
         "--scorer-domain-bootstrap-segnet-hard-birth-weight",

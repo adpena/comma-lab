@@ -414,6 +414,17 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     assert frozen_after.keys() == frozen_before.keys()
     for name, before_value in frozen_before.items():
         assert np.array_equal(before_value, frozen_after[name]), name
+    # Receipt-level proof of the same: out-of-scope group hash unchanged while
+    # at least one scoped group hash moved.
+    assert payload["out_of_scope_bit_frozen_verified"] is True
+    before_hashes = payload["parameter_group_sha256_before"]
+    after_hashes = payload["parameter_group_sha256_after"]
+    assert before_hashes["out_of_scope"] == after_hashes["out_of_scope"]
+    assert any(
+        before_hashes[group] != after_hashes[group]
+        for group in before_hashes
+        if group != "out_of_scope"
+    )
 
 
 @skip_no_mlx
@@ -466,6 +477,68 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
     assert all_after.keys() == all_before.keys()
     for name, before_value in all_before.items():
         assert np.array_equal(before_value, all_after[name]), name
+
+
+@skip_no_mlx
+def test_birth_rejection_restores_full_state_and_replays_identically() -> None:
+    """Restore must cover ALL state, not just tensors.
+
+    The actuator is optimizer-stateless by construction: raw scoped SGD from
+    explicit snapshots — no momentum/Adam slots, no EMA update, no dual
+    variables, and no RNG draws inside the loop.  This test proves the
+    construction: after a fully-rejected fit, a SECOND fit from the restored
+    state must observe an identical starting world (same before-stats, same
+    worst region, same group hashes) and reach identical rejection counters.
+    Any hidden state advanced by the first run would break the replay.
+    """
+
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _SubquantumSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    def _run():
+        return model.fit_target_region_birth_from_segnet(
+            scorer_teacher=teacher,
+            target_rgb_0=target0,
+            target_rgb_1=target1,
+            pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+            target_segnet_argmax_1=mx.array(labels_np),
+            max_steps=3,
+            learning_rate=5.0e-4,
+        )
+
+    first = _run()
+    second = _run()
+    assert first["accepted"] is False and second["accepted"] is False
+    # The second run starts from a world bit-identical to the first run's
+    # start: same group hashes, same worst region, same margin stats.
+    assert (
+        first["parameter_group_sha256_before"]
+        == first["parameter_group_sha256_after"]
+        == second["parameter_group_sha256_before"]
+        == second["parameter_group_sha256_after"]
+    )
+    assert first["worst_region"] == second["worst_region"]
+    assert first["before_region_margin_stats"] == second["before_region_margin_stats"]
+    assert first["out_of_scope_bit_frozen_verified"] is True
+    assert second["out_of_scope_bit_frozen_verified"] is True
+    # Identical rejection trajectory == no hidden state advanced.
+    for key in (
+        "accepted_step_count",
+        "rejected_step_count",
+        "subquantum_rejected_step_count",
+        "receiver_quantum_growth_attempt_count",
+        "blockers",
+    ):
+        assert first[key] == second[key], key
 
 
 @skip_no_mlx
