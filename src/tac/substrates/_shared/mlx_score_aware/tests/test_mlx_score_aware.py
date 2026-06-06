@@ -1133,6 +1133,57 @@ def test_target_region_argmax_mass_is_priced_in_score_units() -> None:
             "segnet_direct_live_target_min_ratio_floor_worst_score_weighted_unsolved_argmax_class_index"
         ]
     ) == pytest.approx(1.0)
+    assert _scalar(
+        parts[
+            "segnet_direct_live_target_min_ratio_floor_class_1_decision_crossing_score_debt_boost"
+        ]
+    ) == pytest.approx(33.0)
+
+
+def test_target_min_ratio_floor_decision_crossing_boost_tracks_score_debt() -> None:
+    candidate = np.zeros((1, 4, 4, 5), dtype=np.float32)
+    candidate[..., 2] = 5.0
+    candidate[..., 1] = -5.0
+    target_logits = mx.zeros((1, 4, 4, 5), dtype=mx.float32)
+    target_small = np.full((1, 4, 4), 2, dtype=np.int32)
+    target_large = np.full((1, 4, 4), 2, dtype=np.int32)
+    target_small[:, 0, 0] = 1
+    target_large[:, 0, :2] = 1
+
+    small_loss, small_metrics = _segnet_target_min_ratio_floor_loss_and_metrics(
+        candidate_logits=mx.array(candidate),
+        target_logits=target_logits,
+        target_argmax=mx.array(target_small),
+        min_ratio_floor=0.35,
+    )
+    large_loss, large_metrics = _segnet_target_min_ratio_floor_loss_and_metrics(
+        candidate_logits=mx.array(candidate),
+        target_logits=target_logits,
+        target_argmax=mx.array(target_large),
+        min_ratio_floor=0.35,
+    )
+
+    assert _scalar(
+        small_metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_unsolved_argmax_mass"
+        ]
+    ) == pytest.approx(6.25)
+    assert _scalar(
+        large_metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_score_weighted_unsolved_argmax_mass"
+        ]
+    ) == pytest.approx(12.5)
+    assert _scalar(
+        small_metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_decision_crossing_score_debt_boost"
+        ]
+    ) == pytest.approx(7.25)
+    assert _scalar(
+        large_metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_decision_crossing_score_debt_boost"
+        ]
+    ) == pytest.approx(13.5)
+    assert _scalar(large_loss) > _scalar(small_loss)
 
 
 def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:

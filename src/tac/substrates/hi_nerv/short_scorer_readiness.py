@@ -1120,6 +1120,10 @@ def _segnet_target_region_atom_rows(metrics: Mapping[str, Any]) -> list[dict[str
                     metrics,
                     f"{base}_score_weighted_crossing_loss",
                 ),
+                "decision_crossing_score_debt_boost": _finite_mapping_value(
+                    metrics,
+                    f"{base}_decision_crossing_score_debt_boost",
+                ),
                 "target_fraction": _finite_mapping_value(
                     metrics,
                     f"{base}_target_fraction",

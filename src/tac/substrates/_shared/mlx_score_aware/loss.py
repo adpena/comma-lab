@@ -2316,6 +2316,13 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
             * target_fraction
             * target_region_crossing_loss
         )
+        decision_crossing_score_debt_boost = (
+            mx.array(1.0, dtype=mx.float32)
+            + mx.minimum(
+                mx.array(32.0, dtype=mx.float32),
+                mx.stop_gradient(score_weighted_unsolved_argmax_mass),
+            )
+        )
         masked_region_margin = mx.where(
             target_mask > 0.0,
             target_region_margin,
@@ -2398,7 +2405,11 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
             + mx.array(12.0, dtype=mx.float32)
             * seed_prob_deficit
             * seed_prob_deficit
-            + (mx.array(1.0, dtype=mx.float32) + mx.array(4.0, dtype=mx.float32) * region_deficit)
+            + decision_crossing_score_debt_boost
+            * (
+                mx.array(1.0, dtype=mx.float32)
+                + mx.array(4.0, dtype=mx.float32) * region_deficit
+            )
             * target_region_crossing_loss
             + mx.array(4.0, dtype=mx.float32) * seed_island_crossing_loss
         )
@@ -2481,6 +2492,9 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_score_weighted_crossing_loss"
         ] = score_weighted_crossing_loss
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_decision_crossing_score_debt_boost"
+        ] = decision_crossing_score_debt_boost
         metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_island_crossing_loss"
         ] = seed_island_crossing_loss
