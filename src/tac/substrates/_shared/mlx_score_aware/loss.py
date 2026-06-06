@@ -2245,7 +2245,23 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
             mx.sum(target_mask * target_region_margin * target_region_margin)
             / mx.maximum(target_mass, eps)
         )
-        shifted_margin = target_region_margin - mx.min(target_region_margin)
+        masked_region_margin = mx.where(
+            target_mask > 0.0,
+            target_region_margin,
+            mx.array(1.0e30, dtype=target_region_margin.dtype),
+        )
+        raw_frontier_margin = mx.min(masked_region_margin)
+        frontier_margin = mx.stop_gradient(
+            mx.where(
+                class_active > 0.0,
+                raw_frontier_margin,
+                mx.array(0.0, dtype=target_region_margin.dtype),
+            )
+        )
+        shifted_margin = mx.maximum(
+            target_region_margin - frontier_margin,
+            mx.array(0.0, dtype=target_region_margin.dtype),
+        )
         easy_temperature = mx.minimum(
             mx.array(2.0, dtype=mx.float32),
             mx.maximum(
@@ -2383,6 +2399,13 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_island_crossing_loss"
         ] = seed_island_crossing_loss
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_region_frontier_margin"
+        ] = mx.where(
+            class_active > 0.0,
+            frontier_margin,
+            mx.array(0.0, dtype=mx.float32),
+        )
         metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_ratio_active"
         ] = ratio_active

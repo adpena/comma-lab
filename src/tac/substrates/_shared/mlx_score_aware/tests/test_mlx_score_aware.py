@@ -1790,6 +1790,35 @@ def test_target_min_ratio_floor_prices_zero_hard_support() -> None:
     ) > 0.0, "descent must decrease the winning impostor logit"
 
 
+def test_target_min_ratio_floor_seed_frontier_is_target_region_stable() -> None:
+    candidate = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    candidate[..., 2] = 100.0
+    candidate[..., 1] = -100.0
+    candidate[:, 1, :, 1] = 200.0
+    candidate[:, 1, :, 2] = 0.0
+    target_logits = np.zeros((1, 2, 2, 5), dtype=np.float32)
+    target_argmax = mx.array(np.array([[[1, 1], [0, 0]]], dtype=np.int32))
+
+    loss, metrics = _segnet_target_min_ratio_floor_loss_and_metrics(
+        candidate_logits=mx.array(candidate),
+        target_logits=mx.array(target_logits),
+        target_argmax=target_argmax,
+        min_ratio_floor=0.35,
+    )
+
+    assert _scalar(loss) > 0.0
+    assert _scalar(
+        metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_target_region_frontier_margin"
+        ]
+    ) == pytest.approx(201.0)
+    assert _scalar(
+        metrics[
+            "segnet_direct_live_target_min_ratio_floor_class_1_seed_island_crossing_loss"
+        ]
+    ) > 40000.0
+
+
 def test_direct_live_segnet_base_loss_weight_zero_keeps_ce_escape_active() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
     target_1 = mx.ones((2, 4, 4, 3))
