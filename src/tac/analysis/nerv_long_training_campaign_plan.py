@@ -2037,8 +2037,6 @@ def _snerv_campaign_row(
         "--snerv-scorer-loop-qat",
         "--snerv-scorer-loop-search-mode",
         "learned_random_subspace",
-        "--snerv-model-size-adapter",
-        str(candidate.get("snerv_model_size_adapter") or ""),
         "--snerv-fc-dim",
         str(int(candidate.get("fc_dim") or 0)),
         "--snerv-emb-size",
@@ -2083,9 +2081,11 @@ def _snerv_campaign_row(
                 official_trained_checkpoint_state_dict_path.as_posix(),
             ]
         )
-    if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
-        insert_at = command.index("--snerv-model-size-adapter")
-        command.insert(insert_at, "--snerv-spectra-preserving-adapter")
+    snerv_model_size_adapter = str(candidate.get("snerv_model_size_adapter") or "").strip()
+    if snerv_model_size_adapter:
+        command.extend(["--snerv-model-size-adapter", snerv_model_size_adapter])
+    if snerv_model_size_adapter == SNERV_SPECTRA_PRESERVING_ADAPTER:
+        command.append("--snerv-spectra-preserving-adapter")
     prioritized_pair_training = _snerv_prioritized_pair_training_plan(prioritized_pair_indices)
     lf_recode_admission_plan = _snerv_lf_payload_recode_admission_for_candidate(
         sources=snerv_lf_payload_recode_sources,
@@ -8966,6 +8966,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "snerv_scorer_tether_smoke_gate",
         "snerv_renderer_nondegenerate_gate",
         "snerv_pre_long_run_evidence_gate",
+        "snerv_long_run_launch_gate",
         "snerv_lf_payload_recode_admission_plan",
         "snerv_lf_payload_codec_from_admission_plan",
         "output_dir_reuse_policy",

@@ -335,6 +335,7 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
         "pr95_scorer_atom_actuator_contract",
         "pr95_scorer_atom_actuator_execution_evidence",
         "pr95_distortion_practices_guard",
+        "snerv_long_run_launch_gate",
         "hinerv_distortion_birth_before_rate_pressure_gate",
         "coder_qat_control",
     ):

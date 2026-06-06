@@ -282,6 +282,73 @@ def test_nerv_long_training_campaign_admission_blocks_active_local_mlx_process(
     assert admission["ready_for_exact_eval_dispatch"] is False
 
 
+def test_nerv_long_training_campaign_admission_blocks_snerv_without_launch_gate(
+    tmp_path: Path,
+) -> None:
+    verdict = _snerv_runnable_verdict(tmp_path / "ssd")
+    claims = _claims_file(
+        tmp_path,
+        lane_id="lane_snerv_local_mlx",
+        instance_job_id="job_snerv",
+    )
+
+    admission = build_nerv_long_training_campaign_execution_admission(
+        verdict,
+        repo_root=tmp_path,
+        active_claims_path=claims,
+        lane_id="lane_snerv_local_mlx",
+        instance_job_id="job_snerv",
+        limit=1,
+        storage_expected_bytes_per_row=1024,
+        storage_reserve_free_gb=0.0,
+        allowed_output_roots=(tmp_path / "ssd",),
+        now_utc="2026-06-02T18:40:00Z",
+    )
+
+    assert admission["experiment_queue_ready"] is False
+    assert admission["admitted_experiment_count"] == 0
+    blockers = set(admission["selected_rows"][0]["blockers"])
+    assert "selected_row_snerv_long_run_launch_gate_not_approved" in blockers
+    assert (
+        "selected_row_snerv_long_run_launch_gate_source_forward_action_effect_missing"
+        in blockers
+    )
+
+
+def test_nerv_long_training_campaign_admission_accepts_snerv_with_launch_gate(
+    tmp_path: Path,
+) -> None:
+    verdict = _snerv_runnable_verdict(
+        tmp_path / "ssd",
+        snerv_long_run_launch_gate_verdict=_approved_snerv_long_run_gate_verdict(),
+    )
+    claims = _claims_file(
+        tmp_path,
+        lane_id="lane_snerv_local_mlx",
+        instance_job_id="job_snerv",
+    )
+
+    admission = build_nerv_long_training_campaign_execution_admission(
+        verdict,
+        repo_root=tmp_path,
+        active_claims_path=claims,
+        lane_id="lane_snerv_local_mlx",
+        instance_job_id="job_snerv",
+        limit=1,
+        storage_expected_bytes_per_row=1024,
+        storage_reserve_free_gb=0.0,
+        allowed_output_roots=(tmp_path / "ssd",),
+        now_utc="2026-06-02T18:40:00Z",
+    )
+
+    assert admission["experiment_queue_ready"] is True
+    assert admission["admitted_experiment_count"] == 1
+    selected = admission["selected_rows"][0]
+    assert selected["family"] == "snerv"
+    assert selected["snerv_long_run_launch_gate"]["approved"] is True
+    assert selected["blockers"] == []
+
+
 def test_nerv_long_training_campaign_admission_blocks_missing_pr95_distortion_practice(
     tmp_path: Path,
 ) -> None:
@@ -387,7 +454,11 @@ def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
     assert selected["steps"][0]["timeout_seconds"] == 777
 
 
-def _campaign_plan(output_root: Path) -> dict:
+def _campaign_plan(
+    output_root: Path,
+    *,
+    snerv_long_run_launch_gate_verdict: dict | None = None,
+) -> dict:
     return build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget={
             "schema": "nerv_modelsize_budget.v1",
@@ -448,6 +519,7 @@ def _campaign_plan(output_root: Path) -> dict:
         hinerv_distortion_birth_evidence_sources=(
             _hinerv_distortion_birth_evidence(),
         ),
+        snerv_long_run_launch_gate_verdict=snerv_long_run_launch_gate_verdict,
     )
 
 def _hinerv_actuator_execution_evidence() -> dict:
@@ -561,6 +633,16 @@ def _pair_local_distortion_servo_receipt(family: str) -> dict:
         "old_archive_bytes": 178_000,
         "new_archive_bytes": 178_128,
         "value_per_byte": 0.0007,
+        "archive_sha256": "8" * 64,
+        "candidate_archive_sha256": "8" * 64,
+        "source_archive_sha256": "9" * 64,
+        "payload_sha256": "a" * 64,
+        "runtime_tree_sha256": "b" * 64,
+        "state_custody": {
+            "archive_sha256": "8" * 64,
+            "payload_sha256": "a" * 64,
+            "runtime_tree_sha256": "b" * 64,
+        },
         "float_rgb_delta_linf": 0.007,
         "uint8_changed_pixels": 12,
         "segnet_input_delta_linf": 0.002,
@@ -729,6 +811,63 @@ def _runnable_verdict(output_root: Path) -> dict:
     gate["cpu_replay_ready"] = False
     gate["exact_gate_ready"] = False
     return dict(consume_candidate(queue))
+
+
+def _snerv_runnable_verdict(
+    output_root: Path,
+    *,
+    snerv_long_run_launch_gate_verdict: dict | None = None,
+) -> dict:
+    output_root.mkdir(parents=True, exist_ok=True)
+    queue = json.loads(
+        json.dumps(
+            _campaign_plan(
+                output_root,
+                snerv_long_run_launch_gate_verdict=snerv_long_run_launch_gate_verdict,
+            )["experiment_queue"]
+        )
+    )
+    for row in queue["experiments"]:
+        if row["family"] == "hi_nerv":
+            row["status"] = "disabled"
+            row["blocked"] = True
+            continue
+        if row["family"] != "snerv":
+            continue
+        row["status"] = "queued"
+        row["blocked"] = False
+        contract = row["launch_authority_contract"]
+        contract["queue_status_is_local_mlx_plan"] = True
+        contract["queue_status_is_runnable_plan"] = True
+        contract["queue_launch_blockers"] = []
+        contract["queue_status_is_receiver_proof"] = False
+        contract["queue_status_is_cpu_replay_proof"] = False
+        contract["queue_status_is_exact_eval_authority"] = False
+        gate = row["score_lowering_gate"]
+        gate["local_mlx_executable"] = True
+        gate["prelaunch_allowed"] = True
+        gate["cpu_replay_ready"] = False
+        gate["exact_gate_ready"] = False
+    return dict(consume_candidate(queue))
+
+
+def _approved_snerv_long_run_gate_verdict() -> dict:
+    return {
+        "schema": "nerv_long_run_launch_gate.v1",
+        "family": "snerv",
+        "approved": True,
+        "highest_level": "L4",
+        "blocking_evidence": [],
+        "missing_evidence_keys": [],
+        "evidence_index": {
+            "snerv_source_forward_proof_action_effect.v1": [
+                "/Volumes/VertigoDataTier/pact/unit/source_forward_proof.json",
+            ],
+        },
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
 
 
 def _claims_file(tmp_path: Path, *, lane_id: str, instance_job_id: str) -> Path:

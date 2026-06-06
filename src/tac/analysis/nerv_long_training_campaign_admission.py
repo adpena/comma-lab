@@ -24,6 +24,7 @@ from comma_lab.scheduler.experiment_queue import (
 from comma_lab.scheduler.storage_preflight import (
     build_scheduler_storage_preflight_experiment,
 )
+from tac.analysis.nerv_long_run_launch_gate import NERV_LONG_RUN_LAUNCH_GATE_SCHEMA
 from tac.analysis.nerv_long_training_campaign_plan import (
     ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
     RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA,
@@ -31,6 +32,9 @@ from tac.analysis.nerv_long_training_campaign_plan import (
 from tac.analysis.pr95_distortion_practices_guard import (
     build_pr95_distortion_practices_row_guard,
     build_pr95_distortion_source_inventory,
+)
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
 )
 from tac.deploy.claims import active_claim_row
 from tac.optimization.proxy_candidate_contract import (
@@ -444,6 +448,66 @@ def _archive_parseback_selection_contract(row: Mapping[str, Any]) -> Mapping[str
     return contract if isinstance(contract, Mapping) else {}
 
 
+def _snerv_long_run_launch_gate(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    direct = row.get("snerv_long_run_launch_gate")
+    if isinstance(direct, Mapping):
+        return direct
+    metadata = row.get("metadata")
+    if isinstance(metadata, Mapping):
+        nested = metadata.get("snerv_long_run_launch_gate")
+        if isinstance(nested, Mapping):
+            return nested
+    launch = row.get("launch_authority_contract")
+    if isinstance(launch, Mapping):
+        nested = launch.get("snerv_long_run_launch_gate")
+        if isinstance(nested, Mapping):
+            return nested
+    return {}
+
+
+def _snerv_long_run_launch_gate_blockers(
+    gate: Mapping[str, Any],
+    *,
+    row: Mapping[str, Any],
+) -> list[str]:
+    if _normalize_family(row.get("family")) != "snerv":
+        return []
+    launch = row.get("launch_authority_contract")
+    if isinstance(launch, Mapping) and launch.get(
+        "current_command_is_bounded_proof_not_long_training"
+    ) is True:
+        return []
+    if not gate:
+        return ["selected_row_snerv_long_run_launch_gate_missing"]
+    blockers: list[str] = []
+    try:
+        _require_no_authority(gate, label="selected_row_snerv_long_run_launch_gate")
+    except NervLongTrainingCampaignAdmissionError as exc:
+        blockers.append(_safe_blocker_text(str(exc)))
+    if gate.get("schema") != "snerv_long_run_launch_gate_consumption.v1":
+        blockers.append("selected_row_snerv_long_run_launch_gate_schema_mismatch")
+    if gate.get("required") is not True:
+        blockers.append("selected_row_snerv_long_run_launch_gate_not_required")
+    if gate.get("approved") is not True:
+        blockers.append("selected_row_snerv_long_run_launch_gate_not_approved")
+    if gate.get("verdict_schema") != NERV_LONG_RUN_LAUNCH_GATE_SCHEMA:
+        blockers.append("selected_row_snerv_long_run_launch_gate_verdict_schema_mismatch")
+    if gate.get("gate_highest_level") != "L4":
+        blockers.append("selected_row_snerv_long_run_launch_gate_not_l4")
+    if gate.get("source_forward_action_effect_indexed") is not True:
+        blockers.append(
+            "selected_row_snerv_long_run_launch_gate_source_forward_action_effect_missing"
+        )
+    for item in _string_list(gate.get("blockers")):
+        blockers.append(f"selected_row_snerv_long_run_launch_gate_blocker:{item}")
+    indexed_schemas = _string_list(gate.get("indexed_evidence_schemas"))
+    if indexed_schemas and SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA not in indexed_schemas:
+        blockers.append(
+            "selected_row_snerv_long_run_launch_gate_index_missing_source_forward_schema"
+        )
+    return blockers
+
+
 def _receiver_surface_trace_contract_blockers(
     contract: Mapping[str, Any],
     *,
@@ -619,6 +683,13 @@ def _row_record(
             archive_parseback_selection_contract,
         )
     )
+    snerv_long_run_launch_gate = _snerv_long_run_launch_gate(row)
+    blockers.extend(
+        _snerv_long_run_launch_gate_blockers(
+            snerv_long_run_launch_gate,
+            row=row,
+        )
+    )
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         row,
         repo_root=repo_root,
@@ -645,6 +716,7 @@ def _row_record(
         "command": command,
         "receiver_surface_trace_contract": receiver_surface_trace_contract,
         "archive_parseback_selection_contract": archive_parseback_selection_contract,
+        "snerv_long_run_launch_gate": snerv_long_run_launch_gate,
         "pr95_distortion_practices_guard": pr95_distortion_guard,
         "admitted": not blockers,
         "blockers": _dedupe(blockers),
