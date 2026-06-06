@@ -122,3 +122,17 @@ The next smoke should require:
 - PoseNet cap satisfaction before admission;
 - exact nonrate improvement;
 - then fakequant/hysteresis survival on the same action id.
+
+## Codex Follow-Up Landed On Main
+
+After this v8 run, Codex landed the target-geometry split in `main`:
+
+- `bfe6e7f9a Target HiNeRV birth updates at unsolved tails`
+- `492b04cc9 Trace HiNeRV birth candidate attempts`
+
+The actuator now optimizes the initial unsolved tail of the selected connected
+component, penalizes regressions on already-won pixels, admits progress through
+net target support or tail-margin improvement, and persists per-attempt records
+with receiver-uint8, argmax, PoseNet, joint-score, and decision fields. The next
+bounded smoke should be v9 from `492b04cc9` or later; v8 remains pre-v9
+diagnostic evidence and is not long-run authority.
