@@ -70199,11 +70199,11 @@
       "id": "lane_pr110_pairwise_commutator_ledger_20260606",
       "name": "PR110 pairwise action commutator ledger",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/analysis/action_commutator.py + tools/run_pr110_commutator_ledger.py + src/tac/tests/test_action_commutator.py (27 tests pass, ruff clean, consumes tac.action_effect.v1)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -70326,5 +70326,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-06T18:46:28Z"
+  "updated_at": "2026-06-06T19:07:14Z"
 }
