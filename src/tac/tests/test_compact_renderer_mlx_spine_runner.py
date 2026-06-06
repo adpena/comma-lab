@@ -8013,10 +8013,11 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert captured["archive_selection_replay_batch_size"] == 2
     assert captured["archive_replay_archive_path"] == "parseback.zip"
     assert captured["archive_replay_batch"]["local_pair_indices"].tolist() == [0]
-    assert captured["archive_replay_target_shape"] == (2, 1164, 874, 3)
-    assert captured["archive_replay_target1_shape"] == (2, 1164, 874, 3)
+    assert captured["archive_replay_target_shape"] == (2, 384, 512, 3)
+    assert captured["archive_replay_target1_shape"] == (2, 384, 512, 3)
     assert captured["archive_replay_scorer_teacher"] is None
-    assert captured["archive_replay_pose_scorer_teacher"] is None
+    assert captured["archive_replay_pose_scorer_teacher"] is not None
+    assert int(captured["archive_replay_pose_scorer_teacher"].pose_dims) == 6
     assert captured["archive_replay_candidate_kind"] == "ema"
     assert captured["archive_replay_components"]["parseback_rgb_pair_mse"] == 0.0
     assert metadata["config"]["latent_dim_mid"] == 4
@@ -13678,14 +13679,14 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
         "posenet_yuv6_geometry_tether": 1.0,
         "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 2.0,
-        "segnet_direct_live_class_histogram": 0.0,
-        "segnet_direct_live_class_balanced_hinge": 0.0,
-        "segnet_direct_live_class_balanced_ce": 0.0,
-        "segnet_direct_live_class_balanced_squared_hinge": 0.0,
-        "segnet_direct_live_class_region_recon": 0.0,
-        "segnet_direct_live_rare_class_logit": 0.0,
+        "segnet_direct_live_class_histogram": 2.0,
+        "segnet_direct_live_class_balanced_hinge": 2.0,
+        "segnet_direct_live_class_balanced_ce": 2.0,
+        "segnet_direct_live_class_balanced_squared_hinge": 2.0,
+        "segnet_direct_live_class_region_recon": 2.0,
+        "segnet_direct_live_rare_class_logit": 2.0,
         "segnet_direct_live_target_mass_floor": 2.0,
-        "segnet_direct_live_target_min_ratio_floor": 0.0,
+        "segnet_direct_live_target_min_ratio_floor": 2.0,
     }
     assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == ("auto_discovered_joint_p18_p19_file")
     assert out["score_aware_training"]["pose_direct_live_distillation"]["enabled"] is False
