@@ -696,6 +696,54 @@ def _snerv_checkpoint_selection_row_is_better(
     metric_value_key: str,
     epsilon: float = 1.0e-9,
 ) -> bool:
+    candidate_support = _snerv_checkpoint_selection_support_tuple(
+        candidate,
+        metric_value_key=metric_value_key,
+    )
+    incumbent_support = _snerv_checkpoint_selection_support_tuple(
+        incumbent,
+        metric_value_key=metric_value_key,
+    )
+    if candidate_support is not None or incumbent_support is not None:
+        if candidate_support is None:
+            if incumbent_support is not None and incumbent_support[0] <= 0.0:
+                return _snerv_checkpoint_selection_scalar_row_is_better(
+                    candidate,
+                    incumbent,
+                    metric_value_key=metric_value_key,
+                    epsilon=epsilon,
+                )
+            return False
+        if incumbent_support is None:
+            if candidate_support[0] <= 0.0:
+                return False
+            return True
+        for candidate_value, incumbent_value in zip(
+            candidate_support,
+            incumbent_support,
+            strict=True,
+        ):
+            if candidate_value > incumbent_value + float(epsilon):
+                return True
+            if candidate_value < incumbent_value - float(epsilon):
+                return False
+        return False
+
+    return _snerv_checkpoint_selection_scalar_row_is_better(
+        candidate,
+        incumbent,
+        metric_value_key=metric_value_key,
+        epsilon=epsilon,
+    )
+
+
+def _snerv_checkpoint_selection_scalar_row_is_better(
+    candidate: Mapping[str, Any],
+    incumbent: Mapping[str, Any],
+    *,
+    metric_value_key: str,
+    epsilon: float = 1.0e-9,
+) -> bool:
     try:
         candidate_value = float(candidate[metric_value_key])
     except (KeyError, TypeError, ValueError):
@@ -711,6 +759,127 @@ def _snerv_checkpoint_selection_row_is_better(
             or candidate_value < incumbent_value - float(epsilon)
         )
     )
+
+
+_SNERV_SELECTION_SUPPORT_ALIASES: dict[str, tuple[str, ...]] = {
+    "segnet_direct_live_candidate_occupied_class_fraction": (
+        "segnet_direct_live_candidate_occupied_class_fraction",
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+        "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction",
+    ),
+    "segnet_direct_live_candidate_target_class_coverage_fraction": (
+        "segnet_direct_live_candidate_target_class_coverage_fraction",
+        "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction",
+        "loss_part_pr95_stage_segnet_direct_live_candidate_target_class_coverage_fraction",
+    ),
+    "segnet_direct_live_candidate_target_class_min_ratio": (
+        "segnet_direct_live_candidate_target_class_min_ratio",
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio",
+        "loss_part_pr95_stage_segnet_direct_live_candidate_target_class_min_ratio",
+    ),
+    "segnet_direct_live_argmax_disagreement": (
+        "segnet_direct_live_argmax_disagreement",
+        "loss_part_segnet_direct_live_argmax_disagreement",
+        "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement",
+    ),
+}
+
+
+def _snerv_checkpoint_selection_attach_support_metrics(row: dict[str, Any]) -> None:
+    for output_key, aliases in _SNERV_SELECTION_SUPPORT_ALIASES.items():
+        value = _snerv_checkpoint_selection_support_value(row, aliases)
+        if value is not None:
+            row[output_key] = float(value)
+    row["support_aware_selection_axis"] = (
+        "segnet_last_frame_target_class_support_then_scalar_surrogate"
+        if any(
+            output_key in row
+            for output_key in _SNERV_SELECTION_SUPPORT_ALIASES
+        )
+        else "scalar_surrogate_only"
+    )
+
+
+def _snerv_checkpoint_selection_support_tuple(
+    row: Mapping[str, Any],
+    *,
+    metric_value_key: str,
+) -> tuple[float, ...] | None:
+    coverage = _snerv_checkpoint_selection_support_value(
+        row,
+        _SNERV_SELECTION_SUPPORT_ALIASES[
+            "segnet_direct_live_candidate_target_class_coverage_fraction"
+        ],
+    )
+    min_ratio = _snerv_checkpoint_selection_support_value(
+        row,
+        _SNERV_SELECTION_SUPPORT_ALIASES[
+            "segnet_direct_live_candidate_target_class_min_ratio"
+        ],
+    )
+    occupied = _snerv_checkpoint_selection_support_value(
+        row,
+        _SNERV_SELECTION_SUPPORT_ALIASES[
+            "segnet_direct_live_candidate_occupied_class_fraction"
+        ],
+    )
+    argmax = _snerv_checkpoint_selection_support_value(
+        row,
+        _SNERV_SELECTION_SUPPORT_ALIASES["segnet_direct_live_argmax_disagreement"],
+    )
+    if not any(
+        value is not None
+        for value in (coverage, min_ratio, occupied, argmax)
+    ):
+        return None
+    metric = _snerv_checkpoint_selection_metric_value(row, metric_value_key)
+    return (
+        1.0 if _snerv_checkpoint_selection_blocker_free(row) else 0.0,
+        -1.0 if coverage is None else float(coverage),
+        -1.0 if min_ratio is None else float(min_ratio),
+        -1.0 if occupied is None else float(occupied),
+        float("-inf") if argmax is None else -float(argmax),
+        float("-inf") if metric is None else -float(metric),
+    )
+
+
+def _snerv_checkpoint_selection_blocker_free(row: Mapping[str, Any]) -> bool:
+    return not any(
+        str(blocker)
+        for blocker in row.get("score_aware_checkpoint_selection_blockers", ())
+    )
+
+
+def _snerv_checkpoint_selection_metric_value(
+    row: Mapping[str, Any],
+    metric_value_key: str,
+) -> float | None:
+    try:
+        value = float(row[metric_value_key])
+    except (KeyError, TypeError, ValueError):
+        return None
+    return value if np.isfinite(value) else None
+
+
+def _snerv_checkpoint_selection_support_value(
+    row: Mapping[str, Any],
+    aliases: Sequence[str],
+) -> float | None:
+    search_rows: list[Mapping[str, Any]] = [row]
+    parts = row.get("score_aware_composite_parts")
+    if isinstance(parts, Mapping):
+        search_rows.append(parts)
+    for mapping in search_rows:
+        for alias in aliases:
+            for key in (alias, f"raw_{alias}", f"weighted_{alias}"):
+                value = mapping.get(key)
+                try:
+                    scalar = float(value)
+                except (TypeError, ValueError):
+                    continue
+                if np.isfinite(scalar):
+                    return scalar
+    return None
 
 
 def _snerv_score_aware_long_training_telemetry_contract(
@@ -7349,6 +7518,7 @@ def _run_score_aware_long_training_attachment(
                 )
             else:
                 row["score_aware_checkpoint_selection_blockers"] = []
+            _snerv_checkpoint_selection_attach_support_metrics(row)
             if not np.isfinite(float(row.get(metric_value_key, float("nan")))):
                 row["score_aware_checkpoint_selection_blockers"] = _ordered_unique(
                     [

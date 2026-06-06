@@ -21,6 +21,7 @@ from tac.analysis.snerv_official_source_parity_audit import (
 )
 from tac.analysis.snerv_official_tub_source_forward_replay import (
     STATE_VALUE_ARTIFACT_BLOCKER,
+    TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     build_snerv_official_tub_source_forward_replay_artifact,
 )
 
@@ -172,8 +173,8 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert artifact["official_repo"]["head_sha"] == OFFICIAL_SNERV_SHA
     assert artifact["official_trained_checkpoint_loaded"] is True
     assert artifact["official_mfu_hfr_source_fixture_forward_parity_passed"] is True
-    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is True
-    assert artifact["source_forward_replay_verified"] is True
+    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is False
+    assert artifact["source_forward_replay_verified"] is False
     assert artifact["source_forward_replay_authority"] is False
     assert (
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
@@ -181,9 +182,10 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert artifact["official_mfu_trained_checkpoint_weight_mapping_proven"] is True
     assert artifact["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
     assert artifact["official_tub_temporal_encoder_weight_mapping_proven"] is True
+    assert artifact["official_tub_output2_decoder_weight_mapping_proven"] is True
     assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
     assert artifact["official_tub_source_fixture_forward_parity_proven"] is True
-    assert artifact["full_tub_source_forward_parity_proven"] is True
+    assert artifact["full_tub_source_forward_parity_proven"] is False
     assert artifact["source_forward_training_smoke"]["enabled"] is True
     assert artifact["source_forward_training_smoke"]["step_count"] == 1
     assert (
@@ -203,14 +205,11 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
         artifact["blockers"]
     )
     assert (
-        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
-        not in artifact["blockers"]
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+        in artifact["blockers"]
     )
-    assert (
-        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
-        not in artifact["blockers"]
-    )
-    assert STATE_VALUE_ARTIFACT_BLOCKER in artifact["blockers"]
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
+    assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
     assert (
         "snerv_official_tub_frame_reconstruction_source_forward_replay_missing"
         in artifact["tub_source_fixture_closed_blockers"]
@@ -259,7 +258,7 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert tub["primitive_source_forward_parity_proven"] is True
     assert tub["source_fixture_forward_parity_proven"] is True
     assert tub["portable_output2_fusion_receiver_mapping_proven"] is True
-    assert tub["source_forward_parity_proven"] is True
+    assert tub["source_forward_parity_proven"] is False
     assert tub["max_abs_error"] == 0.0
     assert tub["graph_input_max_abs_error"] == 0.0
     assert tub["output2_fusion_max_abs_error"] == 0.0
@@ -288,7 +287,7 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert local_gap["source_forward_parity_proven"] is False
 
 
-def test_snerv_official_source_forward_harness_grants_authority_with_persisted_tub_state(
+def test_snerv_official_source_forward_harness_preserves_fixture_state_without_authority(
     tmp_path: Path,
 ) -> None:
     state_path = tmp_path / "official_snerv_t_one_step_state_dict.npz"
@@ -307,16 +306,18 @@ def test_snerv_official_source_forward_harness_grants_authority_with_persisted_t
     )
 
     assert state_path.is_file()
-    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is True
-    assert artifact["source_forward_replay_verified"] is True
-    assert artifact["source_forward_replay_authority"] is True
+    assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is False
+    assert artifact["source_forward_replay_verified"] is False
+    assert artifact["source_forward_replay_authority"] is False
     assert (
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
     )
+    assert artifact["official_tub_source_fixture_forward_parity_proven"] is True
     assert artifact["receiver_payload_frame_replay"][
         "source_forward_replay_authority"
-    ] is True
+    ] is False
     assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
 
 
 def test_snerv_official_source_forward_harness_rejects_in_memory_only_tub_authority(
@@ -351,7 +352,7 @@ def test_snerv_official_source_forward_harness_rejects_in_memory_only_tub_author
 
     assert state_path.is_file()
     assert not missing_state_path.exists()
-    assert artifact["source_forward_replay_verified"] is True
+    assert artifact["source_forward_replay_verified"] is False
     assert artifact["source_forward_replay_authority"] is False
     assert (
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
@@ -359,7 +360,7 @@ def test_snerv_official_source_forward_harness_rejects_in_memory_only_tub_author
     assert artifact["receiver_payload_frame_replay"][
         "source_forward_replay_authority"
     ] is False
-    assert STATE_VALUE_ARTIFACT_BLOCKER in artifact["blockers"]
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
 
 
 def test_snerv_official_source_forward_harness_consumes_receiver_bound_export_without_source_authority() -> None:
@@ -573,7 +574,7 @@ def test_snerv_source_audit_consumes_harness_artifact_without_fake_pass(
     assert artifact_row["status"] == "present"
     assert artifact_row["parity_passed"] is False
     assert artifact_row["parity_falsified"] is False
-    assert "component_not_proven:tub" not in artifact_row["blockers"]
+    assert "component_not_proven:tub" in artifact_row["blockers"]
     assert "component_not_proven:mfu" not in artifact_row["blockers"]
     assert "component_not_proven:hfr" not in artifact_row["blockers"]
     assert report["official_mfu_hfr_tub_parity_proven"] is False

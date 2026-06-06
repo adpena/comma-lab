@@ -438,6 +438,10 @@ def build_snerv_official_source_forward_harness_artifact(
             "official_tub_temporal_encoder_weight_mapping_proven"
         )
         is True
+        and trained_checkpoint_mapping.get(
+            "official_tub_output2_decoder_weight_mapping_proven"
+        )
+        is True
     )
     source_forward_replay_verified = bool(
         full_passed
@@ -594,6 +598,12 @@ def build_snerv_official_source_forward_harness_artifact(
             )
             is True
         ),
+        "official_tub_output2_decoder_weight_mapping_proven": (
+            trained_checkpoint_mapping.get(
+                "official_tub_output2_decoder_weight_mapping_proven"
+            )
+            is True
+        ),
         "official_trained_checkpoint_state_dict_mapping_verified": bool(
             trained_checkpoint_mapping.get(
                 "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
@@ -601,6 +611,10 @@ def build_snerv_official_source_forward_harness_artifact(
             is True
             and trained_checkpoint_mapping.get(
                 "official_tub_temporal_encoder_weight_mapping_proven"
+            )
+            is True
+            and trained_checkpoint_mapping.get(
+                "official_tub_output2_decoder_weight_mapping_proven"
             )
             is True
         ),
@@ -800,16 +814,14 @@ def _trained_checkpoint_mapping_evidence(
                 "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
             ]
         )
-    if (
-        out.get("official_tub_output2_decoder_weight_mapping_proven") is True
-        or out.get("official_tub_temporal_encoder_weight_mapping_proven") is True
-    ):
+    if out.get("official_tub_output2_decoder_weight_mapping_proven") is True:
         closed.append(
             "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
         )
     if (
         out.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven") is True
         and out.get("official_tub_temporal_encoder_weight_mapping_proven") is True
+        and out.get("official_tub_output2_decoder_weight_mapping_proven") is True
     ):
         closed.append(OFFICIAL_TRAINED_CHECKPOINT_MAPPING_BLOCKER)
     out["closed_campaign_blockers"] = _ordered_unique(

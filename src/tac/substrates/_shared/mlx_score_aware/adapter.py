@@ -1816,6 +1816,25 @@ class MlxScoreAwareAdapter:
         return SEGNET_DIRECT_LIVE_SCORE_WEIGHT * delta, delta
 
     @staticmethod
+    def _target_class_min_ratio_support_credit(
+        *,
+        pre_target_class_min_ratio: float | None,
+        post_target_class_min_ratio: float | None,
+        eligible: bool,
+    ) -> tuple[float, float | None]:
+        """Return min-ratio recovery credit in direct non-rate score units."""
+
+        if not eligible:
+            return 0.0, None
+        if pre_target_class_min_ratio is None or post_target_class_min_ratio is None:
+            return 0.0, None
+        delta = max(
+            0.0,
+            float(post_target_class_min_ratio) - float(pre_target_class_min_ratio),
+        )
+        return SEGNET_DIRECT_LIVE_SCORE_WEIGHT * delta, delta
+
+    @staticmethod
     def _metric_crossed_ceiling(
         *,
         pre_value: float | None,
@@ -2723,6 +2742,15 @@ class MlxScoreAwareAdapter:
             or target_class_ratio_drop is None
             or target_class_ratio_drop <= max_target_class_ratio_drop + 1.0e-7
         )
+        target_class_min_ratio_recovery = (
+            target_class_min_ratio_floor_active
+            and pre_target_class_min_ratio is not None
+            and post_target_class_min_ratio is not None
+            and pre_target_class_min_ratio < min_target_class_min_ratio
+            and target_class_min_ratio_improved
+            and target_class_coverage_preserved
+            and target_class_ratio_drop_within_limit
+        )
         target_class_min_ratio_birth_allowed = (
             target_class_coverage_improved
             and target_class_min_ratio_preserved
@@ -2913,6 +2941,9 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_target_class_min_ratio_below_floor_non_improving"
         ] = float(target_class_min_ratio_below_floor_non_improving)
         metrics[
+            "scorer_space_step_guard_target_class_min_ratio_recovery"
+        ] = float(target_class_min_ratio_recovery)
+        metrics[
             "scorer_space_step_guard_target_class_ratio_drop_within_limit"
         ] = float(target_class_ratio_drop_within_limit)
         metrics[
@@ -3006,6 +3037,7 @@ class MlxScoreAwareAdapter:
             target_class_coverage_breakthrough
             or target_class_coverage_improved
             or bootstrap_occupancy_improved
+            or target_class_min_ratio_recovery
         )
         target_class_within_ceiling_rare_recovery = (
             target_class_argmax_within_ceiling
@@ -3031,6 +3063,12 @@ class MlxScoreAwareAdapter:
             and not posenet_yuv6_distribution_mae_crossed_ceiling
             and not posenet_yuv6_contrast_crossed_ceiling
         )
+        target_class_min_ratio_support_credit_eligible = (
+            target_class_min_ratio_recovery
+            and not segnet_distribution_mae_crossed_ceiling
+            and not posenet_yuv6_distribution_mae_crossed_ceiling
+            and not posenet_yuv6_contrast_crossed_ceiling
+        )
         (
             target_class_support_nonrate_credit,
             target_class_coverage_delta,
@@ -3039,20 +3077,38 @@ class MlxScoreAwareAdapter:
             post_target_class_coverage=post_target_class_coverage,
             eligible=target_class_support_credit_eligible,
         )
+        (
+            target_class_min_ratio_support_nonrate_credit,
+            target_class_min_ratio_delta,
+        ) = self._target_class_min_ratio_support_credit(
+            pre_target_class_min_ratio=pre_target_class_min_ratio,
+            post_target_class_min_ratio=post_target_class_min_ratio,
+            eligible=target_class_min_ratio_support_credit_eligible,
+        )
+        target_class_total_support_nonrate_credit = (
+            target_class_support_nonrate_credit
+            + target_class_min_ratio_support_nonrate_credit
+        )
         bootstrap_direct_nonrate_worsening_budget = None
         if self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening is not None:
             bootstrap_direct_nonrate_worsening_budget = (
                 self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-                + target_class_support_nonrate_credit
+                + target_class_total_support_nonrate_credit
             )
-        if (
-            self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            is not None
-            and target_class_coverage_floor_active
+        target_class_coverage_support_context = (
+            target_class_coverage_floor_active
             and pre_target_class_coverage is not None
             and pre_target_class_coverage < min_target_class_coverage
             and target_class_coverage_preserved
             and target_class_ratio_drop_within_limit
+        )
+        if (
+            self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+            is not None
+            and (
+                target_class_coverage_support_context
+                or target_class_min_ratio_support_credit_eligible
+            )
             and (
                 not target_class_min_ratio_floor_active
                 or pre_target_class_min_ratio is None
@@ -3068,6 +3124,7 @@ class MlxScoreAwareAdapter:
                 or target_class_within_ceiling_rare_recovery
                 or bootstrap_escape_improved_meaningfully
                 or bootstrap_argmax_improved_meaningfully
+                or target_class_min_ratio_recovery
             )
             and (
                 not target_class_coverage_breakthrough
@@ -3173,7 +3230,20 @@ class MlxScoreAwareAdapter:
             ] = float(target_class_coverage_delta)
         metrics[
             "scorer_space_step_guard_target_class_support_nonrate_credit"
+        ] = float(target_class_total_support_nonrate_credit)
+        metrics[
+            "scorer_space_step_guard_target_class_coverage_support_nonrate_credit"
         ] = float(target_class_support_nonrate_credit)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_support_credit_eligible"
+        ] = float(target_class_min_ratio_support_credit_eligible)
+        if target_class_min_ratio_delta is not None:
+            metrics[
+                "scorer_space_step_guard_target_class_min_ratio_delta"
+            ] = float(target_class_min_ratio_delta)
+        metrics[
+            "scorer_space_step_guard_target_class_min_ratio_support_nonrate_credit"
+        ] = float(target_class_min_ratio_support_nonrate_credit)
         if bootstrap_direct_nonrate_worsening_budget is not None:
             metrics[
                 "scorer_space_step_guard_bootstrap_direct_nonrate_worsening_budget"
@@ -3585,6 +3655,15 @@ class MlxScoreAwareAdapter:
                     or trial_rare_class_logit_recovered_meaningfully
                 )
             )
+            trial_target_class_min_ratio_recovery = (
+                target_class_min_ratio_floor_active
+                and pre_target_class_min_ratio is not None
+                and trial_target_class_min_ratio is not None
+                and pre_target_class_min_ratio < min_target_class_min_ratio
+                and trial_target_class_min_ratio_improved
+                and trial_target_class_coverage_preserved
+                and trial_target_class_ratio_drop_within_limit
+            )
             trial_bootstrap_escape_allowed = (
                 pre_occ
                 < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
@@ -3705,6 +3784,7 @@ class MlxScoreAwareAdapter:
                 trial_target_class_coverage_breakthrough
                 or trial_target_class_coverage_improved
                 or trial_occupancy_improved
+                or trial_target_class_min_ratio_recovery
             )
             trial_target_class_support_credit_eligible = (
                 target_class_coverage_floor_active
@@ -3726,6 +3806,12 @@ class MlxScoreAwareAdapter:
                 and not trial_posenet_yuv6_distribution_mae_crossed_ceiling
                 and not trial_posenet_yuv6_contrast_crossed_ceiling
             )
+            trial_target_class_min_ratio_support_credit_eligible = (
+                trial_target_class_min_ratio_recovery
+                and not trial_segnet_distribution_mae_crossed_ceiling
+                and not trial_posenet_yuv6_distribution_mae_crossed_ceiling
+                and not trial_posenet_yuv6_contrast_crossed_ceiling
+            )
             (
                 trial_target_class_support_nonrate_credit,
                 trial_target_class_coverage_delta,
@@ -3734,6 +3820,18 @@ class MlxScoreAwareAdapter:
                 post_target_class_coverage=trial_target_class_coverage,
                 eligible=trial_target_class_support_credit_eligible,
             )
+            (
+                trial_target_class_min_ratio_support_nonrate_credit,
+                trial_target_class_min_ratio_delta,
+            ) = self._target_class_min_ratio_support_credit(
+                pre_target_class_min_ratio=pre_target_class_min_ratio,
+                post_target_class_min_ratio=trial_target_class_min_ratio,
+                eligible=trial_target_class_min_ratio_support_credit_eligible,
+            )
+            trial_target_class_total_support_nonrate_credit = (
+                trial_target_class_support_nonrate_credit
+                + trial_target_class_min_ratio_support_nonrate_credit
+            )
             trial_bootstrap_direct_nonrate_worsening_budget = None
             if (
                 self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
@@ -3741,17 +3839,23 @@ class MlxScoreAwareAdapter:
             ):
                 trial_bootstrap_direct_nonrate_worsening_budget = (
                     self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-                    + trial_target_class_support_nonrate_credit
+                    + trial_target_class_total_support_nonrate_credit
                 )
             trial_bootstrap_direct_nonrate_worsening_allowed = False
-            if (
-                self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-                is not None
-                and target_class_coverage_floor_active
+            trial_target_class_coverage_support_context = (
+                target_class_coverage_floor_active
                 and pre_target_class_coverage is not None
                 and pre_target_class_coverage < min_target_class_coverage
                 and trial_target_class_coverage_preserved
                 and trial_target_class_ratio_drop_within_limit
+            )
+            if (
+                self._scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
+                is not None
+                and (
+                    trial_target_class_coverage_support_context
+                    or trial_target_class_min_ratio_support_credit_eligible
+                )
                 and (
                     not target_class_min_ratio_floor_active
                     or pre_target_class_min_ratio is None
@@ -3768,6 +3872,7 @@ class MlxScoreAwareAdapter:
                     or trial_escape_improved_meaningfully
                     or trial_argmax_improved_meaningfully
                     or trial_rare_class_logit_recovered_meaningfully
+                    or trial_target_class_min_ratio_recovery
                 )
                 and (
                     not trial_target_class_coverage_breakthrough
@@ -3993,6 +4098,9 @@ class MlxScoreAwareAdapter:
                 "scorer_space_step_guard_backtracking_last_target_class_min_ratio_bootstrap_hold_allowed"
             ] = float(trial_target_class_min_ratio_bootstrap_hold_allowed)
             metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_recovery"
+            ] = float(trial_target_class_min_ratio_recovery)
+            metrics[
                 "scorer_space_step_guard_backtracking_last_target_class_ratio_drop_within_limit"
             ] = float(trial_target_class_ratio_drop_within_limit)
             metrics[
@@ -4051,7 +4159,20 @@ class MlxScoreAwareAdapter:
                 ] = float(trial_target_class_coverage_delta)
             metrics[
                 "scorer_space_step_guard_backtracking_last_target_class_support_nonrate_credit"
+            ] = float(trial_target_class_total_support_nonrate_credit)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_coverage_support_nonrate_credit"
             ] = float(trial_target_class_support_nonrate_credit)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_support_credit_eligible"
+            ] = float(trial_target_class_min_ratio_support_credit_eligible)
+            if trial_target_class_min_ratio_delta is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_target_class_min_ratio_delta"
+                ] = float(trial_target_class_min_ratio_delta)
+            metrics[
+                "scorer_space_step_guard_backtracking_last_target_class_min_ratio_support_nonrate_credit"
+            ] = float(trial_target_class_min_ratio_support_nonrate_credit)
             if trial_bootstrap_direct_nonrate_worsening_budget is not None:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_bootstrap_direct_nonrate_worsening_budget"

@@ -804,6 +804,96 @@ def test_score_aware_checkpoint_selection_policy_prices_posenet_yuv6_geometry_te
     assert policy["blockers"] == []
 
 
+def test_score_aware_checkpoint_selection_prefers_segnet_target_support_before_scalar() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    incumbent = {
+        "score_aware_composite_loss": 1.0,
+        "score_aware_checkpoint_selection_blockers": [],
+        "score_aware_composite_parts": {
+            "raw_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "raw_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "raw_segnet_direct_live_candidate_target_class_min_ratio": 0.0,
+            "raw_segnet_direct_live_argmax_disagreement": 0.30,
+        },
+    }
+    candidate = {
+        "score_aware_composite_loss": 1.25,
+        "score_aware_checkpoint_selection_blockers": [],
+        "score_aware_composite_parts": {
+            "raw_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "raw_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "raw_segnet_direct_live_candidate_target_class_min_ratio": 0.05,
+            "raw_segnet_direct_live_argmax_disagreement": 0.35,
+        },
+    }
+
+    assert mod._snerv_checkpoint_selection_row_is_better(
+        candidate,
+        incumbent,
+        metric_value_key="score_aware_composite_loss",
+    )
+    assert not mod._snerv_checkpoint_selection_row_is_better(
+        incumbent,
+        candidate,
+        metric_value_key="score_aware_composite_loss",
+    )
+
+
+def test_score_aware_checkpoint_selection_rejects_blocked_support_row() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    incumbent = {
+        "score_aware_composite_loss": 1.0,
+        "score_aware_checkpoint_selection_blockers": [],
+        "score_aware_composite_parts": {
+            "raw_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+            "raw_segnet_direct_live_candidate_target_class_min_ratio": 0.05,
+        },
+    }
+    candidate = {
+        "score_aware_composite_loss": 0.5,
+        "score_aware_checkpoint_selection_blockers": [
+            "snerv_score_aware_checkpoint_selection_required_parts_missing"
+        ],
+        "score_aware_composite_parts": {
+            "raw_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+            "raw_segnet_direct_live_candidate_target_class_min_ratio": 0.2,
+        },
+    }
+
+    assert not mod._snerv_checkpoint_selection_row_is_better(
+        candidate,
+        incumbent,
+        metric_value_key="score_aware_composite_loss",
+    )
+
+
+def test_score_aware_checkpoint_selection_rejects_blocked_support_row_against_scalar_only() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    incumbent = {
+        "score_aware_composite_loss": 1.0,
+        "score_aware_checkpoint_selection_blockers": [],
+    }
+    candidate = {
+        "score_aware_composite_loss": 0.5,
+        "score_aware_checkpoint_selection_blockers": [
+            "snerv_score_aware_checkpoint_selection_required_parts_missing"
+        ],
+        "score_aware_composite_parts": {
+            "raw_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+            "raw_segnet_direct_live_candidate_target_class_min_ratio": 0.2,
+        },
+    }
+
+    assert not mod._snerv_checkpoint_selection_row_is_better(
+        candidate,
+        incumbent,
+        metric_value_key="score_aware_composite_loss",
+    )
+
+
 def test_score_aware_long_training_direct_live_only_requires_research_gate(
     tmp_path: Path,
 ) -> None:

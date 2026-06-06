@@ -14,6 +14,7 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     PYTORCH_WAVELETS_BLOCKER,
     SCHEMA,
     STATE_VALUE_ARTIFACT_BLOCKER,
+    TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     TUB_CLOSED_BY_FIXTURE_REPLAY,
     TUB_PRESERVED_BLOCKERS,
     build_snerv_official_tub_source_forward_replay_artifact,
@@ -133,12 +134,14 @@ def test_snerv_official_tub_source_forward_replay_persists_value_state_npz(
     assert artifact["source_forward_replay_executed"] is True
     assert artifact["official_trained_checkpoint_loaded"] is True
     assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
-    assert artifact["full_tub_source_forward_parity_proven"] is True
+    assert artifact["full_tub_source_forward_parity_proven"] is False
     assert (
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
     )
-    assert artifact["source_forward_replay_authority"] is True
+    assert artifact["source_forward_replay_authority"] is False
+    assert artifact["official_trained_checkpoint_export_lineage_verified"] is False
     assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
     assert artifact["official_trained_checkpoint_state_dict_path"] == state_path.as_posix()
     assert artifact["official_trained_checkpoint_state_dict_slice_present"] is True
     assert artifact["official_trained_checkpoint_state_dict_slice_file_present"] is True
@@ -184,12 +187,13 @@ def test_snerv_official_tub_source_forward_replay_blocks_authority_without_value
     assert artifact["source_forward_replay_executed"] is True
     assert artifact["official_trained_checkpoint_loaded"] is True
     assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
-    assert artifact["full_tub_source_forward_parity_proven"] is True
+    assert artifact["full_tub_source_forward_parity_proven"] is False
     assert (
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
     )
     assert artifact["source_forward_replay_authority"] is False
-    assert STATE_VALUE_ARTIFACT_BLOCKER in artifact["blockers"]
+    assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
 
 
 def test_snerv_official_tub_replay_missing_checkout_is_fail_closed(tmp_path: Path) -> None:
@@ -256,4 +260,5 @@ def test_snerv_official_tub_replay_cli_writes_value_state_npz(
     assert payload["official_trained_checkpoint_state_dict_slice_present"] is True
     assert payload["official_trained_checkpoint_state_dict_artifact"]["member_count"] > 0
     assert payload["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
-    assert payload["source_forward_replay_authority"] is True
+    assert payload["source_forward_replay_authority"] is False
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in payload["blockers"]

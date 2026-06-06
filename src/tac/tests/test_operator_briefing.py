@@ -34,6 +34,67 @@ def _run(*args: str) -> subprocess.CompletedProcess:
     )
 
 
+def _run_fixture_backed(tmp_path: Path, *args: str) -> subprocess.CompletedProcess:
+    scan_root = tmp_path / "briefing_scan_roots"
+    fixture_root = tmp_path / "briefing_delegate_fixtures"
+    scan_root.mkdir()
+    fixture_root.mkdir()
+    delegate_text = "\n".join(
+        [
+            "fixture delegate output",
+            "pr91_hpm1_readiness_bundle",
+            "wr01_apply_pr106x_half",
+            "pr106_q10_151byte_brotli",
+            "pr106x_lgblock16_1byte_brotli",
+            "hnerv_hlm1_fixed_latent_recode_exact_eval",
+            "hnerv_hlm1_xmember_exact_eval_20260514",
+        ]
+    )
+    for stem in (
+        "apogee_intN_pareto",
+        "score_dashboard",
+        "predicted_vs_actual_reconciler",
+    ):
+        (fixture_root / f"{stem}.txt").write_text(delegate_text + "\n", encoding="utf-8")
+    (fixture_root / "apogee_intN_pareto.json").write_text(
+        json.dumps({"n_configs": 1, "n_pareto_frontier": 1}) + "\n",
+        encoding="utf-8",
+    )
+    (fixture_root / "score_dashboard.json").write_text(
+        json.dumps({"n_total": 1, "n_displayed": 1}) + "\n",
+        encoding="utf-8",
+    )
+    (fixture_root / "predicted_vs_actual_reconciler.json").write_text(
+        json.dumps({"n_configs": 1, "n_landed": 1}) + "\n",
+        encoding="utf-8",
+    )
+    (fixture_root / "claim_lane_dispatch.json").write_text(
+        json.dumps(
+            {
+                "schema": "pact.dispatch_claim_summary.v1",
+                "active": [],
+                "active_count": 0,
+                "stale_nonterminal": [],
+                "stale_nonterminal_count": 0,
+                "terminal_latest": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    env["PACT_OPERATOR_BRIEFING_SCAN_ROOTS"] = scan_root.as_posix()
+    env["PACT_OPERATOR_BRIEFING_DELEGATE_FIXTURE_ROOT"] = fixture_root.as_posix()
+    env["PACT_OPERATOR_BRIEFING_FAST_SUMMARY_FIXTURES"] = "1"
+    return subprocess.run(
+        [sys.executable, str(BRIEFING), *args],
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+
+
 def _load_briefing_module():
     spec = importlib.util.spec_from_file_location("operator_briefing_under_test", BRIEFING)
     assert spec is not None
@@ -348,8 +409,8 @@ def test_briefing_delegates_to_repo_venv_when_available(monkeypatch):
         assert calls[0][0] == str(module.REPO_VENV_PYTHON)
 
 
-def test_briefing_runs_all_three_phases():
-    proc = _run("--top", "3")
+def test_briefing_runs_all_three_phases(tmp_path: Path):
+    proc = _run_fixture_backed(tmp_path, "--top", "3")
     assert "Codex inbox" in proc.stdout
     assert "open_questions:" in proc.stdout
     assert "Dispatch claim coordination" in proc.stdout
@@ -385,8 +446,8 @@ def test_briefing_runs_all_three_phases():
     assert "next exact-eval targets:" in proc.stdout
 
 
-def test_briefing_skip_pareto_omits_phase1():
-    proc = _run("--skip-pareto", "--top", "3")
+def test_briefing_skip_pareto_omits_phase1(tmp_path: Path):
+    proc = _run_fixture_backed(tmp_path, "--skip-pareto", "--top", "3")
     # Use the section-header form ("Phase 1 — ...") rather than bare "Phase 1"
     # because Phase 8 readiness summary (added 2026-05-09) mentions Phase 1
     # as a navigation breadcrumb, which is intentional.
@@ -395,22 +456,22 @@ def test_briefing_skip_pareto_omits_phase1():
     assert "Phase 3" in proc.stdout
 
 
-def test_briefing_skip_dashboard_omits_phase2():
-    proc = _run("--skip-dashboard", "--top", "3")
+def test_briefing_skip_dashboard_omits_phase2(tmp_path: Path):
+    proc = _run_fixture_backed(tmp_path, "--skip-dashboard", "--top", "3")
     assert "Phase 1 — Pre-dispatch" in proc.stdout
     assert "Phase 2 — Post-dispatch" not in proc.stdout
     assert "Phase 3" in proc.stdout
 
 
-def test_briefing_skip_reconciler_omits_phase3():
-    proc = _run("--skip-reconciler", "--top", "3")
+def test_briefing_skip_reconciler_omits_phase3(tmp_path: Path):
+    proc = _run_fixture_backed(tmp_path, "--skip-reconciler", "--top", "3")
     assert "Phase 1 — Pre-dispatch" in proc.stdout
     assert "Phase 2" in proc.stdout
     assert "Phase 3 — Post-dispatch" not in proc.stdout
 
 
-def test_briefing_json_composite_has_all_three_keys():
-    proc = _run("--json", "--top", "3")
+def test_briefing_json_composite_has_all_three_keys(tmp_path: Path):
+    proc = _run_fixture_backed(tmp_path, "--json", "--top", "3")
     out = json.loads(proc.stdout)
     assert out["target_score"] == 0.19
     assert "codex_inbox_summary" in out
@@ -1452,8 +1513,8 @@ def test_l5_v2_briefing_suppresses_packetir_targets_on_active_claims(
     assert l5["next_exact_eval_targets"] == []
 
 
-def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
-    proc = _run("--json", "--skip-pareto", "--top", "3")
+def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit(tmp_path: Path):
+    proc = _run_fixture_backed(tmp_path, "--json", "--skip-pareto", "--top", "3")
     out = json.loads(proc.stdout)
 
     assert "pareto" not in out
@@ -3704,9 +3765,9 @@ def test_materializer_exact_ready_handoff_summary_keeps_distinct_stable_identiti
     }
 
 
-def test_briefing_json_each_phase_has_n_total_or_n_configs():
+def test_briefing_json_each_phase_has_n_total_or_n_configs(tmp_path: Path):
     """Each sub-tool must emit a JSON dict with at least one count field."""
-    proc = _run("--json", "--top", "3")
+    proc = _run_fixture_backed(tmp_path, "--json", "--top", "3")
     out = json.loads(proc.stdout)
     # Each tool emits its own count fields — ensure at least one is present
     assert any(k in out["pareto"] for k in ("n_configs", "n_pareto_frontier"))

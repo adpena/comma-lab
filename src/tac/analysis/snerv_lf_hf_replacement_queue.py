@@ -2651,6 +2651,8 @@ def _bounded_snerv_official_state_dict_path(
         return None
     evidence = current_state.get("source_forward_evidence")
     evidence = evidence if isinstance(evidence, Mapping) else {}
+    if evidence.get("source_forward_replay_authority") is not True:
+        return None
     if evidence.get("official_trained_checkpoint_state_dict_value_artifact_ready") is not True:
         return None
     path = _existing_file_text(

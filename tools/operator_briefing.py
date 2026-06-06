@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -36,6 +37,21 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 TOOLS = REPO_ROOT / "tools"
 REPO_VENV_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
+BRIEFING_SCAN_ROOTS_ENV = "PACT_OPERATOR_BRIEFING_SCAN_ROOTS"
+BRIEFING_DELEGATE_FIXTURE_ROOT_ENV = "PACT_OPERATOR_BRIEFING_DELEGATE_FIXTURE_ROOT"
+BRIEFING_FAST_SUMMARY_FIXTURES_ENV = "PACT_OPERATOR_BRIEFING_FAST_SUMMARY_FIXTURES"
+
+
+def _env_scan_roots(env_name: str, default: tuple[Path, ...]) -> tuple[Path, ...]:
+    raw = os.environ.get(env_name)
+    if raw is None:
+        return default
+    roots = tuple(Path(part) for part in raw.split(os.pathsep) if part)
+    return roots or default
+
+
+def _fast_summary_fixtures_enabled() -> bool:
+    return os.environ.get(BRIEFING_FAST_SUMMARY_FIXTURES_ENV) == "1"
 
 PARETO = TOOLS / "apogee_intN_pareto.py"
 DASHBOARD = TOOLS / "score_dashboard.py"
@@ -61,6 +77,7 @@ EXACT_READY_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+EXACT_READY_SCAN_ROOTS = _env_scan_roots(BRIEFING_SCAN_ROOTS_ENV, EXACT_READY_SCAN_ROOTS)
 EXACT_READY_QUEUE_SCAN_PATTERNS = (
     "exact_ready_queue.json",
     "*exact_ready_queue.json",
@@ -72,13 +89,22 @@ MATERIALIZER_HANDOFF_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+MATERIALIZER_HANDOFF_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, MATERIALIZER_HANDOFF_SCAN_ROOTS
+)
 BYTE_SHAVING_ACQUISITION_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+BYTE_SHAVING_ACQUISITION_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, BYTE_SHAVING_ACQUISITION_SCAN_ROOTS
+)
 FRONTIER_FEEDBACK_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
     REPO_ROOT / "experiments" / "results",
+)
+FRONTIER_FEEDBACK_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, FRONTIER_FEEDBACK_SCAN_ROOTS
 )
 NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
@@ -88,6 +114,9 @@ NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS = (
     Path("/Volumes/APDataStore/pact/experiments/results"),
     Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
 )
+NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS
+)
 NERV_MODELSIZE_BUDGET_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
     REPO_ROOT / "experiments" / "results",
@@ -96,26 +125,44 @@ NERV_MODELSIZE_BUDGET_SCAN_ROOTS = (
     Path("/Volumes/APDataStore/pact/experiments/results"),
     Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
 )
+NERV_MODELSIZE_BUDGET_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, NERV_MODELSIZE_BUDGET_SCAN_ROOTS
+)
 SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     Path("/Volumes/VertigoDataTier/pact/experiments/results"),
     Path("/Volumes/APDataStore/pact/experiments/results"),
 )
+SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS
+)
 PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
+)
+PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS
 )
 DISTORTION_AXIS_PROBE_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research" / "tier_1_distortion_axis_probes_20260521",
     REPO_ROOT / ".omx" / "research",
 )
+DISTORTION_AXIS_PROBE_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, DISTORTION_AXIS_PROBE_SCAN_ROOTS
+)
 DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
 )
+DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, DISTORTION_AXIS_LEARNED_SWEEP_SCAN_ROOTS
+)
 DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
+)
+DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, DQS1_DROP_MANY_GREEDY_VERDICT_SCAN_ROOTS
 )
 TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
@@ -124,6 +171,9 @@ TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"),
     Path("/Volumes/APDataStore/pact/experiments/results"),
     Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
+)
+TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS = _env_scan_roots(
+    BRIEFING_SCAN_ROOTS_ENV, TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
 )
 SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
@@ -952,6 +1002,20 @@ def _format_exact_eval_packets() -> str:
 
 @lru_cache(maxsize=1)
 def _exact_ready_queue_audit() -> dict[str, object]:
+    if _fast_summary_fixtures_enabled():
+        return {
+            "schema": "optimizer_exact_ready_queue_terminal_evidence_audit_v1",
+            "passed": True,
+            "queue_count": 0,
+            "queues": [],
+            "stale_ready_row_count": 0,
+            "suppressed_ready_row_count": 1,
+            "suppression_manifest_path": EXACT_READY_SUPPRESSION_MANIFEST.as_posix(),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     queues = discover_exact_ready_queues(
         repo_root=REPO_ROOT,
         scan_root=EXACT_READY_SCAN_ROOTS,
@@ -4135,7 +4199,20 @@ def _format_nerv_long_training_campaign_plan_summary() -> str:
     return "\n".join(lines)
 
 
+@lru_cache(maxsize=1)
 def _queue_fleet_summary() -> dict[str, object]:
+    if _fast_summary_fixtures_enabled():
+        return {
+            "schema": "experiment_queue_fleet_status.v1",
+            "queue_count": 0,
+            "actionable_count": 0,
+            "ready_to_supervise_count": 0,
+            "needs_recovery_count": 0,
+            "status_counts": {},
+            "rows": [],
+            "operator_briefing_live_observation": True,
+            **_false_authority_fields(),
+        }
     payload = queue_fleet_status(
         REPO_ROOT,
         (".omx/research", "experiments/results", "configs/experiment_queues"),
@@ -6846,6 +6923,12 @@ def _format_composition_lanes(
 
 
 def _run(script: Path, extra_args: list[str] | None = None) -> str:
+    fixture_root = os.environ.get(BRIEFING_DELEGATE_FIXTURE_ROOT_ENV)
+    if fixture_root:
+        fixture_suffix = "json" if "--json" in (extra_args or []) else "txt"
+        fixture = Path(fixture_root) / f"{script.stem}.{fixture_suffix}"
+        if fixture.is_file():
+            return fixture.read_text(encoding="utf-8")
     python = str(REPO_VENV_PYTHON) if REPO_VENV_PYTHON.is_file() else sys.executable
     args = [python, str(script)]
     if extra_args:
@@ -8779,6 +8862,22 @@ def _archive_bound_contract_hygiene_result():
 
 @lru_cache(maxsize=1)
 def _archive_bound_contract_hygiene_summary() -> dict[str, object]:
+    if _fast_summary_fixtures_enabled():
+        return {
+            "schema": "archive_bound_candidate_contract_audit.v1",
+            "status": "PASS",
+            "reason": "fast fixture: no invalid shared contract surfaces found",
+            "paths_scanned": 0,
+            "contract_surface_count": 0,
+            "valid_contract_surface_count": 0,
+            "blocking_finding_count": 0,
+            "migration_required_finding_count": 0,
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     result = _archive_bound_contract_hygiene_result()
     payload = result.as_dict()
     if payload["blocking_finding_count"]:

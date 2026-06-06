@@ -75,6 +75,9 @@ PYTORCH_WAVELETS_BLOCKER = "snerv_official_pytorch_wavelets_runtime_dependency_m
 STATE_VALUE_ARTIFACT_BLOCKER = (
     "snerv_official_trained_checkpoint_state_dict_value_artifact_missing"
 )
+TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER = (
+    "snerv_official_tub_trained_checkpoint_export_lineage_missing"
+)
 
 
 @dataclass(frozen=True)
@@ -211,7 +214,14 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         mapping_manifest.get("official_trained_checkpoint_state_dict_mapping_verified")
         is True
     )
-    full_source_parity = bool(replay_passed and train_one_step and mapping_verified)
+    checkpoint_export_lineage = _mapping_manifest_has_checkpoint_export_lineage(
+        mapping_manifest
+    )
+    full_source_parity = bool(
+        replay_passed
+        and mapping_verified
+        and checkpoint_export_lineage
+    )
     source_forward_authority = bool(
         full_source_parity and state_dict_value_artifact_ready
     )
@@ -234,6 +244,8 @@ def build_snerv_official_tub_source_forward_replay_artifact(
     )
     if full_source_parity and not state_dict_value_artifact_ready:
         preserved = _ordered_unique([*preserved, STATE_VALUE_ARTIFACT_BLOCKER])
+    if replay_passed and mapping_verified and not checkpoint_export_lineage:
+        preserved = _ordered_unique([*preserved, TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER])
     closed_blockers = list(TUB_CLOSED_BY_FIXTURE_REPLAY) if replay_passed else []
     if full_source_parity:
         closed_blockers.extend(
@@ -256,6 +268,7 @@ def build_snerv_official_tub_source_forward_replay_artifact(
             mapping_manifest.get("official_trained_checkpoint_loaded") is True
         ),
         "official_trained_checkpoint_state_dict_mapping_verified": mapping_verified,
+        "official_trained_checkpoint_export_lineage_verified": checkpoint_export_lineage,
         "official_trained_checkpoint_mapping_manifest": mapping_manifest,
         "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
         "official_trained_checkpoint_state_dict_path": (
@@ -811,6 +824,22 @@ def _build_official_tub_trained_checkpoint_mapping_manifest(
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
     }
+
+
+def _mapping_manifest_has_checkpoint_export_lineage(manifest: Mapping[str, Any]) -> bool:
+    kind = str(manifest.get("state_dict_kind") or "").strip()
+    source = str(manifest.get("state_dict_source") or "").strip()
+    if kind in {
+        "official_trained_checkpoint_state_dict",
+        "checkpoint_export_official_trained_checkpoint_state_dict",
+        "checkpoint_export_native_mlx_receiver_state_dict",
+    }:
+        return True
+    return bool(
+        kind.startswith("checkpoint_export_")
+        or source.startswith("export_snerv_checkpoint_archive")
+        or source.startswith("snerv_checkpoint_archive_export")
+    )
 
 
 def _untrained_tub_source_fixture_mapping_manifest(
@@ -1438,6 +1467,7 @@ __all__ = [
     "PYTORCH_WAVELETS_BLOCKER",
     "SCHEMA",
     "STATE_VALUE_ARTIFACT_BLOCKER",
+    "TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER",
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
     "TUB_PRESERVED_BLOCKERS",
     "build_snerv_official_tub_source_forward_replay_artifact",
