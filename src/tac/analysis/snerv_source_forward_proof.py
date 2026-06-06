@@ -55,6 +55,7 @@ SOURCE_FORWARD_TENSOR_NAMES: tuple[str, ...] = (
     "segnet_argmax",
     "posenet_output",
 )
+SOURCE_FORWARD_SCORER_FIELDS: tuple[str, ...] = ("d_seg", "d_pose")
 
 
 def build_snerv_source_forward_proof_action_effect(
@@ -119,6 +120,7 @@ def build_snerv_source_forward_proof_action_effect(
 
     score_status = _validate_scorer_deltas(scorer_deltas)
     blockers.extend(score_status["blockers"])
+    normalized_scorer_deltas = score_status["normalized_scorer_deltas"]
 
     if not _looks_like_sha256(archive_sha256):
         blockers.append("source_forward_archive_sha256_invalid")
@@ -154,7 +156,7 @@ def build_snerv_source_forward_proof_action_effect(
         "tensor_hashes": tensor_hashes,
         "tensor_deltas": tensor_deltas,
         "tolerance_by_tensor": {str(k): float(v) for k, v in tolerance_by_tensor.items()},
-        "scorer_deltas": dict(scorer_deltas),
+        "scorer_deltas": normalized_scorer_deltas,
         "destructive_payload_bit_flip": dict(destructive_payload_bit_flip),
         "rgb_uint8_and_scorer_compared": _scorer_surfaces_present(tensor_hashes),
         "parseback_receiver_surface_compared": _parseback_receiver_surfaces_present(
@@ -335,11 +337,87 @@ def find_snerv_source_forward_proof_rows(payload: Any) -> list[dict[str, Any]]:
 def _validate_scorer_deltas(row: Any) -> dict[str, Any]:
     blockers: list[str] = []
     if not isinstance(row, Mapping):
-        return {"passed": False, "blockers": ["snerv_source_forward_scorer_deltas_missing"]}
+        return {
+            "passed": False,
+            "blockers": ["snerv_source_forward_scorer_deltas_missing"],
+            "normalized_scorer_deltas": {},
+        }
     for field in ("d_seg", "d_pose", "delta_score_nonrate"):
         if not _finite_float(row.get(field)):
             blockers.append(f"snerv_source_forward_scorer_delta_invalid:{field}")
-    return {"passed": not blockers, "blockers": blockers}
+    by_surface = row.get("by_surface")
+    if not isinstance(by_surface, Mapping):
+        blockers.append("snerv_source_forward_scorer_by_surface_missing")
+        return {
+            "passed": False,
+            "blockers": _ordered_unique(blockers),
+            "normalized_scorer_deltas": dict(row),
+        }
+
+    normalized_by_surface: dict[str, dict[str, float]] = {}
+    for surface in SOURCE_FORWARD_SURFACES:
+        metrics = by_surface.get(surface)
+        if not isinstance(metrics, Mapping):
+            blockers.append(f"snerv_source_forward_scorer_surface_missing:{surface}")
+            continue
+        normalized_by_surface[surface] = {}
+        for field in SOURCE_FORWARD_SCORER_FIELDS:
+            value = metrics.get(field)
+            if not _nonnegative_finite_float(value):
+                blockers.append(
+                    f"snerv_source_forward_scorer_surface_metric_invalid:{surface}:{field}"
+                )
+                continue
+            normalized_by_surface[surface][field] = float(value)
+
+    surface_deltas: dict[str, dict[str, float | None]] = {}
+    reference = normalized_by_surface.get(SOURCE_FORWARD_REFERENCE_SURFACE)
+    tolerance_by_field = row.get("tolerance_by_field")
+    tolerance_by_field = tolerance_by_field if isinstance(tolerance_by_field, Mapping) else {}
+    if reference is None:
+        blockers.append("snerv_source_forward_scorer_reference_surface_missing")
+    else:
+        for field in SOURCE_FORWARD_SCORER_FIELDS:
+            surface_deltas.setdefault(SOURCE_FORWARD_REFERENCE_SURFACE, {})[field] = 0.0
+        for surface in SOURCE_FORWARD_COMPARISON_SURFACES:
+            surface_metrics = normalized_by_surface.get(surface)
+            surface_deltas[surface] = {}
+            for field in SOURCE_FORWARD_SCORER_FIELDS:
+                if surface_metrics is None or field not in surface_metrics or field not in reference:
+                    surface_deltas[surface][field] = None
+                    blockers.append(
+                        f"snerv_source_forward_scorer_surface_delta_missing:{surface}:{field}"
+                    )
+                    continue
+                delta = abs(float(surface_metrics[field]) - float(reference[field]))
+                surface_deltas[surface][field] = delta
+                tolerance = _float_or_default(tolerance_by_field.get(field), 0.0)
+                if delta > tolerance:
+                    blockers.append(
+                        f"snerv_source_forward_scorer_surface_delta_exceeds_tolerance:{surface}:{field}"
+                    )
+
+    normalized = {
+        "d_seg": float(row.get("d_seg")) if _finite_float(row.get("d_seg")) else row.get("d_seg"),
+        "d_pose": float(row.get("d_pose")) if _finite_float(row.get("d_pose")) else row.get("d_pose"),
+        "delta_score_nonrate": (
+            float(row.get("delta_score_nonrate"))
+            if _finite_float(row.get("delta_score_nonrate"))
+            else row.get("delta_score_nonrate")
+        ),
+        "by_surface": normalized_by_surface,
+        "surface_deltas": surface_deltas,
+        "tolerance_by_field": {
+            str(key): float(value)
+            for key, value in tolerance_by_field.items()
+            if _nonnegative_finite_float(value)
+        },
+    }
+    return {
+        "passed": not _ordered_unique(blockers),
+        "blockers": _ordered_unique(blockers),
+        "normalized_scorer_deltas": normalized,
+    }
 
 
 def _scorer_surfaces_present(tensor_hashes: Mapping[str, Mapping[str, str]]) -> bool:
@@ -450,6 +528,7 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
 __all__ = [
     "SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA",
     "SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA",
+    "SOURCE_FORWARD_SCORER_FIELDS",
     "SOURCE_FORWARD_SURFACES",
     "SOURCE_FORWARD_TENSOR_NAMES",
     "build_snerv_payload_bitflip_falsification",

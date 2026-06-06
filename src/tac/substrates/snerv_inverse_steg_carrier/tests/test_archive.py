@@ -1990,6 +1990,15 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
             "d_seg": 0.0,
             "d_pose": 0.0,
             "delta_score_nonrate": 0.0,
+            "by_surface": {
+                surface: {"d_seg": 0.0, "d_pose": 0.0}
+                for surface in (
+                    "official_torch",
+                    "pact_mlx",
+                    "archive_parseback",
+                    "numpy_receiver",
+                )
+            },
         },
         destructive_payload_bit_flip=bitflip,
     )

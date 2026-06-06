@@ -71,6 +71,8 @@ def _snerv_source_forward_action_row(
     *,
     bitflip_passes_proof: bool = False,
     tensor_delta: float = 0.0,
+    include_scorer_by_surface: bool = True,
+    parseback_d_pose: float = 0.0,
 ) -> dict:
     bitflip = build_snerv_payload_bitflip_falsification(
         bitflip_section="decoder_payload.output_2",
@@ -82,6 +84,22 @@ def _snerv_source_forward_action_row(
         bit_offset=17,
         bit_mask=1,
     )
+    scorer_deltas = {
+        "d_seg": 0.0,
+        "d_pose": 0.0,
+        "delta_score_nonrate": 0.0,
+    }
+    if include_scorer_by_surface:
+        scorer_deltas["by_surface"] = {
+            surface: {"d_seg": 0.0, "d_pose": 0.0}
+            for surface in (
+                "official_torch",
+                "pact_mlx",
+                "archive_parseback",
+                "numpy_receiver",
+            )
+        }
+        scorer_deltas["by_surface"]["archive_parseback"]["d_pose"] = parseback_d_pose
     return build_snerv_source_forward_proof_action_effect(
         action_id=ACTION,
         archive_sha256="1" * 64,
@@ -93,11 +111,7 @@ def _snerv_source_forward_action_row(
         },
         pair_ids=[0],
         tensors_by_surface=_snerv_tensor_surfaces(delta=tensor_delta),
-        scorer_deltas={
-            "d_seg": 0.0,
-            "d_pose": 0.0,
-            "delta_score_nonrate": 0.0,
-        },
+        scorer_deltas=scorer_deltas,
         destructive_payload_bit_flip=bitflip,
     )
 
@@ -678,6 +692,54 @@ def test_snerv_source_forward_tensor_delta_blocks_launch(tmp_path: Path) -> None
     )
     assert any(
         item.endswith("source_forward_tensor_delta_exceeds_tolerance:numpy_receiver:output_2")
+        for item in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_snerv_source_forward_requires_per_surface_scorer_metrics(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    _write(
+        root / "proof.json",
+        _snerv_source_forward_action_row(include_scorer_by_surface=False),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert any(
+        item.endswith("snerv_source_forward_scorer_by_surface_missing")
+        for item in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_snerv_source_forward_scorer_surface_delta_blocks_launch(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    _write(
+        root / "proof.json",
+        _snerv_source_forward_action_row(parseback_d_pose=0.25),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert any(
+        item.endswith(
+            "snerv_source_forward_scorer_surface_delta_exceeds_tolerance:archive_parseback:d_pose"
+        )
         for item in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
