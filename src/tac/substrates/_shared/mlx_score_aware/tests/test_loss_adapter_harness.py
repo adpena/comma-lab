@@ -3676,9 +3676,19 @@ def test_adapter_receiver_surface_delta_metrics_counts_exact_receiver_motion() -
     )
     assert metrics["receiver_surface_segnet_input_delta_linf"] == pytest.approx(0.5)
     assert metrics["receiver_surface_argmax_flipped_pixels"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_argmax_changed_count_region"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_target_hard_won_count"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_target_hard_lost_count"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_net_target_support_delta"] == pytest.approx(-1.0)
+    assert metrics["receiver_surface_wrong_to_target_count"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_target_to_wrong_count"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_wrong_to_wrong_count"] == pytest.approx(0.0)
     assert metrics[
         "receiver_surface_fakequant_argmax_flipped_pixels"
     ] == pytest.approx(0.0)
+    assert metrics["receiver_surface_fakequant_argmax_changed_count_region"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_fakequant_target_hard_won_count"] == pytest.approx(0.0)
+    assert metrics["receiver_surface_fakequant_net_target_support_delta"] == pytest.approx(0.0)
     assert metrics["receiver_surface_worst_region_margin_p50_pre"] == pytest.approx(
         -2.0
     )
@@ -3692,6 +3702,7 @@ def test_adapter_receiver_surface_delta_metrics_counts_exact_receiver_motion() -
         "receiver_surface_worst_region_margin_p50_delta_evidence_missing"
     ] == pytest.approx(0.0)
     assert metrics["receiver_surface_posenet_input_delta_linf"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_pose_output_delta"] == pytest.approx(5.0)
     assert metrics["receiver_surface_posenet_output_delta_linf"] == pytest.approx(4.0)
     assert metrics["receiver_surface_posenet_output_delta_l2_mean"] == pytest.approx(
         5.0

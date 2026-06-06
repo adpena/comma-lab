@@ -2411,6 +2411,45 @@ class MlxScoreAwareAdapter:
             "receiver_surface_fakequant_argmax_flipped_pixels",
         )
 
+        def _target_support_transition_metrics(
+            *,
+            argmax_name: str,
+            prefix: str,
+        ) -> None:
+            argmax_pair = _pair(argmax_name)
+            target = pre.get("segnet_target_argmax")
+            if argmax_pair is None or target is None:
+                return
+            pre_argmax, post_argmax = argmax_pair
+            pre_hits = pre_argmax == target
+            post_hits = post_argmax == target
+            changed = pre_argmax != post_argmax
+            won = mx.sum((~pre_hits & post_hits).astype(mx.float32))
+            lost = mx.sum((pre_hits & ~post_hits).astype(mx.float32))
+            wrong_to_wrong = mx.sum((~pre_hits & ~post_hits & changed).astype(mx.float32))
+            changed_count = mx.sum(changed.astype(mx.float32))
+            net = won - lost
+            metric_values = {
+                f"{prefix}target_hard_won_count": won,
+                f"{prefix}target_hard_lost_count": lost,
+                f"{prefix}net_target_support_delta": net,
+                f"{prefix}wrong_to_target_count": won,
+                f"{prefix}target_to_wrong_count": lost,
+                f"{prefix}wrong_to_wrong_count": wrong_to_wrong,
+                f"{prefix}argmax_changed_count_region": changed_count,
+            }
+            out.update(metric_values)
+            eval_targets.extend(metric_values.values())
+
+        _target_support_transition_metrics(
+            argmax_name="segnet_argmax",
+            prefix="receiver_surface_",
+        )
+        _target_support_transition_metrics(
+            argmax_name="fakequant_segnet_argmax",
+            prefix="receiver_surface_fakequant_",
+        )
+
         pre_margin_p50 = self._receiver_surface_worst_connected_region_margin_p50(
             logits=pre.get("segnet_logits"),
             target_argmax=pre.get("segnet_target_argmax"),
@@ -2446,6 +2485,7 @@ class MlxScoreAwareAdapter:
             pose_diff = pose_pair[1] - pose_pair[0]
             pose_linf = mx.max(mx.abs(pose_diff))
             pose_l2_mean = mx.mean(mx.sqrt(mx.sum(pose_diff * pose_diff, axis=-1)))
+            out["receiver_surface_pose_output_delta"] = pose_l2_mean
             out["receiver_surface_posenet_output_delta_linf"] = pose_linf
             out["receiver_surface_posenet_output_delta_l2_mean"] = pose_l2_mean
             eval_targets.extend([pose_linf, pose_l2_mean])
