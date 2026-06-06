@@ -759,6 +759,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         self.skip_high = mx.array(skip_high_np, dtype=mx.float32)  # type: ignore[union-attr]
         self._hfr_head_names = ("lh", "hl", "hh")
         self._import_hfr_heads(hfr_heads)
+        self.receiver_channel_count = int(hfr_heads.lh_head.conv2.out_channels)
         self._tub_current_np = _official_tub_frame_or_default(
             tub_current,
             skip_high_np,
@@ -796,7 +797,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         )
         self.tub_output2_receiver_frame_shape = (
             int(self.skip_high_full_shape[0]),
-            int(self.skip_high_full_shape[1]),
+            int(self.receiver_channel_count),
             int(self.output_hw[0]),
             int(self.output_hw[1]),
         )
@@ -835,40 +836,11 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         """Return ``(rgb_0, rgb_1)`` NCHW in ``[0, 1]`` for the shared harness."""
 
         _require_mlx()
-        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
-        if idx.ndim == 0:
-            idx = idx.reshape((1,))
-        frame_offsets = mx.arange(2, dtype=mx.int32).reshape((1, 2))  # type: ignore[union-attr]
-        frame_indices = (idx.reshape((-1, 1)) * 2 + frame_offsets).reshape((-1,))
-        low = mx.take(self.low, frame_indices, axis=0)  # type: ignore[union-attr]
-        skip_mid = mx.take(self.skip_mid, frame_indices, axis=0)  # type: ignore[union-attr]
-        if self.skip_high_mode != "full":
-            skip_high = mx.broadcast_to(  # type: ignore[union-attr]
-                self.skip_high,
-                (
-                    int(frame_indices.shape[0]),
-                    int(self.skip_high_full_shape[1]),
-                    int(self.skip_high_full_shape[2]),
-                    int(self.skip_high_full_shape[3]),
-                ),
-            )
-        else:
-            skip_high = mx.take(self.skip_high, frame_indices, axis=0)  # type: ignore[union-attr]
-        mfu_out = self.mfu.forward_mlx(
-            low,
-            skip_mid,
-            skip_high,
-            accumulation_mode="optimized",
-        )
-        lh = self._hfr_head_forward("lh", mfu_out.pyr_out)
-        hl = self._hfr_head_forward("hl", mfu_out.pyr_out)
-        hh = self._hfr_head_forward("hh", mfu_out.pyr_out)
-        recon = _haar_idwt2_level_mlx_nchw(mfu_out.pyr_out, lh, hl, hh)
-        if self.tub_output2_receiver_frame_bound:
-            recon = self._apply_tub_output2_residual(recon, frame_indices)
-        b = int(idx.shape[0])
+        trace = self._forward_trace(pair_indices)
+        recon = trace["recon"]
+        b = int(trace["pair_count"])
         h, w = self.output_hw
-        pair = recon.reshape((b, 2, 3, h, w))
+        pair = recon.reshape((b, 2, int(self.receiver_channel_count), h, w))
         pair01 = mx.clip(pair / 255.0, 0.0, 1.0)  # type: ignore[union-attr]
         return pair01[:, 0], pair01[:, 1]
 
@@ -900,6 +872,133 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             np.float32,
             copy=False,
         )
+
+    def source_forward_primitive_tensor_bundle(
+        self,
+        *,
+        pair_ids: Sequence[int] | None = None,
+        clip_to_uint8_range: bool = True,
+        portable_tub_tensors: dict[str, np.ndarray] | None = None,
+    ) -> dict[str, Any]:
+        """Expose MLX primitive tensors for SNeRV SourceForwardProof producers.
+
+        The MFU/HFR/output2/RGB tensors are produced by the MLX renderer.  The
+        current TUB normalized-LF prep can be supplied from the deterministic
+        portable receiver path until the official TUB prep itself is ported to
+        MLX; that mixed status is reported explicitly so validators can keep
+        source-forward authority fail-closed.
+        """
+
+        _require_mlx()
+        selected_pair_ids = (
+            list(range(int(self.num_pairs)))
+            if pair_ids is None
+            else [int(value) for value in pair_ids]
+        )
+        if not selected_pair_ids:
+            raise SnervMlxRendererError("source-forward MLX tensor capture needs pair ids")
+        if min(selected_pair_ids) < 0 or max(selected_pair_ids) >= int(self.num_pairs):
+            raise SnervMlxRendererError(
+                f"source-forward MLX pair ids {selected_pair_ids!r} outside "
+                f"available range [0,{int(self.num_pairs)})"
+            )
+        trace = self._forward_trace(selected_pair_ids)
+        h, w = self.output_hw
+        pair = trace["recon"].reshape(
+            (len(selected_pair_ids), 2, int(self.receiver_channel_count), h, w)
+        )
+        pair255 = mx.clip(pair, 0.0, 255.0) if clip_to_uint8_range else pair  # type: ignore[union-attr]
+        mfu_out = trace["mfu_out"]
+        hfr_out = mx.stack([trace["lh"], trace["hl"], trace["hh"]], axis=2)  # type: ignore[union-attr]
+        eval_tensors = [
+            trace["low"],
+            trace["skip_mid"],
+            trace["skip_high"],
+            mfu_out.up1,
+            mfu_out.cat_mid,
+            mfu_out.unet1,
+            mfu_out.unet1_up,
+            mfu_out.cat_high,
+            mfu_out.pyr_out,
+            hfr_out,
+            pair255,
+        ]
+        output2_fused = trace.get("output2_fused")
+        if output2_fused is not None:
+            eval_tensors.append(output2_fused)
+        mx.eval(*eval_tensors)  # type: ignore[union-attr]
+        tensors: dict[str, np.ndarray] = {
+            "mfu_in": _source_forward_trace_pack_tensor_group_local(
+                ("low", _as_numpy_float32(trace["low"])),
+                ("skip_mid", _as_numpy_float32(trace["skip_mid"])),
+                ("skip_high", _as_numpy_float32(trace["skip_high"])),
+            ),
+            "mfu_out": _source_forward_trace_pack_tensor_group_local(
+                ("up1", _as_numpy_float32(mfu_out.up1)),
+                ("cat_mid", _as_numpy_float32(mfu_out.cat_mid)),
+                ("unet1", _as_numpy_float32(mfu_out.unet1)),
+                ("unet1_up", _as_numpy_float32(mfu_out.unet1_up)),
+                ("cat_high", _as_numpy_float32(mfu_out.cat_high)),
+                ("pyr_out", _as_numpy_float32(mfu_out.pyr_out)),
+            ),
+            "hfr_in": _as_numpy_float32(mfu_out.pyr_out),
+            "hfr_out": _as_numpy_float32(hfr_out),
+            "rgb_pair_float": _as_numpy_float32(pair255),
+            "rgb_pair_uint8": np.clip(
+                np.rint(np.asarray(pair255, dtype=np.float32)),
+                0,
+                255,
+            ).astype(np.uint8),
+        }
+        if output2_fused is not None:
+            tensors["output_2"] = _as_numpy_float32(output2_fused)
+        supplied_portable = dict(portable_tub_tensors or {})
+        for name in ("tub_in", "tub_out"):
+            if name in supplied_portable:
+                tensors[name] = np.asarray(supplied_portable[name], dtype=np.float32)
+        missing = [
+            name
+            for name in (
+                "coord_time_embedding",
+                "mfu_in",
+                "mfu_out",
+                "hfr_in",
+                "hfr_out",
+                "tub_in",
+                "tub_out",
+                "output_2",
+                "rgb_pair_float",
+                "rgb_pair_uint8",
+                "segnet_input",
+                "posenet_input",
+                "segnet_logits",
+                "segnet_argmax",
+                "posenet_output",
+            )
+            if name not in tensors
+        ]
+        return {
+            "schema": "snerv_mlx_official_mfu_hfr_tub_primitive_tensor_bundle.v1",
+            "renderer_schema": self.schema,
+            "surface": "pact_mlx",
+            "pair_ids": selected_pair_ids,
+            "tensor_names": sorted(tensors),
+            "tensors": tensors,
+            "mfu_hfr_output2_rgb_backend": "mlx",
+            "tub_prep_backend": (
+                "portable_receiver_numpy_supplied"
+                if {"tub_in", "tub_out"}.issubset(tensors)
+                else "missing"
+            ),
+            "mixed_backend_capture": bool({"tub_in", "tub_out"}.issubset(tensors)),
+            "missing_action_effect_tensor_names": missing,
+            "complete_for_source_forward_action_effect": not missing,
+            "source_forward_replay_authority": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
 
     def export_state_dict(self) -> dict[str, np.ndarray]:
         _require_mlx()
@@ -1039,6 +1138,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             "model_size": self.model_size.as_jsonable(),
             "official_skip_high_mode": self.skip_high_mode,
             "skip_high_full_shape": [int(v) for v in self.skip_high_full_shape],
+            "receiver_channel_count": int(self.receiver_channel_count),
             "trainable_parameter_count": int(self.num_parameters()),
             "trainable_payload_atoms": [
                 "inputs.mfu.low",
@@ -1116,6 +1216,86 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             )
         return mx.clip(recon + residual, 0.0, 255.0)  # type: ignore[union-attr]
 
+    def _forward_trace(self, pair_indices: Any) -> dict[str, Any]:
+        _require_mlx()
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim == 0:
+            idx = idx.reshape((1,))
+        frame_offsets = mx.arange(2, dtype=mx.int32).reshape((1, 2))  # type: ignore[union-attr]
+        frame_indices = (idx.reshape((-1, 1)) * 2 + frame_offsets).reshape((-1,))
+        low = mx.take(self.low, frame_indices, axis=0)  # type: ignore[union-attr]
+        skip_mid = mx.take(self.skip_mid, frame_indices, axis=0)  # type: ignore[union-attr]
+        if self.skip_high_mode != "full":
+            skip_high = mx.broadcast_to(  # type: ignore[union-attr]
+                self.skip_high,
+                (
+                    int(frame_indices.shape[0]),
+                    int(self.skip_high_full_shape[1]),
+                    int(self.skip_high_full_shape[2]),
+                    int(self.skip_high_full_shape[3]),
+                ),
+            )
+        else:
+            skip_high = mx.take(self.skip_high, frame_indices, axis=0)  # type: ignore[union-attr]
+        mfu_out = self.mfu.forward_mlx(
+            low,
+            skip_mid,
+            skip_high,
+            accumulation_mode="optimized",
+        )
+        lh = self._hfr_head_forward("lh", mfu_out.pyr_out)
+        hl = self._hfr_head_forward("hl", mfu_out.pyr_out)
+        hh = self._hfr_head_forward("hh", mfu_out.pyr_out)
+        recon = _haar_idwt2_level_mlx_nchw(mfu_out.pyr_out, lh, hl, hh)
+        output2_fused = None
+        if self.tub_output2_receiver_frame_bound:
+            recon, output2_fused = self._apply_tub_output2_residual_with_trace(
+                recon,
+                frame_indices,
+            )
+        return {
+            "idx": idx,
+            "pair_count": int(idx.shape[0]),
+            "frame_indices": frame_indices,
+            "low": low,
+            "skip_mid": skip_mid,
+            "skip_high": skip_high,
+            "mfu_out": mfu_out,
+            "lh": lh,
+            "hl": hl,
+            "hh": hh,
+            "output2_fused": output2_fused,
+            "recon": recon,
+        }
+
+    def _apply_tub_output2_residual_with_trace(
+        self,
+        recon: Any,
+        frame_indices: Any,
+    ) -> tuple[Any, Any]:
+        if (
+            self.tub_temporal_encoder_concat is None
+            or self.tub_output2_raw is None
+            or self.tub_output2_fc_hw is None
+        ):
+            raise SnervMlxRendererError(
+                "official TUB output2 residual requested without a complete "
+                "temporal/raw/fc_hw payload"
+            )
+        _decoder_input, output2_fused = official_output2_fusion_mlx(
+            self.tub_temporal_encoder_concat,
+            self.tub_output2_raw,
+            fc_hw=self.tub_output2_fc_hw,
+        )
+        residual = mx.take(output2_fused, frame_indices, axis=0)  # type: ignore[union-attr]
+        if tuple(int(v) for v in residual.shape) != tuple(int(v) for v in recon.shape):
+            raise SnervMlxRendererError(
+                "official TUB output2 residual shape must match selected "
+                f"receiver frames; got {tuple(int(v) for v in residual.shape)}, "
+                f"expected {tuple(int(v) for v in recon.shape)}"
+            )
+        return mx.clip(recon + residual, 0.0, 255.0), output2_fused  # type: ignore[union-attr]
+
     def num_parameters(self) -> int:
         _require_mlx()
         total = 0
@@ -1155,6 +1335,28 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
                 padding=1,
             ),
         )
+
+
+def _as_numpy_float32(value: Any) -> np.ndarray:
+    return np.asarray(value, dtype=np.float32).copy()
+
+
+def _source_forward_trace_pack_tensor_group_local(
+    *items: tuple[str, np.ndarray],
+) -> np.ndarray:
+    arrays: list[np.ndarray] = []
+    for name, value in items:
+        arr = np.asarray(value, dtype=np.float32)
+        header = np.asarray(
+            [len(name), arr.ndim, *arr.shape],
+            dtype=np.float32,
+        )
+        arrays.append(header.reshape(-1))
+        arrays.append(np.frombuffer(name.encode("utf-8"), dtype=np.uint8).astype(np.float32))
+        arrays.append(arr.reshape(-1))
+    if not arrays:
+        return np.zeros((0,), dtype=np.float32)
+    return np.concatenate(arrays).astype(np.float32, copy=False)
 
 
 def _official_tub_frame_or_default(
@@ -1247,11 +1449,35 @@ def _trainable_conv2d_nchw_mlx(x: Any, weight_oihw: Any, bias: Any, *, padding: 
 
 
 def _haar_idwt2_level_mlx_nchw(ll: Any, lh: Any, hl: Any, hh: Any) -> Any:
+    detail_channels = int(lh.shape[1])
+    ll_channels = int(ll.shape[1])
+    if int(hl.shape[1]) != detail_channels or int(hh.shape[1]) != detail_channels:
+        raise SnervMlxRendererError("official HFR detail channel counts must match")
+    if ll_channels not in (1, detail_channels):
+        raise SnervMlxRendererError(
+            "official MFU pyr_out channels must be 1 or match HFR detail "
+            f"channels ({ll_channels} vs {detail_channels})"
+        )
+    if ll_channels == 1 and detail_channels != 1:
+        ll = mx.broadcast_to(  # type: ignore[union-attr]
+            ll,
+            (
+                int(ll.shape[0]),
+                detail_channels,
+                int(ll.shape[2]),
+                int(ll.shape[3]),
+            ),
+        )
     a = (ll + lh + hl + hh) * 0.5
     b = (ll + lh - hl - hh) * 0.5
     c = (ll - lh + hl - hh) * 0.5
     d = (ll - lh - hl + hh) * 0.5
-    n, c_count, h, w = (int(ll.shape[0]), int(ll.shape[1]), int(ll.shape[2]), int(ll.shape[3]))
+    n, c_count, h, w = (
+        int(ll.shape[0]),
+        int(ll.shape[1]),
+        int(ll.shape[2]),
+        int(ll.shape[3]),
+    )
     row0 = mx.stack([a, b], axis=-1).reshape((n, c_count, h, w * 2))  # type: ignore[union-attr]
     row1 = mx.stack([c, d], axis=-1).reshape((n, c_count, h, w * 2))  # type: ignore[union-attr]
     return mx.stack([row0, row1], axis=-2).reshape((n, c_count, h * 2, w * 2))  # type: ignore[union-attr]
