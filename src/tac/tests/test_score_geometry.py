@@ -13,6 +13,7 @@ from tac.score_geometry import (
     PlannerAxisMarginals,
     PoseByteTradeoff,
     RateOnlyDeltaAudit,
+    ReceiverEquivalenceFloorAudit,
     audit_rate_only_delta_claim,
     contest_score,
     equal_score_curve_archive_bytes,
@@ -26,6 +27,7 @@ from tac.score_geometry import (
     pose_score_saving_from_delta,
     predict_cpu_axis_marginals,
     project_onto_pareto_envelope,
+    receiver_equivalence_floor_audit,
     recommend_dispatch_axis_dual,
     required_byte_savings_for_score_delta,
     score_decomposition,
@@ -62,6 +64,74 @@ def test_pure_rate_floor_is_dominant_at_active_anchor_bytes() -> None:
     expected_rate = 25.0 * 185_578 / CONTEST_REFERENCE_BYTES
     assert math.isclose(score, expected_rate, rel_tol=1e-12)
     assert math.isclose(score, information_floor(185_578), rel_tol=1e-12)
+
+
+def test_pr95_receiver_equivalence_floor_audit_prices_distortion_debt() -> None:
+    """PR95-sized bytes still pay about 0.08 score in receiver distortion."""
+    audit = receiver_equivalence_floor_audit(
+        d_seg=0.00061212,
+        d_pose=0.00003494,
+        archive_bytes=178_417,
+    )
+
+    assert isinstance(audit, ReceiverEquivalenceFloorAudit)
+    assert audit.current_score == pytest.approx(
+        contest_score(0.00061212, 0.00003494, 178_417),
+        rel=1e-12,
+    )
+    assert audit.zero_distortion_floor_score == pytest.approx(
+        information_floor(178_417),
+        rel=1e-12,
+    )
+    assert audit.zero_distortion_floor_score == pytest.approx(0.11880055683919845)
+    assert audit.seg_debt_score == pytest.approx(0.061212)
+    assert audit.pose_debt_score == pytest.approx(math.sqrt(10.0 * 0.00003494))
+    assert audit.distortion_debt_score == pytest.approx(0.07990424438102604)
+    assert audit.distortion_debt_fraction_of_score == pytest.approx(
+        audit.distortion_debt_score / audit.current_score,
+    )
+    assert audit.largest_distortion_debt_axis == "seg"
+    assert audit.steepest_distortion_marginal_axis == "pose"
+    assert audit.pose_marginal == pytest.approx(267.4906179311112)
+    assert audit.distortion_first_recommended is True
+    assert audit.next_stage == "receiver_equivalence_distortion_attack_at_fixed_bytes"
+    assert audit.receiver_equivalence_witness_proven is False
+    assert "receiver_equivalence_witness_not_proven" in audit.blockers
+    assert "positive_distortion_debt_above_same_byte_floor" in audit.blockers
+    assert audit.score_claim is False
+    assert audit.promotion_eligible is False
+    assert audit.ready_for_exact_eval_dispatch is False
+
+
+def test_receiver_equivalence_floor_audit_routes_zero_distortion_to_byte_compiler() -> None:
+    audit = receiver_equivalence_floor_audit(
+        d_seg=0.0,
+        d_pose=0.0,
+        archive_bytes=178_417,
+    )
+
+    assert audit.current_score == pytest.approx(audit.zero_distortion_floor_score)
+    assert audit.distortion_debt_score == 0.0
+    assert audit.seg_debt_score == 0.0
+    assert audit.pose_debt_score == 0.0
+    assert audit.largest_distortion_debt_axis == "none"
+    assert audit.steepest_distortion_marginal_axis == "pose"
+    assert audit.distortion_first_recommended is False
+    assert audit.next_stage == "byte_compiler_after_zero_distortion"
+    assert audit.receiver_equivalence_witness_proven is False
+    assert audit.blockers == ("receiver_equivalence_witness_not_proven",)
+
+
+def test_receiver_equivalence_floor_audit_can_record_external_witness_proof() -> None:
+    audit = receiver_equivalence_floor_audit(
+        d_seg=0.0,
+        d_pose=0.0,
+        archive_bytes=178_417,
+        receiver_equivalence_witness_proven=True,
+    )
+
+    assert audit.receiver_equivalence_witness_proven is True
+    assert audit.blockers == ()
 
 
 def test_decomposition_sums_to_total() -> None:
@@ -339,6 +409,12 @@ def test_negative_inputs_raise() -> None:
         contest_score(0, -1, 0)
     with pytest.raises(ValueError):
         contest_score(0, 0, -1)
+    with pytest.raises(ValueError):
+        receiver_equivalence_floor_audit(d_seg=-1, d_pose=0, archive_bytes=0)
+    with pytest.raises(ValueError):
+        receiver_equivalence_floor_audit(d_seg=0, d_pose=-1, archive_bytes=0)
+    with pytest.raises(ValueError):
+        receiver_equivalence_floor_audit(d_seg=0, d_pose=0, archive_bytes=-1)
     with pytest.raises(ValueError):
         score_gradient(0.0, -1)
     with pytest.raises(ValueError):

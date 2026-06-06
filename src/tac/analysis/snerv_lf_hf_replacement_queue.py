@@ -460,6 +460,56 @@ def _source_forward_replay_proof(
     return None
 
 
+def _first_source_forward_mapping(
+    keys: Sequence[str],
+    *sources: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        for key in keys:
+            value = source.get(key)
+            if isinstance(value, Mapping):
+                return dict(value)
+        for nested_key in (
+            "pr95_distortion_axis_trace",
+            "pair_local_distortion_servo",
+            "nerv_pair_local_distortion_servo",
+        ):
+            nested = source.get(nested_key)
+            if not isinstance(nested, Mapping):
+                continue
+            for key in keys:
+                value = nested.get(key)
+                if isinstance(value, Mapping):
+                    return dict(value)
+    return None
+
+
+def _source_forward_axis_trace_measurements(
+    *sources: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        for key in (
+            "pr95_distortion_axis_trace_measurements",
+            "distortion_axis_trace_measurements",
+            "axis_trace_measurements",
+            "axis_trace_rows",
+        ):
+            value = source.get(key)
+            if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+                rows.extend(dict(item) for item in value if isinstance(item, Mapping))
+        nested = source.get("pr95_distortion_axis_trace")
+        if isinstance(nested, Mapping):
+            value = nested.get("measurements") or nested.get("rows")
+            if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+                rows.extend(dict(item) for item in value if isinstance(item, Mapping))
+    return rows
+
+
 def _source_forward_replay_proof_status(
     proof: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
@@ -2501,6 +2551,25 @@ def _source_forward_state(
     export_binding = export_binding if isinstance(export_binding, Mapping) else {}
     trained_mapping = selected.get("official_trained_checkpoint_mapping_manifest")
     trained_mapping = trained_mapping if isinstance(trained_mapping, Mapping) else {}
+    servo_receipt = _first_source_forward_mapping(
+        (
+            "pair_local_distortion_servo_receipt",
+            "nerv_pair_local_distortion_servo_receipt",
+            "servo_receipt",
+        ),
+        selected,
+        replay,
+        export_binding,
+        trained_mapping,
+        source_forward_proof,
+    )
+    axis_trace_measurements = _source_forward_axis_trace_measurements(
+        selected,
+        replay,
+        export_binding,
+        trained_mapping,
+        source_forward_proof,
+    )
     trained_checkpoint_loaded = (
         selected.get("official_trained_checkpoint_loaded") is True
         or trained_mapping.get("official_trained_checkpoint_loaded") is True
@@ -2837,6 +2906,8 @@ def _source_forward_state(
         "source_forward_replay_numerical_proof_complete": (
             numerical_source_forward_proof_complete
         ),
+        "pair_local_distortion_servo_receipt": servo_receipt,
+        "pr95_distortion_axis_trace_measurements": axis_trace_measurements,
         "decoded_frames_shape": replay.get("decoded_frames_shape"),
         "decoded_frames_sha256": replay.get("decoded_frames_sha256"),
         "payload_bytes": payload_bytes,

@@ -24,6 +24,7 @@ for inverse curves and Pareto slack calculations used by planning tools:
   * ``importance_flip_threshold()`` — where SegNet vs PoseNet marginals cross
   * ``marginal_value_per_byte(...)`` — bytes-of-information cost per axis
   * ``information_floor(...)`` — Shannon-style lower bound at d_seg=d_pose=0
+  * ``receiver_equivalence_floor_audit(...)`` — distortion debt above that floor
   * ``operating_regime(d_pose)`` — classifies a candidate against the flip
   * ``project_onto_pareto_envelope(...)`` — closed-form 3-axis Pareto
 
@@ -65,6 +66,48 @@ class ScoreDecomposition:
         if s == 0.0:
             return (0.0, 0.0, 0.0)
         return (self.seg_term / s, self.pose_term / s, self.rate_term / s)
+
+
+@dataclass(frozen=True)
+class ReceiverEquivalenceFloorAudit:
+    """MDL-style audit against the same-byte zero-distortion receiver floor.
+
+    This is the contest-native version of the "shortest scorer-equivalent
+    witness" question: at a fixed archive byte count, the best possible score
+    is the rate-only floor where SegNet and PoseNet distortion are both zero.
+    Any gap above that floor is distortion debt, not a byte-compiler win.
+    """
+
+    archive_bytes: int
+    d_seg: float
+    d_pose: float
+    current_score: float
+    zero_distortion_floor_score: float
+    distortion_debt_score: float
+    seg_debt_score: float
+    pose_debt_score: float
+    rate_term: float
+    distortion_debt_fraction_of_score: float
+    rate_fraction_of_score: float
+    seg_fraction_of_distortion_debt: float
+    pose_fraction_of_distortion_debt: float
+    largest_distortion_debt_axis: Literal["seg", "pose", "tie", "none"]
+    steepest_distortion_marginal_axis: Literal["seg", "pose", "tie"]
+    seg_marginal: float
+    pose_marginal: float
+    byte_marginal: float
+    distortion_first_recommended: bool
+    next_stage: Literal[
+        "receiver_equivalence_distortion_attack_at_fixed_bytes",
+        "byte_compiler_after_zero_distortion",
+    ]
+    receiver_equivalence_witness_proven: bool = False
+    blockers: tuple[str, ...] = ()
+    evidence_grade: str = "[prediction; receiver-equivalence floor audit]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
 
 
 @dataclass(frozen=True)
@@ -458,6 +501,107 @@ def information_floor(
     if archive_bytes < 0:
         raise ValueError("archive_bytes must be non-negative")
     return RATE_COEFFICIENT * archive_bytes / reference_bytes
+
+
+def receiver_equivalence_floor_audit(
+    *,
+    d_seg: float,
+    d_pose: float,
+    archive_bytes: int,
+    receiver_equivalence_witness_proven: bool = False,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+    tie_rtol: float = 1e-12,
+) -> ReceiverEquivalenceFloorAudit:
+    """Return the same-byte score debt above exact scorer equivalence.
+
+    The audit assumes the archive byte count is fixed and asks how much score
+    remains if the receiver could synthesize any raw frames with
+    ``d_seg == 0`` and ``d_pose == 0``. It separates two planner questions:
+
+    * which axis currently owns the largest additive distortion debt; and
+    * which axis has the steepest local marginal at the current pose point.
+
+    The result is prediction-only planning metadata. It is not an eval result
+    and cannot promote, rank, dispatch, or retire a candidate.
+    """
+    if d_seg < 0.0 or d_pose < 0.0 or archive_bytes < 0:
+        raise ValueError("receiver-equivalence floor inputs must be non-negative")
+    if tie_rtol < 0.0:
+        raise ValueError("tie_rtol must be non-negative")
+
+    decomp = score_decomposition(
+        d_seg=d_seg,
+        d_pose=d_pose,
+        archive_bytes=archive_bytes,
+        reference_bytes=reference_bytes,
+    )
+    floor = information_floor(archive_bytes, reference_bytes=reference_bytes)
+    distortion_debt = decomp.total - floor
+    if math.isclose(distortion_debt, 0.0, rel_tol=tie_rtol, abs_tol=tie_rtol):
+        largest_axis: Literal["seg", "pose", "tie", "none"] = "none"
+    elif math.isclose(
+        decomp.seg_term,
+        decomp.pose_term,
+        rel_tol=tie_rtol,
+        abs_tol=tie_rtol,
+    ):
+        largest_axis = "tie"
+    else:
+        largest_axis = "seg" if decomp.seg_term > decomp.pose_term else "pose"
+
+    grad = score_gradient(d_seg, d_pose, reference_bytes=reference_bytes)
+    if math.isclose(
+        grad.d_seg,
+        grad.d_pose,
+        rel_tol=tie_rtol,
+        abs_tol=tie_rtol,
+    ):
+        steepest_axis: Literal["seg", "pose", "tie"] = "tie"
+    else:
+        steepest_axis = "seg" if grad.d_seg > grad.d_pose else "pose"
+
+    total = decomp.total
+    positive_debt = max(0.0, distortion_debt)
+    distortion_first = positive_debt > tie_rtol
+    blockers: list[str] = []
+    if not receiver_equivalence_witness_proven:
+        blockers.append("receiver_equivalence_witness_not_proven")
+    if distortion_first:
+        blockers.append("positive_distortion_debt_above_same_byte_floor")
+    return ReceiverEquivalenceFloorAudit(
+        archive_bytes=archive_bytes,
+        d_seg=d_seg,
+        d_pose=d_pose,
+        current_score=decomp.total,
+        zero_distortion_floor_score=floor,
+        distortion_debt_score=positive_debt,
+        seg_debt_score=decomp.seg_term,
+        pose_debt_score=decomp.pose_term,
+        rate_term=decomp.rate_term,
+        distortion_debt_fraction_of_score=(
+            positive_debt / total if total > 0.0 else 0.0
+        ),
+        rate_fraction_of_score=decomp.rate_term / total if total > 0.0 else 0.0,
+        seg_fraction_of_distortion_debt=(
+            decomp.seg_term / positive_debt if positive_debt > 0.0 else 0.0
+        ),
+        pose_fraction_of_distortion_debt=(
+            decomp.pose_term / positive_debt if positive_debt > 0.0 else 0.0
+        ),
+        largest_distortion_debt_axis=largest_axis,
+        steepest_distortion_marginal_axis=steepest_axis,
+        seg_marginal=grad.d_seg,
+        pose_marginal=grad.d_pose,
+        byte_marginal=grad.d_bytes,
+        distortion_first_recommended=distortion_first,
+        next_stage=(
+            "receiver_equivalence_distortion_attack_at_fixed_bytes"
+            if distortion_first
+            else "byte_compiler_after_zero_distortion"
+        ),
+        receiver_equivalence_witness_proven=receiver_equivalence_witness_proven,
+        blockers=tuple(blockers),
+    )
 
 
 def score_saving_from_byte_savings(
@@ -1130,6 +1274,7 @@ __all__ = [
     "PlannerAxisMarginals",
     "PoseByteTradeoff",
     "RateOnlyDeltaAudit",
+    "ReceiverEquivalenceFloorAudit",
     "ScoreDecomposition",
     "ScoreGradient",
     "TargetByteBudget",
@@ -1146,6 +1291,7 @@ __all__ = [
     "pose_score_saving_from_delta",
     "predict_cpu_axis_marginals",
     "project_onto_pareto_envelope",
+    "receiver_equivalence_floor_audit",
     "recommend_dispatch_axis_dual",
     "required_byte_savings_for_score_delta",
     "score_decomposition",

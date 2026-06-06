@@ -44,6 +44,32 @@ _EXTERNAL_ARTIFACT_RE = re.compile(
     r"(?P<path>(?:/Volumes|/Users|/tmp|/var/folders|experiments/results|\.omx|runs|outputs)"
     r"[^'\"\s)]*?\.(?:npy|npz|pt|pth|safetensors|pkl|pickle|bin|zip|zst|br|xz|mkv|raw|png))"
 )
+_ORIGINAL_VIDEO_DEPENDENCY_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(r"\bCOMMA_CHALLENGE_ROOT\b"),
+        "comma_challenge_root_runtime_dependency",
+    ),
+    (
+        re.compile(r"\bfind_upstream_root\s*\("),
+        "upstream_root_discovery_runtime_dependency",
+    ),
+    (
+        re.compile(r"\bupstream_root\b.*[/\\]\s*[\"']videos[\"']"),
+        "upstream_videos_runtime_dependency",
+    ),
+    (
+        re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b\s*[/\\]\s*[\"']videos[\"']"),
+        "upstream_videos_runtime_dependency",
+    ),
+    (
+        re.compile(r"[/\\]\s*[\"']videos[\"']\s*[/\\]"),
+        "videos_directory_runtime_dependency",
+    ),
+    (
+        re.compile(r"\bframe_utils\.py\b"),
+        "upstream_frame_utils_runtime_dependency",
+    ),
+)
 _LEARNED_FILE_SUFFIXES = {
     ".npy",
     ".npz",
@@ -222,6 +248,7 @@ def _audit_source_file(
         )
     issues.extend(_literal_issues(path, data, large_literal_bytes=large_literal_bytes))
     issues.extend(_external_reference_issues(path, data))
+    issues.extend(_original_video_dependency_issues(path, data))
     return {
         "path": path.as_posix(),
         "exists": True,
@@ -295,6 +322,26 @@ def _external_reference_issues(path: Path, data: bytes) -> list[dict[str, Any]]:
                 "reference": ref,
             }
         )
+    return issues
+
+
+def _original_video_dependency_issues(path: Path, data: bytes) -> list[dict[str, Any]]:
+    text = data.decode("utf-8", errors="ignore")
+    issues: list[dict[str, Any]] = []
+    for regex, kind in _ORIGINAL_VIDEO_DEPENDENCY_PATTERNS:
+        if regex.search(text):
+            issues.append(
+                {
+                    "kind": kind,
+                    "severity": "blocker",
+                    "path": path.as_posix(),
+                    "detail": (
+                        "eval-time receiver source appears to discover or read "
+                        "the original upstream video tree instead of only the "
+                        "charged archive payload"
+                    ),
+                }
+            )
     return issues
 
 

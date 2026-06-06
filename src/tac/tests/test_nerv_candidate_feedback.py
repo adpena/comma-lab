@@ -182,6 +182,16 @@ def test_build_nerv_candidate_feedback_row_preserves_hinerv_pair_local_pr95_evid
         "family": "hi_nerv",
         "source": "hi_nerv_scorer_domain_bootstrap",
         "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_smoke_artifact_schema": (
+            "hinerv_pair_local_actuator_smoke_artifact.v1"
+        ),
+        "pair_local_smoke_artifact_path": (
+            "/Volumes/VertigoDataTier/pact/test_feedback/"
+            "hi_nerv_pair_local_actuator_smoke/"
+            "hinerv_pair_local_actuator_smoke_pair000000_cccccccccccc.json"
+        ),
+        "pair_local_smoke_artifact_sha256": "e" * 64,
+        "pair_local_smoke_artifact_bytes": 2048,
         "actuator_kind": "pair_local_latent_row",
         "actuator_tensor_name": "latents_fine",
         "updated_tensor_names": ["latents_fine"],
@@ -196,18 +206,27 @@ def test_build_nerv_candidate_feedback_row_preserves_hinerv_pair_local_pr95_evid
         "pair_local_output_delta_max_abs_uint8": 1.02,
         "receiver_uint8_half_step_normalized": 0.5 / 255.0,
         "receiver_uint8_crossing_potential": True,
+        "receiver_uint8_changed": True,
+        "receiver_uint8_changed_count": 12,
+        "receiver_uint8_changed_fraction": 0.001,
+        "receiver_uint8_delta_abs_max": 2,
+        "non_target_pair_receiver_uint8_changed_count": 0,
+        "non_target_pair_receiver_uint8_delta_abs_max": 0,
         "pair_locality_verified": True,
         "non_target_pair_output_delta_l2_max": 0.0,
         "state_restored_after_smoke": True,
         "pair_local_latents_fine_original_row_sha256": "d" * 64,
         "pair_local_latents_fine_restored_row_sha256": "d" * 64,
-        "section_value_per_byte_rows": [
+        "section_output_delta_per_byte_rows": [
             {
                 "section": "pair_local_latents_fine",
                 "bytes": 384,
-                "value_per_byte": 0.001,
+                "output_delta_l2_per_byte": 0.001,
+                "value_semantics": "receiver_output_l2_per_byte_not_score_value",
+                "score_value_per_byte_measured": False,
             }
         ],
+        "section_value_per_byte_rows": [],
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -226,6 +245,9 @@ def test_build_nerv_candidate_feedback_row_preserves_hinerv_pair_local_pr95_evid
         "pair_local_adapter_sha256": "c" * 64,
         "pair_local_grad_norm": 0.5,
         "pair_local_output_delta_l2": 0.125,
+        "section_output_delta_per_byte_rows": evidence[
+            "section_output_delta_per_byte_rows"
+        ],
         "section_value_per_byte_rows": evidence["section_value_per_byte_rows"],
         "score_claim": False,
         "promotion_eligible": False,
@@ -751,14 +773,17 @@ def test_candidate_feedback_preserves_hinerv_pair_local_actuator_evidence(
         "pair_local_adapter_sha256": "c" * 64,
         "pair_local_grad_norm": 0.25,
         "pair_local_output_delta_l2": 0.031,
-        "section_value_per_byte_rows": [
+        "section_output_delta_per_byte_rows": [
             {
                 "section": "pair_local_latents_fine",
                 "bytes": 4096,
-                "score_value": 0.031,
-                "value_per_byte": 7.568359375e-6,
+                "output_delta_l2": 0.031,
+                "output_delta_l2_per_byte": 7.568359375e-6,
+                "value_semantics": "receiver_output_l2_per_byte_not_score_value",
+                "score_value_per_byte_measured": False,
             }
         ],
+        "section_value_per_byte_rows": [],
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -768,6 +793,16 @@ def test_candidate_feedback_preserves_hinerv_pair_local_actuator_evidence(
         "family": "hi_nerv",
         "source": "hi_nerv_scorer_domain_bootstrap",
         "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_smoke_artifact_schema": (
+            "hinerv_pair_local_actuator_smoke_artifact.v1"
+        ),
+        "pair_local_smoke_artifact_path": (
+            "/Volumes/VertigoDataTier/pact/test_feedback/"
+            "hi_nerv_pair_local_actuator_smoke/"
+            "hinerv_pair_local_actuator_smoke_pair000000_cccccccccccc.json"
+        ),
+        "pair_local_smoke_artifact_sha256": "e" * 64,
+        "pair_local_smoke_artifact_bytes": 2048,
         "actuator_kind": "pair_local_latent_row",
         "actuator_tensor_name": "latents_fine",
         "updated_tensor_names": ["latents_fine"],
@@ -782,14 +817,21 @@ def test_candidate_feedback_preserves_hinerv_pair_local_actuator_evidence(
         "pair_local_output_delta_max_abs_uint8": 1.02,
         "receiver_uint8_half_step_normalized": 0.5 / 255.0,
         "receiver_uint8_crossing_potential": True,
+        "receiver_uint8_changed": True,
+        "receiver_uint8_changed_count": 12,
+        "receiver_uint8_changed_fraction": 0.001,
+        "receiver_uint8_delta_abs_max": 2,
+        "non_target_pair_receiver_uint8_changed_count": 0,
+        "non_target_pair_receiver_uint8_delta_abs_max": 0,
         "pair_locality_verified": True,
         "non_target_pair_output_delta_l2_max": 0.0,
         "state_restored_after_smoke": True,
         "pair_local_latents_fine_original_row_sha256": "d" * 64,
         "pair_local_latents_fine_restored_row_sha256": "d" * 64,
-        "section_value_per_byte_rows": actuator_smoke[
-            "section_value_per_byte_rows"
-        ],
+            "section_output_delta_per_byte_rows": actuator_smoke[
+                "section_output_delta_per_byte_rows"
+            ],
+            "section_value_per_byte_rows": actuator_smoke["section_value_per_byte_rows"],
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

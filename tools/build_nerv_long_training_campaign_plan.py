@@ -170,6 +170,18 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--hinerv-distortion-birth-evidence-source",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "HiNeRV compact-runner smoke report or "
+            "nerv_distortion_birth_before_rate_pressure_evidence.v1 JSON. "
+            "Missing or failing evidence blocks HiNeRV QAT, section-byte duals, "
+            "entropy pressure, byte-compiler selection, and late optimizer polish."
+        ),
+    )
+    parser.add_argument(
         "--auto-archive-section-telemetry-root",
         action="append",
         default=[],
@@ -447,6 +459,10 @@ def main(argv: list[str] | None = None) -> int:
         modelsize_byte_cap_feedback_paths=tuple(
             path.as_posix() for path in modelsize_byte_cap_feedback_paths
         ),
+        hinerv_distortion_birth_evidence_sources=tuple(
+            _load_with_source_identity(path)
+            for path in args.hinerv_distortion_birth_evidence_source
+        ),
         decoder_weight_waterfill_sources=tuple(
             _load_decoder_weight_waterfill_sources(
                 args.decoder_weight_waterfill_source,
@@ -573,6 +589,9 @@ def main(argv: list[str] | None = None) -> int:
                 "campaign_row_count": report["campaign_row_count"],
                 "candidate_feedback_source_count": report[
                     "candidate_feedback_source_count"
+                ],
+                "hinerv_distortion_birth_evidence_source_count": report[
+                    "hinerv_distortion_birth_evidence_source_count"
                 ],
                 "launchable_local_row_count": report["launchable_local_row_count"],
                 "blocked_row_count": report["blocked_row_count"],

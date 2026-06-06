@@ -63,6 +63,34 @@ def test_source_boundary_audit_blocks_large_uncharged_literal(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_source_boundary_audit_blocks_eval_time_original_video_dependency(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "inflate.py"
+    source.write_text(
+        "import os\n"
+        "from pathlib import Path\n"
+        "root = Path(os.environ['COMMA_CHALLENGE_ROOT'])\n"
+        "video_path = root / 'videos' / '0.mkv'\n",
+        encoding="utf-8",
+    )
+
+    report = audit_nerv_source_boundary(
+        source_paths=[source],
+        mode="aggressive",
+    )
+
+    assert report["source_boundary_clean"] is False
+    assert any(
+        "comma_challenge_root_runtime_dependency" in item
+        for item in report["blockers"]
+    )
+    assert any(
+        "upstream_videos_runtime_dependency" in item
+        for item in report["blockers"]
+    )
+
+
 def test_witness_dag_consumes_source_boundary_audit_report(
     tmp_path: Path,
 ) -> None:

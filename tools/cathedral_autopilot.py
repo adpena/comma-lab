@@ -87,6 +87,7 @@ from tac.score_geometry import (  # noqa: E402
     importance_flip_threshold,
     information_floor,
     operating_regime,
+    receiver_equivalence_floor_audit,
     score_decomposition,
     score_gradient,
 )
@@ -2873,6 +2874,33 @@ def build_plan(
             gap["bytes_only_savings_required"] = archive_bytes - required_bytes
         # Information-theoretic floor at this byte budget
         gap["information_floor_at_current_bytes"] = information_floor(archive_bytes)
+        receiver_floor = receiver_equivalence_floor_audit(
+            d_seg=d_seg,
+            d_pose=d_pose,
+            archive_bytes=archive_bytes,
+        )
+        gap["receiver_equivalence_floor_audit"] = {
+            "schema": "receiver_equivalence_floor_audit.v1",
+            "zero_distortion_floor_score": receiver_floor.zero_distortion_floor_score,
+            "distortion_debt_score": receiver_floor.distortion_debt_score,
+            "seg_debt_score": receiver_floor.seg_debt_score,
+            "pose_debt_score": receiver_floor.pose_debt_score,
+            "largest_distortion_debt_axis": receiver_floor.largest_distortion_debt_axis,
+            "steepest_distortion_marginal_axis": (
+                receiver_floor.steepest_distortion_marginal_axis
+            ),
+            "distortion_first_recommended": receiver_floor.distortion_first_recommended,
+            "next_stage": receiver_floor.next_stage,
+            "receiver_equivalence_witness_proven": (
+                receiver_floor.receiver_equivalence_witness_proven
+            ),
+            "blockers": list(receiver_floor.blockers),
+            "evidence_grade": receiver_floor.evidence_grade,
+            "score_claim": receiver_floor.score_claim,
+            "promotion_eligible": receiver_floor.promotion_eligible,
+            "rank_or_kill_eligible": receiver_floor.rank_or_kill_eligible,
+            "ready_for_exact_eval_dispatch": receiver_floor.ready_for_exact_eval_dispatch,
+        }
 
     notes = [
         f"Operating regime: {regime.advice}",

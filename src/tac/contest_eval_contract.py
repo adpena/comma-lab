@@ -106,6 +106,17 @@ def build_score_allocation_contract() -> dict[str, Any]:
             "rate_price_per_archive_byte": contest_rate_term(1),
             "raw_output_shape_bytes_are_not_rate_denominator": PUBLIC_TEST_RAW_OUTPUT_BYTES,
         },
+        "receiver_equivalence_floor": {
+            "planning_semantics": (
+                "at fixed archive bytes, exact SegNet/PoseNet receiver equivalence "
+                "has score equal to the rate term only"
+            ),
+            "zero_distortion_score_formula": "25*archive_zip_bytes/source_video_bytes",
+            "helper": "tac.score_geometry.receiver_equivalence_floor_audit",
+            "receiver_equivalence_witness_required_for_promotion": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+        },
         "distortion_reduction": {
             "authority": "upstream/evaluate.py full-video pair-sum reduction",
             "pair_weighting": "sum per-pair distortions over all evaluated pairs, then divide by total pair count",

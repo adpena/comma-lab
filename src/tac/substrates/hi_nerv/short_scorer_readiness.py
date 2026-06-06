@@ -539,6 +539,10 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_bootstrap_not_enabled"
             )
+        if scorer_domain_hard_birth_gate["hard_birth_requested_but_not_consumed"]:
+            add_blocker(
+                "hi_nerv_short_smoke_scorer_domain_hard_birth_requested_but_not_consumed"
+            )
         if not scorer_domain_hard_birth_gate["hard_birth_enabled"]:
             add_blocker(
                 "hi_nerv_short_smoke_scorer_domain_hard_birth_not_enabled"
@@ -1446,6 +1450,37 @@ def _scorer_domain_hard_birth_gate(
             "hard_birth_worst_improved_total_spill_rejected_step_count",
         )
     )
+    hard_birth_requested_weight = _finite_mapping_value(
+        metadata,
+        "segnet_hard_birth_bootstrap_requested_weight",
+    )
+    hard_birth_effective_weight = _finite_mapping_value(
+        metadata,
+        "segnet_hard_birth_bootstrap_effective_weight",
+    )
+    hard_birth_request_consumed_raw = metadata.get(
+        "segnet_hard_birth_bootstrap_request_consumed"
+    )
+    hard_birth_request_consumed = (
+        bool(hard_birth_request_consumed_raw)
+        if hard_birth_request_consumed_raw is not None
+        else not bool(
+            hard_birth_requested_weight is not None
+            and hard_birth_requested_weight
+            > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+            and (
+                hard_birth_effective_weight is None
+                or hard_birth_effective_weight
+                <= HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+            )
+        )
+    )
+    hard_birth_requested_but_not_consumed = bool(
+        hard_birth_requested_weight is not None
+        and hard_birth_requested_weight
+        > HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON
+        and not hard_birth_request_consumed
+    )
     max_candidate_segnet_worst_debt_reduction = _finite_mapping_value(
         metadata,
         "max_candidate_segnet_worst_debt_reduction",
@@ -1551,6 +1586,12 @@ def _scorer_domain_hard_birth_gate(
         "required": True,
         "bootstrap_enabled": bool(metadata.get("enabled")),
         "hard_birth_enabled": bool(hard_birth.get("enabled")),
+        "hard_birth_requested_weight": hard_birth_requested_weight,
+        "hard_birth_effective_weight": hard_birth_effective_weight,
+        "hard_birth_request_consumed": hard_birth_request_consumed,
+        "hard_birth_requested_but_not_consumed": (
+            hard_birth_requested_but_not_consumed
+        ),
         "accepted_step_count": accepted_step_count,
         "before_candidate_target_class_min_ratio": before_min_ratio,
         "after_candidate_target_class_min_ratio": after_min_ratio,

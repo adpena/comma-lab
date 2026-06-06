@@ -8,6 +8,8 @@ import math
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "tools" / "cathedral_autopilot.py"
 CONTEST_UNCOMPRESSED_BYTES = 37_545_489
@@ -170,6 +172,33 @@ def test_target_score_gap_uses_inverse_curves() -> None:
     # Both paths should be feasible at this gentle gap
     assert gap["pose_only_feasible"]
     assert gap["bytes_only_feasible"]
+
+
+def test_target_score_gap_consumes_receiver_equivalence_floor_audit() -> None:
+    autopilot = _load_autopilot()
+    plan = autopilot.build_plan(
+        d_seg=0.00061212,
+        d_pose=0.00003494,
+        archive_bytes=178_417,
+        target_score=0.190,
+    )
+
+    audit = plan.target_score_gap_analysis["receiver_equivalence_floor_audit"]
+    assert audit["schema"] == "receiver_equivalence_floor_audit.v1"
+    assert audit["zero_distortion_floor_score"] == pytest.approx(0.11880055683919845)
+    assert audit["distortion_debt_score"] == pytest.approx(0.07990424438102604)
+    assert audit["seg_debt_score"] == pytest.approx(0.061212)
+    assert audit["pose_debt_score"] == pytest.approx(math.sqrt(10.0 * 0.00003494))
+    assert audit["largest_distortion_debt_axis"] == "seg"
+    assert audit["steepest_distortion_marginal_axis"] == "pose"
+    assert audit["distortion_first_recommended"] is True
+    assert audit["next_stage"] == "receiver_equivalence_distortion_attack_at_fixed_bytes"
+    assert audit["receiver_equivalence_witness_proven"] is False
+    assert "receiver_equivalence_witness_not_proven" in audit["blockers"]
+    assert "positive_distortion_debt_above_same_byte_floor" in audit["blockers"]
+    assert audit["score_claim"] is False
+    assert audit["promotion_eligible"] is False
+    assert audit["ready_for_exact_eval_dispatch"] is False
 
 
 def test_plan_summary_renders_without_error() -> None:

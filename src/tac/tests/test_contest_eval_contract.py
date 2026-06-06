@@ -31,6 +31,16 @@ def test_score_allocation_contract_matches_upstream_score_geometry() -> None:
     assert contract["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (
         PUBLIC_TEST_RAW_OUTPUT_BYTES
     )
+    assert contract["receiver_equivalence_floor"]["zero_distortion_score_formula"] == (
+        "25*archive_zip_bytes/source_video_bytes"
+    )
+    assert contract["receiver_equivalence_floor"]["helper"] == (
+        "tac.score_geometry.receiver_equivalence_floor_audit"
+    )
+    assert contract["receiver_equivalence_floor"][
+        "receiver_equivalence_witness_required_for_promotion"
+    ] is True
+    assert contract["receiver_equivalence_floor"]["score_claim"] is False
     assert contract["distortion_reduction"]["authority"] == (
         "upstream/evaluate.py full-video pair-sum reduction"
     )
