@@ -505,6 +505,120 @@ def test_lf_hf_queue_ignores_ready_official_gate_unblock_command(
     assert "stale_source_audit.py" not in report["next_unblock_command_argv"]
 
 
+def test_lf_hf_queue_prefers_ready_official_gate_over_newer_blocked_gate(
+    tmp_path: Path,
+) -> None:
+    state_dict_path = _write_fake_state_dict(tmp_path)
+    ready_gate = {
+        **_official_replacement_authority_gate(ready=True),
+        "generated_utc": "2026-06-05T22:45:53+00:00",
+        "_source_path": "/ssd/v5_ready_gate.json",
+        "_source_sha256": "5" * 64,
+    }
+    newer_blocked_gate = {
+        **_official_replacement_authority_gate(ready=False),
+        "generated_utc": "2026-06-06T00:00:00+00:00",
+        "_source_path": "/ssd/newer_blocked_gate.json",
+        "_source_sha256": "6" * 64,
+        "queue_blockers": ["stale_lower_readiness_blocker"],
+    }
+
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        source_forward_artifacts=[
+            _source_forward_artifact(
+                official_export_bound=True,
+                receiver_consumes_output2=True,
+                source_authority=True,
+                full_tub_parity=True,
+                state_dict_path=state_dict_path,
+            )
+        ],
+        official_replacement_authority_gates=[newer_blocked_gate, ready_gate],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    official = report["official_replacement_authority_evidence"]
+    assert official["selection_policy"] == "prefer_ready_artifacts_then_newest_generated_utc"
+    assert official["source_path"] == "/ssd/v5_ready_gate.json"
+    assert official["source_sha256"] == "5" * 64
+    assert official["ready_artifact_count"] == 1
+    assert official["queue_blockers"] == []
+    assert official["ignored_lower_readiness_artifacts"] == [
+        {
+            "source_path": "/ssd/newer_blocked_gate.json",
+            "source_sha256": "6" * 64,
+            "generated_utc": "2026-06-06T00:00:00+00:00",
+            "official_tub_lf_hf_decoder_replacement_ready": False,
+            "queue_blockers": ["stale_lower_readiness_blocker"],
+        }
+    ]
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    assert row["official_gate_selected_path"] == "/ssd/v5_ready_gate.json"
+    assert row["official_gate_selected_sha256"] == "5" * 64
+    assert row["official_gate_selection_policy"] == (
+        "prefer_ready_artifacts_then_newest_generated_utc"
+    )
+    assert "stale_lower_readiness_blocker" not in row["blockers"]
+
+
+def test_lf_hf_queue_ready_gate_cannot_mask_missing_source_forward_proof(
+    tmp_path: Path,
+) -> None:
+    state_dict_path = _write_fake_state_dict(tmp_path)
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        source_forward_artifacts=[
+            _source_forward_artifact(
+                official_export_bound=True,
+                receiver_consumes_output2=True,
+                source_authority=False,
+                full_tub_parity=True,
+                state_dict_path=state_dict_path,
+            )
+        ],
+        official_replacement_authority_gates=[
+            _official_replacement_authority_gate(ready=True)
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    blockers = set(row["blockers"])
+    contradiction = (
+        "snerv_ready_official_tub_lf_hf_gate_contradicts_source_forward_queue_blockers"
+    )
+    assert row["official_replacement_authority_evidence"][
+        "official_tub_lf_hf_decoder_replacement_ready"
+    ] is True
+    assert contradiction in blockers
+    assert contradiction in row["official_gate_source_forward_contradiction_blockers"]
+    assert "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing" in (
+        blockers
+    )
+    assert row["blocked"] is True
+    assert row["command_argv"] == []
+
+
 def test_lf_hf_rebuild_command_uses_candidate_feedback_source_alias(
     tmp_path: Path,
 ) -> None:

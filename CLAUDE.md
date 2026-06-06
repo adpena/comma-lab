@@ -36,6 +36,42 @@ and fail closed if no SSD/local tier has enough free space. Before finishing any
 such landing, add or reuse the auto-clean hook so future runs do not leave
 orphaned bulk files behind.
 
+## Evaluator-Equivalent Witness Compiler Paradigm — NON-NEGOTIABLE
+
+Current HiNeRV/SNeRV work is no longer ordinary video-codec fidelity work. The
+contest-native objective is the shortest compliant `archive.zip` whose
+`inflate.sh` output is a witness inside the same frozen evaluator cells as the
+source video. Only three terms carry authority: SegNet last-frame RGB argmax
+pixels, PoseNet official two-frame YUV6 output, and exact archive bytes. Human
+visual fidelity is non-authority unless it causally improves one of those terms.
+
+Treat NeRV/HNeRV/HiNeRV/SNeRV as possible witness backends, not as the goal.
+They may generate evaluator-equivalent witnesses directly, or they may compress
+mask grammar, pose trajectory grammar, evaluator-inverse renderer state,
+score-effect codebooks, LF/HF carriers, pair-local residuals, and sparse
+hard-pixel/hard-pair sidecars. The winning representation is whichever legal
+mixture minimizes:
+
+`100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37_545_489`
+
+Every actuator, optimizer, byte control, modelsize control, sidecar, codebook,
+or residual section must report its score-unit value per byte whenever measured:
+Seg delta, Pose delta using the nonlinear square-root term, byte delta, authority
+surface, and receiver/parse-back survival. Do not admit updates merely because a
+proxy loss improved. Admit only when the relevant evaluator-cell debt improves
+or a fail-closed blocker records why it did not.
+
+Before HiNeRV/SNeRV long MLX training is approved, the executable readiness DAG
+must show the right gates in order: charged/free source-boundary hygiene, exact
+scorer-oracle/cache geometry, archive parse-back selection, short receiver
+surface smoke, joint Seg/Pose trust region, family-specific hard blocker closure,
+full-video MLX replay, receiver-closed archive proof, and then exact CPU/CUDA
+replay. HiNeRV's current hard blocker is target-region class birth that survives
+uint8/resize/parse-back without total Seg spill or Pose harm. SNeRV's current
+hard blocker is official MFU/HFR/TUB source-forward train/export/runtime binding
+plus LF/HF representation collapse under real byte pressure. Build MLX-first,
+with deterministic NumPy reference and Torch parity surfaces kept portable.
+
 You are operating inside a dual-track lab for the comma video compression challenge.
 
 Read `PROGRAM.md` before making changes.

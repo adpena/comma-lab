@@ -1020,6 +1020,11 @@ def _candidate_row(
             )
             if blocker
         ]
+    official_gate_source_forward_contradiction_blockers = (
+        _official_gate_source_forward_contradiction_blockers(current_state)
+        if solution_family == _OFFICIAL_TUB_LF_HF_FAMILY
+        else []
+    )
     terminal_renderer_extra_blockers: list[str] = []
     if command_kind == "bounded_snerv_training_smoke":
         terminal_renderer_extra_blockers = _candidate_terminal_renderer_blockers(
@@ -1145,6 +1150,7 @@ def _candidate_row(
             *campaign_blockers,
             *source_forward_extra_blockers,
             *official_replacement_extra_blockers,
+            *official_gate_source_forward_contradiction_blockers,
             *terminal_renderer_extra_blockers,
             *value_domain_extra_blockers,
             *hf_residual_payload_extra_blockers,
@@ -1549,6 +1555,54 @@ def _candidate_row(
         "official_replacement_authority_evidence": current_state.get(
             "official_replacement_authority_evidence"
         ),
+        "official_gate_selected_path": _nested(
+            current_state,
+            ("official_replacement_authority_evidence", "source_path"),
+        ),
+        "official_gate_selected_sha256": _nested(
+            current_state,
+            ("official_replacement_authority_evidence", "source_sha256"),
+        ),
+        "official_gate_selected_generated_utc": _nested(
+            current_state,
+            ("official_replacement_authority_evidence", "selected_artifact_generated_utc"),
+        ),
+        "official_gate_selection_policy": _nested(
+            current_state,
+            ("official_replacement_authority_evidence", "selection_policy"),
+        ),
+        "official_gate_source_forward_contradiction_blockers": (
+            official_gate_source_forward_contradiction_blockers
+        ),
+        "closed_source_forward_blockers": _dedupe(
+            [
+                *(
+                    _nested(
+                        current_state,
+                        ("source_forward_evidence", "closed_campaign_blockers"),
+                    )
+                    or ()
+                ),
+                *(
+                    _nested(
+                        current_state,
+                        (
+                            "official_replacement_authority_evidence",
+                            "closed_campaign_blockers",
+                        ),
+                    )
+                    or ()
+                ),
+            ]
+        ),
+        "source_forward_authority_residual_blockers": _nested(
+            current_state,
+            (
+                "official_replacement_authority_evidence",
+                "source_forward_authority_residual_blockers",
+            ),
+        )
+        or [],
         "scorer_domain_evidence": current_state.get("scorer_domain_evidence"),
         "value_domain_evidence": current_state.get("value_domain_evidence"),
         "hf_residual_payload_evidence": current_state.get(
@@ -1599,6 +1653,37 @@ def _inherited_queue_authority_blockers(
                 )
                 or ()
             ),
+        ]
+    )
+
+
+def _official_gate_source_forward_contradiction_blockers(
+    current_state: Mapping[str, Any],
+) -> list[str]:
+    official_ready = (
+        _nested(
+            current_state,
+            (
+                "official_replacement_authority_evidence",
+                "official_tub_lf_hf_decoder_replacement_ready",
+            ),
+        )
+        is True
+    )
+    source_blockers = [
+        str(blocker)
+        for blocker in (
+            _nested(current_state, ("source_forward_evidence", "queue_blockers"))
+            or ()
+        )
+        if str(blocker)
+    ]
+    if not official_ready or not source_blockers:
+        return []
+    return _dedupe(
+        [
+            "snerv_ready_official_tub_lf_hf_gate_contradicts_source_forward_queue_blockers",
+            *source_blockers,
         ]
     )
 

@@ -611,6 +611,23 @@ def _direct_live_posenet_distillation_loss_and_metrics(
         "pose_direct_live_target_pose_std": mx.std(teacher_pose),
         "pose_direct_live_yuv6_pair_mean": mx.mean(yuv6_pair),
         "pose_direct_live_yuv6_pair_std": mx.std(yuv6_pair),
+        "pose_direct_live_input_official_yuv6_concat": mx.array(
+            1.0, dtype=mx.float32
+        ),
+        "pose_direct_live_input_frame0_incidence": mx.array(1.0, dtype=mx.float32),
+        "pose_direct_live_input_frame1_incidence": mx.array(1.0, dtype=mx.float32),
+        "pose_direct_live_input_channel_count": mx.array(
+            float(int(yuv6_pair.shape[-1])), dtype=mx.float32
+        ),
+        "pose_direct_live_input_height": mx.array(
+            float(int(yuv6_pair.shape[1])), dtype=mx.float32
+        ),
+        "pose_direct_live_input_width": mx.array(
+            float(int(yuv6_pair.shape[2])), dtype=mx.float32
+        ),
+        "pose_direct_live_input_temporal_delta_proxy_authority": mx.array(
+            0.0, dtype=mx.float32
+        ),
         "pose_direct_live_yuv6_pair_temporal_delta_std": mx.std(
             yuv6_pair[..., 6:12] - yuv6_pair[..., 0:6]
         ),

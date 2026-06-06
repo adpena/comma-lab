@@ -124,6 +124,19 @@ class _StubPoseTeacher:
         return mx.zeros((idx.shape[0], 6))
 
 
+class _DirectLivePoseTeacher(_StubPoseTeacher):
+    def __init__(self) -> None:
+        self.last_yuv6_pair_shape: tuple[int, ...] | None = None
+
+    def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+        import mlx.core as mx
+
+        self.last_yuv6_pair_shape = tuple(int(v) for v in yuv6_pair.shape)
+        batch = int(yuv6_pair.shape[0])
+        mean = mx.mean(yuv6_pair, axis=(1, 2, 3), keepdims=False)
+        return mx.broadcast_to(mean.reshape(batch, 1), (batch, self.pose_dims))
+
+
 @mlx_only
 def test_bundle_fails_closed_on_pose_distill_without_teacher() -> None:
     """pose_distillation_weight > 0 with NO pose_scorer_teacher => REJECTED.
@@ -276,6 +289,81 @@ def test_pose_only_binding_is_allowed() -> None:
         learnable_pose_student_head=_Head(),
     )
     assert bundle.pose_distillation_weight == 0.5
+
+
+@mlx_only
+def test_posenet_yuv6_pair_uses_both_frames_as_official_concat_not_delta() -> None:
+    """Direct-live Pose consumes YUV6(frame0)||YUV6(frame1), never a delta."""
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates._shared.mlx_score_aware.loss import (
+        posenet_yuv6_pair_nhwc255,
+    )
+
+    frame0 = mx.zeros((1, 4, 4, 3), dtype=mx.float32)
+    frame1 = mx.zeros((1, 4, 4, 3), dtype=mx.float32)
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=frame0,
+        target_rgb_1=frame1,
+        num_pairs=1,
+        forward_convention="call_b2chw_255",
+    )
+    base = posenet_yuv6_pair_nhwc255(bundle, frame0, frame1)
+    frame0_changed = mx.ones_like(frame0) * 0.25
+    frame1_changed = mx.ones_like(frame1) * 0.5
+    delta0 = posenet_yuv6_pair_nhwc255(bundle, frame0_changed, frame1) - base
+    delta1 = posenet_yuv6_pair_nhwc255(bundle, frame0, frame1_changed) - base
+    mx.eval(base, delta0, delta1)
+
+    assert tuple(base.shape) == (1, 2, 2, 12)
+    delta0_np = np.array(delta0)
+    delta1_np = np.array(delta1)
+    assert float(np.max(np.abs(delta0_np[..., :6]))) > 0.0
+    assert float(np.max(np.abs(delta0_np[..., 6:12]))) == 0.0
+    assert float(np.max(np.abs(delta1_np[..., :6]))) == 0.0
+    assert float(np.max(np.abs(delta1_np[..., 6:12]))) > 0.0
+
+
+@mlx_only
+def test_direct_live_posenet_metrics_prove_official_yuv6_concat_contract() -> None:
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.loss import (
+        _direct_live_posenet_distillation_loss_and_metrics,
+    )
+
+    frame0 = mx.zeros((1, 4, 4, 3), dtype=mx.float32)
+    frame1 = mx.ones((1, 4, 4, 3), dtype=mx.float32) * 0.5
+    teacher = _DirectLivePoseTeacher()
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=frame0,
+        target_rgb_1=frame1,
+        num_pairs=1,
+        forward_convention="call_b2chw_255",
+        pose_direct_live_distillation_weight=1.0,
+        pose_scorer_teacher=teacher,
+    )
+
+    _loss, metrics = _direct_live_posenet_distillation_loss_and_metrics(
+        bundle, frame0, frame1, mx.array([0], dtype=mx.int32)
+    )
+    mx.eval(*metrics.values())
+
+    assert teacher.last_yuv6_pair_shape == (1, 2, 2, 12)
+    assert float(metrics["pose_direct_live_input_official_yuv6_concat"].item()) == 1.0
+    assert float(metrics["pose_direct_live_input_frame0_incidence"].item()) == 1.0
+    assert float(metrics["pose_direct_live_input_frame1_incidence"].item()) == 1.0
+    assert float(metrics["pose_direct_live_input_channel_count"].item()) == 12.0
+    assert float(metrics["pose_direct_live_input_height"].item()) == 2.0
+    assert float(metrics["pose_direct_live_input_width"].item()) == 2.0
+    assert (
+        float(metrics["pose_direct_live_input_temporal_delta_proxy_authority"].item())
+        == 0.0
+    )
+    assert "pose_direct_live_yuv6_pair_temporal_delta_std" in metrics
 
 
 # --------------------------------------------------------------------------- #
