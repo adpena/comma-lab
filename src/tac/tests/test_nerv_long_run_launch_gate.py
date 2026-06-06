@@ -30,6 +30,7 @@ from tac.analysis.nerv_long_run_launch_gate import (
 from tac.analysis.snerv_source_forward_proof import (
     build_snerv_payload_bitflip_falsification,
     build_snerv_source_forward_proof_action_effect,
+    build_snerv_source_forward_surface_provenance,
 )
 
 NOW = datetime(2026, 6, 6, 21, 0, 0, tzinfo=UTC)
@@ -73,6 +74,8 @@ def _snerv_source_forward_action_row(
     tensor_delta: float = 0.0,
     include_scorer_by_surface: bool = True,
     parseback_d_pose: float = 0.0,
+    include_surface_provenance: bool = True,
+    provenance_authority: str = "real_surface_forward_capture",
 ) -> dict:
     bitflip = build_snerv_payload_bitflip_falsification(
         bitflip_section="decoder_payload.output_2",
@@ -113,6 +116,38 @@ def _snerv_source_forward_action_row(
         tensors_by_surface=_snerv_tensor_surfaces(delta=tensor_delta),
         scorer_deltas=scorer_deltas,
         destructive_payload_bit_flip=bitflip,
+        surface_provenance=(
+            _snerv_surface_provenance(provenance_authority=provenance_authority)
+            if include_surface_provenance
+            else None
+        ),
+    )
+
+
+def _snerv_surface_provenance(
+    *,
+    provenance_authority: str = "real_surface_forward_capture",
+) -> dict[str, dict[str, object]]:
+    surfaces = (
+        "official_torch",
+        "pact_mlx",
+        "archive_parseback",
+        "numpy_receiver",
+    )
+    return build_snerv_source_forward_surface_provenance(
+        pair_ids=[0],
+        archive_sha256="1" * 64,
+        producer_by_surface={
+            surface: f"{surface}_producer" for surface in surfaces
+        },
+        tensor_capture_authority_by_surface=dict.fromkeys(
+            surfaces,
+            provenance_authority,
+        ),
+        scorer_capture_authority_by_surface=dict.fromkeys(
+            surfaces,
+            provenance_authority,
+        ),
     )
 
 
@@ -739,6 +774,58 @@ def test_snerv_source_forward_scorer_surface_delta_blocks_launch(
     assert any(
         item.endswith(
             "snerv_source_forward_scorer_surface_delta_exceeds_tolerance:archive_parseback:d_pose"
+        )
+        for item in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_snerv_source_forward_requires_surface_provenance(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    _write(
+        root / "proof.json",
+        _snerv_source_forward_action_row(include_surface_provenance=False),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert any(
+        item.endswith(
+            "snerv_source_forward_surface_provenance_surface_missing:archive_parseback"
+        )
+        for item in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_snerv_source_forward_rejects_synthetic_surface_provenance(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    _write(
+        root / "proof.json",
+        _snerv_source_forward_action_row(
+            provenance_authority="synthetic_fixture_capture"
+        ),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert any(
+        item.endswith(
+            "snerv_source_forward_surface_provenance_authority_not_real:official_torch:tensor_capture_authority"
         )
         for item in verdict["blocking_evidence"]
     )

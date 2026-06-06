@@ -14,6 +14,7 @@ import pytest
 from tac.analysis.snerv_source_forward_proof import (
     build_snerv_payload_bitflip_falsification,
     build_snerv_source_forward_proof_action_effect,
+    build_snerv_source_forward_surface_provenance,
 )
 from tac.analysis.snerv_step_map_coder import (
     decode_step_maps,
@@ -2001,6 +2002,10 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
             },
         },
         destructive_payload_bit_flip=bitflip,
+        surface_provenance=build_snerv_source_forward_surface_provenance(
+            pair_ids=[0],
+            archive_sha256="1" * 64,
+        ),
     )
 
 

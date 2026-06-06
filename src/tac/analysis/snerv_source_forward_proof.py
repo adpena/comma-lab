@@ -56,6 +56,68 @@ SOURCE_FORWARD_TENSOR_NAMES: tuple[str, ...] = (
     "posenet_output",
 )
 SOURCE_FORWARD_SCORER_FIELDS: tuple[str, ...] = ("d_seg", "d_pose")
+SOURCE_FORWARD_SURFACE_PROVENANCE_SCHEMA = "snerv_source_forward_surface_provenance.v1"
+SOURCE_FORWARD_PROVENANCE_REQUIRED_FIELDS: tuple[str, ...] = (
+    "schema",
+    "surface",
+    "producer",
+    "backend",
+    "pair_ids",
+    "tensor_capture_authority",
+    "scorer_capture_authority",
+)
+SOURCE_FORWARD_ARCHIVE_BOUND_SURFACES: tuple[str, ...] = (
+    "archive_parseback",
+    "numpy_receiver",
+)
+SOURCE_FORWARD_FORBIDDEN_PROVENANCE_TOKENS: tuple[str, ...] = (
+    "fixture",
+    "synthetic",
+    "mock",
+    "metadata",
+    "sidecar",
+    "proxy",
+    "placeholder",
+)
+
+
+def build_snerv_source_forward_surface_provenance(
+    *,
+    pair_ids: Sequence[int],
+    archive_sha256: str,
+    producer_by_surface: Mapping[str, str] | None = None,
+    backend_by_surface: Mapping[str, str] | None = None,
+    tensor_capture_authority_by_surface: Mapping[str, str] | None = None,
+    scorer_capture_authority_by_surface: Mapping[str, str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Build canonical per-surface custody for SourceForwardProof producers."""
+
+    producers = dict(producer_by_surface or {})
+    backends = dict(backend_by_surface or {})
+    tensor_authority = dict(tensor_capture_authority_by_surface or {})
+    scorer_authority = dict(scorer_capture_authority_by_surface or {})
+    normalized_pair_ids = _normalize_pair_ids(pair_ids)
+    return {
+        surface: {
+            "schema": SOURCE_FORWARD_SURFACE_PROVENANCE_SCHEMA,
+            "surface": surface,
+            "producer": str(producers.get(surface) or f"{surface}_source_forward"),
+            "backend": str(backends.get(surface) or surface),
+            "pair_ids": list(normalized_pair_ids),
+            "tensor_capture_authority": str(
+                tensor_authority.get(surface) or "real_surface_forward_capture"
+            ),
+            "scorer_capture_authority": str(
+                scorer_authority.get(surface) or "real_surface_scorer_capture"
+            ),
+            **(
+                {"archive_sha256": str(archive_sha256)}
+                if surface in SOURCE_FORWARD_ARCHIVE_BOUND_SURFACES
+                else {}
+            ),
+        }
+        for surface in SOURCE_FORWARD_SURFACES
+    }
 
 
 def build_snerv_source_forward_proof_action_effect(
@@ -67,6 +129,7 @@ def build_snerv_source_forward_proof_action_effect(
     tensors_by_surface: Mapping[str, Mapping[str, Any]],
     scorer_deltas: Mapping[str, Any],
     destructive_payload_bit_flip: Mapping[str, Any],
+    surface_provenance: Mapping[str, Mapping[str, Any]] | None = None,
     tolerance_by_tensor: Mapping[str, float] | None = None,
     archive_bytes: int | None = None,
     generated_utc: str | None = None,
@@ -121,6 +184,13 @@ def build_snerv_source_forward_proof_action_effect(
     score_status = _validate_scorer_deltas(scorer_deltas)
     blockers.extend(score_status["blockers"])
     normalized_scorer_deltas = score_status["normalized_scorer_deltas"]
+    provenance_status = _validate_surface_provenance(
+        surface_provenance,
+        archive_sha256=archive_sha256,
+        pair_ids=pair_ids,
+    )
+    blockers.extend(provenance_status["blockers"])
+    normalized_surface_provenance = provenance_status["normalized_surface_provenance"]
 
     if not _looks_like_sha256(archive_sha256):
         blockers.append("source_forward_archive_sha256_invalid")
@@ -157,6 +227,7 @@ def build_snerv_source_forward_proof_action_effect(
         "tensor_deltas": tensor_deltas,
         "tolerance_by_tensor": {str(k): float(v) for k, v in tolerance_by_tensor.items()},
         "scorer_deltas": normalized_scorer_deltas,
+        "surface_provenance": normalized_surface_provenance,
         "destructive_payload_bit_flip": dict(destructive_payload_bit_flip),
         "rgb_uint8_and_scorer_compared": _scorer_surfaces_present(tensor_hashes),
         "parseback_receiver_surface_compared": _parseback_receiver_surfaces_present(
@@ -281,6 +352,12 @@ def validate_snerv_source_forward_proof_action_effect(
 
     score_status = _validate_scorer_deltas(row.get("scorer_deltas"))
     blockers.extend(score_status["blockers"])
+    provenance_status = _validate_surface_provenance(
+        row.get("surface_provenance"),
+        archive_sha256=str(row.get("archive_sha256") or ""),
+        pair_ids=row.get("pair_ids") if isinstance(row.get("pair_ids"), Sequence) else (),
+    )
+    blockers.extend(provenance_status["blockers"])
     bitflip_status = validate_snerv_payload_bitflip_falsification(
         row.get("destructive_payload_bit_flip")
     )
@@ -332,6 +409,94 @@ def find_snerv_source_forward_proof_rows(payload: Any) -> list[dict[str, Any]]:
         for value in payload:
             hits.extend(find_snerv_source_forward_proof_rows(value))
     return hits
+
+
+def _validate_surface_provenance(
+    row: Any,
+    *,
+    archive_sha256: str,
+    pair_ids: Sequence[int] | Any,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not isinstance(row, Mapping):
+        return {
+            "passed": False,
+            "blockers": ["snerv_source_forward_surface_provenance_missing"],
+            "normalized_surface_provenance": {},
+        }
+    normalized_pair_ids = _normalize_pair_ids(pair_ids)
+    normalized: dict[str, dict[str, Any]] = {}
+    for surface in SOURCE_FORWARD_SURFACES:
+        surface_row = row.get(surface)
+        if not isinstance(surface_row, Mapping):
+            blockers.append(
+                f"snerv_source_forward_surface_provenance_surface_missing:{surface}"
+            )
+            continue
+        surface_map = dict(surface_row)
+        for field in SOURCE_FORWARD_PROVENANCE_REQUIRED_FIELDS:
+            if field not in surface_map:
+                blockers.append(
+                    f"snerv_source_forward_surface_provenance_field_missing:{surface}:{field}"
+                )
+        if surface_map.get("schema") != SOURCE_FORWARD_SURFACE_PROVENANCE_SCHEMA:
+            blockers.append(
+                f"snerv_source_forward_surface_provenance_schema_invalid:{surface}"
+            )
+        if str(surface_map.get("surface") or "") != surface:
+            blockers.append(
+                f"snerv_source_forward_surface_provenance_surface_mismatch:{surface}"
+            )
+        if not str(surface_map.get("producer") or ""):
+            blockers.append(
+                f"snerv_source_forward_surface_provenance_producer_missing:{surface}"
+            )
+        if not str(surface_map.get("backend") or ""):
+            blockers.append(
+                f"snerv_source_forward_surface_provenance_backend_missing:{surface}"
+            )
+        surface_pair_ids = _normalize_pair_ids(surface_map.get("pair_ids"))
+        if surface_pair_ids != normalized_pair_ids:
+            blockers.append(
+                f"snerv_source_forward_surface_provenance_pair_ids_mismatch:{surface}"
+            )
+        for field in ("tensor_capture_authority", "scorer_capture_authority"):
+            value = str(surface_map.get(field) or "")
+            if not value:
+                blockers.append(
+                    f"snerv_source_forward_surface_provenance_authority_missing:{surface}:{field}"
+                )
+                continue
+            lowered = value.lower()
+            if any(token in lowered for token in SOURCE_FORWARD_FORBIDDEN_PROVENANCE_TOKENS):
+                blockers.append(
+                    f"snerv_source_forward_surface_provenance_authority_not_real:{surface}:{field}"
+                )
+        if surface in SOURCE_FORWARD_ARCHIVE_BOUND_SURFACES:
+            value = str(surface_map.get("archive_sha256") or "")
+            if value != str(archive_sha256):
+                blockers.append(
+                    f"snerv_source_forward_surface_provenance_archive_sha256_mismatch:{surface}"
+                )
+        normalized[surface] = {
+            "schema": str(surface_map.get("schema") or ""),
+            "surface": str(surface_map.get("surface") or ""),
+            "producer": str(surface_map.get("producer") or ""),
+            "backend": str(surface_map.get("backend") or ""),
+            "pair_ids": surface_pair_ids,
+            "tensor_capture_authority": str(surface_map.get("tensor_capture_authority") or ""),
+            "scorer_capture_authority": str(surface_map.get("scorer_capture_authority") or ""),
+            **(
+                {"archive_sha256": str(surface_map.get("archive_sha256") or "")}
+                if "archive_sha256" in surface_map
+                else {}
+            ),
+        }
+    return {
+        "passed": not _ordered_unique(blockers),
+        "blockers": _ordered_unique(blockers),
+        "normalized_surface_provenance": normalized,
+    }
 
 
 def _validate_scorer_deltas(row: Any) -> dict[str, Any]:
@@ -453,14 +618,21 @@ def _first_failed_tensor(blockers: Sequence[str]) -> str | None:
 
 
 def _valid_pair_ids(value: Any) -> bool:
+    return bool(_normalize_pair_ids(value))
+
+
+def _normalize_pair_ids(value: Any) -> list[int]:
     if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
-        return False
+        return []
     if not value:
-        return False
+        return []
     try:
-        return all(int(item) >= 0 for item in value)
+        out = [int(item) for item in value]
     except (TypeError, ValueError):
-        return False
+        return []
+    if any(item < 0 for item in out):
+        return []
+    return out
 
 
 def _hash_array_exact(array: Any) -> str:
@@ -530,9 +702,11 @@ __all__ = [
     "SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA",
     "SOURCE_FORWARD_SCORER_FIELDS",
     "SOURCE_FORWARD_SURFACES",
+    "SOURCE_FORWARD_SURFACE_PROVENANCE_SCHEMA",
     "SOURCE_FORWARD_TENSOR_NAMES",
     "build_snerv_payload_bitflip_falsification",
     "build_snerv_source_forward_proof_action_effect",
+    "build_snerv_source_forward_surface_provenance",
     "find_snerv_source_forward_proof_rows",
     "validate_snerv_payload_bitflip_falsification",
     "validate_snerv_source_forward_proof_action_effect",
