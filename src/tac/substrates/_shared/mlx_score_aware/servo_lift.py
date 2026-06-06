@@ -20,6 +20,7 @@ def servo_lift(
     stage: str,
     consumer: str = "nerv_long_training_campaign_admission",
     min_score_improvement: float = 0.0,
+    require_inflate_survival: bool = True,
 ) -> dict[str, Any]:
     """Convert a continuous proposal into a receiver-surface ActionEffect.
 
@@ -48,6 +49,12 @@ def servo_lift(
             "affected_regions": proposal.get("affected_regions"),
             "payload_sections": proposal.get("payload_sections"),
             "state_custody": proposal.get("state_custody"),
+            "archive_sha256": proposal.get("archive_sha256"),
+            "candidate_archive_sha256": proposal.get("candidate_archive_sha256"),
+            "source_archive_sha256": proposal.get("source_archive_sha256"),
+            "payload_sha256": proposal.get("payload_sha256"),
+            "runtime_tree_sha256": proposal.get("runtime_tree_sha256"),
+            "section_tree_sha256": proposal.get("section_tree_sha256"),
             "old_d_seg": _first(proposal, old, "old_d_seg", "d_seg"),
             "new_d_seg": _first(proposal, new, "new_d_seg", "d_seg"),
             "old_d_pose": _first(proposal, old, "old_d_pose", "d_pose"),
@@ -63,6 +70,14 @@ def servo_lift(
         min_score_improvement=min_score_improvement,
     )
     blockers = list(action_effect.get("blockers") or [])
+    blockers.extend(
+        _servo_surface_blockers(
+            receiver_surface,
+            require_inflate_survival=bool(require_inflate_survival),
+        )
+    )
+    blockers = _dedupe(blockers)
+    accepted = action_effect.get("action_effect_admitted") is True and not blockers
     return {
         "schema": PARSEBACK_SERVO_LIFT_SCHEMA,
         "family": str(family),
@@ -70,15 +85,27 @@ def servo_lift(
         "proposal_id": action_effect.get("action_id"),
         "action_effect_schema": ACTION_EFFECT_SCHEMA,
         "action_effect": action_effect,
-        "servo_lift_accepted": action_effect.get("action_effect_admitted") is True,
+        "servo_lift_accepted": accepted,
         "receiver_visible": action_effect.get("receiver_visible") is True,
         "score_admissible": action_effect.get("score_admissible") is True,
         "byte_priced": action_effect.get("byte_priced") is True,
+        "uint8_receiver_contact": _positive(
+            receiver_surface.get("receiver_surface_uint8_changed_pixels"),
+            receiver_surface.get("uint8_changed_pixels"),
+        ),
+        "scorer_surface_motion": _scorer_surface_motion(receiver_surface),
+        "inflate_survived": _optional_truthy(
+            proposal,
+            receiver_surface,
+            "inflate_survived",
+            "inflate_survival",
+        ),
         "blockers": blockers,
         "policy": {
             "continuous_proposal_is_not_authority": True,
             "uint8_receiver_surface_required": True,
             "fakequant_and_parseback_survival_required": True,
+            "inflate_survival_required": bool(require_inflate_survival),
             "exact_nonlinear_delta_score_prices_admission": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
@@ -93,6 +120,48 @@ def _receiver_surface(proposal: Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(trace, Mapping):
         return dict(trace)
     return {}
+
+
+def _servo_surface_blockers(
+    receiver_surface: Mapping[str, Any],
+    *,
+    require_inflate_survival: bool,
+) -> list[str]:
+    blockers: list[str] = []
+    if not _positive(
+        receiver_surface.get("receiver_surface_uint8_changed_pixels"),
+        receiver_surface.get("uint8_changed_pixels"),
+    ):
+        blockers.append("servo_lift_uint8_receiver_contact_missing")
+    if not _scorer_surface_motion(receiver_surface):
+        blockers.append("servo_lift_scorer_surface_motion_missing")
+    if require_inflate_survival and receiver_surface.get("inflate_survival") is not True:
+        blockers.append("servo_lift_inflate_survival_missing")
+    return blockers
+
+
+def _scorer_surface_motion(receiver_surface: Mapping[str, Any]) -> bool:
+    return _positive(
+        receiver_surface.get("receiver_surface_segnet_input_delta_linf"),
+        receiver_surface.get("segnet_input_delta_linf"),
+        receiver_surface.get("receiver_surface_posenet_input_delta_linf"),
+        receiver_surface.get("posenet_input_delta_linf"),
+        receiver_surface.get("receiver_surface_argmax_flipped_pixels"),
+        receiver_surface.get("argmax_flipped_pixels"),
+        receiver_surface.get("receiver_surface_pose_output_delta"),
+        receiver_surface.get("pose_output_delta_l2"),
+    )
+
+
+def _positive(*values: Any) -> bool:
+    for value in values:
+        try:
+            candidate = float(value)
+        except (TypeError, ValueError):
+            continue
+        if candidate > 0.0:
+            return True
+    return False
 
 
 def _first(
@@ -126,6 +195,16 @@ def _optional_truthy(
 
 def _text(value: object) -> str:
     return str(value or "").strip()
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value not in seen:
+            seen.add(value)
+            out.append(value)
+    return out
 
 
 __all__ = [
