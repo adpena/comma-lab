@@ -972,6 +972,106 @@ def test_long_training_campaign_plan_routes_receiver_closed_actions_into_commuta
     assert report["score_claim"] is False
 
 
+def test_long_training_campaign_plan_consumes_direct_hinerv_action_effect_sources() -> None:
+    base = plan_module.ActionEffect.build(
+        action_id="hinerv_v6_four_arm_real_smoke",
+        family="hinerv",
+        action_kind="target_region_birth",
+        authority="batch_local_live_mlx",
+        producer="test",
+        pair_ids=(0,),
+        old_d_seg=0.10,
+        new_d_seg=0.07,
+        old_d_pose=0.40,
+        new_d_pose=0.35,
+    ).as_dict()
+    arm_a = plan_module.ActionEffect.build(
+        action_id="hinerv_v6_four_arm_real_smoke",
+        family="hinerv",
+        action_kind="birth_only",
+        authority="batch_local_live_mlx",
+        producer="test",
+        pair_ids=(0,),
+        arm="A",
+        old_d_seg=0.10,
+        new_d_seg=0.07,
+        old_d_pose=0.40,
+        new_d_pose=0.35,
+    ).as_dict()
+    arm_b = plan_module.ActionEffect.build(
+        action_id="hinerv_v6_four_arm_real_smoke",
+        family="hinerv",
+        action_kind="frame0_pose_target_only",
+        authority="batch_local_live_mlx",
+        producer="test",
+        pair_ids=(0,),
+        arm="B",
+        old_d_seg=0.10,
+        new_d_seg=0.10,
+        old_d_pose=0.40,
+        new_d_pose=0.30,
+    ).as_dict()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget={
+            "schema": "nerv_modelsize_budget.v1",
+            "selected_candidates": [
+                {
+                    "schema": "hinerv_modelsize_candidate.v1",
+                    "family": "hi_nerv",
+                    "candidate_id": "hinerv_direct_action_effect_probe",
+                    "num_pairs": 600,
+                    "hard_byte_ceiling": 178_000,
+                    "decoder_codec": "int4_mixed",
+                    "nominal_total_payload_bytes": 120_000,
+                    "nominal_under_ceiling": True,
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        action_effect_sources=(base, arm_a, arm_b),
+    )
+
+    bundle = report["action_effect_planning_bundle"]
+    assert report["action_effect_source_count"] == 3
+    assert bundle["effect_count"] >= 3
+    assert bundle["advisory_false_authority_effect_count"] >= 3
+    assert bundle["selector_planning"]["advisory_false_authority_action_count"] >= 3
+    direct_effects = [
+        row
+        for row in bundle["effects"]
+        if row["action_id"] == "hinerv_v6_four_arm_real_smoke"
+    ]
+    assert len(direct_effects) == 3
+    assert {row["action_kind"] for row in direct_effects} == {
+        "target_region_birth",
+        "birth_only",
+        "frame0_pose_target_only",
+    }
+    atlas = bundle["action_atlas"]
+    direct_atlas = [
+        row
+        for row in atlas["rows"]
+        if row["action_id"] == "hinerv_v6_four_arm_real_smoke"
+    ]
+    assert len(direct_atlas) == 3
+    assert {row["score_currency"] for row in direct_atlas} == {
+        "advisory_false_authority_score_units"
+    }
+    assert all(row["receiver_closed"] is False for row in direct_atlas)
+    assert any(
+        "action_effect_not_receiver_closed" in blocker
+        for blocker in bundle["blockers"]
+    )
+
+
 def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -720,6 +720,7 @@ def build_nerv_long_training_campaign_plan(
         Mapping[str, Any]
     ] = (),
     snerv_lf_hf_runtime_binding_proofs: Sequence[Mapping[str, Any]] = (),
+    action_effect_sources: Sequence[Mapping[str, Any]] = (),
     pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_report: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
@@ -872,7 +873,10 @@ def build_nerv_long_training_campaign_plan(
             str(row.get("row_id") or ""),
         ),
     )
-    action_effect_planning_bundle = _action_effect_planning_bundle(rows)
+    action_effect_planning_bundle = _action_effect_planning_bundle(
+        rows,
+        action_effect_sources=action_effect_sources,
+    )
     experiment_queue = _experiment_queue(rows, queue_id=queue_id)
     experiment_queue["action_effect_planning_bundle"] = action_effect_planning_bundle
     snerv_lf_over_ceiling_reroute_queue = build_snerv_lf_over_ceiling_reroute_queue(
@@ -1001,6 +1005,7 @@ def build_nerv_long_training_campaign_plan(
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
         "archive_section_telemetry_source_count": len(archive_section_telemetry_sources),
         "archive_section_telemetry_row_count": _unique_index_row_count(archive_section_telemetry_index),
+        "action_effect_source_count": len(action_effect_sources),
         "snerv_lf_payload_recode_source_count": len(snerv_lf_payload_recode_sources),
         "snerv_lf_payload_byte_report_source_count": len(snerv_lf_payload_byte_report_sources),
         "snerv_snar_header_grammar_profile_source_count": len(snerv_snar_header_grammar_profile_sources),
@@ -2468,10 +2473,42 @@ def _experiment_queue(
     }
 
 
-def _action_effect_planning_bundle(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _action_effect_planning_bundle(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    action_effect_sources: Sequence[Mapping[str, Any]] = (),
+) -> dict[str, Any]:
     effects_by_key: dict[tuple[Any, ...], ActionEffect] = {}
     source_refs_by_key: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    receiver_closed_by_key: dict[tuple[Any, ...], bool] = {}
     blockers: list[str] = []
+
+    def add_effect(
+        effect: ActionEffect,
+        *,
+        row_id: str,
+        family: str,
+        source_schema: Any,
+        source: str,
+    ) -> None:
+        receiver_closed = _action_effect_is_receiver_closed(effect)
+        if not receiver_closed:
+            blockers.append(
+                f"action_effect_not_receiver_closed:{row_id}:{effect.action_id}:{effect.action_kind}"
+            )
+        key = _action_effect_identity_key(effect)
+        effects_by_key.setdefault(key, effect)
+        receiver_closed_by_key[key] = receiver_closed_by_key.get(key, False) or receiver_closed
+        source_refs_by_key.setdefault(key, []).append(
+            {
+                "row_id": row_id,
+                "family": family,
+                "source_schema": source_schema,
+                "source": source,
+                "receiver_closed": receiver_closed,
+            }
+        )
+
     for row in rows:
         row_id = str(row.get("row_id") or "")
         family = str(row.get("family") or "")
@@ -2483,24 +2520,46 @@ def _action_effect_planning_bundle(rows: Sequence[Mapping[str, Any]]) -> dict[st
                     f"action_effect_pair_local_receipt_invalid:{row_id}:{type(exc).__name__}"
                 )
                 continue
-            if not _action_effect_is_receiver_closed(effect):
-                blockers.append(
-                    f"action_effect_not_receiver_closed:{row_id}:{effect.action_id}"
-                )
-                continue
-            key = _action_effect_identity_key(effect)
-            effects_by_key.setdefault(key, effect)
-            source_refs_by_key.setdefault(key, []).append(
-                {
-                    "row_id": row_id,
-                    "family": family,
-                    "source_schema": source.get("schema"),
-                    "source": source.get("source"),
-                }
+            add_effect(
+                effect,
+                row_id=row_id,
+                family=family,
+                source_schema=source.get("schema"),
+                source=str(source.get("source") or "campaign_row_pair_local"),
+            )
+    for index, source in enumerate(action_effect_sources):
+        source_id = str(
+            source.get("row_id")
+            or source.get("source")
+            or source.get("action_id")
+            or f"direct_action_effect_source_{index}"
+        )
+        family = str(source.get("family") or "")
+        try:
+            effects = _action_effects_from_direct_source(source)
+        except (TypeError, ValueError) as exc:
+            blockers.append(
+                f"action_effect_direct_source_invalid:{source_id}:{type(exc).__name__}"
+            )
+            continue
+        for effect in effects:
+            add_effect(
+                effect,
+                row_id=source_id,
+                family=family or effect.family,
+                source_schema=source.get("schema"),
+                source=str(source.get("source") or "direct_action_effect_source"),
             )
     effects = list(effects_by_key.values())
     atlas_rows = [
-        _action_effect_atlas_row(effect, source_refs_by_key.get(_action_effect_identity_key(effect), []))
+        _action_effect_atlas_row(
+            effect,
+            source_refs_by_key.get(_action_effect_identity_key(effect), []),
+            receiver_closed=receiver_closed_by_key.get(
+                _action_effect_identity_key(effect),
+                False,
+            ),
+        )
         for effect in effects
     ]
     atlas_rows.sort(
@@ -2514,12 +2573,16 @@ def _action_effect_planning_bundle(rows: Sequence[Mapping[str, Any]]) -> dict[st
         reverse=True,
     )
     commutator_ledger = build_commutator_ledger(effects)
+    receiver_closed_count = sum(
+        1 for effect in effects if receiver_closed_by_key.get(_action_effect_identity_key(effect), False)
+    )
     selector_planning = {
         "schema": ACTION_EFFECT_SELECTOR_PLANNING_SCHEMA,
         "action_effect_schema": ACTION_EFFECT_V1_SCHEMA,
         "commutator_ledger_schema": commutator_ledger["schema"],
         "independent_delta_assumption_allowed": False,
-        "receiver_closed_action_count": len(effects),
+        "receiver_closed_action_count": receiver_closed_count,
+        "advisory_false_authority_action_count": len(effects) - receiver_closed_count,
         "measured_commutator_count": commutator_ledger["measured_commutator_count"],
         "needs_measurement_count": commutator_ledger["needs_measurement_count"],
         "macro_action_candidate_count": len(commutator_ledger["macro_action_candidates"]),
@@ -2545,6 +2608,8 @@ def _action_effect_planning_bundle(rows: Sequence[Mapping[str, Any]]) -> dict[st
             **FALSE_AUTHORITY,
         },
         "effect_count": len(effects),
+        "receiver_closed_effect_count": receiver_closed_count,
+        "advisory_false_authority_effect_count": len(effects) - receiver_closed_count,
         "effects": [effect.as_dict() for effect in effects],
         "commutator_ledger": commutator_ledger,
         "selector_planning": selector_planning,
@@ -2553,6 +2618,22 @@ def _action_effect_planning_bundle(rows: Sequence[Mapping[str, Any]]) -> dict[st
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _action_effects_from_direct_source(source: Mapping[str, Any]) -> tuple[ActionEffect, ...]:
+    schema = str(source.get("schema") or "")
+    if schema == ACTION_EFFECT_V1_SCHEMA:
+        return (ActionEffect.from_dict(source),)
+    if schema == "hi_nerv_target_region_birth_four_arm_ablation.v1" or (
+        isinstance(source.get("four_arm_ablation"), Mapping)
+    ):
+        return ActionEffect.from_hinerv_four_arm_ablation(source)
+    if schema in {
+        "hi_nerv_target_region_birth_receipt.v1",
+        "hi_nerv_target_region_birth_four_arm.v1",
+    } or isinstance(source.get("exact_nonrate"), Mapping):
+        return (ActionEffect.from_hinerv_birth_receipt(source),)
+    raise ValueError(f"unsupported ActionEffect source schema: {schema!r}")
 
 
 def _row_pair_local_action_effect_sources(row: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -2596,6 +2677,8 @@ def _action_effect_identity_key(effect: ActionEffect) -> tuple[Any, ...]:
     return (
         effect.action_id,
         effect.family,
+        effect.action_kind,
+        effect.arm,
         effect.authority,
         effect.old_d_seg,
         effect.new_d_seg,
@@ -2609,6 +2692,8 @@ def _action_effect_identity_key(effect: ActionEffect) -> tuple[Any, ...]:
 def _action_effect_atlas_row(
     effect: ActionEffect,
     source_refs: Sequence[Mapping[str, Any]],
+    *,
+    receiver_closed: bool,
 ) -> dict[str, Any]:
     out = effect.as_dict()
     out.update(
@@ -2619,8 +2704,12 @@ def _action_effect_atlas_row(
             "source_row_ids": _dedupe(
                 [str(ref.get("row_id") or "") for ref in source_refs if ref.get("row_id")]
             ),
-            "receiver_closed": True,
-            "score_currency": "contest_score_units",
+            "receiver_closed": bool(receiver_closed),
+            "score_currency": (
+                "contest_score_units"
+                if bool(receiver_closed)
+                else "advisory_false_authority_score_units"
+            ),
             **FALSE_AUTHORITY,
         }
     )

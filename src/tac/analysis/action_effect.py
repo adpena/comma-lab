@@ -881,6 +881,7 @@ class ActionEffect:
     seg_score_delta: float | None = None
     pose_score_delta: float | None = None
     rejection_source: str | None = None
+    blockers: tuple[str, ...] = ()
     interaction_or_commutator: float | None = None
     promotion_eligible: bool = False
 
@@ -964,6 +965,8 @@ class ActionEffect:
             raise ValueError("region_ids must be a tuple")
         if not isinstance(self.payload_sections, tuple):
             raise ValueError("payload_sections must be a tuple")
+        if not isinstance(self.blockers, tuple):
+            raise ValueError("blockers must be a tuple")
         for name, value in (
             ("archive_sha256", self.archive_sha256),
             ("payload_sha256", self.payload_sha256),
@@ -1027,6 +1030,7 @@ class ActionEffect:
         seg_score_delta: float | None = None,
         pose_score_delta: float | None = None,
         rejection_source: str | None = None,
+        blockers: Sequence[str] = (),
         interaction_or_commutator: float | None = None,
         reference_bytes: int = CONTEST_REFERENCE_BYTES,
     ) -> ActionEffect:
@@ -1116,6 +1120,7 @@ class ActionEffect:
             seg_score_delta=seg_score_delta,
             pose_score_delta=pose_score_delta,
             rejection_source=None if rejection_source is None else str(rejection_source),
+            blockers=_v1_str_tuple(blockers),
             interaction_or_commutator=interaction_or_commutator,
             promotion_eligible=False,
         )
@@ -1406,6 +1411,13 @@ class ActionEffect:
             or _v1_pose_score_delta(old_d_pose, new_d_pose),
             rejection_source=_v1_first_text(admission_decision, "rejection_source")
             or _v1_first_text(receipt, "rejection_source"),
+            blockers=_v1_str_tuple(receipt.get("blockers") or ()),
+            interaction_or_commutator=_v1_first_float(
+                receipt,
+                "interaction_or_commutator",
+                "commutator",
+                "commutator_delta_score_nonrate",
+            ),
             seg_input_delta_linf_region=_v1_first_float(
                 receiver_surface,
                 "seg_input_delta_linf_region",
@@ -1421,6 +1433,46 @@ class ActionEffect:
             or receiver_delta_linf,
             reference_bytes=reference_bytes,
         )
+
+    @classmethod
+    def from_hinerv_four_arm_ablation(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        consumer: str | None = "nerv_long_run_launch_gate",
+        reference_bytes: int = CONTEST_REFERENCE_BYTES,
+    ) -> tuple[ActionEffect, ...]:
+        """Build one ActionEffect per measured HiNeRV v6 four-arm row.
+
+        The renderer emits a bundle under ``four_arm_ablation`` on the live
+        birth payload.  Each arm is receipt-shaped and is imported through the
+        same HiNeRV birth constructor so score math, receiver-surface aliases,
+        authority, and region ids cannot drift into a parallel adapter.
+        """
+
+        if not isinstance(payload, Mapping):
+            raise TypeError("four-arm ablation payload must be a mapping")
+        bundle = payload.get("four_arm_ablation") if "four_arm_ablation" in payload else payload
+        bundle = _v1_mapping(bundle)
+        arms = bundle.get("arms")
+        if not isinstance(arms, Sequence) or isinstance(arms, (str, bytes)):
+            return ()
+        root_action_id = _v1_first_text(bundle, "action_id") or _v1_first_text(payload, "action_id")
+        out: list[ActionEffect] = []
+        for raw in arms:
+            if not isinstance(raw, Mapping):
+                continue
+            arm_row = dict(raw)
+            if root_action_id and not arm_row.get("action_id"):
+                arm_row["action_id"] = root_action_id
+            out.append(
+                cls.from_hinerv_birth_receipt(
+                    arm_row,
+                    consumer=consumer,
+                    reference_bytes=reference_bytes,
+                )
+            )
+        return tuple(out)
 
     @classmethod
     def from_pair_local_admission(
@@ -1794,6 +1846,7 @@ class ActionEffect:
         payload["pair_ids"] = list(self.pair_ids)
         payload["region_ids"] = list(self.region_ids)
         payload["payload_sections"] = list(self.payload_sections)
+        payload["blockers"] = list(self.blockers)
         payload["receiver_surface"] = self.receiver_surface.as_dict()
         payload["old_archive_bytes"] = self.old_bytes
         payload["new_archive_bytes"] = self.new_bytes
@@ -1873,6 +1926,7 @@ class ActionEffect:
             rejection_source=(
                 None if payload.get("rejection_source") is None else str(payload["rejection_source"])
             ),
+            blockers=_v1_str_tuple(payload.get("blockers") or ()),
             interaction_or_commutator=_v1_float_or_none(payload.get("interaction_or_commutator")),
         )
 

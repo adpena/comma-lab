@@ -18,6 +18,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tac.analysis.action_effect import ActionEffect
 from tac.analysis.nerv_modelsize_budget import enumerate_snerv_modelsize_candidates
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
@@ -868,10 +869,73 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
     monkeypatch.setattr(survival_mod, "measure_birth_survival", fake_measure_birth_survival)
     monkeypatch.setattr(survival_mod, "measure_birth_hysteresis", fake_measure_birth_hysteresis)
 
+    def arm_row(arm: str, *, action_kind: str, delta_seg: float, blockers: list[str] | None = None):
+        old_d_seg = 0.50
+        new_d_seg = old_d_seg + delta_seg
+        old_d_pose = 194.0
+        new_d_pose = 194.1
+        return {
+            "schema": "hi_nerv_target_region_birth_four_arm.v1",
+            "action_id": "d" * 64,
+            "surface": "live_mlx",
+            "authority": "batch_local_live_mlx",
+            "normalization_scope": "batch_local",
+            "action_kind": action_kind,
+            "arm": arm,
+            "pair_index": 0,
+            "worst_region": {"batch_index": 0, "class_index": 2, "region_label": 1},
+            "updated_parameter_names": ["head_rgb_1.weight"] if arm != "B" else ["head_rgb_0.weight"],
+            "exact_nonrate": {
+                "old_d_seg_batch": old_d_seg,
+                "new_d_seg_batch": new_d_seg,
+                "old_d_pose_batch": old_d_pose,
+                "new_d_pose_batch": new_d_pose,
+                "pose_term_available": True,
+            },
+            "argmax_transitions": {
+                "wrong_to_target_count": 5 if arm != "B" else 0,
+                "target_to_wrong_count": 0,
+                "wrong_to_wrong_count": 1,
+                "net_target_support_delta": 5 if arm != "B" else 0,
+            },
+            "receiver_surface_uint8_changed_pixels": 7 if arm != "B" else 0,
+            "receiver_uint8_delta_abs_max": 4.0,
+            "receiver_float_rgb_delta_linf": 0.01,
+            "argmax_changed_count_region": 6 if arm != "B" else 0,
+            "pose_output_l2_delta": 0.12,
+            "admission_decision": {
+                "arm": arm,
+                "exact_score_decision": "accepted" if not blockers else "rejected",
+                "raw_cap_decision": "violated_counterfactual_only",
+                "catastrophic_guard_decision": "satisfied",
+                "would_accept_exact_score_if_raw_cap_disabled": not blockers,
+                "would_accept_without_catastrophic_guard": not blockers,
+                "pose_output_l2_delta": 0.12,
+                "seg_score_delta": 100.0 * delta_seg,
+                "pose_score_delta": math.sqrt(10.0 * new_d_pose) - math.sqrt(10.0 * old_d_pose),
+                "rejection_source": None if not blockers else "blocked_by_test_fixture",
+            },
+            "blockers": blockers or [],
+            "interaction_or_commutator": -0.25 if arm in {"C", "D"} else None,
+        }
+
     row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
         model=model,
         output_dir=tmp_path,
-        live_birth_payload={"action_id": "d" * 64, "accepted": True},
+        live_birth_payload={
+            "action_id": "d" * 64,
+            "accepted": True,
+            "four_arm_ablation": {
+                "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
+                "action_id": "d" * 64,
+                "arms": [
+                    arm_row("A", action_kind="birth_only", delta_seg=-0.03),
+                    arm_row("B", action_kind="frame0_pose_target_only", delta_seg=0.0),
+                    arm_row("C", action_kind="independent_birth_plus_frame0_pose", delta_seg=-0.02),
+                    arm_row("D", action_kind="joint_line_search_composite", delta_seg=-0.04),
+                ],
+            },
+        },
         scorer_teacher=object(),
         target_labels=np.zeros((1, 2, 2), dtype=np.int32),
         pair_indices=np.array([0], dtype=np.int64),
@@ -881,7 +945,8 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
 
     assert row["fakequant_survived"] is True
     assert row["hysteresis_passed"] is True
-    assert row["action_effect_rows_written"] == 1
+    assert row["action_effect_rows_written"] == 5
+    assert row["four_arm_action_effect_rows_written"] == 4
     assert float(np.asarray(model.weight)[0]) == pytest.approx(1.0)
     fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
     hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
@@ -891,9 +956,11 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
         json.loads(line)
         for line in (tmp_path / "hi_nerv_birth_action_effects.jsonl").read_text(encoding="utf-8").splitlines()
     ]
-    assert effect_rows[-1]["schema"] == "tac.action_effect.v1"
-    assert effect_rows[-1]["action_id"] == "d" * 64
-    assert effect_rows[-1]["fakequant_survived"] is True
+    assert [entry["schema"] for entry in effect_rows] == ["tac.action_effect.v1"] * 5
+    assert effect_rows[0]["fakequant_survived"] is True
+    assert [entry["arm"] for entry in effect_rows[1:]] == ["A", "B", "C", "D"]
+    assert effect_rows[-1]["action_kind"] == "joint_line_search_composite"
+    assert effect_rows[-1]["interaction_or_commutator"] == pytest.approx(-0.25)
 
 
 def _receiver_replay_selection_manifest(
@@ -7112,6 +7179,92 @@ def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     assert embedded_plan["planner_row_queue_artifact_path"].endswith("/compact_renderer_mlx_spine_runner_report.json")
     embedded_command = embedded_plan["campaign_rows"][0]["command_argv"]
     assert "--planner-row-queue-artifact" in embedded_command
+
+
+def test_hinerv_execute_threads_live_action_effect_ledger_into_campaign_plan(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        ledger = out / "hi_nerv_birth_action_effects.jsonl"
+        rows = [
+            ActionEffect.build(
+                action_id="hinerv_live_four_arm_probe",
+                family="hinerv",
+                action_kind="target_region_birth",
+                authority="batch_local_live_mlx",
+                producer="test",
+                pair_ids=(0,),
+                old_d_seg=0.10,
+                new_d_seg=0.07,
+                old_d_pose=0.40,
+                new_d_pose=0.35,
+            ).as_dict(),
+            ActionEffect.build(
+                action_id="hinerv_live_four_arm_probe",
+                family="hinerv",
+                action_kind="birth_only",
+                authority="batch_local_live_mlx",
+                producer="test",
+                pair_ids=(0,),
+                arm="A",
+                old_d_seg=0.10,
+                new_d_seg=0.07,
+                old_d_pose=0.40,
+                new_d_pose=0.35,
+            ).as_dict(),
+        ]
+        ledger.write_text(
+            "\n".join(json.dumps(row, sort_keys=True) for row in rows) + "\n",
+            encoding="utf-8",
+        )
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_action_effect_threading",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["action_effect_source_count"] == 2
+    assert out["action_effect_source_paths"] == [
+        (tmp_path / "hinerv_action_effect_threading/hi_nerv_mlx_training/hi_nerv_birth_action_effects.jsonl")
+        .resolve(strict=False)
+        .as_posix()
+    ]
+    plan = out["nerv_long_training_campaign_plan"]
+    assert plan["action_effect_row_count"] == 2
+    assert plan["action_effect_source_count"] == 2
+    bundle = plan["action_effect_planning_bundle"]
+    assert bundle["advisory_false_authority_effect_count"] == 2
+    assert {row["action_kind"] for row in bundle["effects"]} == {
+        "target_region_birth",
+        "birth_only",
+    }
+    assert all(row["receiver_closed"] is False for row in bundle["action_atlas"]["rows"])
 
 
 def test_hinerv_execute_forwards_prioritized_pair_indices(

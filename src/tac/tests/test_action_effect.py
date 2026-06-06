@@ -415,6 +415,47 @@ def _real_servo_admission_dict() -> dict:
     return admit_pair_local_distortion_action(before=before, after=after, trace=trace).as_dict()
 
 
+def test_hinerv_four_arm_ablation_imports_receipt_shaped_rows() -> None:
+    receipt, action_id = _real_birth_receipt(surface="live_mlx")
+    arm_a = {
+        **receipt,
+        "schema": "hi_nerv_target_region_birth_four_arm.v1",
+        "arm": "A",
+        "action_kind": "birth_only",
+        "action_id": action_id,
+        "blockers": [],
+        "interaction_or_commutator": 0.0,
+    }
+    arm_b = {
+        **receipt,
+        "schema": "hi_nerv_target_region_birth_four_arm.v1",
+        "arm": "B",
+        "action_kind": "frame0_pose_target_only",
+        "action_id": action_id,
+        "accepted": False,
+        "blockers": ["hinerv_four_arm_frame0_pose_snapshot_missing"],
+        "updated_parameter_names": ["head_rgb_0.weight"],
+        "payload_sections": ["head_rgb_0.weight"],
+    }
+
+    effects = ActionEffect.from_hinerv_four_arm_ablation(
+        {
+            "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
+            "action_id": action_id,
+            "arms": [arm_a, arm_b],
+        }
+    )
+
+    assert len(effects) == 2
+    rows = [effect.as_dict() for effect in effects]
+    assert rows[0]["action_id"] == action_id
+    assert rows[0]["interaction_or_commutator"] == pytest.approx(0.0)
+    assert rows[0]["blockers"] == []
+    assert rows[1]["payload_sections"] == ["head_rgb_0.weight"]
+    assert rows[1]["blockers"] == ["hinerv_four_arm_frame0_pose_snapshot_missing"]
+    assert rows[1]["rejection_source"] is None
+
+
 def _servo_receipt_with_absolute_endpoints() -> dict:
     return {
         "schema": "nerv_pair_local_distortion_servo_receipt.v1",
@@ -688,6 +729,96 @@ def test_v1_from_hinerv_birth_receipt_carries_v6_pose_trusted_admission_fields()
     assert roundtrip.raw_cap_decision == "violated_counterfactual_only"
     assert roundtrip.would_accept_exact_score_if_raw_cap_disabled is True
     assert roundtrip.pose_output_l2_delta == pytest.approx(0.37355837225914)
+
+
+def test_v1_from_hinerv_four_arm_ablation_expands_all_real_arm_rows() -> None:
+    receipt, action_id = _real_birth_receipt(
+        old_d_seg=0.50,
+        new_d_seg=0.47,
+        old_d_pose=194.0,
+        new_d_pose=194.2,
+    )
+
+    def arm(arm_id: str, action_kind: str, *, new_d_seg: float, blockers: list[str] | None = None) -> dict:
+        old_d_seg = 0.50
+        old_d_pose = 194.0
+        new_d_pose = 194.2
+        return {
+            "schema": "hi_nerv_target_region_birth_four_arm.v1",
+            "action_id": action_id,
+            "surface": "live_mlx",
+            "authority": "batch_local_live_mlx",
+            "normalization_scope": "batch_local",
+            "action_kind": action_kind,
+            "arm": arm_id,
+            "pair_index": 0,
+            "worst_region": receipt["worst_region"],
+            "updated_parameter_names": ["head_rgb_0.weight"] if arm_id == "B" else ["head_rgb_1.weight"],
+            "exact_nonrate": {
+                "old_d_seg_batch": old_d_seg,
+                "new_d_seg_batch": new_d_seg,
+                "old_d_pose_batch": old_d_pose,
+                "new_d_pose_batch": new_d_pose,
+                "pose_term_available": True,
+            },
+            "argmax_transitions": {
+                "wrong_to_target_count": 3 if arm_id != "B" else 0,
+                "target_to_wrong_count": 0,
+                "wrong_to_wrong_count": 1,
+                "net_target_support_delta": 3 if arm_id != "B" else 0,
+            },
+            "receiver_surface_uint8_changed_pixels": 4 if arm_id != "B" else 0,
+            "receiver_uint8_delta_abs_max": 3.0,
+            "receiver_float_rgb_delta_linf": 0.02,
+            "argmax_changed_count_region": 4 if arm_id != "B" else 0,
+            "pose_output_l2_delta": 0.2,
+            "interaction_or_commutator": -0.125 if arm_id in {"C", "D"} else None,
+            "admission_decision": {
+                "arm": arm_id,
+                "exact_score_decision": "accepted" if not blockers else "rejected",
+                "raw_cap_decision": "violated_counterfactual_only",
+                "catastrophic_guard_decision": "satisfied",
+                "would_accept_exact_score_if_raw_cap_disabled": not blockers,
+                "would_accept_without_catastrophic_guard": not blockers,
+                "pose_output_l2_delta": 0.2,
+                "seg_score_delta": 100.0 * (new_d_seg - old_d_seg),
+                "pose_score_delta": math.sqrt(10.0 * new_d_pose) - math.sqrt(10.0 * old_d_pose),
+                "rejection_source": None if not blockers else "blocked_by_fixture",
+            },
+            "blockers": blockers or [],
+        }
+
+    effects = ActionEffect.from_hinerv_four_arm_ablation(
+        {
+            "action_id": action_id,
+            "four_arm_ablation": {
+                "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
+                "action_id": action_id,
+                "arms": [
+                    arm("A", "birth_only", new_d_seg=0.47),
+                    arm("B", "frame0_pose_target_only", new_d_seg=0.50, blockers=["b_has_no_seg_birth"]),
+                    arm("C", "independent_birth_plus_frame0_pose", new_d_seg=0.46),
+                    arm("D", "joint_line_search_composite", new_d_seg=0.45),
+                ],
+            },
+        }
+    )
+
+    assert [effect.arm for effect in effects] == ["A", "B", "C", "D"]
+    assert [effect.action_kind for effect in effects] == [
+        "birth_only",
+        "frame0_pose_target_only",
+        "independent_birth_plus_frame0_pose",
+        "joint_line_search_composite",
+    ]
+    assert effects[0].exact_score_decision == "accept"
+    assert effects[1].exact_score_decision == "reject"
+    assert effects[1].blockers == ("b_has_no_seg_birth",)
+    assert effects[2].interaction_or_commutator == pytest.approx(-0.125)
+    assert effects[3].wrong_to_target == 3
+    roundtrip = [ActionEffect.from_dict(effect.as_dict()) for effect in effects]
+    assert roundtrip[1].blockers == ("b_has_no_seg_birth",)
+    assert roundtrip[3].arm == "D"
 
 
 # ── constructor: pair-local servo (real schema) ────────────────────────────

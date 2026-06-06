@@ -10820,6 +10820,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         receiver_cache_quality_summary=post_export_receiver_cache_quality_summary,
     )
     blockers.extend(train_receiver_class_escape_contract.get("blockers") or [])
+    action_effect_ledger_path = training_dir / "hi_nerv_birth_action_effects.jsonl"
+    action_effect_sources, action_effect_source_blockers = (
+        _load_runner_action_effect_sources_from_jsonl(action_effect_ledger_path)
+    )
+    blockers.extend(action_effect_source_blockers)
     long_mlx_training_readiness_signals = _hi_nerv_long_mlx_training_readiness_signals(
         config_gate=config_gate,
         training_telemetry_contract=(
@@ -10840,6 +10845,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         hard_byte_ceilings=hard_byte_ceilings,
         repo_root=root,
     )
+    if action_effect_sources:
+        final["nerv_long_training_campaign_plan"] = build_nerv_long_training_campaign_plan(
+            hinerv_modelsize_budget=final["hinerv_modelsize_budget"],
+            snerv_modelsize_budget=final["snerv_modelsize_budget"],
+            planner_row_queue_artifact_path=(out / "compact_renderer_mlx_spine_runner_report.json"),
+            action_effect_sources=action_effect_sources,
+        )
     final.update(
         {
             "execute_family": "hi_nerv",
@@ -10881,6 +10893,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "archive_selection_manifest_path": artifact_dict.get("archive_selection_manifest_path"),
             "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
             "training_artifact": artifact_dict,
+            "action_effect_source_paths": (
+                [action_effect_ledger_path.as_posix()] if action_effect_sources else []
+            ),
+            "action_effect_source_count": len(action_effect_sources),
             "trained_archive_byte_oracle": trained_archive_byte_oracle,
             "decoder_weight_waterfill_from_trained_ladder": (decoder_weight_waterfill_from_trained_ladder),
             "hi_nerv_long_mlx_training_readiness_signals": (long_mlx_training_readiness_signals),
@@ -11494,6 +11510,36 @@ def _base_report(
         },
         **FALSE_AUTHORITY,
     }
+
+
+def _load_runner_action_effect_sources_from_jsonl(
+    path: str | Path,
+) -> tuple[tuple[dict[str, Any], ...], list[str]]:
+    ledger = Path(path).expanduser().resolve(strict=False)
+    if not ledger.is_file():
+        return (), []
+    rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for line_no, line in enumerate(ledger.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            blockers.append(
+                f"action_effect_source_jsonl_invalid:{ledger.as_posix()}:{line_no}:{exc.msg}"
+            )
+            continue
+        if not isinstance(payload, Mapping):
+            blockers.append(
+                f"action_effect_source_jsonl_non_mapping:{ledger.as_posix()}:{line_no}"
+            )
+            continue
+        row = dict(payload)
+        row.setdefault("source", ledger.as_posix())
+        row.setdefault("row_id", f"{ledger.name}:{line_no}")
+        rows.append(row)
+    return tuple(rows), _dedupe(blockers)
 
 
 def _compact_runner_public_command_args(args: argparse.Namespace) -> dict[str, Any]:
@@ -18666,10 +18712,19 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
             consumer="nerv_long_run_launch_gate",
         )
         append_action_effect(action_effect, action_effect_ledger_path)
-        summary["action_effect_rows_written"] = 1
+        rows_written = 1
+        for four_arm_effect in ActionEffect.from_hinerv_four_arm_ablation(
+            live_birth_payload,
+            consumer="nerv_long_run_launch_gate",
+        ):
+            append_action_effect(four_arm_effect, action_effect_ledger_path)
+            rows_written += 1
+        summary["action_effect_rows_written"] = rows_written
+        summary["four_arm_action_effect_rows_written"] = max(0, rows_written - 1)
     except Exception as exc:
         blocker = f"hi_nerv_birth_action_effect_write_failed:{type(exc).__name__}:{exc}"
         summary["action_effect_rows_written"] = 0
+        summary["four_arm_action_effect_rows_written"] = 0
         summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], blocker])
 
     hyst_path = out / "hi_nerv_birth_hysteresis.json"

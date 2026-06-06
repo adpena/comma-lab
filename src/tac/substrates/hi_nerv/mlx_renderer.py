@@ -2712,6 +2712,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         min_region_pixels: int = 1,
         target_geometry_mode: str = "frontier_band",
         target_geometry_frontier_dilation: int = 1,
+        emit_four_arm_ablation: bool = True,
+        four_arm_ablation_compensation_steps: int = 8,
     ) -> dict[str, Any]:
         """Run a scoped hard-birth prefit on the worst SegNet target region.
 
@@ -2799,6 +2801,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             raise ValueError(
                 "target_geometry_frontier_dilation must be >= 1; "
                 f"got {target_geometry_frontier_dilation}"
+            )
+        ablation_compensation_steps = int(four_arm_ablation_compensation_steps)
+        if ablation_compensation_steps < 1:
+            raise ValueError(
+                "four_arm_ablation_compensation_steps must be >= 1; "
+                f"got {four_arm_ablation_compensation_steps}"
             )
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
@@ -3589,6 +3597,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             )
             return mx.mean((pose - trust_target) ** 2)  # type: ignore[union-attr]
 
+        def _pose_target_frame0_loss_fn(model_obj: Any) -> Any:
+            pred0, pred1 = _predict_pair01(model_obj)
+            pred1 = mx.stop_gradient(pred1)  # type: ignore[union-attr]
+            yuv6_pair = mx.concatenate(  # type: ignore[union-attr]
+                [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+                axis=-1,
+            )
+            pose = pose_fn(yuv6_pair)
+            return mx.mean((pose - target_pose_reference) * (pose - target_pose_reference))  # type: ignore[operator, union-attr]
+
         def _apply_compensation_step(
             base_snapshot: list[tuple[Any, Any]],
             grads_tree: Any,
@@ -3731,6 +3749,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if pose_available and target_pose_np is not None
             else None
         )
+        pose_target_loss_and_grad_fn = (
+            nn.value_and_grad(self, _pose_target_frame0_loss_fn)  # type: ignore[union-attr]
+            if pose_available and target_pose_np is not None
+            else None
+        )
         initial_snapshot = _snapshot_parameters()
         parameter_group_sha256_before = _parameter_group_sha256(initial_snapshot)
         blockers: list[str] = []
@@ -3789,20 +3812,28 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         max_backtracking_attempts = 8
         min_lr = lr * (0.5**max_backtracking_attempts)
         candidate_attempt_records: list[dict[str, Any]] = []
+        accepted_birth_only_snapshot: list[tuple[Any, Any]] | None = None
+        accepted_birth_only_state: dict[str, Any] | None = None
+        accepted_birth_only_updated_names: list[str] = []
+        accepted_birth_only_decision: dict[str, Any] | None = None
+        accepted_composite_state: dict[str, Any] | None = None
+        accepted_composite_updated_names: list[str] = []
+        accepted_composite_decision: dict[str, Any] | None = None
         target_geometry_exhausted = False
 
         def _gate_with_optional_compensation(
             *,
             region_progress: bool,
             candidate: dict[str, Any],
-        ) -> dict[str, Any] | None:
+        ) -> tuple[dict[str, Any], list[tuple[Any, Any]]] | None:
             """Try a frame0 compensation when a birth step lost pose/joint.
 
             Returns the admissible composite ``_region_candidate_state`` dict
-            when the composite (frame1 birth + frame0 compensation) strictly
-            improves the exact nonrate score AND satisfies the pose cap;
-            otherwise restores the frame1 birth world and returns ``None`` so
-            the caller falls back to the existing backtrack/reject path.
+            plus the pre-compensation frame1-birth snapshot when the composite
+            strictly improves the exact nonrate score AND satisfies the pose
+            cap; otherwise restores the frame1 birth world and returns
+            ``None`` so the caller falls back to the existing backtrack/reject
+            path.
             Eligibility requires region progress and an available pose teacher;
             on the no-pose-teacher path it is a no-op (returns ``None``), which
             keeps that path behaviorally byte-identical.
@@ -3833,7 +3864,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             composite_accepted_count += 1
             composite_updated_parameter_names.update(record["compensation_updated_parameter_names"])
             last_composite_delta_score_nonrate = record["composite_delta_score_nonrate"]
-            return record["composite_state"]
+            return record["composite_state"], frame1_birth_snapshot
 
         for _step in range(step_count):
             base_snapshot = _snapshot_parameters()
@@ -4102,7 +4133,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         candidate=candidate,
                     )
                     if composite_accepted is not None:
-                        composite_state = composite_accepted
+                        composite_state, frame1_birth_snapshot = composite_accepted
+                        accepted_birth_only_snapshot = frame1_birth_snapshot
+                        accepted_birth_only_state = candidate
+                        accepted_birth_only_updated_names = sorted(applied_names)
+                        accepted_birth_only_decision = dict(candidate_decision)
                         step_accepted = True
                         accepted_step_count += 1
                         accepted_update_names.update(applied_names)
@@ -4124,6 +4159,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         if composite_pose_delta is not None:
                             max_accepted_pose_delta_l2 = max(max_accepted_pose_delta_l2, composite_pose_delta)
                         current_lr = attempt_lr
+                        accepted_composite_state = composite_state
+                        accepted_composite_updated_names = sorted(
+                            [*applied_names, *composite_updated_parameter_names]
+                        )
+                        accepted_composite_decision = dict(
+                            (composite_records[-1].get("admission_decision") or {})
+                            if composite_records
+                            else {}
+                        )
                         candidate_attempt_record["decision"] = "accepted_with_frame0_pose_compensation"
                         candidate_attempt_records.append(candidate_attempt_record)
                         break
@@ -4170,6 +4214,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 step_accepted = True
                 accepted_step_count += 1
                 accepted_update_names.update(applied_names)
+                accepted_birth_only_snapshot = _snapshot_parameters()
+                accepted_birth_only_state = candidate
+                accepted_birth_only_updated_names = sorted(applied_names)
+                accepted_birth_only_decision = dict(candidate_decision)
                 last_grad_norm_by_group = grad_norms
                 last_update_norm_by_group = update_norms
                 best_unsolved_tail_stats = dict(tail_stats)
@@ -4208,6 +4256,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         if accepted_step_count == 0:
             _restore_parameters(initial_snapshot)
             blockers.append("hinerv_target_region_birth_no_accepted_step")
+
+        final_model_snapshot = _snapshot_parameters()
 
         parameter_group_sha256_after = _parameter_group_sha256(_snapshot_parameters())
         out_of_scope_bit_frozen_verified = parameter_group_sha256_before.get(
@@ -4435,6 +4485,422 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             initial_group_sha256=parameter_group_sha256_before,
             trained_groups=sorted(trained_groups_for_action_id),
         )
+
+        def _snapshot_delta_names(
+            before_snapshot: list[tuple[Any, Any]],
+            after_snapshot: list[tuple[Any, Any]],
+            predicate: Any,
+        ) -> list[str]:
+            before_by_name = {_flat_param_name(raw_name): leaf for raw_name, leaf in before_snapshot}
+            out: list[str] = []
+            for raw_name, leaf in after_snapshot:
+                flat = _flat_param_name(raw_name)
+                if not predicate(flat):
+                    continue
+                before_leaf = before_by_name.get(flat)
+                if before_leaf is None or leaf is None:
+                    continue
+                if not np.array_equal(np.asarray(before_leaf), np.asarray(leaf)):
+                    out.append(flat)
+            return sorted(out)
+
+        def _compose_disjoint_snapshots(
+            birth_snapshot: list[tuple[Any, Any]],
+            compensation_snapshot: list[tuple[Any, Any]],
+        ) -> list[tuple[Any, Any]]:
+            birth_by_name = {_flat_param_name(raw_name): leaf for raw_name, leaf in birth_snapshot}
+            compensation_by_name = {_flat_param_name(raw_name): leaf for raw_name, leaf in compensation_snapshot}
+            composed: list[tuple[Any, Any]] = []
+            for raw_name, base_leaf in initial_snapshot:
+                flat = _flat_param_name(raw_name)
+                if allowed_pose_compensation_update_name(flat):
+                    composed.append((raw_name, compensation_by_name.get(flat, base_leaf)))
+                elif allowed_birth_update_name(flat):
+                    composed.append((raw_name, birth_by_name.get(flat, base_leaf)))
+                else:
+                    composed.append((raw_name, base_leaf))
+            return composed
+
+        def _region_debt_units(argmax_np: np.ndarray) -> float:
+            unsolved = int(np.count_nonzero(region_bool_np & (np.asarray(argmax_np) != birth_class)))
+            return float(100.0 * unsolved / total_scored_pixels)
+
+        def _dedupe_arm_blockers(values: list[str]) -> list[str]:
+            out: list[str] = []
+            seen: set[str] = set()
+            for value in values:
+                if value and value not in seen:
+                    seen.add(value)
+                    out.append(value)
+            return out
+
+        def _ablation_arm_row(
+            *,
+            arm: str,
+            action_kind: str,
+            state: dict[str, Any] | None,
+            updated_names: list[str],
+            admission_decision: Mapping[str, Any] | None,
+            decision: str,
+            blockers_for_arm: list[str] | tuple[str, ...] = (),
+            interaction_or_commutator: float | None = None,
+        ) -> dict[str, Any]:
+            row_blockers = [str(value) for value in blockers_for_arm]
+            exact_nonrate: dict[str, Any] = {
+                "authority": "batch_local_live_mlx",
+                "normalization_scope": "batch_local",
+                "old_d_seg_batch": float(initial_d_seg),
+                "new_d_seg_batch": None,
+                "old_d_pose_batch": None if initial_d_pose is None else float(initial_d_pose),
+                "new_d_pose_batch": None,
+                "old_nonrate_score": None if initial_nonrate is None else float(initial_nonrate),
+                "new_nonrate_score": None,
+                "delta_score_nonrate": None,
+                "pose_term_available": bool(target_pose_np is not None),
+            }
+            transitions = {
+                "argmax_changed_count_region": 0,
+                "wrong_to_target_count": 0,
+                "target_to_wrong_count": 0,
+                "wrong_to_wrong_count": 0,
+                "target_hard_won_count": 0,
+                "target_hard_lost_count": 0,
+                "net_target_support_delta": 0,
+            }
+            uint8_changed = 0
+            uint8_delta_abs_max_arm = 0.0
+            float_rgb_delta_linf = 0.0
+            argmax_changed = 0
+            pose_delta_l2 = None
+            if state is None:
+                row_blockers.append("hinerv_four_arm_state_missing")
+            else:
+                state_nonrate = _nonrate_score(state["d_seg_batch"], state["d_pose_batch"])
+                exact_nonrate.update(
+                    {
+                        "new_d_seg_batch": float(state["d_seg_batch"]),
+                        "new_d_pose_batch": (
+                            None if state["d_pose_batch"] is None else float(state["d_pose_batch"])
+                        ),
+                        "new_nonrate_score": None if state_nonrate is None else float(state_nonrate),
+                        "delta_score_nonrate": (
+                            None
+                            if initial_nonrate is None or state_nonrate is None
+                            else float(state_nonrate - initial_nonrate)
+                        ),
+                    }
+                )
+                transitions = region_argmax_transition_counts(
+                    initial_argmax_np,
+                    state["argmax_np"],
+                    region_bool_np,
+                    birth_class,
+                )
+                uint8_changed = _uint8_changed_in_region(initial_uint8, state["uint8"])
+                uint8_delta_abs_max_arm = float(
+                    np.abs(state["uint8"].astype(np.int32) - initial_uint8.astype(np.int32))[region_bool_np].max()
+                    if region_bool_np.any()
+                    else 0.0
+                )
+                float_rgb_delta_linf = float(state["float_rgb_delta_linf"])
+                argmax_changed = int(
+                    np.count_nonzero((state["argmax_np"] != initial_argmax_np) & region_bool_np)
+                )
+                pose_delta_l2 = _pose_delta_l2(state["pose"])
+            decision_payload = dict(admission_decision or {})
+            if not decision_payload and state is not None:
+                decision_payload = _target_birth_admission_decision(
+                    new_d_seg=float(state["d_seg_batch"]),
+                    new_d_pose=state["d_pose_batch"],
+                    pose_output_l2_delta=pose_delta_l2,
+                )
+            exact_decision = str(decision_payload.get("exact_score_decision") or "not_applicable")
+            catastrophic_decision = str(
+                decision_payload.get("catastrophic_guard_decision") or "not_applicable"
+            )
+            accepted = bool(
+                decision in {"accepted", "accepted_with_frame0_pose_compensation"}
+                or (
+                    exact_decision == "accepted"
+                    and catastrophic_decision == "satisfied"
+                    and not row_blockers
+                )
+            )
+            old_region_debt = float(worst.score_debt_units)
+            new_region_debt = old_region_debt if state is None else _region_debt_units(state["argmax_np"])
+            return {
+                "schema": "hi_nerv_target_region_birth_four_arm.v1",
+                "action_id": action_identity,
+                "surface": "live_mlx",
+                "authority": "batch_local_live_mlx",
+                "normalization_scope": "batch_local",
+                "family": "hinerv",
+                "producer": "hinerv_target_region_birth",
+                "action_kind": action_kind,
+                "arm": str(arm),
+                "ablation_arm": str(arm),
+                "decision": str(decision),
+                "accepted": bool(accepted),
+                "blockers": _dedupe_arm_blockers(row_blockers),
+                "pair_index": int(worst.batch_index),
+                "worst_region": worst.as_dict(),
+                "updated_parameter_names": sorted(str(name) for name in updated_names),
+                "payload_sections": sorted(str(name) for name in updated_names),
+                "exact_nonrate": exact_nonrate,
+                "admission_decision": {
+                    **decision_payload,
+                    "arm": str(arm),
+                    "action_kind": action_kind,
+                },
+                "argmax_transitions": transitions,
+                **transitions,
+                "old_region_debt": old_region_debt,
+                "new_region_debt": float(new_region_debt),
+                "receiver_surface_uint8_changed_pixels": int(uint8_changed),
+                "receiver_uint8_changed_pixels_region": int(uint8_changed),
+                "receiver_uint8_delta_abs_max": float(uint8_delta_abs_max_arm),
+                "receiver_surface_uint8_delta_abs_max": float(uint8_delta_abs_max_arm),
+                "receiver_float_rgb_delta_linf": float(float_rgb_delta_linf),
+                "argmax_changed_count_region": int(argmax_changed),
+                "argmax_flipped_pixels_region": int(argmax_changed),
+                "pose_output_l2_delta": None if pose_delta_l2 is None else float(pose_delta_l2),
+                "raw_cap_decision": decision_payload.get("raw_cap_decision"),
+                "catastrophic_guard_decision": decision_payload.get("catastrophic_guard_decision"),
+                "would_accept_exact_score_if_raw_cap_disabled": decision_payload.get(
+                    "would_accept_exact_score_if_raw_cap_disabled"
+                ),
+                "would_accept_without_catastrophic_guard": decision_payload.get(
+                    "would_accept_without_catastrophic_guard"
+                ),
+                "seg_score_delta": decision_payload.get("seg_score_delta"),
+                "pose_score_delta": decision_payload.get("pose_score_delta"),
+                "rejection_source": decision_payload.get("rejection_source"),
+                "interaction_or_commutator": interaction_or_commutator,
+                "restore_state_pass": True,
+                "promotion_eligible": False,
+                "human_visual_fidelity_objective": False,
+            }
+
+        def _measure_frame0_pose_target_arm() -> tuple[list[tuple[Any, Any]] | None, dict[str, Any] | None, list[str], list[str]]:
+            if pose_target_loss_and_grad_fn is None:
+                return None, None, [], ["hinerv_four_arm_pose_teacher_missing"]
+            _restore_parameters(initial_snapshot)
+            updated_names: set[str] = set()
+            for _ in range(ablation_compensation_steps):
+                arm_snapshot = _snapshot_parameters()
+                arm_loss, arm_grads = pose_target_loss_and_grad_fn(self)
+                mx.eval(arm_loss)  # type: ignore[union-attr]
+                if not math.isfinite(float(arm_loss.item())):
+                    _restore_parameters(arm_snapshot)
+                    return None, None, sorted(updated_names), ["hinerv_four_arm_frame0_pose_loss_not_finite"]
+                applied = _apply_compensation_step(arm_snapshot, arm_grads, compensation_lr)
+                if not applied:
+                    break
+                updated_names.update(applied)
+            measured_snapshot = _snapshot_parameters()
+            measured_state = _region_candidate_state()
+            return measured_snapshot, measured_state, sorted(updated_names), []
+
+        four_arm_ablation_payload: dict[str, Any] | None = None
+        if emit_four_arm_ablation:
+            restore_target_snapshot = final_model_snapshot
+            arm_rows: list[dict[str, Any]] = []
+            try:
+                arm_a_state = accepted_birth_only_state
+                arm_a_decision = accepted_birth_only_decision
+                if arm_a_state is None and accepted_step_count > 0:
+                    arm_a_state = final
+                    arm_a_decision = _target_birth_admission_decision(
+                        new_d_seg=float(final["d_seg_batch"]),
+                        new_d_pose=final["d_pose_batch"],
+                        pose_output_l2_delta=final_pose_delta,
+                    )
+                arm_rows.append(
+                    _ablation_arm_row(
+                        arm="A",
+                        action_kind="birth_only",
+                        state=arm_a_state,
+                        updated_names=accepted_birth_only_updated_names or sorted(accepted_update_names),
+                        admission_decision=arm_a_decision,
+                        decision="accepted" if arm_a_state is not None and accepted_step_count > 0 else "blocked",
+                        blockers_for_arm=(
+                            []
+                            if arm_a_state is not None and accepted_step_count > 0
+                            else ["hinerv_four_arm_birth_only_missing"]
+                        ),
+                    )
+                )
+
+                arm_b_snapshot, arm_b_state, arm_b_names, arm_b_blockers = _measure_frame0_pose_target_arm()
+                arm_b_decision = (
+                    None
+                    if arm_b_state is None
+                    else _target_birth_admission_decision(
+                        new_d_seg=float(arm_b_state["d_seg_batch"]),
+                        new_d_pose=arm_b_state["d_pose_batch"],
+                        pose_output_l2_delta=_pose_delta_l2(arm_b_state["pose"]),
+                    )
+                )
+                arm_rows.append(
+                    _ablation_arm_row(
+                        arm="B",
+                        action_kind="frame0_pose_target_only",
+                        state=arm_b_state,
+                        updated_names=arm_b_names,
+                        admission_decision=arm_b_decision,
+                        decision="measured" if arm_b_state is not None else "blocked",
+                        blockers_for_arm=arm_b_blockers,
+                    )
+                )
+
+                arm_c_state: dict[str, Any] | None = None
+                arm_c_names: list[str] = []
+                arm_c_blockers: list[str] = []
+                if accepted_birth_only_snapshot is None:
+                    arm_c_blockers.append("hinerv_four_arm_birth_snapshot_missing")
+                if arm_b_snapshot is None:
+                    arm_c_blockers.append("hinerv_four_arm_frame0_pose_snapshot_missing")
+                if not arm_c_blockers:
+                    _restore_parameters(
+                        _compose_disjoint_snapshots(
+                            accepted_birth_only_snapshot,  # type: ignore[arg-type]
+                            arm_b_snapshot,  # type: ignore[arg-type]
+                        )
+                    )
+                    arm_c_state = _region_candidate_state()
+                    arm_c_names = sorted(
+                        [
+                            *_snapshot_delta_names(
+                                initial_snapshot,
+                                accepted_birth_only_snapshot,  # type: ignore[arg-type]
+                                allowed_birth_update_name,
+                            ),
+                            *_snapshot_delta_names(
+                                initial_snapshot,
+                                arm_b_snapshot,  # type: ignore[arg-type]
+                                allowed_pose_compensation_update_name,
+                            ),
+                        ]
+                    )
+                arm_c_decision = (
+                    None
+                    if arm_c_state is None
+                    else _target_birth_admission_decision(
+                        new_d_seg=float(arm_c_state["d_seg_batch"]),
+                        new_d_pose=arm_c_state["d_pose_batch"],
+                        pose_output_l2_delta=_pose_delta_l2(arm_c_state["pose"]),
+                    )
+                )
+                delta_a = arm_rows[0]["exact_nonrate"].get("delta_score_nonrate")
+                delta_b = arm_rows[1]["exact_nonrate"].get("delta_score_nonrate")
+                delta_c = (
+                    None
+                    if arm_c_state is None or initial_nonrate is None or _nonrate_score(arm_c_state["d_seg_batch"], arm_c_state["d_pose_batch"]) is None
+                    else float(_nonrate_score(arm_c_state["d_seg_batch"], arm_c_state["d_pose_batch"]) - initial_nonrate)  # type: ignore[operator]
+                )
+                comm_c = (
+                    None
+                    if not all(isinstance(value, (int, float)) for value in (delta_a, delta_b, delta_c))
+                    else float(delta_c - float(delta_a) - float(delta_b))  # type: ignore[operator]
+                )
+                arm_rows.append(
+                    _ablation_arm_row(
+                        arm="C",
+                        action_kind="independent_birth_plus_frame0_pose",
+                        state=arm_c_state,
+                        updated_names=arm_c_names,
+                        admission_decision=arm_c_decision,
+                        decision="measured" if arm_c_state is not None else "blocked",
+                        blockers_for_arm=arm_c_blockers,
+                        interaction_or_commutator=comm_c,
+                    )
+                )
+
+                arm_d_state = accepted_composite_state
+                arm_d_names = accepted_composite_updated_names
+                arm_d_decision = accepted_composite_decision
+                arm_d_blockers: list[str] = []
+                if arm_d_state is None and accepted_birth_only_snapshot is not None and comp_loss_and_grad_fn is not None:
+                    _restore_parameters(accepted_birth_only_snapshot)
+                    d_record = _attempt_frame0_compensation(
+                        accepted_birth_only_snapshot,
+                        accepted_birth_only_state["uint8"] if accepted_birth_only_state is not None else final["uint8"],
+                        initial_nonrate,
+                    )
+                    arm_d_state = d_record.get("composite_state")
+                    arm_d_names = sorted(
+                        [
+                            *_snapshot_delta_names(
+                                initial_snapshot,
+                                accepted_birth_only_snapshot,
+                                allowed_birth_update_name,
+                            ),
+                            *[str(name) for name in d_record.get("compensation_updated_parameter_names") or []],
+                        ]
+                    )
+                    arm_d_decision = dict(d_record.get("admission_decision") or {})
+                    if not d_record.get("accepted"):
+                        arm_d_blockers.append("hinerv_four_arm_joint_line_search_not_admitted")
+                elif arm_d_state is None:
+                    arm_d_blockers.append("hinerv_four_arm_joint_line_search_not_measured")
+                delta_d = (
+                    None
+                    if arm_d_state is None or initial_nonrate is None or _nonrate_score(arm_d_state["d_seg_batch"], arm_d_state["d_pose_batch"]) is None
+                    else float(_nonrate_score(arm_d_state["d_seg_batch"], arm_d_state["d_pose_batch"]) - initial_nonrate)  # type: ignore[operator]
+                )
+                comm_d = (
+                    None
+                    if not all(isinstance(value, (int, float)) for value in (delta_a, delta_b, delta_d))
+                    else float(delta_d - float(delta_a) - float(delta_b))  # type: ignore[operator]
+                )
+                arm_rows.append(
+                    _ablation_arm_row(
+                        arm="D",
+                        action_kind="joint_line_search_composite",
+                        state=arm_d_state,
+                        updated_names=arm_d_names,
+                        admission_decision=arm_d_decision,
+                        decision=(
+                            "accepted_with_frame0_pose_compensation"
+                            if arm_d_state is not None and not arm_d_blockers
+                            else "blocked"
+                        ),
+                        blockers_for_arm=arm_d_blockers,
+                        interaction_or_commutator=comm_d,
+                    )
+                )
+                four_arm_ablation_payload = {
+                    "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
+                    "action_id": action_identity,
+                    "authority": "batch_local_live_mlx",
+                    "normalization_scope": "batch_local",
+                    "producer": "hinerv_target_region_birth",
+                    "arm_count": len(arm_rows),
+                    "required_arms": ["A", "B", "C", "D"],
+                    "measured_arms": [str(row.get("arm")) for row in arm_rows if not row.get("blockers")],
+                    "blocked_arms": [
+                        str(row.get("arm"))
+                        for row in arm_rows
+                        if row.get("blockers")
+                    ],
+                    "arms": arm_rows,
+                    "commutators": [
+                        {
+                            "basis": "C_minus_A_minus_B",
+                            "value": arm_rows[2].get("interaction_or_commutator"),
+                        },
+                        {
+                            "basis": "D_minus_A_minus_B",
+                            "value": arm_rows[3].get("interaction_or_commutator"),
+                        },
+                    ],
+                    "restore_state_pass": True,
+                    "promotion_eligible": False,
+                    "human_visual_fidelity_objective": False,
+                }
+            finally:
+                _restore_parameters(restore_target_snapshot)
+
         receipt = build_target_region_birth_receipt(
             debt=worst,
             before_margin_stats=before_stats,
@@ -4510,6 +4976,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "composite_delta_score_nonrate": last_composite_delta_score_nonrate,
             "compensation_updated_parameter_names": sorted(composite_updated_parameter_names),
             "pose_compensation": pose_compensation_payload,
+            "four_arm_ablation": four_arm_ablation_payload,
             "receiver_quantum_growth_attempt_count": int(receiver_quantum_growth_attempt_count),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "loss_history_first": (loss_history[0] if loss_history else None),
