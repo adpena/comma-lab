@@ -1359,8 +1359,12 @@ def _candidate_row(
                     output_root=output_root,
                 )
     renderer_unblock_blockers = _renderer_nondegenerate_unblock_blockers(blockers)
+    runtime_blocker = runtime_binding_blocker_for_solution_family(solution_family)
+    renderer_unblock_command_allowed = command_kind == "bounded_snerv_training_smoke" or (
+        bool(runtime_blocker) and runtime_blocker in runtime_binding_closed
+    )
     if (
-        command_kind == "bounded_snerv_training_smoke"
+        renderer_unblock_command_allowed
         and not command
         and blockers
         and not renderer_unblock_blockers

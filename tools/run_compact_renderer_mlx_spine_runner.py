@@ -19762,6 +19762,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pose_direct_live_distillation_weight=float(
             pose_direct_live_distillation_weight
         ),
+        scorer_support_ladder_enabled=bool(scorer_support_ladder_enabled),
         pr95_faithful_curriculum_enabled=bool(pr95_curriculum_enabled),
         coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
         train_time_section_byte_control_bound=bool(
@@ -20823,6 +20824,7 @@ def _compact_score_aware_training_telemetry_contract(
     segnet_direct_live_target_mass_floor_weight: float = 0.0,
     segnet_direct_live_target_min_ratio_floor_weight: float = 0.0,
     pose_direct_live_distillation_weight: float = 0.0,
+    scorer_support_ladder_enabled: bool = False,
     pr95_faithful_curriculum_enabled: bool,
     coder_aware_qat_bound: bool,
     train_time_section_byte_control_bound: bool,
@@ -20849,6 +20851,7 @@ def _compact_score_aware_training_telemetry_contract(
     expected_seg = float(segnet_distillation_weight) > 0.0
     expected_pose = float(pose_distillation_weight) > 0.0
     expected_pose_direct_live = float(pose_direct_live_distillation_weight) > 0.0
+    support_ladder_expected = bool(scorer_support_ladder_enabled)
     expected_live_calibration = bool(
         expected_seg and float(segnet_student_live_calibration_weight) > 0.0
     )
@@ -20869,11 +20872,6 @@ def _compact_score_aware_training_telemetry_contract(
     expected_direct_live_subcontrols = {
         name: weight > 0.0 for name, weight in direct_live_subcontrol_weights.items()
     }
-    expected_direct_live_subcontrol = any(expected_direct_live_subcontrols.values())
-    expected_direct_live = bool(
-        float(segnet_direct_live_distillation_weight) > 0.0
-        or expected_direct_live_subcontrol
-    )
     direct_live_seg_dual_suffix_by_control = {
         "class_histogram": "segnet_direct_live_class_histogram",
         "class_balanced_hinge": "segnet_direct_live_class_balanced_hinge",
@@ -20886,6 +20884,35 @@ def _compact_score_aware_training_telemetry_contract(
         "target_mass_floor": "segnet_direct_live_target_mass_floor",
         "target_min_ratio_floor": "segnet_direct_live_target_min_ratio_floor",
     }
+
+    def _segnet_direct_live_dual_suffixes_for_subcontrols(
+        subcontrols: Mapping[str, bool],
+    ) -> set[str]:
+        suffixes = {
+            suffix
+            for name, suffix in direct_live_seg_dual_suffix_by_control.items()
+            if bool(subcontrols.get(name, False))
+        }
+        if subcontrols.get("class_histogram", False):
+            suffixes.add("segnet_direct_live_target_missing_fraction_histogram")
+        if subcontrols.get("class_balanced_ce", False):
+            suffixes.add("segnet_direct_live_target_missing_fraction_ce")
+        if subcontrols.get("class_region_recon", False):
+            suffixes.add("segnet_direct_live_target_min_ratio_region_recon")
+        if subcontrols.get("rare_class_logit", False):
+            suffixes.add("segnet_direct_live_target_min_ratio_rare_class_logit")
+        if subcontrols.get("target_mass_floor", False):
+            suffixes.add("segnet_direct_live_target_min_ratio_mass_floor")
+        if subcontrols.get("target_min_ratio_floor", False):
+            suffixes.add("segnet_direct_live_target_min_ratio_floor")
+        return suffixes
+
+    expected_direct_live_subcontrol = any(expected_direct_live_subcontrols.values())
+    expected_direct_live = bool(
+        float(segnet_direct_live_distillation_weight) > 0.0
+        or expected_direct_live_subcontrol
+        or support_ladder_expected
+    )
     expected_direct_live_seg_dual_suffixes: set[str] = set()
     if float(segnet_direct_live_distillation_weight) > 0.0:
         expected_direct_live_seg_dual_suffixes.add("segnet_direct_live_distill")
@@ -20893,34 +20920,19 @@ def _compact_score_aware_training_telemetry_contract(
             "segnet_direct_live_argmax_disagreement"
         )
     expected_direct_live_seg_dual_suffixes.update(
-        suffix
-        for name, suffix in direct_live_seg_dual_suffix_by_control.items()
-        if expected_direct_live_subcontrols.get(name, False)
+        _segnet_direct_live_dual_suffixes_for_subcontrols(
+            expected_direct_live_subcontrols
+        )
     )
-    if expected_direct_live_subcontrols.get("class_histogram", False):
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_target_missing_fraction_histogram"
+    direct_live_seg_dual_suffixes_to_probe = {
+        "segnet_direct_live_distill",
+        "segnet_direct_live_argmax_disagreement",
+    }
+    direct_live_seg_dual_suffixes_to_probe.update(
+        _segnet_direct_live_dual_suffixes_for_subcontrols(
+            dict.fromkeys(direct_live_subcontrol_weights, True)
         )
-    if expected_direct_live_subcontrols.get("class_balanced_ce", False):
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_target_missing_fraction_ce"
-        )
-    if expected_direct_live_subcontrols.get("class_region_recon", False):
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_target_min_ratio_region_recon"
-        )
-    if expected_direct_live_subcontrols.get("rare_class_logit", False):
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_target_min_ratio_rare_class_logit"
-        )
-    if expected_direct_live_subcontrols.get("target_mass_floor", False):
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_target_min_ratio_mass_floor"
-        )
-    if expected_direct_live_subcontrols.get("target_min_ratio_floor", False):
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_target_min_ratio_floor"
-        )
+    )
     expected_pose_direct_live_dual_suffixes: set[str] = set()
     if expected_pose_direct_live:
         expected_pose_direct_live_dual_suffixes.add(
@@ -21021,6 +21033,16 @@ def _compact_score_aware_training_telemetry_contract(
     direct_live_seg_dual_metric_suffixes_observed: set[str] = set()
     direct_live_seg_dual_active_suffixes_observed: set[str] = set()
     direct_live_seg_dual_update_suffixes_observed: set[str] = set()
+    support_ladder_enabled_observed = False
+    support_ladder_active_observed = False
+    support_ladder_effective_subcontrol_weights = dict.fromkeys(
+        direct_live_subcontrol_weights,
+        0.0,
+    )
+    support_ladder_effective_subcontrol_active = dict.fromkeys(
+        direct_live_subcontrol_weights,
+        False,
+    )
     pose_direct_live_dual_metric_suffixes_observed: set[str] = set()
     pose_direct_live_dual_active_suffixes_observed: set[str] = set()
     pose_direct_live_dual_update_suffixes_observed: set[str] = set()
@@ -21390,6 +21412,36 @@ def _compact_score_aware_training_telemetry_contract(
                     )
                 )
             )
+            support_ladder_enabled_observed = (
+                support_ladder_enabled_observed
+                or _telemetry_nonzero(row, "scorer_support_ladder_enabled")
+            )
+            support_ladder_active_observed = (
+                support_ladder_active_observed
+                or _telemetry_nonzero(row, "scorer_support_ladder_active")
+            )
+            for name, suffix in direct_live_seg_dual_suffix_by_control.items():
+                effective_weight = support_ladder_effective_subcontrol_weights[name]
+                for key in (
+                    f"active_loss_weight__{suffix}",
+                    f"dynamics_pre_update_active_loss_weight__{suffix}",
+                    f"dynamics_effective_weight_{suffix}",
+                    f"scorer_support_ladder_component_weight__{suffix}",
+                    f"scorer_support_ladder_component_floor__{suffix}",
+                ):
+                    value = _telemetry_value(row, key)
+                    if _finite_json_number(value):
+                        effective_weight = max(effective_weight, float(value))
+                support_ladder_effective_subcontrol_weights[name] = effective_weight
+                if effective_weight > 0.0:
+                    support_ladder_effective_subcontrol_active[name] = True
+                for key in (
+                    f"active_loss_weight_positive__{suffix}",
+                    f"dynamics_pre_update_active_loss_weight_positive__{suffix}",
+                    f"scorer_support_ladder_component_active__{suffix}",
+                ):
+                    if _telemetry_nonzero(row, key):
+                        support_ladder_effective_subcontrol_active[name] = True
             direct_live_argmax_observed = (
                 direct_live_argmax_observed
                 or any(
@@ -21581,7 +21633,7 @@ def _compact_score_aware_training_telemetry_contract(
                     f"dual_ascent_lambda__{family_key}_posenet_yuv6_pair_distill",
                 )
             )
-            for suffix in expected_direct_live_seg_dual_suffixes:
+            for suffix in direct_live_seg_dual_suffixes_to_probe:
                 constraint_key = f"{family_key}_{suffix}"
                 if _telemetry_float_equals(
                     row,
@@ -21637,6 +21689,27 @@ def _compact_score_aware_training_telemetry_contract(
                     1.0,
                 )
             )
+    if support_ladder_expected:
+        for name, active in support_ladder_effective_subcontrol_active.items():
+            if active:
+                expected_direct_live_subcontrols[name] = True
+    expected_direct_live_subcontrol = any(expected_direct_live_subcontrols.values())
+    expected_direct_live = bool(
+        float(segnet_direct_live_distillation_weight) > 0.0
+        or expected_direct_live_subcontrol
+        or support_ladder_expected
+    )
+    expected_direct_live_seg_dual_suffixes = set()
+    if float(segnet_direct_live_distillation_weight) > 0.0:
+        expected_direct_live_seg_dual_suffixes.add("segnet_direct_live_distill")
+        expected_direct_live_seg_dual_suffixes.add(
+            "segnet_direct_live_argmax_disagreement"
+        )
+    expected_direct_live_seg_dual_suffixes.update(
+        _segnet_direct_live_dual_suffixes_for_subcontrols(
+            expected_direct_live_subcontrols
+        )
+    )
     if row_count <= 0:
         blockers.append(f"{family_key}_score_aware_training_telemetry_empty")
     if malformed_rows:
@@ -21810,6 +21883,18 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(
             f"{family_key}_score_aware_training_direct_live_segnet_class_occupancy_metric_missing"
         )
+    if support_ladder_expected and not support_ladder_enabled_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_scorer_support_ladder_metric_missing"
+        )
+    if (
+        support_ladder_expected
+        and support_ladder_active_observed
+        and not any(support_ladder_effective_subcontrol_active.values())
+    ):
+        blockers.append(
+            f"{family_key}_score_aware_training_scorer_support_ladder_effective_subcontrol_missing"
+        )
     if expected_direct_live and not direct_live_target_class_coverage_observed:
         blockers.append(
             f"{family_key}_score_aware_training_direct_live_segnet_target_class_coverage_metric_missing"
@@ -21973,6 +22058,7 @@ def _compact_score_aware_training_telemetry_contract(
         "expected_segnet_direct_live_subcontrols": dict(
             expected_direct_live_subcontrols
         ),
+        "expected_scorer_support_ladder": bool(support_ladder_expected),
         "expected_segnet_direct_live_dual_suffixes": sorted(
             expected_direct_live_seg_dual_suffixes
         ),
@@ -21980,6 +22066,12 @@ def _compact_score_aware_training_telemetry_contract(
             expected_pose_direct_live_dual_suffixes
         ),
         "segnet_direct_live_subcontrol_weights": dict(direct_live_subcontrol_weights),
+        "segnet_direct_live_effective_subcontrol_weights": dict(
+            support_ladder_effective_subcontrol_weights
+        ),
+        "segnet_direct_live_effective_subcontrols": dict(
+            support_ladder_effective_subcontrol_active
+        ),
         "expected_section_rate_metrics": bool(expected_section),
         "expected_section_byte_dual_lambda": bool(expected_section),
         "expected_archive_rate_metric": bool(expected_section),
@@ -22141,6 +22233,12 @@ def _compact_score_aware_training_telemetry_contract(
         ),
         "segnet_direct_live_class_occupancy_metric_observed": bool(
             direct_live_class_occupancy_observed
+        ),
+        "scorer_support_ladder_enabled_observed": bool(
+            support_ladder_enabled_observed
+        ),
+        "scorer_support_ladder_active_observed": bool(
+            support_ladder_active_observed
         ),
         "segnet_direct_live_class_histogram_metric_observed": bool(
             direct_live_class_histogram_observed

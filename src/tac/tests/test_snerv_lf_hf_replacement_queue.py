@@ -1175,6 +1175,49 @@ def test_lf_conditioned_hf_runtime_binding_emits_bounded_smoke(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_lf_conditioned_hf_runtime_binding_emits_renderer_unblock_smoke_when_blocked(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[
+            _campaign_plan(blockers=("snerv_renderer_nondegenerate_smoke_missing",))
+        ],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        hf_residual_receiver_payload_proofs=[_hf_residual_receiver_payload_proof()],
+        lf_hf_runtime_binding_proofs=[
+            _lf_hf_runtime_binding_proof("lf_conditioned_hf_residual_generator")
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "lf_conditioned_hf_residual_generator"
+    )
+    assert row["blocked"] is True
+    assert row["status"] == "blocked_until_prerequisite_evidence"
+    assert row["command_argv"] == []
+    assert row["unblock_command_argv"]
+    assert row["unblock_command_argv"][
+        row["unblock_command_argv"].index("--snerv-lf-hf-solution-family") + 1
+    ] == "lf_conditioned_hf_residual_generator"
+    assert row["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
+    assert (
+        row["unblock_launch_authority_contract"][
+            "queue_unblock_status_is_runnable_plan"
+        ]
+        is True
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_joint_lf_hf_runtime_binding_emits_bounded_smoke(
     tmp_path: Path,
 ) -> None:

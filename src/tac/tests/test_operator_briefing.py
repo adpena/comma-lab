@@ -111,6 +111,191 @@ def _write_json(path: Path, payload: dict[str, object]) -> Path:
     return path
 
 
+def _patch_dispatch_readiness_summary_fixtures(
+    monkeypatch,
+    mod,
+    *,
+    patch_phase7: bool = True,
+) -> None:
+    """Keep dispatch-rollup tests focused on the phase they assert."""
+
+    monkeypatch.setattr(
+        mod,
+        "_exact_ready_score_axis_repair_summary",
+        lambda: {"repairable_or_repaired_count": 0},
+    )
+    monkeypatch.setattr(
+        mod,
+        "_materializer_exact_ready_handoff_summary",
+        lambda: {"status": "PENDING", "reason": "fixture"},
+    )
+    monkeypatch.setattr(
+        mod,
+        "_byte_shaving_acquisition_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "campaign_run_count": 0,
+            "total_experiment_count": 0,
+            "total_executable_work_count": 0,
+            "total_blocked_work_count": 0,
+            "overall_executable_conversion_rate": 0.0,
+            "total_compiler_required_count": 0,
+            "total_packet_ir_operation_set_count": 0,
+            "total_queue_consumable_packet_ir_operation_set_count": 0,
+            "total_exact_readiness_handoff_count": 0,
+            "queue_feedback_ready_count": 0,
+            "queue_feedback_followup_queue_count": 0,
+            "queue_observation_recovery_queue_count": 0,
+            "queue_observation_recovery_executed_count": 0,
+            "queue_observation_recovery_execution_success_count": 0,
+            "post_recovery_feedback_replan_count": 0,
+            "post_recovery_feedback_replan_success_count": 0,
+            "post_recovery_feedback_policy_continue_count": 0,
+            "post_recovery_feedback_followup_queue_count": 0,
+            "post_recovery_feedback_followup_executed_count": 0,
+            "post_recovery_feedback_followup_execution_success_count": 0,
+            "post_recovery_feedback_continuation_queue_count": 0,
+            "local_mlx_ready_step_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_frontier_feedback_cycle_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "cycle_report_count": 0,
+            "refresh_report_count": 0,
+            "ready_local_execution_count": 0,
+            "post_harvest_queue_count": 0,
+            "rate_budget_preservation_plan_count": 0,
+            "autonomous_chain_artifact_count": 0,
+            "repair_budget_waterfill_queue_count": 0,
+            "repair_campaign_score_queue_count": 0,
+            "autonomous_chain_queue_count": 0,
+            "action_functional_queue_integrated_count": 0,
+            "next_command": "",
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_pr95_mlx_control_profile_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "profile_count": 0,
+            "executed_healthy_count": 0,
+            "blocked_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_distortion_axis_probe_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "probe_count": 0,
+            "advisory_signal_count": 0,
+            "positive_signal_count": 0,
+            "partial_signal_count": 0,
+            "blocked_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_distortion_axis_learned_sweep_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "tool_exists": True,
+            "payload_count": 0,
+            "plan_count": 0,
+            "feedback_count": 0,
+            "adapted_candidate_count": 0,
+            "suppressed_candidate_count": 0,
+            "local_ready_row_count": 0,
+            "feedback_observation_count": 0,
+            "feedback_replan_suppressed_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_dqs1_drop_many_greedy_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "tool_exists": True,
+            "verdict_count": 0,
+            "advisory_count": 0,
+            "blocked_count": 0,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_nerv_long_training_campaign_plan_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "tool_exists": True,
+            "feedback_row_count": 0,
+            "usable_feedback_row_count": 0,
+            "blocked_feedback_row_count": 0,
+            "default_campaign_plan_command": "",
+        },
+    )
+    grammar_fixture = {
+        "status": "PENDING",
+        "reason": "fixture",
+        "artifact_count": 0,
+        "optimizer_report_count": 0,
+        "consumer_result_count": 0,
+        "receiver_work_justified_count": 0,
+        "demotion_recommended_count": 0,
+        "total_selected_saved_bytes_vs_baseline": 0,
+        "total_grouped_saved_bytes_vs_selected_isolated": 0,
+        "total_grouped_saved_bytes_vs_identity": 0,
+        "max_selected_over_floor_ratio": 0.0,
+    }
+    monkeypatch.setattr(mod, "_tensor_payload_grammar_summary", lambda: grammar_fixture.copy())
+    monkeypatch.setattr(mod, "_section_payload_grammar_summary", lambda: grammar_fixture.copy())
+    monkeypatch.setattr(
+        mod,
+        "_optimal_grammar_campaign_summary",
+        lambda: {
+            "status": "PENDING",
+            "reason": "fixture",
+            "campaign_count": 0,
+            "receiver_adapter_work_justified_count": 0,
+            "exact_auth_work_justified_count": 0,
+            "total_grouped_saved_bytes": 0,
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "_archive_bound_contract_hygiene_summary",
+        lambda: {
+            "status": "PASS",
+            "reason": "fixture",
+            "paths_scanned": 0,
+            "contract_surface_count": 0,
+            "valid_contract_surface_count": 0,
+            "blocking_finding_count": 0,
+            "migration_required_finding_count": 0,
+        },
+    )
+    if patch_phase7:
+        monkeypatch.setattr(
+            mod,
+            "_constrained_coord_search_readiness",
+            lambda: {
+                "status": "PENDING",
+                "reason": "fixture",
+                "n_rollups": 0,
+            },
+        )
+
+
 def test_operator_briefing_surfaces_saturated_tensor_payload_grammar(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -4909,6 +5094,7 @@ def test_dispatch_claim_summary_formats_active_claim(monkeypatch):
 
 def test_dispatch_readiness_blocks_when_every_exact_packet_is_terminal(monkeypatch):
     mod = _load_briefing_module()
+    _patch_dispatch_readiness_summary_fixtures(monkeypatch, mod)
     monkeypatch.setattr(
         mod,
         "_exact_ready_queue_audit",
@@ -4979,6 +5165,11 @@ def test_dispatch_readiness_does_not_mark_predicted_phase7_rollup_ready(
 ):
     mod = _load_briefing_module()
     monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    _patch_dispatch_readiness_summary_fixtures(
+        monkeypatch,
+        mod,
+        patch_phase7=False,
+    )
     monkeypatch.setattr(
         mod,
         "_exact_ready_queue_audit",
