@@ -2449,8 +2449,10 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         easy_weight_mass = mx.sum(easy_weight)
         easy_weight_normalized = easy_weight / mx.maximum(easy_weight_mass, eps)
         seed_target_prob_mean = mx.sum(easy_weight_normalized * class_prob)
-        seed_island_margin = mx.sum(easy_weight_normalized * target_region_margin)
-        seed_island_crossing_loss = seed_island_margin * seed_island_margin
+        seed_island_mean_margin = mx.sum(easy_weight_normalized * target_region_margin)
+        seed_island_crossing_loss = mx.sum(
+            easy_weight_normalized * target_region_margin * target_region_margin
+        )
         target_prob_floor = mx.minimum(
             mx.array(0.80, dtype=mx.float32),
             mx.maximum(
@@ -2594,6 +2596,9 @@ def _segnet_target_min_ratio_floor_loss_and_metrics(
         metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_island_crossing_loss"
         ] = seed_island_crossing_loss
+        metrics[
+            f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_seed_island_mean_margin"
+        ] = seed_island_mean_margin
         metrics[
             f"segnet_direct_live_target_min_ratio_floor_class_{class_index}_target_region_frontier_margin"
         ] = mx.where(
