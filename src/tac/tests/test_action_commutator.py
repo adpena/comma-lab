@@ -40,6 +40,13 @@ from tac.analysis.action_effect import (
     ActionEffect,
     append_action_effect,
 )
+from tac.analysis.pr110_baseline_reproduction import (
+    BLOCKER_AUTHORITY,
+    BLOCKER_GLOBAL_K,
+    BLOCKER_MISSING,
+    MENU_ILP_BASELINE_BLOCKER,
+    PR110_K16_BASELINE_REPRODUCTION_SCHEMA,
+)
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 
 # ── fixture builders (SYNTHETIC; no empirical authority) ────────────────────
@@ -448,7 +455,14 @@ def test_cli_smoke_emits_ledger_and_summary(tmp_path: Path):
     assert summary["schema"] == ACTION_COMMUTATOR_LEDGER_SCHEMA
     assert summary["measured_commutator_count"] == 1
     assert summary["needs_measurement_count"] == 1
+    assert summary["menu_ilp_allowed"] is False
+    assert summary["macro_action_promotion_allowed"] is False
+    assert summary["menu_ilp_blockers"] == [MENU_ILP_BASELINE_BLOCKER, BLOCKER_MISSING]
     assert summary["macro_action_candidates"][0]["comm"] == pytest.approx(-2.0)
+    assert summary["macro_action_candidates"][0]["menu_ilp_blockers"] == [
+        MENU_ILP_BASELINE_BLOCKER,
+        BLOCKER_MISSING,
+    ]
     # false-authority markers propagate to the summary
     assert summary["score_claim"] is False
 
@@ -457,6 +471,7 @@ def test_cli_smoke_emits_ledger_and_summary(tmp_path: Path):
     ]
     assert any(r["schema"] == ACTION_COMMUTATOR_SCHEMA for r in jsonl_rows)
     assert any(r["schema"] == ACTION_COMMUTATOR_NEEDS_MEASUREMENT_SCHEMA for r in jsonl_rows)
+    assert all(MENU_ILP_BASELINE_BLOCKER in r["menu_ilp_blockers"] for r in jsonl_rows)
 
 
 def test_cli_smoke_no_pair_effects_all_queued(tmp_path: Path):
@@ -480,6 +495,7 @@ def test_cli_smoke_no_pair_effects_all_queued(tmp_path: Path):
     summary = json.loads((out_dir / "commutator_summary.json").read_text())
     assert summary["measured_commutator_count"] == 0
     assert summary["needs_measurement_count"] == 2
+    assert summary["menu_ilp_allowed"] is False
     assert summary["measurement_queue"][0]["first_measurement_command"] == (
         "uv run python tools/run_pr110_commutator_ledger.py "
         f"--action-effects {singles_path.as_posix()} "
@@ -489,6 +505,89 @@ def test_cli_smoke_no_pair_effects_all_queued(tmp_path: Path):
     assert summary["measurement_queue"][0]["additive_delta_score_total"] == pytest.approx(
         a.delta_score_total + b.delta_score_total
     )
+    assert summary["measurement_queue"][0]["menu_ilp_blockers"] == [MENU_ILP_BASELINE_BLOCKER, BLOCKER_MISSING]
+
+
+def _write_pr110_k16_baseline(path: Path, **overrides: object) -> None:
+    payload: dict[str, object] = {
+        "schema": PR110_K16_BASELINE_REPRODUCTION_SCHEMA,
+        "passed": True,
+        "global_k": 16,
+        "selector_id": "synthetic-pr110-global-k16",
+        "authority": "contest_cpu",
+        "expected_archive_bytes": 178517,
+        "actual_archive_bytes": 178517,
+        "byte_error_abs": 0,
+        "byte_tolerance": 0,
+        "expected_score": 0.192051,
+        "actual_score": 0.192051,
+        "score_error_abs": 0.0,
+        "score_tolerance": 0.0,
+    }
+    payload.update(overrides)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_cli_valid_k16_baseline_unblocks_menu_ilp(tmp_path: Path):
+    singles_path = tmp_path / "singles.jsonl"
+    out_dir = tmp_path / "out_valid_baseline"
+    baseline_path = tmp_path / "baseline.json"
+    _write_effect_jsonl([_seg_effect("A", new_d_seg=0.08), _seg_effect("B", new_d_seg=0.09)], singles_path)
+    _write_pr110_k16_baseline(baseline_path)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    cmd = [
+        sys.executable,
+        str(repo_root / "tools" / "run_pr110_commutator_ledger.py"),
+        "--action-effects",
+        str(singles_path),
+        "--baseline-reproduction",
+        str(baseline_path),
+        "--output",
+        str(out_dir),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=repo_root, check=False)
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads((out_dir / "commutator_summary.json").read_text())
+    assert summary["baseline_reproduction"]["passed"] is True
+    assert summary["menu_ilp_allowed"] is True
+    assert summary["macro_action_promotion_allowed"] is True
+    assert summary["menu_ilp_blockers"] == []
+    assert all(row["menu_ilp_allowed"] is True for row in summary["measurement_queue"])
+    assert f"--baseline-reproduction {baseline_path.as_posix()}" in summary["measurement_queue"][0][
+        "first_measurement_command"
+    ]
+
+
+def test_cli_invalid_k16_baseline_keeps_exact_blockers(tmp_path: Path):
+    singles_path = tmp_path / "singles.jsonl"
+    out_dir = tmp_path / "out_invalid_baseline"
+    baseline_path = tmp_path / "baseline_bad.json"
+    _write_effect_jsonl([_seg_effect("A", new_d_seg=0.08), _seg_effect("B", new_d_seg=0.09)], singles_path)
+    _write_pr110_k16_baseline(baseline_path, global_k=8, authority="")
+
+    repo_root = Path(__file__).resolve().parents[3]
+    cmd = [
+        sys.executable,
+        str(repo_root / "tools" / "run_pr110_commutator_ledger.py"),
+        "--action-effects",
+        str(singles_path),
+        "--baseline-reproduction",
+        str(baseline_path),
+        "--output",
+        str(out_dir),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=repo_root, check=False)
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads((out_dir / "commutator_summary.json").read_text())
+    assert summary["baseline_reproduction"]["passed"] is False
+    assert summary["menu_ilp_allowed"] is False
+    assert summary["menu_ilp_blockers"] == [
+        MENU_ILP_BASELINE_BLOCKER,
+        BLOCKER_GLOBAL_K,
+        BLOCKER_AUTHORITY,
+    ]
+    assert summary["measurement_queue"][0]["menu_ilp_blockers"] == summary["menu_ilp_blockers"]
 
 
 def test_cli_missing_action_effects_file_errors(tmp_path: Path):

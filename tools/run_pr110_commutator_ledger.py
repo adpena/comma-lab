@@ -44,6 +44,10 @@ from tac.analysis.action_commutator import (
     build_commutator_ledger,
 )
 from tac.analysis.action_effect import ActionEffect, read_action_effects
+from tac.analysis.pr110_baseline_reproduction import (
+    baseline_blockers_for_menu_ilp,
+    load_and_validate_pr110_k16_baseline_reproduction,
+)
 
 
 def _read_effects(path: Path) -> list[ActionEffect]:
@@ -77,6 +81,39 @@ def _write_ledger_jsonl(ledger: dict, path: Path) -> int:
     return written
 
 
+def _apply_menu_ilp_baseline_gate(ledger: dict, baseline_validation: dict) -> dict:
+    """Annotate macro/menu planning surfaces with the K=16 reproduction gate."""
+
+    blockers = baseline_blockers_for_menu_ilp(baseline_validation)
+    menu_ilp_allowed = not blockers
+    ledger["baseline_reproduction"] = baseline_validation
+    ledger["menu_ilp_allowed"] = menu_ilp_allowed
+    ledger["macro_action_promotion_allowed"] = menu_ilp_allowed
+    ledger["menu_ilp_blockers"] = blockers
+    ledger["macro_action_promotion_blockers"] = blockers
+    for row in ledger["rows"]:
+        row["menu_ilp_allowed"] = menu_ilp_allowed
+        row["macro_action_promotion_allowed"] = menu_ilp_allowed
+        row["menu_ilp_blockers"] = blockers
+        row["macro_action_promotion_blockers"] = blockers
+    for row in ledger["macro_action_candidates"]:
+        row["menu_ilp_allowed"] = menu_ilp_allowed
+        row["macro_action_promotion_allowed"] = menu_ilp_allowed
+        row["menu_ilp_blockers"] = blockers
+        row["macro_action_promotion_blockers"] = blockers
+    for row in ledger["conflict_pairs"]:
+        row["menu_ilp_allowed"] = menu_ilp_allowed
+        row["macro_action_promotion_allowed"] = menu_ilp_allowed
+        row["menu_ilp_blockers"] = blockers
+        row["macro_action_promotion_blockers"] = blockers
+    for row in ledger["measurement_queue"]:
+        row["menu_ilp_allowed"] = menu_ilp_allowed
+        row["macro_action_promotion_allowed"] = menu_ilp_allowed
+        row["menu_ilp_blockers"] = blockers
+        row["macro_action_promotion_blockers"] = blockers
+    return ledger
+
+
 def _write_summary_json(ledger: dict, path: Path, *, top_k: int) -> None:
     """Write the counts + capped macro/conflict/queue views as a summary JSON."""
 
@@ -97,6 +134,11 @@ def _write_summary_json(ledger: dict, path: Path, *, top_k: int) -> None:
         "conflict_pairs": ledger["conflict_pairs"][: max(0, top_k)],
         "measurement_queue": ledger["measurement_queue"][: max(0, top_k)],
         "policy": ledger["policy"],
+        "baseline_reproduction": ledger["baseline_reproduction"],
+        "menu_ilp_allowed": ledger["menu_ilp_allowed"],
+        "macro_action_promotion_allowed": ledger["macro_action_promotion_allowed"],
+        "menu_ilp_blockers": ledger["menu_ilp_blockers"],
+        "macro_action_promotion_blockers": ledger["macro_action_promotion_blockers"],
         # Carry the false-authority markers onto the summary so a downstream
         # reader cannot mistake this for a score-claim artifact.
         **{k: v for k, v in ledger.items() if isinstance(v, bool)},
@@ -173,6 +215,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=16,
         help="Cap on macro-action / conflict / queue views in the summary (default 16).",
     )
+    parser.add_argument(
+        "--baseline-reproduction",
+        type=Path,
+        default=None,
+        help=(
+            "Optional typed PR110 global K=16 reproduction proof JSON. "
+            "Menu ILP / macro promotion remains blocked when omitted or invalid."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.eps < 0.0:
@@ -184,12 +235,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     pair_effects_path = args.pair_effects if args.pair_effects is not None else default_pair_effects
     pairs = _read_effects(pair_effects_path) if pair_effects_path.exists() else []
 
-    first_measurement_command = (
-        "uv run python tools/run_pr110_commutator_ledger.py "
-        f"--action-effects {args.action_effects.as_posix()} "
-        f"--pair-effects {pair_effects_path.as_posix()} "
-        f"--output {out_dir.as_posix()}"
-    )
+    first_measurement_command_parts = [
+        "uv run python tools/run_pr110_commutator_ledger.py",
+        f"--action-effects {args.action_effects.as_posix()}",
+        f"--pair-effects {pair_effects_path.as_posix()}",
+        f"--output {out_dir.as_posix()}",
+    ]
+    if args.baseline_reproduction is not None:
+        first_measurement_command_parts.append(f"--baseline-reproduction {args.baseline_reproduction.as_posix()}")
+    first_measurement_command = " ".join(first_measurement_command_parts)
     ledger = build_commutator_ledger(
         singles,
         pairs,
@@ -198,6 +252,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         conflict_pair_limit=max(args.top_k, 0),
         first_measurement_command=first_measurement_command,
     )
+    baseline_validation = load_and_validate_pr110_k16_baseline_reproduction(args.baseline_reproduction)
+    _apply_menu_ilp_baseline_gate(ledger, baseline_validation)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     jsonl_path = out_dir / "commutator_ledger.jsonl"
