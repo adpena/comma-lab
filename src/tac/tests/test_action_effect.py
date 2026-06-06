@@ -590,6 +590,8 @@ def test_v1_carries_no_canonical_false_authority_keys() -> None:
 
 def test_v1_from_hinerv_birth_receipt_real_schema_roundtrips() -> None:
     receipt, action_id = _real_birth_receipt(surface="parseback_mlx")
+    receipt["receiver_surface"] = {"segnet_input_delta_linf": 0.03125}
+    receipt["pose_guard"]["posenet_input_delta_linf_pair"] = 0.015625
     eff = ActionEffect.from_hinerv_birth_receipt(receipt)
     assert eff.schema == ACTION_EFFECT_V1_SCHEMA
     assert eff.action_id == action_id  # CARRIED, not recomputed
@@ -601,6 +603,16 @@ def test_v1_from_hinerv_birth_receipt_real_schema_roundtrips() -> None:
     assert eff.new_d_seg == pytest.approx(0.0008)
     assert eff.delta_score_nonrate == pytest.approx(100.0 * (0.0008 - 0.0010), abs=1e-12)
     assert eff.parseback_survived is True
+    assert eff.hard_won_count == 10
+    assert eff.wrong_to_target == 10
+    assert eff.target_to_wrong == 0
+    assert eff.net_target_support_delta == 10
+    assert eff.uint8_changed_count_region == 12
+    assert eff.seg_input_delta_linf_region == pytest.approx(0.03125)
+    assert eff.posenet_input_delta_linf_pair == pytest.approx(0.015625)
+    roundtrip = ActionEffect.from_dict(eff.as_dict())
+    assert roundtrip.hard_won_count == 10
+    assert roundtrip.uint8_changed_count_region == 12
 
 
 def test_v1_from_hinerv_birth_receipt_no_pose_teacher_leaves_distortion_none() -> None:
@@ -623,6 +635,11 @@ def test_v1_from_pair_local_admission_real_admission_roundtrips_structurally() -
     assert eff.family == "hinerv"
     assert eff.pair_ids == (43,)
     assert eff.parseback_survived is True
+    assert eff.hard_won_count == 8
+    assert eff.wrong_to_target == 8
+    assert eff.net_target_support_delta == 8
+    assert eff.uint8_changed_count_region == 12
+    assert eff.seg_input_delta_linf_region == pytest.approx(0.01)
     # deltas-only admission ⇒ no absolute endpoints ⇒ no fabricated nonrate.
     assert eff.old_d_seg is None
     assert eff.delta_score_nonrate is None

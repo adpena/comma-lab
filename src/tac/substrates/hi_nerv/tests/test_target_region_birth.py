@@ -668,6 +668,12 @@ def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() ->
     assert telemetry["final_already_won_lost_count"] == 0
     assert telemetry["unsolved_tail_pixel_count"] == 24
     assert telemetry["already_won_region_pixel_count"] == 24
+    controls = telemetry["trust_region_controls"]
+    assert controls["lambda_support_preserve"] == pytest.approx(64.0)
+    assert controls["lambda_already_won_hard_preserve"] == pytest.approx(0.0)
+    assert controls["lambda_already_won_rgb_preserve"] == pytest.approx(0.0)
+    assert controls["lambda_pose_trust_preserve"] == pytest.approx(0.0)
+    assert controls["lambda_pose_target"] == pytest.approx(0.0)
     assert telemetry["max_candidate_region_hard_won_delta"] >= 24
     assert telemetry["attempts"]
     assert any(record["decision"] == "accepted" for record in telemetry["attempts"])
@@ -945,7 +951,11 @@ def test_accepted_birth_with_pose_teacher_requires_joint_score_improvement() -> 
         assert nonrate["delta_score_nonrate"] is not None
         assert nonrate["delta_score_nonrate"] < 0.0
     else:
-        assert payload["joint_score_rejected_step_count"] >= 1 or payload["subquantum_rejected_step_count"] >= 1
+        assert (
+            payload["joint_score_rejected_step_count"] >= 1
+            or payload["subquantum_rejected_step_count"] >= 1
+            or payload["no_progress_rejected_step_count"] >= 1
+        )
     assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in (payload["blockers"])
 
 

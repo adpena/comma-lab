@@ -11,6 +11,10 @@ import warnings
 import numpy as np
 import pytest
 
+from tac.analysis.snerv_source_forward_proof import (
+    build_snerv_payload_bitflip_falsification,
+    build_snerv_source_forward_proof_action_effect,
+)
 from tac.analysis.snerv_step_map_coder import (
     decode_step_maps,
     encode_step_maps,
@@ -28,6 +32,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SNERV_ARCHIVE_MAGIC_V2,
     SNERV_DECODER_MAGIC,
     SnervArchiveError,
+    build_snerv_archive_payload_bitflip_falsification,
     decode_decoder_payload,
     decode_lf_metadata_payload,
     decode_lf_quant_payload,
@@ -728,6 +733,72 @@ def test_official_mfu_hfr_tub_payload_rejects_metadata_only_source_forward_claim
         match="source-forward authority requires numerical proof",
     ):
         decode_official_mfu_hfr_tub_decoder_payload(corrupted)
+
+
+def test_official_mfu_hfr_tub_payload_accepts_action_effect_source_forward_claim() -> None:
+    payload = encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())
+    action_effect = _source_forward_action_effect_fixture()
+
+    def bind_proof(header: dict[str, object]) -> None:
+        header["source_forward_replay_bound_by_export"] = True
+        header["source_forward_replay_verified"] = True
+        header["source_forward_replay_authority"] = True
+        header["source_forward_replay_proof"] = action_effect
+        header["source_forward_replay_proof_status"] = {
+            "schema": "will_be_recomputed_by_receiver"
+        }
+
+    bound = _rewrite_subpacket_header(payload, bind_proof)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(bound)
+    proof = decoded.execute()
+
+    status = proof["source_forward_replay_proof_status"]
+    assert status["source_forward_replay_proof_present"] is True
+    assert status["source_forward_replay_action_effect_valid"] is True
+    assert status["source_forward_replay_numerical_proof_complete"] is True
+    assert status["source_forward_replay_proof_status"] == (
+        "complete_numerical_source_forward_proof_present"
+    )
+    assert proof["source_forward_replay_authority"] is False
+    assert decoded.header["source_forward_replay_authority"] is True
+
+
+def test_official_mfu_hfr_tub_archive_payload_bitflip_falsifies_receiver_replay() -> None:
+    decoder_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **_official_payload_fixture()
+    )
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 1,
+            "channels": 3,
+        },
+    )
+
+    proof = build_snerv_archive_payload_bitflip_falsification(
+        archive.packet,
+        bitflip_section="decoder_payload",
+        bit_offset=0,
+        bit_mask=1,
+    )
+
+    assert proof["schema"] == "snerv_payload_bitflip_falsification.v1"
+    assert proof["bitflip_section"] == "decoder_payload"
+    assert proof["baseline_section_sha256"] != proof["mutated_section_sha256"]
+    assert proof["proof_passed"] is False
+    assert proof["first_failed_tensor"] in {"output_2", "rgb_pair_uint8"}
+    assert proof["first_failed_surface"] in {"archive_parseback", "numpy_receiver"}
+    assert proof["passed"] is True
+    assert proof["blockers"] == []
 
 
 def test_official_mfu_hfr_tub_decoder_payload_uses_bounded_lzma_by_default(
@@ -1869,6 +1940,59 @@ def _official_payload_fixture(seed: int = 17) -> dict[str, object]:
         "fc_hw": (2, 2),
         "output2_decoder_output_shape": (2, 8, 4, 4),
     }
+
+
+def _source_forward_action_effect_fixture() -> dict[str, object]:
+    tensors = {
+        "coord_time_embedding": np.array([[0.0, 1.0]], dtype=np.float32),
+        "mfu_in": np.ones((1, 1, 2, 2), dtype=np.float32),
+        "mfu_out": np.ones((1, 1, 4, 4), dtype=np.float32) * 2,
+        "hfr_in": np.ones((1, 1, 4, 4), dtype=np.float32) * 2,
+        "hfr_out": np.ones((1, 3, 3, 4, 4), dtype=np.float32) * 0.125,
+        "tub_in": np.ones((3, 3, 4, 4), dtype=np.float32) * 0.25,
+        "tub_out": np.ones((1, 1, 2, 2), dtype=np.float32) * 0.5,
+        "output_2": np.ones((1, 3, 4, 4), dtype=np.float32) * 0.01,
+        "rgb_pair_float": np.ones((1, 2, 3, 4, 4), dtype=np.float32) * 127.5,
+        "rgb_pair_uint8": np.ones((1, 2, 3, 4, 4), dtype=np.uint8) * 128,
+        "segnet_input": np.ones((1, 3, 384, 512), dtype=np.float32) * 0.5,
+        "posenet_input": np.ones((1, 6, 384, 512), dtype=np.float32) * 0.5,
+        "segnet_logits": np.ones((1, 6, 384, 512), dtype=np.float32),
+        "segnet_argmax": np.ones((1, 384, 512), dtype=np.int64),
+        "posenet_output": np.ones((1, 6), dtype=np.float32),
+    }
+    bitflip = build_snerv_payload_bitflip_falsification(
+        bitflip_section="decoder_payload.output_2",
+        baseline_section_sha256="2" * 64,
+        mutated_section_sha256="3" * 64,
+        proof_passed_after_bitflip=False,
+        first_failed_tensor="output_2",
+        first_failed_surface="archive_parseback",
+        bit_offset=4,
+        bit_mask=1,
+    )
+    return build_snerv_source_forward_proof_action_effect(
+        action_id="a" * 64,
+        archive_sha256="1" * 64,
+        archive_bytes=4096,
+        payload_section_hashes={
+            "decoder_payload": "2" * 64,
+            "lf_payload": "4" * 64,
+            "output_2": "5" * 64,
+        },
+        pair_ids=[0],
+        tensors_by_surface={
+            "official_torch": tensors,
+            "pact_mlx": tensors,
+            "archive_parseback": tensors,
+            "numpy_receiver": tensors,
+        },
+        scorer_deltas={
+            "d_seg": 0.0,
+            "d_pose": 0.0,
+            "delta_score_nonrate": 0.0,
+        },
+        destructive_payload_bit_flip=bitflip,
+    )
 
 
 def _official_hfr_head(rng: np.random.Generator) -> OfficialHfrConvBlock:

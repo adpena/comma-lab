@@ -672,6 +672,15 @@ class ActionEffect:
     value_per_byte: float | None
     parseback_survived: bool | None
     inflate_survived: bool | None
+    fakequant_survived: bool | None = None
+    hard_won_count: int | None = None
+    wrong_to_target: int | None = None
+    target_to_wrong: int | None = None
+    wrong_to_wrong: int | None = None
+    net_target_support_delta: int | None = None
+    uint8_changed_count_region: int | None = None
+    seg_input_delta_linf_region: float | None = None
+    posenet_input_delta_linf_pair: float | None = None
     promotion_eligible: bool = False
 
     def __post_init__(self) -> None:
@@ -695,6 +704,20 @@ class ActionEffect:
             _v1_validate_distortion(name, value)
         for name, value in (("old_bytes", self.old_bytes), ("new_bytes", self.new_bytes)):
             _v1_validate_bytes(name, value)
+        for name, value in (
+            ("hard_won_count", self.hard_won_count),
+            ("wrong_to_target", self.wrong_to_target),
+            ("target_to_wrong", self.target_to_wrong),
+            ("wrong_to_wrong", self.wrong_to_wrong),
+            ("net_target_support_delta", self.net_target_support_delta),
+            ("uint8_changed_count_region", self.uint8_changed_count_region),
+        ):
+            _v1_validate_optional_nonnegative_int(name, value)
+        for name, value in (
+            ("seg_input_delta_linf_region", self.seg_input_delta_linf_region),
+            ("posenet_input_delta_linf_pair", self.posenet_input_delta_linf_pair),
+        ):
+            _v1_validate_distortion(name, value)
         if not isinstance(self.pair_ids, tuple):
             raise ValueError("pair_ids must be a tuple")
         if not isinstance(self.region_ids, tuple):
@@ -724,6 +747,15 @@ class ActionEffect:
         new_bytes: int | None = None,
         parseback_survived: bool | None = None,
         inflate_survived: bool | None = None,
+        fakequant_survived: bool | None = None,
+        hard_won_count: int | None = None,
+        wrong_to_target: int | None = None,
+        target_to_wrong: int | None = None,
+        wrong_to_wrong: int | None = None,
+        net_target_support_delta: int | None = None,
+        uint8_changed_count_region: int | None = None,
+        seg_input_delta_linf_region: float | None = None,
+        posenet_input_delta_linf_pair: float | None = None,
         reference_bytes: int = CONTEST_REFERENCE_BYTES,
     ) -> ActionEffect:
         """Build an ActionEffect, computing the shared delta scores.
@@ -763,6 +795,15 @@ class ActionEffect:
             value_per_byte=deltas.value_per_byte,
             parseback_survived=parseback_survived,
             inflate_survived=inflate_survived,
+            fakequant_survived=fakequant_survived,
+            hard_won_count=hard_won_count,
+            wrong_to_target=wrong_to_target,
+            target_to_wrong=target_to_wrong,
+            wrong_to_wrong=wrong_to_wrong,
+            net_target_support_delta=net_target_support_delta,
+            uint8_changed_count_region=uint8_changed_count_region,
+            seg_input_delta_linf_region=seg_input_delta_linf_region,
+            posenet_input_delta_linf_pair=posenet_input_delta_linf_pair,
             promotion_eligible=False,
         )
 
@@ -819,6 +860,19 @@ class ActionEffect:
 
         payload_sections = _v1_str_tuple(receipt.get("updated_parameter_names"))
         parseback_survived, inflate_survived = _v1_birth_survival_flags(receipt, surface)
+        transitions = _v1_mapping(receipt.get("argmax_transitions"))
+        if not transitions:
+            transitions = _v1_mapping(receipt.get("region_argmax_transitions"))
+        if not transitions:
+            transitions = _v1_mapping(receipt.get("argmax_transition_counts"))
+        transition_values = {**dict(receipt), **dict(transitions)}
+        receiver_surface = _v1_mapping(receipt.get("receiver_surface"))
+        pose_guard = _v1_mapping(receipt.get("pose_guard"))
+        fakequant_survived = _v1_bool_or_none(receipt.get("fakequant_survived"))
+        if fakequant_survived is None and surface == "fakequant_mlx":
+            blockers = receipt.get("blockers")
+            if isinstance(blockers, Sequence) and not isinstance(blockers, (str, bytes)) and len(blockers) == 0:
+                fakequant_survived = True
 
         return cls.build(
             action_id=action_id,
@@ -837,6 +891,49 @@ class ActionEffect:
             new_bytes=new_bytes,
             parseback_survived=parseback_survived,
             inflate_survived=inflate_survived,
+            fakequant_survived=fakequant_survived,
+            hard_won_count=_v1_first_int(
+                transition_values,
+                "target_hard_won_count",
+                "wrong_to_target_count",
+                "receiver_surface_target_hard_won_count",
+            ),
+            wrong_to_target=_v1_first_int(
+                transition_values,
+                "wrong_to_target_count",
+                "target_hard_won_count",
+                "receiver_surface_wrong_to_target_count",
+            ),
+            target_to_wrong=_v1_first_int(
+                transition_values,
+                "target_to_wrong_count",
+                "target_hard_lost_count",
+                "receiver_surface_target_to_wrong_count",
+            ),
+            wrong_to_wrong=_v1_first_int(transition_values, "wrong_to_wrong_count"),
+            net_target_support_delta=_v1_first_int(
+                transition_values,
+                "net_target_support_delta",
+                "receiver_surface_net_target_support_delta",
+            ),
+            uint8_changed_count_region=_v1_first_int(
+                receipt,
+                "receiver_uint8_changed_pixels_region",
+                "receiver_surface_uint8_changed_pixels",
+                "uint8_changed_pixels_region",
+                "uint8_changed_count_region",
+            ),
+            seg_input_delta_linf_region=_v1_first_float(
+                receiver_surface,
+                "seg_input_delta_linf_region",
+                "segnet_input_delta_linf_region",
+                "segnet_input_delta_linf",
+            ),
+            posenet_input_delta_linf_pair=_v1_first_float(
+                pose_guard,
+                "posenet_input_delta_linf_pair",
+                "pose_input_delta_linf_pair",
+            ),
             reference_bytes=reference_bytes,
         )
 
@@ -913,6 +1010,10 @@ class ActionEffect:
         surfaces = _v1_mapping(admission.get("surfaces"))
         parseback_survived = _v1_bool_or_none(surfaces.get("parseback_survival"))
         inflate_survived = _v1_bool_or_none(surfaces.get("inflate_survival"))
+        fakequant_survived = _v1_bool_or_none(surfaces.get("fakequant_survival"))
+        if fakequant_survived is None:
+            fakequant_survived = _v1_bool_or_none(admission.get("fakequant_survived"))
+        transition_values = {**dict(trace), **dict(admission)}
 
         region_ids = _v1_str_tuple(admission.get("affected_regions"))
         payload_sections = _v1_str_tuple(admission.get("payload_sections"))
@@ -934,6 +1035,37 @@ class ActionEffect:
             new_bytes=new_bytes,
             parseback_survived=parseback_survived,
             inflate_survived=inflate_survived,
+            fakequant_survived=fakequant_survived,
+            hard_won_count=_v1_first_int(
+                transition_values,
+                "target_hard_won_count",
+                "wrong_to_target_count",
+                "receiver_surface_target_hard_won_count",
+            ),
+            wrong_to_target=_v1_first_int(transition_values, "wrong_to_target_count", "target_hard_won_count"),
+            target_to_wrong=_v1_first_int(transition_values, "target_to_wrong_count", "target_hard_lost_count"),
+            wrong_to_wrong=_v1_first_int(transition_values, "wrong_to_wrong_count"),
+            net_target_support_delta=_v1_first_int(
+                transition_values,
+                "net_target_support_delta",
+                "receiver_surface_net_target_support_delta",
+            ),
+            uint8_changed_count_region=_v1_first_int(
+                transition_values,
+                "uint8_changed_pixels",
+                "receiver_uint8_changed_pixels_region",
+                "uint8_changed_count_region",
+            ),
+            seg_input_delta_linf_region=_v1_first_float(
+                transition_values,
+                "segnet_input_delta_linf",
+                "seg_input_delta_linf_region",
+            ),
+            posenet_input_delta_linf_pair=_v1_first_float(
+                transition_values,
+                "posenet_input_delta_linf_pair",
+                "pose_input_delta_linf_pair",
+            ),
             reference_bytes=reference_bytes,
         )
 
@@ -1046,6 +1178,15 @@ class ActionEffect:
             value_per_byte=_v1_float_or_none(payload.get("value_per_byte")),
             parseback_survived=_v1_bool_or_none(payload.get("parseback_survived")),
             inflate_survived=_v1_bool_or_none(payload.get("inflate_survived")),
+            fakequant_survived=_v1_bool_or_none(payload.get("fakequant_survived")),
+            hard_won_count=_v1_int_or_none(payload.get("hard_won_count")),
+            wrong_to_target=_v1_int_or_none(payload.get("wrong_to_target")),
+            target_to_wrong=_v1_int_or_none(payload.get("target_to_wrong")),
+            wrong_to_wrong=_v1_int_or_none(payload.get("wrong_to_wrong")),
+            net_target_support_delta=_v1_int_or_none(payload.get("net_target_support_delta")),
+            uint8_changed_count_region=_v1_int_or_none(payload.get("uint8_changed_count_region")),
+            seg_input_delta_linf_region=_v1_float_or_none(payload.get("seg_input_delta_linf_region")),
+            posenet_input_delta_linf_pair=_v1_float_or_none(payload.get("posenet_input_delta_linf_pair")),
             promotion_eligible=False,
         )
 
@@ -1136,6 +1277,15 @@ def _v1_validate_distortion(name: str, value: float | None) -> None:
 
 
 def _v1_validate_bytes(name: str, value: int | None) -> None:
+    if value is None:
+        return
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{name} must be an int; got {value!r}")
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative; got {value!r}")
+
+
+def _v1_validate_optional_nonnegative_int(name: str, value: int | None) -> None:
     if value is None:
         return
     if not isinstance(value, int) or isinstance(value, bool):

@@ -21,6 +21,11 @@ from typing import Any
 
 import numpy as np
 
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    build_snerv_payload_bitflip_falsification,
+    validate_snerv_source_forward_proof_action_effect,
+)
 from tac.analysis.snerv_step_map_coder import decode_step_maps
 from tac.codec.receiver_integer_plane_codec import (
     SPATIAL_DELTA_ZIGZAG_LEB128_CODEC,
@@ -1426,6 +1431,108 @@ def decode_snerv_archive_pair_frames(
     )
 
 
+def build_snerv_archive_payload_bitflip_falsification(
+    packet: bytes,
+    *,
+    bitflip_section: str = "decoder_payload",
+    bit_offset: int = 0,
+    bit_mask: int = 1,
+) -> dict[str, Any]:
+    """Mutate one charged archive section and prove receiver replay fails.
+
+    The mutation is not a header-only corruption: we unpack the archive, flip
+    one bit inside the requested section, repack the container with fresh outer
+    section hashes, and then run receiver frame replay.  If replay still returns
+    the exact same uint8 receiver tensor, the proof is metadata-only.
+    """
+
+    decoded = unpack_snerv_archive(packet)
+    if bitflip_section not in decoded.sections:
+        raise SnervArchiveError(f"unknown SNeRV bitflip section {bitflip_section!r}")
+    section = bytearray(decoded.sections[bitflip_section])
+    if not section:
+        raise SnervArchiveError(f"SNeRV bitflip section {bitflip_section!r} is empty")
+    offset = int(bit_offset)
+    if offset < 0 or offset >= len(section):
+        raise SnervArchiveError(
+            f"SNeRV bitflip offset {offset} outside section {bitflip_section!r}"
+        )
+    mask = int(bit_mask)
+    if mask <= 0 or mask > 255:
+        raise SnervArchiveError("SNeRV bitflip mask must be in [1, 255]")
+
+    baseline_section_hash = _sha256(bytes(section))
+    try:
+        baseline_frames = decoded.decode_frames(clip_to_uint8_range=True)
+    except Exception as exc:
+        return build_snerv_payload_bitflip_falsification(
+            bitflip_section=bitflip_section,
+            baseline_section_sha256=baseline_section_hash,
+            mutated_section_sha256=baseline_section_hash,
+            proof_passed_after_bitflip=True,
+            first_failed_tensor=None,
+            bit_offset=offset,
+            bit_mask=mask,
+            failure=f"baseline_receiver_replay_failed:{type(exc).__name__}:{exc}",
+        )
+
+    section[offset] ^= mask
+    mutated_sections = dict(decoded.sections)
+    mutated_sections[bitflip_section] = bytes(section)
+    mutated_section_hash = _sha256(mutated_sections[bitflip_section])
+    packer = (
+        pack_snerv_archive_snar2
+        if decoded.schema == SNERV_ARCHIVE_SCHEMA_V2
+        else pack_snerv_archive
+    )
+    mutated_packet = packer(
+        metadata_payload=mutated_sections["metadata_payload"],
+        lf_payload=mutated_sections["lf_payload"],
+        decoder_payload=mutated_sections["decoder_payload"],
+        step_map_packet=mutated_sections["step_map_packet"],
+        metadata=decoded.metadata,
+    ).packet
+
+    first_failed_tensor: str | None = None
+    first_failed_surface: str | None = None
+    failure: str | None = None
+    proof_passed_after_bitflip = True
+    try:
+        mutated_frames = decode_snerv_archive_frames(mutated_packet)
+    except Exception as exc:
+        proof_passed_after_bitflip = False
+        first_failed_tensor = _bitflip_section_first_tensor(bitflip_section)
+        first_failed_surface = "archive_parseback"
+        failure = f"{type(exc).__name__}: {exc}"
+    else:
+        if tuple(mutated_frames.shape) != tuple(baseline_frames.shape):
+            proof_passed_after_bitflip = False
+            first_failed_tensor = "rgb_pair_uint8"
+            first_failed_surface = "numpy_receiver"
+            failure = (
+                f"shape_changed:{tuple(baseline_frames.shape)}->{tuple(mutated_frames.shape)}"
+            )
+        elif not np.array_equal(
+            np.rint(mutated_frames).astype(np.uint8),
+            np.rint(baseline_frames).astype(np.uint8),
+        ):
+            proof_passed_after_bitflip = False
+            first_failed_tensor = "rgb_pair_uint8"
+            first_failed_surface = "numpy_receiver"
+
+    return build_snerv_payload_bitflip_falsification(
+        bitflip_section=bitflip_section,
+        baseline_section_sha256=baseline_section_hash,
+        mutated_section_sha256=mutated_section_hash,
+        proof_passed_after_bitflip=proof_passed_after_bitflip,
+        first_failed_tensor=first_failed_tensor,
+        first_failed_surface=first_failed_surface,
+        bit_offset=offset,
+        bit_mask=mask,
+        failure=failure,
+    )
+
+
 def decode_snerv_archive_frame_planes_from_decoded(
     decoded: DecodedSnervArchive,
     *,
@@ -1467,7 +1574,10 @@ def decode_snerv_archive_frame_planes_from_decoded(
                 decoded_planes[frame_to_local[int(index) // channels] * channels + int(index) % channels]
                 for index in selected
             ]
-        return decoded.decode_official_mfu_hfr_tub_payload().decode_frame_planes(
+        return _decode_official_mfu_hfr_tub_selected_frame_planes(
+            decoded.sections["decoder_payload"],
+            frame_indices=range(expected_frame_count),
+            expected_frame_count=expected_frame_count,
             clip_to_uint8_range=clip_to_uint8_range,
         )
 
@@ -4166,7 +4276,12 @@ def _official_mfu_hfr_tub_source_forward_proof_status_from_header(
     proof_present = isinstance(proof, Mapping)
     missing = list(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS)
     invalid: list[str] = []
-    if proof_present:
+    action_effect_status: dict[str, Any] | None = None
+    if proof_present and proof.get("schema") == SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+        action_effect_status = validate_snerv_source_forward_proof_action_effect(proof)
+        missing = []
+        invalid = list(action_effect_status["blockers"])
+    elif proof_present:
         proof_map = proof
         missing = [
             field
@@ -4200,7 +4315,16 @@ def _official_mfu_hfr_tub_source_forward_proof_status_from_header(
             ]
             if bad_hashes:
                 invalid.append(field)
-    complete = bool(proof_present and not missing and not invalid)
+        invalid.append("source_forward_action_effect_proof_missing")
+    complete = bool(
+        proof_present
+        and not missing
+        and not invalid
+        and (
+            action_effect_status is not None
+            and action_effect_status["passed"] is True
+        )
+    )
     if complete:
         status = "complete_numerical_source_forward_proof_present"
     elif proof_present:
@@ -4217,6 +4341,18 @@ def _official_mfu_hfr_tub_source_forward_proof_status_from_header(
         ),
         "source_forward_replay_required_fields_missing": missing,
         "source_forward_replay_invalid_fields": _dedupe_strings(invalid),
+        "source_forward_replay_action_effect_schema": (
+            SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA
+        ),
+        "source_forward_replay_action_effect_valid": bool(
+            action_effect_status is not None
+            and action_effect_status["passed"] is True
+        ),
+        "source_forward_replay_action_effect_blockers": (
+            []
+            if action_effect_status is None
+            else list(action_effect_status["blockers"])
+        ),
         "source_forward_replay_numerical_proof_complete": complete,
         "source_forward_replay_proof_status": status,
         "source_forward_replay_authority_fields": list(
@@ -4648,6 +4784,18 @@ def _metadata_hw_value(name: str, value: Any) -> tuple[int, int]:
     if h <= 0 or w <= 0:
         raise SnervArchiveError("receiver replay metadata height/width must be positive")
     return h, w
+
+
+def _bitflip_section_first_tensor(section: str) -> str:
+    if section == "decoder_payload":
+        return "output_2"
+    if section == "lf_payload":
+        return "lf_payload"
+    if section == "metadata_payload":
+        return "coord_time_embedding"
+    if section == "step_map_packet":
+        return "rgb_pair_uint8"
+    return str(section or "archive_parseback")
 
 
 def _pack_subpacket(magic: bytes, header: dict[str, Any], payload: bytes) -> bytes:

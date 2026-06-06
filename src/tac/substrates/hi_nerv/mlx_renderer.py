@@ -2696,6 +2696,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         lambda_seed: float = 8.0,
         lambda_support_preserve: float = 64.0,
         lambda_outside_argmax_preserve: float = 16.0,
+        lambda_already_won_hard_preserve: float = 0.0,
+        lambda_already_won_rgb_preserve: float = 0.0,
+        already_won_margin_floor: float = 1.0,
+        lambda_pose_trust_preserve: float = 0.0,
+        lambda_pose_target: float = 0.0,
         seed_temperature: float = 0.5,
         min_margin_mean_drop: float = 1.0e-6,
         max_pose_output_delta_l2: float = 0.05,
@@ -2745,6 +2750,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ("lambda_seed", float(lambda_seed)),
             ("lambda_support_preserve", float(lambda_support_preserve)),
             ("lambda_outside_argmax_preserve", float(lambda_outside_argmax_preserve)),
+            ("lambda_already_won_hard_preserve", float(lambda_already_won_hard_preserve)),
+            ("lambda_already_won_rgb_preserve", float(lambda_already_won_rgb_preserve)),
+            ("already_won_margin_floor", float(already_won_margin_floor)),
+            ("lambda_pose_trust_preserve", float(lambda_pose_trust_preserve)),
+            ("lambda_pose_target", float(lambda_pose_target)),
             ("seed_temperature", float(seed_temperature)),
             ("min_margin_mean_drop", float(min_margin_mean_drop)),
             ("max_pose_output_delta_l2", float(max_pose_output_delta_l2)),
@@ -2870,9 +2880,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if not pose_available:
                 return None
             # Mirrors the shared posenet_yuv6_pair_nhwc255 surface: per-frame
-            # RGB->YUV6 at byte scale, concatenated to 12 channels NHWC.
+            # receiver-quantized RGB->YUV6 at byte scale, concatenated to 12
+            # channels NHWC.  Pose and SegNet must see the same uint8 receiver
+            # surface; otherwise hard-birth can optimize sub-byte pose fiction.
+            receiver0 = _receiver_uint8_roundtrip_ste_nhwc01(pred0)
+            receiver1 = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
             yuv6_pair = mx.concatenate(  # type: ignore[union-attr]
-                [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+                [rgb_to_yuv6_mlx(receiver0 * 255.0), rgb_to_yuv6_mlx(receiver1 * 255.0)],
                 axis=-1,
             )
             pose = pose_fn(yuv6_pair)
@@ -2932,6 +2946,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         already_won_mask = mx.stop_gradient(  # type: ignore[union-attr]
             mx.array(already_won_mask_np, dtype=mx.float32)
         )
+        already_won_mask_4 = mx.expand_dims(already_won_mask, axis=-1)  # type: ignore[union-attr]
         unsolved_tail_pixels = float(unsolved_tail_pixel_count)
         already_won_pixels = float(already_won_pixel_count)
         before_unsolved_tail_stats = region_margin_stats(
@@ -2945,6 +2960,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             else None
         )
         target_pose_np: np.ndarray | None = None
+        target_pose_reference: Any | None = None
         if pose_available:
             pose_target_fn = getattr(pose_teacher, "teacher_pose_for_indices", None)
             if callable(pose_target_fn):
@@ -2957,14 +2973,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 target_pose = pose_fn(
                     mx.concatenate(  # type: ignore[union-attr]
                         [
-                            rgb_to_yuv6_mlx(target0 * 255.0),
-                            rgb_to_yuv6_mlx(target1 * 255.0),
+                            rgb_to_yuv6_mlx(_receiver_uint8_roundtrip_ste_nhwc01(target0) * 255.0),
+                            rgb_to_yuv6_mlx(_receiver_uint8_roundtrip_ste_nhwc01(target1) * 255.0),
                         ],
                         axis=-1,
                     )
                 )
             mx.eval(target_pose)  # type: ignore[union-attr]
             target_pose_np = np.asarray(target_pose, dtype=np.float32)
+            target_pose_reference = mx.stop_gradient(mx.array(target_pose, dtype=mx.float32))  # type: ignore[union-attr]
 
         def _d_seg_batch(argmax_np: np.ndarray) -> float:
             return float(np.mean(argmax_np != labels_np))
@@ -3032,7 +3049,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
 
         def _loss_fn(model_obj: Any) -> Any:
-            _, pred1 = _predict_pair01(model_obj)
+            pred0, pred1 = _predict_pair01(model_obj)
             receiver = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
             logits = live_fn(receiver)
             class_logit = logits[..., birth_class]
@@ -3064,6 +3081,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             seed_weight = seed_weight / mx.maximum(mx.sum(seed_weight), eps)  # type: ignore[union-attr]
             loss_seed = mx.sum(seed_weight * crossing * crossing)  # type: ignore[union-attr]
             loss_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            loss_already_won_hard_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            loss_already_won_rgb_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             if already_won_pixel_count > 0:
                 # Preserve already-won target support as a trust-region
                 # constraint, not only after it has crossed the argmax boundary.
@@ -3083,6 +3102,22 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     * mx.sum(preserve_violation * preserve_violation * already_won_mask)
                     / already_won_pixels
                 )
+                hard_preserve = mx.logaddexp(  # type: ignore[union-attr]
+                    (margin_raw + float(already_won_margin_floor)) / float(margin_tau),
+                    0.0,
+                )
+                loss_already_won_hard_preserve = (  # type: ignore[assignment]
+                    float(lambda_already_won_hard_preserve)
+                    * float(preserve_weight)
+                    * mx.sum(hard_preserve * hard_preserve * already_won_mask)
+                    / already_won_pixels
+                )
+                rgb_preserve_delta = (pred1 - base_pred1) * already_won_mask_4
+                loss_already_won_rgb_preserve = (  # type: ignore[assignment]
+                    float(lambda_already_won_rgb_preserve)
+                    * mx.sum(rgb_preserve_delta * rgb_preserve_delta)
+                    / max(already_won_pixels * 3.0, 1.0)
+                )
             loss_outside_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             if outside_region_pixels > 0.0 and float(lambda_outside_argmax_preserve) > 0.0:
                 initial_winner_logit = mx.sum(logits * initial_argmax_one_hot, axis=-1)  # type: ignore[union-attr]
@@ -3101,6 +3136,44 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     * mx.sum(outside_margin_erosion * outside_margin_erosion * outside_region_mask)
                     / outside_region_pixels
                 )
+            loss_pose_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            loss_pose_target = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            if initial_pose_reference is not None and (
+                float(lambda_pose_trust_preserve) > 0.0 or float(lambda_pose_target) > 0.0
+            ):
+                receiver0 = _receiver_uint8_roundtrip_ste_nhwc01(pred0)
+                receiver1 = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
+                pose_live = pose_fn(  # type: ignore[misc]
+                    mx.concatenate(  # type: ignore[union-attr]
+                        [
+                            rgb_to_yuv6_mlx(receiver0 * 255.0),
+                            rgb_to_yuv6_mlx(receiver1 * 255.0),
+                        ],
+                        axis=-1,
+                    )
+                )
+                if float(lambda_pose_trust_preserve) > 0.0:
+                    pose_drift_sq = mx.sum(  # type: ignore[union-attr]
+                        (pose_live - initial_pose_reference) * (pose_live - initial_pose_reference),
+                        axis=-1,
+                    )
+                    pose_cap_sq = max(float(max_pose_output_delta_l2) ** 2, 1.0e-12)
+                    pose_trust_violation = mx.maximum(  # type: ignore[union-attr]
+                        pose_drift_sq / pose_cap_sq - 1.0,
+                        0.0,
+                    )
+                    loss_pose_preserve = (  # type: ignore[assignment]
+                        float(lambda_pose_trust_preserve)
+                        * mx.mean(pose_trust_violation * pose_trust_violation)
+                    )
+                if target_pose_reference is not None and float(lambda_pose_target) > 0.0:
+                    pose_target_mse = mx.mean(  # type: ignore[union-attr]
+                        (pose_live - target_pose_reference) * (pose_live - target_pose_reference)
+                    )
+                    pose_target_scale = max(float(initial_d_pose or 0.0), 1.0e-6)
+                    loss_pose_target = (  # type: ignore[assignment]
+                        float(lambda_pose_target) * pose_target_mse / pose_target_scale
+                    )
             pred_class = mx.argmax(logits, axis=-1)  # type: ignore[union-attr]
             unsolved = mx.stop_gradient(  # type: ignore[union-attr]
                 mx.sum(unsolved_tail_mask * (pred_class != birth_class).astype(mx.float32))
@@ -3111,7 +3184,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + float(lambda_prob_floor) * loss_prob
                 + float(lambda_seed) * loss_seed
                 + loss_preserve
+                + loss_already_won_hard_preserve
+                + loss_already_won_rgb_preserve
                 + loss_outside_preserve
+                + loss_pose_preserve
+                + loss_pose_target
             )
 
         if tree_unflatten is None:
@@ -3919,6 +3996,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "trust_region_controls": {
                 "lambda_support_preserve": float(lambda_support_preserve),
                 "lambda_outside_argmax_preserve": float(lambda_outside_argmax_preserve),
+                "lambda_already_won_hard_preserve": float(lambda_already_won_hard_preserve),
+                "lambda_already_won_rgb_preserve": float(lambda_already_won_rgb_preserve),
+                "already_won_margin_floor": float(already_won_margin_floor),
+                "lambda_pose_trust_preserve": float(lambda_pose_trust_preserve),
+                "lambda_pose_target": float(lambda_pose_target),
                 "outside_region_pixel_count": int(outside_region_pixels),
                 "pose_trust_cap_l2": float(max_pose_output_delta_l2),
             },

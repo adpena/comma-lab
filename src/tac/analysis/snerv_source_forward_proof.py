@@ -1,0 +1,460 @@
+# SPDX-License-Identifier: MIT
+"""SNeRV source-forward proof action rows.
+
+The long-run gate needs a numerical proof that bytes are causal, not metadata
+that merely says a section was present.  This module is intentionally small and
+backend-agnostic: producers supply real tensors from official Torch, Pact MLX,
+archive parse-back, and NumPy receiver surfaces; the contract validates the
+fixed tensor/scorer comparisons and the destructive payload bit-flip.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Mapping, Sequence
+from hashlib import sha256
+from typing import Any
+
+import numpy as np
+
+from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
+
+SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA = (
+    "snerv_source_forward_proof_action_effect.v1"
+)
+SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA = (
+    "snerv_payload_bitflip_falsification.v1"
+)
+
+SOURCE_FORWARD_SURFACES: tuple[str, ...] = (
+    "official_torch",
+    "pact_mlx",
+    "archive_parseback",
+    "numpy_receiver",
+)
+SOURCE_FORWARD_REFERENCE_SURFACE = "official_torch"
+SOURCE_FORWARD_COMPARISON_SURFACES: tuple[str, ...] = (
+    "pact_mlx",
+    "archive_parseback",
+    "numpy_receiver",
+)
+SOURCE_FORWARD_TENSOR_NAMES: tuple[str, ...] = (
+    "coord_time_embedding",
+    "mfu_in",
+    "mfu_out",
+    "hfr_in",
+    "hfr_out",
+    "tub_in",
+    "tub_out",
+    "output_2",
+    "rgb_pair_float",
+    "rgb_pair_uint8",
+    "segnet_input",
+    "posenet_input",
+    "segnet_logits",
+    "segnet_argmax",
+    "posenet_output",
+)
+
+
+def build_snerv_source_forward_proof_action_effect(
+    *,
+    action_id: str,
+    archive_sha256: str,
+    payload_section_hashes: Mapping[str, str],
+    pair_ids: Sequence[int],
+    tensors_by_surface: Mapping[str, Mapping[str, Any]],
+    scorer_deltas: Mapping[str, Any],
+    destructive_payload_bit_flip: Mapping[str, Any],
+    tolerance_by_tensor: Mapping[str, float] | None = None,
+    archive_bytes: int | None = None,
+    generated_utc: str | None = None,
+) -> dict[str, Any]:
+    """Build a validated SourceForwardProof action row from real tensors."""
+
+    tolerance_by_tensor = dict(tolerance_by_tensor or {})
+    tensor_hashes: dict[str, dict[str, str]] = {}
+    tensor_deltas: dict[str, dict[str, float | None]] = {}
+    blockers: list[str] = []
+
+    surfaces = {
+        surface: {
+            str(name): np.asarray(value)
+            for name, value in dict(tensors_by_surface.get(surface) or {}).items()
+        }
+        for surface in SOURCE_FORWARD_SURFACES
+    }
+
+    for surface in SOURCE_FORWARD_SURFACES:
+        tensor_hashes[surface] = {}
+        for name in SOURCE_FORWARD_TENSOR_NAMES:
+            tensor = surfaces[surface].get(name)
+            if tensor is None:
+                blockers.append(f"source_forward_tensor_missing:{surface}:{name}")
+                continue
+            tensor_hashes[surface][name] = _hash_array_exact(tensor)
+
+    reference = surfaces[SOURCE_FORWARD_REFERENCE_SURFACE]
+    for name in SOURCE_FORWARD_TENSOR_NAMES:
+        tensor_deltas[name] = {}
+        ref = reference.get(name)
+        if ref is None:
+            tensor_deltas[name][SOURCE_FORWARD_REFERENCE_SURFACE] = None
+            continue
+        tensor_deltas[name][SOURCE_FORWARD_REFERENCE_SURFACE] = 0.0
+        tolerance = float(tolerance_by_tensor.get(name, 0.0))
+        for surface in SOURCE_FORWARD_COMPARISON_SURFACES:
+            other = surfaces[surface].get(name)
+            delta = _max_abs_delta_or_none(ref, other)
+            tensor_deltas[name][surface] = delta
+            if delta is None:
+                blockers.append(f"source_forward_tensor_shape_mismatch:{surface}:{name}")
+            elif delta > tolerance:
+                blockers.append(f"source_forward_tensor_delta_exceeds_tolerance:{surface}:{name}")
+
+    bitflip_status = validate_snerv_payload_bitflip_falsification(
+        destructive_payload_bit_flip
+    )
+    blockers.extend(bitflip_status["blockers"])
+
+    score_status = _validate_scorer_deltas(scorer_deltas)
+    blockers.extend(score_status["blockers"])
+
+    if not _looks_like_sha256(archive_sha256):
+        blockers.append("source_forward_archive_sha256_invalid")
+    if not payload_section_hashes:
+        blockers.append("source_forward_payload_section_hashes_missing")
+    for name, value in payload_section_hashes.items():
+        if not str(name):
+            blockers.append("source_forward_payload_section_hash_name_missing")
+        if not _looks_like_sha256(value):
+            blockers.append(f"source_forward_payload_section_hash_invalid:{name}")
+    if not pair_ids:
+        blockers.append("source_forward_pair_ids_missing")
+    if archive_bytes is not None and int(archive_bytes) <= 0:
+        blockers.append("source_forward_archive_bytes_invalid")
+
+    blockers = _ordered_unique(blockers)
+    first_failed_tensor = _first_failed_tensor(blockers)
+    passed = not blockers
+    return {
+        "schema": SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+        "action_id": str(action_id),
+        "family": "snerv",
+        "authority": "source_forward_action_effect",
+        "generated_utc": generated_utc,
+        "pair_ids": [int(value) for value in pair_ids],
+        "archive_sha256": str(archive_sha256),
+        "archive_bytes": None if archive_bytes is None else int(archive_bytes),
+        "payload_section_hashes": {str(k): str(v) for k, v in payload_section_hashes.items()},
+        "surfaces": list(SOURCE_FORWARD_SURFACES),
+        "reference_surface": SOURCE_FORWARD_REFERENCE_SURFACE,
+        "comparison_surfaces": list(SOURCE_FORWARD_COMPARISON_SURFACES),
+        "tensor_names": list(SOURCE_FORWARD_TENSOR_NAMES),
+        "tensor_hashes": tensor_hashes,
+        "tensor_deltas": tensor_deltas,
+        "tolerance_by_tensor": {str(k): float(v) for k, v in tolerance_by_tensor.items()},
+        "scorer_deltas": dict(scorer_deltas),
+        "destructive_payload_bit_flip": dict(destructive_payload_bit_flip),
+        "rgb_uint8_and_scorer_compared": _scorer_surfaces_present(tensor_hashes),
+        "parseback_receiver_surface_compared": _parseback_receiver_surfaces_present(
+            tensor_hashes
+        ),
+        "source_forward_replay_bound": passed,
+        "source_forward_replay_verified": passed,
+        "source_forward_replay_authority": passed,
+        "full_stack_source_forward_replay_proven": passed,
+        "first_failed_tensor": first_failed_tensor,
+        "passed": passed,
+        "blockers": blockers,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def build_snerv_payload_bitflip_falsification(
+    *,
+    bitflip_section: str,
+    baseline_section_sha256: str,
+    mutated_section_sha256: str,
+    proof_passed_after_bitflip: bool,
+    first_failed_tensor: str | None,
+    first_failed_surface: str | None = None,
+    bit_offset: int | None = None,
+    bit_mask: int | None = None,
+    failure: str | None = None,
+) -> dict[str, Any]:
+    """Return the destructive payload mutation row consumed by the proof."""
+
+    row = {
+        "schema": SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA,
+        "bitflip_section": str(bitflip_section),
+        "baseline_section_sha256": str(baseline_section_sha256),
+        "mutated_section_sha256": str(mutated_section_sha256),
+        "proof_passed": bool(proof_passed_after_bitflip),
+        "first_failed_tensor": first_failed_tensor,
+        "first_failed_surface": first_failed_surface,
+        "bit_offset": bit_offset,
+        "bit_mask": bit_mask,
+        "failure": failure,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+    status = validate_snerv_payload_bitflip_falsification(row)
+    return {**row, "passed": not status["blockers"], "blockers": status["blockers"]}
+
+
+def validate_snerv_source_forward_proof_action_effect(
+    row: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate that a SNeRV proof row is numerical and payload-causal."""
+
+    blockers: list[str] = []
+    if not isinstance(row, Mapping):
+        return {"passed": False, "blockers": ["snerv_source_forward_proof_missing"]}
+    if row.get("schema") != SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+        blockers.append("snerv_source_forward_proof_schema_invalid")
+    if not str(row.get("action_id") or ""):
+        blockers.append("snerv_source_forward_action_id_missing")
+    if not _looks_like_sha256(row.get("archive_sha256")):
+        blockers.append("snerv_source_forward_archive_sha256_invalid")
+    archive_bytes = row.get("archive_bytes")
+    if archive_bytes is not None:
+        try:
+            if int(archive_bytes) <= 0:
+                blockers.append("snerv_source_forward_archive_bytes_invalid")
+        except (TypeError, ValueError):
+            blockers.append("snerv_source_forward_archive_bytes_invalid")
+    payload_hashes = row.get("payload_section_hashes")
+    if not isinstance(payload_hashes, Mapping) or not payload_hashes:
+        blockers.append("snerv_source_forward_payload_section_hashes_missing")
+    elif any(not _looks_like_sha256(value) for value in payload_hashes.values()):
+        blockers.append("snerv_source_forward_payload_section_hash_invalid")
+    if not _valid_pair_ids(row.get("pair_ids")):
+        blockers.append("snerv_source_forward_pair_ids_missing")
+    if row.get("rgb_uint8_and_scorer_compared") is not True:
+        blockers.append("snerv_source_forward_rgb_uint8_scorer_not_compared")
+    if row.get("parseback_receiver_surface_compared") is not True:
+        blockers.append("snerv_source_forward_parseback_receiver_not_compared")
+
+    tensor_hashes = row.get("tensor_hashes")
+    if not isinstance(tensor_hashes, Mapping):
+        blockers.append("snerv_source_forward_tensor_hashes_missing")
+    else:
+        for surface in SOURCE_FORWARD_SURFACES:
+            surface_hashes = tensor_hashes.get(surface)
+            if not isinstance(surface_hashes, Mapping):
+                blockers.append(f"snerv_source_forward_surface_missing:{surface}")
+                continue
+            missing = [name for name in SOURCE_FORWARD_TENSOR_NAMES if name not in surface_hashes]
+            blockers.extend(f"snerv_source_forward_tensor_hash_missing:{surface}:{name}" for name in missing)
+            bad = [
+                name
+                for name, value in surface_hashes.items()
+                if not _looks_like_sha256(value)
+            ]
+            blockers.extend(f"snerv_source_forward_tensor_hash_invalid:{surface}:{name}" for name in bad)
+
+    tensor_deltas = row.get("tensor_deltas")
+    tolerance_by_tensor = row.get("tolerance_by_tensor") or {}
+    if not isinstance(tensor_deltas, Mapping):
+        blockers.append("snerv_source_forward_tensor_deltas_missing")
+    else:
+        for name in SOURCE_FORWARD_TENSOR_NAMES:
+            deltas = tensor_deltas.get(name)
+            if not isinstance(deltas, Mapping):
+                blockers.append(f"snerv_source_forward_tensor_delta_missing:{name}")
+                continue
+            for surface in SOURCE_FORWARD_COMPARISON_SURFACES:
+                value = deltas.get(surface)
+                if not _nonnegative_finite_float(value):
+                    blockers.append(f"snerv_source_forward_tensor_delta_invalid:{surface}:{name}")
+                    continue
+                tolerance = _float_or_default(
+                    tolerance_by_tensor.get(name) if isinstance(tolerance_by_tensor, Mapping) else None,
+                    0.0,
+                )
+                if float(value) > tolerance:
+                    blockers.append(
+                        f"snerv_source_forward_tensor_delta_exceeds_tolerance:{surface}:{name}"
+                    )
+
+    score_status = _validate_scorer_deltas(row.get("scorer_deltas"))
+    blockers.extend(score_status["blockers"])
+    bitflip_status = validate_snerv_payload_bitflip_falsification(
+        row.get("destructive_payload_bit_flip")
+    )
+    blockers.extend(bitflip_status["blockers"])
+    if row.get("passed") is not True:
+        blockers.append("snerv_source_forward_proof_not_passed")
+    if row.get("source_forward_replay_authority") is not True:
+        blockers.append("snerv_source_forward_replay_authority_false")
+    return {"passed": not _ordered_unique(blockers), "blockers": _ordered_unique(blockers)}
+
+
+def validate_snerv_payload_bitflip_falsification(
+    row: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not isinstance(row, Mapping):
+        return {"passed": False, "blockers": ["snerv_payload_bitflip_falsification_missing"]}
+    if row.get("schema") != SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA:
+        blockers.append("snerv_payload_bitflip_schema_invalid")
+    if not str(row.get("bitflip_section") or ""):
+        blockers.append("snerv_payload_bitflip_section_missing")
+    if not _looks_like_sha256(row.get("baseline_section_sha256")):
+        blockers.append("snerv_payload_bitflip_baseline_hash_invalid")
+    if not _looks_like_sha256(row.get("mutated_section_sha256")):
+        blockers.append("snerv_payload_bitflip_mutated_hash_invalid")
+    if (
+        _looks_like_sha256(row.get("baseline_section_sha256"))
+        and row.get("baseline_section_sha256") == row.get("mutated_section_sha256")
+    ):
+        blockers.append("snerv_payload_bitflip_section_hash_unchanged")
+    if row.get("proof_passed") is not False:
+        blockers.append("snerv_payload_bitflip_did_not_falsify_proof")
+    failed_tensor = row.get("first_failed_tensor")
+    if not isinstance(failed_tensor, str) or not failed_tensor:
+        blockers.append("snerv_payload_bitflip_first_failed_tensor_missing")
+    return {"passed": not _ordered_unique(blockers), "blockers": _ordered_unique(blockers)}
+
+
+def find_snerv_source_forward_proof_rows(payload: Any) -> list[dict[str, Any]]:
+    """Recursively collect SourceForwardProof action rows from JSON payloads."""
+
+    hits: list[dict[str, Any]] = []
+    if isinstance(payload, Mapping):
+        if payload.get("schema") == SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+            hits.append(dict(payload))
+        for value in payload.values():
+            hits.extend(find_snerv_source_forward_proof_rows(value))
+    elif isinstance(payload, (list, tuple)):
+        for value in payload:
+            hits.extend(find_snerv_source_forward_proof_rows(value))
+    return hits
+
+
+def _validate_scorer_deltas(row: Any) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not isinstance(row, Mapping):
+        return {"passed": False, "blockers": ["snerv_source_forward_scorer_deltas_missing"]}
+    for field in ("d_seg", "d_pose", "delta_score_nonrate"):
+        if not _finite_float(row.get(field)):
+            blockers.append(f"snerv_source_forward_scorer_delta_invalid:{field}")
+    return {"passed": not blockers, "blockers": blockers}
+
+
+def _scorer_surfaces_present(tensor_hashes: Mapping[str, Mapping[str, str]]) -> bool:
+    required = {
+        "rgb_pair_uint8",
+        "segnet_input",
+        "posenet_input",
+        "segnet_logits",
+        "segnet_argmax",
+        "posenet_output",
+    }
+    return all(
+        required.issubset(set(tensor_hashes.get(surface, {})))
+        for surface in SOURCE_FORWARD_SURFACES
+    )
+
+
+def _parseback_receiver_surfaces_present(
+    tensor_hashes: Mapping[str, Mapping[str, str]]
+) -> bool:
+    required = set(SOURCE_FORWARD_TENSOR_NAMES)
+    return required.issubset(set(tensor_hashes.get("archive_parseback", {}))) and required.issubset(
+        set(tensor_hashes.get("numpy_receiver", {}))
+    )
+
+
+def _first_failed_tensor(blockers: Sequence[str]) -> str | None:
+    for blocker in blockers:
+        parts = str(blocker).split(":")
+        if len(parts) >= 3 and parts[-1] in SOURCE_FORWARD_TENSOR_NAMES:
+            return parts[-1]
+    return None
+
+
+def _valid_pair_ids(value: Any) -> bool:
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        return False
+    if not value:
+        return False
+    try:
+        return all(int(item) >= 0 for item in value)
+    except (TypeError, ValueError):
+        return False
+
+
+def _hash_array_exact(array: Any) -> str:
+    arr = np.ascontiguousarray(np.asarray(array))
+    h = sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(b"\0")
+    h.update(json.dumps(list(arr.shape), sort_keys=True).encode("utf-8"))
+    h.update(b"\0")
+    h.update(arr.tobytes())
+    return h.hexdigest()
+
+
+def _max_abs_delta_or_none(left: Any, right: Any) -> float | None:
+    if right is None:
+        return None
+    left_arr = np.asarray(left, dtype=np.float64)
+    right_arr = np.asarray(right, dtype=np.float64)
+    if left_arr.shape != right_arr.shape:
+        return None
+    delta = np.abs(left_arr - right_arr)
+    if not np.all(np.isfinite(delta)):
+        return None
+    return float(np.max(delta)) if delta.size else 0.0
+
+
+def _looks_like_sha256(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _finite_float(value: Any) -> bool:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return False
+    return bool(np.isfinite(parsed))
+
+
+def _nonnegative_finite_float(value: Any) -> bool:
+    if not _finite_float(value):
+        return False
+    return float(value) >= 0.0
+
+
+def _float_or_default(value: Any, default: float) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return parsed if np.isfinite(parsed) and parsed >= 0.0 else float(default)
+
+
+def _ordered_unique(values: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
+
+
+__all__ = [
+    "SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA",
+    "SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA",
+    "SOURCE_FORWARD_SURFACES",
+    "SOURCE_FORWARD_TENSOR_NAMES",
+    "build_snerv_payload_bitflip_falsification",
+    "build_snerv_source_forward_proof_action_effect",
+    "find_snerv_source_forward_proof_rows",
+    "validate_snerv_payload_bitflip_falsification",
+    "validate_snerv_source_forward_proof_action_effect",
+]

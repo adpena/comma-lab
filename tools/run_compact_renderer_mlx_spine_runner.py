@@ -225,6 +225,7 @@ DEFAULT_UPSTREAM_DIR = Path(os.environ.get("TAC_UPSTREAM_DIR", REPO_ROOT / "upst
 CANONICAL_UPSTREAM_FALLBACK_DIR = Path.home() / "Projects" / "pact" / "upstream"
 HI_NERV_MODELSIZE_DEFAULT_SEGNET_DISTILLATION_WEIGHT = 1.0
 HI_NERV_MODELSIZE_DEFAULT_POSE_DISTILLATION_WEIGHT = 1.0
+HI_NERV_HARD_BIRTH_POSE_TRUST_PRESERVE_WEIGHT_DEFAULT = 32.0
 DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT = 2.0
 DEFAULT_SOURCE_VIDEO_PATH = Path("upstream/videos/0.mkv")
 TARGET_FAMILIES = (
@@ -8917,6 +8918,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_domain_bootstrap_segnet_margin_weight: float = 1.0,
     scorer_domain_bootstrap_segnet_hard_birth_weight: float = 2.0,
     scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor: float = 0.02,
+    scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight: float = 64.0,
+    scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight: float = 16.0,
+    scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor: float = 1.0,
+    scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight: float = 0.0,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = (
@@ -10035,6 +10043,27 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_domain_bootstrap_segnet_hard_birth_weight=float(scorer_domain_bootstrap_segnet_hard_birth_weight),
             scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
                 scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor=float(
+                scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight=float(
+                scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight
             ),
             allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
             scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
@@ -15262,6 +15291,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_domain_bootstrap_segnet_margin_weight: float = 1.0,
     scorer_domain_bootstrap_segnet_hard_birth_weight: float = 2.0,
     scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor: float = 0.02,
+    scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight: float = 64.0,
+    scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight: float = 16.0,
+    scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor: float = 1.0,
+    scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight: float = 0.0,
+    scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight: float = 0.0,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -15588,6 +15624,34 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         (
             "scorer_domain_bootstrap_segnet_hard_birth_weight",
             scorer_domain_bootstrap_segnet_hard_birth_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor",
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight,
+        ),
+        (
+            "scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight",
+            scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight,
         ),
     ):
         if not math.isfinite(float(value)) or float(value) < 0.0:
@@ -16178,13 +16242,39 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         bootstrap_pose_teacher_metadata: dict[str, Any] = {
             "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
             "enabled": False,
-            "reason": "pose_direct_live_distillation_not_requested",
+            "reason": "posenet_pair_teacher_not_requested",
             "runtime_sidecar_bytes": 0,
             "archive_charged_decoder_tensors": [],
             "authority": "macos_mlx_research_signal_false_authority",
             "dispatch_attempted": False,
         }
-        if float(pose_direct_live_distillation_weight) > 0.0:
+        requested_segnet_margin_bootstrap_weight = float(scorer_domain_bootstrap_segnet_margin_weight)
+        requested_segnet_hard_birth_bootstrap_weight = float(scorer_domain_bootstrap_segnet_hard_birth_weight)
+        requested_hard_birth_pose_trust_preserve_weight = float(
+            scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight
+        )
+        hard_birth_pose_trust_preserve_defaulted = bool(
+            pose_trust_required
+            and requested_segnet_hard_birth_bootstrap_weight > 0.0
+            and requested_hard_birth_pose_trust_preserve_weight <= 0.0
+        )
+        effective_hard_birth_pose_trust_preserve_weight = (
+            HI_NERV_HARD_BIRTH_POSE_TRUST_PRESERVE_WEIGHT_DEFAULT
+            if hard_birth_pose_trust_preserve_defaulted
+            else requested_hard_birth_pose_trust_preserve_weight
+        )
+        requested_hard_birth_pose_target_weight = float(
+            scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight
+        )
+        hard_birth_pose_teacher_requested = bool(
+            requested_segnet_hard_birth_bootstrap_weight > 0.0
+            and (
+                pose_trust_required
+                or effective_hard_birth_pose_trust_preserve_weight > 0.0
+                or requested_hard_birth_pose_target_weight > 0.0
+            )
+        )
+        if float(pose_direct_live_distillation_weight) > 0.0 or hard_birth_pose_teacher_requested:
             # Build the REAL PoseNet pair teacher LOCALLY at the birth callsite
             # so fit_target_region_birth_from_segnet can emit a populated
             # pose_guard (pose_available True) and the exact_nonrate term. The
@@ -16238,8 +16328,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "authority": "macos_mlx_research_signal_false_authority",
                     "dispatch_attempted": False,
                 }
-        requested_segnet_margin_bootstrap_weight = float(scorer_domain_bootstrap_segnet_margin_weight)
-        requested_segnet_hard_birth_bootstrap_weight = float(scorer_domain_bootstrap_segnet_hard_birth_weight)
         if (
             requested_segnet_hard_birth_bootstrap_weight > 0.0
             and (bootstrap_scorer_teacher is None or target_segnet_argmax_1 is None)
@@ -16252,6 +16340,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "direct-live subcontrol with teacher_argmax_for_indices, "
                 "or pass --allow-unscored-research-smoke for a forensic "
                 "teacherless trace"
+            )
+        if (
+            hard_birth_pose_teacher_requested
+            and bootstrap_pose_scorer_teacher is None
+            and not bool(allow_unscored_research_smoke)
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                "hard-birth pose trust or positive hard-birth pose weights require "
+                "a real PoseNet pair teacher; pass --allow-unscored-research-smoke "
+                "only for a false-authority forensic trace"
             )
         effective_segnet_margin_bootstrap_weight = (
             requested_segnet_margin_bootstrap_weight if bootstrap_scorer_teacher is not None else 0.0
@@ -16334,6 +16432,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             target_min_region_ratio=float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor),
                             pose_teacher=bootstrap_pose_scorer_teacher,
                             require_pose_trust=bool(pose_trust_required),
+                            lambda_support_preserve=float(
+                                scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight
+                            ),
+                            lambda_outside_argmax_preserve=float(
+                                scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight
+                            ),
+                            lambda_already_won_hard_preserve=float(
+                                scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight
+                            ),
+                            lambda_already_won_rgb_preserve=float(
+                                scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight
+                            ),
+                            already_won_margin_floor=float(
+                                scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor
+                            ),
+                            lambda_pose_trust_preserve=float(
+                                effective_hard_birth_pose_trust_preserve_weight
+                            ),
+                            lambda_pose_target=float(requested_hard_birth_pose_target_weight),
                             grad_clip_max_norm=None,
                         )
                     )
@@ -16380,6 +16497,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         bootstrap_payload["segnet_hard_birth_bootstrap_requested_weight"] = requested_segnet_hard_birth_bootstrap_weight
         bootstrap_payload["segnet_hard_birth_bootstrap_effective_weight"] = effective_segnet_hard_birth_bootstrap_weight
         bootstrap_payload["segnet_hard_birth_bootstrap_request_consumed"] = hard_birth_request_consumed
+        bootstrap_payload["segnet_hard_birth_pose_trust_preserve_requested_weight"] = (
+            requested_hard_birth_pose_trust_preserve_weight
+        )
+        bootstrap_payload["segnet_hard_birth_pose_trust_preserve_effective_weight"] = (
+            effective_hard_birth_pose_trust_preserve_weight
+        )
+        bootstrap_payload["segnet_hard_birth_pose_trust_preserve_defaulted"] = (
+            hard_birth_pose_trust_preserve_defaulted
+        )
+        bootstrap_payload["segnet_hard_birth_pose_target_requested_weight"] = requested_hard_birth_pose_target_weight
+        bootstrap_payload["segnet_hard_birth_pose_teacher_requested"] = hard_birth_pose_teacher_requested
         bootstrap_payload["actuators_enabled_effective"] = {
             "segnet_teacher": bootstrap_scorer_teacher is not None,
             "pose_teacher": bootstrap_pose_scorer_teacher is not None,
@@ -18250,6 +18378,16 @@ def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> 
         blockers.append("hi_nerv_pose_trusted_birth_target_hard_won_missing")
     if not isinstance(net_support, (int, float)) or float(net_support) <= 0.0:
         blockers.append("hi_nerv_pose_trusted_birth_net_support_not_positive")
+    lost_fields = (
+        ("target_hard_lost_count", "hi_nerv_pose_trusted_birth_target_hard_lost"),
+        ("target_to_wrong_count", "hi_nerv_pose_trusted_birth_target_to_wrong"),
+    )
+    for field, blocker in lost_fields:
+        value = transitions.get(field)
+        if value is None:
+            value = row.get(field)
+        if isinstance(value, (int, float)) and float(value) > 0.0:
+            blockers.append(blocker)
 
     pose_guard_raw = row.get("pose_guard")
     pose_guard = pose_guard_raw if isinstance(pose_guard_raw, Mapping) else {}
@@ -18276,6 +18414,9 @@ def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> 
     frontier = frontier_raw if isinstance(frontier_raw, Mapping) else {}
     if int(frontier.get("candidate_attempt_count") or 0) <= 0:
         blockers.append("hi_nerv_pose_trusted_birth_candidate_frontier_missing")
+    already_won_lost = frontier.get("final_already_won_lost_count")
+    if isinstance(already_won_lost, (int, float)) and float(already_won_lost) > 0.0:
+        blockers.append("hi_nerv_pose_trusted_birth_already_won_lost")
 
     compensation_raw = row.get("pose_compensation")
     compensation = compensation_raw if isinstance(compensation_raw, Mapping) else None
@@ -24951,6 +25092,71 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-support-preserve-weight",
+        default=64.0,
+        type=float,
+        help=(
+            "Weight for preserving already-won target-region SegNet support "
+            "against the initial receiver-surface margin while the unsolved "
+            "tail is moved."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-outside-argmax-preserve-weight",
+        default=16.0,
+        type=float,
+        help=(
+            "Weight for preserving the initial SegNet argmax outside the "
+            "selected target region during the hard-birth actuator."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-already-won-hard-preserve-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Weight for a hard target-class margin floor on already-won pixels "
+            "inside the selected target region."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-already-won-rgb-preserve-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Weight for decoded-RGB locality preservation on already-won pixels "
+            "inside the selected target region."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-already-won-margin-floor",
+        default=1.0,
+        type=float,
+        help=(
+            "Required target-vs-impostor logit margin floor for already-won "
+            "pixels during the hard-birth preservation loss."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-pose-trust-preserve-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Weight for PoseNet output trust-cap preservation inside the "
+            "hard-birth actuator loss."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-pose-target-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Weight for normalized PoseNet target-pose pressure inside the "
+            "hard-birth actuator. This uses the same live PoseNet surface as "
+            "the gate and remains false-authority until exact eval."
+        ),
+    )
+    parser.add_argument(
         "--no-scorer-space-step-guard",
         action="store_false",
         dest="scorer_space_step_guard_enabled",
@@ -27169,6 +27375,27 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
                 args.scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight=float(
+                args.scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight
             ),
             scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(

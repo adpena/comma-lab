@@ -36,7 +36,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.action_effect import ACTION_EFFECT_V1_SCHEMA
 from tac.analysis.receiver_surface_metrics import receiver_surface_target_support_breakdown
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    find_snerv_source_forward_proof_rows,
+    validate_snerv_source_forward_proof_action_effect,
+)
 from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
     require_no_truthy_authority_fields,
@@ -48,6 +54,8 @@ BIRTH_SURVIVAL_SCHEMA = "hi_nerv_target_region_birth_survival.v1"
 BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 REPRESENTATIVE_COVERAGE_SCHEMA = "hi_nerv_representative_region_coverage.v1"
 SNERV_SOURCE_FORWARD_SCHEMA = "snerv_official_tub_source_forward_replay.v1"
+ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA = "nerv_archive_parseback_selection_contract.v1"
+SOURCE_QUALIFIED_METRICS_SCHEMA = "nerv_source_qualified_metrics.v1"
 SUPPORTED_FAMILIES = ("hinerv", "hi_nerv", "snerv")
 SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
 SURVIVAL_SURFACE_L5 = "inflated_torch_cpu"
@@ -251,6 +259,130 @@ def _target_support_positive(
     return True
 
 
+def _action_effect_rows_for_action(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+) -> list[dict[str, Any]]:
+    return [row for row in rows if str(row.get("action_id") or "") == action_id]
+
+
+def _require_hi_nerv_action_effect_evidence(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    blockers: list[str],
+) -> None:
+    matches = _action_effect_rows_for_action(rows, action_id=action_id)
+    if not matches:
+        blockers.append(f"action_effect_v1_missing:{action_id}")
+        return
+    if not any(row.get("fakequant_survived") is True for row in matches):
+        blockers.append("action_effect_same_action_fakequant_survival_missing")
+    if not any(row.get("parseback_survived") is True for row in matches):
+        blockers.append("action_effect_same_action_parseback_survival_missing")
+    if not any(row.get("inflate_survived") is True for row in matches):
+        blockers.append("action_effect_same_action_inflate_survival_missing")
+    best = next((row for row in matches if _action_effect_has_required_v6_fields(row)), matches[0])
+    for field in (
+        "hard_won_count",
+        "wrong_to_target",
+        "net_target_support_delta",
+        "uint8_changed_count_region",
+        "seg_input_delta_linf_region",
+        "posenet_input_delta_linf_pair",
+    ):
+        if not _positive_number(best.get(field)):
+            blockers.append(f"action_effect_v1_field_missing_or_nonpositive:{field}")
+    for field in ("target_to_wrong", "wrong_to_wrong"):
+        value = best.get(field)
+        if value is not None and _finite_number(value) and float(value) > 0.0:
+            blockers.append(f"action_effect_v1_spill_positive:{field}")
+    delta_nonrate = best.get("delta_score_nonrate")
+    if not _finite_number(delta_nonrate) or float(delta_nonrate) >= 0.0:
+        blockers.append("action_effect_v1_exact_nonrate_not_improved")
+    delta_total = best.get("delta_score_total")
+    if delta_total is not None and (not _finite_number(delta_total) or float(delta_total) >= 0.0):
+        blockers.append("action_effect_v1_exact_total_not_improved")
+    for row in matches:
+        old_bytes = row.get("old_bytes")
+        new_bytes = row.get("new_bytes")
+        if (
+            _finite_number(old_bytes)
+            and _finite_number(new_bytes)
+            and int(new_bytes) != int(old_bytes)
+            and not _finite_number(row.get("value_per_byte"))
+        ):
+            blockers.append(f"value_per_byte_ledger_missing:{action_id}")
+
+
+def _action_effect_has_required_v6_fields(row: Mapping[str, Any]) -> bool:
+    return all(
+        _positive_number(row.get(field))
+        for field in (
+            "hard_won_count",
+            "wrong_to_target",
+            "net_target_support_delta",
+            "uint8_changed_count_region",
+            "seg_input_delta_linf_region",
+            "posenet_input_delta_linf_pair",
+        )
+    )
+
+
+def _parseback_selection_contract_ok(rows: list[dict[str, Any]]) -> bool:
+    for row in rows:
+        if row.get("parseback_selection_required") is not True:
+            continue
+        if row.get("archive_parseback_axis_required") is not True:
+            continue
+        if row.get("live_only_improvement_is_false_authority") is not True:
+            continue
+        if row.get("fail_closed_on_axis_divergence") is not True:
+            continue
+        authority_order = row.get("selection_authority_order")
+        if isinstance(authority_order, list) and "archive_parseback" in {str(value) for value in authority_order}:
+            return True
+    return False
+
+
+def _source_qualified_metrics_ok(
+    rows: list[dict[str, Any]],
+    *,
+    family: str,
+) -> bool:
+    accepted_family_values = {family, "hi_nerv" if family == "hinerv" else family}
+    for row in rows:
+        row_family = str(row.get("family") or family).strip().lower().replace("-", "_")
+        if row_family not in accepted_family_values:
+            continue
+        if row.get("source_qualified") is not True:
+            continue
+        sources = [
+            row.get("metric_source"),
+            row.get("canonical_score_source"),
+            row.get("seg_metric_source"),
+            row.get("pose_metric_source"),
+        ]
+        if any(isinstance(value, str) and value.strip() for value in sources):
+            return True
+    return False
+
+
+def _finite_number(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(parsed)
+
+
+def _positive_number(value: Any) -> bool:
+    return _finite_number(value) and float(value) > 0.0
+
+
 def evaluate_nerv_long_run_launch_gate(
     *,
     family: str,
@@ -290,6 +422,23 @@ def evaluate_nerv_long_run_launch_gate(
             index=evidence_index,
             blockers=blockers,
         )
+        action_effect_rows = _collect_schema_rows(root, ACTION_EFFECT_V1_SCHEMA, index=evidence_index, blockers=blockers)
+        parseback_contract_rows = _collect_schema_rows(
+            root,
+            ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
+        source_metric_rows = _collect_schema_rows(
+            root,
+            SOURCE_QUALIFIED_METRICS_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
+        if not _parseback_selection_contract_ok(parseback_contract_rows):
+            blockers.append("archive_parseback_selection_contract_missing")
+        if not _source_qualified_metrics_ok(source_metric_rows, family=family):
+            blockers.append("source_qualified_metrics_missing")
         live = _accepted_live_birth(birth_rows, blockers=blockers)
         if live is None:
             blockers.append("real_video_birth_receipt_missing")
@@ -300,6 +449,7 @@ def evaluate_nerv_long_run_launch_gate(
             else:
                 blockers.append("pose_trusted_birth_receipt_missing")
             action_id = str(live.get("action_id"))
+            _require_hi_nerv_action_effect_evidence(action_effect_rows, action_id=action_id, blockers=blockers)
             l4_ok = highest_level == "L3"
             for surface in SURVIVAL_SURFACES_L4:
                 row = _survival_rows_for_action(
@@ -344,36 +494,67 @@ def evaluate_nerv_long_run_launch_gate(
             if delta_bytes != 0:
                 blockers.append("value_per_byte_ledger_missing")
     else:  # snerv
-        proof_rows = _collect_schema_rows(root, SNERV_SOURCE_FORWARD_SCHEMA, index=evidence_index, blockers=blockers)
-        proven = next(
-            (row for row in proof_rows if row.get("full_tub_source_forward_parity_proven") is True),
-            None,
+        _collect_schema_rows(
+            root,
+            SNERV_SOURCE_FORWARD_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
         )
-        if proven is None:
+        proof_rows: list[dict[str, Any]] = []
+        for path, payload in _iter_evidence_payloads(root):
+            hits = find_snerv_source_forward_proof_rows(payload)
+            if not hits:
+                continue
+            try:
+                require_no_truthy_authority_fields(payload, context=str(path))
+            except Exception:
+                blockers.append(f"evidence_truthy_authority:{path.name}")
+                continue
+            proof_rows.extend(hits)
+            evidence_index.setdefault(
+                SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+                [],
+            ).append(path.as_posix())
+        valid_rows: list[dict[str, Any]] = []
+        invalid_blockers: list[str] = []
+        for row in proof_rows:
+            status = validate_snerv_source_forward_proof_action_effect(row)
+            if status["passed"] is True:
+                valid_rows.append(row)
+            else:
+                invalid_blockers.extend(
+                    f"snerv_source_forward_proof_invalid:{blocker}"
+                    for blocker in status["blockers"]
+                )
+        if not valid_rows:
             blockers.append("snerv_full_source_forward_parity_missing")
+            if proof_rows:
+                blockers.extend(invalid_blockers)
         else:
             highest_level = "L3"
         bitflip = next(
             (
-                row
-                for row in proof_rows
-                if row.get("bitflip_section") and row.get("proof_passed") is False and row.get("first_failed_tensor")
+                row.get("destructive_payload_bit_flip")
+                for row in valid_rows
+                if isinstance(row.get("destructive_payload_bit_flip"), Mapping)
             ),
             None,
         )
-        if bitflip is None:
+        if bitflip is None or not bitflip.get("first_failed_tensor"):
             blockers.append("snerv_payload_bitflip_falsification_missing")
-        elif proven is not None:
+        elif valid_rows:
             highest_level = "L4"
 
     approved = not blockers and highest_level == ("L5" if family == "hinerv" else "L4")
+    missing_evidence_keys = sorted(set(blockers))
     verdict = {
         "schema": NERV_LONG_RUN_LAUNCH_GATE_SCHEMA,
         "family": family,
         "run_root": root.as_posix(),
         "approved": bool(approved),
         "highest_level": highest_level,
-        "blocking_evidence": sorted(set(blockers)),
+        "blocking_evidence": missing_evidence_keys,
+        "missing_evidence_keys": missing_evidence_keys,
         "non_blocking_warnings": sorted(set(warnings)),
         "evidence_index": evidence_index,
         "frontier_pointer": pointer,

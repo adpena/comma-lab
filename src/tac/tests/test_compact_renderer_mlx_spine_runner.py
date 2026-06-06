@@ -160,6 +160,48 @@ def test_pose_trusted_birth_payload_validator_accepts_receiver_closed_receipt() 
     assert blockers == []
 
 
+def test_pose_trusted_birth_payload_validator_rejects_already_won_spill() -> None:
+    blockers = _hi_nerv_pose_trusted_birth_payload_blockers(
+        {
+            "schema": "hi_nerv_target_region_birth.v1",
+            "accepted": True,
+            "action_id": "a" * 64,
+            "receipt": {
+                "schema": "hi_nerv_target_region_birth_receipt.v1",
+                "surface": "live_mlx",
+                "action_id": "a" * 64,
+                "accepted_step_count": 1,
+                "updated_parameter_names": ["head_rgb_1.weight"],
+                "argmax_transitions": {
+                    "target_hard_won_count": 5,
+                    "target_hard_lost_count": 1,
+                    "target_to_wrong_count": 1,
+                    "net_target_support_delta": 4,
+                },
+                "pose_guard": {
+                    "available": True,
+                    "pose_input_contest_resolution": True,
+                    "max_accepted_pose_output_delta_l2": 0.025,
+                    "max_pose_output_delta_l2": 0.05,
+                },
+                "exact_nonrate": {
+                    "pose_term_available": True,
+                    "delta_score_nonrate": -0.1,
+                },
+                "candidate_frontier_telemetry": {
+                    "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+                    "candidate_attempt_count": 2,
+                    "final_already_won_lost_count": 1,
+                },
+            },
+        }
+    )
+
+    assert "hi_nerv_pose_trusted_birth_target_hard_lost" in blockers
+    assert "hi_nerv_pose_trusted_birth_target_to_wrong" in blockers
+    assert "hi_nerv_pose_trusted_birth_already_won_lost" in blockers
+
+
 def test_hinerv_runner_calls_pose_trusted_birth_validator_after_actuator() -> None:
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     body = source[
@@ -7502,6 +7544,13 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             target_min_region_ratio,
             pose_teacher,
             require_pose_trust,
+            lambda_support_preserve,
+            lambda_outside_argmax_preserve,
+            lambda_already_won_hard_preserve,
+            lambda_already_won_rgb_preserve,
+            already_won_margin_floor,
+            lambda_pose_trust_preserve,
+            lambda_pose_target,
             grad_clip_max_norm,
         ):
             captured["target_region_birth_call"] = {
@@ -7515,15 +7564,51 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "max_steps": int(max_steps),
                 "learning_rate": float(learning_rate),
                 "target_min_region_ratio": float(target_min_region_ratio),
+                "lambda_support_preserve": float(lambda_support_preserve),
+                "lambda_outside_argmax_preserve": float(lambda_outside_argmax_preserve),
+                "lambda_already_won_hard_preserve": float(lambda_already_won_hard_preserve),
+                "lambda_already_won_rgb_preserve": float(lambda_already_won_rgb_preserve),
+                "already_won_margin_floor": float(already_won_margin_floor),
+                "lambda_pose_trust_preserve": float(lambda_pose_trust_preserve),
+                "lambda_pose_target": float(lambda_pose_target),
                 "grad_clip_max_norm": grad_clip_max_norm,
             }
             return {
                 "schema": "hi_nerv_target_region_birth.v1",
                 "actuator_id": "fit_target_region_birth_from_segnet",
                 "accepted": True,
+                "accepted_step_count": 1,
+                "action_id": "a" * 64,
                 "target_hard_won_count": 5.0,
-                "target_hard_lost_count": 1.0,
-                "net_target_support_delta": 4.0,
+                "target_hard_lost_count": 0.0,
+                "net_target_support_delta": 5.0,
+                "receipt": {
+                    "schema": "hi_nerv_target_region_birth_receipt.v1",
+                    "surface": "live_mlx",
+                    "action_id": "a" * 64,
+                    "accepted_step_count": 1,
+                    "updated_parameter_names": ["head_rgb_1.weight"],
+                    "argmax_transitions": {
+                        "target_hard_won_count": 5.0,
+                        "target_hard_lost_count": 0.0,
+                        "target_to_wrong_count": 0.0,
+                        "net_target_support_delta": 5.0,
+                    },
+                    "pose_guard": {
+                        "available": True,
+                        "pose_input_contest_resolution": True,
+                        "max_accepted_pose_output_delta_l2": 0.025,
+                        "max_pose_output_delta_l2": 0.05,
+                    },
+                    "exact_nonrate": {
+                        "pose_term_available": True,
+                        "delta_score_nonrate": -0.1,
+                    },
+                    "candidate_frontier_telemetry": {
+                        "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
+                        "candidate_attempt_count": 2,
+                    },
+                },
                 "runtime_sidecar_bytes": 0,
                 "archive_charged_decoder_tensors": ["decoder.target_region_birth.delta"],
                 "blockers": [],
@@ -7734,7 +7819,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         ema_decay=0.9,
         segnet_distillation_weight=0.0,
         pose_distillation_weight=1.0,
-        pose_direct_live_distillation_weight=0.25,
+        pose_direct_live_distillation_weight=0.0,
         pose_trust_required=True,
         pose_distillation_loss="mse",
         pose_distillation_huber_delta=1.0,
@@ -7764,6 +7849,13 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         scorer_domain_bootstrap_segnet_margin_weight=1.5,
         scorer_domain_bootstrap_segnet_hard_birth_weight=3.0,
         scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=0.07,
+        scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight=73.0,
+        scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight=19.0,
+        scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight=211.0,
+        scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight=223.0,
+        scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor=1.25,
+        scorer_domain_bootstrap_segnet_hard_birth_pose_trust_preserve_weight=37.0,
+        scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight=41.0,
         segnet_direct_live_class_balanced_ce_weight=0.25,
         segnet_direct_live_target_mass_floor_weight=0.4,
         segnet_direct_live_target_min_ratio_floor_weight=0.4,
@@ -7846,7 +7938,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert bootstrap_metadata["exact_posenet_target_pose"]["enabled"] is True
     target_region_birth = bootstrap_metadata["target_region_birth_actuator"]
     assert target_region_birth["accepted"] is True
-    assert target_region_birth["net_target_support_delta"] == pytest.approx(4.0)
+    assert target_region_birth["net_target_support_delta"] == pytest.approx(5.0)
     target_birth_call = captured["target_region_birth_call"]
     assert target_birth_call["scorer_teacher_present"] is True
     assert target_birth_call["pose_teacher_present"] is True
@@ -7857,6 +7949,13 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["target_segnet_argmax_shape"] == (8, 384, 512)
     assert target_birth_call["max_steps"] == 32
     assert target_birth_call["target_min_region_ratio"] == pytest.approx(0.07)
+    assert target_birth_call["lambda_support_preserve"] == pytest.approx(73.0)
+    assert target_birth_call["lambda_outside_argmax_preserve"] == pytest.approx(19.0)
+    assert target_birth_call["lambda_already_won_hard_preserve"] == pytest.approx(211.0)
+    assert target_birth_call["lambda_already_won_rgb_preserve"] == pytest.approx(223.0)
+    assert target_birth_call["already_won_margin_floor"] == pytest.approx(1.25)
+    assert target_birth_call["lambda_pose_trust_preserve"] == pytest.approx(37.0)
+    assert target_birth_call["lambda_pose_target"] == pytest.approx(41.0)
     assert (
         bootstrap_call["pair_local_smoke_artifact_dir"]
         == (tmp_path / "private_smoke_full_priority_hydration" / "hi_nerv_pair_local_actuator_smoke").as_posix()
