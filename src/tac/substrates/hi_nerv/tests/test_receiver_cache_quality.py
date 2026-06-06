@@ -13,6 +13,9 @@ from tac.repo_io import sha256_file
 from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
+from tac.substrates.hi_nerv.archive_candidate import (
+    build_hi_nerv_archive_replay_components,
+)
 from tac.substrates.hi_nerv.receiver_cache_quality import (
     HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA,
     HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA,
@@ -88,6 +91,78 @@ def test_hi_nerv_receiver_cache_quality_consumes_minimal_x_member(
     )
     assert audit["source"]["zip_member"] == MINIMAL_SINGLE_MEMBER_NAME
     assert Path(report["candidate_cache_manifest_path"]).is_file()
+
+
+def test_hi_nerv_archive_replay_components_parse_minimal_x_member(
+    tmp_path: Path,
+) -> None:
+    archive = _write_tiny_hiv1_archive(
+        tmp_path / "archive.zip",
+        member_name=MINIMAL_SINGLE_MEMBER_NAME,
+    )
+    target0, target1 = _render_tiny_hiv1_targets()
+
+    components = build_hi_nerv_archive_replay_components(
+        archive,
+        {"local_pair_indices": np.array([0, 1], dtype=np.int64)},
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        candidate_kind="ema",
+    )
+
+    assert components["archive_replay_pair_count"] == pytest.approx(2.0)
+    assert components["archive_replay_archive_bytes"] == pytest.approx(
+        archive.stat().st_size
+    )
+    assert components["archive_replay_payload_bytes"] > 0
+    assert components["archive_replay_candidate_is_ema"] == pytest.approx(1.0)
+    assert components["parseback_rgb_pair_mse"] < 1.0e-3
+    assert components["selection_health_parseback_rgb_dynamic_range"] > 0.0
+    assert components["selection_health_parseback_rgb_temporal_delta_std"] >= 0.0
+
+
+def test_hi_nerv_archive_replay_components_attach_segnet_teacher_metrics(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("mlx.core")
+    archive = _write_tiny_hiv1_archive(tmp_path / "archive.zip")
+    target0, target1 = _render_tiny_hiv1_targets()
+    labels = (target1[..., 0] > target1[..., 1]).astype(np.int32)
+
+    class FakeSegnetTeacher:
+        num_classes = 2
+
+        def teacher_argmax_for_indices(self, idx):
+            import mlx.core as mx
+
+            return mx.array(labels[np.asarray(idx, dtype=np.int64)], dtype=mx.int32)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            import mlx.core as mx
+
+            return mx.stack([frames[..., 1], frames[..., 0]], axis=-1)
+
+    components = build_hi_nerv_archive_replay_components(
+        archive,
+        {"local_pair_indices": np.array([0, 1], dtype=np.int64)},
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        scorer_teacher=FakeSegnetTeacher(),
+    )
+
+    assert components["parseback_segnet_argmax_disagreement_score_units"] < 1.0
+    assert (
+        components[
+            "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
+        ]
+        > 0.0
+    )
+    assert (
+        components[
+            "selection_health_segnet_direct_live_candidate_target_class_min_ratio"
+        ]
+        >= 0.0
+    )
 
 
 def test_hi_nerv_receiver_cache_quality_rejects_ambiguous_payload_members(
@@ -717,3 +792,30 @@ def _write_tiny_hiv1_archive(path: Path, *, member_name: str = "0.bin") -> Path:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr(member_name, packet)
     return path
+
+
+def _render_tiny_hiv1_targets() -> tuple[np.ndarray, np.ndarray]:
+    cfg = HinervConfig(
+        latent_dim_coarse=2,
+        latent_dim_mid=2,
+        latent_dim_fine=2,
+        embed_dim=2,
+        initial_grid_h=1,
+        initial_grid_w=1,
+        decoder_channels=(2, 2, 2),
+        sin_frequency=3.0,
+        num_upsample_blocks=3,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=2,
+        output_height=8,
+        output_width=8,
+    )
+    torch.manual_seed(7)
+    model = HinervSubstrate(cfg).eval()
+    with torch.no_grad():
+        rgb0, rgb1 = model(torch.tensor([0, 1], dtype=torch.long))
+    return (
+        rgb0.permute(0, 2, 3, 1).detach().cpu().numpy().astype(np.float32),
+        rgb1.permute(0, 2, 3, 1).detach().cpu().numpy().astype(np.float32),
+    )

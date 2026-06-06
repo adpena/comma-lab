@@ -13,9 +13,11 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
+import zipfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 import torch
@@ -31,10 +33,14 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
 from tac.repo_io import sha256_file
-from tac.submission_archive import build_minimal_single_member_archive_bytes
+from tac.submission_archive import (
+    MINIMAL_SINGLE_MEMBER_NAME,
+    build_minimal_single_member_archive_bytes,
+)
 from tac.substrates._shared.inflate_runtime import CAMERA_HW
 from tac.substrates._shared.pact_nerv_full_main import write_contest_runtime
 from tac.substrates.hi_nerv.architecture import (
+    HinervConfig,
     HinervSubstrate,
     validate_decoder_state_dict,
 )
@@ -51,9 +57,6 @@ from tac.substrates.hprc.representation_spine import (
     build_hi_nerv_spine_from_archive_payload,
     write_representation_spine_projection,
 )
-
-if TYPE_CHECKING:
-    from tac.substrates.hi_nerv.architecture import HinervConfig
 
 HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = (
     "hi_nerv_mlx_archive_bound_adapter_package.v1"
@@ -95,6 +98,102 @@ _LIVE_RECEIVER_CODEC_PORTFOLIO_CANDIDATES = (
     "int2_mixed",
     "int2_scale_bundled",
 )
+
+
+def build_hi_nerv_archive_replay_components(
+    archive_path: str | Path,
+    batch: Any,
+    *,
+    target_rgb_0: Any,
+    target_rgb_1: Any,
+    scorer_teacher: Any | None = None,
+    pose_scorer_teacher: Any | None = None,
+    candidate_kind: str = "",
+) -> dict[str, float]:
+    """Return receiver-parse-back components for live/EMA archive selection.
+
+    This is local false-authority evidence, but the tensor source is the
+    charged ``archive.zip`` bytes parsed through the HiNeRV receiver grammar.
+    Score-unit components use the upstream evaluator coefficients when the
+    real scorer teachers are attached; health-only metrics are prefixed with
+    ``selection_health_`` so the shared selector can sort by non-collapse
+    without double-counting them in the proxy score.
+    """
+
+    path = Path(archive_path).expanduser().resolve(strict=False)
+    payload = _read_hiv1_payload_from_archive_zip(path)
+    arc = parse_archive(payload)
+    cfg = _hinerv_config_from_archive_meta(arc)
+    pair_indices = _local_pair_indices_from_batch(batch)
+    if pair_indices.size == 0:
+        raise ValueError("HiNeRV archive replay requires at least one pair index")
+    max_pair = int(pair_indices.max())
+    if max_pair >= int(arc.latents_fine.shape[0]):
+        raise ValueError(
+            "HiNeRV archive replay pair index exceeds archive latent rows: "
+            f"max_pair={max_pair} num_pairs={int(arc.latents_fine.shape[0])}"
+        )
+    target0 = _target_rows_nhwc01(target_rgb_0, pair_indices, "target_rgb_0")
+    target1 = _target_rows_nhwc01(target_rgb_1, pair_indices, "target_rgb_1")
+    receiver_model = _load_receiver_model_for_pixel_proof(
+        cfg=cfg,
+        decoder_state=arc.decoder_state_dict,
+        latents_coarse=arc.latents_coarse,
+        latents_mid=arc.latents_mid,
+        latents_fine=arc.latents_fine,
+    )
+    torch_pair_indices = torch.tensor(pair_indices.tolist(), dtype=torch.long)
+    with torch.no_grad():
+        receiver_pixels = _render_receiver_pixels(receiver_model, torch_pair_indices)
+    receiver = np.asarray(receiver_pixels.detach().cpu(), dtype=np.float32)
+    receiver_nhwc = np.transpose(receiver, (0, 1, 3, 4, 2))
+    target_pair = np.stack([target0, target1], axis=1).astype(np.float32, copy=False)
+    if receiver_nhwc.shape != target_pair.shape:
+        raise ValueError(
+            "HiNeRV archive replay target/receiver shape mismatch: "
+            f"receiver={receiver_nhwc.shape} target={target_pair.shape}"
+        )
+    diff = receiver_nhwc - target_pair
+    frame0_mse = float(np.mean(diff[:, 0] * diff[:, 0]))
+    frame1_mse = float(np.mean(diff[:, 1] * diff[:, 1]))
+    pair_mse = 0.5 * (frame0_mse + frame1_mse)
+    temporal_delta = receiver_nhwc[:, 1] - receiver_nhwc[:, 0]
+    out: dict[str, float] = {
+        "archive_replay_pair_count": float(pair_indices.size),
+        "archive_replay_archive_bytes": float(path.stat().st_size),
+        "archive_replay_payload_bytes": float(len(payload)),
+        "archive_replay_candidate_is_ema": (
+            1.0 if str(candidate_kind).lower() == "ema" else 0.0
+        ),
+        "parseback_rgb_pair_mse": pair_mse,
+        "parseback_rgb_frame0_mse": frame0_mse,
+        "parseback_rgb_frame1_mse": frame1_mse,
+        "selection_health_parseback_rgb_std": float(np.std(receiver_nhwc)),
+        "selection_health_parseback_rgb_dynamic_range": float(
+            np.max(receiver_nhwc) - np.min(receiver_nhwc)
+        ),
+        "selection_health_parseback_rgb_temporal_delta_std": float(
+            np.std(temporal_delta)
+        ),
+        "selection_health_parseback_rgb_temporal_delta_mean_abs": float(
+            np.mean(np.abs(temporal_delta))
+        ),
+    }
+    _attach_segnet_archive_replay_components(
+        out,
+        receiver_nhwc[:, 1],
+        scorer_teacher=scorer_teacher,
+        pair_indices=pair_indices,
+        batch=batch,
+    )
+    _attach_posenet_archive_replay_components(
+        out,
+        receiver_nhwc,
+        pose_scorer_teacher=pose_scorer_teacher,
+        pair_indices=pair_indices,
+        batch=batch,
+    )
+    return {key: value for key, value in out.items() if math.isfinite(float(value))}
 
 
 def hi_nerv_mlx_numpy_portability_contract(
@@ -165,6 +264,280 @@ def hi_nerv_meta_from_config(cfg: HinervConfig) -> dict[str, object]:
         "convnext_kernel_size": int(cfg.convnext_kernel_size),
         "init_seed": int(getattr(cfg, "init_seed", 0)),
     }
+
+
+def _read_hiv1_payload_from_archive_zip(archive_zip_path: Path) -> bytes:
+    if not archive_zip_path.is_file():
+        raise FileNotFoundError(f"HiNeRV archive.zip missing: {archive_zip_path}")
+    with zipfile.ZipFile(archive_zip_path, "r") as zf:
+        file_names = [name for name in zf.namelist() if not name.endswith("/")]
+        receiver_names = [
+            name
+            for name in file_names
+            if name in {"0.bin", MINIMAL_SINGLE_MEMBER_NAME}
+        ]
+        candidates = receiver_names or file_names
+        if len(candidates) != 1:
+            raise ValueError(
+                "HiNeRV archive replay requires exactly one receiver payload "
+                f"member; got {file_names}"
+            )
+        return zf.read(candidates[0])
+
+
+def _hinerv_config_from_archive_meta(arc: Any) -> HinervConfig:
+    meta = dict(getattr(arc, "meta", {}) or {})
+    decoder_channels = meta.get("decoder_channels")
+    if not isinstance(decoder_channels, Sequence) or isinstance(
+        decoder_channels,
+        (str, bytes),
+    ):
+        raise ValueError("HiNeRV archive replay meta missing decoder_channels")
+    return HinervConfig(
+        latent_dim_coarse=int(arc.latents_coarse.shape[1]),
+        latent_dim_mid=int(arc.latents_mid.shape[1]),
+        latent_dim_fine=int(arc.latents_fine.shape[1]),
+        embed_dim=int(meta["embed_dim"]),
+        initial_grid_h=int(meta["initial_grid_h"]),
+        initial_grid_w=int(meta["initial_grid_w"]),
+        decoder_channels=tuple(int(value) for value in decoder_channels),
+        sin_frequency=float(meta["sin_frequency"]),
+        num_upsample_blocks=int(meta["num_upsample_blocks"]),
+        mid_injection_block_index=int(meta["mid_injection_block_index"]),
+        fine_injection_block_index=int(meta["fine_injection_block_index"]),
+        num_pairs=int(arc.latents_fine.shape[0]),
+        output_height=int(meta["output_height"]),
+        output_width=int(meta["output_width"]),
+        use_hierarchical_feature_grid=bool(
+            meta.get("use_hierarchical_feature_grid", False)
+        ),
+        use_convnext_blocks=bool(meta.get("use_convnext_blocks", False)),
+        local_grid_levels=int(meta.get("local_grid_levels", 1)),
+        local_grid_channels=int(meta.get("local_grid_channels", 0)),
+        convnext_mlp_ratio=int(meta.get("convnext_mlp_ratio", 2)),
+        convnext_kernel_size=int(meta.get("convnext_kernel_size", 3)),
+        init_seed=int(meta.get("init_seed", 0)),
+    )
+
+
+def _local_pair_indices_from_batch(batch: Any) -> np.ndarray:
+    source = batch
+    if isinstance(batch, Mapping):
+        source = _first_mapping_value(
+            batch,
+            ("local_pair_indices", "pair_indices", "indices"),
+        )
+        if source is None:
+            raise ValueError(
+                "HiNeRV archive replay batch mapping must contain one of "
+                "local_pair_indices, pair_indices, or indices"
+            )
+    arr = np.asarray(source, dtype=np.int64).reshape(-1)
+    if np.any(arr < 0):
+        raise ValueError(f"HiNeRV archive replay pair indices must be >= 0: {arr}")
+    return np.ascontiguousarray(arr.astype(np.int64, copy=False))
+
+
+def _target_rows_nhwc01(target: Any, pair_indices: np.ndarray, name: str) -> np.ndarray:
+    arr = np.asarray(target, dtype=np.float32)
+    if arr.ndim != 4 or int(arr.shape[-1]) != 3:
+        raise ValueError(f"{name} must be NHWC RGB; got shape={arr.shape}")
+    max_pair = int(pair_indices.max()) if pair_indices.size else -1
+    if max_pair >= int(arr.shape[0]):
+        raise ValueError(
+            f"{name} has {arr.shape[0]} rows but replay requested pair {max_pair}"
+        )
+    rows = np.ascontiguousarray(arr[pair_indices])
+    if not np.all(np.isfinite(rows)):
+        raise ValueError(f"{name} contains non-finite replay rows")
+    return rows
+
+
+def _attach_segnet_archive_replay_components(
+    out: dict[str, float],
+    candidate_rgb_1_nhwc01: np.ndarray,
+    *,
+    scorer_teacher: Any | None,
+    pair_indices: np.ndarray,
+    batch: Any,
+) -> None:
+    if scorer_teacher is None:
+        return
+    live_logits_fn = getattr(
+        scorer_teacher,
+        "teacher_logits_for_frames_nhwc01",
+        None,
+    )
+    if not callable(live_logits_fn):
+        return
+    import mlx.core as mx
+
+    candidate = mx.array(candidate_rgb_1_nhwc01, dtype=mx.float32)
+    candidate_logits = live_logits_fn(candidate)
+    mx.eval(candidate_logits)
+    candidate_argmax = np.asarray(mx.argmax(candidate_logits, axis=-1), dtype=np.int64)
+    target_argmax = _segnet_target_argmax_for_batch(
+        scorer_teacher,
+        batch=batch,
+        pair_indices=pair_indices,
+    )
+    if target_argmax is None:
+        return
+    if tuple(candidate_argmax.shape) != tuple(target_argmax.shape):
+        raise ValueError(
+            "HiNeRV archive replay SegNet argmax shape mismatch: "
+            f"candidate={candidate_argmax.shape} target={target_argmax.shape}"
+        )
+    num_classes = int(
+        getattr(scorer_teacher, "num_classes", int(candidate_logits.shape[-1]))
+    )
+    d_seg = float(np.mean(candidate_argmax != target_argmax))
+    out["parseback_segnet_argmax_disagreement_score_units"] = 100.0 * d_seg
+    out["selection_health_segnet_direct_live_argmax_disagreement_rate"] = d_seg
+    out[
+        "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
+    ] = _occupied_class_fraction(candidate_argmax, num_classes=num_classes)
+    coverage = _target_class_coverage(
+        candidate_argmax,
+        target_argmax,
+        num_classes=num_classes,
+    )
+    out[
+        "selection_health_segnet_direct_live_candidate_target_class_coverage_fraction"
+    ] = coverage["coverage_fraction"]
+    out[
+        "selection_health_segnet_direct_live_candidate_target_any_class_coverage_fraction"
+    ] = coverage["any_coverage_fraction"]
+    out[
+        "selection_health_segnet_direct_live_candidate_target_class_min_ratio"
+    ] = coverage["min_ratio"]
+
+
+def _segnet_target_argmax_for_batch(
+    scorer_teacher: Any,
+    *,
+    batch: Any,
+    pair_indices: np.ndarray,
+) -> np.ndarray | None:
+    import mlx.core as mx
+
+    idx = batch
+    if isinstance(idx, Mapping):
+        idx = _first_mapping_value(idx, ("local_pair_indices", "pair_indices"))
+        if idx is None:
+            idx = pair_indices
+    idx_mx = mx.array(np.asarray(idx, dtype=np.int32).reshape(-1), dtype=mx.int32)
+    argmax_fn = getattr(scorer_teacher, "teacher_argmax_for_indices", None)
+    if callable(argmax_fn):
+        target = argmax_fn(idx_mx)
+        mx.eval(target)
+        return np.asarray(target, dtype=np.int64)
+    logits_fn = getattr(scorer_teacher, "teacher_logits_for_indices", None)
+    if callable(logits_fn):
+        logits = logits_fn(idx_mx)
+        mx.eval(logits)
+        return np.asarray(mx.argmax(logits, axis=-1), dtype=np.int64)
+    return None
+
+
+def _occupied_class_fraction(values: np.ndarray, *, num_classes: int) -> float:
+    flat = np.asarray(values, dtype=np.int64).reshape(-1)
+    if flat.size == 0 or num_classes <= 0:
+        return 0.0
+    counts = np.bincount(flat, minlength=num_classes)[:num_classes]
+    min_pixels = max(2, math.ceil(float(flat.size) * 1.0e-3))
+    return float(np.count_nonzero(counts >= min_pixels)) / float(num_classes)
+
+
+def _target_class_coverage(
+    candidate: np.ndarray,
+    target: np.ndarray,
+    *,
+    num_classes: int,
+) -> dict[str, float]:
+    ratios: list[float] = []
+    any_hits = 0
+    for cls in range(max(0, int(num_classes))):
+        mask = target == cls
+        total = int(np.count_nonzero(mask))
+        if total <= 0:
+            continue
+        hit_count = int(np.count_nonzero((candidate == cls) & mask))
+        ratio = float(hit_count) / float(total)
+        ratios.append(ratio)
+        if hit_count > 0:
+            any_hits += 1
+    if not ratios:
+        return {
+            "coverage_fraction": 0.0,
+            "any_coverage_fraction": 0.0,
+            "min_ratio": 0.0,
+        }
+    positive = [value for value in ratios if value > 0.0]
+    return {
+        "coverage_fraction": float(len(positive)) / float(len(ratios)),
+        "any_coverage_fraction": float(any_hits) / float(len(ratios)),
+        "min_ratio": float(min(ratios)),
+    }
+
+
+def _attach_posenet_archive_replay_components(
+    out: dict[str, float],
+    candidate_pair_nhwc01: np.ndarray,
+    *,
+    pose_scorer_teacher: Any | None,
+    pair_indices: np.ndarray,
+    batch: Any,
+) -> None:
+    if pose_scorer_teacher is None:
+        return
+    live_pose_fn = getattr(
+        pose_scorer_teacher,
+        "teacher_pose_for_yuv6_pair_nhwc",
+        None,
+    )
+    target_pose_fn = getattr(pose_scorer_teacher, "teacher_pose_for_indices", None)
+    if not callable(live_pose_fn) or not callable(target_pose_fn):
+        return
+    import mlx.core as mx
+
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    rgb0 = mx.array(candidate_pair_nhwc01[:, 0], dtype=mx.float32)
+    rgb1 = mx.array(candidate_pair_nhwc01[:, 1], dtype=mx.float32)
+    yuv6_pair = mx.concatenate(
+        [rgb_to_yuv6_mlx(rgb0 * 255.0), rgb_to_yuv6_mlx(rgb1 * 255.0)],
+        axis=-1,
+    )
+    idx = batch
+    if isinstance(idx, Mapping):
+        idx = _first_mapping_value(idx, ("local_pair_indices", "pair_indices"))
+        if idx is None:
+            idx = pair_indices
+    idx_mx = mx.array(np.asarray(idx, dtype=np.int32).reshape(-1), dtype=mx.int32)
+    candidate_pose = live_pose_fn(yuv6_pair)
+    target_pose = target_pose_fn(idx_mx)
+    raw_diff = candidate_pose - target_pose
+    raw_mse = mx.mean(raw_diff * raw_diff)
+    score = mx.sqrt(10.0 * raw_mse + 1.0e-12)
+    yuv6_delta = yuv6_pair[..., 6:12] - yuv6_pair[..., 0:6]
+    mx.eval(raw_mse, score, yuv6_pair, yuv6_delta)
+    raw_mse_f = float(raw_mse.item())
+    out["parseback_posenet_direct_live_score_term"] = float(score.item())
+    out["selection_health_parseback_posenet_direct_live_raw_mse"] = raw_mse_f
+    out["selection_health_parseback_posenet_yuv6_pair_std"] = float(
+        mx.std(yuv6_pair).item()
+    )
+    out["selection_health_parseback_posenet_yuv6_temporal_delta_std"] = float(
+        mx.std(yuv6_delta).item()
+    )
+
+
+def _first_mapping_value(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any | None:
+    for key in keys:
+        if key in mapping:
+            return mapping[key]
+    return None
 
 
 def _state_bridge_paths(out_dir: Path) -> tuple[Path, Path]:

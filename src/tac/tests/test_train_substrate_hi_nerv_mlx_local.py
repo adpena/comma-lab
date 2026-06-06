@@ -2105,6 +2105,69 @@ def test_hinerv_mlx_trainer_forwards_section_byte_dual_controls_to_harness() -> 
     )
 
 
+def test_hinerv_mlx_trainer_wires_archive_replay_components_to_bundle() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    final_bundle_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "RendererBundle"
+        and any(keyword.arg == "export_archive_fn" for keyword in node.keywords)
+    ]
+
+    assert len(final_bundle_calls) == 1
+    keywords = {
+        str(keyword.arg): keyword.value
+        for keyword in final_bundle_calls[0].keywords
+        if keyword.arg
+    }
+    assert "archive_replay_components_fn" in keywords
+    replay_source = ast.unparse(keywords["archive_replay_components_fn"])
+    for needle in (
+        "build_hi_nerv_archive_replay_components",
+        "target_rgb_0",
+        "target_rgb_1",
+        "scorer_teacher",
+        "pose_scorer_teacher",
+        "candidate_kind",
+    ):
+        assert needle in replay_source
+
+
+def test_hinerv_mlx_trainer_requires_parseback_selection_when_quality_gate_runs() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    run_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+
+    assert len(run_calls) == 1
+    keywords = {
+        str(keyword.arg): keyword.value
+        for keyword in run_calls[0].keywords
+        if keyword.arg
+    }
+    assert "archive_selection_replay_required" in keywords
+    assert "archive_selection_replay_batch_size" in keywords
+    required_source = ast.unparse(keywords["archive_selection_replay_required"])
+    batch_source = ast.unparse(keywords["archive_selection_replay_batch_size"])
+    assert "post_export_receiver_cache_quality_gate" in required_source
+    assert "receiver_cache_quality_max_pairs" in batch_source
+    assert "effective_training_num_pairs" in batch_source
+
+
 def test_hinerv_direct_trainer_forwards_shared_harness_actuators() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(

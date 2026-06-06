@@ -952,7 +952,10 @@ def _full_main(args: argparse.Namespace) -> int:
         coder_qat_loss_weights,
         coder_qat_metadata,
     )
-    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_archive_replay_components,
+        export_hi_nerv_mlx_archive,
+    )
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
     from tac.substrates.hinton_distilled_scorer_surrogate import (
         DEFAULT_POSE_DIMS,
@@ -1287,6 +1290,19 @@ def _full_main(args: argparse.Namespace) -> int:
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
             hard_byte_ceiling=modelsize_hard_byte_ceiling,
         ),
+        archive_replay_components_fn=(
+            lambda archive_path, batch, candidate_kind: (
+                build_hi_nerv_archive_replay_components(
+                    archive_path,
+                    batch,
+                    target_rgb_0=target_rgb_0,
+                    target_rgb_1=target_rgb_1,
+                    scorer_teacher=scorer_teacher,
+                    pose_scorer_teacher=pose_scorer_teacher,
+                    candidate_kind=candidate_kind,
+                )
+            )
+        ),
         substrate_artifact_metadata={
             "schema": TRAINER_SCHEMA,
             "authority": TRAINER_AUTHORITY,
@@ -1549,6 +1565,16 @@ def _full_main(args: argparse.Namespace) -> int:
         cosine_decay_total_epochs=args.cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
+        archive_selection_replay_required=bool(
+            args.post_export_receiver_cache_quality_gate
+        ),
+        archive_selection_replay_batch_size=max(
+            1,
+            min(
+                int(args.receiver_cache_quality_max_pairs),
+                int(effective_training_num_pairs),
+            ),
+        ),
         train_time_dual_ascent_config=train_time_dual_ascent_config,
         prioritized_pair_indices=local_training_pair_indices,
         pair_sampling_weights=optimizer_control["pair_sampling_weights"],
