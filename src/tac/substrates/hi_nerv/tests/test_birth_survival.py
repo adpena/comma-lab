@@ -25,6 +25,7 @@ from datetime import UTC, datetime
 import numpy as np
 import pytest
 
+import tac.substrates.hi_nerv.birth_survival as birth_survival_mod
 from tac.repo_io import sha256_file
 from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.birth_survival import (
@@ -94,6 +95,35 @@ def test_reconstruct_birth_region_mask_rejects_drifted_labels() -> None:
     }
     with pytest.raises(BirthSurvivalError, match="drifted from the live receipt"):
         reconstruct_birth_region_mask(labels, worst_region)
+
+
+def test_region_support_counts_only_forward_measured_target_wins(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression guard: never replace scorer-measured support with region size."""
+
+    logits = np.zeros((1, 4, 4, 2), dtype=np.float32)
+    logits[..., 0] = 2.0
+    logits[..., 1] = -2.0
+    region_mask = np.zeros((1, 4, 4), dtype=np.float32)
+    region_mask[0, 1:3, 1:3] = 1.0
+
+    monkeypatch.setattr(
+        birth_survival_mod,
+        "_candidate_logits_np",
+        lambda _teacher, _frame: logits,
+    )
+
+    support = birth_survival_mod._region_support_from_frame1_nhwc01(
+        scorer_teacher=object(),
+        frame1_nhwc01=object(),
+        region_mask_np=region_mask,
+        birth_class=1,
+    )
+
+    assert support["region_pixel_count"] == 4
+    assert support["region_hard_won"] == 0
+    assert support["region_unsolved"] == 4
 
 
 def test_blocked_surfaces_return_typed_blocker_without_survived() -> None:

@@ -550,6 +550,89 @@ def test_hinerv_live_birth_survival_rows_fail_closed_on_missing_inputs(tmp_path:
     assert hyst["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hinerv_live_birth_survival_rows_fail_closed_on_rejected_birth(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.hi_nerv.birth_survival as survival_mod
+
+    def fail_measurement(*_args, **_kwargs):
+        raise AssertionError("rejected births must not be remeasured as survival")
+
+    monkeypatch.setattr(survival_mod, "measure_birth_survival", fail_measurement)
+    monkeypatch.setattr(survival_mod, "measure_birth_hysteresis", fail_measurement)
+
+    row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
+        model=object(),
+        output_dir=tmp_path,
+        live_birth_payload={
+            "schema": "hi_nerv_target_region_birth_actuator.v1",
+            "action_id": "e" * 64,
+            "accepted": False,
+            "blockers": ["hinerv_target_region_birth_no_accepted_step"],
+            "surface": "direct_live_mlx",
+        },
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+    )
+
+    assert row["schema"] == "hi_nerv_runner_live_birth_survival_bundle.v1"
+    assert row["birth_accepted"] is False
+    assert row["blockers"][0] == "birth_survival_live_birth_not_accepted"
+    fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
+    hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
+    assert fake["schema"] == "hi_nerv_target_region_birth_survival_blocked.v1"
+    assert hyst["schema"] == "hi_nerv_target_region_birth_hysteresis_blocked.v1"
+    assert fake["accepted"] is False
+    assert fake["source_blockers"] == ["hinerv_target_region_birth_no_accepted_step"]
+    assert hyst["blocker"] == "birth_survival_live_birth_not_accepted"
+
+
+def test_hinerv_archive_birth_parseback_survival_fails_closed_on_rejected_birth(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"PK\x05\x06" + b"\0" * 18)
+
+    import tac.substrates.hi_nerv.birth_survival as survival_mod
+
+    def fail_measurement(*_args, **_kwargs):
+        raise AssertionError("rejected births must not be parseback remeasured")
+
+    monkeypatch.setattr(
+        survival_mod,
+        "measure_birth_parseback_survival_from_report",
+        fail_measurement,
+    )
+
+    row = runner_mod._write_hi_nerv_runner_birth_parseback_survival_for_archive(
+        archive_path=archive,
+        output_dir=tmp_path,
+        live_birth_payload={
+            "schema": "hi_nerv_target_region_birth_actuator.v1",
+            "action_id": "f" * 64,
+            "accepted": False,
+            "blockers": ["hinerv_target_region_birth_no_accepted_step"],
+            "surface": "direct_live_mlx",
+        },
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+        candidate_kind="ema",
+    )
+
+    assert row is not None
+    assert row["schema"] == "hi_nerv_target_region_birth_survival_blocked.v1"
+    assert row["blocker"] == "birth_survival_parseback_live_birth_not_accepted"
+    assert row["accepted"] is False
+    assert row["source_blockers"] == ["hinerv_target_region_birth_no_accepted_step"]
+    persisted = json.loads((tmp_path / "hi_nerv_birth_parseback_survival_ema.json").read_text(encoding="utf-8"))
+    assert persisted["action_id"] == "f" * 64
+    assert persisted["score_claim"] is False
+
+
 def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -5786,6 +5869,7 @@ def test_planner_row_launch_gate_accepts_snerv_lf_hf_blocked_unblock_command(
         bounded_training_contract_bound=False,
         include_command=False,
         include_unblock_command=True,
+        command_extra=["--segnet-direct-live-escape-class-multiplier", "16"],
     )
     args = SimpleNamespace(
         execute_family="snerv",
@@ -5796,6 +5880,7 @@ def test_planner_row_launch_gate_accepts_snerv_lf_hf_blocked_unblock_command(
         num_pairs=16,
         epochs=128,
         modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        segnet_direct_live_escape_class_multiplier=16.0,
         repo_root=REPO_ROOT,
     )
 

@@ -24,6 +24,8 @@ from tac.adaptation.hard_pair_indices import (
     normalize_pair_indices,
     pair_indices_from_mapping,
 )
+from tac.analysis.action_commutator import build_commutator_ledger
+from tac.analysis.action_effect import ACTION_EFFECT_V1_SCHEMA, ActionEffect
 from tac.analysis.nerv_candidate_curriculum import (
     build_hinerv_candidate_curriculum_plan,
     build_snerv_candidate_curriculum_plan,
@@ -98,6 +100,9 @@ RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA = "nerv_receiver_surface_trace_contract.v
 ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA = (
     "nerv_archive_parseback_selection_contract.v1"
 )
+ACTION_EFFECT_PLANNING_BUNDLE_SCHEMA = "nerv_action_effect_planning_bundle.v1"
+ACTION_EFFECT_ATLAS_SCHEMA = "nerv_action_effect_atlas.v1"
+ACTION_EFFECT_SELECTOR_PLANNING_SCHEMA = "nerv_action_effect_selector_planning.v1"
 HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA = (
     "hinerv_distortion_birth_before_rate_pressure_gate.v1"
 )
@@ -861,7 +866,9 @@ def build_nerv_long_training_campaign_plan(
             str(row.get("row_id") or ""),
         ),
     )
+    action_effect_planning_bundle = _action_effect_planning_bundle(rows)
     experiment_queue = _experiment_queue(rows, queue_id=queue_id)
+    experiment_queue["action_effect_planning_bundle"] = action_effect_planning_bundle
     snerv_lf_over_ceiling_reroute_queue = build_snerv_lf_over_ceiling_reroute_queue(
         campaign_rows=rows,
         measured_lf_payload_sources=(
@@ -997,6 +1004,22 @@ def build_nerv_long_training_campaign_plan(
         "decoder_weight_waterfill_unattached_sources": (decoder_weight_waterfill_unattached_sources),
         "archive_section_telemetry_unattached_source_count": len(archive_section_telemetry_unattached_sources),
         "archive_section_telemetry_unattached_sources": archive_section_telemetry_unattached_sources,
+        "action_effect_planning_bundle": action_effect_planning_bundle,
+        "action_effect_planning_bundle_schema": action_effect_planning_bundle[
+            "schema"
+        ],
+        "action_effect_row_count": action_effect_planning_bundle[
+            "effect_count"
+        ],
+        "action_effect_commutator_measurement_queue_count": (
+            action_effect_planning_bundle["commutator_ledger"][
+                "needs_measurement_count"
+            ]
+        ),
+        "action_effect_selector_planning_consumed_by_queue": (
+            experiment_queue.get("action_effect_planning_bundle")
+            == action_effect_planning_bundle
+        ),
         "snerv_lf_over_ceiling_reroute_queue": snerv_lf_over_ceiling_reroute_queue,
         "snerv_lf_over_ceiling_reroute_queue_schema": snerv_lf_over_ceiling_reroute_queue["schema"],
         "snerv_lf_over_ceiling_reroute_queue_row_count": snerv_lf_over_ceiling_reroute_queue["queue_row_count"],
@@ -2424,6 +2447,165 @@ def _experiment_queue(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _action_effect_planning_bundle(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    effects_by_key: dict[tuple[Any, ...], ActionEffect] = {}
+    source_refs_by_key: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    blockers: list[str] = []
+    for row in rows:
+        row_id = str(row.get("row_id") or "")
+        family = str(row.get("family") or "")
+        for source in _row_pair_local_action_effect_sources(row):
+            try:
+                effect = ActionEffect.from_pair_local_admission(source)
+            except (TypeError, ValueError) as exc:
+                blockers.append(
+                    f"action_effect_pair_local_receipt_invalid:{row_id}:{type(exc).__name__}"
+                )
+                continue
+            if not _action_effect_is_receiver_closed(effect):
+                blockers.append(
+                    f"action_effect_not_receiver_closed:{row_id}:{effect.action_id}"
+                )
+                continue
+            key = _action_effect_identity_key(effect)
+            effects_by_key.setdefault(key, effect)
+            source_refs_by_key.setdefault(key, []).append(
+                {
+                    "row_id": row_id,
+                    "family": family,
+                    "source_schema": source.get("schema"),
+                    "source": source.get("source"),
+                }
+            )
+    effects = list(effects_by_key.values())
+    atlas_rows = [
+        _action_effect_atlas_row(effect, source_refs_by_key.get(_action_effect_identity_key(effect), []))
+        for effect in effects
+    ]
+    atlas_rows.sort(
+        key=lambda item: (
+            float("-inf")
+            if item.get("value_per_byte") is None
+            else float(item["value_per_byte"]),
+            -abs(float(item.get("delta_score_total") or 0.0)),
+            str(item.get("action_id") or ""),
+        ),
+        reverse=True,
+    )
+    commutator_ledger = build_commutator_ledger(effects)
+    selector_planning = {
+        "schema": ACTION_EFFECT_SELECTOR_PLANNING_SCHEMA,
+        "action_effect_schema": ACTION_EFFECT_V1_SCHEMA,
+        "commutator_ledger_schema": commutator_ledger["schema"],
+        "independent_delta_assumption_allowed": False,
+        "receiver_closed_action_count": len(effects),
+        "measured_commutator_count": commutator_ledger["measured_commutator_count"],
+        "needs_measurement_count": commutator_ledger["needs_measurement_count"],
+        "macro_action_candidate_count": len(commutator_ledger["macro_action_candidates"]),
+        "conflict_pair_count": len(commutator_ledger["conflict_pairs"]),
+        "measurement_queue": list(commutator_ledger["measurement_queue"]),
+        "macro_action_candidates": list(commutator_ledger["macro_action_candidates"]),
+        "conflict_pairs": list(commutator_ledger["conflict_pairs"]),
+        "policy": {
+            "receiver_closed_actions_are_score_currency": True,
+            "composition_must_be_measured_before_additive_planning": True,
+            "measurement_queue_routes_unmeasured_pairs": True,
+        },
+        **FALSE_AUTHORITY,
+    }
+    return {
+        "schema": ACTION_EFFECT_PLANNING_BUNDLE_SCHEMA,
+        "action_effect_schema": ACTION_EFFECT_V1_SCHEMA,
+        "action_atlas": {
+            "schema": ACTION_EFFECT_ATLAS_SCHEMA,
+            "rows": atlas_rows,
+            "row_count": len(atlas_rows),
+            "ranked_by": "value_per_byte_desc_then_abs_delta_score_total_desc",
+            **FALSE_AUTHORITY,
+        },
+        "effect_count": len(effects),
+        "effects": [effect.as_dict() for effect in effects],
+        "commutator_ledger": commutator_ledger,
+        "selector_planning": selector_planning,
+        "blockers": _dedupe(blockers),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _row_pair_local_action_effect_sources(row: Mapping[str, Any]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    for evidence_key in (
+        "pr95_scorer_atom_actuator_execution_evidence",
+        "candidate_feedback",
+        "snerv_official_source_forward_evidence",
+    ):
+        evidence = row.get(evidence_key)
+        if isinstance(evidence, Mapping):
+            receipt = evidence.get("pair_local_distortion_servo_receipt")
+            if isinstance(receipt, Mapping):
+                source = dict(receipt)
+                source.setdefault("source", evidence_key)
+                source.setdefault("family", row.get("family"))
+                sources.append(source)
+            nested = evidence.get("pr95_scorer_atom_actuator_execution_evidence")
+            if isinstance(nested, Mapping):
+                nested_receipt = nested.get("pair_local_distortion_servo_receipt")
+                if isinstance(nested_receipt, Mapping):
+                    source = dict(nested_receipt)
+                    source.setdefault("source", f"{evidence_key}.pr95_scorer_atom_actuator_execution_evidence")
+                    source.setdefault("family", row.get("family"))
+                    sources.append(source)
+    return sources
+
+
+def _action_effect_is_receiver_closed(effect: ActionEffect) -> bool:
+    authority = str(effect.authority or "").lower()
+    return bool(
+        effect.parseback_survived is True
+        or effect.inflate_survived is True
+        or "parseback" in authority
+        or "inflate" in authority
+        or "inflated" in authority
+    )
+
+
+def _action_effect_identity_key(effect: ActionEffect) -> tuple[Any, ...]:
+    return (
+        effect.action_id,
+        effect.family,
+        effect.authority,
+        effect.old_d_seg,
+        effect.new_d_seg,
+        effect.old_d_pose,
+        effect.new_d_pose,
+        effect.old_bytes,
+        effect.new_bytes,
+    )
+
+
+def _action_effect_atlas_row(
+    effect: ActionEffect,
+    source_refs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    out = effect.as_dict()
+    out.update(
+        {
+            "schema": "nerv_action_effect_atlas_row.v1",
+            "action_effect_schema": ACTION_EFFECT_V1_SCHEMA,
+            "source_refs": [dict(ref) for ref in source_refs],
+            "source_row_ids": _dedupe(
+                [str(ref.get("row_id") or "") for ref in source_refs if ref.get("row_id")]
+            ),
+            "receiver_closed": True,
+            "score_currency": "contest_score_units",
+            **FALSE_AUTHORITY,
+        }
+    )
+    return out
 
 
 def _experiment_for_row(
@@ -5848,22 +6030,48 @@ def _normalize_hinerv_distortion_birth_evidence_source(
     if row.get("schema") == DISTORTION_BIRTH_RATE_EVIDENCE_SCHEMA:
         evidence = dict(row)
     else:
+        raw_metrics = row.get("metrics")
+        raw_metrics = raw_metrics if isinstance(raw_metrics, Mapping) else {}
+        metrics = {
+            key: _find_nested_finite_number(row, key)
+            for key in (
+                "receiver_quantum_attempt_count",
+                "hard_birth_argmax_progress_accepted_step_count",
+                "max_candidate_segnet_worst_debt_reduction",
+                "max_candidate_segnet_min_ratio_increase",
+                "max_candidate_segnet_total_debt_spill_given_worst_improvement",
+                "max_accepted_frame1_receiver_uint8_changed_count",
+                "max_accepted_frame1_receiver_uint8_delta_abs",
+                "max_candidate_pose_exact_delta",
+                "max_candidate_segnet_target_min_ratio_increase_authoritative",
+                "hard_birth_target_hard_won_count",
+                "hard_birth_net_target_support_delta",
+            )
+        }
+        for key in (
+            "min_ratio_increase_by_source",
+            "target_min_region_ratio_delta_by_source",
+            "min_ratio_increase_authority_source",
+            "target_support_by_source",
+        ):
+            if key in raw_metrics:
+                metrics[key] = raw_metrics[key]
+            elif key in row:
+                metrics[key] = row[key]
+        target_support_by_source = (
+            row.get("target_support_by_source")
+            if isinstance(row.get("target_support_by_source"), Mapping)
+            else raw_metrics.get("target_support_by_source")
+        )
         evidence = build_distortion_birth_before_rate_pressure_evidence(
             {
                 "report_loaded": True,
-                "metrics": {
-                    key: _find_nested_finite_number(row, key)
-                    for key in (
-                        "receiver_quantum_attempt_count",
-                        "hard_birth_argmax_progress_accepted_step_count",
-                        "max_candidate_segnet_worst_debt_reduction",
-                        "max_candidate_segnet_min_ratio_increase",
-                        "max_candidate_segnet_total_debt_spill_given_worst_improvement",
-                        "max_accepted_frame1_receiver_uint8_changed_count",
-                        "max_accepted_frame1_receiver_uint8_delta_abs",
-                        "max_candidate_pose_exact_delta",
-                    )
-                },
+                "metrics": metrics,
+                "target_support_by_source": (
+                    dict(target_support_by_source)
+                    if isinstance(target_support_by_source, Mapping)
+                    else {}
+                ),
             }
         )
     blockers = [str(blocker) for blocker in evidence.get("blockers") or []]

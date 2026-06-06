@@ -198,6 +198,30 @@ def test_action_effect_serializes_pr110_selector_replay_row() -> None:
     assert effect["action_effect_admitted"] is True
 
 
+def test_pair_local_action_effect_preserves_receipt_pair_ids() -> None:
+    effect = ActionEffect.from_pair_local_admission(
+        {
+            "schema": "nerv_pair_local_distortion_servo_receipt.v1",
+            "family": "hi_nerv",
+            "authority": "parseback_mlx",
+            "actuator_id": "hinerv_pair_17",
+            "pair_ids": [17],
+            "old_d_seg": 0.020,
+            "new_d_seg": 0.019,
+            "old_d_pose": 0.0020,
+            "new_d_pose": 0.00195,
+            "old_archive_bytes": 178_000,
+            "new_archive_bytes": 178_128,
+        }
+    )
+
+    assert effect.schema == ACTION_EFFECT_V1_SCHEMA
+    assert effect.family == "hinerv"
+    assert effect.action_id == "hinerv_pair_17"
+    assert effect.pair_ids == (17,)
+    assert effect.delta_score_total is not None
+
+
 def test_action_effect_rejects_malformed_custody_hashes() -> None:
     effect = build_action_effect(
         {

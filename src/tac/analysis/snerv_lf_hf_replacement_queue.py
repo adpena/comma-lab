@@ -451,12 +451,12 @@ def _source_forward_replay_proof(
     selected: Mapping[str, Any],
     replay: Mapping[str, Any],
 ) -> Mapping[str, Any] | None:
-    for raw in (
-        selected.get("source_forward_replay_proof"),
-        replay.get("source_forward_replay_proof"),
-    ):
-        if isinstance(raw, Mapping):
-            return raw
+    direct_proof = selected.get("source_forward_replay_proof")
+    direct_status = _source_forward_replay_proof_status(
+        direct_proof if isinstance(direct_proof, Mapping) else None
+    )
+    if direct_status["source_forward_replay_numerical_proof_complete"] is True:
+        return dict(direct_proof)
     return _canonical_source_forward_authority_proof(selected, replay)
 
 
@@ -575,14 +575,26 @@ def _canonical_tub_output2_hash(
 ) -> str | None:
     tub_replay = selected.get("official_tub_source_forward_replay")
     tub_replay = tub_replay if isinstance(tub_replay, Mapping) else {}
+    if not (
+        tub_replay.get("source_forward_replay_authority") is True
+        and tub_replay.get("full_tub_source_forward_parity_proven") is True
+        and not tub_replay.get("blockers")
+    ):
+        return None
     output2 = tub_replay.get("portable_output2_fusion")
     output2 = output2 if isinstance(output2, Mapping) else {}
-    for key in ("source_output_sha256", "portable_output_sha256"):
-        value = output2.get(key)
-        if _looks_like_sha256(value):
-            return str(value)
-    value = tub_row.get("official_output_sha256")
-    return str(value) if _looks_like_sha256(value) else None
+    source_hash = output2.get("source_output_sha256")
+    portable_hash = output2.get("portable_output_sha256")
+    if not (
+        output2.get("output_hashes_bit_identical") is True
+        and not output2.get("blockers")
+        and _zero_float(output2.get("max_abs_error"))
+        and _looks_like_sha256(source_hash)
+        and _looks_like_sha256(portable_hash)
+        and str(source_hash) == str(portable_hash)
+    ):
+        return None
+    return str(source_hash)
 
 
 def _first_source_forward_mapping(
@@ -650,7 +662,7 @@ def _source_forward_replay_proof_status(
             if field in proof and not _looks_like_sha256(proof.get(field)):
                 invalid.append(field)
         for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS:
-            if field in proof and not _nonnegative_finite_float(proof.get(field)):
+            if field in proof and not _zero_float(proof.get(field)):
                 invalid.append(field)
         for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS:
             if field not in proof:

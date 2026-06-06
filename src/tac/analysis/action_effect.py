@@ -885,10 +885,18 @@ class ActionEffect:
             or ACTION_EFFECT_PLANNING_AUTHORITY
         )
 
-        pair_index = _v1_first_int(admission, "pair_index")
-        if pair_index is None:
-            pair_index = _v1_first_int(trace, "pair_index")
-        pair_ids: tuple[int, ...] = (pair_index,) if pair_index is not None else ()
+        pair_ids = _v1_int_tuple(
+            admission.get("pair_ids")
+            or admission.get("affected_pairs")
+            or trace.get("pair_ids")
+            or trace.get("affected_pairs")
+            or ()
+        )
+        if not pair_ids:
+            pair_index = _v1_first_int(admission, "pair_index")
+            if pair_index is None:
+                pair_index = _v1_first_int(trace, "pair_index")
+            pair_ids = (pair_index,) if pair_index is not None else ()
 
         # Canonical servo score-state aliases (receipt surface).  A deltas-only
         # admission row carries none of these, leaving endpoints None.

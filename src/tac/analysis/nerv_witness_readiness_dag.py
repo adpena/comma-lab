@@ -724,6 +724,14 @@ def _distortion_birth_stage_evidence(
     )
     target_support_by_source = dict(target_support_by_source) if isinstance(target_support_by_source, Mapping) else {}
     metrics["target_support_by_source"] = dict(target_support_by_source)
+    hard_birth_support = target_support_by_source.get("hard_birth_actuator", {})
+    if isinstance(hard_birth_support, Mapping):
+        hard_won = _finite_number(hard_birth_support.get("target_hard_won_count"))
+        net_delta = _finite_number(hard_birth_support.get("net_target_support_delta"))
+        if hard_won is not None:
+            metrics["hard_birth_target_hard_won_count"] = hard_won
+        if net_delta is not None:
+            metrics["hard_birth_net_target_support_delta"] = net_delta
     blockers: list[str] = []
     if not bool(hinerv_evidence.get("report_loaded")):
         blockers.append("distortion_birth_smoke_report_missing")

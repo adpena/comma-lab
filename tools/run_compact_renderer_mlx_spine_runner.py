@@ -17237,10 +17237,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             pose_scorer_teacher=pose_scorer_teacher,
             candidate_kind=candidate_kind,
         )
-        if (
-            isinstance(target_region_birth_payload, Mapping)
-            and target_region_birth_payload.get("accepted") is True
-        ):
+        if isinstance(target_region_birth_payload, Mapping):
             row = _write_hi_nerv_runner_birth_parseback_survival_for_archive(
                 archive_path=archive_path,
                 output_dir=Path(archive_path).expanduser().resolve(strict=False).parent,
@@ -17374,10 +17371,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 input_channels=6,
                 seed=int(random_seed) + 1,
             )
-    if (
-        isinstance(target_region_birth_payload, Mapping)
-        and target_region_birth_payload.get("accepted") is True
-    ):
+    if isinstance(target_region_birth_payload, Mapping):
         live_survival = _write_hi_nerv_runner_live_birth_survival_rows(
             model=model,
             output_dir=output_dir,
@@ -18233,7 +18227,13 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     out = Path(output_dir).expanduser().resolve(strict=False)
     out.mkdir(parents=True, exist_ok=True)
 
-    def _blocked(schema: str, path: Path, blocker: str, reason: str | None = None) -> dict[str, Any]:
+    def _blocked(
+        schema: str,
+        path: Path,
+        blocker: str,
+        reason: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
         row = {
             "schema": schema,
             "action_id": action_id,
@@ -18248,6 +18248,8 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
         }
+        if isinstance(extra, Mapping):
+            row.update(dict(extra))
         row["artifact_path"] = path.as_posix()
         _write_json(path, row)
         return row
@@ -18263,6 +18265,37 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    if "accepted" in live_birth_payload and live_birth_payload.get("accepted") is not True:
+        payload_blockers = [str(value) for value in live_birth_payload.get("blockers") or []]
+        blocker = "birth_survival_live_birth_not_accepted"
+        summary["birth_accepted"] = False
+        summary["blockers"] = [blocker, *payload_blockers]
+        summary["live_birth_blockers"] = payload_blockers
+        fake_path = out / "hi_nerv_birth_fakequant_survival.json"
+        hyst_path = out / "hi_nerv_birth_hysteresis.json"
+        blocked_extra = {
+            "accepted": False,
+            "source_schema": str(live_birth_payload.get("schema") or ""),
+            "source_blockers": payload_blockers,
+            "source_birth_surface": str(live_birth_payload.get("surface") or "live_mlx"),
+        }
+        _blocked(
+            "hi_nerv_target_region_birth_survival_blocked.v1",
+            fake_path,
+            blocker,
+            reason="live target-region hard birth did not pass its acceptance gate",
+            extra=blocked_extra,
+        )
+        _blocked(
+            "hi_nerv_target_region_birth_hysteresis_blocked.v1",
+            hyst_path,
+            blocker,
+            reason="live target-region hard birth did not pass its acceptance gate",
+            extra=blocked_extra,
+        )
+        summary["fakequant_survival_path"] = fake_path.as_posix()
+        summary["hysteresis_path"] = hyst_path.as_posix()
+        return summary
     if scorer_teacher is None or target_labels is None or pair_indices is None:
         missing = []
         if scorer_teacher is None:
@@ -18388,7 +18421,11 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
     )
     row_path = out / f"hi_nerv_birth_parseback_survival_{safe_kind}.json"
 
-    def _blocked(blocker: str, reason: str | None = None) -> dict[str, Any]:
+    def _blocked(
+        blocker: str,
+        reason: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
         row = {
             "schema": (
                 "hi_nerv_target_region_birth_survival_blocked.v1"
@@ -18408,9 +18445,24 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
         }
+        if isinstance(extra, Mapping):
+            row.update(dict(extra))
         row["artifact_path"] = row_path.as_posix()
         _write_json(row_path, row)
         return row
+
+    if "accepted" in live_birth_payload and live_birth_payload.get("accepted") is not True:
+        payload_blockers = [str(value) for value in live_birth_payload.get("blockers") or []]
+        return _blocked(
+            "birth_survival_parseback_live_birth_not_accepted",
+            reason="live target-region hard birth did not pass its acceptance gate",
+            extra={
+                "accepted": False,
+                "source_schema": str(live_birth_payload.get("schema") or ""),
+                "source_blockers": payload_blockers,
+                "source_birth_surface": str(live_birth_payload.get("surface") or "live_mlx"),
+            },
+        )
 
     archive = Path(archive_path).expanduser().resolve(strict=False)
     if not archive.is_file():
@@ -22856,6 +22908,7 @@ def _planner_row_flag_values_match(flag: str, *, actual: str, expected: str) -> 
         "--segnet-direct-live-rare-class-logit-weight",
         "--segnet-direct-live-target-mass-floor-weight",
         "--segnet-direct-live-target-min-ratio-floor-weight",
+        "--segnet-direct-live-escape-class-multiplier",
         "--pose-direct-live-distillation-weight",
         "--scorer-input-distribution-guard-weight",
         "--scorer-input-contrast-floor-weight",

@@ -934,6 +934,44 @@ def test_long_training_campaign_plan_consumes_hinerv_pair_local_feedback_evidenc
     assert hi_row["score_claim"] is False
 
 
+def test_long_training_campaign_plan_routes_receiver_closed_actions_into_commutator_planning() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        candidate_feedback_sources=(_snerv_scorer_input_distribution_guard_feedback_row(),),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    bundle = report["action_effect_planning_bundle"]
+    assert bundle["schema"] == plan_module.ACTION_EFFECT_PLANNING_BUNDLE_SCHEMA
+    assert bundle["effect_count"] == 2
+
+    effects_by_id = {row["action_id"]: row for row in bundle["effects"]}
+    assert effects_by_id["hinerv_target_region_birth_pair17"]["pair_ids"] == [17]
+    assert effects_by_id["snerv_tub_output2_pair_birth"]["pair_ids"] == [17]
+
+    atlas = bundle["action_atlas"]
+    assert atlas["schema"] == plan_module.ACTION_EFFECT_ATLAS_SCHEMA
+    assert atlas["row_count"] == 2
+    assert {row["action_effect_schema"] for row in atlas["rows"]} == {
+        "tac.action_effect.v1"
+    }
+    assert all(row["receiver_closed"] for row in atlas["rows"])
+
+    ledger = bundle["commutator_ledger"]
+    assert ledger["measured_commutator_count"] == 0
+    assert ledger["needs_measurement_count"] == 2
+    assert bundle["selector_planning"]["independent_delta_assumption_allowed"] is False
+    assert bundle["selector_planning"]["measurement_queue"] == ledger["measurement_queue"]
+    assert report["action_effect_commutator_measurement_queue_count"] == 2
+    assert report["action_effect_selector_planning_consumed_by_queue"] is True
+    assert report["experiment_queue"]["action_effect_planning_bundle"] == bundle
+    assert report["score_claim"] is False
+
+
 def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -8971,10 +9009,38 @@ def _hinerv_distortion_birth_evidence(*, candidate_id: str = "hinerv_tiny") -> d
         "hard_birth_argmax_progress_accepted_step_count": 1.0,
         "max_candidate_segnet_worst_debt_reduction": 0.125,
         "max_candidate_segnet_min_ratio_increase": 0.0625,
+        "max_candidate_segnet_target_min_ratio_increase_authoritative": 0.03125,
         "max_candidate_segnet_total_debt_spill_given_worst_improvement": 0.0,
         "max_accepted_frame1_receiver_uint8_changed_count": 512.0,
         "max_accepted_frame1_receiver_uint8_delta_abs": 2048.0,
         "max_candidate_pose_exact_delta": 0.0,
+        "metrics": {
+            "min_ratio_increase_by_source": {
+                "bootstrap": 0.0625,
+                "hard_birth_actuator": 0.03125,
+                "parseback": 0.0234375,
+            },
+            "target_min_region_ratio_delta_by_source": {
+                "bootstrap": 0.0625,
+                "hard_birth_actuator": 0.03125,
+                "parseback": 0.0234375,
+            },
+            "min_ratio_increase_authority_source": "hard_birth_actuator",
+            "target_support_by_source": {
+                "hard_birth_actuator": {
+                    "target_hard_won_count": 9.0,
+                    "target_hard_lost_count": 1.0,
+                    "net_target_support_delta": 8.0,
+                }
+            },
+        },
+        "target_support_by_source": {
+            "hard_birth_actuator": {
+                "target_hard_won_count": 9.0,
+                "target_hard_lost_count": 1.0,
+                "net_target_support_delta": 8.0,
+            }
+        },
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
