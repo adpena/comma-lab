@@ -44,6 +44,14 @@ def test_runtime_binding_reopens_and_decodes_exact_payload_bytes(tmp_path: Path)
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     closed = set(report["closed_campaign_blockers"])
+    assert (
+        "snerv_lf_conditioned_hf_residual_receiver_runtime_binding_missing"
+        in closed
+    )
+    assert (
+        "snerv_joint_lf_hf_factorized_codebook_receiver_runtime_binding_missing"
+        in closed
+    )
     assert "snerv_temporal_lf_predictor_receiver_runtime_binding_missing" in closed
     assert "snerv_lf_super_resolution_receiver_runtime_binding_missing" in closed
     assert (

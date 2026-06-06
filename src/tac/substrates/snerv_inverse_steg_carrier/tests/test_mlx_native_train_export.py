@@ -1251,6 +1251,196 @@ def test_score_aware_telemetry_contract_requires_direct_live_region_recon_metric
     )
 
 
+def test_score_aware_telemetry_contract_requires_direct_live_target_floor_metrics(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.125,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        segnet_direct_live_target_mass_floor_weight=0.5,
+        segnet_direct_live_target_min_ratio_floor_weight=0.5,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["expected_segnet_direct_live_target_mass_floor"] is True
+    assert contract["expected_segnet_direct_live_target_min_ratio_floor"] is True
+    assert contract["segnet_direct_live_target_mass_floor_metric_observed"] is False
+    assert (
+        contract["segnet_direct_live_target_min_ratio_floor_metric_observed"]
+        is False
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_mass_floor_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_min_ratio_floor_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_requires_direct_live_target_floor_duals(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    loss_components = {
+        "loss_part_segnet_direct_live_distill": 0.125,
+        "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+        "loss_part_segnet_direct_live_target_mass_floor_loss": 0.03125,
+        "loss_part_segnet_direct_live_target_min_ratio_floor_loss": 0.015625,
+    }
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": loss_components,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_target_mass_floor_weight=0.5,
+        segnet_direct_live_target_min_ratio_floor_weight=0.5,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["expected_segnet_direct_live_target_mass_floor"] is True
+    assert contract["expected_segnet_direct_live_target_min_ratio_floor"] is True
+    assert contract["segnet_direct_live_target_mass_floor_metric_observed"] is True
+    assert contract["segnet_direct_live_target_min_ratio_floor_metric_observed"] is True
+    assert (
+        contract["segnet_direct_live_target_mass_floor_dual_metric_observed"]
+        is False
+    )
+    assert (
+        contract[
+            "segnet_direct_live_target_mass_floor_dual_lambda_active_observed"
+        ]
+        is False
+    )
+    assert (
+        contract["segnet_direct_live_target_min_ratio_floor_dual_metric_observed"]
+        is False
+    )
+    assert (
+        contract[
+            "segnet_direct_live_target_min_ratio_floor_dual_lambda_active_observed"
+        ]
+        is False
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_mass_floor_dual_metric_never_observed"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_mass_floor_dual_lambda_never_active"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_min_ratio_floor_dual_metric_never_observed"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_target_min_ratio_floor_dual_lambda_never_active"
+        in contract["blockers"]
+    )
+
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    **loss_components,
+                    "dual_ascent_missing_metric__snerv_segnet_direct_live_target_mass_floor": 0.0,
+                    "dual_ascent_missing_metric__snerv_segnet_direct_live_target_min_ratio_floor": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_direct_live_target_mass_floor": 0.25,
+                    "dual_ascent_lambda__snerv_segnet_direct_live_target_min_ratio_floor": 0.25,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        segnet_direct_live_target_mass_floor_weight=0.5,
+        segnet_direct_live_target_min_ratio_floor_weight=0.5,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["blockers"] == []
+    assert contract["segnet_direct_live_target_mass_floor_dual_metric_observed"] is True
+    assert (
+        contract[
+            "segnet_direct_live_target_mass_floor_dual_lambda_active_observed"
+        ]
+        is True
+    )
+    assert (
+        contract["segnet_direct_live_target_min_ratio_floor_dual_metric_observed"]
+        is True
+    )
+    assert (
+        contract[
+            "segnet_direct_live_target_min_ratio_floor_dual_lambda_active_observed"
+        ]
+        is True
+    )
+
+
 def test_score_aware_telemetry_contract_rejects_direct_live_target_class_collapse(
     tmp_path: Path,
 ) -> None:

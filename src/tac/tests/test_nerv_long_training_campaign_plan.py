@@ -152,6 +152,18 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-region-recon-weight") + 1] == "0.25"
         for row in hi_rows
     )
+    assert all("--segnet-direct-live-target-mass-floor-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-target-mass-floor-weight") + 1]
+        == "0.4"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-target-min-ratio-floor-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-target-min-ratio-floor-weight") + 1]
+        == "0.4"
+        for row in hi_rows
+    )
     assert all("--pose-direct-live-distillation-weight" in row["command_argv"] for row in hi_rows)
     assert all(
         row["command_argv"][row["command_argv"].index("--pose-direct-live-distillation-weight") + 1] == "0.25"
@@ -207,6 +219,12 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         "0.25"
     )
     assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-rare-class-logit-weight") + 1] == "4"
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-target-mass-floor-weight") + 1] == (
+        "0.5"
+    )
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-direct-live-target-min-ratio-floor-weight") + 1] == (
+        "0.5"
+    )
     assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-distribution-guard-weight") + 1] == "2"
     assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-contrast-floor-weight") + 1] == "0.5"
     assert snerv["command_argv"][snerv["command_argv"].index("--scorer-input-contrast-floor-segnet-min-std-ratio") + 1] == (
@@ -293,6 +311,18 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all("--segnet-direct-live-rare-class-logit-weight" in row["command_argv"] for row in hi_rows)
     assert all(
         row["command_argv"][row["command_argv"].index("--segnet-direct-live-rare-class-logit-weight") + 1] == "16"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-target-mass-floor-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-target-mass-floor-weight") + 1]
+        == "0.4"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-target-min-ratio-floor-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-target-min-ratio-floor-weight") + 1]
+        == "0.4"
         for row in hi_rows
     )
     assert all("--posenet-yuv6-geometry-tether-weight" in row["command_argv"] for row in hi_rows)

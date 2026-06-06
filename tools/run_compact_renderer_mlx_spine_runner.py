@@ -5878,6 +5878,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     mlx_prefilter_progress_every: int = 50,
     run_scorer_loop_qat: bool = False,
     snerv_bounded_smoke_scorer_loop_qat_policy: Mapping[str, Any] | None = None,
+    snerv_lf_hf_solution_family: str = "official_tub_lf_hf_decoder_replacement",
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
     snerv_scorer_loop_step_map_bins: int = 16,
@@ -6310,6 +6311,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "temporal_context": int(snerv_temporal_context),
         "temporal_mode": str(snerv_temporal_mode),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "snerv_lf_hf_solution_family": str(snerv_lf_hf_solution_family),
         "decoder_payload_codec": str(decoder_payload_codec),
         "levels": int(levels),
         "wavelet": str(wavelet),
@@ -7595,6 +7597,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "temporal_context": int(snerv_temporal_context),
         "temporal_mode": str(snerv_temporal_mode),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "snerv_lf_hf_solution_family": str(snerv_lf_hf_solution_family),
         "decoder_payload_codec": str(decoder_payload_codec),
         "levels": int(levels),
         "wavelet": str(wavelet),
@@ -24544,6 +24547,7 @@ def _planner_row_command_control_blockers(
         ("--target-modelsize-mparams", "target_modelsize_mparams"),
         ("--snerv-official-modelsize-mparams", "snerv_official_modelsize_mparams"),
         ("--snerv-modelsize-control-profile", "snerv_modelsize_control_profile"),
+        ("--snerv-lf-hf-solution-family", "snerv_lf_hf_solution_family"),
         ("--snerv-official-enc-strds", "snerv_official_enc_strds"),
         ("--snerv-official-dec-strds", "snerv_official_dec_strds"),
         ("--hi-nerv-optimizer-policy", "hi_nerv_optimizer_policy"),
@@ -24708,6 +24712,8 @@ def _planner_row_flag_values_match(flag: str, *, actual: str, expected: str) -> 
         "--segnet-direct-live-class-balanced-squared-hinge-weight",
         "--segnet-direct-live-class-region-recon-weight",
         "--segnet-direct-live-rare-class-logit-weight",
+        "--segnet-direct-live-target-mass-floor-weight",
+        "--segnet-direct-live-target-min-ratio-floor-weight",
         "--pose-direct-live-distillation-weight",
         "--scorer-input-distribution-guard-weight",
         "--scorer-input-contrast-floor-weight",
@@ -27947,6 +27953,25 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "expensive attachment and record a false-authority blocker."
         ),
     )
+    parser.add_argument(
+        "--snerv-lf-hf-solution-family",
+        choices=(
+            "official_tub_lf_hf_decoder_replacement",
+            "lf_conditioned_hf_residual_generator",
+            "joint_lf_hf_factorized_codebook",
+            "temporal_lf_predictor_gate",
+            "lf_super_resolution_from_tiny_anchor",
+            "score_tethered_spectral_band_allocator",
+            "entropy_modeled_lf_latent_hyperprior",
+        ),
+        default="official_tub_lf_hf_decoder_replacement",
+        help=(
+            "SNeRV LF/HF replacement family selected by a queue-owned bounded "
+            "smoke row. This is false-authority metadata until receiver proof "
+            "and scorer replay pass, but it must match the queue row so the "
+            "trainer consumes the intended replacement lane."
+        ),
+    )
     parser.add_argument("--snerv-scorer-loop-max-trials", default=2, type=int)
     parser.add_argument(
         "--snerv-scorer-loop-search-mode",
@@ -29029,6 +29054,7 @@ def main(argv: list[str] | None = None) -> int:
             snerv_bounded_smoke_scorer_loop_qat_policy=(
                 snerv_bounded_smoke_scorer_loop_qat_policy
             ),
+            snerv_lf_hf_solution_family=args.snerv_lf_hf_solution_family,
             snerv_scorer_loop_max_trials=args.snerv_scorer_loop_max_trials,
             snerv_scorer_loop_search_mode=args.snerv_scorer_loop_search_mode,
             snerv_scorer_loop_step_map_bins=args.snerv_scorer_loop_step_map_bins,

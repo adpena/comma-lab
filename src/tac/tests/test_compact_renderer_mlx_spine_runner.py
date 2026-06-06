@@ -5165,6 +5165,49 @@ def test_planner_row_launch_gate_accepts_snerv_lf_hf_replacement_queue_rows(
     assert match["ready_for_exact_eval_dispatch"] is False
 
 
+def test_planner_row_launch_gate_checks_snerv_lf_hf_solution_family(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_snerv_lf_hf_replacement_queue_artifact(
+        tmp_path / "snerv_lf_hf_queue.json",
+        solution_family="lf_conditioned_hf_residual_generator",
+        command_extra=[
+            "--snerv-lf-hf-solution-family",
+            "lf_conditioned_hf_residual_generator",
+            "--segnet-direct-live-target-mass-floor-weight",
+            "0.50",
+            "--segnet-direct-live-target-min-ratio-floor-weight",
+            "0.5000",
+        ],
+    )
+
+    matching_args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv_lf_hf_replace_unit",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=16,
+        epochs=128,
+        modelsize_candidate_id="snerv_lf_hf_unit_candidate",
+        snerv_lf_hf_solution_family="lf_conditioned_hf_residual_generator",
+        segnet_direct_live_target_mass_floor_weight=0.5,
+        segnet_direct_live_target_min_ratio_floor_weight=0.5,
+        repo_root=REPO_ROOT,
+    )
+    assert runner_mod._planner_row_launch_blockers(matching_args) == []
+
+    mismatched_args = SimpleNamespace(
+        **{
+            **matching_args.__dict__,
+            "snerv_lf_hf_solution_family": "official_tub_lf_hf_decoder_replacement",
+        }
+    )
+    blockers = runner_mod._planner_row_launch_blockers(mismatched_args)
+    assert "planner_row_command_mismatch:--snerv-lf-hf-solution-family" in blockers
+    assert "snerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
+
+
 def test_planner_row_launch_gate_rejects_snerv_lf_hf_runnable_without_command(
     tmp_path: Path,
 ) -> None:

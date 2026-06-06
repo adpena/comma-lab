@@ -123,6 +123,18 @@ def test_lf_hf_replacement_queue_emits_bounded_smoke_when_unblocked(
         row["command_argv"].index("--segnet-direct-live-rare-class-logit-weight") + 1
     ] == "4"
     assert row["command_argv"][
+        row["command_argv"].index(
+            "--segnet-direct-live-target-mass-floor-weight"
+        )
+        + 1
+    ] == "0.5"
+    assert row["command_argv"][
+        row["command_argv"].index(
+            "--segnet-direct-live-target-min-ratio-floor-weight"
+        )
+        + 1
+    ] == "0.5"
+    assert row["command_argv"][
         row["command_argv"].index("--posenet-yuv6-geometry-tether-weight") + 1
     ] == "0.5"
     assert row["command_argv"][
@@ -346,6 +358,12 @@ def test_lf_hf_queue_blocks_same_candidate_after_terminal_renderer_collapse_feed
         command[command.index("--snerv-score-aware-long-training-epochs") + 1]
         == "128"
     )
+    assert command[
+        command.index("--segnet-direct-live-target-mass-floor-weight") + 1
+    ] == "0.5"
+    assert command[
+        command.index("--segnet-direct-live-target-min-ratio-floor-weight") + 1
+    ] == "0.5"
     assert report["next_unblock_command_argv"] == command
     unblock_contract = row["unblock_launch_authority_contract"]
     assert unblock_contract["schema"] == "snerv_lf_hf_queue_unblock_launch_contract.v1"
@@ -1018,14 +1036,22 @@ def test_lf_hf_queue_consumes_hf_residual_receiver_payload_proof(
     assert "--hf-residual-receiver-payload-proof" in report[
         "runnable_rebuild_command_argv"
     ]
-    assert "snerv_lf_conditioned_hf_bounded_training_binding_missing" in blockers
+    assert (
+        "snerv_lf_conditioned_hf_residual_receiver_runtime_binding_missing"
+        in blockers
+    )
+    assert "snerv_lf_conditioned_hf_bounded_training_binding_missing" not in blockers
     assert row["blocked"] is True
     assert row["status"] == "blocked_until_prerequisite_evidence"
     assert row["command_argv"] == []
-    assert row["unblock_command_argv"] == []
+    assert row["unblock_command_argv"]
+    assert "tools/build_snerv_lf_hf_runtime_binding_proof.py" in row[
+        "unblock_command_argv"
+    ]
+    assert "--hf-residual-receiver-payload-proof" in row["unblock_command_argv"]
     assert row["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
     assert (
-        "snerv_lf_conditioned_hf_bounded_training_binding_missing"
+        "snerv_lf_conditioned_hf_residual_receiver_runtime_binding_missing"
         in row["launch_authority_contract"]["queue_launch_blockers"]
     )
     contract = row["bounded_training_binding_contract"]
@@ -1079,14 +1105,22 @@ def test_lf_hf_queue_consumes_joint_codebook_receiver_payload_proof(
     assert "--joint-codebook-receiver-payload-proof" in report[
         "runnable_rebuild_command_argv"
     ]
-    assert "snerv_joint_lf_hf_bounded_training_binding_missing" in blockers
+    assert (
+        "snerv_joint_lf_hf_factorized_codebook_receiver_runtime_binding_missing"
+        in blockers
+    )
+    assert "snerv_joint_lf_hf_bounded_training_binding_missing" not in blockers
     assert row["blocked"] is True
     assert row["status"] == "blocked_until_prerequisite_evidence"
     assert row["command_argv"] == []
-    assert row["unblock_command_argv"] == []
+    assert row["unblock_command_argv"]
+    assert "tools/build_snerv_lf_hf_runtime_binding_proof.py" in row[
+        "unblock_command_argv"
+    ]
+    assert "--joint-codebook-receiver-payload-proof" in row["unblock_command_argv"]
     assert row["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
     assert (
-        "snerv_joint_lf_hf_bounded_training_binding_missing"
+        "snerv_joint_lf_hf_factorized_codebook_receiver_runtime_binding_missing"
         in row["launch_authority_contract"]["queue_launch_blockers"]
     )
     contract = row["bounded_training_binding_contract"]
@@ -1100,6 +1134,85 @@ def test_lf_hf_queue_consumes_joint_codebook_receiver_payload_proof(
     assert "snerv_joint_lf_hf_bounded_training_binding_missing" in contract[
         "blockers"
     ]
+
+
+def test_lf_conditioned_hf_runtime_binding_emits_bounded_smoke(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        hf_residual_receiver_payload_proofs=[_hf_residual_receiver_payload_proof()],
+        lf_hf_runtime_binding_proofs=[
+            _lf_hf_runtime_binding_proof("lf_conditioned_hf_residual_generator")
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "lf_conditioned_hf_residual_generator"
+    )
+    assert row["blocked"] is False
+    assert row["status"] == "local_bounded_smoke_ready_no_authority"
+    assert row["command_argv"]
+    assert row["command_argv"][
+        row["command_argv"].index("--snerv-lf-hf-solution-family") + 1
+    ] == "lf_conditioned_hf_residual_generator"
+    assert row["launch_authority_contract"]["queue_status_is_runnable_plan"] is True
+    contract = row["bounded_training_binding_contract"]
+    assert contract["runner_actuator_bound"] is True
+    assert contract["runner_actuator"]["consumes_solution_family"] == (
+        "lf_conditioned_hf_residual_generator"
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_joint_lf_hf_runtime_binding_emits_bounded_smoke(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        joint_codebook_receiver_payload_proofs=[
+            _joint_codebook_receiver_payload_proof()
+        ],
+        lf_hf_runtime_binding_proofs=[
+            _lf_hf_runtime_binding_proof("joint_lf_hf_factorized_codebook")
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "joint_lf_hf_factorized_codebook"
+    )
+    assert row["blocked"] is False
+    assert row["status"] == "local_bounded_smoke_ready_no_authority"
+    assert row["command_argv"]
+    assert row["command_argv"][
+        row["command_argv"].index("--snerv-lf-hf-solution-family") + 1
+    ] == "joint_lf_hf_factorized_codebook"
+    assert row["launch_authority_contract"]["queue_status_is_runnable_plan"] is True
+    contract = row["bounded_training_binding_contract"]
+    assert contract["runner_actuator_bound"] is True
+    assert contract["runner_actuator"]["consumes_solution_family"] == (
+        "joint_lf_hf_factorized_codebook"
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_lf_hf_queue_emits_temporal_lf_predictor_payload_proof_unblock_command(
@@ -1731,6 +1844,63 @@ def test_lf_hf_queue_blocks_source_authority_without_value_state_artifact(
     assert (
         "snerv_official_trained_checkpoint_state_dict_value_artifact_missing"
         in row["blockers"]
+    )
+
+
+def test_lf_hf_queue_preserves_raw_source_replay_blocker_despite_ready_flags(
+    tmp_path: Path,
+) -> None:
+    state_dict_path = _write_fake_state_dict(tmp_path)
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+        state_dict_path=state_dict_path,
+    )
+    source["blockers"] = [
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+    ]
+
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        source_forward_artifacts=[source],
+        official_replacement_authority_gates=[
+            _official_replacement_authority_gate(ready=True)
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    evidence = row["source_forward_evidence"]
+    blockers = set(row["blockers"])
+
+    assert row["blocked"] is True
+    assert row["command_argv"] == []
+    assert evidence["source_forward_replay_authority"] is False
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in (
+        blockers
+    )
+    assert (
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+        in blockers
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        not in evidence["closed_campaign_blockers"]
     )
 
 
@@ -2675,6 +2845,12 @@ def _lf_hf_runtime_binding_proof(
     source_path: str = "/ssd/snerv_lf_hf_runtime_binding_proof.json",
 ) -> dict[str, object]:
     blocker_by_family = {
+        "lf_conditioned_hf_residual_generator": (
+            "snerv_lf_conditioned_hf_residual_receiver_runtime_binding_missing"
+        ),
+        "joint_lf_hf_factorized_codebook": (
+            "snerv_joint_lf_hf_factorized_codebook_receiver_runtime_binding_missing"
+        ),
         "temporal_lf_predictor_gate": (
             "snerv_temporal_lf_predictor_receiver_runtime_binding_missing"
         ),

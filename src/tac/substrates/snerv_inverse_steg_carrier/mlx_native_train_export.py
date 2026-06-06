@@ -837,6 +837,10 @@ def _snerv_score_aware_long_training_telemetry_contract(
     direct_live_rare_class_logit_observed = False
     direct_live_target_mass_floor_observed = False
     direct_live_target_min_ratio_floor_observed = False
+    direct_live_target_mass_floor_dual_observed = False
+    direct_live_target_mass_floor_dual_lambda_active_observed = False
+    direct_live_target_min_ratio_floor_dual_observed = False
+    direct_live_target_min_ratio_floor_dual_lambda_active_observed = False
     direct_live_max_candidate_occupied_class_fraction: float | None = None
     direct_live_target_class_coverage_observed = False
     direct_live_max_candidate_target_class_coverage_fraction: float | None = None
@@ -1300,6 +1304,22 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 "dual_ascent_missing_metric__snerv_segnet_last_frame_distill",
                 0.0,
             )
+            direct_live_target_mass_floor_dual_observed = (
+                direct_live_target_mass_floor_dual_observed
+                or _row_float_equals(
+                    row,
+                    "dual_ascent_missing_metric__snerv_segnet_direct_live_target_mass_floor",
+                    0.0,
+                )
+            )
+            direct_live_target_min_ratio_floor_dual_observed = (
+                direct_live_target_min_ratio_floor_dual_observed
+                or _row_float_equals(
+                    row,
+                    "dual_ascent_missing_metric__snerv_segnet_direct_live_target_min_ratio_floor",
+                    0.0,
+                )
+            )
             pose_dual_observed = pose_dual_observed or _row_float_equals(
                 row,
                 "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill",
@@ -1315,6 +1335,20 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 or _row_nonzero_finite_number(
                     row,
                     "dual_ascent_lambda__snerv_segnet_last_frame_distill",
+                )
+            )
+            direct_live_target_mass_floor_dual_lambda_active_observed = (
+                direct_live_target_mass_floor_dual_lambda_active_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_lambda__snerv_segnet_direct_live_target_mass_floor",
+                )
+            )
+            direct_live_target_min_ratio_floor_dual_lambda_active_observed = (
+                direct_live_target_min_ratio_floor_dual_lambda_active_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_lambda__snerv_segnet_direct_live_target_min_ratio_floor",
                 )
             )
             pose_dual_lambda_active_observed = (
@@ -1536,11 +1570,39 @@ def _snerv_score_aware_long_training_telemetry_contract(
             "snerv_score_aware_long_training_direct_live_segnet_target_mass_floor_metric_missing"
         )
     if (
+        expected_direct_live_target_mass_floor
+        and not direct_live_target_mass_floor_dual_observed
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_target_mass_floor_dual_metric_never_observed"
+        )
+    if (
+        expected_direct_live_target_mass_floor
+        and not direct_live_target_mass_floor_dual_lambda_active_observed
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_target_mass_floor_dual_lambda_never_active"
+        )
+    if (
         expected_direct_live_target_min_ratio_floor
         and not direct_live_target_min_ratio_floor_observed
     ):
         blockers.append(
             "snerv_score_aware_long_training_direct_live_segnet_target_min_ratio_floor_metric_missing"
+        )
+    if (
+        expected_direct_live_target_min_ratio_floor
+        and not direct_live_target_min_ratio_floor_dual_observed
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_target_min_ratio_floor_dual_metric_never_observed"
+        )
+    if (
+        expected_direct_live_target_min_ratio_floor
+        and not direct_live_target_min_ratio_floor_dual_lambda_active_observed
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_target_min_ratio_floor_dual_lambda_never_active"
         )
     if expected_direct_live and not direct_live_argmax_observed:
         blockers.append(
@@ -1760,8 +1822,20 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "segnet_direct_live_target_mass_floor_metric_observed": bool(
             direct_live_target_mass_floor_observed
         ),
+        "segnet_direct_live_target_mass_floor_dual_metric_observed": bool(
+            direct_live_target_mass_floor_dual_observed
+        ),
+        "segnet_direct_live_target_mass_floor_dual_lambda_active_observed": bool(
+            direct_live_target_mass_floor_dual_lambda_active_observed
+        ),
         "segnet_direct_live_target_min_ratio_floor_metric_observed": bool(
             direct_live_target_min_ratio_floor_observed
+        ),
+        "segnet_direct_live_target_min_ratio_floor_dual_metric_observed": bool(
+            direct_live_target_min_ratio_floor_dual_observed
+        ),
+        "segnet_direct_live_target_min_ratio_floor_dual_lambda_active_observed": bool(
+            direct_live_target_min_ratio_floor_dual_lambda_active_observed
         ),
         "segnet_direct_live_argmax_metric_observed": bool(
             direct_live_argmax_observed

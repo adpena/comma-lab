@@ -87,7 +87,9 @@ FAMILY_SPECS: tuple[_FamilySpec, ...] = (
         proof_schema="snerv_lf_conditioned_hf_residual_receiver_proof.v1",
         cli_flag="--hf-residual-receiver-payload-proof",
         false_authority_blocker="snerv_lf_conditioned_hf_residual_payload_false_authority",
-        runtime_binding_blocker=None,
+        runtime_binding_blocker=(
+            "snerv_lf_conditioned_hf_residual_receiver_runtime_binding_missing"
+        ),
         bounded_training_blocker="snerv_lf_conditioned_hf_bounded_training_binding_missing",
         decoder_name="decode_lf_conditioned_hf_residual_payload",
         decoder=decode_lf_conditioned_hf_residual_payload,
@@ -97,7 +99,9 @@ FAMILY_SPECS: tuple[_FamilySpec, ...] = (
         proof_schema="snerv_joint_lf_hf_factorized_codebook_receiver_proof.v1",
         cli_flag="--joint-codebook-receiver-payload-proof",
         false_authority_blocker="snerv_joint_lf_hf_factorized_codebook_false_authority",
-        runtime_binding_blocker=None,
+        runtime_binding_blocker=(
+            "snerv_joint_lf_hf_factorized_codebook_receiver_runtime_binding_missing"
+        ),
         bounded_training_blocker="snerv_joint_lf_hf_bounded_training_binding_missing",
         decoder_name="decode_joint_lf_hf_factorized_codebook_payload",
         decoder=decode_joint_lf_hf_factorized_codebook_payload,

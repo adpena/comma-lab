@@ -48,6 +48,8 @@ SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_COVERAGE_FRACTION = "0.8"
 SNERV_BOUNDED_SMOKE_MIN_POST_SEGNET_TARGET_CLASS_MIN_RATIO = "0.2"
 SNERV_BOUNDED_SMOKE_MAX_POST_SEGNET_TARGET_CLASS_RATIO_DROP = "0.05"
 SNERV_BOUNDED_SMOKE_SEGNET_RARE_CLASS_LOGIT_WEIGHT = "4"
+SNERV_BOUNDED_SMOKE_SEGNET_TARGET_MASS_FLOOR_WEIGHT = "0.5"
+SNERV_BOUNDED_SMOKE_SEGNET_TARGET_MIN_RATIO_FLOOR_WEIGHT = "0.5"
 SNERV_BOUNDED_SMOKE_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT = "0.5"
 SNERV_BOUNDED_SMOKE_MAX_POST_SEGNET_DISTRIBUTION_MAE = "0.31"
 SNERV_BOUNDED_SMOKE_MAX_POST_POSENET_YUV6_DISTRIBUTION_MAE = "0.22"
@@ -1087,6 +1089,7 @@ def _candidate_row(
         )
     command: list[str] = []
     unblock_command: list[str] = []
+    effective_command_kind = command_kind
     if (
         command_kind == "bounded_snerv_training_smoke"
         and not blockers
@@ -1122,9 +1125,39 @@ def _candidate_row(
                     ]
                 )
         elif not blockers:
-            blockers = _dedupe(
-                [*blockers, _LF_CONDITIONED_HF_POST_PAYLOAD_BLOCKER]
+            runtime_blocker = runtime_binding_blocker_for_solution_family(
+                solution_family
             )
+            post_runtime_blocker = bounded_training_blocker_for_solution_family(
+                solution_family
+            )
+            if runtime_blocker in runtime_binding_closed:
+                command = _bounded_snerv_smoke_command(
+                    campaign_row,
+                    current_state=current_state,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
+                    solution_family=solution_family,
+                )
+                effective_command_kind = "bounded_snerv_training_smoke"
+                if not command:
+                    blockers = _dedupe(
+                        [
+                            *blockers,
+                            "snerv_lf_conditioned_hf_bounded_command_missing",
+                        ]
+                    )
+            elif runtime_blocker:
+                blockers = _dedupe([*blockers, runtime_blocker])
+                unblock_command = _runtime_binding_proof_command(
+                    current_state,
+                    solution_family=solution_family,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                )
+            else:
+                blockers = _dedupe([*blockers, post_runtime_blocker])
     if command_kind == "joint_lf_hf_codebook_payload_proof":
         joint_codebook_proof_blockers = set(_JOINT_CODEBOOK_CLOSED_BLOCKERS)
         non_joint_codebook_blockers = [
@@ -1148,7 +1181,36 @@ def _candidate_row(
                     ]
                 )
         elif not blockers:
-            blockers = _dedupe([*blockers, _JOINT_CODEBOOK_POST_PAYLOAD_BLOCKER])
+            runtime_blocker = runtime_binding_blocker_for_solution_family(
+                solution_family
+            )
+            post_runtime_blocker = bounded_training_blocker_for_solution_family(
+                solution_family
+            )
+            if runtime_blocker in runtime_binding_closed:
+                command = _bounded_snerv_smoke_command(
+                    campaign_row,
+                    current_state=current_state,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                    queue_artifact_path=queue_artifact_path,
+                    solution_family=solution_family,
+                )
+                effective_command_kind = "bounded_snerv_training_smoke"
+                if not command:
+                    blockers = _dedupe(
+                        [*blockers, "snerv_joint_lf_hf_codebook_bounded_command_missing"]
+                    )
+            elif runtime_blocker:
+                blockers = _dedupe([*blockers, runtime_blocker])
+                unblock_command = _runtime_binding_proof_command(
+                    current_state,
+                    solution_family=solution_family,
+                    queue_row_id=queue_row_id,
+                    output_root=output_root,
+                )
+            else:
+                blockers = _dedupe([*blockers, post_runtime_blocker])
     if command_kind == "lf_super_resolution_tiny_anchor_payload_proof":
         lf_super_resolution_proof_blockers = set(_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS)
         non_lf_super_resolution_blockers = [
@@ -1327,7 +1389,7 @@ def _candidate_row(
     )
     bounded_training_binding_contract = _bounded_training_binding_contract(
         solution_family=solution_family,
-        command_kind=command_kind,
+        command_kind=effective_command_kind,
         command=command,
     )
     unblock_launch_contract = _unblock_launch_authority_contract(
@@ -1498,8 +1560,13 @@ def _bounded_training_binding_contract(
     command_kind: str,
     command: Sequence[str],
 ) -> dict[str, Any]:
+    boundable_families = {
+        _OFFICIAL_TUB_LF_HF_FAMILY,
+        _LF_CONDITIONED_HF_FAMILY,
+        "joint_lf_hf_factorized_codebook",
+    }
     bound = (
-        solution_family == _OFFICIAL_TUB_LF_HF_FAMILY
+        solution_family in boundable_families
         and command_kind == "bounded_snerv_training_smoke"
         and bool(command)
     )
@@ -1518,6 +1585,7 @@ def _bounded_training_binding_contract(
             "kind": command_kind,
             "runner": "tools/run_compact_renderer_mlx_spine_runner.py",
             "consumes_queue_artifact": True,
+            "consumes_solution_family": solution_family,
             "command_prefix": list(command[:4]),
         }
     return {
@@ -1571,6 +1639,7 @@ def _bounded_snerv_smoke_command(
         "--mlx-prefilter-scorer-batch-pairs": "1",
         "--mlx-prefilter-progress-every": "4",
         "--snerv-native-mlx-receiver-proof-timeout": "600",
+        "--snerv-lf-hf-solution-family": str(solution_family),
         "--output-dir": (output_root / queue_row_id / "bounded_smoke").as_posix(),
         "--planner-row-queue-artifact": (
             Path(queue_artifact_path).as_posix()
@@ -1591,6 +1660,12 @@ def _bounded_snerv_smoke_command(
         ),
         "--segnet-direct-live-rare-class-logit-weight": (
             SNERV_BOUNDED_SMOKE_SEGNET_RARE_CLASS_LOGIT_WEIGHT
+        ),
+        "--segnet-direct-live-target-mass-floor-weight": (
+            SNERV_BOUNDED_SMOKE_SEGNET_TARGET_MASS_FLOOR_WEIGHT
+        ),
+        "--segnet-direct-live-target-min-ratio-floor-weight": (
+            SNERV_BOUNDED_SMOKE_SEGNET_TARGET_MIN_RATIO_FLOOR_WEIGHT
         ),
         "--posenet-yuv6-geometry-tether-weight": (
             SNERV_BOUNDED_SMOKE_POSENET_YUV6_GEOMETRY_TETHER_WEIGHT
@@ -2260,20 +2335,12 @@ def _source_forward_state(
         selected.get("official_tub_output2_decoder_weight_mapping_proven") is True
         or trained_mapping.get("official_tub_output2_decoder_weight_mapping_proven")
         is True
-        or tub_temporal_encoder_weight_mapping_proven
     )
     native_receiver_state_mapping_proven = (
         selected.get("official_native_receiver_state_mapping_proven") is True
         or trained_mapping.get("official_native_receiver_state_mapping_proven")
         is True
     )
-    if (
-        mfu_hfr_weight_mapping_proven
-        and tub_temporal_encoder_weight_mapping_proven
-        and tub_output2_decoder_weight_mapping_proven
-        and not state_dict_mapping_verified
-    ):
-        state_dict_mapping_verified = True
     state_dict_artifact = _source_forward_state_dict_value_artifact(selected)
     state_dict_path = str(state_dict_artifact.get("path") or "").strip()
     state_dict_file_present = state_dict_artifact.get("file_present") is True
@@ -2309,8 +2376,19 @@ def _source_forward_state(
         or export_binding.get("official_export_bound") is True
     )
     full_tub_parity = selected.get("full_tub_source_forward_parity_proven") is True
+    raw_source_blockers = {str(blocker) for blocker in selected.get("blockers") or ()}
+    source_authority_conflicting_blockers = {
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+    }
+    source_authority_blocked_by_raw_evidence = bool(
+        raw_source_blockers.intersection(source_authority_conflicting_blockers)
+    )
     source_authority = bool(
         full_tub_parity
+        and not source_authority_blocked_by_raw_evidence
         and state_dict_value_artifact_ready
         and (
             replay.get("source_forward_replay_authority") is True
@@ -2408,6 +2486,10 @@ def _source_forward_state(
                 "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
                 "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
             ]
+        )
+    if source_authority_blocked_by_raw_evidence:
+        queue_blockers.extend(
+            sorted(raw_source_blockers.intersection(source_authority_conflicting_blockers))
         )
     if (
         full_tub_parity
@@ -3733,6 +3815,12 @@ def _runtime_binding_state(
         in {
             blocker
             for blocker in (
+                runtime_binding_blocker_for_solution_family(
+                    _LF_CONDITIONED_HF_FAMILY
+                ),
+                runtime_binding_blocker_for_solution_family(
+                    "joint_lf_hf_factorized_codebook"
+                ),
                 runtime_binding_blocker_for_solution_family(
                     "temporal_lf_predictor_gate"
                 ),

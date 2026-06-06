@@ -97,6 +97,73 @@ def test_authority_gate_can_open_without_score_or_dispatch_authority(
     assert report["local_mlx_long_training_allowed"] is False
 
 
+def test_authority_gate_preserves_source_and_checkpoint_blockers_for_partial_mapping(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+    )
+    source["blockers"] = [
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+    ]
+    checkpoint = _checkpoint_export_report(trained_mapping=False)
+    binding = checkpoint["official_checkpoint_export_binding"]
+    binding["official_trained_checkpoint_state_dict_slice_present"] = True
+    binding["official_hfr_trained_checkpoint_weight_mapping_proven"] = True
+    binding["official_mfu_receiver_activation_payload_bound"] = True
+    binding["blockers"] = [
+        "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping",
+        "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+        "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+    ]
+    binding["preserved_blockers"] = list(binding["blockers"])
+
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        source_forward_artifacts=[source],
+        checkpoint_export_reports=[checkpoint],
+        output_root=tmp_path / "gate",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["official_tub_lf_hf_decoder_replacement_ready"] is False
+    assert report["full_tub_source_forward_replay_ready"] is False
+    assert report["trained_checkpoint_state_dict_mapping_ready"] is False
+    assert report["tub_temporal_output2_weight_mapping_ready"] is False
+    blockers = set(report["queue_blockers"])
+    assert (
+        "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+        in blockers
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in blockers
+    assert "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded" in (
+        blockers
+    )
+    assert "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing" in (
+        blockers
+    )
+    assert "snerv_official_tub_portable_output2_decoder_weight_mapping_missing" in (
+        blockers
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in (
+        blockers
+    )
+    assert (
+        "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+        not in report["closed_campaign_blockers"]
+    )
+
+
 def test_authority_gate_cli_writes_json_and_markdown(tmp_path: Path) -> None:
     source_path = tmp_path / "source.json"
     checkpoint_path = tmp_path / "checkpoint.json"
@@ -252,6 +319,7 @@ def _checkpoint_export_report(*, trained_mapping: bool) -> dict[str, object]:
             "official_trained_checkpoint_state_dict_mapping_verified": trained_mapping,
             "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": trained_mapping,
             "official_tub_temporal_encoder_weight_mapping_proven": trained_mapping,
+            "official_tub_output2_decoder_weight_mapping_proven": trained_mapping,
             "official_trained_checkpoint_mapping_manifest": {
                 "schema": (
                     "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
@@ -261,6 +329,9 @@ def _checkpoint_export_report(*, trained_mapping: bool) -> dict[str, object]:
                     trained_mapping
                 ),
                 "official_tub_temporal_encoder_weight_mapping_proven": (
+                    trained_mapping
+                ),
+                "official_tub_output2_decoder_weight_mapping_proven": (
                     trained_mapping
                 ),
                 "blockers": binding_blockers,

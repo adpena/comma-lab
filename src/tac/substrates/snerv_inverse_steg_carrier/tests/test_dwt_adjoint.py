@@ -165,6 +165,20 @@ def test_lf_is_super_small_fraction_of_pixels():
     assert n4 < n3  # coarser stores fewer
 
 
+def test_lf_coeff_count_is_backend_free(monkeypatch):
+    """Budget/modelsize pricing must not execute PyWavelets just to count LF."""
+    import tac.substrates.snerv_inverse_steg_carrier.dwt as dwt_mod
+
+    def fail_wavedec2(*_args, **_kwargs):
+        raise AssertionError("lf_coeff_count must not execute wavedec2")
+
+    if dwt_mod.pywt is not None:
+        monkeypatch.setattr(dwt_mod.pywt, "wavedec2", fail_wavedec2)
+
+    assert lf_coeff_count((384, 512), 3, wavelet="db2") == 48 * 64
+    assert lf_coeff_count((874, 1164), 4, wavelet="db2") == 55 * 73
+
+
 def test_lf_block_changes_when_input_changes_not_a_constant():
     """NO-FAKE: the LF coefficients ACTUALLY depend on the input (not a stub)."""
     rng = np.random.default_rng(3)

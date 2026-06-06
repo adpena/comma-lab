@@ -289,10 +289,22 @@ def lf_coeff_count(
     This is the SNeRV rate lever: the LF subband at level ``L`` is ~``(H*W) / 4^L``
     coefficients (each level halves both spatial dims). The detail subbands hold
     the rest and are generated, not stored.
+
+    The count is wavelet-independent for periodized orthonormal 2D DWT on the
+    padded ``2**levels`` lattice, so this helper intentionally avoids executing
+    PyWavelets. Budget/modelsize controllers call this path frequently and must
+    stay receiver-safe even when the training DWT backend is unavailable.
     """
-    probe = np.zeros(orig_hw, dtype=np.float64)
-    pyr = dwt2_multilevel(probe, levels=levels, wavelet=wavelet)
-    return int(pyr.lf.size)
+    h, w = (int(orig_hw[0]), int(orig_hw[1]))
+    if h <= 0 or w <= 0:
+        raise SnervDwtError(f"orig_hw must be positive; got {orig_hw}")
+    if int(levels) < 1:
+        raise SnervDwtError(f"levels must be >= 1; got {levels}")
+    if not str(wavelet).strip():
+        raise SnervDwtError("wavelet must be a non-empty string")
+    ph, pw = _pad_to_square_dims((h, w), int(levels))
+    scale = 1 << int(levels)
+    return int((ph // scale) * (pw // scale))
 
 
 def synthesis_adjoint_residual(

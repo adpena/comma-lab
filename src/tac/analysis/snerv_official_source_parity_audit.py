@@ -856,7 +856,9 @@ def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
     if row.get("source_forward_parity_proven") is not True:
         blockers.append("component_not_proven")
-    tolerance = _float_or_none(row.get("tolerance") or row.get("max_abs_tolerance"))
+    tolerance = _float_or_none(
+        _first_not_none(row, ("tolerance", "max_abs_tolerance"))
+    )
     max_abs_error = _float_or_none(
         _first_not_none(row, ("max_abs_error", "max_error", "max_abs_delta"))
     )
@@ -1017,6 +1019,8 @@ def _component_state_rows(
         artifact_blocker = ""
         if artifact_component_present and artifact_component_proven:
             artifact_blocker = ""
+        elif artifact_component_falsified:
+            artifact_blocker = "snerv_official_forward_parity_artifact_falsifies_parity"
         elif not artifact_component_present and not artifact_passed:
             artifact_blocker = (
                 "snerv_official_forward_parity_artifact_falsifies_parity"
