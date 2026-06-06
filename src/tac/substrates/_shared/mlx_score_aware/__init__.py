@@ -112,6 +112,10 @@ from tac.substrates._shared.mlx_score_aware.portability import (
     FORBIDDEN_INFLATE_IMPORT_ROOTS,
     assert_numpy_portable_inflate,
 )
+from tac.substrates._shared.mlx_score_aware.servo_lift import (
+    PARSEBACK_SERVO_LIFT_SCHEMA,
+    servo_lift,
+)
 from tac.substrates._shared.mlx_score_aware.targets import (
     N_PAIRS_FULL,
     decode_mlx_targets,
@@ -129,6 +133,7 @@ __all__ = [
     "MLX_NUMPY_BRIDGE_DRIFT_SCHEMA",
     "MODEL_SIZE_BUDGET_PLAN_SCHEMA",
     "N_PAIRS_FULL",
+    "PARSEBACK_SERVO_LIFT_SCHEMA",
     "TRAIN_TIME_DUAL_ASCENT_SCHEMA",
     "CarrierTrainingPlanError",
     "CarrierTrainingThresholds",
@@ -169,5 +174,6 @@ __all__ = [
     "scorer_input_contrast_floor_loss",
     "scorer_input_distribution_guard_loss",
     "scorer_input_shape_tether_loss",
+    "servo_lift",
     "source_pair_indices_for_local_batch",
 ]
