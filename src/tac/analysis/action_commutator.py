@@ -277,6 +277,7 @@ def _needs_measurement_row(
     second: ActionEffect,
     *,
     reason: str,
+    first_measurement_command: str | None,
 ) -> dict[str, Any]:
     """Emit a typed needs-measurement row (NO fabricated comm value).
 
@@ -291,6 +292,15 @@ def _needs_measurement_row(
 
     parts_share_authority = str(first.authority).strip() == str(second.authority).strip()
     proposed_id = f"{first.action_id}__then__{second.action_id}"
+    additive_delta_total = _add_optional_floats(first.delta_score_total, second.delta_score_total)
+    additive_delta_nonrate = _add_optional_floats(first.delta_score_nonrate, second.delta_score_nonrate)
+    additive_delta_bytes = _add_optional_ints(first.delta_bytes, second.delta_bytes)
+    command = first_measurement_command or (
+        "uv run python tools/run_pr110_commutator_ledger.py "
+        "--action-effects <single_action_effects.jsonl> "
+        "--pair-effects <composite_action_effects.jsonl> "
+        "--output <commutator_output_dir>"
+    )
     return {
         "schema": ACTION_COMMUTATOR_NEEDS_MEASUREMENT_SCHEMA,
         "first_action_id": first.action_id,
@@ -304,10 +314,16 @@ def _needs_measurement_row(
         "second_delta_score_total": second.delta_score_total,
         "first_delta_score_nonrate": first.delta_score_nonrate,
         "second_delta_score_nonrate": second.delta_score_nonrate,
+        "additive_delta_score_total": additive_delta_total,
+        "additive_delta_score_nonrate": additive_delta_nonrate,
+        "additive_delta_bytes": additive_delta_bytes,
+        "byte_cost": None if additive_delta_bytes is None else abs(additive_delta_bytes),
         "pair_ids": sorted(set(first.pair_ids) | set(second.pair_ids)),
         "region_ids": sorted(set(first.region_ids) | set(second.region_ids)),
         "comm": None,
         "classification": None,
+        "first_measurement_command": command,
+        "measurement_command_blockers": ["composite_action_effect_row_missing"],
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
 
@@ -319,6 +335,7 @@ def build_commutator_ledger(
     eps: float = DEFAULT_COMMUTATOR_EPS,
     macro_action_limit: int = 16,
     conflict_pair_limit: int = 16,
+    first_measurement_command: str | None = None,
 ) -> dict[str, Any]:
     """Build the pairwise commutator ledger over ActionEffect rows.
 
@@ -367,6 +384,7 @@ def build_commutator_ledger(
                         first,
                         second,
                         reason="no_measured_composite_for_ordered_pair",
+                        first_measurement_command=first_measurement_command,
                     )
                 )
                 continue
@@ -381,6 +399,7 @@ def build_commutator_ledger(
                         first,
                         second,
                         reason=f"measured_composite_incompatible:{exc.args[0] if exc.args else exc}",
+                        first_measurement_command=first_measurement_command,
                     )
                 )
 
@@ -412,9 +431,26 @@ def build_commutator_ledger(
             "commutator_values_are_measured_never_invented": True,
             "unmeasured_pairs_emit_needs_measurement_rows": True,
             "composition_is_order_sensitive": True,
+            "measurement_queue_carries_first_command": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
+
+
+def _add_optional_floats(left: float | None, right: float | None) -> float | None:
+    if left is None or right is None:
+        return None
+    left_f = float(left)
+    right_f = float(right)
+    if not math.isfinite(left_f) or not math.isfinite(right_f):
+        return None
+    return left_f + right_f
+
+
+def _add_optional_ints(left: int | None, right: int | None) -> int | None:
+    if left is None or right is None:
+        return None
+    return int(left) + int(right)
 
 
 def _coerce_effects(effects: Sequence[Any], label: str) -> list[ActionEffect]:

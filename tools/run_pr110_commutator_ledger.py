@@ -179,17 +179,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("--eps must be non-negative")
 
     singles = _read_effects(args.action_effects)
-    pairs = _read_effects(args.pair_effects) if args.pair_effects is not None else []
+    out_dir = args.output if args.output is not None else _default_output_dir()
+    default_pair_effects = out_dir / "pr110_composite_action_effects.jsonl"
+    pair_effects_path = args.pair_effects if args.pair_effects is not None else default_pair_effects
+    pairs = _read_effects(pair_effects_path) if pair_effects_path.exists() else []
 
+    first_measurement_command = (
+        "uv run python tools/run_pr110_commutator_ledger.py "
+        f"--action-effects {args.action_effects.as_posix()} "
+        f"--pair-effects {pair_effects_path.as_posix()} "
+        f"--output {out_dir.as_posix()}"
+    )
     ledger = build_commutator_ledger(
         singles,
         pairs,
         eps=args.eps,
         macro_action_limit=max(args.top_k, 0),
         conflict_pair_limit=max(args.top_k, 0),
+        first_measurement_command=first_measurement_command,
     )
 
-    out_dir = args.output if args.output is not None else _default_output_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     jsonl_path = out_dir / "commutator_ledger.jsonl"
     summary_path = out_dir / "commutator_summary.json"

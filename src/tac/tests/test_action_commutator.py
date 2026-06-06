@@ -271,6 +271,11 @@ def test_ledger_emits_measured_row_and_queue_for_missing_reverse_pair():
     assert q["second_action_id"] == "A"
     assert q["proposed_composite_action_id"] == "B__then__A"
     assert q["comm"] is None  # NEVER fabricated
+    assert q["additive_delta_score_total"] == pytest.approx(a.delta_score_total + b.delta_score_total)
+    assert q["additive_delta_bytes"] == 0
+    assert q["byte_cost"] == 0
+    assert q["first_measurement_command"].startswith("uv run python tools/run_pr110_commutator_ledger.py")
+    assert q["measurement_command_blockers"] == ["composite_action_effect_row_missing"]
 
 
 def test_ledger_queue_when_no_pair_effects_at_all():
@@ -283,6 +288,7 @@ def test_ledger_queue_when_no_pair_effects_at_all():
     assert ledger["measured_commutator_count"] == 0
     assert ledger["needs_measurement_count"] == 6
     assert all(r["comm"] is None for r in ledger["measurement_queue"])
+    assert all("first_measurement_command" in r for r in ledger["measurement_queue"])
 
 
 def test_ledger_queues_pair_with_incompatible_authority_never_fabricates():
@@ -474,6 +480,15 @@ def test_cli_smoke_no_pair_effects_all_queued(tmp_path: Path):
     summary = json.loads((out_dir / "commutator_summary.json").read_text())
     assert summary["measured_commutator_count"] == 0
     assert summary["needs_measurement_count"] == 2
+    assert summary["measurement_queue"][0]["first_measurement_command"] == (
+        "uv run python tools/run_pr110_commutator_ledger.py "
+        f"--action-effects {singles_path.as_posix()} "
+        f"--pair-effects {(out_dir / 'pr110_composite_action_effects.jsonl').as_posix()} "
+        f"--output {out_dir.as_posix()}"
+    )
+    assert summary["measurement_queue"][0]["additive_delta_score_total"] == pytest.approx(
+        a.delta_score_total + b.delta_score_total
+    )
 
 
 def test_cli_missing_action_effects_file_errors(tmp_path: Path):
