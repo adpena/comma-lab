@@ -43,6 +43,16 @@ def test_witness_dag_blocks_hinerv_long_run_on_spilling_hard_birth_smoke(
     assert payload["parseback_contract_evidence"]["implemented_contract_present"] is True
     nodes = {row["node_id"]: row for row in payload["gate_nodes"]}
     assert nodes["shared.parseback_selection_contract"]["status"] == "succeeded"
+    servo = nodes["shared.pair_local_distortion_servo_contract"]
+    assert servo["status"] == "succeeded"
+    assert servo["evidence"]["implemented_contract_present"] is True
+    assert (
+        "archive_parseback_survival"
+        in servo["evidence"]["contract"]["survival_gates"]
+    )
+    assert "shared.pair_local_distortion_servo_contract" in nodes[
+        "shared.joint_seg_pose_trust_region"
+    ]["dependencies"]
     assert nodes["hinerv.short_receiver_surface_smoke"]["status"] == "succeeded"
     birth = nodes["shared.distortion_birth_before_rate_pressure"]
     assert birth["status"] == "blocked"

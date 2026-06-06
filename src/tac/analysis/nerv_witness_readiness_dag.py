@@ -21,6 +21,10 @@ from comma_lab.scheduler.staircase_dag import (
     build_staircase_dag_from_experiment_queue,
     plan_staircase_dispatch,
 )
+from tac.analysis.nerv_pair_local_distortion_servo import (
+    PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA,
+    pair_local_servo_static_contract,
+)
 from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
     apply_proxy_evidence_boundary,
@@ -69,6 +73,7 @@ def build_nerv_witness_readiness_dag(
     )
     snerv_evidence = _snerv_authority_gate_evidence(snerv_authority_gate_report)
     parseback = _parseback_contract_evidence(repo)
+    pair_servo = _pair_local_servo_contract_evidence(repo)
 
     nodes = _node_specs(
         repo_root=repo,
@@ -77,6 +82,7 @@ def build_nerv_witness_readiness_dag(
         hinerv_evidence=hinerv_evidence,
         snerv_evidence=snerv_evidence,
         parseback_evidence=parseback,
+        pair_servo_evidence=pair_servo,
     )
     queue = _queue_from_nodes(nodes, queue_id=dag_id)
     dag = build_staircase_dag_from_experiment_queue(
@@ -163,6 +169,7 @@ def build_nerv_witness_readiness_dag(
             "hinerv_smoke_evidence": hinerv_evidence,
             "snerv_authority_gate_evidence": snerv_evidence,
             "parseback_contract_evidence": parseback,
+            "pair_local_servo_contract_evidence": pair_servo,
             "long_training_approved": False,
             "hinerv_long_training_approved": False,
             "snerv_long_training_approved": False,
@@ -264,6 +271,53 @@ def _parseback_contract_evidence(repo: Path) -> dict[str, Any]:
             "run",
             "pytest",
             "src/tac/tests/test_long_training_archive_selection.py",
+            "-q",
+        ],
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def _pair_local_servo_contract_evidence(repo: Path) -> dict[str, Any]:
+    source = repo / "src/tac/analysis/nerv_pair_local_distortion_servo.py"
+    tests = repo / "src/tac/tests/test_nerv_pair_local_distortion_servo.py"
+    source_text = source.read_text(encoding="utf-8") if source.is_file() else ""
+    test_text = tests.read_text(encoding="utf-8") if tests.is_file() else ""
+    required_needles = [
+        "admit_pair_local_distortion_action",
+        "PairLocalSurfaceTrace",
+        "PairLocalScoreState",
+        "select_worst_scorer_debt_target",
+        "exact_pair_local_score_delta",
+        "PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA",
+    ]
+    test_needles = [
+        "test_admits_frame1_pair_local_action_only_after_parseback_survival",
+        "test_rejects_subquantum_float_update_even_when_score_numbers_improve",
+        "test_rejects_live_argmax_motion_lost_by_fakequant_or_parseback",
+        "test_rejects_when_exact_nonlinear_score_worsens_despite_seg_improvement",
+        "test_frame0_pose_only_cannot_claim_segnet_mutation",
+    ]
+    missing = [
+        needle for needle in required_needles if needle not in source_text
+    ] + [needle for needle in test_needles if needle not in test_text]
+    contract = pair_local_servo_static_contract()
+    contract_schema_ok = (
+        contract.get("schema") == PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA
+    )
+    if not contract_schema_ok:
+        missing.append("pair_local_servo_static_contract_schema_mismatch")
+    return {
+        "schema": "nerv_pair_local_distortion_servo_static_evidence.v1",
+        "source_path": source.as_posix(),
+        "test_path": tests.as_posix(),
+        "implemented_contract_present": not missing,
+        "missing_needles": missing,
+        "contract": contract,
+        "recommended_validation_command": [
+            "uv",
+            "run",
+            "pytest",
+            "src/tac/tests/test_nerv_pair_local_distortion_servo.py",
             "-q",
         ],
         **PROXY_FALSE_AUTHORITY_FIELDS,
@@ -521,8 +575,10 @@ def _node_specs(
     hinerv_evidence: Mapping[str, Any],
     snerv_evidence: Mapping[str, Any],
     parseback_evidence: Mapping[str, Any],
+    pair_servo_evidence: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     parseback_ok = bool(parseback_evidence.get("implemented_contract_present"))
+    pair_servo_ok = bool(pair_servo_evidence.get("implemented_contract_present"))
     source_boundary_ok = bool(source_boundary_evidence.get("source_boundary_clean"))
     source_boundary_blockers = list(source_boundary_evidence.get("blockers") or [])
     oracle_cache = {
@@ -667,10 +723,36 @@ def _node_specs(
             ),
         ),
         _node(
+            node_id="shared.pair_local_distortion_servo_contract",
+            family="shared",
+            stage="pair_local_distortion_servo_contract",
+            priority=6,
+            command=[
+                "uv",
+                "run",
+                "pytest",
+                "src/tac/tests/test_nerv_pair_local_distortion_servo.py",
+                "-q",
+            ],
+            dependencies=["shared.distortion_birth_before_rate_pressure"],
+            satisfied=pair_servo_ok,
+            blockers=(
+                []
+                if pair_servo_ok
+                else ["pair_local_distortion_servo_contract_missing"]
+            ),
+            evidence=pair_servo_evidence,
+            acceptance=(
+                "pair-local actions are admitted only after uint8/preprocess/"
+                "SegNet/Pose/fakequant/archive-parseback survival and exact "
+                "nonlinear score improvement"
+            ),
+        ),
+        _node(
             node_id="shared.joint_seg_pose_trust_region",
             family="shared",
             stage="joint_seg_pose_trust_region",
-            priority=6,
+            priority=7,
             command=[
                 "uv",
                 "run",
@@ -678,7 +760,10 @@ def _node_specs(
                 "src/tac/substrates/hi_nerv/tests/test_short_scorer_readiness.py",
                 "-q",
             ],
-            dependencies=["shared.distortion_birth_before_rate_pressure"],
+            dependencies=[
+                "shared.distortion_birth_before_rate_pressure",
+                "shared.pair_local_distortion_servo_contract",
+            ],
             satisfied=False,
             blockers=["joint_seg_pose_exact_delta_admission_not_yet_proven_in_smoke"],
             evidence={
@@ -696,7 +781,7 @@ def _node_specs(
             node_id="hinerv.localized_target_region_projection_actuator",
             family="hi_nerv",
             stage="localized_target_region_projection",
-            priority=7,
+            priority=8,
             command=[
                 "uv",
                 "run",
@@ -723,7 +808,7 @@ def _node_specs(
             node_id="snerv.official_mfu_hfr_tub_source_forward",
             family="snerv",
             stage="official_mfu_hfr_tub_source_forward",
-            priority=8,
+            priority=9,
             command=[
                 "uv",
                 "run",
