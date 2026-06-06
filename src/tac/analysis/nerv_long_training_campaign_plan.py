@@ -1027,6 +1027,9 @@ def build_nerv_long_training_campaign_plan(
                 "needs_measurement_count"
             ]
         ),
+        "action_effect_inline_measured_interaction_count": (
+            action_effect_planning_bundle["inline_measured_interaction_count"]
+        ),
         "action_effect_selector_planning_consumed_by_queue": (
             experiment_queue.get("action_effect_planning_bundle")
             == action_effect_planning_bundle
@@ -2573,6 +2576,9 @@ def _action_effect_planning_bundle(
         reverse=True,
     )
     commutator_ledger = build_commutator_ledger(effects)
+    inline_commutator_count = sum(
+        1 for effect in effects if effect.interaction_or_commutator is not None
+    )
     receiver_closed_count = sum(
         1 for effect in effects if receiver_closed_by_key.get(_action_effect_identity_key(effect), False)
     )
@@ -2583,6 +2589,7 @@ def _action_effect_planning_bundle(
         "independent_delta_assumption_allowed": False,
         "receiver_closed_action_count": receiver_closed_count,
         "advisory_false_authority_action_count": len(effects) - receiver_closed_count,
+        "inline_measured_interaction_count": inline_commutator_count,
         "measured_commutator_count": commutator_ledger["measured_commutator_count"],
         "needs_measurement_count": commutator_ledger["needs_measurement_count"],
         "macro_action_candidate_count": len(commutator_ledger["macro_action_candidates"]),
@@ -2610,6 +2617,7 @@ def _action_effect_planning_bundle(
         "effect_count": len(effects),
         "receiver_closed_effect_count": receiver_closed_count,
         "advisory_false_authority_effect_count": len(effects) - receiver_closed_count,
+        "inline_measured_interaction_count": inline_commutator_count,
         "effects": [effect.as_dict() for effect in effects],
         "commutator_ledger": commutator_ledger,
         "selector_planning": selector_planning,

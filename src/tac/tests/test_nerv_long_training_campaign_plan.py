@@ -1010,6 +1010,7 @@ def test_long_training_campaign_plan_consumes_direct_hinerv_action_effect_source
         new_d_seg=0.10,
         old_d_pose=0.40,
         new_d_pose=0.30,
+        interaction_or_commutator=0.5,
     ).as_dict()
 
     report = build_nerv_long_training_campaign_plan(
@@ -1043,7 +1044,10 @@ def test_long_training_campaign_plan_consumes_direct_hinerv_action_effect_source
     assert report["action_effect_source_count"] == 3
     assert bundle["effect_count"] >= 3
     assert bundle["advisory_false_authority_effect_count"] >= 3
+    assert bundle["inline_measured_interaction_count"] >= 1
     assert bundle["selector_planning"]["advisory_false_authority_action_count"] >= 3
+    assert bundle["selector_planning"]["inline_measured_interaction_count"] >= 1
+    assert report["action_effect_inline_measured_interaction_count"] >= 1
     direct_effects = [
         row
         for row in bundle["effects"]
