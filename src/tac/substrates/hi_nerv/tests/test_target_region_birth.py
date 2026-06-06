@@ -641,6 +641,10 @@ def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() ->
     assert telemetry["unsolved_tail_pixel_count"] == 24
     assert telemetry["already_won_region_pixel_count"] == 24
     assert telemetry["max_candidate_region_hard_won_delta"] >= 24
+    assert telemetry["attempts"]
+    assert any(record["decision"] == "accepted" for record in telemetry["attempts"])
+    assert max(record["region_net_target_support_delta"] for record in telemetry["attempts"]) >= 24
+    assert all(record["already_won_lost_count"] == 0 for record in telemetry["attempts"])
 
 
 @skip_no_mlx

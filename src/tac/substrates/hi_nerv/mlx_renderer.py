@@ -3406,6 +3406,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         max_quantum_growth_attempts = 20
         max_backtracking_attempts = 8
         min_lr = lr * (0.5**max_backtracking_attempts)
+        candidate_attempt_records: list[dict[str, Any]] = []
 
         def _gate_with_optional_compensation(
             *,
@@ -3624,6 +3625,34 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         )
                 if joint_rejects:
                     joint_rejected_candidate_count += 1
+                candidate_attempt_record: dict[str, Any] = {
+                    "step_index": int(len(loss_history) - 1),
+                    "attempt_learning_rate": float(attempt_lr),
+                    "receiver_uint8_changed_pixels_region": int(changed_in_region),
+                    "receiver_uint8_changed_pixels_unsolved_tail": int(
+                        np.count_nonzero(np.any(step_base_uint8 != candidate["uint8"], axis=-1) & unsolved_tail_bool_np)
+                    ),
+                    "argmax_changed_count_region": int(candidate_argmax_flipped_region),
+                    "region_wrong_to_target_count": int(region_transitions["wrong_to_target_count"]),
+                    "region_target_to_wrong_count": int(region_transitions["target_to_wrong_count"]),
+                    "region_net_target_support_delta": int(net_target_support_delta),
+                    "already_won_lost_count": int(already_won_lost_count),
+                    "unsolved_tail_hard_won_delta": float(tail_hard_won_delta),
+                    "unsolved_tail_hard_ratio_delta": float(tail_hard_ratio_delta),
+                    "unsolved_tail_margin_mean_improvement": float(tail_margin_mean_improvement),
+                    "unsolved_tail_margin_p50_improvement": float(tail_margin_p50_improvement),
+                    "region_progress": bool(region_progress),
+                    "pose_output_delta_l2": (None if pose_delta is None else float(pose_delta)),
+                    "pose_cap_satisfied": bool(not pose_cap_rejects),
+                    "joint_score_improved": bool(not joint_rejects),
+                    "candidate_nonrate_score": (
+                        None if candidate_nonrate is None else float(candidate_nonrate)
+                    ),
+                    "best_nonrate_score_before_attempt": (
+                        None if best_nonrate is None else float(best_nonrate)
+                    ),
+                    "decision": "pending",
+                }
 
                 if pose_cap_rejects or joint_rejects:
                     # The frame1 birth step is receiver-visible but loses the
@@ -3653,28 +3682,41 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         if composite_pose_delta is not None:
                             max_accepted_pose_delta_l2 = max(max_accepted_pose_delta_l2, composite_pose_delta)
                         current_lr = attempt_lr
+                        candidate_attempt_record["decision"] = "accepted_with_frame0_pose_compensation"
+                        candidate_attempt_records.append(candidate_attempt_record)
                         break
                     # No admissible composite: restore the frame1 birth step and
                     # fall back to the existing backtrack/reject disposition.
                     _restore_parameters(base_snapshot)
                     if attempt_lr * 0.5 >= min_lr:
                         backtracking_attempt_count += 1
+                        candidate_attempt_record["decision"] = (
+                            "backtrack_pose_cap" if pose_cap_rejects else "backtrack_joint_score"
+                        )
+                        candidate_attempt_records.append(candidate_attempt_record)
                         attempt_lr *= 0.5
                         continue
                     if pose_cap_rejects:
                         pose_guard_rejected_step_count += 1
+                        candidate_attempt_record["decision"] = "rejected_pose_cap"
                     else:
                         joint_score_rejected_step_count += 1
+                        candidate_attempt_record["decision"] = "rejected_joint_score"
+                    candidate_attempt_records.append(candidate_attempt_record)
                     rejected_step_count += 1
                     break
                 if not region_progress:
                     _restore_parameters(base_snapshot)
                     if attempt_lr * 0.5 >= min_lr:
                         backtracking_attempt_count += 1
+                        candidate_attempt_record["decision"] = "backtrack_no_unsolved_tail_progress"
+                        candidate_attempt_records.append(candidate_attempt_record)
                         attempt_lr *= 0.5
                         continue
                     no_progress_rejected_step_count += 1
                     rejected_step_count += 1
+                    candidate_attempt_record["decision"] = "rejected_no_unsolved_tail_progress"
+                    candidate_attempt_records.append(candidate_attempt_record)
                     break
                 step_accepted = True
                 accepted_step_count += 1
@@ -3690,6 +3732,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         pose_delta,
                     )
                 current_lr = attempt_lr
+                candidate_attempt_record["decision"] = "accepted"
+                candidate_attempt_records.append(candidate_attempt_record)
                 break
             if (
                 "hinerv_target_region_birth_no_scoped_gradient_signal" in blockers
@@ -3817,6 +3861,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "min_pose_rejected_pose_output_delta_l2": (
                 None if min_pose_rejected_pose_delta_l2 is None else float(min_pose_rejected_pose_delta_l2)
             ),
+            "attempts": candidate_attempt_records,
             "reference_region_stats": "current_best_live_mlx",
             "human_visual_fidelity_objective": False,
         }
