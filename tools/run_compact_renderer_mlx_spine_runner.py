@@ -12118,6 +12118,121 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         if archive_file_path is not None and archive_file_path.parent.is_dir()
         else training_dir
     )
+    receiver_cache_quality_scope = (
+        _hi_nerv_effective_receiver_cache_quality_max_pairs(
+            requested_max_pairs=int(receiver_cache_quality_max_pairs),
+            num_pairs=int(num_pairs),
+            train_batch_pairs=int(batch_pair_indices_per_step),
+        )
+    )
+    receiver_replay_archive_selection = (
+        _write_hi_nerv_runner_receiver_replay_archive_selection(
+            requested=bool(post_export_receiver_cache_quality_gate),
+            archive_resolution=archive_resolution,
+            source_video_path=resolved_source_video,
+            output_dir=training_dir,
+            reference_cache_dir=receiver_cache_quality_reference_cache_dir,
+            max_pairs=int(receiver_cache_quality_scope["effective_max_pairs"]),
+            batch_pairs=int(receiver_cache_quality_batch_pairs),
+            pair_indices=tuple(int(value) for value in prioritized_pair_indices),
+            min_segnet_std=float(receiver_cache_quality_min_segnet_std),
+            min_segnet_dynamic_range=float(
+                receiver_cache_quality_min_segnet_dynamic_range
+            ),
+            max_segnet_mae_vs_reference_for_fit_gate=float(
+                receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+            ),
+            min_posenet_yuv6_std=float(receiver_cache_quality_min_posenet_yuv6_std),
+            min_posenet_yuv6_dynamic_range=float(
+                receiver_cache_quality_min_posenet_yuv6_dynamic_range
+            ),
+            max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
+                receiver_cache_quality_max_posenet_yuv6_mae_vs_reference_for_fit_gate
+            ),
+            min_posenet_yuv6_temporal_signal_std_for_fit_gate=float(
+                receiver_cache_quality_min_posenet_yuv6_temporal_signal_std_for_fit_gate
+            ),
+            min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=float(
+                receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
+            ),
+            segnet_argmax_probe=bool(receiver_cache_quality_segnet_argmax_probe),
+            segnet_argmax_batch_frames=int(
+                receiver_cache_quality_segnet_argmax_batch_frames
+            ),
+            max_segnet_argmax_disagreement_for_fit_gate=float(
+                receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
+            ),
+            min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+                receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+            ),
+            mlx_scorer_response_probe=bool(
+                receiver_cache_quality_mlx_scorer_response_probe
+            ),
+            mlx_scorer_response_upstream_dir=scorer_upstream,
+            mlx_scorer_response_device_type=str(
+                receiver_cache_quality_mlx_scorer_response_device_type
+            ),
+            mlx_scorer_response_batch_pairs=int(
+                receiver_cache_quality_mlx_scorer_response_batch_pairs
+            ),
+            max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
+                receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
+            ),
+            max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
+                receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
+            ),
+            repo_root=root,
+        )
+    )
+    if isinstance(receiver_replay_archive_selection, dict):
+        selected_replay_archive = receiver_replay_archive_selection.get(
+            "selected_archive_path"
+        )
+        if isinstance(selected_replay_archive, str) and selected_replay_archive:
+            replay_archive_file_path = Path(selected_replay_archive).expanduser()
+            replay_archive_file_path = (
+                replay_archive_file_path
+                if replay_archive_file_path.is_absolute()
+                else (root / replay_archive_file_path)
+            ).resolve(strict=False)
+            if replay_archive_file_path.is_file():
+                archive_file_path = replay_archive_file_path
+                archive_path = archive_file_path.as_posix()
+                archive_artifact_dir = archive_file_path.parent
+                artifact_dict["archive_path"] = archive_path
+                artifact_dict["archive_bytes"] = receiver_replay_archive_selection.get(
+                    "selected_archive_bytes"
+                )
+                artifact_dict["archive_sha256"] = (
+                    receiver_replay_archive_selection.get("selected_archive_sha256")
+                )
+                artifact_dict["receiver_replay_archive_selection"] = dict(
+                    receiver_replay_archive_selection
+                )
+                archive_resolution = dict(archive_resolution)
+                archive_resolution["receiver_replay_archive_selection"] = {
+                    key: value
+                    for key, value in receiver_replay_archive_selection.items()
+                    if key != "selected_receiver_replay_report"
+                }
+                archive_resolution["archive_path"] = archive_path
+                archive_resolution["archive_bytes"] = (
+                    receiver_replay_archive_selection.get("selected_archive_bytes")
+                )
+                archive_resolution["archive_sha256"] = (
+                    receiver_replay_archive_selection.get("selected_archive_sha256")
+                )
+                archive_resolution["candidate_kind"] = (
+                    receiver_replay_archive_selection.get("selected_candidate_kind")
+                )
+                archive_resolution[
+                    "source"
+                ] = "receiver_replay_archive_selection"
+                _attach_hi_nerv_runner_archive_resolution(
+                    artifact_dict=artifact_dict,
+                    output_dir=training_dir,
+                    archive_resolution=archive_resolution,
+                )
     archive_codec_custody = _hi_nerv_archive_codec_custody(
         archive_artifact_dir=archive_artifact_dir,
         launch_decoder_codec=launch_decoder_codec,
@@ -12127,15 +12242,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=training_dir,
         codec_custody=archive_codec_custody,
     )
-    receiver_cache_quality_scope = (
-        _hi_nerv_effective_receiver_cache_quality_max_pairs(
-            requested_max_pairs=int(receiver_cache_quality_max_pairs),
-            num_pairs=int(num_pairs),
-            train_batch_pairs=int(batch_pair_indices_per_step),
-        )
+    replay_selected_report = (
+        receiver_replay_archive_selection.get("selected_receiver_replay_report")
+        if isinstance(receiver_replay_archive_selection, dict)
+        else None
     )
     post_export_receiver_cache_quality = (
-        _write_hi_nerv_runner_post_export_receiver_cache_quality(
+        replay_selected_report
+        if isinstance(replay_selected_report, dict)
+        else _write_hi_nerv_runner_post_export_receiver_cache_quality(
             requested=bool(post_export_receiver_cache_quality_gate),
             archive_zip_path=archive_file_path,
             source_video_path=resolved_source_video,
@@ -15618,7 +15733,31 @@ def _hi_nerv_runner_archive_resolution_from_artifact(
 
     unique_candidates: dict[str, dict[str, Any]] = {}
     for candidate in candidates:
-        unique_candidates.setdefault(str(candidate["archive_path"]), candidate)
+        key = str(candidate["archive_path"])
+        existing = unique_candidates.get(key)
+        if existing is None:
+            unique_candidates[key] = candidate
+            continue
+        for merge_key in (
+            "candidate_kind",
+            "selector_status",
+            "selector_failure",
+            "archive_sha256",
+            "archive_bytes",
+            "source",
+        ):
+            if not existing.get(merge_key) and candidate.get(merge_key):
+                existing[merge_key] = candidate[merge_key]
+        existing["selected_for_training_artifact"] = bool(
+            existing.get("selected_for_training_artifact")
+            or candidate.get("selected_for_training_artifact")
+        )
+        existing["diagnostic_only"] = bool(
+            existing.get("diagnostic_only") and candidate.get("diagnostic_only")
+        )
+        existing["byte_cap_rejected"] = bool(
+            existing.get("byte_cap_rejected") or candidate.get("byte_cap_rejected")
+        )
     candidates = list(unique_candidates.values())
 
     def _sort_key(candidate: Mapping[str, Any]) -> tuple[int, int, int, str]:
@@ -20801,6 +20940,249 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
+
+
+def _hi_nerv_receiver_replay_selection_score(
+    report: Mapping[str, Any] | None,
+) -> float | None:
+    """Return archive-backed local scorer score when receiver replay produced it."""
+
+    if not isinstance(report, Mapping):
+        return None
+    probe = report.get("mlx_scorer_response_probe")
+    if not isinstance(probe, Mapping):
+        return None
+    return _first_finite_float(probe.get("canonical_score"))
+
+
+def _write_hi_nerv_runner_receiver_replay_archive_selection(
+    *,
+    requested: bool,
+    archive_resolution: Mapping[str, Any],
+    source_video_path: str | Path,
+    output_dir: str | Path,
+    reference_cache_dir: str | Path | None,
+    max_pairs: int,
+    batch_pairs: int,
+    min_segnet_std: float,
+    min_segnet_dynamic_range: float,
+    max_segnet_mae_vs_reference_for_fit_gate: float,
+    segnet_argmax_probe: bool,
+    segnet_argmax_batch_frames: int,
+    max_segnet_argmax_disagreement_for_fit_gate: float,
+    min_segnet_argmax_occupied_class_fraction_for_fit_gate: float,
+    repo_root: str | Path,
+    min_posenet_yuv6_std: float = 1.0,
+    min_posenet_yuv6_dynamic_range: float = 16.0,
+    max_posenet_yuv6_mae_vs_reference_for_fit_gate: float = 64.0,
+    min_posenet_yuv6_temporal_signal_std_for_fit_gate: float = 0.25,
+    min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate: float = 0.25,
+    pair_indices: Sequence[int] = (),
+    mlx_scorer_response_probe: bool = True,
+    mlx_scorer_response_upstream_dir: str | Path | None = None,
+    mlx_scorer_response_device_type: str = "cpu",
+    mlx_scorer_response_batch_pairs: int = 1,
+    max_mlx_scorer_response_posenet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE
+    ),
+    max_mlx_scorer_response_segnet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE
+    ),
+) -> dict[str, Any] | None:
+    """Select HiNeRV live/EMA archive by receiver-replayed scorer response.
+
+    Training-side live/EMA selection can prefer a smoother proxy state whose
+    packed receiver output is worse.  This selector prices each exported
+    candidate through the HIV1 archive receiver and local MLX scorer probe, then
+    lets downstream gates consume the best replayed archive.  It is still
+    false-authority local evidence, not a contest score claim.
+    """
+
+    if not requested or not bool(mlx_scorer_response_probe):
+        return None
+    raw_candidates = archive_resolution.get("candidates")
+    if not isinstance(raw_candidates, Sequence) or isinstance(
+        raw_candidates, (str, bytes)
+    ):
+        return None
+    candidates: list[Mapping[str, Any]] = []
+    seen_paths: set[str] = set()
+    for raw in raw_candidates:
+        if not isinstance(raw, Mapping):
+            continue
+        raw_path = raw.get("archive_path")
+        if not isinstance(raw_path, str) or not raw_path:
+            continue
+        archive_path = Path(raw_path).expanduser().resolve(strict=False)
+        if not archive_path.is_file():
+            continue
+        key = archive_path.as_posix()
+        if key in seen_paths:
+            continue
+        seen_paths.add(key)
+        candidates.append(raw)
+    if len(candidates) < 2:
+        return None
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    selection_dir = out / "receiver_replay_archive_selection"
+    selection_dir.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, Any]] = []
+    selected_report: dict[str, Any] | None = None
+
+    for idx, candidate in enumerate(candidates):
+        archive_path = Path(str(candidate["archive_path"])).expanduser().resolve(
+            strict=False
+        )
+        kind = str(candidate.get("candidate_kind") or f"candidate_{idx}")
+        safe_kind = re.sub(r"[^A-Za-z0-9_.-]+", "_", kind).strip("._") or (
+            f"candidate_{idx}"
+        )
+        candidate_output_dir = selection_dir / f"{idx:02d}_{safe_kind}"
+        report = _write_hi_nerv_runner_post_export_receiver_cache_quality(
+            requested=True,
+            archive_zip_path=archive_path,
+            source_video_path=source_video_path,
+            output_dir=candidate_output_dir,
+            reference_cache_dir=reference_cache_dir,
+            max_pairs=max_pairs,
+            batch_pairs=batch_pairs,
+            pair_indices=pair_indices,
+            min_segnet_std=min_segnet_std,
+            min_segnet_dynamic_range=min_segnet_dynamic_range,
+            max_segnet_mae_vs_reference_for_fit_gate=(
+                max_segnet_mae_vs_reference_for_fit_gate
+            ),
+            min_posenet_yuv6_std=min_posenet_yuv6_std,
+            min_posenet_yuv6_dynamic_range=min_posenet_yuv6_dynamic_range,
+            max_posenet_yuv6_mae_vs_reference_for_fit_gate=(
+                max_posenet_yuv6_mae_vs_reference_for_fit_gate
+            ),
+            min_posenet_yuv6_temporal_signal_std_for_fit_gate=(
+                min_posenet_yuv6_temporal_signal_std_for_fit_gate
+            ),
+            min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=(
+                min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
+            ),
+            segnet_argmax_probe=segnet_argmax_probe,
+            segnet_argmax_batch_frames=segnet_argmax_batch_frames,
+            max_segnet_argmax_disagreement_for_fit_gate=(
+                max_segnet_argmax_disagreement_for_fit_gate
+            ),
+            min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
+                min_segnet_argmax_occupied_class_fraction_for_fit_gate
+            ),
+            mlx_scorer_response_probe=True,
+            mlx_scorer_response_upstream_dir=mlx_scorer_response_upstream_dir,
+            mlx_scorer_response_device_type=mlx_scorer_response_device_type,
+            mlx_scorer_response_batch_pairs=mlx_scorer_response_batch_pairs,
+            max_mlx_scorer_response_posenet_dist_for_fit_gate=(
+                max_mlx_scorer_response_posenet_dist_for_fit_gate
+            ),
+            max_mlx_scorer_response_segnet_dist_for_fit_gate=(
+                max_mlx_scorer_response_segnet_dist_for_fit_gate
+            ),
+            repo_root=repo_root,
+        )
+        summary = _hi_nerv_receiver_cache_quality_summary(report)
+        local_score = _hi_nerv_receiver_replay_selection_score(report)
+        rows.append(
+            {
+                "schema": (
+                    "hi_nerv_receiver_replay_archive_selection_candidate.v1"
+                ),
+                "candidate_index": int(idx),
+                "candidate_kind": candidate.get("candidate_kind"),
+                "archive_path": archive_path.as_posix(),
+                "archive_sha256": candidate.get("archive_sha256"),
+                "archive_bytes": candidate.get("archive_bytes"),
+                "source": candidate.get("source"),
+                "selected_by_training_proxy": bool(
+                    candidate.get("selected_for_training_artifact")
+                ),
+                "diagnostic_only_before_receiver_replay": bool(
+                    candidate.get("diagnostic_only")
+                ),
+                "byte_cap_rejected": bool(candidate.get("byte_cap_rejected")),
+                "receiver_replay_report_path": (
+                    report.get("report_path") if isinstance(report, Mapping) else None
+                ),
+                "receiver_replay_summary": summary,
+                "receiver_replay_local_canonical_score": local_score,
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    finite_rows = [
+        row
+        for row in rows
+        if _first_finite_float(row.get("receiver_replay_local_canonical_score"))
+        is not None
+    ]
+    selected = None
+    if finite_rows:
+        selected = min(
+            finite_rows,
+            key=lambda row: (
+                int(bool(row.get("byte_cap_rejected"))),
+                float(row["receiver_replay_local_canonical_score"]),
+                int(row.get("archive_bytes") or 0),
+                0 if row.get("candidate_kind") == "ema" else 1,
+            ),
+        )
+        selected_report_path = selected.get("receiver_replay_report_path")
+        if isinstance(selected_report_path, str) and selected_report_path:
+            try:
+                selected_report = _load_json(Path(selected_report_path))
+            except Exception:
+                selected_report = None
+
+    manifest = {
+        "schema": "hi_nerv_receiver_replay_archive_selection.v1",
+        "selection_metric": "archive_backed_mlx_scorer_response_canonical_score",
+        "authority": "local_receiver_replay_false_authority",
+        "candidate_count": len(rows),
+        "selected_candidate_kind": (
+            selected.get("candidate_kind") if isinstance(selected, Mapping) else None
+        ),
+        "selected_archive_path": (
+            selected.get("archive_path") if isinstance(selected, Mapping) else None
+        ),
+        "selected_archive_sha256": (
+            selected.get("archive_sha256") if isinstance(selected, Mapping) else None
+        ),
+        "selected_archive_bytes": (
+            selected.get("archive_bytes") if isinstance(selected, Mapping) else None
+        ),
+        "selected_receiver_replay_local_canonical_score": (
+            selected.get("receiver_replay_local_canonical_score")
+            if isinstance(selected, Mapping)
+            else None
+        ),
+        "selected_receiver_replay_report_path": (
+            selected.get("receiver_replay_report_path")
+            if isinstance(selected, Mapping)
+            else None
+        ),
+        "rows": rows,
+        "blockers": _dedupe(
+            [
+                "hi_nerv_receiver_replay_archive_selection_is_false_authority",
+                *(
+                    ["hi_nerv_receiver_replay_archive_selection_no_finite_score"]
+                    if selected is None
+                    else []
+                ),
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+    if selected_report is not None:
+        manifest["selected_receiver_replay_report"] = selected_report
+    manifest_path = selection_dir / "receiver_replay_archive_selection.json"
+    manifest["manifest_path"] = manifest_path.as_posix()
+    _write_json(manifest_path, manifest)
+    return manifest
 
 
 def _argmax_histogram_occupied_fraction(histogram: Any) -> float | None:

@@ -85,7 +85,9 @@ def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() 
     assert "require_pose_direct_live_distillation" in helper
     assert "decoder_weight_waterfill_plan_metadata" in helper
     assert "output_head_target_bias_init_metadata" in helper
-    assert "_substrate_score_aware_training_from_artifact(artifact_dict)" in helper
+    assert "_reload_hi_nerv_training_artifact_for_readiness(" in helper
+    assert "_substrate_score_aware_training_from_artifact(" in helper
+    assert "readiness_artifact_dict" in helper
     assert "require_section_byte_dual_ascent=launch_hard_byte_ceiling is not None" in call
     assert "require_pose_direct_live_distillation=True" in call
     assert "decoder_weight_waterfill_plan_metadata=(" in call
@@ -146,6 +148,156 @@ def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None
         "                segnet_direct_live_target_min_ratio_floor_weight\n"
         "            ),"
     ) in execute_to_smoke_call
+
+
+def test_hinerv_receiver_replay_archive_selection_prefers_archive_backed_score(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    live_archive = tmp_path / "live" / "archive.zip"
+    ema_archive = tmp_path / "ema" / "archive.zip"
+    live_archive.parent.mkdir()
+    ema_archive.parent.mkdir()
+    live_archive.write_bytes(b"live")
+    ema_archive.write_bytes(b"ema")
+    calls: list[Path] = []
+
+    def fake_receiver_quality(**kwargs):
+        archive = Path(kwargs["archive_zip_path"])
+        calls.append(archive)
+        score = 12.0 if archive == live_archive else 25.0
+        report_dir = Path(kwargs["output_dir"]) / "post_export_receiver_cache_quality"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / "hi_nerv_receiver_cache_quality_report.json"
+        report = {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": report_path.as_posix(),
+            "archive_path": archive.as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "archive_bytes": archive.stat().st_size,
+            "quality_gate_passed": False,
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_probe": {
+                "fit_gate_passed": False,
+                "canonical_score": score,
+                "avg_segnet_dist": score / 100.0,
+                "avg_posenet_dist": score,
+            },
+            "blockers": ["test_false_authority"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        return report
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_write_hi_nerv_runner_post_export_receiver_cache_quality",
+        fake_receiver_quality,
+    )
+
+    manifest = runner_mod._write_hi_nerv_runner_receiver_replay_archive_selection(
+        requested=True,
+        archive_resolution={
+            "candidates": [
+                {
+                    "candidate_kind": "ema",
+                    "archive_path": ema_archive.as_posix(),
+                    "archive_sha256": runner_mod._sha256_file(ema_archive),
+                    "archive_bytes": ema_archive.stat().st_size,
+                    "selected_for_training_artifact": True,
+                    "diagnostic_only": False,
+                },
+                {
+                    "candidate_kind": "live",
+                    "archive_path": live_archive.as_posix(),
+                    "archive_sha256": runner_mod._sha256_file(live_archive),
+                    "archive_bytes": live_archive.stat().st_size,
+                    "selected_for_training_artifact": False,
+                    "diagnostic_only": True,
+                },
+            ],
+        },
+        source_video_path=tmp_path / "source.mkv",
+        output_dir=tmp_path / "out",
+        reference_cache_dir=None,
+        max_pairs=4,
+        batch_pairs=1,
+        min_segnet_std=1.0,
+        min_segnet_dynamic_range=16.0,
+        max_segnet_mae_vs_reference_for_fit_gate=64.0,
+        segnet_argmax_probe=True,
+        segnet_argmax_batch_frames=1,
+        max_segnet_argmax_disagreement_for_fit_gate=0.25,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.400001,
+        repo_root=tmp_path,
+        mlx_scorer_response_probe=True,
+        mlx_scorer_response_upstream_dir=tmp_path / "upstream",
+        mlx_scorer_response_device_type="cpu",
+        mlx_scorer_response_batch_pairs=1,
+    )
+
+    assert manifest is not None
+    assert calls == [ema_archive, live_archive]
+    assert manifest["selected_candidate_kind"] == "live"
+    assert manifest["selected_archive_path"] == live_archive.as_posix()
+    assert manifest["selected_receiver_replay_local_canonical_score"] == 12.0
+    assert Path(manifest["manifest_path"]).is_file()
+    assert manifest["score_claim"] is False
+
+
+def test_hinerv_archive_resolution_dedup_preserves_manifest_candidate_kind(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "training"
+    selection_dir = training_dir / "ema_archive_selection"
+    ema_archive = selection_dir / "ema" / "archive.zip"
+    live_archive = selection_dir / "live" / "archive.zip"
+    ema_archive.parent.mkdir(parents=True)
+    live_archive.parent.mkdir(parents=True)
+    ema_archive.write_bytes(b"ema")
+    live_archive.write_bytes(b"live")
+    manifest_path = selection_dir / "ema_archive_selection.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "long_training_ema_archive_selection.v1",
+                "selected_archive_path": ema_archive.as_posix(),
+                "selected_candidate_kind": "ema",
+                "rows": [
+                    {
+                        "candidate_kind": "ema",
+                        "status": "exported",
+                        "archive_path": ema_archive.as_posix(),
+                    },
+                    {
+                        "candidate_kind": "live",
+                        "status": "exported",
+                        "archive_path": live_archive.as_posix(),
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    resolution = runner_mod._hi_nerv_runner_archive_resolution_from_artifact(
+        artifact_dict={
+            "archive_path": ema_archive.as_posix(),
+            "archive_selection_manifest_path": manifest_path.as_posix(),
+        },
+        training_dir=training_dir,
+        repo_root=tmp_path,
+    )
+
+    assert resolution["archive_path"] == ema_archive.as_posix()
+    by_path = {
+        candidate["archive_path"]: candidate for candidate in resolution["candidates"]
+    }
+    assert by_path[ema_archive.as_posix()]["candidate_kind"] == "ema"
+    assert by_path[ema_archive.as_posix()]["selected_for_training_artifact"] is True
+    assert by_path[live_archive.as_posix()]["candidate_kind"] == "live"
 
 
 def _assert_compact_runner_rerun_provenance(
