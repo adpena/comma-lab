@@ -307,6 +307,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_archive_section_entropy_recode_candidate",
+        receiver_proof_function="build_archive_section_entropy_recode_receiver_proof",
+        receiver_verify_function="verify_archive_section_entropy_recode_receiver_contract",
     ),
     MaterializerAdapter(
         materializer_id=ARCHIVE_ZIP_REPACK_MATERIALIZER,
@@ -330,6 +332,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_archive_zip_repack_candidate",
+        receiver_proof_function="build_archive_zip_repack_receiver_proof",
+        receiver_verify_function="verify_archive_zip_repack_receiver_contract",
     ),
     _non_executable_family_adapter(
         materializer_id=ARCHIVE_SECTION_HEADER_ELIDE_MATERIALIZER,
@@ -441,6 +445,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_tensor_factorize_candidate",
+        receiver_proof_function="build_tensor_factorize_receiver_proof",
+        receiver_verify_function="verify_tensor_factorize_receiver_contract",
     ),
     _non_executable_family_adapter(
         materializer_id=TENSOR_SHARED_CODEBOOK_MATERIALIZER,
@@ -482,6 +488,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_packet_member_zip_header_elide_candidate",
+        receiver_proof_function="build_packet_member_zip_header_elide_receiver_proof",
+        receiver_verify_function="verify_packet_member_zip_header_elide_receiver_contract",
     ),
     MaterializerAdapter(
         materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER,
@@ -506,6 +514,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_packet_member_recompress_candidate",
+        receiver_proof_function="build_packet_member_recompress_receiver_proof",
+        receiver_verify_function="verify_packet_member_recompress_receiver_contract",
     ),
     _non_executable_family_adapter(
         materializer_id=PACKET_MEMBER_REORDER_MATERIALIZER,
@@ -549,6 +559,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_packet_member_merge_candidate",
+        receiver_proof_function="build_packet_member_merge_receiver_proof",
+        receiver_verify_function="verify_packet_member_merge_receiver_contract",
     ),
     MaterializerAdapter(
         materializer_id=RENDERER_PAYLOAD_DFL1_MATERIALIZER,
@@ -572,6 +584,8 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         implementation_module="tac.optimization.family_agnostic_materializers",
         materialize_function="materialize_renderer_payload_dfl1_candidate",
+        receiver_proof_function="build_renderer_payload_dfl1_receiver_proof",
+        receiver_verify_function="verify_renderer_payload_dfl1_receiver_contract",
     ),
     MaterializerAdapter(
         materializer_id=FECA_SELECTOR_REPARAMETERIZE_MATERIALIZER,
@@ -647,7 +661,6 @@ _ADAPTERS: tuple[MaterializerAdapter, ...] = (
         ),
         plan_function="build_entropy_delta_materializer_work_order",
         materialize_function="tools/materialize_z8_joint_p18_p19_deadzone_candidate.py",
-        receiver_proof_function="export_z8hpc1_archive_bytes",
     ),
 )
 

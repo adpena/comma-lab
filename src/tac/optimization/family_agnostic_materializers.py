@@ -56,6 +56,7 @@ ARCHIVE_ZIP_REPACK_TARGET_KIND = "archive_zip_repack_v1"
 PACKET_MEMBER_RECOMPRESS_TARGET_KIND = "packet_member_recompress_v1"
 PACKET_MEMBER_MERGE_TARGET_KIND = "packet_member_merge_v1"
 RENDERER_PAYLOAD_DFL1_TARGET_KIND = "renderer_payload_dfl1_v1"
+RENDERER_PAYLOAD_DFL1_PROOF_KIND = "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1"
 SHELL_INFLATE_PARITY_PROOF_SCHEMA = "shell_inflate_parity_proof_v2"
 SHELL_INFLATE_PARITY_SCOPE_DECLARED_FILE_LIST = "declared_file_list"
 SHELL_INFLATE_PARITY_SCOPE_CONTEST_FULL_SAMPLE = "contest_full_sample"
@@ -2373,6 +2374,167 @@ def verify_runtime_consumption_proof(
     }
 
 
+def build_archive_zip_repack_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _archive_zip_repack_runtime_consumption_proof(**kwargs)
+
+
+def verify_archive_zip_repack_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256s: Mapping[str, str] | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256s=required_candidate_member_sha256s,
+        required_proof_kind=ARCHIVE_ZIP_REPACK_PROOF_KIND,
+        required_receiver_contract_kind=ARCHIVE_ZIP_REPACK_RECEIVER_CONTRACT_KIND,
+        required_target_kind=ARCHIVE_ZIP_REPACK_TARGET_KIND,
+        required_materializer_id=ARCHIVE_ZIP_REPACK_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
+def build_packet_member_recompress_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _packet_member_recompress_runtime_consumption_proof(**kwargs)
+
+
+def verify_packet_member_recompress_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256: str | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256=required_candidate_member_sha256,
+        required_proof_kind=PACKET_MEMBER_RECOMPRESS_PROOF_KIND,
+        required_receiver_contract_kind=PACKET_MEMBER_RECOMPRESS_RECEIVER_CONTRACT_KIND,
+        required_target_kind=PACKET_MEMBER_RECOMPRESS_TARGET_KIND,
+        required_materializer_id=PACKET_MEMBER_RECOMPRESS_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
+def build_packet_member_merge_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _packet_member_merge_runtime_consumption_proof(**kwargs)
+
+
+def verify_packet_member_merge_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256: str | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256=required_candidate_member_sha256,
+        required_proof_kind=PACKET_MEMBER_MERGE_RUNTIME_ADAPTER_PROOF_KIND,
+        required_receiver_contract_kind=PACKET_MEMBER_MERGE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=PACKET_MEMBER_MERGE_TARGET_KIND,
+        required_materializer_id=PACKET_MEMBER_MERGE_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
+def build_packet_member_zip_header_elide_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _packet_member_zip_header_elide_runtime_consumption_proof(**kwargs)
+
+
+def verify_packet_member_zip_header_elide_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256s: Mapping[str, str] | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256s=required_candidate_member_sha256s,
+        required_proof_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_PROOF_KIND,
+        required_receiver_contract_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=PACKET_MEMBER_ZIP_HEADER_ELIDE_TARGET_KIND,
+        required_materializer_id=PACKET_MEMBER_ZIP_HEADER_ELIDE_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
+def build_archive_section_entropy_recode_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _archive_section_entropy_recode_runtime_consumption_proof(**kwargs)
+
+
+def verify_archive_section_entropy_recode_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256: str | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256=required_candidate_member_sha256,
+        required_proof_kind=ARCHIVE_SECTION_ENTROPY_RECODE_PROOF_KIND,
+        required_receiver_contract_kind=ARCHIVE_SECTION_ENTROPY_RECODE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=ARCHIVE_SECTION_ENTROPY_RECODE_TARGET_KIND,
+        required_materializer_id=ARCHIVE_SECTION_ENTROPY_RECODE_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
+def build_tensor_factorize_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _tensor_factorize_runtime_consumption_proof(**kwargs)
+
+
+def verify_tensor_factorize_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256: str | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256=required_candidate_member_sha256,
+        required_proof_kind=TENSOR_FACTORIZE_PROOF_KIND,
+        required_receiver_contract_kind=TENSOR_FACTORIZE_RECEIVER_CONTRACT_KIND,
+        required_target_kind=TENSOR_FACTORIZE_TARGET_KIND,
+        required_materializer_id=TENSOR_FACTORIZE_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
+def build_renderer_payload_dfl1_receiver_proof(**kwargs: Any) -> dict[str, Any]:
+    return _renderer_payload_dfl1_runtime_consumption_proof(**kwargs)
+
+
+def verify_renderer_payload_dfl1_receiver_contract(
+    *,
+    runtime_consumption_proof: str | Path | Mapping[str, Any] | None,
+    required_candidate_archive_sha256: str | None = None,
+    required_candidate_member_sha256: str | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    return verify_runtime_consumption_proof(
+        runtime_consumption_proof=runtime_consumption_proof,
+        required_candidate_archive_sha256=required_candidate_archive_sha256,
+        required_candidate_member_sha256=required_candidate_member_sha256,
+        required_proof_kind=RENDERER_PAYLOAD_DFL1_PROOF_KIND,
+        required_receiver_contract_kind="source_runtime_native_renderer_payload_dfl1",
+        required_target_kind=RENDERER_PAYLOAD_DFL1_TARGET_KIND,
+        required_materializer_id=RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
+        repo_root=repo_root,
+    )
+
+
 def _target_specific_runtime_consumption_blockers(
     proof: Mapping[str, Any],
     *,
@@ -3317,7 +3479,7 @@ def _renderer_payload_dfl1_runtime_consumption_proof(
     runtime_adapter_manifest["requires_full_frame_shell_parity"] = True
     return {
         "schema": RUNTIME_CONSUMPTION_PROOF_SCHEMA,
-        "proof_kind": "renderer_payload_dfl1_native_unpacker_reconstruction_smoke.v1",
+        "proof_kind": RENDERER_PAYLOAD_DFL1_PROOF_KIND,
         "target_kind": RENDERER_PAYLOAD_DFL1_TARGET_KIND,
         "materializer_id": RENDERER_PAYLOAD_DFL1_MATERIALIZER_ID,
         "receiver_contract_kind": "source_runtime_native_renderer_payload_dfl1",

@@ -75,9 +75,36 @@ class TargetRegionDebt:
     bbox_x0: int
     bbox_x1: int
 
+    def full_equivalent_score_debt_units(
+        self,
+        full_eval_total_scored_pixels: int,
+    ) -> float:
+        """Convert batch-local debt to full-eval score units.
+
+        The stored ``score_debt_units`` uses the batch-local
+        ``total_scored_pixels`` normalizer.  Value-per-byte and promotion math
+        must use the SAME units as ``evaluate.py`` (all scored pixels of the
+        full eval), otherwise a 4-pair smoke region looks ~150x overvalued
+        relative to byte price.
+        """
+
+        if full_eval_total_scored_pixels <= 0:
+            raise ValueError(
+                "full_eval_total_scored_pixels must be positive; got "
+                f"{full_eval_total_scored_pixels}"
+            )
+        return float(
+            100.0 * self.region_unsolved_pixel_count / full_eval_total_scored_pixels
+        )
+
     def as_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["schema"] = TARGET_REGION_DEBT_SCHEMA
+        # Denominator authority: this row's score units are normalized by the
+        # supplied batch only.  Consumers pricing bytes must re-normalize via
+        # full_equivalent_score_debt_units(...) before comparing to byte cost.
+        payload["normalization_authority"] = "batch_local_scored_pixels"
+        payload["score_debt_units_local"] = payload["score_debt_units"]
         payload.update(PROXY_FALSE_AUTHORITY_FIELDS)
         return payload
 

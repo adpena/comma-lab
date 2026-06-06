@@ -3245,7 +3245,25 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             for group in ("feature_grids", "fine_injector", "head_rgb_1"):
                 if name.startswith(f"{group}."):
                     return group
-            return "other"
+            return "out_of_scope"
+
+        def _parameter_group_sha256(snapshot: list[tuple[Any, Any]]) -> dict[str, str]:
+            """Hash every parameter group so 'scoped' is a receipt, not a claim."""
+
+            import hashlib
+
+            digests: dict[str, Any] = {}
+            for raw_name, leaf in sorted(
+                snapshot,
+                key=lambda item: _flat_param_name(item[0]),
+            ):
+                if leaf is None:
+                    continue
+                group = _group_for_name(_flat_param_name(raw_name))
+                digest = digests.setdefault(group, hashlib.sha256())
+                digest.update(_flat_param_name(raw_name).encode("utf-8"))
+                digest.update(np.ascontiguousarray(np.asarray(leaf)).tobytes())
+            return {group: digest.hexdigest() for group, digest in digests.items()}
 
         def _apply_scoped_step(
             base_snapshot: list[tuple[Any, Any]],
@@ -3320,6 +3338,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
 
         loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
         initial_snapshot = _snapshot_parameters()
+        parameter_group_sha256_before = _parameter_group_sha256(initial_snapshot)
         blockers: list[str] = []
         if not pose_available:
             blockers.append("hinerv_target_region_birth_pose_trust_telemetry_missing")
@@ -3456,6 +3475,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             _restore_parameters(initial_snapshot)
             blockers.append("hinerv_target_region_birth_no_accepted_step")
 
+        parameter_group_sha256_after = _parameter_group_sha256(_snapshot_parameters())
+        out_of_scope_bit_frozen_verified = parameter_group_sha256_before.get(
+            "out_of_scope"
+        ) == parameter_group_sha256_after.get("out_of_scope")
+        if not out_of_scope_bit_frozen_verified:
+            # Fail loudly: a scoped actuator that moved out-of-scope state is
+            # a contract violation, not a tunable.
+            blockers.append("hinerv_target_region_birth_out_of_scope_state_mutated")
         final = _region_candidate_state()
         after_stats = final["stats"]
         final_argmax_np = np.argmax(final["logits_np"], axis=-1)
@@ -3535,6 +3562,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "updated_parameter_names": sorted(accepted_update_names),
             "grad_norm_by_group": dict(last_grad_norm_by_group),
             "update_norm_by_group": dict(last_update_norm_by_group),
+            "parameter_group_sha256_before": parameter_group_sha256_before,
+            "parameter_group_sha256_after": parameter_group_sha256_after,
+            "out_of_scope_bit_frozen_verified": bool(out_of_scope_bit_frozen_verified),
             "pose_guard": pose_guard_payload,
             "receipt": receipt,
             "blockers": list(blockers),

@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import copy
 import hashlib
+import importlib
 import importlib.util
 import io
 import json
@@ -1078,6 +1079,7 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
         "target_kind": INVERSE_ACTION_HIGH_LEVEL_TARGET_KIND,
         "unit_kind": "scorer_inverse_surface_cell",
     }
+
     grammar_registry = manifest["cooperative_receiver_grammar_registry"]
     assert grammar_registry["schema"] == "cooperative_receiver_packet_grammar_registry_hook.v1"
     assert grammar_registry["known_grammar_count"] >= 1
@@ -1099,6 +1101,20 @@ def test_byte_shaving_materializer_registry_exposes_dqs1_and_byte_range_contract
     assert resolved.receiver_contract_kind == DQS1_RECEIVER_CONTRACT_KIND
     assert resolved.cooperative_receiver_required is True
     assert resolved.blockers == ()
+
+
+def test_executable_materializer_receiver_hooks_are_importable() -> None:
+    manifest = registry_manifest()
+    for row in manifest["adapters"]:
+        if row["executable"] is not True or row["emits_candidate_archive"] is not True:
+            continue
+        proof_function = row["receiver_proof_function"]
+        verify_function = row["receiver_verify_function"]
+        if not proof_function and not verify_function:
+            continue
+        module = importlib.import_module(row["implementation_module"])
+        assert callable(getattr(module, proof_function))
+        assert callable(getattr(module, verify_function))
 
 
 def test_byte_shaving_materializer_registry_refuses_implicit_dqs1_pair_drop() -> None:
@@ -1262,6 +1278,8 @@ def test_byte_shaving_materializer_registry_registers_z8_hpc1_entropy_delta() ->
     )
     assert resolved.adapter.plan_function == "build_entropy_delta_materializer_work_order"
     assert resolved.adapter.receiver_contract_kind == "z8_hpc1_generated_inflate_sh_decode_only_receiver"
+    assert resolved.adapter.receiver_proof_function == ""
+    assert resolved.adapter.receiver_verify_function == ""
 
 
 def test_materializer_registry_has_family_agnostic_fail_closed_targets() -> None:
