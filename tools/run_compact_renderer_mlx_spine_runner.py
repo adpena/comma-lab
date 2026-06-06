@@ -14209,6 +14209,129 @@ def _decoder_weight_waterfill_fake_quant_bits_by_name(
     return bits_by_name
 
 
+def _decoder_weight_waterfill_gradient_multiplier_by_name(
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+) -> tuple[dict[str, float], dict[str, Any]]:
+    """Derive train-time gradient pressure from validated waterfill actions."""
+
+    report: dict[str, Any] = {
+        "schema": "compact_hi_nerv_decoder_weight_waterfill_gradient_policy.v1",
+        "attached": decoder_weight_waterfill_plan is not None,
+        "active": False,
+        "source_schema": (
+            None
+            if decoder_weight_waterfill_plan is None
+            else decoder_weight_waterfill_plan.get("schema")
+        ),
+        "targeted_tensor_count": 0,
+        "multiplier_by_name": {},
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if decoder_weight_waterfill_plan is None:
+        return {}, report
+    try:
+        from tac.substrates.hi_nerv.bitstream import (
+            build_decoder_waterfill_fake_quant_forward_plan,
+        )
+
+        fake_quant_plan = build_decoder_waterfill_fake_quant_forward_plan(
+            decoder_weight_waterfill_plan
+        )
+    except Exception as exc:
+        report["blockers"] = [
+            f"decoder_weight_waterfill_gradient_policy_plan_invalid:{exc}"
+        ]
+        return {}, report
+
+    actuation_blockers = [
+        str(blocker) for blocker in fake_quant_plan.get("actuation_blockers") or []
+    ]
+    per_tensor_bits = {
+        str(name): int(bits)
+        for name, bits in dict(fake_quant_plan.get("per_tensor_bits") or {}).items()
+    }
+    report.update(
+        {
+            "fake_quant_plan_schema": fake_quant_plan.get("schema"),
+            "fake_quant_plan_method": fake_quant_plan.get("method"),
+            "fake_quant_plan_blockers": [
+                str(blocker) for blocker in fake_quant_plan.get("blockers") or []
+            ],
+            "fake_quant_plan_actuation_blockers": actuation_blockers,
+            "fake_quant_targeted_tensor_count": len(per_tensor_bits),
+            "fake_quant_per_tensor_bits": dict(sorted(per_tensor_bits.items())),
+            "skipped_row_count": len(fake_quant_plan.get("skipped_rows") or []),
+            "formula": (
+                "multiplier = min(4.0, max(1.05, sqrt(8 / max(bits, 1)))) "
+                "for receiver-visible waterfill-selected rows with bits < 32"
+            ),
+            "rationale": (
+                "The same waterfill rows that constrain receiver-visible decoder "
+                "weights should also exert bounded train-time pressure; otherwise "
+                "HiNeRV can carry a selected byte plan without proving that the "
+                "optimizer consumed it."
+            ),
+        }
+    )
+    if actuation_blockers:
+        report["blockers"] = actuation_blockers
+        return {}, report
+    multipliers: dict[str, float] = {}
+    for name, bits in per_tensor_bits.items():
+        if int(bits) >= 32:
+            continue
+        effective_bits = max(int(bits), 1)
+        multiplier = min(4.0, max(1.05, math.sqrt(8.0 / float(effective_bits))))
+        if multiplier != 1.0:
+            multipliers[name] = float(round(multiplier, 6))
+    report.update(
+        {
+            "active": bool(multipliers),
+            "targeted_tensor_count": len(multipliers),
+            "multiplier_by_name": dict(sorted(multipliers.items())),
+            "min_multiplier": (
+                None if not multipliers else min(float(v) for v in multipliers.values())
+            ),
+            "max_multiplier": (
+                None if not multipliers else max(float(v) for v in multipliers.values())
+            ),
+            "blockers": (
+                [] if multipliers else ["decoder_weight_waterfill_gradient_policy_no_targets"]
+            ),
+        }
+    )
+    return multipliers, report
+
+
+def _merge_decoder_waterfill_gradient_multiplier_controls(
+    *,
+    explicit_gradient_multiplier_by_name: Mapping[str, float],
+    waterfill_gradient_multiplier_by_name: Mapping[str, float],
+    waterfill_policy: Mapping[str, Any],
+) -> tuple[dict[str, float], dict[str, Any]]:
+    """Merge automatic waterfill controls with exact-name operator overrides."""
+
+    explicit = dict(explicit_gradient_multiplier_by_name)
+    waterfill = dict(waterfill_gradient_multiplier_by_name)
+    override_names = sorted(set(explicit) & set(waterfill))
+    merged = {**waterfill, **explicit}
+    policy = {
+        **dict(waterfill_policy),
+        "explicit_control_count": len(explicit),
+        "explicit_override_names": override_names,
+        "explicit_overrides_take_precedence": True,
+        "merged_control_count": len(merged),
+        "merged_multiplier_by_name": dict(sorted(merged.items())),
+        "active_after_merge": any(float(value) != 1.0 for value in merged.values()),
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+    return merged, policy
+
+
 def _attach_hi_nerv_decoder_weight_waterfill_launch_custody(
     plan: Mapping[str, Any] | None,
     metadata: Mapping[str, Any],
@@ -17805,8 +17928,22 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "segnet_direct_live_base_loss_weight must be finite and >= 0"
         )
-    normalized_gradient_multiplier_by_name = _normalize_gradient_multiplier_by_name(
+    explicit_gradient_multiplier_by_name = _normalize_gradient_multiplier_by_name(
         gradient_multiplier_by_name
+    )
+    (
+        waterfill_gradient_multiplier_by_name,
+        decoder_weight_waterfill_gradient_policy,
+    ) = _decoder_weight_waterfill_gradient_multiplier_by_name(
+        decoder_weight_waterfill_plan
+    )
+    (
+        normalized_gradient_multiplier_by_name,
+        decoder_weight_waterfill_gradient_policy,
+    ) = _merge_decoder_waterfill_gradient_multiplier_controls(
+        explicit_gradient_multiplier_by_name=explicit_gradient_multiplier_by_name,
+        waterfill_gradient_multiplier_by_name=waterfill_gradient_multiplier_by_name,
+        waterfill_policy=decoder_weight_waterfill_gradient_policy,
     )
     stage_weights = _compact_scoreaware_stage_loss_weights(
         recon=float(recon_loss_stage_weight),
@@ -18810,6 +18947,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "gradient_multipliers": {
                 "schema": "compact_hi_nerv_gradient_multiplier_controls.v1",
                 "by_name": dict(sorted(normalized_gradient_multiplier_by_name.items())),
+                "explicit_by_name": dict(
+                    sorted(explicit_gradient_multiplier_by_name.items())
+                ),
+                "decoder_weight_waterfill_gradient_policy": (
+                    strip_candidate_curriculum_authority_fields(
+                        decoder_weight_waterfill_gradient_policy
+                    )
+                ),
                 "bias_gradient_multiplier": (
                     float(bias_gradient_multiplier)
                     if bias_gradient_multiplier is not None

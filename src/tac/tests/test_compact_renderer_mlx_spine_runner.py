@@ -4024,6 +4024,148 @@ def test_hinerv_training_telemetry_contract_tracks_source_pairs(
     assert contract["train_max_actual_batch_size_observed"] == 2
 
 
+def test_hinerv_training_telemetry_contract_uses_support_ladder_effective_controls(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 3,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 1.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.25,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.3,
+                    "loss_part_segnet_direct_live_target_mass_floor_loss": 2.0,
+                    "loss_part_segnet_direct_live_rare_class_logit_loss": 3.0,
+                    "loss_part_segnet_direct_live_class_balanced_hinge_loss": 4.0,
+                    "active_loss_weight__segnet_direct_live_target_mass_floor": 2.0,
+                    "active_loss_weight__segnet_direct_live_rare_class_logit": 1.0,
+                    "active_loss_weight__segnet_direct_live_class_balanced_hinge": 0.5,
+                    "active_loss_weight_positive__segnet_direct_live_target_mass_floor": 1.0,
+                    "active_loss_weight_positive__segnet_direct_live_rare_class_logit": 1.0,
+                    "active_loss_weight_positive__segnet_direct_live_class_balanced_hinge": 1.0,
+                    "scorer_support_ladder_enabled": 1.0,
+                    "scorer_support_ladder_active": 1.0,
+                    "scorer_support_ladder_component_active__segnet_direct_live_target_mass_floor": 1.0,
+                    "scorer_support_ladder_component_active__segnet_direct_live_rare_class_logit": 1.0,
+                    "scorer_support_ladder_component_active__segnet_direct_live_class_balanced_hinge": 1.0,
+                    "scorer_support_ladder_component_weight__segnet_direct_live_target_mass_floor": 2.0,
+                    "scorer_support_ladder_component_weight__segnet_direct_live_rare_class_logit": 1.0,
+                    "scorer_support_ladder_component_weight__segnet_direct_live_class_balanced_hinge": 0.5,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_mass_floor": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_target_min_ratio_rare_class_logit": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_rare_class_logit": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_mass_floor": 0.5,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_mass_floor": 0.5,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_target_min_ratio_rare_class_logit": 0.5,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_rare_class_logit": 0.5,
+                    "dual_ascent_lambda__hi_nerv_segnet_direct_live_class_balanced_hinge": 0.5,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        scorer_support_ladder_enabled=True,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["blockers"] == []
+    assert contract["expected_scorer_support_ladder"] is True
+    assert contract["scorer_support_ladder_enabled_observed"] is True
+    assert contract["scorer_support_ladder_active_observed"] is True
+    assert contract["expected_segnet_direct_live_subcontrols"][
+        "target_mass_floor"
+    ] is True
+    assert contract["expected_segnet_direct_live_subcontrols"][
+        "rare_class_logit"
+    ] is True
+    assert contract["expected_segnet_direct_live_subcontrols"][
+        "class_balanced_hinge"
+    ] is True
+    assert contract["segnet_direct_live_effective_subcontrol_weights"][
+        "target_mass_floor"
+    ] == pytest.approx(2.0)
+    assert contract["segnet_direct_live_effective_subcontrol_weights"][
+        "rare_class_logit"
+    ] == pytest.approx(1.0)
+    assert contract["segnet_direct_live_effective_subcontrol_weights"][
+        "class_balanced_hinge"
+    ] == pytest.approx(0.5)
+    assert (
+        "segnet_direct_live_target_min_ratio_mass_floor"
+        in contract["expected_segnet_direct_live_dual_suffixes"]
+    )
+    assert (
+        "segnet_direct_live_target_min_ratio_rare_class_logit"
+        in contract["expected_segnet_direct_live_dual_suffixes"]
+    )
+
+
+def test_hinerv_training_telemetry_contract_rejects_empty_active_support_ladder(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 1,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 1.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.25,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 1.0,
+                    "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.3,
+                    "scorer_support_ladder_enabled": 1.0,
+                    "scorer_support_ladder_active": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        scorer_support_ladder_enabled=True,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["scorer_support_ladder_active_observed"] is True
+    assert (
+        "hi_nerv_score_aware_training_scorer_support_ladder_effective_subcontrol_missing"
+        in contract["blockers"]
+    )
+
+
 def test_hinerv_training_telemetry_contract_allows_under_budget_byte_duals(
     tmp_path: Path,
 ) -> None:
@@ -14561,6 +14703,18 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
 
     captured: dict[str, object] = {}
+    decoder_weight_waterfill_plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv-unit-candidate",
+        "rows": [
+            {"group_name": "head_rgb_1.bias", "selected_bits": 4},
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
     class FakeHinervModel:
         def __init__(self, cfg):
@@ -14662,6 +14816,9 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
         captured["model_num_pairs"] = int(bundle.model.cfg.num_pairs)
         captured["model_fake_quant"] = dict(bundle.model.fake_quant)
+        captured["gradient_multiplier_by_name"] = dict(
+            kwargs["gradient_multiplier_by_name"]
+        )
         captured["metadata"] = dict(bundle.substrate_artifact_metadata)
         return FakeArtifact({"substrate_artifact_metadata": captured["metadata"]})
 
@@ -14730,7 +14887,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
         coder_qat_c1a_sample_size=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
         recon_pixel_weight_path=None,
-        decoder_weight_waterfill_plan=None,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         recon_pixel_weight_auto_discovery=None,
         auto_segnet_boundary_recon_weight=False,
         recon_pixel_weight_tau=1.0,
@@ -14780,7 +14937,13 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert captured["model_num_pairs"] == 600
     assert captured["model_fake_quant"]["enabled"] is True
     assert captured["model_fake_quant"]["quant_bits"] == 4
+    assert captured["model_fake_quant"]["per_tensor_bits"] == {
+        "head_rgb_1.bias": 4
+    }
     assert captured["model_fake_quant"]["stage_controlled"] is True
+    assert captured["gradient_multiplier_by_name"] == {
+        "head_rgb_1.bias": pytest.approx(1.414214)
+    }
     metadata = captured["metadata"]
     assert metadata["num_pairs"] == 2
     assert metadata["training_num_pairs"] == 2
@@ -14807,6 +14970,21 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         fake_quant["stage_control_source"]
         == "pr95_faithful_stage_verdict.qat_active"
     )
+    assert fake_quant["per_tensor_waterfill_enabled"] is True
+    assert fake_quant["per_tensor_waterfill_bits_by_name"] == {
+        "head_rgb_1.bias": 4
+    }
+    gradient_policy = metadata["score_aware_training"]["gradient_multipliers"][
+        "decoder_weight_waterfill_gradient_policy"
+    ]
+    assert gradient_policy["active_after_merge"] is True
+    assert gradient_policy["merged_multiplier_by_name"] == {
+        "head_rgb_1.bias": pytest.approx(1.414214)
+    }
+    assert "score_claim" not in gradient_policy
+    assert "promotion_eligible" not in gradient_policy
+    assert "ready_for_exact_eval_dispatch" not in gradient_policy
+    assert gradient_policy["authority"] == "macos_mlx_research_signal_false_authority"
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required (Apple Silicon)")
@@ -15335,6 +15513,74 @@ def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
         match="selected_bits",
     ):
         runner_mod._decoder_weight_waterfill_fake_quant_bits_by_name(invalid)
+
+
+def test_hinerv_waterfill_plan_compiles_gradient_multiplier_policy() -> None:
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {"group_name": "head_rgb_1.bias", "selected_bits": 0},
+            {"group_name": "blocks.0.conv.weight", "selected_bits": 4},
+            {"group_name": "blocks.1.conv.weight", "selected_bits": 8},
+            {"group_name": "latent_embed.bias", "selected_bits": 32},
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    multipliers, policy = (
+        runner_mod._decoder_weight_waterfill_gradient_multiplier_by_name(plan)
+    )
+
+    assert multipliers == {
+        "head_rgb_1.bias": pytest.approx(2.828427),
+        "blocks.0.conv.weight": pytest.approx(1.414214),
+        "blocks.1.conv.weight": pytest.approx(1.05),
+    }
+    assert "latent_embed.bias" not in multipliers
+    assert policy["active"] is True
+    assert policy["targeted_tensor_count"] == 3
+    assert policy["fake_quant_targeted_tensor_count"] == 3
+    assert policy["blockers"] == []
+    assert policy["score_claim"] is False
+
+
+def test_hinerv_waterfill_gradient_multiplier_policy_explicit_override() -> None:
+    waterfill_policy = {
+        "schema": "compact_hi_nerv_decoder_weight_waterfill_gradient_policy.v1",
+        "active": True,
+        "multiplier_by_name": {"head_rgb_1.bias": 1.414214},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    merged, policy = runner_mod._merge_decoder_waterfill_gradient_multiplier_controls(
+        explicit_gradient_multiplier_by_name={
+            "head_rgb_1.bias": 0.25,
+            "head_rgb_0.bias": 0.5,
+        },
+        waterfill_gradient_multiplier_by_name={
+            "head_rgb_1.bias": 1.414214,
+            "blocks.0.conv.weight": 2.0,
+        },
+        waterfill_policy=waterfill_policy,
+    )
+
+    assert merged == {
+        "head_rgb_1.bias": 0.25,
+        "head_rgb_0.bias": 0.5,
+        "blocks.0.conv.weight": 2.0,
+    }
+    assert policy["explicit_override_names"] == ["head_rgb_1.bias"]
+    assert policy["explicit_overrides_take_precedence"] is True
+    assert policy["merged_control_count"] == 3
+    assert policy["active_after_merge"] is True
 
 
 def test_hinerv_pose_distillation_warmup_compiles_real_curriculum_stages() -> None:

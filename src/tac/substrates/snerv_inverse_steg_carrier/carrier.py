@@ -44,6 +44,7 @@ be canonical.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -826,6 +827,40 @@ def _kernel_vector(kernel: np.ndarray, model_size: SnervModelSizeConfig) -> np.n
     return vec
 
 
+def _apply_linear_decoder_features(feats: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    feats_arr = np.asarray(feats, dtype=np.float64)
+    kernel_arr = np.asarray(kernel, dtype=np.float64)
+    out = np.einsum("...i,i->...", feats_arr, kernel_arr, optimize=True)
+    if not np.all(np.isfinite(out)):
+        raise SnervCarrierError("HF decoder produced non-finite detail coefficients")
+    return out
+
+
+def _weighted_normal_equation_terms(
+    feats: np.ndarray,
+    weights: np.ndarray,
+    target: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    feats_arr = np.asarray(feats, dtype=np.float64)
+    weights_arr = np.asarray(weights, dtype=np.float64).reshape(-1)
+    target_arr = np.asarray(target, dtype=np.float64).reshape(-1)
+    if feats_arr.ndim != 2 or feats_arr.shape[0] != weights_arr.size:
+        raise SnervCarrierError("weighted HF fit feature/weight shape mismatch")
+    if target_arr.size != weights_arr.size:
+        raise SnervCarrierError("weighted HF fit target/weight shape mismatch")
+    if (
+        not np.all(np.isfinite(feats_arr))
+        or not np.all(np.isfinite(weights_arr))
+        or not np.all(np.isfinite(target_arr))
+    ):
+        raise SnervCarrierError("weighted HF fit inputs must be finite")
+    ata = np.einsum("ni,nj,n->ij", feats_arr, feats_arr, weights_arr, optimize=True)
+    atb = np.einsum("ni,n->i", feats_arr, weights_arr * target_arr, optimize=True)
+    if not np.all(np.isfinite(ata)) or not np.all(np.isfinite(atb)):
+        raise SnervCarrierError("weighted HF fit normal equations became non-finite")
+    return ata, atb
+
+
 def _patch_features(
     field: np.ndarray,
     *,
@@ -1027,9 +1062,18 @@ def generate_hf_from_lf(
         )
         kern = decoder.kernels[lvl]
         raw_details = (
-            feats @ _kernel_vector(kern["LH"], decoder.model_size),
-            feats @ _kernel_vector(kern["HL"], decoder.model_size),
-            feats @ _kernel_vector(kern["HH"], decoder.model_size),
+            _apply_linear_decoder_features(
+                feats,
+                _kernel_vector(kern["LH"], decoder.model_size),
+            ),
+            _apply_linear_decoder_features(
+                feats,
+                _kernel_vector(kern["HL"], decoder.model_size),
+            ),
+            _apply_linear_decoder_features(
+                feats,
+                _kernel_vector(kern["HH"], decoder.model_size),
+            ),
         )
         lh, hl, hh = _hfr_for_model_size(decoder.model_size).restore(raw_details, up)
         coeffs.append((lh, hl, hh))
@@ -1150,9 +1194,13 @@ def fit_hf_decoder_weighted_least_squares(
                     floor=weight_floor,
                     saliency_gain=saliency_gain,
                 ).reshape(-1)
-                weighted_feats = feats * weights[:, None]
-                ata += feats.T @ weighted_feats
-                atb += feats.T @ (weights * target.reshape(-1))
+                ata_delta, atb_delta = _weighted_normal_equation_terms(
+                    feats,
+                    weights,
+                    target,
+                )
+                ata += ata_delta
+                atb += atb_delta
             # Lift approx for next level (TRUE detail, the encoder path).
             approx = idwt2_multilevel(
                 WaveletPyramid(
@@ -1208,10 +1256,22 @@ def _detail_weights_for_subband(
     positive = raw[raw > 0]
     if positive.size == 0 or saliency_gain == 0:
         return np.ones(expected_shape, dtype=np.float64)
-    scale = float(np.mean(positive))
-    if scale <= 0:
+    scale = float(np.max(positive))
+    if scale <= 0 or not math.isfinite(scale):
         return np.ones(expected_shape, dtype=np.float64)
-    return floor + saliency_gain * (raw / scale)
+    relative = np.zeros_like(raw, dtype=np.float64)
+    active = raw >= (scale * 1.0e-6)
+    relative[active] = raw[active] / scale
+    weights = floor + saliency_gain * relative
+    if not np.all(np.isfinite(weights)):
+        raise SnervCarrierError("detail weights produced non-finite values")
+    mean_weight = float(np.mean(weights))
+    if mean_weight <= 0 or not math.isfinite(mean_weight):
+        return np.ones(expected_shape, dtype=np.float64)
+    normalized = weights / mean_weight
+    if not np.all(np.isfinite(normalized)):
+        raise SnervCarrierError("detail weights produced non-finite values")
+    return normalized
 
 
 def encode_frame_lf(

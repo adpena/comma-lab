@@ -166,6 +166,52 @@ def test_weighted_decoder_fit_reduces_weighted_hf_residual():
     )
 
 
+def test_weighted_decoder_fit_bounds_extreme_saliency_before_normal_equations():
+    """NO-FAKE: scorer saliency outliers must not overflow the HF ridge fit."""
+
+    rng = np.random.default_rng(44)
+    frames = [_smooth_frame(rng, hw=(32, 48)) for _ in range(3)]
+    pyrs = [encode_frame_lf(f, levels=2) for f in frames]
+    weight_pyrs = [_extreme_detail_weight_pyramid(pyr) for pyr in pyrs]
+
+    with np.errstate(over="raise", invalid="raise", divide="raise"):
+        decoder = fit_hf_decoder_weighted_least_squares(
+            pyrs,
+            levels=2,
+            detail_weight_pyramids=weight_pyrs,
+            saliency_gain=16.0,
+        )
+
+    for lvl in range(2):
+        for sb in ("LH", "HL", "HH"):
+            assert np.all(np.isfinite(decoder.kernels[lvl][sb]))
+
+
+def test_detail_weight_saliency_normalization_preserves_ls_scale():
+    """NO-FAKE: extreme saliency changes relative pressure, not global LS scale."""
+
+    import tac.substrates.snerv_inverse_steg_carrier.carrier as carrier_mod
+
+    rng = np.random.default_rng(45)
+    pyr = encode_frame_lf(_smooth_frame(rng, hw=(32, 48)), levels=2)
+    weight_pyr = _extreme_detail_weight_pyramid(pyr)
+
+    weights = carrier_mod._detail_weights_for_subband(
+        [weight_pyr],
+        pyramid_index=0,
+        level=0,
+        subband="LH",
+        expected_shape=pyr.details[0][0].shape,
+        floor=1.0e-3,
+        saliency_gain=16.0,
+    )
+
+    assert np.all(np.isfinite(weights))
+    assert np.min(weights) > 0
+    assert float(np.mean(weights)) == pytest.approx(1.0)
+    assert float(np.max(weights)) < float(weights.size)
+
+
 def test_decoder_byte_cost_is_tiny_and_real():
     """The decoder is byte-cheap (shared across all frames) and cost scales w/ levels."""
     rng = np.random.default_rng(3)
@@ -551,6 +597,24 @@ def _hot_detail_weight_pyramid(pyr: WaveletPyramid) -> WaveletPyramid:
             weights = np.ones_like(detail, dtype=np.float64)
             h, w = weights.shape
             weights[: max(1, h // 3), : max(1, w // 3)] = 50.0
+            detail_tuple.append(weights)
+        weighted_details.append(tuple(detail_tuple))
+    return WaveletPyramid(
+        coeffs=[np.ones_like(pyr.lf), *weighted_details],
+        levels=pyr.levels,
+        wavelet=pyr.wavelet,
+        orig_hw=pyr.orig_hw,
+        padded_hw=pyr.padded_hw,
+    )
+
+
+def _extreme_detail_weight_pyramid(pyr: WaveletPyramid) -> WaveletPyramid:
+    weighted_details = []
+    for lh, hl, hh in pyr.details:
+        detail_tuple = []
+        for detail in (lh, hl, hh):
+            weights = np.ones_like(detail, dtype=np.float64)
+            weights[0, 0] = 1.0e300
             detail_tuple.append(weights)
         weighted_details.append(tuple(detail_tuple))
     return WaveletPyramid(
