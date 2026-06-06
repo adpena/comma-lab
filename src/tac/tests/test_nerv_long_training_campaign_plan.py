@@ -1349,6 +1349,7 @@ def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blocke
         full_tub_parity=True,
         trained_checkpoint_loaded=True,
         state_dict_path=state_dict_path,
+        numerical_proof_complete=True,
     )
     mapping = dict(source_forward["official_trained_checkpoint_mapping_manifest"])
     mapping.update(
@@ -1410,6 +1411,7 @@ def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blocke
     ) == set(stale_blockers)
     split = snerv_row["snerv_official_runtime_authority_split"]
     assert split["source_forward_replay_authority"] is True
+    assert split["source_forward_numerical_proof_complete"] is True
     assert not set(split["blockers"]).intersection(stale_blockers)
     pr95_evidence = snerv_row["pr95_scorer_atom_actuator_execution_evidence"]
     assert pr95_evidence["schema"] == "pr95_scorer_atom_actuator_execution_evidence.v1"
@@ -7815,6 +7817,16 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "schema": "pr95_scorer_atom_actuator_execution_evidence.v1",
         "family": "hi_nerv",
         "pair_local_smoke_schema": "hinerv_pair_local_actuator_smoke.v1",
+        "pair_local_smoke_artifact_schema": (
+            "hinerv_pair_local_actuator_smoke_artifact.v1"
+        ),
+        "pair_local_smoke_artifact_path": (
+            "/Volumes/VertigoDataTier/pact/test_campaigns/"
+            "hi_nerv_pair_local_actuator_smoke/"
+            "hinerv_pair_local_actuator_smoke_pair000000_aaaaaaaaaaaa.json"
+        ),
+        "pair_local_smoke_artifact_sha256": "d" * 64,
+        "pair_local_smoke_artifact_bytes": 2048,
         "actuator_kind": "pair_local_latent_row",
         "actuator_tensor_name": "latents_fine",
         "updated_tensor_names": ["latents_fine"],
@@ -7829,6 +7841,12 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "pair_local_output_delta_max_abs_uint8": 1.02,
         "receiver_uint8_half_step_normalized": 0.5 / 255.0,
         "receiver_uint8_crossing_potential": True,
+        "receiver_uint8_changed": True,
+        "receiver_uint8_changed_count": 12,
+        "receiver_uint8_changed_fraction": 0.001,
+        "receiver_uint8_delta_abs_max": 2,
+        "non_target_pair_receiver_uint8_changed_count": 0,
+        "non_target_pair_receiver_uint8_delta_abs_max": 0,
         "pair_locality_verified": True,
         "non_target_pair_output_delta_l2_max": 0.0,
         "state_restored_after_smoke": True,
@@ -7887,6 +7905,7 @@ def _snerv_source_forward_artifact(
     full_tub_parity: bool,
     trained_checkpoint_loaded: bool = False,
     state_dict_path: Path | None = None,
+    numerical_proof_complete: bool = False,
 ) -> dict:
     blockers = []
     if not receiver_consumes_output2:
@@ -7940,7 +7959,12 @@ def _snerv_source_forward_artifact(
             else "--snerv-official-trained-checkpoint-state-dict-path"
         ),
     }
-    return {
+    source_forward_proof = (
+        _snerv_source_forward_numerical_proof()
+        if numerical_proof_complete
+        else None
+    )
+    out = {
         "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
         "generated_utc": "20260605T000000Z",
         "_source_path": "/Volumes/VertigoDataTier/pact/snerv_forward_harness.json",
@@ -7968,6 +7992,7 @@ def _snerv_source_forward_artifact(
             "ready_for_exact_eval_dispatch": False,
         },
         "full_tub_source_forward_parity_proven": bool(full_tub_parity),
+        "source_forward_replay_proof": source_forward_proof,
         "official_trained_checkpoint_loaded": bool(trained_checkpoint_loaded),
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
         "official_tub_temporal_encoder_weight_mapping_proven": False,
@@ -8013,6 +8038,36 @@ def _snerv_source_forward_artifact(
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+    if source_forward_proof is not None:
+        out["source_forward_replay_proof_status"] = {
+            "schema": (
+                "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_proof_status.v1"
+            ),
+            "source_forward_replay_proof_present": True,
+            "source_forward_replay_required_fields_missing": [],
+            "source_forward_replay_invalid_fields": [],
+            "source_forward_replay_numerical_proof_complete": True,
+            "source_forward_replay_proof_status": (
+                "complete_numerical_source_forward_proof_present"
+            ),
+        }
+    return out
+
+
+def _snerv_source_forward_numerical_proof() -> dict:
+    return {
+        "official_torch_frame_hash": "1" * 64,
+        "mlx_frame_hash": "2" * 64,
+        "numpy_receiver_frame_hash": "3" * 64,
+        "parseback_frame_hash": "4" * 64,
+        "tub_output_2_hash": "5" * 64,
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
+        "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
     }
 
 

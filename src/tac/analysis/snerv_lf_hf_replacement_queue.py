@@ -30,6 +30,13 @@ from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
     summarize_snerv_official_tub_lf_hf_replacement_authority_gates,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
+    OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_HASH_FIELDS,
+    OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS,
+    OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS,
+    OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS,
+)
 
 SCHEMA = "snerv_lf_hf_replacement_queue.v1"
 ROW_SCHEMA = "snerv_lf_hf_replacement_candidate_row.v1"
@@ -438,6 +445,84 @@ def summarize_snerv_lf_hf_source_forward_evidence(
     """Summarize official SNeRV source-forward evidence for planner consumers."""
 
     return _source_forward_state(source_forward_artifacts)
+
+
+def _source_forward_replay_proof(
+    selected: Mapping[str, Any],
+    replay: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    for raw in (
+        selected.get("source_forward_replay_proof"),
+        replay.get("source_forward_replay_proof"),
+    ):
+        if isinstance(raw, Mapping):
+            return raw
+    return None
+
+
+def _source_forward_replay_proof_status(
+    proof: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    missing = list(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS)
+    invalid: list[str] = []
+    if isinstance(proof, Mapping):
+        missing = [
+            field
+            for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
+            if field not in proof
+        ]
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_HASH_FIELDS:
+            if field in proof and not _looks_like_sha256(proof.get(field)):
+                invalid.append(field)
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS:
+            if field in proof and not _nonnegative_finite_float(proof.get(field)):
+                invalid.append(field)
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS:
+            if field not in proof:
+                continue
+            group = proof.get(field)
+            if (
+                not isinstance(group, Mapping)
+                or not group
+                or any(
+                    not str(name) or not _looks_like_sha256(value)
+                    for name, value in group.items()
+                )
+            ):
+                invalid.append(field)
+    complete = bool(isinstance(proof, Mapping) and not missing and not invalid)
+    return {
+        "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
+        "source_forward_replay_proof_present": isinstance(proof, Mapping),
+        "source_forward_replay_required_fields": list(
+            OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
+        ),
+        "source_forward_replay_required_fields_missing": missing,
+        "source_forward_replay_invalid_fields": _dedupe(invalid),
+        "source_forward_replay_numerical_proof_complete": complete,
+        "source_forward_replay_proof_status": (
+            "complete_numerical_source_forward_proof_present"
+            if complete
+            else (
+                "metadata_only_or_incomplete_source_forward_proof"
+                if isinstance(proof, Mapping)
+                else "missing_source_forward_proof"
+            )
+        ),
+    }
+
+
+def _looks_like_sha256(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _nonnegative_finite_float(value: Any) -> bool:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(parsed) and parsed >= 0.0
 
 
 def render_snerv_lf_hf_replacement_queue_markdown(report: Mapping[str, Any]) -> str:
@@ -2312,6 +2397,15 @@ def _source_forward_state(
     )
     replay = selected.get("receiver_payload_frame_replay")
     replay = replay if isinstance(replay, Mapping) else {}
+    source_forward_proof = _source_forward_replay_proof(selected, replay)
+    source_forward_proof_status = _source_forward_replay_proof_status(
+        source_forward_proof
+    )
+    numerical_source_forward_proof_complete = bool(
+        source_forward_proof_status[
+            "source_forward_replay_numerical_proof_complete"
+        ]
+    )
     receiver_runtime_decode = replay.get("receiver_runtime_decode_proven") is True
     frame_payload_replay = (
         replay.get("frame_producing_official_payload_replay_proven") is True
@@ -2426,6 +2520,7 @@ def _source_forward_state(
     )
     source_authority = bool(
         full_tub_parity
+        and numerical_source_forward_proof_complete
         and not source_authority_blocked_by_raw_evidence
         and state_dict_value_artifact_ready
         and (
@@ -2524,6 +2619,10 @@ def _source_forward_state(
                 "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
                 "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
             ]
+        )
+    if not numerical_source_forward_proof_complete:
+        queue_blockers.append(
+            "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing"
         )
     if source_authority_blocked_by_raw_evidence:
         queue_blockers.extend(
@@ -2646,6 +2745,13 @@ def _source_forward_state(
         "tub_source_fixture_closed_blockers": tub_source_fixture_closed,
         "full_tub_source_forward_parity_proven": full_tub_parity,
         "source_forward_replay_authority": source_authority,
+        "source_forward_replay_proof": (
+            dict(source_forward_proof) if isinstance(source_forward_proof, Mapping) else None
+        ),
+        "source_forward_replay_proof_status": source_forward_proof_status,
+        "source_forward_replay_numerical_proof_complete": (
+            numerical_source_forward_proof_complete
+        ),
         "decoded_frames_shape": replay.get("decoded_frames_shape"),
         "decoded_frames_sha256": replay.get("decoded_frames_sha256"),
         "payload_bytes": payload_bytes,

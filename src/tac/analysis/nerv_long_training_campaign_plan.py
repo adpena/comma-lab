@@ -3282,6 +3282,65 @@ def _snerv_source_forward_evidence_active(
     )
 
 
+def _looks_like_sha256(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _nonnegative_finite_float(value: Any) -> bool:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return False
+    return parsed >= 0.0 and parsed < float("inf")
+
+
+def _snerv_source_forward_numerical_proof_complete(
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> bool:
+    """Require actual official/MLX/receiver/parse-back proof, not booleans only."""
+
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return False
+    assert source_forward_evidence is not None
+    status = source_forward_evidence.get("source_forward_replay_proof_status")
+    if isinstance(status, Mapping):
+        if status.get("source_forward_replay_numerical_proof_complete") is True:
+            return True
+        if status.get("source_forward_replay_required_fields_missing"):
+            return False
+        if status.get("source_forward_replay_invalid_fields"):
+            return False
+    proof = source_forward_evidence.get("source_forward_replay_proof")
+    if not isinstance(proof, Mapping):
+        return False
+    hash_fields = (
+        "official_torch_frame_hash",
+        "mlx_frame_hash",
+        "numpy_receiver_frame_hash",
+        "parseback_frame_hash",
+        "tub_output_2_hash",
+    )
+    numeric_fields = (
+        "max_abs_frame_delta_official_mlx",
+        "max_abs_yuv6_delta_official_numpy",
+        "seg_logit_linf_official_parseback",
+        "pose_linf_official_parseback",
+    )
+    tensor_group_fields = ("mfu_tensor_hashes", "hfr_tensor_hashes")
+    if any(not _looks_like_sha256(proof.get(field)) for field in hash_fields):
+        return False
+    if any(not _nonnegative_finite_float(proof.get(field)) for field in numeric_fields):
+        return False
+    for field in tensor_group_fields:
+        group = proof.get(field)
+        if not isinstance(group, Mapping) or not group:
+            return False
+        if any(not str(name) or not _looks_like_sha256(value) for name, value in group.items()):
+            return False
+    return True
+
+
 def _hinerv_pr95_actuator_execution_evidence_from_feedback(
     feedback: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
@@ -3332,6 +3391,9 @@ def _snerv_pr95_actuator_execution_evidence_from_source_forward(
         or source_forward_evidence.get("source_forward_replay_authority") is not True
         or source_forward_evidence.get("full_tub_source_forward_parity_proven")
         is not True
+        or not _snerv_source_forward_numerical_proof_complete(
+            source_forward_evidence
+        )
         or source_forward_evidence.get("receiver_frame_decode_consumes_output2")
         is not True
         or source_forward_evidence.get("official_checkpoint_export_bound")
@@ -3379,10 +3441,22 @@ def _snerv_source_forward_closed_blockers(
 ) -> set[str]:
     if not _snerv_source_forward_evidence_active(source_forward_evidence):
         return set()
+    numerical_proof_complete = _snerv_source_forward_numerical_proof_complete(
+        source_forward_evidence
+    )
+    source_authority_blockers = {
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+        "snerv_official_trained_checkpoint_source_forward_replay_missing",
+    }
     return {
         str(blocker)
         for blocker in source_forward_evidence.get("closed_campaign_blockers") or ()
         if str(blocker)
+        and (
+            numerical_proof_complete
+            or _source_forward_blocker_token(blocker) not in source_authority_blockers
+        )
     }
 
 
@@ -3391,13 +3465,18 @@ def _snerv_source_forward_queue_blockers(
 ) -> list[str]:
     if not _snerv_source_forward_evidence_active(source_forward_evidence):
         return []
-    return _dedupe(
+    blockers = _dedupe(
         [
             str(blocker)
             for blocker in source_forward_evidence.get("queue_blockers") or ()
             if str(blocker)
         ]
     )
+    if not _snerv_source_forward_numerical_proof_complete(source_forward_evidence):
+        blockers.append(
+            "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing"
+        )
+    return _dedupe(blockers)
 
 
 def _source_forward_blocker_token(blocker: Any) -> str:
@@ -3518,8 +3597,17 @@ def _snerv_runtime_authority_split_with_source_forward_evidence(
         source_forward_evidence.get("receiver_bound_export_proven")
         or source_forward_evidence.get("receiver_payload_frame_replay_proven")
     )
-    source_authority = bool(source_forward_evidence.get("source_forward_replay_authority"))
-    full_tub_parity = bool(source_forward_evidence.get("full_tub_source_forward_parity_proven"))
+    numerical_proof_complete = _snerv_source_forward_numerical_proof_complete(
+        source_forward_evidence
+    )
+    source_authority = bool(
+        source_forward_evidence.get("source_forward_replay_authority")
+        and numerical_proof_complete
+    )
+    full_tub_parity = bool(
+        source_forward_evidence.get("full_tub_source_forward_parity_proven")
+        and numerical_proof_complete
+    )
     out.update(
         {
             "snerv_official_source_forward_evidence_consumed": True,
@@ -3534,6 +3622,7 @@ def _snerv_runtime_authority_split_with_source_forward_evidence(
             "receiver_frame_decode_consumes_output2": bool(
                 source_forward_evidence.get("receiver_frame_decode_consumes_output2")
             ),
+            "source_forward_numerical_proof_complete": numerical_proof_complete,
             "full_tub_source_forward_parity_proven": full_tub_parity,
             "source_forward_replay_authority": source_authority,
             "receiver_bound_training_evidence_usable": bool(
@@ -3634,8 +3723,17 @@ def _snerv_source_forward_split_with_evidence(
         out.get("frame_producing_export")
         or source_forward_evidence.get("frame_producing_official_payload_replay_proven")
     )
-    source_authority = bool(source_forward_evidence.get("source_forward_replay_authority"))
-    full_tub_parity = bool(source_forward_evidence.get("full_tub_source_forward_parity_proven"))
+    numerical_proof_complete = _snerv_source_forward_numerical_proof_complete(
+        source_forward_evidence
+    )
+    source_authority = bool(
+        source_forward_evidence.get("source_forward_replay_authority")
+        and numerical_proof_complete
+    )
+    full_tub_parity = bool(
+        source_forward_evidence.get("full_tub_source_forward_parity_proven")
+        and numerical_proof_complete
+    )
     full_authority = bool(
         source_authority
         and full_tub_parity
@@ -3673,6 +3771,7 @@ def _snerv_source_forward_split_with_evidence(
             "source_faithful_stack": bool(
                 out.get("source_faithful_stack") or source_authority
             ),
+            "source_forward_numerical_proof_complete": numerical_proof_complete,
             "export_bound_semantics": out.get("export_bound_semantics")
             or (
                 "official_checkpoint_export_bound_not_source_forward_parity"

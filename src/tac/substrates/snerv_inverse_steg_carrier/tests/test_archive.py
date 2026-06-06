@@ -676,6 +676,19 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert proof["receiver_export_self_consistency_verified"] is True
     assert proof["source_forward_replay_bound"] is False
     assert proof["source_forward_replay_verified"] is False
+    source_forward_status = header["source_forward_replay_proof_status"]
+    assert source_forward_status["schema"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_proof_status.v1"
+    )
+    assert source_forward_status["source_forward_replay_proof_present"] is False
+    assert source_forward_status["source_forward_replay_numerical_proof_complete"] is False
+    assert source_forward_status["source_forward_replay_proof_status"] == (
+        "missing_source_forward_proof"
+    )
+    assert "official_torch_frame_hash" in source_forward_status[
+        "source_forward_replay_required_fields_missing"
+    ]
+    assert proof["source_forward_replay_proof_status"] == source_forward_status
     assert proof["executed_components"]["official_mfu"] is True
     assert proof["executed_components"]["official_hfr"] is True
     assert proof["executed_components"]["official_tub"] is True
@@ -694,6 +707,27 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert proof["mfu_output"]["pyr_out_shape"] == [1, 1, 8, 8]
     assert proof["hfr_output"]["yh_out_shape"] == [1, 3, 3, 8, 8]
     assert proof["tub_output"]["shape_metadata"]["temporal_encoder_input_count"] == 2
+
+
+def test_official_mfu_hfr_tub_payload_rejects_metadata_only_source_forward_claim() -> None:
+    payload = encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())
+
+    def overclaim(header: dict[str, object]) -> None:
+        header["source_forward_replay_bound_by_export"] = True
+        header["source_forward_replay_verified"] = True
+        header["source_forward_replay_authority"] = True
+        header["source_forward_replay_proof"] = {
+            "section_names": ["MFU", "HFR", "TUB"],
+            "shapes_match": True,
+        }
+
+    corrupted = _rewrite_subpacket_header(payload, overclaim)
+
+    with pytest.raises(
+        SnervArchiveError,
+        match="source-forward authority requires numerical proof",
+    ):
+        decode_official_mfu_hfr_tub_decoder_payload(corrupted)
 
 
 def test_official_mfu_hfr_tub_decoder_payload_uses_bounded_lzma_by_default(

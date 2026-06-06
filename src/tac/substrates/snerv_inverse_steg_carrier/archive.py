@@ -129,6 +129,9 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA = (
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA = (
     "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_replay.v1"
 )
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA = (
+    "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_proof_status.v1"
+)
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
@@ -151,6 +154,41 @@ OFFICIAL_MFU_HFR_TUB_BASE_SOURCE_FORWARD_BLOCKERS: tuple[str, ...] = (
     "official_hfr_weight_tensor_mapping_not_loaded",
     "full_official_hfr_forward_artifact_not_emitted",
     *OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS,
+)
+OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_HASH_FIELDS: tuple[str, ...] = (
+    "official_torch_frame_hash",
+    "mlx_frame_hash",
+    "numpy_receiver_frame_hash",
+    "parseback_frame_hash",
+    "tub_output_2_hash",
+)
+OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS: tuple[str, ...] = (
+    "max_abs_frame_delta_official_mlx",
+    "max_abs_yuv6_delta_official_numpy",
+    "seg_logit_linf_official_parseback",
+    "pose_linf_official_parseback",
+)
+OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS: tuple[str, ...] = (
+    "mfu_tensor_hashes",
+    "hfr_tensor_hashes",
+)
+OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS: tuple[str, ...] = (
+    *OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_HASH_FIELDS,
+    *OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS,
+    *OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS,
+)
+OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_AUTHORITY_FIELDS: tuple[str, ...] = (
+    "source_forward_replay_bound_by_export",
+    "source_forward_replay_bound",
+    "source_forward_replay_verified_by_export",
+    "source_forward_replay_verified",
+    "source_forward_replay_authority",
+    "snerv_official_mfu_hfr_tub_source_forward_replay_bound",
+    "snerv_official_mfu_hfr_tub_source_forward_replay_authority",
+    "source_forward_parity_proven",
+    "full_tub_source_forward_parity_proven",
+    "full_stack_source_forward_replay_proven",
+    "source_faithful_stack",
 )
 OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
     "full": OFFICIAL_SKIP_HIGH_CODEC_FULL,
@@ -500,6 +538,11 @@ class OfficialMfuHfrTubReceiverPayload:
             output_rows=output_rows,
             output_bundle_sha256=output_bundle_sha256,
         )
+        source_forward_proof_status = (
+            _official_mfu_hfr_tub_source_forward_proof_status_from_header(
+                self.header
+            )
+        )
         return {
             "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA,
             "payload_schema": self.schema,
@@ -535,6 +578,7 @@ class OfficialMfuHfrTubReceiverPayload:
             "source_forward_replay_bound": False,
             "source_forward_replay_verified": False,
             "source_forward_replay_authority": False,
+            "source_forward_replay_proof_status": source_forward_proof_status,
             "source_forward_blockers": list(
                 self.header.get("source_forward_blockers") or ()
             ),
@@ -2029,6 +2073,9 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         ),
         tub_output2_raw=output2_plan["effective"].get("output2_raw"),
     )
+    source_forward_proof_status = (
+        _official_mfu_hfr_tub_source_forward_proof_status_from_header({})
+    )
     header = {
         "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         "codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC,
@@ -2085,6 +2132,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "receiver_export_payload_bound": True,
         "receiver_export_self_consistency_verified": True,
         "source_forward_replay_bound_by_export": False,
+        "source_forward_replay_proof_status": source_forward_proof_status,
         "source_forward_blockers": list(source_forward_blockers),
         "receiver_runtime_decode_proven_by_payload": False,
         "source_forward_replay_authority": False,
@@ -3970,6 +4018,7 @@ def _validate_official_payload_exec_surfaces(
     payload.tub_output2_inputs()
     _validate_official_tub_output2_storage(payload.header, payload.tensors)
     _official_receiver_self_consistency_reference_from_header(payload.header)
+    _validate_official_source_forward_authority_claims(payload.header)
 
 
 def _validate_official_tub_output2_storage(
@@ -4110,9 +4159,114 @@ def _validate_official_receiver_self_consistency_reference(
     return reference
 
 
+def _official_mfu_hfr_tub_source_forward_proof_status_from_header(
+    header: Mapping[str, Any],
+) -> dict[str, Any]:
+    proof = header.get("source_forward_replay_proof")
+    proof_present = isinstance(proof, Mapping)
+    missing = list(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS)
+    invalid: list[str] = []
+    if proof_present:
+        proof_map = proof
+        missing = [
+            field
+            for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
+            if field not in proof_map
+        ]
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_HASH_FIELDS:
+            if field in proof_map and not _looks_like_sha256(proof_map.get(field)):
+                invalid.append(field)
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS:
+            if field not in proof_map:
+                continue
+            try:
+                value = float(proof_map[field])
+            except (TypeError, ValueError):
+                invalid.append(field)
+                continue
+            if not np.isfinite(value) or value < 0.0:
+                invalid.append(field)
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS:
+            if field not in proof_map:
+                continue
+            group = proof_map.get(field)
+            if not isinstance(group, Mapping) or not group:
+                invalid.append(field)
+                continue
+            bad_hashes = [
+                str(name)
+                for name, value in group.items()
+                if not str(name) or not _looks_like_sha256(value)
+            ]
+            if bad_hashes:
+                invalid.append(field)
+    complete = bool(proof_present and not missing and not invalid)
+    if complete:
+        status = "complete_numerical_source_forward_proof_present"
+    elif proof_present:
+        status = "metadata_only_or_incomplete_source_forward_proof"
+    else:
+        status = "missing_source_forward_proof"
+    return {
+        "schema": (
+            DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA
+        ),
+        "source_forward_replay_proof_present": bool(proof_present),
+        "source_forward_replay_required_fields": list(
+            OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
+        ),
+        "source_forward_replay_required_fields_missing": missing,
+        "source_forward_replay_invalid_fields": _dedupe_strings(invalid),
+        "source_forward_replay_numerical_proof_complete": complete,
+        "source_forward_replay_proof_status": status,
+        "source_forward_replay_authority_fields": list(
+            OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_AUTHORITY_FIELDS
+        ),
+    }
+
+
+def _validate_official_source_forward_authority_claims(
+    header: Mapping[str, Any],
+) -> dict[str, Any]:
+    status = _official_mfu_hfr_tub_source_forward_proof_status_from_header(header)
+    truthy_claims = [
+        field
+        for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_AUTHORITY_FIELDS
+        if bool(header.get(field))
+    ]
+    if truthy_claims and not bool(
+        status["source_forward_replay_numerical_proof_complete"]
+    ):
+        missing = status["source_forward_replay_required_fields_missing"]
+        invalid = status["source_forward_replay_invalid_fields"]
+        details = []
+        if missing:
+            details.append("missing " + ",".join(str(v) for v in missing))
+        if invalid:
+            details.append("invalid " + ",".join(str(v) for v in invalid))
+        raise SnervArchiveError(
+            "official primitive payload source-forward authority requires "
+            "numerical proof; truthy fields "
+            + ",".join(truthy_claims)
+            + ("; " + "; ".join(details) if details else "")
+        )
+    return status
+
+
 def _looks_like_sha256(value: Any) -> bool:
     text = str(value or "").strip().lower()
     return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _dedupe_strings(values: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
 
 
 def _decoder_to_flat_values(
