@@ -3231,6 +3231,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             frame1_uint8_after = composite["uint8"]
             frame1_uint8_unchanged = bool(np.array_equal(frame1_uint8_before, frame1_uint8_after))
             if not frame1_uint8_unchanged:
+                _restore_parameters(pre_compensation_snapshot)
+                mx.eval(self.parameters())  # type: ignore[union-attr]
                 raise RuntimeError(
                     "frame0 pose compensation moved the frame1 receiver uint8; "
                     "head_rgb_0 must not affect frame1 (SegNet reads frame1 only)"

@@ -1074,6 +1074,69 @@ def test_frame0_compensation_rejects_and_restores_when_pose_harm_is_uncompensabl
 
 
 @skip_no_mlx
+def test_frame0_compensation_restores_head0_before_frame1_violation_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A structural frame1-safety violation must not leave frame0 edits behind."""
+
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    import tac.substrates.hi_nerv.mlx_renderer as renderer_mod
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _near_boundary_all_class1_targets(cfg, mx)
+    labels_np = np.ones(
+        (cfg.num_pairs, cfg.output_height, cfg.output_width),
+        dtype=np.int32,
+    )
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    def _head0_snapshot() -> dict[str, np.ndarray]:
+        return {
+            (
+                ".".join(str(p) for p in raw)
+                if isinstance(raw, (tuple, list))
+                else str(raw)
+            ): np.array(leaf, copy=True)
+            for raw, leaf in tree_flatten(model.parameters())
+            if leaf is not None
+            and (
+                ".".join(str(p) for p in raw)
+                if isinstance(raw, (tuple, list))
+                else str(raw)
+            ).startswith("head_rgb_0")
+        }
+
+    head0_before = _head0_snapshot()
+    assert head0_before
+    original_array_equal = renderer_mod.np.array_equal
+    monkeypatch.setattr(renderer_mod.np, "array_equal", lambda _left, _right: False)
+
+    with pytest.raises(RuntimeError, match="frame0 pose compensation moved"):
+        model.fit_target_region_birth_from_segnet(
+            scorer_teacher=teacher,
+            target_rgb_0=target0,
+            target_rgb_1=target1,
+            pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+            target_segnet_argmax_1=mx.array(labels_np),
+            pose_teacher=_FrameDiffPoseTeacher(mx, k=0.5),
+            max_pose_output_delta_l2=0.05,
+            max_steps=24,
+            learning_rate=2.0e-3,
+        )
+
+    head0_after = _head0_snapshot()
+    assert head0_after.keys() == head0_before.keys()
+    for name, before_value in head0_before.items():
+        assert original_array_equal(before_value, head0_after[name]), name
+
+
+@skip_no_mlx
 def test_no_pose_teacher_path_never_attempts_compensation() -> None:
     """Without a pose teacher the composite operator is a no-op (byte-identical path).
 
