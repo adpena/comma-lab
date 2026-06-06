@@ -236,9 +236,21 @@ def test_receipt_emits_crux_trace_compatible_keys() -> None:
     )
     assert receipt["receiver_surface_float_rgb_delta_linf"] == pytest.approx(0.02)
     assert receipt["frame_scope"] == "frame1_seg_pose_joint"
-    # False-authority contract: receipts can never promote or claim score.
-    assert receipt["score_claim"] is False
-    assert receipt["promotion_eligible"] is False
+    # Custody contract: receipts travel inside substrate_artifact_metadata,
+    # whose harness validator REFUSES nested authority/readiness keys (single
+    # custody surface). The receipt must carry the non-authority marker and
+    # must NOT carry any forbidden key — even as a false-valued copy.
+    assert receipt["authority"] == "planning_control_false_authority"
+    forbidden = {
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "promotable",
+    }
+    assert not (forbidden & receipt.keys())
+    assert not (forbidden & receipt["worst_region"].keys())
 
 
 # ---------------------------------------------------------------------------

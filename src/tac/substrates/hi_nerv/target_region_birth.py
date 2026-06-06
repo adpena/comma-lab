@@ -25,8 +25,6 @@ from typing import Any
 import numpy as np
 from scipy import ndimage
 
-from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
-
 TARGET_REGION_DEBT_SCHEMA = "hi_nerv_target_region_debt.v1"
 TARGET_REGION_BIRTH_RECEIPT_SCHEMA = "hi_nerv_target_region_birth_receipt.v1"
 
@@ -105,7 +103,11 @@ class TargetRegionDebt:
         # full_equivalent_score_debt_units(...) before comparing to byte cost.
         payload["normalization_authority"] = "batch_local_scored_pixels"
         payload["score_debt_units_local"] = payload["score_debt_units"]
-        payload.update(PROXY_FALSE_AUTHORITY_FIELDS)
+        # NOTE: deliberately NO score_claim/promotion authority keys here.
+        # These rows are embedded under substrate_artifact_metadata, whose
+        # harness custody validator REFUSES nested authority/readiness keys
+        # (single-custody-surface rule): authority lives only on the canonical
+        # TrainingArtifact. Spreading even false-valued copies is forbidden.
         return payload
 
 
@@ -366,6 +368,10 @@ def build_target_region_birth_receipt(
         "pose_guard": dict(pose_guard),
         "runtime_sidecar_bytes": int(runtime_sidecar_bytes),
         "human_visual_fidelity_objective": False,
+        # Authority marker WITHOUT the canonical authority/readiness keys:
+        # receipts travel inside substrate_artifact_metadata, where the
+        # harness custody validator refuses score_claim/promotion_eligible/
+        # etc. even as false-valued copies (single-custody-surface rule).
+        "authority": "planning_control_false_authority",
     }
-    receipt.update(PROXY_FALSE_AUTHORITY_FIELDS)
     return receipt
