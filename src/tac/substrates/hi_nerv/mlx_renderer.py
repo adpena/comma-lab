@@ -1065,6 +1065,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pair_indices: Any,
         target_segnet_argmax_1: Any | None = None,
         target_region_bootstrap_weight: float = 0.25,
+        scorer_teacher: Any | None = None,
+        segnet_margin_bootstrap_weight: float = 0.0,
+        segnet_margin_bootstrap_floor: float = 0.25,
         steps: int = 8,
         learning_rate: float = 2.0e-3,
         rgb_weight: float = 1.0,
@@ -1110,6 +1113,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "temporal_delta_weight": float(temporal_delta_weight),
             "contrast_floor_weight": float(contrast_floor_weight),
             "target_region_bootstrap_weight": float(target_region_bootstrap_weight),
+            "segnet_margin_bootstrap_weight": float(segnet_margin_bootstrap_weight),
         }
         if not math.isfinite(lr) or lr <= 0.0:
             raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
@@ -1126,6 +1130,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         ):
             if not math.isfinite(value) or value < 0.0:
                 raise ValueError(f"{name} must be finite and non-negative; got {value}")
+        segnet_margin_floor = float(segnet_margin_bootstrap_floor)
+        if not math.isfinite(segnet_margin_floor) or segnet_margin_floor < 0.0:
+            raise ValueError(
+                "segnet_margin_bootstrap_floor must be finite and non-negative; "
+                f"got {segnet_margin_bootstrap_floor}"
+            )
         wd = float(weight_decay)
         if not math.isfinite(wd) or wd < 0.0:
             raise ValueError(f"weight_decay must be finite and non-negative; got {weight_decay}")
@@ -1231,12 +1241,256 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             }
 
         target_region_weight_map, target_region_metadata = _target_region_weight_map()
+        archive_charged_bootstrap_tensors = [
+            "latents_coarse",
+            "latents_mid",
+            "latents_fine",
+            "latent_embed.*",
+            "blocks.*",
+            "feature_grids.*",
+            "convnext_blocks.*",
+            "mid_injector.*",
+            "fine_injector.*",
+            "head_rgb_0.*",
+            "head_rgb_1.*",
+        ]
+        segnet_margin_live_fn = None
+        segnet_margin_target_labels = None
+        segnet_margin_metadata: dict[str, Any] = {
+            "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
+            "enabled": False,
+            "weight": float(weights["segnet_margin_bootstrap_weight"]),
+            "margin_floor": float(segnet_margin_floor),
+            "reason": "segnet_margin_bootstrap_weight_not_positive",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "human_visual_fidelity_objective": False,
+        }
+        if weights["segnet_margin_bootstrap_weight"] > 0.0:
+            blockers: list[str] = []
+            live_fn = getattr(scorer_teacher, "teacher_logits_for_frames_nhwc01", None)
+            if not callable(live_fn):
+                blockers.append("hi_nerv_bootstrap_live_segnet_candidate_logits_missing")
+            labels = None
+            if target_segnet_argmax_1 is not None:
+                labels = mx.array(target_segnet_argmax_1, dtype=mx.int32)  # type: ignore[union-attr]
+                if labels.ndim == 4 and int(labels.shape[-1]) == 1:
+                    labels = labels[..., 0]
+            else:
+                local_teacher_indices = mx.arange(  # type: ignore[union-attr]
+                    int(target1.shape[0]),
+                    dtype=mx.int32,
+                )
+                argmax_fn = getattr(scorer_teacher, "teacher_argmax_for_indices", None)
+                logits_fn = getattr(scorer_teacher, "teacher_logits_for_indices", None)
+                if callable(argmax_fn):
+                    labels = argmax_fn(local_teacher_indices)
+                elif callable(logits_fn):
+                    target_logits = logits_fn(local_teacher_indices)
+                    labels = mx.argmax(target_logits, axis=-1)  # type: ignore[union-attr]
+                else:
+                    blockers.append("hi_nerv_bootstrap_target_segnet_argmax_missing")
+            if labels is not None:
+                if labels.ndim == 4 and int(labels.shape[-1]) == 1:
+                    labels = labels[..., 0]
+                if labels.ndim != 3:
+                    raise ValueError(
+                        "target_segnet_argmax_1 must have shape BHW or BHW1; "
+                        f"got {tuple(int(v) for v in labels.shape)}"
+                    )
+                if tuple(int(v) for v in labels.shape) != tuple(
+                    int(v) for v in target1.shape[:3]
+                ):
+                    raise ValueError(
+                        "target_segnet_argmax_1 shape must match target_rgb_1 BHW; "
+                        f"argmax={tuple(int(v) for v in labels.shape)} "
+                        f"target={tuple(int(v) for v in target1.shape[:3])}"
+                    )
+                segnet_margin_target_labels = mx.stop_gradient(labels)
+                mx.eval(segnet_margin_target_labels)  # type: ignore[union-attr]
+            if blockers:
+                raise ValueError(
+                    "segnet_margin_bootstrap_weight was positive, but the live "
+                    f"SegNet bootstrap actuator cannot run: {blockers}"
+                )
+            segnet_margin_live_fn = live_fn
+            segnet_margin_metadata = {
+                "schema": "hi_nerv_scorer_domain_bootstrap_live_segnet_margin.v1",
+                "enabled": True,
+                "weight": float(weights["segnet_margin_bootstrap_weight"]),
+                "margin_floor": float(segnet_margin_floor),
+                "source": "live_mlx_segnet_candidate_logits_against_frame1_target_argmax",
+                "target_index_semantics": "local_bootstrap_batch_indices",
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
+                "human_visual_fidelity_objective": False,
+            }
 
         def _predict_pair01(model_obj: Any) -> tuple[Any, Any]:
             pair01 = model_obj(idx) / 255.0
             pred0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
             pred1 = mx.transpose(pair01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
             return pred0, pred1
+
+        def _segnet_margin_bootstrap_tensors(pred1: Any) -> dict[str, Any]:
+            if (
+                segnet_margin_live_fn is None
+                or segnet_margin_target_labels is None
+                or weights["segnet_margin_bootstrap_weight"] <= 0.0
+            ):
+                zero = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+                one = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
+                return {
+                    "segnet_margin_bootstrap_loss": zero,
+                    "segnet_margin_bootstrap_argmax_disagreement": zero,
+                    "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass": zero,
+                    "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass": zero,
+                    "segnet_margin_bootstrap_candidate_target_class_min_ratio": one,
+                    "segnet_margin_bootstrap_worst_class_index": mx.array(  # type: ignore[union-attr]
+                        -1.0,
+                        dtype=mx.float32,
+                    ),
+                }
+
+            candidate_logits = segnet_margin_live_fn(pred1)
+            if candidate_logits.ndim != 4:
+                raise ValueError(
+                    "live SegNet bootstrap candidate logits must be BHWC; got "
+                    f"{tuple(int(v) for v in candidate_logits.shape)}"
+                )
+            if tuple(int(v) for v in candidate_logits.shape[:3]) != tuple(
+                int(v) for v in segnet_margin_target_labels.shape
+            ):
+                raise ValueError(
+                    "live SegNet bootstrap logits BHW must match target labels; "
+                    f"logits={tuple(int(v) for v in candidate_logits.shape[:3])} "
+                    f"labels={tuple(int(v) for v in segnet_margin_target_labels.shape)}"
+                )
+            class_count = int(candidate_logits.shape[-1])
+            if class_count <= 0:
+                raise ValueError("live SegNet bootstrap logits must have at least one class")
+            max_target_class = int(
+                np.asarray(mx.max(segnet_margin_target_labels), dtype=np.int32).item()
+            )
+            if max_target_class >= class_count:
+                raise ValueError(
+                    "target SegNet argmax contains a class outside live logits: "
+                    f"max_target_class={max_target_class} class_count={class_count}"
+                )
+            pred_class = mx.argmax(candidate_logits, axis=-1)  # type: ignore[union-attr]
+            eps = mx.array(1.0e-6, dtype=mx.float32)  # type: ignore[union-attr]
+            total_loss = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            active_count = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            total_unsolved = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            worst_unsolved = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+            worst_class = mx.array(-1.0, dtype=mx.float32)  # type: ignore[union-attr]
+            min_region_ratio = mx.array(1.0, dtype=mx.float32)  # type: ignore[union-attr]
+            metrics: dict[str, Any] = {}
+            for class_index in range(class_count):
+                target_mask = (segnet_margin_target_labels == class_index).astype(
+                    mx.float32
+                )
+                target_fraction = mx.mean(target_mask)  # type: ignore[union-attr]
+                active = (target_fraction > 0.0).astype(mx.float32)
+                class_pred_mask = (pred_class == class_index).astype(mx.float32)
+                hard_fraction = mx.mean(class_pred_mask)  # type: ignore[union-attr]
+                correct_pixels = mx.sum(class_pred_mask * target_mask)  # type: ignore[union-attr]
+                target_pixels = mx.sum(target_mask)  # type: ignore[union-attr]
+                region_ratio = correct_pixels / mx.maximum(target_pixels, eps)  # type: ignore[union-attr]
+                support_ratio = hard_fraction / mx.maximum(target_fraction, eps)  # type: ignore[union-attr]
+                class_logit = candidate_logits[..., class_index]
+                if class_count == 1:
+                    impostor_logit = mx.zeros_like(class_logit)  # type: ignore[union-attr]
+                elif class_index == 0:
+                    impostor_logit = mx.max(  # type: ignore[union-attr]
+                        candidate_logits[..., 1:],
+                        axis=-1,
+                    )
+                elif class_index == class_count - 1:
+                    impostor_logit = mx.max(  # type: ignore[union-attr]
+                        candidate_logits[..., :class_index],
+                        axis=-1,
+                    )
+                else:
+                    impostor_logit = mx.max(  # type: ignore[union-attr]
+                        mx.concatenate(
+                            [
+                                candidate_logits[..., :class_index],
+                                candidate_logits[..., class_index + 1 :],
+                            ],
+                            axis=-1,
+                        ),
+                        axis=-1,
+                    )
+                margin = mx.maximum(  # type: ignore[union-attr]
+                    0.0,
+                    impostor_logit - class_logit + segnet_margin_floor,
+                )
+                crossing_loss = mx.sum(  # type: ignore[union-attr]
+                    margin * margin * target_mask
+                ) / mx.maximum(target_pixels, eps)
+                score_weighted_unsolved = (
+                    mx.array(100.0, dtype=mx.float32)
+                    * target_fraction
+                    * mx.maximum(0.0, 1.0 - region_ratio)  # type: ignore[union-attr]
+                )
+                support_deficit = mx.maximum(0.0, 1.0 - support_ratio)  # type: ignore[union-attr]
+                region_deficit = mx.maximum(0.0, 1.0 - region_ratio)  # type: ignore[union-attr]
+                boost = mx.stop_gradient(  # type: ignore[union-attr]
+                    active
+                    * (
+                        1.0
+                        + mx.minimum(32.0, score_weighted_unsolved)
+                        + 16.0 * support_deficit
+                        + 16.0 * region_deficit
+                    )
+                )
+                class_loss = boost * crossing_loss
+                total_loss = total_loss + class_loss
+                active_count = active_count + active
+                total_unsolved = total_unsolved + active * score_weighted_unsolved
+                better_worst = score_weighted_unsolved > worst_unsolved
+                worst_unsolved = mx.where(  # type: ignore[union-attr]
+                    better_worst,
+                    score_weighted_unsolved,
+                    worst_unsolved,
+                )
+                worst_class = mx.where(  # type: ignore[union-attr]
+                    better_worst,
+                    mx.array(float(class_index), dtype=mx.float32),
+                    worst_class,
+                )
+                min_region_ratio = mx.minimum(  # type: ignore[union-attr]
+                    min_region_ratio,
+                    active * region_ratio + (1.0 - active),
+                )
+                prefix = f"segnet_margin_bootstrap_class_{class_index}"
+                metrics[f"{prefix}_target_fraction"] = target_fraction
+                metrics[f"{prefix}_candidate_hard_fraction"] = hard_fraction
+                metrics[f"{prefix}_candidate_support_ratio"] = support_ratio
+                metrics[f"{prefix}_target_region_correct_ratio"] = region_ratio
+                metrics[f"{prefix}_crossing_loss"] = crossing_loss
+                metrics[f"{prefix}_score_weighted_unsolved_argmax_mass"] = (
+                    score_weighted_unsolved
+                )
+            metrics.update({
+                "segnet_margin_bootstrap_loss": total_loss
+                / mx.maximum(active_count, eps),
+                "segnet_margin_bootstrap_argmax_disagreement": mx.mean(  # type: ignore[union-attr]
+                    (pred_class != segnet_margin_target_labels).astype(mx.float32)
+                ),
+                "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass": (
+                    total_unsolved
+                ),
+                "segnet_margin_bootstrap_score_weighted_worst_unsolved_argmax_mass": (
+                    worst_unsolved
+                ),
+                "segnet_margin_bootstrap_candidate_target_class_min_ratio": (
+                    min_region_ratio
+                ),
+                "segnet_margin_bootstrap_worst_class_index": worst_class,
+            })
+            return metrics
 
         def _metric_tensors(model_obj: Any) -> dict[str, Any]:
             pred0, pred1 = _predict_pair01(model_obj)
@@ -1253,7 +1507,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             temporal = mx.mean(  # type: ignore[union-attr]
                 (pred_temporal - ref_temporal) * (pred_temporal - ref_temporal)
             )
-            return {
+            metrics = {
                 "rgb_pair_mse": 0.5 * (rgb0 + rgb1),
                 "rgb_frame0_mse": rgb0,
                 "rgb_frame1_mse": rgb1,
@@ -1265,6 +1519,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "output_yuv6_temporal_delta_std": mx.std(pred_temporal),  # type: ignore[union-attr]
                 "target_yuv6_temporal_delta_std": mx.std(ref_temporal),  # type: ignore[union-attr]
             }
+            metrics.update(_segnet_margin_bootstrap_tensors(pred1))
+            return metrics
 
         def _contrast_floor_loss(metrics: Mapping[str, Any]) -> Any:
             eps = 1.0e-6
@@ -1290,6 +1546,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + weights["contrast_floor_weight"] * _contrast_floor_loss(metrics)
                 + weights["target_region_bootstrap_weight"]
                 * metrics["target_region_rgb_frame1_mse"]
+                + weights["segnet_margin_bootstrap_weight"]
+                * metrics["segnet_margin_bootstrap_loss"]
             )
 
         def _scalar_metrics(model_obj: Any) -> dict[str, float]:
@@ -1463,10 +1721,26 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "map_source": str(target_region_metadata.get("source")),
                 "metadata": target_region_metadata,
             },
+            "segnet_margin_bootstrap": segnet_margin_metadata,
             "rgb_pair_mse_delta": _improvement("rgb_pair_mse"),
             "rgb_frame1_mse_delta": _improvement("rgb_frame1_mse"),
             "target_region_rgb_frame1_mse_delta": _improvement(
                 "target_region_rgb_frame1_mse"
+            ),
+            "segnet_margin_bootstrap_loss_delta": _improvement(
+                "segnet_margin_bootstrap_loss"
+            ),
+            "segnet_margin_bootstrap_argmax_disagreement_delta": _improvement(
+                "segnet_margin_bootstrap_argmax_disagreement"
+            ),
+            "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass_delta": (
+                _improvement(
+                    "segnet_margin_bootstrap_score_weighted_total_unsolved_argmax_mass"
+                )
+            ),
+            "segnet_margin_bootstrap_candidate_target_class_min_ratio_delta": float(
+                after["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
+                - before["segnet_margin_bootstrap_candidate_target_class_min_ratio"]
             ),
             "yuv6_pair_mse_delta": _improvement("yuv6_pair_mse"),
             "yuv6_temporal_delta_mse_delta": _improvement("yuv6_temporal_delta_mse"),
@@ -1479,19 +1753,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 - before["output_yuv6_temporal_delta_std_ratio"]
             ),
             "runtime_sidecar_bytes": 0,
-            "archive_charged_decoder_tensors": [
-                "latents_coarse",
-                "latents_mid",
-                "latents_fine",
-                "latent_embed.*",
-                "blocks.*",
-                "feature_grids.*",
-                "convnext_blocks.*",
-                "mid_injector.*",
-                "fine_injector.*",
-                "head_rgb_0.*",
-                "head_rgb_1.*",
-            ],
+            "archive_charged_decoder_tensors": archive_charged_bootstrap_tensors,
             "target_surface": "segnet_last_frame_rgb_and_posenet_pr95_yuv6_pair",
             "human_visual_fidelity_objective": False,
         }

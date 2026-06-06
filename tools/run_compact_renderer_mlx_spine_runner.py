@@ -18687,6 +18687,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 target_rgb_1[:bootstrap_count],
                 pair_indices=bootstrap_pair_indices,
                 target_segnet_argmax_1=target_segnet_argmax_1,
+                scorer_teacher=bootstrap_scorer_teacher,
+                segnet_margin_bootstrap_weight=(
+                    1.0 if bootstrap_scorer_teacher is not None else 0.0
+                ),
                 steps=int(scorer_domain_bootstrap_steps),
                 learning_rate=float(scorer_domain_bootstrap_learning_rate),
                 rgb_weight=float(scorer_domain_bootstrap_rgb_weight),

@@ -7073,11 +7073,15 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             weight_decay,
             grad_clip_max_norm,
             target_segnet_argmax_1=None,
+            scorer_teacher=None,
+            segnet_margin_bootstrap_weight=0.0,
         ):
             captured["scorer_domain_bootstrap_call"] = {
                 "target0_shape": tuple(target_rgb_0.shape),
                 "target1_shape": tuple(target_rgb_1.shape),
                 "steps": int(steps),
+                "scorer_teacher_present": scorer_teacher is not None,
+                "segnet_margin_bootstrap_weight": float(segnet_margin_bootstrap_weight),
             }
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -7718,6 +7722,8 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
             weight_decay,
             grad_clip_max_norm,
             target_segnet_argmax_1=None,
+            scorer_teacher=None,
+            segnet_margin_bootstrap_weight=0.0,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -8016,6 +8022,8 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
             weight_decay,
             grad_clip_max_norm,
             target_segnet_argmax_1=None,
+            scorer_teacher=None,
+            segnet_margin_bootstrap_weight=0.0,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15091,6 +15099,8 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
             weight_decay,
             grad_clip_max_norm,
             target_segnet_argmax_1=None,
+            scorer_teacher=None,
+            segnet_margin_bootstrap_weight=0.0,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15387,6 +15397,8 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
             weight_decay,
             grad_clip_max_norm,
             target_segnet_argmax_1=None,
+            scorer_teacher=None,
+            segnet_margin_bootstrap_weight=0.0,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
