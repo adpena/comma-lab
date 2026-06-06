@@ -44,6 +44,7 @@ def _receiver_surface_trace(**overrides: float) -> dict[str, float]:
         "receiver_surface_loss_delta": -0.01,
         "receiver_surface_float_rgb_delta_linf": 0.02,
         "receiver_surface_uint8_changed_pixels": 7.0,
+        "receiver_surface_uint8_delta_abs_max": 2.0,
         "receiver_surface_segnet_input_delta_linf": 0.015,
         "receiver_surface_worst_region_margin_p50_delta": 0.0002,
         "receiver_surface_argmax_flipped_pixels": 3.0,
@@ -57,8 +58,15 @@ def _receiver_surface_trace(**overrides: float) -> dict[str, float]:
         "receiver_surface_posenet_input_delta_linf": 0.03,
         "receiver_surface_pose_output_delta": -0.05,
         "receiver_surface_fakequant_argmax_flipped_pixels": 3.0,
+        "receiver_surface_fakequant_margin_delta": 0.0002,
+        "receiver_surface_fakequant_pose_output_delta": 0.05,
+        "receiver_surface_fakequant_survival": 1.0,
         "receiver_surface_parseback_argmax_flipped_pixels": 3.0,
+        "receiver_surface_parseback_pose_output_delta": 0.05,
+        "receiver_surface_parseback_survival": 1.0,
         "receiver_surface_inflated_argmax_flipped_pixels": 3.0,
+        "receiver_surface_inflated_pose_output_delta": 0.05,
+        "receiver_surface_inflate_survival": 1.0,
     }
     trace.update(overrides)
     return trace
@@ -93,7 +101,14 @@ def test_trace_nerv_crux_emits_contest_unit_rows_without_score_claim(tmp_path: P
     )
     assert metrics["archive_rate_score"]["score_units"] == pytest.approx(25.0 * 150_000 / 37_545_489)
     assert metrics["receiver_surface_uint8_changed_pixels"]["value"] == pytest.approx(7.0)
+    assert metrics["receiver_surface_uint8_delta_abs_max"]["value"] == pytest.approx(2.0)
     assert metrics["receiver_surface_parseback_argmax_flipped_pixels"]["value"] == pytest.approx(3.0)
+    assert metrics["receiver_surface_fakequant_pose_output_delta"]["value"] == pytest.approx(0.05)
+    assert metrics["receiver_surface_fakequant_survival"]["value"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_parseback_pose_output_delta"]["value"] == pytest.approx(0.05)
+    assert metrics["receiver_surface_parseback_survival"]["value"] == pytest.approx(1.0)
+    assert metrics["receiver_surface_inflated_pose_output_delta"]["value"] == pytest.approx(0.05)
+    assert metrics["receiver_surface_inflate_survival"]["value"] == pytest.approx(1.0)
     assert metrics["receiver_surface_target_hard_won_count"]["value"] == pytest.approx(2.0)
     assert metrics["receiver_surface_net_target_support_delta"]["value"] == pytest.approx(2.0)
     assert {row["authority"] for row in rows} == {"macos_mlx_false_authority_no_score_claim"}

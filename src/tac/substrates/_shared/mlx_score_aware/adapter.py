@@ -2215,7 +2215,7 @@ class MlxScoreAwareAdapter:
         )
         if pre_pose is not None and post_pose is not None:
             pose_delta = float(post_pose - pre_pose)
-            out["receiver_surface_pose_output_delta"] = pose_delta
+            out["receiver_surface_pose_score_term_delta"] = pose_delta
             out["receiver_surface_pose_score_unit_movement"] = -pose_delta
 
         pre_argmax = _metric("scorer_space_step_guard_pre_segnet_argmax_disagreement")
@@ -2272,21 +2272,33 @@ class MlxScoreAwareAdapter:
             {
                 "receiver_surface_float_rgb_delta_linf_evidence_missing": 1.0,
                 "receiver_surface_uint8_changed_pixels_evidence_missing": 1.0,
+                "receiver_surface_uint8_delta_abs_max_evidence_missing": 1.0,
                 "receiver_surface_segnet_input_delta_linf_evidence_missing": 1.0,
                 "receiver_surface_argmax_flipped_pixels_evidence_missing": 1.0,
                 "receiver_surface_worst_region_margin_p50_delta_evidence_missing": (
                     1.0
                 ),
                 "receiver_surface_posenet_input_delta_linf_evidence_missing": 1.0,
+                "receiver_surface_pose_output_delta_evidence_missing": 1.0,
                 "receiver_surface_fakequant_argmax_flipped_pixels_evidence_missing": (
                     1.0
                 ),
+                "receiver_surface_fakequant_margin_delta_evidence_missing": 1.0,
+                "receiver_surface_fakequant_pose_output_delta_evidence_missing": 1.0,
+                "receiver_surface_fakequant_survival_evidence_missing": 1.0,
                 "receiver_surface_parseback_argmax_flipped_pixels_evidence_missing": (
                     1.0
                 ),
+                "receiver_surface_parseback_margin_delta_evidence_missing": 1.0,
+                "receiver_surface_parseback_target_support_evidence_missing": 1.0,
+                "receiver_surface_parseback_pose_output_delta_evidence_missing": 1.0,
+                "receiver_surface_parseback_survival_evidence_missing": 1.0,
                 "receiver_surface_inflated_argmax_flipped_pixels_evidence_missing": (
                     1.0
                 ),
+                "receiver_surface_inflated_target_support_evidence_missing": 1.0,
+                "receiver_surface_inflated_pose_output_delta_evidence_missing": 1.0,
+                "receiver_surface_inflate_survival_evidence_missing": 1.0,
             }
         )
         return out
@@ -2386,14 +2398,19 @@ class MlxScoreAwareAdapter:
 
         uint8_pair = _pair("uint8_rgb")
         if uint8_pair is not None:
-            changed_channels = (uint8_pair[1] != uint8_pair[0]).astype(mx.float32)
+            uint8_delta = mx.abs(uint8_pair[1] - uint8_pair[0])
+            changed_channels = (uint8_delta > 0.0).astype(mx.float32)
             changed_pixels = mx.sum(mx.max(changed_channels, axis=-1))
             changed_channel_values = mx.sum(changed_channels)
+            uint8_delta_abs_max = mx.max(uint8_delta)
             out["receiver_surface_uint8_changed_pixels"] = changed_pixels
+            out["receiver_surface_uint8_delta_abs_max"] = uint8_delta_abs_max
             out["receiver_surface_uint8_changed_channel_values"] = (
                 changed_channel_values
             )
-            eval_targets.extend([changed_pixels, changed_channel_values])
+            eval_targets.extend(
+                [changed_pixels, changed_channel_values, uint8_delta_abs_max]
+            )
 
         def _argmax_flip_count(name: str, metric: str) -> None:
             argmax_pair = _pair(name)
@@ -2480,14 +2497,44 @@ class MlxScoreAwareAdapter:
                 "receiver_surface_worst_region_margin_p50_connected_component_authority"
             ] = 1.0
 
+        fakequant_pre_margin_p50 = self._receiver_surface_worst_connected_region_margin_p50(
+            logits=pre.get("fakequant_segnet_logits"),
+            target_argmax=pre.get("segnet_target_argmax"),
+        )
+        fakequant_post_margin_p50 = self._receiver_surface_worst_connected_region_margin_p50(
+            logits=post.get("fakequant_segnet_logits"),
+            target_argmax=post.get("segnet_target_argmax"),
+        )
+        fakequant_scorer_motion_values: list[float] = []
+        if (
+            fakequant_pre_margin_p50 is not None
+            and fakequant_post_margin_p50 is not None
+        ):
+            fakequant_margin_delta = (
+                fakequant_post_margin_p50[0] - fakequant_pre_margin_p50[0]
+            )
+            out["receiver_surface_fakequant_margin_delta"] = fakequant_margin_delta
+            out["receiver_surface_fakequant_worst_region_margin_p50_pre"] = (
+                fakequant_pre_margin_p50[0]
+            )
+            out["receiver_surface_fakequant_worst_region_margin_p50_post"] = (
+                fakequant_post_margin_p50[0]
+            )
+            fakequant_scorer_motion_values.append(abs(float(fakequant_margin_delta)))
+
         pose_pair = _pair("posenet_output")
         if pose_pair is not None:
             pose_diff = pose_pair[1] - pose_pair[0]
             pose_linf = mx.max(mx.abs(pose_diff))
             pose_l2_mean = mx.mean(mx.sqrt(mx.sum(pose_diff * pose_diff, axis=-1)))
             out["receiver_surface_pose_output_delta"] = pose_l2_mean
+            out["receiver_surface_fakequant_pose_output_delta"] = pose_l2_mean
             out["receiver_surface_posenet_output_delta_linf"] = pose_linf
             out["receiver_surface_posenet_output_delta_l2_mean"] = pose_l2_mean
+            out["receiver_surface_fakequant_posenet_output_delta_linf"] = pose_linf
+            out["receiver_surface_fakequant_posenet_output_delta_l2_mean"] = (
+                pose_l2_mean
+            )
             eval_targets.extend([pose_linf, pose_l2_mean])
 
         if eval_targets:
@@ -2499,12 +2546,37 @@ class MlxScoreAwareAdapter:
             else:
                 float_out[key] = float(value.item())
 
+        for key in (
+            "receiver_surface_fakequant_argmax_flipped_pixels",
+            "receiver_surface_fakequant_target_hard_won_count",
+            "receiver_surface_fakequant_net_target_support_delta",
+            "receiver_surface_fakequant_margin_delta",
+            "receiver_surface_fakequant_pose_output_delta",
+        ):
+            value = float_out.get(key)
+            if value is not None:
+                fakequant_scorer_motion_values.append(abs(float(value)))
+        if any(
+            key in float_out
+            for key in (
+                "receiver_surface_fakequant_argmax_flipped_pixels",
+                "receiver_surface_fakequant_margin_delta",
+                "receiver_surface_fakequant_pose_output_delta",
+            )
+        ):
+            float_out["receiver_surface_fakequant_survival"] = float(
+                any(value > 0.0 for value in fakequant_scorer_motion_values)
+            )
+
         exact_field_to_missing_flag = {
             "receiver_surface_float_rgb_delta_linf": (
                 "receiver_surface_float_rgb_delta_linf_evidence_missing"
             ),
             "receiver_surface_uint8_changed_pixels": (
                 "receiver_surface_uint8_changed_pixels_evidence_missing"
+            ),
+            "receiver_surface_uint8_delta_abs_max": (
+                "receiver_surface_uint8_delta_abs_max_evidence_missing"
             ),
             "receiver_surface_segnet_input_delta_linf": (
                 "receiver_surface_segnet_input_delta_linf_evidence_missing"
@@ -2515,8 +2587,20 @@ class MlxScoreAwareAdapter:
             "receiver_surface_posenet_input_delta_linf": (
                 "receiver_surface_posenet_input_delta_linf_evidence_missing"
             ),
+            "receiver_surface_pose_output_delta": (
+                "receiver_surface_pose_output_delta_evidence_missing"
+            ),
             "receiver_surface_fakequant_argmax_flipped_pixels": (
                 "receiver_surface_fakequant_argmax_flipped_pixels_evidence_missing"
+            ),
+            "receiver_surface_fakequant_margin_delta": (
+                "receiver_surface_fakequant_margin_delta_evidence_missing"
+            ),
+            "receiver_surface_fakequant_pose_output_delta": (
+                "receiver_surface_fakequant_pose_output_delta_evidence_missing"
+            ),
+            "receiver_surface_fakequant_survival": (
+                "receiver_surface_fakequant_survival_evidence_missing"
             ),
             "receiver_surface_worst_region_margin_p50_delta": (
                 "receiver_surface_worst_region_margin_p50_delta_evidence_missing"

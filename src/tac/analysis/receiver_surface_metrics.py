@@ -283,18 +283,24 @@ RECEIVER_SURFACE_ALIAS_METRIC_ROWS = (
         "inflate",
     ),
 )
-RECEIVER_SURFACE_TRACE_METRIC_ROWS = tuple(
-    ((canonical_key,), canonical_key, axis) for _keys, canonical_key, axis in RECEIVER_SURFACE_ALIAS_METRIC_ROWS
-)
-RECEIVER_SURFACE_EVIDENCE_KEYS = tuple(
-    canonical_key for _keys, canonical_key, _axis in RECEIVER_SURFACE_TRACE_METRIC_ROWS
-)
 RECEIVER_SURFACE_CANONICAL_METRIC_ROWS = (
     *RECEIVER_SURFACE_ALIAS_METRIC_ROWS,
     (RECEIVER_SURFACE_UINT8_DELTA_ABS_MAX_KEYS, "receiver_surface_uint8_delta_abs_max", "receiver"),
     (RECEIVER_SURFACE_FAKEQUANT_POSE_OUTPUT_DELTA_KEYS, "receiver_surface_fakequant_pose_output_delta", "fakequant"),
     (RECEIVER_SURFACE_PARSEBACK_POSE_OUTPUT_DELTA_KEYS, "receiver_surface_parseback_pose_output_delta", "parseback"),
     (RECEIVER_SURFACE_INFLATED_POSE_OUTPUT_DELTA_KEYS, "receiver_surface_inflated_pose_output_delta", "inflate"),
+)
+RECEIVER_SURFACE_TRACE_METRIC_ROWS = (
+    *(
+        ((canonical_key,), canonical_key, axis)
+        for _keys, canonical_key, axis in RECEIVER_SURFACE_CANONICAL_METRIC_ROWS
+    ),
+    (RECEIVER_SURFACE_FAKEQUANT_SURVIVAL_KEYS, "receiver_surface_fakequant_survival", "fakequant"),
+    (RECEIVER_SURFACE_PARSEBACK_SURVIVAL_KEYS, "receiver_surface_parseback_survival", "parseback"),
+    (RECEIVER_SURFACE_INFLATE_SURVIVAL_KEYS, "receiver_surface_inflate_survival", "inflate"),
+)
+RECEIVER_SURFACE_EVIDENCE_KEYS = tuple(
+    canonical_key for _keys, canonical_key, _axis in RECEIVER_SURFACE_TRACE_METRIC_ROWS
 )
 
 
