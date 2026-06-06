@@ -4323,6 +4323,13 @@ def train_export_snerv_mlx_native(
                 score_aware_long_training_output_head_bias_gradient_multiplier,
             )
         ),
+        official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+        official_trained_checkpoint_state_dict_path=(
+            official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            official_trained_checkpoint_state_dict_kind
+        ),
         official_trained_checkpoint_mapping_manifest=(
             official_trained_checkpoint_mapping_manifest
         ),
@@ -5794,6 +5801,11 @@ def _run_score_aware_long_training_attachment(
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
     bias_gradient_multiplier: float | None = None,
     output_head_bias_gradient_multiplier: float = 1.0,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
     official_trained_checkpoint_mapping_manifest: Mapping[str, Any] | None = None,
     prioritized_pair_indices: tuple[int, ...],
     scorer_error_pair_sampling_weights: Mapping[int, float] | None,
@@ -6561,6 +6573,15 @@ def _run_score_aware_long_training_attachment(
                     official_trained_checkpoint_mapping_manifest=(
                         trained_checkpoint_mapping_manifest
                     ),
+                    official_trained_checkpoint_state_dict=(
+                        official_trained_checkpoint_state_dict
+                    ),
+                    official_trained_checkpoint_state_dict_path=(
+                        official_trained_checkpoint_state_dict_path
+                    ),
+                    official_trained_checkpoint_state_dict_kind=(
+                        official_trained_checkpoint_state_dict_kind
+                    ),
                     allow_overwrite=allow_overwrite,
                 )
             )
@@ -6572,6 +6593,15 @@ def _run_score_aware_long_training_attachment(
                 source_pair_indices=source_pair_indices,
                 official_trained_checkpoint_mapping_manifest=(
                     trained_checkpoint_mapping_manifest
+                ),
+                official_trained_checkpoint_state_dict=(
+                    official_trained_checkpoint_state_dict
+                ),
+                official_trained_checkpoint_state_dict_path=(
+                    official_trained_checkpoint_state_dict_path
+                ),
+                official_trained_checkpoint_state_dict_kind=(
+                    official_trained_checkpoint_state_dict_kind
                 ),
                 allow_overwrite=allow_overwrite,
             )
@@ -8153,6 +8183,11 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
     model_size: SnervModelSizeConfig,
     source_pair_indices: Sequence[int],
     official_trained_checkpoint_mapping_manifest: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Write the executable official-payload replay proof for long-training refusal.
@@ -8211,7 +8246,21 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
         **FALSE_AUTHORITY,
     }
     try:
-        tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training()
+        tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training(
+            official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+            official_trained_checkpoint_state_dict_path=(
+                official_trained_checkpoint_state_dict_path
+            ),
+            official_trained_checkpoint_state_dict_kind=(
+                official_trained_checkpoint_state_dict_kind
+            ),
+        )
+        checkpoint_source_forward_verified = (
+            _official_tub_checkpoint_source_forward_verified(tub_fixture_replay)
+        )
+        checkpoint_load_blockers = _official_tub_checkpoint_load_blockers(
+            tub_fixture_replay
+        )
         packet = _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
             pairs,
             source_pair_indices=tuple(int(value) for value in source_pair_indices),
@@ -8281,11 +8330,30 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             ""
             if official_checkpoint_mapping_verified
             else SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER,
-            SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
+            ""
+            if checkpoint_source_forward_verified
+            else SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
             *source_forward_blockers,
+            *checkpoint_load_blockers,
         ]
         payload = {
             **base,
+            "source_forward_replay_bound": bool(
+                receiver_decode_replay_passed and checkpoint_source_forward_verified
+            ),
+            "source_forward_replay_verified": checkpoint_source_forward_verified,
+            "source_forward_replay_authority": bool(
+                receiver_decode_replay_passed and checkpoint_source_forward_verified
+            ),
+            "official_trained_checkpoint_source_forward_replay_verified": (
+                checkpoint_source_forward_verified
+            ),
+            "official_torch_source_forward_replay_passed": (
+                checkpoint_source_forward_verified
+            ),
+            "official_trained_checkpoint_source_forward_replay": (
+                tub_fixture_replay
+            ),
             "packet_bytes": len(packet.packet),
             "packet_sha256": _sha256_bytes(packet.packet),
             "selected_packet_authority": selected_authority,
@@ -8322,7 +8390,17 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             "blockers": _ordered_unique(str(blocker) for blocker in blockers if blocker),
         }
     except Exception as exc:
-        tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training()
+        tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training(
+            official_trained_checkpoint_state_dict=(
+                official_trained_checkpoint_state_dict
+            ),
+            official_trained_checkpoint_state_dict_path=(
+                official_trained_checkpoint_state_dict_path
+            ),
+            official_trained_checkpoint_state_dict_kind=(
+                official_trained_checkpoint_state_dict_kind
+            ),
+        )
         payload = {
             **base,
             "failure": f"{type(exc).__name__}: {exc}",
@@ -8355,6 +8433,11 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
     pair_count: int,
     source_pair_indices: Sequence[int],
     official_trained_checkpoint_mapping_manifest: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Write a fail-closed replay contract without blocking full-video training."""
@@ -8367,7 +8450,15 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
             f"refusing to overwrite existing official source-forward replay contract: {artifact_path}"
         )
     blocker = "snerv_official_mfu_hfr_tub_receiver_payload_replay_deferred_full_video"
-    tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training()
+    tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training(
+        official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+        official_trained_checkpoint_state_dict_path=(
+            official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            official_trained_checkpoint_state_dict_kind
+        ),
+    )
     trained_checkpoint_mapping_manifest = _coerce_official_checkpoint_mapping_manifest(
         official_trained_checkpoint_mapping_manifest,
         source="snerv_mlx_native_train_export_deferred_replay_contract",
@@ -8376,15 +8467,8 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
         trained_checkpoint_mapping_manifest.get("official_trained_checkpoint_loaded")
         is True
     )
-    official_checkpoint_mapping_verified = bool(
-        trained_checkpoint_mapping_manifest.get(
-            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
-        )
-        is True
-        and trained_checkpoint_mapping_manifest.get(
-            "official_tub_temporal_encoder_weight_mapping_proven"
-        )
-        is True
+    official_checkpoint_mapping_verified = _official_checkpoint_full_mapping_verified(
+        trained_checkpoint_mapping_manifest
     )
     source_forward_blockers = _filter_official_source_forward_blockers_for_mapping(
         _official_source_forward_blockers_from_tub_fixture(tub_fixture_replay),
@@ -8395,6 +8479,9 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
         _official_tub_fixture_preserved_blockers(tub_fixture_replay)
         if tub_fixture_passed
         else ["snerv_official_mfu_hfr_tub_source_forward_replay_missing"]
+    )
+    checkpoint_load_blockers = _official_tub_checkpoint_load_blockers(
+        tub_fixture_replay
     )
     payload: dict[str, Any] = {
         "schema": "snerv_official_mfu_hfr_tub_source_forward_replay_contract.v1",
@@ -8467,6 +8554,7 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
                         if component_id == "tub"
                         else [source_blocker]
                     ),
+                    *checkpoint_load_blockers,
                 ],
                 **FALSE_AUTHORITY,
             }
@@ -8495,6 +8583,7 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
                 else SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER,
                 SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
                 *source_forward_blockers,
+                *checkpoint_load_blockers,
             )
         ),
         **FALSE_AUTHORITY,
@@ -8581,11 +8670,31 @@ def _official_long_training_replay_component_rows(
     return rows
 
 
-def _build_official_tub_fixture_replay_for_long_training() -> dict[str, Any]:
+def _build_official_tub_fixture_replay_for_long_training(
+    *,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+) -> dict[str, Any]:
     """Run or fail closed the cheap SNeRV_T output_2 source fixture replay."""
 
     try:
-        payload = build_snerv_official_tub_source_forward_replay_artifact()
+        kwargs: dict[str, Any] = {}
+        if official_trained_checkpoint_state_dict is not None:
+            kwargs["official_trained_checkpoint_state_dict"] = (
+                official_trained_checkpoint_state_dict
+            )
+        if official_trained_checkpoint_state_dict_path is not None:
+            kwargs["official_trained_checkpoint_state_dict_path"] = (
+                official_trained_checkpoint_state_dict_path
+            )
+        if kwargs:
+            kwargs["official_trained_checkpoint_state_dict_kind"] = (
+                official_trained_checkpoint_state_dict_kind
+            )
+        payload = build_snerv_official_tub_source_forward_replay_artifact(**kwargs)
     except Exception as exc:  # pragma: no cover - defensive fail-closed path.
         return {
             "schema": "snerv_official_tub_source_forward_replay.v1",
@@ -8612,6 +8721,36 @@ def _official_tub_fixture_replay_passed(
             "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
         )
         is True
+    )
+
+
+def _official_tub_checkpoint_source_forward_verified(
+    replay: Mapping[str, Any] | None,
+) -> bool:
+    load = replay.get("official_trained_checkpoint_load") if isinstance(replay, Mapping) else None
+    return bool(
+        isinstance(replay, Mapping)
+        and isinstance(load, Mapping)
+        and load.get("loaded") is True
+        and replay.get("official_trained_checkpoint_loaded") is True
+        and replay.get("official_trained_checkpoint_state_dict_mapping_verified")
+        is True
+        and replay.get("official_tub_temporal_encoder_output2_source_fixture_replay_passed")
+        is True
+        and replay.get("source_forward_parity_proven") is True
+    )
+
+
+def _official_tub_checkpoint_load_blockers(
+    replay: Mapping[str, Any] | None,
+) -> list[str]:
+    if not isinstance(replay, Mapping):
+        return []
+    load = replay.get("official_trained_checkpoint_load")
+    if not isinstance(load, Mapping):
+        return []
+    return _ordered_unique(
+        str(blocker) for blocker in load.get("blockers") or () if str(blocker)
     )
 
 
@@ -8815,15 +8954,13 @@ def _official_long_training_replay_with_renderer_binding(
         trained_checkpoint_mapping_manifest.get("official_trained_checkpoint_loaded")
         is True
     )
-    official_checkpoint_mapping_verified = bool(
-        trained_checkpoint_mapping_manifest.get(
-            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
-        )
+    official_checkpoint_mapping_verified = _official_checkpoint_full_mapping_verified(
+        trained_checkpoint_mapping_manifest
+    )
+    checkpoint_source_forward_verified = bool(
+        payload.get("official_trained_checkpoint_source_forward_replay_verified")
         is True
-        and trained_checkpoint_mapping_manifest.get(
-            "official_tub_temporal_encoder_weight_mapping_proven"
-        )
-        is True
+        and payload.get("source_forward_replay_verified") is True
     )
     payload["score_aware_long_training_renderer_bound"] = True
     payload["train_renderer_bound"] = True
@@ -8841,7 +8978,21 @@ def _official_long_training_replay_with_renderer_binding(
     payload["official_trained_checkpoint_mapping_manifest"] = (
         trained_checkpoint_mapping_manifest
     )
-    payload["official_trained_checkpoint_source_forward_replay_verified"] = False
+    payload["official_trained_checkpoint_source_forward_replay_verified"] = (
+        checkpoint_source_forward_verified
+    )
+    payload["official_torch_source_forward_replay_passed"] = (
+        checkpoint_source_forward_verified
+    )
+    payload["source_forward_replay_verified"] = checkpoint_source_forward_verified
+    payload["source_forward_replay_bound"] = bool(
+        payload.get("source_forward_replay_bound") is True
+        and checkpoint_source_forward_verified
+    )
+    payload["source_forward_replay_authority"] = bool(
+        payload.get("source_forward_replay_authority") is True
+        and checkpoint_source_forward_verified
+    )
     payload["blockers"] = _ordered_unique(
         str(blocker)
         for blocker in payload.get("blockers") or ()
@@ -8856,6 +9007,15 @@ def _official_long_training_replay_with_renderer_binding(
                     "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping",
                 }
                 if official_checkpoint_mapping_verified
+                else set()
+            ),
+            *(
+                {
+                    SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
+                    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+                    "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+                }
+                if checkpoint_source_forward_verified
                 else set()
             ),
         }
@@ -8886,6 +9046,21 @@ def _official_long_training_replay_with_renderer_binding(
                 closed_row_mapping_blockers.add(
                     "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping"
                 )
+        row["official_trained_checkpoint_source_forward_replay_verified"] = (
+            checkpoint_source_forward_verified
+        )
+        row["official_source_forward_parity_proven"] = bool(
+            checkpoint_source_forward_verified
+        )
+        closed_row_source_forward_blockers = (
+            {
+                SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
+                "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+                "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+            }
+            if checkpoint_source_forward_verified
+            else set()
+        )
         row["blockers"] = [
             str(blocker)
             for blocker in row.get("blockers") or ()
@@ -8893,6 +9068,7 @@ def _official_long_training_replay_with_renderer_binding(
             not in {
                 "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
                 *closed_row_mapping_blockers,
+                *closed_row_source_forward_blockers,
             }
         ]
         rows.append(row)
