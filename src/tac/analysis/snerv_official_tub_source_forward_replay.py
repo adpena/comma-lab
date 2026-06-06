@@ -44,6 +44,7 @@ COMPONENT_SCHEMA = "snerv_official_tub_source_forward_component.v1"
 TRAINED_CHECKPOINT_MAPPING_SCHEMA = (
     "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
 )
+CHECKPOINT_LOAD_SCHEMA = "snerv_official_tub_checkpoint_load.v1"
 OFFICIAL_REPO_URL = "https://github.com/qwertja/SNeRV"
 DEFAULT_OFFICIAL_SNERV_REPO = Path(
     "/Volumes/VertigoDataTier/pact/experiments/results/"
@@ -81,6 +82,28 @@ STATE_VALUE_ARTIFACT_BLOCKER = (
 TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER = (
     "snerv_official_tub_trained_checkpoint_export_lineage_missing"
 )
+CHECKPOINT_LOAD_MISSING_KEYS_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_missing_keys"
+)
+CHECKPOINT_LOAD_UNEXPECTED_KEYS_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_unexpected_keys"
+)
+CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_shape_mismatch"
+)
+CHECKPOINT_LOAD_PATH_MISSING_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_path_missing"
+)
+CHECKPOINT_LOAD_UNREADABLE_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_unreadable"
+)
+
+
+class _OfficialTubCheckpointLoadFailed(RuntimeError):
+    def __init__(self, report: Mapping[str, Any]) -> None:
+        self.report = dict(report)
+        blockers = ",".join(str(value) for value in self.report.get("blockers", ()))
+        super().__init__(blockers or "official TUB checkpoint load failed")
 
 
 @dataclass(frozen=True)
@@ -120,6 +143,11 @@ def build_snerv_official_tub_source_forward_replay_artifact(
     official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
     train_one_step: bool = False,
     output_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed executable TUB source-forward replay artifact."""
@@ -145,6 +173,7 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "source_forward_parity_proven": False,
         "official_trained_checkpoint_loaded": False,
         "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "official_trained_checkpoint_load": _checkpoint_not_requested_report(),
         "official_pytorch_wavelets_runtime_dependency_installed": _module_installed(
             "pytorch_wavelets"
         ),
@@ -169,7 +198,33 @@ def build_snerv_official_tub_source_forward_replay_artifact(
             official_root,
             train_one_step=train_one_step,
             output_state_dict_path=output_state_dict_path,
+            official_trained_checkpoint_state_dict=(
+                official_trained_checkpoint_state_dict
+            ),
+            official_trained_checkpoint_state_dict_path=(
+                official_trained_checkpoint_state_dict_path
+            ),
+            official_trained_checkpoint_state_dict_kind=(
+                official_trained_checkpoint_state_dict_kind
+            ),
         )
+    except _OfficialTubCheckpointLoadFailed as exc:
+        blockers = _ordered_unique(
+            [
+                *(
+                    str(blocker)
+                    for blocker in exc.report.get("blockers", ())
+                    if str(blocker)
+                ),
+                *TUB_PRESERVED_BLOCKERS,
+            ]
+        )
+        return {
+            **base,
+            "official_trained_checkpoint_load": exc.report,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": blockers,
+        }
     except Exception as exc:  # pragma: no cover - fail-closed caller path.
         return {
             **base,
@@ -206,6 +261,7 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         else _tub_fixture_replay_blockers(payload)
     )
     mapping_manifest = payload["official_trained_checkpoint_mapping_manifest"]
+    checkpoint_load = dict(payload.get("official_trained_checkpoint_load") or {})
     state_dict_artifact = payload.get("official_trained_checkpoint_state_dict_artifact")
     state_dict_artifact = (
         dict(state_dict_artifact) if isinstance(state_dict_artifact, Mapping) else None
@@ -269,8 +325,13 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "official_tub_temporal_encoder_output2_source_fixture_replay_passed": replay_passed,
         "official_trained_checkpoint_loaded": bool(
             mapping_manifest.get("official_trained_checkpoint_loaded") is True
+            and (
+                checkpoint_load.get("requested") is not True
+                or checkpoint_load.get("loaded") is True
+            )
         ),
         "official_trained_checkpoint_state_dict_mapping_verified": mapping_verified,
+        "official_trained_checkpoint_load": checkpoint_load,
         "official_trained_checkpoint_export_lineage_verified": checkpoint_export_lineage,
         "official_trained_checkpoint_mapping_manifest": mapping_manifest,
         "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
@@ -373,6 +434,9 @@ def _run_source_fixture(
     *,
     train_one_step: bool,
     output_state_dict_path: str | Path | None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None,
+    official_trained_checkpoint_state_dict_path: str | Path | None,
+    official_trained_checkpoint_state_dict_kind: str,
 ) -> dict[str, Any]:
     import torch
 
@@ -383,6 +447,13 @@ def _run_source_fixture(
             warnings.simplefilter("ignore", FutureWarning)
             snerv_t = importlib.import_module("model.snerv_t")
         model = snerv_t.SNeRV_T(cfg.to_namespace()).double()
+        checkpoint_load = _load_checkpoint_into_official_tub_model(
+            model,
+            torch_module=torch,
+            state_dict=official_trained_checkpoint_state_dict,
+            state_dict_path=official_trained_checkpoint_state_dict_path,
+            state_dict_kind=official_trained_checkpoint_state_dict_kind,
+        )
 
         current = _positive_fixture((1, 3, 32, 32), modulo=17)
         previous = current + 1.0 / 64.0
@@ -502,6 +573,12 @@ def _run_source_fixture(
         "full_img_yl": _tensor_array(img_yl),
         "full_yh_out": _tensor_array(yh_out),
     }
+    checkpoint_loaded = checkpoint_load.get("loaded") is True
+    checkpoint_state_dict = (
+        checkpoint_load.get("_state_dict")
+        if isinstance(checkpoint_load.get("_state_dict"), Mapping)
+        else None
+    )
     state_dict_artifact = (
         _write_deterministic_state_npz(
             Path(output_state_dict_path),
@@ -510,18 +587,38 @@ def _run_source_fixture(
         if train_one_step and output_state_dict_path is not None
         else None
     )
+    if state_dict_artifact is None and checkpoint_loaded:
+        state_dict_artifact = _supplied_checkpoint_state_artifact(checkpoint_load)
+    checkpoint_public = {
+        key: value for key, value in checkpoint_load.items() if key != "_state_dict"
+    }
+    manifest_source = (
+        str(checkpoint_public.get("state_dict_source") or "")
+        if checkpoint_loaded
+        else "official_snerv_t_one_step_source_smoke"
+    )
+    manifest_kind = (
+        str(checkpoint_public.get("state_dict_kind") or "")
+        if checkpoint_loaded
+        else "official_snerv_t_one_step_trained_source_smoke_state_dict"
+    )
     return {
         "source_fixture_config": asdict(cfg),
         "source_training_smoke": training_smoke,
+        "official_trained_checkpoint_load": checkpoint_public,
         "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
         "official_trained_checkpoint_mapping_manifest": (
             _build_official_tub_trained_checkpoint_mapping_manifest(
-                model_state_dict=state_dict,
+                model_state_dict=(
+                    checkpoint_state_dict
+                    if checkpoint_loaded and checkpoint_state_dict is not None
+                    else state_dict
+                ),
                 decoder_len=int(model.decoder_len),
-                source="official_snerv_t_one_step_source_smoke",
-                state_dict_kind="official_snerv_t_one_step_trained_source_smoke_state_dict",
+                source=manifest_source,
+                state_dict_kind=manifest_kind,
             )
-            if train_one_step
+            if (train_one_step or checkpoint_loaded)
             else _untrained_tub_source_fixture_mapping_manifest(
                 state_dict=state_dict,
                 decoder_len=int(model.decoder_len),
@@ -679,6 +776,216 @@ def _run_one_step_training_smoke(
         "step_count": 1,
         "loss_before": loss_before,
         "loss_after": loss_after,
+    }
+
+
+def _checkpoint_not_requested_report() -> dict[str, Any]:
+    return {
+        "schema": CHECKPOINT_LOAD_SCHEMA,
+        "requested": False,
+        "loaded": False,
+        "state_dict_kind": None,
+        "state_dict_source": None,
+        "state_dict_key_count": 0,
+        "loaded_key_count": 0,
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "shape_mismatches": [],
+        "blockers": ["snerv_official_trained_checkpoint_state_dict_not_loaded"],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _load_checkpoint_into_official_tub_model(
+    model: Any,
+    *,
+    torch_module: Any,
+    state_dict: Mapping[str, Any] | None,
+    state_dict_path: str | Path | None,
+    state_dict_kind: str,
+) -> dict[str, Any]:
+    if state_dict is not None and state_dict_path is not None:
+        report = {
+            **_checkpoint_not_requested_report(),
+            "requested": True,
+            "blockers": [
+                "snerv_official_trained_checkpoint_state_dict_ambiguous_inputs"
+            ],
+        }
+        raise _OfficialTubCheckpointLoadFailed(report)
+    if state_dict is None and state_dict_path is None:
+        return _checkpoint_not_requested_report()
+
+    if state_dict_path is not None:
+        resolved = Path(state_dict_path).expanduser().resolve(strict=False)
+        try:
+            raw_state = _load_checkpoint_state_dict_path(resolved, torch_module=torch_module)
+        except _OfficialTubCheckpointLoadFailed:
+            raise
+        source = resolved.as_posix()
+    else:
+        raw_state = _coerce_checkpoint_state_dict_mapping(state_dict)
+        source = "in_memory_official_trained_checkpoint_state_dict"
+
+    expected = dict(model.state_dict())
+    supplied = _coerce_checkpoint_state_dict_mapping(raw_state)
+    missing_keys = sorted(key for key in expected if key not in supplied)
+    unexpected_keys = sorted(key for key in supplied if key not in expected)
+    shape_mismatches: list[dict[str, Any]] = []
+    torch_state: dict[str, Any] = {}
+    for key in sorted(key for key in supplied if key in expected):
+        array = np.asarray(_state_value_array(supplied[key]))
+        expected_shape = tuple(int(value) for value in expected[key].shape)
+        observed_shape = tuple(int(value) for value in array.shape)
+        if observed_shape != expected_shape:
+            shape_mismatches.append(
+                {
+                    "key": key,
+                    "expected_shape": list(expected_shape),
+                    "observed_shape": list(observed_shape),
+                }
+            )
+            continue
+        torch_state[key] = torch_module.as_tensor(
+            array,
+            dtype=expected[key].dtype,
+            device=expected[key].device,
+        )
+
+    blockers: list[str] = []
+    if missing_keys:
+        blockers.append(CHECKPOINT_LOAD_MISSING_KEYS_BLOCKER)
+    if unexpected_keys:
+        blockers.append(CHECKPOINT_LOAD_UNEXPECTED_KEYS_BLOCKER)
+    if shape_mismatches:
+        blockers.append(CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER)
+    report = {
+        "schema": CHECKPOINT_LOAD_SCHEMA,
+        "requested": True,
+        "loaded": False,
+        "state_dict_kind": str(state_dict_kind),
+        "state_dict_source": source,
+        "state_dict_key_count": len(supplied),
+        "expected_key_count": len(expected),
+        "loaded_key_count": 0,
+        "state_dict_sha256": _hash_state_dict_exact(supplied),
+        "missing_keys": missing_keys,
+        "unexpected_keys": unexpected_keys,
+        "shape_mismatches": shape_mismatches,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+    if blockers:
+        raise _OfficialTubCheckpointLoadFailed(report)
+
+    try:
+        model.load_state_dict(torch_state, strict=True)
+    except Exception as exc:  # pragma: no cover - validation should catch this.
+        report = {
+            **report,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [CHECKPOINT_LOAD_UNREADABLE_BLOCKER],
+        }
+        raise _OfficialTubCheckpointLoadFailed(report) from exc
+
+    return {
+        **report,
+        "_state_dict": supplied,
+        "loaded": True,
+        "loaded_key_count": len(torch_state),
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "shape_mismatches": [],
+        "blockers": [],
+    }
+
+
+def _load_checkpoint_state_dict_path(
+    path: Path,
+    *,
+    torch_module: Any,
+) -> dict[str, Any]:
+    if not path.is_file():
+        report = {
+            **_checkpoint_not_requested_report(),
+            "requested": True,
+            "state_dict_source": path.as_posix(),
+            "blockers": [CHECKPOINT_LOAD_PATH_MISSING_BLOCKER],
+        }
+        raise _OfficialTubCheckpointLoadFailed(report)
+    try:
+        suffix = path.suffix.lower()
+        if suffix == ".npz":
+            with np.load(path, allow_pickle=False) as npz:
+                return {
+                    _checkpoint_npz_member_to_state_key(str(key)): np.asarray(npz[key])
+                    for key in npz.files
+                }
+        if suffix == ".json":
+            return _coerce_checkpoint_state_dict_mapping(
+                json.loads(path.read_text(encoding="utf-8"))
+            )
+        loaded = torch_module.load(path, map_location="cpu")
+        return _coerce_checkpoint_state_dict_mapping(loaded)
+    except _OfficialTubCheckpointLoadFailed:
+        raise
+    except Exception as exc:
+        report = {
+            **_checkpoint_not_requested_report(),
+            "requested": True,
+            "state_dict_source": path.as_posix(),
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [CHECKPOINT_LOAD_UNREADABLE_BLOCKER],
+        }
+        raise _OfficialTubCheckpointLoadFailed(report) from exc
+
+
+def _coerce_checkpoint_state_dict_mapping(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, Mapping):
+        for nested_key in ("state_dict", "model_state_dict", "decoder_state_dict"):
+            nested = raw.get(nested_key)
+            if isinstance(nested, Mapping):
+                raw = nested
+                break
+    if not isinstance(raw, Mapping):
+        report = {
+            **_checkpoint_not_requested_report(),
+            "requested": True,
+            "blockers": [CHECKPOINT_LOAD_UNREADABLE_BLOCKER],
+        }
+        raise _OfficialTubCheckpointLoadFailed(report)
+    return {str(key): value for key, value in raw.items()}
+
+
+def _checkpoint_npz_member_to_state_key(member_name: str) -> str:
+    # _write_deterministic_state_npz stores each state value as "<key>.npy" so
+    # arbitrary keys remain independent zip members.  np.load exposes those
+    # member names directly; strip only that storage suffix.
+    if member_name.endswith(".npy"):
+        return member_name[: -len(".npy")]
+    return member_name
+
+
+def _supplied_checkpoint_state_artifact(
+    checkpoint_load: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    path = Path(str(checkpoint_load.get("state_dict_source") or ""))
+    if not path.is_file():
+        return None
+    state_dict = checkpoint_load.get("_state_dict")
+    if not isinstance(state_dict, Mapping):
+        return None
+    state_dict_keys = sorted(str(key) for key in state_dict)
+    return {
+        "schema": "snerv_official_tub_supplied_state_dict_file.v1",
+        "path": path.as_posix(),
+        "bytes": int(path.stat().st_size),
+        "sha256": _hash_bytes(path.read_bytes()),
+        "member_count": len(state_dict_keys),
+        "member_names": state_dict_keys,
+        "state_dict_keys": state_dict_keys,
+        "state_dict_sha256": _hash_state_dict_exact(state_dict),
+        **FALSE_AUTHORITY,
     }
 
 
@@ -1450,6 +1757,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--write-json", type=Path, default=None)
     parser.add_argument("--write-state-dict-npz", type=Path, default=None)
+    parser.add_argument("--official-trained-checkpoint-state-dict-path", type=Path, default=None)
+    parser.add_argument(
+        "--official-trained-checkpoint-state-dict-kind",
+        default="official_trained_checkpoint_state_dict",
+    )
     args = parser.parse_args(argv)
     if args.write_state_dict_npz is not None and not args.train_one_step:
         parser.error("--write-state-dict-npz requires --train-one-step")
@@ -1458,6 +1770,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         official_repo_dir=args.official_repo_dir,
         train_one_step=bool(args.train_one_step),
         output_state_dict_path=args.write_state_dict_npz,
+        official_trained_checkpoint_state_dict_path=(
+            args.official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            args.official_trained_checkpoint_state_dict_kind
+        ),
         generated_utc=args.generated_utc,
     )
     text = json.dumps(payload, indent=2, sort_keys=True)
@@ -1474,6 +1792,10 @@ if __name__ == "__main__":  # pragma: no cover
 
 
 __all__ = [
+    "CHECKPOINT_LOAD_MISSING_KEYS_BLOCKER",
+    "CHECKPOINT_LOAD_PATH_MISSING_BLOCKER",
+    "CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER",
+    "CHECKPOINT_LOAD_UNEXPECTED_KEYS_BLOCKER",
     "DEFAULT_OFFICIAL_SNERV_REPO",
     "FALSE_AUTHORITY",
     "PYTORCH_WAVELETS_BLOCKER",

@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from tac.analysis.snerv_official_tub_source_forward_replay import (
+    CHECKPOINT_LOAD_PATH_MISSING_BLOCKER,
     DEFAULT_OFFICIAL_SNERV_REPO,
     PYTORCH_WAVELETS_BLOCKER,
     SCHEMA,
@@ -194,6 +195,61 @@ def test_snerv_official_tub_source_forward_replay_blocks_authority_without_value
     assert artifact["source_forward_replay_authority"] is False
     assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
     assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
+
+
+def test_snerv_official_tub_source_forward_replay_loads_value_state_npz(
+    tmp_path: Path,
+) -> None:
+    state_path = tmp_path / "official_state.npz"
+    source = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        train_one_step=True,
+        output_state_dict_path=state_path,
+        generated_utc="20260604T000000Z",
+    )
+    assert source["official_trained_checkpoint_state_dict_artifact"]["path"] == (
+        state_path.as_posix()
+    )
+
+    loaded = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        official_trained_checkpoint_state_dict_path=state_path,
+        generated_utc="20260604T000001Z",
+    )
+
+    load = loaded["official_trained_checkpoint_load"]
+    assert load["requested"] is True
+    assert load["loaded"] is True
+    assert load["state_dict_source"] == state_path.as_posix()
+    assert load["missing_keys"] == []
+    assert load["unexpected_keys"] == []
+    assert load["shape_mismatches"] == []
+    assert loaded["official_trained_checkpoint_loaded"] is True
+    assert loaded["official_trained_checkpoint_state_dict_mapping_verified"] is True
+    assert loaded["official_trained_checkpoint_state_dict_artifact"]["path"] == (
+        state_path.as_posix()
+    )
+    assert loaded["source_forward_replay_authority"] is True
+    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER not in loaded["blockers"]
+
+
+def test_snerv_official_tub_source_forward_replay_missing_checkpoint_path_fails_closed(
+    tmp_path: Path,
+) -> None:
+    missing = tmp_path / "missing_state.npz"
+
+    artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        official_trained_checkpoint_state_dict_path=missing,
+        generated_utc="20260604T000001Z",
+    )
+
+    assert artifact["source_forward_replay_executed"] is False
+    assert artifact["official_trained_checkpoint_loaded"] is False
+    assert artifact["official_trained_checkpoint_load"]["requested"] is True
+    assert CHECKPOINT_LOAD_PATH_MISSING_BLOCKER in artifact["blockers"]
+    assert artifact["score_claim"] is False
+    assert artifact["ready_for_exact_eval_dispatch"] is False
 
 
 def test_snerv_official_tub_replay_missing_checkout_is_fail_closed(tmp_path: Path) -> None:
