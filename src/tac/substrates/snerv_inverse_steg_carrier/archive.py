@@ -428,6 +428,71 @@ class DecodedSnervArchive:
             clip_to_uint8_range=clip_to_uint8_range,
         )
 
+    def source_forward_receiver_tensor_surfaces(
+        self,
+        pair_ids: Sequence[int],
+        *,
+        clip_to_uint8_range: bool = True,
+    ) -> dict[str, Any]:
+        """Expose archive parse-back and NumPy receiver tensors from charged bytes."""
+
+        payload = self.decode_official_mfu_hfr_tub_payload()
+        parseback = payload.source_forward_primitive_tensor_bundle(
+            pair_ids=pair_ids,
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
+        receiver_frames = self.decode_pair_frames(
+            pair_ids,
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
+        receiver_tensors = dict(parseback["tensors"])
+        receiver_tensors["rgb_pair_float"] = np.asarray(receiver_frames, dtype=np.float32)
+        receiver_tensors["rgb_pair_uint8"] = np.clip(
+            np.rint(receiver_frames),
+            0,
+            255,
+        ).astype(np.uint8)
+        parseback_tensors = dict(parseback["tensors"])
+        rgb_delta = _max_abs_delta(
+            parseback_tensors["rgb_pair_uint8"],
+            receiver_tensors["rgb_pair_uint8"],
+        )
+        missing = sorted(
+            set(parseback.get("missing_action_effect_tensor_names") or ())
+            | {
+                name
+                for name in SOURCE_FORWARD_TENSOR_NAMES
+                if name not in receiver_tensors
+            }
+        )
+        return {
+            "schema": "snerv_archive_source_forward_receiver_tensor_surfaces.v1",
+            "archive_schema": self.schema,
+            "archive_sha256": self.packet_sha256,
+            "decoder_payload_sha256": payload.payload_sha256,
+            "pair_ids": [int(value) for value in pair_ids],
+            "surface_tensors": {
+                "archive_parseback": parseback_tensors,
+                "numpy_receiver": receiver_tensors,
+            },
+            "rgb_uint8_parseback_receiver_delta_linf": rgb_delta,
+            "parseback_receiver_rgb_uint8_equal": rgb_delta == 0.0,
+            "missing_action_effect_tensor_names": missing,
+            "complete_for_source_forward_action_effect": not missing,
+            "requires_external_scorer_tensors": any(
+                name
+                in {
+                    "segnet_input",
+                    "posenet_input",
+                    "segnet_logits",
+                    "segnet_argmax",
+                    "posenet_output",
+                }
+                for name in missing
+            ),
+            **FALSE_AUTHORITY,
+        }
+
 
 @dataclass(frozen=True)
 class OfficialMfuHfrTubReceiverPayload:
@@ -884,6 +949,19 @@ def _source_forward_trace_pack_tensor_group(
     if not parts:
         return np.zeros((0,), dtype=np.float64)
     return np.concatenate(parts).astype(np.float64, copy=False)
+
+
+def _max_abs_delta(left: Any, right: Any) -> float:
+    left_arr = np.asarray(left, dtype=np.float64)
+    right_arr = np.asarray(right, dtype=np.float64)
+    if left_arr.shape != right_arr.shape:
+        raise SnervArchiveError(
+            f"receiver tensor shape mismatch: {left_arr.shape} != {right_arr.shape}"
+        )
+    delta = np.abs(left_arr - right_arr)
+    if not np.all(np.isfinite(delta)):
+        raise SnervArchiveError("receiver tensor delta contains NaN or Inf")
+    return float(np.max(delta)) if delta.size else 0.0
 
 
 def _official_mfu_hfr_frame_planes(

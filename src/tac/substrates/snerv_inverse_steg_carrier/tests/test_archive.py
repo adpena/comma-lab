@@ -11,6 +11,9 @@ import warnings
 import numpy as np
 import pytest
 
+from tac.analysis.snerv_source_forward_producer import (
+    build_snerv_source_forward_proof_from_archive_packet,
+)
 from tac.analysis.snerv_source_forward_proof import (
     build_snerv_payload_bitflip_falsification,
     build_snerv_source_forward_proof_action_effect,
@@ -1134,6 +1137,143 @@ def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
     assert float(np.std(frames)) > 0.0
     with pytest.raises(SnervArchiveError, match="requires decode_official"):
         decoded.decode_decoder()
+
+
+def test_archive_exposes_parseback_and_receiver_source_forward_surfaces() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    bundle["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    bundle["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float64).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.125, dtype=np.float64)
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    step_packet = encode_step_maps([np.ones((1, 1), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+    decoded = unpack_snerv_archive(archive.packet)
+
+    surfaces = decoded.source_forward_receiver_tensor_surfaces([0])
+
+    assert surfaces["archive_sha256"] == decoded.packet_sha256
+    assert surfaces["score_claim"] is False
+    assert surfaces["parseback_receiver_rgb_uint8_equal"] is True
+    assert surfaces["rgb_uint8_parseback_receiver_delta_linf"] == 0.0
+    assert surfaces["complete_for_source_forward_action_effect"] is False
+    assert surfaces["requires_external_scorer_tensors"] is True
+    assert set(surfaces["surface_tensors"]) == {"archive_parseback", "numpy_receiver"}
+    archive_tensors = surfaces["surface_tensors"]["archive_parseback"]
+    receiver_tensors = surfaces["surface_tensors"]["numpy_receiver"]
+    assert archive_tensors["output_2"].shape == (2, 3, 16, 16)
+    np.testing.assert_array_equal(
+        archive_tensors["rgb_pair_uint8"],
+        receiver_tensors["rgb_pair_uint8"],
+    )
+    assert "segnet_input" in surfaces["missing_action_effect_tensor_names"]
+    assert "official_torch" not in surfaces["surface_tensors"]
+
+
+def test_source_forward_producer_binds_archive_surfaces_but_fails_closed() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    bundle["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    bundle["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float64).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.125, dtype=np.float64)
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=encode_step_maps(
+            [np.ones((1, 1), dtype=np.float32)],
+            bins=4,
+        ).packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="a" * 64,
+        archive_packet=archive.packet,
+        pair_ids=[0],
+    )
+
+    assert row["passed"] is False
+    assert row["source_forward_replay_authority"] is False
+    assert row["producer_status"]["archive_receiver_surfaces_bound"] is True
+    assert row["producer_status"]["parseback_receiver_rgb_uint8_equal"] is True
+    assert row["destructive_payload_bit_flip"]["passed"] is True
+    assert row["destructive_payload_bit_flip"]["proof_passed"] is False
+    assert row["destructive_payload_bit_flip"]["first_failed_tensor"] == "output_2"
+    assert row["tensor_hashes"]["archive_parseback"]["rgb_pair_uint8"]
+    assert row["tensor_hashes"]["numpy_receiver"]["rgb_pair_uint8"]
+    assert "source_forward_tensor_missing:official_torch:mfu_in" in row["blockers"]
+    assert "source_forward_tensor_missing:pact_mlx:mfu_in" in row["blockers"]
+    assert "source_forward_tensor_missing:archive_parseback:segnet_logits" in row["blockers"]
+    assert "snerv_source_forward_scorer_delta_invalid:d_seg" in row["blockers"]
+    assert "snerv_source_forward_scorer_by_surface_missing" in row["blockers"]
 
 
 def test_official_mfu_hfr_tub_archive_frames_ignore_dummy_lf_sections() -> None:
