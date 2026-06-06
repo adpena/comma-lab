@@ -459,6 +459,81 @@ def test_direct_live_target_min_ratio_floor_clears_with_loss_and_dual_telemetry(
     assert report["actionable_blockers"] == []
 
 
+def test_direct_live_subcontrols_staged_off_do_not_require_telemetry() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(
+            segnet_direct_live_class_balanced_ce_weight=0.7,
+            segnet_direct_live_target_min_ratio_floor_weight=0.7,
+        ),
+        final_loss_components={
+            **_base_metrics(),
+            "active_loss_weight__segnet_direct_live_class_balanced_ce": 0.0,
+            "active_loss_weight__segnet_direct_live_target_min_ratio_floor": 0.0,
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    gate = report["direct_live_segnet_gate"]
+    assert gate["subcontrol_stage_active_weights"][
+        "segnet_direct_live_class_balanced_ce_weight"
+    ] == pytest.approx(0.0)
+    assert gate["subcontrol_stage_active_weights"][
+        "segnet_direct_live_target_min_ratio_floor_weight"
+    ] == pytest.approx(0.0)
+    assert "loss_part_segnet_direct_live_class_balanced_ce_loss" not in gate[
+        "active_subcontrol_metric_keys"
+    ]
+    assert "loss_part_segnet_direct_live_target_min_ratio_floor_loss" not in gate[
+        "active_subcontrol_metric_keys"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_telemetry" not in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_subcontrol_telemetry" not in (
+        report["actionable_blockers"]
+    )
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" not in (
+        report["actionable_blockers"]
+    )
+    assert report["ready_for_long_run"] is True
+
+
+def test_direct_live_subcontrols_staged_on_still_require_telemetry() -> None:
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_controls(segnet_direct_live_class_balanced_ce_weight=0.7),
+        final_loss_components={
+            **_base_metrics(),
+            "active_loss_weight__segnet_direct_live_class_balanced_ce": 1.0,
+            **_dual_metrics("hi_nerv_segnet_direct_live_distill"),
+        },
+        post_export_quality=_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+    )
+
+    gate = report["direct_live_segnet_gate"]
+    assert "segnet_direct_live_class_balanced_ce_weight" in gate[
+        "active_subcontrol_control_keys"
+    ]
+    assert "loss_part_segnet_direct_live_class_balanced_ce_loss" in gate[
+        "active_subcontrol_metric_keys"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_telemetry" in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_subcontrol_telemetry" in (
+        report["actionable_blockers"]
+    )
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" in (
+        report["actionable_blockers"]
+    )
+
+
 def test_required_pose_direct_live_blocks_generic_posenet_only() -> None:
     report = build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_controls(),

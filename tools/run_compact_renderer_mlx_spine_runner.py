@@ -10951,18 +10951,6 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             else float(segnet_direct_live_stage_weight)
         ),
     )
-    if bool(scorer_support_ladder_enabled):
-        for ladder_component in (
-            "segnet_direct_live_class_histogram",
-            "segnet_direct_live_class_balanced_hinge",
-            "segnet_direct_live_class_balanced_ce",
-            "segnet_direct_live_class_balanced_squared_hinge",
-            "segnet_direct_live_class_region_recon",
-            "segnet_direct_live_rare_class_logit",
-            "segnet_direct_live_target_min_ratio_floor",
-        ):
-            if float(stage_loss_weights.get(ladder_component, 0.0)) > 0.0:
-                stage_loss_weights[ladder_component] = 0.0
     curriculum_stages = _compact_scoreaware_curriculum_stages(
         substrate_id="compact_runner_hi_nerv_mlx",
         epochs=int(epochs),
@@ -13949,6 +13937,63 @@ def _row_declared_numel(row: Mapping[str, Any]) -> int | None:
     return None
 
 
+def _hi_nerv_waterfill_smoke_projected_row(
+    row: Mapping[str, Any],
+    *,
+    group_name: str,
+    declared_shape: tuple[int, ...] | None,
+    declared_numel: int | None,
+    expected_shape: tuple[int, ...],
+    expected_numel: int,
+) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    """Project full-video feature-grid waterfill rows onto bounded smokes.
+
+    HiNeRV feature-grid tensors scale along the frame/time axis.  A full-video
+    waterfill plan is still useful for a 1-2 pair smoke when the selected
+    per-tensor bit action is unchanged and every non-time dimension matches.
+    Other tensors remain exact-shape validated.
+    """
+
+    if ".grids." not in group_name or not group_name.startswith("feature_grids."):
+        return None
+    if declared_shape is None or len(declared_shape) != len(expected_shape):
+        return None
+    if len(expected_shape) < 2 or declared_shape[1:] != expected_shape[1:]:
+        return None
+    if int(declared_shape[0]) <= int(expected_shape[0]):
+        return None
+    if declared_numel is not None and declared_numel != int(math.prod(declared_shape)):
+        return None
+
+    projected = dict(row)
+    for field in ("shape", "tensor_shape", "expected_shape", "state_shape"):
+        if field in projected:
+            projected[field] = [int(dim) for dim in expected_shape]
+    if not any(field in projected for field in ("shape", "tensor_shape", "expected_shape", "state_shape")):
+        projected["shape"] = [int(dim) for dim in expected_shape]
+    for field in ("numel", "tensor_numel", "group_numel", "expected_numel"):
+        if field in projected:
+            projected[field] = int(expected_numel)
+    if not any(field in projected for field in ("numel", "tensor_numel", "group_numel", "expected_numel")):
+        projected["numel"] = int(expected_numel)
+    projected["compact_runner_smoke_projected_from_shape"] = [
+        int(dim) for dim in declared_shape
+    ]
+    projected["compact_runner_smoke_projection_scope"] = (
+        "hi_nerv_feature_grid_time_axis_only"
+    )
+    return projected, {
+        "smoke_projected": True,
+        "projection_scope": "hi_nerv_feature_grid_time_axis_only",
+        "declared_shape": [int(dim) for dim in declared_shape],
+        "declared_numel": (
+            int(declared_numel) if declared_numel is not None else None
+        ),
+        "projected_shape": [int(dim) for dim in expected_shape],
+        "projected_numel": int(expected_numel),
+    }
+
+
 def _hi_nerv_expected_decoder_state_shapes(
     *,
     num_pairs: int,
@@ -14074,6 +14119,8 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
         fine_injection_block_index=fine_injection_block_index,
     )
     validated_rows: list[dict[str, Any]] = []
+    projected_rows: list[dict[str, Any]] = []
+    smoke_projection_rows: list[dict[str, Any]] = []
     for idx, row_obj in enumerate(rows):
         if not isinstance(row_obj, Mapping):
             blockers.append(f"decoder_weight_waterfill_row_not_mapping:{idx}")
@@ -14102,19 +14149,51 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
             "shape_checked": declared_shape is not None,
             "numel_checked": declared_numel is not None,
         }
-        if declared_shape is not None and declared_shape != expected_shape:
-            blockers.append(f"decoder_weight_waterfill_shape_mismatch:{group_name}")
-            row_validation["declared_shape"] = [int(dim) for dim in declared_shape]
-        if declared_numel is not None and declared_numel != expected_numel:
-            blockers.append(f"decoder_weight_waterfill_numel_mismatch:{group_name}")
-            row_validation["declared_numel"] = int(declared_numel)
+        projected_row = dict(row_obj)
+        projection = None
+        shape_mismatch = declared_shape is not None and declared_shape != expected_shape
+        numel_mismatch = declared_numel is not None and declared_numel != expected_numel
+        if shape_mismatch or numel_mismatch:
+            projection = _hi_nerv_waterfill_smoke_projected_row(
+                row_obj,
+                group_name=group_name,
+                declared_shape=declared_shape,
+                declared_numel=declared_numel,
+                expected_shape=expected_shape,
+                expected_numel=expected_numel,
+            )
+        if projection is not None:
+            projected_row, projection_validation = projection
+            row_validation.update(projection_validation)
+            smoke_projection_rows.append(
+                {
+                    "group_name": group_name,
+                    "declared_shape": projection_validation["declared_shape"],
+                    "projected_shape": projection_validation["projected_shape"],
+                    "declared_numel": projection_validation["declared_numel"],
+                    "projected_numel": projection_validation["projected_numel"],
+                }
+            )
+        else:
+            if shape_mismatch:
+                blockers.append(f"decoder_weight_waterfill_shape_mismatch:{group_name}")
+                row_validation["declared_shape"] = [int(dim) for dim in declared_shape or ()]
+            if numel_mismatch:
+                blockers.append(f"decoder_weight_waterfill_numel_mismatch:{group_name}")
+                row_validation["declared_numel"] = int(declared_numel)
         validated_rows.append(row_validation)
+        projected_rows.append(projected_row)
 
     try:
         bits_by_name = _decoder_weight_waterfill_fake_quant_bits_by_name(plan)
     except CompactRendererMlxSpineRunnerError as exc:
         blockers.append(f"decoder_weight_waterfill_fake_quant_bits_invalid:{exc}")
         bits_by_name = {}
+    fake_quant_bits_by_name = {
+        str(name): int(bits)
+        for name, bits in bits_by_name.items()
+        if int(bits) < 32
+    }
     out.update(
         {
             "source_schema": plan.get("schema"),
@@ -14125,8 +14204,27 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
             "launch_state_group_count": len(expected_shapes),
             "validated_row_count": len(validated_rows),
             "validated_rows": validated_rows,
+            "smoke_projection": {
+                "schema": "compact_hi_nerv_decoder_weight_waterfill_smoke_projection.v1",
+                "active": bool(smoke_projection_rows),
+                "projected_row_count": len(smoke_projection_rows),
+                "projection_scope": "hi_nerv_feature_grid_time_axis_only",
+                "projected_rows": smoke_projection_rows,
+                **FALSE_AUTHORITY,
+            },
             "per_tensor_fake_quant_group_count": len(bits_by_name),
             "per_tensor_fake_quant_bits_by_name": dict(sorted(bits_by_name.items())),
+            "train_time_fake_quant_bound": bool(fake_quant_bits_by_name),
+            "fake_quant_forward": {
+                "schema": "hi_nerv_decoder_fake_quant_forward_qat_binding.v1",
+                "configured": bool(fake_quant_bits_by_name),
+                "targeted_tensor_count": len(fake_quant_bits_by_name),
+                "per_tensor_waterfill_bits_by_name": dict(
+                    sorted(fake_quant_bits_by_name.items())
+                ),
+                "binding_source": "validated_decoder_weight_waterfill_plan",
+                **FALSE_AUTHORITY,
+            },
             "blockers": _dedupe(blockers),
         }
     )
@@ -14134,7 +14232,13 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
         out["attached"] = True
         out["active"] = True
         out["validated"] = True
-        return dict(plan), out
+        validated_plan = dict(plan)
+        validated_plan["rows"] = projected_rows
+        if smoke_projection_rows:
+            validated_plan["compact_runner_smoke_projection"] = out[
+                "smoke_projection"
+            ]
+        return validated_plan, out
     return None, out
 
 
@@ -18038,18 +18142,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             else float(segnet_direct_live_stage_weight)
         ),
     )
-    if bool(scorer_support_ladder_enabled):
-        for ladder_component in (
-            "segnet_direct_live_class_histogram",
-            "segnet_direct_live_class_balanced_hinge",
-            "segnet_direct_live_class_balanced_ce",
-            "segnet_direct_live_class_balanced_squared_hinge",
-            "segnet_direct_live_class_region_recon",
-            "segnet_direct_live_rare_class_logit",
-            "segnet_direct_live_target_min_ratio_floor",
-        ):
-            if float(stage_weights.get(ladder_component, 0.0)) > 0.0:
-                stage_weights[ladder_component] = 0.0
     curriculum_stages = _compact_scoreaware_curriculum_stages(
         substrate_id="compact_runner_hi_nerv_mlx",
         epochs=int(epochs),
@@ -22668,8 +22760,14 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
     output_head_target_bias_init_metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     output_path = Path(output_dir).expanduser().resolve(strict=False)
+    readiness_artifact_dict = _reload_hi_nerv_training_artifact_for_readiness(
+        output_path,
+        artifact_dict,
+    )
     if output_head_target_bias_init_metadata is None:
-        score_training = _substrate_score_aware_training_from_artifact(artifact_dict)
+        score_training = _substrate_score_aware_training_from_artifact(
+            readiness_artifact_dict
+        )
         candidate_output_init = score_training.get("output_head_target_bias_init")
         output_head_target_bias_init_metadata = (
             dict(candidate_output_init)
@@ -22679,7 +22777,7 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
     report = build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=train_time_controls,
         final_loss_components=_final_loss_components_from_training_artifact_dict(
-            artifact_dict
+            readiness_artifact_dict
         ),
         post_export_quality=post_export_quality,
         segnet_distillation_weight=float(segnet_distillation_weight),
@@ -22691,7 +22789,10 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
             require_pose_direct_live_distillation
         ),
         decoder_weight_waterfill_plan_metadata=(
-            decoder_weight_waterfill_plan_metadata
+            _merge_hi_nerv_decoder_waterfill_training_metadata(
+                decoder_weight_waterfill_plan_metadata,
+                readiness_artifact_dict,
+            )
         ),
         output_head_target_bias_init_metadata=(
             output_head_target_bias_init_metadata
@@ -22709,6 +22810,75 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
         report=report,
     )
     return report
+
+
+def _merge_hi_nerv_decoder_waterfill_training_metadata(
+    metadata: Mapping[str, Any] | None,
+    artifact_dict: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    if not isinstance(metadata, Mapping):
+        return metadata
+    out = dict(metadata)
+    artifact_metadata = artifact_dict.get("substrate_artifact_metadata")
+    artifact_metadata = (
+        artifact_metadata if isinstance(artifact_metadata, Mapping) else {}
+    )
+    supplied_training = artifact_metadata.get("substrate_supplied_score_aware_training")
+    supplied_training = (
+        supplied_training if isinstance(supplied_training, Mapping) else {}
+    )
+    fake_quant = supplied_training.get("decoder_fake_quant_forward")
+    if not isinstance(fake_quant, Mapping):
+        return out
+    per_tensor_bits = fake_quant.get("per_tensor_waterfill_bits_by_name")
+    per_tensor_bits = per_tensor_bits if isinstance(per_tensor_bits, Mapping) else {}
+    targeted_tensor_count = _optional_float(
+        fake_quant.get("per_tensor_waterfill_group_count")
+    )
+    if targeted_tensor_count is None:
+        targeted_tensor_count = float(len(per_tensor_bits))
+    enabled = bool(fake_quant.get("per_tensor_waterfill_enabled") is True)
+    if enabled and targeted_tensor_count > 0.0:
+        out["train_time_fake_quant_bound"] = True
+        if not isinstance(out.get("fake_quant_forward"), Mapping):
+            out["fake_quant_forward"] = {
+                "schema": "hi_nerv_decoder_fake_quant_forward_training_artifact_binding.v1",
+                "configured": True,
+                "targeted_tensor_count": targeted_tensor_count,
+                "per_tensor_waterfill_group_count": targeted_tensor_count,
+                "binding_source": "substrate_supplied_score_aware_training.decoder_fake_quant_forward",
+                **FALSE_AUTHORITY,
+            }
+    out["training_artifact_decoder_fake_quant_forward"] = {
+        "schema": "hi_nerv_decoder_fake_quant_forward_training_artifact_summary.v1",
+        "per_tensor_waterfill_enabled": enabled,
+        "per_tensor_waterfill_group_count": targeted_tensor_count,
+        "per_tensor_waterfill_bits_by_name_count": len(per_tensor_bits),
+        **FALSE_AUTHORITY,
+    }
+    return out
+
+
+def _reload_hi_nerv_training_artifact_for_readiness(
+    output_dir: str | Path,
+    artifact_dict: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
+        "training_artifact.json"
+    )
+    if not artifact_path.is_file():
+        return artifact_dict
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return artifact_dict
+    if not isinstance(payload, Mapping):
+        return artifact_dict
+    return (
+        payload
+        if _final_loss_components_from_training_artifact_dict(payload)
+        else artifact_dict
+    )
 
 
 def _attach_hi_nerv_short_scorer_smoke_readiness(

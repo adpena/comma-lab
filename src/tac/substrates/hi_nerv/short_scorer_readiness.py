@@ -50,6 +50,32 @@ _SEGNET_DIRECT_LIVE_SUBCONTROL_DUAL_KEYS = {
         "hi_nerv_segnet_direct_live_target_min_ratio_floor"
     ),
 }
+_SEGNET_DIRECT_LIVE_SUBCONTROL_ACTIVE_WEIGHT_KEYS = {
+    "segnet_direct_live_class_histogram_weight": (
+        "active_loss_weight__segnet_direct_live_class_histogram"
+    ),
+    "segnet_direct_live_class_balanced_hinge_weight": (
+        "active_loss_weight__segnet_direct_live_class_balanced_hinge"
+    ),
+    "segnet_direct_live_class_balanced_ce_weight": (
+        "active_loss_weight__segnet_direct_live_class_balanced_ce"
+    ),
+    "segnet_direct_live_class_balanced_squared_hinge_weight": (
+        "active_loss_weight__segnet_direct_live_class_balanced_squared_hinge"
+    ),
+    "segnet_direct_live_class_region_recon_weight": (
+        "active_loss_weight__segnet_direct_live_class_region_recon"
+    ),
+    "segnet_direct_live_rare_class_logit_weight": (
+        "active_loss_weight__segnet_direct_live_rare_class_logit"
+    ),
+    "segnet_direct_live_target_mass_floor_weight": (
+        "active_loss_weight__segnet_direct_live_target_mass_floor"
+    ),
+    "segnet_direct_live_target_min_ratio_floor_weight": (
+        "active_loss_weight__segnet_direct_live_target_min_ratio_floor"
+    ),
+}
 _SECTION_BYTE_PRICED_ONLY_CONSTRAINT_KEYS = frozenset(
     {
         "hi_nerv_hiv1_header_section_bytes",
@@ -165,10 +191,27 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         key: _control_float(train_time_controls, key)
         for key in direct_live_subcontrol_metric_keys
     }
+    direct_live_subcontrol_stage_active_weights = {
+        key: _finite_mapping_value(
+            final_components,
+            _SEGNET_DIRECT_LIVE_SUBCONTROL_ACTIVE_WEIGHT_KEYS[key],
+        )
+        for key in direct_live_subcontrol_metric_keys
+    }
+    active_direct_live_subcontrol_control_keys = {
+        control_key
+        for control_key in direct_live_subcontrol_metric_keys
+        if _direct_live_subcontrol_active_for_stage(
+            configured_weight=direct_live_subcontrol_weights[control_key],
+            stage_active_weight=direct_live_subcontrol_stage_active_weights[
+                control_key
+            ],
+        )
+    }
     active_direct_live_subcontrol_metric_keys = {
         metric_key
         for control_key, metric_key in direct_live_subcontrol_metric_keys.items()
-        if direct_live_subcontrol_weights[control_key] > 0.0
+        if control_key in active_direct_live_subcontrol_control_keys
     }
     direct_live_subcontrol_enabled = bool(active_direct_live_subcontrol_metric_keys)
     direct_live_enabled = direct_live_weight > 0.0 or direct_live_subcontrol_enabled
@@ -278,7 +321,7 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         )
     if direct_live_enabled:
         for control_key, metric_key in direct_live_subcontrol_metric_keys.items():
-            if direct_live_subcontrol_weights[control_key] > 0.0:
+            if control_key in active_direct_live_subcontrol_control_keys:
                 dual_required_constraint_keys[
                     _SEGNET_DIRECT_LIVE_SUBCONTROL_DUAL_KEYS[control_key]
                 ] = metric_key
@@ -288,7 +331,9 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             ] = "loss_part_segnet_direct_live_argmax_disagreement"
         if direct_live_subcontrol_weights[
             "segnet_direct_live_class_histogram_weight"
-        ] > 0.0:
+        ] > 0.0 and "segnet_direct_live_class_histogram_weight" in (
+            active_direct_live_subcontrol_control_keys
+        ):
             dual_required_constraint_keys[
                 "hi_nerv_segnet_direct_live_target_missing_fraction_histogram"
             ] = (
@@ -296,7 +341,9 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             )
         if direct_live_subcontrol_weights[
             "segnet_direct_live_class_balanced_ce_weight"
-        ] > 0.0:
+        ] > 0.0 and "segnet_direct_live_class_balanced_ce_weight" in (
+            active_direct_live_subcontrol_control_keys
+        ):
             dual_required_constraint_keys[
                 "hi_nerv_segnet_direct_live_target_missing_fraction_ce"
             ] = (
@@ -304,25 +351,33 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             )
         if direct_live_subcontrol_weights[
             "segnet_direct_live_class_region_recon_weight"
-        ] > 0.0:
+        ] > 0.0 and "segnet_direct_live_class_region_recon_weight" in (
+            active_direct_live_subcontrol_control_keys
+        ):
             dual_required_constraint_keys[
                 "hi_nerv_segnet_direct_live_target_min_ratio_region_recon"
             ] = "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
         if direct_live_subcontrol_weights[
             "segnet_direct_live_rare_class_logit_weight"
-        ] > 0.0:
+        ] > 0.0 and "segnet_direct_live_rare_class_logit_weight" in (
+            active_direct_live_subcontrol_control_keys
+        ):
             dual_required_constraint_keys[
                 "hi_nerv_segnet_direct_live_target_min_ratio_rare_class_logit"
             ] = "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
         if direct_live_subcontrol_weights[
             "segnet_direct_live_target_mass_floor_weight"
-        ] > 0.0:
+        ] > 0.0 and "segnet_direct_live_target_mass_floor_weight" in (
+            active_direct_live_subcontrol_control_keys
+        ):
             dual_required_constraint_keys[
                 "hi_nerv_segnet_direct_live_target_min_ratio_mass_floor"
             ] = "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
         if direct_live_subcontrol_weights[
             "segnet_direct_live_target_min_ratio_floor_weight"
-        ] > 0.0:
+        ] > 0.0 and "segnet_direct_live_target_min_ratio_floor_weight" in (
+            active_direct_live_subcontrol_control_keys
+        ):
             dual_required_constraint_keys[
                 "hi_nerv_segnet_direct_live_target_min_ratio_floor_gate"
             ] = "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
@@ -658,6 +713,12 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             "base_distillation_enabled": bool(direct_live_weight > 0.0),
             "subcontrol_enabled": bool(direct_live_subcontrol_enabled),
             "subcontrol_weights": direct_live_subcontrol_weights,
+            "subcontrol_stage_active_weights": (
+                direct_live_subcontrol_stage_active_weights
+            ),
+            "active_subcontrol_control_keys": sorted(
+                active_direct_live_subcontrol_control_keys
+            ),
             "active_subcontrol_metric_keys": sorted(
                 active_direct_live_subcontrol_metric_keys
             ),
@@ -990,6 +1051,20 @@ def _finite_mapping_value(mapping: Mapping[str, Any] | None, key: str) -> float 
     if not isinstance(mapping, Mapping) or key not in mapping:
         return None
     return _finite_float(mapping.get(key))
+
+
+def _direct_live_subcontrol_active_for_stage(
+    *,
+    configured_weight: float,
+    stage_active_weight: float | None,
+) -> bool:
+    if configured_weight <= 0.0:
+        return False
+    # Missing stage metadata means the trainer is older or the smoke failed
+    # before emitting stage weights. Fail closed by requiring telemetry.
+    if stage_active_weight is None:
+        return True
+    return stage_active_weight > 0.0
 
 
 def _first_finite_mapping_value(

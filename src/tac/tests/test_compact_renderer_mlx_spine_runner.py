@@ -6,6 +6,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import math
 import os
 import signal
 import struct
@@ -1245,6 +1246,108 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
     ]
     assert persisted_summary["ready_for_long_run"] is True
     assert persisted_admission["long_run_admission_passed"] is True
+
+
+def test_hinerv_short_scorer_readiness_reloads_durable_final_metrics(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    loss_components = {
+        "loss_part_segnet_direct_live_distill": 0.12,
+        "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction": 0.8,
+        "loss_part_segnet_direct_live_candidate_target_class_missing_fraction": 0.0,
+        "loss_part_segnet_direct_live_candidate_target_class_min_ratio": 0.25,
+        "dual_ascent_active": 1.0,
+        "dual_ascent_constraint_count": 2.0,
+    }
+    for constraint in (
+        "hi_nerv_segnet_direct_live_distill",
+        "hi_nerv_segnet_direct_live_argmax_disagreement",
+    ):
+        loss_components.update(
+            {
+                f"dual_ascent_metric__{constraint}": 0.12,
+                f"dual_ascent_missing_metric__{constraint}": 0.0,
+                f"dual_ascent_lambda__{constraint}": 0.04,
+                f"dual_ascent_update_count__{constraint}": 1.0,
+                f"dual_ascent_weight_applied__{constraint}": 1.0,
+                f"dual_ascent_effective_loss_weight__{constraint}": 0.5,
+                f"dual_ascent_violation__{constraint}": 0.1,
+            }
+        )
+    (training_dir / "training_artifact.json").write_text(
+        json.dumps(
+            {
+                "per_epoch_metrics": [{"loss_components": loss_components}],
+                "substrate_artifact_metadata": {
+                    "score_aware_training": {"schema": "unit"},
+                    "substrate_supplied_score_aware_training": {
+                        "decoder_fake_quant_forward": {
+                            "per_tensor_waterfill_enabled": True,
+                            "per_tensor_waterfill_group_count": 2,
+                            "per_tensor_waterfill_bits_by_name": {
+                                "head_rgb_0.bias": 8,
+                                "convnext_blocks.0.norm.bias": 4,
+                            },
+                        }
+                    },
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = runner_mod._write_hi_nerv_runner_short_scorer_smoke_readiness(
+        output_dir=training_dir,
+        artifact_dict={
+            "per_epoch_metrics": [],
+            "substrate_artifact_metadata": {
+                "score_aware_training": {"schema": "stale_in_memory_summary"}
+            },
+        },
+        train_time_controls={
+            "segnet_direct_live_distillation_weight": 0.4,
+            "pose_direct_live_distillation_weight": 0.0,
+            "scorer_input_contrast_floor_weight": 0.0,
+            "scorer_input_shape_tether_weight": 0.0,
+            "posenet_temporal_signal_floor_weight": 0.0,
+        },
+        post_export_quality=None,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_unscored_research_smoke=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+        require_section_byte_dual_ascent=False,
+        require_pose_direct_live_distillation=False,
+        decoder_weight_waterfill_plan_metadata={
+            "attached": True,
+            "row_count": 2,
+        },
+    )
+
+    assert report["final_loss_components_present"] is True
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_telemetry" not in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" not in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_direct_live_dual_ascent_weight_not_applied" not in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_decoder_waterfill_fake_quant_not_bound" not in report[
+        "actionable_blockers"
+    ]
+    assert report["decoder_weight_waterfill_actuation_gate"][
+        "train_time_fake_quant_bound"
+    ] is True
+    assert report["decoder_weight_waterfill_actuation_gate"][
+        "fake_quant_targeted_tensor_count"
+    ] == pytest.approx(2.0)
 
 
 def test_hinerv_runner_short_scorer_smoke_readiness_failure_marks_training_artifact(
@@ -6847,6 +6950,20 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         def as_dict(self) -> dict[str, object]:
             return dict(self._payload)
 
+    class FakeSegNetTeacher:
+        num_classes = 8
+        live_segnet_adapter = object()
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            return frames
+
+    class FakePoseNetTeacher:
+        pose_dims = 12
+        live_posenet_adapter = object()
+
+        def teacher_pose_for_yuv6_pair_nhwc(self, pairs):
+            return pairs
+
     def fake_decode_mlx_targets(
         video_path,
         *,
@@ -6906,12 +7023,21 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["bundle_segnet_direct_live_class_balanced_hinge_weight"] = float(
             bundle.segnet_direct_live_class_balanced_hinge_weight
         )
+        captured["bundle_segnet_direct_live_class_balanced_ce_weight"] = float(
+            bundle.segnet_direct_live_class_balanced_ce_weight
+        )
         captured[
             "bundle_segnet_direct_live_class_balanced_squared_hinge_weight"
         ] = float(bundle.segnet_direct_live_class_balanced_squared_hinge_weight)
         captured["bundle_segnet_direct_live_class_region_recon_weight"] = float(
             bundle.segnet_direct_live_class_region_recon_weight
         )
+        captured["bundle_segnet_direct_live_target_mass_floor_weight"] = float(
+            bundle.segnet_direct_live_target_mass_floor_weight
+        )
+        captured[
+            "bundle_segnet_direct_live_target_min_ratio_floor_weight"
+        ] = float(bundle.segnet_direct_live_target_min_ratio_floor_weight)
         captured["run_prioritized_pair_indices"] = tuple(
             kwargs["prioritized_pair_indices"]
         )
@@ -7010,6 +7136,16 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         fake_run_mlx_score_aware_full_main,
     )
     monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "build_mlx_segnet_pair_teacher",
+        lambda *args, **kwargs: FakeSegNetTeacher(),
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "build_mlx_posenet_pair_teacher",
+        lambda *args, **kwargs: FakePoseNetTeacher(),
+    )
+    monkeypatch.setattr(
         hinerv_mlx_renderer,
         "HinervSubstrateMLX",
         FakeHinervModel,
@@ -7037,7 +7173,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         hi_nerv_latent_codec="int16_brotli_q11",
         ema_decay=0.9,
         segnet_distillation_weight=0.0,
-        pose_distillation_weight=0.0,
+        pose_distillation_weight=1.0,
         pose_distillation_loss="mse",
         pose_distillation_huber_delta=1.0,
         recon_loss_stage_weight=1.0,
@@ -7063,6 +7199,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         posenet_temporal_signal_floor_weight=0.85,
         posenet_temporal_signal_min_std_ratio=0.35,
         posenet_temporal_signal_min_mean_abs_ratio=0.45,
+        segnet_direct_live_class_balanced_ce_weight=0.25,
+        segnet_direct_live_target_mass_floor_weight=0.4,
+        segnet_direct_live_target_min_ratio_floor_weight=0.4,
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,
@@ -7144,12 +7283,21 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured["bundle_segnet_direct_live_class_balanced_hinge_weight"] == (
         pytest.approx(0.0)
     )
+    assert captured["bundle_segnet_direct_live_class_balanced_ce_weight"] == (
+        pytest.approx(0.25)
+    )
     assert captured[
         "bundle_segnet_direct_live_class_balanced_squared_hinge_weight"
     ] == pytest.approx(0.0)
     assert captured["bundle_segnet_direct_live_class_region_recon_weight"] == (
         pytest.approx(0.0)
     )
+    assert captured["bundle_segnet_direct_live_target_mass_floor_weight"] == (
+        pytest.approx(0.4)
+    )
+    assert captured[
+        "bundle_segnet_direct_live_target_min_ratio_floor_weight"
+    ] == pytest.approx(0.4)
     temporal_dual = captured["dual_ascent_constraints"][
         "hi_nerv_posenet_temporal_signal_floor"
     ]
@@ -7180,20 +7328,28 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert all(
-        weights["segnet_direct_live_rare_class_logit"] == pytest.approx(0.0)
+        weights["segnet_direct_live_class_balanced_ce"] == pytest.approx(1.0)
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert all(
-        weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(0.0)
+        weights["segnet_direct_live_target_min_ratio_floor"] == pytest.approx(1.0)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_rare_class_logit"] == pytest.approx(1.0)
+        for weights in captured["curriculum_stage_loss_weights"]
+    )
+    assert all(
+        weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(1.0)
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert all(
         weights["segnet_direct_live_class_balanced_squared_hinge"]
-        == pytest.approx(0.0)
+        == pytest.approx(1.0)
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert all(
-        weights["segnet_direct_live_class_region_recon"] == pytest.approx(0.0)
+        weights["segnet_direct_live_class_region_recon"] == pytest.approx(1.0)
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert captured["scorer_space_step_guard_enabled"] is True
@@ -7245,8 +7401,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     )
     assert captured["run_prioritized_pair_indices"] == (7, 2)
     assert captured["run_pr95_curriculum_total_epochs"] == 8
-    assert captured["checkpoint_selection_metric_key"] == "total"
-    assert captured["checkpoint_selection_metric_required"] is False
+    assert captured["checkpoint_selection_metric_key"] == (
+        "loss_part_segnet_direct_live_escape_selection"
+    )
+    assert captured["checkpoint_selection_metric_required"] is True
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
     training = metadata["score_aware_training"]
     assert metadata["model_num_pairs"] == 10
@@ -7523,6 +7681,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         ema_decay=0.9,
         segnet_distillation_weight=0.0,
         pose_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=0.25,
         pose_distillation_loss="mse",
         pose_distillation_huber_delta=1.0,
         recon_loss_stage_weight=1.0,
@@ -15483,6 +15642,105 @@ def test_hinerv_waterfill_plan_shape_mismatch_refuses_before_training(
         "blockers"
     ]
     assert waterfill["validated_rows"][0]["declared_shape"] == [4]
+
+
+def test_hinerv_waterfill_plan_projects_feature_grid_time_axis_for_smoke() -> None:
+    candidate = _hinerv_waterfill_modelsize_candidate()
+    full_shapes = runner_mod._hi_nerv_expected_decoder_state_shapes(
+        num_pairs=600,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=6,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=7,
+        mid_injection_block_index=2,
+        fine_injection_block_index=5,
+    )
+    smoke_shapes = runner_mod._hi_nerv_expected_decoder_state_shapes(
+        num_pairs=1,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=6,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=7,
+        mid_injection_block_index=2,
+        fine_injection_block_index=5,
+    )
+    group_name = "feature_grids.0.grids.0"
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv-unit-candidate",
+        "rows": [
+            {
+                "group_name": group_name,
+                "shape": list(full_shapes[group_name]),
+                "numel": int(math.prod(full_shapes[group_name])),
+                "selected_bits": 4,
+                "selected_action": "int4",
+            }
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    projected_plan, metadata = (
+        runner_mod._validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
+            plan=plan,
+            metadata={
+                "schema": "compact_hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
+                "attached": True,
+                "blockers": [],
+            },
+            candidate=candidate,
+            num_pairs=1,
+            latent_dim=12,
+            embed_dim=16,
+            decoder_channel=6,
+            use_hierarchical_feature_grid=True,
+            use_convnext_blocks=True,
+            local_grid_levels=2,
+            local_grid_channels=4,
+            convnext_mlp_ratio=2,
+            convnext_kernel_size=7,
+            mid_injection_block_index=2,
+            fine_injection_block_index=5,
+        )
+    )
+
+    assert projected_plan is not None
+    assert metadata["attached"] is True
+    assert metadata["active"] is True
+    assert metadata["validated"] is True
+    assert metadata["blockers"] == []
+    assert metadata["train_time_fake_quant_bound"] is True
+    assert metadata["fake_quant_forward"]["configured"] is True
+    assert metadata["fake_quant_forward"]["targeted_tensor_count"] == 1
+    assert metadata["fake_quant_forward"]["per_tensor_waterfill_bits_by_name"] == {
+        group_name: 4
+    }
+    projection = metadata["smoke_projection"]
+    assert projection["active"] is True
+    assert projection["projected_row_count"] == 1
+    assert projection["projection_scope"] == "hi_nerv_feature_grid_time_axis_only"
+    row = projected_plan["rows"][0]
+    assert row["shape"] == list(smoke_shapes[group_name])
+    assert row["numel"] == int(math.prod(smoke_shapes[group_name]))
+    assert row["selected_bits"] == 4
+    assert row["compact_runner_smoke_projected_from_shape"] == list(
+        full_shapes[group_name]
+    )
+    assert projected_plan["compact_runner_smoke_projection"]["score_claim"] is False
 
 
 def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
