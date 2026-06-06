@@ -319,6 +319,21 @@ def _requested_pair_indices_np(pair_indices: Any) -> np.ndarray:
     return np.ascontiguousarray(arr)
 
 
+def _target_rgb_birth_row(target: Any | None, *, batch_index: int, name: str) -> np.ndarray | None:
+    if target is None:
+        return None
+    arr = np.asarray(target, dtype=np.float32)
+    if arr.ndim != 4 or int(arr.shape[-1]) != 3:
+        raise BirthSurvivalError(f"{name} must be NHWC RGB; got shape {arr.shape}")
+    if int(arr.shape[0]) == 1:
+        return np.ascontiguousarray(arr)
+    if not 0 <= int(batch_index) < int(arr.shape[0]):
+        raise BirthSurvivalError(
+            f"{name} has {int(arr.shape[0])} rows but live birth batch_index={int(batch_index)}"
+        )
+    return np.ascontiguousarray(arr[int(batch_index) : int(batch_index) + 1])
+
+
 def _parseback_selected_pairs(report: Mapping[str, Any]) -> set[int] | None:
     direct = _direct_receiver_report(report)
     raw = direct.get("selected_pair_indices")
@@ -739,30 +754,38 @@ def measure_birth_parseback_survival_from_report(
         )
 
     pair_np = _requested_pair_indices_np(pair_indices)
+    worst_region = _live_worst_region(live_birth_payload)
+    birth_batch = int(worst_region["batch_index"])
+    if not 0 <= birth_batch < int(pair_np.shape[0]):
+        raise BirthSurvivalError(
+            "live birth batch_index is outside the supplied pair_indices: "
+            f"batch_index={birth_batch} pair_count={int(pair_np.shape[0])}"
+        )
+    birth_pair_np = np.ascontiguousarray(np.array([int(pair_np[birth_batch])], dtype=np.int64))
     selected_pairs = _parseback_selected_pairs(report)
     if selected_pairs is not None:
-        missing = sorted(int(value) for value in set(pair_np.tolist()) - selected_pairs)
-        if missing:
+        birth_pair = int(birth_pair_np[0])
+        if birth_pair not in selected_pairs:
             return _blocked_survival_row(
                 action_id=action_id,
                 surface="parseback_mlx",
                 blocker="birth_survival_parseback_birth_pair_not_cached",
                 reason=(
-                    "parseback report did not cache every requested birth pair; "
-                    f"missing_pairs={missing[:8]}"
+                    "parseback report did not cache the live hard-birth pair; "
+                    f"birth_pair={birth_pair} selected_pairs={sorted(selected_pairs)[:8]}"
                 ),
             )
 
     _require_mlx()
-    worst_region = _live_worst_region(live_birth_payload)
     birth_class = int(worst_region["class_index"])
     region_mask_np, region_pixels = reconstruct_birth_region_mask(target_labels, worst_region)
+    region_mask_np = np.ascontiguousarray(region_mask_np[birth_batch : birth_batch + 1])
     initial_in_region_target = _initial_in_region_target_count(worst_region)
     live_pose_compensation = _live_pose_compensation(live_birth_payload)
 
     pair_frames, surface_meta = _render_parseback_pair01_nhwc01(
         archive_path=archive_path,
-        pair_indices=pair_np,
+        pair_indices=birth_pair_np,
     )
     support = _region_support_from_frame1_nhwc01(
         scorer_teacher=scorer_teacher,
@@ -770,12 +793,14 @@ def measure_birth_parseback_survival_from_report(
         region_mask_np=region_mask_np,
         birth_class=birth_class,
     )
+    target_rgb_0_birth = _target_rgb_birth_row(target_rgb_0, batch_index=birth_batch, name="target_rgb_0")
+    target_rgb_1_birth = _target_rgb_birth_row(target_rgb_1, batch_index=birth_batch, name="target_rgb_1")
     pose_compensation_survival = _pose_compensation_survival_on_surface(
         object(),
         pose_teacher=pose_teacher,
-        target_rgb_0=target_rgb_0,
-        target_rgb_1=target_rgb_1,
-        pair_indices=pair_indices,
+        target_rgb_0=target_rgb_0_birth,
+        target_rgb_1=target_rgb_1_birth,
+        pair_indices=birth_pair_np,
         live_pose_compensation=live_pose_compensation,
         surface_pair01_nhwc01=pair_frames,
         d_pose_tolerance_abs=float(pose_d_pose_tolerance_abs),

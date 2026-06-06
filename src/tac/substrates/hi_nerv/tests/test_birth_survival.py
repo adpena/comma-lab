@@ -326,6 +326,12 @@ def _parseback_report_for_archive(archive, selected_pair_indices):
     }
 
 
+def _live_birth_pair(payload: dict, pair_indices) -> int:
+    pair_np = np.asarray(pair_indices, dtype=np.int64).reshape(-1)
+    batch_index = int(payload["worst_region"]["batch_index"])
+    return int(pair_np[batch_index])
+
+
 # ---------------------------------------------------------------------------
 # MLX behavioral tests
 # ---------------------------------------------------------------------------
@@ -676,10 +682,11 @@ def test_parseback_survival_row_consumes_archive_report_same_action(tmp_path) ->
     cfg, model, teacher, target0, target1, labels_np = _setup(mx)
     payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
     idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    birth_pair = _live_birth_pair(payload, idx)
     archive = _write_mlx_model_hiv1_archive(tmp_path, model, cfg)
     report = _parseback_report_for_archive(
         archive,
-        selected_pair_indices=range(cfg.num_pairs),
+        selected_pair_indices=[birth_pair],
     )
 
     row = measure_birth_parseback_survival_from_report(
@@ -697,6 +704,7 @@ def test_parseback_survival_row_consumes_archive_report_same_action(tmp_path) ->
     assert row["parseback_archive_sha256"] == sha256_file(archive)
     assert row["parseback_zip_member"] == MINIMAL_SINGLE_MEMBER_NAME
     assert row["parseback_receiver_model"] == "hiv1_build_model_from_archive_torch_cpu"
+    assert row["parseback_pair_indices"] == [birth_pair]
     assert row["receiver_surface_target_hard_won_count"] == row["region_hard_won_count"]
     assert "fakequant_bits" not in row
     assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
@@ -727,10 +735,11 @@ def test_parseback_survival_remeasures_pose_compensation_for_composite_birth(tmp
     payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
     payload = _with_accepted_pose_compensation(payload)
     idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    birth_pair = _live_birth_pair(payload, idx)
     archive = _write_mlx_model_hiv1_archive(tmp_path, model, cfg)
     report = _parseback_report_for_archive(
         archive,
-        selected_pair_indices=range(cfg.num_pairs),
+        selected_pair_indices=[birth_pair],
     )
 
     row = measure_birth_parseback_survival_from_report(
@@ -788,8 +797,10 @@ def test_parseback_survival_blocks_when_birth_pair_not_cached(tmp_path) -> None:
     cfg, model, teacher, target0, target1, labels_np = _setup(mx)
     payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
     idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    birth_pair = _live_birth_pair(payload, idx)
+    non_birth_pair = next(pair for pair in range(cfg.num_pairs) if pair != birth_pair)
     archive = _write_mlx_model_hiv1_archive(tmp_path, model, cfg)
-    report = _parseback_report_for_archive(archive, selected_pair_indices=[0])
+    report = _parseback_report_for_archive(archive, selected_pair_indices=[non_birth_pair])
 
     row = measure_birth_parseback_survival_from_report(
         parseback_report=report,

@@ -10341,6 +10341,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         archive_artifact_dir=archive_artifact_dir,
         launch_decoder_codec=launch_decoder_codec,
     )
+    selected_birth_parseback_survival = _promote_hi_nerv_selected_birth_parseback_survival(
+        archive_resolution=archive_resolution,
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+    )
+    if isinstance(selected_birth_parseback_survival, Mapping):
+        artifact_dict["selected_birth_parseback_survival"] = dict(selected_birth_parseback_survival)
     _attach_hi_nerv_archive_codec_custody(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
@@ -16061,6 +16068,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+    bootstrap_pair_indices = None
+    target_segnet_argmax_1 = None
+    target_region_birth_payload: dict[str, Any] | None = None
     if bool(scorer_domain_bootstrap):
         bootstrap_initializer = getattr(
             model,
@@ -16091,7 +16101,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         else:
             bootstrap_pair_indices = mx.arange(bootstrap_count, dtype=mx.int32)
             bootstrap_pair_index_semantics = "identity_local_rows_are_source_pairs"
-        target_segnet_argmax_1 = None
         bootstrap_segnet_teacher_metadata: dict[str, Any] = {
             "schema": "hi_nerv_bootstrap_exact_segnet_target_argmax.v1",
             "enabled": False,
@@ -16278,7 +16287,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             bootstrap_blockers.append("hi_nerv_scorer_domain_margin_requested_but_segnet_teacher_missing")
         if not hard_birth_request_consumed:
             bootstrap_blockers.append("hi_nerv_scorer_domain_hard_birth_requested_but_segnet_teacher_missing")
-        target_region_birth_payload: dict[str, Any] = {
+        target_region_birth_payload = {
             "schema": "hi_nerv_target_region_birth.v1",
             "enabled": False,
             "reason": (
@@ -17214,6 +17223,57 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "training_executed": True,
         "score_authority": "false_macos_mlx_research_signal",
     }
+
+    def _hi_nerv_archive_replay_components_with_birth_survival(
+        archive_path: str | Path,
+        batch: Any,
+        candidate_kind: str,
+    ) -> dict[str, float]:
+        components = build_hi_nerv_archive_replay_components(
+            archive_path,
+            batch,
+            target_rgb_0=target_rgb_0,
+            target_rgb_1=target_rgb_1,
+            scorer_teacher=scorer_teacher,
+            pose_scorer_teacher=pose_scorer_teacher,
+            candidate_kind=candidate_kind,
+        )
+        if (
+            isinstance(target_region_birth_payload, Mapping)
+            and target_region_birth_payload.get("accepted") is True
+        ):
+            row = _write_hi_nerv_runner_birth_parseback_survival_for_archive(
+                archive_path=archive_path,
+                output_dir=Path(archive_path).expanduser().resolve(strict=False).parent,
+                live_birth_payload=target_region_birth_payload,
+                scorer_teacher=scorer_teacher,
+                pose_teacher=pose_scorer_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                target_labels=target_segnet_argmax_1,
+                pair_indices=bootstrap_pair_indices,
+                candidate_kind=candidate_kind,
+                canonical_for_launch_gate=False,
+            )
+            if isinstance(row, Mapping):
+                artifact_metadata["score_aware_training"][
+                    "last_birth_parseback_survival"
+                ] = {
+                    "schema": row.get("schema"),
+                    "surface": row.get("surface"),
+                    "action_id": row.get("action_id"),
+                    "candidate_kind": row.get("candidate_kind"),
+                    "survived": row.get("survived"),
+                    "artifact_path": row.get("artifact_path"),
+                    "blockers": [
+                        str(value) for value in row.get("blockers") or []
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+        return components
+
     bundle_kwargs: dict[str, Any] = {
         "model": model,
         "target_rgb_0": target_rgb_0,
@@ -17223,17 +17283,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "extra_loss_terms": _extra_loss_terms,
         "extra_loss_weights": coder_qat_loss_weight_map,
         "export_archive_fn": _export_archive,
-        "archive_replay_components_fn": (
-            lambda archive_path, batch, candidate_kind: build_hi_nerv_archive_replay_components(
-                archive_path,
-                batch,
-                target_rgb_0=target_rgb_0,
-                target_rgb_1=target_rgb_1,
-                scorer_teacher=scorer_teacher,
-                pose_scorer_teacher=pose_scorer_teacher,
-                candidate_kind=candidate_kind,
-            )
-        ),
+        "archive_replay_components_fn": _hi_nerv_archive_replay_components_with_birth_survival,
         "substrate_artifact_metadata": artifact_metadata,
         "eval_roundtrip_ste_enabled": True,
         "eval_roundtrip_camera_hw": (874, 1164),
@@ -18108,6 +18158,212 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
+
+
+def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
+    *,
+    archive_path: str | Path,
+    output_dir: str | Path,
+    live_birth_payload: Mapping[str, Any] | None,
+    scorer_teacher: Any | None,
+    target_labels: Any | None,
+    pair_indices: Any | None,
+    pose_teacher: Any | None = None,
+    target_rgb_0: Any | None = None,
+    target_rgb_1: Any | None = None,
+    candidate_kind: str = "",
+    canonical_for_launch_gate: bool = True,
+) -> dict[str, Any] | None:
+    """Write same-action parseback survival evidence for a HiNeRV hard birth."""
+
+    if not isinstance(live_birth_payload, Mapping):
+        return None
+    receipt = live_birth_payload.get("receipt")
+    receipt = receipt if isinstance(receipt, Mapping) else {}
+    action_id = str(live_birth_payload.get("action_id") or receipt.get("action_id") or "")
+    if not action_id:
+        return None
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    safe_kind = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "_"
+        for ch in str(candidate_kind or "archive")
+    )
+    row_path = out / f"hi_nerv_birth_parseback_survival_{safe_kind}.json"
+
+    def _blocked(blocker: str, reason: str | None = None) -> dict[str, Any]:
+        row = {
+            "schema": (
+                "hi_nerv_target_region_birth_survival_blocked.v1"
+                if canonical_for_launch_gate
+                else "hi_nerv_target_region_birth_survival_candidate_blocked.v1"
+            ),
+            "surface": "parseback_mlx",
+            "action_id": action_id,
+            "candidate_kind": str(candidate_kind or ""),
+            "archive_path": str(archive_path),
+            "blocker": blocker,
+            "blockers": [blocker],
+            "reason": reason or blocker,
+            "producer": "hi_nerv_runner_archive_selection_birth_parseback_survival",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        row["artifact_path"] = row_path.as_posix()
+        _write_json(row_path, row)
+        return row
+
+    archive = Path(archive_path).expanduser().resolve(strict=False)
+    if not archive.is_file():
+        return _blocked("birth_survival_parseback_archive_zip_missing")
+    if scorer_teacher is None:
+        return _blocked("birth_survival_parseback_scorer_teacher_missing")
+    if target_labels is None:
+        return _blocked("birth_survival_parseback_target_labels_missing")
+    if pair_indices is None:
+        return _blocked("birth_survival_parseback_pair_indices_missing")
+
+    parseback_report = {
+        "schema": "hi_nerv_runner_archive_selection_parseback_report.v1",
+        "archive_path": archive.as_posix(),
+        "archive_sha256": _sha256_file(archive),
+        "archive_bytes": int(archive.stat().st_size),
+        "action_id": action_id,
+        "candidate_kind": str(candidate_kind or ""),
+        "producer": "hi_nerv_runner_archive_selection_birth_parseback_survival",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    try:
+        from tac.substrates.hi_nerv.birth_survival import (
+            measure_birth_parseback_survival_from_report,
+        )
+
+        row = dict(
+            measure_birth_parseback_survival_from_report(
+                parseback_report=parseback_report,
+                scorer_teacher=scorer_teacher,
+                pose_teacher=pose_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                pair_indices=pair_indices,
+            )
+        )
+    except Exception as exc:
+        return _blocked(
+            "birth_survival_parseback_remeasurement_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+
+    row["candidate_kind"] = str(candidate_kind or "")
+    if not canonical_for_launch_gate:
+        row["source_schema"] = row.get("schema")
+        row["schema"] = "hi_nerv_target_region_birth_survival_candidate.v1"
+        row["canonical_launch_gate_schema"] = False
+    row["artifact_path"] = row_path.as_posix()
+    row["producer"] = "hi_nerv_runner_archive_selection_birth_parseback_survival"
+    _write_json(row_path, row)
+    return row
+
+
+def _promote_hi_nerv_selected_birth_parseback_survival(
+    *,
+    archive_resolution: Mapping[str, Any],
+    output_dir: str | Path,
+    artifact_dict: dict[str, Any],
+) -> dict[str, Any] | None:
+    archive_raw = archive_resolution.get("archive_path")
+    if not archive_raw:
+        return None
+    archive = Path(str(archive_raw)).expanduser().resolve(strict=False)
+    if not archive.is_file():
+        return None
+    candidate_kind = str(archive_resolution.get("candidate_kind") or "archive")
+    safe_kind = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in candidate_kind)
+    candidate_path = archive.parent / f"hi_nerv_birth_parseback_survival_{safe_kind}.json"
+    if not candidate_path.is_file():
+        matches = sorted(archive.parent.glob("hi_nerv_birth_parseback_survival_*.json"))
+        candidate_path = matches[0] if matches else candidate_path
+    if not candidate_path.is_file():
+        return None
+    try:
+        row = _load_json(candidate_path)
+    except Exception:
+        return None
+    if not isinstance(row, Mapping):
+        return None
+    if str(row.get("schema") or "") != "hi_nerv_target_region_birth_survival_candidate.v1":
+        return None
+    promoted = dict(row)
+    promoted["source_schema"] = row.get("schema")
+    promoted["schema"] = str(row.get("source_schema") or "hi_nerv_target_region_birth_survival.v1")
+    promoted["canonical_launch_gate_schema"] = True
+    promoted["selected_archive_path"] = archive.as_posix()
+    promoted["selected_archive_sha256"] = archive_resolution.get("archive_sha256") or _sha256_file(archive)
+    promoted["selected_candidate_kind"] = candidate_kind
+    promoted["source_candidate_artifact_path"] = candidate_path.as_posix()
+    promoted["producer"] = "hi_nerv_runner_selected_birth_parseback_survival"
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    promoted_path = out / "hi_nerv_selected_birth_parseback_survival.json"
+    promoted["artifact_path"] = promoted_path.as_posix()
+    _write_json(promoted_path, promoted)
+
+    artifact_dict["selected_birth_parseback_survival"] = dict(promoted)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["selected_birth_parseback_survival"] = dict(promoted)
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["selected_birth_parseback_survival"] = {
+                "schema": promoted.get("schema"),
+                "surface": promoted.get("surface"),
+                "action_id": promoted.get("action_id"),
+                "survived": promoted.get("survived"),
+                "artifact_path": promoted.get("artifact_path"),
+                "selected_candidate_kind": promoted.get("selected_candidate_kind"),
+                "blockers": [str(value) for value in promoted.get("blockers") or []],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+    artifact_path = out / "training_artifact.json"
+    if artifact_path.is_file():
+        try:
+            artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except Exception:
+            artifact = None
+        if isinstance(artifact, dict):
+            artifact["selected_birth_parseback_survival"] = dict(promoted)
+            artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+            artifact_metadata["selected_birth_parseback_survival"] = dict(promoted)
+            score_training = artifact_metadata.get("score_aware_training")
+            if isinstance(score_training, dict):
+                score_training["selected_birth_parseback_survival"] = {
+                    "schema": promoted.get("schema"),
+                    "surface": promoted.get("surface"),
+                    "action_id": promoted.get("action_id"),
+                    "survived": promoted.get("survived"),
+                    "artifact_path": promoted.get("artifact_path"),
+                    "selected_candidate_kind": promoted.get("selected_candidate_kind"),
+                    "blockers": [str(value) for value in promoted.get("blockers") or []],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            artifact["substrate_artifact_metadata"] = artifact_metadata
+            artifact_path.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+    return promoted
 
 
 def _hi_nerv_receiver_replay_selection_score(

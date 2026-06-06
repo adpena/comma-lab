@@ -429,6 +429,107 @@ def test_hinerv_receiver_replay_parseback_servo_lift_blocks_missing_surfaces() -
     assert "servo_lift_inflate_survival_missing" in servo["blockers"]
 
 
+def test_hinerv_archive_selection_birth_survival_candidate_row_is_not_gate_schema(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = tmp_path / "ema" / "archive.zip"
+    archive.parent.mkdir()
+    archive.write_bytes(b"unit archive")
+    calls: list[dict[str, object]] = []
+
+    import tac.substrates.hi_nerv.birth_survival as survival_mod
+
+    def fake_measure_birth_parseback_survival_from_report(**kwargs):
+        calls.append(dict(kwargs))
+        return {
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": "a" * 64,
+            "survived": True,
+            "region_hard_won_count": 1,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        survival_mod,
+        "measure_birth_parseback_survival_from_report",
+        fake_measure_birth_parseback_survival_from_report,
+    )
+
+    row = runner_mod._write_hi_nerv_runner_birth_parseback_survival_for_archive(
+        archive_path=archive,
+        output_dir=archive.parent,
+        live_birth_payload={"action_id": "a" * 64, "accepted": True},
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+        candidate_kind="ema",
+        canonical_for_launch_gate=False,
+    )
+
+    assert calls
+    assert row is not None
+    assert row["schema"] == "hi_nerv_target_region_birth_survival_candidate.v1"
+    assert row["source_schema"] == "hi_nerv_target_region_birth_survival.v1"
+    assert row["canonical_launch_gate_schema"] is False
+    persisted = json.loads(Path(row["artifact_path"]).read_text(encoding="utf-8"))
+    assert persisted["schema"] == "hi_nerv_target_region_birth_survival_candidate.v1"
+
+
+def test_hinerv_selected_birth_parseback_survival_promotes_only_selected_candidate(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "ema" / "archive.zip"
+    archive.parent.mkdir()
+    archive.write_bytes(b"unit archive")
+    candidate_row = {
+        "schema": "hi_nerv_target_region_birth_survival_candidate.v1",
+        "source_schema": "hi_nerv_target_region_birth_survival.v1",
+        "surface": "parseback_mlx",
+        "action_id": "b" * 64,
+        "survived": True,
+        "candidate_kind": "ema",
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    candidate_path = archive.parent / "hi_nerv_birth_parseback_survival_ema.json"
+    candidate_path.write_text(json.dumps(candidate_row), encoding="utf-8")
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    artifact_path = training_dir / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps({"substrate_artifact_metadata": {"score_aware_training": {}}}),
+        encoding="utf-8",
+    )
+    artifact_dict = {"substrate_artifact_metadata": {"score_aware_training": {}}}
+
+    promoted = runner_mod._promote_hi_nerv_selected_birth_parseback_survival(
+        archive_resolution={
+            "archive_path": archive.as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "candidate_kind": "ema",
+        },
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+    )
+
+    assert promoted is not None
+    assert promoted["schema"] == "hi_nerv_target_region_birth_survival.v1"
+    assert promoted["canonical_launch_gate_schema"] is True
+    assert promoted["selected_archive_path"] == archive.as_posix()
+    assert Path(promoted["artifact_path"]).name == "hi_nerv_selected_birth_parseback_survival.json"
+    assert artifact_dict["selected_birth_parseback_survival"]["action_id"] == "b" * 64
+    persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
+    persisted_training = persisted["substrate_artifact_metadata"]["score_aware_training"]
+    assert persisted_training["selected_birth_parseback_survival"]["survived"] is True
+
+
 def _receiver_replay_selection_manifest(
     *,
     old_summary: dict[str, object],
@@ -7800,6 +7901,33 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         _write_synthetic_pr95_archive(archive, pairs=2)
         return archive, runner_mod._sha256_file(archive), archive.stat().st_size
 
+    class FakeSegNetTeacher:
+        num_classes = 3
+        frame_count = 10
+        upstream_segnet_safetensors_sha256 = "0" * 64
+
+        def teacher_argmax_for_indices(self, indices):
+            import mlx.core as mx
+
+            return mx.zeros((int(indices.shape[0]), 384, 512), dtype=mx.int32)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            import mlx.core as mx
+
+            batch, height, width, _channels = frames.shape
+            zeros = mx.zeros((batch, height, width, 1), dtype=mx.float32)
+            ones = mx.ones((batch, height, width, 1), dtype=mx.float32)
+            return mx.concatenate([ones, zeros, zeros], axis=-1)
+
+    class FakePoseNetTeacher:
+        pose_dims = 6
+        upstream_posenet_safetensors_sha256 = "1" * 64
+
+        def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+            import mlx.core as mx
+
+            return mx.zeros((int(yuv6_pair.shape[0]), self.pose_dims), dtype=mx.float32)
+
     def fake_build_hi_nerv_archive_replay_components(
         archive_path,
         batch,
@@ -7821,6 +7949,29 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
             "archive_replay_pair_count": 1.0,
             "parseback_rgb_pair_mse": 0.0,
         }
+
+    def fake_write_mlx_renderer_prefilter_profile(**kwargs):
+        captured["prefilter_profile_scorer_device"] = kwargs["scorer_device"]
+        captured["prefilter_profile_scorer_batch_pairs"] = int(
+            kwargs["scorer_batch_pairs"]
+        )
+        output_path = Path(kwargs["output_path"])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {
+                    "schema": "mlx_renderer_prefilter_profile.v1",
+                    "run_id": kwargs["run_id"],
+                    "archive_bytes": int(kwargs["archive_bytes"]),
+                    "archive_sha256": str(kwargs["archive_sha256"]),
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ),
+            encoding="utf-8",
+        )
 
     def fake_run_mlx_score_aware_full_main(**kwargs):
         captured["run_pr95_curriculum_total_epochs"] = int(kwargs["pr95_curriculum_total_epochs"])
@@ -7860,6 +8011,16 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         fake_run_mlx_score_aware_full_main,
     )
     monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "build_mlx_segnet_pair_teacher",
+        lambda *_args, **_kwargs: FakeSegNetTeacher(),
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "build_mlx_posenet_pair_teacher",
+        lambda *_args, **_kwargs: FakePoseNetTeacher(),
+    )
+    monkeypatch.setattr(
         hinerv_archive_candidate,
         "export_hi_nerv_mlx_archive",
         fake_export_hi_nerv_mlx_archive,
@@ -7868,6 +8029,13 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         hinerv_archive_candidate,
         "build_hi_nerv_archive_replay_components",
         fake_build_hi_nerv_archive_replay_components,
+    )
+    import tac.local_acceleration.mlx_renderer_prefilter_profile as prefilter_mod
+
+    monkeypatch.setattr(
+        prefilter_mod,
+        "write_mlx_renderer_prefilter_profile",
+        fake_write_mlx_renderer_prefilter_profile,
     )
     monkeypatch.setattr(
         hinerv_mlx_renderer,

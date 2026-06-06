@@ -1191,7 +1191,7 @@ def test_pr95_stage_direct_live_region_recon_refuses_missing_teacher() -> None:
         num_pairs=base.num_pairs,
         forward_convention=base.forward_convention,
         segnet_direct_live_distillation_weight=0.0,
-        segnet_direct_live_class_region_recon_weight=0.75,
+        segnet_direct_live_class_region_recon_weight=0.0,
     )
     adapter = MlxScoreAwareAdapter(
         bundle,
@@ -1204,7 +1204,10 @@ def test_pr95_stage_direct_live_region_recon_refuses_missing_teacher() -> None:
         adapter.train_step(
             mx.array([0, 1], dtype=mx.int32),
             learning_rate=1e-3,
-            loss_weights={"segnet_direct_live_class_region_recon": 1.0},
+            loss_weights={
+                "segnet_direct_live_class_region_recon": 1.0,
+                "segnet_direct_live_class_region_recon_config_floor": 0.75,
+            },
         )
 
 
