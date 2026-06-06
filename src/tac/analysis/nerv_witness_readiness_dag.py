@@ -38,6 +38,21 @@ NERV_WITNESS_READINESS_NODE_SCHEMA = "nerv_witness_readiness_node.v1"
 NERV_WITNESS_GATE_STATUS_SCHEMA = "nerv_witness_gate_status.v1"
 DEFAULT_QUEUE_ID = "nerv_witness_long_training_readiness_dag.v1"
 CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 37_545_489.0
+HINERV_TARGET_MIN_RATIO_SOURCE_MAP_KEYS = (
+    "min_ratio_increase_by_source",
+    "target_min_region_ratio_delta_by_source",
+    "max_candidate_segnet_min_ratio_increase_by_source",
+)
+HINERV_TARGET_MIN_RATIO_SOURCE_METRIC_KEYS = (
+    "target_min_region_ratio_delta",
+    "target_min_region_ratio_increase",
+    "min_ratio_increase",
+    "candidate_target_class_min_ratio_delta",
+)
+HINERV_TARGET_MIN_RATIO_AUTHORITATIVE_SOURCES = (
+    "parseback",
+    "hard_birth_actuator",
+)
 
 
 class NervWitnessReadinessDagError(ValueError):
@@ -591,6 +606,18 @@ def _hinerv_smoke_evidence(
             "max_candidate_pose_exact_delta",
         )
     }
+    min_ratio_increase_by_source = _target_min_ratio_increase_by_source(payload)
+    authority_source, authority_delta = _authoritative_target_min_ratio_delta(
+        min_ratio_increase_by_source
+    )
+    metrics["min_ratio_increase_by_source"] = dict(min_ratio_increase_by_source)
+    metrics["target_min_region_ratio_delta_by_source"] = dict(
+        min_ratio_increase_by_source
+    )
+    metrics["min_ratio_increase_authority_source"] = authority_source
+    metrics["max_candidate_segnet_target_min_ratio_increase_authoritative"] = (
+        authority_delta
+    )
     trace_path = path.parent / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json"
     readiness_path = (
         path.parent
@@ -607,7 +634,7 @@ def _hinerv_smoke_evidence(
         and (metrics["max_candidate_segnet_total_debt_spill_given_worst_improvement"] or 0.0) > 0.0
     ):
         blockers.append("hinerv_localized_projection_trust_region_missing")
-    if (metrics["max_candidate_segnet_min_ratio_increase"] or 0.0) <= 0.0:
+    if (authority_delta or 0.0) <= 0.0:
         blockers.append("hinerv_target_min_ratio_not_lifted")
     return {
         "schema": "hinerv_short_smoke_witness_evidence.v1",
@@ -676,8 +703,25 @@ def _distortion_birth_stage_evidence(
             "max_accepted_frame1_receiver_uint8_changed_count",
             "max_accepted_frame1_receiver_uint8_delta_abs",
             "max_candidate_pose_exact_delta",
+            "max_candidate_segnet_target_min_ratio_increase_authoritative",
         )
     }
+    raw_metrics = hinerv_evidence.get("metrics")
+    raw_metrics = raw_metrics if isinstance(raw_metrics, Mapping) else {}
+    min_ratio_increase_by_source = _numeric_mapping(
+        raw_metrics.get("min_ratio_increase_by_source")
+    )
+    if not min_ratio_increase_by_source:
+        min_ratio_increase_by_source = _numeric_mapping(
+            raw_metrics.get("target_min_region_ratio_delta_by_source")
+        )
+    metrics["min_ratio_increase_by_source"] = dict(min_ratio_increase_by_source)
+    metrics["target_min_region_ratio_delta_by_source"] = dict(
+        min_ratio_increase_by_source
+    )
+    metrics["min_ratio_increase_authority_source"] = raw_metrics.get(
+        "min_ratio_increase_authority_source"
+    )
     blockers: list[str] = []
     if not bool(hinerv_evidence.get("report_loaded")):
         blockers.append("distortion_birth_smoke_report_missing")
@@ -687,7 +731,7 @@ def _distortion_birth_stage_evidence(
         blockers.append("receiver_visible_hard_birth_update_not_accepted")
     if metrics["max_candidate_segnet_worst_debt_reduction"] <= 0.0:
         blockers.append("worst_region_debt_reduction_missing")
-    if metrics["max_candidate_segnet_min_ratio_increase"] <= 0.0:
+    if metrics["max_candidate_segnet_target_min_ratio_increase_authoritative"] <= 0.0:
         blockers.append("target_region_min_ratio_lift_missing")
     if metrics["max_candidate_segnet_total_debt_spill_given_worst_improvement"] > 0.0:
         blockers.append("worst_region_improvement_has_total_seg_spill")
@@ -1237,6 +1281,13 @@ def _default_hinerv_smoke_command(output_root: Path) -> list[str]:
         "2",
         "--scorer-domain-bootstrap-segnet-hard-birth-weight",
         "2.0",
+        "--segnet-direct-live-distillation-weight",
+        "0.5",
+        "--segnet-direct-live-target-min-ratio-floor-weight",
+        "1.0",
+        "--pose-direct-live-distillation-weight",
+        "0.25",
+        "--pose-trust-required",
         "--coder-aware-qat",
         "--receiver-cache-quality-mlx-scorer-response-device-type",
         "cpu",
@@ -1249,6 +1300,149 @@ def _read_json_or_none(path: Path) -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _target_min_ratio_increase_by_source(payload: Mapping[str, Any]) -> dict[str, float]:
+    """Return source-qualified target-region min-ratio lift.
+
+    The legacy ``max_candidate_segnet_min_ratio_increase`` scalar came from the
+    bootstrap smoke loop. Keep it as telemetry, but do not let it clear the
+    hard-birth actuator gate. Readiness needs the source that moved the
+    receiver surface, so ``hard_birth_actuator`` or ``parseback`` must carry
+    the positive delta.
+    """
+
+    out: dict[str, float] = {}
+    legacy_bootstrap = _find_number(
+        payload,
+        "max_candidate_segnet_min_ratio_increase",
+    )
+    if legacy_bootstrap is not None:
+        _record_source_metric(out, "bootstrap", legacy_bootstrap)
+
+    for key in HINERV_TARGET_MIN_RATIO_SOURCE_MAP_KEYS:
+        for mapping in _find_mappings(payload, key):
+            for source, value in mapping.items():
+                number = _source_metric_delta(value)
+                if number is not None:
+                    _record_source_metric(out, str(source), number)
+
+    for source in ("bootstrap", "hard_birth", "hard_birth_actuator", "parseback"):
+        for mapping in _find_mappings(payload, source):
+            number = _source_metric_delta(mapping)
+            if number is not None:
+                _record_source_metric(out, source, number)
+
+    for mapping in _iter_mappings(payload):
+        schema = mapping.get("schema")
+        actuator = mapping.get("actuator_id")
+        if (
+            schema == "hi_nerv_target_region_birth_receipt.v1"
+            or actuator == "hinerv_target_region_birth"
+        ):
+            number = _source_metric_delta(mapping)
+            if number is not None:
+                _record_source_metric(out, "hard_birth_actuator", number)
+
+    return dict(sorted(out.items()))
+
+
+def _authoritative_target_min_ratio_delta(
+    source_map: Mapping[str, float],
+) -> tuple[str | None, float]:
+    best_source: str | None = None
+    best_delta = 0.0
+    for source in HINERV_TARGET_MIN_RATIO_AUTHORITATIVE_SOURCES:
+        value = _finite_number(source_map.get(source))
+        if value is not None and (best_source is None or value > best_delta):
+            best_source = source
+            best_delta = value
+    return best_source, best_delta
+
+
+def _source_metric_delta(value: Any) -> float | None:
+    number = _finite_number(value)
+    if number is not None:
+        return number
+    if not isinstance(value, Mapping):
+        return None
+    for key in HINERV_TARGET_MIN_RATIO_SOURCE_METRIC_KEYS:
+        number = _finite_number(value.get(key))
+        if number is not None:
+            return number
+    before = _first_finite_mapping_value(
+        value,
+        (
+            "before_region_hard_ratio",
+            "old_region_hard_ratio",
+            "before_target_min_region_ratio",
+            "old_target_min_region_ratio",
+        ),
+    )
+    after = _first_finite_mapping_value(
+        value,
+        (
+            "after_region_hard_ratio",
+            "new_region_hard_ratio",
+            "after_target_min_region_ratio",
+            "new_target_min_region_ratio",
+        ),
+    )
+    if before is not None and after is not None:
+        return after - before
+    return None
+
+
+def _first_finite_mapping_value(
+    mapping: Mapping[str, Any],
+    keys: Sequence[str],
+) -> float | None:
+    for key in keys:
+        number = _finite_number(mapping.get(key))
+        if number is not None:
+            return number
+    return None
+
+
+def _record_source_metric(
+    out: dict[str, float],
+    source: str,
+    value: float,
+) -> None:
+    name = "hard_birth_actuator" if source == "hard_birth" else str(source)
+    old = out.get(name)
+    if old is None or value > old:
+        out[name] = float(value)
+
+
+def _numeric_mapping(value: Any) -> dict[str, float]:
+    if not isinstance(value, Mapping):
+        return {}
+    out: dict[str, float] = {}
+    for key, item in value.items():
+        number = _source_metric_delta(item)
+        if number is not None:
+            _record_source_metric(out, str(key), number)
+    return out
+
+
+def _iter_mappings(payload: Any) -> Iterable[Mapping[str, Any]]:
+    queue: deque[Any] = deque([payload])
+    while queue:
+        item = queue.popleft()
+        if isinstance(item, Mapping):
+            yield item
+            queue.extend(item.values())
+        elif isinstance(item, list | tuple):
+            queue.extend(item)
+
+
+def _find_mappings(payload: Any, key: str) -> list[Mapping[str, Any]]:
+    return [
+        value
+        for item in _iter_mappings(payload)
+        if isinstance((value := item.get(key)), Mapping)
+    ]
 
 
 def _find_number(payload: Any, key: str) -> float | None:

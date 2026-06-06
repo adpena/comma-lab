@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tac.analysis.nerv_pair_local_distortion_servo import (
     PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA,
 )
@@ -228,6 +230,83 @@ def test_distortion_birth_gate_accepts_receiver_visible_no_spill_smoke(
     ]
 
 
+def test_distortion_birth_gate_consumes_hard_birth_actuator_min_ratio_source(
+    tmp_path: Path,
+) -> None:
+    report = _write_hinerv_smoke(
+        tmp_path,
+        accepted=1,
+        worst_reduction=0.02,
+        total_reduction=0.01,
+        min_ratio_increase=0.0,
+        min_ratio_increase_by_source={
+            "bootstrap": 0.0,
+            "hard_birth_actuator": 0.18,
+        },
+        total_spill=0.0,
+        accepted_uint8_changed=9,
+        accepted_uint8_delta=2,
+    )
+
+    status = check_witness_gate_status(
+        node_id="shared.distortion_birth_before_rate_pressure",
+        hinerv_smoke_report=report,
+        repo_root=REPO_ROOT,
+    )
+
+    assert status["satisfied"] is True
+    metrics = status["evidence"]["metrics"]
+    assert metrics["max_candidate_segnet_min_ratio_increase"] == pytest.approx(0.0)
+    assert metrics["min_ratio_increase_by_source"] == {
+        "bootstrap": pytest.approx(0.0),
+        "hard_birth_actuator": pytest.approx(0.18),
+    }
+    assert metrics["min_ratio_increase_authority_source"] == "hard_birth_actuator"
+    assert metrics[
+        "max_candidate_segnet_target_min_ratio_increase_authoritative"
+    ] == pytest.approx(0.18)
+
+    payload = build_nerv_witness_readiness_dag(
+        repo_root=REPO_ROOT,
+        output_root=tmp_path / "dag_out",
+        hinerv_smoke_report=report,
+    )
+    nodes = {row["node_id"]: row for row in payload["gate_nodes"]}
+    localized = nodes["hinerv.localized_target_region_projection_actuator"]
+    assert localized["status"] == "succeeded"
+    assert "hinerv_target_min_ratio_not_lifted" not in localized["blockers"]
+
+
+def test_distortion_birth_gate_rejects_bootstrap_only_min_ratio_lift(
+    tmp_path: Path,
+) -> None:
+    report = _write_hinerv_smoke(
+        tmp_path,
+        accepted=1,
+        worst_reduction=0.02,
+        total_reduction=0.01,
+        min_ratio_increase=0.18,
+        min_ratio_increase_by_source={"bootstrap": 0.18},
+        total_spill=0.0,
+        accepted_uint8_changed=9,
+        accepted_uint8_delta=2,
+    )
+
+    status = check_witness_gate_status(
+        node_id="shared.distortion_birth_before_rate_pressure",
+        hinerv_smoke_report=report,
+        repo_root=REPO_ROOT,
+    )
+
+    assert status["satisfied"] is False
+    assert "target_region_min_ratio_lift_missing" in status["blockers"]
+    metrics = status["evidence"]["metrics"]
+    assert metrics["min_ratio_increase_by_source"] == {
+        "bootstrap": pytest.approx(0.18)
+    }
+    assert metrics["min_ratio_increase_authority_source"] is None
+
+
 def test_joint_seg_pose_trust_region_accepts_pr95_grade_pair_servo_receipt(
     tmp_path: Path,
 ) -> None:
@@ -296,6 +375,7 @@ def _write_hinerv_smoke(
     worst_reduction: float,
     total_reduction: float,
     min_ratio_increase: float,
+    min_ratio_increase_by_source: dict[str, float] | None = None,
     total_spill: float,
     accepted_uint8_changed: int | None = None,
     accepted_uint8_delta: int | None = None,
@@ -320,6 +400,26 @@ def _write_hinerv_smoke(
         "max_candidate_segnet_worst_debt_reduction": worst_reduction,
         "max_candidate_segnet_total_debt_reduction": total_reduction,
         "max_candidate_segnet_min_ratio_increase": min_ratio_increase,
+        "min_ratio_increase_by_source": (
+            {
+                str(source): float(value)
+                for source, value in (
+                    min_ratio_increase_by_source
+                    if min_ratio_increase_by_source is not None
+                    else {"hard_birth_actuator": min_ratio_increase}
+                ).items()
+            }
+        ),
+        "target_min_region_ratio_delta_by_source": (
+            {
+                str(source): float(value)
+                for source, value in (
+                    min_ratio_increase_by_source
+                    if min_ratio_increase_by_source is not None
+                    else {"hard_birth_actuator": min_ratio_increase}
+                ).items()
+            }
+        ),
         "max_candidate_segnet_total_debt_spill_given_worst_improvement": total_spill,
         "max_accepted_frame1_receiver_uint8_changed_count": (
             accepted if accepted_uint8_changed is None else accepted_uint8_changed
