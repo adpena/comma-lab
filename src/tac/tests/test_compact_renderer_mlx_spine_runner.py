@@ -155,6 +155,33 @@ def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None
     ) in execute_to_smoke_call
 
 
+def test_hinerv_runner_binds_archive_parseback_selection_to_receiver_gate() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    body = source[
+        source.index("def execute_hi_nerv_mlx_scoreaware_and_adapt(") :
+        source.index("def _compact_score_aware_training_telemetry_contract(")
+    ]
+    execute_to_smoke_call = body[
+        body.index("artifact = _run_hi_nerv_mlx_scoreaware_smoke(") :
+        body.index("artifact_dict = artifact.as_dict()")
+    ]
+    smoke_body = source[
+        source.index("def _run_hi_nerv_mlx_scoreaware_smoke(") :
+        source.index("def _write_hi_nerv_runner_source_pair_reference_cache(")
+    ]
+
+    assert "archive_selection_quality_scope = (" in body
+    assert "post_export_receiver_cache_quality_gate" in execute_to_smoke_call
+    assert "archive_selection_replay_required=bool(" in execute_to_smoke_call
+    assert "archive_selection_quality_scope[\"effective_max_pairs\"]" in (
+        execute_to_smoke_call
+    )
+    assert "build_hi_nerv_archive_replay_components" in smoke_body
+    assert "\"archive_replay_components_fn\"" in smoke_body
+    assert "archive_selection_replay_required=bool(" in smoke_body
+    assert "archive_selection_replay_batch_size=(" in smoke_body
+
+
 def test_hinerv_receiver_replay_archive_selection_prefers_archive_backed_score(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -7916,6 +7943,28 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         _write_synthetic_pr95_archive(archive, pairs=2)
         return archive, runner_mod._sha256_file(archive), archive.stat().st_size
 
+    def fake_build_hi_nerv_archive_replay_components(
+        archive_path,
+        batch,
+        *,
+        target_rgb_0,
+        target_rgb_1,
+        scorer_teacher,
+        pose_scorer_teacher,
+        candidate_kind,
+    ):
+        captured["archive_replay_archive_path"] = Path(archive_path).name
+        captured["archive_replay_batch"] = dict(batch)
+        captured["archive_replay_target_shape"] = tuple(target_rgb_0.shape)
+        captured["archive_replay_target1_shape"] = tuple(target_rgb_1.shape)
+        captured["archive_replay_scorer_teacher"] = scorer_teacher
+        captured["archive_replay_pose_scorer_teacher"] = pose_scorer_teacher
+        captured["archive_replay_candidate_kind"] = str(candidate_kind)
+        return {
+            "archive_replay_pair_count": 1.0,
+            "parseback_rgb_pair_mse": 0.0,
+        }
+
     def fake_run_mlx_score_aware_full_main(**kwargs):
         captured["run_pr95_curriculum_total_epochs"] = int(
             kwargs["pr95_curriculum_total_epochs"]
@@ -7923,6 +7972,18 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         captured["run_pr95_enabled"] = bool(
             kwargs["pr95_faithful_curriculum_enabled"]
         )
+        captured["archive_selection_replay_required"] = bool(
+            kwargs["archive_selection_replay_required"]
+        )
+        captured["archive_selection_replay_batch_size"] = int(
+            kwargs["archive_selection_replay_batch_size"]
+        )
+        replay_components = kwargs["bundle"].archive_replay_components_fn(
+            tmp_path / "parseback.zip",
+            {"local_pair_indices": np.array([0], dtype=np.int64)},
+            "ema",
+        )
+        captured["archive_replay_components"] = dict(replay_components)
         exported = kwargs["bundle"].export_archive_fn(
             kwargs["bundle"].model,
             tmp_path / "fake_hinerv_export",
@@ -7955,6 +8016,11 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         hinerv_archive_candidate,
         "export_hi_nerv_mlx_archive",
         fake_export_hi_nerv_mlx_archive,
+    )
+    monkeypatch.setattr(
+        hinerv_archive_candidate,
+        "build_hi_nerv_archive_replay_components",
+        fake_build_hi_nerv_archive_replay_components,
     )
     monkeypatch.setattr(
         hinerv_mlx_renderer,
@@ -8031,6 +8097,8 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         pr95_curriculum_total_epochs=29_650,
         optimizer_controls={},
         prioritized_pair_indices=(),
+        archive_selection_replay_required=True,
+        archive_selection_replay_batch_size=2,
         random_seed=0,
         scorer_upstream_dir=REPO_ROOT / "upstream",
         repo_root=REPO_ROOT,
@@ -8093,6 +8161,16 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"] == []
     assert consumption["hard_byte_ceiling"] == 178_000
     assert captured["export_hard_byte_ceiling"] == 178_000
+    assert captured["archive_selection_replay_required"] is True
+    assert captured["archive_selection_replay_batch_size"] == 2
+    assert captured["archive_replay_archive_path"] == "parseback.zip"
+    assert captured["archive_replay_batch"]["local_pair_indices"].tolist() == [0]
+    assert captured["archive_replay_target_shape"] == (2, 1164, 874, 3)
+    assert captured["archive_replay_target1_shape"] == (2, 1164, 874, 3)
+    assert captured["archive_replay_scorer_teacher"] is None
+    assert captured["archive_replay_pose_scorer_teacher"] is None
+    assert captured["archive_replay_candidate_kind"] == "ema"
+    assert captured["archive_replay_components"]["parseback_rgb_pair_mse"] == 0.0
     assert metadata["config"]["latent_dim_mid"] == 4
     assert metadata["config"]["embed_dim"] == 4
     assert metadata["config"]["decoder_channels"] == [4, 4, 4, 4, 4, 4, 4]

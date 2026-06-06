@@ -11770,6 +11770,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         path = out / "compact_renderer_mlx_spine_runner_report.json"
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
+    archive_selection_quality_scope = (
+        _hi_nerv_effective_receiver_cache_quality_max_pairs(
+            requested_max_pairs=int(receiver_cache_quality_max_pairs),
+            num_pairs=int(num_pairs),
+            train_batch_pairs=int(batch_pair_indices_per_step),
+        )
+    )
     try:
         artifact = _run_hi_nerv_mlx_scoreaware_smoke(
             output_dir=out / "hi_nerv_mlx_training",
@@ -12066,6 +12073,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             sparse_prioritized_target_hydration=bool(
                 sparse_prioritized_target_hydration
+            ),
+            archive_selection_replay_required=bool(
+                post_export_receiver_cache_quality_gate
+            ),
+            archive_selection_replay_batch_size=int(
+                archive_selection_quality_scope["effective_max_pairs"]
             ),
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
@@ -18003,6 +18016,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     sparse_prioritized_target_hydration: bool = False,
     archive_section_telemetry: Mapping[str, Any] | None = None,
     archive_section_telemetry_metadata: Mapping[str, Any] | None = None,
+    archive_selection_replay_required: bool = False,
+    archive_selection_replay_batch_size: int | None = None,
 ) -> Any:
     pairs = int(num_pairs)
     if pairs < 1:
@@ -18049,7 +18064,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
-    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_archive_replay_components,
+        export_hi_nerv_mlx_archive,
+    )
     from tac.substrates.hi_nerv.bitstream import (
         build_hinerv_archive_section_qat_weight_policy,
         build_hinerv_train_time_section_byte_control,
@@ -20156,6 +20174,19 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "extra_loss_terms": _extra_loss_terms,
         "extra_loss_weights": coder_qat_loss_weight_map,
         "export_archive_fn": _export_archive,
+        "archive_replay_components_fn": (
+            lambda archive_path, batch, candidate_kind: (
+                build_hi_nerv_archive_replay_components(
+                    archive_path,
+                    batch,
+                    target_rgb_0=target_rgb_0,
+                    target_rgb_1=target_rgb_1,
+                    scorer_teacher=scorer_teacher,
+                    pose_scorer_teacher=pose_scorer_teacher,
+                    candidate_kind=candidate_kind,
+                )
+            )
+        ),
         "substrate_artifact_metadata": artifact_metadata,
         "eval_roundtrip_ste_enabled": True,
         "eval_roundtrip_camera_hw": (874, 1164),
@@ -20372,6 +20403,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             effective_pr95_stage_source_weight_amplification_enabled
         ),
         ema_archive_selection_enabled=True,
+        archive_selection_replay_required=bool(archive_selection_replay_required),
+        archive_selection_replay_batch_size=(
+            None
+            if archive_selection_replay_batch_size is None
+            else max(
+                1,
+                min(
+                    int(archive_selection_replay_batch_size),
+                    int(hydrated_target_pair_count),
+                ),
+            )
+        ),
         grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
         weight_decay=effective_weight_decay,
         optimizer_kind=effective_optimizer_kind,
