@@ -1221,6 +1221,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         restored_row_sha256 = _latent_row_digest(restored_np[target_index])
         state_restored = restored_row_sha256 == original_row_sha256
         value_per_byte = selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
+        receiver_uint8_half_step_normalized = 0.5 / 255.0
+        selected_delta_max_abs_uint8 = selected_delta_max_abs * 255.0
+        receiver_uint8_crossing_potential = (
+            selected_delta_max_abs >= receiver_uint8_half_step_normalized
+        )
         blockers: list[str] = []
         if not math.isfinite(float(loss.item())):
             blockers.append("hinerv_pair_local_loss_not_finite")
@@ -1228,6 +1233,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             blockers.append("hinerv_pair_local_grad_norm_not_positive")
         if not math.isfinite(selected_delta_l2) or selected_delta_l2 <= 0.0:
             blockers.append("hinerv_pair_local_output_delta_not_positive")
+        if not receiver_uint8_crossing_potential:
+            blockers.append("hinerv_pair_local_output_delta_below_uint8_half_step")
         pair_locality_verified = non_target_delta_l2 <= 1.0e-12
         if not pair_locality_verified:
             blockers.append("hinerv_pair_local_non_target_pair_delta_detected")
@@ -1257,6 +1264,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pair_local_grad_norm": grad_norm,
             "pair_local_grad_norm_by_group": {"latents_fine": grad_norm},
             "pair_local_output_delta_l2": selected_delta_l2,
+            "pair_local_output_delta_max_abs": selected_delta_max_abs,
+            "pair_local_output_delta_max_abs_uint8": selected_delta_max_abs_uint8,
+            "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
+            "receiver_uint8_crossing_potential": receiver_uint8_crossing_potential,
             "pair_locality_verified": pair_locality_verified,
             "non_target_pair_output_delta_l2_max": non_target_delta_l2,
             "state_restored_after_smoke": state_restored,
@@ -1297,6 +1308,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "output_delta": {
                 "pair_local_output_delta_l2": selected_delta_l2,
                 "pair_local_output_delta_max_abs": selected_delta_max_abs,
+                "pair_local_output_delta_max_abs_uint8": selected_delta_max_abs_uint8,
+                "receiver_uint8_half_step_normalized": receiver_uint8_half_step_normalized,
+                "receiver_uint8_crossing_potential": receiver_uint8_crossing_potential,
                 "non_target_pair_output_delta_l2_max": non_target_delta_l2,
                 "pair_locality_verified": pair_locality_verified,
             },

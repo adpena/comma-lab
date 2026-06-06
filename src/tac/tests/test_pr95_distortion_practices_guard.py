@@ -115,6 +115,29 @@ def test_pr95_distortion_guard_rejects_global_hinerv_actuator_evidence() -> None
     ]
 
 
+def test_pr95_distortion_guard_rejects_subquantum_hinerv_actuator_evidence() -> None:
+    row = _hinerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence["pair_local_output_delta_max_abs"] = 1.0e-6
+    evidence["pair_local_output_delta_max_abs_uint8"] = 2.55e-4
+    evidence["receiver_uint8_crossing_potential"] = False
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "hi_nerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert actuator_row["observed"] is False
+    assert "hinerv_pair_local_receiver_uint8_crossing_potential" not in actuator_row[
+        "observed_evidence"
+    ]
+
+
 def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
     row = _snerv_row()
     command = row["command"]
@@ -342,6 +365,10 @@ def _hinerv_actuator_execution_evidence() -> dict:
         "pair_local_grad_norm": 0.25,
         "pair_local_grad_norm_by_group": {"latents_fine": 0.25},
         "pair_local_output_delta_l2": 0.031,
+        "pair_local_output_delta_max_abs": 0.004,
+        "pair_local_output_delta_max_abs_uint8": 1.02,
+        "receiver_uint8_half_step_normalized": 0.5 / 255.0,
+        "receiver_uint8_crossing_potential": True,
         "pair_locality_verified": True,
         "non_target_pair_output_delta_l2_max": 0.0,
         "state_restored_after_smoke": True,

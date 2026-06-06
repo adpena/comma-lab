@@ -1626,6 +1626,25 @@ def _hinerv_actuator_execution_evidence_ok(
     output_delta = _positive_float_value(execution.get("pair_local_output_delta_l2"))
     if output_delta is not None:
         evidence.append("hinerv_pair_local_output_delta_positive")
+    output_delta_max_abs = _positive_float_value(
+        execution.get("pair_local_output_delta_max_abs")
+    )
+    output_delta_max_abs_uint8 = _positive_float_value(
+        execution.get("pair_local_output_delta_max_abs_uint8")
+    )
+    uint8_half_step = _positive_float_value(
+        execution.get("receiver_uint8_half_step_normalized")
+    )
+    receiver_crossing_ok = (
+        execution.get("receiver_uint8_crossing_potential") is True
+        and output_delta_max_abs is not None
+        and output_delta_max_abs_uint8 is not None
+        and uint8_half_step is not None
+        and output_delta_max_abs >= uint8_half_step
+        and output_delta_max_abs_uint8 >= 0.5
+    )
+    if receiver_crossing_ok:
+        evidence.append("hinerv_pair_local_receiver_uint8_crossing_potential")
     locality_ok = execution.get("pair_locality_verified") is True
     non_target_delta = _non_negative_float_value(
         execution.get("non_target_pair_output_delta_l2_max")
@@ -1670,6 +1689,7 @@ def _hinerv_actuator_execution_evidence_ok(
         and grad_norm is not None
         and grad_group_norm is not None
         and output_delta is not None
+        and receiver_crossing_ok
         and locality_ok
         and non_target_ok
         and state_restored_ok
