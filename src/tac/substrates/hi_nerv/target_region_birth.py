@@ -39,6 +39,8 @@ ALLOWED_BIRTH_UPDATE_PREFIXES: tuple[str, ...] = (
     "fine_injector.",
     "head_rgb_1.",
 )
+ALLOWED_POSE_COMPENSATION_UPDATE_EXACT: tuple[str, ...] = ("head_rgb_0",)
+ALLOWED_POSE_COMPENSATION_UPDATE_PREFIXES: tuple[str, ...] = ("head_rgb_0.",)
 
 
 def allowed_birth_update_name(name: Any) -> bool:
@@ -48,6 +50,15 @@ def allowed_birth_update_name(name: Any) -> bool:
     if flat in ALLOWED_BIRTH_UPDATE_EXACT:
         return True
     return any(flat.startswith(prefix) for prefix in ALLOWED_BIRTH_UPDATE_PREFIXES)
+
+
+def allowed_pose_compensation_update_name(name: Any) -> bool:
+    """Return True when a flattened parameter name is frame0 compensation-only."""
+
+    flat = ".".join(str(part) for part in name) if isinstance(name, (tuple, list)) else str(name)
+    if flat in ALLOWED_POSE_COMPENSATION_UPDATE_EXACT:
+        return True
+    return any(flat.startswith(prefix) for prefix in ALLOWED_POSE_COMPENSATION_UPDATE_PREFIXES)
 
 
 @dataclass(frozen=True)
@@ -371,6 +382,7 @@ def build_target_region_birth_receipt(
     runtime_sidecar_bytes: int = 0,
     argmax_transitions: Mapping[str, int] | None = None,
     exact_nonrate: Mapping[str, Any] | None = None,
+    pose_compensation: Mapping[str, Any] | None = None,
     action_id: str | None = None,
     surface: str = "live_mlx",
 ) -> dict[str, Any]:
@@ -380,12 +392,35 @@ def build_target_region_birth_receipt(
     ``tools/trace_nerv_crux.py`` rows so accepted birth updates populate the
     receiver-surface evidence the witness-readiness DAG requires, without the
     consumer needing producer-specific adapters.
+
+    ``pose_compensation`` carries the OPTIONAL frame0-only composite record.
+    The frame0 RGB head (``head_rgb_0.*``) is a *compensation* scope, NOT a
+    birth scope: SegNet reads frame1 only, so a frame0 update cannot move the
+    seg term, and admitting it must never relax ``ALLOWED_BIRTH_UPDATE_*``.
+    The compensated parameter names therefore travel under this mapping's
+    ``compensation_updated_parameter_names`` key and are deliberately exempt
+    from the ``updated_parameter_names`` birth-scope check below.
     """
 
     margin_p50_delta = float(after_margin_stats["margin_p50"] - before_margin_stats["margin_p50"])
     disallowed = [name for name in updated_parameter_names if not allowed_birth_update_name(name)]
     if disallowed:
         raise ValueError(f"updated parameter names escape the birth scope: {sorted(disallowed)}")
+    pose_compensation_payload = dict(pose_compensation) if pose_compensation is not None else None
+    if pose_compensation_payload is not None:
+        compensation_names = [
+            str(name) for name in pose_compensation_payload.get("compensation_updated_parameter_names") or []
+        ]
+        disallowed_compensation = [
+            name
+            for name in compensation_names
+            if not allowed_pose_compensation_update_name(name) or allowed_birth_update_name(name)
+        ]
+        if disallowed_compensation:
+            raise ValueError(
+                "pose compensation parameter names escape the frame0 compensation scope: "
+                f"{sorted(disallowed_compensation)}"
+            )
     transition_counts = (
         {str(k): int(v) for k, v in argmax_transitions.items()} if argmax_transitions is not None else {}
     )
@@ -423,6 +458,14 @@ def build_target_region_birth_receipt(
         # Exact nonlinear joint movement (batch-local authority) when a pose
         # teacher was available: 100*Δd_seg + (sqrt(10*d_pose') - sqrt(10*d_pose)).
         "exact_nonrate": dict(exact_nonrate) if exact_nonrate is not None else None,
+        # Frame0 composite compensation record (batch-local authority). When a
+        # receiver-visible birth step held region progress but lost the pose
+        # cap or the exact joint gate, a frame0-only (head_rgb_0.*) pose
+        # compensation may have been attempted; SegNet reads frame1 only so the
+        # seg term is structurally untouched by it. The composite (frame1 birth
+        # + frame0 compensation) is admitted only when the exact nonrate score
+        # strictly improves AND the pose cap is satisfied.
+        "pose_compensation": pose_compensation_payload,
         "runtime_sidecar_bytes": int(runtime_sidecar_bytes),
         "human_visual_fidelity_objective": False,
         # Authority marker WITHOUT the canonical authority/readiness keys:

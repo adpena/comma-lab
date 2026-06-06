@@ -2720,6 +2720,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
         from tac.substrates.hi_nerv.target_region_birth import (
             allowed_birth_update_name,
+            allowed_pose_compensation_update_name,
             birth_action_id,
             build_target_region_birth_receipt,
             region_argmax_transition_counts,
@@ -3040,6 +3041,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             for group in ("feature_grids", "fine_injector", "head_rgb_1"):
                 if name.startswith(f"{group}."):
                     return group
+            # head_rgb_0 is the frame0 *compensation* scope, NOT a birth scope.
+            # SegNet reads frame1 only, so frame0 head moves carry zero seg
+            # leverage; they exist solely to absorb a pose-cap/joint loss that a
+            # frame1 birth step would otherwise have to backtrack away from. It
+            # is reported as its own group so the out-of-scope frozen-bit proof
+            # (which must stay bit-identical) never folds head_rgb_0 into it.
+            if name == "head_rgb_0" or name.startswith("head_rgb_0."):
+                return "compensation_head_rgb_0"
             return "out_of_scope"
 
         def _parameter_group_sha256(snapshot: list[tuple[Any, Any]]) -> dict[str, str]:
@@ -3133,7 +3142,146 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             per_item = np.sqrt(np.sum((pose - initial_pose) ** 2, axis=-1))
             return float(per_item.max())
 
+        # ---- Frame0 pose-compensation composite operator (pose-only) --------
+        # When a receiver-visible frame1 birth step holds region progress but
+        # loses the pose cap or the exact joint gate, attempt ONE frame0-only
+        # compensation BEFORE backtracking the learning rate. The compensation
+        # minimizes the pose distance to target by updating ``head_rgb_0.*``
+        # ONLY. SegNet reads frame1 only, so the seg term is structurally
+        # untouched; an explicit assertion proves the frame1 receiver uint8 did
+        # not move during compensation. The composite (frame1 birth + frame0
+        # compensation) is admitted only when the exact nonrate score strictly
+        # improves vs best AND the pose cap is satisfied.
+        compensation_step_count = 8
+        compensation_lr = lr
+
+        def _pose_compensation_loss_fn(model_obj: Any) -> Any:
+            pred0, pred1 = _predict_pair01(model_obj)
+            # Freeze frame1: only the frame0 head may absorb pose error. This
+            # keeps the gradient (and therefore the receiver-visible motion)
+            # confined to head_rgb_0; frame1's birth state must not move.
+            pred1 = mx.stop_gradient(pred1)  # type: ignore[union-attr]
+            yuv6_pair = mx.concatenate(  # type: ignore[union-attr]
+                [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+                axis=-1,
+            )
+            pose = pose_fn(yuv6_pair)
+            target = mx.array(target_pose_np)  # type: ignore[union-attr]
+            return mx.mean((pose - target) ** 2)  # type: ignore[union-attr]
+
+        def _apply_compensation_step(
+            base_snapshot: list[tuple[Any, Any]],
+            grads_tree: Any,
+            step_lr: float,
+        ) -> list[str]:
+            grad_by_name = dict(tree_flatten(grads_tree))  # type: ignore[operator]
+            updated: list[tuple[Any, Any]] = []
+            applied: list[str] = []
+            for raw_name, leaf in base_snapshot:
+                grad = grad_by_name.get(raw_name)
+                flat = _flat_param_name(raw_name)
+                # Compensation is pose-only and restricted to the frame0 RGB
+                # head via the canonical allow-list. It is deliberately NOT the
+                # birth allow-list: head_rgb_0 must never enter the seg-side
+                # birth scope.
+                if leaf is None or grad is None or not allowed_pose_compensation_update_name(flat):
+                    updated.append((raw_name, leaf))
+                    continue
+                grad_sq = mx.sum(grad * grad)  # type: ignore[union-attr]
+                mx.eval(grad_sq)  # type: ignore[union-attr]
+                if float(grad_sq.item()) <= 0.0:
+                    updated.append((raw_name, leaf))
+                    continue
+                update = mx.array(leaf) - float(step_lr) * grad  # type: ignore[union-attr]
+                updated.append((raw_name, update))
+                applied.append(flat)
+            self.update(tree_unflatten(updated))
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+            return applied
+
+        def _attempt_frame0_compensation(
+            pre_compensation_snapshot: list[tuple[Any, Any]],
+            frame1_uint8_before: np.ndarray,
+            best_nonrate_value: float | None,
+        ) -> dict[str, Any]:
+            """Run a frame0-only pose compensation and price the composite.
+
+            Returns a record with ``accepted`` plus composite telemetry. On
+            rejection the model state is restored to ``pre_compensation_snapshot``
+            (the frame1 birth state) so the caller's existing backtracking path
+            sees an unchanged world.
+            """
+
+            applied_compensation_names: set[str] = set()
+            for _comp_step in range(compensation_step_count):
+                comp_snapshot = _snapshot_parameters()
+                comp_loss, comp_grads = comp_loss_and_grad_fn(self)
+                mx.eval(comp_loss)  # type: ignore[union-attr]
+                if not math.isfinite(float(comp_loss.item())):
+                    _restore_parameters(comp_snapshot)
+                    break
+                applied = _apply_compensation_step(comp_snapshot, comp_grads, compensation_lr)
+                if not applied:
+                    break
+                applied_compensation_names.update(applied)
+            composite = _region_candidate_state()
+            # Structural seg-safety proof: frame0 compensation MUST NOT move the
+            # frame1 receiver uint8. SegNet reads frame1 only, so a moved frame1
+            # would mean the seg term changed — a contract violation, not a tune.
+            frame1_uint8_after = composite["uint8"]
+            frame1_uint8_unchanged = bool(np.array_equal(frame1_uint8_before, frame1_uint8_after))
+            if not frame1_uint8_unchanged:
+                raise RuntimeError(
+                    "frame0 pose compensation moved the frame1 receiver uint8; "
+                    "head_rgb_0 must not affect frame1 (SegNet reads frame1 only)"
+                )
+            composite_pose_delta = _pose_delta_l2(composite["pose"])
+            composite_nonrate = _nonrate_score(
+                composite["d_seg_batch"],
+                composite["d_pose_batch"],
+            )
+            composite_delta_score_nonrate = (
+                None
+                if composite_nonrate is None or initial_nonrate is None
+                else float(composite_nonrate - initial_nonrate)
+            )
+            pose_cap_ok = composite_pose_delta is None or composite_pose_delta <= float(max_pose_output_delta_l2)
+            joint_improved = (
+                composite_nonrate is not None
+                and best_nonrate_value is not None
+                and composite_nonrate < best_nonrate_value
+            )
+            accepted = bool(joint_improved and pose_cap_ok and applied_compensation_names)
+            record: dict[str, Any] = {
+                "attempted": True,
+                "frame": 0,
+                "accepted": accepted,
+                "frame1_receiver_uint8_unchanged": frame1_uint8_unchanged,
+                "compensation_updated_parameter_names": sorted(applied_compensation_names),
+                "composite_delta_score_nonrate": composite_delta_score_nonrate,
+                "composite_new_nonrate_score": (None if composite_nonrate is None else float(composite_nonrate)),
+                "composite_pose_output_delta_l2": (
+                    None if composite_pose_delta is None else float(composite_pose_delta)
+                ),
+                "composite_pose_cap_satisfied": bool(pose_cap_ok),
+                "composite_d_seg_batch": float(composite["d_seg_batch"]),
+                "composite_d_pose_batch": (
+                    None if composite["d_pose_batch"] is None else float(composite["d_pose_batch"])
+                ),
+                "composite_stats": dict(composite["stats"]),
+                "composite_state": composite,
+            }
+            if not accepted:
+                _restore_parameters(pre_compensation_snapshot)
+                mx.eval(self.parameters())  # type: ignore[union-attr]
+            return record
+
         loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
+        comp_loss_and_grad_fn = (
+            nn.value_and_grad(self, _pose_compensation_loss_fn)  # type: ignore[union-attr]
+            if pose_available and target_pose_np is not None
+            else None
+        )
         initial_snapshot = _snapshot_parameters()
         parameter_group_sha256_before = _parameter_group_sha256(initial_snapshot)
         blockers: list[str] = []
@@ -3154,11 +3302,66 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         last_update_norm_by_group: dict[str, float] = {}
         max_accepted_pose_delta_l2 = 0.0
         best_stats = dict(before_stats)
+        # Frame0 composite-compensation telemetry (pose-only). These remain
+        # at their no-op defaults on the no-pose-teacher path so that path is
+        # behaviorally byte-identical to before this operator existed.
+        pose_compensation_attempted = False
+        pose_compensation_accepted = False
+        composite_accepted_count = 0
+        composite_attempt_count = 0
+        composite_updated_parameter_names: set[str] = set()
+        composite_records: list[dict[str, Any]] = []
+        last_composite_delta_score_nonrate: float | None = None
         current_lr = lr
         consecutive_rejected_steps = 0
         max_quantum_growth_attempts = 20
         max_backtracking_attempts = 8
         min_lr = lr * (0.5**max_backtracking_attempts)
+
+        def _gate_with_optional_compensation(
+            *,
+            region_progress: bool,
+            candidate: dict[str, Any],
+        ) -> dict[str, Any] | None:
+            """Try a frame0 compensation when a birth step lost pose/joint.
+
+            Returns the admissible composite ``_region_candidate_state`` dict
+            when the composite (frame1 birth + frame0 compensation) strictly
+            improves the exact nonrate score AND satisfies the pose cap;
+            otherwise restores the frame1 birth world and returns ``None`` so
+            the caller falls back to the existing backtrack/reject path.
+            Eligibility requires region progress and an available pose teacher;
+            on the no-pose-teacher path it is a no-op (returns ``None``), which
+            keeps that path behaviorally byte-identical.
+            """
+
+            nonlocal pose_compensation_attempted, pose_compensation_accepted
+            nonlocal composite_accepted_count, composite_attempt_count
+            nonlocal last_composite_delta_score_nonrate
+            if not (region_progress and comp_loss_and_grad_fn is not None):
+                return None
+            pose_compensation_attempted = True
+            composite_attempt_count += 1
+            # The frame1 birth step is currently live (applied and receiver-
+            # visible). Snapshot it so a rejected composite restores exactly
+            # the frame1 birth world.
+            frame1_birth_snapshot = _snapshot_parameters()
+            record = _attempt_frame0_compensation(
+                frame1_birth_snapshot,
+                candidate["uint8"],
+                best_nonrate,
+            )
+            composite_records.append(record)
+            if not record["accepted"]:
+                # _attempt_frame0_compensation already restored the frame1
+                # birth state on reject; the caller restores to pre-step next.
+                return None
+            pose_compensation_accepted = True
+            composite_accepted_count += 1
+            composite_updated_parameter_names.update(record["compensation_updated_parameter_names"])
+            last_composite_delta_score_nonrate = record["composite_delta_score_nonrate"]
+            return record["composite_state"]
+
         for _step in range(step_count):
             base_snapshot = _snapshot_parameters()
             _, step_base_pred1 = _predict_pair01(self)
@@ -3207,35 +3410,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         subquantum_rejected_step_count += 1
                     rejected_step_count += 1
                     break
-                pose_delta = _pose_delta_l2(candidate["pose"])
-                if pose_delta is not None and pose_delta > float(max_pose_output_delta_l2):
-                    pose_violation_seen = True
-                    _restore_parameters(base_snapshot)
-                    if attempt_lr * 0.5 >= min_lr:
-                        backtracking_attempt_count += 1
-                        attempt_lr *= 0.5
-                        continue
-                    pose_guard_rejected_step_count += 1
-                    rejected_step_count += 1
-                    break
-                candidate_nonrate = _nonrate_score(
-                    candidate["d_seg_batch"],
-                    candidate["d_pose_batch"],
-                )
-                if candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate >= best_nonrate:
-                    # Exact nonlinear joint admission (batch-local authority):
-                    # a Seg win whose sqrt(10*d_pose) cost erases it is a net
-                    # score regression and must not be admitted, even when the
-                    # raw pose-output cap was satisfied.
-                    pose_violation_seen = True
-                    _restore_parameters(base_snapshot)
-                    if attempt_lr * 0.5 >= min_lr:
-                        backtracking_attempt_count += 1
-                        attempt_lr *= 0.5
-                        continue
-                    joint_score_rejected_step_count += 1
-                    rejected_step_count += 1
-                    break
+                # Region progress is computed up-front (it is needed both by
+                # the final acceptance rule and by the frame0-compensation
+                # eligibility test at the pose/joint gates below). The frame1
+                # birth step is receiver-visible at this point; the only open
+                # questions are pose cap, joint score, and region progress.
                 stats = candidate["stats"]
                 ratio_progress = stats["region_hard_won_pixels"] > best_stats["region_hard_won_pixels"]
                 # Mean margin registers single-pixel receiver motion; the
@@ -3243,7 +3422,61 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 # move it, which would re-open the quantum-growth/backtrack
                 # ping-pong this acceptance rule exists to terminate.
                 margin_progress = stats["margin_mean"] < best_stats["margin_mean"] - float(min_margin_mean_drop)
-                if not ratio_progress and not margin_progress:
+                region_progress = bool(ratio_progress or margin_progress)
+                pose_delta = _pose_delta_l2(candidate["pose"])
+                candidate_nonrate = _nonrate_score(
+                    candidate["d_seg_batch"],
+                    candidate["d_pose_batch"],
+                )
+
+                pose_cap_rejects = pose_delta is not None and pose_delta > float(max_pose_output_delta_l2)
+                joint_rejects = (
+                    candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate >= best_nonrate
+                )
+
+                if pose_cap_rejects or joint_rejects:
+                    # The frame1 birth step is receiver-visible but loses the
+                    # pose cap or the exact joint gate. BEFORE backtracking the
+                    # learning rate, attempt ONE frame0-only compensation iff
+                    # region progress holds and a pose teacher is available.
+                    pose_violation_seen = True
+                    composite_accepted = _gate_with_optional_compensation(
+                        region_progress=region_progress,
+                        candidate=candidate,
+                    )
+                    if composite_accepted is not None:
+                        composite_state = composite_accepted
+                        step_accepted = True
+                        accepted_step_count += 1
+                        accepted_update_names.update(applied_names)
+                        last_grad_norm_by_group = grad_norms
+                        last_update_norm_by_group = update_norms
+                        best_stats = dict(composite_state["stats"])
+                        composite_nonrate = _nonrate_score(
+                            composite_state["d_seg_batch"],
+                            composite_state["d_pose_batch"],
+                        )
+                        if composite_nonrate is not None:
+                            best_nonrate = composite_nonrate
+                        composite_pose_delta = _pose_delta_l2(composite_state["pose"])
+                        if composite_pose_delta is not None:
+                            max_accepted_pose_delta_l2 = max(max_accepted_pose_delta_l2, composite_pose_delta)
+                        current_lr = attempt_lr
+                        break
+                    # No admissible composite: restore the frame1 birth step and
+                    # fall back to the existing backtrack/reject disposition.
+                    _restore_parameters(base_snapshot)
+                    if attempt_lr * 0.5 >= min_lr:
+                        backtracking_attempt_count += 1
+                        attempt_lr *= 0.5
+                        continue
+                    if pose_cap_rejects:
+                        pose_guard_rejected_step_count += 1
+                    else:
+                        joint_score_rejected_step_count += 1
+                    rejected_step_count += 1
+                    break
+                if not region_progress:
                     _restore_parameters(base_snapshot)
                     if attempt_lr * 0.5 >= min_lr:
                         backtracking_attempt_count += 1
@@ -3342,10 +3575,70 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "final_pose_output_delta_l2": (None if final_pose_delta is None else float(final_pose_delta)),
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
         }
+        # Frame0 composite-compensation payload (batch-local authority). The
+        # compensated scope (``head_rgb_0.*``) is recorded SEPARATELY from the
+        # birth ``updated_parameter_names`` so the receipt's birth-scope check
+        # never sees it: compensation is a pose-only frame0 surface, not a
+        # seg-side birth scope, and admitting it must never relax the birth
+        # allow-list. The per-attempt records carry the JSON-clean summary only
+        # (the live MLX/np ``composite_state`` is dropped here).
+        compensation_attempt_summaries = [
+            {
+                "accepted": bool(record["accepted"]),
+                "frame1_receiver_uint8_unchanged": bool(record["frame1_receiver_uint8_unchanged"]),
+                "compensation_updated_parameter_names": list(record["compensation_updated_parameter_names"]),
+                "composite_delta_score_nonrate": record["composite_delta_score_nonrate"],
+                "composite_new_nonrate_score": record["composite_new_nonrate_score"],
+                "composite_pose_output_delta_l2": record["composite_pose_output_delta_l2"],
+                "composite_pose_cap_satisfied": bool(record["composite_pose_cap_satisfied"]),
+                "composite_d_seg_batch": record["composite_d_seg_batch"],
+                "composite_d_pose_batch": record["composite_d_pose_batch"],
+            }
+            for record in composite_records
+        ]
+        pose_compensation_payload: dict[str, Any] | None = None
+        if pose_compensation_attempted:
+            compensation_names_sorted = sorted(composite_updated_parameter_names)
+            # Defensive scope proof: every compensated name is the frame0 head
+            # ONLY, and NONE of them may be birth-scoped (that would mean a
+            # frame0 edit leaked into the seg-side birth allow-list).
+            escaped = [
+                name
+                for name in compensation_names_sorted
+                if not allowed_pose_compensation_update_name(name) or allowed_birth_update_name(name)
+            ]
+            if escaped:
+                raise RuntimeError(
+                    "frame0 compensation scope escaped head_rgb_0 or collided with the "
+                    f"birth allow-list: {escaped}"
+                )
+            pose_compensation_payload = {
+                "authority": "batch_local_live_mlx",
+                "normalization_scope": "batch_local",
+                "pose_compensation_attempted": True,
+                "pose_compensation_frame": 0,
+                "composite_accepted": bool(composite_accepted_count > 0),
+                "composite_attempt_count": int(composite_attempt_count),
+                "composite_accepted_count": int(composite_accepted_count),
+                "composite_delta_score_nonrate": last_composite_delta_score_nonrate,
+                # head_rgb_0 lives in a SEPARATE compensation scope record; it
+                # is deliberately NOT added to updated_parameter_names nor to
+                # ALLOWED_BIRTH_UPDATE_*.
+                "compensation_updated_parameter_names": compensation_names_sorted,
+                "compensation_scope": "head_rgb_0",
+                "frame1_receiver_uint8_unchanged_by_compensation": bool(
+                    all(record["frame1_receiver_uint8_unchanged"] for record in composite_records)
+                ),
+                "attempts": compensation_attempt_summaries,
+                "human_visual_fidelity_objective": False,
+            }
+        trained_groups_for_action_id = {_group_for_name(name) for name in accepted_update_names}
+        if pose_compensation_payload is not None and pose_compensation_payload["composite_accepted"]:
+            trained_groups_for_action_id.add("compensation_head_rgb_0")
         action_identity = birth_action_id(
             debt=worst,
             initial_group_sha256=parameter_group_sha256_before,
-            trained_groups=sorted({_group_for_name(name) for name in accepted_update_names}),
+            trained_groups=sorted(trained_groups_for_action_id),
         )
         receipt = build_target_region_birth_receipt(
             debt=worst,
@@ -3365,9 +3658,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             runtime_sidecar_bytes=0,
             argmax_transitions=argmax_transitions,
             exact_nonrate=exact_nonrate_payload,
+            pose_compensation=pose_compensation_payload,
             action_id=action_identity,
             surface="live_mlx",
         )
+        archive_charged_decoder_tensors = [
+            "latents_fine",
+            "feature_grids.*",
+            "fine_injector.*",
+            "head_rgb_1.*",
+        ]
+        if pose_compensation_payload is not None and pose_compensation_payload["composite_accepted"]:
+            archive_charged_decoder_tensors.append("head_rgb_0.*")
         return {
             "schema": "hi_nerv_target_region_birth.v1",
             "enabled": True,
@@ -3389,6 +3691,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
             "argmax_transitions": argmax_transitions,
             "exact_nonrate": exact_nonrate_payload,
+            # Frame0 composite-compensation summary (batch-local). Defaults are
+            # the no-op no-pose-teacher path: attempted=False, frame=None.
+            "pose_compensation_attempted": bool(pose_compensation_attempted),
+            "pose_compensation_frame": (0 if pose_compensation_attempted else None),
+            "composite_attempt_count": int(composite_attempt_count),
+            "composite_accepted_count": int(composite_accepted_count),
+            "composite_accepted": bool(composite_accepted_count > 0),
+            "composite_delta_score_nonrate": last_composite_delta_score_nonrate,
+            "compensation_updated_parameter_names": sorted(composite_updated_parameter_names),
+            "pose_compensation": pose_compensation_payload,
             "receiver_quantum_growth_attempt_count": int(receiver_quantum_growth_attempt_count),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "loss_history_first": (loss_history[0] if loss_history else None),
@@ -3403,12 +3715,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_guard": pose_guard_payload,
             "receipt": receipt,
             "blockers": list(blockers),
-            "archive_charged_decoder_tensors": [
-                "latents_fine",
-                "feature_grids.*",
-                "fine_injector.*",
-                "head_rgb_1.*",
-            ],
+            "archive_charged_decoder_tensors": archive_charged_decoder_tensors,
             "runtime_sidecar_bytes": 0,
             "receiver_surface": "clamp_round_uint8_rgb_ste_nhwc01",
             "target_surface": "segnet_last_frame_rgb_argmax_worst_connected_region",
