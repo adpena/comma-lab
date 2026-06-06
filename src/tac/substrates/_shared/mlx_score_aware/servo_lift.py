@@ -6,10 +6,20 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from tac.analysis.action_effect import ACTION_EFFECT_SCHEMA, build_action_effect
+from tac.analysis.action_effect import (
+    ACTION_EFFECT_SCHEMA,
+    build_action_effect,
+)
+from tac.analysis.receiver_surface_metrics import (
+    normalize_receiver_surface,
+    receiver_surface_scorer_visible,
+    receiver_surface_survival_state,
+    receiver_surface_uint8_contact,
+)
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 
 PARSEBACK_SERVO_LIFT_SCHEMA = "mlx_score_aware_parseback_servo_lift.v1"
+PARSEBACK_SERVO_LIFT_AUTHORITIES = frozenset({"parseback_mlx", "inflate_torch_cpu", "inflate_torch_cuda"})
 
 
 def servo_lift(
@@ -33,6 +43,25 @@ def servo_lift(
     old = dict(trace_old or proposal.get("trace_old") or proposal.get("old") or {})
     new = dict(proposal.get("trace_new") or proposal.get("new") or {})
     receiver_surface = _receiver_surface(proposal)
+    authority = _text(proposal.get("authority") or "parseback_mlx")
+    fakequant_survived, fakequant_blockers = receiver_surface_survival_state(
+        "fakequant",
+        proposal,
+        receiver_surface,
+        blocker_prefix="servo_lift",
+    )
+    parseback_survived, parseback_blockers = receiver_surface_survival_state(
+        "parseback",
+        proposal,
+        receiver_surface,
+        blocker_prefix="servo_lift",
+    )
+    inflate_survived, inflate_blockers = receiver_surface_survival_state(
+        "inflate",
+        proposal,
+        receiver_surface,
+        blocker_prefix="servo_lift",
+    )
     action_effect = build_action_effect(
         {
             "action_id": _text(
@@ -41,8 +70,8 @@ def servo_lift(
                 or proposal.get("id")
                 or f"{family}_{stage}_servo_lift"
             ),
-            "family": proposal.get("family") or family,
-            "authority": proposal.get("authority") or "parseback_mlx",
+            "family": _family(proposal.get("family") or family),
+            "authority": authority,
             "producer": proposal.get("producer") or "mlx_score_aware_parseback_servo_lift",
             "consumer": proposal.get("consumer") or consumer,
             "affected_pairs": proposal.get("affected_pairs") or proposal.get("pair_ids"),
@@ -62,25 +91,33 @@ def servo_lift(
             "old_bytes": _first(proposal, old, "old_bytes", "archive_bytes"),
             "new_bytes": _first(proposal, new, "new_bytes", "archive_bytes"),
             "receiver_surface": receiver_surface,
-            "fakequant_survived": _truthy(proposal, receiver_surface, "fakequant_survived", "fakequant_survival"),
-            "parseback_survived": _truthy(proposal, receiver_surface, "parseback_survived", "parseback_survival"),
-            "inflate_survived": _optional_truthy(proposal, receiver_surface, "inflate_survived", "inflate_survival"),
+            "fakequant_survived": fakequant_survived is True,
+            "parseback_survived": parseback_survived is True,
+            "inflate_survived": inflate_survived,
             "value_per_byte": proposal.get("value_per_byte"),
         },
         min_score_improvement=min_score_improvement,
     )
     blockers = list(action_effect.get("blockers") or [])
+    blockers.extend(fakequant_blockers)
+    blockers.extend(parseback_blockers)
+    blockers.extend(inflate_blockers)
     blockers.extend(
         _servo_surface_blockers(
             receiver_surface,
+            authority=authority,
+            inflate_survived=inflate_survived,
             require_inflate_survival=bool(require_inflate_survival),
         )
     )
     blockers = _dedupe(blockers)
     accepted = action_effect.get("action_effect_admitted") is True and not blockers
+    action_effect = dict(action_effect)
+    action_effect["blockers"] = blockers
+    action_effect["action_effect_admitted"] = accepted
     return {
         "schema": PARSEBACK_SERVO_LIFT_SCHEMA,
-        "family": str(family),
+        "family": str(action_effect.get("family") or family),
         "stage": str(stage),
         "proposal_id": action_effect.get("action_id"),
         "action_effect_schema": ACTION_EFFECT_SCHEMA,
@@ -89,17 +126,9 @@ def servo_lift(
         "receiver_visible": action_effect.get("receiver_visible") is True,
         "score_admissible": action_effect.get("score_admissible") is True,
         "byte_priced": action_effect.get("byte_priced") is True,
-        "uint8_receiver_contact": _positive(
-            receiver_surface.get("receiver_surface_uint8_changed_pixels"),
-            receiver_surface.get("uint8_changed_pixels"),
-        ),
-        "scorer_surface_motion": _scorer_surface_motion(receiver_surface),
-        "inflate_survived": _optional_truthy(
-            proposal,
-            receiver_surface,
-            "inflate_survived",
-            "inflate_survival",
-        ),
+        "uint8_receiver_contact": receiver_surface_uint8_contact(receiver_surface),
+        "scorer_surface_motion": receiver_surface_scorer_visible(receiver_surface),
+        "inflate_survived": inflate_survived,
         "blockers": blockers,
         "policy": {
             "continuous_proposal_is_not_authority": True,
@@ -115,53 +144,30 @@ def servo_lift(
 def _receiver_surface(proposal: Mapping[str, Any]) -> dict[str, Any]:
     surface = proposal.get("receiver_surface")
     if isinstance(surface, Mapping):
-        return dict(surface)
+        return normalize_receiver_surface(surface)
     trace = proposal.get("receiver_trace")
     if isinstance(trace, Mapping):
-        return dict(trace)
+        return normalize_receiver_surface(trace)
     return {}
 
 
 def _servo_surface_blockers(
     receiver_surface: Mapping[str, Any],
     *,
+    authority: str,
+    inflate_survived: bool | None,
     require_inflate_survival: bool,
 ) -> list[str]:
     blockers: list[str] = []
-    if not _positive(
-        receiver_surface.get("receiver_surface_uint8_changed_pixels"),
-        receiver_surface.get("uint8_changed_pixels"),
-    ):
+    if authority not in PARSEBACK_SERVO_LIFT_AUTHORITIES:
+        blockers.append("servo_lift_parseback_or_inflate_authority_missing")
+    if not receiver_surface_uint8_contact(receiver_surface):
         blockers.append("servo_lift_uint8_receiver_contact_missing")
-    if not _scorer_surface_motion(receiver_surface):
+    if not receiver_surface_scorer_visible(receiver_surface):
         blockers.append("servo_lift_scorer_surface_motion_missing")
-    if require_inflate_survival and receiver_surface.get("inflate_survival") is not True:
+    if require_inflate_survival and inflate_survived is not True:
         blockers.append("servo_lift_inflate_survival_missing")
     return blockers
-
-
-def _scorer_surface_motion(receiver_surface: Mapping[str, Any]) -> bool:
-    return _positive(
-        receiver_surface.get("receiver_surface_segnet_input_delta_linf"),
-        receiver_surface.get("segnet_input_delta_linf"),
-        receiver_surface.get("receiver_surface_posenet_input_delta_linf"),
-        receiver_surface.get("posenet_input_delta_linf"),
-        receiver_surface.get("receiver_surface_argmax_flipped_pixels"),
-        receiver_surface.get("argmax_flipped_pixels"),
-        receiver_surface.get("receiver_surface_pose_output_delta"),
-        receiver_surface.get("pose_output_delta_l2"),
-    )
-
-
-def _positive(*values: Any) -> bool:
-    for value in values:
-        try:
-            candidate = float(value)
-        except (TypeError, ValueError):
-            continue
-        if candidate > 0.0:
-            return True
-    return False
 
 
 def _first(
@@ -170,31 +176,19 @@ def _first(
     proposal_key: str,
     trace_key: str,
 ) -> Any:
-    return proposal.get(proposal_key, trace.get(trace_key))
-
-
-def _truthy(
-    proposal: Mapping[str, Any],
-    surface: Mapping[str, Any],
-    proposal_key: str,
-    surface_key: str,
-) -> bool:
-    return proposal.get(proposal_key) is True or surface.get(surface_key) is True
-
-
-def _optional_truthy(
-    proposal: Mapping[str, Any],
-    surface: Mapping[str, Any],
-    proposal_key: str,
-    surface_key: str,
-) -> bool | None:
-    if proposal_key not in proposal and surface_key not in surface:
-        return None
-    return _truthy(proposal, surface, proposal_key, surface_key)
+    value = proposal.get(proposal_key)
+    return trace.get(trace_key) if value is None else value
 
 
 def _text(value: object) -> str:
     return str(value or "").strip()
+
+
+def _family(value: object) -> str:
+    text = _text(value).lower().replace("-", "_")
+    if text == "hi_nerv":
+        return "hinerv"
+    return text
 
 
 def _dedupe(values: list[str]) -> list[str]:
@@ -208,6 +202,7 @@ def _dedupe(values: list[str]) -> list[str]:
 
 
 __all__ = [
+    "PARSEBACK_SERVO_LIFT_AUTHORITIES",
     "PARSEBACK_SERVO_LIFT_SCHEMA",
     "servo_lift",
 ]

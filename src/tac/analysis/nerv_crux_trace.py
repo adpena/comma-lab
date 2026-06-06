@@ -16,6 +16,19 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.receiver_surface_metrics import (
+    RECEIVER_SURFACE_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_EVIDENCE_KEYS,
+    RECEIVER_SURFACE_FAKEQUANT_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_INFLATED_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_LOSS_DELTA_KEYS,
+    RECEIVER_SURFACE_MARGIN_P50_DELTA_KEYS,
+    RECEIVER_SURFACE_PARSEBACK_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_TRACE_METRIC_ROWS,
+    RECEIVER_SURFACE_UINT8_CHANGED_PIXELS_KEYS,
+    target_support_breakdown_present,
+)
+
 CONTEST_ORIGINAL_VIDEO_BYTES = 37_545_489
 CONTEST_RATE_SCORE_PER_BYTE = 25.0 / CONTEST_ORIGINAL_VIDEO_BYTES
 FALSE_AUTHORITY = "macos_mlx_false_authority_no_score_claim"
@@ -23,8 +36,7 @@ TRACE_SCHEMA = "nerv_crux_trace_rows.v1"
 TRACE_ATTACHMENT_SCHEMA = "nerv_crux_trace_attachment.v1"
 
 SEGNET_TARGET_REGION_DEBT_KEY = (
-    "loss_part_segnet_direct_live_target_min_ratio_floor_"
-    "score_weighted_total_unsolved_argmax_mass"
+    "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass"
 )
 SEGNET_TARGET_REGION_DEBT_KEYS = (
     SEGNET_TARGET_REGION_DEBT_KEY,
@@ -36,25 +48,19 @@ SEGNET_ARGMAX_DISAGREEMENT_KEYS = (
     "segnet_direct_live_argmax_disagreement",
     "argmax_disagreement",
 )
-SEGNET_OCCUPIED_CLASS_FRACTION_KEY = (
-    "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
-)
+SEGNET_OCCUPIED_CLASS_FRACTION_KEY = "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
 SEGNET_OCCUPIED_CLASS_FRACTION_KEYS = (
     SEGNET_OCCUPIED_CLASS_FRACTION_KEY,
     "segnet_direct_live_candidate_occupied_class_fraction",
     "candidate_occupied_class_fraction",
 )
-SEGNET_TARGET_CLASS_COVERAGE_KEY = (
-    "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
-)
+SEGNET_TARGET_CLASS_COVERAGE_KEY = "loss_part_segnet_direct_live_candidate_target_class_coverage_fraction"
 SEGNET_TARGET_CLASS_COVERAGE_KEYS = (
     SEGNET_TARGET_CLASS_COVERAGE_KEY,
     "segnet_direct_live_candidate_target_class_coverage_fraction",
     "candidate_target_class_coverage_fraction",
 )
-SEGNET_TARGET_CLASS_MIN_RATIO_KEY = (
-    "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
-)
+SEGNET_TARGET_CLASS_MIN_RATIO_KEY = "loss_part_segnet_direct_live_candidate_target_class_min_ratio"
 SEGNET_TARGET_CLASS_MIN_RATIO_KEYS = (
     SEGNET_TARGET_CLASS_MIN_RATIO_KEY,
     "segnet_direct_live_candidate_target_class_min_ratio",
@@ -74,64 +80,14 @@ POSE_YUV6_PAIR_STD_KEYS = (
     POSE_YUV6_PAIR_STD_KEY,
     "pose_direct_live_yuv6_pair_std",
 )
-POSE_YUV6_TEMPORAL_DELTA_STD_KEY = (
-    "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std"
-)
+POSE_YUV6_TEMPORAL_DELTA_STD_KEY = "loss_part_pose_direct_live_yuv6_pair_temporal_delta_std"
 POSE_YUV6_TEMPORAL_DELTA_STD_KEYS = (
     POSE_YUV6_TEMPORAL_DELTA_STD_KEY,
     "pose_direct_live_yuv6_pair_temporal_delta_std",
 )
 ARCHIVE_BYTES_KEYS = ("train_time_archive_bytes", "archive_bytes")
 ARCHIVE_RATE_SCORE_KEY = "train_time_archive_rate_score"
-RECEIVER_SURFACE_MAPPING_KEYS = (
-    "receiver_surface_trace",
-)
-RECEIVER_SURFACE_LOSS_DELTA_KEYS = (
-    "receiver_surface_loss_delta",
-)
-RECEIVER_SURFACE_FLOAT_RGB_DELTA_LINF_KEYS = (
-    "receiver_surface_float_rgb_delta_linf",
-)
-RECEIVER_SURFACE_UINT8_CHANGED_PIXELS_KEYS = (
-    "receiver_surface_uint8_changed_pixels",
-)
-RECEIVER_SURFACE_SEGNET_INPUT_DELTA_LINF_KEYS = (
-    "receiver_surface_segnet_input_delta_linf",
-)
-RECEIVER_SURFACE_MARGIN_P50_DELTA_KEYS = (
-    "receiver_surface_worst_region_margin_p50_delta",
-)
-RECEIVER_SURFACE_ARGMAX_FLIPPED_PIXELS_KEYS = (
-    "receiver_surface_argmax_flipped_pixels",
-)
-RECEIVER_SURFACE_POSENET_INPUT_DELTA_LINF_KEYS = (
-    "receiver_surface_posenet_input_delta_linf",
-)
-RECEIVER_SURFACE_POSE_OUTPUT_DELTA_KEYS = (
-    "receiver_surface_pose_output_delta",
-)
-RECEIVER_SURFACE_FAKEQUANT_ARGMAX_FLIPPED_PIXELS_KEYS = (
-    "receiver_surface_fakequant_argmax_flipped_pixels",
-)
-RECEIVER_SURFACE_PARSEBACK_ARGMAX_FLIPPED_PIXELS_KEYS = (
-    "receiver_surface_parseback_argmax_flipped_pixels",
-)
-RECEIVER_SURFACE_INFLATED_ARGMAX_FLIPPED_PIXELS_KEYS = (
-    "receiver_surface_inflated_argmax_flipped_pixels",
-)
-RECEIVER_SURFACE_EVIDENCE_KEYS = (
-    *RECEIVER_SURFACE_LOSS_DELTA_KEYS,
-    *RECEIVER_SURFACE_FLOAT_RGB_DELTA_LINF_KEYS,
-    *RECEIVER_SURFACE_UINT8_CHANGED_PIXELS_KEYS,
-    *RECEIVER_SURFACE_SEGNET_INPUT_DELTA_LINF_KEYS,
-    *RECEIVER_SURFACE_MARGIN_P50_DELTA_KEYS,
-    *RECEIVER_SURFACE_ARGMAX_FLIPPED_PIXELS_KEYS,
-    *RECEIVER_SURFACE_POSENET_INPUT_DELTA_LINF_KEYS,
-    *RECEIVER_SURFACE_POSE_OUTPUT_DELTA_KEYS,
-    *RECEIVER_SURFACE_FAKEQUANT_ARGMAX_FLIPPED_PIXELS_KEYS,
-    *RECEIVER_SURFACE_PARSEBACK_ARGMAX_FLIPPED_PIXELS_KEYS,
-    *RECEIVER_SURFACE_INFLATED_ARGMAX_FLIPPED_PIXELS_KEYS,
-)
+RECEIVER_SURFACE_MAPPING_KEYS = ("receiver_surface_trace",)
 DEFAULT_RECEIVER_SURFACE_MIN_MARGIN_DELTA = 1.0e-6
 
 SEGNET_DIRECT_LIVE_EVIDENCE_KEYS = (
@@ -345,9 +301,7 @@ def _has_any_metric(metrics: Sequence[Mapping[str, Any]], *keys: str) -> bool:
 
 
 def _any_key_with_prefix(metrics: Sequence[Mapping[str, Any]], prefix: str) -> bool:
-    return any(
-        any(str(key).startswith(prefix) for key in mapping) for mapping in metrics
-    )
+    return any(any(str(key).startswith(prefix) for key in mapping) for mapping in metrics)
 
 
 def _append_metric_row(
@@ -421,38 +375,23 @@ def _append_receiver_surface_rows(
     if trace_present and uint8_changed_pixels is not None and uint8_changed_pixels > 0.0:
         if argmax_flipped_pixels is None and margin_p50_delta is None:
             blockers.append("receiver_surface_uint8_motion_missing_argmax_or_margin_evidence")
-        no_argmax_motion = (
-            argmax_flipped_pixels is not None and argmax_flipped_pixels <= 0.0
-        )
-        no_margin_motion = (
-            margin_p50_delta is None
-            or abs(margin_p50_delta) < min_margin_delta_for_unflipped_uint8
-        )
+        no_argmax_motion = argmax_flipped_pixels is not None and argmax_flipped_pixels <= 0.0
+        no_margin_motion = margin_p50_delta is None or abs(margin_p50_delta) < min_margin_delta_for_unflipped_uint8
         if no_argmax_motion and no_margin_motion:
             blockers.append("receiver_surface_uint8_motion_without_argmax_or_margin_motion")
-    if (
-        trace_present
-        and argmax_flipped_pixels is not None
-        and argmax_flipped_pixels > 0.0
-    ):
+    if trace_present and argmax_flipped_pixels is not None and argmax_flipped_pixels > 0.0:
+        if not target_support_breakdown_present(metrics):
+            blockers.append("receiver_surface_argmax_motion_without_target_support_breakdown")
         if fakequant_argmax_flipped_pixels is None:
             blockers.append("receiver_surface_fakequant_survival_missing")
         elif fakequant_argmax_flipped_pixels <= 0.0:
             blockers.append("receiver_surface_fakequant_lost_argmax_motion")
-    if (
-        trace_present
-        and fakequant_argmax_flipped_pixels is not None
-        and fakequant_argmax_flipped_pixels > 0.0
-    ):
+    if trace_present and fakequant_argmax_flipped_pixels is not None and fakequant_argmax_flipped_pixels > 0.0:
         if parseback_argmax_flipped_pixels is None:
             blockers.append("receiver_surface_parseback_survival_missing")
         elif parseback_argmax_flipped_pixels <= 0.0:
             blockers.append("receiver_surface_parseback_lost_argmax_motion")
-    if (
-        trace_present
-        and parseback_argmax_flipped_pixels is not None
-        and parseback_argmax_flipped_pixels > 0.0
-    ):
+    if trace_present and parseback_argmax_flipped_pixels is not None and parseback_argmax_flipped_pixels > 0.0:
         if inflated_argmax_flipped_pixels is None:
             blockers.append("receiver_surface_inflate_survival_missing")
         elif inflated_argmax_flipped_pixels <= 0.0:
@@ -468,63 +407,7 @@ def _append_receiver_surface_rows(
         value=1.0 if trace_present else 0.0,
         blocker=blockers[0] if blockers else None,
     )
-    for keys, metric_name, axis in (
-        (
-            RECEIVER_SURFACE_LOSS_DELTA_KEYS,
-            "receiver_surface_loss_delta",
-            "loss",
-        ),
-        (
-            RECEIVER_SURFACE_FLOAT_RGB_DELTA_LINF_KEYS,
-            "receiver_surface_float_rgb_delta_linf",
-            "rgb",
-        ),
-        (
-            RECEIVER_SURFACE_UINT8_CHANGED_PIXELS_KEYS,
-            "receiver_surface_uint8_changed_pixels",
-            "receiver",
-        ),
-        (
-            RECEIVER_SURFACE_SEGNET_INPUT_DELTA_LINF_KEYS,
-            "receiver_surface_segnet_input_delta_linf",
-            "segnet",
-        ),
-        (
-            RECEIVER_SURFACE_MARGIN_P50_DELTA_KEYS,
-            "receiver_surface_worst_region_margin_p50_delta",
-            "segnet",
-        ),
-        (
-            RECEIVER_SURFACE_ARGMAX_FLIPPED_PIXELS_KEYS,
-            "receiver_surface_argmax_flipped_pixels",
-            "segnet",
-        ),
-        (
-            RECEIVER_SURFACE_POSENET_INPUT_DELTA_LINF_KEYS,
-            "receiver_surface_posenet_input_delta_linf",
-            "posenet",
-        ),
-        (
-            RECEIVER_SURFACE_POSE_OUTPUT_DELTA_KEYS,
-            "receiver_surface_pose_output_delta",
-            "posenet",
-        ),
-        (
-            RECEIVER_SURFACE_FAKEQUANT_ARGMAX_FLIPPED_PIXELS_KEYS,
-            "receiver_surface_fakequant_argmax_flipped_pixels",
-            "fakequant",
-        ),
-        (
-            RECEIVER_SURFACE_PARSEBACK_ARGMAX_FLIPPED_PIXELS_KEYS,
-            "receiver_surface_parseback_argmax_flipped_pixels",
-            "parseback",
-        ),
-        (
-            RECEIVER_SURFACE_INFLATED_ARGMAX_FLIPPED_PIXELS_KEYS,
-            "receiver_surface_inflated_argmax_flipped_pixels",
-            "inflate",
-        ),
-    ):
+    for keys, metric_name, axis in RECEIVER_SURFACE_TRACE_METRIC_ROWS:
         _append_metric_row(
             rows,
             source_path=source_path,
@@ -555,9 +438,7 @@ def build_trace_rows(
     require_direct_live_posenet: bool = True,
     require_direct_live_segnet: bool = True,
     require_receiver_surface_trace: bool = True,
-    min_margin_delta_for_unflipped_uint8: float = (
-        DEFAULT_RECEIVER_SURFACE_MIN_MARGIN_DELTA
-    ),
+    min_margin_delta_for_unflipped_uint8: float = (DEFAULT_RECEIVER_SURFACE_MIN_MARGIN_DELTA),
     telemetry_last_row: Mapping[str, Any] | None = None,
 ) -> list[TraceRow]:
     metrics = metric_mappings_from_training_payload(
@@ -634,11 +515,7 @@ def build_trace_rows(
         axis="posenet",
         metric="pose_direct_live_score_term",
         value=observed_pose_score if observed_pose_score is not None else derived_pose_score,
-        score_units=(
-            observed_pose_score
-            if observed_pose_score is not None
-            else derived_pose_score
-        ),
+        score_units=(observed_pose_score if observed_pose_score is not None else derived_pose_score),
     )
     _append_metric_row(
         rows,
@@ -647,11 +524,7 @@ def build_trace_rows(
         stage="loss",
         axis="posenet",
         metric="pose_direct_live_score_marginal_wrt_raw_mse",
-        value=(
-            observed_pose_marginal
-            if observed_pose_marginal is not None
-            else derived_pose_marginal
-        ),
+        value=(observed_pose_marginal if observed_pose_marginal is not None else derived_pose_marginal),
     )
     for keys, metric_name in (
         (POSE_YUV6_PAIR_STD_KEYS, "pose_direct_live_yuv6_pair_std"),
@@ -676,9 +549,7 @@ def build_trace_rows(
         source_sha256=source_sha256,
         metrics=metrics,
         require_receiver_surface_trace=bool(require_receiver_surface_trace),
-        min_margin_delta_for_unflipped_uint8=float(
-            min_margin_delta_for_unflipped_uint8
-        ),
+        min_margin_delta_for_unflipped_uint8=float(min_margin_delta_for_unflipped_uint8),
     )
 
     archive_bytes = _metric(metrics, *ARCHIVE_BYTES_KEYS)
@@ -718,9 +589,7 @@ def build_trace_rows_for_training_artifact(
     source = training_artifact_path.expanduser().resolve(strict=False)
     payload = _read_json_mapping(source)
     telemetry_path = _resolve_telemetry_path(payload, training_artifact_path=source)
-    telemetry_last_row = (
-        _read_last_jsonl_mapping(telemetry_path) if telemetry_path is not None else None
-    )
+    telemetry_last_row = _read_last_jsonl_mapping(telemetry_path) if telemetry_path is not None else None
     return build_trace_rows(
         payload,
         source_path=source.as_posix(),

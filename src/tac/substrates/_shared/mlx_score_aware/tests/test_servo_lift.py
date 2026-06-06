@@ -82,9 +82,43 @@ def test_servo_lift_rejects_subquantum_continuous_proposal() -> None:
     assert "action_effect_receiver_surface_motion_missing" in lifted["blockers"]
     assert "action_effect_fakequant_survival_missing" in lifted["blockers"]
     assert "action_effect_parseback_survival_missing" in lifted["blockers"]
+    assert "servo_lift_parseback_or_inflate_authority_missing" in lifted["blockers"]
     assert "servo_lift_uint8_receiver_contact_missing" in lifted["blockers"]
     assert "servo_lift_scorer_surface_motion_missing" in lifted["blockers"]
     assert "servo_lift_inflate_survival_missing" in lifted["blockers"]
+    assert lifted["action_effect"]["action_effect_admitted"] is False
+
+
+def test_servo_lift_accepts_target_support_motion_without_argmax_alias() -> None:
+    lifted = servo_lift(
+        {
+            "action_id": "hinerv_birth_target_support",
+            "authority": "parseback_mlx",
+            "producer": "hinerv_target_region_birth",
+            "affected_pairs": [7],
+            "state_custody": {"archive_sha256": "d" * 64},
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.009,
+            "old_d_pose": 0.0001,
+            "new_d_pose": 0.0001,
+            "old_bytes": 1000,
+            "new_bytes": 1000,
+            "receiver_surface": {
+                "uint8_changed_pixels": 9,
+                "receiver_surface_target_hard_won_count": 4,
+                "receiver_surface_net_target_support_delta": 4,
+                "fakequant_survival": True,
+                "parseback_survival": True,
+                "inflate_survival": True,
+            },
+        },
+        family="hi_nerv",
+        stage="birth_contact",
+    )
+
+    assert lifted["servo_lift_accepted"] is True
+    assert lifted["scorer_surface_motion"] is True
+    assert "servo_lift_scorer_surface_motion_missing" not in lifted["blockers"]
 
 
 def test_servo_lift_rejects_parseback_motion_without_inflate_survival() -> None:
@@ -113,11 +147,104 @@ def test_servo_lift_rejects_parseback_motion_without_inflate_survival() -> None:
         stage="parseback_selection",
     )
 
-    assert lifted["action_effect"]["action_effect_admitted"] is True
+    assert lifted["action_effect"]["action_effect_admitted"] is False
     assert lifted["servo_lift_accepted"] is False
     assert "servo_lift_inflate_survival_missing" in lifted["blockers"]
+    assert "servo_lift_inflate_survival_missing" in lifted["action_effect"]["blockers"]
 
 
 def test_servo_lift_imports_from_score_aware_package() -> None:
     assert PARSEBACK_SERVO_LIFT_SCHEMA == "mlx_score_aware_parseback_servo_lift.v1"
     assert callable(servo_lift)
+
+
+def test_servo_lift_rejects_conflicting_survival_evidence() -> None:
+    lifted = servo_lift(
+        {
+            "action_id": "hinerv_conflicted_survival",
+            "authority": "parseback_mlx",
+            "affected_pairs": [9],
+            "archive_sha256": "d" * 64,
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.009,
+            "old_d_pose": 0.0001,
+            "new_d_pose": 0.0001,
+            "old_bytes": 1000,
+            "new_bytes": 1000,
+            "parseback_survived": False,
+            "receiver_surface": {
+                "uint8_changed_pixels": 5,
+                "argmax_flipped_pixels": 3,
+                "fakequant_survival": True,
+                "parseback_survival": True,
+                "inflate_survival": True,
+            },
+        },
+        family="hi_nerv",
+        stage="parseback_selection",
+    )
+
+    assert lifted["servo_lift_accepted"] is False
+    assert "servo_lift_parseback_survival_conflict" in lifted["blockers"]
+    assert "action_effect_parseback_survival_missing" in lifted["blockers"]
+    assert lifted["action_effect"]["action_effect_admitted"] is False
+
+
+def test_servo_lift_rejects_preprocess_motion_without_scorer_output_motion() -> None:
+    lifted = servo_lift(
+        {
+            "action_id": "hinerv_preprocess_only",
+            "authority": "parseback_mlx",
+            "affected_pairs": [10],
+            "archive_sha256": "e" * 64,
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.009,
+            "old_d_pose": 0.0001,
+            "new_d_pose": 0.0001,
+            "old_bytes": 1000,
+            "new_bytes": 1000,
+            "receiver_surface": {
+                "uint8_changed_pixels": 5,
+                "segnet_input_delta_linf": 0.05,
+                "fakequant_survival": True,
+                "parseback_survival": True,
+                "inflate_survival": True,
+            },
+        },
+        family="hi_nerv",
+        stage="parseback_selection",
+    )
+
+    assert lifted["servo_lift_accepted"] is False
+    assert "servo_lift_scorer_surface_motion_missing" in lifted["blockers"]
+    assert "action_effect_scorer_surface_motion_missing" in lifted["blockers"]
+
+
+def test_servo_lift_pose_delta_uses_exact_sqrt_score_term() -> None:
+    lifted = servo_lift(
+        {
+            "action_id": "snerv_pose_pair3",
+            "authority": "parseback_mlx",
+            "affected_pairs": [3],
+            "payload_sha256": "b" * 64,
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.010,
+            "old_d_pose": 0.0004,
+            "new_d_pose": 0.0001,
+            "old_bytes": 1000,
+            "new_bytes": 1000,
+            "receiver_surface": {
+                "uint8_changed_pixels": 7,
+                "pose_output_delta_l2": 0.01,
+                "fakequant_survival": True,
+                "parseback_survival": True,
+                "inflate_survival": True,
+            },
+        },
+        family="snerv",
+        stage="pose_contact",
+    )
+
+    expected = math.sqrt(10.0 * 0.0001) - math.sqrt(10.0 * 0.0004)
+    assert lifted["servo_lift_accepted"] is True
+    assert math.isclose(lifted["action_effect"]["delta_score_total"], expected)

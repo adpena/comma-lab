@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Fail-closed behavior of the NeRV long-run launch gate.
 
-All evidence files here are synthetic FIXTURES (labelled, tmp-dir only) used
-to verify the gate's refusal logic — they are not empirical anchors and grant
+All evidence files here are synthetic fixtures (labelled, tmp-dir only) used
+to verify the gate's refusal logic; they are not empirical anchors and grant
 no score authority.  The gate must approve ONLY on a complete, consistent
 ladder, and every missing/mismatched row must be NAMED in the verdict.
 """
@@ -45,6 +45,7 @@ def _live_birth_receipt(
     *,
     action_id: str = ACTION,
     pose_trusted: bool = True,
+    hard_won: int = 7932,
     net_support: int = 7932,
 ) -> dict:
     return {
@@ -54,7 +55,11 @@ def _live_birth_receipt(
         "action_id": action_id,
         "accepted_step_count": 1,
         "runtime_sidecar_bytes": 0,
-        "argmax_transitions": {"net_target_support_delta": net_support},
+        "argmax_transitions": {
+            "target_hard_won_count": hard_won,
+            "target_hard_lost_count": max(0, hard_won - net_support),
+            "net_target_support_delta": net_support,
+        },
         "pose_guard": {
             "available": pose_trusted,
             "pose_input_contest_resolution": pose_trusted,
@@ -66,13 +71,31 @@ def _live_birth_receipt(
     }
 
 
-def _survival(surface: str, *, action_id: str = ACTION, survived: bool = True) -> dict:
+def _survival(
+    surface: str,
+    *,
+    action_id: str = ACTION,
+    survived: bool = True,
+    include_support: bool = True,
+    hard_won: int = 2048,
+    net_support: int = 2048,
+) -> dict:
+    argmax_transitions = (
+        {
+            "target_hard_won_count": hard_won,
+            "target_hard_lost_count": max(0, hard_won - net_support),
+            "net_target_support_delta": net_support,
+        }
+        if include_support
+        else None
+    )
     return {
         "schema": BIRTH_SURVIVAL_SCHEMA,
         "fixture_not_real": True,
         "surface": surface,
         "action_id": action_id,
         "survived": survived,
+        "argmax_transitions": argmax_transitions,
     }
 
 
@@ -142,7 +165,7 @@ def test_live_birth_without_pose_trust_is_l2(tmp_path: Path) -> None:
 
 def test_zero_net_support_is_not_a_birth(tmp_path: Path) -> None:
     root = tmp_path / "run"
-    _write(root / "birth.json", _live_birth_receipt(net_support=0))
+    _write(root / "birth.json", _live_birth_receipt(hard_won=1, net_support=0))
     verdict = evaluate_nerv_long_run_launch_gate(
         family="hi_nerv",
         run_root=root,
@@ -151,6 +174,7 @@ def test_zero_net_support_is_not_a_birth(tmp_path: Path) -> None:
     )
     assert verdict["highest_level"] == "none"
     assert "real_video_birth_receipt_missing" in verdict["blocking_evidence"]
+    assert "live_birth_target_support_not_positive" in verdict["blocking_evidence"]
 
 
 def test_survival_action_id_mismatch_is_named(tmp_path: Path) -> None:
@@ -183,6 +207,25 @@ def test_not_survived_row_blocks(tmp_path: Path) -> None:
         now_utc=NOW,
     )
     assert "birth_not_survived:parseback_mlx" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_survived_row_without_target_support_blocks(tmp_path: Path) -> None:
+    root = tmp_path / "run"
+    _write(root / "birth.json", _live_birth_receipt())
+    _write(
+        root / "fakequant.json",
+        _survival("fakequant_mlx", include_support=False),
+    )
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+    blocking = verdict["blocking_evidence"]
+    assert "birth_survival_target_support_missing:fakequant_mlx" in blocking
+    assert "birth_survival_receipt_missing:fakequant_mlx" in blocking
     assert verdict["approved"] is False
 
 

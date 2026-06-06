@@ -14,6 +14,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
+from tac.analysis.receiver_surface_metrics import (
+    normalize_receiver_surface,
+    receiver_surface_receiver_visible,
+    receiver_surface_scorer_visible,
+)
+from tac.exact_eval_custody import is_sha256_hex
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.score_geometry import CONTEST_REFERENCE_BYTES, contest_score
 
@@ -63,8 +69,7 @@ class ActionEffect:
     @property
     def delta_score_nonrate(self) -> float:
         return 100.0 * self.delta_d_seg + (
-            math.sqrt(10.0 * float(self.new_d_pose))
-            - math.sqrt(10.0 * float(self.old_d_pose))
+            math.sqrt(10.0 * float(self.new_d_pose)) - math.sqrt(10.0 * float(self.old_d_pose))
         )
 
     @property
@@ -80,7 +85,7 @@ class ActionEffect:
         if not _score_state_valid(self) or not _archive_byte_state_valid(self):
             return None
         if self.delta_bytes == 0:
-            return self.value_per_byte
+            return None
         return -self.delta_score_nonrate / abs(float(self.delta_bytes))
 
     @property
@@ -133,9 +138,7 @@ class ActionEffect:
             "delta_d_seg": _finite_value_or_none(self.delta_d_seg),
             "delta_d_pose": _finite_value_or_none(self.delta_d_pose),
             "delta_bytes": self.delta_bytes,
-            "delta_score_nonrate": _finite_value_or_none(
-                self.delta_score_nonrate
-            ),
+            "delta_score_nonrate": _finite_value_or_none(self.delta_score_nonrate),
             "rate_score_delta": _finite_value_or_none(self.rate_score_delta),
             "delta_score_total": _finite_value_or_none(self.delta_score_total),
             "byte_price": 25.0 / float(self.reference_bytes),
@@ -185,72 +188,11 @@ def build_action_effect(
         receiver_surface=_receiver_surface(payload.get("receiver_surface")),
         parseback_survived=payload.get("parseback_survived") is True,
         fakequant_survived=payload.get("fakequant_survived") is True,
-        inflate_survived=(
-            None
-            if payload.get("inflate_survived") is None
-            else payload.get("inflate_survived") is True
-        ),
+        inflate_survived=(None if payload.get("inflate_survived") is None else payload.get("inflate_survived") is True),
         value_per_byte=_optional_finite_float(payload.get("value_per_byte")),
         reference_bytes=int(reference_bytes),
     )
     return effect.to_mapping(min_score_improvement=min_score_improvement)
-
-
-def action_effect_from_pair_local_servo(
-    *,
-    receipt: Mapping[str, Any],
-    report: Mapping[str, Any],
-    receiver_surface: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Build an action effect from the pair-local NeRV servo report."""
-
-    return build_action_effect(
-        {
-            "action_id": (
-                receipt.get("action_id")
-                or _nested_text(receipt, ("action_algebra_trace", "selected_action_id"))
-                or receipt.get("actuator_id")
-                or receipt.get("actuator_kind")
-                or "pair_local_servo_action"
-            ),
-            "family": report.get("family") or receipt.get("family"),
-            "authority": report.get("authority") or receipt.get("authority"),
-            "producer": "nerv_pair_local_distortion_servo",
-            "consumer": "nerv_long_training_campaign_admission",
-            "affected_pairs": report.get("pair_ids") or receipt.get("pair_ids"),
-            "affected_regions": _affected_regions(receipt),
-            "payload_sections": receipt.get("payload_sections") or (),
-            "state_custody": {
-                "archive_sha256": receipt.get("archive_sha256"),
-                "runtime_tree_sha256": receipt.get("runtime_tree_sha256"),
-                "payload_sha256": receipt.get("payload_sha256"),
-            },
-            "old_d_seg": report.get("score_state_old_d_seg")
-            or receipt.get("old_d_seg"),
-            "new_d_seg": report.get("score_state_new_d_seg")
-            or receipt.get("new_d_seg"),
-            "old_d_pose": report.get("score_state_old_d_pose")
-            or receipt.get("old_d_pose"),
-            "new_d_pose": report.get("score_state_new_d_pose")
-            or receipt.get("new_d_pose"),
-            "old_bytes": receipt.get("old_archive_bytes"),
-            "new_bytes": receipt.get("new_archive_bytes"),
-            "receiver_surface": receiver_surface,
-            "parseback_survived": _truthy_surface(
-                report,
-                ("surfaces", "parseback_survival"),
-            ),
-            "fakequant_survived": _truthy_surface(
-                report,
-                ("surfaces", "fakequant_survival"),
-            ),
-            "inflate_survived": _optional_truthy_surface(
-                report,
-                ("surfaces", "inflate_survival"),
-            ),
-            "value_per_byte": report.get("value_per_byte"),
-        }
-    )
 
 
 def build_action_commutator_row(
@@ -294,8 +236,7 @@ def build_action_effect_ledger(
     normalized_effects = [
         dict(effect)
         for effect in effects
-        if isinstance(effect, Mapping)
-        and effect.get("schema") == ACTION_EFFECT_SCHEMA
+        if isinstance(effect, Mapping) and effect.get("schema") == ACTION_EFFECT_SCHEMA
     ]
     return {
         "schema": ACTION_EFFECT_LEDGER_SCHEMA,
@@ -307,8 +248,7 @@ def build_action_effect_ledger(
         "commutators": [
             dict(row)
             for row in commutators
-            if isinstance(row, Mapping)
-            and row.get("schema") == ACTION_COMMUTATOR_ROW_SCHEMA
+            if isinstance(row, Mapping) and row.get("schema") == ACTION_COMMUTATOR_ROW_SCHEMA
         ],
         "score_claim": False,
         **PROXY_FALSE_AUTHORITY_FIELDS,
@@ -339,6 +279,8 @@ def _action_effect_blockers(
         blockers.append("action_effect_state_custody_hash_missing")
     if not _receiver_visible(effect.receiver_surface):
         blockers.append("action_effect_receiver_surface_motion_missing")
+    if not _scorer_surface_visible(effect.receiver_surface):
+        blockers.append("action_effect_scorer_surface_motion_missing")
     if effect.fakequant_survived is not True:
         blockers.append("action_effect_fakequant_survival_missing")
     if effect.parseback_survived is not True:
@@ -355,6 +297,8 @@ def _byte_priced(effect: ActionEffect) -> bool:
         return False
     if effect.delta_bytes == 0:
         return True
+    if not _archive_custodied(effect.state_custody):
+        return False
     value = effect.exact_value_per_byte
     return value is not None and math.isfinite(float(value))
 
@@ -392,11 +336,7 @@ def _score_state_valid(effect: ActionEffect) -> bool:
 
 
 def _archive_byte_state_valid(effect: ActionEffect) -> bool:
-    return (
-        int(effect.old_bytes) >= 0
-        and int(effect.new_bytes) >= 0
-        and int(effect.reference_bytes) > 0
-    )
+    return int(effect.old_bytes) >= 0 and int(effect.new_bytes) >= 0 and int(effect.reference_bytes) > 0
 
 
 def _state_custodied(custody: Mapping[str, Any]) -> bool:
@@ -409,40 +349,32 @@ def _state_custodied(custody: Mapping[str, Any]) -> bool:
         "section_tree_sha256",
     ):
         value = custody.get(key)
-        if isinstance(value, str) and value.strip():
+        if is_sha256_hex(value):
             return True
     return False
+
+
+def _archive_custodied(custody: Mapping[str, Any]) -> bool:
+    return any(
+        is_sha256_hex(custody.get(key))
+        for key in (
+            "archive_sha256",
+            "candidate_archive_sha256",
+            "source_archive_sha256",
+        )
+    )
 
 
 def _receiver_visible(surface: Mapping[str, Any]) -> bool:
-    for key in (
-        "uint8_changed_pixels",
-        "receiver_surface_uint8_changed_pixels",
-        "argmax_flipped_pixels",
-        "receiver_surface_argmax_flipped_pixels",
-        "pose_output_delta_l2",
-        "receiver_surface_pose_output_delta",
-        "segnet_input_delta_linf",
-        "receiver_surface_segnet_input_delta_linf",
-        "posenet_input_delta_linf",
-        "receiver_surface_posenet_input_delta_linf",
-    ):
-        value = _optional_finite_float(surface.get(key))
-        if value is not None and value > 0.0:
-            return True
-    return False
+    return receiver_surface_receiver_visible(surface)
+
+
+def _scorer_surface_visible(surface: Mapping[str, Any]) -> bool:
+    return receiver_surface_scorer_visible(surface)
 
 
 def _receiver_surface(value: Any) -> dict[str, float | int | bool | str]:
-    if not isinstance(value, Mapping):
-        return {}
-    out: dict[str, float | int | bool | str] = {}
-    for key, raw in value.items():
-        if isinstance(raw, bool | int | float | str) and not (
-            isinstance(raw, float) and not math.isfinite(raw)
-        ):
-            out[str(key)] = raw
-    return out
+    return normalize_receiver_surface(value)
 
 
 def _state_custody(
@@ -453,7 +385,7 @@ def _state_custody(
     out: dict[str, str | int | bool] = {}
     if isinstance(value, Mapping):
         for key, raw in value.items():
-            if isinstance(raw, bool | int | str) and str(raw):
+            if is_sha256_hex(raw):
                 out[str(key)] = raw
     for key in (
         "archive_sha256",
@@ -464,45 +396,9 @@ def _state_custody(
         "section_tree_sha256",
     ):
         raw = payload.get(key)
-        if key not in out and isinstance(raw, bool | int | str) and str(raw):
+        if key not in out and is_sha256_hex(raw):
             out[key] = raw
     return out
-
-
-def _affected_regions(receipt: Mapping[str, Any]) -> tuple[str, ...]:
-    explicit = tuple(_text_values(receipt.get("affected_regions")))
-    if explicit:
-        return explicit
-    debt = receipt.get("worst_scorer_debt")
-    if isinstance(debt, Mapping):
-        target = _optional_text(debt.get("target_id"))
-        if target:
-            return (target,)
-    return ()
-
-
-def _truthy_surface(payload: Mapping[str, Any], path: tuple[str, str]) -> bool:
-    first = payload.get(path[0])
-    if isinstance(first, Mapping):
-        return first.get(path[1]) is True
-    return False
-
-
-def _optional_truthy_surface(
-    payload: Mapping[str, Any],
-    path: tuple[str, str],
-) -> bool | None:
-    first = payload.get(path[0])
-    if not isinstance(first, Mapping) or path[1] not in first:
-        return None
-    return first.get(path[1]) is True
-
-
-def _nested_text(payload: Mapping[str, Any], path: tuple[str, str]) -> str | None:
-    first = payload.get(path[0])
-    if not isinstance(first, Mapping):
-        return None
-    return _optional_text(first.get(path[1]))
 
 
 def _family(value: Any) -> str:
@@ -585,7 +481,6 @@ __all__ = [
     "ACTION_EFFECT_LEDGER_SCHEMA",
     "ACTION_EFFECT_SCHEMA",
     "ActionEffect",
-    "action_effect_from_pair_local_servo",
     "build_action_commutator_row",
     "build_action_effect",
     "build_action_effect_ledger",

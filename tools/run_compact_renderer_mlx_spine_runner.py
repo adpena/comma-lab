@@ -208,17 +208,13 @@ ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA = "compact_renderer_active_family_process_r
 DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS = DEFAULT_CHECKPOINT_INTERVAL_EPOCHS
 DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N = 4
 DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N = 2
-RAW_NERV_MODELSIZE_BUDGET_SCHEMAS = frozenset(
-    {"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"}
-)
+RAW_NERV_MODELSIZE_BUDGET_SCHEMAS = frozenset({"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"})
 DEFAULT_SSD_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact"),
 )
 DEFAULT_PR95_SOURCE_ARCHIVE_ZIP = (
-    REPO_ROOT
-    / "experiments/results/public_pr_archive_release_view"
-    / "public_pr95_intake_20260505_auto/archive.zip"
+    REPO_ROOT / "experiments/results/public_pr_archive_release_view" / "public_pr95_intake_20260505_auto/archive.zip"
 )
 DEFAULT_PR95_RECEIVER_RUNTIME_DIR = (
     REPO_ROOT
@@ -254,24 +250,16 @@ PLANNER_GATED_FAMILIES: tuple[str, ...] = ()
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 PLANNER_ROW_REQUIRED_FAMILIES = ("hi_nerv", "snerv")
 PLANNER_ROW_QUEUE_RUNNABLE_STATUSES = ("queued", "runnable")
-SNERV_LF_HF_REPLACEMENT_QUEUE_RUNNABLE_STATUSES = (
-    "local_bounded_smoke_ready_no_authority",
-)
+SNERV_LF_HF_REPLACEMENT_QUEUE_RUNNABLE_STATUSES = ("local_bounded_smoke_ready_no_authority",)
 PLANNER_ROW_QUEUE_ARTIFACT_SCHEMAS = (
     "nerv_long_training_campaign_plan.v1",
     "experiment_queue.v1",
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     "snerv_lf_hf_replacement_queue.v1",
 )
-PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA = (
-    "nerv_long_training_queue_launch_authority_contract.v1"
-)
-SNERV_LF_HF_BOUNDED_TRAINING_BINDING_CONTRACT_SCHEMA = (
-    "snerv_lf_hf_bounded_training_binding_contract.v1"
-)
-SNERV_LF_HF_UNBLOCK_LAUNCH_CONTRACT_SCHEMA = (
-    "snerv_lf_hf_queue_unblock_launch_contract.v1"
-)
+PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA = "nerv_long_training_queue_launch_authority_contract.v1"
+SNERV_LF_HF_BOUNDED_TRAINING_BINDING_CONTRACT_SCHEMA = "snerv_lf_hf_bounded_training_binding_contract.v1"
+SNERV_LF_HF_UNBLOCK_LAUNCH_CONTRACT_SCHEMA = "snerv_lf_hf_queue_unblock_launch_contract.v1"
 PLANNER_ROW_TIMING_SMOKE_MAX_PAIRS = 32
 PLANNER_ROW_TIMING_SMOKE_MAX_EPOCHS = 3
 HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE = "boundary_argmax_hinge"
@@ -293,9 +281,7 @@ DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT = 2.0e-4
 DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT = 1.0e-4
 DEFAULT_PACT_CODER_QAT_C1A_SIGMA = 0.2
 DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE = 512
-COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
-    "compact_renderer_mlx_spine_runner_startup.json"
-)
+COMPACT_FAMILY_STARTUP_MARKER_FILENAME = "compact_renderer_mlx_spine_runner_startup.json"
 COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     "pr95_hnerv": {
         "canonical_family": "pr95_hnerv",
@@ -316,10 +302,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "backend_status": "executable_mlx_backend_available",
         "trainer_kind": "canonical_mlx_score_aware_harness",
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family pact_nerv_vq",
-        "archive_exporter": (
-            "tac.substrates.pact_nerv_vq.archive_candidate."
-            "export_pact_nerv_vq_mlx_archive"
-        ),
+        "archive_exporter": ("tac.substrates.pact_nerv_vq.archive_candidate.export_pact_nerv_vq_mlx_archive"),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
         "next_action": "train_mlx_export_archive_spine_receiver_proof_then_full_video_replay",
         "execution_scope": "MLX advisory train/export/archive candidate lane",
@@ -329,10 +312,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "backend_status": "executable_via_pact_nerv_vq_adapter",
         "trainer_kind": "canonical_mlx_score_aware_harness",
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family pact_nerv_vq",
-        "archive_exporter": (
-            "tac.substrates.pact_nerv_vq.archive_candidate."
-            "export_pact_nerv_vq_mlx_archive"
-        ),
+        "archive_exporter": ("tac.substrates.pact_nerv_vq.archive_candidate.export_pact_nerv_vq_mlx_archive"),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
         "next_action": "route_to_pact_nerv_vq_until_pvq_specific_adapter_diverges",
         "execution_scope": "MLX advisory adapter route through pact_nerv_vq",
@@ -343,17 +323,11 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "trainer_kind": "selector_v4_mlx_score_aware_harness",
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family pact_nerv_selector_v4",
         "archive_exporter": (
-            "tac.substrates.pact_nerv_selector_v4.archive_candidate."
-            "export_pact_nerv_selector_v4_mlx_archive"
+            "tac.substrates.pact_nerv_selector_v4.archive_candidate.export_pact_nerv_selector_v4_mlx_archive"
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
-        "section_value_profiler": (
-            "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
-        ),
-        "next_action": (
-            "train_mlx_export_psv4_archive_spine_receiver_proof_then_"
-            "full_video_section_value_profile"
-        ),
+        "section_value_profiler": ("tools/profile_pact_nerv_selector_v4_mlx_section_value.py"),
+        "next_action": ("train_mlx_export_psv4_archive_spine_receiver_proof_then_full_video_section_value_profile"),
         "execution_scope": (
             "MLX advisory train/export/archive candidate lane; PSV4 selector "
             "primitive is charged at archive encode time and remains "
@@ -362,20 +336,12 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     },
     "hi_nerv": {
         "canonical_family": "hi_nerv",
-        "backend_status": (
-            "mlx_archive_export_adapter_available_"
-            "distortion_fit_actuator_pending"
-        ),
+        "backend_status": ("mlx_archive_export_adapter_available_distortion_fit_actuator_pending"),
         "trainer_kind": "mlx_renderer_export_smoke_available_scoreaware_trainer_pending",
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv",
-        "archive_exporter": (
-            "tac.substrates.hi_nerv.archive_candidate.export_hi_nerv_mlx_archive"
-        ),
+        "archive_exporter": ("tac.substrates.hi_nerv.archive_candidate.export_hi_nerv_mlx_archive"),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_archive_exporter",
-        "next_action": (
-            "scale_score_faithful_hinerv_mlx_training_with_full_video_"
-            "prefilter_then_cpu_replay_gate"
-        ),
+        "next_action": ("scale_score_faithful_hinerv_mlx_training_with_full_video_prefilter_then_cpu_replay_gate"),
         "execution_scope": (
             "primary compact carrier candidate; MLX renderer/export/receiver "
             "adapter is executable, but promotion is blocked until score-aware "
@@ -421,17 +387,11 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     },
     "snerv": {
         "canonical_family": "snerv",
-        "backend_status": (
-            "executable_cpu_advisory_plus_mlx_native_export_adapter_available"
-        ),
-        "trainer_kind": (
-            "mlx_native_target_hydration_receiver_export_available_"
-            "scoreaware_long_training_missing"
-        ),
+        "backend_status": ("executable_cpu_advisory_plus_mlx_native_export_adapter_available"),
+        "trainer_kind": ("mlx_native_target_hydration_receiver_export_available_scoreaware_long_training_missing"),
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family snerv",
         "archive_exporter": (
-            "tac.substrates.snerv_inverse_steg_carrier.archive_candidate."
-            "export_snerv_archive_bound_candidate_package"
+            "tac.substrates.snerv_inverse_steg_carrier.archive_candidate.export_snerv_archive_bound_candidate_package"
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_snerv_packet",
         "next_action": (
@@ -495,8 +455,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "archive_exporter": None,
         "receiver_proof": "missing_until_adapter_implemented",
         "next_action": (
-            "run_lowres_to_contest_resolution_scorer_mirror_check_then_"
-            "implement_charged_sr_upsampler_mlx_adapter"
+            "run_lowres_to_contest_resolution_scorer_mirror_check_then_implement_charged_sr_upsampler_mlx_adapter"
         ),
         "execution_scope": (
             "high-priority resolution-axis enhancer/design knob for the "
@@ -626,14 +585,11 @@ def _write_decoder_weight_saliency_artifact(
     path = output_dir / "decoder_weight_gradient_saliency.json"
     payload = {
         **saliency,
-        "schema": saliency.get("schema")
-        or "mlx_decoder_weight_gradient_saliency.v1",
+        "schema": saliency.get("schema") or "mlx_decoder_weight_gradient_saliency.v1",
         "artifact_schema": "compact_runner_decoder_weight_saliency_artifact.v1",
         "family": str(family),
         "source": "MlxScoreAwareAdapter.artifact_metadata",
-        "source_training_artifact_path": (
-            output_dir / "training_artifact.json"
-        ).as_posix(),
+        "source_training_artifact_path": (output_dir / "training_artifact.json").as_posix(),
         "artifact_path": path.as_posix(),
         "authority": "macos_mlx_research_signal_false_authority",
         "score_claim": False,
@@ -674,8 +630,7 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
         "expected_source_schema": HINERV_ARCHIVE_LADDER_WATERFILL_SCHEMA,
         "written": False,
         "active": False,
-        "candidate_id": candidate_id
-        or trained_archive_byte_oracle.get("candidate_id"),
+        "candidate_id": candidate_id or trained_archive_byte_oracle.get("candidate_id"),
         "action_bits": [int(value) for value in action_bits],
         "authority": "macos_mlx_research_signal_false_authority",
         "score_claim": False,
@@ -686,20 +641,12 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
     structural_blockers: list[str] = []
     saliency_path = Path(str(decoder_weight_saliency_artifact.get("path") or ""))
     if decoder_weight_saliency_artifact.get("written") is not True:
-        structural_blockers.append(
-            "hi_nerv_decoder_weight_saliency_artifact_missing_for_waterfill"
-        )
+        structural_blockers.append("hi_nerv_decoder_weight_saliency_artifact_missing_for_waterfill")
     elif not saliency_path.is_file():
-        structural_blockers.append(
-            "hi_nerv_decoder_weight_saliency_artifact_path_missing_for_waterfill"
-        )
-    ladder_path = Path(
-        str(trained_archive_byte_oracle.get("receiver_closed_modelsize_ladder_path") or "")
-    )
+        structural_blockers.append("hi_nerv_decoder_weight_saliency_artifact_path_missing_for_waterfill")
+    ladder_path = Path(str(trained_archive_byte_oracle.get("receiver_closed_modelsize_ladder_path") or ""))
     if not ladder_path.is_file():
-        structural_blockers.append(
-            "hi_nerv_trained_receiver_closed_modelsize_ladder_missing_for_waterfill"
-        )
+        structural_blockers.append("hi_nerv_trained_receiver_closed_modelsize_ladder_missing_for_waterfill")
     if structural_blockers:
         metadata["structural_blockers"] = _dedupe(structural_blockers)
         metadata["blockers"] = _dedupe(structural_blockers)
@@ -712,15 +659,9 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
         report = build_hinerv_archive_ladder_waterfill(
             ladder,
             saliency_by_row_id=_hi_nerv_waterfill_row_saliency(saliency_payload),
-            global_saliency_by_name=_hi_nerv_waterfill_global_saliency(
-                saliency_payload
-            ),
-            saliency_report_blockers=_hi_nerv_waterfill_report_blockers(
-                saliency_payload
-            ),
-            saliency_row_blockers_by_id=_hi_nerv_waterfill_row_blockers(
-                saliency_payload
-            ),
+            global_saliency_by_name=_hi_nerv_waterfill_global_saliency(saliency_payload),
+            saliency_report_blockers=_hi_nerv_waterfill_report_blockers(saliency_payload),
+            saliency_row_blockers_by_id=_hi_nerv_waterfill_row_blockers(saliency_payload),
             decoder_weight_saliency_json_path=saliency_path,
             action_bits=tuple(int(value) for value in action_bits),
             candidate_id=(
@@ -752,9 +693,7 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
         if not isinstance(plan, dict):
             continue
         row_id = str(row.get("row_id") or f"row_{len(plan_paths):04d}")
-        plan_path = (
-            output_dir / f"decoder_weight_waterfill_plan_{_compact_slug(row_id)}.json"
-        )
+        plan_path = output_dir / f"decoder_weight_waterfill_plan_{_compact_slug(row_id)}.json"
         plan_payload = {
             **plan,
             "_source_waterfill_bundle_path": bundle_path.as_posix(),
@@ -779,12 +718,8 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
         row["decoder_weight_waterfill_plan_sha256"] = plan_entry["sha256"]
         plan_paths.append(plan_entry)
     report["report_path"] = bundle_path.as_posix()
-    report["source_trained_archive_byte_oracle_path"] = trained_archive_byte_oracle.get(
-        "path"
-    )
-    report["source_trained_archive_byte_oracle_sha256"] = (
-        trained_archive_byte_oracle.get("sha256")
-    )
+    report["source_trained_archive_byte_oracle_path"] = trained_archive_byte_oracle.get("path")
+    report["source_trained_archive_byte_oracle_sha256"] = trained_archive_byte_oracle.get("sha256")
     report["generated_plan_paths"] = plan_paths
     _write_json(bundle_path, report)
     metadata.update(
@@ -803,11 +738,7 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
             "candidate_plan_count": len(plan_paths),
             "candidate_plan_paths": plan_paths,
             "report_blockers": list(report.get("blockers") or []),
-            "blockers": (
-                []
-                if plan_paths
-                else ["hi_nerv_decoder_weight_waterfill_candidate_plans_missing"]
-            ),
+            "blockers": ([] if plan_paths else ["hi_nerv_decoder_weight_waterfill_candidate_plans_missing"]),
         }
     )
     return metadata
@@ -816,29 +747,21 @@ def _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
 def _hi_nerv_waterfill_global_saliency(payload: Mapping[str, Any]) -> dict[str, float]:
     if not isinstance(payload, Mapping):
         return {}
-    if any(
-        key in payload
-        for key in ("row_saliency", "saliency_by_row_id", "saliency_by_row")
-    ) and "global_saliency" not in payload:
+    if (
+        any(key in payload for key in ("row_saliency", "saliency_by_row_id", "saliency_by_row"))
+        and "global_saliency" not in payload
+    ):
         return {}
     mapping = payload.get("global_saliency") or payload.get("saliency_by_name")
     if not isinstance(mapping, Mapping):
         mapping = payload
-    return {
-        str(key): float(value)
-        for key, value in mapping.items()
-        if _float_or_none(value) is not None
-    }
+    return {str(key): float(value) for key, value in mapping.items() if _float_or_none(value) is not None}
 
 
 def _hi_nerv_waterfill_row_saliency(
     payload: Mapping[str, Any],
 ) -> dict[str, dict[str, float]]:
-    rows = (
-        payload.get("row_saliency")
-        or payload.get("saliency_by_row_id")
-        or payload.get("saliency_by_row")
-    )
+    rows = payload.get("row_saliency") or payload.get("saliency_by_row_id") or payload.get("saliency_by_row")
     if not isinstance(rows, Mapping):
         return {}
     out: dict[str, dict[str, float]] = {}
@@ -846,9 +769,7 @@ def _hi_nerv_waterfill_row_saliency(
         if not isinstance(mapping, Mapping):
             continue
         out[str(row_id)] = {
-            str(key): float(value)
-            for key, value in mapping.items()
-            if _float_or_none(value) is not None
+            str(key): float(value) for key, value in mapping.items() if _float_or_none(value) is not None
         }
     return out
 
@@ -884,10 +805,7 @@ def _float_or_none(value: Any) -> float | None:
 
 
 def _compact_slug(value: Any) -> str:
-    text = "".join(
-        ch if ch.isalnum() or ch in {"-", "_"} else "_"
-        for ch in str(value).strip()
-    ).strip("_")
+    text = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in str(value).strip()).strip("_")
     return text or "item"
 
 
@@ -927,24 +845,17 @@ def _pr95_hnerv_control_arm_exact_blockers(
         segnet_distillation_weight=segnet_distillation_weight,
         pose_distillation_weight=pose_distillation_weight,
     )
-    blockers: list[str] = [
-        "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"
-    ]
+    blockers: list[str] = ["pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"]
     for blocker in PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS:
         if has_joint_binding and blocker == PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER:
             blockers.append(PR95_HNERV_SCOREAWARE_ADVISORY_NOT_EXACT_BLOCKER)
             continue
-        if (
-            has_joint_binding
-            and blocker == PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER
-        ):
+        if has_joint_binding and blocker == PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER:
             continue
         blockers.append(blocker)
     blockers.append("pr95_hnerv_stage8_muon_continuation_not_wired")
     if not has_joint_binding:
-        blockers.append(
-            "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden"
-        )
+        blockers.append("pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden")
     blockers.extend(
         [
             "requires_full_frame_inflate_parity_before_runtime_consumption_claim",
@@ -965,9 +876,7 @@ def _local_cpu_replay_enabled_by_default(
 ) -> bool:
     """Return whether local replay should run without an explicit CLI override."""
 
-    return int(num_pairs) >= CONTEST_PAIR_COUNT and bool(
-        mlx_prefilter_local_replay_passed
-    )
+    return int(num_pairs) >= CONTEST_PAIR_COUNT and bool(mlx_prefilter_local_replay_passed)
 
 
 def _run_compact_local_cpu_replay_gate(
@@ -1118,13 +1027,9 @@ def _compile_carrier_post_export_materializer_plan(
         "archive_path": str(archive_path) if archive_path is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
         "archive_bytes": archive_bytes_int,
-        "runtime_submission_dir": (
-            str(runtime_submission_dir) if runtime_submission_dir is not None else None
-        ),
+        "runtime_submission_dir": (str(runtime_submission_dir) if runtime_submission_dir is not None else None),
         "effective_runtime_submission_dir": (
-            effective_runtime_dir.as_posix()
-            if effective_runtime_dir is not None
-            else None
+            effective_runtime_dir.as_posix() if effective_runtime_dir is not None else None
         ),
         "runtime_context_blockers": list(runtime_context_blockers),
         "materializer_results_root": result_root.as_posix(),
@@ -1160,9 +1065,7 @@ def _compile_carrier_post_export_materializer_plan(
             expected_bytes=archive_bytes_int,
             source_runtime_dir=effective_runtime_dir,
         )
-        queue_id = (
-            f"carrier_post_export_{family_token}_{str(record['sha256'])[:12]}"
-        )
+        queue_id = f"carrier_post_export_{family_token}_{str(record['sha256'])[:12]}"
         output_root = result_root / queue_id
         bootstrap_path = output_root / "frontier_rate_attack_bootstrap.json"
         target_coverage_path = output_root / "target_coverage.json"
@@ -1204,9 +1107,7 @@ def _compile_carrier_post_export_materializer_plan(
             "materializer_work_queue_path": work_queue_path.as_posix(),
             "experiment_queue_path": experiment_queue_path.as_posix(),
             "experiment_queue_state_path": experiment_queue_state_path.as_posix(),
-            "executable_target_count": payloads["bootstrap"].get(
-                "executable_target_count"
-            ),
+            "executable_target_count": payloads["bootstrap"].get("executable_target_count"),
             "experiment_count": payloads["bootstrap"].get("experiment_count"),
             "step_count": payloads["bootstrap"].get("step_count"),
             "target_coverage": payloads["target_coverage"],
@@ -1221,9 +1122,7 @@ def _compile_carrier_post_export_materializer_plan(
         result = {
             **base_result,
             "compiled": False,
-            "blockers": _dedupe(
-                [f"carrier_post_export_materializer_plan_failed:{exc}"]
-            ),
+            "blockers": _dedupe([f"carrier_post_export_materializer_plan_failed:{exc}"]),
         }
     _write_json(plan_path, result)
     return result
@@ -1241,9 +1140,7 @@ def _post_export_materializer_handoff_summary(
         target_kind = handoff_dir.name.removesuffix("_exact_eval_handoff")
         source_queue_path = handoff_dir / "source_queue.json"
         harvest_report_path = handoff_dir / "harvest_report.json"
-        closure_report_path = (
-            handoff_dir / "submission_closure" / "submission_closure_report.json"
-        )
+        closure_report_path = handoff_dir / "submission_closure" / "submission_closure_report.json"
         exact_readiness_bridge_path = handoff_dir / "exact_readiness_bridge_report.json"
         dispatch_plan_path = handoff_dir / "dispatch_plan.json"
         dispatch_queue_path = handoff_dir / "dispatch_queue.json"
@@ -1251,28 +1148,16 @@ def _post_export_materializer_handoff_summary(
             "schema": "compact_carrier_post_export_materializer_handoff.v1",
             "target_kind": target_kind,
             "handoff_dir": handoff_dir.as_posix(),
-            "source_queue_path": (
-                source_queue_path.as_posix() if source_queue_path.is_file() else None
-            ),
-            "harvest_report_path": (
-                harvest_report_path.as_posix()
-                if harvest_report_path.is_file()
-                else None
-            ),
+            "source_queue_path": (source_queue_path.as_posix() if source_queue_path.is_file() else None),
+            "harvest_report_path": (harvest_report_path.as_posix() if harvest_report_path.is_file() else None),
             "submission_closure_report_path": (
                 closure_report_path.as_posix() if closure_report_path.is_file() else None
             ),
             "exact_readiness_bridge_report_path": (
-                exact_readiness_bridge_path.as_posix()
-                if exact_readiness_bridge_path.is_file()
-                else None
+                exact_readiness_bridge_path.as_posix() if exact_readiness_bridge_path.is_file() else None
             ),
-            "dispatch_plan_path": (
-                dispatch_plan_path.as_posix() if dispatch_plan_path.is_file() else None
-            ),
-            "dispatch_queue_path": (
-                dispatch_queue_path.as_posix() if dispatch_queue_path.is_file() else None
-            ),
+            "dispatch_plan_path": (dispatch_plan_path.as_posix() if dispatch_plan_path.is_file() else None),
+            "dispatch_queue_path": (dispatch_queue_path.as_posix() if dispatch_queue_path.is_file() else None),
             **FALSE_AUTHORITY,
         }
         for key, path in (
@@ -1294,9 +1179,7 @@ def _post_export_materializer_handoff_summary(
                 row[key] = payload.get("schema")
                 if key == "harvest_report_schema":
                     row["harvest_report_blockers"] = payload.get("blockers")
-                    row["harvest_report_ready_for_exact_eval_dispatch"] = payload.get(
-                        "ready_for_exact_eval_dispatch"
-                    )
+                    row["harvest_report_ready_for_exact_eval_dispatch"] = payload.get("ready_for_exact_eval_dispatch")
         rows.append(row)
     return {
         "schema": "compact_carrier_post_export_materializer_handoff_summary.v1",
@@ -1321,15 +1204,11 @@ def _post_export_materializer_sweep_feedback_summary(
             continue
         target_kind = str(payload.get("target_kind") or sweep_path.parent.name)
         rate_positive_count = int(payload.get("rate_positive_count") or 0)
-        total_positive_saved_bytes = int(
-            payload.get("total_positive_saved_bytes") or 0
-        )
+        total_positive_saved_bytes = int(payload.get("total_positive_saved_bytes") or 0)
         max_saved_bytes = int(payload.get("max_saved_bytes") or 0)
         planner_feedback = payload.get("planner_feedback")
         recommended_rule = (
-            planner_feedback.get("recommended_acquisition_rule")
-            if isinstance(planner_feedback, Mapping)
-            else None
+            planner_feedback.get("recommended_acquisition_rule") if isinstance(planner_feedback, Mapping) else None
         )
         byte_saving = rate_positive_count > 0 or total_positive_saved_bytes > 0
         rows.append(
@@ -1339,9 +1218,7 @@ def _post_export_materializer_sweep_feedback_summary(
                 "sweep_path": sweep_path.as_posix(),
                 "observation_count": int(payload.get("observation_count") or 0),
                 "rate_positive_count": rate_positive_count,
-                "rate_nonpositive_count": int(
-                    payload.get("rate_nonpositive_count") or 0
-                ),
+                "rate_nonpositive_count": int(payload.get("rate_nonpositive_count") or 0),
                 "max_saved_bytes": max_saved_bytes,
                 "total_positive_saved_bytes": total_positive_saved_bytes,
                 "recommended_acquisition_rule": recommended_rule,
@@ -1355,9 +1232,7 @@ def _post_export_materializer_sweep_feedback_summary(
             }
         )
     byte_saving_rows = [row for row in rows if row["byte_saving_atom"] is True]
-    total_positive_saved_bytes = sum(
-        int(row["total_positive_saved_bytes"]) for row in byte_saving_rows
-    )
+    total_positive_saved_bytes = sum(int(row["total_positive_saved_bytes"]) for row in byte_saving_rows)
     max_saved_bytes = max(
         (int(row["max_saved_bytes"]) for row in byte_saving_rows),
         default=0,
@@ -1369,12 +1244,8 @@ def _post_export_materializer_sweep_feedback_summary(
         "zero_save_sweep_count": len(rows) - len(byte_saving_rows),
         "total_positive_saved_bytes": total_positive_saved_bytes,
         "max_saved_bytes": max_saved_bytes,
-        "retain_target_kinds": [
-            row["target_kind"] for row in rows if row["byte_saving_atom"] is True
-        ],
-        "zero_save_target_kinds": [
-            row["target_kind"] for row in rows if row["byte_saving_atom"] is False
-        ],
+        "retain_target_kinds": [row["target_kind"] for row in rows if row["byte_saving_atom"] is True],
+        "zero_save_target_kinds": [row["target_kind"] for row in rows if row["byte_saving_atom"] is False],
         "recommended_global_rule": (
             "retain_and_order_byte_saving_atoms_before_demoting_full_lane"
             if byte_saving_rows
@@ -1470,9 +1341,7 @@ def _execute_carrier_post_export_materializer_plan(
     if max_experiments is not None and int(max_experiments) < 1:
         result = {
             **base_result,
-            "blockers": [
-                "post_export_materializer_max_experiments_must_be_positive_or_null"
-            ],
+            "blockers": ["post_export_materializer_max_experiments_must_be_positive_or_null"],
         }
         _write_json(execution_path, result)
         return result
@@ -1519,12 +1388,8 @@ def _execute_carrier_post_export_materializer_plan(
             "before": before,
             "worker": worker,
             "after": after,
-            "handoff_summary": _post_export_materializer_handoff_summary(
-                output_root
-            ),
-            "sweep_feedback_summary": (
-                _post_export_materializer_sweep_feedback_summary(output_root)
-            ),
+            "handoff_summary": _post_export_materializer_handoff_summary(output_root),
+            "sweep_feedback_summary": (_post_export_materializer_sweep_feedback_summary(output_root)),
             "blockers": _dedupe(blockers),
         }
     except (OSError, RuntimeError, ValueError) as exc:
@@ -1543,10 +1408,7 @@ def _scorer_coupled_rd_metadata() -> dict[str, Any]:
     pose_marginal_formula = "5/sqrt(10*d_pose)"
     return {
         "schema": "contest_scorer_coupled_rd_allocation_facts.v2",
-        "score_formula": (
-            "100*d_seg + sqrt(10*d_pose) + "
-            "25*(archive_zip_bytes/uncompressed_total)"
-        ),
+        "score_formula": ("100*d_seg + sqrt(10*d_pose) + 25*(archive_zip_bytes/uncompressed_total)"),
         "score_formula_terms": {
             "segnet": "100*d_seg",
             "posenet": "sqrt(10*d_pose)",
@@ -1592,9 +1454,7 @@ def _scorer_coupled_rd_metadata() -> dict[str, Any]:
             "score_derivative_operating_point_dependent": True,
             "frame_score_weights": {
                 "frame_0": "pose_marginal_only",
-                "frame_1": (
-                    "pose_marginal_plus_segnet_marginal_when_segnet_sensitive"
-                ),
+                "frame_1": ("pose_marginal_plus_segnet_marginal_when_segnet_sensitive"),
             },
             "input_size": [384, 512],
         },
@@ -1608,8 +1468,7 @@ def _scorer_coupled_rd_metadata() -> dict[str, Any]:
                 "posenet_score_weight": pose_marginal_formula,
             },
             "allocator_implication": (
-                "Frame-1 atoms can buy SegNet and PoseNet distortion; frame-0 "
-                "atoms can buy PoseNet distortion only."
+                "Frame-1 atoms can buy SegNet and PoseNet distortion; frame-0 atoms can buy PoseNet distortion only."
             ),
         },
         "gradient_note": (
@@ -1631,8 +1490,7 @@ def _scorer_coupled_rd_metadata() -> dict[str, Any]:
             ),
         },
         "allocation_rule": (
-            "spend a charged bit only when measured scorer-value-per-bit "
-            "exceeds fixed_marginal_byte_price"
+            "spend a charged bit only when measured scorer-value-per-bit exceeds fixed_marginal_byte_price"
         ),
         "authority": "planning_metadata_only_not_score_authority",
     }
@@ -1765,30 +1623,14 @@ def _compact_scoreaware_stage_loss_weights(
             posenet_yuv6_geometry_tether=posenet_yuv6_geometry_tether,
             posenet_temporal_signal_floor=posenet_temporal_signal_floor,
             segnet_direct_live=segnet_direct_live,
-            segnet_direct_live_class_histogram=(
-                segnet_direct_live_class_histogram
-            ),
-            segnet_direct_live_class_balanced_hinge=(
-                segnet_direct_live_class_balanced_hinge
-            ),
-            segnet_direct_live_class_balanced_ce=(
-                segnet_direct_live_class_balanced_ce
-            ),
-            segnet_direct_live_class_balanced_squared_hinge=(
-                segnet_direct_live_class_balanced_squared_hinge
-            ),
-            segnet_direct_live_class_region_recon=(
-                segnet_direct_live_class_region_recon
-            ),
-            segnet_direct_live_rare_class_logit=(
-                segnet_direct_live_rare_class_logit
-            ),
-            segnet_direct_live_target_mass_floor=(
-                segnet_direct_live_target_mass_floor
-            ),
-            segnet_direct_live_target_min_ratio_floor=(
-                segnet_direct_live_target_min_ratio_floor
-            ),
+            segnet_direct_live_class_histogram=(segnet_direct_live_class_histogram),
+            segnet_direct_live_class_balanced_hinge=(segnet_direct_live_class_balanced_hinge),
+            segnet_direct_live_class_balanced_ce=(segnet_direct_live_class_balanced_ce),
+            segnet_direct_live_class_balanced_squared_hinge=(segnet_direct_live_class_balanced_squared_hinge),
+            segnet_direct_live_class_region_recon=(segnet_direct_live_class_region_recon),
+            segnet_direct_live_rare_class_logit=(segnet_direct_live_rare_class_logit),
+            segnet_direct_live_target_mass_floor=(segnet_direct_live_target_mass_floor),
+            segnet_direct_live_target_min_ratio_floor=(segnet_direct_live_target_min_ratio_floor),
             pose_direct_live=pose_direct_live,
         )
     except ValueError as exc:
@@ -1814,12 +1656,8 @@ def _compact_scoreaware_curriculum_stages(
             loss_weights=loss_weights,
             pose_distillation_warmup_epochs=pose_distillation_warmup_epochs,
             scorer_input_shape_warmup_epochs=scorer_input_shape_warmup_epochs,
-            segnet_direct_live_escape_warmup_epochs=(
-                segnet_direct_live_escape_warmup_epochs
-            ),
-            segnet_direct_live_escape_class_multiplier=(
-                segnet_direct_live_escape_class_multiplier
-            ),
+            segnet_direct_live_escape_warmup_epochs=(segnet_direct_live_escape_warmup_epochs),
+            segnet_direct_live_escape_class_multiplier=(segnet_direct_live_escape_class_multiplier),
         )
     except ValueError as exc:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
@@ -1838,34 +1676,26 @@ def _resolve_torch_scorer_device_alias(
     if requested == "metal":
         return "mps"
     if requested != "gpu":
-        raise CompactRendererMlxSpineRunnerError(
-            f"unsupported scorer distillation device: {requested_device!r}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"unsupported scorer distillation device: {requested_device!r}")
     torch = torch_module
     if torch is None:
         try:
             import torch as torch  # type: ignore[no-redef]
         except Exception as exc:  # pragma: no cover - import failure is environment.
             raise CompactRendererMlxSpineRunnerError(
-                "distillation_device='gpu' requires PyTorch to resolve a concrete "
-                "scorer teacher device"
+                "distillation_device='gpu' requires PyTorch to resolve a concrete scorer teacher device"
             ) from exc
     cuda = getattr(torch, "cuda", None)
-    cuda_available = bool(
-        getattr(cuda, "is_available", lambda: False)()
-    )
+    cuda_available = bool(getattr(cuda, "is_available", lambda: False)())
     if cuda_available:
         return "cuda"
     backends = getattr(torch, "backends", None)
     mps = getattr(backends, "mps", None)
-    mps_available = bool(
-        getattr(mps, "is_available", lambda: False)()
-    )
+    mps_available = bool(getattr(mps, "is_available", lambda: False)())
     if mps_available:
         return "mps"
     raise CompactRendererMlxSpineRunnerError(
-        "distillation_device='gpu' requested, but neither torch.cuda nor "
-        "torch.backends.mps is available"
+        "distillation_device='gpu' requested, but neither torch.cuda nor torch.backends.mps is available"
     )
 
 
@@ -1890,8 +1720,7 @@ def _resolve_mlx_prefilter_scorer_device_alias(
     }
     if raw not in aliases:
         raise CompactRendererMlxSpineRunnerError(
-            "mlx prefilter scorer device must resolve to MLX 'cpu' or 'gpu'; "
-            f"got {requested_device!r}"
+            f"mlx prefilter scorer device must resolve to MLX 'cpu' or 'gpu'; got {requested_device!r}"
         )
     return aliases[raw]
 
@@ -1913,9 +1742,7 @@ def adapt_pr95_mlx_report_to_spine(
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     report_path = _resolve(pr95_mlx_report_path, base=root)
     pr95_report = _load_json(report_path)
@@ -1975,19 +1802,14 @@ def adapt_pr95_mlx_report_to_spine(
             "pr95_mlx_report_path": report_path.as_posix(),
             "pr95_mlx_report_sha256": _sha256_file(report_path),
             "selected_checkpoint": _checkpoint_summary(checkpoint, base=root),
-            "pytorch_export_manifest_path": (
-                None if export_manifest_path is None else export_manifest_path.as_posix()
-            ),
+            "pytorch_export_manifest_path": (None if export_manifest_path is None else export_manifest_path.as_posix()),
             "spine_adapter_report_path": adapter_report["report_path"],
             "projection_manifest_paths": [projection_manifest.as_posix()],
             "acquisition_report_path": acquisition_path.as_posix(),
             "bounded_runner_plan_path": runner_plan_path.as_posix(),
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
             "selected_runner_rows": runner_plan["selected_runner_rows"],
             "blockers": _dedupe(
@@ -2025,27 +1847,20 @@ def adapt_pr95_stage8_report_to_spine(
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     report_path = _resolve_existing(pr95_stage8_report_path, base=root)
     stage8_report = _load_json(report_path)
-    archive_raw = (
-        stage8_report.get("candidate_archive_zip_path")
-        or (stage8_report.get("package_report") or {}).get("archive_zip_path")
+    archive_raw = stage8_report.get("candidate_archive_zip_path") or (stage8_report.get("package_report") or {}).get(
+        "archive_zip_path"
     )
     if not isinstance(archive_raw, str) or not archive_raw:
-        raise CompactRendererMlxSpineRunnerError(
-            "pr95_stage8_report_missing_candidate_archive_zip_path"
-        )
+        raise CompactRendererMlxSpineRunnerError("pr95_stage8_report_missing_candidate_archive_zip_path")
     archive = _resolve_existing(archive_raw, base=root)
     receiver_proof_report: dict[str, Any] | None = None
     receiver_proof_paths: list[Path] = []
     package_report = (
-        stage8_report.get("package_report")
-        if isinstance(stage8_report.get("package_report"), dict)
-        else {}
+        stage8_report.get("package_report") if isinstance(stage8_report.get("package_report"), dict) else {}
     )
     embedded_receiver_proof = (
         package_report.get("archive_bound_candidate_receiver_proof")
@@ -2110,8 +1925,7 @@ def adapt_pr95_stage8_report_to_spine(
     local_training = stage8_report.get("local_training_result")
     raw_result = (
         local_training.get("raw_result")
-        if isinstance(local_training, dict)
-        and isinstance(local_training.get("raw_result"), dict)
+        if isinstance(local_training, dict) and isinstance(local_training.get("raw_result"), dict)
         else {}
     )
     public_stage8_train_called = raw_result.get("public_stage8_train_stage_called")
@@ -2122,13 +1936,10 @@ def adapt_pr95_stage8_report_to_spine(
     ]
     if not mlx_profile_paths:
         blockers.append("full_video_mlx_scorer_replay_not_attached")
-    receiver_proof_passed = (
-        receiver_proof_report is not None
-        and (
-            receiver_proof_report.get("receiver_proof_valid") is True
-            or receiver_proof_report.get("runtime_consumption_proof_passed") is True
-            or receiver_proof_report.get("receiver_contract_satisfied") is True
-        )
+    receiver_proof_passed = receiver_proof_report is not None and (
+        receiver_proof_report.get("receiver_proof_valid") is True
+        or receiver_proof_report.get("runtime_consumption_proof_passed") is True
+        or receiver_proof_report.get("receiver_contract_satisfied") is True
     )
     if receiver_proof_report is None:
         blockers.append("receiver_proof_not_executed")
@@ -2156,32 +1967,25 @@ def adapt_pr95_stage8_report_to_spine(
             "candidate_archive_zip_bytes": archive.stat().st_size,
             "candidate_archive_zip_sha256": _sha256_file(archive),
             "projection_manifest_paths": [projection_manifest.as_posix()],
-            "receiver_proof_report_paths": [
-                path.as_posix() for path in receiver_proof_paths
-            ],
+            "receiver_proof_report_paths": [path.as_posix() for path in receiver_proof_paths],
             "receiver_proof_report": receiver_proof_report,
             "acquisition_report_path": acquisition_path.as_posix(),
             "bounded_runner_plan_path": runner_plan_path.as_posix(),
             "selected_runner_rows": runner_plan["selected_runner_rows"],
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
             "stage8_source_faithfulness": {
                 "schema": "pr95_stage8_source_faithfulness.v1",
                 "public_stage8_train_stage_called": public_stage8_train_called is True,
                 "source_faithful_training_complete": (
                     public_stage8_train_called is True
-                    and "stage8_zero_epoch_source_seed_packaged_no_training"
-                    not in stage8_blockers
-                    and "stage8_training_not_executed_plan_only"
-                    not in stage8_blockers
+                    and "stage8_zero_epoch_source_seed_packaged_no_training" not in stage8_blockers
+                    and "stage8_training_not_executed_plan_only" not in stage8_blockers
                 ),
                 "optimizer_semantics": "public_pr95_stage8_muon_adamw_source_code",
                 "score_authority": "none_until_exact_cpu_cuda",
             },
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
             "blockers": _dedupe(blockers),
         }
@@ -2225,9 +2029,7 @@ def execute_pr95_stage8_source_and_adapt(
     root = Path(repo_root).expanduser().resolve(strict=False)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     stage8_report = run_pr95_stage8_from_public_archive(
         source_archive_zip=_resolve_existing(source_archive_zip, base=root),
@@ -2241,9 +2043,7 @@ def execute_pr95_stage8_source_and_adapt(
         muon_weight_decay=float(stage8_muon_weight_decay),
         device=stage8_device,
         execute=True,
-        target_cache_path=None
-        if stage8_target_cache_path is None
-        else _resolve(stage8_target_cache_path, base=root),
+        target_cache_path=None if stage8_target_cache_path is None else _resolve(stage8_target_cache_path, base=root),
         build_target_cache_if_missing=bool(stage8_build_target_cache_if_missing),
         overwrite=True,
     )
@@ -2275,9 +2075,7 @@ def build_plan_only_report(
     root = Path(repo_root).expanduser().resolve(strict=False)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     report = _base_report(
         output_dir=out,
@@ -2321,9 +2119,7 @@ def execute_planner_gated_compact_family(
     root = Path(repo_root).expanduser().resolve(strict=False)
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     backend = COMPACT_FAMILY_BACKENDS[family]
     planner = _score_aware_carrier_training_plan(family, backend)
@@ -2358,12 +2154,9 @@ def execute_planner_gated_compact_family(
                 "num_pairs": int(num_pairs),
                 "epochs": int(epochs),
                 "hard_byte_ceilings": [int(value) for value in hard_byte_ceilings],
-                "mlx_profile_paths": [
-                    _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-                ],
+                "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
                 "hprc_queue_followup_report_paths": [
-                    _resolve(path, base=root).as_posix()
-                    for path in hprc_queue_followup_report_paths
+                    _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
                 ],
             },
             "score_aware_carrier_training_plan": planner,
@@ -2428,12 +2221,8 @@ def _resolve_execute_modelsize_candidate(
     if _modelsize_candidate_resolution_disabled(token):
         return None
     shared_targets = tuple(float(value) for value in target_modelsize_mparams)
-    hinerv_targets = _dedupe_float_tuple(
-        (*shared_targets, *tuple(float(v) for v in hinerv_target_modelsize_mparams))
-    )
-    snerv_targets = _dedupe_float_tuple(
-        (*shared_targets, *tuple(float(v) for v in snerv_official_modelsize_mparams))
-    )
+    hinerv_targets = _dedupe_float_tuple((*shared_targets, *tuple(float(v) for v in hinerv_target_modelsize_mparams)))
+    snerv_targets = _dedupe_float_tuple((*shared_targets, *tuple(float(v) for v in snerv_official_modelsize_mparams)))
     hinerv_auto_official_only = family == "hi_nerv" and token.lower() == "auto"
     if family == "hi_nerv":
         candidates = [
@@ -2441,12 +2230,8 @@ def _resolve_execute_modelsize_candidate(
             for row in enumerate_hinerv_modelsize_candidates(
                 hard_byte_ceilings=hard_byte_ceilings,
                 num_pairs=int(num_pairs),
-                use_hierarchical_feature_grid_options=(
-                    (True,) if hinerv_auto_official_only else (False, True)
-                ),
-                use_convnext_blocks_options=(
-                    (True,) if hinerv_auto_official_only else (False, True)
-                ),
+                use_hierarchical_feature_grid_options=((True,) if hinerv_auto_official_only else (False, True)),
+                use_convnext_blocks_options=((True,) if hinerv_auto_official_only else (False, True)),
                 target_modelsize_mparams=hinerv_targets,
             )
         ]
@@ -2467,9 +2252,7 @@ def _resolve_execute_modelsize_candidate(
                 modelsize_control_profile_id=str(snerv_modelsize_control_profile_id),
                 temporal_context=int(snerv_temporal_context),
                 temporal_modes=tuple(str(value) for value in snerv_temporal_modes),
-                official_skip_high_modes=tuple(
-                    str(value) for value in snerv_official_skip_high_modes
-                ),
+                official_skip_high_modes=tuple(str(value) for value in snerv_official_skip_high_modes),
             )
         ]
     else:
@@ -2477,9 +2260,7 @@ def _resolve_execute_modelsize_candidate(
             f"modelsize candidate resolution is only supported for hi_nerv/snerv; got {family!r}"
         )
     if not candidates:
-        raise CompactRendererMlxSpineRunnerError(
-            f"no {family} modelsize candidates were enumerated"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"no {family} modelsize candidates were enumerated")
     candidates = _attach_byte_cap_controller_predictions(
         candidates,
         family=family,
@@ -2487,47 +2268,25 @@ def _resolve_execute_modelsize_candidate(
     )
     if token.lower() == "auto":
         if family == "hi_nerv":
-            official_candidates = [
-                row
-                for row in candidates
-                if _hi_nerv_modelsize_candidate_has_official_controls(row)
-            ]
-            official_under = [
-                row
-                for row in official_candidates
-                if bool(row.get("nominal_under_ceiling"))
-            ]
+            official_candidates = [row for row in candidates if _hi_nerv_modelsize_candidate_has_official_controls(row)]
+            official_under = [row for row in official_candidates if bool(row.get("nominal_under_ceiling"))]
             if not official_under:
-                raise CompactRendererMlxSpineRunnerError(
-                    "hinerv_official_control_candidate_missing_under_ceiling"
-                )
+                raise CompactRendererMlxSpineRunnerError("hinerv_official_control_candidate_missing_under_ceiling")
             candidates = official_candidates
         if family == "hi_nerv" and hinerv_targets:
             target_candidates = [
-                row
-                for row in candidates
-                if row.get("capacity_source") == "local_hinerv_target_modelsize"
+                row for row in candidates if row.get("capacity_source") == "local_hinerv_target_modelsize"
             ]
             if target_candidates:
                 candidates = target_candidates
         if family == "snerv" and snerv_targets:
-            official_candidates = [
-                row
-                for row in candidates
-                if row.get("official_modelsize_solution") is not None
-            ]
+            official_candidates = [row for row in candidates if row.get("official_modelsize_solution") is not None]
             if official_candidates:
                 candidates = official_candidates
-        under = [
-            row
-            for row in candidates
-            if _byte_cap_controller_predicts_under_ceiling(row)
-        ]
+        under = [row for row in candidates if _byte_cap_controller_predicts_under_ceiling(row)]
         if under:
             tightest_ceiling = min(int(row["hard_byte_ceiling"]) for row in under)
-            tightest_under = [
-                row for row in under if int(row["hard_byte_ceiling"]) == tightest_ceiling
-            ]
+            tightest_under = [row for row in under if int(row["hard_byte_ceiling"]) == tightest_ceiling]
             if family == "hi_nerv" and hinerv_targets:
                 return min(
                     tightest_under,
@@ -2542,19 +2301,14 @@ def _resolve_execute_modelsize_candidate(
                 tightest_under,
                 key=lambda row: (
                     int(row["nominal_total_payload_bytes"]),
-                    -int(
-                        _byte_cap_controller_predicted_archive_bytes(row)
-                        or row["nominal_total_payload_bytes"]
-                    ),
+                    -int(_byte_cap_controller_predicted_archive_bytes(row) or row["nominal_total_payload_bytes"]),
                     int(row.get("capacity_source") == "local_hinerv_target_modelsize"),
                     int(row.get("official_modelsize_solution") is not None),
                     float(row.get("modelsize_mparams") or 0.0),
                     int(row.get("total_trainable_params", 0)),
                 ),
             )
-        calibrated_rows = [
-            row for row in candidates if _byte_cap_controller_has_observation(row)
-        ]
+        calibrated_rows = [row for row in candidates if _byte_cap_controller_has_observation(row)]
         if calibrated_rows:
             best = min(
                 calibrated_rows,
@@ -2581,9 +2335,7 @@ def _resolve_execute_modelsize_candidate(
                 int(row["hard_byte_ceiling"]),
             ),
         )
-        predicted_archive_bytes = _byte_cap_controller_predicted_archive_bytes(
-            best_uncalibrated
-        )
+        predicted_archive_bytes = _byte_cap_controller_predicted_archive_bytes(best_uncalibrated)
         hard_byte_ceiling = int(best_uncalibrated["hard_byte_ceiling"])
         normalized_snerv_adapter = (
             normalize_snerv_model_size_adapter(snerv_model_size_adapter)
@@ -2603,27 +2355,19 @@ def _resolve_execute_modelsize_candidate(
             and near_cap_over_ratio <= 1.10
         )
         generic_measured_feedback_near_cap = bool(
-            family in {"hi_nerv", "snerv"}
-            and near_cap_over_ratio is not None
-            and 1.0 < near_cap_over_ratio <= 1.01
+            family in {"hi_nerv", "snerv"} and near_cap_over_ratio is not None and 1.0 < near_cap_over_ratio <= 1.01
         )
         if snerv_spectra_near_cap or generic_measured_feedback_near_cap:
             near_cap = dict(best_uncalibrated)
-            near_cap[
-                "modelsize_auto_selection_requires_measured_archive_feedback"
-            ] = True
+            near_cap["modelsize_auto_selection_requires_measured_archive_feedback"] = True
             near_cap["modelsize_auto_selection_warning"] = (
                 "snerv_spectra_adapter_uncalibrated_near_cap_candidate"
                 if snerv_spectra_near_cap
                 else f"{family}_uncalibrated_near_cap_candidate_requires_archive_measurement"
             )
-            near_cap["modelsize_auto_selection_predicted_archive_bytes"] = int(
-                predicted_archive_bytes
-            )
+            near_cap["modelsize_auto_selection_predicted_archive_bytes"] = int(predicted_archive_bytes)
             near_cap["modelsize_auto_selection_hard_byte_ceiling"] = hard_byte_ceiling
-            near_cap["modelsize_auto_selection_over_cap_ratio"] = (
-                near_cap_over_ratio
-            )
+            near_cap["modelsize_auto_selection_over_cap_ratio"] = near_cap_over_ratio
             near_cap["promotion_eligible"] = False
             near_cap["ready_for_exact_eval_dispatch"] = False
             near_cap["score_claim"] = False
@@ -2698,14 +2442,8 @@ def _effective_snerv_modelsize_adapter_for_resolution(args: argparse.Namespace) 
     graph and fail only after campaign startup.
     """
 
-    raw_explicit_adapter = str(
-        getattr(args, "snerv_model_size_adapter", "") or ""
-    ).strip()
-    explicit_adapter = (
-        normalize_snerv_model_size_adapter(raw_explicit_adapter)
-        if raw_explicit_adapter
-        else ""
-    )
+    raw_explicit_adapter = str(getattr(args, "snerv_model_size_adapter", "") or "").strip()
+    explicit_adapter = normalize_snerv_model_size_adapter(raw_explicit_adapter) if raw_explicit_adapter else ""
     spectra_requested = bool(getattr(args, "snerv_spectra_preserving_adapter", False))
     if spectra_requested:
         if explicit_adapter and explicit_adapter != SNERV_SPECTRA_PRESERVING_ADAPTER:
@@ -2735,10 +2473,7 @@ def _snerv_auto_skip_high_modes_for_resolution(
 
     if explicit_mode is not None:
         return (str(explicit_mode),)
-    if (
-        normalize_snerv_model_size_adapter(str(model_size_adapter))
-        == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-    ):
+    if normalize_snerv_model_size_adapter(str(model_size_adapter)) == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER:
         return ("scalar_mean", "channel_mean", "shared_mean")
     return ("full",)
 
@@ -2768,9 +2503,7 @@ def _snerv_official_modelsize_candidate_resolution_blockers(
 
     if getattr(args, "execute_family", None) != "snerv":
         return []
-    if not _modelsize_candidate_resolution_disabled(
-        getattr(args, "modelsize_candidate_id", "auto")
-    ):
+    if not _modelsize_candidate_resolution_disabled(getattr(args, "modelsize_candidate_id", "auto")):
         return []
     flag_attrs = (
         ("--target-modelsize-mparams", "target_modelsize_mparams"),
@@ -2792,8 +2525,7 @@ def _snerv_official_modelsize_candidate_resolution_blockers(
     )
     if profile != DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID:
         blockers.append(
-            "snerv_official_modelsize_control_requires_candidate_resolution:"
-            "--snerv-modelsize-control-profile"
+            "snerv_official_modelsize_control_requires_candidate_resolution:--snerv-modelsize-control-profile"
         )
     return blockers
 
@@ -2872,13 +2604,9 @@ def _byte_cap_controller_prediction(
             nominal_payload_bytes=int(nominal),
             observations=observations,
         )
-        residual_guard_bytes = _byte_cap_leave_one_out_underprediction_margin(
-            observations
-        )
+        residual_guard_bytes = _byte_cap_leave_one_out_underprediction_margin(observations)
         predicted += residual_guard_bytes
-        prediction_rule = (
-            "max_observed_archive_to_nominal_ratio_or_additive_overhead_plus_loo_residual_guard"
-        )
+        prediction_rule = "max_observed_archive_to_nominal_ratio_or_additive_overhead_plus_loo_residual_guard"
     calibrated_prediction = bool(observations and not blockers)
     headroom = None
     if predicted is not None and ceiling is not None:
@@ -2946,11 +2674,7 @@ def _byte_cap_leave_one_out_underprediction_margin(
         return 0
     worst = 0
     for index, row in enumerate(observations):
-        peers = [
-            peer
-            for peer_index, peer in enumerate(observations)
-            if peer_index != index
-        ]
+        peers = [peer for peer_index, peer in enumerate(observations) if peer_index != index]
         if not peers:
             continue
         nominal = int(row["nominal_payload_bytes"])
@@ -3052,9 +2776,7 @@ def _byte_cap_calibration(
     return {
         "schema": "compact_modelsize_byte_cap_calibration.v1",
         "family": str(family),
-        "calibration_source": (
-            "measured_archive_feedback_rows" if observations else "none"
-        ),
+        "calibration_source": ("measured_archive_feedback_rows" if observations else "none"),
         "observation_count": len(observations),
         "rejected_feedback_row_count": len(rejected_rows),
         "rejected_feedback_rows": rejected_rows,
@@ -3071,33 +2793,22 @@ def _byte_cap_matching_observations(
     candidate: Mapping[str, Any],
     codec: str | None,
 ) -> list[dict[str, Any]]:
-    observations = [
-        dict(row)
-        for row in calibration.get("observations", ())
-        if isinstance(row, Mapping)
-    ]
+    observations = [dict(row) for row in calibration.get("observations", ()) if isinstance(row, Mapping)]
     candidate_id = str(candidate.get("candidate_id") or "")
     if candidate_id:
-        exact_id = [
-            row
-            for row in observations
-            if str(row.get("candidate_id") or "") == candidate_id
-        ]
+        exact_id = [row for row in observations if str(row.get("candidate_id") or "") == candidate_id]
         if exact_id:
             return exact_id
     target_controls = _byte_cap_candidate_match_controls(candidate)
     exact_controls = [
-        row
-        for row in observations
-        if _byte_cap_controls_match(row.get("source_bound_controls"), target_controls)
+        row for row in observations if _byte_cap_controls_match(row.get("source_bound_controls"), target_controls)
     ]
     if exact_controls:
         return exact_controls
     scoped_rows = [
         row
         for row in observations
-        if row.get("candidate_id")
-        or _byte_cap_controls_are_candidate_scoped(row.get("source_bound_controls"))
+        if row.get("candidate_id") or _byte_cap_controls_are_candidate_scoped(row.get("source_bound_controls"))
     ]
     if scoped_rows:
         return []
@@ -3247,9 +2958,7 @@ def _truthy_any(row: Mapping[str, Any], keys: Sequence[str]) -> bool:
 def _hi_nerv_modelsize_candidate_has_official_controls(row: Mapping[str, Any]) -> bool:
     """Return whether a candidate enables the official HiNeRV control spine."""
 
-    return bool(row.get("use_hierarchical_feature_grid")) and bool(
-        row.get("use_convnext_blocks")
-    )
+    return bool(row.get("use_hierarchical_feature_grid")) and bool(row.get("use_convnext_blocks"))
 
 
 def _resolve_hi_nerv_latent_codec_policy(
@@ -3296,11 +3005,7 @@ def _resolve_hi_nerv_decoder_codec_policy(
 
     requested = str(requested_decoder_codec).strip() or "portfolio_auto"
     candidate_mapping = dict(candidate or {})
-    candidate_codec = (
-        str(candidate_mapping.get("decoder_codec") or "")
-        if candidate_mapping
-        else None
-    )
+    candidate_codec = str(candidate_mapping.get("decoder_codec") or "") if candidate_mapping else None
     direct_live_weights = (
         float(segnet_direct_live_distillation_weight),
         float(segnet_direct_live_class_histogram_weight),
@@ -3337,19 +3042,13 @@ def _resolve_hi_nerv_decoder_codec_policy(
         "requested_decoder_codec": requested,
         "resolved_decoder_codec": resolved,
         "portfolio_auto_intervened": portfolio_intervened,
-        "post_export_receiver_cache_quality_gate": bool(
-            post_export_receiver_cache_quality_gate
-        ),
+        "post_export_receiver_cache_quality_gate": bool(post_export_receiver_cache_quality_gate),
         "scorer_active": scorer_active,
         "explicit_pin": explicit_pin,
         "policy": (
             "score_preserving_receiver_survival_portfolio_under_byte_cap"
             if portfolio_intervened
-            else (
-                "explicit_single_codec_ablation"
-                if explicit_pin
-                else "requested_codec"
-            )
+            else ("explicit_single_codec_ablation" if explicit_pin else "requested_codec")
         ),
         "score_claim": False,
         "promotion_eligible": False,
@@ -3456,12 +3155,10 @@ def _modelsize_candidate_from_self_describing_id(
             convnext_mlp_ratio=int(match.group("convnext_mlp_ratio") or 2),
             convnext_kernel_size=int(match.group("convnext_kernel_size") or 7),
             mid_injection_block_index=int(
-                match.group("mid_injection_block_index")
-                or HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX
+                match.group("mid_injection_block_index") or HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX
             ),
             fine_injection_block_index=int(
-                match.group("fine_injection_block_index")
-                or HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX
+                match.group("fine_injection_block_index") or HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX
             ),
         )
         target_modelsize = match.group("target_modelsize")
@@ -3490,72 +3187,40 @@ def _modelsize_candidate_from_self_describing_id(
             return None
         groups = matched.groupdict()
         parsed_bits_per_coeff = _float_token(matched.group("bits_per_coeff"))
-        parsed_step_map_bits_per_coeff = _float_token(
-            matched.group("step_map_bits_per_coeff")
-        )
+        parsed_step_map_bits_per_coeff = _float_token(matched.group("step_map_bits_per_coeff"))
         parsed_adapter = (
             snerv_model_size_adapter_from_id_token(matched.group("adapter_token"))
             if "adapter_token" in groups
             else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
         )
         parsed_official_modelsize_mparams = (
-            _float_token(groups["official_modelsize"])
-            if groups.get("official_modelsize") is not None
-            else None
+            _float_token(groups["official_modelsize"]) if groups.get("official_modelsize") is not None else None
         )
         parsed_temporal_mode = (
             snerv_temporal_mode_from_id_token(groups["temporal_mode_token"])
             if groups.get("temporal_mode_token") is not None
             else "delta"
         )
-        parsed_official_skip_high_mode_token = groups.get(
-            "official_skip_high_mode_token"
-        )
+        parsed_official_skip_high_mode_token = groups.get("official_skip_high_mode_token")
         parsed_official_skip_high_mode = _snerv_official_skip_high_mode_from_id_token(
             parsed_official_skip_high_mode_token
         )
         row = analyze_snerv_modelsize_candidate(
             hard_byte_ceiling=int(matched.group("hard_byte_ceiling")),
             num_pairs=int(matched.group("num_pairs")),
-            wavelet=(
-                matched.group("wavelet")
-                if "wavelet" in matched.groupdict()
-                else "db2"
-            ),
+            wavelet=(matched.group("wavelet") if "wavelet" in matched.groupdict() else "db2"),
             levels=int(matched.group("levels")),
             bits_per_coeff=parsed_bits_per_coeff,
             step_map_bits_per_coeff=parsed_step_map_bits_per_coeff,
             decoder_payload_codec=matched.group("decoder_payload_codec"),
-            fc_dim=(
-                int(matched.group("fc_dim"))
-                if "fc_dim" in matched.groupdict()
-                else 9
-            ),
-            emb_size=(
-                int(matched.group("emb_size"))
-                if "emb_size" in groups
-                else 0
-            ),
-            patch_radius=(
-                int(matched.group("patch_radius"))
-                if "patch_radius" in groups
-                else 1
-            ),
+            fc_dim=(int(matched.group("fc_dim")) if "fc_dim" in matched.groupdict() else 9),
+            emb_size=(int(matched.group("emb_size")) if "emb_size" in groups else 0),
+            patch_radius=(int(matched.group("patch_radius")) if "patch_radius" in groups else 1),
             mfu_scales=(
-                tuple(int(v) for v in matched.group("mfu_scales").split("-"))
-                if "mfu_scales" in groups
-                else (1, 2, 4)
+                tuple(int(v) for v in matched.group("mfu_scales").split("-")) if "mfu_scales" in groups else (1, 2, 4)
             ),
-            hfr_gain=(
-                _float_token(matched.group("hfr_gain"))
-                if "hfr_gain" in groups
-                else 0.0
-            ),
-            temporal_context=(
-                int(matched.group("temporal_context"))
-                if "temporal_context" in groups
-                else 0
-            ),
+            hfr_gain=(_float_token(matched.group("hfr_gain")) if "hfr_gain" in groups else 0.0),
+            temporal_context=(int(matched.group("temporal_context")) if "temporal_context" in groups else 0),
             temporal_mode=parsed_temporal_mode,
             snerv_model_size_adapter=parsed_adapter,
             official_modelsize_mparams=parsed_official_modelsize_mparams,
@@ -3585,28 +3250,20 @@ def _modelsize_candidate_from_self_describing_id(
                 official_modelsize_mparams=parsed_official_modelsize_mparams,
             )
             if (
-                str(row.get("snerv_model_size_adapter"))
-                == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+                str(row.get("snerv_model_size_adapter")) == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
                 and requested_bit_id == token
             ):
                 row["canonical_candidate_id"] = row["candidate_id"]
                 row["candidate_id"] = token
                 row["legacy_requested_lf_bit_candidate_id"] = True
-                row["requested_bits_per_coeff_from_candidate_id"] = float(
-                    parsed_bits_per_coeff
-                )
-                row["requested_step_map_bits_per_coeff_from_candidate_id"] = float(
-                    parsed_step_map_bits_per_coeff
-                )
+                row["requested_bits_per_coeff_from_candidate_id"] = float(parsed_bits_per_coeff)
+                row["requested_step_map_bits_per_coeff_from_candidate_id"] = float(parsed_step_map_bits_per_coeff)
                 row["bits_per_coeff"] = float(parsed_bits_per_coeff)
-                row["step_map_bits_per_coeff"] = float(
-                    parsed_step_map_bits_per_coeff
-                )
+                row["step_map_bits_per_coeff"] = float(parsed_step_map_bits_per_coeff)
             else:
                 return None
         if (
-            str(row.get("snerv_model_size_adapter"))
-            == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+            str(row.get("snerv_model_size_adapter")) == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
             and parsed_official_skip_high_mode_token is None
             and str(row.get("official_skip_high_mode")) == "full"
         ):
@@ -3675,9 +3332,7 @@ def _resolve_snerv_execution_fc_dim_with_source(
         ("modelsize_mparams", "official_modelsize_mparams"),
     )
     if modelsize is not None:
-        carrier_hw = _int_tuple_from_candidate_value(
-            candidate.get("carrier_hw") or (384, 512)
-        )
+        carrier_hw = _int_tuple_from_candidate_value(candidate.get("carrier_hw") or (384, 512))
         profile = candidate.get("modelsize_control_profile")
         enc_strds = candidate.get("enc_strds", candidate.get("official_enc_strds"))
         dec_strds = candidate.get("dec_strds", candidate.get("official_dec_strds"))
@@ -3694,15 +3349,9 @@ def _resolve_snerv_execution_fc_dim_with_source(
                     final_size=int(carrier_hw[0]) * int(carrier_hw[1]),
                     enc_strds=enc_tuple,
                     dec_strds=dec_tuple,
-                    ks=_int_tuple_from_candidate_value(
-                        candidate.get("ks", (0, 1, 5))
-                    ),
-                    enc_dim=_float_tuple_from_candidate_value(
-                        candidate.get("enc_dim", (64.0, 16.0))
-                    ),
-                    emb_size=int(
-                        candidate.get("emb_size", candidate.get("snerv_emb_size", 0))
-                    ),
+                    ks=_int_tuple_from_candidate_value(candidate.get("ks", (0, 1, 5))),
+                    enc_dim=_float_tuple_from_candidate_value(candidate.get("enc_dim", (64.0, 16.0))),
+                    emb_size=int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0))),
                     reduce=float(candidate.get("reduce", 1.2)),
                     lower_width=int(candidate.get("lower_width", 12)),
                     saturate_stages=int(candidate.get("saturate_stages", -1)),
@@ -3867,14 +3516,8 @@ def _run_snerv_scorer_loop_qat_attachment(
             "lf_payload_codec": str(lf_payload_codec),
             "perturb_scale": float(perturb_scale),
             "byte_pressure_multiplier": float(byte_pressure_multiplier),
-            "section_value_pressure_multiplier": float(
-                section_value_pressure_multiplier
-            ),
-            "max_archive_byte_growth": (
-                None
-                if max_archive_byte_growth is None
-                else int(max_archive_byte_growth)
-            ),
+            "section_value_pressure_multiplier": float(section_value_pressure_multiplier),
+            "max_archive_byte_growth": (None if max_archive_byte_growth is None else int(max_archive_byte_growth)),
             "byte_growth_admission_mode": str(byte_growth_admission_mode),
             "pose_slack": float(pose_slack),
             "seg_slack": float(seg_slack),
@@ -3901,9 +3544,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             pair_stride=int(pair_stride),
             start_pair=int(start_pair),
             pair_indices=(
-                tuple(int(value) for value in prioritized_pair_indices)
-                if prioritized_pair_indices
-                else None
+                tuple(int(value) for value in prioritized_pair_indices) if prioritized_pair_indices else None
             ),
             upstream_dir=Path(upstream_dir).as_posix(),
             video_path=Path(source_video_path).as_posix(),
@@ -3926,27 +3567,17 @@ def _run_snerv_scorer_loop_qat_attachment(
             perturb_scale=float(perturb_scale),
             byte_pressure_multiplier=float(byte_pressure_multiplier),
             section_value_pressure_multiplier=float(section_value_pressure_multiplier),
-            max_archive_byte_growth=(
-                None
-                if max_archive_byte_growth is None
-                else int(max_archive_byte_growth)
-            ),
+            max_archive_byte_growth=(None if max_archive_byte_growth is None else int(max_archive_byte_growth)),
             byte_growth_admission_mode=str(byte_growth_admission_mode),
             pose_slack=float(pose_slack),
             seg_slack=float(seg_slack),
-            pair_guard_min_score_improved_fraction=float(
-                pair_guard_min_score_improved_fraction
-            ),
-            pair_guard_max_pose_worsened_fraction=float(
-                pair_guard_max_pose_worsened_fraction
-            ),
+            pair_guard_min_score_improved_fraction=float(pair_guard_min_score_improved_fraction),
+            pair_guard_max_pose_worsened_fraction=float(pair_guard_max_pose_worsened_fraction),
             component_guard_mode=str(component_guard_mode),
             seed=int(seed),
             progress_callback=_snerv_scorer_loop_progress_callback(progress_path),
         )
-        result_payload = (
-            result.as_jsonable() if hasattr(result, "as_jsonable") else dict(result)
-        )
+        result_payload = result.as_jsonable() if hasattr(result, "as_jsonable") else dict(result)
         blockers = list(result_payload.get("blockers") or [])
         if int(num_pairs) < CONTEST_PAIR_COUNT:
             blockers.append("snerv_scorer_loop_qat_partial_pair_coverage")
@@ -3956,10 +3587,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             "requested": True,
             "axis_tag": "[macOS-CPU advisory]",
             "n_pairs": int(num_pairs),
-            "source_pair_indices": [
-                int(value)
-                for value in result_payload.get("source_pair_indices") or []
-            ],
+            "source_pair_indices": [int(value) for value in result_payload.get("source_pair_indices") or []],
             "prioritized_pair_training": {
                 "schema": "compact_snerv_prioritized_pair_training.v1",
                 "enabled": bool(prioritized_pair_indices),
@@ -3982,51 +3610,29 @@ def _run_snerv_scorer_loop_qat_attachment(
             "snerv_temporal_context": int(snerv_temporal_context),
             "snerv_temporal_mode": str(snerv_temporal_mode),
             "qat_bits": int(qat_bits),
-            "lf_payload_codec": str(
-                result_payload.get("lf_payload_codec") or lf_payload_codec
-            ),
+            "lf_payload_codec": str(result_payload.get("lf_payload_codec") or lf_payload_codec),
             "max_trials": int(max_trials),
             "search_mode": str(search_mode),
-            "component_guard_mode": str(
-                result_payload.get("component_guard_mode") or component_guard_mode
-            ),
+            "component_guard_mode": str(result_payload.get("component_guard_mode") or component_guard_mode),
             "perturb_scale": float(perturb_scale),
             "byte_pressure_multiplier": float(byte_pressure_multiplier),
-            "section_value_pressure_multiplier": float(
-                section_value_pressure_multiplier
-            ),
-            "max_archive_byte_growth": (
-                None
-                if max_archive_byte_growth is None
-                else int(max_archive_byte_growth)
-            ),
+            "section_value_pressure_multiplier": float(section_value_pressure_multiplier),
+            "max_archive_byte_growth": (None if max_archive_byte_growth is None else int(max_archive_byte_growth)),
             "byte_growth_admission_mode": str(byte_growth_admission_mode),
             "pose_slack": float(pose_slack),
             "seg_slack": float(seg_slack),
             "seed": int(seed),
-            "pair_robust_admission": result_payload.get(
-                "pair_robust_admission"
-            ),
+            "pair_robust_admission": result_payload.get("pair_robust_admission"),
             "result": result_payload,
-            "accepted_improvement": bool(
-                result_payload.get("accepted_improvement")
-            ),
-            "receiver_contract_satisfied": bool(
-                result_payload.get("receiver_contract_satisfied")
-            ),
-            "ready_for_pose_guard_gate": bool(
-                result_payload.get("ready_for_pose_guard_gate")
-            ),
+            "accepted_improvement": bool(result_payload.get("accepted_improvement")),
+            "receiver_contract_satisfied": bool(result_payload.get("receiver_contract_satisfied")),
+            "ready_for_pose_guard_gate": bool(result_payload.get("ready_for_pose_guard_gate")),
             "improvement_score_delta": result_payload.get("improvement_score_delta"),
             "improvement_d_pose_delta": result_payload.get("improvement_d_pose_delta"),
             "improvement_d_seg_delta": result_payload.get("improvement_d_seg_delta"),
-            "scorer_loop_evaluations": result_payload.get(
-                "scorer_loop_evaluations"
-            ),
+            "scorer_loop_evaluations": result_payload.get("scorer_loop_evaluations"),
             "progress_jsonl_path": progress_path.as_posix(),
-            "progress_jsonl_sha256": (
-                _sha256_file(progress_path) if progress_path.is_file() else None
-            ),
+            "progress_jsonl_sha256": (_sha256_file(progress_path) if progress_path.is_file() else None),
             "blockers": _dedupe(blockers),
             "score_claim": False,
             "promotion_eligible": False,
@@ -4098,11 +3704,7 @@ def _run_snerv_score_aware_long_training_scorer_tether_gate(
             ],
             **FALSE_AUTHORITY,
         }
-    blockers = [
-        str(blocker)
-        for blocker in report.get("blockers") or []
-        if str(blocker)
-    ]
+    blockers = [str(blocker) for blocker in report.get("blockers") or [] if str(blocker)]
     if report.get("passed") is not True:
         blockers.insert(0, "snerv_scorer_tether_smoke_failed_before_long_training")
     payload = {
@@ -4137,11 +3739,7 @@ def _snerv_score_aware_long_training_required_control_contract(
 ) -> dict[str, Any]:
     """Require configured SNeRV scorer-domain controls to appear in telemetry."""
 
-    telemetry = (
-        training_telemetry_contract
-        if isinstance(training_telemetry_contract, Mapping)
-        else None
-    )
+    telemetry = training_telemetry_contract if isinstance(training_telemetry_contract, Mapping) else None
     definitions = (
         {
             "control_id": "scorer_input_distribution_guard",
@@ -4209,13 +3807,8 @@ def _snerv_score_aware_long_training_required_control_contract(
         bound = bool(score_aware_long_training.get(bound_key) is True)
         expected_key = str(definition["expected_key"])
         observed_keys = tuple(str(key) for key in definition["observed_keys"])
-        telemetry_expected = bool(
-            telemetry is not None and telemetry.get(expected_key) is True
-        )
-        observed = {
-            key: bool(telemetry is not None and telemetry.get(key) is True)
-            for key in observed_keys
-        }
+        telemetry_expected = bool(telemetry is not None and telemetry.get(expected_key) is True)
+        observed = {key: bool(telemetry is not None and telemetry.get(key) is True) for key in observed_keys}
         telemetry_observed = bool(telemetry_expected and all(observed.values()))
         control_passed = bool(not required or (bound and telemetry_observed))
         controls[control_id] = {
@@ -4232,21 +3825,13 @@ def _snerv_score_aware_long_training_required_control_contract(
         if not required:
             continue
         if not bound:
-            blockers.append(
-                f"snerv_score_aware_long_training_{control_id}_required_control_not_bound"
-            )
+            blockers.append(f"snerv_score_aware_long_training_{control_id}_required_control_not_bound")
         if telemetry is None:
-            blockers.append(
-                "snerv_score_aware_long_training_required_control_telemetry_contract_missing"
-            )
+            blockers.append("snerv_score_aware_long_training_required_control_telemetry_contract_missing")
         elif telemetry.get("passed") is not True:
-            blockers.append(
-                "snerv_score_aware_long_training_required_control_telemetry_contract_failed"
-            )
+            blockers.append("snerv_score_aware_long_training_required_control_telemetry_contract_failed")
         elif not telemetry_observed:
-            blockers.append(
-                f"snerv_score_aware_long_training_{control_id}_required_telemetry_missing"
-            )
+            blockers.append(f"snerv_score_aware_long_training_{control_id}_required_telemetry_missing")
     blockers = _dedupe(blockers)
     return {
         "schema": "snerv_score_aware_long_training_required_control_contract.v1",
@@ -4267,13 +3852,7 @@ def _snerv_score_aware_long_training_artifact_path(
             return Path(raw).expanduser().resolve(strict=False)
     telemetry_path = score_aware_long_training.get("telemetry_path")
     if isinstance(telemetry_path, str) and telemetry_path:
-        return (
-            Path(telemetry_path)
-            .expanduser()
-            .resolve(strict=False)
-            .parent
-            / "training_artifact.json"
-        )
+        return Path(telemetry_path).expanduser().resolve(strict=False).parent / "training_artifact.json"
     return None
 
 
@@ -4282,9 +3861,7 @@ def _write_snerv_runner_crux_trace(
     artifact: dict[str, Any],
     score_aware_long_training: dict[str, Any],
 ) -> dict[str, Any]:
-    training_artifact_path = _snerv_score_aware_long_training_artifact_path(
-        score_aware_long_training
-    )
+    training_artifact_path = _snerv_score_aware_long_training_artifact_path(score_aware_long_training)
     if training_artifact_path is None:
         return {
             "schema": "snerv_runner_crux_trace_attachment.v1",
@@ -4400,32 +3977,21 @@ def _run_snerv_native_mlx_export_attachment(
     | None = HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
     score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop: float
     | None = HI_NERV_SEGNET_TARGET_CLASS_MAX_RATIO_DROP_FOR_STEP_GUARD,
-    score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio: float
-    | None = 4.25,
-    score_aware_long_training_scorer_space_step_guard_max_post_segnet_distribution_mae: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_post_segnet_argmax_disagreement: float
-    | None = 0.5,
-    score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening: float
-    | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = 4.25,
+    score_aware_long_training_scorer_space_step_guard_max_post_segnet_distribution_mae: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = 0.5,
+    score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening: float | None = None,
     score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening: float
     | None = None,
     score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening: float
     | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening: float
-    | None = None,
-    score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening: float
-    | None = 5.0,
+    score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening: float | None = None,
+    score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening: float | None = 5.0,
     score_aware_long_training_scorer_space_step_guard_backtracking_steps: int = 6,
     score_aware_long_training_scorer_space_step_guard_backtracking_shrink: float = 0.5,
     score_aware_long_training_loss_weights: Mapping[str, float] | None = None,
@@ -4505,10 +4071,7 @@ def _run_snerv_native_mlx_export_attachment(
             required=int(score_aware_long_training_epochs) > 0,
             steps=int(score_aware_long_training_scorer_tether_smoke_steps),
         )
-        if (
-            int(score_aware_long_training_epochs) > 0
-            and scorer_tether_gate.get("passed") is not True
-        ):
+        if int(score_aware_long_training_epochs) > 0 and scorer_tether_gate.get("passed") is not True:
             payload = {
                 "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
                 "executed": False,
@@ -4545,31 +4108,20 @@ def _run_snerv_native_mlx_export_attachment(
             repo_root=Path(repo_root),
             run_archive_export=True,
             pair_indices=None,
-            prioritized_pair_indices=tuple(
-                int(value) for value in prioritized_pair_indices
-            ),
+            prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
             scorer_error_pair_sampling_weights={
-                int(pair): float(weight)
-                for pair, weight in dict(
-                    scorer_error_pair_sampling_weights or {}
-                ).items()
+                int(pair): float(weight) for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
             },
-            scorer_error_pair_curriculum=dict(
-                scorer_error_pair_curriculum or {}
-            ),
+            scorer_error_pair_curriculum=dict(scorer_error_pair_curriculum or {}),
             retain_receiver_output=bool(retain_receiver_output),
             receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
             run_scorer_loop_qat=bool(run_scorer_loop_qat),
             scorer_loop_qat_max_trials=int(scorer_loop_qat_max_trials),
             scorer_loop_qat_search_mode=str(scorer_loop_qat_search_mode),
             scorer_loop_qat_qat_bits=int(scorer_loop_qat_qat_bits),
-            scorer_loop_qat_decoder_payload_codec=str(
-                scorer_loop_qat_decoder_payload_codec
-            ),
+            scorer_loop_qat_decoder_payload_codec=str(scorer_loop_qat_decoder_payload_codec),
             scorer_loop_qat_lf_payload_codec=str(scorer_loop_qat_lf_payload_codec),
-            scorer_loop_qat_component_guard_mode=str(
-                scorer_loop_qat_component_guard_mode
-            ),
+            scorer_loop_qat_component_guard_mode=str(scorer_loop_qat_component_guard_mode),
             scorer_loop_qat_pair_guard_min_score_improved_fraction=float(
                 scorer_loop_qat_pair_guard_min_score_improved_fraction
             ),
@@ -4578,20 +4130,14 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             scorer_loop_qat_device=str(scorer_loop_qat_device),
             scorer_loop_qat_perturb_scale=float(scorer_loop_qat_perturb_scale),
-            scorer_loop_qat_byte_pressure_multiplier=float(
-                scorer_loop_qat_byte_pressure_multiplier
-            ),
-            scorer_loop_qat_section_value_pressure_multiplier=float(
-                scorer_loop_qat_section_value_pressure_multiplier
-            ),
+            scorer_loop_qat_byte_pressure_multiplier=float(scorer_loop_qat_byte_pressure_multiplier),
+            scorer_loop_qat_section_value_pressure_multiplier=float(scorer_loop_qat_section_value_pressure_multiplier),
             scorer_loop_qat_max_archive_byte_growth=(
                 None
                 if scorer_loop_qat_max_archive_byte_growth is None
                 else int(scorer_loop_qat_max_archive_byte_growth)
             ),
-            scorer_loop_qat_byte_growth_admission_mode=str(
-                scorer_loop_qat_byte_growth_admission_mode
-            ),
+            scorer_loop_qat_byte_growth_admission_mode=str(scorer_loop_qat_byte_growth_admission_mode),
             scorer_loop_qat_pose_slack=float(scorer_loop_qat_pose_slack),
             scorer_loop_qat_seg_slack=float(scorer_loop_qat_seg_slack),
             scorer_loop_qat_seed=int(scorer_loop_qat_seed),
@@ -4609,15 +4155,11 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             score_aware_long_training_epochs=int(score_aware_long_training_epochs),
             score_aware_long_training_lr=float(score_aware_long_training_lr),
-            score_aware_long_training_batch_pairs=int(
-                score_aware_long_training_batch_pairs
-            ),
+            score_aware_long_training_batch_pairs=int(score_aware_long_training_batch_pairs),
             score_aware_long_training_section_byte_refresh_every_steps=int(
                 score_aware_long_training_section_byte_refresh_every_steps
             ),
-            score_aware_long_training_optimizer=str(
-                score_aware_long_training_optimizer
-            ),
+            score_aware_long_training_optimizer=str(score_aware_long_training_optimizer),
             score_aware_long_training_grad_clip_max_norm=(
                 None
                 if score_aware_long_training_grad_clip_max_norm is None
@@ -4628,9 +4170,7 @@ def _run_snerv_native_mlx_export_attachment(
                 if score_aware_long_training_weight_decay is None
                 else float(score_aware_long_training_weight_decay)
             ),
-            score_aware_long_training_eval_roundtrip_ste=bool(
-                score_aware_long_training_eval_roundtrip_ste
-            ),
+            score_aware_long_training_eval_roundtrip_ste=bool(score_aware_long_training_eval_roundtrip_ste),
             score_aware_long_training_scorer_input_distribution_guard_weight=float(
                 score_aware_long_training_scorer_input_distribution_guard_weight
             ),
@@ -4727,12 +4267,8 @@ def _run_snerv_native_mlx_export_attachment(
             score_aware_long_training_scorer_space_step_guard_backtracking_shrink=float(
                 score_aware_long_training_scorer_space_step_guard_backtracking_shrink
             ),
-            score_aware_long_training_loss_weights=(
-                dict(score_aware_long_training_loss_weights or {})
-            ),
-            score_aware_long_training_pose_warmup_epochs=int(
-                score_aware_long_training_pose_warmup_epochs
-            ),
+            score_aware_long_training_loss_weights=(dict(score_aware_long_training_loss_weights or {})),
+            score_aware_long_training_pose_warmup_epochs=int(score_aware_long_training_pose_warmup_epochs),
             score_aware_long_training_scorer_input_shape_warmup_epochs=int(
                 score_aware_long_training_scorer_input_shape_warmup_epochs
             ),
@@ -4742,60 +4278,32 @@ def _run_snerv_native_mlx_export_attachment(
             score_aware_long_training_segnet_direct_live_escape_class_multiplier=float(
                 score_aware_long_training_segnet_direct_live_escape_class_multiplier
             ),
-            score_aware_long_training_checkpoint_retention_keep_last_n=(
-                checkpoint_retention_keep_last_n
-            ),
-            score_aware_long_training_checkpoint_retention_keep_best_n=(
-                checkpoint_retention_keep_best_n
-            ),
+            score_aware_long_training_checkpoint_retention_keep_last_n=(checkpoint_retention_keep_last_n),
+            score_aware_long_training_checkpoint_retention_keep_best_n=(checkpoint_retention_keep_best_n),
             score_aware_long_training_checkpoint_retention_keep_every_n_epochs=(
                 checkpoint_retention_keep_every_n_epochs
             ),
-            score_aware_long_training_checkpoint_retention_cold_store_roots=(
-                checkpoint_retention_cold_store_roots
-            ),
+            score_aware_long_training_checkpoint_retention_cold_store_roots=(checkpoint_retention_cold_store_roots),
             segnet_distillation_weight=float(segnet_distillation_weight),
             pose_distillation_weight=float(pose_distillation_weight),
             pose_distillation_loss=str(pose_distillation_loss),
             pose_distillation_huber_delta=float(pose_distillation_huber_delta),
             segnet_distillation_objective=str(segnet_distillation_objective),
             distillation_temperature=float(distillation_temperature),
-            segnet_student_live_calibration_weight=float(
-                segnet_student_live_calibration_weight
-            ),
-            segnet_direct_live_distillation_weight=float(
-                segnet_direct_live_distillation_weight
-            ),
-            pose_direct_live_distillation_weight=float(
-                pose_direct_live_distillation_weight
-            ),
-            segnet_direct_live_base_loss_weight=float(
-                segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=float(
-                segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=float(
-                segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=float(
-                segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+            segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+            pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
+            segnet_direct_live_base_loss_weight=float(segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=float(
                 segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=float(
-                segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=float(
-                segnet_direct_live_rare_class_logit_weight
-            ),
-            segnet_direct_live_target_mass_floor_weight=float(
-                segnet_direct_live_target_mass_floor_weight
-            ),
-            segnet_direct_live_target_min_ratio_floor_weight=float(
-                segnet_direct_live_target_min_ratio_floor_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+            segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+            segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
             distillation_device=str(distillation_device),
@@ -4808,12 +4316,8 @@ def _run_snerv_native_mlx_export_attachment(
             coder_qat_c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
             coder_qat_c1a_sigma=float(coder_qat_c1a_sigma),
             coder_qat_c1a_sample_size=int(coder_qat_c1a_sample_size),
-            score_aware_long_training_pr95_faithful_curriculum=bool(
-                score_aware_long_training_pr95_faithful_curriculum
-            ),
-            score_aware_long_training_pr95_muon_policy=str(
-                score_aware_long_training_pr95_muon_policy
-            ),
+            score_aware_long_training_pr95_faithful_curriculum=bool(score_aware_long_training_pr95_faithful_curriculum),
+            score_aware_long_training_pr95_muon_policy=str(score_aware_long_training_pr95_muon_policy),
             write_mlx_prefilter_profile=bool(write_mlx_prefilter_profile),
             mlx_prefilter_scorer_device=(
                 _resolve_mlx_prefilter_scorer_device_alias(
@@ -4825,9 +4329,7 @@ def _run_snerv_native_mlx_export_attachment(
             mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
             allow_overwrite=bool(allow_overwrite),
         )
-        native_training_export_guard = build_snerv_mlx_native_training_export_guard(
-            artifact
-        )
+        native_training_export_guard = build_snerv_mlx_native_training_export_guard(artifact)
         blockers = [
             *list(artifact.get("blockers") or []),
             *list(native_training_export_guard.get("blockers") or []),
@@ -4838,26 +4340,19 @@ def _run_snerv_native_mlx_export_attachment(
         if artifact.get("receiver_proof_passed") is not True:
             blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
         native_scorer_loop = dict(artifact.get("scorer_loop_qat") or {})
-        snerv_score_aware_long_training = dict(
-            artifact.get("score_aware_long_training") or {}
-        )
+        snerv_score_aware_long_training = dict(artifact.get("score_aware_long_training") or {})
         snerv_crux_trace = _write_snerv_runner_crux_trace(
             artifact=artifact,
             score_aware_long_training=snerv_score_aware_long_training,
         )
-        snerv_training_telemetry_contract = (
-            snerv_score_aware_long_training.get("training_telemetry_contract")
-        )
+        snerv_training_telemetry_contract = snerv_score_aware_long_training.get("training_telemetry_contract")
         snerv_score_aware_long_training_executed = bool(
             artifact.get("score_aware_long_training_executed")
             or snerv_score_aware_long_training.get("executed") is True
         )
         snerv_score_aware_long_training_guard_bound = bool(
             artifact.get("score_aware_long_training_scorer_input_distribution_guard_bound")
-            or snerv_score_aware_long_training.get(
-                "scorer_input_distribution_guard_bound"
-            )
-            is True
+            or snerv_score_aware_long_training.get("scorer_input_distribution_guard_bound") is True
         )
         snerv_score_aware_long_training_coder_qat_bound = bool(
             artifact.get("score_aware_long_training_coder_qat_bound")
@@ -4865,19 +4360,16 @@ def _run_snerv_native_mlx_export_attachment(
         )
         snerv_score_aware_long_training_pr95_curriculum_bound = bool(
             artifact.get("score_aware_long_training_pr95_curriculum_bound")
-            or snerv_score_aware_long_training.get("pr95_faithful_curriculum_enabled")
-            is True
+            or snerv_score_aware_long_training.get("pr95_faithful_curriculum_enabled") is True
         )
-        snerv_score_aware_long_training_pr95_muon_policy = (
-            artifact.get("score_aware_long_training_pr95_muon_policy")
-            or snerv_score_aware_long_training.get("pr95_muon_policy")
-        )
+        snerv_score_aware_long_training_pr95_muon_policy = artifact.get(
+            "score_aware_long_training_pr95_muon_policy"
+        ) or snerv_score_aware_long_training.get("pr95_muon_policy")
         snerv_score_aware_long_training_real_teachers_bound = bool(
             artifact.get("score_aware_long_training_real_teachers_bound")
             or (
                 snerv_score_aware_long_training.get("has_real_segnet_teacher") is True
-                and snerv_score_aware_long_training.get("has_real_posenet_teacher")
-                is True
+                and snerv_score_aware_long_training.get("has_real_posenet_teacher") is True
             )
         )
         snerv_score_aware_long_training_has_real_segnet_teacher = bool(
@@ -4888,25 +4380,18 @@ def _run_snerv_native_mlx_export_attachment(
             artifact.get("score_aware_long_training_has_real_posenet_teacher")
             or snerv_score_aware_long_training.get("has_real_posenet_teacher") is True
         )
-        snerv_official_tub_source_fixture_binding = artifact.get(
-            "snerv_official_tub_source_fixture_binding"
-        )
+        snerv_official_tub_source_fixture_binding = artifact.get("snerv_official_tub_source_fixture_binding")
         if not isinstance(snerv_official_tub_source_fixture_binding, Mapping):
             official_primitive_binding = artifact.get("official_primitive_binding")
             if isinstance(official_primitive_binding, Mapping):
-                snerv_official_tub_source_fixture_binding = (
-                    official_primitive_binding.get(
-                        "official_tub_source_fixture_binding"
-                    )
+                snerv_official_tub_source_fixture_binding = official_primitive_binding.get(
+                    "official_tub_source_fixture_binding"
                 )
         snerv_official_tub_source_fixture_bound = bool(
             artifact.get("snerv_official_tub_source_fixture_replay_bound") is True
             or (
                 isinstance(snerv_official_tub_source_fixture_binding, Mapping)
-                and snerv_official_tub_source_fixture_binding.get(
-                    "source_fixture_replay_bound"
-                )
-                is True
+                and snerv_official_tub_source_fixture_binding.get("source_fixture_replay_bound") is True
             )
         )
         snerv_official_tub_source_fixture_passed = bool(
@@ -4919,31 +4404,17 @@ def _run_snerv_native_mlx_export_attachment(
                 is True
             )
         )
-        snerv_required_control_contract = (
-            _snerv_score_aware_long_training_required_control_contract(
-                executed=snerv_score_aware_long_training_executed,
-                score_aware_long_training=snerv_score_aware_long_training,
-                training_telemetry_contract=(
-                    snerv_training_telemetry_contract
-                    if isinstance(snerv_training_telemetry_contract, Mapping)
-                    else None
-                ),
-                scorer_input_distribution_guard_weight=(
-                    score_aware_long_training_scorer_input_distribution_guard_weight
-                ),
-                scorer_input_contrast_floor_weight=(
-                    score_aware_long_training_scorer_input_contrast_floor_weight
-                ),
-                scorer_input_shape_tether_weight=(
-                    score_aware_long_training_scorer_input_shape_tether_weight
-                ),
-                posenet_yuv6_geometry_tether_weight=(
-                    score_aware_long_training_posenet_yuv6_geometry_tether_weight
-                ),
-                posenet_temporal_signal_floor_weight=(
-                    score_aware_long_training_posenet_temporal_signal_floor_weight
-                ),
-            )
+        snerv_required_control_contract = _snerv_score_aware_long_training_required_control_contract(
+            executed=snerv_score_aware_long_training_executed,
+            score_aware_long_training=snerv_score_aware_long_training,
+            training_telemetry_contract=(
+                snerv_training_telemetry_contract if isinstance(snerv_training_telemetry_contract, Mapping) else None
+            ),
+            scorer_input_distribution_guard_weight=(score_aware_long_training_scorer_input_distribution_guard_weight),
+            scorer_input_contrast_floor_weight=(score_aware_long_training_scorer_input_contrast_floor_weight),
+            scorer_input_shape_tether_weight=(score_aware_long_training_scorer_input_shape_tether_weight),
+            posenet_yuv6_geometry_tether_weight=(score_aware_long_training_posenet_yuv6_geometry_tether_weight),
+            posenet_temporal_signal_floor_weight=(score_aware_long_training_posenet_temporal_signal_floor_weight),
         )
         snerv_score_aware_long_training_control_bound = bool(
             snerv_score_aware_long_training_executed
@@ -4954,19 +4425,12 @@ def _run_snerv_native_mlx_export_attachment(
         if snerv_score_aware_long_training_executed:
             if isinstance(snerv_training_telemetry_contract, Mapping):
                 blockers.extend(
-                    str(blocker)
-                    for blocker in snerv_training_telemetry_contract.get("blockers")
-                    or []
-                    if str(blocker)
+                    str(blocker) for blocker in snerv_training_telemetry_contract.get("blockers") or [] if str(blocker)
                 )
                 if not bool(snerv_training_telemetry_contract.get("passed")):
-                    blockers.append(
-                        "snerv_score_aware_long_training_telemetry_contract_failed"
-                    )
+                    blockers.append("snerv_score_aware_long_training_telemetry_contract_failed")
             else:
-                blockers.append(
-                    "snerv_score_aware_long_training_telemetry_contract_missing"
-                )
+                blockers.append("snerv_score_aware_long_training_telemetry_contract_missing")
             blockers.extend(snerv_required_control_contract.get("blockers") or [])
         blockers.extend(snerv_crux_trace.get("blockers") or [])
         if not bool(snerv_crux_trace.get("written")):
@@ -4998,9 +4462,7 @@ def _run_snerv_native_mlx_export_attachment(
             "requested": True,
             "axis_tag": "[macOS-MLX research-signal]",
             "num_pairs": int(num_pairs),
-            "source_pair_indices": [
-                int(value) for value in artifact.get("source_pair_indices") or []
-            ],
+            "source_pair_indices": [int(value) for value in artifact.get("source_pair_indices") or []],
             "prioritized_pair_training": {
                 "schema": "compact_snerv_native_mlx_prioritized_pair_training.v1",
                 "enabled": bool(prioritized_pair_indices),
@@ -5011,27 +4473,17 @@ def _run_snerv_native_mlx_export_attachment(
                 **FALSE_AUTHORITY,
             },
             "scorer_error_pair_curriculum": {
-                **strip_candidate_curriculum_authority_fields(
-                    scorer_error_pair_curriculum or {}
-                ),
+                **strip_candidate_curriculum_authority_fields(scorer_error_pair_curriculum or {}),
                 "schema": "compact_snerv_native_mlx_scorer_error_pair_curriculum.v1",
-                "consumed_by_native_mlx_train_export": bool(
-                    scorer_error_pair_sampling_weights
-                ),
-                "weighted_pair_count": len(
-                    dict(scorer_error_pair_sampling_weights or {})
-                ),
+                "consumed_by_native_mlx_train_export": bool(scorer_error_pair_sampling_weights),
+                "weighted_pair_count": len(dict(scorer_error_pair_sampling_weights or {})),
                 "sampling_scope": "score_aware_training_batches_not_target_hydration",
                 **FALSE_AUTHORITY,
             },
             "artifact_schema": artifact.get("schema"),
-            "native_mlx_training_executed": bool(
-                artifact.get("native_mlx_training_executed")
-            ),
+            "native_mlx_training_executed": bool(artifact.get("native_mlx_training_executed")),
             "native_mlx_training_kind": artifact.get("native_mlx_training_kind"),
-            "native_mlx_hf_decoder_training": artifact.get(
-                "native_mlx_hf_decoder_training"
-            ),
+            "native_mlx_hf_decoder_training": artifact.get("native_mlx_hf_decoder_training"),
             "snerv_scorer_tether_smoke_gate": scorer_tether_gate,
             "native_mlx_training_export_guard": native_training_export_guard,
             "artifact_report_path": artifact.get("report_path"),
@@ -5045,9 +4497,7 @@ def _run_snerv_native_mlx_export_attachment(
             "byte_cap_control": artifact.get("byte_cap_control"),
             "step_map_packet_schema": artifact.get("step_map_packet_schema"),
             "step_map_coder_mode": artifact.get("step_map_coder_mode"),
-            "step_map_waterfill_bits_per_coeff": artifact.get(
-                "step_map_waterfill_bits_per_coeff"
-            ),
+            "step_map_waterfill_bits_per_coeff": artifact.get("step_map_waterfill_bits_per_coeff"),
             "step_map_coder_groups": artifact.get("step_map_coder_groups") or [],
             "runtime_submission_dir": (
                 (Path(str(artifact.get("archive_path"))).parent / "submission").as_posix()
@@ -5056,24 +4506,14 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "receiver_proof_path": artifact.get("receiver_proof_path"),
             "receiver_proof_passed": bool(artifact.get("receiver_proof_passed")),
-            "receiver_contract_satisfied": bool(
-                artifact.get("receiver_contract_satisfied")
-            ),
+            "receiver_contract_satisfied": bool(artifact.get("receiver_contract_satisfied")),
             "official_primitive_binding": artifact.get("official_primitive_binding"),
-            "selected_official_authority": artifact.get(
-                "selected_official_authority"
-            ),
-            "official_receiver_tensor_map_custody": artifact.get(
-                "official_receiver_tensor_map_custody"
-            ),
+            "selected_official_authority": artifact.get("selected_official_authority"),
+            "official_receiver_tensor_map_custody": artifact.get("official_receiver_tensor_map_custody"),
             "snerv_official_mfu_hfr_tub_numeric_primitives_requested": bool(
-                artifact.get(
-                    "snerv_official_mfu_hfr_tub_numeric_primitives_requested"
-                )
+                artifact.get("snerv_official_mfu_hfr_tub_numeric_primitives_requested")
             ),
-            "snerv_official_mfu_hfr_tub_export_bound": bool(
-                artifact.get("snerv_official_mfu_hfr_tub_export_bound")
-            ),
+            "snerv_official_mfu_hfr_tub_export_bound": bool(artifact.get("snerv_official_mfu_hfr_tub_export_bound")),
             "snerv_official_mfu_hfr_tub_export_bound_semantics": artifact.get(
                 "snerv_official_mfu_hfr_tub_export_bound_semantics"
             ),
@@ -5084,84 +4524,47 @@ def _run_snerv_native_mlx_export_attachment(
                 artifact.get("snerv_official_mfu_hfr_tub_frame_producing_export")
             ),
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound": bool(
-                artifact.get(
-                    "snerv_official_mfu_hfr_tub_source_forward_replay_bound"
-                )
+                artifact.get("snerv_official_mfu_hfr_tub_source_forward_replay_bound")
             ),
             "snerv_official_mfu_hfr_tub_source_forward_replay_authority": bool(
-                artifact.get(
-                    "snerv_official_mfu_hfr_tub_source_forward_replay_authority"
-                )
+                artifact.get("snerv_official_mfu_hfr_tub_source_forward_replay_authority")
             ),
             "snerv_official_mfu_hfr_tub_export_blockers": list(
                 artifact.get("snerv_official_mfu_hfr_tub_export_blockers") or []
             ),
             "receiver_reconstruction": receiver_reconstruction,
-            "receiver_reconstruction_verified": bool(
-                receiver_reconstruction["receiver_reconstruction_verified"]
-            ),
-            "official_skip_high_value_domain_gate": artifact.get(
-                "official_skip_high_value_domain_gate"
-            ),
+            "receiver_reconstruction_verified": bool(receiver_reconstruction["receiver_reconstruction_verified"]),
+            "official_skip_high_value_domain_gate": artifact.get("official_skip_high_value_domain_gate"),
             "snerv_official_tub_source_fixture_binding": (
                 dict(snerv_official_tub_source_fixture_binding)
                 if isinstance(snerv_official_tub_source_fixture_binding, Mapping)
                 else None
             ),
-            "snerv_official_tub_source_fixture_replay_bound": (
-                snerv_official_tub_source_fixture_bound
-            ),
-            "snerv_official_tub_source_fixture_replay_passed": (
-                snerv_official_tub_source_fixture_passed
-            ),
+            "snerv_official_tub_source_fixture_replay_bound": (snerv_official_tub_source_fixture_bound),
+            "snerv_official_tub_source_fixture_replay_passed": (snerv_official_tub_source_fixture_passed),
             "snerv_official_tub_source_forward_fixture_bound": bool(
-                artifact.get("snerv_official_tub_source_forward_fixture_bound")
-                is True
+                artifact.get("snerv_official_tub_source_forward_fixture_bound") is True
             ),
-            "official_source_parity_blockers": list(
-                artifact.get("official_source_parity_blockers") or []
-            ),
-            "receiver_target_reconstruction_profile": receiver_reconstruction[
-                "target_profile"
-            ],
-            "receiver_export_reconstruction_profile": receiver_reconstruction[
-                "export_profile"
-            ],
-            "receiver_target_reconstruction_mse_nchw255": receiver_reconstruction[
-                "target_mse_nchw255"
-            ],
-            "receiver_export_reconstruction_mse_nchw255": receiver_reconstruction[
-                "export_mse_nchw255"
-            ],
+            "official_source_parity_blockers": list(artifact.get("official_source_parity_blockers") or []),
+            "receiver_target_reconstruction_profile": receiver_reconstruction["target_profile"],
+            "receiver_export_reconstruction_profile": receiver_reconstruction["export_profile"],
+            "receiver_target_reconstruction_mse_nchw255": receiver_reconstruction["target_mse_nchw255"],
+            "receiver_export_reconstruction_mse_nchw255": receiver_reconstruction["export_mse_nchw255"],
             "scorer_loop_qat_attached": bool(native_scorer_loop.get("executed")),
-            "scorer_loop_qat_receiver_contract_satisfied": bool(
-                native_scorer_loop.get("receiver_contract_satisfied")
-            ),
-            "scorer_loop_qat_ready_for_pose_guard_gate": bool(
-                native_scorer_loop.get("ready_for_pose_guard_gate")
-            ),
-            "scorer_loop_qat_accepted_improvement": bool(
-                native_scorer_loop.get("accepted_improvement")
-            ),
+            "scorer_loop_qat_receiver_contract_satisfied": bool(native_scorer_loop.get("receiver_contract_satisfied")),
+            "scorer_loop_qat_ready_for_pose_guard_gate": bool(native_scorer_loop.get("ready_for_pose_guard_gate")),
+            "scorer_loop_qat_accepted_improvement": bool(native_scorer_loop.get("accepted_improvement")),
             "scorer_loop_qat_best_materialized": bool(
                 native_scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
             ),
-            "score_aware_hf_decoder_fit_executed": bool(
-                artifact.get("score_aware_hf_decoder_fit_executed")
-            ),
-            "score_aware_long_training_executed": (
-                snerv_score_aware_long_training_executed
-            ),
+            "score_aware_hf_decoder_fit_executed": bool(artifact.get("score_aware_hf_decoder_fit_executed")),
+            "score_aware_long_training_executed": (snerv_score_aware_long_training_executed),
             "score_aware_long_training_telemetry_contract_passed": bool(
                 isinstance(snerv_training_telemetry_contract, Mapping)
                 and snerv_training_telemetry_contract.get("passed") is True
             ),
-            "score_aware_long_training_control_bound": (
-                snerv_score_aware_long_training_control_bound
-            ),
-            "score_aware_long_training_required_control_contract": (
-                snerv_required_control_contract
-            ),
+            "score_aware_long_training_control_bound": (snerv_score_aware_long_training_control_bound),
+            "score_aware_long_training_required_control_contract": (snerv_required_control_contract),
             "score_aware_long_training_required_scorer_domain_controls_bound": bool(
                 snerv_required_control_contract.get("passed") is True
             ),
@@ -5172,9 +4575,7 @@ def _run_snerv_native_mlx_export_attachment(
                 if isinstance(snerv_training_telemetry_contract, Mapping)
                 else None
             ),
-            "score_aware_long_training_real_teachers_bound": (
-                snerv_score_aware_long_training_real_teachers_bound
-            ),
+            "score_aware_long_training_real_teachers_bound": (snerv_score_aware_long_training_real_teachers_bound),
             "score_aware_long_training_has_real_segnet_teacher": (
                 snerv_score_aware_long_training_has_real_segnet_teacher
             ),
@@ -5184,41 +4585,23 @@ def _run_snerv_native_mlx_export_attachment(
             "score_aware_long_training_scorer_input_distribution_guard_bound": (
                 snerv_score_aware_long_training_guard_bound
             ),
-            "score_aware_long_training_coder_qat_bound": (
-                snerv_score_aware_long_training_coder_qat_bound
-            ),
-            "score_aware_long_training_pr95_curriculum_bound": (
-                snerv_score_aware_long_training_pr95_curriculum_bound
-            ),
-            "score_aware_long_training_pr95_muon_policy": (
-                snerv_score_aware_long_training_pr95_muon_policy
-            ),
+            "score_aware_long_training_coder_qat_bound": (snerv_score_aware_long_training_coder_qat_bound),
+            "score_aware_long_training_pr95_curriculum_bound": (snerv_score_aware_long_training_pr95_curriculum_bound),
+            "score_aware_long_training_pr95_muon_policy": (snerv_score_aware_long_training_pr95_muon_policy),
             "score_aware_long_training_pr95_faithful_optimizer_schedule_bound": bool(
-                artifact.get(
-                    "score_aware_long_training_pr95_faithful_optimizer_schedule_bound"
-                )
+                artifact.get("score_aware_long_training_pr95_faithful_optimizer_schedule_bound")
             ),
             "score_aware_long_training_pact_native_muon_adamw_partition_bound": bool(
-                artifact.get(
-                    "score_aware_long_training_pact_native_muon_adamw_partition_bound"
-                )
+                artifact.get("score_aware_long_training_pact_native_muon_adamw_partition_bound")
             ),
             "score_aware_long_training_muon_adamw_partition_bound": bool(
                 artifact.get("score_aware_long_training_muon_adamw_partition_bound")
             ),
-            "local_mlx_prefilter_profile": artifact.get(
-                "local_mlx_prefilter_profile"
-            ),
-            "local_mlx_prefilter_profile_path": artifact.get(
-                "local_mlx_prefilter_profile_path"
-            ),
-            "local_mlx_prefilter_progress_path": artifact.get(
-                "local_mlx_prefilter_progress_path"
-            ),
+            "local_mlx_prefilter_profile": artifact.get("local_mlx_prefilter_profile"),
+            "local_mlx_prefilter_profile_path": artifact.get("local_mlx_prefilter_profile_path"),
+            "local_mlx_prefilter_progress_path": artifact.get("local_mlx_prefilter_progress_path"),
             "native_mlx_train_export_attached": True,
-            "native_mlx_full600_export_proof_ready": (
-                native_mlx_full600_export_proof_ready
-            ),
+            "native_mlx_full600_export_proof_ready": (native_mlx_full600_export_proof_ready),
             "native_mlx_full600_campaign_ready": native_mlx_full600_campaign_ready,
             "recon_pixel_weight_manifest_path": (
                 Path(recon_pixel_weight_manifest_path).as_posix()
@@ -5336,11 +4719,7 @@ def _pr95_long_campaign_prelaunch_blockers(
         return []
     blockers = list(gate.get("blockers") or [])
     if allow_segnet_only_research:
-        blockers = [
-            blocker
-            for blocker in blockers
-            if blocker != "hi_nerv_real_posenet_teacher_missing"
-        ]
+        blockers = [blocker for blocker in blockers if blocker != "hi_nerv_real_posenet_teacher_missing"]
         if not blockers:
             return []
     return _dedupe(["pr95_long_campaign_prelaunch_gate_failed", *blockers])
@@ -5360,9 +4739,7 @@ def _bind_hi_nerv_modelsize_launch_pressure(
     effective_seg = float(segnet_distillation_weight)
     effective_pose = float(pose_distillation_weight)
     mutations: list[dict[str, Any]] = []
-    segnet_only_research = bool(
-        allow_segnet_only_research and effective_seg > 0.0 and effective_pose == 0.0
-    )
+    segnet_only_research = bool(allow_segnet_only_research and effective_seg > 0.0 and effective_pose == 0.0)
     if candidate_selected and not bool(allow_unscored_research_smoke):
         if effective_seg == 0.0:
             effective_seg = HI_NERV_MODELSIZE_DEFAULT_SEGNET_DISTILLATION_WEIGHT
@@ -5422,11 +4799,7 @@ def _hi_nerv_launch_control_precedence_report(
     decoder_weight_waterfill_plan_metadata: Mapping[str, Any],
     optimizer_policy: Mapping[str, Any],
 ) -> dict[str, Any]:
-    modelsize_precedence = (
-        modelsize_control_precedence_contract(modelsize_candidate)
-        if modelsize_candidate
-        else None
-    )
+    modelsize_precedence = modelsize_control_precedence_contract(modelsize_candidate) if modelsize_candidate else None
     child_layers = [
         {
             "layer_id": "official_hinerv_source_base",
@@ -5491,9 +4864,7 @@ def _hi_nerv_launch_control_precedence_report(
             key=lambda row: int(row["specificity"]),
         ),
         "modelsize_control_precedence": modelsize_precedence,
-        "source_base_blockers": list(
-            source_faithfulness.get("official_hinerv_blockers") or []
-        ),
+        "source_base_blockers": list(source_faithfulness.get("official_hinerv_blockers") or []),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -5519,12 +4890,9 @@ def _resolve_hi_nerv_optimizer_policy(
     policy = str(requested_policy or "auto").strip().lower()
     if policy not in HI_NERV_OPTIMIZER_POLICIES:
         raise CompactRendererMlxSpineRunnerError(
-            "hi_nerv_optimizer_policy must be one of "
-            f"{HI_NERV_OPTIMIZER_POLICIES}; got {requested_policy!r}"
+            f"hi_nerv_optimizer_policy must be one of {HI_NERV_OPTIMIZER_POLICIES}; got {requested_policy!r}"
         )
-    optimizer = str(
-        optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
-    ).strip().lower()
+    optimizer = str(optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND).strip().lower()
     explicit_total_epochs = pr95_curriculum_total_epochs is not None
     resolved_total_epochs = _resolve_hi_nerv_pr95_curriculum_total_epochs(
         epochs=epochs,
@@ -5533,8 +4901,7 @@ def _resolve_hi_nerv_optimizer_policy(
     requested_muon_policy = str(pr95_muon_policy or "auto").strip().lower()
     if requested_muon_policy not in HI_NERV_PR95_MUON_POLICIES:
         raise CompactRendererMlxSpineRunnerError(
-            "hi_nerv_pr95_muon_policy must be one of "
-            f"{HI_NERV_PR95_MUON_POLICIES}; got {pr95_muon_policy!r}"
+            f"hi_nerv_pr95_muon_policy must be one of {HI_NERV_PR95_MUON_POLICIES}; got {pr95_muon_policy!r}"
         )
     if policy == "auto":
         # Auto may choose the PR95 curriculum only for an explicit PR95 total
@@ -5565,11 +4932,7 @@ def _resolve_hi_nerv_optimizer_policy(
         resolved_muon_policy = (
             "every_stage"
             if requested_muon_policy == "auto" and optimizer == "pact_muon_adamw"
-            else (
-                "faithful_stage8_only"
-                if requested_muon_policy == "auto"
-                else requested_muon_policy
-            )
+            else ("faithful_stage8_only" if requested_muon_policy == "auto" else requested_muon_policy)
         )
     else:
         resolved_muon_policy = None
@@ -5579,9 +4942,7 @@ def _resolve_hi_nerv_optimizer_policy(
         "resolved_policy": resolved,
         "optimizer_kind": optimizer,
         "pr95_faithful_curriculum_enabled": pr95_enabled,
-        "pr95_curriculum_total_epochs": (
-            resolved_total_epochs if pr95_enabled else None
-        ),
+        "pr95_curriculum_total_epochs": (resolved_total_epochs if pr95_enabled else None),
         "pr95_curriculum_total_epochs_requested": (
             int(pr95_curriculum_total_epochs) if explicit_total_epochs else None
         ),
@@ -5592,11 +4953,7 @@ def _resolve_hi_nerv_optimizer_policy(
         "native_optimizer_active": resolved == "native_optimizer",
         "optimizer_kind_consumed_by_native_mlx": resolved == "native_optimizer",
         "optimizer_kind_consumed_by_pr95_curriculum": pr95_enabled,
-        "effective_optimizer_label": (
-            f"pr95_8stage_muon_adamw_{resolved_muon_policy}"
-            if pr95_enabled
-            else optimizer
-        ),
+        "effective_optimizer_label": (f"pr95_8stage_muon_adamw_{resolved_muon_policy}" if pr95_enabled else optimizer),
         "authority": "macos_mlx_research_signal_false_authority",
         "score_claim": False,
         "promotion_eligible": False,
@@ -5612,14 +4969,10 @@ def _resolve_hi_nerv_pr95_curriculum_total_epochs(
     if requested_total_epochs is None:
         return max(8, int(epochs))
     if isinstance(requested_total_epochs, bool):
-        raise CompactRendererMlxSpineRunnerError(
-            "hi_nerv_pr95_curriculum_total_epochs must be an integer >= 8"
-        )
+        raise CompactRendererMlxSpineRunnerError("hi_nerv_pr95_curriculum_total_epochs must be an integer >= 8")
     total_epochs = int(requested_total_epochs)
     if total_epochs < 8:
-        raise CompactRendererMlxSpineRunnerError(
-            "hi_nerv_pr95_curriculum_total_epochs must be >= 8"
-        )
+        raise CompactRendererMlxSpineRunnerError("hi_nerv_pr95_curriculum_total_epochs must be >= 8")
     return total_epochs
 
 
@@ -5637,13 +4990,10 @@ def _resolve_mlx_score_aware_optimizer_controls(
 ) -> dict[str, Any]:
     """Resolve concrete optimizer controls before the MLX adapter is built."""
 
-    kind = str(
-        optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
-    ).strip().lower()
+    kind = str(optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND).strip().lower()
     if kind not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
         raise CompactRendererMlxSpineRunnerError(
-            "optimizer_kind must be one of "
-            f"{SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS}; got {optimizer_kind!r}"
+            f"optimizer_kind must be one of {SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS}; got {optimizer_kind!r}"
         )
     weight_decay_supported = kind in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
     if requested_weight_decay is not None and not weight_decay_supported:
@@ -5661,58 +5011,36 @@ def _resolve_mlx_score_aware_optimizer_controls(
         else None
     )
     if grad_clip_max_norm is not None and float(grad_clip_max_norm) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "--optimizer-grad-clip-max-norm must be > 0 when provided"
-        )
+        raise CompactRendererMlxSpineRunnerError("--optimizer-grad-clip-max-norm must be > 0 when provided")
     resolved_warmup_epochs = int(warmup_epochs)
     resolved_warmup_steps_per_epoch = int(warmup_steps_per_epoch)
     if resolved_warmup_epochs < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "--optimizer-warmup-epochs must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("--optimizer-warmup-epochs must be >= 0")
     if resolved_warmup_steps_per_epoch <= 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "--optimizer-warmup-steps-per-epoch must be > 0"
-        )
-    resolved_cosine_total_epochs = (
-        int(cosine_decay_total_epochs)
-        if cosine_decay_total_epochs is not None
-        else None
-    )
+        raise CompactRendererMlxSpineRunnerError("--optimizer-warmup-steps-per-epoch must be > 0")
+    resolved_cosine_total_epochs = int(cosine_decay_total_epochs) if cosine_decay_total_epochs is not None else None
     cosine_total_defaulted = False
     if cosine_decay_enabled:
         if resolved_warmup_epochs <= 0:
             raise CompactRendererMlxSpineRunnerError(
-                "--optimizer-cosine-decay-enabled requires "
-                "--optimizer-warmup-epochs > 0"
+                "--optimizer-cosine-decay-enabled requires --optimizer-warmup-epochs > 0"
             )
         if resolved_cosine_total_epochs is None:
-            resolved_cosine_total_epochs = max(
-                int(run_epochs), resolved_warmup_epochs + 1
-            )
+            resolved_cosine_total_epochs = max(int(run_epochs), resolved_warmup_epochs + 1)
             cosine_total_defaulted = True
         if resolved_cosine_total_epochs <= resolved_warmup_epochs:
             raise CompactRendererMlxSpineRunnerError(
-                "--optimizer-cosine-decay-total-epochs must be > "
-                "--optimizer-warmup-epochs"
+                "--optimizer-cosine-decay-total-epochs must be > --optimizer-warmup-epochs"
             )
     if float(cosine_decay_min_lr_ratio) < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "--optimizer-cosine-decay-min-lr-ratio must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("--optimizer-cosine-decay-min-lr-ratio must be >= 0")
     return {
         "schema": "compact_mlx_score_aware_optimizer_controls.v1",
         "optimizer_kind": kind,
-        "grad_clip_max_norm": (
-            float(grad_clip_max_norm) if grad_clip_max_norm is not None else None
-        ),
-        "weight_decay_requested": (
-            None if requested_weight_decay is None else float(requested_weight_decay)
-        ),
+        "grad_clip_max_norm": (float(grad_clip_max_norm) if grad_clip_max_norm is not None else None),
+        "weight_decay_requested": (None if requested_weight_decay is None else float(requested_weight_decay)),
         "weight_decay_effective": effective_weight_decay,
-        "weight_decay_defaulted": (
-            requested_weight_decay is None and weight_decay_supported
-        ),
+        "weight_decay_defaulted": (requested_weight_decay is None and weight_decay_supported),
         "weight_decay_supported_by_optimizer": weight_decay_supported,
         "warmup_epochs": resolved_warmup_epochs,
         "warmup_steps_per_epoch": resolved_warmup_steps_per_epoch,
@@ -5737,9 +5065,7 @@ def _resolve_pact_compact_optimizer_policy(
     """Declare native-optimizer routing for Pact compact runner families."""
 
     controls = dict(optimizer_controls or {})
-    optimizer = str(
-        controls.get("optimizer_kind") or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
-    ).strip().lower()
+    optimizer = str(controls.get("optimizer_kind") or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND).strip().lower()
     return {
         "schema": "compact_pact_native_optimizer_policy.v1",
         "family": str(family),
@@ -5793,9 +5119,7 @@ def _snerv_curriculum_step_map_coder_mode_from_native_export(
     fallback: str,
 ) -> str:
     native_mode = str(
-        native_export.get("step_map_coder_mode")
-        or _nested(native_export, "artifact", "step_map_coder_mode")
-        or ""
+        native_export.get("step_map_coder_mode") or _nested(native_export, "artifact", "step_map_coder_mode") or ""
     )
     if "waterfill" in native_mode:
         return "waterfill"
@@ -5810,31 +5134,17 @@ def _snerv_native_scorer_loop_qat_status(
         scorer_loop = dict(scorer_loop_raw)
         return {
             "attached": bool(scorer_loop.get("executed")),
-            "receiver_contract_satisfied": bool(
-                scorer_loop.get("receiver_contract_satisfied")
-            ),
-            "ready_for_pose_guard_gate": bool(
-                scorer_loop.get("ready_for_pose_guard_gate")
-            ),
+            "receiver_contract_satisfied": bool(scorer_loop.get("receiver_contract_satisfied")),
+            "ready_for_pose_guard_gate": bool(scorer_loop.get("ready_for_pose_guard_gate")),
             "accepted_improvement": bool(scorer_loop.get("accepted_improvement")),
-            "best_materialized": bool(
-                scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
-            ),
+            "best_materialized": bool(scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")),
         }
     return {
         "attached": bool(native_export.get("scorer_loop_qat_attached")),
-        "receiver_contract_satisfied": bool(
-            native_export.get("scorer_loop_qat_receiver_contract_satisfied")
-        ),
-        "ready_for_pose_guard_gate": bool(
-            native_export.get("scorer_loop_qat_ready_for_pose_guard_gate")
-        ),
-        "accepted_improvement": bool(
-            native_export.get("scorer_loop_qat_accepted_improvement")
-        ),
-        "best_materialized": bool(
-            native_export.get("scorer_loop_qat_best_materialized")
-        ),
+        "receiver_contract_satisfied": bool(native_export.get("scorer_loop_qat_receiver_contract_satisfied")),
+        "ready_for_pose_guard_gate": bool(native_export.get("scorer_loop_qat_ready_for_pose_guard_gate")),
+        "accepted_improvement": bool(native_export.get("scorer_loop_qat_accepted_improvement")),
+        "best_materialized": bool(native_export.get("scorer_loop_qat_best_materialized")),
     }
 
 
@@ -5916,32 +5226,24 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
-    scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction: float
-    | None = 0.8,
+    scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction: float | None = 0.8,
     scorer_space_step_guard_min_post_segnet_target_class_min_ratio: float
     | None = HI_NERV_SEGNET_TARGET_CLASS_MIN_RATIO_FOR_FIT_GATE,
     scorer_space_step_guard_max_post_segnet_target_class_ratio_drop: float
     | None = HI_NERV_SEGNET_TARGET_CLASS_MAX_RATIO_DROP_FOR_STEP_GUARD,
     scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = 4.25,
     scorer_space_step_guard_max_post_segnet_distribution_mae: float | None = None,
-    scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae: float
-    | None = None,
-    scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio: float
-    | None = None,
+    scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae: float | None = None,
+    scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio: float | None = None,
     scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = 0.5,
     scorer_space_step_guard_max_post_pose_score_term: float | None = None,
     scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
-    scorer_space_step_guard_max_pose_score_term_relative_worsening: float
-    | None = None,
-    scorer_space_step_guard_max_pose_score_term_absolute_worsening: float
-    | None = None,
-    scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening: float
-    | None = None,
-    scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening: float
-    | None = None,
+    scorer_space_step_guard_max_pose_score_term_relative_worsening: float | None = None,
+    scorer_space_step_guard_max_pose_score_term_absolute_worsening: float | None = None,
+    scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening: float | None = None,
+    scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening: float | None = None,
     scorer_space_step_guard_max_direct_nonrate_score_worsening: float | None = None,
-    scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening: float
-    | None = 5.0,
+    scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening: float | None = 5.0,
     scorer_space_step_guard_backtracking_steps: int = 6,
     scorer_space_step_guard_backtracking_shrink: float = 0.5,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
@@ -6025,21 +5327,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
-    prioritized_pair_indices = _normalize_nonnegative_int_sequence(
-        prioritized_pair_indices
-    )
+    prioritized_pair_indices = _normalize_nonnegative_int_sequence(prioritized_pair_indices)
     scorer_error_pair_sampling_weights = {
-        int(pair): float(weight)
-        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+        int(pair): float(weight) for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
     }
     scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
-    if (
-        not math.isfinite(float(scorer_input_contrast_floor_weight))
-        or float(scorer_input_contrast_floor_weight) < 0.0
-    ):
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_contrast_floor_weight must be finite and >= 0"
-        )
+    if not math.isfinite(float(scorer_input_contrast_floor_weight)) or float(scorer_input_contrast_floor_weight) < 0.0:
+        raise CompactRendererMlxSpineRunnerError("scorer_input_contrast_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(scorer_input_contrast_floor_segnet_min_std_ratio))
         or float(scorer_input_contrast_floor_segnet_min_std_ratio) <= 0.0
@@ -6052,37 +5346,28 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         or float(scorer_input_contrast_floor_posenet_yuv6_min_std_ratio) <= 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be "
-            "finite and > 0"
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be finite and > 0"
         )
     if (
         not math.isfinite(float(posenet_temporal_signal_floor_weight))
         or float(posenet_temporal_signal_floor_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_floor_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_min_std_ratio))
         or float(posenet_temporal_signal_min_std_ratio) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_min_std_ratio must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_min_std_ratio must be finite and > 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_min_mean_abs_ratio))
         or float(posenet_temporal_signal_min_mean_abs_ratio) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_min_mean_abs_ratio must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_min_mean_abs_ratio must be finite and > 0")
     if (
         not math.isfinite(float(segnet_direct_live_escape_class_multiplier))
         or float(segnet_direct_live_escape_class_multiplier) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_escape_class_multiplier must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_escape_class_multiplier must be finite and > 0")
     if (
         _has_disallowed_existing_output_artifacts(
             out,
@@ -6090,9 +5375,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         )
         and not allow_overwrite
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     effective_recon_pixel_weight_path = recon_pixel_weight_path
     effective_recon_pixel_weight_manifest_path: str | Path | None = None
@@ -6100,8 +5383,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     if auto_joint_recon_pixel_weight:
         if recon_pixel_weight_path is not None:
             raise CompactRendererMlxSpineRunnerError(
-                "pass either --recon-pixel-weight-path or "
-                "--auto-joint-recon-pixel-weight, not both"
+                "pass either --recon-pixel-weight-path or --auto-joint-recon-pixel-weight, not both"
             )
         (
             effective_recon_pixel_weight_path,
@@ -6111,13 +5393,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             num_pairs=int(num_pairs),
         )
         if recon_pixel_weight_auto_discovery is not None:
-            selected_manifest_path = recon_pixel_weight_auto_discovery.get(
-                "selected_manifest_path"
-            )
+            selected_manifest_path = recon_pixel_weight_auto_discovery.get("selected_manifest_path")
             if selected_manifest_path:
-                effective_recon_pixel_weight_manifest_path = str(
-                    selected_manifest_path
-                )
+                effective_recon_pixel_weight_manifest_path = str(selected_manifest_path)
     stage_weights = _compact_scoreaware_stage_loss_weights(
         recon=float(recon_loss_stage_weight),
         segnet=float(segnet_loss_stage_weight),
@@ -6129,9 +5407,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             else float(scorer_input_contrast_floor_stage_weight)
         ),
         scorer_input_shape_tether=(
-            None
-            if scorer_input_shape_tether_stage_weight is None
-            else float(scorer_input_shape_tether_stage_weight)
+            None if scorer_input_shape_tether_stage_weight is None else float(scorer_input_shape_tether_stage_weight)
         ),
         posenet_yuv6_geometry_tether=(
             None
@@ -6144,34 +5420,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             else float(posenet_temporal_signal_floor_stage_weight)
         ),
         segnet_direct_live=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_histogram=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_hinge=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_ce=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_squared_hinge=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_region_recon=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         pose_direct_live=float(pose_loss_stage_weight),
     )
@@ -6184,12 +5448,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     levels = int(candidate.get("levels", 3))
     wavelet = str(candidate.get("wavelet", "haar"))
     target_bits_per_coeff = float(candidate.get("bits_per_coeff", 2.5))
-    step_map_waterfill_bits_per_coeff = float(
-        candidate.get("step_map_bits_per_coeff", 4.0)
-    )
-    decoder_payload_codec = str(
-        candidate.get("decoder_payload_codec", "float32_lzma")
-    )
+    step_map_waterfill_bits_per_coeff = float(candidate.get("step_map_bits_per_coeff", 4.0))
+    decoder_payload_codec = str(candidate.get("decoder_payload_codec", "float32_lzma"))
     snerv_fc_dim, snerv_fc_dim_source = _resolve_snerv_execution_fc_dim_with_source(
         candidate,
         cli_override=snerv_fc_dim_override,
@@ -6209,11 +5469,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "patch_radius",
             candidate.get(
                 "snerv_patch_radius",
-                (
-                    1
-                    if snerv_patch_radius_override is None
-                    else int(snerv_patch_radius_override)
-                ),
+                (1 if snerv_patch_radius_override is None else int(snerv_patch_radius_override)),
             ),
         )
     )
@@ -6222,11 +5478,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "temporal_context",
             candidate.get(
                 "snerv_temporal_context",
-                (
-                    0
-                    if snerv_temporal_context_override is None
-                    else int(snerv_temporal_context_override)
-                ),
+                (0 if snerv_temporal_context_override is None else int(snerv_temporal_context_override)),
             ),
         )
     )
@@ -6235,11 +5487,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "temporal_mode",
             candidate.get(
                 "snerv_temporal_mode",
-                (
-                    "delta"
-                    if snerv_temporal_mode_override is None
-                    else str(snerv_temporal_mode_override)
-                ),
+                ("delta" if snerv_temporal_mode_override is None else str(snerv_temporal_mode_override)),
             ),
         )
     )
@@ -6247,25 +5495,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     if raw_mfu_scales is None:
         resolved_snerv_mfu_scales = tuple(int(v) for v in snerv_mfu_scales)
     elif isinstance(raw_mfu_scales, str):
-        resolved_snerv_mfu_scales = tuple(
-            int(v.strip()) for v in raw_mfu_scales.split(",") if v.strip()
-        )
+        resolved_snerv_mfu_scales = tuple(int(v.strip()) for v in raw_mfu_scales.split(",") if v.strip())
     else:
         resolved_snerv_mfu_scales = tuple(int(v) for v in raw_mfu_scales)
     if not resolved_snerv_mfu_scales:
-        raise CompactRendererMlxSpineRunnerError(
-            "SNeRV modelsize candidate mfu_scales resolved to an empty tuple"
+        raise CompactRendererMlxSpineRunnerError("SNeRV modelsize candidate mfu_scales resolved to an empty tuple")
+    resolved_snerv_hfr_gain = float(candidate.get("hfr_gain", candidate.get("snerv_hfr_gain", snerv_hfr_gain)))
+    raw_candidate_skip_high_mode = (
+        str(
+            candidate.get(
+                "official_skip_high_mode",
+                candidate.get("snerv_official_skip_high_mode", ""),
+            )
+            or ""
         )
-    resolved_snerv_hfr_gain = float(
-        candidate.get("hfr_gain", candidate.get("snerv_hfr_gain", snerv_hfr_gain))
+        .strip()
+        .lower()
     )
-    raw_candidate_skip_high_mode = str(
-        candidate.get(
-            "official_skip_high_mode",
-            candidate.get("snerv_official_skip_high_mode", ""),
-        )
-        or ""
-    ).strip().lower()
     if (
         raw_candidate_skip_high_mode == "full"
         and bool(candidate.get("official_skip_high_mode_token_missing"))
@@ -6275,32 +5521,21 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     ):
         raw_candidate_skip_high_mode = ""
-    if (
-        raw_candidate_skip_high_mode
-        and raw_candidate_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES
-    ):
+    if raw_candidate_skip_high_mode and raw_candidate_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES:
         raise CompactRendererMlxSpineRunnerError(
             "SNeRV modelsize candidate official_skip_high_mode must be one of "
             f"{sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}; got "
             f"{raw_candidate_skip_high_mode!r}"
         )
-    raw_explicit_skip_high_mode = str(
-        snerv_official_skip_high_mode_override or ""
-    ).strip().lower()
-    if (
-        raw_explicit_skip_high_mode
-        and raw_explicit_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES
-    ):
+    raw_explicit_skip_high_mode = str(snerv_official_skip_high_mode_override or "").strip().lower()
+    if raw_explicit_skip_high_mode and raw_explicit_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES:
         raise CompactRendererMlxSpineRunnerError(
             "--snerv-official-skip-high-mode must be one of "
             f"{sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}; got "
             f"{raw_explicit_skip_high_mode!r}"
         )
     if raw_candidate_skip_high_mode:
-        if (
-            raw_explicit_skip_high_mode
-            and raw_explicit_skip_high_mode != raw_candidate_skip_high_mode
-        ):
+        if raw_explicit_skip_high_mode and raw_explicit_skip_high_mode != raw_candidate_skip_high_mode:
             raise CompactRendererMlxSpineRunnerError(
                 "SNeRV modelsize candidate official_skip_high_mode conflicts "
                 "with --snerv-official-skip-high-mode: "
@@ -6309,26 +5544,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             )
         resolved_snerv_official_skip_high_mode = raw_candidate_skip_high_mode
     else:
-        resolved_snerv_official_skip_high_mode = (
-            raw_explicit_skip_high_mode or "full"
-        )
+        resolved_snerv_official_skip_high_mode = raw_explicit_skip_high_mode or "full"
     raw_candidate_adapter = str(candidate.get("snerv_model_size_adapter") or "")
-    candidate_adapter = (
-        normalize_snerv_model_size_adapter(raw_candidate_adapter)
-        if raw_candidate_adapter
-        else ""
-    )
+    candidate_adapter = normalize_snerv_model_size_adapter(raw_candidate_adapter) if raw_candidate_adapter else ""
     raw_explicit_adapter = str(snerv_model_size_adapter_override or "")
-    explicit_adapter = (
-        normalize_snerv_model_size_adapter(raw_explicit_adapter)
-        if raw_explicit_adapter
-        else ""
-    )
+    explicit_adapter = normalize_snerv_model_size_adapter(raw_explicit_adapter) if raw_explicit_adapter else ""
     if candidate_adapter:
-        if (
-            snerv_spectra_preserving_adapter
-            and candidate_adapter != SNERV_SPECTRA_PRESERVING_ADAPTER
-        ):
+        if snerv_spectra_preserving_adapter and candidate_adapter != SNERV_SPECTRA_PRESERVING_ADAPTER:
             raise CompactRendererMlxSpineRunnerError(
                 "SNeRV modelsize candidate adapter conflicts with "
                 "--snerv-spectra-preserving-adapter: "
@@ -6342,13 +5564,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             )
         snerv_model_size_adapter = candidate_adapter
     else:
-        snerv_model_size_adapter = (
-            explicit_adapter
-            or (
-                SNERV_SPECTRA_PRESERVING_ADAPTER
-                if snerv_spectra_preserving_adapter
-                else "snerv_fc_dim_emb_size_adapter_v1"
-            )
+        snerv_model_size_adapter = explicit_adapter or (
+            SNERV_SPECTRA_PRESERVING_ADAPTER if snerv_spectra_preserving_adapter else "snerv_fc_dim_emb_size_adapter_v1"
         )
     if (
         normalize_snerv_model_size_adapter(str(snerv_model_size_adapter))
@@ -6367,9 +5584,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "non-promotional rate diagnostic."
         )
     resolved_step_map_coder_mode = (
-        step_map_coder_mode
-        if step_map_coder_mode is not None
-        else ("waterfill" if candidate else "uniform")
+        step_map_coder_mode if step_map_coder_mode is not None else ("waterfill" if candidate else "uniform")
     )
     prelaunch_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
@@ -6402,13 +5617,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "snerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "candidate_curriculum_plan": prelaunch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -6435,9 +5646,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "mfu_scales": [int(v) for v in resolved_snerv_mfu_scales],
         "hfr_gain": float(resolved_snerv_hfr_gain),
         "official_skip_high_mode": str(resolved_snerv_official_skip_high_mode),
-        "snerv_official_skip_high_mode": str(
-            resolved_snerv_official_skip_high_mode
-        ),
+        "snerv_official_skip_high_mode": str(resolved_snerv_official_skip_high_mode),
         "temporal_context": int(snerv_temporal_context),
         "temporal_mode": str(snerv_temporal_mode),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
@@ -6447,38 +5656,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "wavelet": str(wavelet),
         "bits_per_coeff": float(target_bits_per_coeff),
         "step_map_bits_per_coeff": float(step_map_waterfill_bits_per_coeff),
-        "snerv_native_mlx_decoder_train_steps": int(
-            snerv_native_mlx_decoder_train_steps
-        ),
-        "snerv_native_mlx_decoder_train_lr": float(
-            snerv_native_mlx_decoder_train_lr
-        ),
-        "snerv_native_mlx_decoder_train_ridge": float(
-            snerv_native_mlx_decoder_train_ridge
-        ),
-        "snerv_native_mlx_decoder_train_optimizer": str(
-            snerv_native_mlx_decoder_train_optimizer
-        ),
+        "snerv_native_mlx_decoder_train_steps": int(snerv_native_mlx_decoder_train_steps),
+        "snerv_native_mlx_decoder_train_lr": float(snerv_native_mlx_decoder_train_lr),
+        "snerv_native_mlx_decoder_train_ridge": float(snerv_native_mlx_decoder_train_ridge),
+        "snerv_native_mlx_decoder_train_optimizer": str(snerv_native_mlx_decoder_train_optimizer),
         "snerv_official_trained_checkpoint_state_dict_path": (
             None
             if snerv_official_trained_checkpoint_state_dict_path is None
             else str(Path(snerv_official_trained_checkpoint_state_dict_path))
         ),
-        "snerv_score_aware_long_training_epochs": int(
-            snerv_score_aware_long_training_epochs
-        ),
-        "snerv_score_aware_long_training_lr": float(
-            snerv_score_aware_long_training_lr
-        ),
-        "snerv_score_aware_long_training_batch_pairs": int(
-            snerv_score_aware_long_training_batch_pairs
-        ),
+        "snerv_score_aware_long_training_epochs": int(snerv_score_aware_long_training_epochs),
+        "snerv_score_aware_long_training_lr": float(snerv_score_aware_long_training_lr),
+        "snerv_score_aware_long_training_batch_pairs": int(snerv_score_aware_long_training_batch_pairs),
         "snerv_score_aware_long_training_section_byte_refresh_every_steps": int(
             snerv_score_aware_long_training_section_byte_refresh_every_steps
         ),
-        "snerv_score_aware_long_training_optimizer": str(
-            snerv_score_aware_long_training_optimizer
-        ),
+        "snerv_score_aware_long_training_optimizer": str(snerv_score_aware_long_training_optimizer),
         "snerv_score_aware_long_training_grad_clip_max_norm": (
             None
             if snerv_score_aware_long_training_grad_clip_max_norm is None
@@ -6489,16 +5682,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             if snerv_score_aware_long_training_weight_decay is None
             else float(snerv_score_aware_long_training_weight_decay)
         ),
-        "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
-            snerv_score_aware_long_training_eval_roundtrip_ste
-        ),
+        "snerv_score_aware_long_training_eval_roundtrip_ste": bool(snerv_score_aware_long_training_eval_roundtrip_ste),
         "snerv_score_aware_long_training_stage_loss_weights": dict(stage_weights),
-        "snerv_score_aware_long_training_pose_warmup_epochs": int(
-            pose_distillation_warmup_epochs
-        ),
-        "snerv_score_aware_long_training_scorer_input_shape_warmup_epochs": int(
-            scorer_input_shape_warmup_epochs
-        ),
+        "snerv_score_aware_long_training_pose_warmup_epochs": int(pose_distillation_warmup_epochs),
+        "snerv_score_aware_long_training_scorer_input_shape_warmup_epochs": int(scorer_input_shape_warmup_epochs),
         "snerv_score_aware_long_training_segnet_direct_live_escape_warmup_epochs": int(
             segnet_direct_live_escape_warmup_epochs
         ),
@@ -6523,9 +5710,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": (
             float(scorer_input_contrast_floor_posenet_yuv6_min_std_ratio)
         ),
-        "snerv_score_aware_long_training_scorer_input_shape_tether_weight": (
-            float(scorer_input_shape_tether_weight)
-        ),
+        "snerv_score_aware_long_training_scorer_input_shape_tether_weight": (float(scorer_input_shape_tether_weight)),
         "snerv_score_aware_long_training_posenet_temporal_signal_floor_weight": (
             float(posenet_temporal_signal_floor_weight)
         ),
@@ -6535,9 +5720,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio": (
             float(posenet_temporal_signal_min_mean_abs_ratio)
         ),
-        "snerv_score_aware_long_training_scorer_space_step_guard_enabled": bool(
-            scorer_space_step_guard_enabled
-        ),
+        "snerv_score_aware_long_training_scorer_space_step_guard_enabled": bool(scorer_space_step_guard_enabled),
         "snerv_score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction": (
             float(scorer_space_step_guard_min_pre_segnet_occupied_class_fraction)
         ),
@@ -6546,27 +5729,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction": (
             None
-            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            is None
-            else float(
-                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            )
+            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is None
+            else float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio": (
             None
-            if scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-            is None
-            else float(
-                scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-            )
+            if scorer_space_step_guard_min_post_segnet_target_class_min_ratio is None
+            else float(scorer_space_step_guard_min_post_segnet_target_class_min_ratio)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop": (
             None
-            if scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-            is None
-            else float(
-                scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-            )
+            if scorer_space_step_guard_max_post_segnet_target_class_ratio_drop is None
+            else float(scorer_space_step_guard_max_post_segnet_target_class_ratio_drop)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio": (
             None
@@ -6605,31 +5779,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening": (
             None
-            if scorer_space_step_guard_max_pose_score_term_relative_worsening
-            is None
+            if scorer_space_step_guard_max_pose_score_term_relative_worsening is None
             else float(scorer_space_step_guard_max_pose_score_term_relative_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening": (
             None
-            if scorer_space_step_guard_max_pose_score_term_absolute_worsening
-            is None
+            if scorer_space_step_guard_max_pose_score_term_absolute_worsening is None
             else float(scorer_space_step_guard_max_pose_score_term_absolute_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening": (
             None
-            if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-            )
+            if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening is None
+            else float(scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening": (
             None
-            if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-            )
+            if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening is None
+            else float(scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening": (
             None
@@ -6638,11 +5804,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening": (
             None
-            if scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            )
+            if scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening is None
+            else float(scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_backtracking_steps": int(
             scorer_space_step_guard_backtracking_steps
@@ -6653,9 +5816,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
         "snerv_pose_distillation_weight": float(pose_distillation_weight),
         "snerv_pose_distillation_loss": str(pose_distillation_loss),
-        "snerv_pose_distillation_huber_delta": float(
-            pose_distillation_huber_delta
-        ),
+        "snerv_pose_distillation_huber_delta": float(pose_distillation_huber_delta),
         "snerv_segnet_distillation_objective": str(segnet_distillation_objective),
         "snerv_distillation_temperature": float(distillation_temperature),
         "snerv_segnet_tau_boundary": float(segnet_tau_boundary),
@@ -6664,28 +5825,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_allow_segnet_only_research": bool(allow_segnet_only_research),
         "snerv_coder_aware_qat": bool(coder_aware_qat),
         "snerv_coder_qat_quant_bits": int(coder_qat_quant_bits),
-        "snerv_coder_qat_quant_residual_weight": float(
-            coder_qat_quant_residual_weight
-        ),
+        "snerv_coder_qat_quant_residual_weight": float(coder_qat_quant_residual_weight),
         "snerv_coder_qat_magnitude_weight": float(coder_qat_magnitude_weight),
         "snerv_coder_qat_delta_weight": float(coder_qat_delta_weight),
-        "snerv_coder_qat_c1a_entropy_weight": float(
-            coder_qat_c1a_entropy_weight
-        ),
+        "snerv_coder_qat_c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
         "snerv_coder_qat_c1a_sigma": float(coder_qat_c1a_sigma),
         "snerv_coder_qat_c1a_sample_size": int(coder_qat_c1a_sample_size),
         "snerv_score_aware_long_training_pr95_faithful_curriculum": bool(
             snerv_score_aware_long_training_pr95_faithful_curriculum
         ),
-        "snerv_score_aware_long_training_pr95_muon_policy": str(
-            snerv_score_aware_long_training_pr95_muon_policy
-        ),
-        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": (
-            checkpoint_retention_keep_last_n
-        ),
-        "snerv_score_aware_long_training_checkpoint_retention_keep_best_n": int(
-            checkpoint_retention_keep_best_n
-        ),
+        "snerv_score_aware_long_training_pr95_muon_policy": str(snerv_score_aware_long_training_pr95_muon_policy),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": (checkpoint_retention_keep_last_n),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_best_n": int(checkpoint_retention_keep_best_n),
         "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs": (
             checkpoint_retention_keep_every_n_epochs
         ),
@@ -6693,12 +5844,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             snerv_score_aware_long_training_scorer_tether_smoke_steps
         ),
     }
-    native_long_training_requested = bool(
-        run_native_mlx_export and int(snerv_score_aware_long_training_epochs) > 0
-    )
-    bounded_smoke_scorer_loop_qat_policy = dict(
-        snerv_bounded_smoke_scorer_loop_qat_policy or {}
-    )
+    native_long_training_requested = bool(run_native_mlx_export and int(snerv_score_aware_long_training_epochs) > 0)
+    bounded_smoke_scorer_loop_qat_policy = dict(snerv_bounded_smoke_scorer_loop_qat_policy or {})
     snerv_mlx_native_export: dict[str, Any] = {}
     snerv_mlx_native_file_backed_evidence: dict[str, Any] = {}
     snerv_mlx_native_adapter_contract_after_export: dict[str, Any] = {}
@@ -6718,18 +5865,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             repo_root=root,
             allow_overwrite=bool(allow_overwrite),
             retain_receiver_output=bool(keep_local_replay_inflated),
-            receiver_proof_timeout_seconds=int(
-                snerv_native_mlx_receiver_proof_timeout_seconds
-            ),
+            receiver_proof_timeout_seconds=int(snerv_native_mlx_receiver_proof_timeout_seconds),
             run_scorer_loop_qat=bool(run_scorer_loop_qat),
             scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
             scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
             scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
             scorer_loop_qat_decoder_payload_codec=decoder_payload_codec,
             scorer_loop_qat_lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
-            scorer_loop_qat_component_guard_mode=str(
-                snerv_scorer_loop_component_guard_mode
-            ),
+            scorer_loop_qat_component_guard_mode=str(snerv_scorer_loop_component_guard_mode),
             scorer_loop_qat_pair_guard_min_score_improved_fraction=float(
                 snerv_scorer_loop_pair_guard_min_score_improved_fraction
             ),
@@ -6738,48 +5881,30 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
             scorer_loop_qat_device=str(distillation_device),
             scorer_loop_qat_perturb_scale=float(snerv_scorer_loop_perturb_scale),
-            scorer_loop_qat_byte_pressure_multiplier=float(
-                snerv_scorer_loop_byte_pressure_multiplier
-            ),
+            scorer_loop_qat_byte_pressure_multiplier=float(snerv_scorer_loop_byte_pressure_multiplier),
             scorer_loop_qat_section_value_pressure_multiplier=float(
                 snerv_scorer_loop_section_value_pressure_multiplier
             ),
-            scorer_loop_qat_max_archive_byte_growth=(
-                snerv_scorer_loop_max_archive_byte_growth
-            ),
-            scorer_loop_qat_byte_growth_admission_mode=str(
-                snerv_scorer_loop_byte_growth_admission_mode
-            ),
+            scorer_loop_qat_max_archive_byte_growth=(snerv_scorer_loop_max_archive_byte_growth),
+            scorer_loop_qat_byte_growth_admission_mode=str(snerv_scorer_loop_byte_growth_admission_mode),
             scorer_loop_qat_pose_slack=float(snerv_scorer_loop_pose_slack),
             scorer_loop_qat_seg_slack=float(snerv_scorer_loop_seg_slack),
             scorer_loop_qat_seed=int(random_seed),
             recon_pixel_weight_path=effective_recon_pixel_weight_path,
-            recon_pixel_weight_manifest_path=(
-                effective_recon_pixel_weight_manifest_path
-            ),
+            recon_pixel_weight_manifest_path=(effective_recon_pixel_weight_manifest_path),
             recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
             native_mlx_decoder_train_steps=int(snerv_native_mlx_decoder_train_steps),
             native_mlx_decoder_train_lr=float(snerv_native_mlx_decoder_train_lr),
             native_mlx_decoder_train_ridge=float(snerv_native_mlx_decoder_train_ridge),
-            native_mlx_decoder_train_optimizer=str(
-                snerv_native_mlx_decoder_train_optimizer
-            ),
-            official_trained_checkpoint_state_dict_path=(
-                snerv_official_trained_checkpoint_state_dict_path
-            ),
-            score_aware_long_training_epochs=int(
-                snerv_score_aware_long_training_epochs
-            ),
+            native_mlx_decoder_train_optimizer=str(snerv_native_mlx_decoder_train_optimizer),
+            official_trained_checkpoint_state_dict_path=(snerv_official_trained_checkpoint_state_dict_path),
+            score_aware_long_training_epochs=int(snerv_score_aware_long_training_epochs),
             score_aware_long_training_lr=float(snerv_score_aware_long_training_lr),
-            score_aware_long_training_batch_pairs=int(
-                snerv_score_aware_long_training_batch_pairs
-            ),
+            score_aware_long_training_batch_pairs=int(snerv_score_aware_long_training_batch_pairs),
             score_aware_long_training_section_byte_refresh_every_steps=int(
                 snerv_score_aware_long_training_section_byte_refresh_every_steps
             ),
-            score_aware_long_training_optimizer=str(
-                snerv_score_aware_long_training_optimizer
-            ),
+            score_aware_long_training_optimizer=str(snerv_score_aware_long_training_optimizer),
             score_aware_long_training_grad_clip_max_norm=(
                 None
                 if snerv_score_aware_long_training_grad_clip_max_norm is None
@@ -6790,9 +5915,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 if snerv_score_aware_long_training_weight_decay is None
                 else float(snerv_score_aware_long_training_weight_decay)
             ),
-            score_aware_long_training_eval_roundtrip_ste=bool(
-                snerv_score_aware_long_training_eval_roundtrip_ste
-            ),
+            score_aware_long_training_eval_roundtrip_ste=bool(snerv_score_aware_long_training_eval_roundtrip_ste),
             score_aware_long_training_scorer_tether_smoke_steps=int(
                 snerv_score_aware_long_training_scorer_tether_smoke_steps
             ),
@@ -6805,33 +5928,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             score_aware_long_training_scorer_input_distribution_guard_temperature=float(
                 scorer_input_distribution_guard_temperature
             ),
-            score_aware_long_training_scorer_input_contrast_floor_weight=float(
-                scorer_input_contrast_floor_weight
-            ),
+            score_aware_long_training_scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
             score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio=float(
                 scorer_input_contrast_floor_segnet_min_std_ratio
             ),
             score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
                 scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
-            score_aware_long_training_scorer_input_shape_tether_weight=float(
-                scorer_input_shape_tether_weight
-            ),
-            score_aware_long_training_posenet_yuv6_geometry_tether_weight=float(
-                posenet_yuv6_geometry_tether_weight
-            ),
-            score_aware_long_training_posenet_temporal_signal_floor_weight=float(
-                posenet_temporal_signal_floor_weight
-            ),
+            score_aware_long_training_scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
+            score_aware_long_training_posenet_yuv6_geometry_tether_weight=float(posenet_yuv6_geometry_tether_weight),
+            score_aware_long_training_posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
             score_aware_long_training_posenet_temporal_signal_min_std_ratio=float(
                 posenet_temporal_signal_min_std_ratio
             ),
             score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio=float(
                 posenet_temporal_signal_min_mean_abs_ratio
             ),
-            score_aware_long_training_scorer_space_step_guard_enabled=bool(
-                scorer_space_step_guard_enabled
-            ),
+            score_aware_long_training_scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
             score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
                 scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
             ),
@@ -6893,12 +6006,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 scorer_space_step_guard_backtracking_shrink
             ),
             score_aware_long_training_loss_weights=dict(stage_weights),
-            score_aware_long_training_pose_warmup_epochs=int(
-                pose_distillation_warmup_epochs
-            ),
-            score_aware_long_training_scorer_input_shape_warmup_epochs=int(
-                scorer_input_shape_warmup_epochs
-            ),
+            score_aware_long_training_pose_warmup_epochs=int(pose_distillation_warmup_epochs),
+            score_aware_long_training_scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
             score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(
                 segnet_direct_live_escape_warmup_epochs
             ),
@@ -6907,45 +6016,25 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
-            checkpoint_retention_keep_every_n_epochs=(
-                checkpoint_retention_keep_every_n_epochs
-            ),
-            checkpoint_retention_cold_store_roots=(
-                checkpoint_retention_cold_store_roots
-            ),
+            checkpoint_retention_keep_every_n_epochs=(checkpoint_retention_keep_every_n_epochs),
+            checkpoint_retention_cold_store_roots=(checkpoint_retention_cold_store_roots),
             segnet_distillation_weight=float(segnet_distillation_weight),
             pose_distillation_weight=float(pose_distillation_weight),
             pose_distillation_loss=str(pose_distillation_loss),
             pose_distillation_huber_delta=float(pose_distillation_huber_delta),
             segnet_distillation_objective=str(segnet_distillation_objective),
             distillation_temperature=float(distillation_temperature),
-            segnet_student_live_calibration_weight=float(
-                segnet_student_live_calibration_weight
-            ),
-            segnet_direct_live_distillation_weight=float(
-                segnet_direct_live_distillation_weight
-            ),
-            segnet_direct_live_base_loss_weight=float(
-                segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=float(
-                segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=float(
-                segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=float(
-                segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+            segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+            segnet_direct_live_base_loss_weight=float(segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=float(
                 segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=float(
-                segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=float(
-                segnet_direct_live_rare_class_logit_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
             distillation_device=str(distillation_device),
@@ -6961,12 +6050,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             score_aware_long_training_pr95_faithful_curriculum=bool(
                 snerv_score_aware_long_training_pr95_faithful_curriculum
             ),
-            score_aware_long_training_pr95_muon_policy=str(
-                snerv_score_aware_long_training_pr95_muon_policy
-            ),
-            write_mlx_prefilter_profile=bool(
-                int(num_pairs) >= CONTEST_PAIR_COUNT
-            ),
+            score_aware_long_training_pr95_muon_policy=str(snerv_score_aware_long_training_pr95_muon_policy),
+            write_mlx_prefilter_profile=bool(int(num_pairs) >= CONTEST_PAIR_COUNT),
             mlx_prefilter_scorer_device=(
                 _resolve_mlx_prefilter_scorer_device_alias(
                     mlx_prefilter_scorer_device,
@@ -6976,93 +6061,61 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             mlx_prefilter_scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
             mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
         )
-        snerv_mlx_native_file_backed_evidence = (
-            build_snerv_mlx_native_file_backed_evidence(
-                snerv_mlx_native_export,
-                required_num_pairs=CONTEST_PAIR_COUNT,
-            )
+        snerv_mlx_native_file_backed_evidence = build_snerv_mlx_native_file_backed_evidence(
+            snerv_mlx_native_export,
+            required_num_pairs=CONTEST_PAIR_COUNT,
         )
-        snerv_mlx_native_adapter_contract_after_export = (
-            build_snerv_mlx_native_adapter_contract(
-                extra_evidence={
-                    "file_backed_export_artifact": snerv_mlx_native_export,
-                    "required_num_pairs": CONTEST_PAIR_COUNT,
-                }
-            )
+        snerv_mlx_native_adapter_contract_after_export = build_snerv_mlx_native_adapter_contract(
+            extra_evidence={
+                "file_backed_export_artifact": snerv_mlx_native_export,
+                "required_num_pairs": CONTEST_PAIR_COUNT,
+            }
         )
         snerv_mlx_native_export_verified = bool(
             snerv_mlx_native_export.get("executed")
             and snerv_mlx_native_export.get("receiver_proof_passed") is True
             and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
-            and snerv_mlx_native_file_backed_evidence.get(
-                "required_pair_file_backed_export_proof_passed"
-            )
+            and snerv_mlx_native_file_backed_evidence.get("required_pair_file_backed_export_proof_passed")
         )
         snerv_mlx_native_receiver_proof_passed = bool(
             snerv_mlx_native_export.get("executed")
             and snerv_mlx_native_export.get("receiver_proof_passed") is True
             and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
         )
-        snerv_curriculum_step_map_coder_mode = (
-            _snerv_curriculum_step_map_coder_mode_from_native_export(
-                snerv_mlx_native_export,
-                fallback=str(resolved_step_map_coder_mode),
-            )
+        snerv_curriculum_step_map_coder_mode = _snerv_curriculum_step_map_coder_mode_from_native_export(
+            snerv_mlx_native_export,
+            fallback=str(resolved_step_map_coder_mode),
         )
-        native_scorer_loop_qat_status = _snerv_native_scorer_loop_qat_status(
-            snerv_mlx_native_export
-        )
+        native_scorer_loop_qat_status = _snerv_native_scorer_loop_qat_status(snerv_mlx_native_export)
         candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
             candidate=candidate or None,
             requested_epochs=int(epochs),
             num_pairs=int(num_pairs),
             step_map_coder_mode=str(snerv_curriculum_step_map_coder_mode),
-            native_mlx_train_export_attached=bool(
-                snerv_mlx_native_export.get("executed")
-            ),
-            native_mlx_long_training_bound=bool(
-                snerv_mlx_native_export.get("score_aware_long_training_control_bound")
-            ),
-            native_mlx_receiver_proof_passed=(
-                snerv_mlx_native_receiver_proof_passed
-            ),
-            native_mlx_full600_campaign_ready=bool(
-                snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
-            ),
-            native_mlx_scorer_loop_qat_attached=bool(
-                native_scorer_loop_qat_status["attached"]
-            ),
+            native_mlx_train_export_attached=bool(snerv_mlx_native_export.get("executed")),
+            native_mlx_long_training_bound=bool(snerv_mlx_native_export.get("score_aware_long_training_control_bound")),
+            native_mlx_receiver_proof_passed=(snerv_mlx_native_receiver_proof_passed),
+            native_mlx_full600_campaign_ready=bool(snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")),
+            native_mlx_scorer_loop_qat_attached=bool(native_scorer_loop_qat_status["attached"]),
             native_mlx_scorer_loop_qat_receiver_contract_satisfied=bool(
                 native_scorer_loop_qat_status["receiver_contract_satisfied"]
             ),
             native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=bool(
                 native_scorer_loop_qat_status["ready_for_pose_guard_gate"]
             ),
-            native_mlx_scorer_loop_qat_accepted_improvement=bool(
-                native_scorer_loop_qat_status["accepted_improvement"]
-            ),
-            native_mlx_scorer_loop_qat_best_materialized=bool(
-                native_scorer_loop_qat_status["best_materialized"]
-            ),
+            native_mlx_scorer_loop_qat_accepted_improvement=bool(native_scorer_loop_qat_status["accepted_improvement"]),
+            native_mlx_scorer_loop_qat_best_materialized=bool(native_scorer_loop_qat_status["best_materialized"]),
             native_mlx_scorer_input_distribution_guard_bound=bool(
-                snerv_mlx_native_export.get(
-                    "score_aware_long_training_scorer_input_distribution_guard_bound"
-                )
+                snerv_mlx_native_export.get("score_aware_long_training_scorer_input_distribution_guard_bound")
             ),
             native_mlx_real_segnet_teacher_bound=bool(
-                snerv_mlx_native_export.get(
-                    "score_aware_long_training_has_real_segnet_teacher"
-                )
+                snerv_mlx_native_export.get("score_aware_long_training_has_real_segnet_teacher")
             ),
             native_mlx_real_posenet_teacher_bound=bool(
-                snerv_mlx_native_export.get(
-                    "score_aware_long_training_has_real_posenet_teacher"
-                )
+                snerv_mlx_native_export.get("score_aware_long_training_has_real_posenet_teacher")
             ),
             native_mlx_pr95_curriculum_bound=bool(
-                snerv_mlx_native_export.get(
-                    "score_aware_long_training_pr95_curriculum_bound"
-                )
+                snerv_mlx_native_export.get("score_aware_long_training_pr95_curriculum_bound")
             ),
             native_mlx_eval_roundtrip_ste_bound=bool(
                 _nested(
@@ -7079,15 +6132,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "has_real_posenet_teacher",
                 )
             ),
-            native_mlx_coder_qat_bound=bool(
-                snerv_mlx_native_export.get(
-                    "score_aware_long_training_coder_qat_bound"
-                )
-            ),
+            native_mlx_coder_qat_bound=bool(snerv_mlx_native_export.get("score_aware_long_training_coder_qat_bound")),
             native_mlx_muon_adamw_partition_bound=bool(
-                snerv_mlx_native_export.get(
-                    "score_aware_long_training_muon_adamw_partition_bound"
-                )
+                snerv_mlx_native_export.get("score_aware_long_training_muon_adamw_partition_bound")
             ),
             native_mlx_artifact_evidence=snerv_mlx_native_export,
         )
@@ -7098,21 +6145,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 *list(bounded_smoke_scorer_loop_qat_policy.get("blockers") or []),
                 *list(candidate_curriculum_plan.get("blockers") or []),
                 *list(snerv_mlx_native_export.get("blockers") or []),
-                *list(
-                    snerv_mlx_native_adapter_contract_after_export.get("blockers")
-                    or []
-                ),
+                *list(snerv_mlx_native_adapter_contract_after_export.get("blockers") or []),
             ]
         )
-        auto_mlx_prefilter_profile = snerv_mlx_native_export.get(
-            "local_mlx_prefilter_profile"
-        )
-        auto_mlx_prefilter_profile_path = snerv_mlx_native_export.get(
-            "local_mlx_prefilter_profile_path"
-        )
-        effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(
-            mlx_profile_paths
-        )
+        auto_mlx_prefilter_profile = snerv_mlx_native_export.get("local_mlx_prefilter_profile")
+        auto_mlx_prefilter_profile_path = snerv_mlx_native_export.get("local_mlx_prefilter_profile_path")
+        effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(mlx_profile_paths)
         if auto_mlx_prefilter_profile_path:
             effective_mlx_profile_paths = (
                 *effective_mlx_profile_paths,
@@ -7132,12 +6170,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             output_dir=out / "mlx_prefilter_error_anatomy",
             label="snerv_native_direct_auto_post_export_xray",
         )
-        has_full_video_mlx_prefilter = bool(
-            mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
-        )
-        mlx_prefilter_local_replay_passed = bool(
-            mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
-        )
+        has_full_video_mlx_prefilter = bool(mlx_prefilter_coverage["has_full_video_mlx_prefilter"])
+        mlx_prefilter_local_replay_passed = bool(mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"])
         local_cpu_replay_summary: dict[str, Any] | None = None
         local_cpu_replay_paths: list[Path] = []
         local_cpu_replay_blockers: list[str] = []
@@ -7150,10 +6184,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 archive_zip_path=snerv_mlx_native_export.get("archive_path"),
                 runtime_submission_dir=(
                     snerv_mlx_native_export.get("runtime_submission_dir")
-                    or (
-                        Path(str(snerv_mlx_native_export.get("archive_path"))).parent
-                        / "submission"
-                    )
+                    or (Path(str(snerv_mlx_native_export.get("archive_path"))).parent / "submission")
                 ),
                 output_dir=out / "local_cpu_replay",
                 upstream_dir=scorer_upstream,
@@ -7178,9 +6209,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "execute_family": "snerv",
                 "num_pairs": int(num_pairs),
                 "epochs_requested": int(epochs),
-                "training_executed": bool(
-                    snerv_mlx_native_export.get("native_mlx_training_executed")
-                ),
+                "training_executed": bool(snerv_mlx_native_export.get("native_mlx_training_executed")),
                 "legacy_advisory_preexport_skipped": True,
                 "legacy_advisory_preexport_skip_reason": (
                     "native MLX score-aware long training requested; legacy "
@@ -7191,24 +6220,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "snerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "candidate_curriculum_plan": candidate_curriculum_plan,
                     **FALSE_AUTHORITY,
                 },
                 "candidate_curriculum_plan": candidate_curriculum_plan,
                 "score_aware_carrier_training_plan": planner,
-                "snerv_bounded_smoke_scorer_loop_qat_policy": (
-                    bounded_smoke_scorer_loop_qat_policy
-                ),
-                "snerv_mlx_native_adapter_contract": (
-                    snerv_mlx_native_adapter_contract_after_export
-                ),
+                "snerv_bounded_smoke_scorer_loop_qat_policy": (bounded_smoke_scorer_loop_qat_policy),
+                "snerv_mlx_native_adapter_contract": (snerv_mlx_native_adapter_contract_after_export),
                 "archive_path": snerv_mlx_native_export.get("archive_path"),
                 "archive_bytes": snerv_mlx_native_export.get("archive_bytes"),
                 "archive_sha256": snerv_mlx_native_export.get("archive_sha256"),
@@ -7221,10 +6242,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "schema": "compact_snerv_recon_pixel_weight_consumption.v1",
                     "requested": effective_recon_pixel_weight_path is not None,
                     "enabled": bool(
-                        (
-                            snerv_mlx_native_export.get("recon_pixel_weight")
-                            or {}
-                        ).get("selected_packet_consumed")
+                        (snerv_mlx_native_export.get("recon_pixel_weight") or {}).get("selected_packet_consumed")
                     ),
                     "path": (
                         Path(effective_recon_pixel_weight_path).as_posix()
@@ -7232,45 +6250,27 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                         else None
                     ),
                     "manifest_path": (
-                        Path(
-                            effective_recon_pixel_weight_manifest_path
-                        ).as_posix()
+                        Path(effective_recon_pixel_weight_manifest_path).as_posix()
                         if effective_recon_pixel_weight_manifest_path is not None
                         else None
                     ),
                     "normalize": str(recon_pixel_weight_normalize),
                     "auto_discovery": recon_pixel_weight_auto_discovery,
                     "native_export_consumed": bool(
-                        (
-                            snerv_mlx_native_export.get("recon_pixel_weight")
-                            or {}
-                        ).get("selected_packet_consumed")
+                        (snerv_mlx_native_export.get("recon_pixel_weight") or {}).get("selected_packet_consumed")
                     ),
-                    "native_export_packet_source": snerv_mlx_native_export.get(
-                        "packet_source"
-                    ),
-                    "native_mlx_export_consumption": snerv_mlx_native_export.get(
-                        "recon_pixel_weight"
-                    ),
+                    "native_export_packet_source": snerv_mlx_native_export.get("packet_source"),
+                    "native_mlx_export_consumption": snerv_mlx_native_export.get("recon_pixel_weight"),
                     "primary_archive_consumed": bool(
-                        (
-                            snerv_mlx_native_export.get("recon_pixel_weight")
-                            or {}
-                        ).get("selected_packet_consumed")
+                        (snerv_mlx_native_export.get("recon_pixel_weight") or {}).get("selected_packet_consumed")
                     ),
                     "primary_archive_source": "snerv_native_mlx_export_direct",
-                    "primary_archive_path": snerv_mlx_native_export.get(
-                        "archive_path"
-                    ),
+                    "primary_archive_path": snerv_mlx_native_export.get("archive_path"),
                     **FALSE_AUTHORITY,
                 },
                 "snerv_mlx_native_export": snerv_mlx_native_export,
-                "snerv_mlx_native_file_backed_export_evidence": (
-                    snerv_mlx_native_file_backed_evidence
-                ),
-                "local_cpu_replay_summary_paths": [
-                    path.as_posix() for path in local_cpu_replay_paths
-                ],
+                "snerv_mlx_native_file_backed_export_evidence": (snerv_mlx_native_file_backed_evidence),
+                "local_cpu_replay_summary_paths": [path.as_posix() for path in local_cpu_replay_paths],
                 "local_cpu_replay_summary": local_cpu_replay_summary,
                 "local_cpu_replay_gate": {
                     "schema": "compact_runner_local_cpu_replay_gate.v1",
@@ -7278,25 +6278,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "default_enabled_for_full_coverage": (
                         _local_cpu_replay_enabled_by_default(
                             int(num_pairs),
-                            mlx_prefilter_local_replay_passed=(
-                                mlx_prefilter_local_replay_passed
-                            ),
+                            mlx_prefilter_local_replay_passed=(mlx_prefilter_local_replay_passed),
                         )
                     ),
                     "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
-                    "local_replay_mlx_prefilter_passed": (
-                        mlx_prefilter_local_replay_passed
-                    ),
+                    "local_replay_mlx_prefilter_passed": (mlx_prefilter_local_replay_passed),
                     "coverage_valid_for_replay": int(num_pairs) >= CONTEST_PAIR_COUNT,
                     "executed": local_cpu_replay_summary is not None,
                     "archive_source": "snerv_mlx_native_export_archive",
                     "archive_path": snerv_mlx_native_export.get("archive_path"),
                     "runtime_submission_dir": (
                         snerv_mlx_native_export.get("runtime_submission_dir")
-                        or (
-                            Path(str(snerv_mlx_native_export.get("archive_path"))).parent
-                            / "submission"
-                        ).as_posix()
+                        or (Path(str(snerv_mlx_native_export.get("archive_path"))).parent / "submission").as_posix()
                         if snerv_mlx_native_export.get("archive_path")
                         else None
                     ),
@@ -7306,22 +6299,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "ready_for_exact_eval_dispatch": False,
                 },
                 "mlx_prefilter_coverage": mlx_prefilter_coverage,
-                "mlx_profile_paths": [
-                    _resolve(path, base=root).as_posix()
-                    for path in effective_mlx_profile_paths
-                ],
+                "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in effective_mlx_profile_paths],
                 "auto_mlx_prefilter_profile_path": (
-                    str(auto_mlx_prefilter_profile_path)
-                    if auto_mlx_prefilter_profile_path
-                    else None
+                    str(auto_mlx_prefilter_profile_path) if auto_mlx_prefilter_profile_path else None
                 ),
-                "auto_mlx_prefilter_progress_path": (
-                    snerv_mlx_native_export.get("local_mlx_prefilter_progress_path")
-                ),
+                "auto_mlx_prefilter_progress_path": (snerv_mlx_native_export.get("local_mlx_prefilter_progress_path")),
                 "auto_mlx_prefilter_profile": (
-                    dict(auto_mlx_prefilter_profile)
-                    if isinstance(auto_mlx_prefilter_profile, Mapping)
-                    else None
+                    dict(auto_mlx_prefilter_profile) if isinstance(auto_mlx_prefilter_profile, Mapping) else None
                 ),
                 "mlx_prefilter_error_anatomy": auto_xray_attachment,
                 "score_aware_training": {
@@ -7332,39 +6316,25 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "wavelet": str(wavelet),
                     "target_bits_per_coeff": target_bits_per_coeff,
                     "step_map_coder_mode": str(resolved_step_map_coder_mode),
-                    "step_map_waterfill_bits_per_coeff": (
-                        step_map_waterfill_bits_per_coeff
-                    ),
+                    "step_map_waterfill_bits_per_coeff": (step_map_waterfill_bits_per_coeff),
                     "decoder_payload_codec": decoder_payload_codec,
-                    "source_pair_indices": list(
-                        snerv_mlx_native_export.get("source_pair_indices") or []
-                    ),
-                    "scorer_tether_smoke_gate": snerv_mlx_native_export.get(
-                        "snerv_scorer_tether_smoke_gate"
-                    ),
+                    "source_pair_indices": list(snerv_mlx_native_export.get("source_pair_indices") or []),
+                    "scorer_tether_smoke_gate": snerv_mlx_native_export.get("snerv_scorer_tether_smoke_gate"),
                     "prioritized_pair_training": {
                         "schema": "compact_snerv_prioritized_pair_training.v1",
                         "enabled": bool(prioritized_pair_indices),
-                        "pair_indices": [
-                            int(value) for value in prioritized_pair_indices
-                        ],
+                        "pair_indices": [int(value) for value in prioritized_pair_indices],
                         "pair_count": len(prioritized_pair_indices),
                         "consumed_by_cpu_advisory": False,
                         "consumed_by_scorer_loop_qat": bool(
-                            prioritized_pair_indices
-                            and snerv_mlx_native_export.get(
-                                "scorer_loop_qat_attached"
-                            )
+                            prioritized_pair_indices and snerv_mlx_native_export.get("scorer_loop_qat_attached")
                         ),
                         "consumed_by_mlx_native_export": bool(
                             prioritized_pair_indices
                             and (
-                                (
-                                    snerv_mlx_native_export.get(
-                                        "prioritized_pair_training"
-                                    )
-                                    or {}
-                                ).get("consumed_by_native_mlx_train_export")
+                                (snerv_mlx_native_export.get("prioritized_pair_training") or {}).get(
+                                    "consumed_by_native_mlx_train_export"
+                                )
                                 is True
                             )
                         ),
@@ -7373,94 +6343,55 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                             if (
                                 not prioritized_pair_indices
                                 or (
-                                    (
-                                        snerv_mlx_native_export.get(
-                                            "prioritized_pair_training"
-                                        )
-                                        or {}
-                                    ).get("consumed_by_native_mlx_train_export")
+                                    (snerv_mlx_native_export.get("prioritized_pair_training") or {}).get(
+                                        "consumed_by_native_mlx_train_export"
+                                    )
                                     is True
                                 )
                             )
-                            else (
-                                "snerv_mlx_native_prioritized_pair_hydration_"
-                                "not_consumed"
-                            )
+                            else ("snerv_mlx_native_prioritized_pair_hydration_not_consumed")
                         ),
                         "sampling_scope": "snerv_native_mlx_direct_training",
                         **FALSE_AUTHORITY,
                     },
                     "scorer_error_pair_curriculum": {
-                        **strip_candidate_curriculum_authority_fields(
-                            scorer_error_pair_curriculum
-                        ),
+                        **strip_candidate_curriculum_authority_fields(scorer_error_pair_curriculum),
                         "schema": "compact_snerv_score_aware_scorer_error_pair_curriculum.v1",
                         "consumed_by_native_mlx_export": bool(
                             scorer_error_pair_sampling_weights
                             and (
-                                (
-                                    snerv_mlx_native_export.get(
-                                        "scorer_error_pair_curriculum"
-                                    )
-                                    or {}
-                                ).get("consumed_by_native_mlx_train_export")
+                                (snerv_mlx_native_export.get("scorer_error_pair_curriculum") or {}).get(
+                                    "consumed_by_native_mlx_train_export"
+                                )
                                 is True
                             )
                         ),
-                        "weighted_pair_count": len(
-                            scorer_error_pair_sampling_weights
-                        ),
+                        "weighted_pair_count": len(scorer_error_pair_sampling_weights),
                         "sampling_scope": "snerv_native_mlx_direct_training",
                         **FALSE_AUTHORITY,
                     },
-                    "scorer_loop_component_guard_mode": str(
-                        snerv_scorer_loop_component_guard_mode
-                    ),
-                    "bounded_smoke_scorer_loop_qat_policy": (
-                        bounded_smoke_scorer_loop_qat_policy
-                    ),
+                    "scorer_loop_component_guard_mode": str(snerv_scorer_loop_component_guard_mode),
+                    "bounded_smoke_scorer_loop_qat_policy": (bounded_smoke_scorer_loop_qat_policy),
                     "mlx_native_export": snerv_mlx_native_export,
-                    "mlx_native_file_backed_export_evidence": (
-                        snerv_mlx_native_file_backed_evidence
-                    ),
-                    "mlx_native_train_export_attached": bool(
-                        snerv_mlx_native_export.get("executed")
-                    ),
+                    "mlx_native_file_backed_export_evidence": (snerv_mlx_native_file_backed_evidence),
+                    "mlx_native_train_export_attached": bool(snerv_mlx_native_export.get("executed")),
                     "mlx_native_hf_decoder_fit_executed": bool(
-                        snerv_mlx_native_export.get(
-                            "score_aware_hf_decoder_fit_executed"
-                        )
+                        snerv_mlx_native_export.get("score_aware_hf_decoder_fit_executed")
                     ),
-                    "mlx_native_receiver_proof_passed": (
-                        snerv_mlx_native_receiver_proof_passed
-                    ),
-                    "mlx_native_receiver_reconstruction": (
-                        snerv_mlx_native_export.get("receiver_reconstruction")
-                    ),
+                    "mlx_native_receiver_proof_passed": (snerv_mlx_native_receiver_proof_passed),
+                    "mlx_native_receiver_reconstruction": (snerv_mlx_native_export.get("receiver_reconstruction")),
                     "mlx_native_receiver_reconstruction_verified": bool(
-                        snerv_mlx_native_export.get(
-                            "receiver_reconstruction_verified"
-                        )
+                        snerv_mlx_native_export.get("receiver_reconstruction_verified")
                     ),
                     "mlx_native_receiver_target_reconstruction_mse_nchw255": (
-                        snerv_mlx_native_export.get(
-                            "receiver_target_reconstruction_mse_nchw255"
-                        )
+                        snerv_mlx_native_export.get("receiver_target_reconstruction_mse_nchw255")
                     ),
                     "mlx_native_receiver_export_reconstruction_mse_nchw255": (
-                        snerv_mlx_native_export.get(
-                            "receiver_export_reconstruction_mse_nchw255"
-                        )
+                        snerv_mlx_native_export.get("receiver_export_reconstruction_mse_nchw255")
                     ),
-                    "mlx_native_full600_export_verified": (
-                        snerv_mlx_native_export_verified
-                    ),
+                    "mlx_native_full600_export_verified": (snerv_mlx_native_export_verified),
                     "mlx_native_training_required_next": (
-                        not bool(
-                            snerv_mlx_native_export.get(
-                                "score_aware_long_training_executed"
-                            )
-                        )
+                        not bool(snerv_mlx_native_export.get("score_aware_long_training_executed"))
                     ),
                     "authority": "macos_mlx_false_authority_until_replay_exact",
                     **FALSE_AUTHORITY,
@@ -7478,11 +6409,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         return {**final, "report_path": path.as_posix()}
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
-        pair_indices=(
-            tuple(int(value) for value in prioritized_pair_indices)
-            if prioritized_pair_indices
-            else None
-        ),
+        pair_indices=(tuple(int(value) for value in prioritized_pair_indices) if prioritized_pair_indices else None),
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
@@ -7510,9 +6437,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         advisory_payload,
         requested_num_pairs=int(num_pairs),
     )
-    advisory_payload["source_pair_indices"] = [
-        int(value) for value in advisory_source_pair_indices
-    ]
+    advisory_payload["source_pair_indices"] = [int(value) for value in advisory_source_pair_indices]
     advisory_payload["receiver_archive_packet_path"] = packet_path.as_posix()
     advisory_archive_bytes_total = int(
         getattr(
@@ -7568,9 +6493,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     trained_ladder_row_path = out / "snerv_trained_ladder_row_payload.json"
     _write_json(trained_ladder_row_path, trained_ladder_row_payload)
     advisory_payload["trained_ladder_row_payload"] = trained_ladder_row_payload
-    advisory_payload["trained_ladder_row_payload_path"] = (
-        trained_ladder_row_path.as_posix()
-    )
+    advisory_payload["trained_ladder_row_payload_path"] = trained_ladder_row_path.as_posix()
     _write_json(advisory_path, advisory_payload)
 
     auto_mlx_prefilter_profile = (
@@ -7594,9 +6517,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         root=root,
     )
     resolved_auto_mlx_prefilter_profile_path = (
-        _optional_existing(auto_mlx_prefilter_profile_path, base=root)
-        if auto_mlx_prefilter_profile_path
-        else None
+        _optional_existing(auto_mlx_prefilter_profile_path, base=root) if auto_mlx_prefilter_profile_path else None
     )
     auto_xray_attachment = _write_mlx_prefilter_error_anatomy_attachment(
         profile_path=resolved_auto_mlx_prefilter_profile_path,
@@ -7604,12 +6525,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         output_dir=out / "mlx_prefilter_error_anatomy",
         label="snerv_auto_post_export_xray",
     )
-    has_full_video_mlx_prefilter = bool(
-        mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
-    )
-    mlx_prefilter_local_replay_passed = bool(
-        mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
-    )
+    has_full_video_mlx_prefilter = bool(mlx_prefilter_coverage["has_full_video_mlx_prefilter"])
+    mlx_prefilter_local_replay_passed = bool(mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"])
     local_cpu_replay_summary: dict[str, Any] | None = None
     local_cpu_replay_paths: list[Path] = []
     local_cpu_replay_blockers: list[str] = []
@@ -7618,9 +6535,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     replay_source = "snerv_advisory_archive"
     if auto_mlx_prefilter_profile_path and snerv_mlx_native_export.get("archive_path"):
         replay_archive_path = snerv_mlx_native_export.get("archive_path")
-        replay_runtime_submission_dir = (
-            snerv_mlx_native_export.get("runtime_submission_dir")
-            or (Path(str(replay_archive_path)).parent / "submission")
+        replay_runtime_submission_dir = snerv_mlx_native_export.get("runtime_submission_dir") or (
+            Path(str(replay_archive_path)).parent / "submission"
         )
         replay_source = "snerv_mlx_native_export_archive"
     if replay_archive_path:
@@ -7650,15 +6566,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         runtime_submission_dir=package_dir / "submission",
         repo_root=root,
     )
-    post_export_materializer_execution = (
-        _execute_carrier_post_export_materializer_plan(
-            plan=post_export_materializer_plan,
-            requested=run_post_export_materializers,
-            max_steps=post_export_materializer_max_steps,
-            max_parallel=post_export_materializer_max_parallel,
-            max_experiments=post_export_materializer_max_experiments,
-            repo_root=root,
-        )
+    post_export_materializer_execution = _execute_carrier_post_export_materializer_plan(
+        plan=post_export_materializer_plan,
+        requested=run_post_export_materializers,
+        max_steps=post_export_materializer_max_steps,
+        max_parallel=post_export_materializer_max_parallel,
+        max_experiments=post_export_materializer_max_experiments,
+        repo_root=root,
     )
     snerv_binary_profile = _write_snerv_binary_profile_attachment(
         archive_path=archive_path,
@@ -7691,12 +6605,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         max_trials=int(snerv_scorer_loop_max_trials),
         search_mode=str(snerv_scorer_loop_search_mode),
         perturb_scale=float(snerv_scorer_loop_perturb_scale),
-        byte_pressure_multiplier=float(
-            snerv_scorer_loop_byte_pressure_multiplier
-        ),
-        section_value_pressure_multiplier=float(
-            snerv_scorer_loop_section_value_pressure_multiplier
-        ),
+        byte_pressure_multiplier=float(snerv_scorer_loop_byte_pressure_multiplier),
+        section_value_pressure_multiplier=float(snerv_scorer_loop_section_value_pressure_multiplier),
         max_archive_byte_growth=snerv_scorer_loop_max_archive_byte_growth,
         byte_growth_admission_mode=str(snerv_scorer_loop_byte_growth_admission_mode),
         pose_slack=float(snerv_scorer_loop_pose_slack),
@@ -7704,12 +6614,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         pair_stride=int(snerv_scorer_loop_pair_stride),
         start_pair=int(snerv_scorer_loop_start_pair),
         prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
-        pair_guard_min_score_improved_fraction=float(
-            snerv_scorer_loop_pair_guard_min_score_improved_fraction
-        ),
-        pair_guard_max_pose_worsened_fraction=float(
-            snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
-        ),
+        pair_guard_min_score_improved_fraction=float(snerv_scorer_loop_pair_guard_min_score_improved_fraction),
+        pair_guard_max_pose_worsened_fraction=float(snerv_scorer_loop_pair_guard_max_pose_worsened_fraction),
         component_guard_mode=str(snerv_scorer_loop_component_guard_mode),
         seed=int(random_seed),
     )
@@ -7721,9 +6627,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "mfu_scales": [int(v) for v in resolved_snerv_mfu_scales],
         "hfr_gain": float(resolved_snerv_hfr_gain),
         "official_skip_high_mode": str(resolved_snerv_official_skip_high_mode),
-        "snerv_official_skip_high_mode": str(
-            resolved_snerv_official_skip_high_mode
-        ),
+        "snerv_official_skip_high_mode": str(resolved_snerv_official_skip_high_mode),
         "temporal_context": int(snerv_temporal_context),
         "temporal_mode": str(snerv_temporal_mode),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
@@ -7733,33 +6637,17 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "wavelet": str(wavelet),
         "bits_per_coeff": float(target_bits_per_coeff),
         "step_map_bits_per_coeff": float(step_map_waterfill_bits_per_coeff),
-        "snerv_native_mlx_decoder_train_steps": int(
-            snerv_native_mlx_decoder_train_steps
-        ),
-        "snerv_native_mlx_decoder_train_lr": float(
-            snerv_native_mlx_decoder_train_lr
-        ),
-        "snerv_native_mlx_decoder_train_ridge": float(
-            snerv_native_mlx_decoder_train_ridge
-        ),
-        "snerv_native_mlx_decoder_train_optimizer": str(
-            snerv_native_mlx_decoder_train_optimizer
-        ),
-        "snerv_score_aware_long_training_epochs": int(
-            snerv_score_aware_long_training_epochs
-        ),
-        "snerv_score_aware_long_training_lr": float(
-            snerv_score_aware_long_training_lr
-        ),
-        "snerv_score_aware_long_training_batch_pairs": int(
-            snerv_score_aware_long_training_batch_pairs
-        ),
+        "snerv_native_mlx_decoder_train_steps": int(snerv_native_mlx_decoder_train_steps),
+        "snerv_native_mlx_decoder_train_lr": float(snerv_native_mlx_decoder_train_lr),
+        "snerv_native_mlx_decoder_train_ridge": float(snerv_native_mlx_decoder_train_ridge),
+        "snerv_native_mlx_decoder_train_optimizer": str(snerv_native_mlx_decoder_train_optimizer),
+        "snerv_score_aware_long_training_epochs": int(snerv_score_aware_long_training_epochs),
+        "snerv_score_aware_long_training_lr": float(snerv_score_aware_long_training_lr),
+        "snerv_score_aware_long_training_batch_pairs": int(snerv_score_aware_long_training_batch_pairs),
         "snerv_score_aware_long_training_section_byte_refresh_every_steps": int(
             snerv_score_aware_long_training_section_byte_refresh_every_steps
         ),
-        "snerv_score_aware_long_training_optimizer": str(
-            snerv_score_aware_long_training_optimizer
-        ),
+        "snerv_score_aware_long_training_optimizer": str(snerv_score_aware_long_training_optimizer),
         "snerv_score_aware_long_training_grad_clip_max_norm": (
             None
             if snerv_score_aware_long_training_grad_clip_max_norm is None
@@ -7770,9 +6658,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             if snerv_score_aware_long_training_weight_decay is None
             else float(snerv_score_aware_long_training_weight_decay)
         ),
-        "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
-            snerv_score_aware_long_training_eval_roundtrip_ste
-        ),
+        "snerv_score_aware_long_training_eval_roundtrip_ste": bool(snerv_score_aware_long_training_eval_roundtrip_ste),
         "snerv_score_aware_long_training_scorer_input_distribution_guard_weight": (
             float(scorer_input_distribution_guard_weight)
         ),
@@ -7782,9 +6668,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature": (
             float(scorer_input_distribution_guard_temperature)
         ),
-        "snerv_score_aware_long_training_scorer_space_step_guard_enabled": bool(
-            scorer_space_step_guard_enabled
-        ),
+        "snerv_score_aware_long_training_scorer_space_step_guard_enabled": bool(scorer_space_step_guard_enabled),
         "snerv_score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction": (
             float(scorer_space_step_guard_min_pre_segnet_occupied_class_fraction)
         ),
@@ -7793,27 +6677,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction": (
             None
-            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            is None
-            else float(
-                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            )
+            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is None
+            else float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_min_post_segnet_target_class_min_ratio": (
             None
-            if scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-            is None
-            else float(
-                scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-            )
+            if scorer_space_step_guard_min_post_segnet_target_class_min_ratio is None
+            else float(scorer_space_step_guard_min_post_segnet_target_class_min_ratio)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_post_segnet_target_class_ratio_drop": (
             None
-            if scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-            is None
-            else float(
-                scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-            )
+            if scorer_space_step_guard_max_post_segnet_target_class_ratio_drop is None
+            else float(scorer_space_step_guard_max_post_segnet_target_class_ratio_drop)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_post_segnet_contrast_ratio": (
             None
@@ -7852,31 +6727,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_score_term_relative_worsening": (
             None
-            if scorer_space_step_guard_max_pose_score_term_relative_worsening
-            is None
+            if scorer_space_step_guard_max_pose_score_term_relative_worsening is None
             else float(scorer_space_step_guard_max_pose_score_term_relative_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_score_term_absolute_worsening": (
             None
-            if scorer_space_step_guard_max_pose_score_term_absolute_worsening
-            is None
+            if scorer_space_step_guard_max_pose_score_term_absolute_worsening is None
             else float(scorer_space_step_guard_max_pose_score_term_absolute_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening": (
             None
-            if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-            )
+            if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening is None
+            else float(scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening": (
             None
-            if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-            )
+            if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening is None
+            else float(scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_direct_nonrate_score_worsening": (
             None
@@ -7885,11 +6752,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening": (
             None
-            if scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            )
+            if scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening is None
+            else float(scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening)
         ),
         "snerv_score_aware_long_training_scorer_space_step_guard_backtracking_steps": int(
             scorer_space_step_guard_backtracking_steps
@@ -7900,9 +6764,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
         "snerv_pose_distillation_weight": float(pose_distillation_weight),
         "snerv_pose_distillation_loss": str(pose_distillation_loss),
-        "snerv_pose_distillation_huber_delta": float(
-            pose_distillation_huber_delta
-        ),
+        "snerv_pose_distillation_huber_delta": float(pose_distillation_huber_delta),
         "snerv_segnet_distillation_objective": str(segnet_distillation_objective),
         "snerv_distillation_temperature": float(distillation_temperature),
         "snerv_segnet_tau_boundary": float(segnet_tau_boundary),
@@ -7911,28 +6773,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_allow_segnet_only_research": bool(allow_segnet_only_research),
         "snerv_coder_aware_qat": bool(coder_aware_qat),
         "snerv_coder_qat_quant_bits": int(coder_qat_quant_bits),
-        "snerv_coder_qat_quant_residual_weight": float(
-            coder_qat_quant_residual_weight
-        ),
+        "snerv_coder_qat_quant_residual_weight": float(coder_qat_quant_residual_weight),
         "snerv_coder_qat_magnitude_weight": float(coder_qat_magnitude_weight),
         "snerv_coder_qat_delta_weight": float(coder_qat_delta_weight),
-        "snerv_coder_qat_c1a_entropy_weight": float(
-            coder_qat_c1a_entropy_weight
-        ),
+        "snerv_coder_qat_c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
         "snerv_coder_qat_c1a_sigma": float(coder_qat_c1a_sigma),
         "snerv_coder_qat_c1a_sample_size": int(coder_qat_c1a_sample_size),
         "snerv_score_aware_long_training_pr95_faithful_curriculum": bool(
             snerv_score_aware_long_training_pr95_faithful_curriculum
         ),
-        "snerv_score_aware_long_training_pr95_muon_policy": str(
-            snerv_score_aware_long_training_pr95_muon_policy
-        ),
-        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": (
-            checkpoint_retention_keep_last_n
-        ),
-        "snerv_score_aware_long_training_checkpoint_retention_keep_best_n": int(
-            checkpoint_retention_keep_best_n
-        ),
+        "snerv_score_aware_long_training_pr95_muon_policy": str(snerv_score_aware_long_training_pr95_muon_policy),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": (checkpoint_retention_keep_last_n),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_best_n": int(checkpoint_retention_keep_best_n),
         "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs": (
             checkpoint_retention_keep_every_n_epochs
         ),
@@ -7953,18 +6805,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         repo_root=root,
         allow_overwrite=bool(allow_overwrite),
         retain_receiver_output=bool(keep_local_replay_inflated),
-        receiver_proof_timeout_seconds=int(
-            snerv_native_mlx_receiver_proof_timeout_seconds
-        ),
+        receiver_proof_timeout_seconds=int(snerv_native_mlx_receiver_proof_timeout_seconds),
         run_scorer_loop_qat=bool(run_scorer_loop_qat),
         scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
         scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
         scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
         scorer_loop_qat_decoder_payload_codec=decoder_payload_codec,
         scorer_loop_qat_lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
-        scorer_loop_qat_component_guard_mode=str(
-            snerv_scorer_loop_component_guard_mode
-        ),
+        scorer_loop_qat_component_guard_mode=str(snerv_scorer_loop_component_guard_mode),
         scorer_loop_qat_pair_guard_min_score_improved_fraction=float(
             snerv_scorer_loop_pair_guard_min_score_improved_fraction
         ),
@@ -7973,16 +6821,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         scorer_loop_qat_device=str(distillation_device),
         scorer_loop_qat_perturb_scale=float(snerv_scorer_loop_perturb_scale),
-        scorer_loop_qat_byte_pressure_multiplier=float(
-            snerv_scorer_loop_byte_pressure_multiplier
-        ),
-        scorer_loop_qat_section_value_pressure_multiplier=float(
-            snerv_scorer_loop_section_value_pressure_multiplier
-        ),
+        scorer_loop_qat_byte_pressure_multiplier=float(snerv_scorer_loop_byte_pressure_multiplier),
+        scorer_loop_qat_section_value_pressure_multiplier=float(snerv_scorer_loop_section_value_pressure_multiplier),
         scorer_loop_qat_max_archive_byte_growth=snerv_scorer_loop_max_archive_byte_growth,
-        scorer_loop_qat_byte_growth_admission_mode=str(
-            snerv_scorer_loop_byte_growth_admission_mode
-        ),
+        scorer_loop_qat_byte_growth_admission_mode=str(snerv_scorer_loop_byte_growth_admission_mode),
         scorer_loop_qat_pose_slack=float(snerv_scorer_loop_pose_slack),
         scorer_loop_qat_seg_slack=float(snerv_scorer_loop_seg_slack),
         scorer_loop_qat_seed=int(random_seed),
@@ -7993,19 +6835,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_decoder_train_lr=float(snerv_native_mlx_decoder_train_lr),
         native_mlx_decoder_train_ridge=float(snerv_native_mlx_decoder_train_ridge),
         native_mlx_decoder_train_optimizer=str(snerv_native_mlx_decoder_train_optimizer),
-        score_aware_long_training_epochs=int(
-            snerv_score_aware_long_training_epochs
-        ),
+        score_aware_long_training_epochs=int(snerv_score_aware_long_training_epochs),
         score_aware_long_training_lr=float(snerv_score_aware_long_training_lr),
-        score_aware_long_training_batch_pairs=int(
-            snerv_score_aware_long_training_batch_pairs
-        ),
+        score_aware_long_training_batch_pairs=int(snerv_score_aware_long_training_batch_pairs),
         score_aware_long_training_section_byte_refresh_every_steps=int(
             snerv_score_aware_long_training_section_byte_refresh_every_steps
         ),
-        score_aware_long_training_optimizer=str(
-            snerv_score_aware_long_training_optimizer
-        ),
+        score_aware_long_training_optimizer=str(snerv_score_aware_long_training_optimizer),
         score_aware_long_training_grad_clip_max_norm=(
             None
             if snerv_score_aware_long_training_grad_clip_max_norm is None
@@ -8016,45 +6852,31 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             if snerv_score_aware_long_training_weight_decay is None
             else float(snerv_score_aware_long_training_weight_decay)
         ),
-        score_aware_long_training_eval_roundtrip_ste=bool(
-            snerv_score_aware_long_training_eval_roundtrip_ste
-        ),
+        score_aware_long_training_eval_roundtrip_ste=bool(snerv_score_aware_long_training_eval_roundtrip_ste),
         score_aware_long_training_scorer_tether_smoke_steps=int(
             snerv_score_aware_long_training_scorer_tether_smoke_steps
         ),
-        score_aware_long_training_scorer_input_distribution_guard_weight=float(
-            scorer_input_distribution_guard_weight
-        ),
+        score_aware_long_training_scorer_input_distribution_guard_weight=float(scorer_input_distribution_guard_weight),
         score_aware_long_training_scorer_input_distribution_guard_saturation_margin=float(
             scorer_input_distribution_guard_saturation_margin
         ),
         score_aware_long_training_scorer_input_distribution_guard_temperature=float(
             scorer_input_distribution_guard_temperature
         ),
-        score_aware_long_training_scorer_input_contrast_floor_weight=float(
-            scorer_input_contrast_floor_weight
-        ),
+        score_aware_long_training_scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
         score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio=float(
             scorer_input_contrast_floor_segnet_min_std_ratio
         ),
         score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
         ),
-        score_aware_long_training_scorer_input_shape_tether_weight=float(
-            scorer_input_shape_tether_weight
-        ),
-        score_aware_long_training_posenet_temporal_signal_floor_weight=float(
-            posenet_temporal_signal_floor_weight
-        ),
-        score_aware_long_training_posenet_temporal_signal_min_std_ratio=float(
-            posenet_temporal_signal_min_std_ratio
-        ),
+        score_aware_long_training_scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
+        score_aware_long_training_posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
+        score_aware_long_training_posenet_temporal_signal_min_std_ratio=float(posenet_temporal_signal_min_std_ratio),
         score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio=float(
             posenet_temporal_signal_min_mean_abs_ratio
         ),
-        score_aware_long_training_scorer_space_step_guard_enabled=bool(
-            scorer_space_step_guard_enabled
-        ),
+        score_aware_long_training_scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
         score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
         ),
@@ -8116,65 +6938,35 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             scorer_space_step_guard_backtracking_shrink
         ),
         score_aware_long_training_loss_weights=dict(stage_weights),
-        score_aware_long_training_pose_warmup_epochs=int(
-            pose_distillation_warmup_epochs
-        ),
-        score_aware_long_training_scorer_input_shape_warmup_epochs=int(
-            scorer_input_shape_warmup_epochs
-        ),
-        score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(
-            segnet_direct_live_escape_warmup_epochs
-        ),
+        score_aware_long_training_pose_warmup_epochs=int(pose_distillation_warmup_epochs),
+        score_aware_long_training_scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
+        score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(segnet_direct_live_escape_warmup_epochs),
         score_aware_long_training_segnet_direct_live_escape_class_multiplier=float(
             segnet_direct_live_escape_class_multiplier
         ),
         checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
         checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
-        checkpoint_retention_keep_every_n_epochs=(
-            checkpoint_retention_keep_every_n_epochs
-        ),
-        checkpoint_retention_cold_store_roots=(
-            checkpoint_retention_cold_store_roots
-        ),
+        checkpoint_retention_keep_every_n_epochs=(checkpoint_retention_keep_every_n_epochs),
+        checkpoint_retention_cold_store_roots=(checkpoint_retention_cold_store_roots),
         segnet_distillation_weight=float(segnet_distillation_weight),
         pose_distillation_weight=float(pose_distillation_weight),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         segnet_distillation_objective=str(segnet_distillation_objective),
         distillation_temperature=float(distillation_temperature),
-        segnet_student_live_calibration_weight=float(
-            segnet_student_live_calibration_weight
-        ),
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_base_loss_weight=float(
-            segnet_direct_live_base_loss_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_base_loss_weight=float(segnet_direct_live_base_loss_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
         distillation_device=str(distillation_device),
@@ -8190,12 +6982,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         score_aware_long_training_pr95_faithful_curriculum=bool(
             snerv_score_aware_long_training_pr95_faithful_curriculum
         ),
-        score_aware_long_training_pr95_muon_policy=str(
-            snerv_score_aware_long_training_pr95_muon_policy
-        ),
-        write_mlx_prefilter_profile=bool(
-            run_native_mlx_export and int(num_pairs) >= CONTEST_PAIR_COUNT
-        ),
+        score_aware_long_training_pr95_muon_policy=str(snerv_score_aware_long_training_pr95_muon_policy),
+        write_mlx_prefilter_profile=bool(run_native_mlx_export and int(num_pairs) >= CONTEST_PAIR_COUNT),
         mlx_prefilter_scorer_device=_resolve_mlx_prefilter_scorer_device_alias(
             mlx_prefilter_scorer_device,
             fallback_device=distillation_device,
@@ -8203,42 +6991,32 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         mlx_prefilter_scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
         mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
     )
-    snerv_mlx_native_file_backed_evidence = (
-        build_snerv_mlx_native_file_backed_evidence(
-            snerv_mlx_native_export,
-            required_num_pairs=CONTEST_PAIR_COUNT,
-        )
+    snerv_mlx_native_file_backed_evidence = build_snerv_mlx_native_file_backed_evidence(
+        snerv_mlx_native_export,
+        required_num_pairs=CONTEST_PAIR_COUNT,
     )
-    snerv_mlx_native_adapter_contract_after_export = (
-        build_snerv_mlx_native_adapter_contract(
-            extra_evidence={
-                "file_backed_export_artifact": snerv_mlx_native_export,
-                "required_num_pairs": CONTEST_PAIR_COUNT,
-            }
-        )
+    snerv_mlx_native_adapter_contract_after_export = build_snerv_mlx_native_adapter_contract(
+        extra_evidence={
+            "file_backed_export_artifact": snerv_mlx_native_export,
+            "required_num_pairs": CONTEST_PAIR_COUNT,
+        }
     )
     snerv_mlx_native_export_verified = bool(
         snerv_mlx_native_export.get("executed")
         and snerv_mlx_native_export.get("receiver_proof_passed") is True
         and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
-        and snerv_mlx_native_file_backed_evidence.get(
-            "required_pair_file_backed_export_proof_passed"
-        )
+        and snerv_mlx_native_file_backed_evidence.get("required_pair_file_backed_export_proof_passed")
     )
     snerv_mlx_native_receiver_proof_passed = bool(
         snerv_mlx_native_export.get("executed")
         and snerv_mlx_native_export.get("receiver_proof_passed") is True
         and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
     )
-    snerv_curriculum_step_map_coder_mode = (
-        _snerv_curriculum_step_map_coder_mode_from_native_export(
-            snerv_mlx_native_export,
-            fallback=str(resolved_step_map_coder_mode),
-        )
+    snerv_curriculum_step_map_coder_mode = _snerv_curriculum_step_map_coder_mode_from_native_export(
+        snerv_mlx_native_export,
+        fallback=str(resolved_step_map_coder_mode),
     )
-    native_scorer_loop_qat_status = _snerv_native_scorer_loop_qat_status(
-        snerv_mlx_native_export
-    )
+    native_scorer_loop_qat_status = _snerv_native_scorer_loop_qat_status(snerv_mlx_native_export)
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -8246,67 +7024,39 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         step_map_coder_mode=str(snerv_curriculum_step_map_coder_mode),
         measured_packet_bytes=advisory_archive_bytes_total,
         measured_archive_bytes=(
-            int(row["candidate_archive_bytes"])
-            if row.get("candidate_archive_bytes") is not None
-            else None
+            int(row["candidate_archive_bytes"]) if row.get("candidate_archive_bytes") is not None else None
         ),
         scorer_loop_qat_attached=bool(snerv_scorer_loop_qat.get("executed")),
-        scorer_loop_qat_receiver_contract_satisfied=bool(
-            snerv_scorer_loop_qat.get("receiver_contract_satisfied")
-        ),
-        scorer_loop_qat_ready_for_pose_guard_gate=bool(
-            snerv_scorer_loop_qat.get("ready_for_pose_guard_gate")
-        ),
-        scorer_loop_qat_accepted_improvement=bool(
-            snerv_scorer_loop_qat.get("accepted_improvement")
-        ),
+        scorer_loop_qat_receiver_contract_satisfied=bool(snerv_scorer_loop_qat.get("receiver_contract_satisfied")),
+        scorer_loop_qat_ready_for_pose_guard_gate=bool(snerv_scorer_loop_qat.get("ready_for_pose_guard_gate")),
+        scorer_loop_qat_accepted_improvement=bool(snerv_scorer_loop_qat.get("accepted_improvement")),
         receiver_proof_attached=receiver_proof_attached,
         full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
         local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
-        native_mlx_train_export_attached=bool(
-            snerv_mlx_native_export.get("executed")
-        ),
-        native_mlx_long_training_bound=bool(
-            snerv_mlx_native_export.get("score_aware_long_training_control_bound")
-        ),
+        native_mlx_train_export_attached=bool(snerv_mlx_native_export.get("executed")),
+        native_mlx_long_training_bound=bool(snerv_mlx_native_export.get("score_aware_long_training_control_bound")),
         native_mlx_receiver_proof_passed=snerv_mlx_native_receiver_proof_passed,
-        native_mlx_full600_campaign_ready=bool(
-            snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
-        ),
-        native_mlx_scorer_loop_qat_attached=bool(
-            native_scorer_loop_qat_status["attached"]
-        ),
+        native_mlx_full600_campaign_ready=bool(snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")),
+        native_mlx_scorer_loop_qat_attached=bool(native_scorer_loop_qat_status["attached"]),
         native_mlx_scorer_loop_qat_receiver_contract_satisfied=bool(
             native_scorer_loop_qat_status["receiver_contract_satisfied"]
         ),
         native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=bool(
             native_scorer_loop_qat_status["ready_for_pose_guard_gate"]
         ),
-        native_mlx_scorer_loop_qat_accepted_improvement=bool(
-            native_scorer_loop_qat_status["accepted_improvement"]
-        ),
-        native_mlx_scorer_loop_qat_best_materialized=bool(
-            native_scorer_loop_qat_status["best_materialized"]
-        ),
+        native_mlx_scorer_loop_qat_accepted_improvement=bool(native_scorer_loop_qat_status["accepted_improvement"]),
+        native_mlx_scorer_loop_qat_best_materialized=bool(native_scorer_loop_qat_status["best_materialized"]),
         native_mlx_scorer_input_distribution_guard_bound=bool(
-            snerv_mlx_native_export.get(
-                "score_aware_long_training_scorer_input_distribution_guard_bound"
-            )
+            snerv_mlx_native_export.get("score_aware_long_training_scorer_input_distribution_guard_bound")
         ),
         native_mlx_real_segnet_teacher_bound=bool(
-            snerv_mlx_native_export.get(
-                "score_aware_long_training_has_real_segnet_teacher"
-            )
+            snerv_mlx_native_export.get("score_aware_long_training_has_real_segnet_teacher")
         ),
         native_mlx_real_posenet_teacher_bound=bool(
-            snerv_mlx_native_export.get(
-                "score_aware_long_training_has_real_posenet_teacher"
-            )
+            snerv_mlx_native_export.get("score_aware_long_training_has_real_posenet_teacher")
         ),
         native_mlx_pr95_curriculum_bound=bool(
-            snerv_mlx_native_export.get(
-                "score_aware_long_training_pr95_curriculum_bound"
-            )
+            snerv_mlx_native_export.get("score_aware_long_training_pr95_curriculum_bound")
         ),
         native_mlx_eval_roundtrip_ste_bound=bool(
             _nested(
@@ -8323,13 +7073,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "has_real_posenet_teacher",
             )
         ),
-        native_mlx_coder_qat_bound=bool(
-            snerv_mlx_native_export.get("score_aware_long_training_coder_qat_bound")
-        ),
+        native_mlx_coder_qat_bound=bool(snerv_mlx_native_export.get("score_aware_long_training_coder_qat_bound")),
         native_mlx_muon_adamw_partition_bound=bool(
-            snerv_mlx_native_export.get(
-                "score_aware_long_training_muon_adamw_partition_bound"
-            )
+            snerv_mlx_native_export.get("score_aware_long_training_muon_adamw_partition_bound")
         ),
         native_mlx_artifact_evidence=snerv_mlx_native_export,
     )
@@ -8340,16 +7086,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             *(
                 []
                 if snerv_mlx_native_export_verified
-                else list(
-                    snerv_mlx_native_adapter_contract_after_export.get("blockers")
-                    or []
-                )
+                else list(snerv_mlx_native_adapter_contract_after_export.get("blockers") or [])
             ),
             *local_proof_prelaunch_blockers,
             *(
                 []
-                if snerv_mlx_native_export.get("score_aware_long_training_executed")
-                is True
+                if snerv_mlx_native_export.get("score_aware_long_training_executed") is True
                 else [
                     (
                         "snerv_mlx_native_longer_staged_training_not_executed"
@@ -8364,11 +7106,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
             *list(snerv_scorer_loop_qat.get("blockers") or []),
-            *(
-                []
-                if snerv_binary_profile.get("profile_written")
-                else list(snerv_binary_profile.get("blockers") or [])
-            ),
+            *([] if snerv_binary_profile.get("profile_written") else list(snerv_binary_profile.get("blockers") or [])),
             *list(row.get("blockers") or []),
             *list(mlx_prefilter_coverage.get("blockers") or []),
         ]
@@ -8397,9 +7135,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "launch_levels": levels,
                 "launch_bits_per_coeff": target_bits_per_coeff,
                 "launch_step_map_coder_mode": str(resolved_step_map_coder_mode),
-                "launch_step_map_waterfill_bits_per_coeff": (
-                    step_map_waterfill_bits_per_coeff
-                ),
+                "launch_step_map_waterfill_bits_per_coeff": (step_map_waterfill_bits_per_coeff),
                 "launch_decoder_payload_codec": decoder_payload_codec,
                 "candidate_curriculum_plan": candidate_curriculum_plan,
                 "score_claim": False,
@@ -8410,9 +7146,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "schema": "compact_snerv_recon_pixel_weight_consumption.v1",
                 "requested": effective_recon_pixel_weight_path is not None,
                 "enabled": bool(
-                    (
-                        snerv_mlx_native_export.get("recon_pixel_weight") or {}
-                    ).get("selected_packet_consumed")
+                    (snerv_mlx_native_export.get("recon_pixel_weight") or {}).get("selected_packet_consumed")
                 ),
                 "path": (
                     Path(effective_recon_pixel_weight_path).as_posix()
@@ -8427,20 +7161,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "normalize": str(recon_pixel_weight_normalize),
                 "auto_discovery": recon_pixel_weight_auto_discovery,
                 "native_export_consumed": bool(
-                    (
-                        snerv_mlx_native_export.get("recon_pixel_weight") or {}
-                    ).get("selected_packet_consumed")
+                    (snerv_mlx_native_export.get("recon_pixel_weight") or {}).get("selected_packet_consumed")
                 ),
-                "native_export_packet_source": snerv_mlx_native_export.get(
-                    "packet_source"
-                ),
-                "native_mlx_export_consumption": snerv_mlx_native_export.get(
-                    "recon_pixel_weight"
-                ),
+                "native_export_packet_source": snerv_mlx_native_export.get("packet_source"),
+                "native_mlx_export_consumption": snerv_mlx_native_export.get("recon_pixel_weight"),
                 "primary_archive_consumed": False,
-                "primary_archive_source": (
-                    "snerv_advisory_archive_packet_not_native_mlx_export"
-                ),
+                "primary_archive_source": ("snerv_advisory_archive_packet_not_native_mlx_export"),
                 "primary_archive_path": archive_path,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -8454,25 +7180,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "trained_ladder_row_payload_path": trained_ladder_row_path.as_posix(),
             "trained_ladder_row_payload": trained_ladder_row_payload,
             "runtime_package_dir": package_dir.as_posix(),
-            "runtime_package_path": (
-                package_path.as_posix() if package_path.is_file() else None
-            ),
+            "runtime_package_path": (package_path.as_posix() if package_path.is_file() else None),
             "receiver_proof_report_paths": (
-                [_resolve(receiver_proof_path, base=root).as_posix()]
-                if receiver_proof_path
-                else []
+                [_resolve(receiver_proof_path, base=root).as_posix()] if receiver_proof_path else []
             ),
             "archive_bound_candidate_rows": candidate_rows,
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_carrier_training_plan": planner,
-            "snerv_mlx_native_adapter_contract": (
-                snerv_mlx_native_adapter_contract_after_export
-            ),
+            "snerv_mlx_native_adapter_contract": (snerv_mlx_native_adapter_contract_after_export),
             "score_aware_training": {
                 "schema": "compact_snerv_archive_bound_advisory.v1",
                 "status": (
-                    "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_"
-                    "mlx_native_training_missing"
+                    "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_mlx_native_training_missing"
                     if snerv_scorer_loop_qat.get("executed")
                     else "executed_cpu_advisory_mlx_native_training_missing"
                 ),
@@ -8481,34 +7200,24 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "wavelet": advisory.wavelet,
                 "target_bits_per_coeff": target_bits_per_coeff,
                 "step_map_coder_mode": str(resolved_step_map_coder_mode),
-                "step_map_waterfill_bits_per_coeff": (
-                    step_map_waterfill_bits_per_coeff
-                ),
+                "step_map_waterfill_bits_per_coeff": (step_map_waterfill_bits_per_coeff),
                 "decoder_payload_codec": decoder_payload_codec,
-                "source_pair_indices": [
-                    int(value) for value in advisory_source_pair_indices
-                ],
+                "source_pair_indices": [int(value) for value in advisory_source_pair_indices],
                 "prioritized_pair_training": {
                     "schema": "compact_snerv_prioritized_pair_training.v1",
                     "enabled": bool(prioritized_pair_indices),
-                    "pair_indices": [
-                        int(value) for value in prioritized_pair_indices
-                    ],
+                    "pair_indices": [int(value) for value in prioritized_pair_indices],
                     "pair_count": len(prioritized_pair_indices),
                     "consumed_by_cpu_advisory": bool(prioritized_pair_indices),
                     "consumed_by_scorer_loop_qat": bool(
-                        prioritized_pair_indices
-                        and snerv_scorer_loop_qat.get("executed")
+                        prioritized_pair_indices and snerv_scorer_loop_qat.get("executed")
                     ),
                     "consumed_by_mlx_native_export": bool(
                         prioritized_pair_indices
                         and (
-                            (
-                                snerv_mlx_native_export.get(
-                                    "prioritized_pair_training"
-                                )
-                                or {}
-                            ).get("consumed_by_native_mlx_train_export")
+                            (snerv_mlx_native_export.get("prioritized_pair_training") or {}).get(
+                                "consumed_by_native_mlx_train_export"
+                            )
                             is True
                         )
                     ),
@@ -8517,98 +7226,62 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                         if (
                             not prioritized_pair_indices
                             or (
-                                (
-                                    snerv_mlx_native_export.get(
-                                        "prioritized_pair_training"
-                                    )
-                                    or {}
-                                ).get("consumed_by_native_mlx_train_export")
+                                (snerv_mlx_native_export.get("prioritized_pair_training") or {}).get(
+                                    "consumed_by_native_mlx_train_export"
+                                )
                                 is True
                             )
                         )
                         else "snerv_mlx_native_prioritized_pair_hydration_not_consumed"
                     ),
-                    "sampling_scope": (
-                        "snerv_cpu_advisory_and_scorer_loop_qat_pair_subset"
-                    ),
+                    "sampling_scope": ("snerv_cpu_advisory_and_scorer_loop_qat_pair_subset"),
                     **FALSE_AUTHORITY,
                 },
                 "scorer_error_pair_curriculum": {
-                    **strip_candidate_curriculum_authority_fields(
-                        scorer_error_pair_curriculum
-                    ),
+                    **strip_candidate_curriculum_authority_fields(scorer_error_pair_curriculum),
                     "schema": "compact_snerv_score_aware_scorer_error_pair_curriculum.v1",
                     "consumed_by_mlx_native_export": bool(
                         scorer_error_pair_sampling_weights
                         and (
-                            (
-                                snerv_mlx_native_export.get(
-                                    "scorer_error_pair_curriculum"
-                                )
-                                or {}
-                            ).get("consumed_by_native_mlx_train_export")
+                            (snerv_mlx_native_export.get("scorer_error_pair_curriculum") or {}).get(
+                                "consumed_by_native_mlx_train_export"
+                            )
                             is True
                         )
                     ),
-                    "weighted_pair_count": len(
-                        scorer_error_pair_sampling_weights
-                    ),
-                    "sampling_scope": (
-                        "snerv_mlx_native_training_batches_when_attached"
-                    ),
+                    "weighted_pair_count": len(scorer_error_pair_sampling_weights),
+                    "sampling_scope": ("snerv_mlx_native_training_batches_when_attached"),
                     **FALSE_AUTHORITY,
                 },
-                "scorer_loop_component_guard_mode": str(
-                    snerv_scorer_loop_component_guard_mode
-                ),
+                "scorer_loop_component_guard_mode": str(snerv_scorer_loop_component_guard_mode),
                 "score_linf": float(advisory.score_linf),
                 "score_l2": float(advisory.score_l2),
                 "d_seg_mean_linf": float(advisory.d_seg_mean_linf),
                 "d_pose_mean_linf": float(advisory.d_pose_mean_linf),
                 "archive_bytes_total": advisory_archive_bytes_total,
                 "beats_frontier_rate": bool(advisory.beats_frontier_rate),
-                "receiver_archive_replay_verified": bool(
-                    advisory.receiver_archive_replay_verified
-                ),
+                "receiver_archive_replay_verified": bool(advisory.receiver_archive_replay_verified),
                 "scorer_loop_qat": snerv_scorer_loop_qat,
                 "mlx_native_export": snerv_mlx_native_export,
-                "mlx_native_file_backed_export_evidence": (
-                    snerv_mlx_native_file_backed_evidence
-                ),
-                "mlx_native_train_export_attached": bool(
-                    snerv_mlx_native_export.get("executed")
-                ),
+                "mlx_native_file_backed_export_evidence": (snerv_mlx_native_file_backed_evidence),
+                "mlx_native_train_export_attached": bool(snerv_mlx_native_export.get("executed")),
                 "mlx_native_hf_decoder_fit_executed": bool(
-                    snerv_mlx_native_export.get(
-                        "score_aware_hf_decoder_fit_executed"
-                    )
+                    snerv_mlx_native_export.get("score_aware_hf_decoder_fit_executed")
                 ),
-                "mlx_native_receiver_proof_passed": (
-                    snerv_mlx_native_receiver_proof_passed
-                ),
-                "mlx_native_receiver_reconstruction": (
-                    snerv_mlx_native_export.get("receiver_reconstruction")
-                ),
+                "mlx_native_receiver_proof_passed": (snerv_mlx_native_receiver_proof_passed),
+                "mlx_native_receiver_reconstruction": (snerv_mlx_native_export.get("receiver_reconstruction")),
                 "mlx_native_receiver_reconstruction_verified": bool(
                     snerv_mlx_native_export.get("receiver_reconstruction_verified")
                 ),
                 "mlx_native_receiver_target_reconstruction_mse_nchw255": (
-                    snerv_mlx_native_export.get(
-                        "receiver_target_reconstruction_mse_nchw255"
-                    )
+                    snerv_mlx_native_export.get("receiver_target_reconstruction_mse_nchw255")
                 ),
                 "mlx_native_receiver_export_reconstruction_mse_nchw255": (
-                    snerv_mlx_native_export.get(
-                        "receiver_export_reconstruction_mse_nchw255"
-                    )
+                    snerv_mlx_native_export.get("receiver_export_reconstruction_mse_nchw255")
                 ),
                 "mlx_native_full600_export_verified": snerv_mlx_native_export_verified,
                 "mlx_native_training_required_next": (
-                    not bool(
-                        snerv_mlx_native_export.get(
-                            "score_aware_long_training_executed"
-                        )
-                    )
+                    not bool(snerv_mlx_native_export.get("score_aware_long_training_executed"))
                 ),
                 "authority": "macos_cpu_advisory_false_authority",
             },
@@ -8628,15 +7301,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "stages for all byte-closed carriers, not as private SNeRV "
                     "or HiNeRV one-offs"
                 ),
-                "post_export_materializer_plan_path": (
-                    post_export_materializer_plan.get("plan_path")
-                ),
-                "post_export_experiment_queue_path": (
-                    post_export_materializer_plan.get("experiment_queue_path")
-                ),
-                "post_export_execution_path": (
-                    post_export_materializer_execution.get("execution_path")
-                ),
+                "post_export_materializer_plan_path": (post_export_materializer_plan.get("plan_path")),
+                "post_export_experiment_queue_path": (post_export_materializer_plan.get("experiment_queue_path")),
+                "post_export_execution_path": (post_export_materializer_execution.get("execution_path")),
                 "authority": "planner_hook_false_authority_until_executed",
             },
             "post_export_materializer_plan": post_export_materializer_plan,
@@ -8644,12 +7311,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "snerv_binary_profile": snerv_binary_profile,
             "snerv_scorer_loop_qat": snerv_scorer_loop_qat,
             "snerv_mlx_native_export": snerv_mlx_native_export,
-            "snerv_mlx_native_file_backed_export_evidence": (
-                snerv_mlx_native_file_backed_evidence
-            ),
-            "local_cpu_replay_summary_paths": [
-                path.as_posix() for path in local_cpu_replay_paths
-            ],
+            "snerv_mlx_native_file_backed_export_evidence": (snerv_mlx_native_file_backed_evidence),
+            "local_cpu_replay_summary_paths": [path.as_posix() for path in local_cpu_replay_paths],
             "local_cpu_replay_summary": local_cpu_replay_summary,
             "local_cpu_replay_gate": {
                 "schema": "compact_runner_local_cpu_replay_gate.v1",
@@ -8657,21 +7320,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "default_enabled_for_full_coverage": (
                     _local_cpu_replay_enabled_by_default(
                         int(num_pairs),
-                        mlx_prefilter_local_replay_passed=(
-                            mlx_prefilter_local_replay_passed
-                        ),
+                        mlx_prefilter_local_replay_passed=(mlx_prefilter_local_replay_passed),
                     )
                 ),
                 "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
-                "local_replay_mlx_prefilter_passed": (
-                    mlx_prefilter_local_replay_passed
-                ),
+                "local_replay_mlx_prefilter_passed": (mlx_prefilter_local_replay_passed),
                 "coverage_valid_for_replay": int(num_pairs) >= CONTEST_PAIR_COUNT,
                 "executed": local_cpu_replay_summary is not None,
                 "archive_source": replay_source,
-                "archive_path": (
-                    str(replay_archive_path) if replay_archive_path else None
-                ),
+                "archive_path": (str(replay_archive_path) if replay_archive_path else None),
                 "runtime_submission_dir": str(replay_runtime_submission_dir),
                 "axis_tag": "[macOS-CPU advisory]",
                 "score_claim": False,
@@ -8680,14 +7337,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
             "mlx_prefilter_error_anatomy": auto_xray_attachment,
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in effective_mlx_profile_paths
-            ],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in effective_mlx_profile_paths],
             "auto_mlx_prefilter_profile_path": (
-                str(auto_mlx_prefilter_profile_path)
-                if auto_mlx_prefilter_profile_path
-                else None
+                str(auto_mlx_prefilter_profile_path) if auto_mlx_prefilter_profile_path else None
             ),
             "auto_mlx_prefilter_progress_path": (
                 snerv_mlx_native_export.get("local_mlx_prefilter_progress_path")
@@ -8695,13 +7347,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 else None
             ),
             "auto_mlx_prefilter_profile": (
-                dict(auto_mlx_prefilter_profile)
-                if isinstance(auto_mlx_prefilter_profile, Mapping)
-                else None
+                dict(auto_mlx_prefilter_profile) if isinstance(auto_mlx_prefilter_profile, Mapping) else None
             ),
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
             "blockers": blockers,
         }
@@ -8739,9 +7388,7 @@ def adapt_snerv_advisory_report_to_spine(
     out = Path(output_dir).expanduser().resolve(strict=False)
     report_path = _resolve(snerv_advisory_report_path, base=root)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     advisory_payload = _load_json(report_path)
     package = advisory_payload.get("runtime_package")
@@ -8777,20 +7424,14 @@ def adapt_snerv_advisory_report_to_spine(
     )
     receiver_proof_path = receiver_proof.get("proof_path")
     trained_ladder_row_payload = advisory_payload.get("trained_ladder_row_payload")
-    trained_ladder_row_payload_path = advisory_payload.get(
-        "trained_ladder_row_payload_path"
-    )
+    trained_ladder_row_payload_path = advisory_payload.get("trained_ladder_row_payload_path")
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         mlx_profile_paths,
         root=root,
     )
-    has_full_video_mlx_prefilter = bool(
-        mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
-    )
-    mlx_prefilter_local_replay_passed = bool(
-        mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
-    )
+    has_full_video_mlx_prefilter = bool(mlx_prefilter_coverage["has_full_video_mlx_prefilter"])
+    mlx_prefilter_local_replay_passed = bool(mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"])
     local_cpu_replay_summary: dict[str, Any] | None = None
     local_cpu_replay_paths: list[Path] = []
     local_cpu_replay_blockers: list[str] = []
@@ -8801,11 +7442,7 @@ def adapt_snerv_advisory_report_to_spine(
         runtime_manifest = row.get("runtime_adapter_manifest")
         if not isinstance(runtime_manifest, Mapping):
             contract = row.get("archive_bound_candidate_contract")
-            runtime_manifest = (
-                contract.get("runtime_adapter_manifest")
-                if isinstance(contract, Mapping)
-                else {}
-            )
+            runtime_manifest = contract.get("runtime_adapter_manifest") if isinstance(contract, Mapping) else {}
         if isinstance(runtime_manifest, Mapping):
             num_pairs_raw = runtime_manifest.get("n_pairs")
     num_pairs = int(num_pairs_raw or 0)
@@ -8836,15 +7473,13 @@ def adapt_snerv_advisory_report_to_spine(
         runtime_submission_dir=runtime_submission_dir,
         repo_root=root,
     )
-    post_export_materializer_execution = (
-        _execute_carrier_post_export_materializer_plan(
-            plan=post_export_materializer_plan,
-            requested=run_post_export_materializers,
-            max_steps=post_export_materializer_max_steps,
-            max_parallel=post_export_materializer_max_parallel,
-            max_experiments=post_export_materializer_max_experiments,
-            repo_root=root,
-        )
+    post_export_materializer_execution = _execute_carrier_post_export_materializer_plan(
+        plan=post_export_materializer_plan,
+        requested=run_post_export_materializers,
+        max_steps=post_export_materializer_max_steps,
+        max_parallel=post_export_materializer_max_parallel,
+        max_experiments=post_export_materializer_max_experiments,
+        repo_root=root,
     )
     snerv_binary_profile = _write_snerv_binary_profile_attachment(
         archive_path=archive_path,
@@ -8855,13 +7490,9 @@ def adapt_snerv_advisory_report_to_spine(
         repo_root=root,
         families=("snerv",),
     )
-    source_parity_blockers = [
-        f"source_parity:{blocker}"
-        for blocker in source_parity_contract.get("blockers") or ()
-    ]
+    source_parity_blockers = [f"source_parity:{blocker}" for blocker in source_parity_contract.get("blockers") or ()]
     source_parity_nonblocking_gaps = [
-        f"source_parity:{gap}"
-        for gap in source_parity_contract.get("nonblocking_gaps") or ()
+        f"source_parity:{gap}" for gap in source_parity_contract.get("nonblocking_gaps") or ()
     ]
     blockers = _dedupe(
         [
@@ -8874,20 +7505,12 @@ def adapt_snerv_advisory_report_to_spine(
                 if receiver_proof.get("runtime_consumption_proof_passed") is True
                 else ["snerv_runtime_package_receiver_proof_missing_or_failed"]
             ),
-            *(
-                []
-                if num_pairs >= CONTEST_PAIR_COUNT
-                else ["snerv_packet_not_full_600_pairs"]
-            ),
+            *([] if num_pairs >= CONTEST_PAIR_COUNT else ["snerv_packet_not_full_600_pairs"]),
             *list(row.get("blockers") or []),
             *local_cpu_replay_blockers,
             *list(post_export_materializer_plan.get("blockers") or []),
             *list(post_export_materializer_execution.get("blockers") or []),
-            *(
-                []
-                if snerv_binary_profile.get("profile_written")
-                else list(snerv_binary_profile.get("blockers") or [])
-            ),
+            *([] if snerv_binary_profile.get("profile_written") else list(snerv_binary_profile.get("blockers") or [])),
         ]
     )
     final = _base_report(
@@ -8905,14 +7528,10 @@ def adapt_snerv_advisory_report_to_spine(
             "archive_path": str(archive_path),
             "archive_bytes": row.get("candidate_archive_bytes"),
             "archive_sha256": row.get("candidate_archive_sha256"),
-            "receiver_proof_report_paths": (
-                [str(receiver_proof_path)] if receiver_proof_path else []
-            ),
+            "receiver_proof_report_paths": ([str(receiver_proof_path)] if receiver_proof_path else []),
             "trained_ladder_row_payload_path": trained_ladder_row_payload_path,
             "trained_ladder_row_payload": (
-                trained_ladder_row_payload
-                if isinstance(trained_ladder_row_payload, Mapping)
-                else None
+                trained_ladder_row_payload if isinstance(trained_ladder_row_payload, Mapping) else None
             ),
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
@@ -8931,9 +7550,7 @@ def adapt_snerv_advisory_report_to_spine(
                 "exact_cpu_cuda_required_for_promotion": True,
                 **FALSE_AUTHORITY,
             },
-            "local_cpu_replay_summary_paths": [
-                path.as_posix() for path in local_cpu_replay_paths
-            ],
+            "local_cpu_replay_summary_paths": [path.as_posix() for path in local_cpu_replay_paths],
             "local_cpu_replay_summary": local_cpu_replay_summary,
             "local_cpu_replay_gate": {
                 "schema": "compact_runner_local_cpu_replay_gate.v1",
@@ -8941,15 +7558,11 @@ def adapt_snerv_advisory_report_to_spine(
                 "default_enabled_for_full_coverage": (
                     _local_cpu_replay_enabled_by_default(
                         num_pairs,
-                        mlx_prefilter_local_replay_passed=(
-                            mlx_prefilter_local_replay_passed
-                        ),
+                        mlx_prefilter_local_replay_passed=(mlx_prefilter_local_replay_passed),
                     )
                 ),
                 "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
-                "local_replay_mlx_prefilter_passed": (
-                    mlx_prefilter_local_replay_passed
-                ),
+                "local_replay_mlx_prefilter_passed": (mlx_prefilter_local_replay_passed),
                 "coverage_valid_for_replay": num_pairs >= CONTEST_PAIR_COUNT,
                 "executed": local_cpu_replay_summary is not None,
                 "axis_tag": "[macOS-CPU advisory]",
@@ -8958,12 +7571,9 @@ def adapt_snerv_advisory_report_to_spine(
                 "ready_for_exact_eval_dispatch": False,
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
             "blockers": blockers,
         }
@@ -9066,9 +7676,7 @@ def execute_pr95_mlx_smoke_and_adapt(
             "pr95_mlx_smoke_report_path": pr95_report_path.as_posix(),
             "pr95_mlx_smoke_report_sha256": _sha256_file(pr95_report_path),
             "adapted_report_path": adapted["report_path"],
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
             "adapted_blockers": adapted["blockers"],
             "blockers": adapted["blockers"],
         }
@@ -9147,54 +7755,30 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         checkpoint_interval_epochs,
         epochs=epochs,
     )
-    requested_distillation_device = str(
-        requested_distillation_device or distillation_device
-    )
-    resolved_distillation_device = _resolve_torch_scorer_device_alias(
-        str(distillation_device)
-    )
+    requested_distillation_device = str(requested_distillation_device or distillation_device)
+    resolved_distillation_device = _resolve_torch_scorer_device_alias(str(distillation_device))
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if segnet_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_distillation_weight must be >= 0")
     if segnet_direct_live_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_distillation_weight must be >= 0")
     if segnet_direct_live_class_histogram_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_histogram_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_histogram_weight must be >= 0")
     if segnet_direct_live_class_balanced_hinge_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_balanced_hinge_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_balanced_hinge_weight must be >= 0")
     if segnet_direct_live_class_balanced_ce_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_balanced_ce_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_balanced_ce_weight must be >= 0")
     if segnet_direct_live_class_balanced_squared_hinge_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_balanced_squared_hinge_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_balanced_squared_hinge_weight must be >= 0")
     if segnet_direct_live_class_region_recon_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_region_recon_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_region_recon_weight must be >= 0")
     if segnet_direct_live_rare_class_logit_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_rare_class_logit_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_rare_class_logit_weight must be >= 0")
     if segnet_direct_live_target_mass_floor_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_target_mass_floor_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_target_mass_floor_weight must be >= 0")
     if segnet_direct_live_target_min_ratio_floor_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_target_min_ratio_floor_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_target_min_ratio_floor_weight must be >= 0")
     segnet_direct_live_subcontrol_active = any(
         float(value) > 0.0
         for value in (
@@ -9209,21 +7793,13 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         )
     )
     if pose_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_weight must be >= 0")
     if pose_direct_live_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_direct_live_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_direct_live_distillation_weight must be >= 0")
     if str(pose_distillation_loss) not in {"mse", "huber"}:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_loss must be one of ['mse', 'huber']"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_loss must be one of ['mse', 'huber']")
     if float(pose_distillation_huber_delta) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_huber_delta must be > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_huber_delta must be > 0")
     if (
         (
             segnet_distillation_weight > 0.0
@@ -9253,13 +7829,11 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     packet = parse_pr95_public_archive_zip(Path(source_archive_zip))
     if pairs > int(packet.latents.shape[0]):
         raise CompactRendererMlxSpineRunnerError(
-            f"requested {pairs} pairs but source archive has "
-            f"{int(packet.latents.shape[0])} latent rows"
+            f"requested {pairs} pairs but source archive has {int(packet.latents.shape[0])} latent rows"
         )
     if int(latent_dim) != int(packet.latents.shape[1]):
         raise CompactRendererMlxSpineRunnerError(
-            f"latent_dim={latent_dim} does not match source archive "
-            f"latent_dim={int(packet.latents.shape[1])}"
+            f"latent_dim={latent_dim} does not match source archive latent_dim={int(packet.latents.shape[1])}"
         )
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
         source_video_path,
@@ -9286,9 +7860,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
                 "latent_dim": int(latent_dim),
                 "base_channels": int(base_channels),
                 "eval_size": [384, 512],
-                "training_fidelity": (
-                    "pr95_public_archive_seeded_scoreaware_mlx_advisory"
-                ),
+                "training_fidelity": ("pr95_public_archive_seeded_scoreaware_mlx_advisory"),
                 "source_archive_sha256": packet.archive_zip_sha256,
             },
             output_zip_path=archive_output_dir / "pr95_public_archive.zip",
@@ -9306,39 +7878,25 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         "full_video_pairs_required_for_promotion": 600,
         "source_archive_zip": str(Path(source_archive_zip)),
         "source_archive_sha256": packet.archive_zip_sha256,
-        "archive_exporter": (
-            "tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip"
-        ),
+        "archive_exporter": ("tac.local_acceleration.pr95_hnerv_mlx.write_pr95_public_archive_zip"),
         "score_aware_training": {
             "schema": "compact_pr95_hnerv_scoreaware_training.v1",
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
-            "pose_direct_live_distillation_weight": float(
-                pose_direct_live_distillation_weight
-            ),
+            "pose_direct_live_distillation_weight": float(pose_direct_live_distillation_weight),
             "pose_distillation_loss": str(pose_distillation_loss),
             "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
             "distillation_temperature": float(distillation_temperature),
-            "segnet_student_live_calibration_weight": float(
-                segnet_student_live_calibration_weight
-            ),
+            "segnet_student_live_calibration_weight": float(segnet_student_live_calibration_weight),
             "segnet_direct_live_distillation": {
                 "schema": "pr95_hnerv_segnet_direct_live_distillation_control.v1",
                 "enabled": float(segnet_direct_live_distillation_weight) > 0.0,
                 "weight": float(segnet_direct_live_distillation_weight),
-                "class_histogram_weight": float(
-                    segnet_direct_live_class_histogram_weight
-                ),
-                "class_balanced_hinge_weight": float(
-                    segnet_direct_live_class_balanced_hinge_weight
-                ),
-                "target_mass_floor_weight": float(
-                    segnet_direct_live_target_mass_floor_weight
-                ),
-                "target_min_ratio_floor_weight": float(
-                    segnet_direct_live_target_min_ratio_floor_weight
-                ),
+                "class_histogram_weight": float(segnet_direct_live_class_histogram_weight),
+                "class_balanced_hinge_weight": float(segnet_direct_live_class_balanced_hinge_weight),
+                "target_mass_floor_weight": float(segnet_direct_live_target_mass_floor_weight),
+                "target_min_ratio_floor_weight": float(segnet_direct_live_target_min_ratio_floor_weight),
                 "teacher_surface": "teacher_logits_for_frames_nhwc01",
                 "objective": str(segnet_distillation_objective),
                 "loss": (
@@ -9360,23 +7918,15 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "checkpoint_interval_epochs": checkpoint_interval,
-            "checkpoint_dir": (
-                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
-            ),
+            "checkpoint_dir": (Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None),
             "resume_from_checkpoint": (
-                Path(resume_from_checkpoint).as_posix()
-                if resume_from_checkpoint is not None
-                else None
+                Path(resume_from_checkpoint).as_posix() if resume_from_checkpoint is not None else None
             ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
-            "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                scorer_upstream_dir
-            ),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream_dir),
             "pr95_public_archive_seeded": True,
             "stage8_muon_continuation_optimizer_wired": False,
-            "stage8_muon_continuation_blocker": (
-                "shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"
-            ),
+            "stage8_muon_continuation_blocker": ("shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"),
         },
         "score_authority": "false_macos_mlx_research_signal",
     }
@@ -9427,52 +7977,28 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         learnable_student_head=learnable_student_head,
         distillation_temperature=float(distillation_temperature),
         segnet_distillation_objective=segnet_distillation_objective,
-        segnet_student_live_calibration_weight=float(
-            segnet_student_live_calibration_weight
-        ),
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
-        distillation_num_classes=(
-            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
-        ),
+        distillation_num_classes=(int(scorer_teacher.num_classes) if scorer_teacher is not None else 5),
         pose_distillation_weight=float(pose_distillation_weight),
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
-        pose_dims=int(pose_scorer_teacher.pose_dims)
-        if pose_scorer_teacher is not None
-        else 6,
+        pose_dims=int(pose_scorer_teacher.pose_dims) if pose_scorer_teacher is not None else 6,
         allow_segnet_only_research=bool(allow_segnet_only_research),
     )
     return run_mlx_score_aware_full_main(
@@ -9574,9 +8100,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     )
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     try:
         artifact = _run_pr95_hnerv_mlx_scoreaware_smoke(
@@ -9597,37 +8121,19 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
             segnet_student_live_calibration_weight=segnet_student_live_calibration_weight,
-            segnet_direct_live_distillation_weight=(
-                segnet_direct_live_distillation_weight
-            ),
+            segnet_direct_live_distillation_weight=(segnet_direct_live_distillation_weight),
             pose_direct_live_distillation_weight=0.0,
-            segnet_direct_live_base_loss_weight=(
-                segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=(
-                segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=(
-                segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=(
-                segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_direct_live_base_loss_weight=(segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=(segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=(segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=(segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=(
                 segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=(
-                segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=(
-                segnet_direct_live_rare_class_logit_weight
-            ),
-            segnet_direct_live_target_mass_floor_weight=(
-                segnet_direct_live_target_mass_floor_weight
-            ),
-            segnet_direct_live_target_min_ratio_floor_weight=(
-                segnet_direct_live_target_min_ratio_floor_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=(segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=(segnet_direct_live_rare_class_logit_weight),
+            segnet_direct_live_target_mass_floor_weight=(segnet_direct_live_target_mass_floor_weight),
+            segnet_direct_live_target_min_ratio_floor_weight=(segnet_direct_live_target_min_ratio_floor_weight),
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
@@ -9651,19 +8157,11 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             {
                 "execute_family": "pr95_hnerv",
                 "failure": repr(exc),
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": ["pr95_hnerv_mlx_scoreaware_or_export_failed"],
             }
         )
@@ -9762,9 +8260,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             pose_distillation_weight=pose_distillation_weight,
         )
     )
-    if receiver_proof_report is None or not receiver_proof_report.get(
-        "runtime_consumption_proof_passed"
-    ):
+    if receiver_proof_report is None or not receiver_proof_report.get("runtime_consumption_proof_passed"):
         blockers.extend(
             [
                 "runtime_consumption_proof_missing",
@@ -9817,20 +8313,12 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             "archive_sha256": artifact_dict.get("archive_sha256"),
             "source_archive_zip": str(Path(source_archive_zip)),
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
-            "receiver_proof_report_paths": [
-                path.as_posix() for path in receiver_proof_paths
-            ],
+            "receiver_proof_report_paths": [path.as_posix() for path in receiver_proof_paths],
             "receiver_proof_report": receiver_proof_report,
             "spine_projection_error": spine_projection_error,
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
-            "acquisition_report_path": (
-                acquisition_path.as_posix() if acquisition_path.is_file() else None
-            ),
-            "bounded_runner_plan_path": (
-                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
-            ),
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
+            "acquisition_report_path": (acquisition_path.as_posix() if acquisition_path.is_file() else None),
+            "bounded_runner_plan_path": (runner_plan_path.as_posix() if runner_plan_path.is_file() else None),
             "selected_runner_rows": selected_runner_rows,
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
@@ -9846,23 +8334,13 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
                 "checkpoint_interval_epochs": checkpoint_interval,
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "stage8_muon_continuation_optimizer_wired": False,
-                "stage8_muon_continuation_blocker": (
-                    "shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"
-                ),
+                "stage8_muon_continuation_blocker": ("shared_mlx_scoreaware_harness_lacks_stage8_start_epoch_offset"),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "control_arm_scope": {
@@ -9872,15 +8350,13 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 "score_authority": False,
                 "runtime_consumption_proven": (
                     receiver_proof_report is not None
-                    and receiver_proof_report.get("runtime_consumption_proof_passed")
-                    is True
+                    and receiver_proof_report.get("runtime_consumption_proof_passed") is True
                 ),
                 "full_frame_inflate_parity_proven": False,
                 "exact_cpu_cuda_authority": False,
             },
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
             "blockers": _dedupe(blockers),
         }
@@ -9912,9 +8388,7 @@ def run_pr95_hnerv_receiver_proof(
     runtime = _resolve(runtime_dir, base=root)
     inflate_sh = runtime / "inflate.sh"
     if not inflate_sh.is_file():
-        raise CompactRendererMlxSpineRunnerError(
-            f"PR95 receiver runtime missing inflate.sh: {inflate_sh}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"PR95 receiver runtime missing inflate.sh: {inflate_sh}")
     out = Path(output_dir).expanduser().resolve(strict=False)
     data_dir = out / "data"
     raw_dir = out / "raw"
@@ -9925,9 +8399,7 @@ def run_pr95_hnerv_receiver_proof(
     with zipfile.ZipFile(archive_path) as zf:
         names = zf.namelist()
         if "0.bin" not in names:
-            raise CompactRendererMlxSpineRunnerError(
-                f"PR95 receiver proof expects 0.bin; archive members={names!r}"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"PR95 receiver proof expects 0.bin; archive members={names!r}")
         member_bytes = zf.read("0.bin")
     member_path = data_dir / "0.bin"
     member_path.write_bytes(member_bytes)
@@ -10102,18 +8574,14 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
-    coder_qat_quant_residual_weight: float = (
-        DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT
-    ),
+    coder_qat_quant_residual_weight: float = (DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT),
     coder_qat_magnitude_weight: float = DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
     coder_qat_delta_weight: float = DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
-    optimizer_grad_clip_max_norm: float | None = (
-        DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
-    ),
+    optimizer_grad_clip_max_norm: float | None = (DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM),
     optimizer_weight_decay: float | None = None,
     optimizer_warmup_epochs: int = 0,
     optimizer_warmup_steps_per_epoch: int = 1,
@@ -10175,9 +8643,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     out = Path(output_dir).expanduser().resolve(strict=False)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     try:
         artifact = _run_pact_nerv_vq_mlx_smoke(
@@ -10232,19 +8698,11 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             {
                 "execute_family": "pact_nerv_vq",
                 "failure": repr(exc),
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": ["pact_nerv_vq_mlx_smoke_or_export_failed"],
             }
         )
@@ -10256,9 +8714,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     archive_path = artifact_dict.get("archive_path")
     training_dir = out / "pact_nerv_vq_mlx_training"
     spine_manifest = training_dir / "hprc_representation_spine_pact_nerv_vq_manifest.json"
-    receiver_proof_path = (
-        training_dir / "receiver_proof" / "pact_nerv_vq_mlx_receiver_proof.json"
-    )
+    receiver_proof_path = training_dir / "receiver_proof" / "pact_nerv_vq_mlx_receiver_proof.json"
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
     acquisition_path = out / "hprc_spine_acquisition_report.json"
@@ -10335,68 +8791,37 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 "segnet_distillation_weight": float(segnet_distillation_weight),
                 "pose_distillation_weight": float(pose_distillation_weight),
                 "pose_distillation_loss": str(pose_distillation_loss),
-                "pose_distillation_huber_delta": float(
-                    pose_distillation_huber_delta
-                ),
+                "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
                 "segnet_tau_boundary": float(segnet_tau_boundary),
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
-                "optimizer_policy": strip_candidate_curriculum_authority_fields(
-                    optimizer_policy
-                ),
-                "pr95_faithful_curriculum_enabled": bool(
-                    optimizer_policy.get("pr95_faithful_curriculum_enabled")
-                ),
-                "native_optimizer_active": bool(
-                    optimizer_policy.get("native_optimizer_active")
-                ),
-                "optimizer_kind": str(
-                    optimizer_policy.get("optimizer_kind") or optimizer_kind
-                ),
-                "optimizer_controls": strip_candidate_curriculum_authority_fields(
-                    optimizer_controls
-                ),
-                "effective_weight_decay": optimizer_controls.get(
-                    "weight_decay_effective"
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
+                "optimizer_policy": strip_candidate_curriculum_authority_fields(optimizer_policy),
+                "pr95_faithful_curriculum_enabled": bool(optimizer_policy.get("pr95_faithful_curriculum_enabled")),
+                "native_optimizer_active": bool(optimizer_policy.get("native_optimizer_active")),
+                "optimizer_kind": str(optimizer_policy.get("optimizer_kind") or optimizer_kind),
+                "optimizer_controls": strip_candidate_curriculum_authority_fields(optimizer_controls),
+                "effective_weight_decay": optimizer_controls.get("weight_decay_effective"),
                 "checkpoint_interval_epochs": checkpoint_interval,
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
                 "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
-            "receiver_proof_report_paths": [
-                path.as_posix() for path in receiver_proof_paths
-            ],
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
+            "receiver_proof_report_paths": [path.as_posix() for path in receiver_proof_paths],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
-            "acquisition_report_path": (
-                acquisition_path.as_posix() if acquisition_path.is_file() else None
-            ),
-            "bounded_runner_plan_path": (
-                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
-            ),
+            "acquisition_report_path": (acquisition_path.as_posix() if acquisition_path.is_file() else None),
+            "bounded_runner_plan_path": (runner_plan_path.as_posix() if runner_plan_path.is_file() else None),
             "selected_runner_rows": selected_runner_rows,
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
@@ -10432,6 +8857,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     pose_direct_live_distillation_weight: float = 0.0,
+    pose_trust_required: bool = False,
     pose_distillation_loss: str = "mse",
     pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
@@ -10533,9 +8959,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     allow_segnet_only_research: bool = False,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
-    coder_qat_quant_residual_weight: float = (
-        DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT
-    ),
+    coder_qat_quant_residual_weight: float = (DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT),
     coder_qat_magnitude_weight: float = DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
     coder_qat_delta_weight: float = DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
@@ -10591,9 +9015,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     hi_nerv_pr95_muon_policy: str = "auto",
     hi_nerv_pr95_curriculum_total_epochs: int | None = None,
     hi_nerv_pr95_source_weight_amplification: bool = False,
-    optimizer_grad_clip_max_norm: float | None = (
-        DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
-    ),
+    optimizer_grad_clip_max_norm: float | None = (DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM),
     optimizer_weight_decay: float | None = None,
     optimizer_warmup_epochs: int = 0,
     optimizer_warmup_steps_per_epoch: int = 1,
@@ -10632,12 +9054,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     """Train/export a HiNeRV MLX candidate through the real receiver bundle."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
-    prioritized_pair_indices = _normalize_nonnegative_int_sequence(
-        prioritized_pair_indices
-    )
+    prioritized_pair_indices = _normalize_nonnegative_int_sequence(prioritized_pair_indices)
     scorer_error_pair_sampling_weights = {
-        int(pair): float(weight)
-        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+        int(pair): float(weight) for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
     }
     scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     try:
@@ -10670,8 +9089,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         pr95_muon_policy=str(hi_nerv_pr95_muon_policy),
     )
     effective_hi_nerv_pr95_source_weight_amplification = bool(
-        hi_nerv_pr95_source_weight_amplification
-        or optimizer_policy.get("pr95_faithful_curriculum_enabled") is True
+        hi_nerv_pr95_source_weight_amplification or optimizer_policy.get("pr95_faithful_curriculum_enabled") is True
     )
     optimizer_policy["pr95_stage_source_weight_amplification_requested"] = bool(
         hi_nerv_pr95_source_weight_amplification
@@ -10680,8 +9098,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         effective_hi_nerv_pr95_source_weight_amplification
     )
     optimizer_policy["pr95_stage_source_weight_amplification_defaulted"] = bool(
-        effective_hi_nerv_pr95_source_weight_amplification
-        and not hi_nerv_pr95_source_weight_amplification
+        effective_hi_nerv_pr95_source_weight_amplification and not hi_nerv_pr95_source_weight_amplification
     )
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
         optimizer_kind=str(optimizer_policy.get("optimizer_kind") or optimizer_kind),
@@ -10695,24 +9112,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         run_epochs=int(epochs),
     )
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
-    effective_requested_distillation_device = str(
-        requested_distillation_device or distillation_device
-    )
-    scorer_input_distribution_guard_enabled = (
-        float(scorer_input_distribution_guard_weight) > 0.0
-    )
-    scorer_input_contrast_floor_enabled = (
-        float(scorer_input_contrast_floor_weight) > 0.0
-    )
-    scorer_input_shape_tether_enabled = (
-        float(scorer_input_shape_tether_weight) > 0.0
-    )
-    posenet_yuv6_geometry_tether_enabled = (
-        float(posenet_yuv6_geometry_tether_weight) > 0.0
-    )
-    posenet_temporal_signal_floor_enabled = (
-        float(posenet_temporal_signal_floor_weight) > 0.0
-    )
+    effective_requested_distillation_device = str(requested_distillation_device or distillation_device)
+    scorer_input_distribution_guard_enabled = float(scorer_input_distribution_guard_weight) > 0.0
+    scorer_input_contrast_floor_enabled = float(scorer_input_contrast_floor_weight) > 0.0
+    scorer_input_shape_tether_enabled = float(scorer_input_shape_tether_weight) > 0.0
+    posenet_yuv6_geometry_tether_enabled = float(posenet_yuv6_geometry_tether_weight) > 0.0
+    posenet_temporal_signal_floor_enabled = float(posenet_temporal_signal_floor_weight) > 0.0
     scorer_input_guard_attached = bool(
         scorer_input_distribution_guard_enabled
         or scorer_input_contrast_floor_enabled
@@ -10721,17 +9126,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         or posenet_temporal_signal_floor_enabled
     )
     if float(scorer_input_distribution_guard_weight) < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_distribution_guard_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_input_distribution_guard_weight must be >= 0")
     if not (0.0 < float(scorer_input_distribution_guard_saturation_margin) < 0.5):
         raise CompactRendererMlxSpineRunnerError(
             "scorer_input_distribution_guard_saturation_margin must be in (0, 0.5)"
         )
     if float(scorer_input_distribution_guard_temperature) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_distribution_guard_temperature must be > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_input_distribution_guard_temperature must be > 0")
     direct_live_argmax_objectives = {"argmax_hinge", "boundary_argmax_hinge"}
     if (
         float(segnet_direct_live_distillation_weight) > 0.0
@@ -10744,13 +9145,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             f"{sorted(direct_live_argmax_objectives)} when "
             "--segnet-direct-live-distillation-weight > 0."
         )
-    if (
-        not math.isfinite(float(scorer_input_contrast_floor_weight))
-        or float(scorer_input_contrast_floor_weight) < 0.0
-    ):
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_contrast_floor_weight must be finite and >= 0"
-        )
+    if not math.isfinite(float(scorer_input_contrast_floor_weight)) or float(scorer_input_contrast_floor_weight) < 0.0:
+        raise CompactRendererMlxSpineRunnerError("scorer_input_contrast_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(scorer_input_contrast_floor_segnet_min_std_ratio))
         or float(scorer_input_contrast_floor_segnet_min_std_ratio) <= 0.0
@@ -10763,63 +9159,43 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         or float(scorer_input_contrast_floor_posenet_yuv6_min_std_ratio) <= 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be "
-            "finite and > 0"
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be finite and > 0"
         )
-    if (
-        not math.isfinite(float(scorer_input_shape_tether_weight))
-        or float(scorer_input_shape_tether_weight) < 0.0
-    ):
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_shape_tether_weight must be finite and >= 0"
-        )
+    if not math.isfinite(float(scorer_input_shape_tether_weight)) or float(scorer_input_shape_tether_weight) < 0.0:
+        raise CompactRendererMlxSpineRunnerError("scorer_input_shape_tether_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_yuv6_geometry_tether_weight))
         or float(posenet_yuv6_geometry_tether_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_yuv6_geometry_tether_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_yuv6_geometry_tether_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_floor_weight))
         or float(posenet_temporal_signal_floor_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_floor_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_min_std_ratio))
         or float(posenet_temporal_signal_min_std_ratio) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_min_std_ratio must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_min_std_ratio must be finite and > 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_min_mean_abs_ratio))
         or float(posenet_temporal_signal_min_mean_abs_ratio) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_min_mean_abs_ratio must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_min_mean_abs_ratio must be finite and > 0")
     if not (
         math.isfinite(float(output_head_target_bias_init_epsilon))
         and 0.0 < float(output_head_target_bias_init_epsilon) < 0.5
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "output_head_target_bias_init_epsilon must be finite and in (0, 0.5)"
-        )
+        raise CompactRendererMlxSpineRunnerError("output_head_target_bias_init_epsilon must be finite and in (0, 0.5)")
     if (
         not math.isfinite(float(segnet_direct_live_escape_class_multiplier))
         or float(segnet_direct_live_escape_class_multiplier) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_escape_class_multiplier must be finite and > 0"
-        )
-    effective_mlx_prefilter_scorer_device = (
-        _resolve_mlx_prefilter_scorer_device_alias(
-            mlx_prefilter_scorer_device,
-            fallback_device=effective_requested_distillation_device,
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_escape_class_multiplier must be finite and > 0")
+    effective_mlx_prefilter_scorer_device = _resolve_mlx_prefilter_scorer_device_alias(
+        mlx_prefilter_scorer_device,
+        fallback_device=effective_requested_distillation_device,
     )
     if (
         _has_disallowed_existing_output_artifacts(
@@ -10828,9 +9204,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         )
         and not allow_overwrite
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     decoder_weight_waterfill_plan: dict[str, Any] | None = None
     decoder_weight_waterfill_plan_metadata: dict[str, Any] = {
@@ -10854,9 +9228,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             }
         )
         if not plan_path.is_file():
-            decoder_weight_waterfill_plan_metadata["blockers"] = [
-                "decoder_weight_waterfill_plan_json_missing"
-            ]
+            decoder_weight_waterfill_plan_metadata["blockers"] = ["decoder_weight_waterfill_plan_json_missing"]
         else:
             decoder_weight_waterfill_plan = _load_json(plan_path)
             decoder_weight_waterfill_plan_metadata.update(
@@ -10866,26 +9238,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "family": decoder_weight_waterfill_plan.get("family"),
                     "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
                     "group_count": decoder_weight_waterfill_plan.get("group_count"),
-                    "row_count": len(
-                        decoder_weight_waterfill_plan.get("rows") or []
-                    ),
-                    "source_blockers": list(
-                        decoder_weight_waterfill_plan.get("blockers") or []
-                    ),
+                    "row_count": len(decoder_weight_waterfill_plan.get("rows") or []),
+                    "source_blockers": list(decoder_weight_waterfill_plan.get("blockers") or []),
                 }
             )
-            if (
-                decoder_weight_waterfill_plan.get("schema")
-                != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
-            ):
-                decoder_weight_waterfill_plan_metadata["blockers"] = [
-                    "decoder_weight_waterfill_plan_schema_mismatch"
-                ]
-            decoder_weight_waterfill_plan = (
-                _attach_hi_nerv_decoder_weight_waterfill_launch_custody(
-                    decoder_weight_waterfill_plan,
-                    decoder_weight_waterfill_plan_metadata,
-                )
+            if decoder_weight_waterfill_plan.get("schema") != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA:
+                decoder_weight_waterfill_plan_metadata["blockers"] = ["decoder_weight_waterfill_plan_schema_mismatch"]
+            decoder_weight_waterfill_plan = _attach_hi_nerv_decoder_weight_waterfill_launch_custody(
+                decoder_weight_waterfill_plan,
+                decoder_weight_waterfill_plan_metadata,
             )
             decoder_weight_waterfill_plan_metadata["launch_custody"] = (
                 decoder_weight_waterfill_plan.get("compact_runner_launch_custody")
@@ -10915,9 +9276,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             }
         )
         if not telemetry_path.is_file():
-            archive_section_telemetry_metadata["blockers"] = [
-                "hi_nerv_archive_section_telemetry_json_missing"
-            ]
+            archive_section_telemetry_metadata["blockers"] = ["hi_nerv_archive_section_telemetry_json_missing"]
         else:
             archive_section_telemetry = _load_json(telemetry_path)
             sections = archive_section_telemetry.get("sections")
@@ -10926,23 +9285,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "sha256": _sha256_file(telemetry_path),
                     "source_schema": archive_section_telemetry.get("schema"),
                     "profile_ready": archive_section_telemetry.get("profile_ready"),
-                    "archive_zip_bytes": archive_section_telemetry.get(
-                        "archive_zip_bytes"
-                    ),
-                    "section_payload_bytes": archive_section_telemetry.get(
-                        "section_payload_bytes"
-                    ),
+                    "archive_zip_bytes": archive_section_telemetry.get("archive_zip_bytes"),
+                    "section_payload_bytes": archive_section_telemetry.get("section_payload_bytes"),
                     "section_count": (
                         len(sections)
-                        if isinstance(sections, Sequence)
-                        and not isinstance(sections, (str, bytes))
+                        if isinstance(sections, Sequence) and not isinstance(sections, (str, bytes))
                         else 0
                     ),
                 }
             )
             archive_section_telemetry_metadata["validated"] = bool(
-                archive_section_telemetry.get("schema")
-                == "hinerv_archive_section_telemetry.v1"
+                archive_section_telemetry.get("schema") == "hinerv_archive_section_telemetry.v1"
                 and archive_section_telemetry.get("profile_ready") is True
             )
     (
@@ -10952,17 +9305,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         telemetry=archive_section_telemetry,
         metadata=archive_section_telemetry_metadata,
     )
-    modelsize_budget_rows, modelsize_budget_sources = (
-        _load_compact_modelsize_budget_rows(
-            (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
-            base=root,
-        )
+    modelsize_budget_rows, modelsize_budget_sources = _load_compact_modelsize_budget_rows(
+        (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
+        base=root,
     )
-    score_aware_evidence = (
-        {"modelsize_budget_rows": modelsize_budget_rows}
-        if modelsize_budget_rows
-        else {}
-    )
+    score_aware_evidence = {"modelsize_budget_rows": modelsize_budget_rows} if modelsize_budget_rows else {}
     score_aware_training_plan = _score_aware_carrier_training_plan(
         "hi_nerv",
         _backend_with_score_aware_evidence("hi_nerv", score_aware_evidence),
@@ -10985,12 +9332,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         allow_segnet_only_research=allow_segnet_only_research,
         allow_unscored_research_smoke=allow_unscored_research_smoke,
     )
-    effective_segnet_distillation_weight = float(
-        launch_pressure_binding["segnet_distillation_weight"]
-    )
-    effective_pose_distillation_weight = float(
-        launch_pressure_binding["pose_distillation_weight"]
-    )
+    effective_segnet_distillation_weight = float(launch_pressure_binding["segnet_distillation_weight"])
+    effective_pose_distillation_weight = float(launch_pressure_binding["pose_distillation_weight"])
     stage_loss_weights = _compact_scoreaware_stage_loss_weights(
         recon=float(recon_loss_stage_weight),
         segnet=float(segnet_loss_stage_weight),
@@ -11002,9 +9345,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             else float(scorer_input_contrast_floor_stage_weight)
         ),
         scorer_input_shape_tether=(
-            None
-            if scorer_input_shape_tether_stage_weight is None
-            else float(scorer_input_shape_tether_stage_weight)
+            None if scorer_input_shape_tether_stage_weight is None else float(scorer_input_shape_tether_stage_weight)
         ),
         posenet_yuv6_geometry_tether=(
             None
@@ -11017,49 +9358,31 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             else float(posenet_temporal_signal_floor_stage_weight)
         ),
         segnet_direct_live=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_histogram=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_hinge=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_ce=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_squared_hinge=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_region_recon=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_rare_class_logit=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_target_mass_floor=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_target_min_ratio_floor=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
     )
     curriculum_stages = _compact_scoreaware_curriculum_stages(
@@ -11068,12 +9391,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         loss_weights=stage_loss_weights,
         pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
         scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
-        segnet_direct_live_escape_warmup_epochs=int(
-            segnet_direct_live_escape_warmup_epochs
-        ),
-        segnet_direct_live_escape_class_multiplier=float(
-            segnet_direct_live_escape_class_multiplier
-        ),
+        segnet_direct_live_escape_warmup_epochs=int(segnet_direct_live_escape_warmup_epochs),
+        segnet_direct_live_escape_class_multiplier=float(segnet_direct_live_escape_class_multiplier),
     )
     curriculum_stage_summary = [
         {
@@ -11081,8 +9400,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "start_epoch": int(getattr(stage, "start_epoch", 0)),
             "end_epoch": int(getattr(stage, "end_epoch", 0)),
             "loss_weights": {
-                str(key): float(value)
-                for key, value in dict(getattr(stage, "loss_weights", {}) or {}).items()
+                str(key): float(value) for key, value in dict(getattr(stage, "loss_weights", {}) or {}).items()
             },
         }
         for stage in curriculum_stages
@@ -11092,20 +9410,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
     requested_launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
-    requested_hi_nerv_latent_codec = str(
-        candidate.get("hi_nerv_latent_codec", hi_nerv_latent_codec)
-    )
+    requested_hi_nerv_latent_codec = str(candidate.get("hi_nerv_latent_codec", hi_nerv_latent_codec))
     launch_hard_byte_ceiling = _compact_first_present_int(
         candidate,
         ("hard_byte_ceiling",),
     )
     if launch_hard_byte_ceiling is None:
-        configured_ceilings = tuple(
-            int(value) for value in hard_byte_ceilings if int(value) > 0
-        )
-        launch_hard_byte_ceiling = (
-            min(configured_ceilings) if configured_ceilings else None
-        )
+        configured_ceilings = tuple(int(value) for value in hard_byte_ceilings if int(value) > 0)
+        launch_hard_byte_ceiling = min(configured_ceilings) if configured_ceilings else None
     launch_hi_nerv_latent_codec = _resolve_hi_nerv_latent_codec_policy(
         requested=requested_hi_nerv_latent_codec,
         hard_byte_ceiling=launch_hard_byte_ceiling,
@@ -11113,48 +9425,24 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_decoder_codec_policy = _resolve_hi_nerv_decoder_codec_policy(
         candidate=candidate or None,
         requested_decoder_codec=requested_launch_decoder_codec,
-        post_export_receiver_cache_quality_gate=bool(
-            post_export_receiver_cache_quality_gate
-        ),
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        post_export_receiver_cache_quality_gate=bool(post_export_receiver_cache_quality_gate),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
         pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         scorer_input_distribution_guard_attached=bool(scorer_input_guard_attached),
     )
-    launch_decoder_codec = str(
-        launch_decoder_codec_policy["resolved_decoder_codec"]
-    )
-    launch_use_hierarchical_feature_grid = bool(
-        candidate.get("use_hierarchical_feature_grid", not candidate_supplied)
-    )
-    launch_use_convnext_blocks = bool(
-        candidate.get("use_convnext_blocks", not candidate_supplied)
-    )
+    launch_decoder_codec = str(launch_decoder_codec_policy["resolved_decoder_codec"])
+    launch_use_hierarchical_feature_grid = bool(candidate.get("use_hierarchical_feature_grid", not candidate_supplied))
+    launch_use_convnext_blocks = bool(candidate.get("use_convnext_blocks", not candidate_supplied))
     launch_local_grid_levels = int(candidate.get("local_grid_levels", 2))
     launch_local_grid_channels = int(candidate.get("local_grid_channels", 4))
     launch_convnext_mlp_ratio = int(candidate.get("convnext_mlp_ratio", 2))
@@ -11208,16 +9496,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         decoder_weight_waterfill_plan_metadata=decoder_weight_waterfill_plan_metadata,
         optimizer_policy=optimizer_policy,
     )
-    waterfill_validation_blockers = list(
-        decoder_weight_waterfill_plan_metadata.get("blockers") or []
-    )
-    archive_section_telemetry_blockers = list(
-        archive_section_telemetry_metadata.get("blockers") or []
-    )
-    if (
-        archive_section_telemetry_json is not None
-        and archive_section_telemetry_blockers
-    ):
+    waterfill_validation_blockers = list(decoder_weight_waterfill_plan_metadata.get("blockers") or [])
+    archive_section_telemetry_blockers = list(archive_section_telemetry_metadata.get("blockers") or [])
+    if archive_section_telemetry_json is not None and archive_section_telemetry_blockers:
         refusal = _base_report(
             output_dir=out,
             mode="hi_nerv_archive_section_telemetry_launch_refused",
@@ -11239,13 +9520,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "hi_nerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -11255,16 +9532,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_decoder_codec_policy": launch_decoder_codec_policy,
                     "requested_hi_nerv_latent_codec": requested_hi_nerv_latent_codec,
                     "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
-                    "launch_use_hierarchical_feature_grid": (
-                        launch_use_hierarchical_feature_grid
-                    ),
+                    "launch_use_hierarchical_feature_grid": (launch_use_hierarchical_feature_grid),
                     "launch_use_convnext_blocks": launch_use_convnext_blocks,
-                    "launch_mid_injection_block_index": (
-                        launch_mid_injection_block_index
-                    ),
-                    "launch_fine_injection_block_index": (
-                        launch_fine_injection_block_index
-                    ),
+                    "launch_mid_injection_block_index": (launch_mid_injection_block_index),
+                    "launch_fine_injection_block_index": (launch_fine_injection_block_index),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -11273,12 +9544,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
                     "stage_loss_weights": stage_loss_weights,
-                    "decoder_weight_waterfill_plan": (
-                        decoder_weight_waterfill_plan_metadata
-                    ),
-                    "archive_section_telemetry_attachment": (
-                        archive_section_telemetry_metadata
-                    ),
+                    "decoder_weight_waterfill_plan": (decoder_weight_waterfill_plan_metadata),
+                    "archive_section_telemetry_attachment": (archive_section_telemetry_metadata),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -11290,9 +9557,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": _dedupe(
                     [
                         *archive_section_telemetry_blockers,
@@ -11332,13 +9597,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "hi_nerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -11348,16 +9609,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_decoder_codec_policy": launch_decoder_codec_policy,
                     "requested_hi_nerv_latent_codec": requested_hi_nerv_latent_codec,
                     "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
-                    "launch_use_hierarchical_feature_grid": (
-                        launch_use_hierarchical_feature_grid
-                    ),
+                    "launch_use_hierarchical_feature_grid": (launch_use_hierarchical_feature_grid),
                     "launch_use_convnext_blocks": launch_use_convnext_blocks,
-                    "launch_mid_injection_block_index": (
-                        launch_mid_injection_block_index
-                    ),
-                    "launch_fine_injection_block_index": (
-                        launch_fine_injection_block_index
-                    ),
+                    "launch_mid_injection_block_index": (launch_mid_injection_block_index),
+                    "launch_fine_injection_block_index": (launch_fine_injection_block_index),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -11366,12 +9621,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
                     "stage_loss_weights": stage_loss_weights,
-                    "decoder_weight_waterfill_plan": (
-                        decoder_weight_waterfill_plan_metadata
-                    ),
-                    "archive_section_telemetry_attachment": (
-                        archive_section_telemetry_metadata
-                    ),
+                    "decoder_weight_waterfill_plan": (decoder_weight_waterfill_plan_metadata),
+                    "archive_section_telemetry_attachment": (archive_section_telemetry_metadata),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -11383,9 +9634,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": _dedupe(
                     [
                         *waterfill_validation_blockers,
@@ -11405,48 +9654,24 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         return {**refusal, "report_path": path.as_posix()}
     config_gate = _validate_hi_nerv_frontier_training_config(
         segnet_distillation_weight=effective_segnet_distillation_weight,
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
-        scorer_input_distribution_guard_weight=float(
-            scorer_input_distribution_guard_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
+        scorer_input_distribution_guard_weight=float(scorer_input_distribution_guard_weight),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
         scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
-        posenet_yuv6_geometry_tether_weight=float(
-            posenet_yuv6_geometry_tether_weight
-        ),
-        posenet_temporal_signal_floor_weight=float(
-            posenet_temporal_signal_floor_weight
-        ),
+        posenet_yuv6_geometry_tether_weight=float(posenet_yuv6_geometry_tether_weight),
+        posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
         pose_distillation_weight=effective_pose_distillation_weight,
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         allow_segnet_only_research=allow_segnet_only_research,
         allow_unscored_research_smoke=allow_unscored_research_smoke,
         score_aware_training_plan=score_aware_training_plan,
@@ -11477,21 +9702,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
                     "stage_loss_weights": stage_loss_weights,
-                    "decoder_weight_waterfill_plan": (
-                        decoder_weight_waterfill_plan_metadata
-                    ),
-                    "archive_section_telemetry_attachment": (
-                        archive_section_telemetry_metadata
-                    ),
+                    "decoder_weight_waterfill_plan": (decoder_weight_waterfill_plan_metadata),
+                    "archive_section_telemetry_attachment": (archive_section_telemetry_metadata),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
                 },
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": _dedupe(
                     [
                         *config_gate.get("blockers", []),
@@ -11509,10 +9728,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         path = out / "compact_renderer_mlx_spine_runner_report.json"
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
-    if (
-        not bool(launch_source_faithfulness["official_hinerv_control"])
-        and not bool(allow_unscored_research_smoke)
-    ):
+    if not bool(launch_source_faithfulness["official_hinerv_control"]) and not bool(allow_unscored_research_smoke):
         refusal = _base_report(
             output_dir=out,
             mode="hi_nerv_official_control_launch_refused",
@@ -11535,13 +9751,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "hi_nerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -11551,16 +9763,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_decoder_codec_policy": launch_decoder_codec_policy,
                     "requested_hi_nerv_latent_codec": requested_hi_nerv_latent_codec,
                     "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
-                    "launch_use_hierarchical_feature_grid": (
-                        launch_use_hierarchical_feature_grid
-                    ),
+                    "launch_use_hierarchical_feature_grid": (launch_use_hierarchical_feature_grid),
                     "launch_use_convnext_blocks": launch_use_convnext_blocks,
-                    "launch_mid_injection_block_index": (
-                        launch_mid_injection_block_index
-                    ),
-                    "launch_fine_injection_block_index": (
-                        launch_fine_injection_block_index
-                    ),
+                    "launch_mid_injection_block_index": (launch_mid_injection_block_index),
+                    "launch_fine_injection_block_index": (launch_fine_injection_block_index),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -11573,21 +9779,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
                     "stage_loss_weights": stage_loss_weights,
-                    "decoder_weight_waterfill_plan": (
-                        decoder_weight_waterfill_plan_metadata
-                    ),
-                    "archive_section_telemetry_attachment": (
-                        archive_section_telemetry_metadata
-                    ),
+                    "decoder_weight_waterfill_plan": (decoder_weight_waterfill_plan_metadata),
+                    "archive_section_telemetry_attachment": (archive_section_telemetry_metadata),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
                 },
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": _dedupe(
                     [
                         "hinerv_official_control_required_for_top_priority_launch",
@@ -11638,69 +9838,42 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         num_pairs=int(num_pairs),
         segnet_distillation_weight=effective_segnet_distillation_weight,
         pose_distillation_weight=effective_pose_distillation_weight,
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
         recon_pixel_weight_attached=bool(
-            effective_recon_pixel_weight_path is not None
-            or auto_segnet_boundary_recon_weight
+            effective_recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
         ),
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
         scorer_input_distribution_guard_attached=scorer_input_guard_attached,
-        pr95_staged_curriculum_bound=bool(
-            optimizer_policy.get("pr95_faithful_curriculum_enabled")
-        ),
+        pr95_staged_curriculum_bound=bool(optimizer_policy.get("pr95_faithful_curriculum_enabled")),
         muon_adamw_partition_bound=bool(
             optimizer_policy.get("pr95_faithful_curriculum_enabled")
             or optimizer_controls.get("optimizer_kind") == "pact_muon_adamw"
         ),
     )
-    effective_coder_aware_qat = bool(
-        launch_curriculum_plan["coder_pressure"]["enabled"]
-    )
-    effective_coder_qat_quant_bits = int(
-        launch_curriculum_plan["coder_pressure"]["quant_bits"]
-    )
+    effective_coder_aware_qat = bool(launch_curriculum_plan["coder_pressure"]["enabled"])
+    effective_coder_qat_quant_bits = int(launch_curriculum_plan["coder_pressure"]["quant_bits"])
     prelaunch_blockers = _pr95_long_campaign_prelaunch_blockers(
         launch_curriculum_plan,
         epochs=int(epochs),
         allow_segnet_only_research=bool(allow_segnet_only_research),
         allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
     )
-    native_optimizer_bypasses_pr95_prelaunch = bool(
-        optimizer_policy.get("native_optimizer_active")
-    )
+    native_optimizer_bypasses_pr95_prelaunch = bool(optimizer_policy.get("native_optimizer_active"))
     if prelaunch_blockers and not native_optimizer_bypasses_pr95_prelaunch:
         refusal = _base_report(
             output_dir=out,
@@ -11715,19 +9888,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "epochs_requested": int(epochs),
                 "training_executed": False,
                 "launch_refusal_reason": (
-                    "8+ epoch HiNeRV campaigns require the PR95-grade "
-                    "prelaunch stack before MLX training execution"
+                    "8+ epoch HiNeRV campaigns require the PR95-grade prelaunch stack before MLX training execution"
                 ),
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "hi_nerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -11737,16 +9905,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_decoder_codec_policy": launch_decoder_codec_policy,
                     "requested_hi_nerv_latent_codec": requested_hi_nerv_latent_codec,
                     "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
-                    "launch_use_hierarchical_feature_grid": (
-                        launch_use_hierarchical_feature_grid
-                    ),
+                    "launch_use_hierarchical_feature_grid": (launch_use_hierarchical_feature_grid),
                     "launch_use_convnext_blocks": launch_use_convnext_blocks,
-                    "launch_mid_injection_block_index": (
-                        launch_mid_injection_block_index
-                    ),
-                    "launch_fine_injection_block_index": (
-                        launch_fine_injection_block_index
-                    ),
+                    "launch_mid_injection_block_index": (launch_mid_injection_block_index),
+                    "launch_fine_injection_block_index": (launch_fine_injection_block_index),
                     "candidate_curriculum_plan": launch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -11771,12 +9933,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         path = out / "compact_renderer_mlx_spine_runner_report.json"
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
-    archive_selection_quality_scope = (
-        _hi_nerv_effective_receiver_cache_quality_max_pairs(
-            requested_max_pairs=int(receiver_cache_quality_max_pairs),
-            num_pairs=int(num_pairs),
-            train_batch_pairs=int(batch_pair_indices_per_step),
-        )
+    archive_selection_quality_scope = _hi_nerv_effective_receiver_cache_quality_max_pairs(
+        requested_max_pairs=int(receiver_cache_quality_max_pairs),
+        num_pairs=int(num_pairs),
+        train_batch_pairs=int(batch_pair_indices_per_step),
     )
     try:
         artifact = _run_hi_nerv_mlx_scoreaware_smoke(
@@ -11803,129 +9963,66 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
             pose_distillation_weight=effective_pose_distillation_weight,
-            pose_direct_live_distillation_weight=float(
-                pose_direct_live_distillation_weight
-            ),
+            pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
+            pose_trust_required=bool(pose_trust_required),
             pose_distillation_loss=str(pose_distillation_loss),
             pose_distillation_huber_delta=float(pose_distillation_huber_delta),
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
-            segnet_student_live_calibration_weight=float(
-                segnet_student_live_calibration_weight
-            ),
-            segnet_direct_live_distillation_weight=float(
-                segnet_direct_live_distillation_weight
-            ),
-            segnet_direct_live_base_loss_weight=float(
-                segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=float(
-                segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=float(
-                segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=float(
-                segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+            segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+            segnet_direct_live_base_loss_weight=float(segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=float(
                 segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=float(
-                segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=float(
-                segnet_direct_live_rare_class_logit_weight
-            ),
-            segnet_direct_live_target_mass_floor_weight=float(
-                segnet_direct_live_target_mass_floor_weight
-            ),
-            segnet_direct_live_target_min_ratio_floor_weight=float(
-                segnet_direct_live_target_min_ratio_floor_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+            segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+            segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
-            scorer_input_distribution_guard_weight=float(
-                scorer_input_distribution_guard_weight
-            ),
-            scorer_input_distribution_guard_saturation_margin=float(
-                scorer_input_distribution_guard_saturation_margin
-            ),
-            scorer_input_distribution_guard_temperature=float(
-                scorer_input_distribution_guard_temperature
-            ),
-            scorer_input_contrast_floor_weight=float(
-                scorer_input_contrast_floor_weight
-            ),
-            scorer_input_contrast_floor_segnet_min_std_ratio=float(
-                scorer_input_contrast_floor_segnet_min_std_ratio
-            ),
+            scorer_input_distribution_guard_weight=float(scorer_input_distribution_guard_weight),
+            scorer_input_distribution_guard_saturation_margin=float(scorer_input_distribution_guard_saturation_margin),
+            scorer_input_distribution_guard_temperature=float(scorer_input_distribution_guard_temperature),
+            scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
+            scorer_input_contrast_floor_segnet_min_std_ratio=float(scorer_input_contrast_floor_segnet_min_std_ratio),
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
                 scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
             scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
-            posenet_yuv6_geometry_tether_weight=float(
-                posenet_yuv6_geometry_tether_weight
-            ),
-            posenet_temporal_signal_floor_weight=float(
-                posenet_temporal_signal_floor_weight
-            ),
-            posenet_temporal_signal_min_std_ratio=float(
-                posenet_temporal_signal_min_std_ratio
-            ),
-            posenet_temporal_signal_min_mean_abs_ratio=float(
-                posenet_temporal_signal_min_mean_abs_ratio
-            ),
+            posenet_yuv6_geometry_tether_weight=float(posenet_yuv6_geometry_tether_weight),
+            posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
+            posenet_temporal_signal_min_std_ratio=float(posenet_temporal_signal_min_std_ratio),
+            posenet_temporal_signal_min_mean_abs_ratio=float(posenet_temporal_signal_min_mean_abs_ratio),
             output_head_target_bias_init=bool(output_head_target_bias_init),
-            output_head_target_bias_init_epsilon=float(
-                output_head_target_bias_init_epsilon
-            ),
+            output_head_target_bias_init_epsilon=float(output_head_target_bias_init_epsilon),
             output_head_target_contrast_init=bool(output_head_target_contrast_init),
-            output_head_target_contrast_init_max_pairs=int(
-                output_head_target_contrast_init_max_pairs
-            ),
-            output_head_target_contrast_init_min_output_std=float(
-                output_head_target_contrast_init_min_output_std
-            ),
-            output_head_target_contrast_init_max_gain=float(
-                output_head_target_contrast_init_max_gain
-            ),
+            output_head_target_contrast_init_max_pairs=int(output_head_target_contrast_init_max_pairs),
+            output_head_target_contrast_init_min_output_std=float(output_head_target_contrast_init_min_output_std),
+            output_head_target_contrast_init_max_gain=float(output_head_target_contrast_init_max_gain),
             scorer_domain_bootstrap=bool(scorer_domain_bootstrap),
             scorer_domain_bootstrap_steps=int(scorer_domain_bootstrap_steps),
-            scorer_domain_bootstrap_learning_rate=float(
-                scorer_domain_bootstrap_learning_rate
-            ),
+            scorer_domain_bootstrap_learning_rate=float(scorer_domain_bootstrap_learning_rate),
             scorer_domain_bootstrap_max_pairs=int(scorer_domain_bootstrap_max_pairs),
             scorer_domain_bootstrap_rgb_weight=float(scorer_domain_bootstrap_rgb_weight),
-            scorer_domain_bootstrap_yuv6_weight=float(
-                scorer_domain_bootstrap_yuv6_weight
-            ),
-            scorer_domain_bootstrap_temporal_delta_weight=float(
-                scorer_domain_bootstrap_temporal_delta_weight
-            ),
-            scorer_domain_bootstrap_contrast_floor_weight=float(
-                scorer_domain_bootstrap_contrast_floor_weight
-            ),
-            scorer_domain_bootstrap_rgb_std_min_ratio=float(
-                scorer_domain_bootstrap_rgb_std_min_ratio
-            ),
+            scorer_domain_bootstrap_yuv6_weight=float(scorer_domain_bootstrap_yuv6_weight),
+            scorer_domain_bootstrap_temporal_delta_weight=float(scorer_domain_bootstrap_temporal_delta_weight),
+            scorer_domain_bootstrap_contrast_floor_weight=float(scorer_domain_bootstrap_contrast_floor_weight),
+            scorer_domain_bootstrap_rgb_std_min_ratio=float(scorer_domain_bootstrap_rgb_std_min_ratio),
             scorer_domain_bootstrap_yuv6_temporal_std_min_ratio=float(
                 scorer_domain_bootstrap_yuv6_temporal_std_min_ratio
             ),
-            scorer_domain_bootstrap_weight_decay=float(
-                scorer_domain_bootstrap_weight_decay
-            ),
+            scorer_domain_bootstrap_weight_decay=float(scorer_domain_bootstrap_weight_decay),
             scorer_domain_bootstrap_grad_clip_max_norm=(
                 None
                 if scorer_domain_bootstrap_grad_clip_max_norm is None
                 else float(scorer_domain_bootstrap_grad_clip_max_norm)
             ),
-            scorer_domain_bootstrap_segnet_margin_weight=float(
-                scorer_domain_bootstrap_segnet_margin_weight
-            ),
-            scorer_domain_bootstrap_segnet_hard_birth_weight=float(
-                scorer_domain_bootstrap_segnet_hard_birth_weight
-            ),
+            scorer_domain_bootstrap_segnet_margin_weight=float(scorer_domain_bootstrap_segnet_margin_weight),
+            scorer_domain_bootstrap_segnet_hard_birth_weight=float(scorer_domain_bootstrap_segnet_hard_birth_weight),
             scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
                 scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
             ),
@@ -11939,11 +10036,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
                 None
-                if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                is None
-                else float(
-                    scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                )
+                if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is None
+                else float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction)
             ),
             scorer_space_step_guard_max_post_segnet_contrast_ratio=(
                 scorer_space_step_guard_max_post_segnet_contrast_ratio
@@ -11960,9 +10054,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
                 scorer_space_step_guard_max_post_segnet_argmax_disagreement
             ),
-            scorer_space_step_guard_max_post_pose_score_term=(
-                scorer_space_step_guard_max_post_pose_score_term
-            ),
+            scorer_space_step_guard_max_post_pose_score_term=(scorer_space_step_guard_max_post_pose_score_term),
             scorer_space_step_guard_max_post_pose_direct_live_score_term=(
                 scorer_space_step_guard_max_post_pose_direct_live_score_term
             ),
@@ -11984,35 +10076,19 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=(
                 scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
             ),
-            scorer_space_step_guard_backtracking_steps=int(
-                scorer_space_step_guard_backtracking_steps
-            ),
-            scorer_space_step_guard_backtracking_shrink=float(
-                scorer_space_step_guard_backtracking_shrink
-            ),
+            scorer_space_step_guard_backtracking_steps=int(scorer_space_step_guard_backtracking_steps),
+            scorer_space_step_guard_backtracking_shrink=float(scorer_space_step_guard_backtracking_shrink),
             gradient_multiplier_by_name=gradient_multiplier_by_name,
-            bias_gradient_multiplier=(
-                None
-                if bias_gradient_multiplier is None
-                else float(bias_gradient_multiplier)
-            ),
-            output_head_bias_gradient_multiplier=float(
-                output_head_bias_gradient_multiplier
-            ),
+            bias_gradient_multiplier=(None if bias_gradient_multiplier is None else float(bias_gradient_multiplier)),
+            output_head_bias_gradient_multiplier=float(output_head_bias_gradient_multiplier),
             distillation_device=distillation_device,
             requested_distillation_device=effective_requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
             pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
             scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
-            segnet_direct_live_escape_warmup_epochs=int(
-                segnet_direct_live_escape_warmup_epochs
-            ),
-            segnet_direct_live_escape_class_multiplier=float(
-                segnet_direct_live_escape_class_multiplier
-            ),
-            posenet_temporal_signal_floor_stage_weight=(
-                posenet_temporal_signal_floor_stage_weight
-            ),
+            segnet_direct_live_escape_warmup_epochs=int(segnet_direct_live_escape_warmup_epochs),
+            segnet_direct_live_escape_class_multiplier=float(segnet_direct_live_escape_class_multiplier),
+            posenet_temporal_signal_floor_stage_weight=(posenet_temporal_signal_floor_stage_weight),
             coder_aware_qat=effective_coder_aware_qat,
             coder_qat_quant_bits=effective_coder_qat_quant_bits,
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
@@ -12034,54 +10110,32 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             checkpoint_interval_epochs=checkpoint_interval,
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
-            checkpoint_retention_keep_every_n_epochs=(
-                checkpoint_retention_keep_every_n_epochs
-            ),
-            checkpoint_retention_cold_store_roots=(
-                checkpoint_retention_cold_store_roots
-            ),
+            checkpoint_retention_keep_every_n_epochs=(checkpoint_retention_keep_every_n_epochs),
+            checkpoint_retention_cold_store_roots=(checkpoint_retention_cold_store_roots),
             checkpoint_dir=resolved_checkpoint_dir,
             resume_from_checkpoint=resolved_resume_from_checkpoint,
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
-            pr95_curriculum_total_epochs=optimizer_policy.get(
-                "pr95_curriculum_total_epochs"
-            ),
-            pr95_stage_source_weight_amplification_enabled=bool(
-                effective_hi_nerv_pr95_source_weight_amplification
-            ),
+            pr95_curriculum_total_epochs=optimizer_policy.get("pr95_curriculum_total_epochs"),
+            pr95_stage_source_weight_amplification_enabled=bool(effective_hi_nerv_pr95_source_weight_amplification),
             optimizer_controls=optimizer_controls,
             recon_loss_stage_weight=float(recon_loss_stage_weight),
             segnet_loss_stage_weight=float(segnet_loss_stage_weight),
             pose_loss_stage_weight=float(pose_loss_stage_weight),
             scorer_input_guard_stage_weight=float(scorer_input_guard_stage_weight),
-            scorer_input_contrast_floor_stage_weight=(
-                scorer_input_contrast_floor_stage_weight
-            ),
-            scorer_input_shape_tether_stage_weight=(
-                scorer_input_shape_tether_stage_weight
-            ),
-            posenet_yuv6_geometry_tether_stage_weight=(
-                posenet_yuv6_geometry_tether_stage_weight
-            ),
+            scorer_input_contrast_floor_stage_weight=(scorer_input_contrast_floor_stage_weight),
+            scorer_input_shape_tether_stage_weight=(scorer_input_shape_tether_stage_weight),
+            posenet_yuv6_geometry_tether_stage_weight=(posenet_yuv6_geometry_tether_stage_weight),
             segnet_direct_live_stage_weight=segnet_direct_live_stage_weight,
             min_segnet_direct_live_occupied_class_fraction_for_fit_gate=float(
                 receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
             prioritized_pair_indices=prioritized_pair_indices,
-            scorer_error_pair_sampling_weights=(
-                scorer_error_pair_sampling_weights
-            ),
+            scorer_error_pair_sampling_weights=(scorer_error_pair_sampling_weights),
             scorer_error_pair_curriculum=scorer_error_pair_curriculum,
-            sparse_prioritized_target_hydration=bool(
-                sparse_prioritized_target_hydration
-            ),
-            archive_selection_replay_required=bool(
-                post_export_receiver_cache_quality_gate
-            ),
-            archive_selection_replay_batch_size=int(
-                archive_selection_quality_scope["effective_max_pairs"]
-            ),
+            sparse_prioritized_target_hydration=bool(sparse_prioritized_target_hydration),
+            archive_selection_replay_required=bool(post_export_receiver_cache_quality_gate),
+            archive_selection_replay_batch_size=int(archive_selection_quality_scope["effective_max_pairs"]),
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -12105,26 +10159,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "requested_distillation_device": effective_requested_distillation_device,
                 "distillation_device": str(distillation_device),
                 "failure": repr(exc),
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "hi_nerv",
-                    "selection_mode": (
-                        "planner_candidate" if candidate else "manual_cli_knobs"
-                    ),
+                    "selection_mode": ("planner_candidate" if candidate else "manual_cli_knobs"),
                     "candidate": candidate or None,
-                    "modelsize_control_contract": _modelsize_control_contract(
-                        candidate
-                    ),
+                    "modelsize_control_contract": _modelsize_control_contract(candidate),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -12134,24 +10178,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_decoder_codec_policy": launch_decoder_codec_policy,
                     "requested_hi_nerv_latent_codec": requested_hi_nerv_latent_codec,
                     "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
-                    "launch_use_hierarchical_feature_grid": (
-                        launch_use_hierarchical_feature_grid
-                    ),
+                    "launch_use_hierarchical_feature_grid": (launch_use_hierarchical_feature_grid),
                     "launch_use_convnext_blocks": launch_use_convnext_blocks,
-                    "launch_mid_injection_block_index": (
-                        launch_mid_injection_block_index
-                    ),
-                    "launch_fine_injection_block_index": (
-                        launch_fine_injection_block_index
-                    ),
+                    "launch_mid_injection_block_index": (launch_mid_injection_block_index),
+                    "launch_fine_injection_block_index": (launch_fine_injection_block_index),
                     "candidate_curriculum_plan": launch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
                 },
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_source_faithfulness": launch_source_faithfulness,
@@ -12164,12 +10200,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "failed_during_mlx_training_or_export",
                     "stage_loss_weights": stage_loss_weights,
-                    "decoder_weight_waterfill_plan": (
-                        decoder_weight_waterfill_plan_metadata
-                    ),
-                    "archive_section_telemetry_attachment": (
-                        archive_section_telemetry_metadata
-                    ),
+                    "decoder_weight_waterfill_plan": (decoder_weight_waterfill_plan_metadata),
+                    "archive_section_telemetry_attachment": (archive_section_telemetry_metadata),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -12214,90 +10246,66 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     substrate_metadata = artifact_dict.get("substrate_artifact_metadata")
     training_telemetry_contract = None
     if isinstance(substrate_metadata, dict):
-        training_telemetry_contract = substrate_metadata.get(
-            "training_telemetry_contract"
-        )
+        training_telemetry_contract = substrate_metadata.get("training_telemetry_contract")
         scoreaware_metadata = substrate_metadata.get("score_aware_training")
         if isinstance(scoreaware_metadata, dict):
-            scoreaware_metadata["decoder_weight_gradient_saliency_artifact"] = (
-                decoder_weight_saliency_artifact
-            )
+            scoreaware_metadata["decoder_weight_gradient_saliency_artifact"] = decoder_weight_saliency_artifact
     archive_file_path = Path(archive_path) if archive_path else None
     archive_artifact_dir = (
         archive_file_path.parent
         if archive_file_path is not None and archive_file_path.parent.is_dir()
         else training_dir
     )
-    receiver_cache_quality_scope = (
-        _hi_nerv_effective_receiver_cache_quality_max_pairs(
-            requested_max_pairs=int(receiver_cache_quality_max_pairs),
-            num_pairs=int(num_pairs),
-            train_batch_pairs=int(batch_pair_indices_per_step),
-        )
+    receiver_cache_quality_scope = _hi_nerv_effective_receiver_cache_quality_max_pairs(
+        requested_max_pairs=int(receiver_cache_quality_max_pairs),
+        num_pairs=int(num_pairs),
+        train_batch_pairs=int(batch_pair_indices_per_step),
     )
-    receiver_replay_archive_selection = (
-        _write_hi_nerv_runner_receiver_replay_archive_selection(
-            requested=bool(post_export_receiver_cache_quality_gate),
-            archive_resolution=archive_resolution,
-            source_video_path=resolved_source_video,
-            output_dir=training_dir,
-            reference_cache_dir=receiver_cache_quality_reference_cache_dir,
-            max_pairs=int(receiver_cache_quality_scope["effective_max_pairs"]),
-            batch_pairs=int(receiver_cache_quality_batch_pairs),
-            pair_indices=tuple(int(value) for value in prioritized_pair_indices),
-            min_segnet_std=float(receiver_cache_quality_min_segnet_std),
-            min_segnet_dynamic_range=float(
-                receiver_cache_quality_min_segnet_dynamic_range
-            ),
-            max_segnet_mae_vs_reference_for_fit_gate=float(
-                receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
-            ),
-            min_posenet_yuv6_std=float(receiver_cache_quality_min_posenet_yuv6_std),
-            min_posenet_yuv6_dynamic_range=float(
-                receiver_cache_quality_min_posenet_yuv6_dynamic_range
-            ),
-            max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
-                receiver_cache_quality_max_posenet_yuv6_mae_vs_reference_for_fit_gate
-            ),
-            min_posenet_yuv6_temporal_signal_std_for_fit_gate=float(
-                receiver_cache_quality_min_posenet_yuv6_temporal_signal_std_for_fit_gate
-            ),
-            min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=float(
-                receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
-            ),
-            segnet_argmax_probe=bool(receiver_cache_quality_segnet_argmax_probe),
-            segnet_argmax_batch_frames=int(
-                receiver_cache_quality_segnet_argmax_batch_frames
-            ),
-            max_segnet_argmax_disagreement_for_fit_gate=float(
-                receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
-            ),
-            min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
-                receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
-            ),
-            mlx_scorer_response_probe=bool(
-                receiver_cache_quality_mlx_scorer_response_probe
-            ),
-            mlx_scorer_response_upstream_dir=scorer_upstream,
-            mlx_scorer_response_device_type=str(
-                receiver_cache_quality_mlx_scorer_response_device_type
-            ),
-            mlx_scorer_response_batch_pairs=int(
-                receiver_cache_quality_mlx_scorer_response_batch_pairs
-            ),
-            max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
-                receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
-            ),
-            max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
-                receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
-            ),
-            repo_root=root,
-        )
+    receiver_replay_archive_selection = _write_hi_nerv_runner_receiver_replay_archive_selection(
+        requested=bool(post_export_receiver_cache_quality_gate),
+        archive_resolution=archive_resolution,
+        source_video_path=resolved_source_video,
+        output_dir=training_dir,
+        reference_cache_dir=receiver_cache_quality_reference_cache_dir,
+        max_pairs=int(receiver_cache_quality_scope["effective_max_pairs"]),
+        batch_pairs=int(receiver_cache_quality_batch_pairs),
+        pair_indices=tuple(int(value) for value in prioritized_pair_indices),
+        min_segnet_std=float(receiver_cache_quality_min_segnet_std),
+        min_segnet_dynamic_range=float(receiver_cache_quality_min_segnet_dynamic_range),
+        max_segnet_mae_vs_reference_for_fit_gate=float(receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate),
+        min_posenet_yuv6_std=float(receiver_cache_quality_min_posenet_yuv6_std),
+        min_posenet_yuv6_dynamic_range=float(receiver_cache_quality_min_posenet_yuv6_dynamic_range),
+        max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
+            receiver_cache_quality_max_posenet_yuv6_mae_vs_reference_for_fit_gate
+        ),
+        min_posenet_yuv6_temporal_signal_std_for_fit_gate=float(
+            receiver_cache_quality_min_posenet_yuv6_temporal_signal_std_for_fit_gate
+        ),
+        min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=float(
+            receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
+        ),
+        segnet_argmax_probe=bool(receiver_cache_quality_segnet_argmax_probe),
+        segnet_argmax_batch_frames=int(receiver_cache_quality_segnet_argmax_batch_frames),
+        max_segnet_argmax_disagreement_for_fit_gate=float(
+            receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
+        ),
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+            receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+        ),
+        mlx_scorer_response_probe=bool(receiver_cache_quality_mlx_scorer_response_probe),
+        mlx_scorer_response_upstream_dir=scorer_upstream,
+        mlx_scorer_response_device_type=str(receiver_cache_quality_mlx_scorer_response_device_type),
+        mlx_scorer_response_batch_pairs=int(receiver_cache_quality_mlx_scorer_response_batch_pairs),
+        max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
+            receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
+        ),
+        max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
+            receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
+        ),
+        repo_root=root,
     )
     if isinstance(receiver_replay_archive_selection, dict):
-        selected_replay_archive = receiver_replay_archive_selection.get(
-            "selected_archive_path"
-        )
+        selected_replay_archive = receiver_replay_archive_selection.get("selected_archive_path")
         if isinstance(selected_replay_archive, str) and selected_replay_archive:
             replay_archive_file_path = Path(selected_replay_archive).expanduser()
             replay_archive_file_path = (
@@ -12310,15 +10318,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 archive_path = archive_file_path.as_posix()
                 archive_artifact_dir = archive_file_path.parent
                 artifact_dict["archive_path"] = archive_path
-                artifact_dict["archive_bytes"] = receiver_replay_archive_selection.get(
-                    "selected_archive_bytes"
-                )
-                artifact_dict["archive_sha256"] = (
-                    receiver_replay_archive_selection.get("selected_archive_sha256")
-                )
-                artifact_dict["receiver_replay_archive_selection"] = dict(
-                    receiver_replay_archive_selection
-                )
+                artifact_dict["archive_bytes"] = receiver_replay_archive_selection.get("selected_archive_bytes")
+                artifact_dict["archive_sha256"] = receiver_replay_archive_selection.get("selected_archive_sha256")
+                artifact_dict["receiver_replay_archive_selection"] = dict(receiver_replay_archive_selection)
                 archive_resolution = dict(archive_resolution)
                 archive_resolution["receiver_replay_archive_selection"] = {
                     key: value
@@ -12326,18 +10328,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     if key != "selected_receiver_replay_report"
                 }
                 archive_resolution["archive_path"] = archive_path
-                archive_resolution["archive_bytes"] = (
-                    receiver_replay_archive_selection.get("selected_archive_bytes")
-                )
-                archive_resolution["archive_sha256"] = (
-                    receiver_replay_archive_selection.get("selected_archive_sha256")
-                )
-                archive_resolution["candidate_kind"] = (
-                    receiver_replay_archive_selection.get("selected_candidate_kind")
-                )
-                archive_resolution[
-                    "source"
-                ] = "receiver_replay_archive_selection"
+                archive_resolution["archive_bytes"] = receiver_replay_archive_selection.get("selected_archive_bytes")
+                archive_resolution["archive_sha256"] = receiver_replay_archive_selection.get("selected_archive_sha256")
+                archive_resolution["candidate_kind"] = receiver_replay_archive_selection.get("selected_candidate_kind")
+                archive_resolution["source"] = "receiver_replay_archive_selection"
                 _attach_hi_nerv_runner_archive_resolution(
                     artifact_dict=artifact_dict,
                     output_dir=training_dir,
@@ -12370,16 +10364,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             batch_pairs=int(receiver_cache_quality_batch_pairs),
             pair_indices=tuple(int(value) for value in prioritized_pair_indices),
             min_segnet_std=float(receiver_cache_quality_min_segnet_std),
-            min_segnet_dynamic_range=float(
-                receiver_cache_quality_min_segnet_dynamic_range
-            ),
+            min_segnet_dynamic_range=float(receiver_cache_quality_min_segnet_dynamic_range),
             max_segnet_mae_vs_reference_for_fit_gate=float(
                 receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
             ),
             min_posenet_yuv6_std=float(receiver_cache_quality_min_posenet_yuv6_std),
-            min_posenet_yuv6_dynamic_range=float(
-                receiver_cache_quality_min_posenet_yuv6_dynamic_range
-            ),
+            min_posenet_yuv6_dynamic_range=float(receiver_cache_quality_min_posenet_yuv6_dynamic_range),
             max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
                 receiver_cache_quality_max_posenet_yuv6_mae_vs_reference_for_fit_gate
             ),
@@ -12390,25 +10380,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
             ),
             segnet_argmax_probe=bool(receiver_cache_quality_segnet_argmax_probe),
-            segnet_argmax_batch_frames=int(
-                receiver_cache_quality_segnet_argmax_batch_frames
-            ),
+            segnet_argmax_batch_frames=int(receiver_cache_quality_segnet_argmax_batch_frames),
             max_segnet_argmax_disagreement_for_fit_gate=float(
                 receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
             ),
             min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
                 receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
-            mlx_scorer_response_probe=bool(
-                receiver_cache_quality_mlx_scorer_response_probe
-            ),
+            mlx_scorer_response_probe=bool(receiver_cache_quality_mlx_scorer_response_probe),
             mlx_scorer_response_upstream_dir=scorer_upstream,
-            mlx_scorer_response_device_type=str(
-                receiver_cache_quality_mlx_scorer_response_device_type
-            ),
-            mlx_scorer_response_batch_pairs=int(
-                receiver_cache_quality_mlx_scorer_response_batch_pairs
-            ),
+            mlx_scorer_response_device_type=str(receiver_cache_quality_mlx_scorer_response_device_type),
+            mlx_scorer_response_batch_pairs=int(receiver_cache_quality_mlx_scorer_response_batch_pairs),
             max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
                 receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
             ),
@@ -12419,18 +10401,18 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         )
     )
     if isinstance(post_export_receiver_cache_quality, dict):
-        post_export_receiver_cache_quality[
-            "runner_requested_receiver_cache_quality_max_pairs"
-        ] = int(receiver_cache_quality_scope["requested_max_pairs"])
-        post_export_receiver_cache_quality[
-            "runner_effective_receiver_cache_quality_max_pairs"
-        ] = int(receiver_cache_quality_scope["effective_max_pairs"])
-        post_export_receiver_cache_quality[
-            "runner_quality_floor_receiver_cache_quality_min_pairs"
-        ] = int(receiver_cache_quality_scope["quality_floor_min_pairs"])
-        post_export_receiver_cache_quality[
-            "runner_train_scope_receiver_cache_quality_min_pairs"
-        ] = int(receiver_cache_quality_scope["train_scope_min_pairs"])
+        post_export_receiver_cache_quality["runner_requested_receiver_cache_quality_max_pairs"] = int(
+            receiver_cache_quality_scope["requested_max_pairs"]
+        )
+        post_export_receiver_cache_quality["runner_effective_receiver_cache_quality_max_pairs"] = int(
+            receiver_cache_quality_scope["effective_max_pairs"]
+        )
+        post_export_receiver_cache_quality["runner_quality_floor_receiver_cache_quality_min_pairs"] = int(
+            receiver_cache_quality_scope["quality_floor_min_pairs"]
+        )
+        post_export_receiver_cache_quality["runner_train_scope_receiver_cache_quality_min_pairs"] = int(
+            receiver_cache_quality_scope["train_scope_min_pairs"]
+        )
         report_path = post_export_receiver_cache_quality.get("report_path")
         if isinstance(report_path, str) and report_path:
             _write_json(Path(report_path), post_export_receiver_cache_quality)
@@ -12446,12 +10428,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             *effective_mlx_profile_paths,
             auto_mlx_prefilter_profile_path,
         )
-    spine_manifest = (
-        archive_artifact_dir / "hprc_representation_spine_hi_nerv_manifest.json"
-    )
-    receiver_proof_path = (
-        archive_artifact_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
-    )
+    spine_manifest = archive_artifact_dir / "hprc_representation_spine_hi_nerv_manifest.json"
+    receiver_proof_path = archive_artifact_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
@@ -12459,21 +10437,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         root=root,
     )
     auto_xray_attachment = _write_mlx_prefilter_error_anatomy_attachment(
-        profile_path=(
-            auto_mlx_prefilter_profile_path
-            if auto_mlx_prefilter_profile_path.is_file()
-            else None
-        ),
+        profile_path=(auto_mlx_prefilter_profile_path if auto_mlx_prefilter_profile_path.is_file() else None),
         archive_path=archive_file_path,
         output_dir=training_dir / "mlx_prefilter_error_anatomy",
         label="hi_nerv_auto_post_export_xray",
     )
-    has_full_video_mlx_prefilter = bool(
-        mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
-    )
-    mlx_prefilter_local_replay_passed = bool(
-        mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"]
-    )
+    has_full_video_mlx_prefilter = bool(mlx_prefilter_coverage["has_full_video_mlx_prefilter"])
+    mlx_prefilter_local_replay_passed = bool(mlx_prefilter_coverage["local_replay_mlx_prefilter_passed"])
     local_cpu_replay_summary: dict[str, Any] | None = None
     local_cpu_replay_paths: list[Path] = []
     local_cpu_replay_blockers: list[str] = []
@@ -12498,98 +10468,71 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
         post_export_receiver_cache_quality
     )
-    receiver_surface_replay_trace = (
-        _hi_nerv_receiver_surface_trace_from_replay_evidence(
-            receiver_replay_archive_selection=(
-                receiver_replay_archive_selection
-                if isinstance(receiver_replay_archive_selection, Mapping)
-                else None
-            ),
-            post_export_receiver_cache_quality=(
-                post_export_receiver_cache_quality
-                if isinstance(post_export_receiver_cache_quality, Mapping)
-                else None
-            ),
-            local_cpu_replay_summary=(
-                local_cpu_replay_summary
-                if isinstance(local_cpu_replay_summary, Mapping)
-                else None
-            ),
-        )
+    receiver_surface_replay_trace = _hi_nerv_receiver_surface_trace_from_replay_evidence(
+        receiver_replay_archive_selection=(
+            receiver_replay_archive_selection if isinstance(receiver_replay_archive_selection, Mapping) else None
+        ),
+        post_export_receiver_cache_quality=(
+            post_export_receiver_cache_quality if isinstance(post_export_receiver_cache_quality, Mapping) else None
+        ),
+        local_cpu_replay_summary=(local_cpu_replay_summary if isinstance(local_cpu_replay_summary, Mapping) else None),
     )
+    receiver_replay_parseback_servo_lift = _write_hi_nerv_receiver_replay_parseback_servo_lift(
+        receiver_replay_archive_selection=(
+            receiver_replay_archive_selection if isinstance(receiver_replay_archive_selection, Mapping) else None
+        ),
+        receiver_surface_trace=(
+            receiver_surface_replay_trace if isinstance(receiver_surface_replay_trace, Mapping) else None
+        ),
+        local_cpu_replay_summary=(local_cpu_replay_summary if isinstance(local_cpu_replay_summary, Mapping) else None),
+        output_dir=training_dir,
+    )
+    if isinstance(receiver_replay_parseback_servo_lift, Mapping):
+        artifact_dict["receiver_replay_parseback_servo_lift"] = dict(receiver_replay_parseback_servo_lift)
+        metadata = artifact_dict.get("substrate_artifact_metadata")
+        if isinstance(metadata, dict):
+            metadata["receiver_replay_parseback_servo_lift"] = dict(receiver_replay_parseback_servo_lift)
     _attach_hi_nerv_runner_receiver_surface_trace(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
         receiver_surface_trace=receiver_surface_replay_trace,
     )
-    short_scorer_smoke_readiness = (
-        _write_hi_nerv_runner_short_scorer_smoke_readiness(
-            output_dir=training_dir,
-            artifact_dict=artifact_dict,
-            train_time_controls={
-                "segnet_direct_live_distillation_weight": float(
-                    segnet_direct_live_distillation_weight
-                ),
-                "segnet_direct_live_class_histogram_weight": float(
-                    segnet_direct_live_class_histogram_weight
-                ),
-                "segnet_direct_live_class_balanced_hinge_weight": float(
-                    segnet_direct_live_class_balanced_hinge_weight
-                ),
-                "segnet_direct_live_class_balanced_ce_weight": float(
-                    segnet_direct_live_class_balanced_ce_weight
-                ),
-                "segnet_direct_live_class_balanced_squared_hinge_weight": float(
-                    segnet_direct_live_class_balanced_squared_hinge_weight
-                ),
-                "segnet_direct_live_class_region_recon_weight": float(
-                    segnet_direct_live_class_region_recon_weight
-                ),
-                "segnet_direct_live_rare_class_logit_weight": float(
-                    segnet_direct_live_rare_class_logit_weight
-                ),
-                "segnet_direct_live_target_mass_floor_weight": float(
-                    segnet_direct_live_target_mass_floor_weight
-                ),
-                "segnet_direct_live_target_min_ratio_floor_weight": float(
-                    segnet_direct_live_target_min_ratio_floor_weight
-                ),
-                "scorer_input_contrast_floor_weight": float(
-                    scorer_input_contrast_floor_weight
-                ),
-                "scorer_input_contrast_floor_segnet_min_std_ratio": float(
-                    scorer_input_contrast_floor_segnet_min_std_ratio
-                ),
-                "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": float(
-                    scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
-                ),
-                "scorer_input_shape_tether_weight": float(
-                    scorer_input_shape_tether_weight
-                ),
-                "posenet_temporal_signal_floor_weight": float(
-                    posenet_temporal_signal_floor_weight
-                ),
-                "pose_direct_live_distillation_weight": float(
-                    pose_direct_live_distillation_weight
-                ),
-            },
-            post_export_quality=post_export_receiver_cache_quality,
-            segnet_distillation_weight=effective_segnet_distillation_weight,
-            pose_distillation_weight=effective_pose_distillation_weight,
-            allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
-            min_segnet_occupied_class_fraction_for_fit_gate=float(
-                receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+    short_scorer_smoke_readiness = _write_hi_nerv_runner_short_scorer_smoke_readiness(
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        train_time_controls={
+            "segnet_direct_live_distillation_weight": float(segnet_direct_live_distillation_weight),
+            "segnet_direct_live_class_histogram_weight": float(segnet_direct_live_class_histogram_weight),
+            "segnet_direct_live_class_balanced_hinge_weight": float(segnet_direct_live_class_balanced_hinge_weight),
+            "segnet_direct_live_class_balanced_ce_weight": float(segnet_direct_live_class_balanced_ce_weight),
+            "segnet_direct_live_class_balanced_squared_hinge_weight": float(
+                segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            require_section_byte_dual_ascent=launch_hard_byte_ceiling is not None,
-            require_pose_direct_live_distillation=True,
-            decoder_weight_waterfill_plan_metadata=(
-                decoder_weight_waterfill_plan_metadata
+            "segnet_direct_live_class_region_recon_weight": float(segnet_direct_live_class_region_recon_weight),
+            "segnet_direct_live_rare_class_logit_weight": float(segnet_direct_live_rare_class_logit_weight),
+            "segnet_direct_live_target_mass_floor_weight": float(segnet_direct_live_target_mass_floor_weight),
+            "segnet_direct_live_target_min_ratio_floor_weight": float(segnet_direct_live_target_min_ratio_floor_weight),
+            "scorer_input_contrast_floor_weight": float(scorer_input_contrast_floor_weight),
+            "scorer_input_contrast_floor_segnet_min_std_ratio": float(scorer_input_contrast_floor_segnet_min_std_ratio),
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": float(
+                scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
-        )
+            "scorer_input_shape_tether_weight": float(scorer_input_shape_tether_weight),
+            "posenet_temporal_signal_floor_weight": float(posenet_temporal_signal_floor_weight),
+            "pose_direct_live_distillation_weight": float(pose_direct_live_distillation_weight),
+        },
+        post_export_quality=post_export_receiver_cache_quality,
+        segnet_distillation_weight=effective_segnet_distillation_weight,
+        pose_distillation_weight=effective_pose_distillation_weight,
+        allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
+        min_segnet_occupied_class_fraction_for_fit_gate=float(
+            receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+        ),
+        require_section_byte_dual_ascent=launch_hard_byte_ceiling is not None,
+        require_pose_direct_live_distillation=True,
+        decoder_weight_waterfill_plan_metadata=(decoder_weight_waterfill_plan_metadata),
     )
-    short_scorer_smoke_readiness_summary = (
-        hinerv_short_scorer_smoke_readiness_summary(short_scorer_smoke_readiness)
-    )
+    short_scorer_smoke_readiness_summary = hinerv_short_scorer_smoke_readiness_summary(short_scorer_smoke_readiness)
     nerv_crux_trace = _write_hi_nerv_runner_crux_trace(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
@@ -12605,20 +10548,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         receiver_proof_path=receiver_proof_path,
         local_cpu_replay_summary=local_cpu_replay_summary,
         mlx_prefilter_coverage=mlx_prefilter_coverage,
-        post_export_receiver_cache_quality_summary=(
-            post_export_receiver_cache_quality_summary
-        ),
+        post_export_receiver_cache_quality_summary=(post_export_receiver_cache_quality_summary),
         repo_root=root,
     )
-    decoder_weight_waterfill_from_trained_ladder = (
-        _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
-            output_dir=training_dir / "decoder_weight_waterfill",
-            trained_archive_byte_oracle=trained_archive_byte_oracle,
-            decoder_weight_saliency_artifact=decoder_weight_saliency_artifact,
-            candidate_id=str(candidate.get("candidate_id") or "")
-            if isinstance(candidate, Mapping)
-            else None,
-        )
+    decoder_weight_waterfill_from_trained_ladder = _write_hi_nerv_decoder_weight_waterfill_from_trained_ladder(
+        output_dir=training_dir / "decoder_weight_waterfill",
+        trained_archive_byte_oracle=trained_archive_byte_oracle,
+        decoder_weight_saliency_artifact=decoder_weight_saliency_artifact,
+        candidate_id=str(candidate.get("candidate_id") or "") if isinstance(candidate, Mapping) else None,
     )
     trained_archive_measured_bytes = _compact_positive_int_from_keys(
         trained_archive_byte_oracle,
@@ -12630,49 +10567,28 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         num_pairs=int(num_pairs),
         segnet_distillation_weight=effective_segnet_distillation_weight,
         pose_distillation_weight=effective_pose_distillation_weight,
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
         recon_pixel_weight_attached=bool(
-            effective_recon_pixel_weight_path is not None
-            or auto_segnet_boundary_recon_weight
+            effective_recon_pixel_weight_path is not None or auto_segnet_boundary_recon_weight
         ),
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
         scorer_input_distribution_guard_attached=scorer_input_guard_attached,
-        pr95_staged_curriculum_bound=bool(
-            optimizer_policy.get("pr95_faithful_curriculum_enabled")
-        ),
+        pr95_staged_curriculum_bound=bool(optimizer_policy.get("pr95_faithful_curriculum_enabled")),
         muon_adamw_partition_bound=bool(
             optimizer_policy.get("pr95_faithful_curriculum_enabled")
             or optimizer_controls.get("optimizer_kind") == "pact_muon_adamw"
@@ -12681,53 +10597,29 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
         local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
         measured_archive_bytes=trained_archive_measured_bytes,
-        measured_num_pairs=(
-            int(num_pairs) if trained_archive_measured_bytes is not None else None
-        ),
+        measured_num_pairs=(int(num_pairs) if trained_archive_measured_bytes is not None else None),
     )
     if isinstance(candidate_curriculum_plan.get("byte_oracle_logging"), dict):
         candidate_curriculum_plan["byte_oracle_logging"].update(
             {
                 "byte_feedback_source": "hi_nerv_trained_archive_byte_oracle",
-                "trained_archive_byte_oracle_path": trained_archive_byte_oracle[
-                    "path"
-                ],
-                "trained_archive_byte_oracle_sha256": trained_archive_byte_oracle[
-                    "sha256"
-                ],
+                "trained_archive_byte_oracle_path": trained_archive_byte_oracle["path"],
+                "trained_archive_byte_oracle_sha256": trained_archive_byte_oracle["sha256"],
                 "receiver_closed_modelsize_ladder_path": (
-                    trained_archive_byte_oracle[
-                        "receiver_closed_modelsize_ladder_path"
-                    ]
+                    trained_archive_byte_oracle["receiver_closed_modelsize_ladder_path"]
                 ),
                 "receiver_closed_modelsize_ladder_sha256": (
-                    trained_archive_byte_oracle[
-                        "receiver_closed_modelsize_ladder_sha256"
-                    ]
+                    trained_archive_byte_oracle["receiver_closed_modelsize_ladder_sha256"]
                 ),
-                "receiver_proof_passed": trained_archive_byte_oracle["row"][
-                    "receiver_proof_passed"
-                ],
-                "local_cpu_replay_executed": trained_archive_byte_oracle["row"][
-                    "local_cpu_replay_executed"
-                ],
-                "local_cpu_replay_axis_tag": trained_archive_byte_oracle["row"][
-                    "local_cpu_replay_axis_tag"
-                ],
-                "byte_oracle_feedback_ready": trained_archive_byte_oracle[
-                    "feedback_ready"
-                ],
-                "byte_oracle_measured_archive_bytes": (
-                    trained_archive_byte_oracle.get("measured_archive_bytes")
-                ),
+                "receiver_proof_passed": trained_archive_byte_oracle["row"]["receiver_proof_passed"],
+                "local_cpu_replay_executed": trained_archive_byte_oracle["row"]["local_cpu_replay_executed"],
+                "local_cpu_replay_axis_tag": trained_archive_byte_oracle["row"]["local_cpu_replay_axis_tag"],
+                "byte_oracle_feedback_ready": trained_archive_byte_oracle["feedback_ready"],
+                "byte_oracle_measured_archive_bytes": (trained_archive_byte_oracle.get("measured_archive_bytes")),
                 "byte_oracle_post_export_receiver_cache_quality_feedback_ready": (
-                    trained_archive_byte_oracle["row"].get(
-                        "post_export_receiver_cache_quality_feedback_ready"
-                    )
+                    trained_archive_byte_oracle["row"].get("post_export_receiver_cache_quality_feedback_ready")
                 ),
-                "byte_oracle_blockers": list(
-                    trained_archive_byte_oracle.get("blockers") or []
-                ),
+                "byte_oracle_blockers": list(trained_archive_byte_oracle.get("blockers") or []),
             }
         )
     acquisition_path = out / "hprc_spine_acquisition_report.json"
@@ -12769,17 +10661,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             blockers.append("hi_nerv_post_export_receiver_cache_quality_gate_failed")
     if not decoder_weight_saliency_artifact.get("written"):
         blockers.append(
-            decoder_weight_saliency_artifact.get("reason")
-            or "hi_nerv_decoder_weight_saliency_artifact_missing"
+            decoder_weight_saliency_artifact.get("reason") or "hi_nerv_decoder_weight_saliency_artifact_missing"
         )
     elif int(decoder_weight_saliency_artifact.get("row_count") or 0) <= 0:
         blockers.append("hi_nerv_decoder_weight_saliency_no_decoder_rows")
-    pr95_curriculum_enabled = bool(
-        optimizer_policy.get("pr95_faithful_curriculum_enabled")
-    )
+    pr95_curriculum_enabled = bool(optimizer_policy.get("pr95_faithful_curriculum_enabled"))
     effective_pr95_stage_source_weight_amplification_enabled = bool(
-        optimizer_policy.get("pr95_stage_source_weight_amplification_enabled")
-        or pr95_curriculum_enabled
+        optimizer_policy.get("pr95_stage_source_weight_amplification_enabled") or pr95_curriculum_enabled
     )
     pr95_stage_source_weight_amplification_requested = bool(
         optimizer_policy.get("pr95_stage_source_weight_amplification_requested")
@@ -12795,12 +10683,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         and not pr95_stage_source_weight_amplification_requested
     )
     real_segnet_teacher_attached = (
-        effective_segnet_distillation_weight > 0.0
-        or float(segnet_direct_live_distillation_weight) > 0.0
+        effective_segnet_distillation_weight > 0.0 or float(segnet_direct_live_distillation_weight) > 0.0
     )
     real_posenet_teacher_attached = (
-        effective_pose_distillation_weight > 0.0
-        or float(pose_direct_live_distillation_weight) > 0.0
+        effective_pose_distillation_weight > 0.0 or float(pose_direct_live_distillation_weight) > 0.0
     )
     if not (real_segnet_teacher_attached and real_posenet_teacher_attached):
         blockers.append("hi_nerv_real_segnet_posenet_teachers_not_both_attached")
@@ -12856,61 +10742,42 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         model_num_pairs=int(num_pairs),
         hydrated_target_pair_count=(
             len(prioritized_pair_indices)
-            if bool(prioritized_pair_indices)
-            and bool(sparse_prioritized_target_hydration)
+            if bool(prioritized_pair_indices) and bool(sparse_prioritized_target_hydration)
             else int(num_pairs)
         ),
         sparse_target_hydration=bool(sparse_prioritized_target_hydration),
     )
-    substrate_score_training_metadata = _substrate_score_aware_training_from_artifact(
-        artifact_dict
-    )
+    substrate_score_training_metadata = _substrate_score_aware_training_from_artifact(artifact_dict)
     if bool(archive_section_telemetry_metadata.get("attached")):
         blockers.extend(archive_section_telemetry_metadata.get("blockers") or [])
-    archive_section_qat_policy_metadata = substrate_score_training_metadata.get(
-        "archive_section_qat_weight_policy"
-    )
+    archive_section_qat_policy_metadata = substrate_score_training_metadata.get("archive_section_qat_weight_policy")
     if bool(archive_section_telemetry_metadata.get("attached")) and isinstance(
         archive_section_qat_policy_metadata,
         Mapping,
     ):
         blockers.extend(archive_section_qat_policy_metadata.get("blockers") or [])
-    post_export_hard_pair_coverage = (
-        _hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
-            post_export_receiver_cache_quality
-        )
+    post_export_hard_pair_coverage = _hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
+        post_export_receiver_cache_quality
     )
-    train_receiver_class_escape_contract = (
-        _hi_nerv_train_receiver_class_escape_contract(
-            training_telemetry_contract=(
-                training_telemetry_contract
-                if isinstance(training_telemetry_contract, Mapping)
-                else None
-            ),
-            receiver_cache_quality_summary=post_export_receiver_cache_quality_summary,
-        )
+    train_receiver_class_escape_contract = _hi_nerv_train_receiver_class_escape_contract(
+        training_telemetry_contract=(
+            training_telemetry_contract if isinstance(training_telemetry_contract, Mapping) else None
+        ),
+        receiver_cache_quality_summary=post_export_receiver_cache_quality_summary,
     )
     blockers.extend(train_receiver_class_escape_contract.get("blockers") or [])
-    long_mlx_training_readiness_signals = (
-        _hi_nerv_long_mlx_training_readiness_signals(
-            config_gate=config_gate,
-            training_telemetry_contract=(
-                training_telemetry_contract
-                if isinstance(training_telemetry_contract, Mapping)
-                else None
-            ),
-            trained_archive_byte_oracle=trained_archive_byte_oracle,
-            decoder_weight_saliency_artifact=decoder_weight_saliency_artifact,
-            decoder_weight_waterfill_from_trained_ladder=(
-                decoder_weight_waterfill_from_trained_ladder
-            ),
-            short_scorer_smoke_readiness=short_scorer_smoke_readiness,
-            post_export_receiver_cache_quality_summary=(
-                post_export_receiver_cache_quality_summary
-            ),
-            optimizer_policy=optimizer_policy,
-            optimizer_controls=optimizer_controls,
-        )
+    long_mlx_training_readiness_signals = _hi_nerv_long_mlx_training_readiness_signals(
+        config_gate=config_gate,
+        training_telemetry_contract=(
+            training_telemetry_contract if isinstance(training_telemetry_contract, Mapping) else None
+        ),
+        trained_archive_byte_oracle=trained_archive_byte_oracle,
+        decoder_weight_saliency_artifact=decoder_weight_saliency_artifact,
+        decoder_weight_waterfill_from_trained_ladder=(decoder_weight_waterfill_from_trained_ladder),
+        short_scorer_smoke_readiness=short_scorer_smoke_readiness,
+        post_export_receiver_cache_quality_summary=(post_export_receiver_cache_quality_summary),
+        optimizer_policy=optimizer_policy,
+        optimizer_controls=optimizer_controls,
     )
 
     final = _base_report(
@@ -12939,22 +10806,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "requested_launch_decoder_codec": requested_launch_decoder_codec,
                 "launch_decoder_codec": launch_decoder_codec,
                 "launch_decoder_codec_policy": launch_decoder_codec_policy,
-                "effective_decoder_codec": archive_codec_custody.get(
-                    "effective_decoder_codec"
-                ),
-                "effective_decoder_codec_source": archive_codec_custody.get(
-                    "effective_decoder_codec_source"
-                ),
+                "effective_decoder_codec": archive_codec_custody.get("effective_decoder_codec"),
+                "effective_decoder_codec_source": archive_codec_custody.get("effective_decoder_codec_source"),
                 "requested_hi_nerv_latent_codec": requested_hi_nerv_latent_codec,
                 "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
-                "launch_use_hierarchical_feature_grid": (
-                    launch_use_hierarchical_feature_grid
-                ),
+                "launch_use_hierarchical_feature_grid": (launch_use_hierarchical_feature_grid),
                 "launch_use_convnext_blocks": launch_use_convnext_blocks,
                 "launch_mid_injection_block_index": launch_mid_injection_block_index,
-                "launch_fine_injection_block_index": (
-                    launch_fine_injection_block_index
-                ),
+                "launch_fine_injection_block_index": (launch_fine_injection_block_index),
                 "candidate_curriculum_plan": candidate_curriculum_plan,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -12965,27 +10824,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "archive_sha256": artifact_dict.get("archive_sha256"),
             "archive_resolution": archive_resolution,
             "hi_nerv_archive_codec_custody": archive_codec_custody,
-            "archive_selection_manifest_path": artifact_dict.get(
-                "archive_selection_manifest_path"
-            ),
-            "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                scorer_upstream
-            ),
+            "archive_selection_manifest_path": artifact_dict.get("archive_selection_manifest_path"),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
             "training_artifact": artifact_dict,
             "trained_archive_byte_oracle": trained_archive_byte_oracle,
-            "decoder_weight_waterfill_from_trained_ladder": (
-                decoder_weight_waterfill_from_trained_ladder
-            ),
-            "hi_nerv_long_mlx_training_readiness_signals": (
-                long_mlx_training_readiness_signals
-            ),
-            "short_scorer_teacher_smoke_readiness": (
-                short_scorer_smoke_readiness_summary
-            ),
+            "decoder_weight_waterfill_from_trained_ladder": (decoder_weight_waterfill_from_trained_ladder),
+            "hi_nerv_long_mlx_training_readiness_signals": (long_mlx_training_readiness_signals),
+            "short_scorer_teacher_smoke_readiness": (short_scorer_smoke_readiness_summary),
             "receiver_closed_modelsize_ladder_path": (
-                trained_archive_byte_oracle[
-                    "receiver_closed_modelsize_ladder_path"
-                ]
+                trained_archive_byte_oracle["receiver_closed_modelsize_ladder_path"]
             ),
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training_config_gate": config_gate,
@@ -12999,66 +10846,37 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "score_aware_training": {
                 "schema": "compact_hi_nerv_score_aware_training.v1",
                 "status": "executed_mlx_local_false_authority",
-                "requested_segnet_distillation_weight": float(
-                    segnet_distillation_weight
-                ),
-                "requested_pose_distillation_weight": float(
-                    pose_distillation_weight
-                ),
-                "segnet_distillation_weight": (
-                    effective_segnet_distillation_weight
-                ),
+                "requested_segnet_distillation_weight": float(segnet_distillation_weight),
+                "requested_pose_distillation_weight": float(pose_distillation_weight),
+                "segnet_distillation_weight": (effective_segnet_distillation_weight),
                 "pose_distillation_weight": effective_pose_distillation_weight,
                 "pose_direct_live_distillation": (
-                    substrate_score_training_metadata.get(
-                        "pose_direct_live_distillation"
-                    )
+                    substrate_score_training_metadata.get("pose_direct_live_distillation")
                     or {
                         "schema": "compact_hi_nerv_pose_direct_live_distillation_control.v1",
-                        "enabled": (
-                            float(pose_direct_live_distillation_weight) > 0.0
-                        ),
+                        "enabled": (float(pose_direct_live_distillation_weight) > 0.0),
                         "weight": float(pose_direct_live_distillation_weight),
                         "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
-                        "candidate_surface": (
-                            "decoded_rgb_nhwc01_to_pr95_yuv6_pair_nhwc255"
-                        ),
-                        "objective": (
-                            "sqrt_10_pose_mse_on_upstream_posenet_first_6_dims"
-                        ),
+                        "candidate_surface": ("decoded_rgb_nhwc01_to_pr95_yuv6_pair_nhwc255"),
+                        "objective": ("sqrt_10_pose_mse_on_upstream_posenet_first_6_dims"),
                         "authority": "macos_mlx_research_signal_false_authority",
                     }
                 ),
                 "training_telemetry_contract": (
                     dict(training_telemetry_contract)
                     if isinstance(training_telemetry_contract, Mapping)
-                    else (
-                        substrate_score_training_metadata.get(
-                            "training_telemetry_contract"
-                        )
-                        or None
-                    )
+                    else (substrate_score_training_metadata.get("training_telemetry_contract") or None)
                 ),
                 "pose_distillation_loss": str(pose_distillation_loss),
-                "pose_distillation_huber_delta": float(
-                    pose_distillation_huber_delta
-                ),
+                "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
                 "stage_loss_weights": stage_loss_weights,
                 "curriculum": {
                     "schema": "compact_hi_nerv_score_aware_curriculum_summary.v1",
                     "stage_count": len(curriculum_stage_summary),
-                    "pose_distillation_warmup_epochs": int(
-                        pose_distillation_warmup_epochs
-                    ),
-                    "scorer_input_shape_warmup_epochs": int(
-                        scorer_input_shape_warmup_epochs
-                    ),
-                    "segnet_direct_live_escape_warmup_epochs": int(
-                        segnet_direct_live_escape_warmup_epochs
-                    ),
-                    "segnet_direct_live_escape_class_multiplier": float(
-                        segnet_direct_live_escape_class_multiplier
-                    ),
+                    "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
+                    "scorer_input_shape_warmup_epochs": int(scorer_input_shape_warmup_epochs),
+                    "segnet_direct_live_escape_warmup_epochs": int(segnet_direct_live_escape_warmup_epochs),
+                    "segnet_direct_live_escape_class_multiplier": float(segnet_direct_live_escape_class_multiplier),
                     "pose_warmup_suppresses": [
                         "pose_distill",
                         "pose_direct_live_distill",
@@ -13095,20 +10913,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
                 "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
                 "config_gate": config_gate,
-                "decoder_codec": str(
-                    archive_codec_custody.get("effective_decoder_codec")
-                    or launch_decoder_codec
-                ),
+                "decoder_codec": str(archive_codec_custody.get("effective_decoder_codec") or launch_decoder_codec),
                 "requested_decoder_codec": str(
-                    archive_codec_custody.get("requested_decoder_codec")
-                    or launch_decoder_codec
+                    archive_codec_custody.get("requested_decoder_codec") or launch_decoder_codec
                 ),
                 "requested_launch_decoder_codec": str(requested_launch_decoder_codec),
                 "launch_decoder_codec": str(launch_decoder_codec),
                 "launch_decoder_codec_policy": launch_decoder_codec_policy,
-                "effective_decoder_codec_source": archive_codec_custody.get(
-                    "effective_decoder_codec_source"
-                ),
+                "effective_decoder_codec_source": archive_codec_custody.get("effective_decoder_codec_source"),
                 "requested_hi_nerv_latent_codec": str(requested_hi_nerv_latent_codec),
                 "hi_nerv_latent_codec": str(launch_hi_nerv_latent_codec),
                 "hi_nerv_latent_codec_policy": {
@@ -13116,9 +10928,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "requested": str(requested_hi_nerv_latent_codec),
                     "resolved": str(launch_hi_nerv_latent_codec),
                     "hard_byte_ceiling": (
-                        int(launch_hard_byte_ceiling)
-                        if launch_hard_byte_ceiling is not None
-                        else None
+                        int(launch_hard_byte_ceiling) if launch_hard_byte_ceiling is not None else None
                     ),
                     "policy": (
                         "protect_decoder_precision_under_178493_by_pricing_latents"
@@ -13127,15 +10937,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     ),
                 },
                 "requested_optimizer_kind": str(optimizer_kind),
-                "optimizer_kind": str(
-                    optimizer_policy.get("optimizer_kind") or optimizer_kind
-                ),
+                "optimizer_kind": str(optimizer_policy.get("optimizer_kind") or optimizer_kind),
                 "optimizer_policy": optimizer_policy,
                 "optimizer_controls": optimizer_controls,
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
-                "pr95_curriculum_total_epochs": optimizer_policy.get(
-                    "pr95_curriculum_total_epochs"
-                ),
+                "pr95_curriculum_total_epochs": optimizer_policy.get("pr95_curriculum_total_epochs"),
                 "pr95_curriculum_total_epochs_consumed": bool(
                     optimizer_policy.get("pr95_curriculum_total_epochs_consumed")
                 ),
@@ -13143,38 +10949,22 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     effective_hi_nerv_pr95_source_weight_amplification
                 ),
                 "pr95_stage_source_weight_amplification_defaulted": bool(
-                    optimizer_policy.get(
-                        "pr95_stage_source_weight_amplification_defaulted"
-                    )
+                    optimizer_policy.get("pr95_stage_source_weight_amplification_defaulted")
                 ),
-                "native_optimizer_active": bool(
-                    optimizer_policy.get("native_optimizer_active")
-                ),
-                "effective_weight_decay": (
-                    optimizer_controls.get("weight_decay_effective")
-                ),
+                "native_optimizer_active": bool(optimizer_policy.get("native_optimizer_active")),
+                "effective_weight_decay": (optimizer_controls.get("weight_decay_effective")),
                 "checkpoint_interval_epochs": checkpoint_interval,
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
                 "prioritized_pair_training": {
                     **priority_hydration_contract,
                     **FALSE_AUTHORITY,
                 },
                 "scorer_error_pair_curriculum": {
-                    **strip_candidate_curriculum_authority_fields(
-                        scorer_error_pair_curriculum
-                    ),
-                    "consumed_by_shared_mlx_sampler": bool(
-                        scorer_error_pair_sampling_weights
-                    ),
+                    **strip_candidate_curriculum_authority_fields(scorer_error_pair_curriculum),
+                    "consumed_by_shared_mlx_sampler": bool(scorer_error_pair_sampling_weights),
                     "weighted_pair_count": len(scorer_error_pair_sampling_weights),
                     "sampling_scope": "score_aware_training_batches_not_full_video_replay",
                     **FALSE_AUTHORITY,
@@ -13190,85 +10980,46 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     c1a_sigma=coder_qat_c1a_sigma,
                     c1a_sample_size=coder_qat_c1a_sample_size,
                 ),
-                "latent_coder_aware_qat": (
-                    substrate_score_training_metadata.get("latent_coder_aware_qat")
-                    or {}
-                ),
+                "latent_coder_aware_qat": (substrate_score_training_metadata.get("latent_coder_aware_qat") or {}),
                 "archive_section_telemetry_attachment": (
-                    substrate_score_training_metadata.get(
-                        "archive_section_telemetry_attachment"
-                    )
-                    or strip_candidate_curriculum_authority_fields(
-                        archive_section_telemetry_metadata
-                    )
+                    substrate_score_training_metadata.get("archive_section_telemetry_attachment")
+                    or strip_candidate_curriculum_authority_fields(archive_section_telemetry_metadata)
                 ),
                 "archive_path": archive_path,
                 "archive_bytes": artifact_dict.get("archive_bytes"),
                 "archive_sha256": artifact_dict.get("archive_sha256"),
                 "archive_resolution": archive_resolution,
-                "archive_section_qat_weight_policy": (
-                    archive_section_qat_policy_metadata
-                    or {}
-                ),
+                "archive_section_qat_weight_policy": (archive_section_qat_policy_metadata or {}),
                 "decoder_weight_waterfill_plan": decoder_weight_waterfill_plan_metadata,
-                "eval_roundtrip_ste": _eval_roundtrip_ste_report_metadata(
-                    artifact_dict
-                ),
-                "pose_student_input_preprocess": (
-                    _pose_student_input_preprocess_report_metadata(artifact_dict)
-                ),
-                "recon_pixel_weight": _recon_pixel_weight_report_metadata(
-                    artifact_dict
-                ),
+                "eval_roundtrip_ste": _eval_roundtrip_ste_report_metadata(artifact_dict),
+                "pose_student_input_preprocess": (_pose_student_input_preprocess_report_metadata(artifact_dict)),
+                "recon_pixel_weight": _recon_pixel_weight_report_metadata(artifact_dict),
                 "local_mlx_prefilter": {
                     "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
                     "scorer_device": effective_mlx_prefilter_scorer_device,
                     "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
                     "progress_every": int(mlx_prefilter_progress_every),
                     "singleton_required_for_local_cpu_replay_unlock": True,
-                    "gpu_profiles_are_prefilter_only": (
-                        effective_mlx_prefilter_scorer_device != "cpu"
-                    ),
-                    "batched_profiles_are_prefilter_only": (
-                        int(mlx_prefilter_scorer_batch_pairs) != 1
-                    ),
+                    "gpu_profiles_are_prefilter_only": (effective_mlx_prefilter_scorer_device != "cpu"),
+                    "batched_profiles_are_prefilter_only": (int(mlx_prefilter_scorer_batch_pairs) != 1),
                     "authority": "macos_mlx_research_signal_false_authority",
                 },
-                "post_export_receiver_cache_quality": (
-                    post_export_receiver_cache_quality_summary
-                ),
+                "post_export_receiver_cache_quality": (post_export_receiver_cache_quality_summary),
                 "receiver_surface_replay_trace": receiver_surface_replay_trace,
-                "short_scorer_teacher_smoke_readiness": (
-                    short_scorer_smoke_readiness_summary
-                ),
+                "receiver_replay_parseback_servo_lift": (receiver_replay_parseback_servo_lift),
+                "short_scorer_teacher_smoke_readiness": (short_scorer_smoke_readiness_summary),
                 "nerv_crux_trace": nerv_crux_trace,
-                "train_receiver_class_escape_contract": (
-                    train_receiver_class_escape_contract
-                ),
-                "pose_instability_monitor": (
-                    _pose_instability_monitor_report_metadata(artifact_dict)
-                ),
-                "decoder_weight_gradient_saliency_artifact": (
-                    decoder_weight_saliency_artifact
-                ),
-                "decoder_weight_waterfill_from_trained_ladder": (
-                    decoder_weight_waterfill_from_trained_ladder
-                ),
-                "long_mlx_training_readiness_signals": (
-                    long_mlx_training_readiness_signals
-                ),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "train_receiver_class_escape_contract": (train_receiver_class_escape_contract),
+                "pose_instability_monitor": (_pose_instability_monitor_report_metadata(artifact_dict)),
+                "decoder_weight_gradient_saliency_artifact": (decoder_weight_saliency_artifact),
+                "decoder_weight_waterfill_from_trained_ladder": (decoder_weight_waterfill_from_trained_ladder),
+                "long_mlx_training_readiness_signals": (long_mlx_training_readiness_signals),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
-            "receiver_proof_report_paths": [
-                path.as_posix() for path in receiver_proof_paths
-            ],
-            "local_cpu_replay_summary_paths": [
-                path.as_posix() for path in local_cpu_replay_paths
-            ],
+            "receiver_proof_report_paths": [path.as_posix() for path in receiver_proof_paths],
+            "local_cpu_replay_summary_paths": [path.as_posix() for path in local_cpu_replay_paths],
             "local_cpu_replay_summary": local_cpu_replay_summary,
             "hi_nerv_trained_archive_byte_oracle": trained_archive_byte_oracle,
             "post_export_materializer_plan": post_export_materializer_plan,
@@ -13279,15 +11030,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "default_enabled_for_full_coverage": (
                     _local_cpu_replay_enabled_by_default(
                         int(num_pairs),
-                        mlx_prefilter_local_replay_passed=(
-                            mlx_prefilter_local_replay_passed
-                        ),
+                        mlx_prefilter_local_replay_passed=(mlx_prefilter_local_replay_passed),
                     )
                 ),
                 "has_full_video_mlx_prefilter": has_full_video_mlx_prefilter,
-                "local_replay_mlx_prefilter_passed": (
-                    mlx_prefilter_local_replay_passed
-                ),
+                "local_replay_mlx_prefilter_passed": (mlx_prefilter_local_replay_passed),
                 "coverage_valid_for_replay": int(num_pairs) >= CONTEST_PAIR_COUNT,
                 "executed": local_cpu_replay_summary is not None,
                 "axis_tag": "[macOS-CPU advisory]",
@@ -13297,37 +11044,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
             "mlx_prefilter_error_anatomy": auto_xray_attachment,
-            "post_export_receiver_cache_quality": (
-                post_export_receiver_cache_quality_summary
-            ),
-            "train_receiver_class_escape_contract": (
-                train_receiver_class_escape_contract
-            ),
+            "post_export_receiver_cache_quality": (post_export_receiver_cache_quality_summary),
+            "train_receiver_class_escape_contract": (train_receiver_class_escape_contract),
             "hard_pair_coverage": post_export_hard_pair_coverage,
             "auto_mlx_prefilter_profile_path": (
-                auto_mlx_prefilter_profile_path.as_posix()
-                if auto_mlx_prefilter_profile_path.is_file()
-                else None
+                auto_mlx_prefilter_profile_path.as_posix() if auto_mlx_prefilter_profile_path.is_file() else None
             ),
             "auto_mlx_prefilter_progress_path": (
                 (training_dir / "local_mlx_prefilter_progress.jsonl").as_posix()
                 if (training_dir / "local_mlx_prefilter_progress.jsonl").is_file()
                 else None
             ),
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in effective_mlx_profile_paths
-            ],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in effective_mlx_profile_paths],
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
-            "acquisition_report_path": (
-                acquisition_path.as_posix() if acquisition_path.is_file() else None
-            ),
-            "bounded_runner_plan_path": (
-                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
-            ),
+            "acquisition_report_path": (acquisition_path.as_posix() if acquisition_path.is_file() else None),
+            "bounded_runner_plan_path": (runner_plan_path.as_posix() if runner_plan_path.is_file() else None),
             "selected_runner_rows": selected_runner_rows,
             "blockers": _dedupe(blockers),
         }
@@ -13372,18 +11105,14 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
-    coder_qat_quant_residual_weight: float = (
-        DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT
-    ),
+    coder_qat_quant_residual_weight: float = (DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT),
     coder_qat_magnitude_weight: float = DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
     coder_qat_delta_weight: float = DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
-    optimizer_grad_clip_max_norm: float | None = (
-        DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
-    ),
+    optimizer_grad_clip_max_norm: float | None = (DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM),
     optimizer_weight_decay: float | None = None,
     optimizer_warmup_epochs: int = 0,
     optimizer_warmup_steps_per_epoch: int = 1,
@@ -13444,9 +11173,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     )
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
-        raise CompactRendererMlxSpineRunnerError(
-            f"output dir is non-empty; pass --overwrite: {out}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"output dir is non-empty; pass --overwrite: {out}")
     out.mkdir(parents=True, exist_ok=True)
     try:
         artifact = _run_pact_nerv_selector_v4_mlx_smoke(
@@ -13501,19 +11228,11 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             {
                 "execute_family": "pact_nerv_selector_v4",
                 "failure": repr(exc),
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "blockers": ["pact_nerv_selector_v4_mlx_smoke_or_export_failed"],
             }
         )
@@ -13523,18 +11242,12 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
 
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     archive_path = artifact_dict.get("archive_path")
-    selector_v4_render_quality = (
-        artifact_dict.get("substrate_artifact_metadata", {}) or {}
-    ).get("selector_v4_render_quality")
+    selector_v4_render_quality = (artifact_dict.get("substrate_artifact_metadata", {}) or {}).get(
+        "selector_v4_render_quality"
+    )
     training_dir = out / "pact_nerv_selector_v4_mlx_training"
-    spine_manifest = (
-        training_dir / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
-    )
-    receiver_proof_path = (
-        training_dir
-        / "receiver_proof"
-        / "pact_nerv_selector_v4_mlx_receiver_proof.json"
-    )
+    spine_manifest = training_dir / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
+    receiver_proof_path = training_dir / "receiver_proof" / "pact_nerv_selector_v4_mlx_receiver_proof.json"
     projection_paths = [spine_manifest] if spine_manifest.is_file() else []
     receiver_proof_paths = [receiver_proof_path] if receiver_proof_path.is_file() else []
     acquisition_path = out / "hprc_spine_acquisition_report.json"
@@ -13618,47 +11331,25 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 "segnet_distillation_weight": float(segnet_distillation_weight),
                 "pose_distillation_weight": float(pose_distillation_weight),
                 "pose_distillation_loss": str(pose_distillation_loss),
-                "pose_distillation_huber_delta": float(
-                    pose_distillation_huber_delta
-                ),
+                "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
                 "segnet_tau_boundary": float(segnet_tau_boundary),
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
-                "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                    scorer_upstream
-                ),
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
                 "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
-                "optimizer_policy": strip_candidate_curriculum_authority_fields(
-                    optimizer_policy
-                ),
-                "pr95_faithful_curriculum_enabled": bool(
-                    optimizer_policy.get("pr95_faithful_curriculum_enabled")
-                ),
-                "native_optimizer_active": bool(
-                    optimizer_policy.get("native_optimizer_active")
-                ),
-                "optimizer_kind": str(
-                    optimizer_policy.get("optimizer_kind") or optimizer_kind
-                ),
-                "optimizer_controls": strip_candidate_curriculum_authority_fields(
-                    optimizer_controls
-                ),
-                "effective_weight_decay": optimizer_controls.get(
-                    "weight_decay_effective"
-                ),
+                "optimizer_policy": strip_candidate_curriculum_authority_fields(optimizer_policy),
+                "pr95_faithful_curriculum_enabled": bool(optimizer_policy.get("pr95_faithful_curriculum_enabled")),
+                "native_optimizer_active": bool(optimizer_policy.get("native_optimizer_active")),
+                "optimizer_kind": str(optimizer_policy.get("optimizer_kind") or optimizer_kind),
+                "optimizer_controls": strip_candidate_curriculum_authority_fields(optimizer_controls),
+                "effective_weight_decay": optimizer_controls.get("weight_decay_effective"),
                 "checkpoint_interval_epochs": checkpoint_interval,
-                "checkpoint_dir": (
-                    resolved_checkpoint_dir.as_posix()
-                    if resolved_checkpoint_dir is not None
-                    else None
-                ),
+                "checkpoint_dir": (resolved_checkpoint_dir.as_posix() if resolved_checkpoint_dir is not None else None),
                 "resume_from_checkpoint": (
-                    resolved_resume_from_checkpoint.as_posix()
-                    if resolved_resume_from_checkpoint is not None
-                    else None
+                    resolved_resume_from_checkpoint.as_posix() if resolved_resume_from_checkpoint is not None else None
                 ),
                 "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
@@ -13669,28 +11360,18 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 "selector_codec": "run_length_varint_selector",
                 "selector_palette_size": int(selector_palette_size),
                 "archive_exporter": (
-                    "tac.substrates.pact_nerv_selector_v4.archive_candidate."
-                    "export_pact_nerv_selector_v4_mlx_archive"
+                    "tac.substrates.pact_nerv_selector_v4.archive_candidate.export_pact_nerv_selector_v4_mlx_archive"
                 ),
                 "primitive_timing": "archive_encode_time_not_training_forward_pass",
             },
             "projection_manifest_paths": [path.as_posix() for path in projection_paths],
-            "receiver_proof_report_paths": [
-                path.as_posix() for path in receiver_proof_paths
-            ],
-            "mlx_profile_paths": [
-                _resolve(path, base=root).as_posix() for path in mlx_profile_paths
-            ],
+            "receiver_proof_report_paths": [path.as_posix() for path in receiver_proof_paths],
+            "mlx_profile_paths": [_resolve(path, base=root).as_posix() for path in mlx_profile_paths],
             "hprc_queue_followup_report_paths": [
-                _resolve(path, base=root).as_posix()
-                for path in hprc_queue_followup_report_paths
+                _resolve(path, base=root).as_posix() for path in hprc_queue_followup_report_paths
             ],
-            "acquisition_report_path": (
-                acquisition_path.as_posix() if acquisition_path.is_file() else None
-            ),
-            "bounded_runner_plan_path": (
-                runner_plan_path.as_posix() if runner_plan_path.is_file() else None
-            ),
+            "acquisition_report_path": (acquisition_path.as_posix() if acquisition_path.is_file() else None),
+            "bounded_runner_plan_path": (runner_plan_path.as_posix() if runner_plan_path.is_file() else None),
             "selected_runner_rows": selected_runner_rows,
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
@@ -13740,9 +11421,7 @@ def _base_report(
         "nerv_long_training_campaign_plan": build_nerv_long_training_campaign_plan(
             hinerv_modelsize_budget=hinerv_modelsize_budget,
             snerv_modelsize_budget=snerv_modelsize_budget,
-            planner_row_queue_artifact_path=(
-                output_dir / "compact_renderer_mlx_spine_runner_report.json"
-            ),
+            planner_row_queue_artifact_path=(output_dir / "compact_renderer_mlx_spine_runner_report.json"),
         ),
         "nerv_stack_synergy_audit": build_nerv_stack_synergy_audit(
             repo_root=repo_root,
@@ -13752,9 +11431,7 @@ def _base_report(
             marker_limit_per_stack=40,
         ),
         "target_family_rows": _target_family_rows(),
-        "compact_base_campaign_rows": _compact_base_campaign_rows(
-            hard_byte_ceilings=hard_byte_ceilings
-        ),
+        "compact_base_campaign_rows": _compact_base_campaign_rows(hard_byte_ceilings=hard_byte_ceilings),
         "cleanup_contract": {
             "schema": "ssd_first_cleanup_contract.v1",
             "artifact_tier": "ssd_preferred",
@@ -13768,11 +11445,7 @@ def _base_report(
 def _compact_runner_public_command_args(args: argparse.Namespace) -> dict[str, Any]:
     """Return parsed CLI args without private provenance helper attributes."""
 
-    return {
-        key: value
-        for key, value in vars(args).items()
-        if not str(key).startswith("_compact_runner_")
-    }
+    return {key: value for key, value in vars(args).items() if not str(key).startswith("_compact_runner_")}
 
 
 def _set_compact_runner_original_argv(
@@ -13816,19 +11489,13 @@ def _compact_runner_output_storage_tier(output_dir: Path) -> dict[str, Any]:
     resolved_output = output_dir.expanduser().resolve(strict=False)
     roots = [root.expanduser().resolve(strict=False) for root in DEFAULT_SSD_ROOTS]
     matching_root = next(
-        (
-            root
-            for root in roots
-            if resolved_output == root or root in resolved_output.parents
-        ),
+        (root for root in roots if resolved_output == root or root in resolved_output.parents),
         None,
     )
     return {
         "schema": "compact_runner_output_storage_tier.v1",
         "output_dir": resolved_output.as_posix(),
-        "ssd_preferred_root": (
-            matching_root.as_posix() if matching_root is not None else None
-        ),
+        "ssd_preferred_root": (matching_root.as_posix() if matching_root is not None else None),
         "ssd_preferred": matching_root is not None,
         "default_ssd_roots": [root.as_posix() for root in roots],
         "large_artifacts_under_output_dir": True,
@@ -13894,17 +11561,9 @@ def _compact_runner_invocation_provenance(
     report_path: Path | None = None,
     source: str = "cli",
 ) -> dict[str, Any]:
-    tool_path = (repo_root / "tools/run_compact_renderer_mlx_spine_runner.py").resolve(
-        strict=False
-    )
-    original_arg_tokens = [
-        str(value)
-        for value in getattr(args, "_compact_runner_original_arg_tokens", ())
-    ]
-    original_argv = [
-        str(value)
-        for value in getattr(args, "_compact_runner_original_argv", ())
-    ]
+    tool_path = (repo_root / "tools/run_compact_renderer_mlx_spine_runner.py").resolve(strict=False)
+    original_arg_tokens = [str(value) for value in getattr(args, "_compact_runner_original_arg_tokens", ())]
+    original_argv = [str(value) for value in getattr(args, "_compact_runner_original_argv", ())]
     if not original_argv:
         original_argv = [tool_path.as_posix(), *original_arg_tokens]
     same_output_args = _replace_or_append_cli_option(
@@ -13950,10 +11609,7 @@ def _compact_runner_invocation_provenance(
             "argv": same_output_rerun_argv,
             "cwd": repo_root.as_posix(),
             "overwrite_required": True,
-            "note": (
-                "same output dir rerun is explicit and overwrites only because "
-                "--overwrite is present"
-            ),
+            "note": ("same output dir rerun is explicit and overwrites only because --overwrite is present"),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -14128,10 +11784,7 @@ def _coder_qat_report_metadata(
         "c1a_entropy_weight": float(c1a_entropy_weight),
         "c1a_sigma": float(c1a_sigma),
         "c1a_sample_size": int(c1a_sample_size),
-        "c1a_source": (
-            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
-            "decoder weights"
-        ),
+        "c1a_source": ("PR95 cat_entropy_v2 soft categorical entropy adapted to selected decoder weights"),
         "authority": "false_macos_mlx_research_signal",
     }
 
@@ -14182,13 +11835,9 @@ def _shape_tuple_or_none(value: Any) -> tuple[int, ...] | None:
         try:
             parsed = int(dim)
         except (TypeError, ValueError) as exc:
-            raise CompactRendererMlxSpineRunnerError(
-                f"shape dim is not an integer: {dim!r}"
-            ) from exc
+            raise CompactRendererMlxSpineRunnerError(f"shape dim is not an integer: {dim!r}") from exc
         if parsed < 0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"shape dim must be non-negative: {parsed}"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"shape dim must be non-negative: {parsed}")
         out.append(parsed)
     return tuple(out)
 
@@ -14210,13 +11859,9 @@ def _row_declared_numel(row: Mapping[str, Any]) -> int | None:
         try:
             parsed = int(value)
         except (TypeError, ValueError) as exc:
-            raise CompactRendererMlxSpineRunnerError(
-                f"numel field {field} is not an integer: {value!r}"
-            ) from exc
+            raise CompactRendererMlxSpineRunnerError(f"numel field {field} is not an integer: {value!r}") from exc
         if parsed < 0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"numel field {field} must be non-negative: {parsed}"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"numel field {field} must be non-negative: {parsed}")
         return parsed
     return None
 
@@ -14260,19 +11905,13 @@ def _hi_nerv_waterfill_smoke_projected_row(
             projected[field] = int(expected_numel)
     if not any(field in projected for field in ("numel", "tensor_numel", "group_numel", "expected_numel")):
         projected["numel"] = int(expected_numel)
-    projected["compact_runner_smoke_projected_from_shape"] = [
-        int(dim) for dim in declared_shape
-    ]
-    projected["compact_runner_smoke_projection_scope"] = (
-        "hi_nerv_feature_grid_time_axis_only"
-    )
+    projected["compact_runner_smoke_projected_from_shape"] = [int(dim) for dim in declared_shape]
+    projected["compact_runner_smoke_projection_scope"] = "hi_nerv_feature_grid_time_axis_only"
     return projected, {
         "smoke_projected": True,
         "projection_scope": "hi_nerv_feature_grid_time_axis_only",
         "declared_shape": [int(dim) for dim in declared_shape],
-        "declared_numel": (
-            int(declared_numel) if declared_numel is not None else None
-        ),
+        "declared_numel": (int(declared_numel) if declared_numel is not None else None),
         "projected_shape": [int(dim) for dim in expected_shape],
         "projected_numel": int(expected_numel),
     }
@@ -14384,9 +12023,7 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
     if not plan_candidate_keys:
         blockers.append("decoder_weight_waterfill_plan_candidate_id_missing")
     elif not set(plan_candidate_keys) & set(candidate_keys):
-        blockers.append(
-            f"decoder_weight_waterfill_candidate_id_mismatch:{plan_candidate_id}"
-        )
+        blockers.append(f"decoder_weight_waterfill_candidate_id_mismatch:{plan_candidate_id}")
 
     expected_shapes = _hi_nerv_expected_decoder_state_shapes(
         num_pairs=num_pairs,
@@ -14421,9 +12058,7 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
             declared_shape = _row_declared_shape(row_obj)
             declared_numel = _row_declared_numel(row_obj)
         except CompactRendererMlxSpineRunnerError as exc:
-            blockers.append(
-                f"decoder_weight_waterfill_row_metadata_invalid:{group_name}:{exc}"
-            )
+            blockers.append(f"decoder_weight_waterfill_row_metadata_invalid:{group_name}:{exc}")
             continue
         expected_numel = int(math.prod(expected_shape))
         row_validation = {
@@ -14473,11 +12108,7 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
     except CompactRendererMlxSpineRunnerError as exc:
         blockers.append(f"decoder_weight_waterfill_fake_quant_bits_invalid:{exc}")
         bits_by_name = {}
-    fake_quant_bits_by_name = {
-        str(name): int(bits)
-        for name, bits in bits_by_name.items()
-        if int(bits) < 32
-    }
+    fake_quant_bits_by_name = {str(name): int(bits) for name, bits in bits_by_name.items() if int(bits) < 32}
     out.update(
         {
             "source_schema": plan.get("schema"),
@@ -14503,9 +12134,7 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat_binding.v1",
                 "configured": bool(fake_quant_bits_by_name),
                 "targeted_tensor_count": len(fake_quant_bits_by_name),
-                "per_tensor_waterfill_bits_by_name": dict(
-                    sorted(fake_quant_bits_by_name.items())
-                ),
+                "per_tensor_waterfill_bits_by_name": dict(sorted(fake_quant_bits_by_name.items())),
                 "binding_source": "validated_decoder_weight_waterfill_plan",
                 **FALSE_AUTHORITY,
             },
@@ -14519,9 +12148,7 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
         validated_plan = dict(plan)
         validated_plan["rows"] = projected_rows
         if smoke_projection_rows:
-            validated_plan["compact_runner_smoke_projection"] = out[
-                "smoke_projection"
-            ]
+            validated_plan["compact_runner_smoke_projection"] = out["smoke_projection"]
         return validated_plan, out
     return None, out
 
@@ -14557,11 +12184,7 @@ def _validate_hi_nerv_archive_section_telemetry_attachment(
         sections = []
     else:
         out["section_count"] = len(sections)
-        if not any(
-            isinstance(row, Mapping)
-            and str(row.get("name") or "") == "decoder_state"
-            for row in sections
-        ):
+        if not any(isinstance(row, Mapping) and str(row.get("name") or "") == "decoder_state" for row in sections):
             blockers.append("hi_nerv_archive_section_telemetry_decoder_state_missing")
     overhead_sections = payload.get("sections_with_zip_overhead")
     if isinstance(overhead_sections, Sequence) and not isinstance(
@@ -14570,8 +12193,7 @@ def _validate_hi_nerv_archive_section_telemetry_attachment(
     ):
         out["sections_with_zip_overhead_count"] = len(overhead_sections)
         out["archive_zip_overhead_section_attached"] = any(
-            isinstance(row, Mapping)
-            and str(row.get("name") or "") == "archive_zip_overhead"
+            isinstance(row, Mapping) and str(row.get("name") or "") == "archive_zip_overhead"
             for row in overhead_sections
         )
     out["blockers"] = _dedupe(blockers)
@@ -14589,20 +12211,15 @@ def _decoder_weight_waterfill_fake_quant_bits_by_name(
         return {}
     if decoder_weight_waterfill_plan.get("schema") != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA:
         raise CompactRendererMlxSpineRunnerError(
-            "decoder_weight_waterfill_plan must have schema "
-            f"{NERV_DECODER_WEIGHT_WATERFILL_SCHEMA}"
+            f"decoder_weight_waterfill_plan must have schema {NERV_DECODER_WEIGHT_WATERFILL_SCHEMA}"
         )
     bits_by_name: dict[str, int] = {}
     for idx, row in enumerate(decoder_weight_waterfill_plan.get("rows") or []):
         if not isinstance(row, Mapping):
-            raise CompactRendererMlxSpineRunnerError(
-                f"decoder_weight_waterfill_plan row {idx} is not a mapping"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"decoder_weight_waterfill_plan row {idx} is not a mapping")
         group_name = row.get("group_name")
         if not isinstance(group_name, str) or not group_name:
-            raise CompactRendererMlxSpineRunnerError(
-                f"decoder_weight_waterfill_plan row {idx} missing group_name"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"decoder_weight_waterfill_plan row {idx} missing group_name")
         try:
             selected_bits = int(row["selected_bits"])
         except (KeyError, TypeError, ValueError) as exc:
@@ -14629,9 +12246,7 @@ def _decoder_weight_waterfill_gradient_multiplier_by_name(
         "attached": decoder_weight_waterfill_plan is not None,
         "active": False,
         "source_schema": (
-            None
-            if decoder_weight_waterfill_plan is None
-            else decoder_weight_waterfill_plan.get("schema")
+            None if decoder_weight_waterfill_plan is None else decoder_weight_waterfill_plan.get("schema")
         ),
         "targeted_tensor_count": 0,
         "multiplier_by_name": {},
@@ -14648,29 +12263,20 @@ def _decoder_weight_waterfill_gradient_multiplier_by_name(
             build_decoder_waterfill_fake_quant_forward_plan,
         )
 
-        fake_quant_plan = build_decoder_waterfill_fake_quant_forward_plan(
-            decoder_weight_waterfill_plan
-        )
+        fake_quant_plan = build_decoder_waterfill_fake_quant_forward_plan(decoder_weight_waterfill_plan)
     except Exception as exc:
-        report["blockers"] = [
-            f"decoder_weight_waterfill_gradient_policy_plan_invalid:{exc}"
-        ]
+        report["blockers"] = [f"decoder_weight_waterfill_gradient_policy_plan_invalid:{exc}"]
         return {}, report
 
-    actuation_blockers = [
-        str(blocker) for blocker in fake_quant_plan.get("actuation_blockers") or []
-    ]
+    actuation_blockers = [str(blocker) for blocker in fake_quant_plan.get("actuation_blockers") or []]
     per_tensor_bits = {
-        str(name): int(bits)
-        for name, bits in dict(fake_quant_plan.get("per_tensor_bits") or {}).items()
+        str(name): int(bits) for name, bits in dict(fake_quant_plan.get("per_tensor_bits") or {}).items()
     }
     report.update(
         {
             "fake_quant_plan_schema": fake_quant_plan.get("schema"),
             "fake_quant_plan_method": fake_quant_plan.get("method"),
-            "fake_quant_plan_blockers": [
-                str(blocker) for blocker in fake_quant_plan.get("blockers") or []
-            ],
+            "fake_quant_plan_blockers": [str(blocker) for blocker in fake_quant_plan.get("blockers") or []],
             "fake_quant_plan_actuation_blockers": actuation_blockers,
             "fake_quant_targeted_tensor_count": len(per_tensor_bits),
             "fake_quant_per_tensor_bits": dict(sorted(per_tensor_bits.items())),
@@ -14703,15 +12309,9 @@ def _decoder_weight_waterfill_gradient_multiplier_by_name(
             "active": bool(multipliers),
             "targeted_tensor_count": len(multipliers),
             "multiplier_by_name": dict(sorted(multipliers.items())),
-            "min_multiplier": (
-                None if not multipliers else min(float(v) for v in multipliers.values())
-            ),
-            "max_multiplier": (
-                None if not multipliers else max(float(v) for v in multipliers.values())
-            ),
-            "blockers": (
-                [] if multipliers else ["decoder_weight_waterfill_gradient_policy_no_targets"]
-            ),
+            "min_multiplier": (None if not multipliers else min(float(v) for v in multipliers.values())),
+            "max_multiplier": (None if not multipliers else max(float(v) for v in multipliers.values())),
+            "blockers": ([] if multipliers else ["decoder_weight_waterfill_gradient_policy_no_targets"]),
         }
     )
     return multipliers, report
@@ -14792,9 +12392,7 @@ def _hi_nerv_pose_preprocess_metadata() -> dict[str, Any]:
         "schema": "mlx_score_aware_pose_student_input_preprocess.v1",
         "mode": "pr95_yuv6",
         "differentiable": True,
-        "source": (
-            "tac.local_acceleration.pr95_hnerv_mlx_training.rgb_to_yuv6_mlx"
-        ),
+        "source": ("tac.local_acceleration.pr95_hnerv_mlx_training.rgb_to_yuv6_mlx"),
         "consumed_by": "learnable_pose_student_head",
         "authority": "macos_mlx_research_signal_false_authority",
     }
@@ -14812,9 +12410,11 @@ def _eval_roundtrip_ste_report_metadata(
         if isinstance(artifact_dict.get("substrate_artifact_metadata"), Mapping)
         else {}
     )
-    value = harness_training.get("score_aware_training", {}).get(
-        "eval_roundtrip_ste"
-    ) if isinstance(harness_training.get("score_aware_training"), Mapping) else None
+    value = (
+        harness_training.get("score_aware_training", {}).get("eval_roundtrip_ste")
+        if isinstance(harness_training.get("score_aware_training"), Mapping)
+        else None
+    )
     if isinstance(value, Mapping):
         return dict(value)
     return {
@@ -14836,9 +12436,11 @@ def _pose_student_input_preprocess_report_metadata(
         if isinstance(artifact_dict.get("substrate_artifact_metadata"), Mapping)
         else {}
     )
-    value = harness_training.get("score_aware_training", {}).get(
-        "pose_student_input_preprocess"
-    ) if isinstance(harness_training.get("score_aware_training"), Mapping) else None
+    value = (
+        harness_training.get("score_aware_training", {}).get("pose_student_input_preprocess")
+        if isinstance(harness_training.get("score_aware_training"), Mapping)
+        else None
+    )
     if isinstance(value, Mapping):
         return dict(value)
     return {
@@ -14896,9 +12498,7 @@ def _validate_recon_pixel_weight_array(
         h, w, channels = weight.shape
     elif weight.ndim == 4:
         leading, h, w, channels = weight.shape
-        if int(leading) != 1 and (
-            expected_pairs is None or int(leading) != int(expected_pairs)
-        ):
+        if int(leading) != 1 and (expected_pairs is None or int(leading) != int(expected_pairs)):
             raise CompactRendererMlxSpineRunnerError(
                 "recon pixel weight with 4 dims must have leading dimension "
                 f"1 or expected pair count {expected_pairs}; got {int(leading)}"
@@ -14906,37 +12506,27 @@ def _validate_recon_pixel_weight_array(
     elif weight.ndim == 5:
         pairs, frames, h, w, channels = weight.shape
         if int(frames) != 2:
-            raise CompactRendererMlxSpineRunnerError(
-                "recon pixel weight with 5 dims must have frame dimension 2"
-            )
+            raise CompactRendererMlxSpineRunnerError("recon pixel weight with 5 dims must have frame dimension 2")
         if expected_pairs is not None and int(pairs) != int(expected_pairs):
             raise CompactRendererMlxSpineRunnerError(
-                "recon pixel weight pair count must match num_pairs "
-                f"({int(pairs)} vs {int(expected_pairs)})"
+                f"recon pixel weight pair count must match num_pairs ({int(pairs)} vs {int(expected_pairs)})"
             )
     else:
         raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight must be shaped (H,W), (H,W,1/3), "
-            "(1|N,H,W,1/3), or (N,2,H,W,1/3)"
+            "recon pixel weight must be shaped (H,W), (H,W,1/3), (1|N,H,W,1/3), or (N,2,H,W,1/3)"
         )
     if (int(h), int(w)) != tuple(int(v) for v in expected_hw):
         raise CompactRendererMlxSpineRunnerError(
             f"recon pixel weight spatial shape {(int(h), int(w))} != {expected_hw}"
         )
     if int(channels) not in (1, 3):
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight channel count must be 1 or 3"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight channel count must be 1 or 3")
     if not bool(np.all(np.isfinite(weight))):
         raise CompactRendererMlxSpineRunnerError("recon pixel weight must be finite")
     if float(np.min(weight)) < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight must be non-negative"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight must be non-negative")
     if float(np.mean(weight)) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight must have positive total mass"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight must have positive total mass")
     return weight
 
 
@@ -14951,18 +12541,14 @@ def _load_recon_pixel_weight(
     import numpy as np
 
     if normalize not in ("mean", "none"):
-        raise CompactRendererMlxSpineRunnerError(
-            "recon_pixel_weight_normalize must be 'mean' or 'none'"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon_pixel_weight_normalize must be 'mean' or 'none'")
     resolved = _resolve_existing(path, base=base)
     key: str | None = None
     if resolved.suffix == ".npz":
         with np.load(resolved) as data:
             keys = sorted(str(item) for item in data.files)
             if not keys:
-                raise CompactRendererMlxSpineRunnerError(
-                    f"recon pixel weight npz is empty: {resolved}"
-                )
+                raise CompactRendererMlxSpineRunnerError(f"recon pixel weight npz is empty: {resolved}")
             key = "weight" if "weight" in data.files else keys[0]
             weight = np.asarray(data[key], dtype=np.float32)
     else:
@@ -15026,9 +12612,7 @@ def _discover_joint_recon_pixel_weight_path(
         seen.add(resolved_root)
         if not resolved_root.is_dir():
             continue
-        for manifest_path in sorted(
-            resolved_root.rglob("joint_p18_p19_recon_pixel_weight_manifest.json")
-        ):
+        for manifest_path in sorted(resolved_root.rglob("joint_p18_p19_recon_pixel_weight_manifest.json")):
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 if not isinstance(manifest, dict):
@@ -15087,10 +12671,7 @@ def _discover_joint_recon_pixel_weight_path(
         "schema": "compact_auto_joint_recon_pixel_weight_discovery.v1",
         "status": "selected_verified_joint_p18_p19_weight",
         "num_pairs": int(num_pairs),
-        "search_roots": [
-            path.expanduser().resolve(strict=False).as_posix()
-            for path in search_roots
-        ],
+        "search_roots": [path.expanduser().resolve(strict=False).as_posix() for path in search_roots],
         "candidate_count": len(candidates),
         "rejected_count": len(rejected),
         "selected_manifest_path": manifest_path.as_posix(),
@@ -15115,9 +12696,7 @@ def _recon_pixel_weight_producer_manifest(
     """Return fail-closed producer-manifest custody for a recon weight file."""
 
     manifest_path = weight_path.with_name("joint_p18_p19_recon_pixel_weight_manifest.json")
-    hard_region_manifest_path = weight_path.with_name(
-        "receiver_replay_hard_region_recon_pixel_weight_manifest.json"
-    )
+    hard_region_manifest_path = weight_path.with_name("receiver_replay_hard_region_recon_pixel_weight_manifest.json")
     if not manifest_path.is_file():
         if hard_region_manifest_path.is_file():
             return _hard_region_recon_pixel_weight_producer_manifest(
@@ -15145,9 +12724,7 @@ def _recon_pixel_weight_producer_manifest(
     )
     producer_metadata = manifest.get("metadata")
     if not isinstance(producer_metadata, dict):
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight producer manifest is missing metadata object"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight producer manifest is missing metadata object")
     gradient_health = producer_metadata.get("gradient_health")
     if not isinstance(gradient_health, dict):
         raise CompactRendererMlxSpineRunnerError(
@@ -15155,18 +12732,14 @@ def _recon_pixel_weight_producer_manifest(
             "regenerate the surface with the finite-gradient producer"
         )
     blockers = list(producer_metadata.get("blockers") or [])
-    consumption_recommended = bool(
-        producer_metadata.get("training_consumption_recommended", False)
-    )
+    consumption_recommended = bool(producer_metadata.get("training_consumption_recommended", False))
     if gradient_health.get("status") != "pass_finite":
         raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight producer manifest did not pass finite-gradient "
-            f"health: {gradient_health.get('status')}"
+            f"recon pixel weight producer manifest did not pass finite-gradient health: {gradient_health.get('status')}"
         )
     if not consumption_recommended or blockers:
         raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight producer manifest is not recommended for "
-            f"training consumption; blockers={blockers}"
+            f"recon pixel weight producer manifest is not recommended for training consumption; blockers={blockers}"
         )
 
     return {
@@ -15200,12 +12773,9 @@ def _hard_region_recon_pixel_weight_producer_manifest(
         weight_path=weight_path,
         expected_weight_sha256=expected_weight_sha256,
     )
-    if str(manifest.get("schema") or "") != (
-        "receiver_replay_hard_region_recon_pixel_weight_manifest.v1"
-    ):
+    if str(manifest.get("schema") or "") != ("receiver_replay_hard_region_recon_pixel_weight_manifest.v1"):
         raise CompactRendererMlxSpineRunnerError(
-            "receiver hard-region recon pixel weight manifest has unexpected "
-            f"schema: {manifest.get('schema')!r}"
+            f"receiver hard-region recon pixel weight manifest has unexpected schema: {manifest.get('schema')!r}"
         )
     producer_metadata = manifest.get("metadata")
     if not isinstance(producer_metadata, dict):
@@ -15243,9 +12813,7 @@ def _hard_region_recon_pixel_weight_producer_manifest(
         "applied_component_bboxes": int(producer_metadata.get("applied_component_bboxes") or 0),
         "target_frame_index": int(producer_metadata.get("target_frame_index") or 0),
         "training_arg": consumption.get("training_arg"),
-        "training_consumption_recommended": bool(
-            consumption.get("training_consumption_recommended")
-        ),
+        "training_consumption_recommended": bool(consumption.get("training_consumption_recommended")),
         "auto_discovery_eligible": bool(consumption.get("auto_discovery_eligible")),
         "consumption_reason": consumption.get("reason"),
         "consumption_certified": False,
@@ -15302,13 +12870,9 @@ def _segnet_boundary_recon_pixel_weight(
     import numpy as np
 
     if tau <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight tau must be > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight tau must be > 0")
     if normalize not in ("mean", "none"):
-        raise CompactRendererMlxSpineRunnerError(
-            "recon_pixel_weight_normalize must be 'mean' or 'none'"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon_pixel_weight_normalize must be 'mean' or 'none'")
     logits = np.asarray(scorer_teacher.teacher_logits_thwk, dtype=np.float32)
     if logits.ndim != 4 or int(logits.shape[-1]) < 2:
         raise CompactRendererMlxSpineRunnerError(
@@ -15336,9 +12900,7 @@ def _segnet_boundary_recon_pixel_weight(
         "tau": float(tau),
         "normalize": normalize,
         "scorer_terms": {
-            "p18_segnet": (
-                "per_pair_last_frame_top2_margin_exp_boundary_saliency_from_real_teacher"
-            ),
+            "p18_segnet": ("per_pair_last_frame_top2_margin_exp_boundary_saliency_from_real_teacher"),
             "p19_posenet": "not_included_use_recon_pixel_weight_path_for_joint_map",
         },
         "frame_policy": {
@@ -15393,13 +12955,9 @@ def _lazy_segnet_boundary_recon_pixel_weight(
     import numpy as np
 
     if tau <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "recon pixel weight tau must be > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon pixel weight tau must be > 0")
     if normalize not in ("mean", "none"):
-        raise CompactRendererMlxSpineRunnerError(
-            "recon_pixel_weight_normalize must be 'mean' or 'none'"
-        )
+        raise CompactRendererMlxSpineRunnerError("recon_pixel_weight_normalize must be 'mean' or 'none'")
     logits = np.asarray(scorer_teacher.teacher_logits_thwk, dtype=np.float32)
     if logits.ndim != 4 or int(logits.shape[-1]) < 2:
         raise CompactRendererMlxSpineRunnerError(
@@ -15431,9 +12989,7 @@ def _lazy_segnet_boundary_recon_pixel_weight(
         "tau": float(tau),
         "normalize": normalize,
         "scorer_terms": {
-            "p18_segnet": (
-                "per_pair_last_frame_top2_margin_exp_boundary_saliency_from_real_teacher"
-            ),
+            "p18_segnet": ("per_pair_last_frame_top2_margin_exp_boundary_saliency_from_real_teacher"),
             "p19_posenet": "not_included_use_recon_pixel_weight_path_for_joint_map",
         },
         "frame_policy": {
@@ -15502,9 +13058,7 @@ def _target_family_rows() -> list[dict[str, Any]]:
                 "allowed_enhancers": backend.get("allowed_enhancers", []),
                 "rate_axis_evidence": backend.get("rate_axis_evidence"),
                 "distortion_fit_blocker": backend.get("distortion_fit_blocker"),
-                "score_aware_carrier_training_plan": (
-                    _score_aware_carrier_training_plan(family, backend)
-                ),
+                "score_aware_carrier_training_plan": (_score_aware_carrier_training_plan(family, backend)),
                 **FALSE_AUTHORITY,
             }
         )
@@ -15526,21 +13080,14 @@ def _compact_base_campaign_rows(
                 "executable_via_pact_nerv_vq_adapter",
             }:
                 route_status = "queued_for_mlx_training_archive_export_receiver_proof"
-            elif status == (
-                "mlx_archive_export_adapter_available_"
-                "distortion_fit_actuator_pending"
-            ):
-                route_status = (
-                    "queued_for_mlx_archive_adapter_smoke_"
-                    "scoreaware_training_pending"
-                )
+            elif status == ("mlx_archive_export_adapter_available_distortion_fit_actuator_pending"):
+                route_status = "queued_for_mlx_archive_adapter_smoke_scoreaware_training_pending"
             elif status == "checkpoint_adapter_available":
                 route_status = "queued_for_checkpoint_import_or_long_continuation"
             elif status in {
                 "archive_exporter_available_trainer_actuator_pending",
                 "archive_projection_available_trainer_actuator_pending",
-                "rate_axis_structural_win_archive_projection_available_"
-                "distortion_fit_actuator_pending",
+                "rate_axis_structural_win_archive_projection_available_distortion_fit_actuator_pending",
             }:
                 route_status = "trainer_actuator_migration_required"
             else:
@@ -15582,9 +13129,7 @@ def _compact_base_campaign_rows(
                             else None
                         )
                     ),
-                    "score_aware_carrier_training_plan": (
-                        _score_aware_carrier_training_plan(family, backend)
-                    ),
+                    "score_aware_carrier_training_plan": (_score_aware_carrier_training_plan(family, backend)),
                     "execution_scope": backend["execution_scope"],
                     "byte_policy": (
                         "train/export only charged weights, latents, selectors, "
@@ -15666,9 +13211,7 @@ def _load_compact_modelsize_budget_rows(
             record.update(
                 {
                     "source_schema": raw_refusal["source_schema"],
-                    "authority": (
-                        "planning_artifact_only_not_receiver_closed_ladder_evidence"
-                    ),
+                    "authority": ("planning_artifact_only_not_receiver_closed_ladder_evidence"),
                     "rows_seen": len(selected),
                     "rows_added": 0,
                     "rows_rejected": len(selected),
@@ -15769,9 +13312,7 @@ def _modelsize_budget_rows_from_payload(
         source_schema = str(payload.get("schema") or "")
         source_rows = payload.get("modelsize_budget_rows")
         if not isinstance(source_rows, list):
-            source_rows = _modelsize_budget_rows_from_plan(
-                payload.get("modelsize_budget_plan")
-            )
+            source_rows = _modelsize_budget_rows_from_plan(payload.get("modelsize_budget_plan"))
         if not source_rows and isinstance(payload.get("rows"), list):
             source_rows = payload["rows"]
     else:
@@ -15792,9 +13333,7 @@ def _modelsize_budget_rows_from_payload(
 
 def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
-    source_schema = str(
-        row.get("source_modelsize_budget_schema") or row.get("schema") or ""
-    )
+    source_schema = str(row.get("source_modelsize_budget_schema") or row.get("schema") or "")
     if source_schema != "nerv_receiver_closed_modelsize_ladder.v1":
         blockers.append("receiver_closed_modelsize_ladder_schema_required")
     archive_bytes = _compact_positive_int_from_keys(
@@ -15811,10 +13350,7 @@ def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
         blockers.append("modelsize_budget_row_missing_measured_receiver_archive_bytes")
     if not (
         row.get("receiver_closed") is True
-        and (
-            row.get("receiver_proof_passed") is True
-            or row.get("receiver_archive_replay_verified") is True
-        )
+        and (row.get("receiver_proof_passed") is True or row.get("receiver_archive_replay_verified") is True)
     ):
         blockers.append("receiver_closed_byte_proof_missing")
     blockers.extend(_compact_receiver_closed_identity_blockers(row))
@@ -15838,11 +13374,7 @@ def _hi_nerv_runner_archive_file_candidate(
     row = row if isinstance(row, Mapping) else {}
     status = str(row.get("status") or "")
     failure = str(row.get("failure") or "")
-    byte_cap_rejected = (
-        bool(diagnostic_only)
-        and "hard_byte_ceiling" in failure
-        and status == "failed"
-    )
+    byte_cap_rejected = bool(diagnostic_only) and "hard_byte_ceiling" in failure and status == "failed"
     return {
         "schema": "hi_nerv_runner_archive_file_candidate.v1",
         "archive_path": path.as_posix(),
@@ -15921,9 +13453,7 @@ def _hi_nerv_runner_archive_resolution_from_artifact(
                 diagnostic_only=False,
                 row={
                     "status": "selected",
-                    "candidate_kind": manifest_payload.get(
-                        "selected_candidate_kind"
-                    ),
+                    "candidate_kind": manifest_payload.get("selected_candidate_kind"),
                 },
             )
             if candidate is not None:
@@ -15946,8 +13476,7 @@ def _hi_nerv_runner_archive_resolution_from_artifact(
                     continue
                 diagnostic_only = not (
                     row.get("status") == "exported"
-                    and row.get("archive_path")
-                    == manifest_payload.get("selected_archive_path")
+                    and row.get("archive_path") == manifest_payload.get("selected_archive_path")
                 )
                 candidate = _hi_nerv_runner_archive_file_candidate(
                     path=row_archive,
@@ -15994,15 +13523,10 @@ def _hi_nerv_runner_archive_resolution_from_artifact(
             if not existing.get(merge_key) and candidate.get(merge_key):
                 existing[merge_key] = candidate[merge_key]
         existing["selected_for_training_artifact"] = bool(
-            existing.get("selected_for_training_artifact")
-            or candidate.get("selected_for_training_artifact")
+            existing.get("selected_for_training_artifact") or candidate.get("selected_for_training_artifact")
         )
-        existing["diagnostic_only"] = bool(
-            existing.get("diagnostic_only") and candidate.get("diagnostic_only")
-        )
-        existing["byte_cap_rejected"] = bool(
-            existing.get("byte_cap_rejected") or candidate.get("byte_cap_rejected")
-        )
+        existing["diagnostic_only"] = bool(existing.get("diagnostic_only") and candidate.get("diagnostic_only"))
+        existing["byte_cap_rejected"] = bool(existing.get("byte_cap_rejected") or candidate.get("byte_cap_rejected"))
     candidates = list(unique_candidates.values())
 
     def _sort_key(candidate: Mapping[str, Any]) -> tuple[int, int, int, str]:
@@ -16039,20 +13563,14 @@ def _hi_nerv_runner_archive_resolution_from_artifact(
         "archive_sha256": selected.get("archive_sha256") if selected else None,
         "source": selected.get("source") if selected else None,
         "candidate_kind": selected.get("candidate_kind") if selected else None,
-        "selected_for_training_artifact": (
-            bool(selected.get("selected_for_training_artifact")) if selected else False
-        ),
+        "selected_for_training_artifact": (bool(selected.get("selected_for_training_artifact")) if selected else False),
         "diagnostic_only": bool(selected.get("diagnostic_only")) if selected else False,
-        "byte_cap_rejected": (
-            bool(selected.get("byte_cap_rejected")) if selected else False
-        ),
+        "byte_cap_rejected": (bool(selected.get("byte_cap_rejected")) if selected else False),
         "selector_status": selected.get("selector_status") if selected else None,
         "selector_failure": selected.get("selector_failure") if selected else None,
         "candidate_count": len(candidates),
         "candidates": candidates,
-        "archive_selection_manifest_path": (
-            manifest_path.as_posix() if manifest_path is not None else None
-        ),
+        "archive_selection_manifest_path": (manifest_path.as_posix() if manifest_path is not None else None),
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
@@ -16070,9 +13588,7 @@ def _attach_hi_nerv_runner_archive_resolution(
         score_training = metadata.get("score_aware_training")
         if isinstance(score_training, dict):
             score_training["archive_resolution"] = dict(archive_resolution)
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -16199,8 +13715,7 @@ def _hi_nerv_archive_codec_custody(
 
     selected_row = (
         selection.get("selected_row")
-        if isinstance(selection, Mapping)
-        and isinstance(selection.get("selected_row"), Mapping)
+        if isinstance(selection, Mapping) and isinstance(selection.get("selected_row"), Mapping)
         else {}
     )
     requested_decoder_codec = (
@@ -16210,32 +13725,23 @@ def _hi_nerv_archive_codec_custody(
     )
     selected_requested_codec = (
         str(selection.get("selected_decoder_codec_requested"))
-        if isinstance(selection, Mapping)
-        and selection.get("selected_decoder_codec_requested")
+        if isinstance(selection, Mapping) and selection.get("selected_decoder_codec_requested")
         else str(selected_row.get("decoder_codec_requested") or launch_decoder_codec)
     )
     selected_effective_codec = (
         str(selection.get("selected_decoder_codec_effective"))
-        if isinstance(selection, Mapping)
-        and selection.get("selected_decoder_codec_effective")
+        if isinstance(selection, Mapping) and selection.get("selected_decoder_codec_effective")
         else str(
             selection.get("selected_decoder_codec")
-            if isinstance(selection, Mapping)
-            and selection.get("selected_decoder_codec")
+            if isinstance(selection, Mapping) and selection.get("selected_decoder_codec")
             else selected_row.get("decoder_codec_emitted") or ""
         )
     )
     telemetry_effective_codec = (
-        str(telemetry.get("decoder_codec"))
-        if isinstance(telemetry, Mapping) and telemetry.get("decoder_codec")
-        else ""
+        str(telemetry.get("decoder_codec")) if isinstance(telemetry, Mapping) and telemetry.get("decoder_codec") else ""
     )
     effective_decoder_codec = telemetry_effective_codec or selected_effective_codec
-    if (
-        selected_effective_codec
-        and telemetry_effective_codec
-        and selected_effective_codec != telemetry_effective_codec
-    ):
+    if selected_effective_codec and telemetry_effective_codec and selected_effective_codec != telemetry_effective_codec:
         blockers.append("hi_nerv_effective_decoder_codec_mismatch")
     if not effective_decoder_codec:
         blockers.append("hi_nerv_effective_decoder_codec_missing")
@@ -16263,9 +13769,7 @@ def _hi_nerv_archive_codec_custody(
         "selected_decoder_codec_effective": selected_effective_codec or None,
         "effective_decoder_codec": effective_decoder_codec or None,
         "effective_decoder_codec_source": (
-            "archive_section_telemetry"
-            if telemetry_effective_codec
-            else "portfolio_selection"
+            "archive_section_telemetry" if telemetry_effective_codec else "portfolio_selection"
         ),
         "receiver_surviving_exportable": not any(
             str(blocker).startswith("hi_nerv_live_receiver_codec_portfolio_")
@@ -16295,15 +13799,9 @@ def _attach_hi_nerv_archive_codec_custody(
         score_training = metadata.get("score_aware_training")
         if isinstance(score_training, dict):
             score_training["hi_nerv_archive_codec_custody"] = dict(codec_custody)
-            score_training["decoder_codec"] = codec_custody.get(
-                "effective_decoder_codec"
-            )
-            score_training["requested_decoder_codec"] = codec_custody.get(
-                "requested_decoder_codec"
-            )
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+            score_training["decoder_codec"] = codec_custody.get("effective_decoder_codec")
+            score_training["requested_decoder_codec"] = codec_custody.get("requested_decoder_codec")
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -16317,9 +13815,7 @@ def _attach_hi_nerv_archive_codec_custody(
     if isinstance(score_training, dict):
         score_training["hi_nerv_archive_codec_custody"] = dict(codec_custody)
         score_training["decoder_codec"] = codec_custody.get("effective_decoder_codec")
-        score_training["requested_decoder_codec"] = codec_custody.get(
-            "requested_decoder_codec"
-        )
+        score_training["requested_decoder_codec"] = codec_custody.get("requested_decoder_codec")
     artifact["substrate_artifact_metadata"] = artifact_metadata
     artifact_path.write_text(
         json.dumps(artifact, indent=2, sort_keys=True) + "\n",
@@ -16354,14 +13850,10 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         ("archive_sha256", "archive_zip_sha256", "candidate_archive_sha256"),
     )
     proof_sha256 = (
-        _sha256_file(receiver_proof_path)
-        if receiver_proof_path is not None and receiver_proof_path.is_file()
-        else None
+        _sha256_file(receiver_proof_path) if receiver_proof_path is not None and receiver_proof_path.is_file() else None
     )
     proof_payload = (
-        _load_json(receiver_proof_path)
-        if receiver_proof_path is not None and receiver_proof_path.is_file()
-        else {}
+        _load_json(receiver_proof_path) if receiver_proof_path is not None and receiver_proof_path.is_file() else {}
     )
     proof_passed = bool(
         isinstance(proof_payload, Mapping)
@@ -16374,19 +13866,15 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         and not proof_payload.get("blockers")
     )
     local_replay_axis = (
-        str(local_cpu_replay_summary.get("axis_tag") or "")
-        if isinstance(local_cpu_replay_summary, Mapping)
-        else ""
+        str(local_cpu_replay_summary.get("axis_tag") or "") if isinstance(local_cpu_replay_summary, Mapping) else ""
     )
     local_replay_executed = isinstance(local_cpu_replay_summary, Mapping)
     local_replay_passed = bool(
         local_replay_executed
         and not local_cpu_replay_summary.get("blockers")
         and (
-            local_cpu_replay_summary.get("local_receiver_archive_replay_verified")
-            is True
-            or local_cpu_replay_summary.get("receiver_archive_replay_verified")
-            is True
+            local_cpu_replay_summary.get("local_receiver_archive_replay_verified") is True
+            or local_cpu_replay_summary.get("receiver_archive_replay_verified") is True
             or local_cpu_replay_summary.get("score_claim_valid") is True
             or local_cpu_replay_summary.get("score_claim") is False
         )
@@ -16410,24 +13898,16 @@ def _write_hi_nerv_trained_archive_byte_oracle(
     receiver_quality_numeric_class_collapse = False
     if isinstance(post_export_receiver_cache_quality_summary, Mapping):
         receiver_quality_blockers = [
-            str(blocker)
-            for blocker in (
-                post_export_receiver_cache_quality_summary.get("blockers") or []
-            )
+            str(blocker) for blocker in (post_export_receiver_cache_quality_summary.get("blockers") or [])
         ]
-        receiver_quality_numeric_class_collapse = (
-            _hi_nerv_receiver_cache_quality_numeric_class_collapse(
-                post_export_receiver_cache_quality_summary
-            )
+        receiver_quality_numeric_class_collapse = _hi_nerv_receiver_cache_quality_numeric_class_collapse(
+            post_export_receiver_cache_quality_summary
         )
         receiver_quality_feedback_ready = bool(
             post_export_receiver_cache_quality_summary.get("quality_gate_passed")
         ) and not (
             receiver_quality_numeric_class_collapse
-            or any(
-                "argmax_class_collapse" in blocker
-                for blocker in receiver_quality_blockers
-            )
+            or any("argmax_class_collapse" in blocker for blocker in receiver_quality_blockers)
         )
     row: dict[str, Any] = {
         "schema": "hi_nerv_trained_archive_byte_oracle_row.v1",
@@ -16447,9 +13927,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
             ("nominal_total_payload_bytes",),
         ),
         "measured_byte_cap_report": measured_byte_cap,
-        "measured_archive_bytes_under_tightest_hard_ceiling": measured_byte_cap[
-            "under_tightest_hard_byte_ceiling"
-        ],
+        "measured_archive_bytes_under_tightest_hard_ceiling": measured_byte_cap["under_tightest_hard_byte_ceiling"],
         "measured_archive_bytes_delta_vs_tightest_hard_ceiling": measured_byte_cap[
             "delta_bytes_vs_tightest_hard_byte_ceiling"
         ],
@@ -16470,17 +13948,13 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         "local_cpu_replay_executed": local_replay_executed,
         "local_cpu_replay_passed": local_replay_passed,
         "local_cpu_replay_axis_tag": local_replay_axis or None,
-        "full_video_mlx_prefilter_attached": bool(
-            mlx_prefilter_coverage.get("has_full_video_mlx_prefilter")
-        ),
+        "full_video_mlx_prefilter_attached": bool(mlx_prefilter_coverage.get("has_full_video_mlx_prefilter")),
         "post_export_receiver_cache_quality": (
             dict(post_export_receiver_cache_quality_summary)
             if isinstance(post_export_receiver_cache_quality_summary, Mapping)
             else None
         ),
-        "post_export_receiver_cache_quality_feedback_ready": (
-            receiver_quality_feedback_ready
-        ),
+        "post_export_receiver_cache_quality_feedback_ready": (receiver_quality_feedback_ready),
         "axis_tag": "[planning/control]",
         "blockers": [],
         **FALSE_AUTHORITY,
@@ -16502,25 +13976,15 @@ def _write_hi_nerv_trained_archive_byte_oracle(
     if local_replay_axis and not local_replay_axis.lower().startswith("[contest-"):
         blockers.append("hi_nerv_local_cpu_replay_not_contest_auth_axis")
     if isinstance(post_export_receiver_cache_quality_summary, Mapping):
-        if not bool(
-            post_export_receiver_cache_quality_summary.get("quality_gate_passed")
-        ):
-            blockers.append(
-                "hi_nerv_trained_archive_byte_oracle_receiver_cache_quality_failed"
-            )
+        if not bool(post_export_receiver_cache_quality_summary.get("quality_gate_passed")):
+            blockers.append("hi_nerv_trained_archive_byte_oracle_receiver_cache_quality_failed")
         if any("argmax_class_collapse" in blocker for blocker in receiver_quality_blockers):
-            blockers.append(
-                "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse"
-            )
+            blockers.append("hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse")
         if receiver_quality_numeric_class_collapse:
-            blockers.append(
-                "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse_numeric"
-            )
+            blockers.append("hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse_numeric")
         blockers.extend(receiver_quality_blockers)
     else:
-        blockers.append(
-            "hi_nerv_trained_archive_byte_oracle_receiver_cache_quality_missing"
-        )
+        blockers.append("hi_nerv_trained_archive_byte_oracle_receiver_cache_quality_missing")
     row["blockers"] = _dedupe(blockers)
 
     ladder = build_nerv_receiver_closed_modelsize_ladder(
@@ -16538,9 +14002,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         "row": row,
         "receiver_closed_modelsize_ladder_path": ladder_path.as_posix(),
         "receiver_closed_modelsize_ladder_status": ladder.get("status"),
-        "receiver_closed_modelsize_ladder_ready": bool(
-            ladder.get("ready_for_carrier_training_plan")
-        ),
+        "receiver_closed_modelsize_ladder_ready": bool(ladder.get("ready_for_carrier_training_plan")),
         "measured_archive_bytes": archive_bytes,
         "archive_sha256": archive_sha256,
         "measured_byte_cap_report": measured_byte_cap,
@@ -16580,19 +14042,13 @@ def _hi_nerv_long_mlx_training_readiness_signals(
 ) -> dict[str, Any]:
     """Compact launch-health facts for the next HiNeRV MLX long run."""
 
-    telemetry = (
-        dict(training_telemetry_contract)
-        if isinstance(training_telemetry_contract, Mapping)
-        else {}
-    )
+    telemetry = dict(training_telemetry_contract) if isinstance(training_telemetry_contract, Mapping) else {}
     receiver_quality = (
         dict(post_export_receiver_cache_quality_summary)
         if isinstance(post_export_receiver_cache_quality_summary, Mapping)
         else {}
     )
-    short_admission = hinerv_short_scorer_smoke_long_run_admission(
-        short_scorer_smoke_readiness
-    )
+    short_admission = hinerv_short_scorer_smoke_long_run_admission(short_scorer_smoke_readiness)
     oracle_row = trained_archive_byte_oracle.get("row")
     if not isinstance(oracle_row, Mapping):
         oracle_row = {}
@@ -16627,15 +14083,11 @@ def _hi_nerv_long_mlx_training_readiness_signals(
     if not bool(trained_archive_byte_oracle.get("feedback_ready")):
         promotion_blockers.extend(trained_archive_byte_oracle.get("blockers") or [])
     if not bool(decoder_weight_waterfill_from_trained_ladder.get("active")):
-        promotion_blockers.extend(
-            decoder_weight_waterfill_from_trained_ladder.get("blockers") or []
-        )
+        promotion_blockers.extend(decoder_weight_waterfill_from_trained_ladder.get("blockers") or [])
 
     return {
         "schema": "compact_hi_nerv_long_mlx_training_readiness_signals.v1",
-        "purpose": (
-            "machine_first_launch_health_for_next_score_aware_mlx_long_run"
-        ),
+        "purpose": ("machine_first_launch_health_for_next_score_aware_mlx_long_run"),
         "ready_for_controlled_long_mlx_training": not _dedupe(control_blockers),
         "control_blockers": _dedupe(control_blockers),
         "ready_for_promotion_replay": bool(
@@ -16644,48 +14096,27 @@ def _hi_nerv_long_mlx_training_readiness_signals(
         ),
         "promotion_blockers": _dedupe(promotion_blockers),
         "teachers": {
-            "real_segnet_teacher_attached": bool(
-                config_gate.get("real_segnet_teacher_attached")
-            ),
-            "real_posenet_teacher_attached": bool(
-                config_gate.get("real_posenet_teacher_attached")
-            ),
-            "pose_direct_live_attached": bool(
-                config_gate.get("pose_direct_live_attached")
-            ),
+            "real_segnet_teacher_attached": bool(config_gate.get("real_segnet_teacher_attached")),
+            "real_posenet_teacher_attached": bool(config_gate.get("real_posenet_teacher_attached")),
+            "pose_direct_live_attached": bool(config_gate.get("pose_direct_live_attached")),
         },
         "optimizer": {
-            "effective_optimizer_label": optimizer_policy.get(
-                "effective_optimizer_label"
-            ),
-            "pr95_faithful_curriculum_enabled": bool(
-                optimizer_policy.get("pr95_faithful_curriculum_enabled")
-            ),
-            "native_optimizer_active": bool(
-                optimizer_policy.get("native_optimizer_active")
-            ),
-            "optimizer_kind": optimizer_policy.get("optimizer_kind")
-            or optimizer_controls.get("optimizer_kind"),
-            "weight_decay_effective": optimizer_controls.get(
-                "weight_decay_effective"
-            ),
+            "effective_optimizer_label": optimizer_policy.get("effective_optimizer_label"),
+            "pr95_faithful_curriculum_enabled": bool(optimizer_policy.get("pr95_faithful_curriculum_enabled")),
+            "native_optimizer_active": bool(optimizer_policy.get("native_optimizer_active")),
+            "optimizer_kind": optimizer_policy.get("optimizer_kind") or optimizer_controls.get("optimizer_kind"),
+            "weight_decay_effective": optimizer_controls.get("weight_decay_effective"),
         },
         "telemetry": {
             "path": telemetry.get("telemetry_path"),
             "passed": bool(telemetry.get("passed")),
             "row_count": _optional_int(telemetry.get("row_count")),
-            "archive_byte_dual_lambda_active_observed": bool(
-                telemetry.get("archive_byte_dual_lambda_active_observed")
-            ),
+            "archive_byte_dual_lambda_active_observed": bool(telemetry.get("archive_byte_dual_lambda_active_observed")),
             "archive_byte_dual_weight_applied_observed": bool(
                 telemetry.get("archive_byte_dual_weight_applied_observed")
             ),
-            "section_rate_metric_observed": bool(
-                telemetry.get("section_rate_metric_observed")
-            ),
-            "section_byte_dual_lambda_active_observed": bool(
-                telemetry.get("section_byte_dual_lambda_active_observed")
-            ),
+            "section_rate_metric_observed": bool(telemetry.get("section_rate_metric_observed")),
+            "section_byte_dual_lambda_active_observed": bool(telemetry.get("section_byte_dual_lambda_active_observed")),
             "section_byte_dual_weight_applied_observed": bool(
                 telemetry.get("section_byte_dual_weight_applied_observed")
             ),
@@ -16704,8 +14135,7 @@ def _hi_nerv_long_mlx_training_readiness_signals(
         },
         "archive": {
             "measured_archive_bytes": archive_bytes,
-            "archive_sha256": trained_archive_byte_oracle.get("archive_sha256")
-            or oracle_row.get("archive_sha256"),
+            "archive_sha256": trained_archive_byte_oracle.get("archive_sha256") or oracle_row.get("archive_sha256"),
             "feedback_ready": bool(trained_archive_byte_oracle.get("feedback_ready")),
             "under_tightest_hard_byte_ceiling": _nested(
                 trained_archive_byte_oracle,
@@ -16724,28 +14154,16 @@ def _hi_nerv_long_mlx_training_readiness_signals(
                 receiver_quality.get("runner_effective_receiver_cache_quality_max_pairs")
             ),
             "quality_floor_min_pairs": _optional_int(
-                receiver_quality.get(
-                    "runner_quality_floor_receiver_cache_quality_min_pairs"
-                )
+                receiver_quality.get("runner_quality_floor_receiver_cache_quality_min_pairs")
             ),
-            "segnet_argmax_disagreement_rate": _optional_float(
-                receiver_quality.get("segnet_argmax_disagreement_rate")
-            ),
-            "mlx_scorer_response_probe_passed": bool(
-                receiver_quality.get("mlx_scorer_response_probe_passed")
-            ),
+            "segnet_argmax_disagreement_rate": _optional_float(receiver_quality.get("segnet_argmax_disagreement_rate")),
+            "mlx_scorer_response_probe_passed": bool(receiver_quality.get("mlx_scorer_response_probe_passed")),
         },
         "short_scorer_smoke": {
-            "long_run_admission_passed": bool(
-                short_admission.get("long_run_admission_passed")
-            ),
-            "short_scorer_teacher_smoke_passed": bool(
-                short_admission.get("short_scorer_teacher_smoke_passed")
-            ),
+            "long_run_admission_passed": bool(short_admission.get("long_run_admission_passed")),
+            "short_scorer_teacher_smoke_passed": bool(short_admission.get("short_scorer_teacher_smoke_passed")),
             "report_path": short_admission.get("report_path"),
-            "admission_blocker_count": _optional_int(
-                short_admission.get("admission_blocker_count")
-            ),
+            "admission_blocker_count": _optional_int(short_admission.get("admission_blocker_count")),
         },
         "decoder_weight_saliency": {
             "written": bool(decoder_weight_saliency_artifact.get("written")),
@@ -16753,13 +14171,9 @@ def _hi_nerv_long_mlx_training_readiness_signals(
             "path": decoder_weight_saliency_artifact.get("path"),
         },
         "decoder_weight_waterfill": {
-            "active": bool(
-                decoder_weight_waterfill_from_trained_ladder.get("active")
-            ),
+            "active": bool(decoder_weight_waterfill_from_trained_ladder.get("active")),
             "candidate_plan_count": _optional_int(
-                decoder_weight_waterfill_from_trained_ladder.get(
-                    "candidate_plan_count"
-                )
+                decoder_weight_waterfill_from_trained_ladder.get("candidate_plan_count")
             ),
             "path": decoder_weight_waterfill_from_trained_ladder.get("path"),
         },
@@ -16774,9 +14188,7 @@ def _hi_nerv_long_mlx_training_readiness_signals(
 def _hi_nerv_receiver_cache_quality_numeric_class_collapse(
     summary: Mapping[str, Any],
     *,
-    min_material_occupied_fraction: float = (
-        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
-    ),
+    min_material_occupied_fraction: float = (HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE),
 ) -> bool:
     candidate_fraction = _compact_finite_float_from_keys(
         summary,
@@ -16788,9 +14200,8 @@ def _hi_nerv_receiver_cache_quality_numeric_class_collapse(
     )
     if candidate_fraction is None or reference_fraction is None:
         return False
-    return (
-        float(candidate_fraction) < float(min_material_occupied_fraction)
-        and float(reference_fraction) >= float(min_material_occupied_fraction)
+    return float(candidate_fraction) < float(min_material_occupied_fraction) and float(reference_fraction) >= float(
+        min_material_occupied_fraction
     )
 
 
@@ -16807,11 +14218,7 @@ def _measured_archive_byte_cap_report(
     archive_int = None if archive_bytes is None else int(archive_bytes)
     delta = None if archive_int is None or tightest is None else archive_int - int(tightest)
     under_tightest = None if delta is None else delta <= 0
-    candidate_delta = (
-        None
-        if archive_int is None or candidate_ceiling is None
-        else archive_int - int(candidate_ceiling)
-    )
+    candidate_delta = None if archive_int is None or candidate_ceiling is None else archive_int - int(candidate_ceiling)
     blockers: list[str] = []
     if not ceilings:
         blockers.append("hard_byte_ceiling_not_configured")
@@ -16824,11 +14231,7 @@ def _measured_archive_byte_cap_report(
     if (
         delta is not None
         and delta > 0
-        and (
-            candidate_ceiling is None
-            or tightest is None
-            or int(candidate_ceiling) <= int(tightest)
-        )
+        and (candidate_ceiling is None or tightest is None or int(candidate_ceiling) <= int(tightest))
     ):
         blockers.append("measured_archive_bytes_exceed_tightest_hard_ceiling")
     if candidate_delta is not None and candidate_delta > 0:
@@ -16844,13 +14247,9 @@ def _measured_archive_byte_cap_report(
         "delta_bytes_vs_tightest_hard_byte_ceiling": delta,
         "delta_bytes_vs_selected_candidate_ceiling": candidate_delta,
         "under_tightest_hard_byte_ceiling": under_tightest,
-        "under_selected_candidate_hard_byte_ceiling": (
-            None if candidate_delta is None else candidate_delta <= 0
-        ),
+        "under_selected_candidate_hard_byte_ceiling": (None if candidate_delta is None else candidate_delta <= 0),
         "tightest_hard_ceiling_is_blocking": bool(
-            candidate_ceiling is None
-            or tightest is None
-            or int(candidate_ceiling) <= int(tightest)
+            candidate_ceiling is None or tightest is None or int(candidate_ceiling) <= int(tightest)
         ),
         "blockers": _dedupe(blockers),
         "score_claim": False,
@@ -16861,14 +14260,17 @@ def _measured_archive_byte_cap_report(
 
 def _compact_receiver_closed_identity_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
-    if _compact_first_present_str(
-        row,
-        (
-            "receiver_proof_path",
-            "receiver_proof_report_path",
-            "receiver_closed_proof_path",
-        ),
-    ) is None:
+    if (
+        _compact_first_present_str(
+            row,
+            (
+                "receiver_proof_path",
+                "receiver_proof_report_path",
+                "receiver_closed_proof_path",
+            ),
+        )
+        is None
+    ):
         blockers.append("receiver_proof_path_missing")
     if not _compact_is_sha256_hex(
         _compact_first_present_str(
@@ -16894,24 +14296,24 @@ def _compact_receiver_closed_identity_blockers(row: Mapping[str, Any]) -> list[s
         )
     ):
         blockers.append("archive_sha256_missing_or_invalid")
-    if _compact_first_present_str(
-        row,
-        (
-            "axis_tag",
-            "score_axis_tag",
-            "measured_score_axis_tag",
-            "receiver_proof_axis_tag",
-        ),
-    ) is None:
+    if (
+        _compact_first_present_str(
+            row,
+            (
+                "axis_tag",
+                "score_axis_tag",
+                "measured_score_axis_tag",
+                "receiver_proof_axis_tag",
+            ),
+        )
+        is None
+    ):
         blockers.append("receiver_proof_axis_tag_missing")
     sample_count = _compact_first_present_int(
         row,
         ("sample_pair_count", "sample_pairs", "n_pairs", "num_pairs", "pair_count"),
     )
-    full_video = any(
-        bool(row.get(key))
-        for key in ("full_video_coverage", "full600_coverage", "full_sample_coverage")
-    )
+    full_video = any(bool(row.get(key)) for key in ("full_video_coverage", "full600_coverage", "full_sample_coverage"))
     if sample_count is None and not full_video:
         blockers.append("receiver_proof_full_sample_count_missing")
     elif sample_count is not None and sample_count < CONTEST_PAIR_COUNT and not full_video:
@@ -16960,8 +14362,7 @@ def _compact_modelsize_row_has_source_bound_capacity(row: Mapping[str, Any]) -> 
     official_controls = row.get("official_controls")
     if isinstance(official_controls, Mapping):
         return (
-            _compact_finite_float_from_keys(official_controls, ("--modelsize",))
-            is not None
+            _compact_finite_float_from_keys(official_controls, ("--modelsize",)) is not None
             or _compact_positive_int_from_keys(official_controls, ("fc_dim",)) is not None
         )
     solved = row.get("solved_budget")
@@ -16971,16 +14372,22 @@ def _compact_modelsize_row_has_source_bound_capacity(row: Mapping[str, Any]) -> 
 
 
 def _compact_modelsize_row_has_nonrate_signal(row: Mapping[str, Any]) -> bool:
-    if _compact_finite_float_from_keys(
-        row,
-        ("nonrate_score", "nonrate_score_value"),
-    ) is not None:
+    if (
+        _compact_finite_float_from_keys(
+            row,
+            ("nonrate_score", "nonrate_score_value"),
+        )
+        is not None
+    ):
         return True
     if _compact_finite_float_from_keys(row, ("avg_segnet_dist", "d_seg")) is not None:
-        return _compact_finite_float_from_keys(
-            row,
-            ("avg_posenet_dist", "d_pose"),
-        ) is not None
+        return (
+            _compact_finite_float_from_keys(
+                row,
+                ("avg_posenet_dist", "d_pose"),
+            )
+            is not None
+        )
     return False
 
 
@@ -17077,18 +14484,10 @@ class _PoseInstabilityEpochMonitor:
         )
         pose_raw_loss = _metric_mapping_float(loss_components, "loss_part_pose_distill")
         pose_loss = pose_score_term if pose_score_term is not None else pose_raw_loss
-        pose_loss_metric_name = (
-            "loss_part_pose_score_term"
-            if pose_score_term is not None
-            else "loss_part_pose_distill"
-        )
+        pose_loss_metric_name = "loss_part_pose_score_term" if pose_score_term is not None else "loss_part_pose_distill"
         pose_axis = _metric_mapping_float(per_axis, "pose")
-        bad_loss = (
-            pose_loss is not None and pose_loss >= self.pose_loss_threshold
-        )
-        bad_axis = (
-            pose_axis is not None and pose_axis >= self.pose_axis_threshold
-        )
+        bad_loss = pose_loss is not None and pose_loss >= self.pose_loss_threshold
+        bad_axis = pose_axis is not None and pose_axis >= self.pose_axis_threshold
         if bad_loss or bad_axis:
             self.bad_epoch_count += 1
             self.last_reason = (
@@ -17106,9 +14505,7 @@ class _PoseInstabilityEpochMonitor:
             self.last_reason = ""
         if self.hard_pair_sampling_active:
             if self.last_reason:
-                self.last_reason = (
-                    f"{self.last_reason}:stop_suppressed_for_hard_pair_sampling"
-                )
+                self.last_reason = f"{self.last_reason}:stop_suppressed_for_hard_pair_sampling"
             return
         if self.bad_epoch_count >= self.consecutive_bad_epochs:
             raise LongTrainingStopRequested(
@@ -17162,9 +14559,7 @@ def _hi_nerv_priority_target_hydration_contract(
             "sparse_source_pair_target_hydration"
             if sparse
             else (
-                "full_video_target_hydration_with_prioritized_sampling"
-                if enabled
-                else "training_batch_emphasis_only"
+                "full_video_target_hydration_with_prioritized_sampling" if enabled else "training_batch_emphasis_only"
             )
         ),
         "pair_index_domain": (
@@ -17232,15 +14627,11 @@ def _validate_hi_nerv_frontier_training_config(
         "class_histogram": float(segnet_direct_live_class_histogram_weight),
         "class_balanced_hinge": float(segnet_direct_live_class_balanced_hinge_weight),
         "class_balanced_ce": float(segnet_direct_live_class_balanced_ce_weight),
-        "class_balanced_squared_hinge": float(
-            segnet_direct_live_class_balanced_squared_hinge_weight
-        ),
+        "class_balanced_squared_hinge": float(segnet_direct_live_class_balanced_squared_hinge_weight),
         "class_region_recon": float(segnet_direct_live_class_region_recon_weight),
         "rare_class_logit": float(segnet_direct_live_rare_class_logit_weight),
         "target_mass_floor": float(segnet_direct_live_target_mass_floor_weight),
-        "target_min_ratio_floor": float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        "target_min_ratio_floor": float(segnet_direct_live_target_min_ratio_floor_weight),
         "contrast_floor": float(scorer_input_contrast_floor_weight),
         "shape_tether": float(scorer_input_shape_tether_weight),
     }
@@ -17248,27 +14639,14 @@ def _validate_hi_nerv_frontier_training_config(
         "distribution_guard": float(scorer_input_distribution_guard_weight),
     }
     pose_supporting_controls = {
-        "posenet_yuv6_geometry_tether": float(
-            posenet_yuv6_geometry_tether_weight
-        ),
-        "posenet_temporal_signal_floor": float(
-            posenet_temporal_signal_floor_weight
-        ),
+        "posenet_yuv6_geometry_tether": float(posenet_yuv6_geometry_tether_weight),
+        "posenet_temporal_signal_floor": float(posenet_temporal_signal_floor_weight),
     }
-    direct_live_escape_controls_attached = any(
-        value > 0.0 for value in direct_live_escape_controls.values()
-    )
-    direct_live_attached = (
-        float(segnet_direct_live_distillation_weight) > 0.0
-        or direct_live_escape_controls_attached
-    )
-    segnet_attached = (
-        float(segnet_distillation_weight) > 0.0 or direct_live_attached
-    )
+    direct_live_escape_controls_attached = any(value > 0.0 for value in direct_live_escape_controls.values())
+    direct_live_attached = float(segnet_direct_live_distillation_weight) > 0.0 or direct_live_escape_controls_attached
+    segnet_attached = float(segnet_distillation_weight) > 0.0 or direct_live_attached
     pose_direct_live_attached = float(pose_direct_live_distillation_weight) > 0.0
-    posenet_attached = (
-        float(pose_distillation_weight) > 0.0 or pose_direct_live_attached
-    )
+    posenet_attached = float(pose_distillation_weight) > 0.0 or pose_direct_live_attached
     if not segnet_attached:
         blockers.append("hi_nerv_real_segnet_teacher_missing")
     if not posenet_attached:
@@ -17278,17 +14656,10 @@ def _validate_hi_nerv_frontier_training_config(
     if allow_segnet_only_research and segnet_attached and not posenet_attached:
         blockers.append("hi_nerv_segnet_only_research_not_frontier_targeting")
     unscored_smoke = bool(allow_unscored_research_smoke)
-    segnet_only_research_allowed = bool(
-        allow_segnet_only_research and segnet_attached and not posenet_attached
-    )
-    base_launch_allowed = (
-        (segnet_attached and posenet_attached)
-        or segnet_only_research_allowed
-        or unscored_smoke
-    )
+    segnet_only_research_allowed = bool(allow_segnet_only_research and segnet_attached and not posenet_attached)
+    base_launch_allowed = (segnet_attached and posenet_attached) or segnet_only_research_allowed or unscored_smoke
     launch_allowed = bool(
-        base_launch_allowed
-        and not (direct_live_attached and not direct_live_escape_controls_attached)
+        base_launch_allowed and not (direct_live_attached and not direct_live_escape_controls_attached)
     )
     return {
         "schema": "compact_hi_nerv_score_aware_training_config_gate.v1",
@@ -17300,17 +14671,13 @@ def _validate_hi_nerv_frontier_training_config(
         "allow_unscored_research_smoke": unscored_smoke,
         "real_segnet_teacher_attached": segnet_attached,
         "segnet_distillation_weight": float(segnet_distillation_weight),
-        "segnet_direct_live_distillation_weight": float(
-            segnet_direct_live_distillation_weight
-        ),
+        "segnet_direct_live_distillation_weight": float(segnet_direct_live_distillation_weight),
         "direct_live_escape_controls_attached": direct_live_escape_controls_attached,
         "direct_live_escape_controls": direct_live_escape_controls,
         "direct_live_supporting_controls": direct_live_supporting_controls,
         "real_posenet_teacher_attached": posenet_attached,
         "pose_distillation_weight": float(pose_distillation_weight),
-        "pose_direct_live_distillation_weight": float(
-            pose_direct_live_distillation_weight
-        ),
+        "pose_direct_live_distillation_weight": float(pose_direct_live_distillation_weight),
         "pose_direct_live_attached": pose_direct_live_attached,
         "pose_supporting_controls": pose_supporting_controls,
         "modelsize_budget_receiver_closed_ready": bool(
@@ -17357,9 +14724,7 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
     convnext_blocks = bool(getattr(cfg, "use_convnext_blocks", False))
     official_hinerv_blockers: list[str] = []
     if not hierarchical_grid:
-        official_hinerv_blockers.append(
-            "hinerv_official_hierarchical_feature_grid_not_enabled"
-        )
+        official_hinerv_blockers.append("hinerv_official_hierarchical_feature_grid_not_enabled")
     if not convnext_blocks:
         official_hinerv_blockers.append("hinerv_official_convnext_blocks_not_enabled")
     pr95_better_blockers = [
@@ -17369,21 +14734,12 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
     official_hinerv_control = not official_hinerv_blockers
     source_parity_binding = _hi_nerv_source_parity_binding()
     source_parity_blockers = list(source_parity_binding.get("required_blockers") or [])
-    source_parity_attached = bool(
-        source_parity_binding.get("contract_attached")
-        and not source_parity_blockers
-    )
+    source_parity_attached = bool(source_parity_binding.get("contract_attached") and not source_parity_blockers)
     source_faithful = False
     if official_hinerv_control and pr95_better_blockers and source_parity_attached:
-        classification = (
-            "official_hinerv_control_candidate_source_parity_bound_"
-            "pr95_better_gaps"
-        )
+        classification = "official_hinerv_control_candidate_source_parity_bound_pr95_better_gaps"
     elif official_hinerv_control and pr95_better_blockers:
-        classification = (
-            "official_hinerv_control_candidate_source_parity_missing_"
-            "pr95_better_gaps"
-        )
+        classification = "official_hinerv_control_candidate_source_parity_missing_pr95_better_gaps"
     elif official_hinerv_control:
         classification = (
             "official_hinerv_control_candidate_source_parity_bound"
@@ -17437,9 +14793,7 @@ def _hi_nerv_source_parity_binding() -> dict[str, Any]:
         families=("hi_nerv",),
     )
     family_rows = [
-        row
-        for row in contract.get("family_rows") or ()
-        if isinstance(row, Mapping) and row.get("family") == "hi_nerv"
+        row for row in contract.get("family_rows") or () if isinstance(row, Mapping) and row.get("family") == "hi_nerv"
     ]
     family_row = family_rows[0] if family_rows else {}
     blockers = [
@@ -17456,13 +14810,9 @@ def _hi_nerv_source_parity_binding() -> dict[str, Any]:
         "contract_schema": contract.get("schema"),
         "contract_authority": contract.get("authority"),
         "contract_attached": contract.get("schema") == "nerv_source_parity_contract.v1",
-        "required_for_long_training_ready": bool(
-            contract.get("required_for_long_training_ready")
-        ),
+        "required_for_long_training_ready": bool(contract.get("required_for_long_training_ready")),
         "required_blockers": blockers,
-        "nonblocking_gaps": [
-            f"source_parity:{gap}" for gap in contract.get("nonblocking_gaps") or ()
-        ],
+        "nonblocking_gaps": [f"source_parity:{gap}" for gap in contract.get("nonblocking_gaps") or ()],
         "feature_statuses": feature_statuses,
         "score_claim": False,
         "frontier_score_claim": False,
@@ -17472,9 +14822,7 @@ def _hi_nerv_source_parity_binding() -> dict[str, Any]:
     }
 
 
-def _hi_nerv_source_faithfulness_metadata(
-    *, cfg: Any, decoder_codec: str
-) -> dict[str, Any]:
+def _hi_nerv_source_faithfulness_metadata(*, cfg: Any, decoder_codec: str) -> dict[str, Any]:
     """Return source-faithfulness facts safe for nested substrate metadata.
 
     ``_hi_nerv_source_faithfulness_report`` is also used as a top-level report
@@ -17536,9 +14884,7 @@ def _positive_int_from_controls(
                 f"{key} must be a positive integer; got {controls.get(key)!r}"
             ) from exc
         if value <= 0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"{key} must be a positive integer; got {value}"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"{key} must be a positive integer; got {value}")
         return value
     return int(default)
 
@@ -17552,18 +14898,12 @@ def _hi_nerv_section_metric_payload_from_telemetry(
     fallback_archive_bytes: int | None = None,
 ) -> dict[str, Any]:
     if str(telemetry.get("schema") or "") != "hinerv_archive_section_telemetry.v1":
-        raise CompactRendererMlxSpineRunnerError(
-            "live HiNeRV archive-section telemetry schema mismatch"
-        )
+        raise CompactRendererMlxSpineRunnerError("live HiNeRV archive-section telemetry schema mismatch")
     if telemetry.get("profile_ready") is not True:
-        raise CompactRendererMlxSpineRunnerError(
-            "live HiNeRV archive-section telemetry is not profile_ready"
-        )
+        raise CompactRendererMlxSpineRunnerError("live HiNeRV archive-section telemetry is not profile_ready")
     sections = telemetry.get("sections")
     if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
-        raise CompactRendererMlxSpineRunnerError(
-            "live HiNeRV archive-section telemetry is missing sections"
-        )
+        raise CompactRendererMlxSpineRunnerError("live HiNeRV archive-section telemetry is missing sections")
     section_bytes: dict[str, int] = {}
     for index, row in enumerate(sections):
         if not isinstance(row, Mapping):
@@ -17576,9 +14916,7 @@ def _hi_nerv_section_metric_payload_from_telemetry(
         if name and nbytes > 0:
             section_bytes[name] = nbytes
     if not section_bytes:
-        raise CompactRendererMlxSpineRunnerError(
-            "live HiNeRV archive-section telemetry has no positive-byte sections"
-        )
+        raise CompactRendererMlxSpineRunnerError("live HiNeRV archive-section telemetry has no positive-byte sections")
     archive_bytes = None
     for key in ("archive_zip_bytes", "inner_payload_bytes"):
         try:
@@ -17604,9 +14942,7 @@ def _hi_nerv_section_metric_payload_from_telemetry(
             "refresh_every_steps": int(refresh_every_steps),
         },
         "authority": "macos_mlx_research_signal_false_authority",
-        "blockers": [
-            "live_metrics_are_inner_hiv1_packet_bytes_until_export_zip_replay"
-        ],
+        "blockers": ["live_metrics_are_inner_hiv1_packet_bytes_until_export_zip_replay"],
     }
 
 
@@ -17643,8 +14979,7 @@ def _hi_nerv_startup_archive_section_telemetry_from_model(
         exported_state_dict = export_state_dict()
         if not isinstance(exported_state_dict, Mapping):
             raise CompactRendererMlxSpineRunnerError(
-                "HiNeRV startup export_state_dict returned "
-                f"{type(exported_state_dict).__name__}, expected Mapping"
+                f"HiNeRV startup export_state_dict returned {type(exported_state_dict).__name__}, expected Mapping"
             )
         from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
         from tac.substrates.hi_nerv.archive_candidate import (
@@ -17663,8 +14998,7 @@ def _hi_nerv_startup_archive_section_telemetry_from_model(
         telemetry = build_archive_section_telemetry(packet_bytes)
         if not isinstance(telemetry, Mapping):
             raise CompactRendererMlxSpineRunnerError(
-                "build_archive_section_telemetry returned "
-                f"{type(telemetry).__name__}, expected Mapping"
+                f"build_archive_section_telemetry returned {type(telemetry).__name__}, expected Mapping"
             )
         sections = telemetry.get("sections")
         metadata.update(
@@ -17679,24 +15013,16 @@ def _hi_nerv_startup_archive_section_telemetry_from_model(
                 "inner_payload_bytes": telemetry.get("inner_payload_bytes"),
                 "section_payload_bytes": telemetry.get("section_payload_bytes"),
                 "section_count": (
-                    len(sections)
-                    if isinstance(sections, Sequence)
-                    and not isinstance(sections, (str, bytes))
-                    else 0
+                    len(sections) if isinstance(sections, Sequence) and not isinstance(sections, (str, bytes)) else 0
                 ),
             }
         )
         if not metadata["validated"]:
-            metadata["blockers"] = [
-                "hi_nerv_startup_archive_section_telemetry_not_profile_ready"
-            ]
+            metadata["blockers"] = ["hi_nerv_startup_archive_section_telemetry_not_profile_ready"]
             return dict(telemetry), metadata
         return dict(telemetry), metadata
     except Exception as exc:
-        metadata["blockers"] = [
-            "hi_nerv_startup_archive_section_telemetry_failed:"
-            f"{type(exc).__name__}:{exc}"
-        ]
+        metadata["blockers"] = [f"hi_nerv_startup_archive_section_telemetry_failed:{type(exc).__name__}:{exc}"]
         return None, metadata
 
 
@@ -17722,9 +15048,7 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
     """
 
     static_payload_obj = train_time_section_byte_control.get("metrics_payload")
-    static_payload = (
-        dict(static_payload_obj) if isinstance(static_payload_obj, Mapping) else None
-    )
+    static_payload = dict(static_payload_obj) if isinstance(static_payload_obj, Mapping) else None
     refresh_every = _positive_int_from_controls(
         optimizer_controls,
         keys=(
@@ -17744,22 +15068,16 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
         "uses_current_export_state_dict": True,
         "writes_artifacts": False,
         "source": "in_memory_pack_archive_from_current_mlx_state",
-        "fallback_source": (
-            "startup_archive_section_telemetry"
-            if static_payload is not None
-            else None
-        ),
+        "fallback_source": ("startup_archive_section_telemetry" if static_payload is not None else None),
         "fallback_static_archive_bytes": (
-            static_payload.get("archive_bytes")
-            if isinstance(static_payload, Mapping)
-            else None
+            static_payload.get("archive_bytes") if isinstance(static_payload, Mapping) else None
         ),
         "refresh_call_count": 0,
         "successful_refresh_count": 0,
         "fallback_count": 0,
-        "blockers": [] if static_payload is not None else [
-            "hi_nerv_live_section_byte_callback_requires_startup_metrics_payload"
-        ],
+        "blockers": []
+        if static_payload is not None
+        else ["hi_nerv_live_section_byte_callback_requires_startup_metrics_payload"],
         "authority": "macos_mlx_research_signal_false_authority",
     }
     if static_payload is None:
@@ -17783,9 +15101,7 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
             payload = dict(static_payload)
             payload["source"] = "startup_archive_section_telemetry_fallback"
         payload["schema"] = "hi_nerv_train_time_section_byte_metrics_fallback.v1"
-        payload["blockers"] = _dedupe(
-            [*list(payload.get("blockers") or []), str(blocker)]
-        )
+        payload["blockers"] = _dedupe([*list(payload.get("blockers") or []), str(blocker)])
         payload["authority"] = "macos_mlx_research_signal_false_authority"
         return payload
 
@@ -17796,10 +15112,7 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
     ) -> Mapping[str, Any] | None:
         state["call_count"] = int(state.get("call_count") or 0) + 1
         call_count = int(state["call_count"])
-        should_refresh = (
-            state.get("last_payload") is None
-            or (call_count - 1) % int(refresh_every) == 0
-        )
+        should_refresh = state.get("last_payload") is None or (call_count - 1) % int(refresh_every) == 0
         if not should_refresh and isinstance(state.get("last_payload"), Mapping):
             payload = dict(state["last_payload"])
             live_profile = dict(payload.get("live_profile") or {})
@@ -17814,8 +15127,7 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
             exported_state_dict = export_state_dict()
             if not isinstance(exported_state_dict, Mapping):
                 raise CompactRendererMlxSpineRunnerError(
-                    "HiNeRV export_state_dict returned "
-                    f"{type(exported_state_dict).__name__}, expected Mapping"
+                    f"HiNeRV export_state_dict returned {type(exported_state_dict).__name__}, expected Mapping"
                 )
             from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
             from tac.substrates.hi_nerv.archive_candidate import (
@@ -17834,8 +15146,7 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
             telemetry = build_archive_section_telemetry(packet_bytes)
             if not isinstance(telemetry, Mapping):
                 raise CompactRendererMlxSpineRunnerError(
-                    "build_archive_section_telemetry returned "
-                    f"{type(telemetry).__name__}, expected Mapping"
+                    f"build_archive_section_telemetry returned {type(telemetry).__name__}, expected Mapping"
                 )
             payload = _hi_nerv_section_metric_payload_from_telemetry(
                 telemetry,
@@ -17845,15 +15156,10 @@ def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
                 fallback_archive_bytes=static_payload.get("archive_bytes"),
             )
         except Exception as exc:
-            return _fallback_payload(
-                "hi_nerv_live_section_byte_refresh_failed:"
-                f"{type(exc).__name__}:{exc}"
-            )
+            return _fallback_payload(f"hi_nerv_live_section_byte_refresh_failed:{type(exc).__name__}:{exc}")
         state["last_payload"] = dict(payload)
         metadata["refresh_call_count"] = call_count
-        metadata["successful_refresh_count"] = (
-            int(metadata.get("successful_refresh_count") or 0) + 1
-        )
+        metadata["successful_refresh_count"] = int(metadata.get("successful_refresh_count") or 0) + 1
         metadata["last_live_archive_bytes"] = int(payload["archive_bytes"])
         metadata["last_live_section_bytes"] = dict(payload["section_bytes"])
         metadata["last_refresh_call"] = call_count
@@ -17889,6 +15195,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     pose_direct_live_distillation_weight: float = 0.0,
+    pose_trust_required: bool = False,
     pose_distillation_loss: str,
     pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
@@ -18058,22 +15365,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
     except HardPairIndicesError as exc:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
-    sparse_priority_target_hydration = bool(
-        prioritized_pair_indices and sparse_prioritized_target_hydration
-    )
+    sparse_priority_target_hydration = bool(prioritized_pair_indices and sparse_prioritized_target_hydration)
     scorer_error_pair_sampling_weights = {
-        int(pair): float(weight)
-        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+        int(pair): float(weight) for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
     }
     scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     hydrated_source_pair_indices = (
-        tuple(int(value) for value in prioritized_pair_indices)
-        if sparse_priority_target_hydration
-        else ()
+        tuple(int(value) for value in prioritized_pair_indices) if sparse_priority_target_hydration else ()
     )
-    hydrated_target_pair_count = (
-        len(hydrated_source_pair_indices) if sparse_priority_target_hydration else pairs
-    )
+    hydrated_target_pair_count = len(hydrated_source_pair_indices) if sparse_priority_target_hydration else pairs
     priority_hydration_contract = _hi_nerv_priority_target_hydration_contract(
         prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         model_num_pairs=pairs,
@@ -18106,39 +15406,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         build_learnable_student_head,
     )
 
-    requested_distillation_device = str(
-        requested_distillation_device or distillation_device
-    )
-    resolved_distillation_device = _resolve_torch_scorer_device_alias(
-        str(distillation_device)
-    )
+    requested_distillation_device = str(requested_distillation_device or distillation_device)
+    resolved_distillation_device = _resolve_torch_scorer_device_alias(str(distillation_device))
     effective_prefilter_scorer_device = _resolve_mlx_prefilter_scorer_device_alias(
         mlx_prefilter_scorer_device,
         fallback_device=requested_distillation_device,
     )
     if segnet_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_distillation_weight must be >= 0")
     if pose_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_weight must be >= 0")
     if str(pose_distillation_loss) not in {"mse", "huber"}:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_loss must be one of ['mse', 'huber']"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_loss must be one of ['mse', 'huber']")
     if float(pose_distillation_huber_delta) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_huber_delta must be > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_huber_delta must be > 0")
     if (
         not math.isfinite(float(segnet_direct_live_class_histogram_weight))
         or float(segnet_direct_live_class_histogram_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_histogram_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_histogram_weight must be finite and >= 0")
     if (
         not math.isfinite(float(segnet_direct_live_class_balanced_hinge_weight))
         or float(segnet_direct_live_class_balanced_hinge_weight) < 0.0
@@ -18150,38 +15436,29 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         not math.isfinite(float(segnet_direct_live_class_balanced_ce_weight))
         or float(segnet_direct_live_class_balanced_ce_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_balanced_ce_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_balanced_ce_weight must be finite and >= 0")
     if (
         not math.isfinite(float(segnet_direct_live_class_balanced_squared_hinge_weight))
         or float(segnet_direct_live_class_balanced_squared_hinge_weight) < 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_balanced_squared_hinge_weight must be "
-            "finite and >= 0"
+            "segnet_direct_live_class_balanced_squared_hinge_weight must be finite and >= 0"
         )
     if (
         not math.isfinite(float(segnet_direct_live_class_region_recon_weight))
         or float(segnet_direct_live_class_region_recon_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_class_region_recon_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_class_region_recon_weight must be finite and >= 0")
     if (
         not math.isfinite(float(segnet_direct_live_rare_class_logit_weight))
         or float(segnet_direct_live_rare_class_logit_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_rare_class_logit_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_rare_class_logit_weight must be finite and >= 0")
     if (
         not math.isfinite(float(segnet_direct_live_target_mass_floor_weight))
         or float(segnet_direct_live_target_mass_floor_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_target_mass_floor_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_target_mass_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(segnet_direct_live_target_min_ratio_floor_weight))
         or float(segnet_direct_live_target_min_ratio_floor_weight) < 0.0
@@ -18189,13 +15466,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "segnet_direct_live_target_min_ratio_floor_weight must be finite and >= 0"
         )
-    if (
-        not math.isfinite(float(scorer_input_contrast_floor_weight))
-        or float(scorer_input_contrast_floor_weight) < 0.0
-    ):
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_contrast_floor_weight must be finite and >= 0"
-        )
+    if not math.isfinite(float(scorer_input_contrast_floor_weight)) or float(scorer_input_contrast_floor_weight) < 0.0:
+        raise CompactRendererMlxSpineRunnerError("scorer_input_contrast_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(scorer_input_contrast_floor_segnet_min_std_ratio))
         or float(scorer_input_contrast_floor_segnet_min_std_ratio) <= 0.0
@@ -18208,65 +15480,41 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         or float(scorer_input_contrast_floor_posenet_yuv6_min_std_ratio) <= 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be "
-            "finite and > 0"
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be finite and > 0"
         )
-    if (
-        not math.isfinite(float(scorer_input_shape_tether_weight))
-        or float(scorer_input_shape_tether_weight) < 0.0
-    ):
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_shape_tether_weight must be finite and >= 0"
-        )
+    if not math.isfinite(float(scorer_input_shape_tether_weight)) or float(scorer_input_shape_tether_weight) < 0.0:
+        raise CompactRendererMlxSpineRunnerError("scorer_input_shape_tether_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_yuv6_geometry_tether_weight))
         or float(posenet_yuv6_geometry_tether_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_yuv6_geometry_tether_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_yuv6_geometry_tether_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_floor_weight))
         or float(posenet_temporal_signal_floor_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_floor_weight must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_floor_weight must be finite and >= 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_min_std_ratio))
         or float(posenet_temporal_signal_min_std_ratio) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_min_std_ratio must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_min_std_ratio must be finite and > 0")
     if (
         not math.isfinite(float(posenet_temporal_signal_min_mean_abs_ratio))
         or float(posenet_temporal_signal_min_mean_abs_ratio) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "posenet_temporal_signal_min_mean_abs_ratio must be finite and > 0"
-        )
-    if (
-        bias_gradient_multiplier is not None
-        and (
-            not math.isfinite(float(bias_gradient_multiplier))
-            or float(bias_gradient_multiplier) < 0.0
-        )
+        raise CompactRendererMlxSpineRunnerError("posenet_temporal_signal_min_mean_abs_ratio must be finite and > 0")
+    if bias_gradient_multiplier is not None and (
+        not math.isfinite(float(bias_gradient_multiplier)) or float(bias_gradient_multiplier) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "bias_gradient_multiplier must be None or finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("bias_gradient_multiplier must be None or finite and >= 0")
     if (
         not math.isfinite(float(output_head_bias_gradient_multiplier))
         or float(output_head_bias_gradient_multiplier) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "output_head_bias_gradient_multiplier must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("output_head_bias_gradient_multiplier must be finite and >= 0")
     if int(output_head_target_contrast_init_max_pairs) <= 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "output_head_target_contrast_init_max_pairs must be positive"
-        )
+        raise CompactRendererMlxSpineRunnerError("output_head_target_contrast_init_max_pairs must be positive")
     if (
         not math.isfinite(float(output_head_target_contrast_init_min_output_std))
         or float(output_head_target_contrast_init_min_output_std) <= 0.0
@@ -18278,31 +15526,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         not math.isfinite(float(output_head_target_contrast_init_max_gain))
         or float(output_head_target_contrast_init_max_gain) < 1.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "output_head_target_contrast_init_max_gain must be finite and >= 1"
-        )
+        raise CompactRendererMlxSpineRunnerError("output_head_target_contrast_init_max_gain must be finite and >= 1")
     if (
         not math.isfinite(float(segnet_direct_live_escape_class_multiplier))
         or float(segnet_direct_live_escape_class_multiplier) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_escape_class_multiplier must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_escape_class_multiplier must be finite and > 0")
     if int(scorer_domain_bootstrap_steps) < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_domain_bootstrap_steps must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_domain_bootstrap_steps must be >= 0")
     if int(scorer_domain_bootstrap_max_pairs) <= 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_domain_bootstrap_max_pairs must be positive"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_domain_bootstrap_max_pairs must be positive")
     if (
         not math.isfinite(float(scorer_domain_bootstrap_learning_rate))
         or float(scorer_domain_bootstrap_learning_rate) <= 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_domain_bootstrap_learning_rate must be finite and > 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_domain_bootstrap_learning_rate must be finite and > 0")
     for name, value in (
         ("scorer_domain_bootstrap_rgb_weight", scorer_domain_bootstrap_rgb_weight),
         ("scorer_domain_bootstrap_yuv6_weight", scorer_domain_bootstrap_yuv6_weight),
@@ -18336,26 +15574,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
     ):
         if not math.isfinite(float(value)) or float(value) < 0.0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be finite and non-negative"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be finite and non-negative")
     if (
-        not math.isfinite(
-            float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor)
-        )
+        not math.isfinite(float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor))
         or float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor) < 0.0
         or float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor) > 1.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor "
-            "must be finite and in [0, 1]"
+            "scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor must be finite and in [0, 1]"
         )
-    if (
-        scorer_domain_bootstrap_grad_clip_max_norm is not None
-        and (
-            not math.isfinite(float(scorer_domain_bootstrap_grad_clip_max_norm))
-            or float(scorer_domain_bootstrap_grad_clip_max_norm) <= 0.0
-        )
+    if scorer_domain_bootstrap_grad_clip_max_norm is not None and (
+        not math.isfinite(float(scorer_domain_bootstrap_grad_clip_max_norm))
+        or float(scorer_domain_bootstrap_grad_clip_max_norm) <= 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
             "scorer_domain_bootstrap_grad_clip_max_norm must be None or finite and > 0"
@@ -18372,8 +15602,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         <= 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "enabled scorer-domain bootstrap requires at least one positive "
-            "RGB/YUV6 loss weight"
+            "enabled scorer-domain bootstrap requires at least one positive RGB/YUV6 loss weight"
         )
     for name, value in (
         (
@@ -18385,36 +15614,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             scorer_space_step_guard_min_post_segnet_occupied_class_fraction,
         ),
     ):
-        if (
-            not math.isfinite(float(value))
-            or float(value) < 0.0
-            or float(value) > 1.0
-        ):
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be finite and in [0, 1]"
-            )
-    if (
-        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-        is not None
-        and (
-            not math.isfinite(
-                float(
-                    scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                )
-            )
-            or float(
-                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            )
-            < 0.0
-            or float(
-                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            )
-            > 1.0
-        )
+        if not math.isfinite(float(value)) or float(value) < 0.0 or float(value) > 1.0:
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be finite and in [0, 1]")
+    if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is not None and (
+        not math.isfinite(float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction))
+        or float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction) < 0.0
+        or float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction) > 1.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction "
-            "must be None or finite in [0, 1]"
+            "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction must be None or finite in [0, 1]"
         )
     for name, value in (
         (
@@ -18429,21 +15637,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         if value is None:
             continue
         if not math.isfinite(float(value)) or float(value) < 0.0 or float(value) > 1.0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be None or finite in [0, 1]"
-            )
-    if (
-        scorer_space_step_guard_max_post_segnet_contrast_ratio is not None
-        and (
-            not math.isfinite(
-                float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
-            )
-            or float(scorer_space_step_guard_max_post_segnet_contrast_ratio) <= 0.0
-        )
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be None or finite in [0, 1]")
+    if scorer_space_step_guard_max_post_segnet_contrast_ratio is not None and (
+        not math.isfinite(float(scorer_space_step_guard_max_post_segnet_contrast_ratio))
+        or float(scorer_space_step_guard_max_post_segnet_contrast_ratio) <= 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_space_step_guard_max_post_segnet_contrast_ratio must be "
-            "None or finite and > 0"
+            "scorer_space_step_guard_max_post_segnet_contrast_ratio must be None or finite and > 0"
         )
     for name, value in (
         (
@@ -18459,27 +15659,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio,
         ),
     ):
-        if value is not None and (
-            not math.isfinite(float(value)) or float(value) <= 0.0
-        ):
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be None or finite and > 0"
-            )
-    if (
-        scorer_space_step_guard_max_post_segnet_argmax_disagreement is not None
-        and (
-            not math.isfinite(
-                float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
-            )
-            or float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
-            < 0.0
-            or float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
-            > 1.0
-        )
+        if value is not None and (not math.isfinite(float(value)) or float(value) <= 0.0):
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be None or finite and > 0")
+    if scorer_space_step_guard_max_post_segnet_argmax_disagreement is not None and (
+        not math.isfinite(float(scorer_space_step_guard_max_post_segnet_argmax_disagreement))
+        or float(scorer_space_step_guard_max_post_segnet_argmax_disagreement) < 0.0
+        or float(scorer_space_step_guard_max_post_segnet_argmax_disagreement) > 1.0
     ):
         raise CompactRendererMlxSpineRunnerError(
-            "scorer_space_step_guard_max_post_segnet_argmax_disagreement must "
-            "be None or finite in [0, 1]"
+            "scorer_space_step_guard_max_post_segnet_argmax_disagreement must be None or finite in [0, 1]"
         )
     for name, value in (
         (
@@ -18491,12 +15679,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             scorer_space_step_guard_max_post_pose_direct_live_score_term,
         ),
     ):
-        if value is not None and (
-            not math.isfinite(float(value)) or float(value) <= 0.0
-        ):
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be None or finite and > 0"
-            )
+        if value is not None and (not math.isfinite(float(value)) or float(value) <= 0.0):
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be None or finite and > 0")
     for name, value in (
         (
             "scorer_space_step_guard_max_pose_score_term_relative_worsening",
@@ -18523,16 +15707,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening,
         ),
     ):
-        if value is not None and (
-            not math.isfinite(float(value)) or float(value) < 0.0
-        ):
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be None or finite and >= 0"
-            )
+        if value is not None and (not math.isfinite(float(value)) or float(value) < 0.0):
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be None or finite and >= 0")
     if int(scorer_space_step_guard_backtracking_steps) < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_space_step_guard_backtracking_steps must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_space_step_guard_backtracking_steps must be >= 0")
     if (
         not math.isfinite(float(scorer_space_step_guard_backtracking_shrink))
         or float(scorer_space_step_guard_backtracking_shrink) <= 0.0
@@ -18542,17 +15720,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "scorer_space_step_guard_backtracking_shrink must be finite and in (0, 1)"
         )
     if int(scorer_support_ladder_patience_steps) < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_support_ladder_patience_steps must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("scorer_support_ladder_patience_steps must be >= 0")
     for name, value in (
         ("scorer_support_ladder_growth_factor", scorer_support_ladder_growth_factor),
         ("scorer_support_ladder_max_multiplier", scorer_support_ladder_max_multiplier),
     ):
         if not math.isfinite(float(value)) or float(value) <= 0.0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"{name} must be finite and > 0"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"{name} must be finite and > 0")
     if (
         not math.isfinite(float(scorer_support_ladder_base_loss_max_when_active))
         or float(scorer_support_ladder_base_loss_max_when_active) < 0.0
@@ -18564,18 +15738,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         not math.isfinite(float(segnet_direct_live_base_loss_weight))
         or float(segnet_direct_live_base_loss_weight) < 0.0
     ):
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_base_loss_weight must be finite and >= 0"
-        )
-    explicit_gradient_multiplier_by_name = _normalize_gradient_multiplier_by_name(
-        gradient_multiplier_by_name
-    )
+        raise CompactRendererMlxSpineRunnerError("segnet_direct_live_base_loss_weight must be finite and >= 0")
+    explicit_gradient_multiplier_by_name = _normalize_gradient_multiplier_by_name(gradient_multiplier_by_name)
     (
         waterfill_gradient_multiplier_by_name,
         decoder_weight_waterfill_gradient_policy,
-    ) = _decoder_weight_waterfill_gradient_multiplier_by_name(
-        decoder_weight_waterfill_plan
-    )
+    ) = _decoder_weight_waterfill_gradient_multiplier_by_name(decoder_weight_waterfill_plan)
     (
         normalized_gradient_multiplier_by_name,
         decoder_weight_waterfill_gradient_policy,
@@ -18595,9 +15763,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             else float(scorer_input_contrast_floor_stage_weight)
         ),
         scorer_input_shape_tether=(
-            None
-            if scorer_input_shape_tether_stage_weight is None
-            else float(scorer_input_shape_tether_stage_weight)
+            None if scorer_input_shape_tether_stage_weight is None else float(scorer_input_shape_tether_stage_weight)
         ),
         posenet_yuv6_geometry_tether=(
             None
@@ -18610,49 +15776,31 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             else float(posenet_temporal_signal_floor_stage_weight)
         ),
         segnet_direct_live=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_histogram=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_hinge=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_ce=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_balanced_squared_hinge=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_class_region_recon=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_rare_class_logit=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_target_mass_floor=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
         segnet_direct_live_target_min_ratio_floor=(
-            None
-            if segnet_direct_live_stage_weight is None
-            else float(segnet_direct_live_stage_weight)
+            None if segnet_direct_live_stage_weight is None else float(segnet_direct_live_stage_weight)
         ),
     )
     curriculum_stages = _compact_scoreaware_curriculum_stages(
@@ -18661,12 +15809,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         loss_weights=stage_weights,
         pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
         scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
-        segnet_direct_live_escape_warmup_epochs=int(
-            segnet_direct_live_escape_warmup_epochs
-        ),
-        segnet_direct_live_escape_class_multiplier=float(
-            segnet_direct_live_escape_class_multiplier
-        ),
+        segnet_direct_live_escape_warmup_epochs=int(segnet_direct_live_escape_warmup_epochs),
+        segnet_direct_live_escape_class_multiplier=float(segnet_direct_live_escape_class_multiplier),
     )
     curriculum_stage_summary = [
         {
@@ -18674,8 +15818,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "start_epoch": int(getattr(stage, "start_epoch", 0)),
             "end_epoch": int(getattr(stage, "end_epoch", 0)),
             "loss_weights": {
-                str(key): float(value)
-                for key, value in dict(getattr(stage, "loss_weights", {}) or {}).items()
+                str(key): float(value) for key, value in dict(getattr(stage, "loss_weights", {}) or {}).items()
             },
         }
         for stage in curriculum_stages
@@ -18725,15 +15868,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     if recon_pixel_weight_path is not None and auto_segnet_boundary_recon_weight:
         raise CompactRendererMlxSpineRunnerError(
-            "pass either --recon-pixel-weight-path or "
-            "--auto-segnet-boundary-recon-weight, not both"
+            "pass either --recon-pixel-weight-path or --auto-segnet-boundary-recon-weight, not both"
         )
     candidate_for_config = dict(modelsize_candidate or {})
     if candidate_for_config:
         if hard_byte_ceiling is None:
-            candidate_hard_byte_ceiling = int(
-                candidate_for_config.get("hard_byte_ceiling") or 0
-            )
+            candidate_hard_byte_ceiling = int(candidate_for_config.get("hard_byte_ceiling") or 0)
             if candidate_hard_byte_ceiling <= 0:
                 raise CompactRendererMlxSpineRunnerError(
                     "HiNeRV modelsize candidate hard_byte_ceiling must be positive"
@@ -18773,13 +15913,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "mid_injection_block_index": int(cfg.mid_injection_block_index),
             "fine_injection_block_index": int(cfg.fine_injection_block_index),
         }
-        mismatches = [
-            key for key, value in expected.items() if observed.get(key) != value
-        ]
+        mismatches = [key for key, value in expected.items() if observed.get(key) != value]
         if mismatches:
             raise CompactRendererMlxSpineRunnerError(
-                "HiNeRV modelsize candidate and launch knobs diverged for "
-                + ", ".join(mismatches)
+                "HiNeRV modelsize candidate and launch knobs diverged for " + ", ".join(mismatches)
             )
         cfg = replace(cfg, init_seed=int(random_seed))
     else:
@@ -18813,14 +15950,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         num_pairs=hydrated_target_pair_count,
         output_height=int(cfg.output_height),
         output_width=int(cfg.output_width),
-        pair_indices=(
-            hydrated_source_pair_indices
-            if sparse_priority_target_hydration
-            else None
-        ),
+        pair_indices=(hydrated_source_pair_indices if sparse_priority_target_hydration else None),
     )
     model = HinervSubstrateMLX(cfg)
     bootstrap_scorer_teacher = None
+    bootstrap_pose_scorer_teacher = None
     if bool(output_head_target_bias_init):
         output_head_target_bias_init_payload = dict(
             model.initialize_output_head_bias_from_targets(
@@ -18858,9 +15992,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     [int(value) for value in hydrated_source_pair_indices[:contrast_count]],
                     dtype=mx.int32,
                 )
-                contrast_pair_index_semantics = (
-                    "local_target_rows_to_source_pair_indices"
-                )
+                contrast_pair_index_semantics = "local_target_rows_to_source_pair_indices"
             else:
                 contrast_pair_indices = mx.arange(contrast_count, dtype=mx.int32)
                 contrast_pair_index_semantics = "identity_local_rows_are_source_pairs"
@@ -18869,16 +16001,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     target_rgb_0[:contrast_count],
                     target_rgb_1[:contrast_count],
                     pair_indices=contrast_pair_indices,
-                    min_output_std=float(
-                        output_head_target_contrast_init_min_output_std
-                    ),
+                    min_output_std=float(output_head_target_contrast_init_min_output_std),
                     max_gain=float(output_head_target_contrast_init_max_gain),
                 )
             )
             contrast_payload["pair_index_semantics"] = contrast_pair_index_semantics
-            contrast_payload["max_pairs"] = int(
-                output_head_target_contrast_init_max_pairs
-            )
+            contrast_payload["max_pairs"] = int(output_head_target_contrast_init_max_pairs)
             output_head_target_bias_init_payload["contrast_init"] = contrast_payload
             output_head_target_bias_init_payload["archive_charged_decoder_tensors"] = sorted(
                 {
@@ -19005,8 +16133,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "pair_index_semantics": bootstrap_pair_index_semantics,
                     "teacher_frame_index": 1,
                     "teacher_cache_reusable_for_training": bool(
-                        int(getattr(bootstrap_scorer_teacher, "frame_count", -1))
-                        == int(hydrated_target_pair_count)
+                        int(getattr(bootstrap_scorer_teacher, "frame_count", -1)) == int(hydrated_target_pair_count)
                     ),
                     "upstream_segnet_safetensors_sha256": getattr(
                         bootstrap_scorer_teacher,
@@ -19023,26 +16150,53 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "schema": "hi_nerv_bootstrap_exact_segnet_target_argmax.v1",
                     "enabled": False,
                     "reason": "segnet_teacher_argmax_provider_missing",
-                    "blockers": [
-                        "hi_nerv_bootstrap_exact_segnet_target_argmax_missing"
-                    ],
+                    "blockers": ["hi_nerv_bootstrap_exact_segnet_target_argmax_missing"],
                     "runtime_sidecar_bytes": 0,
                     "archive_charged_decoder_tensors": [],
                     "authority": "macos_mlx_research_signal_false_authority",
                     "dispatch_attempted": False,
                 }
-        requested_segnet_margin_bootstrap_weight = float(
-            scorer_domain_bootstrap_segnet_margin_weight
-        )
-        requested_segnet_hard_birth_bootstrap_weight = float(
-            scorer_domain_bootstrap_segnet_hard_birth_weight
-        )
+        bootstrap_pose_teacher_metadata: dict[str, Any] = {
+            "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
+            "enabled": False,
+            "reason": "pose_direct_live_distillation_not_requested",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "authority": "macos_mlx_research_signal_false_authority",
+            "dispatch_attempted": False,
+        }
+        if float(pose_direct_live_distillation_weight) > 0.0:
+            bootstrap_pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+                SimpleNamespace(
+                    target_rgb_0=target_rgb_0[:bootstrap_count],
+                    target_rgb_1=target_rgb_1[:bootstrap_count],
+                ),
+                upstream_dir=scorer_upstream_dir,
+                device=resolved_distillation_device,
+            )
+            bootstrap_pose_teacher_metadata = {
+                "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
+                "enabled": True,
+                "source": "real_mlx_posenet_teacher_cache",
+                "pair_count": int(bootstrap_count),
+                "pair_index_semantics": bootstrap_pair_index_semantics,
+                "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
+                "pose_dims": int(getattr(bootstrap_pose_scorer_teacher, "pose_dims", 0)),
+                "upstream_posenet_safetensors_sha256": getattr(
+                    bootstrap_pose_scorer_teacher,
+                    "upstream_posenet_safetensors_sha256",
+                    None,
+                ),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+                "authority": "macos_mlx_research_signal_false_authority",
+                "dispatch_attempted": False,
+            }
+        requested_segnet_margin_bootstrap_weight = float(scorer_domain_bootstrap_segnet_margin_weight)
+        requested_segnet_hard_birth_bootstrap_weight = float(scorer_domain_bootstrap_segnet_hard_birth_weight)
         if (
             requested_segnet_hard_birth_bootstrap_weight > 0.0
-            and (
-                bootstrap_scorer_teacher is None
-                or target_segnet_argmax_1 is None
-            )
+            and (bootstrap_scorer_teacher is None or target_segnet_argmax_1 is None)
             and not bool(allow_unscored_research_smoke)
         ):
             raise CompactRendererMlxSpineRunnerError(
@@ -19054,16 +16208,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "teacherless trace"
             )
         effective_segnet_margin_bootstrap_weight = (
-            requested_segnet_margin_bootstrap_weight
-            if bootstrap_scorer_teacher is not None
-            else 0.0
+            requested_segnet_margin_bootstrap_weight if bootstrap_scorer_teacher is not None else 0.0
         )
         effective_segnet_hard_birth_bootstrap_weight = (
             requested_segnet_hard_birth_bootstrap_weight
-            if (
-                bootstrap_scorer_teacher is not None
-                and target_segnet_argmax_1 is not None
-            )
+            if (bootstrap_scorer_teacher is not None and target_segnet_argmax_1 is not None)
             else 0.0
         )
         bootstrap_payload = dict(
@@ -19074,52 +16223,34 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 target_segnet_argmax_1=target_segnet_argmax_1,
                 scorer_teacher=bootstrap_scorer_teacher,
                 segnet_margin_bootstrap_weight=effective_segnet_margin_bootstrap_weight,
-                segnet_hard_birth_bootstrap_weight=(
-                    effective_segnet_hard_birth_bootstrap_weight
-                ),
+                segnet_hard_birth_bootstrap_weight=(effective_segnet_hard_birth_bootstrap_weight),
                 segnet_hard_birth_bootstrap_min_ratio_floor=(
-                    float(
-                        scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
-                    )
+                    float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor)
                 ),
                 steps=int(scorer_domain_bootstrap_steps),
                 learning_rate=float(scorer_domain_bootstrap_learning_rate),
                 rgb_weight=float(scorer_domain_bootstrap_rgb_weight),
                 yuv6_weight=float(scorer_domain_bootstrap_yuv6_weight),
                 temporal_delta_weight=float(scorer_domain_bootstrap_temporal_delta_weight),
-                contrast_floor_weight=float(
-                    scorer_domain_bootstrap_contrast_floor_weight
-                ),
+                contrast_floor_weight=float(scorer_domain_bootstrap_contrast_floor_weight),
                 rgb_std_min_ratio=float(scorer_domain_bootstrap_rgb_std_min_ratio),
-                yuv6_temporal_std_min_ratio=float(
-                    scorer_domain_bootstrap_yuv6_temporal_std_min_ratio
-                ),
+                yuv6_temporal_std_min_ratio=float(scorer_domain_bootstrap_yuv6_temporal_std_min_ratio),
                 weight_decay=float(scorer_domain_bootstrap_weight_decay),
                 grad_clip_max_norm=scorer_domain_bootstrap_grad_clip_max_norm,
-                pair_local_smoke_artifact_dir=(
-                    output_dir / "hi_nerv_pair_local_actuator_smoke"
-                ),
+                pair_local_smoke_artifact_dir=(output_dir / "hi_nerv_pair_local_actuator_smoke"),
             )
         )
-        bootstrap_blockers = [
-            str(value) for value in bootstrap_payload.get("blockers") or []
-        ]
+        bootstrap_blockers = [str(value) for value in bootstrap_payload.get("blockers") or []]
         margin_request_consumed = bool(
-            requested_segnet_margin_bootstrap_weight <= 0.0
-            or effective_segnet_margin_bootstrap_weight > 0.0
+            requested_segnet_margin_bootstrap_weight <= 0.0 or effective_segnet_margin_bootstrap_weight > 0.0
         )
         hard_birth_request_consumed = bool(
-            requested_segnet_hard_birth_bootstrap_weight <= 0.0
-            or effective_segnet_hard_birth_bootstrap_weight > 0.0
+            requested_segnet_hard_birth_bootstrap_weight <= 0.0 or effective_segnet_hard_birth_bootstrap_weight > 0.0
         )
         if not margin_request_consumed:
-            bootstrap_blockers.append(
-                "hi_nerv_scorer_domain_margin_requested_but_segnet_teacher_missing"
-            )
+            bootstrap_blockers.append("hi_nerv_scorer_domain_margin_requested_but_segnet_teacher_missing")
         if not hard_birth_request_consumed:
-            bootstrap_blockers.append(
-                "hi_nerv_scorer_domain_hard_birth_requested_but_segnet_teacher_missing"
-            )
+            bootstrap_blockers.append("hi_nerv_scorer_domain_hard_birth_requested_but_segnet_teacher_missing")
         target_region_birth_payload: dict[str, Any] = {
             "schema": "hi_nerv_target_region_birth.v1",
             "enabled": False,
@@ -19153,12 +16284,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             pair_indices=bootstrap_pair_indices,
                             target_segnet_argmax_1=target_segnet_argmax_1,
                             max_steps=max(8, int(scorer_domain_bootstrap_steps) * 4),
-                            learning_rate=float(
-                                scorer_domain_bootstrap_learning_rate
-                            ),
-                            target_min_region_ratio=float(
-                                scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
-                            ),
+                            learning_rate=float(scorer_domain_bootstrap_learning_rate),
+                            target_min_region_ratio=float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor),
+                            pose_teacher=bootstrap_pose_scorer_teacher,
+                            require_pose_trust=bool(pose_trust_required),
                             grad_clip_max_norm=None,
                         )
                     )
@@ -19166,9 +16295,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     target_region_birth_payload = {
                         **target_region_birth_payload,
                         "reason": "target_region_birth_actuator_failed",
-                        "blockers": [
-                            f"hi_nerv_target_region_birth_actuator_failed:{exc}"
-                        ],
+                        "blockers": [f"hi_nerv_target_region_birth_actuator_failed:{exc}"],
                     }
             else:
                 target_region_birth_payload = {
@@ -19176,64 +16303,37 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "reason": "target_region_birth_actuator_missing",
                     "blockers": ["hi_nerv_target_region_birth_actuator_missing"],
                 }
-            target_region_birth_payload["requested_weight"] = (
-                requested_segnet_hard_birth_bootstrap_weight
-            )
-            target_region_birth_payload["effective_weight"] = (
-                effective_segnet_hard_birth_bootstrap_weight
-            )
-            target_region_birth_payload["request_consumed"] = (
-                hard_birth_request_consumed
-            )
+            target_region_birth_payload["requested_weight"] = requested_segnet_hard_birth_bootstrap_weight
+            target_region_birth_payload["effective_weight"] = effective_segnet_hard_birth_bootstrap_weight
+            target_region_birth_payload["request_consumed"] = hard_birth_request_consumed
             if target_region_birth_payload.get("accepted") is not True:
-                bootstrap_blockers.append(
-                    "hi_nerv_target_region_birth_actuator_not_accepted"
-                )
-            bootstrap_blockers.extend(
-                str(value)
-                for value in target_region_birth_payload.get("blockers") or []
-            )
-        bootstrap_payload["segnet_margin_bootstrap_requested_weight"] = (
-            requested_segnet_margin_bootstrap_weight
-        )
-        bootstrap_payload["segnet_margin_bootstrap_effective_weight"] = (
-            effective_segnet_margin_bootstrap_weight
-        )
-        bootstrap_payload["segnet_margin_bootstrap_request_consumed"] = (
-            margin_request_consumed
-        )
-        bootstrap_payload["segnet_hard_birth_bootstrap_requested_weight"] = (
-            requested_segnet_hard_birth_bootstrap_weight
-        )
-        bootstrap_payload["segnet_hard_birth_bootstrap_effective_weight"] = (
-            effective_segnet_hard_birth_bootstrap_weight
-        )
-        bootstrap_payload["segnet_hard_birth_bootstrap_request_consumed"] = (
-            hard_birth_request_consumed
-        )
+                bootstrap_blockers.append("hi_nerv_target_region_birth_actuator_not_accepted")
+            bootstrap_blockers.extend(str(value) for value in target_region_birth_payload.get("blockers") or [])
+        bootstrap_payload["segnet_margin_bootstrap_requested_weight"] = requested_segnet_margin_bootstrap_weight
+        bootstrap_payload["segnet_margin_bootstrap_effective_weight"] = effective_segnet_margin_bootstrap_weight
+        bootstrap_payload["segnet_margin_bootstrap_request_consumed"] = margin_request_consumed
+        bootstrap_payload["segnet_hard_birth_bootstrap_requested_weight"] = requested_segnet_hard_birth_bootstrap_weight
+        bootstrap_payload["segnet_hard_birth_bootstrap_effective_weight"] = effective_segnet_hard_birth_bootstrap_weight
+        bootstrap_payload["segnet_hard_birth_bootstrap_request_consumed"] = hard_birth_request_consumed
+        bootstrap_payload["actuators_enabled_effective"] = {
+            "segnet_teacher": bootstrap_scorer_teacher is not None,
+            "pose_teacher": bootstrap_pose_scorer_teacher is not None,
+            "hard_birth": effective_segnet_hard_birth_bootstrap_weight > 0.0,
+        }
         if not margin_request_consumed or not hard_birth_request_consumed:
             bootstrap_payload["scorer_teacher_required_for_requested_controls"] = True
             bootstrap_payload["request_zeroed_reason"] = "segnet_teacher_missing"
             bootstrap_payload["blockers"] = _dedupe(bootstrap_blockers)
         hard_birth_payload = bootstrap_payload.get("segnet_hard_birth_bootstrap")
         if isinstance(hard_birth_payload, dict):
-            hard_birth_payload["requested_weight"] = (
-                requested_segnet_hard_birth_bootstrap_weight
-            )
-            hard_birth_payload["effective_weight"] = (
-                effective_segnet_hard_birth_bootstrap_weight
-            )
+            hard_birth_payload["requested_weight"] = requested_segnet_hard_birth_bootstrap_weight
+            hard_birth_payload["effective_weight"] = effective_segnet_hard_birth_bootstrap_weight
             hard_birth_payload["request_consumed"] = hard_birth_request_consumed
             if not hard_birth_request_consumed:
-                hard_birth_payload["request_zeroed_reason"] = (
-                    "segnet_teacher_missing"
-                )
+                hard_birth_payload["request_zeroed_reason"] = "segnet_teacher_missing"
                 hard_birth_payload["blockers"] = _dedupe(
                     [
-                        *[
-                            str(value)
-                            for value in hard_birth_payload.get("blockers") or []
-                        ],
+                        *[str(value) for value in hard_birth_payload.get("blockers") or []],
                         "hi_nerv_scorer_domain_hard_birth_requested_but_segnet_teacher_missing",
                     ]
                 )
@@ -19241,12 +16341,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         bootstrap_payload["blockers"] = _dedupe(bootstrap_blockers)
         bootstrap_payload["pair_index_semantics"] = bootstrap_pair_index_semantics
         bootstrap_payload["max_pairs"] = int(scorer_domain_bootstrap_max_pairs)
-        bootstrap_payload["exact_segnet_target_argmax"] = (
-            bootstrap_segnet_teacher_metadata
-        )
-        output_head_target_bias_init_payload["scorer_domain_bootstrap"] = (
-            bootstrap_payload
-        )
+        bootstrap_payload["exact_segnet_target_argmax"] = bootstrap_segnet_teacher_metadata
+        bootstrap_payload["exact_posenet_target_pose"] = bootstrap_pose_teacher_metadata
+        output_head_target_bias_init_payload["scorer_domain_bootstrap"] = bootstrap_payload
         output_head_target_bias_init_payload["archive_charged_decoder_tensors"] = sorted(
             {
                 *[
@@ -19285,11 +16382,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "ready_for_exact_eval_dispatch": False,
         }
     startup_archive_section_telemetry_metadata: dict[str, Any] | None = None
-    if (
-        archive_section_telemetry is None
-        and hard_byte_ceiling is not None
-        and bool(coder_aware_qat)
-    ):
+    if archive_section_telemetry is None and hard_byte_ceiling is not None and bool(coder_aware_qat):
         (
             generated_telemetry,
             startup_archive_section_telemetry_metadata,
@@ -19320,42 +16413,26 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "startup_generation": startup_archive_section_telemetry_metadata,
                 "blockers": _dedupe(
                     [
-                        *list(
-                            dict(archive_section_telemetry_metadata or {}).get(
-                                "blockers"
-                            )
-                            or []
-                        ),
-                        *list(
-                            (
-                                startup_archive_section_telemetry_metadata or {}
-                            ).get("blockers")
-                            or []
-                        ),
+                        *list(dict(archive_section_telemetry_metadata or {}).get("blockers") or []),
+                        *list((startup_archive_section_telemetry_metadata or {}).get("blockers") or []),
                     ]
                 ),
             }
     optimizer_policy = dict(hi_nerv_optimizer_policy or {})
     optimizer_control = dict(optimizer_controls or {})
-    pr95_curriculum_enabled = bool(
-        optimizer_policy.get("pr95_faithful_curriculum_enabled")
-    )
-    resolved_pr95_curriculum_total_epochs = (
-        _resolve_hi_nerv_pr95_curriculum_total_epochs(
-            epochs=epochs,
-            requested_total_epochs=(
-                pr95_curriculum_total_epochs
-                if pr95_curriculum_total_epochs is not None
-                else optimizer_policy.get("pr95_curriculum_total_epochs")
-            ),
-        )
+    pr95_curriculum_enabled = bool(optimizer_policy.get("pr95_faithful_curriculum_enabled"))
+    resolved_pr95_curriculum_total_epochs = _resolve_hi_nerv_pr95_curriculum_total_epochs(
+        epochs=epochs,
+        requested_total_epochs=(
+            pr95_curriculum_total_epochs
+            if pr95_curriculum_total_epochs is not None
+            else optimizer_policy.get("pr95_curriculum_total_epochs")
+        ),
     )
     optimizer_policy["pr95_curriculum_total_epochs"] = (
         resolved_pr95_curriculum_total_epochs if pr95_curriculum_enabled else None
     )
-    optimizer_policy["pr95_curriculum_total_epochs_consumed"] = (
-        pr95_curriculum_enabled
-    )
+    optimizer_policy["pr95_curriculum_total_epochs_consumed"] = pr95_curriculum_enabled
     effective_pr95_stage_source_weight_amplification_enabled = bool(
         pr95_stage_source_weight_amplification_enabled or pr95_curriculum_enabled
     )
@@ -19366,12 +16443,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         effective_pr95_stage_source_weight_amplification_enabled
     )
     optimizer_policy["pr95_stage_source_weight_amplification_defaulted"] = bool(
-        effective_pr95_stage_source_weight_amplification_enabled
-        and not pr95_stage_source_weight_amplification_enabled
+        effective_pr95_stage_source_weight_amplification_enabled and not pr95_stage_source_weight_amplification_enabled
     )
-    pr95_muon_policy = str(
-        optimizer_policy.get("pr95_muon_policy") or "faithful_stage8_only"
-    )
+    pr95_muon_policy = str(optimizer_policy.get("pr95_muon_policy") or "faithful_stage8_only")
     effective_pr95_stage_source_weight_amplification_enabled = bool(
         pr95_stage_source_weight_amplification_enabled or pr95_curriculum_enabled
     )
@@ -19382,13 +16456,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         effective_pr95_stage_source_weight_amplification_enabled
     )
     optimizer_policy["pr95_stage_source_weight_amplification_defaulted"] = bool(
-        effective_pr95_stage_source_weight_amplification_enabled
-        and not pr95_stage_source_weight_amplification_enabled
+        effective_pr95_stage_source_weight_amplification_enabled and not pr95_stage_source_weight_amplification_enabled
     )
     native_optimizer_active = bool(optimizer_policy.get("native_optimizer_active"))
-    effective_optimizer_kind = str(
-        optimizer_policy.get("optimizer_kind") or optimizer_kind
-    )
+    effective_optimizer_kind = str(optimizer_policy.get("optimizer_kind") or optimizer_kind)
     effective_weight_decay = optimizer_control.get("weight_decay_effective")
     coder_qat_cfg = CoderAwareQATConfig(
         enabled=bool(coder_aware_qat),
@@ -19408,9 +16479,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     if not archive_section_qat_policy.get("blockers"):
         coder_qat_loss_weight_map = {
             str(key): float(value)
-            for key, value in dict(
-                archive_section_qat_policy.get("extra_loss_weights") or {}
-            ).items()
+            for key, value in dict(archive_section_qat_policy.get("extra_loss_weights") or {}).items()
             if float(value) >= 0.0
         }
     latent_qat_loss_weight_map = {
@@ -19421,18 +16490,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     latent_qat_cfg = CoderAwareQATConfig(
         enabled=bool(latent_qat_loss_weight_map),
         quant_bits=int(coder_qat_cfg.quant_bits),
-        quant_residual_weight=(
-            1.0 if latent_qat_loss_weight_map.get("latent_qat_quant_residual") else 0.0
-        ),
-        magnitude_weight=(
-            1.0 if latent_qat_loss_weight_map.get("latent_qat_magnitude") else 0.0
-        ),
-        delta_weight=(
-            1.0 if latent_qat_loss_weight_map.get("latent_qat_delta") else 0.0
-        ),
-        c1a_entropy_weight=(
-            1.0 if latent_qat_loss_weight_map.get("latent_qat_c1a_entropy") else 0.0
-        ),
+        quant_residual_weight=(1.0 if latent_qat_loss_weight_map.get("latent_qat_quant_residual") else 0.0),
+        magnitude_weight=(1.0 if latent_qat_loss_weight_map.get("latent_qat_magnitude") else 0.0),
+        delta_weight=(1.0 if latent_qat_loss_weight_map.get("latent_qat_delta") else 0.0),
+        c1a_entropy_weight=(1.0 if latent_qat_loss_weight_map.get("latent_qat_c1a_entropy") else 0.0),
         c1a_sigma=float(coder_qat_cfg.c1a_sigma),
         c1a_sample_size=int(coder_qat_cfg.c1a_sample_size),
         include_substrings=("latents",),
@@ -19443,9 +16504,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         coder_qat_loss_weight_map,
         hard_byte_ceiling=hard_byte_ceiling,
     )
-    train_time_section_byte_control_active = bool(
-        train_time_section_byte_control.get("active") is True
-    )
+    train_time_section_byte_control_active = bool(train_time_section_byte_control.get("active") is True)
     train_time_section_byte_control_blockers = [
         str(value) for value in train_time_section_byte_control.get("blockers") or []
     ]
@@ -19478,62 +16537,32 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     train_time_dual_ascent_config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",
         segnet_distillation_weight=float(segnet_distillation_weight),
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
         pose_distillation_weight=float(pose_distillation_weight),
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
-        scorer_input_distribution_guard_weight=float(
-            scorer_input_distribution_guard_weight
-        ),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
+        scorer_input_distribution_guard_weight=float(scorer_input_distribution_guard_weight),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
         scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
-        posenet_yuv6_geometry_tether_weight=float(
-            posenet_yuv6_geometry_tether_weight
-        ),
-        posenet_temporal_signal_floor_weight=float(
-            posenet_temporal_signal_floor_weight
-        ),
+        posenet_yuv6_geometry_tether_weight=float(posenet_yuv6_geometry_tether_weight),
+        posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
         coder_qat_loss_weight_map=coder_qat_loss_weight_map,
         archive_byte_budget=train_time_section_byte_control.get("hard_byte_ceiling"),
-        section_byte_budgets=train_time_section_byte_control.get(
-            "section_byte_budgets"
-        ),
-        section_byte_loss_weight_key_map=train_time_section_byte_control.get(
-            "section_byte_loss_weight_key_map"
-        ),
-        section_byte_loss_weight_scale_map=train_time_section_byte_control.get(
-            "section_byte_loss_weight_scale_map"
-        ),
+        section_byte_budgets=train_time_section_byte_control.get("section_byte_budgets"),
+        section_byte_loss_weight_key_map=train_time_section_byte_control.get("section_byte_loss_weight_key_map"),
+        section_byte_loss_weight_scale_map=train_time_section_byte_control.get("section_byte_loss_weight_scale_map"),
     )
-    decoder_waterfill_fake_quant_bits_by_name = (
-        _decoder_weight_waterfill_fake_quant_bits_by_name(decoder_weight_waterfill_plan)
+    decoder_waterfill_fake_quant_bits_by_name = _decoder_weight_waterfill_fake_quant_bits_by_name(
+        decoder_weight_waterfill_plan
     )
     model.configure_decoder_fake_quant_forward(
         enabled=bool(coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name),
@@ -19548,10 +16577,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     joint_scorer_checkpoint_selection_active = bool(
         float(segnet_direct_live_distillation_weight) > 0.0
-        and (
-            float(pose_distillation_weight) > 0.0
-            or float(pose_direct_live_distillation_weight) > 0.0
-        )
+        and (float(pose_distillation_weight) > 0.0 or float(pose_direct_live_distillation_weight) > 0.0)
         and not bool(allow_segnet_only_research)
     )
     direct_live_class_escape_requested = bool(
@@ -19565,20 +16591,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         or float(segnet_direct_live_target_min_ratio_floor_weight) > 0.0
         or (
             bool(scorer_support_ladder_enabled)
-            and (
-                float(segnet_direct_live_distillation_weight) > 0.0
-                or segnet_direct_live_subcontrol_active
-            )
+            and (float(segnet_direct_live_distillation_weight) > 0.0 or segnet_direct_live_subcontrol_active)
         )
         or int(segnet_direct_live_escape_warmup_epochs) > 0
     )
     direct_live_checkpoint_selection_active = bool(
-        float(segnet_direct_live_distillation_weight) > 0.0
-        or direct_live_class_escape_requested
+        float(segnet_direct_live_distillation_weight) > 0.0 or direct_live_class_escape_requested
     )
     direct_live_class_escape_checkpoint_selection_active = bool(
-        direct_live_checkpoint_selection_active
-        and direct_live_class_escape_requested
+        direct_live_checkpoint_selection_active and direct_live_class_escape_requested
     )
     shape_tether_checkpoint_selection_active = bool(
         direct_live_checkpoint_selection_active
@@ -19598,17 +16619,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         else "total"
     )
     checkpoint_selection_required = bool(
-        direct_live_checkpoint_selection_active
-        or shape_tether_checkpoint_selection_active
+        direct_live_checkpoint_selection_active or shape_tether_checkpoint_selection_active
     )
     checkpoint_tie_break_metric_key = (
         "loss_part_segnet_direct_live_escape_selection"
         if shape_tether_checkpoint_selection_active
         else "loss_part_scorer_input_shape_tether"
-        if (
-            direct_live_class_escape_checkpoint_selection_active
-            and float(scorer_input_shape_tether_weight) > 0.0
-        )
+        if (direct_live_class_escape_checkpoint_selection_active and float(scorer_input_shape_tether_weight) > 0.0)
         else "loss_part_segnet_direct_live_argmax_disagreement"
         if direct_live_checkpoint_selection_active
         else ""
@@ -19671,9 +16688,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "enabled": bool(receiver_proof_export_enabled),
             "training_num_pairs": int(pairs),
             "model_num_pairs": int(cfg.num_pairs),
-            "partial_candidate_smoke_skips_full_receiver_proof": bool(
-                not receiver_proof_export_enabled
-            ),
+            "partial_candidate_smoke_skips_full_receiver_proof": bool(not receiver_proof_export_enabled),
             "reason": (
                 "full_model_receiver_proof"
                 if receiver_proof_export_enabled
@@ -19693,40 +16708,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "candidate_id": candidate_for_config.get("candidate_id"),
             "candidate_schema": candidate_for_config.get("schema"),
             "capacity_source": candidate_for_config.get("capacity_source"),
-            "target_modelsize_mparams": candidate_for_config.get(
-                "target_modelsize_mparams"
-            ),
+            "target_modelsize_mparams": candidate_for_config.get("target_modelsize_mparams"),
             "modelsize_mparams": candidate_for_config.get("modelsize_mparams"),
             "candidate_num_pairs": candidate_for_config.get("num_pairs"),
             "training_num_pairs": pairs,
             "model_num_pairs": int(cfg.num_pairs),
-            "partial_pair_training_against_full_candidate": bool(
-                candidate_for_config and int(cfg.num_pairs) != pairs
-            ),
-            "hard_byte_ceiling": int(hard_byte_ceiling)
-            if hard_byte_ceiling is not None
-            else None,
+            "partial_pair_training_against_full_candidate": bool(candidate_for_config and int(cfg.num_pairs) != pairs),
+            "hard_byte_ceiling": int(hard_byte_ceiling) if hard_byte_ceiling is not None else None,
             "decoder_codec": str(decoder_codec),
             "latent_codec": str(hi_nerv_latent_codec),
             "consumed_by_runner_config": bool(candidate_for_config),
             "consumed_by_decoder_codec": bool(candidate_for_config),
-            "consumed_by_archive_export_hard_byte_ceiling": bool(
-                hard_byte_ceiling is not None
-            ),
+            "consumed_by_archive_export_hard_byte_ceiling": bool(hard_byte_ceiling is not None),
             "archive_export_hard_byte_ceiling_measurement_bypass": False,
             "hard_byte_ceiling_consumed_by_train_time_dual_ascent": bool(
-                hard_byte_ceiling is not None
-                and train_time_section_byte_control_active
+                hard_byte_ceiling is not None and train_time_section_byte_control_active
             ),
-            "train_time_section_byte_control_active": (
-                train_time_section_byte_control_active
-            ),
-            "train_time_section_byte_control_blockers": (
-                train_time_section_byte_control_blockers
-            ),
-            "hard_byte_ceiling_train_time_dual_ascent_blockers": (
-                hard_byte_ceiling_train_time_dual_ascent_blockers
-            ),
+            "train_time_section_byte_control_active": (train_time_section_byte_control_active),
+            "train_time_section_byte_control_blockers": (train_time_section_byte_control_blockers),
+            "hard_byte_ceiling_train_time_dual_ascent_blockers": (hard_byte_ceiling_train_time_dual_ascent_blockers),
             "modelsize_control_contract": strip_candidate_curriculum_authority_fields(
                 _modelsize_control_contract(candidate_for_config) or {}
             ),
@@ -19751,9 +16751,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         },
         "score_aware_training": {
             "schema": "compact_hi_nerv_score_aware_training.v1",
-            "candidate_curriculum_plan": strip_candidate_curriculum_authority_fields(
-                candidate_curriculum_plan or {}
-            ),
+            "candidate_curriculum_plan": strip_candidate_curriculum_authority_fields(candidate_curriculum_plan or {}),
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
             "pose_distillation_loss": str(pose_distillation_loss),
@@ -19771,19 +16769,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "scope": "real_pytorch_segnet_posenet_teacher_cache",
             },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
-            "optimizer_policy": strip_candidate_curriculum_authority_fields(
-                optimizer_policy
-            ),
+            "optimizer_policy": strip_candidate_curriculum_authority_fields(optimizer_policy),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "pr95_curriculum_total_epochs": (
-                resolved_pr95_curriculum_total_epochs
-                if pr95_curriculum_enabled
-                else None
+                resolved_pr95_curriculum_total_epochs if pr95_curriculum_enabled else None
             ),
             "pr95_curriculum_total_epochs_consumed": pr95_curriculum_enabled,
-            "pr95_muon_policy": (
-                pr95_muon_policy if pr95_curriculum_enabled else None
-            ),
+            "pr95_muon_policy": (pr95_muon_policy if pr95_curriculum_enabled else None),
             "pr95_stage_source_weight_amplification_enabled": bool(
                 effective_pr95_stage_source_weight_amplification_enabled
             ),
@@ -19792,24 +16784,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             ),
             "native_optimizer_active": native_optimizer_active,
             "optimizer_kind": effective_optimizer_kind,
-            "optimizer_controls": strip_candidate_curriculum_authority_fields(
-                optimizer_control
-            ),
+            "optimizer_controls": strip_candidate_curriculum_authority_fields(optimizer_control),
             "curriculum": {
                 "schema": "compact_hi_nerv_score_aware_curriculum_summary.v1",
                 "stage_count": len(curriculum_stage_summary),
-                "pose_distillation_warmup_epochs": int(
-                    pose_distillation_warmup_epochs
-                ),
-                "scorer_input_shape_warmup_epochs": int(
-                    scorer_input_shape_warmup_epochs
-                ),
-                "segnet_direct_live_escape_warmup_epochs": int(
-                    segnet_direct_live_escape_warmup_epochs
-                ),
-                "segnet_direct_live_escape_class_multiplier": float(
-                    segnet_direct_live_escape_class_multiplier
-                ),
+                "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
+                "scorer_input_shape_warmup_epochs": int(scorer_input_shape_warmup_epochs),
+                "segnet_direct_live_escape_warmup_epochs": int(segnet_direct_live_escape_warmup_epochs),
+                "segnet_direct_live_escape_class_multiplier": float(segnet_direct_live_escape_class_multiplier),
                 "pose_warmup_suppresses": [
                     "pose_distill",
                     "pose_direct_live_distill",
@@ -19840,22 +16822,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "gradient_multipliers": {
                 "schema": "compact_hi_nerv_gradient_multiplier_controls.v1",
                 "by_name": dict(sorted(normalized_gradient_multiplier_by_name.items())),
-                "explicit_by_name": dict(
-                    sorted(explicit_gradient_multiplier_by_name.items())
-                ),
+                "explicit_by_name": dict(sorted(explicit_gradient_multiplier_by_name.items())),
                 "decoder_weight_waterfill_gradient_policy": (
-                    strip_candidate_curriculum_authority_fields(
-                        decoder_weight_waterfill_gradient_policy
-                    )
+                    strip_candidate_curriculum_authority_fields(decoder_weight_waterfill_gradient_policy)
                 ),
                 "bias_gradient_multiplier": (
-                    float(bias_gradient_multiplier)
-                    if bias_gradient_multiplier is not None
-                    else None
+                    float(bias_gradient_multiplier) if bias_gradient_multiplier is not None else None
                 ),
-                "output_head_bias_gradient_multiplier": float(
-                    output_head_bias_gradient_multiplier
-                ),
+                "output_head_bias_gradient_multiplier": float(output_head_bias_gradient_multiplier),
                 "exact_parameter_names": ["head_rgb_0.bias", "head_rgb_1.bias"],
                 "applied_after_finite_guard_before_clip": True,
                 "rationale": (
@@ -19877,65 +16851,43 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "min_post_segnet_target_class_coverage_fraction": (
                     None
-                    if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                    is None
-                    else float(
-                        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                    )
+                    if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is None
+                    else float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction)
                 ),
                 "min_post_segnet_target_class_min_ratio": (
                     None
-                    if scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-                    is None
-                    else float(
-                        scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-                    )
+                    if scorer_space_step_guard_min_post_segnet_target_class_min_ratio is None
+                    else float(scorer_space_step_guard_min_post_segnet_target_class_min_ratio)
                 ),
                 "max_post_segnet_target_class_ratio_drop": (
                     None
-                    if scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-                    )
+                    if scorer_space_step_guard_max_post_segnet_target_class_ratio_drop is None
+                    else float(scorer_space_step_guard_max_post_segnet_target_class_ratio_drop)
                 ),
                 "max_post_segnet_contrast_ratio": (
                     None
-                    if scorer_space_step_guard_max_post_segnet_contrast_ratio
-                    is None
+                    if scorer_space_step_guard_max_post_segnet_contrast_ratio is None
                     else float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
                 ),
                 "max_post_segnet_distribution_mae": (
                     None
-                    if scorer_space_step_guard_max_post_segnet_distribution_mae
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_post_segnet_distribution_mae
-                    )
+                    if scorer_space_step_guard_max_post_segnet_distribution_mae is None
+                    else float(scorer_space_step_guard_max_post_segnet_distribution_mae)
                 ),
                 "max_post_posenet_yuv6_distribution_mae": (
                     None
-                    if scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
-                    )
+                    if scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae is None
+                    else float(scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae)
                 ),
                 "max_post_posenet_yuv6_contrast_ratio": (
                     None
-                    if scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
-                    )
+                    if scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio is None
+                    else float(scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio)
                 ),
                 "max_post_segnet_argmax_disagreement": (
                     None
-                    if scorer_space_step_guard_max_post_segnet_argmax_disagreement
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_post_segnet_argmax_disagreement
-                    )
+                    if scorer_space_step_guard_max_post_segnet_argmax_disagreement is None
+                    else float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
                 ),
                 "max_post_pose_score_term": (
                     None
@@ -19944,58 +16896,36 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "max_post_pose_direct_live_score_term": (
                     None
-                    if scorer_space_step_guard_max_post_pose_direct_live_score_term
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_post_pose_direct_live_score_term
-                    )
+                    if scorer_space_step_guard_max_post_pose_direct_live_score_term is None
+                    else float(scorer_space_step_guard_max_post_pose_direct_live_score_term)
                 ),
                 "max_pose_score_term_relative_worsening": (
                     None
-                    if scorer_space_step_guard_max_pose_score_term_relative_worsening
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_pose_score_term_relative_worsening
-                    )
+                    if scorer_space_step_guard_max_pose_score_term_relative_worsening is None
+                    else float(scorer_space_step_guard_max_pose_score_term_relative_worsening)
                 ),
                 "max_pose_score_term_absolute_worsening": (
                     None
-                    if scorer_space_step_guard_max_pose_score_term_absolute_worsening
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_pose_score_term_absolute_worsening
-                    )
+                    if scorer_space_step_guard_max_pose_score_term_absolute_worsening is None
+                    else float(scorer_space_step_guard_max_pose_score_term_absolute_worsening)
                 ),
                 "max_pose_direct_live_score_term_relative_worsening": (
                     None
-                    if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-                    )
+                    if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening is None
+                    else float(scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening)
                 ),
                 "max_pose_direct_live_score_term_absolute_worsening": (
                     None
-                    if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-                    )
+                    if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening is None
+                    else float(scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening)
                 ),
                 "max_direct_nonrate_score_worsening": (
                     None
-                    if scorer_space_step_guard_max_direct_nonrate_score_worsening
-                    is None
-                    else float(
-                        scorer_space_step_guard_max_direct_nonrate_score_worsening
-                    )
+                    if scorer_space_step_guard_max_direct_nonrate_score_worsening is None
+                    else float(scorer_space_step_guard_max_direct_nonrate_score_worsening)
                 ),
-                "backtracking_steps": int(
-                    scorer_space_step_guard_backtracking_steps
-                ),
-                "backtracking_shrink": float(
-                    scorer_space_step_guard_backtracking_shrink
-                ),
+                "backtracking_steps": int(scorer_space_step_guard_backtracking_steps),
+                "backtracking_shrink": float(scorer_space_step_guard_backtracking_shrink),
                 "bound_to_shared_mlx_adapter": True,
                 "logic_order": [
                     "target_bias_init",
@@ -20017,115 +16947,75 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             },
             "stage_loss_weights": stage_weights,
             "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
-            "scorer_input_shape_warmup_epochs": int(
-                scorer_input_shape_warmup_epochs
-            ),
-            "segnet_direct_live_escape_warmup_epochs": int(
-                segnet_direct_live_escape_warmup_epochs
-            ),
-            "segnet_direct_live_escape_class_multiplier": float(
-                segnet_direct_live_escape_class_multiplier
-            ),
+            "scorer_input_shape_warmup_epochs": int(scorer_input_shape_warmup_epochs),
+            "segnet_direct_live_escape_warmup_epochs": int(segnet_direct_live_escape_warmup_epochs),
+            "segnet_direct_live_escape_class_multiplier": float(segnet_direct_live_escape_class_multiplier),
             "scorer_input_distribution_guard": {
                 "schema": "compact_hi_nerv_scorer_input_distribution_guard.v1",
                 "enabled": bool(float(scorer_input_distribution_guard_weight) > 0.0),
-                "bound_to_renderer_bundle": bool(
-                    float(scorer_input_distribution_guard_weight) > 0.0
-                ),
+                "bound_to_renderer_bundle": bool(float(scorer_input_distribution_guard_weight) > 0.0),
                 "weight": float(scorer_input_distribution_guard_weight),
-                "saturation_margin": float(
-                    scorer_input_distribution_guard_saturation_margin
-                ),
+                "saturation_margin": float(scorer_input_distribution_guard_saturation_margin),
                 "temperature": float(scorer_input_distribution_guard_temperature),
                 "target_surface": (
-                    "decoded_rgb01_yuv6_vs_target_scorer_inputs_mean_std_"
-                    "dynamic_range_soft_saturation_spatial_gradient"
+                    "decoded_rgb01_yuv6_vs_target_scorer_inputs_mean_std_dynamic_range_soft_saturation_spatial_gradient"
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "scorer_input_contrast_floor": {
                 "schema": "compact_hi_nerv_scorer_input_contrast_floor.v1",
                 "enabled": bool(float(scorer_input_contrast_floor_weight) > 0.0),
-                "bound_to_renderer_bundle": bool(
-                    float(scorer_input_contrast_floor_weight) > 0.0
-                ),
+                "bound_to_renderer_bundle": bool(float(scorer_input_contrast_floor_weight) > 0.0),
                 "weight": float(scorer_input_contrast_floor_weight),
-                "segnet_last_rgb_min_std_ratio": float(
-                    scorer_input_contrast_floor_segnet_min_std_ratio
-                ),
-                "posenet_yuv6_pair_min_std_ratio": float(
-                    scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
-                ),
+                "segnet_last_rgb_min_std_ratio": float(scorer_input_contrast_floor_segnet_min_std_ratio),
+                "posenet_yuv6_pair_min_std_ratio": float(scorer_input_contrast_floor_posenet_yuv6_min_std_ratio),
                 "domains": {
                     "segnet": "last_frame_rgb_after_eval_roundtrip",
                     "posenet": "two_frame_pr95_yuv6_after_eval_roundtrip",
                 },
-                "target_surface": (
-                    "one_sided_reference_relative_std_floor_on_exact_"
-                    "upstream_scorer_input_domains"
-                ),
+                "target_surface": ("one_sided_reference_relative_std_floor_on_exact_upstream_scorer_input_domains"),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "scorer_input_shape_tether": {
                 "schema": "compact_hi_nerv_scorer_input_shape_tether.v1",
                 "enabled": bool(float(scorer_input_shape_tether_weight) > 0.0),
-                "bound_to_renderer_bundle": bool(
-                    float(scorer_input_shape_tether_weight) > 0.0
-                ),
+                "bound_to_renderer_bundle": bool(float(scorer_input_shape_tether_weight) > 0.0),
                 "weight": float(scorer_input_shape_tether_weight),
                 "domains": {
                     "segnet": "last_frame_rgb_after_eval_roundtrip",
                     "posenet": "two_frame_pr95_yuv6_and_temporal_delta_after_eval_roundtrip",
                 },
                 "target_surface": (
-                    "centered_reference_variance_normalized_residual_on_exact_"
-                    "upstream_scorer_input_domains"
+                    "centered_reference_variance_normalized_residual_on_exact_upstream_scorer_input_domains"
                 ),
                 "human_visual_fidelity_objective": False,
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "posenet_yuv6_geometry_tether": {
                 "schema": "compact_hi_nerv_posenet_yuv6_geometry_tether.v1",
-                "enabled": bool(
-                    float(posenet_yuv6_geometry_tether_weight) > 0.0
-                ),
-                "bound_to_renderer_bundle": bool(
-                    float(posenet_yuv6_geometry_tether_weight) > 0.0
-                ),
+                "enabled": bool(float(posenet_yuv6_geometry_tether_weight) > 0.0),
+                "bound_to_renderer_bundle": bool(float(posenet_yuv6_geometry_tether_weight) > 0.0),
                 "weight": float(posenet_yuv6_geometry_tether_weight),
                 "domains": {
                     "posenet": "two_frame_pr95_yuv6_pair_temporal_delta_and_pair_spatial_gradient_after_eval_roundtrip",
                 },
-                "target_surface": (
-                    "dense_pose_geometry_tether_on_exact_upstream_posenet_yuv6"
-                ),
+                "target_surface": ("dense_pose_geometry_tether_on_exact_upstream_posenet_yuv6"),
                 "human_visual_fidelity_objective": False,
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "posenet_temporal_signal_floor": {
                 "schema": "compact_hi_nerv_posenet_temporal_signal_floor.v1",
-                "enabled": bool(
-                    float(posenet_temporal_signal_floor_weight) > 0.0
-                ),
-                "bound_to_renderer_bundle": bool(
-                    float(posenet_temporal_signal_floor_weight) > 0.0
-                ),
+                "enabled": bool(float(posenet_temporal_signal_floor_weight) > 0.0),
+                "bound_to_renderer_bundle": bool(float(posenet_temporal_signal_floor_weight) > 0.0),
                 "weight": float(posenet_temporal_signal_floor_weight),
                 "min_std_ratio": float(posenet_temporal_signal_min_std_ratio),
-                "min_mean_abs_ratio": float(
-                    posenet_temporal_signal_min_mean_abs_ratio
-                ),
-                "target_surface": (
-                    "exact_upstream_posenet_pr95_yuv6_frame1_minus_frame0_"
-                    "temporal_signal"
-                ),
+                "min_mean_abs_ratio": float(posenet_temporal_signal_min_mean_abs_ratio),
+                "target_surface": ("exact_upstream_posenet_pr95_yuv6_frame1_minus_frame0_temporal_signal"),
                 "human_visual_fidelity_objective": False,
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "output_head_target_bias_init": {
-                **strip_candidate_curriculum_authority_fields(
-                    output_head_target_bias_init_payload
-                ),
+                **strip_candidate_curriculum_authority_fields(output_head_target_bias_init_payload),
                 "bound_to_renderer_model": bool(output_head_target_bias_init),
                 "compression_time_only": True,
                 "runtime_sidecar_bytes": 0,
@@ -20150,35 +17040,22 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "keep_last_n": checkpoint_retention_keep_last_n,
                 "keep_best_n": int(checkpoint_retention_keep_best_n),
                 "keep_every_n_epochs": checkpoint_retention_keep_every_n_epochs,
-                "cold_store_roots": [
-                    root.as_posix()
-                    for root in checkpoint_retention_cold_store_roots
-                ],
+                "cold_store_roots": [root.as_posix() for root in checkpoint_retention_cold_store_roots],
                 "hot_directory_scope": "periodic_checkpoints_only_final_always_kept",
                 "authority": "macos_mlx_research_signal_false_authority",
             },
-            "checkpoint_dir": (
-                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
-            ),
+            "checkpoint_dir": (Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None),
             "resume_from_checkpoint": (
-                Path(resume_from_checkpoint).as_posix()
-                if resume_from_checkpoint is not None
-                else None
+                Path(resume_from_checkpoint).as_posix() if resume_from_checkpoint is not None else None
             ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "prioritized_pair_training": {
                 **priority_hydration_contract,
-                "canonical_authority_surface": (
-                    "TrainingArtifact top-level false-authority fields"
-                ),
+                "canonical_authority_surface": ("TrainingArtifact top-level false-authority fields"),
             },
             "scorer_error_pair_curriculum": {
-                **strip_candidate_curriculum_authority_fields(
-                    scorer_error_pair_curriculum
-                ),
-                "consumed_by_shared_mlx_sampler": bool(
-                    scorer_error_pair_sampling_weights
-                ),
+                **strip_candidate_curriculum_authority_fields(scorer_error_pair_curriculum),
+                "consumed_by_shared_mlx_sampler": bool(scorer_error_pair_sampling_weights),
                 "weighted_pair_count": len(scorer_error_pair_sampling_weights),
                 "sampling_scope": "score_aware_training_batches_not_full_video_replay",
                 "orthogonality_controls": {
@@ -20186,9 +17063,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "seg_score_contribution": "last-frame boundary/argmax pressure",
                     "pose_score_contribution": "two-frame pose/motion pressure",
                 },
-                "canonical_authority_surface": (
-                    "TrainingArtifact top-level false-authority fields"
-                ),
+                "canonical_authority_surface": ("TrainingArtifact top-level false-authority fields"),
             },
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "latent_coder_aware_qat": {
@@ -20201,37 +17076,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
             },
             "archive_section_telemetry_attachment": (
-                _strip_substrate_metadata_authority_fields(
-                    archive_section_telemetry_metadata or {}
-                )
+                _strip_substrate_metadata_authority_fields(archive_section_telemetry_metadata or {})
             ),
             "archive_section_qat_weight_policy": (
-                _strip_substrate_metadata_authority_fields(
-                    archive_section_qat_policy
-                )
+                _strip_substrate_metadata_authority_fields(archive_section_qat_policy)
             ),
             "train_time_section_byte_control": (
-                _strip_substrate_metadata_authority_fields(
-                    train_time_section_byte_control
-                )
+                _strip_substrate_metadata_authority_fields(train_time_section_byte_control)
             ),
-            "live_train_time_section_byte_metrics": (
-                live_train_time_section_byte_metrics_metadata
-            ),
-            "train_time_dual_ascent": strip_candidate_curriculum_authority_fields(
-                train_time_dual_ascent_config
-            ),
+            "live_train_time_section_byte_metrics": (live_train_time_section_byte_metrics_metadata),
+            "train_time_dual_ascent": strip_candidate_curriculum_authority_fields(train_time_dual_ascent_config),
             "decoder_fake_quant_forward": {
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
-                "enabled": bool(
-                    coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
-                ),
-                "configured_enabled": bool(
-                    coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
-                ),
-                "initial_forward_active": bool(
-                    coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
-                )
+                "enabled": bool(coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name),
+                "configured_enabled": bool(coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name),
+                "initial_forward_active": bool(coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name)
                 and not bool(pr95_curriculum_enabled),
                 "stage_controlled": bool(pr95_curriculum_enabled),
                 "stage_control_source": (
@@ -20241,21 +17100,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "global_fake_quant_enabled": bool(coder_qat_cfg.enabled),
                 "quant_bits": int(coder_qat_cfg.quant_bits),
-                "global_quant_bits": (
-                    int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None
-                ),
-                "per_tensor_waterfill_enabled": bool(
-                    decoder_waterfill_fake_quant_bits_by_name
-                ),
-                "per_tensor_waterfill_group_count": len(
-                    decoder_waterfill_fake_quant_bits_by_name
-                ),
-                "per_tensor_waterfill_bits_by_name": dict(
-                    sorted(decoder_waterfill_fake_quant_bits_by_name.items())
-                ),
+                "global_quant_bits": (int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None),
+                "per_tensor_waterfill_enabled": bool(decoder_waterfill_fake_quant_bits_by_name),
+                "per_tensor_waterfill_group_count": len(decoder_waterfill_fake_quant_bits_by_name),
+                "per_tensor_waterfill_bits_by_name": dict(sorted(decoder_waterfill_fake_quant_bits_by_name.items())),
                 "quantizer_geometry": (
-                    "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
-                    "per_tensor_fp16_scale_for_biases"
+                    "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_per_tensor_fp16_scale_for_biases"
                 ),
                 "target": (
                     "decoder weights and decoder biases; per-pair latents use "
@@ -20271,30 +17121,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "enabled": float(segnet_direct_live_distillation_weight) > 0.0,
                 "weight": float(segnet_direct_live_distillation_weight),
                 "base_loss_weight": float(segnet_direct_live_base_loss_weight),
-                "class_histogram_weight": float(
-                    segnet_direct_live_class_histogram_weight
-                ),
-                "class_balanced_hinge_weight": float(
-                    segnet_direct_live_class_balanced_hinge_weight
-                ),
-                "class_balanced_ce_weight": float(
-                    segnet_direct_live_class_balanced_ce_weight
-                ),
-                "class_balanced_squared_hinge_weight": float(
-                    segnet_direct_live_class_balanced_squared_hinge_weight
-                ),
-                "class_region_recon_weight": float(
-                    segnet_direct_live_class_region_recon_weight
-                ),
-                "rare_class_logit_weight": float(
-                    segnet_direct_live_rare_class_logit_weight
-                ),
-                "target_mass_floor_weight": float(
-                    segnet_direct_live_target_mass_floor_weight
-                ),
-                "target_min_ratio_floor_weight": float(
-                    segnet_direct_live_target_min_ratio_floor_weight
-                ),
+                "class_histogram_weight": float(segnet_direct_live_class_histogram_weight),
+                "class_balanced_hinge_weight": float(segnet_direct_live_class_balanced_hinge_weight),
+                "class_balanced_ce_weight": float(segnet_direct_live_class_balanced_ce_weight),
+                "class_balanced_squared_hinge_weight": float(segnet_direct_live_class_balanced_squared_hinge_weight),
+                "class_region_recon_weight": float(segnet_direct_live_class_region_recon_weight),
+                "rare_class_logit_weight": float(segnet_direct_live_rare_class_logit_weight),
+                "target_mass_floor_weight": float(segnet_direct_live_target_mass_floor_weight),
+                "target_min_ratio_floor_weight": float(segnet_direct_live_target_min_ratio_floor_weight),
                 "teacher_surface": "teacher_logits_for_frames_nhwc01",
                 "objective": str(segnet_distillation_objective),
                 "loss": (
@@ -20311,18 +17145,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "schema": "hi_nerv_segnet_direct_live_class_support_ladder.v1",
                 "enabled": bool(scorer_support_ladder_enabled),
                 "bound_to_shared_mlx_adapter": True,
-                "target_coverage_floor": (
-                    scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                ),
-                "target_min_ratio_floor": (
-                    scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-                ),
+                "target_coverage_floor": (scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction),
+                "target_min_ratio_floor": (scorer_space_step_guard_min_post_segnet_target_class_min_ratio),
                 "patience_steps": int(scorer_support_ladder_patience_steps),
                 "growth_factor": float(scorer_support_ladder_growth_factor),
                 "max_multiplier": float(scorer_support_ladder_max_multiplier),
-                "base_loss_max_when_active": float(
-                    scorer_support_ladder_base_loss_max_when_active
-                ),
+                "base_loss_max_when_active": float(scorer_support_ladder_base_loss_max_when_active),
                 "stage_order": [
                     "target_mass_floor_plus_rare_class_logit",
                     "target_min_ratio_floor",
@@ -20337,14 +17165,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "enabled": float(pose_direct_live_distillation_weight) > 0.0,
                 "weight": float(pose_direct_live_distillation_weight),
                 "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
-                "candidate_surface": (
-                    "decoded_rgb_nhwc01_to_pr95_yuv6_pair_nhwc255"
-                ),
+                "candidate_surface": ("decoded_rgb_nhwc01_to_pr95_yuv6_pair_nhwc255"),
                 "objective": "sqrt_10_pose_mse_on_upstream_posenet_first_6_dims",
-                "purpose": (
-                    "direct_live_posenet_vjp_for_pose_yuv6_temporal_distortion_"
-                    "collapse_repair"
-                ),
+                "purpose": ("direct_live_posenet_vjp_for_pose_yuv6_temporal_distortion_collapse_repair"),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
@@ -20354,18 +17177,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
                 "progress_every": int(mlx_prefilter_progress_every),
                 "singleton_required_for_local_cpu_replay_unlock": True,
-                "gpu_profiles_are_prefilter_only": (
-                    effective_prefilter_scorer_device != "cpu"
-                ),
-                "batched_profiles_are_prefilter_only": (
-                    int(mlx_prefilter_scorer_batch_pairs) != 1
-                ),
+                "gpu_profiles_are_prefilter_only": (effective_prefilter_scorer_device != "cpu"),
+                "batched_profiles_are_prefilter_only": (int(mlx_prefilter_scorer_batch_pairs) != 1),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "pose_instability_monitor": pose_instability_monitor.as_dict(),
-            "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                scorer_upstream_dir
-            ),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream_dir),
         },
         "training_executed": True,
         "score_authority": "false_macos_mlx_research_signal",
@@ -20380,16 +17197,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "extra_loss_weights": coder_qat_loss_weight_map,
         "export_archive_fn": _export_archive,
         "archive_replay_components_fn": (
-            lambda archive_path, batch, candidate_kind: (
-                build_hi_nerv_archive_replay_components(
-                    archive_path,
-                    batch,
-                    target_rgb_0=target_rgb_0,
-                    target_rgb_1=target_rgb_1,
-                    scorer_teacher=scorer_teacher,
-                    pose_scorer_teacher=pose_scorer_teacher,
-                    candidate_kind=candidate_kind,
-                )
+            lambda archive_path, batch, candidate_kind: build_hi_nerv_archive_replay_components(
+                archive_path,
+                batch,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                scorer_teacher=scorer_teacher,
+                pose_scorer_teacher=pose_scorer_teacher,
+                candidate_kind=candidate_kind,
             )
         ),
         "substrate_artifact_metadata": artifact_metadata,
@@ -20415,18 +17230,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
         if recon_pixel_weight_auto_discovery is not None:
             recon_metadata["source_kind"] = "auto_discovered_joint_p18_p19_file"
-            recon_metadata["auto_discovery"] = (
-                strip_candidate_curriculum_authority_fields(
-                    recon_pixel_weight_auto_discovery
-                )
+            recon_metadata["auto_discovery"] = strip_candidate_curriculum_authority_fields(
+                recon_pixel_weight_auto_discovery
             )
             recon_metadata["scorer_terms"] = {
                 "p18_segnet": "auto_discovered_joint_torch_exact_vjp",
                 "p19_posenet": "auto_discovered_joint_torch_exact_vjp",
             }
-        artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
-            recon_metadata
-        )
+        artifact_metadata["score_aware_training"]["recon_pixel_weight"] = recon_metadata
     teacher_probe_bundle = RendererBundle(**bundle_kwargs)
     scorer_teacher = None
     learnable_student_head = None
@@ -20437,21 +17248,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         or segnet_direct_live_distillation_weight > 0.0
         or segnet_direct_live_subcontrol_active
     ):
-        if (
-            bootstrap_scorer_teacher is not None
-            and int(getattr(bootstrap_scorer_teacher, "frame_count", -1))
-            == int(hydrated_target_pair_count)
+        if bootstrap_scorer_teacher is not None and int(getattr(bootstrap_scorer_teacher, "frame_count", -1)) == int(
+            hydrated_target_pair_count
         ):
             scorer_teacher = bootstrap_scorer_teacher
-            artifact_metadata["score_aware_training"][
-                "segnet_teacher_cache_reuse"
-            ] = {
+            artifact_metadata["score_aware_training"]["segnet_teacher_cache_reuse"] = {
                 "schema": "hi_nerv_segnet_teacher_cache_reuse.v1",
                 "reused_from": "output_head_target_bias_init.scorer_domain_bootstrap",
                 "frame_count": int(getattr(scorer_teacher, "frame_count", 0)),
-                "teacher_argmax_preserved": bool(
-                    getattr(scorer_teacher, "teacher_argmax_thw", None) is not None
-                ),
+                "teacher_argmax_preserved": bool(getattr(scorer_teacher, "teacher_argmax_thw", None) is not None),
                 "runtime_sidecar_bytes": 0,
                 "archive_charged_decoder_tensors": [],
                 "authority": "macos_mlx_research_signal_false_authority",
@@ -20480,9 +17285,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             tau=float(recon_pixel_weight_tau),
             normalize=recon_pixel_weight_normalize,
         )
-        artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
-            recon_metadata
-        )
+        artifact_metadata["score_aware_training"]["recon_pixel_weight"] = recon_metadata
     if pose_distillation_weight > 0.0 or pose_direct_live_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
@@ -20504,83 +17307,43 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         learnable_student_head=learnable_student_head,
         distillation_temperature=float(distillation_temperature),
         segnet_distillation_objective=segnet_distillation_objective,
-        segnet_student_live_calibration_weight=float(
-            segnet_student_live_calibration_weight
-        ),
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
+        segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
         segnet_direct_live_base_loss_weight=float(segnet_direct_live_base_loss_weight),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
-        distillation_num_classes=(
-            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
-        ),
+        distillation_num_classes=(int(scorer_teacher.num_classes) if scorer_teacher is not None else 5),
         pose_distillation_weight=float(pose_distillation_weight),
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
-        pose_dims=int(pose_scorer_teacher.pose_dims)
-        if pose_scorer_teacher is not None
-        else 6,
+        pose_dims=int(pose_scorer_teacher.pose_dims) if pose_scorer_teacher is not None else 6,
         allow_segnet_only_research=bool(allow_segnet_only_research),
-        scorer_input_distribution_guard_weight=float(
-            scorer_input_distribution_guard_weight
-        ),
-        scorer_input_distribution_guard_saturation_margin=float(
-            scorer_input_distribution_guard_saturation_margin
-        ),
-        scorer_input_distribution_guard_temperature=float(
-            scorer_input_distribution_guard_temperature
-        ),
+        scorer_input_distribution_guard_weight=float(scorer_input_distribution_guard_weight),
+        scorer_input_distribution_guard_saturation_margin=float(scorer_input_distribution_guard_saturation_margin),
+        scorer_input_distribution_guard_temperature=float(scorer_input_distribution_guard_temperature),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
-        scorer_input_contrast_floor_segnet_min_std_ratio=float(
-            scorer_input_contrast_floor_segnet_min_std_ratio
-        ),
+        scorer_input_contrast_floor_segnet_min_std_ratio=float(scorer_input_contrast_floor_segnet_min_std_ratio),
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
         ),
         scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
-        posenet_yuv6_geometry_tether_weight=float(
-            posenet_yuv6_geometry_tether_weight
-        ),
-        posenet_temporal_signal_floor_weight=float(
-            posenet_temporal_signal_floor_weight
-        ),
-        posenet_temporal_signal_min_std_ratio=float(
-            posenet_temporal_signal_min_std_ratio
-        ),
-        posenet_temporal_signal_min_mean_abs_ratio=float(
-            posenet_temporal_signal_min_mean_abs_ratio
-        ),
+        posenet_yuv6_geometry_tether_weight=float(posenet_yuv6_geometry_tether_weight),
+        posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
+        posenet_temporal_signal_min_std_ratio=float(posenet_temporal_signal_min_std_ratio),
+        posenet_temporal_signal_min_mean_abs_ratio=float(posenet_temporal_signal_min_mean_abs_ratio),
     )
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
@@ -20604,9 +17367,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=resolved_pr95_curriculum_total_epochs,
         pr95_muon_policy=pr95_muon_policy,
-        pr95_stage_source_weight_amplification_enabled=bool(
-            effective_pr95_stage_source_weight_amplification_enabled
-        ),
+        pr95_stage_source_weight_amplification_enabled=bool(effective_pr95_stage_source_weight_amplification_enabled),
         ema_archive_selection_enabled=True,
         archive_selection_replay_required=bool(archive_selection_replay_required),
         archive_selection_replay_batch_size=(
@@ -20624,29 +17385,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         weight_decay=effective_weight_decay,
         optimizer_kind=effective_optimizer_kind,
         warmup_epochs=int(optimizer_control.get("warmup_epochs", 0)),
-        warmup_steps_per_epoch=max(
-            1, int(optimizer_control.get("warmup_steps_per_epoch", 1))
-        ),
+        warmup_steps_per_epoch=max(1, int(optimizer_control.get("warmup_steps_per_epoch", 1))),
         cosine_decay_enabled=bool(optimizer_control.get("cosine_decay_enabled")),
         cosine_decay_total_epochs=optimizer_control.get("cosine_decay_total_epochs"),
-        cosine_decay_min_lr_ratio=float(
-            optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
-        ),
+        cosine_decay_min_lr_ratio=float(optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)),
         train_time_dual_ascent_config=train_time_dual_ascent_config,
         prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         pair_sampling_weights=scorer_error_pair_sampling_weights,
-        pair_sampling_default_weight=float(
-            scorer_error_pair_curriculum.get("default_weight", 1.0)
-        ),
+        pair_sampling_default_weight=float(scorer_error_pair_curriculum.get("default_weight", 1.0)),
         gradient_multiplier_by_name=normalized_gradient_multiplier_by_name,
-        bias_gradient_multiplier=(
-            float(bias_gradient_multiplier)
-            if bias_gradient_multiplier is not None
-            else None
-        ),
-        output_head_bias_gradient_multiplier=float(
-            output_head_bias_gradient_multiplier
-        ),
+        bias_gradient_multiplier=(float(bias_gradient_multiplier) if bias_gradient_multiplier is not None else None),
+        output_head_bias_gradient_multiplier=float(output_head_bias_gradient_multiplier),
         scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
         scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
@@ -20656,11 +17405,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
             None
-            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            is None
-            else float(
-                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            )
+            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is None
+            else float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction)
         ),
         scorer_space_step_guard_min_post_segnet_target_class_min_ratio=(
             None
@@ -20719,19 +17465,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=(
             None
-            if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-            )
+            if scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening is None
+            else float(scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening)
         ),
         scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=(
             None
-            if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-            )
+            if scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening is None
+            else float(scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening)
         ),
         scorer_space_step_guard_max_direct_nonrate_score_worsening=(
             None
@@ -20740,66 +17480,42 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=(
             None
-            if scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            is None
-            else float(
-                scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-            )
+            if scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening is None
+            else float(scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening)
         ),
-        scorer_space_step_guard_backtracking_steps=int(
-            scorer_space_step_guard_backtracking_steps
-        ),
-        scorer_space_step_guard_backtracking_shrink=float(
-            scorer_space_step_guard_backtracking_shrink
-        ),
+        scorer_space_step_guard_backtracking_steps=int(scorer_space_step_guard_backtracking_steps),
+        scorer_space_step_guard_backtracking_shrink=float(scorer_space_step_guard_backtracking_shrink),
         scorer_support_ladder_enabled=bool(scorer_support_ladder_enabled),
         scorer_support_ladder_target_coverage_floor=(
             None
-            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            is None
-            else float(
-                scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            )
+            if scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction is None
+            else float(scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction)
         ),
         scorer_support_ladder_target_min_ratio_floor=(
             None
             if scorer_space_step_guard_min_post_segnet_target_class_min_ratio is None
             else float(scorer_space_step_guard_min_post_segnet_target_class_min_ratio)
         ),
-        scorer_support_ladder_patience_steps=int(
-            scorer_support_ladder_patience_steps
-        ),
+        scorer_support_ladder_patience_steps=int(scorer_support_ladder_patience_steps),
         scorer_support_ladder_growth_factor=float(scorer_support_ladder_growth_factor),
-        scorer_support_ladder_max_multiplier=float(
-            scorer_support_ladder_max_multiplier
-        ),
-        scorer_support_ladder_base_loss_max_when_active=float(
-            scorer_support_ladder_base_loss_max_when_active
-        ),
+        scorer_support_ladder_max_multiplier=float(scorer_support_ladder_max_multiplier),
+        scorer_support_ladder_base_loss_max_when_active=float(scorer_support_ladder_base_loss_max_when_active),
         on_epoch_end=pose_instability_monitor,
         checkpoint_selection_metric_key=checkpoint_selection_metric_key,
         checkpoint_selection_metric_mode="min",
         checkpoint_selection_metric_required=checkpoint_selection_required,
-        checkpoint_selection_tie_break_metric_key=(
-            checkpoint_tie_break_metric_key
-        ),
+        checkpoint_selection_tie_break_metric_key=(checkpoint_tie_break_metric_key),
         checkpoint_selection_tie_break_metric_mode="min",
-        checkpoint_selection_tie_break_metric_required=(
-            checkpoint_tie_break_required
-        ),
+        checkpoint_selection_tie_break_metric_required=(checkpoint_tie_break_required),
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
             "contest video targets, byte-closed archive export, receiver proof, "
             "explicit optimizer-policy routing, and false-authority MLX evidence."
         ),
     )
-    artifact_metadata["score_aware_training"]["pose_instability_monitor"] = (
-        pose_instability_monitor.as_dict()
-    )
+    artifact_metadata["score_aware_training"]["pose_instability_monitor"] = pose_instability_monitor.as_dict()
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
-    support_ladder_metadata = artifact_metadata["score_aware_training"].get(
-        "segnet_direct_live_class_support_ladder"
-    )
+    support_ladder_metadata = artifact_metadata["score_aware_training"].get("segnet_direct_live_class_support_ladder")
     if isinstance(support_ladder_metadata, Mapping):
         _attach_hi_nerv_score_aware_training_metadata(
             artifact=artifact,
@@ -20813,65 +17529,31 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         family="hi_nerv",
         segnet_distillation_weight=float(segnet_distillation_weight),
         pose_distillation_weight=float(pose_distillation_weight),
-        segnet_student_live_calibration_weight=float(
-            segnet_student_live_calibration_weight
-        ),
-        segnet_direct_live_distillation_weight=float(
-            segnet_direct_live_distillation_weight
-        ),
-        segnet_direct_live_class_histogram_weight=float(
-            segnet_direct_live_class_histogram_weight
-        ),
-        segnet_direct_live_class_balanced_hinge_weight=float(
-            segnet_direct_live_class_balanced_hinge_weight
-        ),
-        segnet_direct_live_class_balanced_ce_weight=float(
-            segnet_direct_live_class_balanced_ce_weight
-        ),
+        segnet_student_live_calibration_weight=float(segnet_student_live_calibration_weight),
+        segnet_direct_live_distillation_weight=float(segnet_direct_live_distillation_weight),
+        segnet_direct_live_class_histogram_weight=float(segnet_direct_live_class_histogram_weight),
+        segnet_direct_live_class_balanced_hinge_weight=float(segnet_direct_live_class_balanced_hinge_weight),
+        segnet_direct_live_class_balanced_ce_weight=float(segnet_direct_live_class_balanced_ce_weight),
         segnet_direct_live_class_balanced_squared_hinge_weight=float(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
-        segnet_direct_live_class_region_recon_weight=float(
-            segnet_direct_live_class_region_recon_weight
-        ),
-        segnet_direct_live_rare_class_logit_weight=float(
-            segnet_direct_live_rare_class_logit_weight
-        ),
-        segnet_direct_live_target_mass_floor_weight=float(
-            segnet_direct_live_target_mass_floor_weight
-        ),
-        segnet_direct_live_target_min_ratio_floor_weight=float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
-        pose_direct_live_distillation_weight=float(
-            pose_direct_live_distillation_weight
-        ),
+        segnet_direct_live_class_region_recon_weight=float(segnet_direct_live_class_region_recon_weight),
+        segnet_direct_live_rare_class_logit_weight=float(segnet_direct_live_rare_class_logit_weight),
+        segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),
+        segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),
+        pose_direct_live_distillation_weight=float(pose_direct_live_distillation_weight),
         scorer_support_ladder_enabled=bool(scorer_support_ladder_enabled),
         pr95_faithful_curriculum_enabled=bool(pr95_curriculum_enabled),
         coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
-        train_time_section_byte_control_bound=bool(
-            train_time_section_byte_control.get("active") is True
-        ),
-        scorer_input_distribution_guard_weight=float(
-            scorer_input_distribution_guard_weight
-        ),
+        train_time_section_byte_control_bound=bool(train_time_section_byte_control.get("active") is True),
+        scorer_input_distribution_guard_weight=float(scorer_input_distribution_guard_weight),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
         scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
-        posenet_yuv6_geometry_tether_weight=float(
-            posenet_yuv6_geometry_tether_weight
-        ),
-        posenet_temporal_signal_floor_weight=float(
-            posenet_temporal_signal_floor_weight
-        ),
+        posenet_yuv6_geometry_tether_weight=float(posenet_yuv6_geometry_tether_weight),
+        posenet_temporal_signal_floor_weight=float(posenet_temporal_signal_floor_weight),
         gradient_multiplier_controls_requested=bool(
-            any(
-                float(value) != 1.0
-                for value in normalized_gradient_multiplier_by_name.values()
-            )
-            or (
-                bias_gradient_multiplier is not None
-                and float(bias_gradient_multiplier) != 1.0
-            )
+            any(float(value) != 1.0 for value in normalized_gradient_multiplier_by_name.values())
+            or (bias_gradient_multiplier is not None and float(bias_gradient_multiplier) != 1.0)
             or float(output_head_bias_gradient_multiplier) != 1.0
         ),
         min_segnet_direct_live_occupied_class_fraction_for_fit_gate=float(
@@ -20890,9 +17572,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     archive_sha256 = artifact_dict.get("archive_sha256")
     try:
         if archive_bytes is None or archive_sha256 is None:
-            raise CompactRendererMlxSpineRunnerError(
-                "archive_bytes/archive_sha256 missing; cannot build MLX prefilter"
-            )
+            raise CompactRendererMlxSpineRunnerError("archive_bytes/archive_sha256 missing; cannot build MLX prefilter")
         from tac.local_acceleration.mlx_renderer_prefilter_profile import (
             write_mlx_renderer_prefilter_profile,
         )
@@ -21025,29 +17705,21 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             output_dir=out,
             blockers=["hi_nerv_receiver_cache_quality_max_pairs_invalid"],
             archive_path=Path(archive_zip_path) if archive_zip_path else None,
-            reference_cache_dir=Path(reference_cache_dir)
-            if reference_cache_dir is not None
-            else None,
+            reference_cache_dir=Path(reference_cache_dir) if reference_cache_dir is not None else None,
         )
     if batch_pairs < 1:
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
             output_dir=out,
             blockers=["hi_nerv_receiver_cache_quality_batch_pairs_invalid"],
             archive_path=Path(archive_zip_path) if archive_zip_path else None,
-            reference_cache_dir=Path(reference_cache_dir)
-            if reference_cache_dir is not None
-            else None,
+            reference_cache_dir=Path(reference_cache_dir) if reference_cache_dir is not None else None,
         )
     if bool(mlx_scorer_response_probe) and int(mlx_scorer_response_batch_pairs) < 1:
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
             output_dir=out,
-            blockers=[
-                "hi_nerv_receiver_cache_quality_mlx_scorer_response_batch_pairs_invalid"
-            ],
+            blockers=["hi_nerv_receiver_cache_quality_mlx_scorer_response_batch_pairs_invalid"],
             archive_path=Path(archive_zip_path) if archive_zip_path else None,
-            reference_cache_dir=Path(reference_cache_dir)
-            if reference_cache_dir is not None
-            else None,
+            reference_cache_dir=Path(reference_cache_dir) if reference_cache_dir is not None else None,
         )
     if archive_zip_path is None:
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
@@ -21056,11 +17728,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
         )
     root = Path(repo_root).expanduser().resolve(strict=False)
     archive = Path(archive_zip_path).expanduser()
-    archive = (
-        (root / archive).resolve(strict=False)
-        if not archive.is_absolute()
-        else archive.resolve(strict=False)
-    )
+    archive = (root / archive).resolve(strict=False) if not archive.is_absolute() else archive.resolve(strict=False)
     if not archive.is_file():
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
             output_dir=out,
@@ -21073,9 +17741,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
         if mlx_scorer_response_upstream_dir is None:
             scorer_response_upstream = root / "upstream"
         else:
-            scorer_response_upstream = Path(
-                mlx_scorer_response_upstream_dir
-            ).expanduser()
+            scorer_response_upstream = Path(mlx_scorer_response_upstream_dir).expanduser()
             scorer_response_upstream = (
                 (root / scorer_response_upstream).resolve(strict=False)
                 if not scorer_response_upstream.is_absolute()
@@ -21083,9 +17749,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             )
 
     selected_pair_indices = tuple(int(value) for value in pair_indices)
-    quality_pair_indices = selected_pair_indices[: int(max_pairs)] or tuple(
-        range(int(max_pairs))
-    )
+    quality_pair_indices = selected_pair_indices[: int(max_pairs)] or tuple(range(int(max_pairs)))
     reference: Path
     if reference_cache_dir is not None:
         reference = Path(reference_cache_dir).expanduser()
@@ -21102,17 +17766,11 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             )
     else:
         source = Path(source_video_path).expanduser()
-        source = (
-            (root / source).resolve(strict=False)
-            if not source.is_absolute()
-            else source.resolve(strict=False)
-        )
+        source = (root / source).resolve(strict=False) if not source.is_absolute() else source.resolve(strict=False)
         if not source.is_file():
             return _write_hi_nerv_runner_receiver_cache_quality_refusal(
                 output_dir=out,
-                blockers=[
-                    "hi_nerv_source_video_missing_for_auto_receiver_cache_quality_reference"
-                ],
+                blockers=["hi_nerv_source_video_missing_for_auto_receiver_cache_quality_reference"],
                 archive_path=archive,
             )
         reference = report_dir / "source_video_reference_cache"
@@ -21139,9 +17797,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
         except Exception as exc:
             return _write_hi_nerv_runner_receiver_cache_quality_refusal(
                 output_dir=out,
-                blockers=[
-                    "hi_nerv_auto_receiver_cache_quality_reference_build_failed"
-                ],
+                blockers=["hi_nerv_auto_receiver_cache_quality_reference_build_failed"],
                 archive_path=archive,
                 reference_cache_dir=reference,
                 failure=repr(exc),
@@ -21162,27 +17818,17 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             pair_indices=quality_pair_indices,
             min_segnet_std=float(min_segnet_std),
             min_segnet_dynamic_range=float(min_segnet_dynamic_range),
-            max_segnet_mae_vs_reference_for_fit_gate=float(
-                max_segnet_mae_vs_reference_for_fit_gate
-            ),
+            max_segnet_mae_vs_reference_for_fit_gate=float(max_segnet_mae_vs_reference_for_fit_gate),
             min_posenet_yuv6_std=float(min_posenet_yuv6_std),
             min_posenet_yuv6_dynamic_range=float(min_posenet_yuv6_dynamic_range),
-            max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
-                max_posenet_yuv6_mae_vs_reference_for_fit_gate
-            ),
-            min_posenet_yuv6_temporal_signal_std_for_fit_gate=float(
-                min_posenet_yuv6_temporal_signal_std_for_fit_gate
-            ),
+            max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(max_posenet_yuv6_mae_vs_reference_for_fit_gate),
+            min_posenet_yuv6_temporal_signal_std_for_fit_gate=float(min_posenet_yuv6_temporal_signal_std_for_fit_gate),
             min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=float(
                 min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
             ),
-            segnet_argmax_probe_upstream_dir=(
-                (root / "upstream") if bool(segnet_argmax_probe) else None
-            ),
+            segnet_argmax_probe_upstream_dir=((root / "upstream") if bool(segnet_argmax_probe) else None),
             segnet_argmax_probe_batch_frames=int(segnet_argmax_batch_frames),
-            max_segnet_argmax_disagreement_for_fit_gate=float(
-                max_segnet_argmax_disagreement_for_fit_gate
-            ),
+            max_segnet_argmax_disagreement_for_fit_gate=float(max_segnet_argmax_disagreement_for_fit_gate),
             min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
                 min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
@@ -21190,19 +17836,13 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             mlx_scorer_response_upstream_dir=scorer_response_upstream,
             mlx_scorer_response_device_type=str(mlx_scorer_response_device_type),
             mlx_scorer_response_batch_pairs=int(mlx_scorer_response_batch_pairs),
-            max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
-                max_mlx_scorer_response_posenet_dist_for_fit_gate
-            ),
-            max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
-                max_mlx_scorer_response_segnet_dist_for_fit_gate
-            ),
+            max_mlx_scorer_response_posenet_dist_for_fit_gate=float(max_mlx_scorer_response_posenet_dist_for_fit_gate),
+            max_mlx_scorer_response_segnet_dist_for_fit_gate=float(max_mlx_scorer_response_segnet_dist_for_fit_gate),
         )
         if isinstance(report, dict):
             report["runner_receiver_cache_quality_max_pairs"] = int(max_pairs)
             report["runner_receiver_cache_quality_batch_pairs"] = int(batch_pairs)
-            report["runner_receiver_cache_quality_pair_indices"] = [
-                int(value) for value in quality_pair_indices
-            ]
+            report["runner_receiver_cache_quality_pair_indices"] = [int(value) for value in quality_pair_indices]
             report_path = report.get("report_path")
             if isinstance(report_path, str) and report_path:
                 _write_json(Path(report_path), report)
@@ -21233,9 +17873,7 @@ def _write_hi_nerv_runner_receiver_cache_quality_refusal(
         "schema": "hi_nerv_receiver_cache_quality_report.v1",
         "output_dir": report_dir.as_posix(),
         "archive_path": archive_path.as_posix() if archive_path is not None else None,
-        "reference_cache_dir": (
-            reference_cache_dir.as_posix() if reference_cache_dir is not None else None
-        ),
+        "reference_cache_dir": (reference_cache_dir.as_posix() if reference_cache_dir is not None else None),
         "quality_gate": None,
         "quality_gate_passed": False,
         "failure": failure,
@@ -21259,33 +17897,16 @@ def _hi_nerv_receiver_cache_quality_summary(
         return None
     gate = report.get("quality_gate") if isinstance(report, Mapping) else None
     gate_stats = gate.get("stats") if isinstance(gate, Mapping) else None
-    argmax_probe = (
-        report.get("segnet_argmax_probe") if isinstance(report, Mapping) else None
-    )
-    crux_probe = (
-        report.get("distortion_crux_probe") if isinstance(report, Mapping) else None
-    )
-    mlx_scorer_response_probe = (
-        report.get("mlx_scorer_response_probe")
-        if isinstance(report, Mapping)
-        else None
-    )
+    argmax_probe = report.get("segnet_argmax_probe") if isinstance(report, Mapping) else None
+    crux_probe = report.get("distortion_crux_probe") if isinstance(report, Mapping) else None
+    mlx_scorer_response_probe = report.get("mlx_scorer_response_probe") if isinstance(report, Mapping) else None
     crux_aggregate = (
         crux_probe.get("aggregate")
-        if isinstance(crux_probe, Mapping)
-        and isinstance(crux_probe.get("aggregate"), Mapping)
+        if isinstance(crux_probe, Mapping) and isinstance(crux_probe.get("aggregate"), Mapping)
         else None
     )
-    candidate_histogram = (
-        argmax_probe.get("candidate_argmax_histogram")
-        if isinstance(argmax_probe, Mapping)
-        else None
-    )
-    reference_histogram = (
-        argmax_probe.get("reference_argmax_histogram")
-        if isinstance(argmax_probe, Mapping)
-        else None
-    )
+    candidate_histogram = argmax_probe.get("candidate_argmax_histogram") if isinstance(argmax_probe, Mapping) else None
+    reference_histogram = argmax_probe.get("reference_argmax_histogram") if isinstance(argmax_probe, Mapping) else None
     candidate_occupancy = _argmax_histogram_occupancy(candidate_histogram)
     reference_occupancy = _argmax_histogram_occupancy(reference_histogram)
     target_class_coverage = _argmax_histogram_target_class_coverage(
@@ -21293,15 +17914,11 @@ def _hi_nerv_receiver_cache_quality_summary(
         reference_histogram,
     )
     candidate_occupied_fraction = _first_finite_float(
-        argmax_probe.get("candidate_occupied_class_fraction")
-        if isinstance(argmax_probe, Mapping)
-        else None,
+        argmax_probe.get("candidate_occupied_class_fraction") if isinstance(argmax_probe, Mapping) else None,
         candidate_occupancy.get("occupied_class_fraction"),
     )
     reference_occupied_fraction = _first_finite_float(
-        argmax_probe.get("reference_occupied_class_fraction")
-        if isinstance(argmax_probe, Mapping)
-        else None,
+        argmax_probe.get("reference_occupied_class_fraction") if isinstance(argmax_probe, Mapping) else None,
         reference_occupancy.get("occupied_class_fraction"),
     )
     return {
@@ -21309,29 +17926,27 @@ def _hi_nerv_receiver_cache_quality_summary(
         "report_path": report.get("report_path"),
         "archive_path": report.get("archive_path"),
         "archive_sha256": report.get("archive_sha256"),
+        "receiver_surface_uint8_changed_pixels": _first_finite_float(
+            report.get("receiver_surface_uint8_changed_pixels"),
+            report.get("uint8_changed_pixels"),
+        ),
+        "fakequant_survival": _bool_or_none(report.get("fakequant_survival")),
         "candidate_cache_dir": report.get("candidate_cache_dir"),
         "reference_cache_dir": report.get("reference_cache_dir"),
         "quality_gate_path": report.get("quality_gate_path"),
         "quality_gate_verdict": gate.get("verdict") if isinstance(gate, Mapping) else None,
         "quality_gate_passed": bool(report.get("quality_gate_passed")),
         "candidate_segnet_last_rgb_stats": (
-            gate_stats.get("candidate_segnet_last_rgb")
-            if isinstance(gate_stats, Mapping)
-            else None
+            gate_stats.get("candidate_segnet_last_rgb") if isinstance(gate_stats, Mapping) else None
         ),
         "candidate_posenet_yuv6_pair_stats": (
-            gate_stats.get("candidate_posenet_yuv6_pair")
-            if isinstance(gate_stats, Mapping)
-            else None
+            gate_stats.get("candidate_posenet_yuv6_pair") if isinstance(gate_stats, Mapping) else None
         ),
-        "distance_to_reference": (
-            gate.get("distance_to_reference") if isinstance(gate, Mapping) else None
-        ),
+        "distance_to_reference": (gate.get("distance_to_reference") if isinstance(gate, Mapping) else None),
         "segnet_argmax_probe_path": report.get("segnet_argmax_probe_path"),
         "segnet_argmax_sample_pairs": (
             int(argmax_probe.get("sample_pairs"))
-            if isinstance(argmax_probe, Mapping)
-            and _finite_json_number(argmax_probe.get("sample_pairs"))
+            if isinstance(argmax_probe, Mapping) and _finite_json_number(argmax_probe.get("sample_pairs"))
             else None
         ),
         "runner_receiver_cache_quality_max_pairs": (
@@ -21341,30 +17956,22 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "runner_requested_receiver_cache_quality_max_pairs": (
             int(report.get("runner_requested_receiver_cache_quality_max_pairs"))
-            if _finite_json_number(
-                report.get("runner_requested_receiver_cache_quality_max_pairs")
-            )
+            if _finite_json_number(report.get("runner_requested_receiver_cache_quality_max_pairs"))
             else None
         ),
         "runner_effective_receiver_cache_quality_max_pairs": (
             int(report.get("runner_effective_receiver_cache_quality_max_pairs"))
-            if _finite_json_number(
-                report.get("runner_effective_receiver_cache_quality_max_pairs")
-            )
+            if _finite_json_number(report.get("runner_effective_receiver_cache_quality_max_pairs"))
             else None
         ),
         "runner_quality_floor_receiver_cache_quality_min_pairs": (
             int(report.get("runner_quality_floor_receiver_cache_quality_min_pairs"))
-            if _finite_json_number(
-                report.get("runner_quality_floor_receiver_cache_quality_min_pairs")
-            )
+            if _finite_json_number(report.get("runner_quality_floor_receiver_cache_quality_min_pairs"))
             else None
         ),
         "runner_train_scope_receiver_cache_quality_min_pairs": (
             int(report.get("runner_train_scope_receiver_cache_quality_min_pairs"))
-            if _finite_json_number(
-                report.get("runner_train_scope_receiver_cache_quality_min_pairs")
-            )
+            if _finite_json_number(report.get("runner_train_scope_receiver_cache_quality_min_pairs"))
             else None
         ),
         "runner_receiver_cache_quality_pair_indices": (
@@ -21373,48 +17980,32 @@ def _hi_nerv_receiver_cache_quality_summary(
             else None
         ),
         "segnet_argmax_probe_passed": (
-            bool(argmax_probe.get("fit_gate_passed"))
-            if isinstance(argmax_probe, Mapping)
-            else None
+            bool(argmax_probe.get("fit_gate_passed")) if isinstance(argmax_probe, Mapping) else None
         ),
         "segnet_argmax_disagreement_rate": (
-            argmax_probe.get("segnet_argmax_disagreement_rate")
-            if isinstance(argmax_probe, Mapping)
-            else None
+            argmax_probe.get("segnet_argmax_disagreement_rate") if isinstance(argmax_probe, Mapping) else None
         ),
         "segnet_boundary_argmax_disagreement_rate": (
-            argmax_probe.get("boundary_argmax_disagreement_rate")
-            if isinstance(argmax_probe, Mapping)
-            else None
+            argmax_probe.get("boundary_argmax_disagreement_rate") if isinstance(argmax_probe, Mapping) else None
         ),
         "segnet_candidate_argmax_histogram": (
-            [int(v) for v in candidate_histogram]
-            if isinstance(candidate_histogram, list)
-            else None
+            [int(v) for v in candidate_histogram] if isinstance(candidate_histogram, list) else None
         ),
         "segnet_reference_argmax_histogram": (
-            [int(v) for v in reference_histogram]
-            if isinstance(reference_histogram, list)
-            else None
+            [int(v) for v in reference_histogram] if isinstance(reference_histogram, list) else None
         ),
         "segnet_candidate_occupied_class_fraction": candidate_occupied_fraction,
         "segnet_candidate_any_occupied_class_fraction": _first_finite_float(
-            argmax_probe.get("candidate_any_occupied_class_fraction")
-            if isinstance(argmax_probe, Mapping)
-            else None,
+            argmax_probe.get("candidate_any_occupied_class_fraction") if isinstance(argmax_probe, Mapping) else None,
             candidate_occupancy.get("any_occupied_class_fraction"),
         ),
         "segnet_reference_occupied_class_fraction": reference_occupied_fraction,
         "segnet_reference_any_occupied_class_fraction": _first_finite_float(
-            argmax_probe.get("reference_any_occupied_class_fraction")
-            if isinstance(argmax_probe, Mapping)
-            else None,
+            argmax_probe.get("reference_any_occupied_class_fraction") if isinstance(argmax_probe, Mapping) else None,
             reference_occupancy.get("any_occupied_class_fraction"),
         ),
         "segnet_candidate_target_class_coverage_fraction": _first_finite_float(
-            argmax_probe.get("candidate_target_class_coverage_fraction")
-            if isinstance(argmax_probe, Mapping)
-            else None,
+            argmax_probe.get("candidate_target_class_coverage_fraction") if isinstance(argmax_probe, Mapping) else None,
             target_class_coverage.get("candidate_target_class_coverage_fraction"),
         ),
         "segnet_candidate_target_any_class_coverage_fraction": _first_finite_float(
@@ -21424,15 +18015,11 @@ def _hi_nerv_receiver_cache_quality_summary(
             target_class_coverage.get("candidate_target_any_class_coverage_fraction"),
         ),
         "segnet_candidate_target_class_min_ratio": _first_finite_float(
-            argmax_probe.get("candidate_target_class_min_ratio")
-            if isinstance(argmax_probe, Mapping)
-            else None,
+            argmax_probe.get("candidate_target_class_min_ratio") if isinstance(argmax_probe, Mapping) else None,
             target_class_coverage.get("candidate_target_class_min_ratio"),
         ),
         "segnet_target_material_class_count": _first_finite_float(
-            argmax_probe.get("target_material_class_count")
-            if isinstance(argmax_probe, Mapping)
-            else None,
+            argmax_probe.get("target_material_class_count") if isinstance(argmax_probe, Mapping) else None,
             target_class_coverage.get("target_material_class_count"),
         ),
         "segnet_candidate_target_material_class_covered_count": _first_finite_float(
@@ -21449,8 +18036,7 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "segnet_candidate_target_class_ratio": (
             argmax_probe.get("candidate_target_class_ratio")
-            if isinstance(argmax_probe, Mapping)
-            and isinstance(argmax_probe.get("candidate_target_class_ratio"), list)
+            if isinstance(argmax_probe, Mapping) and isinstance(argmax_probe.get("candidate_target_class_ratio"), list)
             else target_class_coverage.get("candidate_target_class_ratio")
         ),
         "segnet_argmax_target_coverage_min_class_pixel_count": _first_finite_float(
@@ -21462,24 +18048,14 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "distortion_crux_probe_path": report.get("distortion_crux_probe_path"),
         "distortion_crux_probe_passed": (
-            bool(crux_probe.get("fit_gate_passed"))
-            if isinstance(crux_probe, Mapping)
-            else None
+            bool(crux_probe.get("fit_gate_passed")) if isinstance(crux_probe, Mapping) else None
         ),
         "distortion_crux_dominant_domain": (
-            crux_aggregate.get("dominant_domain_top_k")
-            if isinstance(crux_aggregate, Mapping)
-            else None
+            crux_aggregate.get("dominant_domain_top_k") if isinstance(crux_aggregate, Mapping) else None
         ),
-        "distortion_crux_aggregate": (
-            dict(crux_aggregate) if isinstance(crux_aggregate, Mapping) else None
-        ),
-        "mlx_scorer_response_probe_path": report.get(
-            "mlx_scorer_response_probe_path"
-        ),
-        "mlx_scorer_response_probe_required": bool(
-            report.get("mlx_scorer_response_probe_required")
-        ),
+        "distortion_crux_aggregate": (dict(crux_aggregate) if isinstance(crux_aggregate, Mapping) else None),
+        "mlx_scorer_response_probe_path": report.get("mlx_scorer_response_probe_path"),
+        "mlx_scorer_response_probe_required": bool(report.get("mlx_scorer_response_probe_required")),
         "mlx_scorer_response_probe_passed": (
             bool(mlx_scorer_response_probe.get("fit_gate_passed"))
             if isinstance(mlx_scorer_response_probe, Mapping)
@@ -21491,9 +18067,7 @@ def _hi_nerv_receiver_cache_quality_summary(
             else None
         ),
         "mlx_scorer_response_avg_segnet_dist": (
-            mlx_scorer_response_probe.get("avg_segnet_dist")
-            if isinstance(mlx_scorer_response_probe, Mapping)
-            else None
+            mlx_scorer_response_probe.get("avg_segnet_dist") if isinstance(mlx_scorer_response_probe, Mapping) else None
         ),
         "mlx_scorer_response_blockers": (
             [str(blocker) for blocker in mlx_scorer_response_probe.get("blockers") or []]
@@ -21502,8 +18076,7 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "hard_pair_coverage": (
             dict(crux_probe.get("hard_pair_coverage"))
-            if isinstance(crux_probe, Mapping)
-            and isinstance(crux_probe.get("hard_pair_coverage"), Mapping)
+            if isinstance(crux_probe, Mapping) and isinstance(crux_probe.get("hard_pair_coverage"), Mapping)
             else None
         ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
@@ -21521,6 +18094,159 @@ def _hi_nerv_receiver_replay_selection_score(
     if not isinstance(probe, Mapping):
         return None
     return _first_finite_float(probe.get("canonical_score"))
+
+
+def _write_hi_nerv_receiver_replay_parseback_servo_lift(
+    *,
+    receiver_replay_archive_selection: Mapping[str, Any] | None,
+    receiver_surface_trace: Mapping[str, Any] | None,
+    local_cpu_replay_summary: Mapping[str, Any] | None,
+    output_dir: str | Path,
+) -> dict[str, Any] | None:
+    """Lift receiver-replayed archive selection into the shared servo IR."""
+
+    lift = _hi_nerv_receiver_replay_parseback_servo_lift(
+        receiver_replay_archive_selection=receiver_replay_archive_selection,
+        receiver_surface_trace=receiver_surface_trace,
+        local_cpu_replay_summary=local_cpu_replay_summary,
+    )
+    if lift is None:
+        return None
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "receiver_replay_parseback_servo_lift.json"
+    _write_json(path, lift)
+    lift = dict(lift)
+    lift["artifact_path"] = path.as_posix()
+    lift["artifact_sha256"] = _sha256_file(path)
+    _write_json(path, lift)
+    return lift
+
+
+def _hi_nerv_receiver_replay_parseback_servo_lift(
+    *,
+    receiver_replay_archive_selection: Mapping[str, Any] | None,
+    receiver_surface_trace: Mapping[str, Any] | None,
+    local_cpu_replay_summary: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(receiver_replay_archive_selection, Mapping):
+        return None
+    rows = [row for row in receiver_replay_archive_selection.get("rows") or [] if isinstance(row, Mapping)]
+    if len(rows) < 2:
+        return None
+    training_row = next(
+        (row for row in rows if row.get("selected_by_training_proxy") is True),
+        None,
+    )
+    selected_path = str(receiver_replay_archive_selection.get("selected_archive_path") or "")
+    selected_row = next(
+        (row for row in rows if str(row.get("archive_path") or "") == selected_path),
+        None,
+    )
+    blockers: list[str] = []
+    if training_row is None:
+        blockers.append("hi_nerv_receiver_replay_servo_lift_training_proxy_row_missing")
+    if selected_row is None:
+        blockers.append("hi_nerv_receiver_replay_servo_lift_selected_row_missing")
+    if training_row is None or selected_row is None:
+        return {
+            "schema": "hi_nerv_receiver_replay_parseback_servo_lift.v1",
+            "parseback_servo_lift": None,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+
+    old_summary = training_row.get("receiver_replay_summary")
+    new_summary = selected_row.get("receiver_replay_summary")
+    if not isinstance(old_summary, Mapping):
+        old_summary = {}
+        blockers.append("hi_nerv_receiver_replay_servo_lift_old_summary_missing")
+    if not isinstance(new_summary, Mapping):
+        new_summary = {}
+        blockers.append("hi_nerv_receiver_replay_servo_lift_new_summary_missing")
+
+    old_d_seg = _first_finite_float(old_summary.get("mlx_scorer_response_avg_segnet_dist"))
+    new_d_seg = _first_finite_float(new_summary.get("mlx_scorer_response_avg_segnet_dist"))
+    old_d_pose = _first_finite_float(old_summary.get("mlx_scorer_response_avg_posenet_dist"))
+    new_d_pose = _first_finite_float(new_summary.get("mlx_scorer_response_avg_posenet_dist"))
+    old_bytes = _positive_int_or_none(training_row.get("archive_bytes"))
+    new_bytes = _positive_int_or_none(selected_row.get("archive_bytes"))
+    old_archive_sha = _sha256_text(training_row.get("archive_sha256"))
+    new_archive_sha = _sha256_text(selected_row.get("archive_sha256"))
+    old_flips = _hi_nerv_parseback_argmax_flipped_pixels(old_summary)
+    new_flips = _hi_nerv_parseback_argmax_flipped_pixels(new_summary)
+    argmax_delta = abs(float(new_flips) - float(old_flips)) if old_flips is not None and new_flips is not None else None
+    pose_delta = (
+        abs(float(new_d_pose) - float(old_d_pose)) if old_d_pose is not None and new_d_pose is not None else None
+    )
+    uint8_changed_pixels = _first_finite_float(
+        new_summary.get("receiver_surface_uint8_changed_pixels"),
+        receiver_surface_trace.get("receiver_surface_uint8_changed_pixels")
+        if isinstance(receiver_surface_trace, Mapping)
+        else None,
+    )
+    fakequant_survival = _bool_or_none(new_summary.get("fakequant_survival"))
+    parseback_survival = bool(
+        new_d_seg is not None
+        and new_d_pose is not None
+        and new_archive_sha is not None
+        and new_summary.get("mlx_scorer_response_probe_required") is True
+    )
+    inflate_survival = bool(
+        isinstance(local_cpu_replay_summary, Mapping) and local_cpu_replay_summary.get("evaluation_passed") is True
+    )
+
+    from tac.substrates._shared.mlx_score_aware.servo_lift import servo_lift
+
+    parseback_servo_lift = servo_lift(
+        {
+            "action_id": "hi_nerv_receiver_replay_archive_selection",
+            "family": "hinerv",
+            "stage": "receiver_replay_archive_selection",
+            "authority": "parseback_mlx",
+            "producer": "hi_nerv_receiver_replay_archive_selection",
+            "consumer": "hi_nerv_runner_archive_resolution",
+            "affected_pairs": [],
+            "affected_regions": ["receiver_replay_archive_selection"],
+            "payload_sections": ["archive_zip"],
+            "archive_sha256": new_archive_sha,
+            "source_archive_sha256": old_archive_sha,
+            "old_d_seg": old_d_seg,
+            "new_d_seg": new_d_seg,
+            "old_d_pose": old_d_pose,
+            "new_d_pose": new_d_pose,
+            "old_bytes": old_bytes,
+            "new_bytes": new_bytes,
+            "fakequant_survived": fakequant_survival,
+            "parseback_survived": parseback_survival,
+            "inflate_survived": inflate_survival,
+            "receiver_surface": {
+                "receiver_surface": "receiver_replay_archive_selection",
+                "uint8_changed_pixels": uint8_changed_pixels,
+                "parseback_argmax_flipped_pixels": argmax_delta,
+                "pose_output_delta_l2": pose_delta,
+                "fakequant_survival": fakequant_survival,
+                "parseback_survival": parseback_survival,
+                "inflate_survival": inflate_survival,
+            },
+        },
+        family="hinerv",
+        stage="receiver_replay_archive_selection",
+        require_inflate_survival=True,
+    )
+    blockers.extend(str(blocker) for blocker in parseback_servo_lift.get("blockers") or [])
+    return {
+        "schema": "hi_nerv_receiver_replay_parseback_servo_lift.v1",
+        "selection_manifest_path": receiver_replay_archive_selection.get("manifest_path"),
+        "training_proxy_archive_path": training_row.get("archive_path"),
+        "selected_archive_path": selected_row.get("archive_path"),
+        "training_proxy_archive_sha256": old_archive_sha,
+        "selected_archive_sha256": new_archive_sha,
+        "parseback_servo_lift": parseback_servo_lift,
+        "blockers": _dedupe(blockers),
+        "score_claim": False,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _hi_nerv_receiver_surface_trace_from_replay_evidence(
@@ -21548,9 +18274,7 @@ def _hi_nerv_receiver_surface_trace_from_replay_evidence(
         "trace_source": "hi_nerv_runner_replay_evidence",
         "archive_parseback_source": selection_source if report is not None else None,
         "local_cpu_replay_source": (
-            "local_submission_replay.v1"
-            if isinstance(local_cpu_replay_summary, Mapping)
-            else None
+            "local_submission_replay.v1" if isinstance(local_cpu_replay_summary, Mapping) else None
         ),
         "score_claim": False,
         "promotion_eligible": False,
@@ -21560,14 +18284,10 @@ def _hi_nerv_receiver_surface_trace_from_replay_evidence(
         summary = _hi_nerv_receiver_cache_quality_summary(report)
         if isinstance(summary, Mapping):
             trace["receiver_surface_parseback_report_path"] = summary.get("report_path")
-            trace["receiver_surface_parseback_archive_sha256"] = summary.get(
-                "archive_sha256"
-            )
+            trace["receiver_surface_parseback_archive_sha256"] = summary.get("archive_sha256")
             parseback_flips = _hi_nerv_parseback_argmax_flipped_pixels(summary)
             if parseback_flips is not None:
-                trace["receiver_surface_parseback_argmax_flipped_pixels"] = (
-                    parseback_flips
-                )
+                trace["receiver_surface_parseback_argmax_flipped_pixels"] = parseback_flips
             for source_key, trace_key in (
                 (
                     "mlx_scorer_response_avg_segnet_dist",
@@ -21586,12 +18306,8 @@ def _hi_nerv_receiver_surface_trace_from_replay_evidence(
                 if value is not None:
                     trace[trace_key] = value
     if isinstance(local_cpu_replay_summary, Mapping):
-        trace["receiver_surface_inflate_evaluate_passed"] = bool(
-            local_cpu_replay_summary.get("evaluation_passed")
-        )
-        trace["receiver_surface_inflate_axis_tag"] = local_cpu_replay_summary.get(
-            "axis_tag"
-        )
+        trace["receiver_surface_inflate_evaluate_passed"] = bool(local_cpu_replay_summary.get("evaluation_passed"))
+        trace["receiver_surface_inflate_axis_tag"] = local_cpu_replay_summary.get("axis_tag")
         for source_key, trace_key in (
             ("seg_distortion", "receiver_surface_inflate_segnet_distortion"),
             ("pose_distortion", "receiver_surface_inflate_posenet_distortion"),
@@ -21650,9 +18366,7 @@ def _attach_hi_nerv_runner_receiver_surface_trace(
             metadata["receiver_surface_trace"] = trace
             artifact_dict["receiver_surface_trace"] = trace
 
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -21742,9 +18456,7 @@ def _write_hi_nerv_runner_receiver_replay_archive_selection(
     if not requested or not bool(mlx_scorer_response_probe):
         return None
     raw_candidates = archive_resolution.get("candidates")
-    if not isinstance(raw_candidates, Sequence) or isinstance(
-        raw_candidates, (str, bytes)
-    ):
+    if not isinstance(raw_candidates, Sequence) or isinstance(raw_candidates, (str, bytes)):
         return None
     candidates: list[Mapping[str, Any]] = []
     seen_paths: set[str] = set()
@@ -21772,13 +18484,9 @@ def _write_hi_nerv_runner_receiver_replay_archive_selection(
     selected_report: dict[str, Any] | None = None
 
     for idx, candidate in enumerate(candidates):
-        archive_path = Path(str(candidate["archive_path"])).expanduser().resolve(
-            strict=False
-        )
+        archive_path = Path(str(candidate["archive_path"])).expanduser().resolve(strict=False)
         kind = str(candidate.get("candidate_kind") or f"candidate_{idx}")
-        safe_kind = re.sub(r"[^A-Za-z0-9_.-]+", "_", kind).strip("._") or (
-            f"candidate_{idx}"
-        )
+        safe_kind = re.sub(r"[^A-Za-z0-9_.-]+", "_", kind).strip("._") or (f"candidate_{idx}")
         candidate_output_dir = selection_dir / f"{idx:02d}_{safe_kind}"
         report = _write_hi_nerv_runner_post_export_receiver_cache_quality(
             requested=True,
@@ -21791,25 +18499,17 @@ def _write_hi_nerv_runner_receiver_replay_archive_selection(
             pair_indices=pair_indices,
             min_segnet_std=min_segnet_std,
             min_segnet_dynamic_range=min_segnet_dynamic_range,
-            max_segnet_mae_vs_reference_for_fit_gate=(
-                max_segnet_mae_vs_reference_for_fit_gate
-            ),
+            max_segnet_mae_vs_reference_for_fit_gate=(max_segnet_mae_vs_reference_for_fit_gate),
             min_posenet_yuv6_std=min_posenet_yuv6_std,
             min_posenet_yuv6_dynamic_range=min_posenet_yuv6_dynamic_range,
-            max_posenet_yuv6_mae_vs_reference_for_fit_gate=(
-                max_posenet_yuv6_mae_vs_reference_for_fit_gate
-            ),
-            min_posenet_yuv6_temporal_signal_std_for_fit_gate=(
-                min_posenet_yuv6_temporal_signal_std_for_fit_gate
-            ),
+            max_posenet_yuv6_mae_vs_reference_for_fit_gate=(max_posenet_yuv6_mae_vs_reference_for_fit_gate),
+            min_posenet_yuv6_temporal_signal_std_for_fit_gate=(min_posenet_yuv6_temporal_signal_std_for_fit_gate),
             min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=(
                 min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
             ),
             segnet_argmax_probe=segnet_argmax_probe,
             segnet_argmax_batch_frames=segnet_argmax_batch_frames,
-            max_segnet_argmax_disagreement_for_fit_gate=(
-                max_segnet_argmax_disagreement_for_fit_gate
-            ),
+            max_segnet_argmax_disagreement_for_fit_gate=(max_segnet_argmax_disagreement_for_fit_gate),
             min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
                 min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
@@ -21817,37 +18517,25 @@ def _write_hi_nerv_runner_receiver_replay_archive_selection(
             mlx_scorer_response_upstream_dir=mlx_scorer_response_upstream_dir,
             mlx_scorer_response_device_type=mlx_scorer_response_device_type,
             mlx_scorer_response_batch_pairs=mlx_scorer_response_batch_pairs,
-            max_mlx_scorer_response_posenet_dist_for_fit_gate=(
-                max_mlx_scorer_response_posenet_dist_for_fit_gate
-            ),
-            max_mlx_scorer_response_segnet_dist_for_fit_gate=(
-                max_mlx_scorer_response_segnet_dist_for_fit_gate
-            ),
+            max_mlx_scorer_response_posenet_dist_for_fit_gate=(max_mlx_scorer_response_posenet_dist_for_fit_gate),
+            max_mlx_scorer_response_segnet_dist_for_fit_gate=(max_mlx_scorer_response_segnet_dist_for_fit_gate),
             repo_root=repo_root,
         )
         summary = _hi_nerv_receiver_cache_quality_summary(report)
         local_score = _hi_nerv_receiver_replay_selection_score(report)
         rows.append(
             {
-                "schema": (
-                    "hi_nerv_receiver_replay_archive_selection_candidate.v1"
-                ),
+                "schema": ("hi_nerv_receiver_replay_archive_selection_candidate.v1"),
                 "candidate_index": int(idx),
                 "candidate_kind": candidate.get("candidate_kind"),
                 "archive_path": archive_path.as_posix(),
                 "archive_sha256": candidate.get("archive_sha256"),
                 "archive_bytes": candidate.get("archive_bytes"),
                 "source": candidate.get("source"),
-                "selected_by_training_proxy": bool(
-                    candidate.get("selected_for_training_artifact")
-                ),
-                "diagnostic_only_before_receiver_replay": bool(
-                    candidate.get("diagnostic_only")
-                ),
+                "selected_by_training_proxy": bool(candidate.get("selected_for_training_artifact")),
+                "diagnostic_only_before_receiver_replay": bool(candidate.get("diagnostic_only")),
                 "byte_cap_rejected": bool(candidate.get("byte_cap_rejected")),
-                "receiver_replay_report_path": (
-                    report.get("report_path") if isinstance(report, Mapping) else None
-                ),
+                "receiver_replay_report_path": (report.get("report_path") if isinstance(report, Mapping) else None),
                 "receiver_replay_summary": summary,
                 "receiver_replay_local_canonical_score": local_score,
                 **FALSE_AUTHORITY,
@@ -21855,10 +18543,7 @@ def _write_hi_nerv_runner_receiver_replay_archive_selection(
         )
 
     finite_rows = [
-        row
-        for row in rows
-        if _first_finite_float(row.get("receiver_replay_local_canonical_score"))
-        is not None
+        row for row in rows if _first_finite_float(row.get("receiver_replay_local_canonical_score")) is not None
     ]
     selected = None
     if finite_rows:
@@ -21883,37 +18568,21 @@ def _write_hi_nerv_runner_receiver_replay_archive_selection(
         "selection_metric": "archive_backed_mlx_scorer_response_canonical_score",
         "authority": "local_receiver_replay_false_authority",
         "candidate_count": len(rows),
-        "selected_candidate_kind": (
-            selected.get("candidate_kind") if isinstance(selected, Mapping) else None
-        ),
-        "selected_archive_path": (
-            selected.get("archive_path") if isinstance(selected, Mapping) else None
-        ),
-        "selected_archive_sha256": (
-            selected.get("archive_sha256") if isinstance(selected, Mapping) else None
-        ),
-        "selected_archive_bytes": (
-            selected.get("archive_bytes") if isinstance(selected, Mapping) else None
-        ),
+        "selected_candidate_kind": (selected.get("candidate_kind") if isinstance(selected, Mapping) else None),
+        "selected_archive_path": (selected.get("archive_path") if isinstance(selected, Mapping) else None),
+        "selected_archive_sha256": (selected.get("archive_sha256") if isinstance(selected, Mapping) else None),
+        "selected_archive_bytes": (selected.get("archive_bytes") if isinstance(selected, Mapping) else None),
         "selected_receiver_replay_local_canonical_score": (
-            selected.get("receiver_replay_local_canonical_score")
-            if isinstance(selected, Mapping)
-            else None
+            selected.get("receiver_replay_local_canonical_score") if isinstance(selected, Mapping) else None
         ),
         "selected_receiver_replay_report_path": (
-            selected.get("receiver_replay_report_path")
-            if isinstance(selected, Mapping)
-            else None
+            selected.get("receiver_replay_report_path") if isinstance(selected, Mapping) else None
         ),
         "rows": rows,
         "blockers": _dedupe(
             [
                 "hi_nerv_receiver_replay_archive_selection_is_false_authority",
-                *(
-                    ["hi_nerv_receiver_replay_archive_selection_no_finite_score"]
-                    if selected is None
-                    else []
-                ),
+                *(["hi_nerv_receiver_replay_archive_selection_no_finite_score"] if selected is None else []),
             ]
         ),
         **FALSE_AUTHORITY,
@@ -21954,12 +18623,8 @@ def _argmax_histogram_occupancy(histogram: Any) -> dict[str, float | None]:
         }
     min_count = max(2, math.ceil(total * 1.0e-3))
     return {
-        "occupied_class_fraction": float(
-            sum(1 for value in values if value >= min_count) / max(len(values), 1)
-        ),
-        "any_occupied_class_fraction": float(
-            sum(1 for value in values if value > 0) / max(len(values), 1)
-        ),
+        "occupied_class_fraction": float(sum(1 for value in values if value >= min_count) / max(len(values), 1)),
+        "any_occupied_class_fraction": float(sum(1 for value in values if value > 0) / max(len(values), 1)),
         "min_class_pixel_count": float(min_count),
     }
 
@@ -21988,12 +18653,10 @@ def _argmax_histogram_target_class_coverage(
     try:
         class_count = max(len(candidate_histogram), len(reference_histogram), 1)
         candidate = [
-            max(0, int(candidate_histogram[i])) if i < len(candidate_histogram) else 0
-            for i in range(class_count)
+            max(0, int(candidate_histogram[i])) if i < len(candidate_histogram) else 0 for i in range(class_count)
         ]
         reference = [
-            max(0, int(reference_histogram[i])) if i < len(reference_histogram) else 0
-            for i in range(class_count)
+            max(0, int(reference_histogram[i])) if i < len(reference_histogram) else 0 for i in range(class_count)
         ]
     except (TypeError, ValueError):
         return {
@@ -22013,36 +18676,24 @@ def _argmax_histogram_target_class_coverage(
     min_count = max(2, math.ceil(reference_total * 1.0e-3))
     target_any_count = sum(1 for value in reference if value > 0)
     target_material_count = sum(1 for value in reference if value >= min_count)
-    any_covered = [
-        bool(reference[i] > 0 and candidate[i] > 0) for i in range(class_count)
-    ]
+    any_covered = [bool(reference[i] > 0 and candidate[i] > 0) for i in range(class_count)]
     material_covered = [
-        bool(reference[i] >= min_count and candidate[i] >= min(min_count, reference[i]))
-        for i in range(class_count)
+        bool(reference[i] >= min_count and candidate[i] >= min(min_count, reference[i])) for i in range(class_count)
     ]
     ratios = [
-        1.0
-        if reference[i] <= 0
-        else min(1.0, float(candidate[i] / max(reference[i], 1)))
-        for i in range(class_count)
+        1.0 if reference[i] <= 0 else min(1.0, float(candidate[i] / max(reference[i], 1))) for i in range(class_count)
     ]
     material_covered_count = sum(1 for value in material_covered if value)
     any_covered_count = sum(1 for value in any_covered if value)
-    target_present_ratios = [
-        ratios[i] for i in range(class_count) if reference[i] > 0
-    ]
+    target_present_ratios = [ratios[i] for i in range(class_count) if reference[i] > 0]
     return {
         "candidate_target_class_coverage_fraction": (
-            float(material_covered_count / target_material_count)
-            if target_material_count > 0
-            else 1.0
+            float(material_covered_count / target_material_count) if target_material_count > 0 else 1.0
         ),
         "candidate_target_any_class_coverage_fraction": (
             float(any_covered_count / target_any_count) if target_any_count > 0 else 1.0
         ),
-        "candidate_target_class_min_ratio": (
-            float(min(target_present_ratios)) if target_present_ratios else 1.0
-        ),
+        "candidate_target_class_min_ratio": (float(min(target_present_ratios)) if target_present_ratios else 1.0),
         "target_material_class_count": int(target_material_count),
         "target_any_class_count": int(target_any_count),
         "candidate_target_material_class_covered_count": int(material_covered_count),
@@ -22061,13 +18712,34 @@ def _first_finite_float(*values: Any) -> float | None:
     return None
 
 
+def _positive_int_or_none(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _sha256_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if len(text) != 64:
+        return None
+    if not all(char in "0123456789abcdefABCDEF" for char in text):
+        return None
+    return text
+
+
+def _bool_or_none(value: Any) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
 def _hi_nerv_train_receiver_class_escape_contract(
     *,
     training_telemetry_contract: Mapping[str, Any] | None,
     receiver_cache_quality_summary: Mapping[str, Any] | None,
-    min_surviving_fraction: float = (
-        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
-    ),
+    min_surviving_fraction: float = (HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE),
     min_escape_delta: float = 0.199999,
 ) -> dict[str, Any]:
     """Name the crux when class escape is learned but not receiver-preserved."""
@@ -22088,9 +18760,7 @@ def _hi_nerv_train_receiver_class_escape_contract(
         value = training_telemetry_contract.get("row_count")
         if _finite_json_number(value):
             train_row_count = int(value)
-        raw_source_pairs = training_telemetry_contract.get(
-            "train_source_pair_indices_observed"
-        )
+        raw_source_pairs = training_telemetry_contract.get("train_source_pair_indices_observed")
         if isinstance(raw_source_pairs, Sequence) and not isinstance(
             raw_source_pairs,
             (str, bytes, bytearray),
@@ -22101,45 +18771,29 @@ def _hi_nerv_train_receiver_class_escape_contract(
         value = training_telemetry_contract.get("train_source_pair_count_observed")
         if _finite_json_number(value) and not train_source_pair_indices:
             train_source_pair_indices.update(range(int(value)))
-        value = training_telemetry_contract.get(
-            "segnet_direct_live_max_candidate_occupied_class_fraction"
-        )
+        value = training_telemetry_contract.get("segnet_direct_live_max_candidate_occupied_class_fraction")
         if _finite_json_number(value):
             train_fraction = float(value)
-        value = training_telemetry_contract.get(
-            "segnet_direct_live_max_candidate_target_class_coverage_fraction"
-        )
+        value = training_telemetry_contract.get("segnet_direct_live_max_candidate_target_class_coverage_fraction")
         if _finite_json_number(value):
             train_target_coverage_fraction = float(value)
         value = _first_finite_float(
-            training_telemetry_contract.get(
-                "segnet_direct_live_max_candidate_target_class_min_ratio"
-            ),
-            training_telemetry_contract.get(
-                "segnet_direct_live_min_candidate_target_class_min_ratio"
-            ),
+            training_telemetry_contract.get("segnet_direct_live_max_candidate_target_class_min_ratio"),
+            training_telemetry_contract.get("segnet_direct_live_min_candidate_target_class_min_ratio"),
         )
         if _finite_json_number(value):
             train_target_min_ratio = float(value)
     if isinstance(receiver_cache_quality_summary, Mapping):
-        value = receiver_cache_quality_summary.get(
-            "segnet_candidate_occupied_class_fraction"
-        )
+        value = receiver_cache_quality_summary.get("segnet_candidate_occupied_class_fraction")
         if _finite_json_number(value):
             receiver_fraction = float(value)
-        value = receiver_cache_quality_summary.get(
-            "segnet_reference_occupied_class_fraction"
-        )
+        value = receiver_cache_quality_summary.get("segnet_reference_occupied_class_fraction")
         if _finite_json_number(value):
             target_fraction = float(value)
-        value = receiver_cache_quality_summary.get(
-            "segnet_candidate_target_class_coverage_fraction"
-        )
+        value = receiver_cache_quality_summary.get("segnet_candidate_target_class_coverage_fraction")
         if _finite_json_number(value):
             receiver_target_coverage_fraction = float(value)
-        value = receiver_cache_quality_summary.get(
-            "segnet_candidate_target_class_min_ratio"
-        )
+        value = receiver_cache_quality_summary.get("segnet_candidate_target_class_min_ratio")
         if _finite_json_number(value):
             receiver_target_min_ratio = float(value)
         value = receiver_cache_quality_summary.get("segnet_target_material_class_count")
@@ -22148,9 +18802,7 @@ def _hi_nerv_train_receiver_class_escape_contract(
         value = receiver_cache_quality_summary.get("segnet_argmax_sample_pairs")
         if _finite_json_number(value):
             receiver_sample_pairs = int(value)
-        raw_receiver_pairs = receiver_cache_quality_summary.get(
-            "runner_receiver_cache_quality_pair_indices"
-        )
+        raw_receiver_pairs = receiver_cache_quality_summary.get("runner_receiver_cache_quality_pair_indices")
         if isinstance(raw_receiver_pairs, Sequence) and not isinstance(
             raw_receiver_pairs,
             (str, bytes, bytearray),
@@ -22176,8 +18828,7 @@ def _hi_nerv_train_receiver_class_escape_contract(
         blockers.append("hi_nerv_train_receiver_class_escape_pair_scope_mismatch")
     if (
         scope_aligned
-        and
-        train_fraction is not None
+        and train_fraction is not None
         and receiver_fraction is not None
         and train_fraction >= min_surviving_fraction
         and receiver_fraction < min_surviving_fraction
@@ -22193,17 +18844,13 @@ def _hi_nerv_train_receiver_class_escape_contract(
         blockers.append("hi_nerv_receiver_export_segnet_argmax_class_collapse")
     if (
         scope_aligned
-        and
-        train_target_coverage_fraction is not None
+        and train_target_coverage_fraction is not None
         and receiver_target_coverage_fraction is not None
         and train_target_coverage_fraction >= min_surviving_fraction
         and receiver_target_coverage_fraction < min_surviving_fraction
-        and (train_target_coverage_fraction - receiver_target_coverage_fraction)
-        >= min_escape_delta
+        and (train_target_coverage_fraction - receiver_target_coverage_fraction) >= min_escape_delta
     ):
-        blockers.append(
-            "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
-        )
+        blockers.append("hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved")
     if (
         receiver_target_material_class_count is not None
         and receiver_target_material_class_count > 0
@@ -22220,9 +18867,7 @@ def _hi_nerv_train_receiver_class_escape_contract(
         and receiver_target_min_ratio < min_target_mass_ratio
         and (train_target_min_ratio - receiver_target_min_ratio) >= min_escape_delta
     ):
-        blockers.append(
-            "hi_nerv_train_time_target_class_mass_not_receiver_export_preserved"
-        )
+        blockers.append("hi_nerv_train_time_target_class_mass_not_receiver_export_preserved")
     if (
         receiver_target_material_class_count is not None
         and receiver_target_material_class_count > 0
@@ -22233,22 +18878,14 @@ def _hi_nerv_train_receiver_class_escape_contract(
     return {
         "schema": "hi_nerv_train_receiver_class_escape_contract.v1",
         "train_direct_live_max_candidate_occupied_class_fraction": train_fraction,
-        "train_direct_live_max_candidate_target_class_coverage_fraction": (
-            train_target_coverage_fraction
-        ),
-        "train_direct_live_best_candidate_target_class_min_ratio": (
-            train_target_min_ratio
-        ),
+        "train_direct_live_max_candidate_target_class_coverage_fraction": (train_target_coverage_fraction),
+        "train_direct_live_best_candidate_target_class_min_ratio": (train_target_min_ratio),
         "train_telemetry_row_count": train_row_count,
         "train_source_pair_indices_observed": sorted(train_source_pair_indices),
-        "train_source_pair_count_observed": (
-            len(train_source_pair_indices) if train_source_pair_indices else None
-        ),
+        "train_source_pair_count_observed": (len(train_source_pair_indices) if train_source_pair_indices else None),
         "receiver_candidate_occupied_class_fraction": receiver_fraction,
         "receiver_reference_occupied_class_fraction": target_fraction,
-        "receiver_candidate_target_class_coverage_fraction": (
-            receiver_target_coverage_fraction
-        ),
+        "receiver_candidate_target_class_coverage_fraction": (receiver_target_coverage_fraction),
         "receiver_candidate_target_class_min_ratio": receiver_target_min_ratio,
         "receiver_target_material_class_count": receiver_target_material_class_count,
         "receiver_segnet_argmax_sample_pairs": receiver_sample_pairs,
@@ -22352,33 +18989,23 @@ def _compact_score_aware_training_telemetry_contract(
     expected_pose = float(pose_distillation_weight) > 0.0
     expected_pose_direct_live = float(pose_direct_live_distillation_weight) > 0.0
     support_ladder_expected = bool(scorer_support_ladder_enabled)
-    expected_live_calibration = bool(
-        expected_seg and float(segnet_student_live_calibration_weight) > 0.0
-    )
+    expected_live_calibration = bool(expected_seg and float(segnet_student_live_calibration_weight) > 0.0)
     direct_live_subcontrol_weights = {
         "class_histogram": float(segnet_direct_live_class_histogram_weight),
         "class_balanced_hinge": float(segnet_direct_live_class_balanced_hinge_weight),
         "class_balanced_ce": float(segnet_direct_live_class_balanced_ce_weight),
-        "class_balanced_squared_hinge": float(
-            segnet_direct_live_class_balanced_squared_hinge_weight
-        ),
+        "class_balanced_squared_hinge": float(segnet_direct_live_class_balanced_squared_hinge_weight),
         "class_region_recon": float(segnet_direct_live_class_region_recon_weight),
         "rare_class_logit": float(segnet_direct_live_rare_class_logit_weight),
         "target_mass_floor": float(segnet_direct_live_target_mass_floor_weight),
-        "target_min_ratio_floor": float(
-            segnet_direct_live_target_min_ratio_floor_weight
-        ),
+        "target_min_ratio_floor": float(segnet_direct_live_target_min_ratio_floor_weight),
     }
-    expected_direct_live_subcontrols = {
-        name: weight > 0.0 for name, weight in direct_live_subcontrol_weights.items()
-    }
+    expected_direct_live_subcontrols = {name: weight > 0.0 for name, weight in direct_live_subcontrol_weights.items()}
     direct_live_seg_dual_suffix_by_control = {
         "class_histogram": "segnet_direct_live_class_histogram",
         "class_balanced_hinge": "segnet_direct_live_class_balanced_hinge",
         "class_balanced_ce": "segnet_direct_live_class_balanced_ce",
-        "class_balanced_squared_hinge": (
-            "segnet_direct_live_class_balanced_squared_hinge"
-        ),
+        "class_balanced_squared_hinge": ("segnet_direct_live_class_balanced_squared_hinge"),
         "class_region_recon": "segnet_direct_live_class_region_recon",
         "rare_class_logit": "segnet_direct_live_rare_class_logit",
         "target_mass_floor": "segnet_direct_live_target_mass_floor",
@@ -22416,29 +19043,21 @@ def _compact_score_aware_training_telemetry_contract(
     expected_direct_live_seg_dual_suffixes: set[str] = set()
     if float(segnet_direct_live_distillation_weight) > 0.0:
         expected_direct_live_seg_dual_suffixes.add("segnet_direct_live_distill")
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_argmax_disagreement"
-        )
+        expected_direct_live_seg_dual_suffixes.add("segnet_direct_live_argmax_disagreement")
     expected_direct_live_seg_dual_suffixes.update(
-        _segnet_direct_live_dual_suffixes_for_subcontrols(
-            expected_direct_live_subcontrols
-        )
+        _segnet_direct_live_dual_suffixes_for_subcontrols(expected_direct_live_subcontrols)
     )
     direct_live_seg_dual_suffixes_to_probe = {
         "segnet_direct_live_distill",
         "segnet_direct_live_argmax_disagreement",
     }
     direct_live_seg_dual_suffixes_to_probe.update(
-        _segnet_direct_live_dual_suffixes_for_subcontrols(
-            dict.fromkeys(direct_live_subcontrol_weights, True)
-        )
+        _segnet_direct_live_dual_suffixes_for_subcontrols(dict.fromkeys(direct_live_subcontrol_weights, True))
     )
     expected_pose_direct_live_dual_suffixes: set[str] = set()
     if expected_pose_direct_live:
         expected_pose_direct_live_dual_suffixes.add(
-            "posenet_yuv6_pair_direct_live_distill"
-            if expected_pose
-            else "posenet_yuv6_pair_distill"
+            "posenet_yuv6_pair_direct_live_distill" if expected_pose else "posenet_yuv6_pair_distill"
         )
     expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
@@ -22447,9 +19066,7 @@ def _compact_score_aware_training_telemetry_contract(
     expected_geometry_tether = float(posenet_yuv6_geometry_tether_weight) > 0.0
     expected_temporal_floor = float(posenet_temporal_signal_floor_weight) > 0.0
     expected_gradient_multiplier = bool(gradient_multiplier_controls_requested)
-    min_direct_live_occupied_fraction = float(
-        min_segnet_direct_live_occupied_class_fraction_for_fit_gate
-    )
+    min_direct_live_occupied_fraction = float(min_segnet_direct_live_occupied_class_fraction_for_fit_gate)
     if not 0.0 <= min_direct_live_occupied_fraction <= 1.0:
         raise ValueError(
             "min_segnet_direct_live_occupied_class_fraction_for_fit_gate must "
@@ -22464,9 +19081,7 @@ def _compact_score_aware_training_telemetry_contract(
             "must be in [0, 1], got "
             f"{min_direct_live_target_class_coverage_fraction}"
         )
-    min_direct_live_target_class_min_ratio = float(
-        min_segnet_direct_live_target_class_min_ratio_for_fit_gate
-    )
+    min_direct_live_target_class_min_ratio = float(min_segnet_direct_live_target_class_min_ratio_for_fit_gate)
     if not 0.0 <= min_direct_live_target_class_min_ratio <= 1.0:
         raise ValueError(
             "min_segnet_direct_live_target_class_min_ratio_for_fit_gate "
@@ -22580,12 +19195,8 @@ def _compact_score_aware_training_telemetry_contract(
             "telemetry_path": path.as_posix() if telemetry_path else None,
             "telemetry_exists": False,
             "row_count": 0,
-            "expected_posenet_temporal_signal_floor_metric": bool(
-                expected_temporal_floor
-            ),
-            "expected_posenet_direct_live_distillation": bool(
-                expected_pose_direct_live
-            ),
+            "expected_posenet_temporal_signal_floor_metric": bool(expected_temporal_floor),
+            "expected_posenet_direct_live_distillation": bool(expected_pose_direct_live),
             "posenet_temporal_signal_floor_metric_observed": False,
             "posenet_direct_live_loss_observed": False,
             "posenet_direct_live_raw_loss_metric_observed": False,
@@ -22646,22 +19257,16 @@ def _compact_score_aware_training_telemetry_contract(
                 row,
                 "loss_part_pose_distill",
             )
-            pose_score_term_observed = (
-                pose_score_term_observed
-                or _telemetry_finite(row, "loss_part_pose_score_term")
-            )
+            pose_score_term_observed = pose_score_term_observed or _telemetry_finite(row, "loss_part_pose_score_term")
             pose_loss_observed = bool(pose_raw_loss_observed or pose_score_term_observed)
-            pose_direct_live_loss_observed = (
-                pose_direct_live_loss_observed
-                or _telemetry_finite(row, "loss_part_pose_direct_live_distill")
+            pose_direct_live_loss_observed = pose_direct_live_loss_observed or _telemetry_finite(
+                row, "loss_part_pose_direct_live_distill"
             )
-            pose_direct_live_score_term_observed = (
-                pose_direct_live_score_term_observed
-                or _telemetry_finite(row, "loss_part_pose_direct_live_score_term")
+            pose_direct_live_score_term_observed = pose_direct_live_score_term_observed or _telemetry_finite(
+                row, "loss_part_pose_direct_live_score_term"
             )
-            pose_direct_live_raw_loss_observed = (
-                pose_direct_live_raw_loss_observed
-                or _telemetry_finite(row, "loss_part_pose_direct_live_raw_mse")
+            pose_direct_live_raw_loss_observed = pose_direct_live_raw_loss_observed or _telemetry_finite(
+                row, "loss_part_pose_direct_live_raw_mse"
             )
             pr95_seg_loss_observed = pr95_seg_loss_observed or _telemetry_finite(
                 row,
@@ -22671,21 +19276,17 @@ def _compact_score_aware_training_telemetry_contract(
                 row,
                 "loss_part_pr95_stage_pose_surrogate",
             )
-            pr95_seg_effective_weight_seen = (
-                pr95_seg_effective_weight_seen
-                or _telemetry_finite(row, "loss_part_pr95_stage_effective_seg_weight")
+            pr95_seg_effective_weight_seen = pr95_seg_effective_weight_seen or _telemetry_finite(
+                row, "loss_part_pr95_stage_effective_seg_weight"
             )
-            pr95_seg_effective_weight_active = (
-                pr95_seg_effective_weight_active
-                or _telemetry_nonzero(row, "loss_part_pr95_stage_effective_seg_weight")
+            pr95_seg_effective_weight_active = pr95_seg_effective_weight_active or _telemetry_nonzero(
+                row, "loss_part_pr95_stage_effective_seg_weight"
             )
-            pr95_pose_effective_weight_seen = (
-                pr95_pose_effective_weight_seen
-                or _telemetry_finite(row, "loss_part_pr95_stage_effective_pose_weight")
+            pr95_pose_effective_weight_seen = pr95_pose_effective_weight_seen or _telemetry_finite(
+                row, "loss_part_pr95_stage_effective_pose_weight"
             )
-            pr95_pose_effective_weight_active = (
-                pr95_pose_effective_weight_active
-                or _telemetry_nonzero(row, "loss_part_pr95_stage_effective_pose_weight")
+            pr95_pose_effective_weight_active = pr95_pose_effective_weight_active or _telemetry_nonzero(
+                row, "loss_part_pr95_stage_effective_pose_weight"
             )
             guard_loss_observed = guard_loss_observed or any(
                 _telemetry_finite(row, key)
@@ -22701,24 +19302,18 @@ def _compact_score_aware_training_telemetry_contract(
                     "loss_part_pr95_stage_scorer_input_contrast_floor",
                 )
             )
-            contrast_floor_segnet_ratio_observed = (
-                contrast_floor_segnet_ratio_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
-                        "loss_part_pr95_stage_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
-                    )
+            contrast_floor_segnet_ratio_observed = contrast_floor_segnet_ratio_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+                    "loss_part_pr95_stage_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
                 )
             )
-            contrast_floor_posenet_ratio_observed = (
-                contrast_floor_posenet_ratio_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
-                        "loss_part_pr95_stage_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
-                    )
+            contrast_floor_posenet_ratio_observed = contrast_floor_posenet_ratio_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+                    "loss_part_pr95_stage_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
                 )
             )
             shape_tether_loss_observed = shape_tether_loss_observed or any(
@@ -22735,24 +19330,18 @@ def _compact_score_aware_training_telemetry_contract(
                     "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb",
                 )
             )
-            shape_tether_posenet_pair_observed = (
-                shape_tether_posenet_pair_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_scorer_input_shape_tether_posenet_yuv6_pair",
-                        "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair",
-                    )
+            shape_tether_posenet_pair_observed = shape_tether_posenet_pair_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_shape_tether_posenet_yuv6_pair",
+                    "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair",
                 )
             )
-            shape_tether_posenet_delta_observed = (
-                shape_tether_posenet_delta_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
-                        "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
-                    )
+            shape_tether_posenet_delta_observed = shape_tether_posenet_delta_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
+                    "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
                 )
             )
             geometry_tether_loss_observed = geometry_tether_loss_observed or any(
@@ -22783,83 +19372,59 @@ def _compact_score_aware_training_telemetry_contract(
                     "loss_part_pr95_stage_posenet_temporal_signal_floor",
                 )
             )
-            temporal_floor_std_ratio_observed = (
-                temporal_floor_std_ratio_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_posenet_temporal_signal_floor_mean_std_ratio",
-                        "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio",
-                    )
+            temporal_floor_std_ratio_observed = temporal_floor_std_ratio_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_posenet_temporal_signal_floor_mean_std_ratio",
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio",
                 )
             )
-            temporal_floor_mean_abs_ratio_observed = (
-                temporal_floor_mean_abs_ratio_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_posenet_temporal_signal_floor_mean_abs_ratio",
-                        "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_abs_ratio",
-                    )
+            temporal_floor_mean_abs_ratio_observed = temporal_floor_mean_abs_ratio_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_posenet_temporal_signal_floor_mean_abs_ratio",
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_abs_ratio",
                 )
             )
-            live_calibration_active_observed = (
-                live_calibration_active_observed
-                or _telemetry_float_equals(
-                    row,
-                    "segnet_student_live_calibration_active",
-                    1.0,
+            live_calibration_active_observed = live_calibration_active_observed or _telemetry_float_equals(
+                row,
+                "segnet_student_live_calibration_active",
+                1.0,
+            )
+            live_calibration_loss_observed = live_calibration_loss_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_student_live_calibration",
+                    "loss_part_weighted_segnet_student_live_calibration",
                 )
             )
-            live_calibration_loss_observed = (
-                live_calibration_loss_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_student_live_calibration",
-                        "loss_part_weighted_segnet_student_live_calibration",
-                    )
+            direct_live_loss_observed = direct_live_loss_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_distill",
+                    "loss_part_pr95_stage_segnet_direct_live_distill",
+                    "loss_part_weighted_pr95_stage_segnet_direct_live_distill",
                 )
             )
-            direct_live_loss_observed = (
-                direct_live_loss_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_distill",
-                        "loss_part_pr95_stage_segnet_direct_live_distill",
-                        "loss_part_weighted_pr95_stage_segnet_direct_live_distill",
-                    )
+            direct_live_class_histogram_observed = direct_live_class_histogram_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_class_histogram_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_class_histogram_loss",
                 )
             )
-            direct_live_class_histogram_observed = (
-                direct_live_class_histogram_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_class_histogram_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_class_histogram_loss",
-                    )
+            direct_live_class_balanced_hinge_observed = direct_live_class_balanced_hinge_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_class_balanced_hinge_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_class_balanced_hinge_loss",
                 )
             )
-            direct_live_class_balanced_hinge_observed = (
-                direct_live_class_balanced_hinge_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_class_balanced_hinge_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_class_balanced_hinge_loss",
-                    )
-                )
-            )
-            direct_live_class_balanced_ce_observed = (
-                direct_live_class_balanced_ce_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_class_balanced_ce_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_class_balanced_ce_loss",
-                    )
+            direct_live_class_balanced_ce_observed = direct_live_class_balanced_ce_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_class_balanced_ce_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_class_balanced_ce_loss",
                 )
             )
             direct_live_class_balanced_squared_hinge_observed = (
@@ -22872,53 +19437,39 @@ def _compact_score_aware_training_telemetry_contract(
                     )
                 )
             )
-            direct_live_class_region_recon_observed = (
-                direct_live_class_region_recon_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_class_region_recon_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_class_region_recon_loss",
-                    )
+            direct_live_class_region_recon_observed = direct_live_class_region_recon_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_class_region_recon_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_class_region_recon_loss",
                 )
             )
-            direct_live_rare_class_logit_observed = (
-                direct_live_rare_class_logit_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_rare_class_logit_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_rare_class_logit_loss",
-                    )
+            direct_live_rare_class_logit_observed = direct_live_rare_class_logit_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_rare_class_logit_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_rare_class_logit_loss",
                 )
             )
-            direct_live_target_mass_floor_observed = (
-                direct_live_target_mass_floor_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_target_mass_floor_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_target_mass_floor_loss",
-                    )
+            direct_live_target_mass_floor_observed = direct_live_target_mass_floor_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_target_mass_floor_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_target_mass_floor_loss",
                 )
             )
-            direct_live_target_min_ratio_floor_observed = (
-                direct_live_target_min_ratio_floor_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_target_min_ratio_floor_loss",
-                        "loss_part_pr95_stage_segnet_direct_live_target_min_ratio_floor_loss",
-                    )
+            direct_live_target_min_ratio_floor_observed = direct_live_target_min_ratio_floor_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_loss",
+                    "loss_part_pr95_stage_segnet_direct_live_target_min_ratio_floor_loss",
                 )
             )
-            support_ladder_enabled_observed = (
-                support_ladder_enabled_observed
-                or _telemetry_nonzero(row, "scorer_support_ladder_enabled")
+            support_ladder_enabled_observed = support_ladder_enabled_observed or _telemetry_nonzero(
+                row, "scorer_support_ladder_enabled"
             )
-            support_ladder_active_observed = (
-                support_ladder_active_observed
-                or _telemetry_nonzero(row, "scorer_support_ladder_active")
+            support_ladder_active_observed = support_ladder_active_observed or _telemetry_nonzero(
+                row, "scorer_support_ladder_active"
             )
             for name, suffix in direct_live_seg_dual_suffix_by_control.items():
                 effective_weight = support_ladder_effective_subcontrol_weights[name]
@@ -22942,14 +19493,11 @@ def _compact_score_aware_training_telemetry_contract(
                 ):
                     if _telemetry_nonzero(row, key):
                         support_ladder_effective_subcontrol_active[name] = True
-            direct_live_argmax_observed = (
-                direct_live_argmax_observed
-                or any(
-                    _telemetry_finite(row, key)
-                    for key in (
-                        "loss_part_segnet_direct_live_argmax_disagreement",
-                        "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement",
-                    )
+            direct_live_argmax_observed = direct_live_argmax_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_segnet_direct_live_argmax_disagreement",
+                    "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement",
                 )
             )
             for key in (
@@ -22962,8 +19510,7 @@ def _compact_score_aware_training_telemetry_contract(
                     fraction = float(value)
                     if (
                         direct_live_max_candidate_occupied_class_fraction is None
-                        or fraction
-                        > direct_live_max_candidate_occupied_class_fraction
+                        or fraction > direct_live_max_candidate_occupied_class_fraction
                     ):
                         direct_live_max_candidate_occupied_class_fraction = fraction
             for key in (
@@ -22976,8 +19523,7 @@ def _compact_score_aware_training_telemetry_contract(
                     fraction = float(value)
                     if (
                         direct_live_max_candidate_target_class_coverage_fraction is None
-                        or fraction
-                        > direct_live_max_candidate_target_class_coverage_fraction
+                        or fraction > direct_live_max_candidate_target_class_coverage_fraction
                     ):
                         direct_live_max_candidate_target_class_coverage_fraction = fraction
             for key in (
@@ -22994,45 +19540,35 @@ def _compact_score_aware_training_telemetry_contract(
                     ):
                         direct_live_max_candidate_target_class_min_ratio = ratio
             section_rate_observed = section_rate_observed or any(
-                key.startswith("train_time_section_rate_score__")
-                and _finite_json_number(value)
+                key.startswith("train_time_section_rate_score__") and _finite_json_number(value)
                 for key, value in _telemetry_items(row)
             )
             archive_rate_observed = archive_rate_observed or _telemetry_finite(
                 row,
                 "train_time_archive_rate_score",
             )
-            archive_dual_lambda_active_observed = (
-                archive_dual_lambda_active_observed
-                or _telemetry_nonzero(
-                    row,
-                    f"dual_ascent_lambda__{family_key}_archive_total_bytes",
-                )
+            archive_dual_lambda_active_observed = archive_dual_lambda_active_observed or _telemetry_nonzero(
+                row,
+                f"dual_ascent_lambda__{family_key}_archive_total_bytes",
             )
-            archive_dual_positive_violation_observed = (
-                archive_dual_positive_violation_observed
-                or (
-                    _finite_json_number(
-                        _telemetry_value(
-                            row,
-                            f"dual_ascent_violation__{family_key}_archive_total_bytes",
-                        )
+            archive_dual_positive_violation_observed = archive_dual_positive_violation_observed or (
+                _finite_json_number(
+                    _telemetry_value(
+                        row,
+                        f"dual_ascent_violation__{family_key}_archive_total_bytes",
                     )
-                    and float(
-                        _telemetry_value(
-                            row,
-                            f"dual_ascent_violation__{family_key}_archive_total_bytes",
-                        )
-                    )
-                    > 0.0
                 )
+                and float(
+                    _telemetry_value(
+                        row,
+                        f"dual_ascent_violation__{family_key}_archive_total_bytes",
+                    )
+                )
+                > 0.0
             )
-            archive_dual_update_observed = (
-                archive_dual_update_observed
-                or _telemetry_nonzero(
-                    row,
-                    f"dual_ascent_update_count__{family_key}_archive_total_bytes",
-                )
+            archive_dual_update_observed = archive_dual_update_observed or _telemetry_nonzero(
+                row,
+                f"dual_ascent_update_count__{family_key}_archive_total_bytes",
             )
             archive_dual_weight_applied_observed = (
                 archive_dual_weight_applied_observed
@@ -23045,64 +19581,43 @@ def _compact_score_aware_training_telemetry_contract(
                     f"dual_ascent_effective_loss_weight__{family_key}_archive_total_bytes",
                 )
             )
-            section_dual_lambda_active_observed = (
-                section_dual_lambda_active_observed
-                or any(
-                    key.startswith(f"dual_ascent_lambda__{family_key}_")
-                    and key.endswith("_section_bytes")
-                    and _finite_json_number(value)
-                    and abs(float(value)) > 0.0
-                    for key, value in _telemetry_items(row)
-                )
+            section_dual_lambda_active_observed = section_dual_lambda_active_observed or any(
+                key.startswith(f"dual_ascent_lambda__{family_key}_")
+                and key.endswith("_section_bytes")
+                and _finite_json_number(value)
+                and abs(float(value)) > 0.0
+                for key, value in _telemetry_items(row)
             )
-            section_dual_positive_violation_observed = (
-                section_dual_positive_violation_observed
-                or any(
-                    key.startswith(f"dual_ascent_violation__{family_key}_")
-                    and key.endswith("_section_bytes")
-                    and _finite_json_number(value)
-                    and float(value) > 0.0
-                    for key, value in _telemetry_items(row)
-                )
+            section_dual_positive_violation_observed = section_dual_positive_violation_observed or any(
+                key.startswith(f"dual_ascent_violation__{family_key}_")
+                and key.endswith("_section_bytes")
+                and _finite_json_number(value)
+                and float(value) > 0.0
+                for key, value in _telemetry_items(row)
             )
-            section_dual_update_observed = (
-                section_dual_update_observed
-                or any(
-                    key.startswith(f"dual_ascent_update_count__{family_key}_")
-                    and key.endswith("_section_bytes")
-                    and _finite_json_number(value)
-                    and abs(float(value)) > 0.0
-                    for key, value in _telemetry_items(row)
-                )
+            section_dual_update_observed = section_dual_update_observed or any(
+                key.startswith(f"dual_ascent_update_count__{family_key}_")
+                and key.endswith("_section_bytes")
+                and _finite_json_number(value)
+                and abs(float(value)) > 0.0
+                for key, value in _telemetry_items(row)
             )
-            section_dual_weight_applied_observed = (
-                section_dual_weight_applied_observed
-                or any(
-                    (
-                        key.startswith(
-                            f"dual_ascent_weight_applied__{family_key}_"
-                        )
-                        or key.startswith(
-                            f"dual_ascent_effective_loss_weight__{family_key}_"
-                        )
-                    )
-                    and key.endswith("_section_bytes")
-                    and _finite_json_number(value)
-                    and abs(float(value)) > 0.0
-                    for key, value in _telemetry_items(row)
+            section_dual_weight_applied_observed = section_dual_weight_applied_observed or any(
+                (
+                    key.startswith(f"dual_ascent_weight_applied__{family_key}_")
+                    or key.startswith(f"dual_ascent_effective_loss_weight__{family_key}_")
                 )
+                and key.endswith("_section_bytes")
+                and _finite_json_number(value)
+                and abs(float(value)) > 0.0
+                for key, value in _telemetry_items(row)
             )
-            section_dual_zero_base_masked_observed = (
-                section_dual_zero_base_masked_observed
-                or any(
-                    key.startswith(
-                        f"dual_ascent_zero_base_masked__{family_key}_"
-                    )
-                    and key.endswith("_section_bytes")
-                    and _finite_json_number(value)
-                    and abs(float(value)) > 0.0
-                    for key, value in _telemetry_items(row)
-                )
+            section_dual_zero_base_masked_observed = section_dual_zero_base_masked_observed or any(
+                key.startswith(f"dual_ascent_zero_base_masked__{family_key}_")
+                and key.endswith("_section_bytes")
+                and _finite_json_number(value)
+                and abs(float(value)) > 0.0
+                for key, value in _telemetry_items(row)
             )
             seg_dual_observed = seg_dual_observed or _telemetry_float_equals(
                 row,
@@ -23119,19 +19634,13 @@ def _compact_score_aware_training_telemetry_contract(
                 f"dual_ascent_missing_metric__{family_key}_scorer_input_distribution_guard",
                 0.0,
             )
-            seg_dual_lambda_active_observed = (
-                seg_dual_lambda_active_observed
-                or _telemetry_nonzero(
-                    row,
-                    f"dual_ascent_lambda__{family_key}_segnet_last_frame_distill",
-                )
+            seg_dual_lambda_active_observed = seg_dual_lambda_active_observed or _telemetry_nonzero(
+                row,
+                f"dual_ascent_lambda__{family_key}_segnet_last_frame_distill",
             )
-            pose_dual_lambda_active_observed = (
-                pose_dual_lambda_active_observed
-                or _telemetry_nonzero(
-                    row,
-                    f"dual_ascent_lambda__{family_key}_posenet_yuv6_pair_distill",
-                )
+            pose_dual_lambda_active_observed = pose_dual_lambda_active_observed or _telemetry_nonzero(
+                row,
+                f"dual_ascent_lambda__{family_key}_posenet_yuv6_pair_distill",
             )
             for suffix in direct_live_seg_dual_suffixes_to_probe:
                 constraint_key = f"{family_key}_{suffix}"
@@ -23169,25 +19678,20 @@ def _compact_score_aware_training_telemetry_contract(
                     f"dual_ascent_update_count__{constraint_key}",
                 ):
                     pose_direct_live_dual_update_suffixes_observed.add(suffix)
-            gradient_multiplier_requested_observed = (
-                gradient_multiplier_requested_observed
-                or _telemetry_nonzero(row, "gradient_multiplier_requested_control_count")
+            gradient_multiplier_requested_observed = gradient_multiplier_requested_observed or _telemetry_nonzero(
+                row, "gradient_multiplier_requested_control_count"
             )
-            gradient_multiplier_applied_observed = (
-                gradient_multiplier_applied_observed
-                or _telemetry_nonzero(row, "gradient_multiplier_applied_leaf_count")
+            gradient_multiplier_applied_observed = gradient_multiplier_applied_observed or _telemetry_nonzero(
+                row, "gradient_multiplier_applied_leaf_count"
             )
             gradient_multiplier_missing_requested_observed = (
                 gradient_multiplier_missing_requested_observed
                 or _telemetry_nonzero(row, "gradient_multiplier_missing_requested_count")
             )
-            gradient_multiplier_noop_observed = (
-                gradient_multiplier_noop_observed
-                or _telemetry_float_equals(
-                    row,
-                    "gradient_multiplier_requested_but_unapplied",
-                    1.0,
-                )
+            gradient_multiplier_noop_observed = gradient_multiplier_noop_observed or _telemetry_float_equals(
+                row,
+                "gradient_multiplier_requested_but_unapplied",
+                1.0,
             )
     if support_ladder_expected:
         for name, active in support_ladder_effective_subcontrol_active.items():
@@ -23202,13 +19706,9 @@ def _compact_score_aware_training_telemetry_contract(
     expected_direct_live_seg_dual_suffixes = set()
     if float(segnet_direct_live_distillation_weight) > 0.0:
         expected_direct_live_seg_dual_suffixes.add("segnet_direct_live_distill")
-        expected_direct_live_seg_dual_suffixes.add(
-            "segnet_direct_live_argmax_disagreement"
-        )
+        expected_direct_live_seg_dual_suffixes.add("segnet_direct_live_argmax_disagreement")
     expected_direct_live_seg_dual_suffixes.update(
-        _segnet_direct_live_dual_suffixes_for_subcontrols(
-            expected_direct_live_subcontrols
-        )
+        _segnet_direct_live_dual_suffixes_for_subcontrols(expected_direct_live_subcontrols)
     )
     if row_count <= 0:
         blockers.append(f"{family_key}_score_aware_training_telemetry_empty")
@@ -23219,40 +19719,24 @@ def _compact_score_aware_training_telemetry_contract(
     if expected_pose and not pose_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_posenet_loss_metric_missing")
     if expected_pose and not pose_score_term_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_posenet_score_term_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_posenet_score_term_metric_missing")
     if expected_pose_direct_live and not pose_direct_live_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_posenet_loss_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_posenet_loss_missing")
     if expected_pose_direct_live and not pose_direct_live_score_term_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_posenet_score_term_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_posenet_score_term_metric_missing")
     if expected_pose_direct_live and not pose_direct_live_raw_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_posenet_raw_mse_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_posenet_raw_mse_metric_missing")
     missing_pose_direct_live_dual_metrics = sorted(
-        expected_pose_direct_live_dual_suffixes
-        - pose_direct_live_dual_metric_suffixes_observed
+        expected_pose_direct_live_dual_suffixes - pose_direct_live_dual_metric_suffixes_observed
     )
     missing_pose_direct_live_dual_activation = sorted(
         expected_pose_direct_live_dual_suffixes
-        - (
-            pose_direct_live_dual_active_suffixes_observed
-            | pose_direct_live_dual_update_suffixes_observed
-        )
+        - (pose_direct_live_dual_active_suffixes_observed | pose_direct_live_dual_update_suffixes_observed)
     )
     if expected_pose_direct_live and missing_pose_direct_live_dual_metrics:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_posenet_dual_metric_never_observed"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_posenet_dual_metric_never_observed")
     if expected_pose_direct_live and missing_pose_direct_live_dual_activation:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_posenet_dual_lambda_never_active"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_posenet_dual_lambda_never_active")
     if expected_seg and not seg_dual_observed:
         blockers.append(f"{family_key}_score_aware_training_dual_segnet_metric_never_observed")
     if expected_pose and not pose_dual_observed:
@@ -23263,14 +19747,8 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(f"{family_key}_score_aware_training_dual_posenet_lambda_never_active")
     if expected_section and not section_rate_observed:
         blockers.append(f"{family_key}_score_aware_training_section_rate_metric_missing")
-    if (
-        expected_section
-        and section_dual_positive_violation_observed
-        and not section_dual_lambda_active_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_section_byte_dual_lambda_never_active"
-        )
+    if expected_section and section_dual_positive_violation_observed and not section_dual_lambda_active_observed:
+        blockers.append(f"{family_key}_score_aware_training_section_byte_dual_lambda_never_active")
     if (
         expected_section
         and section_dual_lambda_active_observed
@@ -23278,23 +19756,13 @@ def _compact_score_aware_training_telemetry_contract(
         and not section_dual_weight_applied_observed
         and not (section_dual_update_observed and row_count <= 2)
     ):
-        blockers.append(
-            f"{family_key}_score_aware_training_section_byte_dual_weight_never_applied"
-        )
+        blockers.append(f"{family_key}_score_aware_training_section_byte_dual_weight_never_applied")
     if expected_section and section_dual_zero_base_masked_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_section_byte_dual_zero_base_masked"
-        )
+        blockers.append(f"{family_key}_score_aware_training_section_byte_dual_zero_base_masked")
     if expected_section and not archive_rate_observed:
         blockers.append(f"{family_key}_score_aware_training_archive_rate_metric_missing")
-    if (
-        expected_section
-        and archive_dual_positive_violation_observed
-        and not archive_dual_lambda_active_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_archive_byte_dual_lambda_never_active"
-        )
+    if expected_section and archive_dual_positive_violation_observed and not archive_dual_lambda_active_observed:
+        blockers.append(f"{family_key}_score_aware_training_archive_byte_dual_lambda_never_active")
     if (
         expected_section
         and archive_dual_lambda_active_observed
@@ -23302,128 +19770,67 @@ def _compact_score_aware_training_telemetry_contract(
         and not archive_dual_weight_applied_observed
         and not (archive_dual_update_observed and row_count <= 2)
     ):
-        blockers.append(
-            f"{family_key}_score_aware_training_archive_byte_dual_weight_never_applied"
-        )
+        blockers.append(f"{family_key}_score_aware_training_archive_byte_dual_weight_never_applied")
     if expected_guard and not guard_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_scorer_input_guard_metric_missing")
     if expected_guard and not guard_dual_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_dual_scorer_input_guard_metric_never_observed"
-        )
+        blockers.append(f"{family_key}_score_aware_training_dual_scorer_input_guard_metric_never_observed")
     if expected_contrast_floor and not contrast_floor_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_contrast_floor_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_contrast_floor_metric_missing")
     if expected_contrast_floor and not contrast_floor_segnet_ratio_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_contrast_floor_segnet_ratio_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_contrast_floor_segnet_ratio_metric_missing")
     if expected_contrast_floor and not contrast_floor_posenet_ratio_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_contrast_floor_posenet_ratio_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_contrast_floor_posenet_ratio_metric_missing")
     if expected_shape_tether and not shape_tether_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_shape_tether_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_shape_tether_metric_missing")
     if expected_shape_tether and not shape_tether_segnet_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_shape_tether_segnet_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_shape_tether_segnet_metric_missing")
     if expected_shape_tether and not shape_tether_posenet_pair_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_shape_tether_posenet_pair_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_shape_tether_posenet_pair_metric_missing")
     if expected_shape_tether and not shape_tether_posenet_delta_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_input_shape_tether_posenet_delta_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_shape_tether_posenet_delta_metric_missing")
     if expected_geometry_tether and not geometry_tether_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_posenet_yuv6_geometry_tether_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_posenet_yuv6_geometry_tether_metric_missing")
     if expected_geometry_tether and not geometry_tether_pair_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_posenet_yuv6_geometry_tether_pair_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_posenet_yuv6_geometry_tether_pair_metric_missing")
     if expected_geometry_tether and not geometry_tether_delta_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_posenet_yuv6_geometry_tether_delta_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_posenet_yuv6_geometry_tether_delta_metric_missing")
     if expected_temporal_floor and not temporal_floor_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_posenet_temporal_signal_floor_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_posenet_temporal_signal_floor_metric_missing")
     if expected_temporal_floor and not temporal_floor_std_ratio_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_posenet_temporal_signal_floor_std_ratio_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_posenet_temporal_signal_floor_std_ratio_metric_missing")
     if expected_temporal_floor and not temporal_floor_mean_abs_ratio_observed:
         blockers.append(
             f"{family_key}_score_aware_training_posenet_temporal_signal_floor_mean_abs_ratio_metric_missing"
         )
     if expected_live_calibration and not live_calibration_active_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_live_segnet_calibration_never_active"
-        )
+        blockers.append(f"{family_key}_score_aware_training_live_segnet_calibration_never_active")
     if expected_live_calibration and not live_calibration_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_live_segnet_calibration_loss_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_live_segnet_calibration_loss_missing")
     if expected_direct_live and not direct_live_loss_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_loss_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_loss_missing")
     if expected_direct_live and not direct_live_argmax_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_argmax_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_argmax_metric_missing")
     if expected_direct_live and not direct_live_class_occupancy_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_class_occupancy_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_class_occupancy_metric_missing")
     if support_ladder_expected and not support_ladder_enabled_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_support_ladder_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_support_ladder_metric_missing")
     if (
         support_ladder_expected
         and support_ladder_active_observed
         and not any(support_ladder_effective_subcontrol_active.values())
     ):
-        blockers.append(
-            f"{family_key}_score_aware_training_scorer_support_ladder_effective_subcontrol_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_scorer_support_ladder_effective_subcontrol_missing")
     if expected_direct_live and not direct_live_target_class_coverage_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_target_class_coverage_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_target_class_coverage_metric_missing")
     if expected_direct_live and not direct_live_target_class_min_ratio_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_target_class_min_ratio_metric_missing"
-        )
-    if (
-        expected_direct_live_subcontrols["class_histogram"]
-        and not direct_live_class_histogram_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_class_histogram_metric_missing"
-        )
-    if (
-        expected_direct_live_subcontrols["class_balanced_hinge"]
-        and not direct_live_class_balanced_hinge_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_class_balanced_hinge_metric_missing"
-        )
-    if (
-        expected_direct_live_subcontrols["class_balanced_ce"]
-        and not direct_live_class_balanced_ce_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_class_balanced_ce_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_target_class_min_ratio_metric_missing")
+    if expected_direct_live_subcontrols["class_histogram"] and not direct_live_class_histogram_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_class_histogram_metric_missing")
+    if expected_direct_live_subcontrols["class_balanced_hinge"] and not direct_live_class_balanced_hinge_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_class_balanced_hinge_metric_missing")
+    if expected_direct_live_subcontrols["class_balanced_ce"] and not direct_live_class_balanced_ce_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_class_balanced_ce_metric_missing")
     if (
         expected_direct_live_subcontrols["class_balanced_squared_hinge"]
         and not direct_live_class_balanced_squared_hinge_observed
@@ -23431,108 +19838,62 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(
             f"{family_key}_score_aware_training_direct_live_segnet_class_balanced_squared_hinge_metric_missing"
         )
-    if (
-        expected_direct_live_subcontrols["class_region_recon"]
-        and not direct_live_class_region_recon_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_class_region_recon_metric_missing"
-        )
-    if (
-        expected_direct_live_subcontrols["rare_class_logit"]
-        and not direct_live_rare_class_logit_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_rare_class_logit_metric_missing"
-        )
-    if (
-        expected_direct_live_subcontrols["target_mass_floor"]
-        and not direct_live_target_mass_floor_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_target_mass_floor_metric_missing"
-        )
-    if (
-        expected_direct_live_subcontrols["target_min_ratio_floor"]
-        and not direct_live_target_min_ratio_floor_observed
-    ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_target_min_ratio_floor_metric_missing"
-        )
+    if expected_direct_live_subcontrols["class_region_recon"] and not direct_live_class_region_recon_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_class_region_recon_metric_missing")
+    if expected_direct_live_subcontrols["rare_class_logit"] and not direct_live_rare_class_logit_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_rare_class_logit_metric_missing")
+    if expected_direct_live_subcontrols["target_mass_floor"] and not direct_live_target_mass_floor_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_target_mass_floor_metric_missing")
+    if expected_direct_live_subcontrols["target_min_ratio_floor"] and not direct_live_target_min_ratio_floor_observed:
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_target_min_ratio_floor_metric_missing")
     if (
         expected_direct_live
         and direct_live_class_occupancy_observed
-        and float(direct_live_max_candidate_occupied_class_fraction or 0.0)
-        < min_direct_live_occupied_fraction
+        and float(direct_live_max_candidate_occupied_class_fraction or 0.0) < min_direct_live_occupied_fraction
     ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_candidate_argmax_collapsed")
     if (
         expected_direct_live
         and direct_live_target_class_coverage_observed
         and float(direct_live_max_candidate_target_class_coverage_fraction or 0.0)
         < min_direct_live_target_class_coverage_fraction
     ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_target_class_coverage_collapsed"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_target_class_coverage_collapsed")
     if (
         expected_direct_live
         and direct_live_target_class_min_ratio_observed
-        and float(direct_live_max_candidate_target_class_min_ratio or 0.0)
-        < min_direct_live_target_class_min_ratio
+        and float(direct_live_max_candidate_target_class_min_ratio or 0.0) < min_direct_live_target_class_min_ratio
     ):
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_target_class_mass_collapsed"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_target_class_mass_collapsed")
     missing_direct_live_seg_dual_metrics = sorted(
-        expected_direct_live_seg_dual_suffixes
-        - direct_live_seg_dual_metric_suffixes_observed
+        expected_direct_live_seg_dual_suffixes - direct_live_seg_dual_metric_suffixes_observed
     )
     missing_direct_live_seg_dual_activation = sorted(
         expected_direct_live_seg_dual_suffixes
-        - (
-            direct_live_seg_dual_active_suffixes_observed
-            | direct_live_seg_dual_update_suffixes_observed
-        )
+        - (direct_live_seg_dual_active_suffixes_observed | direct_live_seg_dual_update_suffixes_observed)
     )
     if expected_direct_live and missing_direct_live_seg_dual_metrics:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_dual_metric_never_observed"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_dual_metric_never_observed")
     if expected_direct_live and missing_direct_live_seg_dual_activation:
-        blockers.append(
-            f"{family_key}_score_aware_training_direct_live_segnet_dual_lambda_never_active"
-        )
+        blockers.append(f"{family_key}_score_aware_training_direct_live_segnet_dual_lambda_never_active")
     pr95_seg_alias_required = bool(
-        pr95_seg_loss_observed
-        and (pr95_seg_effective_weight_active or not pr95_seg_effective_weight_seen)
+        pr95_seg_loss_observed and (pr95_seg_effective_weight_active or not pr95_seg_effective_weight_seen)
     )
     pr95_pose_alias_required = bool(
-        pr95_pose_loss_observed
-        and (pr95_pose_effective_weight_active or not pr95_pose_effective_weight_seen)
+        pr95_pose_loss_observed and (pr95_pose_effective_weight_active or not pr95_pose_effective_weight_seen)
     )
     if pr95_faithful_curriculum_enabled and pr95_seg_alias_required and not seg_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_pr95_seg_alias_missing")
     if pr95_faithful_curriculum_enabled and pr95_pose_alias_required and not pose_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_pr95_pose_alias_missing")
     if expected_gradient_multiplier and not gradient_multiplier_requested_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_gradient_multiplier_metric_missing"
-        )
+        blockers.append(f"{family_key}_score_aware_training_gradient_multiplier_metric_missing")
     if expected_gradient_multiplier and not gradient_multiplier_applied_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_gradient_multiplier_never_applied"
-        )
+        blockers.append(f"{family_key}_score_aware_training_gradient_multiplier_never_applied")
     if expected_gradient_multiplier and gradient_multiplier_missing_requested_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_gradient_multiplier_missing_requested_leaf"
-        )
+        blockers.append(f"{family_key}_score_aware_training_gradient_multiplier_missing_requested_leaf")
     if expected_gradient_multiplier and gradient_multiplier_noop_observed:
-        blockers.append(
-            f"{family_key}_score_aware_training_gradient_multiplier_requested_but_unapplied"
-        )
+        blockers.append(f"{family_key}_score_aware_training_gradient_multiplier_requested_but_unapplied")
     blockers = _dedupe(blockers)
     return {
         "schema": "compact_score_aware_training_telemetry_contract.v1",
@@ -23541,37 +19902,23 @@ def _compact_score_aware_training_telemetry_contract(
         "telemetry_exists": True,
         "row_count": int(row_count),
         "malformed_row_count": int(malformed_rows),
-        "train_source_pair_indices_observed": sorted(
-            train_source_pair_indices_observed
-        ),
+        "train_source_pair_indices_observed": sorted(train_source_pair_indices_observed),
         "train_source_pair_count_observed": len(train_source_pair_indices_observed),
         "train_max_actual_batch_size_observed": train_max_actual_batch_size_observed,
         "expected_segnet_dual": bool(expected_seg),
         "expected_posenet_dual": bool(expected_pose),
-        "expected_posenet_direct_live_distillation": bool(
-            expected_pose_direct_live
-        ),
+        "expected_posenet_direct_live_distillation": bool(expected_pose_direct_live),
         "expected_segnet_dual_lambda": bool(expected_seg),
         "expected_posenet_dual_lambda": bool(expected_pose),
         "expected_segnet_live_calibration": bool(expected_live_calibration),
         "expected_segnet_direct_live_distillation": bool(expected_direct_live),
-        "expected_segnet_direct_live_subcontrols": dict(
-            expected_direct_live_subcontrols
-        ),
+        "expected_segnet_direct_live_subcontrols": dict(expected_direct_live_subcontrols),
         "expected_scorer_support_ladder": bool(support_ladder_expected),
-        "expected_segnet_direct_live_dual_suffixes": sorted(
-            expected_direct_live_seg_dual_suffixes
-        ),
-        "expected_posenet_direct_live_dual_suffixes": sorted(
-            expected_pose_direct_live_dual_suffixes
-        ),
+        "expected_segnet_direct_live_dual_suffixes": sorted(expected_direct_live_seg_dual_suffixes),
+        "expected_posenet_direct_live_dual_suffixes": sorted(expected_pose_direct_live_dual_suffixes),
         "segnet_direct_live_subcontrol_weights": dict(direct_live_subcontrol_weights),
-        "segnet_direct_live_effective_subcontrol_weights": dict(
-            support_ladder_effective_subcontrol_weights
-        ),
-        "segnet_direct_live_effective_subcontrols": dict(
-            support_ladder_effective_subcontrol_active
-        ),
+        "segnet_direct_live_effective_subcontrol_weights": dict(support_ladder_effective_subcontrol_weights),
+        "segnet_direct_live_effective_subcontrols": dict(support_ladder_effective_subcontrol_active),
         "expected_section_rate_metrics": bool(expected_section),
         "expected_section_byte_dual_lambda": bool(expected_section),
         "expected_archive_rate_metric": bool(expected_section),
@@ -23579,74 +19926,42 @@ def _compact_score_aware_training_telemetry_contract(
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "expected_scorer_input_contrast_floor_metric": bool(expected_contrast_floor),
         "expected_scorer_input_shape_tether_metric": bool(expected_shape_tether),
-        "expected_posenet_yuv6_geometry_tether_metric": bool(
-            expected_geometry_tether
-        ),
-        "expected_posenet_temporal_signal_floor_metric": bool(
-            expected_temporal_floor
-        ),
+        "expected_posenet_yuv6_geometry_tether_metric": bool(expected_geometry_tether),
+        "expected_posenet_temporal_signal_floor_metric": bool(expected_temporal_floor),
         "expected_gradient_multiplier_controls": bool(expected_gradient_multiplier),
-        "min_segnet_direct_live_occupied_class_fraction_for_fit_gate": (
-            min_direct_live_occupied_fraction
-        ),
+        "min_segnet_direct_live_occupied_class_fraction_for_fit_gate": (min_direct_live_occupied_fraction),
         "min_segnet_direct_live_target_class_coverage_fraction_for_fit_gate": (
             min_direct_live_target_class_coverage_fraction
         ),
-        "min_segnet_direct_live_target_class_min_ratio_for_fit_gate": (
-            min_direct_live_target_class_min_ratio
-        ),
+        "min_segnet_direct_live_target_class_min_ratio_for_fit_gate": (min_direct_live_target_class_min_ratio),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "posenet_raw_loss_metric_observed": bool(pose_raw_loss_observed),
         "posenet_score_term_metric_observed": bool(pose_score_term_observed),
-        "posenet_direct_live_loss_observed": bool(
-            pose_direct_live_loss_observed
-        ),
-        "posenet_direct_live_raw_loss_metric_observed": bool(
-            pose_direct_live_raw_loss_observed
-        ),
-        "posenet_direct_live_score_term_metric_observed": bool(
-            pose_direct_live_score_term_observed
-        ),
-        "posenet_direct_live_dual_metric_suffixes_observed": sorted(
-            pose_direct_live_dual_metric_suffixes_observed
-        ),
+        "posenet_direct_live_loss_observed": bool(pose_direct_live_loss_observed),
+        "posenet_direct_live_raw_loss_metric_observed": bool(pose_direct_live_raw_loss_observed),
+        "posenet_direct_live_score_term_metric_observed": bool(pose_direct_live_score_term_observed),
+        "posenet_direct_live_dual_metric_suffixes_observed": sorted(pose_direct_live_dual_metric_suffixes_observed),
         "posenet_direct_live_dual_lambda_active_suffixes_observed": sorted(
             pose_direct_live_dual_active_suffixes_observed
         ),
-        "posenet_direct_live_dual_update_suffixes_observed": sorted(
-            pose_direct_live_dual_update_suffixes_observed
-        ),
+        "posenet_direct_live_dual_update_suffixes_observed": sorted(pose_direct_live_dual_update_suffixes_observed),
         "posenet_direct_live_dual_metric_observed": bool(
-            expected_pose_direct_live_dual_suffixes
-            and not missing_pose_direct_live_dual_metrics
+            expected_pose_direct_live_dual_suffixes and not missing_pose_direct_live_dual_metrics
         ),
         "posenet_direct_live_dual_lambda_active_observed": bool(
-            expected_pose_direct_live_dual_suffixes
-            and not missing_pose_direct_live_dual_activation
+            expected_pose_direct_live_dual_suffixes and not missing_pose_direct_live_dual_activation
         ),
-        "missing_posenet_direct_live_dual_metric_suffixes": (
-            missing_pose_direct_live_dual_metrics
-        ),
-        "missing_posenet_direct_live_dual_activation_suffixes": (
-            missing_pose_direct_live_dual_activation
-        ),
+        "missing_posenet_direct_live_dual_metric_suffixes": (missing_pose_direct_live_dual_metrics),
+        "missing_posenet_direct_live_dual_activation_suffixes": (missing_pose_direct_live_dual_activation),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
         "posenet_dual_metric_observed": bool(pose_dual_observed),
-        "segnet_dual_lambda_active_observed": bool(
-            seg_dual_lambda_active_observed
-        ),
-        "posenet_dual_lambda_active_observed": bool(
-            pose_dual_lambda_active_observed
-        ),
+        "segnet_dual_lambda_active_observed": bool(seg_dual_lambda_active_observed),
+        "posenet_dual_lambda_active_observed": bool(pose_dual_lambda_active_observed),
         "scorer_input_guard_dual_metric_observed": bool(guard_dual_observed),
         "archive_rate_metric_observed": bool(archive_rate_observed),
-        "archive_byte_dual_lambda_active_observed": bool(
-            archive_dual_lambda_active_observed
-        ),
-        "archive_byte_dual_positive_violation_observed": bool(
-            archive_dual_positive_violation_observed
-        ),
+        "archive_byte_dual_lambda_active_observed": bool(archive_dual_lambda_active_observed),
+        "archive_byte_dual_positive_violation_observed": bool(archive_dual_positive_violation_observed),
         "archive_byte_dual_update_observed": bool(archive_dual_update_observed),
         "archive_byte_dual_pending_weight_after_short_update": bool(
             archive_dual_lambda_active_observed
@@ -23655,16 +19970,10 @@ def _compact_score_aware_training_telemetry_contract(
             and not archive_dual_weight_applied_observed
             and row_count <= 2
         ),
-        "archive_byte_dual_weight_applied_observed": bool(
-            archive_dual_weight_applied_observed
-        ),
+        "archive_byte_dual_weight_applied_observed": bool(archive_dual_weight_applied_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
-        "section_byte_dual_lambda_active_observed": bool(
-            section_dual_lambda_active_observed
-        ),
-        "section_byte_dual_positive_violation_observed": bool(
-            section_dual_positive_violation_observed
-        ),
+        "section_byte_dual_lambda_active_observed": bool(section_dual_lambda_active_observed),
+        "section_byte_dual_positive_violation_observed": bool(section_dual_positive_violation_observed),
         "section_byte_dual_update_observed": bool(section_dual_update_observed),
         "section_byte_dual_pending_weight_after_short_update": bool(
             section_dual_lambda_active_observed
@@ -23673,152 +19982,66 @@ def _compact_score_aware_training_telemetry_contract(
             and not section_dual_weight_applied_observed
             and row_count <= 2
         ),
-        "section_byte_dual_weight_applied_observed": bool(
-            section_dual_weight_applied_observed
-        ),
-        "section_byte_dual_zero_base_masked_observed": bool(
-            section_dual_zero_base_masked_observed
-        ),
+        "section_byte_dual_weight_applied_observed": bool(section_dual_weight_applied_observed),
+        "section_byte_dual_zero_base_masked_observed": bool(section_dual_zero_base_masked_observed),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
-        "scorer_input_contrast_floor_metric_observed": bool(
-            contrast_floor_loss_observed
-        ),
-        "scorer_input_contrast_floor_segnet_ratio_metric_observed": bool(
-            contrast_floor_segnet_ratio_observed
-        ),
-        "scorer_input_contrast_floor_posenet_ratio_metric_observed": bool(
-            contrast_floor_posenet_ratio_observed
-        ),
-        "scorer_input_shape_tether_metric_observed": bool(
-            shape_tether_loss_observed
-        ),
-        "scorer_input_shape_tether_segnet_metric_observed": bool(
-            shape_tether_segnet_observed
-        ),
-        "scorer_input_shape_tether_posenet_pair_metric_observed": bool(
-            shape_tether_posenet_pair_observed
-        ),
-        "scorer_input_shape_tether_posenet_delta_metric_observed": bool(
-            shape_tether_posenet_delta_observed
-        ),
-        "posenet_yuv6_geometry_tether_metric_observed": bool(
-            geometry_tether_loss_observed
-        ),
-        "posenet_yuv6_geometry_tether_pair_metric_observed": bool(
-            geometry_tether_pair_observed
-        ),
-        "posenet_yuv6_geometry_tether_delta_metric_observed": bool(
-            geometry_tether_delta_observed
-        ),
-        "posenet_temporal_signal_floor_metric_observed": bool(
-            temporal_floor_loss_observed
-        ),
-        "posenet_temporal_signal_floor_std_ratio_metric_observed": bool(
-            temporal_floor_std_ratio_observed
-        ),
-        "posenet_temporal_signal_floor_mean_abs_ratio_metric_observed": bool(
-            temporal_floor_mean_abs_ratio_observed
-        ),
-        "segnet_live_calibration_active_observed": bool(
-            live_calibration_active_observed
-        ),
-        "segnet_live_calibration_loss_observed": bool(
-            live_calibration_loss_observed
-        ),
-        "segnet_direct_live_distillation_loss_observed": bool(
-            direct_live_loss_observed
-        ),
-        "segnet_direct_live_argmax_metric_observed": bool(
-            direct_live_argmax_observed
-        ),
-        "segnet_direct_live_class_occupancy_metric_observed": bool(
-            direct_live_class_occupancy_observed
-        ),
-        "scorer_support_ladder_enabled_observed": bool(
-            support_ladder_enabled_observed
-        ),
-        "scorer_support_ladder_active_observed": bool(
-            support_ladder_active_observed
-        ),
-        "segnet_direct_live_class_histogram_metric_observed": bool(
-            direct_live_class_histogram_observed
-        ),
-        "segnet_direct_live_class_balanced_hinge_metric_observed": bool(
-            direct_live_class_balanced_hinge_observed
-        ),
-        "segnet_direct_live_class_balanced_ce_metric_observed": bool(
-            direct_live_class_balanced_ce_observed
-        ),
+        "scorer_input_contrast_floor_metric_observed": bool(contrast_floor_loss_observed),
+        "scorer_input_contrast_floor_segnet_ratio_metric_observed": bool(contrast_floor_segnet_ratio_observed),
+        "scorer_input_contrast_floor_posenet_ratio_metric_observed": bool(contrast_floor_posenet_ratio_observed),
+        "scorer_input_shape_tether_metric_observed": bool(shape_tether_loss_observed),
+        "scorer_input_shape_tether_segnet_metric_observed": bool(shape_tether_segnet_observed),
+        "scorer_input_shape_tether_posenet_pair_metric_observed": bool(shape_tether_posenet_pair_observed),
+        "scorer_input_shape_tether_posenet_delta_metric_observed": bool(shape_tether_posenet_delta_observed),
+        "posenet_yuv6_geometry_tether_metric_observed": bool(geometry_tether_loss_observed),
+        "posenet_yuv6_geometry_tether_pair_metric_observed": bool(geometry_tether_pair_observed),
+        "posenet_yuv6_geometry_tether_delta_metric_observed": bool(geometry_tether_delta_observed),
+        "posenet_temporal_signal_floor_metric_observed": bool(temporal_floor_loss_observed),
+        "posenet_temporal_signal_floor_std_ratio_metric_observed": bool(temporal_floor_std_ratio_observed),
+        "posenet_temporal_signal_floor_mean_abs_ratio_metric_observed": bool(temporal_floor_mean_abs_ratio_observed),
+        "segnet_live_calibration_active_observed": bool(live_calibration_active_observed),
+        "segnet_live_calibration_loss_observed": bool(live_calibration_loss_observed),
+        "segnet_direct_live_distillation_loss_observed": bool(direct_live_loss_observed),
+        "segnet_direct_live_argmax_metric_observed": bool(direct_live_argmax_observed),
+        "segnet_direct_live_class_occupancy_metric_observed": bool(direct_live_class_occupancy_observed),
+        "scorer_support_ladder_enabled_observed": bool(support_ladder_enabled_observed),
+        "scorer_support_ladder_active_observed": bool(support_ladder_active_observed),
+        "segnet_direct_live_class_histogram_metric_observed": bool(direct_live_class_histogram_observed),
+        "segnet_direct_live_class_balanced_hinge_metric_observed": bool(direct_live_class_balanced_hinge_observed),
+        "segnet_direct_live_class_balanced_ce_metric_observed": bool(direct_live_class_balanced_ce_observed),
         "segnet_direct_live_class_balanced_squared_hinge_metric_observed": bool(
             direct_live_class_balanced_squared_hinge_observed
         ),
-        "segnet_direct_live_class_region_recon_metric_observed": bool(
-            direct_live_class_region_recon_observed
-        ),
-        "segnet_direct_live_rare_class_logit_metric_observed": bool(
-            direct_live_rare_class_logit_observed
-        ),
-        "segnet_direct_live_target_mass_floor_metric_observed": bool(
-            direct_live_target_mass_floor_observed
-        ),
-        "segnet_direct_live_target_min_ratio_floor_metric_observed": bool(
-            direct_live_target_min_ratio_floor_observed
-        ),
-        "segnet_direct_live_max_candidate_occupied_class_fraction": (
-            direct_live_max_candidate_occupied_class_fraction
-        ),
-        "segnet_direct_live_target_class_coverage_metric_observed": bool(
-            direct_live_target_class_coverage_observed
-        ),
+        "segnet_direct_live_class_region_recon_metric_observed": bool(direct_live_class_region_recon_observed),
+        "segnet_direct_live_rare_class_logit_metric_observed": bool(direct_live_rare_class_logit_observed),
+        "segnet_direct_live_target_mass_floor_metric_observed": bool(direct_live_target_mass_floor_observed),
+        "segnet_direct_live_target_min_ratio_floor_metric_observed": bool(direct_live_target_min_ratio_floor_observed),
+        "segnet_direct_live_max_candidate_occupied_class_fraction": (direct_live_max_candidate_occupied_class_fraction),
+        "segnet_direct_live_target_class_coverage_metric_observed": bool(direct_live_target_class_coverage_observed),
         "segnet_direct_live_max_candidate_target_class_coverage_fraction": (
             direct_live_max_candidate_target_class_coverage_fraction
         ),
-        "segnet_direct_live_target_class_min_ratio_metric_observed": bool(
-            direct_live_target_class_min_ratio_observed
-        ),
-        "segnet_direct_live_max_candidate_target_class_min_ratio": (
-            direct_live_max_candidate_target_class_min_ratio
-        ),
-        "segnet_direct_live_dual_metric_suffixes_observed": sorted(
-            direct_live_seg_dual_metric_suffixes_observed
-        ),
+        "segnet_direct_live_target_class_min_ratio_metric_observed": bool(direct_live_target_class_min_ratio_observed),
+        "segnet_direct_live_max_candidate_target_class_min_ratio": (direct_live_max_candidate_target_class_min_ratio),
+        "segnet_direct_live_dual_metric_suffixes_observed": sorted(direct_live_seg_dual_metric_suffixes_observed),
         "segnet_direct_live_dual_lambda_active_suffixes_observed": sorted(
             direct_live_seg_dual_active_suffixes_observed
         ),
-        "segnet_direct_live_dual_update_suffixes_observed": sorted(
-            direct_live_seg_dual_update_suffixes_observed
-        ),
+        "segnet_direct_live_dual_update_suffixes_observed": sorted(direct_live_seg_dual_update_suffixes_observed),
         "segnet_direct_live_dual_metric_observed": bool(
-            expected_direct_live_seg_dual_suffixes
-            and not missing_direct_live_seg_dual_metrics
+            expected_direct_live_seg_dual_suffixes and not missing_direct_live_seg_dual_metrics
         ),
         "segnet_direct_live_dual_lambda_active_observed": bool(
-            expected_direct_live_seg_dual_suffixes
-            and not missing_direct_live_seg_dual_activation
+            expected_direct_live_seg_dual_suffixes and not missing_direct_live_seg_dual_activation
         ),
-        "missing_segnet_direct_live_dual_metric_suffixes": (
-            missing_direct_live_seg_dual_metrics
-        ),
-        "missing_segnet_direct_live_dual_activation_suffixes": (
-            missing_direct_live_seg_dual_activation
-        ),
+        "missing_segnet_direct_live_dual_metric_suffixes": (missing_direct_live_seg_dual_metrics),
+        "missing_segnet_direct_live_dual_activation_suffixes": (missing_direct_live_seg_dual_activation),
         "pr95_stage_seg_loss_observed": bool(pr95_seg_loss_observed),
         "pr95_stage_pose_loss_observed": bool(pr95_pose_loss_observed),
-        "pr95_stage_seg_effective_weight_active_observed": bool(
-            pr95_seg_effective_weight_active
-        ),
-        "pr95_stage_pose_effective_weight_active_observed": bool(
-            pr95_pose_effective_weight_active
-        ),
-        "gradient_multiplier_requested_observed": bool(
-            gradient_multiplier_requested_observed
-        ),
-        "gradient_multiplier_applied_observed": bool(
-            gradient_multiplier_applied_observed
-        ),
-        "gradient_multiplier_missing_requested_observed": bool(
-            gradient_multiplier_missing_requested_observed
-        ),
+        "pr95_stage_seg_effective_weight_active_observed": bool(pr95_seg_effective_weight_active),
+        "pr95_stage_pose_effective_weight_active_observed": bool(pr95_pose_effective_weight_active),
+        "gradient_multiplier_requested_observed": bool(gradient_multiplier_requested_observed),
+        "gradient_multiplier_applied_observed": bool(gradient_multiplier_applied_observed),
+        "gradient_multiplier_missing_requested_observed": bool(gradient_multiplier_missing_requested_observed),
         "gradient_multiplier_noop_observed": bool(gradient_multiplier_noop_observed),
         "passed": not blockers,
         "blockers": blockers,
@@ -23891,9 +20114,7 @@ def _attach_hi_nerv_score_aware_training_metadata(
         training = artifact_metadata.setdefault("score_aware_training", {})
         if isinstance(training, dict):
             training[str(key)] = dict(fragment)
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -23930,9 +20151,7 @@ def _attach_hi_nerv_training_telemetry_contract(
         training = artifact_metadata.get("score_aware_training")
         if isinstance(training, dict):
             training["training_telemetry_contract"] = dict(contract)
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -23964,9 +20183,7 @@ def _attach_hi_nerv_post_export_receiver_cache_quality(
         score_training = metadata.get("score_aware_training")
         if isinstance(score_training, dict):
             score_training["post_export_receiver_cache_quality"] = summary
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -24005,21 +20222,16 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
         output_path,
         artifact_dict,
     )
-    score_training = _substrate_score_aware_training_from_artifact(
-        readiness_artifact_dict
-    )
+    score_training = _substrate_score_aware_training_from_artifact(readiness_artifact_dict)
     if output_head_target_bias_init_metadata is None:
         candidate_output_init = score_training.get("output_head_target_bias_init")
         output_head_target_bias_init_metadata = (
-            dict(candidate_output_init)
-            if isinstance(candidate_output_init, Mapping)
-            else {}
+            dict(candidate_output_init) if isinstance(candidate_output_init, Mapping) else {}
         )
     if isinstance(output_head_target_bias_init_metadata, Mapping):
         top_level_bootstrap = score_training.get("scorer_domain_bootstrap")
-        if (
-            "scorer_domain_bootstrap" not in output_head_target_bias_init_metadata
-            and isinstance(top_level_bootstrap, Mapping)
+        if "scorer_domain_bootstrap" not in output_head_target_bias_init_metadata and isinstance(
+            top_level_bootstrap, Mapping
         ):
             output_head_target_bias_init_metadata = {
                 **dict(output_head_target_bias_init_metadata),
@@ -24027,30 +20239,22 @@ def _write_hi_nerv_runner_short_scorer_smoke_readiness(
             }
     report = build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=train_time_controls,
-        final_loss_components=_final_loss_components_from_training_artifact_dict(
-            readiness_artifact_dict
-        ),
+        final_loss_components=_final_loss_components_from_training_artifact_dict(readiness_artifact_dict),
         post_export_quality=post_export_quality,
         segnet_distillation_weight=float(segnet_distillation_weight),
         pose_distillation_weight=float(pose_distillation_weight),
         allow_mock_scorer_teacher=False,
         unscored_research_smoke_enabled=bool(allow_unscored_research_smoke),
         require_section_byte_dual_ascent=bool(require_section_byte_dual_ascent),
-        require_pose_direct_live_distillation=bool(
-            require_pose_direct_live_distillation
-        ),
+        require_pose_direct_live_distillation=bool(require_pose_direct_live_distillation),
         decoder_weight_waterfill_plan_metadata=(
             _merge_hi_nerv_decoder_waterfill_training_metadata(
                 decoder_weight_waterfill_plan_metadata,
                 readiness_artifact_dict,
             )
         ),
-        output_head_target_bias_init_metadata=(
-            output_head_target_bias_init_metadata
-        ),
-        min_segnet_occupied_class_fraction_for_fit_gate=(
-            min_segnet_occupied_class_fraction_for_fit_gate
-        ),
+        output_head_target_bias_init_metadata=(output_head_target_bias_init_metadata),
+        min_segnet_occupied_class_fraction_for_fit_gate=(min_segnet_occupied_class_fraction_for_fit_gate),
     )
     path = output_path / "hi_nerv_short_scorer_smoke_readiness.json"
     report["report_path"] = path.as_posix()
@@ -24071,21 +20275,15 @@ def _merge_hi_nerv_decoder_waterfill_training_metadata(
         return metadata
     out = dict(metadata)
     artifact_metadata = artifact_dict.get("substrate_artifact_metadata")
-    artifact_metadata = (
-        artifact_metadata if isinstance(artifact_metadata, Mapping) else {}
-    )
+    artifact_metadata = artifact_metadata if isinstance(artifact_metadata, Mapping) else {}
     supplied_training = artifact_metadata.get("substrate_supplied_score_aware_training")
-    supplied_training = (
-        supplied_training if isinstance(supplied_training, Mapping) else {}
-    )
+    supplied_training = supplied_training if isinstance(supplied_training, Mapping) else {}
     fake_quant = supplied_training.get("decoder_fake_quant_forward")
     if not isinstance(fake_quant, Mapping):
         return out
     per_tensor_bits = fake_quant.get("per_tensor_waterfill_bits_by_name")
     per_tensor_bits = per_tensor_bits if isinstance(per_tensor_bits, Mapping) else {}
-    targeted_tensor_count = _optional_float(
-        fake_quant.get("per_tensor_waterfill_group_count")
-    )
+    targeted_tensor_count = _optional_float(fake_quant.get("per_tensor_waterfill_group_count"))
     if targeted_tensor_count is None:
         targeted_tensor_count = float(len(per_tensor_bits))
     enabled = bool(fake_quant.get("per_tensor_waterfill_enabled") is True)
@@ -24114,9 +20312,7 @@ def _reload_hi_nerv_training_artifact_for_readiness(
     output_dir: str | Path,
     artifact_dict: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return artifact_dict
     try:
@@ -24125,11 +20321,7 @@ def _reload_hi_nerv_training_artifact_for_readiness(
         return artifact_dict
     if not isinstance(payload, Mapping):
         return artifact_dict
-    return (
-        payload
-        if _final_loss_components_from_training_artifact_dict(payload)
-        else artifact_dict
-    )
+    return payload if _final_loss_components_from_training_artifact_dict(payload) else artifact_dict
 
 
 def _attach_hi_nerv_short_scorer_smoke_readiness(
@@ -24140,9 +20332,7 @@ def _attach_hi_nerv_short_scorer_smoke_readiness(
 ) -> None:
     summary = hinerv_short_scorer_smoke_readiness_summary(report)
     admission = hinerv_short_scorer_smoke_long_run_admission(report)
-    admission_blockers = [
-        str(v) for v in admission.get("admission_blockers") or []
-    ]
+    admission_blockers = [str(v) for v in admission.get("admission_blockers") or []]
     metadata = artifact_dict.get("substrate_artifact_metadata")
     if isinstance(metadata, dict):
         metadata["short_scorer_teacher_smoke_readiness"] = summary
@@ -24159,12 +20349,8 @@ def _attach_hi_nerv_short_scorer_smoke_readiness(
         score_training = metadata.get("score_aware_training")
         if isinstance(score_training, dict):
             score_training["short_scorer_teacher_smoke_readiness"] = summary
-            score_training["short_scorer_teacher_smoke_long_run_admission"] = (
-                admission
-            )
-    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+            score_training["short_scorer_teacher_smoke_long_run_admission"] = admission
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return
     try:
@@ -24309,26 +20495,14 @@ def _run_pact_nerv_vq_mlx_smoke(
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if segnet_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_distillation_weight must be >= 0")
     if pose_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_weight must be >= 0")
     if str(pose_distillation_loss) not in {"mse", "huber"}:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_loss must be one of ['mse', 'huber']"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_loss must be one of ['mse', 'huber']")
     if float(pose_distillation_huber_delta) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_huber_delta must be > 0"
-        )
-    if (
-        segnet_distillation_weight > 0.0
-        and pose_distillation_weight <= 0.0
-        and not allow_segnet_only_research
-    ):
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_huber_delta must be > 0")
+    if segnet_distillation_weight > 0.0 and pose_distillation_weight <= 0.0 and not allow_segnet_only_research:
         raise CompactRendererMlxSpineRunnerError(
             "SegNet-bound compact training must also bind PoseNet. Pass "
             "--pose-distillation-weight > 0, or explicitly pass "
@@ -24360,13 +20534,9 @@ def _run_pact_nerv_vq_mlx_smoke(
     model = PactNervVqSubstrateMLX(cfg)
     optimizer_policy_row = dict(optimizer_policy or {})
     optimizer_control = dict(optimizer_controls or {})
-    pr95_curriculum_enabled = bool(
-        optimizer_policy_row.get("pr95_faithful_curriculum_enabled")
-    )
+    pr95_curriculum_enabled = bool(optimizer_policy_row.get("pr95_faithful_curriculum_enabled"))
     effective_optimizer_kind = str(
-        optimizer_policy_row.get("optimizer_kind")
-        or optimizer_control.get("optimizer_kind")
-        or optimizer_kind
+        optimizer_policy_row.get("optimizer_kind") or optimizer_control.get("optimizer_kind") or optimizer_kind
     )
     effective_weight_decay = optimizer_control.get("weight_decay_effective")
     coder_qat_cfg, coder_qat_metadata_row = _build_pact_coder_qat_config_and_metadata(
@@ -24405,10 +20575,7 @@ def _run_pact_nerv_vq_mlx_smoke(
         "family": "pact_nerv_vq",
         "num_pairs": pairs,
         "full_video_pairs_required_for_promotion": 600,
-        "archive_exporter": (
-            "tac.substrates.pact_nerv_vq.archive_candidate."
-            "export_pact_nerv_vq_mlx_archive"
-        ),
+        "archive_exporter": ("tac.substrates.pact_nerv_vq.archive_candidate.export_pact_nerv_vq_mlx_archive"),
         "score_aware_training": {
             "schema": "compact_pact_nerv_vq_score_aware_training.v1",
             "segnet_distillation_weight": float(segnet_distillation_weight),
@@ -24422,30 +20589,18 @@ def _run_pact_nerv_vq_mlx_smoke(
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
-            "native_optimizer_active": bool(
-                optimizer_policy_row.get("native_optimizer_active")
-            ),
-            "optimizer_policy": strip_candidate_curriculum_authority_fields(
-                optimizer_policy_row
-            ),
+            "native_optimizer_active": bool(optimizer_policy_row.get("native_optimizer_active")),
+            "optimizer_policy": strip_candidate_curriculum_authority_fields(optimizer_policy_row),
             "optimizer_kind": effective_optimizer_kind,
-            "optimizer_controls": strip_candidate_curriculum_authority_fields(
-                optimizer_control
-            ),
+            "optimizer_controls": strip_candidate_curriculum_authority_fields(optimizer_control),
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
-            "checkpoint_dir": (
-                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
-            ),
+            "checkpoint_dir": (Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None),
             "resume_from_checkpoint": (
-                Path(resume_from_checkpoint).as_posix()
-                if resume_from_checkpoint is not None
-                else None
+                Path(resume_from_checkpoint).as_posix() if resume_from_checkpoint is not None else None
             ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
-            "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                scorer_upstream_dir
-            ),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream_dir),
             "coder_aware_qat": coder_qat_metadata_row,
             "decoder_codec": str(decoder_codec),
         },
@@ -24498,17 +20653,13 @@ def _run_pact_nerv_vq_mlx_smoke(
         segnet_distillation_objective=segnet_distillation_objective,
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
-        distillation_num_classes=(
-            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
-        ),
+        distillation_num_classes=(int(scorer_teacher.num_classes) if scorer_teacher is not None else 5),
         pose_distillation_weight=float(pose_distillation_weight),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
-        pose_dims=int(pose_scorer_teacher.pose_dims)
-        if pose_scorer_teacher is not None
-        else 6,
+        pose_dims=int(pose_scorer_teacher.pose_dims) if pose_scorer_teacher is not None else 6,
         allow_segnet_only_research=bool(allow_segnet_only_research),
     )
     return run_mlx_score_aware_full_main(
@@ -24526,21 +20677,15 @@ def _run_pact_nerv_vq_mlx_smoke(
         resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
-        pr95_curriculum_total_epochs=max(8, int(epochs))
-        if pr95_curriculum_enabled
-        else None,
+        pr95_curriculum_total_epochs=max(8, int(epochs)) if pr95_curriculum_enabled else None,
         grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
         weight_decay=effective_weight_decay,
         optimizer_kind=effective_optimizer_kind,
         warmup_epochs=int(optimizer_control.get("warmup_epochs", 0)),
-        warmup_steps_per_epoch=max(
-            1, int(optimizer_control.get("warmup_steps_per_epoch", 1))
-        ),
+        warmup_steps_per_epoch=max(1, int(optimizer_control.get("warmup_steps_per_epoch", 1))),
         cosine_decay_enabled=bool(optimizer_control.get("cosine_decay_enabled")),
         cosine_decay_total_epochs=optimizer_control.get("cosine_decay_total_epochs"),
-        cosine_decay_min_lr_ratio=float(
-            optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
-        ),
+        cosine_decay_min_lr_ratio=float(optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)),
         notes=(
             "Compact renderer MLX spine runner PACT-NeRV-VQ smoke using real "
             "contest video targets, byte-closed archive export, receiver proof, "
@@ -24624,30 +20769,16 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if int(selector_palette_size) < 2:
-        raise CompactRendererMlxSpineRunnerError(
-            "selector_palette_size must be >= 2"
-        )
+        raise CompactRendererMlxSpineRunnerError("selector_palette_size must be >= 2")
     if segnet_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("segnet_distillation_weight must be >= 0")
     if pose_distillation_weight < 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_weight must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_weight must be >= 0")
     if str(pose_distillation_loss) not in {"mse", "huber"}:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_loss must be one of ['mse', 'huber']"
-        )
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_loss must be one of ['mse', 'huber']")
     if float(pose_distillation_huber_delta) <= 0.0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_huber_delta must be > 0"
-        )
-    if (
-        segnet_distillation_weight > 0.0
-        and pose_distillation_weight <= 0.0
-        and not allow_segnet_only_research
-    ):
+        raise CompactRendererMlxSpineRunnerError("pose_distillation_huber_delta must be > 0")
+    if segnet_distillation_weight > 0.0 and pose_distillation_weight <= 0.0 and not allow_segnet_only_research:
         raise CompactRendererMlxSpineRunnerError(
             "SegNet-bound selector-v4 compact training must also bind PoseNet. "
             "Pass --pose-distillation-weight > 0, or explicitly pass "
@@ -24680,13 +20811,9 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     selector_render_quality_holder: dict[str, Any] = {}
     optimizer_policy_row = dict(optimizer_policy or {})
     optimizer_control = dict(optimizer_controls or {})
-    pr95_curriculum_enabled = bool(
-        optimizer_policy_row.get("pr95_faithful_curriculum_enabled")
-    )
+    pr95_curriculum_enabled = bool(optimizer_policy_row.get("pr95_faithful_curriculum_enabled"))
     effective_optimizer_kind = str(
-        optimizer_policy_row.get("optimizer_kind")
-        or optimizer_control.get("optimizer_kind")
-        or optimizer_kind
+        optimizer_policy_row.get("optimizer_kind") or optimizer_control.get("optimizer_kind") or optimizer_kind
     )
     effective_weight_decay = optimizer_control.get("weight_decay_effective")
     coder_qat_cfg, coder_qat_metadata_row = _build_pact_coder_qat_config_and_metadata(
@@ -24716,8 +20843,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         if render_quality.get("export_blocked_recommended"):
             blockers = ", ".join(str(b) for b in render_quality.get("blockers", ()))
             raise CompactRendererMlxSpineRunnerError(
-                "Selector-v4 render quality gate blocked archive export: "
-                f"{blockers}"
+                f"Selector-v4 render quality gate blocked archive export: {blockers}"
             )
         return export_pact_nerv_selector_v4_mlx_archive(
             model_obj,
@@ -24739,8 +20865,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         "num_pairs": pairs,
         "full_video_pairs_required_for_promotion": 600,
         "archive_exporter": (
-            "tac.substrates.pact_nerv_selector_v4.archive_candidate."
-            "export_pact_nerv_selector_v4_mlx_archive"
+            "tac.substrates.pact_nerv_selector_v4.archive_candidate.export_pact_nerv_selector_v4_mlx_archive"
         ),
         "selector_codec": "run_length_varint_selector",
         "selector_palette_size": int(selector_palette_size),
@@ -24757,31 +20882,19 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
-            "optimizer_policy": strip_candidate_curriculum_authority_fields(
-                optimizer_policy_row
-            ),
+            "optimizer_policy": strip_candidate_curriculum_authority_fields(optimizer_policy_row),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
-            "native_optimizer_active": bool(
-                optimizer_policy_row.get("native_optimizer_active")
-            ),
+            "native_optimizer_active": bool(optimizer_policy_row.get("native_optimizer_active")),
             "optimizer_kind": effective_optimizer_kind,
-            "optimizer_controls": strip_candidate_curriculum_authority_fields(
-                optimizer_control
-            ),
+            "optimizer_controls": strip_candidate_curriculum_authority_fields(optimizer_control),
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
-            "checkpoint_dir": (
-                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
-            ),
+            "checkpoint_dir": (Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None),
             "resume_from_checkpoint": (
-                Path(resume_from_checkpoint).as_posix()
-                if resume_from_checkpoint is not None
-                else None
+                Path(resume_from_checkpoint).as_posix() if resume_from_checkpoint is not None else None
             ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
-            "scorer_upstream_snapshot": _scorer_upstream_metadata(
-                scorer_upstream_dir
-            ),
+            "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream_dir),
             "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
             "coder_aware_qat": coder_qat_metadata_row,
             "decoder_codec": str(decoder_codec),
@@ -24834,17 +20947,13 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         segnet_distillation_objective=segnet_distillation_objective,
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
-        distillation_num_classes=(
-            int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
-        ),
+        distillation_num_classes=(int(scorer_teacher.num_classes) if scorer_teacher is not None else 5),
         pose_distillation_weight=float(pose_distillation_weight),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
-        pose_dims=int(pose_scorer_teacher.pose_dims)
-        if pose_scorer_teacher is not None
-        else 6,
+        pose_dims=int(pose_scorer_teacher.pose_dims) if pose_scorer_teacher is not None else 6,
         allow_segnet_only_research=bool(allow_segnet_only_research),
     )
     return run_mlx_score_aware_full_main(
@@ -24862,21 +20971,15 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
-        pr95_curriculum_total_epochs=max(8, int(epochs))
-        if pr95_curriculum_enabled
-        else None,
+        pr95_curriculum_total_epochs=max(8, int(epochs)) if pr95_curriculum_enabled else None,
         grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
         weight_decay=effective_weight_decay,
         optimizer_kind=effective_optimizer_kind,
         warmup_epochs=int(optimizer_control.get("warmup_epochs", 0)),
-        warmup_steps_per_epoch=max(
-            1, int(optimizer_control.get("warmup_steps_per_epoch", 1))
-        ),
+        warmup_steps_per_epoch=max(1, int(optimizer_control.get("warmup_steps_per_epoch", 1))),
         cosine_decay_enabled=bool(optimizer_control.get("cosine_decay_enabled")),
         cosine_decay_total_epochs=optimizer_control.get("cosine_decay_total_epochs"),
-        cosine_decay_min_lr_ratio=float(
-            optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
-        ),
+        cosine_decay_min_lr_ratio=float(optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)),
         notes=(
             "Compact renderer MLX spine runner PACT-NeRV-SELECTOR-V4 smoke "
             "using real contest video targets, selector-v4 PSV4 archive export, "
@@ -24924,9 +21027,7 @@ def _select_latest_exported_checkpoint(
         _resolve_existing(raw["latents_path"], base=base)
         candidates.append(raw)
     if not candidates:
-        raise CompactRendererMlxSpineRunnerError(
-            "no_checkpoint_with_exported_weights_and_latents"
-        )
+        raise CompactRendererMlxSpineRunnerError("no_checkpoint_with_exported_weights_and_latents")
     return max(
         candidates,
         key=lambda row: (int(row.get("global_epoch") or 0), int(row.get("stage_index") or 0)),
@@ -24946,9 +21047,7 @@ def _positive_int(value: Any) -> int | None:
 def _parse_positive_int_csv(value: str) -> tuple[int, ...]:
     parts = [part.strip() for part in str(value).split(",") if part.strip()]
     if not parts:
-        raise CompactRendererMlxSpineRunnerError(
-            "expected at least one positive integer in comma-separated list"
-        )
+        raise CompactRendererMlxSpineRunnerError("expected at least one positive integer in comma-separated list")
     out = []
     for part in parts:
         try:
@@ -24958,9 +21057,7 @@ def _parse_positive_int_csv(value: str) -> tuple[int, ...]:
                 f"invalid positive integer {part!r} in comma-separated list"
             ) from exc
         if parsed < 1:
-            raise CompactRendererMlxSpineRunnerError(
-                f"invalid non-positive integer {part!r} in comma-separated list"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"invalid non-positive integer {part!r} in comma-separated list")
         out.append(parsed)
     return tuple(out)
 
@@ -24980,15 +21077,12 @@ def _normalize_gradient_multiplier_by_name(
         return out
     if not isinstance(value, Mapping):
         raise CompactRendererMlxSpineRunnerError(
-            "gradient_multiplier_by_name must be a mapping of exact parameter "
-            "name to finite non-negative multiplier"
+            "gradient_multiplier_by_name must be a mapping of exact parameter name to finite non-negative multiplier"
         )
     for raw_name, raw_multiplier in value.items():
         name = str(raw_name).strip()
         if not name:
-            raise CompactRendererMlxSpineRunnerError(
-                "gradient multiplier parameter names must be non-empty"
-            )
+            raise CompactRendererMlxSpineRunnerError("gradient multiplier parameter names must be non-empty")
         try:
             multiplier = float(raw_multiplier)
         except (TypeError, ValueError) as exc:
@@ -24996,9 +21090,7 @@ def _normalize_gradient_multiplier_by_name(
                 f"gradient multiplier for {name!r} must be a finite float"
             ) from exc
         if not math.isfinite(multiplier) or multiplier < 0.0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"gradient multiplier for {name!r} must be finite and >= 0"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"gradient multiplier for {name!r} must be finite and >= 0")
         out[name] = multiplier
     return out
 
@@ -25006,14 +21098,10 @@ def _normalize_gradient_multiplier_by_name(
 def _parse_gradient_multiplier_assignment(value: str) -> tuple[str, float]:
     text = str(value)
     if "=" not in text:
-        raise argparse.ArgumentTypeError(
-            "expected exact parameter gradient multiplier as name=value"
-        )
+        raise argparse.ArgumentTypeError("expected exact parameter gradient multiplier as name=value")
     raw_name, raw_multiplier = text.split("=", 1)
     try:
-        [item] = _normalize_gradient_multiplier_by_name(
-            {raw_name: raw_multiplier}
-        ).items()
+        [item] = _normalize_gradient_multiplier_by_name({raw_name: raw_multiplier}).items()
     except CompactRendererMlxSpineRunnerError as exc:
         raise argparse.ArgumentTypeError(str(exc)) from exc
     return item
@@ -25052,9 +21140,7 @@ def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, 
 def _load_scorer_error_pair_rows(path: Path) -> list[Mapping[str, Any]]:
     resolved = Path(path).expanduser().resolve(strict=False)
     if not resolved.is_file():
-        raise CompactRendererMlxSpineRunnerError(
-            f"scorer-error pair curriculum artifact not found: {resolved}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"scorer-error pair curriculum artifact not found: {resolved}")
     if resolved.suffix == ".jsonl":
         rows: list[Mapping[str, Any]] = []
         for line_no, line in enumerate(resolved.read_text(encoding="utf-8").splitlines(), 1):
@@ -25063,21 +21149,15 @@ def _load_scorer_error_pair_rows(path: Path) -> list[Mapping[str, Any]]:
             try:
                 row = json.loads(line)
             except json.JSONDecodeError as exc:
-                raise CompactRendererMlxSpineRunnerError(
-                    f"{resolved}:{line_no}: invalid JSONL row"
-                ) from exc
+                raise CompactRendererMlxSpineRunnerError(f"{resolved}:{line_no}: invalid JSONL row") from exc
             if not isinstance(row, Mapping):
-                raise CompactRendererMlxSpineRunnerError(
-                    f"{resolved}:{line_no}: expected JSON object row"
-                )
+                raise CompactRendererMlxSpineRunnerError(f"{resolved}:{line_no}: expected JSON object row")
             rows.append(row)
         return rows
     try:
         payload = json.loads(resolved.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise CompactRendererMlxSpineRunnerError(
-            f"{resolved}: invalid scorer-error pair curriculum JSON"
-        ) from exc
+        raise CompactRendererMlxSpineRunnerError(f"{resolved}: invalid scorer-error pair curriculum JSON") from exc
     if isinstance(payload, Mapping):
         if payload.get("schema") == "direct_full_scorer_vjp_bundle.v1":
             exact_contract = payload.get("exact_reduction_contract")
@@ -25088,8 +21168,7 @@ def _load_scorer_error_pair_rows(path: Path) -> list[Mapping[str, Any]]:
             bundle_quality_blockers = list(payload.get("gradient_quality_blockers") or [])
             if bundle_quality_blockers:
                 raise CompactRendererMlxSpineRunnerError(
-                    f"{resolved}: direct VJP curriculum has gradient quality blockers: "
-                    f"{bundle_quality_blockers}"
+                    f"{resolved}: direct VJP curriculum has gradient quality blockers: {bundle_quality_blockers}"
                 )
             rows: list[Mapping[str, Any]] = []
             for shard in payload.get("shards") or []:
@@ -25131,10 +21210,7 @@ def _load_scorer_error_pair_rows(path: Path) -> list[Mapping[str, Any]]:
                             }
                         )
                 else:
-                    pair_rows = [
-                        row for row in shard.get("top_pairs_by_grad_l2") or []
-                        if isinstance(row, Mapping)
-                    ]
+                    pair_rows = [row for row in shard.get("top_pairs_by_grad_l2") or [] if isinstance(row, Mapping)]
                 for row in pair_rows:
                     if not isinstance(row, Mapping):
                         continue
@@ -25164,8 +21240,7 @@ def _load_scorer_error_pair_rows(path: Path) -> list[Mapping[str, Any]]:
     if isinstance(payload, list):
         return [row for row in payload if isinstance(row, Mapping)]
     raise CompactRendererMlxSpineRunnerError(
-        f"{resolved}: expected xray report JSON with rows/top_pairs, "
-        "direct_full_scorer_vjp_bundle.v1, or JSONL rows"
+        f"{resolved}: expected xray report JSON with rows/top_pairs, direct_full_scorer_vjp_bundle.v1, or JSONL rows"
     )
 
 
@@ -25202,11 +21277,7 @@ def _write_mlx_prefilter_error_anatomy_attachment(
             write_report_outputs,
         )
 
-        resolved_archive = (
-            Path(archive_path).expanduser().resolve(strict=False)
-            if archive_path is not None
-            else None
-        )
+        resolved_archive = Path(archive_path).expanduser().resolve(strict=False) if archive_path is not None else None
         report_path = out / "mlx_prefilter_error_anatomy.json"
         report = build_report_from_profile(
             mlx_profile=resolved_profile,
@@ -25250,22 +21321,16 @@ def _scorer_error_pair_curriculum_from_args(
     path = getattr(args, "scorer_error_pair_curriculum_json", None)
     default_weight = float(getattr(args, "scorer_error_pair_curriculum_default_weight", 1.0))
     gain = float(getattr(args, "scorer_error_pair_curriculum_gain", 4.0))
-    field = str(
-        getattr(args, "scorer_error_pair_curriculum_field", "component_score_no_rate")
-    )
+    field = str(getattr(args, "scorer_error_pair_curriculum_field", "component_score_no_rate"))
     top_k = int(getattr(args, "scorer_error_pair_curriculum_top_k", 0) or 0)
     if default_weight < 0.0 or not math.isfinite(default_weight):
         raise CompactRendererMlxSpineRunnerError(
             "--scorer-error-pair-curriculum-default-weight must be finite and >= 0"
         )
     if gain < 0.0 or not math.isfinite(gain):
-        raise CompactRendererMlxSpineRunnerError(
-            "--scorer-error-pair-curriculum-gain must be finite and >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("--scorer-error-pair-curriculum-gain must be finite and >= 0")
     if top_k < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "--scorer-error-pair-curriculum-top-k must be >= 0"
-        )
+        raise CompactRendererMlxSpineRunnerError("--scorer-error-pair-curriculum-top-k must be >= 0")
     auto_attachment: dict[str, Any] | None = None
     if path is None and bool(getattr(args, "auto_scorer_error_pair_curriculum", True)):
         mlx_profiles = tuple(getattr(args, "mlx_profile", ()) or ())
@@ -25306,17 +21371,12 @@ def _scorer_error_pair_curriculum_from_args(
             continue
         parsed.append((pair_idx, value))
     if not parsed:
-        raise CompactRendererMlxSpineRunnerError(
-            f"{path}: no positive finite pair rows found for field {field!r}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"{path}: no positive finite pair rows found for field {field!r}")
     parsed.sort(key=lambda item: item[1], reverse=True)
     if top_k:
         parsed = parsed[:top_k]
     max_value = max(value for _pair_idx, value in parsed)
-    weights = {
-        int(pair_idx): float(default_weight + gain * (value / max_value))
-        for pair_idx, value in parsed
-    }
+    weights = {int(pair_idx): float(default_weight + gain * (value / max_value)) for pair_idx, value in parsed}
     return weights, {
         "schema": "compact_runner_scorer_error_pair_curriculum.v1",
         "enabled": True,
@@ -25332,15 +21392,10 @@ def _scorer_error_pair_curriculum_from_args(
         "distortion_geometry": {
             "schema": "compact_runner_distortion_geometry_axis_model.v1",
             "full_lagrangian_is_final_arbiter": True,
-            "inner_distortion_model": (
-                "axis_specific_training_curriculum_before_byte_priced_export"
-            ),
+            "inner_distortion_model": ("axis_specific_training_curriculum_before_byte_priced_export"),
             "segnet_domain": "last_frame_spatial_argmax_boundary_geometry",
             "posenet_domain": "two_frame_motion_pose_geometry",
-            "overlap_domain": (
-                "shared_decoded_pixels_where_xray_vjp_or_cache_delta "
-                "shows both axes move"
-            ),
+            "overlap_domain": ("shared_decoded_pixels_where_xray_vjp_or_cache_delta shows both axes move"),
             "rate_domain": "archive_bytes_admitted_after_export_by_fixed_25_over_N_price",
             "selected_axis_field": field,
             "score_claim": False,
@@ -25360,9 +21415,7 @@ def _resolve_checkpoint_interval_epochs(value: Any, *, epochs: int) -> int:
     """Return a positive periodic checkpoint cadence for long compact runs."""
 
     if isinstance(value, bool):
-        raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_interval_epochs must be a positive integer, not bool"
-        )
+        raise CompactRendererMlxSpineRunnerError("checkpoint_interval_epochs must be a positive integer, not bool")
     try:
         parsed = int(value)
     except (TypeError, ValueError) as exc:
@@ -25370,9 +21423,7 @@ def _resolve_checkpoint_interval_epochs(value: Any, *, epochs: int) -> int:
             f"checkpoint_interval_epochs must be a positive integer; got {value!r}"
         ) from exc
     if parsed <= 0:
-        raise CompactRendererMlxSpineRunnerError(
-            f"checkpoint_interval_epochs must be > 0; got {parsed}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"checkpoint_interval_epochs must be > 0; got {parsed}")
     if int(epochs) <= 0:
         raise CompactRendererMlxSpineRunnerError(f"epochs must be > 0; got {epochs!r}")
     return parsed
@@ -25382,21 +21433,15 @@ def _resolve_checkpoint_retention_keep_last_n(value: Any) -> int | None:
     """Return hot-retention last-N, with -1 meaning preserve every checkpoint."""
 
     if isinstance(value, bool):
-        raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_last_n must be an integer or -1, not bool"
-        )
+        raise CompactRendererMlxSpineRunnerError("checkpoint_retention_keep_last_n must be an integer or -1, not bool")
     try:
         parsed = int(value)
     except (TypeError, ValueError) as exc:
         raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_last_n must be an integer; "
-            f"got {value!r}"
+            f"checkpoint_retention_keep_last_n must be an integer; got {value!r}"
         ) from exc
     if parsed < -1:
-        raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_last_n must be >= -1; "
-            f"got {parsed}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"checkpoint_retention_keep_last_n must be >= -1; got {parsed}")
     return None if parsed == -1 else parsed
 
 
@@ -25411,14 +21456,10 @@ def _resolve_checkpoint_retention_keep_best_n(value: Any) -> int:
         parsed = int(value)
     except (TypeError, ValueError) as exc:
         raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_best_n must be a non-negative integer; "
-            f"got {value!r}"
+            f"checkpoint_retention_keep_best_n must be a non-negative integer; got {value!r}"
         ) from exc
     if parsed < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_best_n must be >= 0; "
-            f"got {parsed}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"checkpoint_retention_keep_best_n must be >= 0; got {parsed}")
     return parsed
 
 
@@ -25435,14 +21476,10 @@ def _resolve_checkpoint_retention_keep_every_n_epochs(value: Any) -> int | None:
         parsed = int(value)
     except (TypeError, ValueError) as exc:
         raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_every_n_epochs must be a positive integer; "
-            f"got {value!r}"
+            f"checkpoint_retention_keep_every_n_epochs must be a positive integer; got {value!r}"
         ) from exc
     if parsed <= 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "checkpoint_retention_keep_every_n_epochs must be > 0; "
-            f"got {parsed}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"checkpoint_retention_keep_every_n_epochs must be > 0; got {parsed}")
     return parsed
 
 
@@ -25483,9 +21520,7 @@ def _default_output_dir() -> Path:
     for root in DEFAULT_SSD_ROOTS:
         if root.exists():
             return root / "compact_renderer_mlx_spine_runner" / _stamp()
-    raise CompactRendererMlxSpineRunnerError(
-        "no SSD artifact root found; pass --output-dir explicitly"
-    )
+    raise CompactRendererMlxSpineRunnerError("no SSD artifact root found; pass --output-dir explicitly")
 
 
 def _jsonable_lock_value(value: Any) -> Any:
@@ -25494,10 +21529,7 @@ def _jsonable_lock_value(value: Any) -> Any:
     if isinstance(value, tuple | list):
         return [_jsonable_lock_value(item) for item in value]
     if isinstance(value, dict):
-        return {
-            str(key): _jsonable_lock_value(item)
-            for key, item in sorted(value.items(), key=lambda kv: str(kv[0]))
-        }
+        return {str(key): _jsonable_lock_value(item) for key, item in sorted(value.items(), key=lambda kv: str(kv[0]))}
     return value
 
 
@@ -25544,9 +21576,7 @@ def _active_campaign_lock_payload(
 
     excluded = {"allow_duplicate_campaign", "output_dir", "overwrite", "repo_root"}
     argv_payload = {
-        key: _jsonable_lock_value(value)
-        for key, value in sorted(vars(args).items())
-        if key not in excluded
+        key: _jsonable_lock_value(value) for key, value in sorted(vars(args).items()) if key not in excluded
     }
     recon_weight = getattr(args, "recon_pixel_weight_path", None)
     recon_weight_sha256 = None
@@ -25581,9 +21611,7 @@ def _active_campaign_lock_payload(
 
 
 def _campaign_lock_digest(payload: Mapping[str, Any]) -> str:
-    return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
 def _pid_is_alive(pid: int) -> bool:
@@ -25721,19 +21749,12 @@ def _snerv_scorer_loop_qat_request_policy(
     *,
     bounded_timing_smoke_waiver_consumed: bool,
 ) -> tuple[bool, dict[str, Any]]:
-    requested = bool(
-        getattr(args, "coder_aware_qat", False)
-        or getattr(args, "snerv_scorer_loop_qat", False)
-    )
-    allow_bounded = bool(
-        getattr(args, "snerv_bounded_smoke_allow_scorer_loop_qat", False)
-    )
+    requested = bool(getattr(args, "coder_aware_qat", False) or getattr(args, "snerv_scorer_loop_qat", False))
+    allow_bounded = bool(getattr(args, "snerv_bounded_smoke_allow_scorer_loop_qat", False))
     effective = requested
     policy: dict[str, Any] = {
         "schema": "snerv_bounded_smoke_scorer_loop_qat_policy.v1",
-        "bounded_timing_smoke_waiver_consumed": bool(
-            bounded_timing_smoke_waiver_consumed
-        ),
+        "bounded_timing_smoke_waiver_consumed": bool(bounded_timing_smoke_waiver_consumed),
         "requested": requested,
         "allow_bounded_smoke_scorer_loop_qat": allow_bounded,
         "effective_requested": effective,
@@ -25748,12 +21769,9 @@ def _snerv_scorer_loop_qat_request_policy(
             {
                 "effective_requested": False,
                 "skip_reason": (
-                    "bounded_planner_row_timing_smoke_skips_expensive_"
-                    "scorer_loop_packet_compression_by_default"
+                    "bounded_planner_row_timing_smoke_skips_expensive_scorer_loop_packet_compression_by_default"
                 ),
-                "blockers": [
-                    "snerv_bounded_timing_smoke_scorer_loop_qat_skipped"
-                ],
+                "blockers": ["snerv_bounded_timing_smoke_scorer_loop_qat_skipped"],
             }
         )
     return effective, policy
@@ -25762,9 +21780,7 @@ def _snerv_scorer_loop_qat_request_policy(
 def _planner_row_launch_guard(args: argparse.Namespace) -> dict[str, Any]:
     family = str(getattr(args, "execute_family", "") or "").strip()
     row_id = str(getattr(args, "planner_row_id", "") or "").strip()
-    manual_launch_allowed = bool(
-        getattr(args, "allow_manual_compact_family_launch", False)
-    )
+    manual_launch_allowed = bool(getattr(args, "allow_manual_compact_family_launch", False))
     guard: dict[str, Any] = {
         "schema": "compact_carrier_planner_row_launch_guard.v1",
         "required_families": list(PLANNER_ROW_REQUIRED_FAMILIES),
@@ -25788,10 +21804,7 @@ def _planner_row_launch_guard(args: argparse.Namespace) -> dict[str, Any]:
         guard["passed"] = False
         guard["blockers"] = [
             f"{family}_planner_row_id_missing",
-            (
-                "top_priority_compact_carrier_launch_must_come_from_"
-                "nerv_long_training_campaign_plan"
-            ),
+            ("top_priority_compact_carrier_launch_must_come_from_nerv_long_training_campaign_plan"),
         ]
         return guard
 
@@ -25847,9 +21860,7 @@ def _planner_row_queue_artifact_status(
         ]
         return status
 
-    repo_root = Path(getattr(args, "repo_root", REPO_ROOT)).expanduser().resolve(
-        strict=False
-    )
+    repo_root = Path(getattr(args, "repo_root", REPO_ROOT)).expanduser().resolve(strict=False)
     records: list[dict[str, Any]] = []
     matches: list[dict[str, Any]] = []
     for raw_path in paths:
@@ -25861,9 +21872,7 @@ def _planner_row_queue_artifact_status(
             args=args,
         )
         records.append(record)
-        matches.extend(
-            row for row in record.get("matched_records", []) if isinstance(row, dict)
-        )
+        matches.extend(row for row in record.get("matched_records", []) if isinstance(row, dict))
     runnable_matches = [
         row
         for row in matches
@@ -25884,12 +21893,8 @@ def _planner_row_queue_artifact_status(
         blockers.append(f"{family}_planner_row_id_not_found_in_queue_artifact")
     else:
         for match in matches:
-            blockers.extend(
-                str(item) for item in match.get("command_control_blockers") or []
-            )
-            blockers.extend(
-                str(item) for item in match.get("launch_contract_blockers") or []
-            )
+            blockers.extend(str(item) for item in match.get("command_control_blockers") or [])
+            blockers.extend(str(item) for item in match.get("launch_contract_blockers") or [])
         blockers.append(f"{family}_planner_row_queue_artifact_not_queued_or_runnable")
     status["blockers"] = _dedupe(blockers)
     return status
@@ -25915,10 +21920,7 @@ def _snerv_lf_hf_bounded_training_contract_blockers(
     blockers: list[str] = []
     if contract.get("schema") != SNERV_LF_HF_BOUNDED_TRAINING_BINDING_CONTRACT_SCHEMA:
         blockers.append("snerv_lf_hf_bounded_training_binding_contract_schema_mismatch")
-    if (
-        contract.get("runner_actuator_required") is True
-        and contract.get("runner_actuator_bound") is not True
-    ):
+    if contract.get("runner_actuator_required") is True and contract.get("runner_actuator_bound") is not True:
         blockers.append("snerv_lf_hf_bounded_training_binding_contract_not_bound")
         blockers.extend(str(item) for item in contract.get("blockers") or [] if item)
     return _dedupe(blockers)
@@ -25954,9 +21956,7 @@ def _planner_row_queue_artifact_record(
     try:
         payload = _load_json(resolved)
     except (OSError, json.JSONDecodeError, CompactRendererMlxSpineRunnerError) as exc:
-        record["blockers"].append(
-            f"planner_row_queue_artifact_unreadable:{type(exc).__name__}"
-        )
+        record["blockers"].append(f"planner_row_queue_artifact_unreadable:{type(exc).__name__}")
         return record
     record["source_schema"] = payload.get("schema")
     if payload.get("schema") not in PLANNER_ROW_QUEUE_ARTIFACT_SCHEMAS:
@@ -25999,9 +21999,7 @@ def _planner_row_records_from_payload(
                 candidates.append((f"campaign_rows[{index}]", row))
                 entry = row.get("experiment_queue_entry")
                 if isinstance(entry, Mapping):
-                    candidates.append(
-                        (f"campaign_rows[{index}].experiment_queue_entry", entry)
-                    )
+                    candidates.append((f"campaign_rows[{index}].experiment_queue_entry", entry))
     queue_rows = payload.get("queue_rows")
     if isinstance(queue_rows, Sequence) and not isinstance(queue_rows, (str, bytes)):
         for index, row in enumerate(queue_rows):
@@ -26037,18 +22035,10 @@ def _planner_row_records_from_payload(
             status_text = str(row.get("status") or "").strip().lower()
             blocked = bool(row.get("blocked"))
             if command_mode == "unblock":
-                contract_schema_valid = (
-                    contract.get("schema")
-                    == SNERV_LF_HF_UNBLOCK_LAUNCH_CONTRACT_SCHEMA
-                )
-                launch_blockers = [
-                    str(item)
-                    for item in (contract.get("queue_unblock_blockers") or [])
-                ]
+                contract_schema_valid = contract.get("schema") == SNERV_LF_HF_UNBLOCK_LAUNCH_CONTRACT_SCHEMA
+                launch_blockers = [str(item) for item in (contract.get("queue_unblock_blockers") or [])]
                 if not contract_schema_valid:
-                    launch_blockers.append(
-                        "planner_row_unblock_contract_schema_mismatch"
-                    )
+                    launch_blockers.append("planner_row_unblock_contract_schema_mismatch")
                 row_status_runnable = (
                     contract_schema_valid
                     and contract.get("queue_unblock_status_is_local_mlx_plan") is True
@@ -26062,26 +22052,15 @@ def _planner_row_records_from_payload(
                     and contract.get("queue_status_is_exact_eval_authority") is not True
                 )
             else:
-                contract_schema_valid = (
-                    contract.get("schema") == PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA
-                )
-                launch_blockers = [
-                    str(item)
-                    for item in (contract.get("queue_launch_blockers") or [])
-                ]
+                contract_schema_valid = contract.get("schema") == PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA
+                launch_blockers = [str(item) for item in (contract.get("queue_launch_blockers") or [])]
                 if not contract_schema_valid:
                     launch_blockers.append("planner_row_launch_contract_schema_mismatch")
                 row_status_runnable_values = set(PLANNER_ROW_QUEUE_RUNNABLE_STATUSES)
                 if payload.get("schema") == "snerv_lf_hf_replacement_queue.v1":
-                    row_status_runnable_values.update(
-                        SNERV_LF_HF_REPLACEMENT_QUEUE_RUNNABLE_STATUSES
-                    )
-                    launch_blockers.extend(
-                        _snerv_lf_hf_bounded_training_contract_blockers(row)
-                    )
-                row_status_runnable = (
-                    status_text in row_status_runnable_values and not blocked
-                )
+                    row_status_runnable_values.update(SNERV_LF_HF_REPLACEMENT_QUEUE_RUNNABLE_STATUSES)
+                    launch_blockers.extend(_snerv_lf_hf_bounded_training_contract_blockers(row))
+                row_status_runnable = status_text in row_status_runnable_values and not blocked
                 launch_contract_runnable = (
                     contract_schema_valid
                     and contract.get("queue_status_is_local_mlx_plan") is True
@@ -26180,9 +22159,7 @@ def _planner_row_command(row: Mapping[str, Any]) -> list[str]:
             if not isinstance(step, Mapping):
                 continue
             step_command = step.get("command")
-            if isinstance(step_command, Sequence) and not isinstance(
-                step_command, (str, bytes)
-            ):
+            if isinstance(step_command, Sequence) and not isinstance(step_command, (str, bytes)):
                 return [str(item) for item in step_command]
     return []
 
@@ -26450,9 +22427,7 @@ def _planner_row_timing_smoke_waiver_status(
     family: str,
     row_id: str,
 ) -> dict[str, Any]:
-    waiver_requested = bool(
-        getattr(args, "allow_bounded_planner_row_timing_smoke_waiver", False)
-    )
+    waiver_requested = bool(getattr(args, "allow_bounded_planner_row_timing_smoke_waiver", False))
     num_pairs = _optional_int(getattr(args, "num_pairs", None))
     epochs = _optional_int(getattr(args, "epochs", None))
     within_bounds = (
@@ -26506,19 +22481,12 @@ def _uncalibrated_near_cap_modelsize_launch_blocker(
 ) -> str | None:
     if not isinstance(modelsize_candidate, Mapping):
         return None
-    if not bool(
-        modelsize_candidate.get(
-            "modelsize_auto_selection_requires_measured_archive_feedback"
-        )
-    ):
+    if not bool(modelsize_candidate.get("modelsize_auto_selection_requires_measured_archive_feedback")):
         return None
     if _uncalibrated_near_cap_modelsize_probe_allowed(args):
         return None
     family = str(getattr(args, "execute_family", "") or "compact")
-    return (
-        f"{family}_modelsize_auto_near_cap_requires_measured_archive_feedback_"
-        "before_long_training"
-    )
+    return f"{family}_modelsize_auto_near_cap_requires_measured_archive_feedback_before_long_training"
 
 
 def _write_planner_row_launch_refusal(
@@ -26553,16 +22521,10 @@ def _write_planner_row_launch_refusal(
             "planner_launch_contract": {
                 "schema": "compact_carrier_planner_launch_contract.v1",
                 "required_families": list(PLANNER_ROW_REQUIRED_FAMILIES),
-                "planner_row_id": str(
-                    getattr(args, "planner_row_id", "") or ""
-                ).strip()
-                or None,
-                "allow_manual_compact_family_launch": bool(
-                    getattr(args, "allow_manual_compact_family_launch", False)
-                ),
+                "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip() or None,
+                "allow_manual_compact_family_launch": bool(getattr(args, "allow_manual_compact_family_launch", False)),
                 "required_source": (
-                    "tac.analysis.nerv_long_training_campaign_plan."
-                    "build_nerv_long_training_campaign_plan"
+                    "tac.analysis.nerv_long_training_campaign_plan.build_nerv_long_training_campaign_plan"
                 ),
                 "launch_guard": _planner_row_launch_guard(args),
                 "score_claim": False,
@@ -26609,9 +22571,7 @@ def _write_compact_family_startup_marker(
     invocation_provenance = _compact_runner_invocation_provenance(
         args=args,
         output_dir=output_dir,
-        repo_root=Path(getattr(args, "repo_root", REPO_ROOT))
-        .expanduser()
-        .resolve(strict=False),
+        repo_root=Path(getattr(args, "repo_root", REPO_ROOT)).expanduser().resolve(strict=False),
         report_path=output_dir / "compact_renderer_mlx_spine_runner_report.json",
         source="startup_marker",
     )
@@ -26620,27 +22580,15 @@ def _write_compact_family_startup_marker(
         "created_utc": datetime.now(UTC).isoformat(),
         "pid": os.getpid(),
         "original_argv": invocation_provenance["original_argv"],
-        "direct_smoke_rerun_argv": invocation_provenance["same_output_dir_rerun"][
-            "argv"
-        ],
+        "direct_smoke_rerun_argv": invocation_provenance["same_output_dir_rerun"]["argv"],
         "runner_invocation_provenance": invocation_provenance,
         "campaign_identity": campaign_identity,
-        "auto_joint_recon_pixel_weight_path": campaign_identity.get(
-            "auto_joint_recon_pixel_weight_path"
-        ),
-        "auto_joint_recon_pixel_weight_sha256": campaign_identity.get(
-            "auto_joint_recon_pixel_weight_sha256"
-        ),
-        "auto_joint_recon_pixel_weight_error": campaign_identity.get(
-            "auto_joint_recon_pixel_weight_error"
-        ),
+        "auto_joint_recon_pixel_weight_path": campaign_identity.get("auto_joint_recon_pixel_weight_path"),
+        "auto_joint_recon_pixel_weight_sha256": campaign_identity.get("auto_joint_recon_pixel_weight_sha256"),
+        "auto_joint_recon_pixel_weight_error": campaign_identity.get("auto_joint_recon_pixel_weight_error"),
         "execute_family": family,
-        "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip()
-        or None,
-        "modelsize_candidate_id": str(
-            getattr(args, "modelsize_candidate_id", "") or ""
-        ).strip()
-        or None,
+        "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip() or None,
+        "modelsize_candidate_id": str(getattr(args, "modelsize_candidate_id", "") or "").strip() or None,
         "modelsize_candidate": _jsonable_lock_value(dict(modelsize_candidate or {})),
         "modelsize_target_binding": modelsize_target_binding,
         "byte_cap_binding": byte_cap_binding,
@@ -26656,15 +22604,9 @@ def _write_compact_family_startup_marker(
             or ""
         ),
         "distillation_device": str(getattr(args, "distillation_device", "") or ""),
-        "mlx_prefilter_scorer_device": str(
-            getattr(args, "mlx_prefilter_scorer_device", "") or ""
-        ),
-        "mlx_prefilter_scorer_batch_pairs": int(
-            getattr(args, "mlx_prefilter_scorer_batch_pairs", 1) or 1
-        ),
-        "mlx_prefilter_progress_every": int(
-            getattr(args, "mlx_prefilter_progress_every", 50) or 50
-        ),
+        "mlx_prefilter_scorer_device": str(getattr(args, "mlx_prefilter_scorer_device", "") or ""),
+        "mlx_prefilter_scorer_batch_pairs": int(getattr(args, "mlx_prefilter_scorer_batch_pairs", 1) or 1),
+        "mlx_prefilter_progress_every": int(getattr(args, "mlx_prefilter_progress_every", 50) or 50),
         "command_args": _jsonable_lock_value(_compact_runner_public_command_args(args)),
         "score_claim": False,
         "frontier_score_claim": False,
@@ -26690,12 +22632,8 @@ def _startup_modelsize_target_binding(
     """Record whether launch selection consumed inverse modelsize controls."""
 
     shared_targets = _float_tuple_from_arg(getattr(args, "target_modelsize_mparams", None))
-    hinerv_targets = _float_tuple_from_arg(
-        getattr(args, "hinerv_target_modelsize_mparams", None)
-    )
-    snerv_targets = _float_tuple_from_arg(
-        getattr(args, "snerv_official_modelsize_mparams", None)
-    )
+    hinerv_targets = _float_tuple_from_arg(getattr(args, "hinerv_target_modelsize_mparams", None))
+    snerv_targets = _float_tuple_from_arg(getattr(args, "snerv_official_modelsize_mparams", None))
     candidate = dict(modelsize_candidate or {})
     contract = candidate.get("modelsize_control_contract")
     if not isinstance(contract, Mapping):
@@ -26711,9 +22649,7 @@ def _startup_modelsize_target_binding(
         expected_capacity_source = None
     selected_capacity_source = str(candidate.get("capacity_source") or "")
     target_active = bool(requested_targets)
-    selected_from_inverse_target = bool(
-        target_active and selected_capacity_source == expected_capacity_source
-    )
+    selected_from_inverse_target = bool(target_active and selected_capacity_source == expected_capacity_source)
     blockers: list[str] = []
     if target_active and not selected_from_inverse_target:
         blockers.append("modelsize_inverse_target_requested_but_not_selected")
@@ -26722,10 +22658,7 @@ def _startup_modelsize_target_binding(
     return {
         "schema": "compact_startup_modelsize_target_binding.v1",
         "family": str(family),
-        "modelsize_candidate_id": str(
-            getattr(args, "modelsize_candidate_id", "") or ""
-        ).strip()
-        or None,
+        "modelsize_candidate_id": str(getattr(args, "modelsize_candidate_id", "") or "").strip() or None,
         "shared_target_modelsize_mparams": list(shared_targets),
         "hinerv_target_modelsize_mparams": list(hinerv_targets),
         "snerv_official_modelsize_mparams": list(snerv_targets),
@@ -26735,18 +22668,10 @@ def _startup_modelsize_target_binding(
         "selected_capacity_source": selected_capacity_source or None,
         "expected_capacity_source_for_inverse_target": expected_capacity_source,
         "control_semantics": contract.get("control_semantics"),
-        "shared_target_modelsize_mparams_consumed_as": contract.get(
-            "shared_target_modelsize_mparams_consumed_as"
-        ),
-        "modelsize_mparams_is_official_upstream_flag": contract.get(
-            "modelsize_mparams_is_official_upstream_flag"
-        ),
-        "modelsize_mparams_caps_archive_zip_bytes": contract.get(
-            "modelsize_mparams_caps_archive_zip_bytes"
-        ),
-        "archive_bytes_authority_required": contract.get(
-            "archive_bytes_authority_required"
-        ),
+        "shared_target_modelsize_mparams_consumed_as": contract.get("shared_target_modelsize_mparams_consumed_as"),
+        "modelsize_mparams_is_official_upstream_flag": contract.get("modelsize_mparams_is_official_upstream_flag"),
+        "modelsize_mparams_caps_archive_zip_bytes": contract.get("modelsize_mparams_caps_archive_zip_bytes"),
+        "archive_bytes_authority_required": contract.get("archive_bytes_authority_required"),
         "blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,
@@ -26778,9 +22703,7 @@ def _startup_byte_cap_binding(
         ),
     )
     nominal_headroom = (
-        None
-        if tightest_ceiling is None or nominal_total is None
-        else int(tightest_ceiling) - int(nominal_total)
+        None if tightest_ceiling is None or nominal_total is None else int(tightest_ceiling) - int(nominal_total)
     )
     candidate_headroom = _compact_first_present_int(candidate, ("byte_headroom",))
     candidate_under_own_cap = candidate.get("nominal_under_ceiling")
@@ -26803,9 +22726,7 @@ def _startup_byte_cap_binding(
         blockers.append("selected_modelsize_candidate_nominal_payload_bytes_missing")
     elif candidate_ceiling is not None and int(nominal_total) > int(candidate_ceiling):
         blockers.append("selected_modelsize_candidate_nominally_over_own_hard_ceiling")
-    elif candidate_ceiling is None and tightest_ceiling is not None and int(
-        nominal_total
-    ) > int(tightest_ceiling):
+    elif candidate_ceiling is None and tightest_ceiling is not None and int(nominal_total) > int(tightest_ceiling):
         blockers.append("selected_modelsize_candidate_nominally_over_tightest_cap")
     blockers.append("byte_cap_requires_measured_archive_zip_export")
     return {
@@ -26830,16 +22751,10 @@ def _startup_byte_cap_binding(
             None if predicted_under_cap is None else bool(predicted_under_cap)
         ),
         "byte_cap_controller": _jsonable_lock_value(dict(controller)),
-        "hard_byte_ceiling_semantics": (
-            "launch_filter_and_export_blocker_until_measured_archive_zip_bytes_exist"
-        ),
+        "hard_byte_ceiling_semantics": ("launch_filter_and_export_blocker_until_measured_archive_zip_bytes_exist"),
         "control_semantics": contract.get("control_semantics"),
-        "modelsize_mparams_caps_archive_zip_bytes": contract.get(
-            "modelsize_mparams_caps_archive_zip_bytes"
-        ),
-        "archive_bytes_authority_required": contract.get(
-            "archive_bytes_authority_required"
-        ),
+        "modelsize_mparams_caps_archive_zip_bytes": contract.get("modelsize_mparams_caps_archive_zip_bytes"),
+        "archive_bytes_authority_required": contract.get("archive_bytes_authority_required"),
         "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
         "blockers": blockers,
         "score_claim": False,
@@ -26921,9 +22836,8 @@ def _compact_family_interruption_evidence_files(output_dir: Path) -> list[dict[s
         if not path.is_file():
             continue
         is_named_evidence = path.name in names
-        is_checkpoint_evidence = (
-            path.parent.name == "checkpoints"
-            and any(path.name.endswith(suffix) for suffix in checkpoint_suffixes)
+        is_checkpoint_evidence = path.parent.name == "checkpoints" and any(
+            path.name.endswith(suffix) for suffix in checkpoint_suffixes
         )
         if not (is_named_evidence or is_checkpoint_evidence):
             continue
@@ -26983,9 +22897,7 @@ def _write_compact_family_interrupted_report(
     invocation_provenance = _compact_runner_invocation_provenance(
         args=args,
         output_dir=output_dir,
-        repo_root=Path(getattr(args, "repo_root", REPO_ROOT))
-        .expanduser()
-        .resolve(strict=False),
+        repo_root=Path(getattr(args, "repo_root", REPO_ROOT)).expanduser().resolve(strict=False),
         report_path=path,
         source="interrupted_report",
     )
@@ -26995,20 +22907,14 @@ def _write_compact_family_interrupted_report(
         "created_utc": datetime.now(UTC).isoformat(),
         "pid": os.getpid(),
         "original_argv": invocation_provenance["original_argv"],
-        "direct_smoke_rerun_argv": invocation_provenance["same_output_dir_rerun"][
-            "argv"
-        ],
+        "direct_smoke_rerun_argv": invocation_provenance["same_output_dir_rerun"]["argv"],
         "runner_invocation_provenance": invocation_provenance,
         "signal": signum,
         "signal_name": signal_name,
         "interruption_reason": reason,
         "execute_family": family,
-        "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip()
-        or None,
-        "modelsize_candidate_id": str(
-            getattr(args, "modelsize_candidate_id", "") or ""
-        ).strip()
-        or None,
+        "planner_row_id": str(getattr(args, "planner_row_id", "") or "").strip() or None,
+        "modelsize_candidate_id": str(getattr(args, "modelsize_candidate_id", "") or "").strip() or None,
         "modelsize_candidate": _jsonable_lock_value(dict(modelsize_candidate or {})),
         "campaign_identity": campaign_identity,
         "output_dir": output_dir.as_posix(),
@@ -27056,9 +22962,7 @@ def _write_compact_family_interrupted_report_from_startup_marker(
         return {**existing, "report_path": report_path.as_posix(), "recovered": False}
     startup_path = output_dir / COMPACT_FAMILY_STARTUP_MARKER_FILENAME
     if not startup_path.is_file():
-        raise CompactRendererMlxSpineRunnerError(
-            f"startup marker missing for interrupted run recovery: {startup_path}"
-        )
+        raise CompactRendererMlxSpineRunnerError(f"startup marker missing for interrupted run recovery: {startup_path}")
     startup = _load_json(startup_path)
     family = str(startup.get("execute_family") or "").strip() or None
     startup_invocation_provenance = _startup_invocation_provenance_for_recovery(
@@ -27088,10 +22992,7 @@ def _write_compact_family_interrupted_report_from_startup_marker(
             else startup.get("original_argv")
         ),
         "direct_smoke_rerun_argv": (
-            (
-                startup_invocation_provenance.get("same_output_dir_rerun")
-                or {}
-            ).get("argv")
+            (startup_invocation_provenance.get("same_output_dir_rerun") or {}).get("argv")
             if startup_invocation_provenance
             else None
         ),
@@ -27161,12 +23062,8 @@ def _recovered_snerv_training_from_telemetry_summary(
     seg_metric_observed = missing_flag_clear(
         "dual_ascent_missing_metric__snerv_segnet_last_frame_distill"
     ) and observed_metric("dual_ascent_metric__snerv_segnet_last_frame_distill")
-    pos_lambda_active = lambda_active(
-        "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill"
-    )
-    seg_lambda_active = lambda_active(
-        "dual_ascent_lambda__snerv_segnet_last_frame_distill"
-    )
+    pos_lambda_active = lambda_active("dual_ascent_lambda__snerv_posenet_yuv6_pair_distill")
+    seg_lambda_active = lambda_active("dual_ascent_lambda__snerv_segnet_last_frame_distill")
     guard_metric_observed = missing_flag_clear(
         "dual_ascent_missing_metric__snerv_scorer_input_distribution_guard"
     ) and (
@@ -27178,10 +23075,7 @@ def _recovered_snerv_training_from_telemetry_summary(
         "dual_ascent_missing_metric__snerv_coder_qat_quant_residual"
     ) and observed_metric("loss_part_coder_qat_quant_residual")
     forced_qat_active = bool(
-        _optional_float(
-            loss_components.get("loss_part_pr95_stage_forced_extra_qat_active")
-        )
-        == 1.0
+        _optional_float(loss_components.get("loss_part_pr95_stage_forced_extra_qat_active")) == 1.0
     )
 
     blockers: list[str] = []
@@ -27203,14 +23097,10 @@ def _recovered_snerv_training_from_telemetry_summary(
     passed = not blockers
     final_metrics = {
         "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": (
-            loss_components.get(
-                "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"
-            )
+            loss_components.get("dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill")
         ),
         "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": (
-            loss_components.get(
-                "dual_ascent_missing_metric__snerv_segnet_last_frame_distill"
-            )
+            loss_components.get("dual_ascent_missing_metric__snerv_segnet_last_frame_distill")
         ),
         "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": loss_components.get(
             "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill"
@@ -27277,11 +23167,7 @@ def _recovered_snerv_training_from_telemetry_summary(
                 "telemetry_observed": bool(guard_metric_observed),
             }
         },
-        "blockers": (
-            []
-            if guard_metric_observed
-            else ["snerv_scorer_input_distribution_guard_metric_missing"]
-        ),
+        "blockers": ([] if guard_metric_observed else ["snerv_scorer_input_distribution_guard_metric_missing"]),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -27349,23 +23235,13 @@ def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
                     "line_number": line_number,
                     "parse_error": "invalid_json",
                 }
-            row_dict = (
-                dict(row)
-                if isinstance(row, Mapping)
-                else {"line_number": line_number, "non_mapping_row": True}
-            )
+            row_dict = dict(row) if isinstance(row, Mapping) else {"line_number": line_number, "non_mapping_row": True}
             if first_row is None:
                 first_row = row_dict
             last_row = row_dict
             row_count += 1
-    loss_components = (
-        dict(last_row.get("loss_components") or {}) if isinstance(last_row, Mapping) else {}
-    )
-    per_axis = (
-        dict(last_row.get("per_axis_decomposition") or {})
-        if isinstance(last_row, Mapping)
-        else {}
-    )
+    loss_components = dict(last_row.get("loss_components") or {}) if isinstance(last_row, Mapping) else {}
+    per_axis = dict(last_row.get("per_axis_decomposition") or {}) if isinstance(last_row, Mapping) else {}
     return {
         "schema": "compact_family_interrupted_telemetry_summary.v1",
         "present": True,
@@ -27381,22 +23257,14 @@ def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
         "last_per_axis_decomposition": _jsonable_lock_value(per_axis),
         "last_loss_components": {
             "pr95_stage_index": _optional_float(loss_components.get("pr95_stage_index")),
-            "pr95_stage_uses_muon": _optional_float(
-                loss_components.get("pr95_stage_uses_muon")
-            ),
+            "pr95_stage_uses_muon": _optional_float(loss_components.get("pr95_stage_uses_muon")),
             "loss_part_pr95_stage_forced_extra_qat_active": _optional_float(
                 loss_components.get("loss_part_pr95_stage_forced_extra_qat_active")
             ),
             "loss_part_distill": _optional_float(loss_components.get("loss_part_distill")),
-            "loss_part_pose_distill": _optional_float(
-                loss_components.get("loss_part_pose_distill")
-            ),
-            "loss_part_pose_score_term": _optional_float(
-                loss_components.get("loss_part_pose_score_term")
-            ),
-            "loss_part_pr95_c1a_entropy": _optional_float(
-                loss_components.get("loss_part_pr95_c1a_entropy")
-            ),
+            "loss_part_pose_distill": _optional_float(loss_components.get("loss_part_pose_distill")),
+            "loss_part_pose_score_term": _optional_float(loss_components.get("loss_part_pose_score_term")),
+            "loss_part_pr95_c1a_entropy": _optional_float(loss_components.get("loss_part_pr95_c1a_entropy")),
             "loss_part_coder_qat_quant_residual": _optional_float(
                 loss_components.get("loss_part_coder_qat_quant_residual")
             ),
@@ -27410,9 +23278,7 @@ def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
                 loss_components.get("dual_ascent_metric__snerv_segnet_last_frame_distill")
             ),
             "dual_ascent_metric__snerv_scorer_input_distribution_guard": _optional_float(
-                loss_components.get(
-                    "dual_ascent_metric__snerv_scorer_input_distribution_guard"
-                )
+                loss_components.get("dual_ascent_metric__snerv_scorer_input_distribution_guard")
             ),
             "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": _optional_float(
                 loss_components.get("dual_ascent_lambda__snerv_posenet_yuv6_pair_distill")
@@ -27421,24 +23287,16 @@ def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
                 loss_components.get("dual_ascent_lambda__snerv_segnet_last_frame_distill")
             ),
             "dual_ascent_missing_metric__snerv_coder_qat_quant_residual": _optional_float(
-                loss_components.get(
-                    "dual_ascent_missing_metric__snerv_coder_qat_quant_residual"
-                )
+                loss_components.get("dual_ascent_missing_metric__snerv_coder_qat_quant_residual")
             ),
             "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": _optional_float(
-                loss_components.get(
-                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"
-                )
+                loss_components.get("dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill")
             ),
             "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": _optional_float(
-                loss_components.get(
-                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill"
-                )
+                loss_components.get("dual_ascent_missing_metric__snerv_segnet_last_frame_distill")
             ),
             "dual_ascent_missing_metric__snerv_scorer_input_distribution_guard": _optional_float(
-                loss_components.get(
-                    "dual_ascent_missing_metric__snerv_scorer_input_distribution_guard"
-                )
+                loss_components.get("dual_ascent_missing_metric__snerv_scorer_input_distribution_guard")
             ),
             "train_time_section_bytes__decoder_payload": _optional_float(
                 loss_components.get("train_time_section_bytes__decoder_payload")
@@ -27447,9 +23305,7 @@ def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
                 loss_components.get("train_time_section_bytes__lf_payload")
             ),
             "loss_part_pr95_stage_scorer_input_distribution_guard": _optional_float(
-                loss_components.get(
-                    "loss_part_pr95_stage_scorer_input_distribution_guard"
-                )
+                loss_components.get("loss_part_pr95_stage_scorer_input_distribution_guard")
             ),
             "loss_part_scorer_input_distribution_guard": _optional_float(
                 loss_components.get("loss_part_scorer_input_distribution_guard")
@@ -27553,9 +23409,7 @@ def _acquire_active_campaign_lock(
     digest = _campaign_lock_digest(payload)
     lock_path = lock_dir / f"{digest}.json"
     planner_row_id = str(getattr(args, "planner_row_id", "") or "").strip() or None
-    modelsize_candidate_id = (
-        str(getattr(args, "modelsize_candidate_id", "") or "").strip() or None
-    )
+    modelsize_candidate_id = str(getattr(args, "modelsize_candidate_id", "") or "").strip() or None
     manifest = {
         "schema": ACTIVE_CAMPAIGN_LOCK_SCHEMA,
         "digest": digest,
@@ -27577,10 +23431,7 @@ def _acquire_active_campaign_lock(
             try:
                 existing = json.loads(lock_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as exc:
-                raise SystemExit(
-                    f"active campaign lock is unreadable: {lock_path}; "
-                    "refusing duplicate launch"
-                ) from exc
+                raise SystemExit(f"active campaign lock is unreadable: {lock_path}; refusing duplicate launch") from exc
             existing_pid = int(existing.get("pid") or -1)
             if not _pid_is_alive(existing_pid):
                 stale_path = lock_path.with_suffix(f".stale_{_stamp()}.json")
@@ -27613,10 +23464,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--from-snerv-advisory-report",
         type=Path,
-        help=(
-            "Adapt an existing SNeRV advisory/package report into the compact "
-            "spine without rerunning SNeRV."
-        ),
+        help=("Adapt an existing SNeRV advisory/package report into the compact spine without rerunning SNeRV."),
     )
     parser.add_argument("--execute-pr95-mlx-smoke", action="store_true")
     parser.add_argument(
@@ -27758,10 +23606,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-error-pair-curriculum-gain",
         default=4.0,
         type=float,
-        help=(
-            "Maximum extra sampling mass added to the worst positive XRay pair "
-            "row after max normalization."
-        ),
+        help=("Maximum extra sampling mass added to the worst positive XRay pair row after max normalization."),
     )
     parser.add_argument(
         "--scorer-error-pair-curriculum-default-weight",
@@ -27777,10 +23622,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-error-pair-curriculum-top-k",
         default=0,
         type=int,
-        help=(
-            "Only apply XRay-derived extra weight to the top K positive rows. "
-            "Zero uses all positive rows."
-        ),
+        help=("Only apply XRay-derived extra weight to the top K positive rows. Zero uses all positive rows."),
     )
     parser.add_argument(
         "--sparse-prioritized-target-hydration",
@@ -27874,10 +23716,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--optimizer-cosine-decay-enabled",
         action="store_true",
-        help=(
-            "Enable MLX warmup plus cosine decay for optimizer controls. "
-            "Requires --optimizer-warmup-epochs > 0."
-        ),
+        help=("Enable MLX warmup plus cosine decay for optimizer controls. Requires --optimizer-warmup-epochs > 0."),
     )
     parser.add_argument(
         "--optimizer-cosine-decay-total-epochs",
@@ -28105,6 +23944,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "toward the target-pair PoseNet pose. This prices the exact "
             "sqrt(10*d_pose) scorer term and is separate from the lightweight "
             "pose-student surrogate. Default 0 for legacy comparability."
+        ),
+    )
+    parser.add_argument(
+        "--pose-trust-required",
+        action="store_true",
+        help=(
+            "Require the HiNeRV hard-birth actuator to receive a live PoseNet "
+            "teacher before it can admit an update. Missing pose trust fails "
+            "closed before state movement."
         ),
     )
     parser.add_argument(
@@ -28442,10 +24290,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-domain-bootstrap-grad-clip-max-norm",
         default=1.0,
         type=float,
-        help=(
-            "Gradient clip for the bounded HiNeRV scorer-domain bootstrap; "
-            "negative disables clipping for ablation."
-        ),
+        help=("Gradient clip for the bounded HiNeRV scorer-domain bootstrap; negative disables clipping for ablation."),
     )
     parser.add_argument(
         "--scorer-domain-bootstrap-segnet-margin-weight",
@@ -28472,8 +24317,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0.02,
         type=float,
         help=(
-            "Minimum target-class birth ratio floor used by the hard-birth "
-            "bootstrap sub-actuator. Must be in [0, 1]."
+            "Minimum target-class birth ratio floor used by the hard-birth bootstrap sub-actuator. Must be in [0, 1]."
         ),
     )
     parser.add_argument(
@@ -28598,10 +24442,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-space-step-guard-max-post-pose-score-term",
         default=None,
         type=float,
-        help=(
-            "Optional ceiling for the student-pose sqrt(10*d_pose) train metric "
-            "inside the scorer-space step guard."
-        ),
+        help=("Optional ceiling for the student-pose sqrt(10*d_pose) train metric inside the scorer-space step guard."),
     )
     parser.add_argument(
         "--scorer-space-step-guard-max-post-pose-direct-live-score-term",
@@ -28664,9 +24505,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--scorer-space-step-guard-max-bootstrap-direct-nonrate-score-worsening",
-        default=(
-            HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
-        ),
+        default=(HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD),
         type=float,
         help=(
             "Missing-class bootstrap allowance for direct non-rate proxy "
@@ -28884,10 +24723,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-support-ladder-patience-steps",
         default=1,
         type=int,
-        help=(
-            "Number of below-floor non-progressing train steps before the "
-            "class-support ladder escalates one stage."
-        ),
+        help=("Number of below-floor non-progressing train steps before the class-support ladder escalates one stage."),
     )
     parser.add_argument(
         "--scorer-support-ladder-growth-factor",
@@ -29047,10 +24883,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--mlx-prefilter-progress-every",
         default=50,
         type=int,
-        help=(
-            "Emit MLX prefilter progress JSONL every N chunks. Use 0 to "
-            "disable progress telemetry."
-        ),
+        help=("Emit MLX prefilter progress JSONL every N chunks. Use 0 to disable progress telemetry."),
     )
     parser.add_argument(
         "--skip-post-export-receiver-cache-quality-gate",
@@ -29094,18 +24927,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--receiver-cache-quality-min-segnet-dynamic-range",
         default=16.0,
         type=float,
-        help=(
-            "Minimum candidate SegNet last-frame RGB dynamic range for the "
-            "receiver-quality gate."
-        ),
+        help=("Minimum candidate SegNet last-frame RGB dynamic range for the receiver-quality gate."),
     )
     parser.add_argument(
         "--receiver-cache-quality-max-segnet-mae-vs-reference-for-fit-gate",
         default=64.0,
         type=float,
         help=(
-            "Maximum candidate-vs-source SegNet RGB MAE accepted by the "
-            "HiNeRV post-export receiver-quality fit gate."
+            "Maximum candidate-vs-source SegNet RGB MAE accepted by the HiNeRV post-export receiver-quality fit gate."
         ),
     )
     parser.add_argument(
@@ -29113,8 +24942,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=1.0,
         type=float,
         help=(
-            "Minimum candidate PoseNet YUV6 pair std accepted by the HiNeRV "
-            "post-export scorer-input distribution gate."
+            "Minimum candidate PoseNet YUV6 pair std accepted by the HiNeRV post-export scorer-input distribution gate."
         ),
     )
     parser.add_argument(
@@ -29401,10 +25229,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--snerv-model-size-adapter",
-        help=(
-            "Manual SNeRV model-size adapter override. Planner candidate rows "
-            "take precedence when selected."
-        ),
+        help=("Manual SNeRV model-size adapter override. Planner candidate rows take precedence when selected."),
     )
     parser.add_argument(
         "--snerv-official-modelsize-mparams",
@@ -29724,10 +25549,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--snerv-scorer-loop-lf-payload-codec",
         default="portfolio_auto",
-        help=(
-            "SNeRV scorer-loop/QAT LF payload codec for receiver-priced SNAR1 "
-            "packets."
-        ),
+        help=("SNeRV scorer-loop/QAT LF payload codec for receiver-priced SNAR1 packets."),
     )
     parser.add_argument("--snerv-scorer-loop-perturb-scale", default=0.02, type=float)
     parser.add_argument(
@@ -29739,10 +25561,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--snerv-scorer-loop-section-value-pressure-multiplier",
         default=1.0,
         type=float,
-        help=(
-            "SNeRV scorer-loop QAT: multiply the train-time SNAR1 "
-            "optional-section neutralization pressure term."
-        ),
+        help=("SNeRV scorer-loop QAT: multiply the train-time SNAR1 optional-section neutralization pressure term."),
     )
     parser.add_argument("--snerv-scorer-loop-max-archive-byte-growth", type=int)
     parser.add_argument(
@@ -29852,10 +25671,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="append",
         default=[],
         type=Path,
-        help=(
-            "Existing HPRC queue followup report to feed into the spine "
-            "bounded-runner posterior. Repeatable."
-        ),
+        help=("Existing HPRC queue followup report to feed into the spine bounded-runner posterior. Repeatable."),
     )
     parser.add_argument(
         "--mlx-profile",
@@ -29890,10 +25706,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--interrupted-report-recovery-reason",
         default="operator_recovery",
-        help=(
-            "Machine-readable reason recorded when "
-            "--recover-interrupted-report-from-startup-marker is used."
-        ),
+        help=("Machine-readable reason recorded when --recover-interrupted-report-from-startup-marker is used."),
     )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args(argv)
@@ -29914,9 +25727,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     args.requested_distillation_device = str(args.distillation_device)
-    args.distillation_device = _resolve_torch_scorer_device_alias(
-        args.distillation_device
-    )
+    args.distillation_device = _resolve_torch_scorer_device_alias(args.distillation_device)
     modes = [
         args.execute_pr95_mlx_smoke,
         args.execute_pr95_stage8_source,
@@ -29934,19 +25745,14 @@ def main(argv: list[str] | None = None) -> int:
             "--recover-interrupted-report-from-startup-marker, or "
             "--execute-family"
         )
-    snerv_modelsize_control_blockers = (
-        _snerv_official_modelsize_candidate_resolution_blockers(args)
-    )
+    snerv_modelsize_control_blockers = _snerv_official_modelsize_candidate_resolution_blockers(args)
     if snerv_modelsize_control_blockers:
         raise SystemExit(
             "SNeRV official modelsize controls require "
-            "--modelsize-candidate-id auto or a concrete candidate id: "
-            + ", ".join(snerv_modelsize_control_blockers)
+            "--modelsize-candidate-id auto or a concrete candidate id: " + ", ".join(snerv_modelsize_control_blockers)
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
-    byte_cap_feedback_rows = _load_modelsize_byte_cap_feedback_rows(
-        args.modelsize_byte_cap_feedback_json
-    )
+    byte_cap_feedback_rows = _load_modelsize_byte_cap_feedback_rows(args.modelsize_byte_cap_feedback_json)
     output_dir = args.output_dir or _default_output_dir()
     if args.recover_interrupted_report_from_startup_marker:
         report = _write_compact_family_interrupted_report_from_startup_marker(
@@ -30004,9 +25810,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 0
-    bounded_timing_smoke_waiver_consumed = (
-        _planner_row_bounded_timing_smoke_waiver_consumed(planner_launch_guard)
-    )
+    bounded_timing_smoke_waiver_consumed = _planner_row_bounded_timing_smoke_waiver_consumed(planner_launch_guard)
     (
         scorer_error_pair_sampling_weights,
         scorer_error_pair_curriculum,
@@ -30021,28 +25825,17 @@ def main(argv: list[str] | None = None) -> int:
         upstream_dir=scorer_upstream_dir,
     )
     post_export_materializer_max_experiments = (
-        None
-        if args.post_export_materializer_max_experiments == 0
-        else args.post_export_materializer_max_experiments
+        None if args.post_export_materializer_max_experiments == 0 else args.post_export_materializer_max_experiments
     )
-    checkpoint_retention_keep_last_n = _resolve_checkpoint_retention_keep_last_n(
-        args.checkpoint_retention_keep_last_n
-    )
-    checkpoint_retention_keep_best_n = _resolve_checkpoint_retention_keep_best_n(
-        args.checkpoint_retention_keep_best_n
-    )
-    checkpoint_retention_keep_every_n_epochs = (
-        _resolve_checkpoint_retention_keep_every_n_epochs(
-            args.checkpoint_retention_keep_every_n_epochs
-        )
+    checkpoint_retention_keep_last_n = _resolve_checkpoint_retention_keep_last_n(args.checkpoint_retention_keep_last_n)
+    checkpoint_retention_keep_best_n = _resolve_checkpoint_retention_keep_best_n(args.checkpoint_retention_keep_best_n)
+    checkpoint_retention_keep_every_n_epochs = _resolve_checkpoint_retention_keep_every_n_epochs(
+        args.checkpoint_retention_keep_every_n_epochs
     )
     checkpoint_retention_cold_store_roots = tuple(
-        Path(path).expanduser().resolve(strict=False)
-        for path in args.checkpoint_retention_cold_store_root
+        Path(path).expanduser().resolve(strict=False) for path in args.checkpoint_retention_cold_store_root
     )
-    snerv_modelsize_profile = snerv_modelsize_control_profile(
-        str(args.snerv_modelsize_control_profile)
-    )
+    snerv_modelsize_profile = snerv_modelsize_control_profile(str(args.snerv_modelsize_control_profile))
     snerv_official_enc_strds = (
         tuple(int(value) for value in args.snerv_official_enc_strds)
         if args.snerv_official_enc_strds is not None
@@ -30053,9 +25846,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.snerv_official_dec_strds is not None
         else tuple(int(value) for value in snerv_modelsize_profile["dec_strds"])
     )
-    snerv_modelsize_adapter_for_resolution = (
-        _effective_snerv_modelsize_adapter_for_resolution(args)
-    )
+    snerv_modelsize_adapter_for_resolution = _effective_snerv_modelsize_adapter_for_resolution(args)
     modelsize_candidate: dict[str, Any] | None = None
     if args.execute_family in {"hi_nerv", "snerv"}:
         modelsize_candidate = _resolve_execute_modelsize_candidate(
@@ -30063,29 +25854,19 @@ def main(argv: list[str] | None = None) -> int:
             candidate_id=args.modelsize_candidate_id,
             hard_byte_ceilings=ceilings,
             num_pairs=CONTEST_PAIR_COUNT,
-            target_modelsize_mparams=tuple(
-                float(value) for value in (args.target_modelsize_mparams or ())
-            ),
+            target_modelsize_mparams=tuple(float(value) for value in (args.target_modelsize_mparams or ())),
             hinerv_target_modelsize_mparams=tuple(
                 float(value) for value in (args.hinerv_target_modelsize_mparams or ())
             ),
             snerv_official_modelsize_mparams=tuple(
                 float(value) for value in (args.snerv_official_modelsize_mparams or ())
             ),
-            snerv_modelsize_control_profile_id=str(
-                args.snerv_modelsize_control_profile
-            ),
+            snerv_modelsize_control_profile_id=str(args.snerv_modelsize_control_profile),
             snerv_official_enc_strds=snerv_official_enc_strds,
             snerv_official_dec_strds=snerv_official_dec_strds,
             snerv_model_size_adapter=snerv_modelsize_adapter_for_resolution,
-            snerv_temporal_context=(
-                0 if args.snerv_temporal_context is None else int(args.snerv_temporal_context)
-            ),
-            snerv_temporal_modes=(
-                ("delta",)
-                if args.snerv_temporal_mode is None
-                else (str(args.snerv_temporal_mode),)
-            ),
+            snerv_temporal_context=(0 if args.snerv_temporal_context is None else int(args.snerv_temporal_context)),
+            snerv_temporal_modes=(("delta",) if args.snerv_temporal_mode is None else (str(args.snerv_temporal_mode),)),
             snerv_official_skip_high_modes=(
                 _snerv_auto_skip_high_modes_for_resolution(
                     explicit_mode=args.snerv_official_skip_high_mode,
@@ -30100,8 +25881,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         if modelsize_launch_blocker:
             raise SystemExit(
-                modelsize_launch_blocker
-                + ": pass --modelsize-byte-cap-feedback-json from a receiver-"
+                modelsize_launch_blocker + ": pass --modelsize-byte-cap-feedback-json from a receiver-"
                 "proven archive export, or run an explicit bounded measurement "
                 "smoke with --allow-unscored-research-smoke and "
                 "--allow-bounded-planner-row-timing-smoke-waiver"
@@ -30208,15 +25988,9 @@ def main(argv: list[str] | None = None) -> int:
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
             run_post_export_materializers=args.run_post_export_materializers,
-            post_export_materializer_max_steps=(
-                args.post_export_materializer_max_steps
-            ),
-            post_export_materializer_max_parallel=(
-                args.post_export_materializer_max_parallel
-            ),
-            post_export_materializer_max_experiments=(
-                post_export_materializer_max_experiments
-            ),
+            post_export_materializer_max_steps=(args.post_export_materializer_max_steps),
+            post_export_materializer_max_parallel=(args.post_export_materializer_max_parallel),
+            post_export_materializer_max_experiments=(post_export_materializer_max_experiments),
             allow_overwrite=args.overwrite,
             repo_root=args.repo_root,
             upstream_dir=scorer_upstream_dir,
@@ -30261,46 +26035,24 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
-            pose_direct_live_distillation_weight=(
-                args.pose_direct_live_distillation_weight
-            ),
+            pose_direct_live_distillation_weight=(args.pose_direct_live_distillation_weight),
             pose_distillation_loss=args.pose_distillation_loss,
             pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
-            segnet_student_live_calibration_weight=(
-                args.segnet_student_live_calibration_weight
-            ),
-            segnet_direct_live_distillation_weight=(
-                args.segnet_direct_live_distillation_weight
-            ),
-            segnet_direct_live_base_loss_weight=(
-                args.segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=(
-                args.segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=(
-                args.segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=(
-                args.segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_student_live_calibration_weight=(args.segnet_student_live_calibration_weight),
+            segnet_direct_live_distillation_weight=(args.segnet_direct_live_distillation_weight),
+            segnet_direct_live_base_loss_weight=(args.segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=(args.segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=(args.segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=(args.segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=(
                 args.segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=(
-                args.segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=(
-                args.segnet_direct_live_rare_class_logit_weight
-            ),
-            segnet_direct_live_target_mass_floor_weight=(
-                args.segnet_direct_live_target_mass_floor_weight
-            ),
-            segnet_direct_live_target_min_ratio_floor_weight=(
-                args.segnet_direct_live_target_min_ratio_floor_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=(args.segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=(args.segnet_direct_live_rare_class_logit_weight),
+            segnet_direct_live_target_mass_floor_weight=(args.segnet_direct_live_target_mass_floor_weight),
+            segnet_direct_live_target_min_ratio_floor_weight=(args.segnet_direct_live_target_min_ratio_floor_weight),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
@@ -30319,12 +26071,8 @@ def main(argv: list[str] | None = None) -> int:
             keep_receiver_proof_output=args.keep_receiver_proof_output,
             receiver_proof_timeout_seconds=args.receiver_proof_timeout_seconds,
             run_post_export_materializers=args.run_post_export_materializers,
-            post_export_materializer_max_steps=(
-                args.post_export_materializer_max_steps
-            ),
-            post_export_materializer_max_parallel=(
-                args.post_export_materializer_max_parallel
-            ),
+            post_export_materializer_max_steps=(args.post_export_materializer_max_steps),
+            post_export_materializer_max_parallel=(args.post_export_materializer_max_parallel),
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
@@ -30349,9 +26097,7 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
-            pose_direct_live_distillation_weight=(
-                args.pose_direct_live_distillation_weight
-            ),
+            pose_direct_live_distillation_weight=(args.pose_direct_live_distillation_weight),
             pose_distillation_loss=args.pose_distillation_loss,
             pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
@@ -30380,22 +26126,14 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_warmup_epochs=args.optimizer_warmup_epochs,
             optimizer_warmup_steps_per_epoch=args.optimizer_warmup_steps_per_epoch,
             optimizer_cosine_decay_enabled=args.optimizer_cosine_decay_enabled,
-            optimizer_cosine_decay_total_epochs=(
-                args.optimizer_cosine_decay_total_epochs
-            ),
-            optimizer_cosine_decay_min_lr_ratio=(
-                args.optimizer_cosine_decay_min_lr_ratio
-            ),
+            optimizer_cosine_decay_total_epochs=(args.optimizer_cosine_decay_total_epochs),
+            optimizer_cosine_decay_min_lr_ratio=(args.optimizer_cosine_decay_min_lr_ratio),
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             checkpoint_dir=args.checkpoint_dir,
             resume_from_checkpoint=args.resume_from_checkpoint,
             run_post_export_materializers=args.run_post_export_materializers,
-            post_export_materializer_max_steps=(
-                args.post_export_materializer_max_steps
-            ),
-            post_export_materializer_max_parallel=(
-                args.post_export_materializer_max_parallel
-            ),
+            post_export_materializer_max_steps=(args.post_export_materializer_max_steps),
+            post_export_materializer_max_parallel=(args.post_export_materializer_max_parallel),
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
@@ -30443,22 +26181,14 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_warmup_epochs=args.optimizer_warmup_epochs,
             optimizer_warmup_steps_per_epoch=args.optimizer_warmup_steps_per_epoch,
             optimizer_cosine_decay_enabled=args.optimizer_cosine_decay_enabled,
-            optimizer_cosine_decay_total_epochs=(
-                args.optimizer_cosine_decay_total_epochs
-            ),
-            optimizer_cosine_decay_min_lr_ratio=(
-                args.optimizer_cosine_decay_min_lr_ratio
-            ),
+            optimizer_cosine_decay_total_epochs=(args.optimizer_cosine_decay_total_epochs),
+            optimizer_cosine_decay_min_lr_ratio=(args.optimizer_cosine_decay_min_lr_ratio),
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             checkpoint_dir=args.checkpoint_dir,
             resume_from_checkpoint=args.resume_from_checkpoint,
             run_post_export_materializers=args.run_post_export_materializers,
-            post_export_materializer_max_steps=(
-                args.post_export_materializer_max_steps
-            ),
-            post_export_materializer_max_parallel=(
-                args.post_export_materializer_max_parallel
-            ),
+            post_export_materializer_max_steps=(args.post_export_materializer_max_steps),
+            post_export_materializer_max_parallel=(args.post_export_materializer_max_parallel),
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             random_seed=args.random_seed,
             allow_overwrite=args.overwrite,
@@ -30470,9 +26200,7 @@ def main(argv: list[str] | None = None) -> int:
             snerv_bounded_smoke_scorer_loop_qat_policy,
         ) = _snerv_scorer_loop_qat_request_policy(
             args,
-            bounded_timing_smoke_waiver_consumed=(
-                bounded_timing_smoke_waiver_consumed
-            ),
+            bounded_timing_smoke_waiver_consumed=(bounded_timing_smoke_waiver_consumed),
         )
         report = execute_snerv_inverse_steg_advisory_and_adapt(
             output_dir=output_dir,
@@ -30486,12 +26214,8 @@ def main(argv: list[str] | None = None) -> int:
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
             run_post_export_materializers=args.run_post_export_materializers,
-            post_export_materializer_max_steps=(
-                args.post_export_materializer_max_steps
-            ),
-            post_export_materializer_max_parallel=(
-                args.post_export_materializer_max_parallel
-            ),
+            post_export_materializer_max_steps=(args.post_export_materializer_max_steps),
+            post_export_materializer_max_parallel=(args.post_export_materializer_max_parallel),
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             distillation_device=args.distillation_device,
             modelsize_candidate=modelsize_candidate,
@@ -30503,52 +26227,28 @@ def main(argv: list[str] | None = None) -> int:
             snerv_patch_radius_override=args.snerv_patch_radius,
             snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
             snerv_hfr_gain=args.snerv_hfr_gain,
-            snerv_official_skip_high_mode_override=(
-                args.snerv_official_skip_high_mode
-            ),
+            snerv_official_skip_high_mode_override=(args.snerv_official_skip_high_mode),
             snerv_temporal_context_override=args.snerv_temporal_context,
             snerv_temporal_mode_override=args.snerv_temporal_mode,
             recon_pixel_weight_path=args.recon_pixel_weight_path,
             auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
             recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,
-            scorer_error_pair_sampling_weights=(
-                scorer_error_pair_sampling_weights
-            ),
+            scorer_error_pair_sampling_weights=(scorer_error_pair_sampling_weights),
             scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             run_native_mlx_export=not args.skip_snerv_native_mlx_export,
-            snerv_native_mlx_receiver_proof_timeout_seconds=(
-                args.snerv_native_mlx_receiver_proof_timeout
-            ),
-            snerv_native_mlx_decoder_train_steps=(
-                args.snerv_native_mlx_decoder_train_steps
-            ),
-            snerv_native_mlx_decoder_train_lr=(
-                args.snerv_native_mlx_decoder_train_lr
-            ),
-            snerv_native_mlx_decoder_train_ridge=(
-                args.snerv_native_mlx_decoder_train_ridge
-            ),
-            snerv_native_mlx_decoder_train_optimizer=(
-                args.snerv_native_mlx_decoder_train_optimizer
-            ),
-            snerv_official_trained_checkpoint_state_dict_path=(
-                args.snerv_official_trained_checkpoint_state_dict_path
-            ),
-            snerv_score_aware_long_training_epochs=(
-                args.snerv_score_aware_long_training_epochs
-            ),
-            snerv_score_aware_long_training_lr=(
-                args.snerv_score_aware_long_training_lr
-            ),
-            snerv_score_aware_long_training_batch_pairs=(
-                args.snerv_score_aware_long_training_batch_pairs
-            ),
+            snerv_native_mlx_receiver_proof_timeout_seconds=(args.snerv_native_mlx_receiver_proof_timeout),
+            snerv_native_mlx_decoder_train_steps=(args.snerv_native_mlx_decoder_train_steps),
+            snerv_native_mlx_decoder_train_lr=(args.snerv_native_mlx_decoder_train_lr),
+            snerv_native_mlx_decoder_train_ridge=(args.snerv_native_mlx_decoder_train_ridge),
+            snerv_native_mlx_decoder_train_optimizer=(args.snerv_native_mlx_decoder_train_optimizer),
+            snerv_official_trained_checkpoint_state_dict_path=(args.snerv_official_trained_checkpoint_state_dict_path),
+            snerv_score_aware_long_training_epochs=(args.snerv_score_aware_long_training_epochs),
+            snerv_score_aware_long_training_lr=(args.snerv_score_aware_long_training_lr),
+            snerv_score_aware_long_training_batch_pairs=(args.snerv_score_aware_long_training_batch_pairs),
             snerv_score_aware_long_training_section_byte_refresh_every_steps=(
                 args.snerv_score_aware_long_training_section_byte_refresh_every_steps
             ),
-            snerv_score_aware_long_training_optimizer=(
-                args.snerv_score_aware_long_training_optimizer
-            ),
+            snerv_score_aware_long_training_optimizer=(args.snerv_score_aware_long_training_optimizer),
             snerv_score_aware_long_training_grad_clip_max_norm=(
                 args.snerv_score_aware_long_training_grad_clip_max_norm
             ),
@@ -30567,58 +26267,28 @@ def main(argv: list[str] | None = None) -> int:
             segnet_loss_stage_weight=args.segnet_loss_stage_weight,
             pose_loss_stage_weight=args.pose_loss_stage_weight,
             scorer_input_guard_stage_weight=args.scorer_input_guard_stage_weight,
-            scorer_input_contrast_floor_stage_weight=(
-                args.scorer_input_contrast_floor_stage_weight
-            ),
-            scorer_input_shape_tether_stage_weight=(
-                args.scorer_input_shape_tether_stage_weight
-            ),
-            posenet_yuv6_geometry_tether_stage_weight=(
-                args.posenet_yuv6_geometry_tether_stage_weight
-            ),
+            scorer_input_contrast_floor_stage_weight=(args.scorer_input_contrast_floor_stage_weight),
+            scorer_input_shape_tether_stage_weight=(args.scorer_input_shape_tether_stage_weight),
+            posenet_yuv6_geometry_tether_stage_weight=(args.posenet_yuv6_geometry_tether_stage_weight),
             segnet_direct_live_stage_weight=args.segnet_direct_live_stage_weight,
             pose_distillation_warmup_epochs=args.pose_distillation_warmup_epochs,
             scorer_input_shape_warmup_epochs=args.scorer_input_shape_warmup_epochs,
-            segnet_direct_live_escape_warmup_epochs=(
-                args.segnet_direct_live_escape_warmup_epochs
-            ),
-            segnet_direct_live_escape_class_multiplier=(
-                args.segnet_direct_live_escape_class_multiplier
-            ),
-            scorer_input_distribution_guard_weight=(
-                args.scorer_input_distribution_guard_weight
-            ),
-            scorer_input_distribution_guard_saturation_margin=(
-                args.scorer_input_distribution_guard_saturation_margin
-            ),
-            scorer_input_distribution_guard_temperature=(
-                args.scorer_input_distribution_guard_temperature
-            ),
-            scorer_input_contrast_floor_weight=(
-                args.scorer_input_contrast_floor_weight
-            ),
-            scorer_input_contrast_floor_segnet_min_std_ratio=(
-                args.scorer_input_contrast_floor_segnet_min_std_ratio
-            ),
+            segnet_direct_live_escape_warmup_epochs=(args.segnet_direct_live_escape_warmup_epochs),
+            segnet_direct_live_escape_class_multiplier=(args.segnet_direct_live_escape_class_multiplier),
+            scorer_input_distribution_guard_weight=(args.scorer_input_distribution_guard_weight),
+            scorer_input_distribution_guard_saturation_margin=(args.scorer_input_distribution_guard_saturation_margin),
+            scorer_input_distribution_guard_temperature=(args.scorer_input_distribution_guard_temperature),
+            scorer_input_contrast_floor_weight=(args.scorer_input_contrast_floor_weight),
+            scorer_input_contrast_floor_segnet_min_std_ratio=(args.scorer_input_contrast_floor_segnet_min_std_ratio),
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
                 args.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
             scorer_input_shape_tether_weight=args.scorer_input_shape_tether_weight,
-            posenet_yuv6_geometry_tether_weight=(
-                args.posenet_yuv6_geometry_tether_weight
-            ),
-            posenet_temporal_signal_floor_weight=(
-                args.posenet_temporal_signal_floor_weight
-            ),
-            posenet_temporal_signal_min_std_ratio=(
-                args.posenet_temporal_signal_min_std_ratio
-            ),
-            posenet_temporal_signal_min_mean_abs_ratio=(
-                args.posenet_temporal_signal_min_mean_abs_ratio
-            ),
-            scorer_space_step_guard_enabled=bool(
-                args.scorer_space_step_guard_enabled
-            ),
+            posenet_yuv6_geometry_tether_weight=(args.posenet_yuv6_geometry_tether_weight),
+            posenet_temporal_signal_floor_weight=(args.posenet_temporal_signal_floor_weight),
+            posenet_temporal_signal_min_std_ratio=(args.posenet_temporal_signal_min_std_ratio),
+            posenet_temporal_signal_min_mean_abs_ratio=(args.posenet_temporal_signal_min_mean_abs_ratio),
+            scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(
                 args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
             ),
@@ -30627,20 +26297,17 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
                 None
-                if args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-                < 0.0
+                if args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction < 0.0
                 else args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
             ),
             scorer_space_step_guard_min_post_segnet_target_class_min_ratio=(
                 None
-                if args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-                < 0.0
+                if args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio < 0.0
                 else args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
             ),
             scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=(
                 None
-                if args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-                < 0.0
+                if args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop < 0.0
                 else args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
             ),
             scorer_space_step_guard_max_post_segnet_contrast_ratio=(
@@ -30650,123 +26317,83 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_space_step_guard_max_post_segnet_distribution_mae=(
                 None
-                if args.scorer_space_step_guard_max_post_segnet_distribution_mae
-                < 0.0
+                if args.scorer_space_step_guard_max_post_segnet_distribution_mae < 0.0
                 else args.scorer_space_step_guard_max_post_segnet_distribution_mae
             ),
             scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=(
                 None
-                if args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
-                < 0.0
+                if args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae < 0.0
                 else args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
             ),
             scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=(
                 None
-                if args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
-                < 0.0
+                if args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio < 0.0
                 else args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
             ),
             scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
                 None
-                if args.scorer_space_step_guard_max_post_segnet_argmax_disagreement
-                < 0.0
+                if args.scorer_space_step_guard_max_post_segnet_argmax_disagreement < 0.0
                 else args.scorer_space_step_guard_max_post_segnet_argmax_disagreement
             ),
-            scorer_space_step_guard_max_post_pose_score_term=(
-                args.scorer_space_step_guard_max_post_pose_score_term
-            ),
+            scorer_space_step_guard_max_post_pose_score_term=(args.scorer_space_step_guard_max_post_pose_score_term),
             scorer_space_step_guard_max_post_pose_direct_live_score_term=(
                 args.scorer_space_step_guard_max_post_pose_direct_live_score_term
             ),
             scorer_space_step_guard_max_pose_score_term_relative_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_score_term_relative_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_score_term_relative_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_score_term_relative_worsening
             ),
             scorer_space_step_guard_max_pose_score_term_absolute_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_score_term_absolute_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
             ),
             scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
             ),
             scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
             ),
             scorer_space_step_guard_max_direct_nonrate_score_worsening=(
                 None
-                if args.scorer_space_step_guard_max_direct_nonrate_score_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_direct_nonrate_score_worsening < 0.0
                 else args.scorer_space_step_guard_max_direct_nonrate_score_worsening
             ),
             scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=(
                 None
-                if args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening < 0.0
                 else args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
             ),
-            scorer_space_step_guard_backtracking_steps=(
-                args.scorer_space_step_guard_backtracking_steps
-            ),
-            scorer_space_step_guard_backtracking_shrink=(
-                args.scorer_space_step_guard_backtracking_shrink
-            ),
+            scorer_space_step_guard_backtracking_steps=(args.scorer_space_step_guard_backtracking_steps),
+            scorer_space_step_guard_backtracking_shrink=(args.scorer_space_step_guard_backtracking_shrink),
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
-            checkpoint_retention_keep_every_n_epochs=(
-                checkpoint_retention_keep_every_n_epochs
-            ),
-            checkpoint_retention_cold_store_roots=(
-                checkpoint_retention_cold_store_roots
-            ),
+            checkpoint_retention_keep_every_n_epochs=(checkpoint_retention_keep_every_n_epochs),
+            checkpoint_retention_cold_store_roots=(checkpoint_retention_cold_store_roots),
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
             pose_distillation_loss=args.pose_distillation_loss,
             pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
-            segnet_student_live_calibration_weight=(
-                args.segnet_student_live_calibration_weight
-            ),
-            segnet_direct_live_distillation_weight=(
-                args.segnet_direct_live_distillation_weight
-            ),
-            segnet_direct_live_base_loss_weight=(
-                args.segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=(
-                args.segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=(
-                args.segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=(
-                args.segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_student_live_calibration_weight=(args.segnet_student_live_calibration_weight),
+            segnet_direct_live_distillation_weight=(args.segnet_direct_live_distillation_weight),
+            segnet_direct_live_base_loss_weight=(args.segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=(args.segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=(args.segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=(args.segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=(
                 args.segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=(
-                args.segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=(
-                args.segnet_direct_live_rare_class_logit_weight
-            ),
-            segnet_direct_live_target_mass_floor_weight=(
-                args.segnet_direct_live_target_mass_floor_weight
-            ),
-            segnet_direct_live_target_min_ratio_floor_weight=(
-                args.segnet_direct_live_target_min_ratio_floor_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=(args.segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=(args.segnet_direct_live_rare_class_logit_weight),
+            segnet_direct_live_target_mass_floor_weight=(args.segnet_direct_live_target_mass_floor_weight),
+            segnet_direct_live_target_min_ratio_floor_weight=(args.segnet_direct_live_target_min_ratio_floor_weight),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             allow_segnet_only_research=args.allow_segnet_only_research,
@@ -30781,37 +26408,25 @@ def main(argv: list[str] | None = None) -> int:
             snerv_score_aware_long_training_pr95_faithful_curriculum=(
                 args.snerv_score_aware_long_training_pr95_faithful_curriculum
             ),
-            snerv_score_aware_long_training_pr95_muon_policy=(
-                args.snerv_score_aware_long_training_pr95_muon_policy
-            ),
+            snerv_score_aware_long_training_pr95_muon_policy=(args.snerv_score_aware_long_training_pr95_muon_policy),
             mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_scorer_batch_pairs=args.mlx_prefilter_scorer_batch_pairs,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             run_scorer_loop_qat=effective_snerv_scorer_loop_qat,
-            snerv_bounded_smoke_scorer_loop_qat_policy=(
-                snerv_bounded_smoke_scorer_loop_qat_policy
-            ),
+            snerv_bounded_smoke_scorer_loop_qat_policy=(snerv_bounded_smoke_scorer_loop_qat_policy),
             snerv_lf_hf_solution_family=args.snerv_lf_hf_solution_family,
             snerv_scorer_loop_max_trials=args.snerv_scorer_loop_max_trials,
             snerv_scorer_loop_search_mode=args.snerv_scorer_loop_search_mode,
             snerv_scorer_loop_step_map_bins=args.snerv_scorer_loop_step_map_bins,
             snerv_scorer_loop_qat_bits=args.coder_qat_quant_bits,
-            snerv_scorer_loop_lf_payload_codec=(
-                args.snerv_scorer_loop_lf_payload_codec
-            ),
+            snerv_scorer_loop_lf_payload_codec=(args.snerv_scorer_loop_lf_payload_codec),
             snerv_scorer_loop_perturb_scale=args.snerv_scorer_loop_perturb_scale,
-            snerv_scorer_loop_byte_pressure_multiplier=(
-                args.snerv_scorer_loop_byte_pressure_multiplier
-            ),
+            snerv_scorer_loop_byte_pressure_multiplier=(args.snerv_scorer_loop_byte_pressure_multiplier),
             snerv_scorer_loop_section_value_pressure_multiplier=(
                 args.snerv_scorer_loop_section_value_pressure_multiplier
             ),
-            snerv_scorer_loop_max_archive_byte_growth=(
-                args.snerv_scorer_loop_max_archive_byte_growth
-            ),
-            snerv_scorer_loop_byte_growth_admission_mode=(
-                args.snerv_scorer_loop_byte_growth_admission_mode
-            ),
+            snerv_scorer_loop_max_archive_byte_growth=(args.snerv_scorer_loop_max_archive_byte_growth),
+            snerv_scorer_loop_byte_growth_admission_mode=(args.snerv_scorer_loop_byte_growth_admission_mode),
             snerv_scorer_loop_pose_slack=args.snerv_scorer_loop_pose_slack,
             snerv_scorer_loop_seg_slack=args.snerv_scorer_loop_seg_slack,
             snerv_scorer_loop_pair_stride=args.snerv_scorer_loop_pair_stride,
@@ -30822,9 +26437,7 @@ def main(argv: list[str] | None = None) -> int:
             snerv_scorer_loop_pair_guard_max_pose_worsened_fraction=(
                 args.snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
             ),
-            snerv_scorer_loop_component_guard_mode=(
-                args.snerv_scorer_loop_component_guard_mode
-            ),
+            snerv_scorer_loop_component_guard_mode=(args.snerv_scorer_loop_component_guard_mode),
             random_seed=args.random_seed,
             upstream_dir=scorer_upstream_dir,
             allow_overwrite=args.overwrite,
@@ -30850,264 +26463,163 @@ def main(argv: list[str] | None = None) -> int:
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
-            pose_direct_live_distillation_weight=(
-                args.pose_direct_live_distillation_weight
-            ),
+            pose_direct_live_distillation_weight=(args.pose_direct_live_distillation_weight),
+            pose_trust_required=bool(args.pose_trust_required),
             pose_distillation_loss=args.pose_distillation_loss,
             pose_distillation_huber_delta=args.pose_distillation_huber_delta,
             segnet_distillation_objective=args.segnet_distillation_objective,
             distillation_temperature=args.distillation_temperature,
-            segnet_student_live_calibration_weight=(
-                args.segnet_student_live_calibration_weight
-            ),
-            segnet_direct_live_distillation_weight=(
-                args.segnet_direct_live_distillation_weight
-            ),
-            segnet_direct_live_base_loss_weight=(
-                args.segnet_direct_live_base_loss_weight
-            ),
-            segnet_direct_live_class_histogram_weight=(
-                args.segnet_direct_live_class_histogram_weight
-            ),
-            segnet_direct_live_class_balanced_hinge_weight=(
-                args.segnet_direct_live_class_balanced_hinge_weight
-            ),
-            segnet_direct_live_class_balanced_ce_weight=(
-                args.segnet_direct_live_class_balanced_ce_weight
-            ),
+            segnet_student_live_calibration_weight=(args.segnet_student_live_calibration_weight),
+            segnet_direct_live_distillation_weight=(args.segnet_direct_live_distillation_weight),
+            segnet_direct_live_base_loss_weight=(args.segnet_direct_live_base_loss_weight),
+            segnet_direct_live_class_histogram_weight=(args.segnet_direct_live_class_histogram_weight),
+            segnet_direct_live_class_balanced_hinge_weight=(args.segnet_direct_live_class_balanced_hinge_weight),
+            segnet_direct_live_class_balanced_ce_weight=(args.segnet_direct_live_class_balanced_ce_weight),
             segnet_direct_live_class_balanced_squared_hinge_weight=(
                 args.segnet_direct_live_class_balanced_squared_hinge_weight
             ),
-            segnet_direct_live_class_region_recon_weight=(
-                args.segnet_direct_live_class_region_recon_weight
-            ),
-            segnet_direct_live_rare_class_logit_weight=(
-                args.segnet_direct_live_rare_class_logit_weight
-            ),
-            segnet_direct_live_target_mass_floor_weight=(
-                args.segnet_direct_live_target_mass_floor_weight
-            ),
-            segnet_direct_live_target_min_ratio_floor_weight=(
-                args.segnet_direct_live_target_min_ratio_floor_weight
-            ),
+            segnet_direct_live_class_region_recon_weight=(args.segnet_direct_live_class_region_recon_weight),
+            segnet_direct_live_rare_class_logit_weight=(args.segnet_direct_live_rare_class_logit_weight),
+            segnet_direct_live_target_mass_floor_weight=(args.segnet_direct_live_target_mass_floor_weight),
+            segnet_direct_live_target_min_ratio_floor_weight=(args.segnet_direct_live_target_min_ratio_floor_weight),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
-            scorer_input_distribution_guard_weight=(
-                args.scorer_input_distribution_guard_weight
-            ),
-            scorer_input_distribution_guard_saturation_margin=(
-                args.scorer_input_distribution_guard_saturation_margin
-            ),
-            scorer_input_distribution_guard_temperature=(
-                args.scorer_input_distribution_guard_temperature
-            ),
-            scorer_input_contrast_floor_weight=(
-                args.scorer_input_contrast_floor_weight
-            ),
-            scorer_input_contrast_floor_segnet_min_std_ratio=(
-                args.scorer_input_contrast_floor_segnet_min_std_ratio
-            ),
+            scorer_input_distribution_guard_weight=(args.scorer_input_distribution_guard_weight),
+            scorer_input_distribution_guard_saturation_margin=(args.scorer_input_distribution_guard_saturation_margin),
+            scorer_input_distribution_guard_temperature=(args.scorer_input_distribution_guard_temperature),
+            scorer_input_contrast_floor_weight=(args.scorer_input_contrast_floor_weight),
+            scorer_input_contrast_floor_segnet_min_std_ratio=(args.scorer_input_contrast_floor_segnet_min_std_ratio),
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
                 args.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
             scorer_input_shape_tether_weight=args.scorer_input_shape_tether_weight,
-            posenet_yuv6_geometry_tether_weight=(
-                args.posenet_yuv6_geometry_tether_weight
-            ),
-            posenet_yuv6_geometry_tether_stage_weight=(
-                args.posenet_yuv6_geometry_tether_stage_weight
-            ),
-            posenet_temporal_signal_floor_weight=(
-                args.posenet_temporal_signal_floor_weight
-            ),
-            posenet_temporal_signal_min_std_ratio=(
-                args.posenet_temporal_signal_min_std_ratio
-            ),
-            posenet_temporal_signal_min_mean_abs_ratio=(
-                args.posenet_temporal_signal_min_mean_abs_ratio
-            ),
+            posenet_yuv6_geometry_tether_weight=(args.posenet_yuv6_geometry_tether_weight),
+            posenet_yuv6_geometry_tether_stage_weight=(args.posenet_yuv6_geometry_tether_stage_weight),
+            posenet_temporal_signal_floor_weight=(args.posenet_temporal_signal_floor_weight),
+            posenet_temporal_signal_min_std_ratio=(args.posenet_temporal_signal_min_std_ratio),
+            posenet_temporal_signal_min_mean_abs_ratio=(args.posenet_temporal_signal_min_mean_abs_ratio),
             output_head_target_bias_init=bool(args.output_head_target_bias_init),
-            output_head_target_bias_init_epsilon=(
-                args.output_head_target_bias_init_epsilon
-            ),
-            output_head_target_contrast_init=bool(
-                args.output_head_target_contrast_init
-            ),
-            output_head_target_contrast_init_max_pairs=(
-                args.output_head_target_contrast_init_max_pairs
-            ),
-            output_head_target_contrast_init_min_output_std=(
-                args.output_head_target_contrast_init_min_output_std
-            ),
-            output_head_target_contrast_init_max_gain=(
-                args.output_head_target_contrast_init_max_gain
-            ),
+            output_head_target_bias_init_epsilon=(args.output_head_target_bias_init_epsilon),
+            output_head_target_contrast_init=bool(args.output_head_target_contrast_init),
+            output_head_target_contrast_init_max_pairs=(args.output_head_target_contrast_init_max_pairs),
+            output_head_target_contrast_init_min_output_std=(args.output_head_target_contrast_init_min_output_std),
+            output_head_target_contrast_init_max_gain=(args.output_head_target_contrast_init_max_gain),
             scorer_domain_bootstrap=bool(args.scorer_domain_bootstrap),
             scorer_domain_bootstrap_steps=int(args.scorer_domain_bootstrap_steps),
-            scorer_domain_bootstrap_learning_rate=float(
-                args.scorer_domain_bootstrap_learning_rate
-            ),
-            scorer_domain_bootstrap_max_pairs=int(
-                args.scorer_domain_bootstrap_max_pairs
-            ),
-            scorer_domain_bootstrap_rgb_weight=float(
-                args.scorer_domain_bootstrap_rgb_weight
-            ),
-            scorer_domain_bootstrap_yuv6_weight=float(
-                args.scorer_domain_bootstrap_yuv6_weight
-            ),
-            scorer_domain_bootstrap_temporal_delta_weight=float(
-                args.scorer_domain_bootstrap_temporal_delta_weight
-            ),
-            scorer_domain_bootstrap_contrast_floor_weight=float(
-                args.scorer_domain_bootstrap_contrast_floor_weight
-            ),
-            scorer_domain_bootstrap_rgb_std_min_ratio=float(
-                args.scorer_domain_bootstrap_rgb_std_min_ratio
-            ),
+            scorer_domain_bootstrap_learning_rate=float(args.scorer_domain_bootstrap_learning_rate),
+            scorer_domain_bootstrap_max_pairs=int(args.scorer_domain_bootstrap_max_pairs),
+            scorer_domain_bootstrap_rgb_weight=float(args.scorer_domain_bootstrap_rgb_weight),
+            scorer_domain_bootstrap_yuv6_weight=float(args.scorer_domain_bootstrap_yuv6_weight),
+            scorer_domain_bootstrap_temporal_delta_weight=float(args.scorer_domain_bootstrap_temporal_delta_weight),
+            scorer_domain_bootstrap_contrast_floor_weight=float(args.scorer_domain_bootstrap_contrast_floor_weight),
+            scorer_domain_bootstrap_rgb_std_min_ratio=float(args.scorer_domain_bootstrap_rgb_std_min_ratio),
             scorer_domain_bootstrap_yuv6_temporal_std_min_ratio=float(
                 args.scorer_domain_bootstrap_yuv6_temporal_std_min_ratio
             ),
-            scorer_domain_bootstrap_weight_decay=float(
-                args.scorer_domain_bootstrap_weight_decay
-            ),
+            scorer_domain_bootstrap_weight_decay=float(args.scorer_domain_bootstrap_weight_decay),
             scorer_domain_bootstrap_grad_clip_max_norm=(
                 None
                 if float(args.scorer_domain_bootstrap_grad_clip_max_norm) < 0.0
                 else float(args.scorer_domain_bootstrap_grad_clip_max_norm)
             ),
-            scorer_domain_bootstrap_segnet_margin_weight=float(
-                args.scorer_domain_bootstrap_segnet_margin_weight
-            ),
+            scorer_domain_bootstrap_segnet_margin_weight=float(args.scorer_domain_bootstrap_segnet_margin_weight),
             scorer_domain_bootstrap_segnet_hard_birth_weight=float(
                 args.scorer_domain_bootstrap_segnet_hard_birth_weight
             ),
             scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
                 args.scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
             ),
-            scorer_space_step_guard_enabled=bool(
-                args.scorer_space_step_guard_enabled
-            ),
+            scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(
                 args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
             ),
             scorer_space_step_guard_min_post_segnet_occupied_class_fraction=(
                 args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
             ),
-        scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
-            None
-            if args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-            < 0.0
-            else args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
-        ),
-        scorer_space_step_guard_min_post_segnet_target_class_min_ratio=(
-            None
-            if args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-            < 0.0
-            else args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
-        ),
-        scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=(
-            None
-            if args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-            < 0.0
-            else args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
-        ),
-        scorer_space_step_guard_max_post_segnet_contrast_ratio=(
-            None
-            if args.scorer_space_step_guard_max_post_segnet_contrast_ratio < 0.0
+            scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction=(
+                None
+                if args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction < 0.0
+                else args.scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction
+            ),
+            scorer_space_step_guard_min_post_segnet_target_class_min_ratio=(
+                None
+                if args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio < 0.0
+                else args.scorer_space_step_guard_min_post_segnet_target_class_min_ratio
+            ),
+            scorer_space_step_guard_max_post_segnet_target_class_ratio_drop=(
+                None
+                if args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop < 0.0
+                else args.scorer_space_step_guard_max_post_segnet_target_class_ratio_drop
+            ),
+            scorer_space_step_guard_max_post_segnet_contrast_ratio=(
+                None
+                if args.scorer_space_step_guard_max_post_segnet_contrast_ratio < 0.0
                 else args.scorer_space_step_guard_max_post_segnet_contrast_ratio
             ),
             scorer_space_step_guard_max_post_segnet_distribution_mae=(
                 None
-                if args.scorer_space_step_guard_max_post_segnet_distribution_mae
-                < 0.0
+                if args.scorer_space_step_guard_max_post_segnet_distribution_mae < 0.0
                 else args.scorer_space_step_guard_max_post_segnet_distribution_mae
             ),
             scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae=(
                 None
-                if args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
-                < 0.0
+                if args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae < 0.0
                 else args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae
             ),
             scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio=(
                 None
-                if args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
-                < 0.0
+                if args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio < 0.0
                 else args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio
             ),
             scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
                 args.scorer_space_step_guard_max_post_segnet_argmax_disagreement
             ),
-            scorer_space_step_guard_max_post_pose_score_term=(
-                args.scorer_space_step_guard_max_post_pose_score_term
-            ),
+            scorer_space_step_guard_max_post_pose_score_term=(args.scorer_space_step_guard_max_post_pose_score_term),
             scorer_space_step_guard_max_post_pose_direct_live_score_term=(
                 args.scorer_space_step_guard_max_post_pose_direct_live_score_term
             ),
             scorer_space_step_guard_max_pose_score_term_relative_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_score_term_relative_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_score_term_relative_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_score_term_relative_worsening
             ),
             scorer_space_step_guard_max_pose_score_term_absolute_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_score_term_absolute_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
             ),
             scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
             ),
             scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening=(
                 None
-                if args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening < 0.0
                 else args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
             ),
             scorer_space_step_guard_max_direct_nonrate_score_worsening=(
                 None
-                if args.scorer_space_step_guard_max_direct_nonrate_score_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_direct_nonrate_score_worsening < 0.0
                 else args.scorer_space_step_guard_max_direct_nonrate_score_worsening
             ),
             scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening=(
                 None
-                if args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-                < 0.0
+                if args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening < 0.0
                 else args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
             ),
-            scorer_space_step_guard_backtracking_steps=(
-                args.scorer_space_step_guard_backtracking_steps
-            ),
-            scorer_space_step_guard_backtracking_shrink=(
-                args.scorer_space_step_guard_backtracking_shrink
-            ),
+            scorer_space_step_guard_backtracking_steps=(args.scorer_space_step_guard_backtracking_steps),
+            scorer_space_step_guard_backtracking_shrink=(args.scorer_space_step_guard_backtracking_shrink),
             scorer_support_ladder_enabled=args.scorer_support_ladder_enabled,
-            scorer_support_ladder_patience_steps=(
-                args.scorer_support_ladder_patience_steps
-            ),
-            scorer_support_ladder_growth_factor=(
-                args.scorer_support_ladder_growth_factor
-            ),
-            scorer_support_ladder_max_multiplier=(
-                args.scorer_support_ladder_max_multiplier
-            ),
-            scorer_support_ladder_base_loss_max_when_active=(
-                args.scorer_support_ladder_base_loss_max_when_active
-            ),
+            scorer_support_ladder_patience_steps=(args.scorer_support_ladder_patience_steps),
+            scorer_support_ladder_growth_factor=(args.scorer_support_ladder_growth_factor),
+            scorer_support_ladder_max_multiplier=(args.scorer_support_ladder_max_multiplier),
+            scorer_support_ladder_base_loss_max_when_active=(args.scorer_support_ladder_base_loss_max_when_active),
             gradient_multiplier_by_name=(
-                _gradient_multiplier_by_name_from_assignments(
-                    args.gradient_multiplier_by_name
-                )
+                _gradient_multiplier_by_name_from_assignments(args.gradient_multiplier_by_name)
             ),
             bias_gradient_multiplier=args.bias_gradient_multiplier,
-            output_head_bias_gradient_multiplier=(
-                args.output_head_bias_gradient_multiplier
-            ),
+            output_head_bias_gradient_multiplier=(args.output_head_bias_gradient_multiplier),
             distillation_device=args.distillation_device,
             requested_distillation_device=getattr(
                 args,
@@ -31126,42 +26638,26 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
             coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
             coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
-            decoder_weight_waterfill_plan_json=(
-                args.decoder_weight_waterfill_plan_json
-            ),
+            decoder_weight_waterfill_plan_json=(args.decoder_weight_waterfill_plan_json),
             archive_section_telemetry_json=args.archive_section_telemetry_json,
             recon_pixel_weight_path=args.recon_pixel_weight_path,
             auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
-            auto_segnet_boundary_recon_weight=(
-                args.auto_segnet_boundary_recon_weight
-            ),
+            auto_segnet_boundary_recon_weight=(args.auto_segnet_boundary_recon_weight),
             recon_pixel_weight_tau=args.recon_pixel_weight_tau,
             recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,
-            mlx_prefilter_scorer_batch_pairs=(
-                args.mlx_prefilter_scorer_batch_pairs
-            ),
+            mlx_prefilter_scorer_batch_pairs=(args.mlx_prefilter_scorer_batch_pairs),
             mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
-            post_export_receiver_cache_quality_gate=(
-                args.post_export_receiver_cache_quality_gate
-            ),
-            receiver_cache_quality_reference_cache_dir=(
-                args.receiver_cache_quality_reference_cache_dir
-            ),
+            post_export_receiver_cache_quality_gate=(args.post_export_receiver_cache_quality_gate),
+            receiver_cache_quality_reference_cache_dir=(args.receiver_cache_quality_reference_cache_dir),
             receiver_cache_quality_max_pairs=args.receiver_cache_quality_max_pairs,
             receiver_cache_quality_batch_pairs=args.receiver_cache_quality_batch_pairs,
-            receiver_cache_quality_min_segnet_std=(
-                args.receiver_cache_quality_min_segnet_std
-            ),
-            receiver_cache_quality_min_segnet_dynamic_range=(
-                args.receiver_cache_quality_min_segnet_dynamic_range
-            ),
+            receiver_cache_quality_min_segnet_std=(args.receiver_cache_quality_min_segnet_std),
+            receiver_cache_quality_min_segnet_dynamic_range=(args.receiver_cache_quality_min_segnet_dynamic_range),
             receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate=(
                 args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
             ),
-            receiver_cache_quality_min_posenet_yuv6_std=(
-                args.receiver_cache_quality_min_posenet_yuv6_std
-            ),
+            receiver_cache_quality_min_posenet_yuv6_std=(args.receiver_cache_quality_min_posenet_yuv6_std),
             receiver_cache_quality_min_posenet_yuv6_dynamic_range=(
                 args.receiver_cache_quality_min_posenet_yuv6_dynamic_range
             ),
@@ -31174,21 +26670,15 @@ def main(argv: list[str] | None = None) -> int:
             receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate=(
                 args.receiver_cache_quality_min_posenet_yuv6_temporal_signal_mean_abs_for_fit_gate
             ),
-            receiver_cache_quality_segnet_argmax_probe=(
-                args.receiver_cache_quality_segnet_argmax_probe
-            ),
-            receiver_cache_quality_segnet_argmax_batch_frames=(
-                args.receiver_cache_quality_segnet_argmax_batch_frames
-            ),
+            receiver_cache_quality_segnet_argmax_probe=(args.receiver_cache_quality_segnet_argmax_probe),
+            receiver_cache_quality_segnet_argmax_batch_frames=(args.receiver_cache_quality_segnet_argmax_batch_frames),
             receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate=(
                 args.receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
             ),
             receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
                 args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
-            receiver_cache_quality_mlx_scorer_response_probe=(
-                args.receiver_cache_quality_mlx_scorer_response_probe
-            ),
+            receiver_cache_quality_mlx_scorer_response_probe=(args.receiver_cache_quality_mlx_scorer_response_probe),
             receiver_cache_quality_mlx_scorer_response_device_type=(
                 args.receiver_cache_quality_mlx_scorer_response_device_type
             ),
@@ -31205,74 +26695,44 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
-            checkpoint_retention_keep_every_n_epochs=(
-                checkpoint_retention_keep_every_n_epochs
-            ),
-            checkpoint_retention_cold_store_roots=(
-                checkpoint_retention_cold_store_roots
-            ),
+            checkpoint_retention_keep_every_n_epochs=(checkpoint_retention_keep_every_n_epochs),
+            checkpoint_retention_cold_store_roots=(checkpoint_retention_cold_store_roots),
             checkpoint_dir=args.checkpoint_dir,
             resume_from_checkpoint=args.resume_from_checkpoint,
             optimizer_kind=args.optimizer_kind,
             hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
             hi_nerv_pr95_muon_policy=args.hi_nerv_pr95_muon_policy,
-            hi_nerv_pr95_curriculum_total_epochs=(
-                args.hi_nerv_pr95_curriculum_total_epochs
-            ),
-            hi_nerv_pr95_source_weight_amplification=(
-                args.hi_nerv_pr95_source_weight_amplification
-            ),
+            hi_nerv_pr95_curriculum_total_epochs=(args.hi_nerv_pr95_curriculum_total_epochs),
+            hi_nerv_pr95_source_weight_amplification=(args.hi_nerv_pr95_source_weight_amplification),
             optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
             optimizer_weight_decay=args.optimizer_weight_decay,
             optimizer_warmup_epochs=args.optimizer_warmup_epochs,
             optimizer_warmup_steps_per_epoch=args.optimizer_warmup_steps_per_epoch,
             optimizer_cosine_decay_enabled=args.optimizer_cosine_decay_enabled,
-            optimizer_cosine_decay_total_epochs=(
-                args.optimizer_cosine_decay_total_epochs
-            ),
-            optimizer_cosine_decay_min_lr_ratio=(
-                args.optimizer_cosine_decay_min_lr_ratio
-            ),
+            optimizer_cosine_decay_total_epochs=(args.optimizer_cosine_decay_total_epochs),
+            optimizer_cosine_decay_min_lr_ratio=(args.optimizer_cosine_decay_min_lr_ratio),
             recon_loss_stage_weight=args.recon_loss_stage_weight,
             segnet_loss_stage_weight=args.segnet_loss_stage_weight,
             pose_loss_stage_weight=args.pose_loss_stage_weight,
             scorer_input_guard_stage_weight=args.scorer_input_guard_stage_weight,
-            scorer_input_contrast_floor_stage_weight=(
-                args.scorer_input_contrast_floor_stage_weight
-            ),
-            scorer_input_shape_tether_stage_weight=(
-                args.scorer_input_shape_tether_stage_weight
-            ),
-            posenet_temporal_signal_floor_stage_weight=(
-                args.posenet_temporal_signal_floor_stage_weight
-            ),
+            scorer_input_contrast_floor_stage_weight=(args.scorer_input_contrast_floor_stage_weight),
+            scorer_input_shape_tether_stage_weight=(args.scorer_input_shape_tether_stage_weight),
+            posenet_temporal_signal_floor_stage_weight=(args.posenet_temporal_signal_floor_stage_weight),
             segnet_direct_live_stage_weight=args.segnet_direct_live_stage_weight,
             pose_distillation_warmup_epochs=args.pose_distillation_warmup_epochs,
             scorer_input_shape_warmup_epochs=args.scorer_input_shape_warmup_epochs,
-            segnet_direct_live_escape_warmup_epochs=(
-                args.segnet_direct_live_escape_warmup_epochs
-            ),
-            segnet_direct_live_escape_class_multiplier=(
-                args.segnet_direct_live_escape_class_multiplier
-            ),
+            segnet_direct_live_escape_warmup_epochs=(args.segnet_direct_live_escape_warmup_epochs),
+            segnet_direct_live_escape_class_multiplier=(args.segnet_direct_live_escape_class_multiplier),
             prioritized_pair_indices=prioritized_pair_indices,
-            scorer_error_pair_sampling_weights=(
-                scorer_error_pair_sampling_weights
-            ),
+            scorer_error_pair_sampling_weights=(scorer_error_pair_sampling_weights),
             scorer_error_pair_curriculum=scorer_error_pair_curriculum,
-            sparse_prioritized_target_hydration=(
-                args.sparse_prioritized_target_hydration
-            ),
+            sparse_prioritized_target_hydration=(args.sparse_prioritized_target_hydration),
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
             run_post_export_materializers=args.run_post_export_materializers,
-            post_export_materializer_max_steps=(
-                args.post_export_materializer_max_steps
-            ),
-            post_export_materializer_max_parallel=(
-                args.post_export_materializer_max_parallel
-            ),
+            post_export_materializer_max_steps=(args.post_export_materializer_max_steps),
+            post_export_materializer_max_parallel=(args.post_export_materializer_max_parallel),
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             upstream_dir=scorer_upstream_dir,
             random_seed=args.random_seed,
@@ -31346,12 +26806,7 @@ def _resolve_source_video_path(
         candidates.append(Path(env_override).expanduser())
     raw = Path(path).expanduser()
     candidates.append(raw if raw.is_absolute() else (base / raw))
-    if (
-        upstream_dir is not None
-        and not raw.is_absolute()
-        and raw.parts
-        and raw.parts[0] == "upstream"
-    ):
+    if upstream_dir is not None and not raw.is_absolute() and raw.parts and raw.parts[0] == "upstream":
         upstream = Path(upstream_dir).expanduser().resolve(strict=False)
         candidates.append(upstream / Path(*raw.parts[1:]))
     if not raw.is_absolute():
@@ -31363,9 +26818,7 @@ def _resolve_source_video_path(
         if resolved.is_file():
             return resolved
     tried = ", ".join(str(candidate.resolve(strict=False)) for candidate in candidates)
-    raise CompactRendererMlxSpineRunnerError(
-        f"source video missing; tried: {tried}"
-    )
+    raise CompactRendererMlxSpineRunnerError(f"source video missing; tried: {tried}")
 
 
 def _optional_existing(path: Any, *, base: Path) -> Path | None:
@@ -31533,26 +26986,16 @@ def _modelsize_byte_cap_feedback_row(
             or candidate_mapping.get("decoder_codec")
             or candidate_mapping.get("decoder_payload_codec")
         ),
-        "source_bound_controls": (
-            _byte_cap_candidate_match_controls(candidate_mapping)
-            if candidate_mapping
-            else {}
-        ),
+        "source_bound_controls": (_byte_cap_candidate_match_controls(candidate_mapping) if candidate_mapping else {}),
         "receiver_closed": True,
         "receiver_closed_status": receiver_closed.get("status"),
         "receiver_proof_path": (
-            receiver_closed.get("proof_path")
-            or node.get("receiver_proof_path")
-            or node.get("proof_path")
+            receiver_closed.get("proof_path") or node.get("receiver_proof_path") or node.get("proof_path")
         ),
         "report_path": node.get("report_path"),
         "artifact_report_path": node.get("artifact_report_path") or node.get("report_path"),
         "packet_path": node.get("packet_path") or node.get("payload_path"),
-        "packet_sha256": (
-            node.get("packet_sha256")
-            or node.get("payload_sha256")
-            or node.get("snar1_packet_sha256")
-        ),
+        "packet_sha256": (node.get("packet_sha256") or node.get("payload_sha256") or node.get("snar1_packet_sha256")),
         "archive_path": (
             node.get("archive_path")
             or node.get("candidate_archive_path")
@@ -31644,8 +27087,7 @@ def _modelsize_byte_cap_official_state_slice(
             (str, bytes, bytearray),
         ):
             out["snerv_official_trained_checkpoint_state_dict_slice_member_names"] = list(
-                source.get("official_trained_checkpoint_state_dict_slice_member_names")
-                or []
+                source.get("official_trained_checkpoint_state_dict_slice_member_names") or []
             )
         return out
     return {}
@@ -31666,9 +27108,7 @@ def _modelsize_byte_cap_scope_matches_candidate(
         measured_pairs = _compact_first_present_int(metadata, ("n_pairs", "num_pairs"))
     candidate_pairs = _compact_first_present_int(candidate, ("num_pairs",))
     return not (
-        measured_pairs is not None
-        and candidate_pairs is not None
-        and int(measured_pairs) != int(candidate_pairs)
+        measured_pairs is not None and candidate_pairs is not None and int(measured_pairs) != int(candidate_pairs)
     )
 
 
@@ -31686,9 +27126,7 @@ def _startup_modelsize_candidate_from_node(
         source_path=source_path,
     ):
         startup_paths.extend(
-            candidate
-            for candidate in _startup_paths_from_artifact(artifact_path)
-            if candidate not in startup_paths
+            candidate for candidate in _startup_paths_from_artifact(artifact_path) if candidate not in startup_paths
         )
     for path in startup_paths:
         try:
@@ -31739,9 +27177,7 @@ def _modelsize_byte_cap_row_receiver_closed(
         if not (runtime_ready and proof.get("receiver_contract_satisfied") is True):
             continue
         proof_archive_sha = str(proof.get("archive_sha256") or "").strip().lower()
-        node_archive_sha = str(
-            node.get("input_sha256") or node.get("archive_sha256") or ""
-        ).strip().lower()
+        node_archive_sha = str(node.get("input_sha256") or node.get("archive_sha256") or "").strip().lower()
         if proof_archive_sha and node_archive_sha and proof_archive_sha != node_archive_sha:
             continue
         proof_archive_bytes = _compact_first_present_int(
@@ -31880,15 +27316,9 @@ def _has_disallowed_existing_output_artifacts(
         return False
     if allow_startup_marker_only:
         for entry in entries:
-            if (
-                entry.is_file()
-                and entry.name == COMPACT_FAMILY_STARTUP_MARKER_FILENAME
-            ):
+            if entry.is_file() and entry.name == COMPACT_FAMILY_STARTUP_MARKER_FILENAME:
                 continue
-            if entry.is_dir() and not any(
-                child.is_file() or child.is_symlink()
-                for child in entry.rglob("*")
-            ):
+            if entry.is_dir() and not any(child.is_file() or child.is_symlink() for child in entry.rglob("*")):
                 continue
             return True
         return False

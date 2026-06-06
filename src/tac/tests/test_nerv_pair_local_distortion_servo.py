@@ -56,6 +56,41 @@ def test_admits_frame1_pair_local_action_only_after_parseback_survival() -> None
     assert receipt.score_claim is False
 
 
+def test_pair_local_servo_uses_target_support_not_generic_argmax_churn() -> None:
+    before = PairLocalScoreState(d_seg=0.010, d_pose=0.0001, archive_bytes=1000)
+    after = PairLocalScoreState(d_seg=0.009, d_pose=0.0001, archive_bytes=1000)
+    trace = PairLocalSurfaceTrace(
+        family="hinerv",
+        frame_scope="frame1_seg_pose_joint",
+        actuator_id="hinerv_target_region_birth",
+        pair_index=7,
+        uint8_changed_pixels=33,
+        uint8_delta_abs_max=3.0,
+        segnet_input_delta_linf=0.04,
+        target_hard_won_count=8,
+        target_hard_lost_count=0,
+        net_target_support_delta=8,
+        wrong_to_target_count=8,
+        argmax_changed_count_region=40,
+        fakequant_target_hard_won_count=7,
+        fakequant_net_target_support_delta=7,
+        parseback_target_hard_won_count=6,
+        parseback_net_target_support_delta=6,
+    )
+
+    receipt = admit_pair_local_distortion_action(
+        before=before,
+        after=after,
+        trace=trace,
+    )
+
+    assert receipt.admitted is True
+    assert receipt.surfaces["seg_movement"] is True
+    assert receipt.surfaces["target_support_birth"] is True
+    assert receipt.surfaces["fakequant_target_support_survival"] is True
+    assert receipt.surfaces["parseback_target_support_survival"] is True
+
+
 def test_rejects_subquantum_float_update_even_when_score_numbers_improve() -> None:
     before = PairLocalScoreState(d_seg=0.010, d_pose=0.0001, archive_bytes=1000)
     after = PairLocalScoreState(d_seg=0.009, d_pose=0.0001, archive_bytes=1000)
@@ -79,9 +114,7 @@ def test_rejects_subquantum_float_update_even_when_score_numbers_improve() -> No
     )
 
     assert receipt.admitted is False
-    assert "pair_local_servo_subquantum_float_update_no_uint8_motion" in (
-        receipt.blockers
-    )
+    assert "pair_local_servo_subquantum_float_update_no_uint8_motion" in (receipt.blockers)
     assert "pair_local_servo_receiver_uint8_motion_missing" in receipt.blockers
     assert "pair_local_servo_scorer_preprocess_motion_missing" in receipt.blockers
 
@@ -160,9 +193,7 @@ def test_frame0_pose_only_cannot_claim_segnet_mutation() -> None:
     )
 
     assert receipt.admitted is False
-    assert "pair_local_servo_frame0_pose_only_changed_segnet_distortion" in (
-        receipt.blockers
-    )
+    assert "pair_local_servo_frame0_pose_only_changed_segnet_distortion" in (receipt.blockers)
 
 
 def test_pr95_grade_report_accepts_parseback_priced_hinerv_receipt() -> None:
@@ -177,9 +208,7 @@ def test_pr95_grade_report_accepts_parseback_priced_hinerv_receipt() -> None:
     assert report["value_per_byte"] > report["byte_price"]
     assert report["action_effect"]["schema"] == ACTION_EFFECT_SCHEMA
     assert report["action_effect"]["action_effect_admitted"] is True
-    assert report["action_effect"]["delta_score_total"] == report[
-        "exact_score_delta"
-    ]
+    assert report["action_effect"]["delta_score_total"] == report["exact_score_delta"]
     assert report["action_effect"]["receiver_visible"] is True
     assert report["action_effect"]["state_custody"]["archive_sha256"] == "a" * 64
     assert report["score_claim"] is False
@@ -197,9 +226,7 @@ def test_pr95_grade_report_rejects_live_only_and_unpriced_byte_growth() -> None:
     report = build_pr95_grade_pair_local_servo_report(receipt)
 
     assert report["long_run_admission_ready"] is False
-    assert "pair_local_servo_archive_parseback_authority_missing" in report[
-        "blockers"
-    ]
+    assert "pair_local_servo_archive_parseback_authority_missing" in report["blockers"]
     assert "pair_local_servo_value_per_byte_not_priced" in report["blockers"]
 
 

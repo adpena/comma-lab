@@ -141,9 +141,7 @@ def build_nerv_witness_readiness_dag(
                     "frames are witnesses inside the same SegNet argmax cells "
                     "and PoseNet output cells as the original video."
                 ),
-                "score_formula": (
-                    "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"
-                ),
+                "score_formula": ("100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"),
                 "rate_score_per_byte": CONTEST_RATE_SCORE_PER_BYTE,
                 "segnet_geometry": "last_frame_rgb_argmax_pixels",
                 "posenet_geometry": "two_frame_official_yuv6_pair",
@@ -236,11 +234,7 @@ def check_witness_gate_status(
         pair_local_servo_receipt=pair_local_servo_receipt,
         max_nodes=1,
     )
-    nodes = {
-        str(node["node_id"]): node
-        for node in payload.get("gate_nodes", [])
-        if isinstance(node, Mapping)
-    }
+    nodes = {str(node["node_id"]): node for node in payload.get("gate_nodes", []) if isinstance(node, Mapping)}
     if node_id not in nodes:
         raise NervWitnessReadinessDagError(f"unknown witness gate node: {node_id}")
     node = nodes[node_id]
@@ -284,11 +278,9 @@ def _parseback_contract_evidence(repo: Path) -> dict[str, Any]:
         "test_archive_selection_required_parseback_fails_closed_without_hook",
         "archive_parseback_replay_proxy_false_authority",
     ]
-    missing = [
-        needle
-        for needle in required_needles
-        if needle not in source_text
-    ] + [needle for needle in test_needles if needle not in test_text]
+    missing = [needle for needle in required_needles if needle not in source_text] + [
+        needle for needle in test_needles if needle not in test_text
+    ]
     return {
         "schema": "nerv_parseback_selection_static_contract_evidence.v1",
         "source_path": source.as_posix(),
@@ -326,13 +318,11 @@ def _pair_local_servo_contract_evidence(repo: Path) -> dict[str, Any]:
         "test_rejects_when_exact_nonlinear_score_worsens_despite_seg_improvement",
         "test_frame0_pose_only_cannot_claim_segnet_mutation",
     ]
-    missing = [
-        needle for needle in required_needles if needle not in source_text
-    ] + [needle for needle in test_needles if needle not in test_text]
+    missing = [needle for needle in required_needles if needle not in source_text] + [
+        needle for needle in test_needles if needle not in test_text
+    ]
     contract = pair_local_servo_static_contract()
-    contract_schema_ok = (
-        contract.get("schema") == PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA
-    )
+    contract_schema_ok = contract.get("schema") == PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA
     if not contract_schema_ok:
         missing.append("pair_local_servo_static_contract_schema_mismatch")
     return {
@@ -423,8 +413,7 @@ def _pair_local_servo_admission_evidence(
     report_for_summary = report_payload or generated_report or {}
     blockers = _ordered_unique(blockers)
     ready = not blockers and bool(
-        report_for_summary.get("long_run_admission_ready")
-        and report_for_summary.get("admitted")
+        report_for_summary.get("long_run_admission_ready") and report_for_summary.get("admitted")
     )
     if not ready and not blockers:
         blockers.append("pair_local_servo_report_not_admission_ready")
@@ -531,9 +520,7 @@ def _source_boundary_evidence(report_path: str | Path | None) -> dict[str, Any]:
             **PROXY_FALSE_AUTHORITY_FIELDS,
         }
     require_no_truthy_authority_fields(payload, context="source_boundary_audit_report")
-    clean = bool(payload.get("source_boundary_clean")) and bool(
-        payload.get("ready_for_witness_compile")
-    )
+    clean = bool(payload.get("source_boundary_clean")) and bool(payload.get("ready_for_witness_compile"))
     blockers = [str(item) for item in payload.get("blockers") or []]
     if not clean and not blockers:
         blockers.append("nerv_witness_source_boundary_audit_not_clean")
@@ -607,35 +594,34 @@ def _hinerv_smoke_evidence(
         )
     }
     min_ratio_increase_by_source = _target_min_ratio_increase_by_source(payload)
-    authority_source, authority_delta = _authoritative_target_min_ratio_delta(
-        min_ratio_increase_by_source
-    )
+    authority_source, authority_delta = _authoritative_target_min_ratio_delta(min_ratio_increase_by_source)
+    target_support_by_source = _target_support_by_source(payload)
+    hard_birth_support = target_support_by_source.get("hard_birth_actuator", {})
     metrics["min_ratio_increase_by_source"] = dict(min_ratio_increase_by_source)
-    metrics["target_min_region_ratio_delta_by_source"] = dict(
-        min_ratio_increase_by_source
-    )
+    metrics["target_min_region_ratio_delta_by_source"] = dict(min_ratio_increase_by_source)
+    metrics["target_support_by_source"] = dict(target_support_by_source)
+    metrics["hard_birth_target_hard_won_count"] = hard_birth_support.get("target_hard_won_count")
+    metrics["hard_birth_net_target_support_delta"] = hard_birth_support.get("net_target_support_delta")
     metrics["min_ratio_increase_authority_source"] = authority_source
-    metrics["max_candidate_segnet_target_min_ratio_increase_authoritative"] = (
-        authority_delta
-    )
+    metrics["max_candidate_segnet_target_min_ratio_increase_authoritative"] = authority_delta
     trace_path = path.parent / "hi_nerv_mlx_training" / "nerv_crux_trace_rows.json"
-    readiness_path = (
-        path.parent
-        / "hi_nerv_mlx_training"
-        / "hi_nerv_short_scorer_smoke_readiness.json"
-    )
+    readiness_path = path.parent / "hi_nerv_mlx_training" / "hi_nerv_short_scorer_smoke_readiness.json"
     blockers: list[str] = []
     if metrics["receiver_quantum_attempt_count"] is None:
         blockers.append("hinerv_receiver_quantum_telemetry_missing")
     if (metrics["hard_birth_argmax_progress_accepted_step_count"] or 0.0) <= 0.0:
         blockers.append("hinerv_hard_birth_argmax_progress_not_accepted")
-    if (
-        (metrics["max_candidate_segnet_worst_debt_reduction"] or 0.0) > 0.0
-        and (metrics["max_candidate_segnet_total_debt_spill_given_worst_improvement"] or 0.0) > 0.0
-    ):
+    if (metrics["max_candidate_segnet_worst_debt_reduction"] or 0.0) > 0.0 and (
+        metrics["max_candidate_segnet_total_debt_spill_given_worst_improvement"] or 0.0
+    ) > 0.0:
         blockers.append("hinerv_localized_projection_trust_region_missing")
     if (authority_delta or 0.0) <= 0.0:
         blockers.append("hinerv_target_min_ratio_not_lifted")
+    if hard_birth_support:
+        if (hard_birth_support.get("target_hard_won_count") or 0.0) <= 0.0:
+            blockers.append("hinerv_target_hard_won_count_missing")
+        if (hard_birth_support.get("net_target_support_delta") or 0.0) <= 0.0:
+            blockers.append("hinerv_net_target_support_delta_not_positive")
     return {
         "schema": "hinerv_short_smoke_witness_evidence.v1",
         "report_path": path.as_posix(),
@@ -647,6 +633,7 @@ def _hinerv_smoke_evidence(
         "short_scorer_readiness_path": readiness_path.as_posix(),
         "short_scorer_readiness_exists": readiness_path.is_file(),
         "metrics": metrics,
+        "target_support_by_source": dict(target_support_by_source),
         "blockers": blockers,
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
@@ -704,24 +691,26 @@ def _distortion_birth_stage_evidence(
             "max_accepted_frame1_receiver_uint8_delta_abs",
             "max_candidate_pose_exact_delta",
             "max_candidate_segnet_target_min_ratio_increase_authoritative",
+            "hard_birth_target_hard_won_count",
+            "hard_birth_net_target_support_delta",
         )
     }
     raw_metrics = hinerv_evidence.get("metrics")
     raw_metrics = raw_metrics if isinstance(raw_metrics, Mapping) else {}
-    min_ratio_increase_by_source = _numeric_mapping(
-        raw_metrics.get("min_ratio_increase_by_source")
-    )
+    min_ratio_increase_by_source = _numeric_mapping(raw_metrics.get("min_ratio_increase_by_source"))
     if not min_ratio_increase_by_source:
-        min_ratio_increase_by_source = _numeric_mapping(
-            raw_metrics.get("target_min_region_ratio_delta_by_source")
-        )
+        min_ratio_increase_by_source = _numeric_mapping(raw_metrics.get("target_min_region_ratio_delta_by_source"))
     metrics["min_ratio_increase_by_source"] = dict(min_ratio_increase_by_source)
-    metrics["target_min_region_ratio_delta_by_source"] = dict(
-        min_ratio_increase_by_source
+    metrics["target_min_region_ratio_delta_by_source"] = dict(min_ratio_increase_by_source)
+    metrics["min_ratio_increase_authority_source"] = raw_metrics.get("min_ratio_increase_authority_source")
+    target_support_by_source = hinerv_evidence.get("target_support_by_source")
+    target_support_by_source = (
+        target_support_by_source
+        if isinstance(target_support_by_source, Mapping)
+        else raw_metrics.get("target_support_by_source")
     )
-    metrics["min_ratio_increase_authority_source"] = raw_metrics.get(
-        "min_ratio_increase_authority_source"
-    )
+    target_support_by_source = dict(target_support_by_source) if isinstance(target_support_by_source, Mapping) else {}
+    metrics["target_support_by_source"] = dict(target_support_by_source)
     blockers: list[str] = []
     if not bool(hinerv_evidence.get("report_loaded")):
         blockers.append("distortion_birth_smoke_report_missing")
@@ -733,6 +722,11 @@ def _distortion_birth_stage_evidence(
         blockers.append("worst_region_debt_reduction_missing")
     if metrics["max_candidate_segnet_target_min_ratio_increase_authoritative"] <= 0.0:
         blockers.append("target_region_min_ratio_lift_missing")
+    if target_support_by_source.get("hard_birth_actuator"):
+        if metrics["hard_birth_target_hard_won_count"] <= 0.0:
+            blockers.append("target_hard_won_count_missing")
+        if metrics["hard_birth_net_target_support_delta"] <= 0.0:
+            blockers.append("net_target_support_delta_not_positive")
     if metrics["max_candidate_segnet_total_debt_spill_given_worst_improvement"] > 0.0:
         blockers.append("worst_region_improvement_has_total_seg_spill")
     if metrics["max_accepted_frame1_receiver_uint8_changed_count"] <= 0.0:
@@ -745,6 +739,7 @@ def _distortion_birth_stage_evidence(
         "source": "hinerv_short_receiver_surface_smoke",
         "distortion_birth_before_rate_pressure_satisfied": satisfied,
         "metrics": metrics,
+        "target_support_by_source": dict(target_support_by_source),
         "blockers": blockers,
         "stage_order": [
             "class_birth",
@@ -800,9 +795,7 @@ def _node_specs(
 ) -> list[dict[str, Any]]:
     parseback_ok = bool(parseback_evidence.get("implemented_contract_present"))
     pair_servo_ok = bool(pair_servo_evidence.get("implemented_contract_present"))
-    pair_servo_admission_ok = bool(
-        pair_servo_admission_evidence.get("long_run_admission_ready")
-    )
+    pair_servo_admission_ok = bool(pair_servo_admission_evidence.get("long_run_admission_ready"))
     source_boundary_ok = bool(source_boundary_evidence.get("source_boundary_clean"))
     source_boundary_blockers = list(source_boundary_evidence.get("blockers") or [])
     oracle_cache = {
@@ -823,12 +816,8 @@ def _node_specs(
     )
     hinerv_projection_ok = not hinerv_evidence.get("blockers") and hinerv_smoke_loaded
     birth_stage_evidence = _distortion_birth_stage_evidence(hinerv_evidence)
-    birth_stage_ok = bool(
-        birth_stage_evidence.get("distortion_birth_before_rate_pressure_satisfied")
-    )
-    snerv_source_ok = bool(
-        snerv_evidence.get("official_tub_lf_hf_decoder_replacement_ready")
-    )
+    birth_stage_ok = bool(birth_stage_evidence.get("distortion_birth_before_rate_pressure_satisfied"))
+    snerv_source_ok = bool(snerv_evidence.get("official_tub_lf_hf_decoder_replacement_ready"))
     nodes = [
         _node(
             node_id="shared.source_boundary_compliance_audit",
@@ -960,11 +949,7 @@ def _node_specs(
             ],
             dependencies=["shared.distortion_birth_before_rate_pressure"],
             satisfied=pair_servo_ok,
-            blockers=(
-                []
-                if pair_servo_ok
-                else ["pair_local_distortion_servo_contract_missing"]
-            ),
+            blockers=([] if pair_servo_ok else ["pair_local_distortion_servo_contract_missing"]),
             evidence=pair_servo_evidence,
             acceptance=(
                 "pair-local actions are admitted only after uint8/preprocess/"
@@ -983,11 +968,7 @@ def _node_specs(
                 "shared.pair_local_distortion_servo_contract",
             ],
             satisfied=pair_servo_admission_ok,
-            blockers=(
-                []
-                if pair_servo_admission_ok
-                else list(pair_servo_admission_evidence.get("blockers") or [])
-            ),
+            blockers=([] if pair_servo_admission_ok else list(pair_servo_admission_evidence.get("blockers") or [])),
             evidence=pair_servo_admission_evidence,
             acceptance="accepted updates reduce exact nonlinear Seg/Pose/rate score units",
         ),
@@ -1013,10 +994,7 @@ def _node_specs(
             satisfied=hinerv_projection_ok,
             blockers=list(hinerv_evidence.get("blockers") or []),
             evidence=hinerv_evidence,
-            acceptance=(
-                "worst target-region debt or min-ratio improves without total Seg "
-                "spill or Pose regression"
-            ),
+            acceptance=("worst target-region debt or min-ratio improves without total Seg spill or Pose regression"),
         ),
         _node(
             node_id="snerv.official_mfu_hfr_tub_source_forward",
@@ -1176,10 +1154,7 @@ def _queue_from_nodes(nodes: Sequence[Mapping[str, Any]], *, queue_id: str) -> d
                         "id": "gate",
                         "kind": "command",
                         "command": list(node["command"]),
-                        "requires": [
-                            str(dep).replace(".", "__") + ".gate"
-                            for dep in node.get("dependencies", [])
-                        ],
+                        "requires": [str(dep).replace(".", "__") + ".gate" for dep in node.get("dependencies", [])],
                         "resources": {"kind": node.get("resource_kind", "local_cpu")},
                         "postconditions": [
                             {
@@ -1336,10 +1311,7 @@ def _target_min_ratio_increase_by_source(payload: Mapping[str, Any]) -> dict[str
     for mapping in _iter_mappings(payload):
         schema = mapping.get("schema")
         actuator = mapping.get("actuator_id")
-        if (
-            schema == "hi_nerv_target_region_birth_receipt.v1"
-            or actuator == "hinerv_target_region_birth"
-        ):
+        if schema == "hi_nerv_target_region_birth_receipt.v1" or actuator == "hinerv_target_region_birth":
             number = _source_metric_delta(mapping)
             if number is not None:
                 _record_source_metric(out, "hard_birth_actuator", number)
@@ -1358,6 +1330,74 @@ def _authoritative_target_min_ratio_delta(
             best_source = source
             best_delta = value
     return best_source, best_delta
+
+
+def _target_support_by_source(
+    payload: Mapping[str, Any],
+) -> dict[str, dict[str, float]]:
+    out: dict[str, dict[str, float]] = {}
+    for mapping in _iter_mappings(payload):
+        schema = mapping.get("schema")
+        actuator = mapping.get("actuator_id") or mapping.get("actuator")
+        if schema not in {
+            "hi_nerv_target_region_birth.v1",
+            "hi_nerv_target_region_birth_receipt.v1",
+        } and actuator not in {
+            "hinerv_target_region_birth",
+            "fit_target_region_birth_from_segnet",
+        }:
+            continue
+        support = _target_support_metrics(mapping)
+        if support:
+            old = out.get("hard_birth_actuator")
+            if old is None or support.get("net_target_support_delta", 0.0) > old.get(
+                "net_target_support_delta",
+                0.0,
+            ):
+                out["hard_birth_actuator"] = support
+    return out
+
+
+def _target_support_metrics(mapping: Mapping[str, Any]) -> dict[str, float]:
+    transitions = mapping.get("argmax_transitions")
+    transitions = transitions if isinstance(transitions, Mapping) else {}
+    hard_won = _first_finite_mapping_value(
+        mapping,
+        ("target_hard_won_count", "hard_won_count", "wrong_to_target_count"),
+    )
+    if hard_won is None:
+        hard_won = _first_finite_mapping_value(
+            transitions,
+            ("target_hard_won_count", "hard_won_count", "wrong_to_target_count"),
+        )
+    hard_lost = _first_finite_mapping_value(
+        mapping,
+        ("target_hard_lost_count", "target_to_wrong_count"),
+    )
+    if hard_lost is None:
+        hard_lost = _first_finite_mapping_value(
+            transitions,
+            ("target_hard_lost_count", "target_to_wrong_count"),
+        )
+    net = _first_finite_mapping_value(
+        mapping,
+        ("net_target_support_delta",),
+    )
+    if net is None:
+        net = _first_finite_mapping_value(
+            transitions,
+            ("net_target_support_delta",),
+        )
+    if net is None and hard_won is not None:
+        net = hard_won - float(hard_lost or 0.0)
+    out: dict[str, float] = {}
+    if hard_won is not None:
+        out["target_hard_won_count"] = float(hard_won)
+    if hard_lost is not None:
+        out["target_hard_lost_count"] = float(hard_lost)
+    if net is not None:
+        out["net_target_support_delta"] = float(net)
+    return out
 
 
 def _source_metric_delta(value: Any) -> float | None:
@@ -1438,11 +1478,7 @@ def _iter_mappings(payload: Any) -> Iterable[Mapping[str, Any]]:
 
 
 def _find_mappings(payload: Any, key: str) -> list[Mapping[str, Any]]:
-    return [
-        value
-        for item in _iter_mappings(payload)
-        if isinstance((value := item.get(key)), Mapping)
-    ]
+    return [value for item in _iter_mappings(payload) if isinstance((value := item.get(key)), Mapping)]
 
 
 def _find_number(payload: Any, key: str) -> float | None:

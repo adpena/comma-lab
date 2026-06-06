@@ -76,7 +76,7 @@ def test_action_effect_rejects_subquantum_parseback_lost_byte_growth() -> None:
     assert "action_effect_state_custody_hash_missing" in effect["blockers"]
     assert "action_effect_fakequant_survival_missing" in effect["blockers"]
     assert "action_effect_parseback_survival_missing" in effect["blockers"]
-    assert "action_effect_byte_delta_not_priced" not in effect["blockers"]
+    assert "action_effect_byte_delta_not_priced" in effect["blockers"]
     assert math.isclose(effect["value_per_byte"], 0.1 / 200.0)
 
 
@@ -176,6 +176,65 @@ def test_action_effect_serializes_pr110_selector_replay_row() -> None:
     assert effect["action_effect_admitted"] is True
 
 
+def test_action_effect_rejects_malformed_custody_hashes() -> None:
+    effect = build_action_effect(
+        {
+            "action_id": "bad_hash_custody",
+            "family": "hinerv",
+            "authority": "parseback_mlx",
+            "producer": "unit_test",
+            "consumer": "nerv_long_training_campaign_admission",
+            "state_custody": {"archive_sha256": "not-a-sha"},
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.009,
+            "old_d_pose": 0.0001,
+            "new_d_pose": 0.0001,
+            "old_bytes": 1000,
+            "new_bytes": 1000,
+            "receiver_surface": {
+                "uint8_changed_pixels": 1,
+                "argmax_flipped_pixels": 1,
+            },
+            "fakequant_survived": True,
+            "parseback_survived": True,
+        }
+    )
+
+    assert effect["state_custody"] == {}
+    assert "action_effect_state_custody_hash_missing" in effect["blockers"]
+    assert effect["action_effect_admitted"] is False
+
+
+def test_action_effect_keeps_reported_value_per_byte_separate_for_zero_byte_delta() -> None:
+    effect = build_action_effect(
+        {
+            "action_id": "zero_byte_reported_value",
+            "family": "hinerv",
+            "authority": "parseback_mlx",
+            "producer": "unit_test",
+            "consumer": "nerv_long_training_campaign_admission",
+            "archive_sha256": "a" * 64,
+            "old_d_seg": 0.010,
+            "new_d_seg": 0.009,
+            "old_d_pose": 0.0001,
+            "new_d_pose": 0.0001,
+            "old_bytes": 1000,
+            "new_bytes": 1000,
+            "receiver_surface": {
+                "uint8_changed_pixels": 1,
+                "argmax_flipped_pixels": 1,
+            },
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "value_per_byte": 123.0,
+        }
+    )
+
+    assert effect["action_effect_admitted"] is True
+    assert effect["value_per_byte"] is None
+    assert effect["reported_value_per_byte"] == 123.0
+
+
 def _effect_payload(action_id: str, delta_score: float) -> dict[str, object]:
     old_d_seg = 0.01
     new_d_seg = old_d_seg + delta_score / 100.0
@@ -192,7 +251,7 @@ def _effect_payload(action_id: str, delta_score: float) -> dict[str, object]:
         "new_d_pose": 0.0001,
         "old_bytes": 1000,
         "new_bytes": 1000,
-        "receiver_surface": {"uint8_changed_pixels": 1},
+        "receiver_surface": {"uint8_changed_pixels": 1, "argmax_flipped_pixels": 1},
         "fakequant_survived": True,
         "parseback_survived": True,
     }

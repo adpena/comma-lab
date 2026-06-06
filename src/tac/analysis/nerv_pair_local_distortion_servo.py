@@ -16,25 +16,48 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
-from tac.analysis.action_effect import action_effect_from_pair_local_servo
+from tac.analysis.receiver_surface_metrics import (
+    RECEIVER_SURFACE_ARGMAX_CHANGED_COUNT_KEYS,
+    RECEIVER_SURFACE_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_FAKEQUANT_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_FAKEQUANT_MARGIN_DELTA_KEYS,
+    RECEIVER_SURFACE_FAKEQUANT_NET_TARGET_SUPPORT_DELTA_KEYS,
+    RECEIVER_SURFACE_FAKEQUANT_POSE_OUTPUT_DELTA_KEYS,
+    RECEIVER_SURFACE_FAKEQUANT_TARGET_HARD_WON_COUNT_KEYS,
+    RECEIVER_SURFACE_FLOAT_RGB_DELTA_LINF_KEYS,
+    RECEIVER_SURFACE_INFLATED_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_INFLATED_NET_TARGET_SUPPORT_DELTA_KEYS,
+    RECEIVER_SURFACE_INFLATED_POSE_OUTPUT_DELTA_KEYS,
+    RECEIVER_SURFACE_INFLATED_TARGET_HARD_WON_COUNT_KEYS,
+    RECEIVER_SURFACE_MARGIN_P50_DELTA_KEYS,
+    RECEIVER_SURFACE_NET_TARGET_SUPPORT_DELTA_KEYS,
+    RECEIVER_SURFACE_PARSEBACK_ARGMAX_FLIPPED_PIXELS_KEYS,
+    RECEIVER_SURFACE_PARSEBACK_MARGIN_DELTA_KEYS,
+    RECEIVER_SURFACE_PARSEBACK_NET_TARGET_SUPPORT_DELTA_KEYS,
+    RECEIVER_SURFACE_PARSEBACK_POSE_OUTPUT_DELTA_KEYS,
+    RECEIVER_SURFACE_PARSEBACK_TARGET_HARD_WON_COUNT_KEYS,
+    RECEIVER_SURFACE_POSE_OUTPUT_DELTA_KEYS,
+    RECEIVER_SURFACE_POSENET_INPUT_DELTA_LINF_KEYS,
+    RECEIVER_SURFACE_SEGNET_INPUT_DELTA_LINF_KEYS,
+    RECEIVER_SURFACE_TARGET_HARD_LOST_COUNT_KEYS,
+    RECEIVER_SURFACE_TARGET_HARD_WON_COUNT_KEYS,
+    RECEIVER_SURFACE_TARGET_TO_WRONG_COUNT_KEYS,
+    RECEIVER_SURFACE_UINT8_CHANGED_PIXELS_KEYS,
+    RECEIVER_SURFACE_UINT8_DELTA_ABS_MAX_KEYS,
+    RECEIVER_SURFACE_WRONG_TO_TARGET_COUNT_KEYS,
+    RECEIVER_SURFACE_WRONG_TO_WRONG_COUNT_KEYS,
+)
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 from tac.score_geometry import (
     CONTEST_REFERENCE_BYTES,
     contest_score,
 )
+from tac.substrates._shared.mlx_score_aware.servo_lift import servo_lift
 
-PAIR_LOCAL_DISTORTION_SERVO_ADMISSION_SCHEMA = (
-    "nerv_pair_local_distortion_servo_admission.v1"
-)
-PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA = (
-    "nerv_pair_local_distortion_servo_static_contract.v1"
-)
-PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA = (
-    "nerv_pair_local_distortion_servo_receipt.v1"
-)
-PAIR_LOCAL_DISTORTION_SERVO_REPORT_SCHEMA = (
-    "nerv_pair_local_distortion_servo_report.v1"
-)
+PAIR_LOCAL_DISTORTION_SERVO_ADMISSION_SCHEMA = "nerv_pair_local_distortion_servo_admission.v1"
+PAIR_LOCAL_DISTORTION_SERVO_STATIC_CONTRACT_SCHEMA = "nerv_pair_local_distortion_servo_static_contract.v1"
+PAIR_LOCAL_DISTORTION_SERVO_RECEIPT_SCHEMA = "nerv_pair_local_distortion_servo_receipt.v1"
+PAIR_LOCAL_DISTORTION_SERVO_REPORT_SCHEMA = "nerv_pair_local_distortion_servo_report.v1"
 
 PR95_SERVO_CURRICULUM_STAGES: tuple[str, ...] = (
     "ce_birth",
@@ -101,14 +124,27 @@ class PairLocalSurfaceTrace:
     segnet_input_delta_linf: float | None = None
     posenet_input_delta_linf: float | None = None
     segnet_margin_delta: float | None = None
+    target_hard_won_count: int | None = None
+    target_hard_lost_count: int | None = None
+    net_target_support_delta: int | None = None
+    wrong_to_target_count: int | None = None
+    target_to_wrong_count: int | None = None
+    wrong_to_wrong_count: int | None = None
+    argmax_changed_count_region: int | None = None
     segnet_argmax_flipped_pixels: int | None = None
     pose_output_delta_l2: float | None = None
     fakequant_segnet_margin_delta: float | None = None
+    fakequant_target_hard_won_count: int | None = None
+    fakequant_net_target_support_delta: int | None = None
     fakequant_argmax_flipped_pixels: int | None = None
     fakequant_pose_output_delta_l2: float | None = None
     parseback_segnet_margin_delta: float | None = None
+    parseback_target_hard_won_count: int | None = None
+    parseback_net_target_support_delta: int | None = None
     parseback_argmax_flipped_pixels: int | None = None
     parseback_pose_output_delta_l2: float | None = None
+    inflated_target_hard_won_count: int | None = None
+    inflated_net_target_support_delta: int | None = None
     inflated_argmax_flipped_pixels: int | None = None
     inflated_pose_output_delta_l2: float | None = None
 
@@ -133,95 +169,50 @@ class PairLocalSurfaceTrace:
             frame_scope=frame_scope,  # type: ignore[arg-type]
             actuator_id=str(payload.get("actuator_id") or payload.get("actuator") or "unknown"),
             pair_index=_int_or_none(payload.get("pair_index")),
-            float_rgb_delta_linf=_first_float(
-                payload,
-                "receiver_surface_float_rgb_delta_linf",
-                "float_rgb_delta_linf",
-            ),
-            uint8_changed_pixels=_first_int(
-                payload,
-                "receiver_surface_uint8_changed_pixels",
-                "uint8_changed_pixels",
-            ),
+            float_rgb_delta_linf=_first_float(payload, *RECEIVER_SURFACE_FLOAT_RGB_DELTA_LINF_KEYS),
+            uint8_changed_pixels=_first_int(payload, *RECEIVER_SURFACE_UINT8_CHANGED_PIXELS_KEYS),
             uint8_delta_abs_max=_first_float(
                 payload,
-                "receiver_surface_uint8_delta_abs_max",
-                "uint8_delta_abs_max",
+                *RECEIVER_SURFACE_UINT8_DELTA_ABS_MAX_KEYS,
                 "max_accepted_frame1_receiver_uint8_delta_abs",
             ),
-            segnet_input_delta_linf=_first_float(
-                payload,
-                "receiver_surface_segnet_input_delta_linf",
-                "segnet_input_delta_linf",
-            ),
-            posenet_input_delta_linf=_first_float(
-                payload,
-                "receiver_surface_posenet_input_delta_linf",
-                "posenet_input_delta_linf",
-            ),
+            segnet_input_delta_linf=_first_float(payload, *RECEIVER_SURFACE_SEGNET_INPUT_DELTA_LINF_KEYS),
+            posenet_input_delta_linf=_first_float(payload, *RECEIVER_SURFACE_POSENET_INPUT_DELTA_LINF_KEYS),
             segnet_margin_delta=_first_float(
                 payload,
-                "receiver_surface_worst_region_margin_p50_delta",
-                "worst_region_margin_p50_delta",
+                *RECEIVER_SURFACE_MARGIN_P50_DELTA_KEYS,
                 "segnet_margin_delta",
                 "margin_delta",
             ),
-            segnet_argmax_flipped_pixels=_first_int(
-                payload,
-                "receiver_surface_argmax_flipped_pixels",
-                "argmax_flipped_pixels",
+            target_hard_won_count=_first_int(payload, *RECEIVER_SURFACE_TARGET_HARD_WON_COUNT_KEYS),
+            target_hard_lost_count=_first_int(payload, *RECEIVER_SURFACE_TARGET_HARD_LOST_COUNT_KEYS),
+            net_target_support_delta=_first_int(payload, *RECEIVER_SURFACE_NET_TARGET_SUPPORT_DELTA_KEYS),
+            wrong_to_target_count=_first_int(payload, *RECEIVER_SURFACE_WRONG_TO_TARGET_COUNT_KEYS),
+            target_to_wrong_count=_first_int(payload, *RECEIVER_SURFACE_TARGET_TO_WRONG_COUNT_KEYS),
+            wrong_to_wrong_count=_first_int(payload, *RECEIVER_SURFACE_WRONG_TO_WRONG_COUNT_KEYS),
+            argmax_changed_count_region=_first_int(payload, *RECEIVER_SURFACE_ARGMAX_CHANGED_COUNT_KEYS),
+            segnet_argmax_flipped_pixels=_first_int(payload, *RECEIVER_SURFACE_ARGMAX_FLIPPED_PIXELS_KEYS),
+            pose_output_delta_l2=_first_float(payload, *RECEIVER_SURFACE_POSE_OUTPUT_DELTA_KEYS),
+            fakequant_segnet_margin_delta=_first_float(payload, *RECEIVER_SURFACE_FAKEQUANT_MARGIN_DELTA_KEYS),
+            fakequant_target_hard_won_count=_first_int(payload, *RECEIVER_SURFACE_FAKEQUANT_TARGET_HARD_WON_COUNT_KEYS),
+            fakequant_net_target_support_delta=_first_int(
+                payload, *RECEIVER_SURFACE_FAKEQUANT_NET_TARGET_SUPPORT_DELTA_KEYS
             ),
-            pose_output_delta_l2=_first_float(
-                payload,
-                "receiver_surface_pose_output_delta",
-                "pose_output_delta",
-                "pose_output_delta_l2",
+            fakequant_argmax_flipped_pixels=_first_int(payload, *RECEIVER_SURFACE_FAKEQUANT_ARGMAX_FLIPPED_PIXELS_KEYS),
+            fakequant_pose_output_delta_l2=_first_float(payload, *RECEIVER_SURFACE_FAKEQUANT_POSE_OUTPUT_DELTA_KEYS),
+            parseback_segnet_margin_delta=_first_float(payload, *RECEIVER_SURFACE_PARSEBACK_MARGIN_DELTA_KEYS),
+            parseback_target_hard_won_count=_first_int(payload, *RECEIVER_SURFACE_PARSEBACK_TARGET_HARD_WON_COUNT_KEYS),
+            parseback_net_target_support_delta=_first_int(
+                payload, *RECEIVER_SURFACE_PARSEBACK_NET_TARGET_SUPPORT_DELTA_KEYS
             ),
-            fakequant_segnet_margin_delta=_first_float(
-                payload,
-                "receiver_surface_fakequant_margin_delta",
-                "fakequant_margin_delta",
-                "fakequant_segnet_margin_delta",
+            parseback_argmax_flipped_pixels=_first_int(payload, *RECEIVER_SURFACE_PARSEBACK_ARGMAX_FLIPPED_PIXELS_KEYS),
+            parseback_pose_output_delta_l2=_first_float(payload, *RECEIVER_SURFACE_PARSEBACK_POSE_OUTPUT_DELTA_KEYS),
+            inflated_argmax_flipped_pixels=_first_int(payload, *RECEIVER_SURFACE_INFLATED_ARGMAX_FLIPPED_PIXELS_KEYS),
+            inflated_target_hard_won_count=_first_int(payload, *RECEIVER_SURFACE_INFLATED_TARGET_HARD_WON_COUNT_KEYS),
+            inflated_net_target_support_delta=_first_int(
+                payload, *RECEIVER_SURFACE_INFLATED_NET_TARGET_SUPPORT_DELTA_KEYS
             ),
-            fakequant_argmax_flipped_pixels=_first_int(
-                payload,
-                "receiver_surface_fakequant_argmax_flipped_pixels",
-                "fakequant_argmax_flipped_pixels",
-            ),
-            fakequant_pose_output_delta_l2=_first_float(
-                payload,
-                "receiver_surface_fakequant_pose_output_delta",
-                "fakequant_pose_output_delta",
-                "fakequant_pose_output_delta_l2",
-            ),
-            parseback_segnet_margin_delta=_first_float(
-                payload,
-                "receiver_surface_parseback_margin_delta",
-                "parseback_margin_delta",
-                "parseback_segnet_margin_delta",
-            ),
-            parseback_argmax_flipped_pixels=_first_int(
-                payload,
-                "receiver_surface_parseback_argmax_flipped_pixels",
-                "parseback_argmax_flipped_pixels",
-            ),
-            parseback_pose_output_delta_l2=_first_float(
-                payload,
-                "receiver_surface_parseback_pose_output_delta",
-                "parseback_pose_output_delta",
-                "parseback_pose_output_delta_l2",
-            ),
-            inflated_argmax_flipped_pixels=_first_int(
-                payload,
-                "receiver_surface_inflated_argmax_flipped_pixels",
-                "inflated_argmax_flipped_pixels",
-            ),
-            inflated_pose_output_delta_l2=_first_float(
-                payload,
-                "receiver_surface_inflated_pose_output_delta",
-                "inflated_pose_output_delta",
-                "inflated_pose_output_delta_l2",
-            ),
+            inflated_pose_output_delta_l2=_first_float(payload, *RECEIVER_SURFACE_INFLATED_POSE_OUTPUT_DELTA_KEYS),
         )
 
 
@@ -281,9 +272,7 @@ def exact_pair_local_score_delta(
 ) -> float:
     """Return finite exact ``S(after)-S(before)`` for contest admission."""
 
-    return after.score(reference_bytes=reference_bytes) - before.score(
-        reference_bytes=reference_bytes
-    )
+    return after.score(reference_bytes=reference_bytes) - before.score(reference_bytes=reference_bytes)
 
 
 def admit_pair_local_distortion_action(
@@ -305,9 +294,7 @@ def admit_pair_local_distortion_action(
         raise ValueError("min_score_improvement must be non-negative")
     if min_margin_delta < 0.0 or min_pose_output_delta < 0.0:
         raise ValueError("movement floors must be non-negative")
-    trace_obj = (
-        trace if isinstance(trace, PairLocalSurfaceTrace) else PairLocalSurfaceTrace.from_mapping(trace)
-    )
+    trace_obj = trace if isinstance(trace, PairLocalSurfaceTrace) else PairLocalSurfaceTrace.from_mapping(trace)
     before.validate()
     after.validate()
     score_before = before.score(reference_bytes=reference_bytes)
@@ -316,11 +303,7 @@ def admit_pair_local_distortion_action(
     delta_archive_bytes = after.archive_bytes - before.archive_bytes
     rate_score_delta = delta_archive_bytes * (25.0 / reference_bytes)
     delta_score_nonrate = score_delta - rate_score_delta
-    value_per_added_byte = (
-        (-delta_score_nonrate / float(delta_archive_bytes))
-        if delta_archive_bytes > 0
-        else None
-    )
+    value_per_added_byte = (-delta_score_nonrate / float(delta_archive_bytes)) if delta_archive_bytes > 0 else None
     surfaces = _surface_flags(
         trace_obj,
         min_margin_delta=min_margin_delta,
@@ -356,9 +339,7 @@ def admit_pair_local_distortion_action(
         value_per_added_byte=value_per_added_byte,
         surfaces=surfaces,
         trace=asdict(trace_obj),
-        evaluator_formula=(
-            "100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"
-        ),
+        evaluator_formula=("100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37545489"),
     )
 
 
@@ -369,10 +350,7 @@ def select_worst_scorer_debt_target(
 
     if not debts:
         raise ValueError("at least one scorer debt target is required")
-    parsed = [
-        item if isinstance(item, ScorerDebtTarget) else _debt_from_mapping(item)
-        for item in debts
-    ]
+    parsed = [item if isinstance(item, ScorerDebtTarget) else _debt_from_mapping(item) for item in debts]
     for item in parsed:
         if item.score_units < 0.0 or not math.isfinite(item.score_units):
             raise ValueError("score debt targets must have finite non-negative score_units")
@@ -432,8 +410,7 @@ def pair_local_servo_static_contract() -> dict[str, Any]:
             },
         },
         "exact_admission_rule": (
-            "S_after - S_before < -min_score_improvement, where "
-            "S=100*d_seg+sqrt(10*d_pose)+25*archive_bytes/37545489"
+            "S_after - S_before < -min_score_improvement, where S=100*d_seg+sqrt(10*d_pose)+25*archive_bytes/37545489"
         ),
         "survival_gates": [
             "uint8_motion",
@@ -538,15 +515,10 @@ def build_pr95_grade_pair_local_servo_report(
         ),
         _stage_row(
             "receiver_surface_projection",
-            bool(
-                admission.surfaces.get("uint8_motion")
-                and admission.surfaces.get("scorer_preprocess_motion")
-            ),
+            bool(admission.surfaces.get("uint8_motion") and admission.surfaces.get("scorer_preprocess_motion")),
             {
                 "uint8_motion": admission.surfaces.get("uint8_motion"),
-                "scorer_preprocess_motion": admission.surfaces.get(
-                    "scorer_preprocess_motion"
-                ),
+                "scorer_preprocess_motion": admission.surfaces.get("scorer_preprocess_motion"),
                 "float_rgb_delta_linf": trace.float_rgb_delta_linf,
                 "uint8_changed_pixels": trace.uint8_changed_pixels,
                 "segnet_input_delta_linf": trace.segnet_input_delta_linf,
@@ -559,7 +531,11 @@ def build_pr95_grade_pair_local_servo_report(
             bool(admission.surfaces.get("live_scorer_motion")),
             {
                 "seg_movement": admission.surfaces.get("seg_movement"),
+                "target_support_birth": admission.surfaces.get("target_support_birth"),
                 "pose_movement": admission.surfaces.get("pose_movement"),
+                "target_hard_won_count": trace.target_hard_won_count,
+                "net_target_support_delta": trace.net_target_support_delta,
+                "argmax_changed_count_region": trace.argmax_changed_count_region,
                 "segnet_argmax_flipped_pixels": trace.segnet_argmax_flipped_pixels,
                 "segnet_margin_delta": trace.segnet_margin_delta,
                 "pose_output_delta_l2": trace.pose_output_delta_l2,
@@ -571,6 +547,8 @@ def build_pr95_grade_pair_local_servo_report(
             bool(admission.surfaces.get("fakequant_survival")),
             {
                 "fakequant_segnet_margin_delta": trace.fakequant_segnet_margin_delta,
+                "fakequant_target_hard_won_count": (trace.fakequant_target_hard_won_count),
+                "fakequant_net_target_support_delta": (trace.fakequant_net_target_support_delta),
                 "fakequant_argmax_flipped_pixels": trace.fakequant_argmax_flipped_pixels,
                 "fakequant_pose_output_delta_l2": trace.fakequant_pose_output_delta_l2,
             },
@@ -583,6 +561,8 @@ def build_pr95_grade_pair_local_servo_report(
                 "authority": receipt.get("authority"),
                 "parseback_survival": admission.surfaces.get("parseback_survival"),
                 "parseback_segnet_margin_delta": trace.parseback_segnet_margin_delta,
+                "parseback_target_hard_won_count": (trace.parseback_target_hard_won_count),
+                "parseback_net_target_support_delta": (trace.parseback_net_target_support_delta),
                 "parseback_argmax_flipped_pixels": trace.parseback_argmax_flipped_pixels,
                 "parseback_pose_output_delta_l2": trace.parseback_pose_output_delta_l2,
             },
@@ -621,15 +601,24 @@ def build_pr95_grade_pair_local_servo_report(
             "pair_local_servo_exact_nonlinear_score_not_improved",
         ),
     ]
-    blockers = [
+    base_blockers = [
         *admission.blockers,
-        *[
-            str(row["blocker"])
-            for row in stage_rows
-            if row["green"] is not True and row.get("blocker")
-        ],
+        *[str(row["blocker"]) for row in stage_rows if row["green"] is not True and row.get("blocker")],
     ]
     receiver_surface = _action_effect_receiver_surface(trace, admission)
+    value_per_byte = _measured_value_per_byte(receipt, before=before, after=after)
+    parseback_servo_lift = _parseback_servo_lift_from_pair_local(
+        receipt=receipt,
+        family=family_key,
+        before=before,
+        after=after,
+        receiver_surface=receiver_surface,
+        value_per_byte=value_per_byte,
+    )
+    blockers = [
+        *base_blockers,
+        *[str(blocker) for blocker in parseback_servo_lift.get("blockers") or ()],
+    ]
     report = {
         "schema": PAIR_LOCAL_DISTORTION_SERVO_REPORT_SCHEMA,
         "receipt_schema": receipt.get("schema"),
@@ -644,31 +633,14 @@ def build_pr95_grade_pair_local_servo_report(
         "score_after": admission.score_after,
         "exact_score_delta": admission.exact_score_delta,
         "delta_score_nonrate": (
-            100.0 * admission.delta_d_seg
-            + (
-                math.sqrt(10.0 * after.d_pose)
-                - math.sqrt(10.0 * before.d_pose)
-            )
+            100.0 * admission.delta_d_seg + (math.sqrt(10.0 * after.d_pose) - math.sqrt(10.0 * before.d_pose))
         ),
         "rate_score_delta": admission.rate_score_delta,
-        "value_per_byte": _measured_value_per_byte(receipt, before=before, after=after),
+        "value_per_byte": value_per_byte,
         "byte_price": 25.0 / reference_bytes,
         "surfaces": dict(admission.surfaces),
-        "action_effect": action_effect_from_pair_local_servo(
-            receipt=receipt,
-            report={
-                "family": family_key,
-                "pair_ids": list(_pair_ids(receipt)),
-                "authority": receipt.get("authority"),
-                "value_per_byte": _measured_value_per_byte(
-                    receipt,
-                    before=before,
-                    after=after,
-                ),
-                "surfaces": dict(admission.surfaces),
-            },
-            receiver_surface=receiver_surface,
-        ),
+        "parseback_servo_lift": parseback_servo_lift,
+        "action_effect": parseback_servo_lift.get("action_effect"),
         "static_contract": pair_local_servo_static_contract(),
         "policy": {
             "human_visual_fidelity_is_not_authority": True,
@@ -693,12 +665,11 @@ def _action_effect_receiver_surface(
         "frame_scope": trace.frame_scope,
         "actuator_id": trace.actuator_id,
         "uint8_motion": bool(admission.surfaces.get("uint8_motion")),
-        "scorer_preprocess_motion": bool(
-            admission.surfaces.get("scorer_preprocess_motion")
-        ),
+        "scorer_preprocess_motion": bool(admission.surfaces.get("scorer_preprocess_motion")),
         "live_scorer_motion": bool(admission.surfaces.get("live_scorer_motion")),
         "fakequant_survival": bool(admission.surfaces.get("fakequant_survival")),
         "parseback_survival": bool(admission.surfaces.get("parseback_survival")),
+        "inflate_survival": bool(admission.surfaces.get("inflate_survival")),
         **_present_surface_numbers(
             {
                 "float_rgb_delta_linf": trace.float_rgb_delta_linf,
@@ -707,20 +678,115 @@ def _action_effect_receiver_surface(
                 "segnet_input_delta_linf": trace.segnet_input_delta_linf,
                 "posenet_input_delta_linf": trace.posenet_input_delta_linf,
                 "segnet_margin_delta": trace.segnet_margin_delta,
+                "target_hard_won_count": trace.target_hard_won_count,
+                "target_hard_lost_count": trace.target_hard_lost_count,
+                "net_target_support_delta": trace.net_target_support_delta,
+                "wrong_to_target_count": trace.wrong_to_target_count,
+                "target_to_wrong_count": trace.target_to_wrong_count,
+                "wrong_to_wrong_count": trace.wrong_to_wrong_count,
+                "argmax_changed_count_region": trace.argmax_changed_count_region,
                 "argmax_flipped_pixels": trace.segnet_argmax_flipped_pixels,
                 "pose_output_delta_l2": trace.pose_output_delta_l2,
-                "fakequant_argmax_flipped_pixels": (
-                    trace.fakequant_argmax_flipped_pixels
-                ),
-                "parseback_argmax_flipped_pixels": (
-                    trace.parseback_argmax_flipped_pixels
-                ),
-                "inflated_argmax_flipped_pixels": (
-                    trace.inflated_argmax_flipped_pixels
-                ),
+                "fakequant_target_hard_won_count": (trace.fakequant_target_hard_won_count),
+                "fakequant_net_target_support_delta": (trace.fakequant_net_target_support_delta),
+                "fakequant_argmax_flipped_pixels": (trace.fakequant_argmax_flipped_pixels),
+                "parseback_target_hard_won_count": (trace.parseback_target_hard_won_count),
+                "parseback_net_target_support_delta": (trace.parseback_net_target_support_delta),
+                "parseback_argmax_flipped_pixels": (trace.parseback_argmax_flipped_pixels),
+                "inflated_target_hard_won_count": (trace.inflated_target_hard_won_count),
+                "inflated_net_target_support_delta": (trace.inflated_net_target_support_delta),
+                "inflated_argmax_flipped_pixels": (trace.inflated_argmax_flipped_pixels),
             }
         ),
     }
+
+
+def _parseback_servo_lift_from_pair_local(
+    *,
+    receipt: Mapping[str, Any],
+    family: str,
+    before: PairLocalScoreState,
+    after: PairLocalScoreState,
+    receiver_surface: Mapping[str, Any],
+    value_per_byte: float | None,
+) -> dict[str, Any]:
+    return servo_lift(
+        {
+            "action_id": (
+                receipt.get("action_id")
+                or _text_from_mapping(
+                    _first_mapping(receipt, "action_algebra_trace", "transform_action"),
+                    "selected_action_id",
+                    "action_id",
+                )
+                or receipt.get("actuator_id")
+                or receipt.get("actuator_kind")
+                or "pair_local_servo_action"
+            ),
+            "family": family,
+            "stage": receipt.get("stage") or "pair_local_servo",
+            "authority": receipt.get("authority"),
+            "producer": "nerv_pair_local_distortion_servo",
+            "consumer": "nerv_long_training_campaign_admission",
+            "affected_pairs": list(_pair_ids(receipt)),
+            "affected_regions": _receipt_affected_regions(receipt),
+            "payload_sections": _receipt_payload_sections(receipt),
+            "archive_sha256": receipt.get("archive_sha256"),
+            "candidate_archive_sha256": receipt.get("candidate_archive_sha256"),
+            "source_archive_sha256": receipt.get("source_archive_sha256"),
+            "payload_sha256": receipt.get("payload_sha256"),
+            "runtime_tree_sha256": receipt.get("runtime_tree_sha256"),
+            "section_tree_sha256": receipt.get("section_tree_sha256"),
+            "trace_new": {
+                "d_seg": after.d_seg,
+                "d_pose": after.d_pose,
+                "archive_bytes": after.archive_bytes,
+            },
+            "receiver_surface": dict(receiver_surface),
+            "value_per_byte": value_per_byte,
+        },
+        {
+            "d_seg": before.d_seg,
+            "d_pose": before.d_pose,
+            "archive_bytes": before.archive_bytes,
+        },
+        family=family,
+        stage=str(receipt.get("stage") or "pair_local_servo"),
+        require_inflate_survival=_receipt_requires_inflate_survival(receipt),
+    )
+
+
+def _receipt_affected_regions(receipt: Mapping[str, Any]) -> tuple[str, ...]:
+    explicit = _string_sequence(receipt.get("affected_regions"))
+    if explicit:
+        return explicit
+    target = _first_mapping(
+        receipt,
+        "worst_scorer_debt",
+        "worst_region_debt",
+        "scorer_debt_target",
+        "debt_target",
+    )
+    target_id = str(
+        target.get("target_id") or target.get("worst_region_id") or target.get("worst_pair_id") or ""
+    ).strip()
+    return (target_id,) if target_id else ()
+
+
+def _receipt_payload_sections(receipt: Mapping[str, Any]) -> tuple[str, ...]:
+    explicit = _string_sequence(receipt.get("payload_sections"))
+    if explicit:
+        return explicit
+    return _string_sequence(receipt.get("trained_param_groups")) or _string_sequence(
+        _first_mapping(receipt, "actuation", "actuator", "pair_local_actuator").get("trained_param_groups")
+    )
+
+
+def _receipt_requires_inflate_survival(receipt: Mapping[str, Any]) -> bool:
+    authority = str(receipt.get("authority") or "")
+    return bool(
+        receipt.get("require_inflate_survival") is True or authority in {"inflate_torch_cpu", "inflate_torch_cuda"}
+    )
 
 
 def _present_surface_numbers(
@@ -847,9 +913,7 @@ def _normalize_family(value: Any) -> str:
 def _pair_ids(payload: Mapping[str, Any]) -> tuple[int, ...]:
     value = payload.get("pair_ids")
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-        out = tuple(
-            parsed for item in value if (parsed := _int_or_none(item)) is not None
-        )
+        out = tuple(parsed for item in value if (parsed := _int_or_none(item)) is not None)
         if out:
             return out
     one = _int_or_none(payload.get("pair_id"))
@@ -880,12 +944,7 @@ def _worst_debt_target_ok(payload: Mapping[str, Any]) -> bool:
         "new_worst_region_unsolved_fraction",
         "new_worst_pair_pose_mse",
     )
-    target_id = str(
-        target.get("target_id")
-        or target.get("worst_region_id")
-        or target.get("worst_pair_id")
-        or ""
-    )
+    target_id = str(target.get("target_id") or target.get("worst_region_id") or target.get("worst_pair_id") or "")
     return before is not None and after is not None and after < before and bool(target_id)
 
 
@@ -898,9 +957,7 @@ def _worst_debt_evidence(payload: Mapping[str, Any]) -> dict[str, Any]:
         "debt_target",
     )
     return {
-        "target_id": target.get("target_id")
-        or target.get("worst_region_id")
-        or target.get("worst_pair_id"),
+        "target_id": target.get("target_id") or target.get("worst_region_id") or target.get("worst_pair_id"),
         "score_debt_before": _first_float(
             target,
             "score_debt_before",
@@ -929,19 +986,19 @@ def _frame_incidence_ok(
         or trace.frame_scope == "frame0_pose_only"
         or trace.frame_scope == "both_frames_joint"
     )
-    frame0_seg_zero = (
-        incidence.get("frame0_segnet_incidence") in {False, "pose_only", None}
-        or trace.frame_scope in {"frame0_pose_only", "both_frames_joint"}
-    )
+    frame0_seg_zero = incidence.get("frame0_segnet_incidence") in {False, "pose_only", None} or trace.frame_scope in {
+        "frame0_pose_only",
+        "both_frames_joint",
+    }
     frame1_seg = (
         incidence.get("frame1_segnet_incidence") is True
         or trace.frame_scope == "frame1_seg_pose_joint"
         or trace.frame_scope == "both_frames_joint"
     )
-    frame1_pose = (
-        incidence.get("frame1_posenet_incidence") is True
-        or trace.frame_scope in {"frame1_seg_pose_joint", "both_frames_joint"}
-    )
+    frame1_pose = incidence.get("frame1_posenet_incidence") is True or trace.frame_scope in {
+        "frame1_seg_pose_joint",
+        "both_frames_joint",
+    }
     split_ok = (
         incidence.get("frame0_frame1_control_split") is True
         or incidence.get("separate_frame_heads") is True
@@ -969,16 +1026,14 @@ def _frame_incidence_evidence(
 def _curriculum_ok(payload: Mapping[str, Any]) -> bool:
     manifest = _first_mapping(payload, "stage_manifest", "curriculum_trace")
     stages = _string_sequence(
-        manifest.get("completed_stage_ids")
-        or manifest.get("stage_ids")
-        or payload.get("completed_stage_ids")
+        manifest.get("completed_stage_ids") or manifest.get("stage_ids") or payload.get("completed_stage_ids")
     )
     stage_index = {stage: idx for idx, stage in enumerate(stages)}
     required_order_ok = all(stage in stage_index for stage in PR95_SERVO_CURRICULUM_STAGES)
     if required_order_ok:
-        required_order_ok = [
+        required_order_ok = [stage_index[stage] for stage in PR95_SERVO_CURRICULUM_STAGES] == sorted(
             stage_index[stage] for stage in PR95_SERVO_CURRICULUM_STAGES
-        ] == sorted(stage_index[stage] for stage in PR95_SERVO_CURRICULUM_STAGES)
+        )
     gates_ok = (
         manifest.get("stage_order_respected") is True
         and manifest.get("byte_pressure_after_birth") is True
@@ -992,9 +1047,7 @@ def _curriculum_evidence(payload: Mapping[str, Any]) -> dict[str, Any]:
     manifest = _first_mapping(payload, "stage_manifest", "curriculum_trace")
     return {
         "completed_stage_ids": _string_sequence(
-            manifest.get("completed_stage_ids")
-            or manifest.get("stage_ids")
-            or payload.get("completed_stage_ids")
+            manifest.get("completed_stage_ids") or manifest.get("stage_ids") or payload.get("completed_stage_ids")
         ),
         "required_stage_ids": list(PR95_SERVO_CURRICULUM_STAGES),
         "stage_order_respected": manifest.get("stage_order_respected"),
@@ -1016,9 +1069,7 @@ def _actuator_ok(payload: Mapping[str, Any], *, family: str) -> bool:
     if not updates:
         updates = _first_mapping(actuator, "update_norm_by_group")
     groups_have_signal = bool(groups) and all(
-        _positive_float_in_mapping(grad, group)
-        and _positive_float_in_mapping(updates, group)
-        for group in groups
+        _positive_float_in_mapping(grad, group) and _positive_float_in_mapping(updates, group) for group in groups
     )
     pair_local = (
         actuator.get("pair_local") is True
@@ -1042,10 +1093,7 @@ def _actuator_ok(payload: Mapping[str, Any], *, family: str) -> bool:
             for group in groups
         )
     elif family == "snerv":
-        family_group = any(
-            group.startswith(("mfu", "hfr", "tub", "output_2", "lf_hf", "lf", "hf"))
-            for group in groups
-        )
+        family_group = any(group.startswith(("mfu", "hfr", "tub", "output_2", "lf_hf", "lf", "hf")) for group in groups)
         family_group = family_group and (
             actuator.get("source_forward_replay_bound") is True
             or actuator.get("source_forward_replay_verified") is True
@@ -1074,8 +1122,7 @@ def _actuator_evidence(payload: Mapping[str, Any], *, family: str) -> dict[str, 
             or _first_mapping(actuator, "grad_norm_by_group", "gradient_norm_by_group")
         ),
         "update_norm_by_group": dict(
-            _first_mapping(payload, "update_norm_by_group")
-            or _first_mapping(actuator, "update_norm_by_group")
+            _first_mapping(payload, "update_norm_by_group") or _first_mapping(actuator, "update_norm_by_group")
         ),
     }
 
@@ -1085,10 +1132,7 @@ def _parseback_authority_ok(
     admission: PairLocalServoAdmission,
 ) -> bool:
     authority = str(payload.get("authority") or "").strip()
-    return bool(
-        authority in PR95_SERVO_PROMOTABLE_AUTHORITIES
-        and admission.surfaces.get("parseback_survival") is True
-    )
+    return bool(authority in PR95_SERVO_PROMOTABLE_AUTHORITIES and admission.surfaces.get("parseback_survival") is True)
 
 
 def _action_algebra_ok(payload: Mapping[str, Any]) -> bool:
@@ -1132,12 +1176,8 @@ def _action_algebra_evidence(payload: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "action_payload_bits": _finite_float_from_mapping(action, "action_payload_bits"),
         "selector_bits": _finite_float_from_mapping(action, "selector_bits"),
-        "noncommutative_interactions_checked": action.get(
-            "noncommutative_interactions_checked"
-        ),
-        "composite_mode_interaction_checked": action.get(
-            "composite_mode_interaction_checked"
-        ),
+        "noncommutative_interactions_checked": action.get("noncommutative_interactions_checked"),
+        "composite_mode_interaction_checked": action.get("composite_mode_interaction_checked"),
     }
 
 
@@ -1189,21 +1229,16 @@ def _measured_value_per_byte(
     delta_bytes = after.archive_bytes - before.archive_bytes
     if delta_bytes <= 0:
         return None
-    return None
+    nonrate_delta = 100.0 * (after.d_seg - before.d_seg) + (
+        math.sqrt(10.0 * after.d_pose) - math.sqrt(10.0 * before.d_pose)
+    )
+    return -nonrate_delta / float(delta_bytes)
 
 
 def _hardware_margin_ok(payload: Mapping[str, Any]) -> bool:
     margin = _first_mapping(payload, "hardware_margin_trace", "hardware_margin")
-    authority = str(
-        margin.get("target_authority")
-        or payload.get("target_authority")
-        or payload.get("authority")
-        or ""
-    )
-    checked = (
-        margin.get("cpu_cuda_margin_checked") is True
-        or margin.get("target_authority_margin_checked") is True
-    )
+    authority = str(margin.get("target_authority") or payload.get("target_authority") or payload.get("authority") or "")
+    checked = margin.get("cpu_cuda_margin_checked") is True or margin.get("target_authority_margin_checked") is True
     drift = str(margin.get("hardware_drift_risk") or "bounded")
     seg_margin = _non_negative_float_from_mapping(
         margin,
@@ -1215,10 +1250,13 @@ def _hardware_margin_ok(payload: Mapping[str, Any]) -> bool:
         "pose_margin_radius",
         "pose_error_slack",
     )
-    return bool(
-        authority in PR95_SERVO_AUTHORITY_ORDER
-        or authority in {"cpu", "cuda_t4", "dual_cpu_cuda"}
-    ) and checked and drift != "unbounded" and seg_margin is not None and pose_slack is not None
+    return (
+        bool(authority in PR95_SERVO_AUTHORITY_ORDER or authority in {"cpu", "cuda_t4", "dual_cpu_cuda"})
+        and checked
+        and drift != "unbounded"
+        and seg_margin is not None
+        and pose_slack is not None
+    )
 
 
 def _hardware_margin_evidence(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -1228,9 +1266,7 @@ def _hardware_margin_evidence(payload: Mapping[str, Any]) -> dict[str, Any]:
         or payload.get("target_authority")
         or payload.get("authority"),
         "cpu_cuda_margin_checked": margin.get("cpu_cuda_margin_checked"),
-        "target_authority_margin_checked": margin.get(
-            "target_authority_margin_checked"
-        ),
+        "target_authority_margin_checked": margin.get("target_authority_margin_checked"),
         "hardware_drift_risk": margin.get("hardware_drift_risk"),
         "segnet_margin_min": _finite_float_from_mapping(margin, "segnet_margin_min"),
         "segnet_margin_safety": _finite_float_from_mapping(
@@ -1248,33 +1284,48 @@ def _surface_flags(
     min_margin_delta: float,
     min_pose_output_delta: float,
 ) -> dict[str, bool]:
-    uint8_motion = _positive_int(trace.uint8_changed_pixels) or _positive(
-        trace.uint8_delta_abs_max
-    )
+    uint8_motion = _positive_int(trace.uint8_changed_pixels) or _positive(trace.uint8_delta_abs_max)
     seg_preprocess = _positive(trace.segnet_input_delta_linf)
     pose_preprocess = _positive(trace.posenet_input_delta_linf)
-    seg_live = _positive_int(trace.segnet_argmax_flipped_pixels) or _above_abs(
-        trace.segnet_margin_delta,
-        min_margin_delta,
+    target_live = (
+        _positive_int(trace.target_hard_won_count)
+        or _positive(trace.net_target_support_delta)
+        or _positive_int(trace.wrong_to_target_count)
+    )
+    seg_live = (
+        target_live
+        or _positive_int(trace.segnet_argmax_flipped_pixels)
+        or _above_abs(trace.segnet_margin_delta, min_margin_delta)
     )
     pose_live = _above_abs(trace.pose_output_delta_l2, min_pose_output_delta)
-    fakequant_seg = _positive_int(trace.fakequant_argmax_flipped_pixels) or _above_abs(
-        trace.fakequant_segnet_margin_delta,
-        min_margin_delta,
+    fakequant_target = _positive_int(trace.fakequant_target_hard_won_count) or _positive(
+        trace.fakequant_net_target_support_delta
+    )
+    fakequant_seg = (
+        fakequant_target
+        or _positive_int(trace.fakequant_argmax_flipped_pixels)
+        or _above_abs(trace.fakequant_segnet_margin_delta, min_margin_delta)
     )
     fakequant_pose = _above_abs(
         trace.fakequant_pose_output_delta_l2,
         min_pose_output_delta,
     )
-    parseback_seg = _positive_int(trace.parseback_argmax_flipped_pixels) or _above_abs(
-        trace.parseback_segnet_margin_delta,
-        min_margin_delta,
+    parseback_target = _positive_int(trace.parseback_target_hard_won_count) or _positive(
+        trace.parseback_net_target_support_delta
+    )
+    parseback_seg = (
+        parseback_target
+        or _positive_int(trace.parseback_argmax_flipped_pixels)
+        or _above_abs(trace.parseback_segnet_margin_delta, min_margin_delta)
     )
     parseback_pose = _above_abs(
         trace.parseback_pose_output_delta_l2,
         min_pose_output_delta,
     )
-    inflated_seg = _positive_int(trace.inflated_argmax_flipped_pixels)
+    inflated_target = _positive_int(trace.inflated_target_hard_won_count) or _positive(
+        trace.inflated_net_target_support_delta
+    )
+    inflated_seg = inflated_target or _positive_int(trace.inflated_argmax_flipped_pixels)
     inflated_pose = _above_abs(trace.inflated_pose_output_delta_l2, min_pose_output_delta)
     if trace.frame_scope == "frame0_pose_only":
         scorer_preprocess = pose_preprocess
@@ -1300,6 +1351,10 @@ def _surface_flags(
         "pose_preprocess_movement": pose_preprocess,
         "scorer_preprocess_motion": scorer_preprocess,
         "seg_movement": seg_live,
+        "target_support_birth": target_live,
+        "fakequant_target_support_survival": fakequant_target,
+        "parseback_target_support_survival": parseback_target,
+        "inflate_target_support_survival": inflated_target,
         "pose_movement": pose_live,
         "live_scorer_motion": live_scorer,
         "fakequant_survival": fakequant_survival,
@@ -1346,6 +1401,14 @@ def _first_mapping(payload: Mapping[str, Any], *keys: str) -> Mapping[str, Any]:
         if isinstance(value, Mapping):
             return value
     return {}
+
+
+def _text_from_mapping(payload: Mapping[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = str(payload.get(key) or "").strip()
+        if value:
+            return value
+    return None
 
 
 def _first_int(payload: Mapping[str, Any], *keys: str) -> int | None:

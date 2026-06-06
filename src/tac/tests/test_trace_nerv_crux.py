@@ -47,6 +47,13 @@ def _receiver_surface_trace(**overrides: float) -> dict[str, float]:
         "receiver_surface_segnet_input_delta_linf": 0.015,
         "receiver_surface_worst_region_margin_p50_delta": 0.0002,
         "receiver_surface_argmax_flipped_pixels": 3.0,
+        "receiver_surface_argmax_changed_count_region": 5.0,
+        "receiver_surface_target_hard_won_count": 2.0,
+        "receiver_surface_target_hard_lost_count": 0.0,
+        "receiver_surface_net_target_support_delta": 2.0,
+        "receiver_surface_wrong_to_target_count": 2.0,
+        "receiver_surface_target_to_wrong_count": 0.0,
+        "receiver_surface_wrong_to_wrong_count": 3.0,
         "receiver_surface_posenet_input_delta_linf": 0.03,
         "receiver_surface_pose_output_delta": -0.05,
         "receiver_surface_fakequant_argmax_flipped_pixels": 3.0,
@@ -79,25 +86,17 @@ def test_trace_nerv_crux_emits_contest_unit_rows_without_score_claim(tmp_path: P
     )
 
     metrics = _by_metric(rows)
-    assert metrics["score_weighted_total_unsolved_argmax_mass"][
-        "score_units"
-    ] == pytest.approx(50.0)
+    assert metrics["score_weighted_total_unsolved_argmax_mass"]["score_units"] == pytest.approx(50.0)
     assert metrics["pose_direct_live_score_term"]["score_units"] == pytest.approx(0.14)
-    assert metrics["pose_direct_live_score_marginal_wrt_raw_mse"][
-        "value"
-    ] == pytest.approx(5.0 / ((10.0 * 0.00196) ** 0.5))
-    assert metrics["archive_rate_score"]["score_units"] == pytest.approx(
-        25.0 * 150_000 / 37_545_489
+    assert metrics["pose_direct_live_score_marginal_wrt_raw_mse"]["value"] == pytest.approx(
+        5.0 / ((10.0 * 0.00196) ** 0.5)
     )
-    assert metrics["receiver_surface_uint8_changed_pixels"]["value"] == pytest.approx(
-        7.0
-    )
-    assert metrics["receiver_surface_parseback_argmax_flipped_pixels"][
-        "value"
-    ] == pytest.approx(3.0)
-    assert {row["authority"] for row in rows} == {
-        "macos_mlx_false_authority_no_score_claim"
-    }
+    assert metrics["archive_rate_score"]["score_units"] == pytest.approx(25.0 * 150_000 / 37_545_489)
+    assert metrics["receiver_surface_uint8_changed_pixels"]["value"] == pytest.approx(7.0)
+    assert metrics["receiver_surface_parseback_argmax_flipped_pixels"]["value"] == pytest.approx(3.0)
+    assert metrics["receiver_surface_target_hard_won_count"]["value"] == pytest.approx(2.0)
+    assert metrics["receiver_surface_net_target_support_delta"]["value"] == pytest.approx(2.0)
+    assert {row["authority"] for row in rows} == {"macos_mlx_false_authority_no_score_claim"}
     for row in rows:
         assert "score_claim" not in row
         assert "promotion_eligible" not in row
@@ -281,6 +280,28 @@ def test_trace_nerv_crux_blocks_argmax_motion_without_fakequant_survival(
     assert "receiver_surface_fakequant_survival_missing" in blockers
 
 
+def test_trace_nerv_crux_blocks_argmax_churn_without_target_support_breakdown(
+    tmp_path: Path,
+) -> None:
+    trace = _receiver_surface_trace()
+    trace.pop("receiver_surface_target_hard_won_count")
+    trace.pop("receiver_surface_net_target_support_delta")
+    rows = _run_trace(
+        tmp_path,
+        {
+            "final_loss_components": {
+                "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 12.5,
+                "loss_part_pose_direct_live_raw_mse": 0.004,
+                "train_time_archive_bytes": 1_000,
+            },
+            "receiver_surface_trace": trace,
+        },
+    )
+
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "receiver_surface_argmax_motion_without_target_support_breakdown" in blockers
+
+
 def test_trace_nerv_crux_blocks_fakequant_motion_without_parseback_survival(
     tmp_path: Path,
 ) -> None:
@@ -347,6 +368,7 @@ def test_trace_nerv_crux_ignores_legacy_receiver_surface_aliases(
     blockers = {row.get("blocker") for row in rows if row.get("blocker")}
     assert metrics["receiver_surface_trace_present"]["value"] == pytest.approx(0.0)
     assert metrics["receiver_surface_uint8_changed_pixels"]["value"] is None
+    assert metrics["receiver_surface_argmax_flipped_pixels"]["value"] is None
     assert "missing_receiver_surface_trace" in blockers
 
 
@@ -374,19 +396,13 @@ def test_trace_nerv_crux_reads_nested_readiness_metrics_and_derives_pose_terms(
     )
 
     metrics = _by_metric(rows)
-    assert metrics["score_weighted_total_unsolved_argmax_mass"][
-        "score_units"
-    ] == pytest.approx(12.5)
+    assert metrics["score_weighted_total_unsolved_argmax_mass"]["score_units"] == pytest.approx(12.5)
     assert metrics["candidate_target_class_min_ratio"]["value"] == pytest.approx(0.4)
-    assert metrics["pose_direct_live_score_term"]["score_units"] == pytest.approx(
-        (10.0 * 0.004 + 1.0e-12) ** 0.5
+    assert metrics["pose_direct_live_score_term"]["score_units"] == pytest.approx((10.0 * 0.004 + 1.0e-12) ** 0.5)
+    assert metrics["pose_direct_live_score_marginal_wrt_raw_mse"]["value"] == pytest.approx(
+        5.0 / ((10.0 * 0.004 + 1.0e-12) ** 0.5)
     )
-    assert metrics["pose_direct_live_score_marginal_wrt_raw_mse"][
-        "value"
-    ] == pytest.approx(5.0 / ((10.0 * 0.004 + 1.0e-12) ** 0.5))
-    assert metrics["archive_rate_score"]["score_units"] == pytest.approx(
-        25.0 * 1_024 / 37_545_489
-    )
+    assert metrics["archive_rate_score"]["score_units"] == pytest.approx(25.0 * 1_024 / 37_545_489)
     assert not [row.get("blocker") for row in rows if row.get("blocker")]
 
 
@@ -422,22 +438,14 @@ def test_trace_nerv_crux_reads_runner_per_epoch_metrics_and_top_level_rate(
     )
 
     metrics = _by_metric(rows)
-    assert metrics["score_weighted_total_unsolved_argmax_mass"][
-        "score_units"
-    ] == pytest.approx(57.648216247558594)
-    assert metrics["argmax_disagreement"]["value"] == pytest.approx(
-        0.5764821767807007
+    assert metrics["score_weighted_total_unsolved_argmax_mass"]["score_units"] == pytest.approx(57.648216247558594)
+    assert metrics["argmax_disagreement"]["value"] == pytest.approx(0.5764821767807007)
+    assert metrics["pose_direct_live_score_term"]["score_units"] == pytest.approx((10.0 * 180.729 + 1.0e-12) ** 0.5)
+    assert metrics["pose_direct_live_score_marginal_wrt_raw_mse"]["value"] == pytest.approx(
+        5.0 / ((10.0 * 180.729 + 1.0e-12) ** 0.5)
     )
-    assert metrics["pose_direct_live_score_term"]["score_units"] == pytest.approx(
-        (10.0 * 180.729 + 1.0e-12) ** 0.5
-    )
-    assert metrics["pose_direct_live_score_marginal_wrt_raw_mse"][
-        "value"
-    ] == pytest.approx(5.0 / ((10.0 * 180.729 + 1.0e-12) ** 0.5))
     assert metrics["archive_bytes"]["value"] == pytest.approx(216_000.0)
-    assert metrics["archive_rate_score"]["score_units"] == pytest.approx(
-        25.0 * 216_000 / 37_545_489
-    )
+    assert metrics["archive_rate_score"]["score_units"] == pytest.approx(25.0 * 216_000 / 37_545_489)
     assert not [row.get("blocker") for row in rows if row.get("blocker")]
 
 
@@ -477,8 +485,6 @@ def test_trace_nerv_crux_uses_telemetry_jsonl_fallback(tmp_path: Path) -> None:
     )
 
     metrics = _by_metric(rows)
-    assert metrics["score_weighted_total_unsolved_argmax_mass"][
-        "score_units"
-    ] == pytest.approx(12.5)
+    assert metrics["score_weighted_total_unsolved_argmax_mass"]["score_units"] == pytest.approx(12.5)
     assert metrics["pose_direct_live_raw_mse"]["value"] == pytest.approx(0.0025)
     assert not [row.get("blocker") for row in rows if row.get("blocker")]

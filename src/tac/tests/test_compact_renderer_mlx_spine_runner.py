@@ -73,12 +73,14 @@ except ImportError:
 def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() -> None:
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     helper = source[
-        source.index("def _write_hi_nerv_runner_short_scorer_smoke_readiness(") :
-        source.index("def _attach_hi_nerv_short_scorer_smoke_readiness(")
+        source.index("def _write_hi_nerv_runner_short_scorer_smoke_readiness(") : source.index(
+            "def _attach_hi_nerv_short_scorer_smoke_readiness("
+        )
     ]
     call = source[
-        source.index("short_scorer_smoke_readiness = (") :
-        source.index("short_scorer_smoke_readiness_summary = (")
+        source.index("short_scorer_smoke_readiness = _write_hi_nerv_runner_short_scorer_smoke_readiness(") : source.index(
+            "short_scorer_smoke_readiness_summary ="
+        )
     ]
 
     assert "require_section_byte_dual_ascent" in helper
@@ -100,86 +102,59 @@ def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() 
 def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None:
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     body = source[
-        source.index("def execute_hi_nerv_mlx_scoreaware_and_adapt(") :
-        source.index("def _compact_score_aware_training_telemetry_contract(")
+        source.index("def execute_hi_nerv_mlx_scoreaware_and_adapt(") : source.index(
+            "def _compact_score_aware_training_telemetry_contract("
+        )
     ]
     main_hi_branch = source[
-        source.index('elif args.execute_family == "hi_nerv":') :
-        source.index("elif args.execute_family in PLANNER_GATED_FAMILIES:")
+        source.index('elif args.execute_family == "hi_nerv":') : source.index(
+            "elif args.execute_family in PLANNER_GATED_FAMILIES:"
+        )
     ]
     execute_to_smoke_call = body[
-        body.index("artifact = _run_hi_nerv_mlx_scoreaware_smoke(") :
-        body.index("artifact_dict = artifact.as_dict()")
+        body.index("artifact = _run_hi_nerv_mlx_scoreaware_smoke(") : body.index("artifact_dict = artifact.as_dict()")
     ]
+    compact_body = "".join(body.split())
+    compact_main_hi_branch = "".join(main_hi_branch.split())
+    compact_execute_to_smoke_call = "".join(execute_to_smoke_call.split())
 
-    assert (
-        "segnet_direct_live_target_mass_floor_weight=float(\n"
-        "            segnet_direct_live_target_mass_floor_weight\n"
-        "        ),"
-    ) in body
-    assert (
-        "segnet_direct_live_target_min_ratio_floor_weight=float(\n"
-        "            segnet_direct_live_target_min_ratio_floor_weight\n"
-        "        ),"
-    ) in body
-    assert (
-        "segnet_direct_live_target_mass_floor_weight=float(\n"
-        "            segnet_direct_live_target_mass_floor_weight\n"
-        "        ),\n"
-        "        segnet_direct_live_target_min_ratio_floor_weight=float("
-    ) in body
-    assert (
-        "segnet_direct_live_target_mass_floor_weight=(\n"
-        "                args.segnet_direct_live_target_mass_floor_weight\n"
-        "            ),"
-    ) in main_hi_branch
-    assert (
-        "segnet_direct_live_target_min_ratio_floor_weight=(\n"
-        "                args.segnet_direct_live_target_min_ratio_floor_weight\n"
-        "            ),"
-    ) in main_hi_branch
-    assert (
-        "posenet_yuv6_geometry_tether_stage_weight=(\n"
-        "                args.posenet_yuv6_geometry_tether_stage_weight\n"
-        "            ),"
-    ) in main_hi_branch
-    assert (
-        "segnet_direct_live_target_mass_floor_weight=float(\n"
-        "                segnet_direct_live_target_mass_floor_weight\n"
-        "            ),"
-    ) in execute_to_smoke_call
-    assert (
-        "segnet_direct_live_target_min_ratio_floor_weight=float(\n"
-        "                segnet_direct_live_target_min_ratio_floor_weight\n"
-        "            ),"
-    ) in execute_to_smoke_call
+    assert "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight)," in compact_body
+    assert "segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight)," in compact_body
+    assert "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),segnet_direct_live_target_min_ratio_floor_weight=float(" in compact_body
+    assert "segnet_direct_live_target_mass_floor_weight=(args.segnet_direct_live_target_mass_floor_weight)," in compact_main_hi_branch
+    assert "segnet_direct_live_target_min_ratio_floor_weight=(args.segnet_direct_live_target_min_ratio_floor_weight)," in compact_main_hi_branch
+    assert "posenet_yuv6_geometry_tether_stage_weight=(args.posenet_yuv6_geometry_tether_stage_weight)," in compact_main_hi_branch
+    assert "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight)," in compact_execute_to_smoke_call
+    assert "segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight)," in compact_execute_to_smoke_call
 
 
 def test_hinerv_runner_binds_archive_parseback_selection_to_receiver_gate() -> None:
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     body = source[
-        source.index("def execute_hi_nerv_mlx_scoreaware_and_adapt(") :
-        source.index("def _compact_score_aware_training_telemetry_contract(")
+        source.index("def execute_hi_nerv_mlx_scoreaware_and_adapt(") : source.index(
+            "def _compact_score_aware_training_telemetry_contract("
+        )
     ]
     execute_to_smoke_call = body[
-        body.index("artifact = _run_hi_nerv_mlx_scoreaware_smoke(") :
-        body.index("artifact_dict = artifact.as_dict()")
+        body.index("artifact = _run_hi_nerv_mlx_scoreaware_smoke(") : body.index("artifact_dict = artifact.as_dict()")
     ]
     smoke_body = source[
-        source.index("def _run_hi_nerv_mlx_scoreaware_smoke(") :
-        source.index("def _write_hi_nerv_runner_source_pair_reference_cache(")
+        source.index("def _run_hi_nerv_mlx_scoreaware_smoke(") : source.index(
+            "def _write_hi_nerv_runner_source_pair_reference_cache("
+        )
     ]
+    compact_body = "".join(body.split())
+    compact_execute_to_smoke_call = "".join(execute_to_smoke_call.split())
+    compact_smoke_body = "".join(smoke_body.split())
 
-    assert "archive_selection_quality_scope = (" in body
+    assert "archive_selection_quality_scope=_hi_nerv_effective_receiver_cache_quality_max_pairs(" in compact_body
     assert "post_export_receiver_cache_quality_gate" in execute_to_smoke_call
-    assert "archive_selection_replay_required=bool(" in execute_to_smoke_call
-    assert "archive_selection_quality_scope[\"effective_max_pairs\"]" in (
-        execute_to_smoke_call
-    )
+    assert "archive_selection_replay_required=bool(" in compact_execute_to_smoke_call
+    assert 'archive_selection_quality_scope["effective_max_pairs"]' in compact_execute_to_smoke_call
     assert "build_hi_nerv_archive_replay_components" in smoke_body
-    assert "\"archive_replay_components_fn\"" in smoke_body
-    assert "archive_selection_replay_required=bool(" in smoke_body
-    assert "archive_selection_replay_batch_size=(" in smoke_body
+    assert '"archive_replay_components_fn"' in smoke_body
+    assert "archive_selection_replay_required=bool(" in compact_smoke_body
+    assert "archive_selection_replay_batch_size=(" in compact_smoke_body
 
 
 def test_hinerv_receiver_replay_archive_selection_prefers_archive_backed_score(
@@ -370,24 +345,118 @@ def test_hinerv_receiver_surface_trace_attaches_real_replay_evidence(
     )
 
     payload = json.loads(artifact_path.read_text(encoding="utf-8"))
-    assert payload["receiver_surface_trace"]["receiver_surface_uint8_changed_pixels"] == (
-        17.0
+    assert payload["receiver_surface_trace"]["receiver_surface_uint8_changed_pixels"] == (17.0)
+    assert payload["receiver_surface_trace"]["receiver_surface_fakequant_argmax_flipped_pixels"] == 3.0
+    assert payload["receiver_surface_trace"]["receiver_surface_argmax_flipped_pixels"] == 5.0
+    assert (
+        payload["receiver_surface_trace"]["receiver_surface_parseback_argmax_flipped_pixels"]
+        == trace["receiver_surface_parseback_argmax_flipped_pixels"]
     )
-    assert payload["receiver_surface_trace"][
-        "receiver_surface_fakequant_argmax_flipped_pixels"
-    ] == 3.0
-    assert payload["receiver_surface_trace"][
-        "receiver_surface_argmax_flipped_pixels"
-    ] == 5.0
-    assert payload["receiver_surface_trace"][
-        "receiver_surface_parseback_argmax_flipped_pixels"
-    ] == trace["receiver_surface_parseback_argmax_flipped_pixels"]
-    assert artifact_dict["receiver_surface_trace"]["receiver_surface_loss_delta"] == (
-        -0.2
+    assert artifact_dict["receiver_surface_trace"]["receiver_surface_loss_delta"] == (-0.2)
+    assert artifact_dict["receiver_surface_trace"]["receiver_surface_worst_region_margin_p50_delta"] == 0.125
+
+
+def test_hinerv_receiver_replay_parseback_servo_lift_accepts_replay_surface(
+    tmp_path: Path,
+) -> None:
+    selection = _receiver_replay_selection_manifest(
+        old_summary={
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_avg_segnet_dist": 0.030,
+            "mlx_scorer_response_avg_posenet_dist": 0.040,
+            "segnet_argmax_disagreement_rate": 0.10,
+            "segnet_argmax_sample_pairs": 2,
+            "fakequant_survival": True,
+        },
+        new_summary={
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_avg_segnet_dist": 0.020,
+            "mlx_scorer_response_avg_posenet_dist": 0.030,
+            "segnet_argmax_disagreement_rate": 0.25,
+            "segnet_argmax_sample_pairs": 2,
+            "receiver_surface_uint8_changed_pixels": 128,
+            "fakequant_survival": True,
+        },
     )
-    assert artifact_dict["receiver_surface_trace"][
-        "receiver_surface_worst_region_margin_p50_delta"
-    ] == 0.125
+
+    lift = runner_mod._write_hi_nerv_receiver_replay_parseback_servo_lift(
+        receiver_replay_archive_selection=selection,
+        receiver_surface_trace=None,
+        local_cpu_replay_summary={"evaluation_passed": True},
+        output_dir=tmp_path,
+    )
+
+    assert lift is not None
+    assert Path(lift["artifact_path"]).is_file()
+    servo = lift["parseback_servo_lift"]
+    assert servo["servo_lift_accepted"] is True
+    assert servo["action_effect"]["action_effect_admitted"] is True
+    assert servo["action_effect"]["state_custody"]["source_archive_sha256"] == "a" * 64
+    assert servo["action_effect"]["state_custody"]["archive_sha256"] == "b" * 64
+    assert servo["action_effect"]["delta_score_total"] < 0.0
+    assert lift["score_claim"] is False
+
+
+def test_hinerv_receiver_replay_parseback_servo_lift_blocks_missing_surfaces() -> None:
+    selection = _receiver_replay_selection_manifest(
+        old_summary={
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_avg_segnet_dist": 0.030,
+            "mlx_scorer_response_avg_posenet_dist": 0.040,
+            "segnet_argmax_disagreement_rate": 0.10,
+            "segnet_argmax_sample_pairs": 2,
+        },
+        new_summary={
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_avg_segnet_dist": 0.020,
+            "mlx_scorer_response_avg_posenet_dist": 0.030,
+            "segnet_argmax_disagreement_rate": 0.25,
+            "segnet_argmax_sample_pairs": 2,
+        },
+    )
+
+    lift = runner_mod._hi_nerv_receiver_replay_parseback_servo_lift(
+        receiver_replay_archive_selection=selection,
+        receiver_surface_trace=None,
+        local_cpu_replay_summary=None,
+    )
+
+    assert lift is not None
+    servo = lift["parseback_servo_lift"]
+    assert servo["servo_lift_accepted"] is False
+    assert "action_effect_fakequant_survival_missing" in servo["blockers"]
+    assert "servo_lift_uint8_receiver_contact_missing" in servo["blockers"]
+    assert "servo_lift_inflate_survival_missing" in servo["blockers"]
+
+
+def _receiver_replay_selection_manifest(
+    *,
+    old_summary: dict[str, object],
+    new_summary: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "schema": "hi_nerv_receiver_replay_archive_selection.v1",
+        "manifest_path": "/tmp/receiver_replay_archive_selection.json",
+        "selected_archive_path": "/tmp/live.zip",
+        "rows": [
+            {
+                "candidate_kind": "ema",
+                "archive_path": "/tmp/ema.zip",
+                "archive_sha256": "a" * 64,
+                "archive_bytes": 1000,
+                "selected_by_training_proxy": True,
+                "receiver_replay_summary": old_summary,
+            },
+            {
+                "candidate_kind": "live",
+                "archive_path": "/tmp/live.zip",
+                "archive_sha256": "b" * 64,
+                "archive_bytes": 1001,
+                "selected_by_training_proxy": False,
+                "receiver_replay_summary": new_summary,
+            },
+        ],
+    }
 
 
 def test_hinerv_archive_resolution_dedup_preserves_manifest_candidate_kind(
@@ -435,9 +504,7 @@ def test_hinerv_archive_resolution_dedup_preserves_manifest_candidate_kind(
     )
 
     assert resolution["archive_path"] == ema_archive.as_posix()
-    by_path = {
-        candidate["archive_path"]: candidate for candidate in resolution["candidates"]
-    }
+    by_path = {candidate["archive_path"]: candidate for candidate in resolution["candidates"]}
     assert by_path[ema_archive.as_posix()]["candidate_kind"] == "ema"
     assert by_path[ema_archive.as_posix()]["selected_for_training_artifact"] is True
     assert by_path[live_archive.as_posix()]["candidate_kind"] == "live"
@@ -453,9 +520,7 @@ def _assert_compact_runner_rerun_provenance(
     assert isinstance(provenance, dict)
     assert provenance["schema"] == "compact_runner_invocation_provenance.v1"
     assert payload["original_argv"] == provenance["original_argv"]
-    assert payload["direct_smoke_rerun_argv"] == provenance["same_output_dir_rerun"][
-        "argv"
-    ]
+    assert payload["direct_smoke_rerun_argv"] == provenance["same_output_dir_rerun"]["argv"]
     assert "--execute-family" in provenance["original_arg_tokens"]
     assert family in provenance["original_arg_tokens"]
     rerun_argv = provenance["same_output_dir_rerun"]["argv"]
@@ -485,9 +550,7 @@ def _fake_hinerv_output_head_contrast_init_payload(
     try:
         pair_index_values = [int(value) for value in pair_indices.tolist()]
     except AttributeError:
-        pair_index_values = [
-            int(value) for value in np.asarray(pair_indices).reshape(-1).tolist()
-        ]
+        pair_index_values = [int(value) for value in np.asarray(pair_indices).reshape(-1).tolist()]
     return {
         "schema": "hi_nerv_output_head_target_contrast_init.v1",
         "enabled": True,
@@ -519,9 +582,7 @@ def _fake_hinerv_scorer_domain_bootstrap_payload(
     try:
         pair_index_values = [int(value) for value in pair_indices.tolist()]
     except AttributeError:
-        pair_index_values = [
-            int(value) for value in np.asarray(pair_indices).reshape(-1).tolist()
-        ]
+        pair_index_values = [int(value) for value in np.asarray(pair_indices).reshape(-1).tolist()]
     return {
         "schema": "hi_nerv_scorer_domain_bootstrap.v1",
         "enabled": True,
@@ -535,9 +596,7 @@ def _fake_hinerv_scorer_domain_bootstrap_payload(
         "rgb_std_min_ratio": float(rgb_std_min_ratio),
         "yuv6_temporal_std_min_ratio": float(yuv6_temporal_std_min_ratio),
         "weight_decay": float(weight_decay),
-        "grad_clip_max_norm": (
-            None if grad_clip_max_norm is None else float(grad_clip_max_norm)
-        ),
+        "grad_clip_max_norm": (None if grad_clip_max_norm is None else float(grad_clip_max_norm)),
         "source_pair_indices": pair_index_values,
         "accepted_step_count": int(steps),
         "rejected_step_count": 0,
@@ -630,12 +689,8 @@ def test_hi_nerv_frontier_gate_counts_target_support_floor_as_escape_control() -
     assert gate["launch_allowed"] is True
     assert gate["real_segnet_teacher_attached"] is True
     assert gate["direct_live_escape_controls_attached"] is True
-    assert gate["direct_live_escape_controls"]["target_mass_floor"] == pytest.approx(
-        0.25
-    )
-    assert gate["direct_live_escape_controls"]["target_min_ratio_floor"] == pytest.approx(
-        0.125
-    )
+    assert gate["direct_live_escape_controls"]["target_mass_floor"] == pytest.approx(0.25)
+    assert gate["direct_live_escape_controls"]["target_min_ratio_floor"] == pytest.approx(0.125)
     assert "hi_nerv_direct_live_escape_controls_missing" not in gate["blockers"]
 
 
@@ -688,9 +743,7 @@ def _stub_snerv_scorer_tether_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         runner_mod,
         "run_snerv_scorer_tether_smoke",
-        lambda *, steps=2: _passing_snerv_scorer_tether_smoke_report(
-            steps=int(steps)
-        ),
+        lambda *, steps=2: _passing_snerv_scorer_tether_smoke_report(steps=int(steps)),
     )
 
 
@@ -781,9 +834,7 @@ def test_hinerv_live_section_byte_metrics_callback_refreshes_current_hiv1_packet
 
         def export_state_dict(self) -> dict[str, np.ndarray]:
             self.export_calls += 1
-            return {
-                "decoder.weight": np.asarray([self.export_calls], dtype=np.float32)
-            }
+            return {"decoder.weight": np.asarray([self.export_calls], dtype=np.float32)}
 
     def fake_pack_archive_from_exported_state_dict(**kwargs):
         pack_calls.append(dict(kwargs))
@@ -819,20 +870,18 @@ def test_hinerv_live_section_byte_metrics_callback_refreshes_current_hiv1_packet
         "build_archive_section_telemetry",
         fake_build_archive_section_telemetry,
     )
-    callback, metadata = (
-        runner_mod._build_hi_nerv_live_train_time_section_byte_metrics_callback(
-            cfg=SimpleNamespace(num_pairs=2),
-            decoder_codec="int4_mixed",
-            latent_codec="int16_brotli_q11",
-            decoder_weight_waterfill_plan={"schema": "unit_waterfill"},
-            train_time_section_byte_control={
-                "metrics_payload": {
-                    "archive_bytes": 999,
-                    "section_bytes": {"decoder_state": 500},
-                }
-            },
-            optimizer_controls={"section_byte_refresh_every_steps": 2},
-        )
+    callback, metadata = runner_mod._build_hi_nerv_live_train_time_section_byte_metrics_callback(
+        cfg=SimpleNamespace(num_pairs=2),
+        decoder_codec="int4_mixed",
+        latent_codec="int16_brotli_q11",
+        decoder_weight_waterfill_plan={"schema": "unit_waterfill"},
+        train_time_section_byte_control={
+            "metrics_payload": {
+                "archive_bytes": 999,
+                "section_bytes": {"decoder_state": 500},
+            }
+        },
+        optimizer_controls={"section_byte_refresh_every_steps": 2},
     )
     assert callback is not None
 
@@ -854,11 +903,7 @@ def test_hinerv_live_section_byte_metrics_callback_refreshes_current_hiv1_packet
         "refresh_call": 1,
         "refresh_every_steps": 2,
     }
-    assert [
-        key
-        for key, value in first.items()
-        if isinstance(value, (int, float, bool))
-    ] == ["archive_bytes"]
+    assert [key for key, value in first.items() if isinstance(value, (int, float, bool))] == ["archive_bytes"]
     assert second["live_profile"]["cache_hit"] is True
     assert second["live_profile"]["callback_call"] == 2
     assert third["archive_bytes"] == 302
@@ -866,9 +911,7 @@ def test_hinerv_live_section_byte_metrics_callback_refreshes_current_hiv1_packet
     assert len(pack_calls) == 2
     assert pack_calls[0]["decoder_codec"] == "int4_mixed"
     assert pack_calls[0]["latent_codec"] == "int16_brotli_q11"
-    assert pack_calls[0]["decoder_weight_waterfill_plan"] == {
-        "schema": "unit_waterfill"
-    }
+    assert pack_calls[0]["decoder_weight_waterfill_plan"] == {"schema": "unit_waterfill"}
     assert metadata["successful_refresh_count"] == 2
     assert metadata["fallback_count"] == 0
     assert metadata["last_live_archive_bytes"] == 302
@@ -925,18 +968,14 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
                     "hard_pair_count": 2,
                 },
             },
-            "mlx_scorer_response_probe_path": (
-                tmp_path / "mlx_scorer_response_probe.json"
-            ).as_posix(),
+            "mlx_scorer_response_probe_path": (tmp_path / "mlx_scorer_response_probe.json").as_posix(),
             "mlx_scorer_response_probe_required": True,
             "mlx_scorer_response_probe": {
                 "schema": "hi_nerv_receiver_cache_mlx_scorer_response_probe.v1",
                 "fit_gate_passed": True,
                 "avg_posenet_dist": 0.001,
                 "avg_segnet_dist": 0.02,
-                "blockers": [
-                    "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"
-                ],
+                "blockers": ["hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"],
             },
             "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
         }
@@ -975,22 +1014,14 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     assert captured["max_segnet_mae_vs_reference_for_fit_gate"] == pytest.approx(22.0)
     assert Path(captured["segnet_argmax_probe_upstream_dir"]) == REPO_ROOT / "upstream"
     assert captured["segnet_argmax_probe_batch_frames"] == 3
-    assert captured["max_segnet_argmax_disagreement_for_fit_gate"] == pytest.approx(
-        0.125
-    )
-    assert captured[
-        "min_segnet_argmax_occupied_class_fraction_for_fit_gate"
-    ] == pytest.approx(0.625)
+    assert captured["max_segnet_argmax_disagreement_for_fit_gate"] == pytest.approx(0.125)
+    assert captured["min_segnet_argmax_occupied_class_fraction_for_fit_gate"] == pytest.approx(0.625)
     assert captured["require_mlx_scorer_response_probe"] is True
     assert Path(captured["mlx_scorer_response_upstream_dir"]) == REPO_ROOT / "upstream"
     assert captured["mlx_scorer_response_device_type"] == "cpu"
     assert captured["mlx_scorer_response_batch_pairs"] == 1
-    assert captured[
-        "max_mlx_scorer_response_posenet_dist_for_fit_gate"
-    ] == pytest.approx(0.01)
-    assert captured[
-        "max_mlx_scorer_response_segnet_dist_for_fit_gate"
-    ] == pytest.approx(0.25)
+    assert captured["max_mlx_scorer_response_posenet_dist_for_fit_gate"] == pytest.approx(0.01)
+    assert captured["max_mlx_scorer_response_segnet_dist_for_fit_gate"] == pytest.approx(0.25)
     summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
     assert summary["quality_gate_passed"] is True
     assert summary["candidate_posenet_yuv6_pair_stats"] == {"std": 3.0}
@@ -1001,12 +1032,7 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     assert summary["mlx_scorer_response_avg_posenet_dist"] == pytest.approx(0.001)
     assert summary["mlx_scorer_response_avg_segnet_dist"] == pytest.approx(0.02)
     assert summary["hard_pair_coverage"]["prioritized_pair_indices"] == [2, 0]
-    assert (
-        runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
-            report
-        )
-        is None
-    )
+    assert runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(report) is None
 
 
 def test_hinerv_runner_receiver_cache_quality_exposes_routable_crux_pairs() -> None:
@@ -1030,9 +1056,7 @@ def test_hinerv_runner_receiver_cache_quality_exposes_routable_crux_pairs() -> N
         "blockers": ["nerv_distortion_crux_posenet_yuv6_pair_mae_too_high"],
     }
 
-    coverage = runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
-        report
-    )
+    coverage = runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(report)
 
     assert coverage is not None
     assert coverage["prioritized_pair_indices"] == [17, 4, 17]
@@ -1067,10 +1091,7 @@ def test_hinerv_runner_receiver_cache_quality_blocks_invalid_mlx_response_batch(
     )
 
     assert report["quality_gate_passed"] is False
-    assert (
-        "hi_nerv_receiver_cache_quality_mlx_scorer_response_batch_pairs_invalid"
-        in report["blockers"]
-    )
+    assert "hi_nerv_receiver_cache_quality_mlx_scorer_response_batch_pairs_invalid" in report["blockers"]
 
 
 def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
@@ -1161,12 +1182,7 @@ def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
         repo_root=REPO_ROOT,
     )
 
-    reference_dir = (
-        tmp_path
-        / "training"
-        / "post_export_receiver_cache_quality"
-        / "source_video_reference_cache"
-    )
+    reference_dir = tmp_path / "training" / "post_export_receiver_cache_quality" / "source_video_reference_cache"
     assert captured_reference["video_path"] == source
     assert captured_reference["output_dir"] == reference_dir
     assert captured_reference["max_pairs"] == 4
@@ -1174,9 +1190,7 @@ def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
     assert Path(captured_quality["reference_cache_dir"]) == reference_dir
     assert captured_quality["segnet_argmax_probe_upstream_dir"] is None
     assert captured_quality["require_mlx_scorer_response_probe"] is True
-    assert Path(captured_quality["mlx_scorer_response_upstream_dir"]) == (
-        REPO_ROOT / "upstream"
-    )
+    assert Path(captured_quality["mlx_scorer_response_upstream_dir"]) == (REPO_ROOT / "upstream")
     assert captured_quality["mlx_scorer_response_batch_pairs"] == 1
     assert report["quality_gate_passed"] is False
     assert "candidate_posenet_yuv6_pair_low_dynamic_range" in report["blockers"]
@@ -1189,20 +1203,10 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     training_dir.mkdir()
     artifact_path = training_dir / "training_artifact.json"
     artifact_path.write_text(
-        json.dumps(
-            {
-                "substrate_artifact_metadata": {
-                    "score_aware_training": {"schema": "unit"}
-                }
-            }
-        ),
+        json.dumps({"substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}}}),
         encoding="utf-8",
     )
-    artifact_dict = {
-        "substrate_artifact_metadata": {
-            "score_aware_training": {"schema": "unit"}
-        }
-    }
+    artifact_dict = {"substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}}}
     report = {
         "schema": "hi_nerv_receiver_cache_quality_report.v1",
         "report_path": (tmp_path / "report.json").as_posix(),
@@ -1219,17 +1223,14 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     )
 
     metadata = artifact_dict["substrate_artifact_metadata"]
-    assert metadata["post_export_receiver_cache_quality"][
-        "quality_gate_passed"
-    ] is False
-    assert metadata["score_aware_training"]["post_export_receiver_cache_quality"][
-        "quality_gate_verdict"
-    ] == "CACHE_QUALITY_GATE_FAILED"
+    assert metadata["post_export_receiver_cache_quality"]["quality_gate_passed"] is False
+    assert (
+        metadata["score_aware_training"]["post_export_receiver_cache_quality"]["quality_gate_verdict"]
+        == "CACHE_QUALITY_GATE_FAILED"
+    )
     persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
     persisted_metadata = persisted["substrate_artifact_metadata"]
-    assert persisted_metadata["post_export_receiver_cache_quality"][
-        "quality_gate_passed"
-    ] is False
+    assert persisted_metadata["post_export_receiver_cache_quality"]["quality_gate_passed"] is False
 
 
 def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
@@ -1250,18 +1251,12 @@ def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
                         }
                     }
                 ],
-                "substrate_artifact_metadata": {
-                    "score_aware_training": {"schema": "unit"}
-                },
+                "substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}},
             }
         ),
         encoding="utf-8",
     )
-    artifact_dict = {
-        "substrate_artifact_metadata": {
-            "score_aware_training": {"schema": "unit"}
-        }
-    }
+    artifact_dict = {"substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}}}
 
     report = runner_mod._write_hi_nerv_runner_crux_trace(
         artifact_dict=artifact_dict,
@@ -1278,9 +1273,7 @@ def test_hinerv_runner_crux_trace_attaches_to_training_artifact(
     assert trace_metadata["path"] == trace_path.as_posix()
     assert trace_metadata["row_count"] > 0
     assert (
-        artifact_dict["substrate_artifact_metadata"]["score_aware_training"][
-            "nerv_crux_trace"
-        ]["path"]
+        artifact_dict["substrate_artifact_metadata"]["score_aware_training"]["nerv_crux_trace"]["path"]
         == trace_path.as_posix()
     )
 
@@ -1323,9 +1316,7 @@ def test_snerv_runner_crux_trace_attaches_to_score_aware_long_training(
     assert report["blockers"] == []
     assert trace_path.is_file()
     assert score_aware_long_training["nerv_crux_trace"]["path"] == trace_path.as_posix()
-    assert artifact["score_aware_long_training"]["nerv_crux_trace"][
-        "row_count"
-    ] > 0
+    assert artifact["score_aware_long_training"]["nerv_crux_trace"]["row_count"] > 0
 
 
 def test_hinerv_runner_archive_resolution_uses_emitted_overcap_ema_archives(
@@ -1361,19 +1352,13 @@ def test_hinerv_runner_archive_resolution_uses_emitted_overcap_ema_archives(
                         "schema": "long_training_archive_selection_candidate.v1",
                         "candidate_kind": "live",
                         "status": "failed",
-                        "failure": (
-                            "ValueError:HiNeRV archive exceeds "
-                            "hard_byte_ceiling: 291749 > 285000"
-                        ),
+                        "failure": ("ValueError:HiNeRV archive exceeds hard_byte_ceiling: 291749 > 285000"),
                     },
                     {
                         "schema": "long_training_archive_selection_candidate.v1",
                         "candidate_kind": "ema",
                         "status": "failed",
-                        "failure": (
-                            "ValueError:HiNeRV archive exceeds "
-                            "hard_byte_ceiling: 291798 > 285000"
-                        ),
+                        "failure": ("ValueError:HiNeRV archive exceeds hard_byte_ceiling: 291798 > 285000"),
                     },
                 ],
             },
@@ -1412,16 +1397,9 @@ def test_hinerv_runner_archive_resolution_uses_emitted_overcap_ema_archives(
     assert resolution["byte_cap_rejected"] is True
     assert resolution["candidate_kind"] == "live"
     assert "hi_nerv_archive_selection_no_selected_archive" in resolution["blockers"]
-    assert (
-        "hi_nerv_archive_selection_rejected_over_hard_byte_ceiling"
-        in resolution["blockers"]
-    )
-    persisted = json.loads(
-        (training_dir / "training_artifact.json").read_text(encoding="utf-8")
-    )
-    persisted_resolution = persisted["substrate_artifact_metadata"][
-        "archive_resolution"
-    ]
+    assert "hi_nerv_archive_selection_rejected_over_hard_byte_ceiling" in resolution["blockers"]
+    persisted = json.loads((training_dir / "training_artifact.json").read_text(encoding="utf-8"))
+    persisted_resolution = persisted["substrate_artifact_metadata"]["archive_resolution"]
     assert persisted_resolution["archive_path"] == live_archive.as_posix()
     assert persisted_resolution["diagnostic_only"] is True
 
@@ -1433,13 +1411,7 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
     training_dir.mkdir()
     artifact_path = training_dir / "training_artifact.json"
     artifact_path.write_text(
-        json.dumps(
-            {
-                "substrate_artifact_metadata": {
-                    "score_aware_training": {"schema": "unit"}
-                }
-            }
-        ),
+        json.dumps({"substrate_artifact_metadata": {"score_aware_training": {"schema": "unit"}}}),
         encoding="utf-8",
     )
     artifact_dict = {
@@ -1560,29 +1532,27 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
             "cached_pair_count": 1,
             "direct_render_raw_sha256": "b" * 64,
             "identity_audit_sha256": "d" * 64,
-            "candidate_cache_identity_mode": (
-                "hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"
-            ),
+            "candidate_cache_identity_mode": ("hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"),
         },
         "quality_gate_path": (tmp_path / "gate.json").as_posix(),
         "quality_gate_passed": True,
-            "quality_gate": {
-                "verdict": "CACHE_QUALITY_GATE_PASSED",
-                "stats": {
-                    "candidate_segnet_last_rgb": {"std": 12.0},
-                    "candidate_posenet_yuv6_pair": {"std": 3.0},
-                    "candidate_posenet_yuv6_temporal_signal": {
-                        "mean_abs": 1.0,
-                        "std": 1.0,
-                    },
+        "quality_gate": {
+            "verdict": "CACHE_QUALITY_GATE_PASSED",
+            "stats": {
+                "candidate_segnet_last_rgb": {"std": 12.0},
+                "candidate_posenet_yuv6_pair": {"std": 3.0},
+                "candidate_posenet_yuv6_temporal_signal": {
+                    "mean_abs": 1.0,
+                    "std": 1.0,
                 },
             },
-            "scorer_input_distribution_gate": {
-                "schema": "hi_nerv_receiver_cache_scorer_input_distribution_gate.v1",
-                "fit_gate_passed": True,
-                "blockers": [],
-            },
-            "segnet_argmax_probe_path": (tmp_path / "argmax.json").as_posix(),
+        },
+        "scorer_input_distribution_gate": {
+            "schema": "hi_nerv_receiver_cache_scorer_input_distribution_gate.v1",
+            "fit_gate_passed": True,
+            "blockers": [],
+        },
+        "segnet_argmax_probe_path": (tmp_path / "argmax.json").as_posix(),
         "segnet_argmax_probe": {
             "fit_gate_passed": True,
             "segnet_argmax_disagreement_rate": 0.02,
@@ -1594,18 +1564,14 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
             "reference_occupied_class_fraction": 0.9,
             "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
         },
-        "mlx_scorer_response_probe_path": (
-            tmp_path / "mlx_scorer_response_probe.json"
-        ).as_posix(),
+        "mlx_scorer_response_probe_path": (tmp_path / "mlx_scorer_response_probe.json").as_posix(),
         "mlx_scorer_response_probe_required": True,
         "mlx_scorer_response_probe": {
             "schema": "hi_nerv_receiver_cache_mlx_scorer_response_probe.v1",
             "fit_gate_passed": True,
             "avg_posenet_dist": 0.002,
             "avg_segnet_dist": 0.03,
-            "blockers": [
-                "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"
-            ],
+            "blockers": ["hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"],
         },
         "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
     }
@@ -1644,9 +1610,7 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
     assert report["short_scorer_teacher_smoke_ready"] is True
     assert report["ready_for_long_run"] is True
     assert report["actionable_blockers"] == []
-    assert report["scorer_domain_hard_birth_bootstrap_gate"][
-        "after_min_ratio_cleared"
-    ] is True
+    assert report["scorer_domain_hard_birth_bootstrap_gate"]["after_min_ratio_cleared"] is True
     assert Path(report["report_path"]).is_file()
     metadata = artifact_dict["substrate_artifact_metadata"]
     summary = metadata["short_scorer_teacher_smoke_readiness"]
@@ -1654,12 +1618,14 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
     assert summary["ready_for_long_run"] is True
     assert admission["long_run_admission_passed"] is True
     assert admission["admission_blockers"] == []
-    assert metadata["score_aware_training"][
-        "short_scorer_teacher_smoke_readiness"
-    ]["short_scorer_teacher_smoke_ready"] is True
-    assert metadata["score_aware_training"][
-        "short_scorer_teacher_smoke_long_run_admission"
-    ]["long_run_admission_passed"] is True
+    assert (
+        metadata["score_aware_training"]["short_scorer_teacher_smoke_readiness"]["short_scorer_teacher_smoke_ready"]
+        is True
+    )
+    assert (
+        metadata["score_aware_training"]["short_scorer_teacher_smoke_long_run_admission"]["long_run_admission_passed"]
+        is True
+    )
     assert summary["scorer_input_shape_tether_gate"]["enabled"] is True
     assert summary["posenet_temporal_signal_floor_gate"]["enabled"] is True
     assert summary["direct_live_segnet_gate"]["subcontrol_weights"][
@@ -1675,12 +1641,8 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
         "loss_part_segnet_direct_live_target_min_ratio_floor_loss"
     ] == pytest.approx(0.04)
     persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
-    persisted_summary = persisted["substrate_artifact_metadata"][
-        "short_scorer_teacher_smoke_readiness"
-    ]
-    persisted_admission = persisted["substrate_artifact_metadata"][
-        "short_scorer_teacher_smoke_long_run_admission"
-    ]
+    persisted_summary = persisted["substrate_artifact_metadata"]["short_scorer_teacher_smoke_readiness"]
+    persisted_admission = persisted["substrate_artifact_metadata"]["short_scorer_teacher_smoke_long_run_admission"]
     assert persisted_summary["ready_for_long_run"] is True
     assert persisted_admission["long_run_admission_passed"] is True
 
@@ -1742,9 +1704,7 @@ def test_hinerv_short_scorer_readiness_reloads_durable_final_metrics(
         output_dir=training_dir,
         artifact_dict={
             "per_epoch_metrics": [],
-            "substrate_artifact_metadata": {
-                "score_aware_training": {"schema": "stale_in_memory_summary"}
-            },
+            "substrate_artifact_metadata": {"score_aware_training": {"schema": "stale_in_memory_summary"}},
         },
         train_time_controls={
             "segnet_direct_live_distillation_weight": 0.4,
@@ -1767,24 +1727,12 @@ def test_hinerv_short_scorer_readiness_reloads_durable_final_metrics(
     )
 
     assert report["final_loss_components_present"] is True
-    assert "hi_nerv_short_smoke_missing_direct_live_segnet_telemetry" not in report[
-        "actionable_blockers"
-    ]
-    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" not in report[
-        "actionable_blockers"
-    ]
-    assert "hi_nerv_short_smoke_direct_live_dual_ascent_weight_not_applied" not in report[
-        "actionable_blockers"
-    ]
-    assert "hi_nerv_short_smoke_decoder_waterfill_fake_quant_not_bound" not in report[
-        "actionable_blockers"
-    ]
-    assert report["decoder_weight_waterfill_actuation_gate"][
-        "train_time_fake_quant_bound"
-    ] is True
-    assert report["decoder_weight_waterfill_actuation_gate"][
-        "fake_quant_targeted_tensor_count"
-    ] == pytest.approx(2.0)
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_telemetry" not in report["actionable_blockers"]
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" not in report["actionable_blockers"]
+    assert "hi_nerv_short_smoke_direct_live_dual_ascent_weight_not_applied" not in report["actionable_blockers"]
+    assert "hi_nerv_short_smoke_decoder_waterfill_fake_quant_not_bound" not in report["actionable_blockers"]
+    assert report["decoder_weight_waterfill_actuation_gate"]["train_time_fake_quant_bound"] is True
+    assert report["decoder_weight_waterfill_actuation_gate"]["fake_quant_targeted_tensor_count"] == pytest.approx(2.0)
 
 
 def test_hinerv_runner_short_scorer_smoke_readiness_failure_marks_training_artifact(
@@ -1881,21 +1829,13 @@ def test_hinerv_runner_short_scorer_smoke_readiness_failure_marks_training_artif
     metadata = artifact_dict["substrate_artifact_metadata"]
     admission = metadata["short_scorer_teacher_smoke_long_run_admission"]
     assert admission["long_run_admission_passed"] is False
-    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in admission[
-        "admission_blockers"
-    ]
-    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" in admission[
-        "admission_blockers"
-    ]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in admission["admission_blockers"]
+    assert "hi_nerv_short_smoke_missing_direct_live_dual_ascent_telemetry" in admission["admission_blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in metadata["blockers"]
-    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in metadata[
-        "blockers"
-    ]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in metadata["blockers"]
     persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
     persisted_metadata = persisted["substrate_artifact_metadata"]
-    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in persisted_metadata[
-        "blockers"
-    ]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in persisted_metadata["blockers"]
 
 
 def test_hinerv_runner_receiver_cache_quality_forwards_prioritized_pairs(
@@ -2092,17 +2032,11 @@ def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
     ]
     assert summary["segnet_candidate_occupied_class_fraction"] == pytest.approx(0.2)
     assert summary["segnet_candidate_any_occupied_class_fraction"] == pytest.approx(0.4)
-    assert summary["segnet_candidate_target_class_coverage_fraction"] == pytest.approx(
-        0.2
-    )
-    assert summary[
-        "segnet_candidate_target_any_class_coverage_fraction"
-    ] == pytest.approx(0.4)
+    assert summary["segnet_candidate_target_class_coverage_fraction"] == pytest.approx(0.2)
+    assert summary["segnet_candidate_target_any_class_coverage_fraction"] == pytest.approx(0.4)
     assert summary["segnet_candidate_target_class_min_ratio"] == pytest.approx(0.0)
     assert summary["segnet_target_material_class_count"] == pytest.approx(5.0)
-    assert summary[
-        "segnet_candidate_target_material_class_covered_count"
-    ] == pytest.approx(1.0)
+    assert summary["segnet_candidate_target_material_class_covered_count"] == pytest.approx(1.0)
     assert summary["segnet_candidate_target_class_covered"] == [
         False,
         False,
@@ -2110,12 +2044,8 @@ def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
         False,
         False,
     ]
-    assert summary["segnet_argmax_occupancy_min_class_pixel_count"] == pytest.approx(
-        197.0
-    )
-    assert summary[
-        "segnet_argmax_target_coverage_min_class_pixel_count"
-    ] == pytest.approx(197.0)
+    assert summary["segnet_argmax_occupancy_min_class_pixel_count"] == pytest.approx(197.0)
+    assert summary["segnet_argmax_target_coverage_min_class_pixel_count"] == pytest.approx(197.0)
     assert summary["segnet_reference_occupied_class_fraction"] == pytest.approx(1.0)
     assert summary["segnet_reference_any_occupied_class_fraction"] == pytest.approx(1.0)
     assert summary["segnet_argmax_sample_pairs"] == 1
@@ -2140,14 +2070,8 @@ def test_hinerv_train_receiver_class_escape_contract_blocks_lost_escape() -> Non
     assert contract["passed"] is False
     assert contract["train_direct_live_max_candidate_occupied_class_fraction"] == 0.8
     assert contract["receiver_candidate_occupied_class_fraction"] == 0.2
-    assert (
-        "hi_nerv_train_time_class_escape_not_receiver_export_preserved"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_receiver_export_segnet_argmax_class_collapse"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_train_time_class_escape_not_receiver_export_preserved" in contract["blockers"]
+    assert "hi_nerv_receiver_export_segnet_argmax_class_collapse" in contract["blockers"]
 
 
 def test_hinerv_train_receiver_class_escape_contract_blocks_lost_target_coverage() -> None:
@@ -2165,19 +2089,10 @@ def test_hinerv_train_receiver_class_escape_contract_blocks_lost_target_coverage
     )
 
     assert contract["passed"] is False
-    assert (
-        contract["train_direct_live_max_candidate_target_class_coverage_fraction"]
-        == 0.8
-    )
+    assert contract["train_direct_live_max_candidate_target_class_coverage_fraction"] == 0.8
     assert contract["receiver_candidate_target_class_coverage_fraction"] == 0.4
-    assert (
-        "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_receiver_export_segnet_target_class_coverage_collapse"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved" in contract["blockers"]
+    assert "hi_nerv_receiver_export_segnet_target_class_coverage_collapse" in contract["blockers"]
 
 
 def test_hinerv_train_receiver_class_escape_contract_blocks_scope_mismatch_claim() -> None:
@@ -2206,22 +2121,10 @@ def test_hinerv_train_receiver_class_escape_contract_blocks_scope_mismatch_claim
     assert contract["train_source_pair_count_observed"] == 2
     assert contract["receiver_segnet_argmax_sample_pairs"] == 1
     assert contract["receiver_pair_indices"] == [0]
-    assert (
-        "hi_nerv_train_receiver_class_escape_pair_scope_mismatch"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_train_time_class_escape_not_receiver_export_preserved"
-        not in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
-        not in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_receiver_export_segnet_target_class_coverage_collapse"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_train_receiver_class_escape_pair_scope_mismatch" in contract["blockers"]
+    assert "hi_nerv_train_time_class_escape_not_receiver_export_preserved" not in contract["blockers"]
+    assert "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved" not in contract["blockers"]
+    assert "hi_nerv_receiver_export_segnet_target_class_coverage_collapse" in contract["blockers"]
 
 
 def test_hinerv_train_receiver_class_escape_contract_preserves_aligned_scope_loss() -> None:
@@ -2247,18 +2150,9 @@ def test_hinerv_train_receiver_class_escape_contract_preserves_aligned_scope_los
     assert contract["train_receiver_scope_aligned"] is True
     assert contract["train_source_pair_indices_observed"] == [0, 1]
     assert contract["receiver_pair_indices"] == [0, 1]
-    assert (
-        "hi_nerv_train_receiver_class_escape_pair_scope_mismatch"
-        not in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_train_time_class_escape_not_receiver_export_preserved"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_train_receiver_class_escape_pair_scope_mismatch" not in contract["blockers"]
+    assert "hi_nerv_train_time_class_escape_not_receiver_export_preserved" in contract["blockers"]
+    assert "hi_nerv_train_time_target_class_coverage_not_receiver_export_preserved" in contract["blockers"]
 
 
 def test_hinerv_effective_receiver_cache_quality_max_pairs_tracks_train_scope() -> None:
@@ -2272,11 +2166,14 @@ def test_hinerv_effective_receiver_cache_quality_max_pairs_tracks_train_scope() 
         "train_scope_min_pairs": 2,
         "effective_max_pairs": 2,
     }
-    assert runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
-        requested_max_pairs=4,
-        num_pairs=2,
-        train_batch_pairs=2,
-    )["effective_max_pairs"] == 4
+    assert (
+        runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
+            requested_max_pairs=4,
+            num_pairs=2,
+            train_batch_pairs=2,
+        )["effective_max_pairs"]
+        == 4
+    )
     assert runner_mod._hi_nerv_effective_receiver_cache_quality_max_pairs(
         requested_max_pairs=1,
         num_pairs=1,
@@ -2318,9 +2215,7 @@ def _snerv_official_skip_candidate(mode: str) -> dict:
         temporal_modes=("official_haar_dwt1d_lowpass",),
         official_skip_high_modes=(mode,),
     )
-    official_rows = [
-        row for row in rows if row.capacity_source == "official_snerv_modelsize"
-    ]
+    official_rows = [row for row in rows if row.capacity_source == "official_snerv_modelsize"]
     assert len(official_rows) == 1
     return official_rows[0].as_dict()
 
@@ -2333,12 +2228,7 @@ def _write_snerv_binary_profile_receiver_feedback(
     archive_sha256: str,
 ) -> Path:
     run_root = tmp_path / "snerv_run"
-    package = (
-        run_root
-        / "snerv_mlx_native_export"
-        / "native_train_export"
-        / "snerv_mlx_native_archive_bound_package"
-    )
+    package = run_root / "snerv_mlx_native_export" / "native_train_export" / "snerv_mlx_native_archive_bound_package"
     archive = package / "archive.zip"
     packet = package.parent / "snerv_mlx_native_packet.snar"
     proof = package / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
@@ -2613,9 +2503,7 @@ def test_scorer_error_pair_curriculum_rejects_quality_blocked_direct_vjp_bundle(
                     "full_reduction_complete": True,
                     "budget_spend_allowed_before_full_reduction": False,
                 },
-                "gradient_quality_blockers": [
-                    "segnet_last_rgb_gradient_abs_max_exceeds_sanity_limit"
-                ],
+                "gradient_quality_blockers": ["segnet_last_rgb_gradient_abs_max_exceeds_sanity_limit"],
                 "shards": [],
             },
             sort_keys=True,
@@ -2634,58 +2522,31 @@ def test_scorer_coupled_rd_metadata_prices_cooperative_receiver_axes() -> None:
     assert metadata["authority"] == "planning_metadata_only_not_score_authority"
     assert metadata["reference_uncompressed_total_bytes"] == 37_545_489
     assert metadata["fixed_marginal_byte_price"] == "25/uncompressed_total"
-    assert metadata["fixed_marginal_byte_price_score_per_byte"] == pytest.approx(
-        25.0 / 37_545_489
-    )
-    assert (
-        metadata["cooperative_receiver"]["human_visual_fidelity_objective"]
-        is False
-    )
+    assert metadata["fixed_marginal_byte_price_score_per_byte"] == pytest.approx(25.0 / 37_545_489)
+    assert metadata["cooperative_receiver"]["human_visual_fidelity_objective"] is False
     assert metadata["cooperative_receiver"]["projection_domains"] == [
         "segnet_last_frame_rgb_384x512_argmax5",
         "posenet_pair_yuv6_384x512_pose6",
         "archive_zip_bytes",
     ]
-    assert metadata["segnet_domain"]["output_math"] == (
-        "five_class_argmax_disagreement_rate"
-    )
+    assert metadata["segnet_domain"]["output_math"] == ("five_class_argmax_disagreement_rate")
     assert metadata["segnet_domain"]["score_derivative"] == pytest.approx(100.0)
     assert metadata["segnet_domain"]["frame_score_weights"] == {
         "frame_0": 0.0,
         "frame_1": 100.0,
     }
-    assert metadata["posenet_domain"]["score_derivative_formula"] == (
-        "5/sqrt(10*d_pose)"
-    )
-    assert (
-        metadata["posenet_domain"]["score_derivative_operating_point_dependent"]
-        is True
-    )
-    assert (
-        metadata["frame_pair_asymmetry"]["frame_0"]["segnet_score_weight"]
-        == 0.0
-    )
-    assert metadata["frame_pair_asymmetry"]["frame_1"]["segnet_score_weight"] == (
-        pytest.approx(100.0)
-    )
-    assert metadata["atom_admission_rule"]["delta_convention"] == (
-        "candidate_minus_current"
-    )
-    assert metadata["atom_admission_rule"]["admit_when"] == (
-        "linearized_score_delta < 0"
-    )
+    assert metadata["posenet_domain"]["score_derivative_formula"] == ("5/sqrt(10*d_pose)")
+    assert metadata["posenet_domain"]["score_derivative_operating_point_dependent"] is True
+    assert metadata["frame_pair_asymmetry"]["frame_0"]["segnet_score_weight"] == 0.0
+    assert metadata["frame_pair_asymmetry"]["frame_1"]["segnet_score_weight"] == (pytest.approx(100.0))
+    assert metadata["atom_admission_rule"]["delta_convention"] == ("candidate_minus_current")
+    assert metadata["atom_admission_rule"]["admit_when"] == ("linearized_score_delta < 0")
 
 
 def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     plane_count = int(pairs) * 2 * 3
-    lf_planes = [
-        (np.arange(48, dtype=np.int64).reshape(6, 8) + idx) % 17
-        for idx in range(plane_count)
-    ]
-    step_maps = [
-        np.full((6, 8), 1.0 + idx * 0.01, dtype=np.float32)
-        for idx in range(plane_count)
-    ]
+    lf_planes = [(np.arange(48, dtype=np.int64).reshape(6, 8) + idx) % 17 for idx in range(plane_count)]
+    step_maps = [np.full((6, 8), 1.0 + idx * 0.01, dtype=np.float32) for idx in range(plane_count)]
     archive = pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=np.zeros(plane_count, dtype=np.float32),
@@ -2784,9 +2645,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
                 "preserved_source_parity_blockers": [
                     "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
                 ],
-                "blockers": [
-                    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
-                ],
+                "blockers": ["snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -2928,9 +2787,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         native_mlx_decoder_train_lr=1e-5,
         native_mlx_decoder_train_ridge=1e-6,
         native_mlx_decoder_train_optimizer="closed_form",
-        official_trained_checkpoint_state_dict_path=(
-            tmp_path / "official_state_dict_slice.npz"
-        ),
+        official_trained_checkpoint_state_dict_path=(tmp_path / "official_state_dict_slice.npz"),
         score_aware_long_training_epochs=8,
         score_aware_long_training_lr=1e-3,
         score_aware_long_training_batch_pairs=2,
@@ -3011,24 +2868,14 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured["mlx_prefilter_progress_every"] == 7
     assert captured["prioritized_pair_indices"] == (3, 5)
     assert captured["scorer_error_pair_sampling_weights"] == {5: 2.0}
-    assert captured["scorer_error_pair_curriculum"]["field"] == (
-        "component_score_no_rate"
-    )
+    assert captured["scorer_error_pair_curriculum"]["field"] == ("component_score_no_rate")
     assert captured["score_aware_long_training_optimizer"] == "pact_muon_adamw"
-    assert captured["official_trained_checkpoint_state_dict_path"] == (
-        tmp_path / "official_state_dict_slice.npz"
-    )
-    assert captured["scorer_loop_qat_pair_guard_min_score_improved_fraction"] == (
-        pytest.approx(0.875)
-    )
-    assert captured["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"] == (
-        pytest.approx(0.125)
-    )
+    assert captured["official_trained_checkpoint_state_dict_path"] == (tmp_path / "official_state_dict_slice.npz")
+    assert captured["scorer_loop_qat_pair_guard_min_score_improved_fraction"] == (pytest.approx(0.875))
+    assert captured["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"] == (pytest.approx(0.125))
     assert captured["scorer_loop_qat_perturb_scale"] == pytest.approx(0.03125)
     assert captured["scorer_loop_qat_byte_pressure_multiplier"] == pytest.approx(2.0)
-    assert captured["scorer_loop_qat_section_value_pressure_multiplier"] == (
-        pytest.approx(1.5)
-    )
+    assert captured["scorer_loop_qat_section_value_pressure_multiplier"] == (pytest.approx(1.5))
     assert captured["scorer_loop_qat_max_archive_byte_growth"] == 9
     assert captured["scorer_loop_qat_byte_growth_admission_mode"] == "rate_paid"
     assert captured["scorer_loop_qat_pose_slack"] == pytest.approx(0.004)
@@ -3038,18 +2885,10 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured["score_aware_long_training_loss_weights"] == stage_weights
     assert captured["score_aware_long_training_pose_warmup_epochs"] == 2
     assert captured["score_aware_long_training_scorer_input_shape_warmup_epochs"] == 1
-    assert captured[
-        "score_aware_long_training_segnet_direct_live_escape_warmup_epochs"
-    ] == 3
-    assert captured["score_aware_long_training_scorer_input_contrast_floor_weight"] == (
-        pytest.approx(0.11)
-    )
-    assert captured["score_aware_long_training_scorer_input_shape_tether_weight"] == (
-        pytest.approx(0.12)
-    )
-    assert (
-        captured["score_aware_long_training_scorer_space_step_guard_enabled"] is True
-    )
+    assert captured["score_aware_long_training_segnet_direct_live_escape_warmup_epochs"] == 3
+    assert captured["score_aware_long_training_scorer_input_contrast_floor_weight"] == (pytest.approx(0.11))
+    assert captured["score_aware_long_training_scorer_input_shape_tether_weight"] == (pytest.approx(0.12))
+    assert captured["score_aware_long_training_scorer_space_step_guard_enabled"] is True
     assert captured[
         "score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
     ] == pytest.approx(0.31)
@@ -3080,9 +2919,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured[
         "score_aware_long_training_scorer_space_step_guard_max_post_segnet_argmax_disagreement"
     ] == pytest.approx(0.16)
-    assert captured[
-        "score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term"
-    ] == pytest.approx(1.75)
+    assert captured["score_aware_long_training_scorer_space_step_guard_max_post_pose_score_term"] == pytest.approx(1.75)
     assert captured[
         "score_aware_long_training_scorer_space_step_guard_max_post_pose_direct_live_score_term"
     ] == pytest.approx(0.055)
@@ -3104,48 +2941,27 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured[
         "score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
     ] == pytest.approx(1.25)
-    assert (
-        captured["score_aware_long_training_scorer_space_step_guard_backtracking_steps"]
-        == 4
-    )
-    assert captured[
-        "score_aware_long_training_scorer_space_step_guard_backtracking_shrink"
-    ] == pytest.approx(0.4)
+    assert captured["score_aware_long_training_scorer_space_step_guard_backtracking_steps"] == 4
+    assert captured["score_aware_long_training_scorer_space_step_guard_backtracking_shrink"] == pytest.approx(0.4)
     assert captured["segnet_student_live_calibration_weight"] == pytest.approx(0.9)
     assert captured["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
     assert captured["segnet_direct_live_base_loss_weight"] == pytest.approx(0.5)
     assert captured["segnet_direct_live_class_histogram_weight"] == pytest.approx(0.75)
-    assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(
-        0.375
-    )
-    assert captured["segnet_direct_live_class_balanced_ce_weight"] == pytest.approx(
-        0.625
-    )
-    assert captured[
-        "segnet_direct_live_class_balanced_squared_hinge_weight"
-    ] == pytest.approx(0.875)
-    assert captured["segnet_direct_live_class_region_recon_weight"] == pytest.approx(
-        0.9375
-    )
+    assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(0.375)
+    assert captured["segnet_direct_live_class_balanced_ce_weight"] == pytest.approx(0.625)
+    assert captured["segnet_direct_live_class_balanced_squared_hinge_weight"] == pytest.approx(0.875)
+    assert captured["segnet_direct_live_class_region_recon_weight"] == pytest.approx(0.9375)
     assert out["executed"] is True
-    assert out["local_mlx_prefilter_profile_path"].endswith(
-        "local_mlx_prefilter_profile.json"
-    )
-    assert out["local_mlx_prefilter_progress_path"].endswith(
-        "local_mlx_prefilter_progress.jsonl"
-    )
+    assert out["local_mlx_prefilter_profile_path"].endswith("local_mlx_prefilter_profile.json")
+    assert out["local_mlx_prefilter_progress_path"].endswith("local_mlx_prefilter_progress.jsonl")
     assert out["local_mlx_prefilter_profile"]["scorer_batch_pairs"] == 4
-    assert out["scorer_error_pair_curriculum"][
-        "consumed_by_native_mlx_train_export"
-    ] is True
+    assert out["scorer_error_pair_curriculum"]["consumed_by_native_mlx_train_export"] is True
     assert out["scorer_error_pair_curriculum"]["weighted_pair_count"] == 1
     assert out["receiver_reconstruction_verified"] is True
     assert out["snerv_official_tub_source_fixture_replay_bound"] is True
     assert out["snerv_official_tub_source_fixture_replay_passed"] is True
     assert out["snerv_official_tub_source_forward_fixture_bound"] is True
-    assert out["snerv_official_tub_source_fixture_binding"][
-        "source_fixture_replay_bound"
-    ] is True
+    assert out["snerv_official_tub_source_fixture_binding"]["source_fixture_replay_bound"] is True
     assert (
         "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
         not in out["official_source_parity_blockers"]
@@ -3330,9 +3146,7 @@ def test_snerv_native_export_attachment_blocks_failed_training_telemetry_contrac
     assert out["receiver_reconstruction_verified"] is True
     assert out["score_aware_long_training_telemetry_contract"]["passed"] is False
     assert "unit_snerv_training_control_missing" in out["blockers"]
-    assert "snerv_score_aware_long_training_telemetry_contract_failed" in out[
-        "blockers"
-    ]
+    assert "snerv_score_aware_long_training_telemetry_contract_failed" in out["blockers"]
     assert out["native_mlx_full600_campaign_ready"] is False
 
 
@@ -3482,9 +3296,7 @@ def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) ->
     assert out["written"] is True
     assert out["row_count"] == 1
     assert out["sha256"] == runner_mod._sha256_file(path)
-    assert payload["artifact_schema"] == (
-        "compact_runner_decoder_weight_saliency_artifact.v1"
-    )
+    assert payload["artifact_schema"] == ("compact_runner_decoder_weight_saliency_artifact.v1")
     assert payload["schema"] == "mlx_decoder_weight_gradient_saliency.v1"
     assert payload["family"] == "hi_nerv"
     assert payload["rows"][0]["group_name"] == "decoder.blocks.0.weight"
@@ -3647,13 +3459,9 @@ def test_hinerv_runner_materializes_waterfill_from_receiver_closed_ladder(
                             "post_export_receiver_cache_quality": {
                                 "quality_gate_passed": False,
                                 "quality_gate_verdict": "CACHE_INPUTS_LOCAL_ONLY",
-                                "blockers": [
-                                    "hi_nerv_receiver_cache_quality_is_false_authority"
-                                ],
+                                "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
                             },
-                            "blockers": [
-                                "hi_nerv_trained_archive_byte_oracle_partial_pair_scope"
-                            ],
+                            "blockers": ["hi_nerv_trained_archive_byte_oracle_partial_pair_scope"],
                         },
                     }
                 ],
@@ -3724,20 +3532,14 @@ def test_hinerv_runner_waterfill_from_trained_ladder_fails_closed_without_salien
         trained_archive_byte_oracle={
             "schema": "hi_nerv_trained_archive_byte_oracle.v1",
             "candidate_id": "candidate_a",
-            "receiver_closed_modelsize_ladder_path": (
-                tmp_path / "missing_ladder.json"
-            ).as_posix(),
+            "receiver_closed_modelsize_ladder_path": (tmp_path / "missing_ladder.json").as_posix(),
         },
         decoder_weight_saliency_artifact={"written": False},
     )
 
     assert out["written"] is False
-    assert "hi_nerv_decoder_weight_saliency_artifact_missing_for_waterfill" in out[
-        "blockers"
-    ]
-    assert "hi_nerv_trained_receiver_closed_modelsize_ladder_missing_for_waterfill" in out[
-        "blockers"
-    ]
+    assert "hi_nerv_decoder_weight_saliency_artifact_missing_for_waterfill" in out["blockers"]
+    assert "hi_nerv_trained_receiver_closed_modelsize_ladder_missing_for_waterfill" in out["blockers"]
 
 
 def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
@@ -3760,13 +3562,9 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
     assert weights["scorer_input_shape_tether"] == pytest.approx(1.0)
     assert weights["segnet_direct_live_distill"] == pytest.approx(2.0)
     assert weights["segnet_direct_live_class_histogram"] == pytest.approx(2.0)
-    assert weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(
-        2.0
-    )
+    assert weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(2.0)
     assert weights["segnet_direct_live_class_balanced_ce"] == pytest.approx(2.0)
-    assert weights[
-        "segnet_direct_live_class_balanced_squared_hinge"
-    ] == pytest.approx(2.0)
+    assert weights["segnet_direct_live_class_balanced_squared_hinge"] == pytest.approx(2.0)
     assert weights["segnet_direct_live_class_region_recon"] == pytest.approx(2.0)
     assert weights["segnet_direct_live_target_mass_floor"] == pytest.approx(2.0)
     assert len(stages) == 1
@@ -3822,31 +3620,15 @@ def test_compact_scoreaware_direct_live_escape_warmup_amplifies_class_atoms() ->
     assert len(stages) == 2
     assert stages[0].start_epoch == 0
     assert stages[0].end_epoch == 3
-    assert stages[0].loss_weights["segnet_direct_live_base_loss"] == pytest.approx(
-        0.0
-    )
+    assert stages[0].loss_weights["segnet_direct_live_base_loss"] == pytest.approx(0.0)
     assert stages[0].loss_weights["segnet_direct_live_distill"] == pytest.approx(2.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_class_histogram"
-    ] == pytest.approx(6.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_class_balanced_hinge"
-    ] == pytest.approx(6.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_class_balanced_ce"
-    ] == pytest.approx(6.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_class_balanced_squared_hinge"
-    ] == pytest.approx(6.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_class_region_recon"
-    ] == pytest.approx(6.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_rare_class_logit"
-    ] == pytest.approx(6.0)
-    assert stages[0].loss_weights[
-        "segnet_direct_live_target_mass_floor"
-    ] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_class_histogram"] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_class_balanced_hinge"] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_class_balanced_ce"] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_class_balanced_squared_hinge"] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_class_region_recon"] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_rare_class_logit"] == pytest.approx(6.0)
+    assert stages[0].loss_weights["segnet_direct_live_target_mass_floor"] == pytest.approx(6.0)
     assert stages[1].start_epoch == 3
     assert stages[1].end_epoch == 8
     assert dict(stages[1].loss_weights) == weights
@@ -4045,9 +3827,7 @@ def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
     checkpoint_dir.mkdir()
     checkpoint_meta = checkpoint_dir / "epoch026805_20260603T061919Z.meta.json"
     checkpoint_live = checkpoint_dir / "epoch026805_20260603T061919Z.live.state.npsd"
-    checkpoint_ema = (
-        checkpoint_dir / "epoch026805_20260603T061919Z.ema_shadow.state.npsd"
-    )
+    checkpoint_ema = checkpoint_dir / "epoch026805_20260603T061919Z.ema_shadow.state.npsd"
     checkpoint_meta.write_text(
         json.dumps(
             {
@@ -4102,11 +3882,7 @@ def test_recover_interrupted_report_summarizes_snerv_nested_long_training_teleme
 ) -> None:
     out = tmp_path / "snerv_run"
     train_dir = (
-        out
-        / "snerv_mlx_native_export"
-        / "native_train_export"
-        / "snerv_score_aware_long_training"
-        / "long_training"
+        out / "snerv_mlx_native_export" / "native_train_export" / "snerv_score_aware_long_training" / "long_training"
     )
     train_dir.mkdir(parents=True)
     startup = out / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
@@ -4194,12 +3970,7 @@ def test_recover_interrupted_report_summarizes_snerv_nested_long_training_teleme
     assert payload["score_aware_long_training_telemetry_contract"]["passed"] is True
     assert loss_components["loss_part_pr95_stage_forced_extra_qat_active"] == 1.0
     assert loss_components["loss_part_coder_qat_quant_residual"] == 0.03918
-    assert (
-        loss_components[
-            "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"
-        ]
-        == 0.0
-    )
+    assert loss_components["dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"] == 0.0
     assert loss_components["train_time_section_bytes__decoder_payload"] == 13_518.0
     evidence_paths = {row["path"] for row in payload["evidence_files"]}
     assert startup.as_posix() in evidence_paths
@@ -4261,9 +4032,7 @@ def test_recover_interrupted_report_preserves_startup_rerun_provenance(
                 "modelsize_candidate_id": f"{family}_candidate",
                 "modelsize_candidate": {"candidate_id": f"{family}_candidate"},
                 "output_dir": out.as_posix(),
-                "source_video_path": (
-                    "/Volumes/VertigoDataTier/pact/upstream/videos/0.mkv"
-                ),
+                "source_video_path": ("/Volumes/VertigoDataTier/pact/upstream/videos/0.mkv"),
                 "hard_byte_ceilings": [178_000],
                 "command_args": {"execute_family": family, "num_pairs": 16},
                 "original_argv": original_argv,
@@ -4464,10 +4233,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["expected_posenet_temporal_signal_floor_metric"] is True
     assert contract["posenet_temporal_signal_floor_metric_observed"] is True
     assert contract["posenet_temporal_signal_floor_std_ratio_metric_observed"] is True
-    assert (
-        contract["posenet_temporal_signal_floor_mean_abs_ratio_metric_observed"]
-        is True
-    )
+    assert contract["posenet_temporal_signal_floor_mean_abs_ratio_metric_observed"] is True
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
@@ -4487,30 +4253,19 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["segnet_direct_live_class_histogram_metric_observed"] is True
     assert contract["segnet_direct_live_class_balanced_hinge_metric_observed"] is True
     assert contract["segnet_direct_live_class_balanced_ce_metric_observed"] is True
-    assert (
-        contract["segnet_direct_live_class_balanced_squared_hinge_metric_observed"]
-        is True
-    )
+    assert contract["segnet_direct_live_class_balanced_squared_hinge_metric_observed"] is True
     assert contract["segnet_direct_live_class_region_recon_metric_observed"] is True
     assert contract["segnet_direct_live_target_mass_floor_metric_observed"] is True
-    assert (
-        contract["segnet_direct_live_target_min_ratio_floor_metric_observed"] is True
-    )
+    assert contract["segnet_direct_live_target_min_ratio_floor_metric_observed"] is True
     assert contract["segnet_direct_live_dual_metric_observed"] is True
     assert contract["segnet_direct_live_dual_lambda_active_observed"] is True
     assert contract["missing_segnet_direct_live_dual_metric_suffixes"] == []
     assert contract["missing_segnet_direct_live_dual_activation_suffixes"] == []
-    assert contract[
-        "segnet_direct_live_max_candidate_occupied_class_fraction"
-    ] == pytest.approx(0.6)
+    assert contract["segnet_direct_live_max_candidate_occupied_class_fraction"] == pytest.approx(0.6)
     assert contract["segnet_direct_live_target_class_coverage_metric_observed"] is True
-    assert contract[
-        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
-    ] == pytest.approx(1.0)
+    assert contract["segnet_direct_live_max_candidate_target_class_coverage_fraction"] == pytest.approx(1.0)
     assert contract["segnet_direct_live_target_class_min_ratio_metric_observed"] is True
-    assert contract[
-        "segnet_direct_live_max_candidate_target_class_min_ratio"
-    ] == pytest.approx(0.25)
+    assert contract["segnet_direct_live_max_candidate_target_class_min_ratio"] == pytest.approx(0.25)
 
 
 def test_hinerv_training_telemetry_contract_tracks_source_pairs(
@@ -4632,31 +4387,15 @@ def test_hinerv_training_telemetry_contract_uses_support_ladder_effective_contro
     assert contract["expected_scorer_support_ladder"] is True
     assert contract["scorer_support_ladder_enabled_observed"] is True
     assert contract["scorer_support_ladder_active_observed"] is True
-    assert contract["expected_segnet_direct_live_subcontrols"][
-        "target_mass_floor"
-    ] is True
-    assert contract["expected_segnet_direct_live_subcontrols"][
-        "rare_class_logit"
-    ] is True
-    assert contract["expected_segnet_direct_live_subcontrols"][
-        "class_balanced_hinge"
-    ] is True
-    assert contract["segnet_direct_live_effective_subcontrol_weights"][
-        "target_mass_floor"
-    ] == pytest.approx(2.0)
-    assert contract["segnet_direct_live_effective_subcontrol_weights"][
-        "rare_class_logit"
-    ] == pytest.approx(1.0)
-    assert contract["segnet_direct_live_effective_subcontrol_weights"][
-        "class_balanced_hinge"
-    ] == pytest.approx(0.5)
+    assert contract["expected_segnet_direct_live_subcontrols"]["target_mass_floor"] is True
+    assert contract["expected_segnet_direct_live_subcontrols"]["rare_class_logit"] is True
+    assert contract["expected_segnet_direct_live_subcontrols"]["class_balanced_hinge"] is True
+    assert contract["segnet_direct_live_effective_subcontrol_weights"]["target_mass_floor"] == pytest.approx(2.0)
+    assert contract["segnet_direct_live_effective_subcontrol_weights"]["rare_class_logit"] == pytest.approx(1.0)
+    assert contract["segnet_direct_live_effective_subcontrol_weights"]["class_balanced_hinge"] == pytest.approx(0.5)
+    assert "segnet_direct_live_target_min_ratio_mass_floor" in contract["expected_segnet_direct_live_dual_suffixes"]
     assert (
-        "segnet_direct_live_target_min_ratio_mass_floor"
-        in contract["expected_segnet_direct_live_dual_suffixes"]
-    )
-    assert (
-        "segnet_direct_live_target_min_ratio_rare_class_logit"
-        in contract["expected_segnet_direct_live_dual_suffixes"]
+        "segnet_direct_live_target_min_ratio_rare_class_logit" in contract["expected_segnet_direct_live_dual_suffixes"]
     )
 
 
@@ -4700,10 +4439,7 @@ def test_hinerv_training_telemetry_contract_rejects_empty_active_support_ladder(
 
     assert contract["passed"] is False
     assert contract["scorer_support_ladder_active_observed"] is True
-    assert (
-        "hi_nerv_score_aware_training_scorer_support_ladder_effective_subcontrol_missing"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_scorer_support_ladder_effective_subcontrol_missing" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_allows_under_budget_byte_duals(
@@ -4788,10 +4524,7 @@ def test_hinerv_training_telemetry_contract_rejects_section_rate_without_section
     assert contract["section_rate_metric_observed"] is True
     assert contract["section_byte_dual_positive_violation_observed"] is True
     assert contract["section_byte_dual_lambda_active_observed"] is False
-    assert (
-        "hi_nerv_score_aware_training_section_byte_dual_lambda_never_active"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_section_byte_dual_lambda_never_active" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_lambda_without_weight_application(
@@ -4834,14 +4567,8 @@ def test_hinerv_training_telemetry_contract_rejects_lambda_without_weight_applic
     assert contract["archive_byte_dual_weight_applied_observed"] is False
     assert contract["section_byte_dual_lambda_active_observed"] is True
     assert contract["section_byte_dual_weight_applied_observed"] is False
-    assert (
-        "hi_nerv_score_aware_training_archive_byte_dual_weight_never_applied"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_section_byte_dual_weight_never_applied"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_archive_byte_dual_weight_never_applied" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_section_byte_dual_weight_never_applied" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_stale_gradient_multiplier(
@@ -4883,18 +4610,9 @@ def test_hinerv_training_telemetry_contract_rejects_stale_gradient_multiplier(
     assert contract["gradient_multiplier_applied_observed"] is False
     assert contract["gradient_multiplier_missing_requested_observed"] is True
     assert contract["gradient_multiplier_noop_observed"] is True
-    assert (
-        "hi_nerv_score_aware_training_gradient_multiplier_never_applied"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_gradient_multiplier_missing_requested_leaf"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_gradient_multiplier_requested_but_unapplied"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_gradient_multiplier_never_applied" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_gradient_multiplier_missing_requested_leaf" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_gradient_multiplier_requested_but_unapplied" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(
@@ -4933,18 +4651,9 @@ def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(
     )
 
     assert contract["passed"] is False
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_loss_missing"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_argmax_metric_missing"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_class_occupancy_metric_missing"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_direct_live_segnet_loss_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_direct_live_segnet_argmax_metric_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_direct_live_segnet_class_occupancy_metric_missing" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_subcontrol_metric(
@@ -4985,10 +4694,7 @@ def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_subcontr
     assert contract["expected_segnet_direct_live_distillation"] is True
     assert contract["expected_segnet_direct_live_subcontrols"]["class_region_recon"] is True
     assert contract["segnet_direct_live_class_region_recon_metric_observed"] is False
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_class_region_recon_metric_missing"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_direct_live_segnet_class_region_recon_metric_missing" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_missing_shape_tether_metrics(
@@ -5025,18 +4731,9 @@ def test_hinerv_training_telemetry_contract_rejects_missing_shape_tether_metrics
 
     assert contract["passed"] is False
     assert contract["scorer_input_shape_tether_metric_observed"] is True
-    assert (
-        "hi_nerv_score_aware_training_scorer_input_shape_tether_segnet_metric_missing"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_scorer_input_shape_tether_posenet_pair_metric_missing"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_scorer_input_shape_tether_posenet_delta_metric_missing"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_scorer_input_shape_tether_segnet_metric_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_scorer_input_shape_tether_posenet_pair_metric_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_scorer_input_shape_tether_posenet_delta_metric_missing" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_missing_temporal_floor_ratios(
@@ -5074,14 +4771,8 @@ def test_hinerv_training_telemetry_contract_rejects_missing_temporal_floor_ratio
     assert contract["passed"] is False
     assert contract["posenet_temporal_signal_floor_metric_observed"] is True
     assert contract["posenet_temporal_signal_floor_std_ratio_metric_observed"] is False
-    assert (
-        contract["posenet_temporal_signal_floor_mean_abs_ratio_metric_observed"]
-        is False
-    )
-    assert (
-        "hi_nerv_score_aware_training_posenet_temporal_signal_floor_std_ratio_metric_missing"
-        in contract["blockers"]
-    )
+    assert contract["posenet_temporal_signal_floor_mean_abs_ratio_metric_observed"] is False
+    assert "hi_nerv_score_aware_training_posenet_temporal_signal_floor_std_ratio_metric_missing" in contract["blockers"]
     assert (
         "hi_nerv_score_aware_training_posenet_temporal_signal_floor_mean_abs_ratio_metric_missing"
         in contract["blockers"]
@@ -5124,14 +4815,8 @@ def test_hinerv_training_telemetry_contract_rejects_missing_geometry_tether_part
     assert contract["posenet_yuv6_geometry_tether_metric_observed"] is True
     assert contract["posenet_yuv6_geometry_tether_pair_metric_observed"] is False
     assert contract["posenet_yuv6_geometry_tether_delta_metric_observed"] is False
-    assert (
-        "hi_nerv_score_aware_training_posenet_yuv6_geometry_tether_pair_metric_missing"
-        in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_posenet_yuv6_geometry_tether_delta_metric_missing"
-        in contract["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_posenet_yuv6_geometry_tether_pair_metric_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_posenet_yuv6_geometry_tether_delta_metric_missing" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
@@ -5174,13 +4859,8 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
     )
 
     assert contract["passed"] is False
-    assert contract[
-        "segnet_direct_live_max_candidate_occupied_class_fraction"
-    ] == pytest.approx(0.4)
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
-        in contract["blockers"]
-    )
+    assert contract["segnet_direct_live_max_candidate_occupied_class_fraction"] == pytest.approx(0.4)
+    assert "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_direct_live_target_class_collapse(
@@ -5223,20 +4903,10 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_target_class_col
     )
 
     assert contract["passed"] is False
-    assert contract[
-        "segnet_direct_live_max_candidate_occupied_class_fraction"
-    ] == pytest.approx(0.8)
-    assert contract[
-        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
-    ] == pytest.approx(0.4)
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
-        not in contract["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_target_class_coverage_collapsed"
-        in contract["blockers"]
-    )
+    assert contract["segnet_direct_live_max_candidate_occupied_class_fraction"] == pytest.approx(0.8)
+    assert contract["segnet_direct_live_max_candidate_target_class_coverage_fraction"] == pytest.approx(0.4)
+    assert "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed" not in contract["blockers"]
+    assert "hi_nerv_score_aware_training_direct_live_segnet_target_class_coverage_collapsed" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_rejects_direct_live_target_mass_collapse(
@@ -5279,16 +4949,9 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_target_mass_coll
     )
 
     assert contract["passed"] is False
-    assert contract[
-        "segnet_direct_live_max_candidate_target_class_coverage_fraction"
-    ] == pytest.approx(1.0)
-    assert contract[
-        "segnet_direct_live_max_candidate_target_class_min_ratio"
-    ] == pytest.approx(0.05)
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_target_class_mass_collapsed"
-        in contract["blockers"]
-    )
+    assert contract["segnet_direct_live_max_candidate_target_class_coverage_fraction"] == pytest.approx(1.0)
+    assert contract["segnet_direct_live_max_candidate_target_class_min_ratio"] == pytest.approx(0.05)
+    assert "hi_nerv_score_aware_training_direct_live_segnet_target_class_mass_collapsed" in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_uses_configured_class_floor(
@@ -5332,13 +4995,8 @@ def test_hinerv_training_telemetry_contract_uses_configured_class_floor(
     )
 
     assert contract["passed"] is True
-    assert contract[
-        "min_segnet_direct_live_occupied_class_fraction_for_fit_gate"
-    ] == pytest.approx(0.4)
-    assert (
-        "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
-        not in contract["blockers"]
-    )
+    assert contract["min_segnet_direct_live_occupied_class_fraction_for_fit_gate"] == pytest.approx(0.4)
+    assert "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed" not in contract["blockers"]
 
 
 def test_hinerv_training_telemetry_contract_requires_direct_live_posenet_dual(
@@ -5374,14 +5032,8 @@ def test_hinerv_training_telemetry_contract_requires_direct_live_posenet_dual(
         scorer_input_distribution_guard_weight=0.0,
     )
     assert blocked["passed"] is False
-    assert (
-        "hi_nerv_score_aware_training_direct_live_posenet_dual_metric_never_observed"
-        in blocked["blockers"]
-    )
-    assert (
-        "hi_nerv_score_aware_training_direct_live_posenet_dual_lambda_never_active"
-        in blocked["blockers"]
-    )
+    assert "hi_nerv_score_aware_training_direct_live_posenet_dual_metric_never_observed" in blocked["blockers"]
+    assert "hi_nerv_score_aware_training_direct_live_posenet_dual_lambda_never_active" in blocked["blockers"]
 
     telemetry.write_text(
         json.dumps(
@@ -5454,28 +5106,13 @@ def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
     )
 
     assert contract["passed"] is False
-    assert "hi_nerv_score_aware_training_pr95_seg_alias_missing" in contract[
-        "blockers"
-    ]
-    assert "hi_nerv_score_aware_training_pr95_pose_alias_missing" in contract[
-        "blockers"
-    ]
-    assert "hi_nerv_score_aware_training_dual_segnet_metric_never_observed" in contract[
-        "blockers"
-    ]
-    assert (
-        "hi_nerv_score_aware_training_dual_scorer_input_guard_metric_never_observed"
-        in contract["blockers"]
-    )
-    assert "hi_nerv_score_aware_training_section_rate_metric_missing" in contract[
-        "blockers"
-    ]
-    assert "hi_nerv_score_aware_training_live_segnet_calibration_never_active" in contract[
-        "blockers"
-    ]
-    assert "hi_nerv_score_aware_training_live_segnet_calibration_loss_missing" in contract[
-        "blockers"
-    ]
+    assert "hi_nerv_score_aware_training_pr95_seg_alias_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_pr95_pose_alias_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_dual_segnet_metric_never_observed" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_dual_scorer_input_guard_metric_never_observed" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_section_rate_metric_missing" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_live_segnet_calibration_never_active" in contract["blockers"]
+    assert "hi_nerv_score_aware_training_live_segnet_calibration_loss_missing" in contract["blockers"]
 
 
 def test_write_decoder_weight_saliency_artifact_missing_fails_closed(
@@ -5583,10 +5220,7 @@ def test_planner_row_launch_gate_rejects_manual_hinerv_without_row_id(
     blockers = runner_mod._planner_row_launch_blockers(args)
     assert blockers == [
         "hi_nerv_planner_row_id_missing",
-        (
-            "top_priority_compact_carrier_launch_must_come_from_"
-            "nerv_long_training_campaign_plan"
-        ),
+        ("top_priority_compact_carrier_launch_must_come_from_nerv_long_training_campaign_plan"),
     ]
 
     report = runner_mod._write_planner_row_launch_refusal(
@@ -5596,9 +5230,7 @@ def test_planner_row_launch_gate_rejects_manual_hinerv_without_row_id(
         hard_byte_ceilings=(178_000, 216_000, 285_000),
         repo_root=REPO_ROOT,
     )
-    payload = json.loads(
-        Path(report["report_path"]).read_text(encoding="utf-8")
-    )
+    payload = json.loads(Path(report["report_path"]).read_text(encoding="utf-8"))
 
     assert payload["mode"] == "compact_carrier_planner_row_launch_refused"
     assert payload["trainer_launch_allowed"] is False
@@ -5637,9 +5269,7 @@ def _write_planner_row_queue_artifact(
                     "schema": "nerv_long_training_queue_launch_authority_contract.v1",
                     "queue_status_is_local_mlx_plan": True,
                     "queue_status_is_runnable_plan": runnable_contract,
-                    "queue_launch_blockers": []
-                    if runnable_contract
-                    else ["unit_not_runnable"],
+                    "queue_launch_blockers": [] if runnable_contract else ["unit_not_runnable"],
                     "queue_status_is_receiver_proof": False,
                     "queue_status_is_cpu_replay_proof": False,
                     "queue_status_is_exact_eval_authority": False,
@@ -5733,9 +5363,7 @@ def _write_snerv_lf_hf_replacement_queue_artifact(
             "schema": "nerv_long_training_queue_launch_authority_contract.v1",
             "queue_status_is_local_mlx_plan": True,
             "queue_status_is_runnable_plan": runnable_contract,
-            "queue_launch_blockers": []
-            if runnable_contract
-            else ["unit_not_runnable"],
+            "queue_launch_blockers": [] if runnable_contract else ["unit_not_runnable"],
             "queue_status_is_receiver_proof": False,
             "queue_status_is_cpu_replay_proof": False,
             "queue_status_is_exact_eval_authority": False,
@@ -6147,35 +5775,14 @@ def test_planner_row_launch_gate_rejects_stale_hinerv_scorer_controls(
     )
 
     assert "planner_row_command_mismatch:--segnet-distillation-objective" in blockers
-    assert (
-        "planner_row_command_mismatch:--segnet-direct-live-distillation-weight"
-        in blockers
-    )
-    assert (
-        "planner_row_command_mismatch:--segnet-direct-live-class-histogram-weight"
-        in blockers
-    )
-    assert (
-        "planner_row_command_mismatch:--segnet-direct-live-class-balanced-hinge-weight"
-        in blockers
-    )
-    assert (
-        "planner_row_command_mismatch:--segnet-direct-live-class-balanced-ce-weight"
-        in blockers
-    )
-    assert (
-        "planner_row_command_mismatch:--scorer-input-distribution-guard-weight"
-        in blockers
-    )
+    assert "planner_row_command_mismatch:--segnet-direct-live-distillation-weight" in blockers
+    assert "planner_row_command_mismatch:--segnet-direct-live-class-histogram-weight" in blockers
+    assert "planner_row_command_mismatch:--segnet-direct-live-class-balanced-hinge-weight" in blockers
+    assert "planner_row_command_mismatch:--segnet-direct-live-class-balanced-ce-weight" in blockers
+    assert "planner_row_command_mismatch:--scorer-input-distribution-guard-weight" in blockers
     assert "planner_row_command_mismatch:--scorer-input-contrast-floor-weight" in blockers
-    assert (
-        "planner_row_command_mismatch:--scorer-input-contrast-floor-segnet-min-std-ratio"
-        in blockers
-    )
-    assert (
-        "planner_row_command_mismatch:--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio"
-        in blockers
-    )
+    assert "planner_row_command_mismatch:--scorer-input-contrast-floor-segnet-min-std-ratio" in blockers
+    assert "planner_row_command_mismatch:--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio" in blockers
 
 
 def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
@@ -6222,9 +5829,7 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
             snerv_official_enc_strds=(1, 3, 2),
             snerv_official_dec_strds=(2, 2, 1),
             snerv_official_skip_high_mode="full",
-            snerv_official_trained_checkpoint_state_dict_path=Path(
-                "official_state_local.npz"
-            ),
+            snerv_official_trained_checkpoint_state_dict_path=Path("official_state_local.npz"),
             repo_root=REPO_ROOT,
         )
     )
@@ -6233,11 +5838,7 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
     assert "planner_row_command_mismatch:--snerv-modelsize-control-profile" in blockers
     assert "planner_row_command_mismatch:--snerv-official-enc-strds" in blockers
     assert "planner_row_command_mismatch:--snerv-official-skip-high-mode" in blockers
-    assert (
-        "planner_row_command_mismatch:"
-        "--snerv-official-trained-checkpoint-state-dict-path"
-        in blockers
-    )
+    assert "planner_row_command_mismatch:--snerv-official-trained-checkpoint-state-dict-path" in blockers
     assert "planner_row_command_mismatch:--snerv-official-dec-strds" not in blockers
 
 
@@ -6306,18 +5907,21 @@ def test_planner_row_launch_gate_rejects_nonrunnable_queue_artifact(
 
 
 def test_planner_row_launch_gate_allows_only_bounded_timing_smoke_waiver() -> None:
-    assert runner_mod._planner_row_launch_blockers(
-        SimpleNamespace(
-            execute_family="snerv",
-            planner_row_id="snerv::candidate::adamw",
-            planner_row_queue_artifact=[],
-            allow_bounded_planner_row_timing_smoke_waiver=True,
-            allow_manual_compact_family_launch=False,
-            num_pairs=2,
-            epochs=1,
-            repo_root=REPO_ROOT,
+    assert (
+        runner_mod._planner_row_launch_blockers(
+            SimpleNamespace(
+                execute_family="snerv",
+                planner_row_id="snerv::candidate::adamw",
+                planner_row_queue_artifact=[],
+                allow_bounded_planner_row_timing_smoke_waiver=True,
+                allow_manual_compact_family_launch=False,
+                num_pairs=2,
+                epochs=1,
+                repo_root=REPO_ROOT,
+            )
         )
-    ) == []
+        == []
+    )
 
     blockers = runner_mod._planner_row_launch_blockers(
         SimpleNamespace(
@@ -6349,9 +5953,7 @@ def test_snerv_bounded_timing_smoke_skips_scorer_loop_qat_by_default() -> None:
     assert effective is False
     assert policy["requested"] is True
     assert policy["effective_requested"] is False
-    assert policy["blockers"] == [
-        "snerv_bounded_timing_smoke_scorer_loop_qat_skipped"
-    ]
+    assert policy["blockers"] == ["snerv_bounded_timing_smoke_scorer_loop_qat_skipped"]
     assert "packet_compression" in policy["skip_reason"]
 
 
@@ -6402,33 +6004,39 @@ def test_snerv_native_scorer_loop_qat_status_prefers_nested_export_truth() -> No
 
 
 def test_planner_row_launch_gate_allows_explicit_manual_without_row() -> None:
-    assert runner_mod._planner_row_launch_blockers(
-        SimpleNamespace(
-            execute_family="snerv",
-            planner_row_id="",
-            planner_row_queue_artifact=[],
-            allow_bounded_planner_row_timing_smoke_waiver=False,
-            allow_manual_compact_family_launch=True,
-            num_pairs=600,
-            epochs=29650,
-            repo_root=REPO_ROOT,
+    assert (
+        runner_mod._planner_row_launch_blockers(
+            SimpleNamespace(
+                execute_family="snerv",
+                planner_row_id="",
+                planner_row_queue_artifact=[],
+                allow_bounded_planner_row_timing_smoke_waiver=False,
+                allow_manual_compact_family_launch=True,
+                num_pairs=600,
+                epochs=29650,
+                repo_root=REPO_ROOT,
+            )
         )
-    ) == []
+        == []
+    )
 
 
 def test_planner_row_launch_gate_allows_non_required_family() -> None:
-    assert runner_mod._planner_row_launch_blockers(
-        SimpleNamespace(
-            execute_family="pr95_hnerv",
-            planner_row_id="",
-            planner_row_queue_artifact=[],
-            allow_bounded_planner_row_timing_smoke_waiver=False,
-            allow_manual_compact_family_launch=False,
-            num_pairs=600,
-            epochs=29650,
-            repo_root=REPO_ROOT,
+    assert (
+        runner_mod._planner_row_launch_blockers(
+            SimpleNamespace(
+                execute_family="pr95_hnerv",
+                planner_row_id="",
+                planner_row_queue_artifact=[],
+                allow_bounded_planner_row_timing_smoke_waiver=False,
+                allow_manual_compact_family_launch=False,
+                num_pairs=600,
+                epochs=29650,
+                repo_root=REPO_ROOT,
+            )
         )
-    ) == []
+        == []
+    )
 
 
 def test_compact_family_startup_marker_records_mlx_custody(
@@ -6485,29 +6093,17 @@ def test_compact_family_startup_marker_records_mlx_custody(
     assert payload["mlx_prefilter_scorer_device"] == "gpu"
     assert payload["mlx_prefilter_scorer_batch_pairs"] == 8
     assert payload["auto_joint_recon_pixel_weight_path"] == weight_path.as_posix()
-    assert payload["auto_joint_recon_pixel_weight_sha256"] == runner_mod._sha256_file(
-        weight_path
-    )
+    assert payload["auto_joint_recon_pixel_weight_sha256"] == runner_mod._sha256_file(weight_path)
     assert payload["auto_joint_recon_pixel_weight_error"] is None
-    assert payload["modelsize_target_binding"]["schema"] == (
-        "compact_startup_modelsize_target_binding.v1"
-    )
+    assert payload["modelsize_target_binding"]["schema"] == ("compact_startup_modelsize_target_binding.v1")
     assert payload["modelsize_target_binding"]["inverse_target_requested"] is False
     assert payload["modelsize_target_binding"]["selected_from_inverse_target"] is False
-    assert payload["byte_cap_binding"]["schema"] == (
-        "compact_startup_byte_cap_binding.v1"
-    )
+    assert payload["byte_cap_binding"]["schema"] == ("compact_startup_byte_cap_binding.v1")
     assert payload["byte_cap_binding"]["hard_byte_cap_requested"] is True
     assert payload["byte_cap_binding"]["tightest_hard_byte_ceiling"] == 178_000
-    assert payload["byte_cap_binding"]["authority_surface"] == (
-        "measured_archive_zip_bytes_after_receiver_export"
-    )
-    assert "byte_cap_requires_measured_archive_zip_export" in payload[
-        "byte_cap_binding"
-    ]["blockers"]
-    assert payload["campaign_identity"]["auto_joint_recon_pixel_weight_path"] == (
-        weight_path.as_posix()
-    )
+    assert payload["byte_cap_binding"]["authority_surface"] == ("measured_archive_zip_bytes_after_receiver_export")
+    assert "byte_cap_requires_measured_archive_zip_export" in payload["byte_cap_binding"]["blockers"]
+    assert payload["campaign_identity"]["auto_joint_recon_pixel_weight_path"] == (weight_path.as_posix())
     assert payload["score_claim"] is False
     assert payload["frontier_score_claim"] is False
     assert payload["promotion_eligible"] is False
@@ -6571,9 +6167,7 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
             "nominal_under_ceiling": True,
             "modelsize_control_contract": {
                 "control_semantics": "local_receiver_visible_grid_search_nearest_target",
-                "shared_target_modelsize_mparams_consumed_as": (
-                    "nearest_local_param_count_target"
-                ),
+                "shared_target_modelsize_mparams_consumed_as": ("nearest_local_param_count_target"),
                 "modelsize_mparams_is_official_upstream_flag": False,
                 "modelsize_mparams_caps_archive_zip_bytes": False,
                 "archive_bytes_authority_required": True,
@@ -6588,9 +6182,7 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
     assert binding["selected_from_inverse_target"] is True
     assert binding["effective_requested_targets_for_family"] == [0.178]
     assert binding["selected_capacity_source"] == "local_hinerv_target_modelsize"
-    assert binding["control_semantics"] == (
-        "local_receiver_visible_grid_search_nearest_target"
-    )
+    assert binding["control_semantics"] == ("local_receiver_visible_grid_search_nearest_target")
     assert binding["blockers"] == []
     byte_binding = payload["byte_cap_binding"]
     assert byte_binding["hard_byte_cap_requested"] is True
@@ -6603,9 +6195,7 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
     assert byte_binding["calibrated_predicted_archive_bytes"] is None
     assert byte_binding["modelsize_mparams_caps_archive_zip_bytes"] is False
     assert byte_binding["archive_bytes_authority_required"] is True
-    assert byte_binding["blockers"] == [
-        "byte_cap_requires_measured_archive_zip_export"
-    ]
+    assert byte_binding["blockers"] == ["byte_cap_requires_measured_archive_zip_export"]
 
 
 def test_startup_byte_cap_binding_allows_looser_selected_sweep_ceiling() -> None:
@@ -6677,13 +6267,9 @@ def test_compact_family_interrupted_report_preserves_false_authority_custody(
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert "hi_nerv_training_interrupted_before_export" in report["blockers"]
-    evidence_by_name = {
-        Path(row["path"]).name: row for row in report["evidence_files"]
-    }
+    evidence_by_name = {Path(row["path"]).name: row for row in report["evidence_files"]}
     assert "telemetry.jsonl" in evidence_by_name
-    assert evidence_by_name["telemetry.jsonl"]["sha256"] == runner_mod._sha256_file(
-        telemetry
-    )
+    assert evidence_by_name["telemetry.jsonl"]["sha256"] == runner_mod._sha256_file(telemetry)
     report_path = tmp_path / "compact_renderer_mlx_spine_runner_report.json"
     assert report_path.is_file()
 
@@ -6701,12 +6287,8 @@ def test_hi_nerv_source_faithfulness_classifies_local_adaptation() -> None:
     assert report["classification"] == "local_hiv1_adaptation_not_official_hinerv"
     assert report["source_faithful_official_hinerv"] is False
     assert report["local_hiv1_adaptation"] is True
-    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in report[
-        "blockers"
-    ]
-    assert "hinerv_pr95_pr101_latent_delta_brotli_codec_missing" in report[
-        "blockers"
-    ]
+    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in report["blockers"]
+    assert "hinerv_pr95_pr101_latent_delta_brotli_codec_missing" in report["blockers"]
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
@@ -6724,10 +6306,7 @@ def test_hi_nerv_source_faithfulness_separates_official_controls_from_pr95_gaps(
         decoder_codec="portfolio_auto",
     )
 
-    assert report["classification"] == (
-        "official_hinerv_control_candidate_source_parity_bound_"
-        "pr95_better_gaps"
-    )
+    assert report["classification"] == ("official_hinerv_control_candidate_source_parity_bound_pr95_better_gaps")
     assert report["official_hinerv_control"] is True
     assert report["source_faithful_official_hinerv"] is False
     assert report["official_source_parity_proof_required"] is True
@@ -6736,12 +6315,11 @@ def test_hi_nerv_source_faithfulness_separates_official_controls_from_pr95_gaps(
     assert report["official_hinerv_blockers"] == []
     assert report["source_parity_blockers"] == []
     assert report["source_parity_binding"]["required_for_long_training_ready"] is True
-    assert report["source_parity_binding"]["feature_statuses"][
-        "hi_nerv_official_patch_index_path"
-    ] == "implemented_or_bound"
-    assert "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing" in report[
-        "pr95_better_blockers"
-    ]
+    assert (
+        report["source_parity_binding"]["feature_statuses"]["hi_nerv_official_patch_index_path"]
+        == "implemented_or_bound"
+    )
+    assert "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing" in report["pr95_better_blockers"]
     assert report["local_grid_levels"] == 2
     assert report["convnext_kernel_size"] == 3
     assert report["score_claim"] is False
@@ -6819,24 +6397,15 @@ def test_hinerv_refuses_non_official_control_candidate_before_training(
     assert out["training_executed"] is False
     assert out["trainer_launch_allowed"] is False
     assert out["hi_nerv_source_faithfulness"]["official_hinerv_control"] is False
-    assert out["hi_nerv_control_precedence"]["schema"] == (
-        "hi_nerv_launch_control_precedence.v1"
+    assert out["hi_nerv_control_precedence"]["schema"] == ("hi_nerv_launch_control_precedence.v1")
+    assert out["hi_nerv_control_precedence"]["more_finely_grained_child_rules_take_priority"] is True
+    assert out["hi_nerv_control_precedence"]["parent_rules_remain_required_guardrails"] is True
+    assert (
+        "hinerv_official_hierarchical_feature_grid_not_enabled"
+        in out["hi_nerv_control_precedence"]["source_base_blockers"]
     )
-    assert out["hi_nerv_control_precedence"][
-        "more_finely_grained_child_rules_take_priority"
-    ] is True
-    assert out["hi_nerv_control_precedence"][
-        "parent_rules_remain_required_guardrails"
-    ] is True
-    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in out[
-        "hi_nerv_control_precedence"
-    ]["source_base_blockers"]
-    assert "hinerv_official_control_required_for_top_priority_launch" in out[
-        "blockers"
-    ]
-    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in out[
-        "blockers"
-    ]
+    assert "hinerv_official_control_required_for_top_priority_launch" in out["blockers"]
+    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in out["blockers"]
     assert "hinerv_official_convnext_blocks_not_enabled" in out["blockers"]
 
 
@@ -7015,16 +6584,12 @@ def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     assert captured_train_kwargs["prioritized_pair_indices"] == ()
     assert captured_train_kwargs["use_hierarchical_feature_grid"] is True
     assert captured_train_kwargs["use_convnext_blocks"] is True
-    assert out["score_aware_training"]["local_mlx_prefilter"]["scorer_device"] == (
-        "gpu"
-    )
+    assert out["score_aware_training"]["local_mlx_prefilter"]["scorer_device"] == ("gpu")
     assert out["execute_family"] == "hi_nerv"
     assert out["training_executed"] is True
     assert marker.is_file()
     embedded_plan = out["nerv_long_training_campaign_plan"]
-    assert embedded_plan["planner_row_queue_artifact_path"].endswith(
-        "/compact_renderer_mlx_spine_runner_report.json"
-    )
+    assert embedded_plan["planner_row_queue_artifact_path"].endswith("/compact_renderer_mlx_spine_runner_report.json")
     embedded_command = embedded_plan["campaign_rows"][0]["command_argv"]
     assert "--planner-row-queue-artifact" in embedded_command
 
@@ -7081,32 +6646,22 @@ def test_hinerv_execute_forwards_prioritized_pair_indices(
     assert captured_train_kwargs["use_hierarchical_feature_grid"] is True
     assert captured_train_kwargs["use_convnext_blocks"] is True
     assert captured_train_kwargs["checkpoint_interval_epochs"] == 7
-    assert captured_train_kwargs["checkpoint_dir"] == (
-        tmp_path / "external_checkpoints"
-    ).resolve(strict=False)
+    assert captured_train_kwargs["checkpoint_dir"] == (tmp_path / "external_checkpoints").resolve(strict=False)
     assert captured_train_kwargs["resume_from_checkpoint"] == (
         tmp_path / "external_checkpoints/epoch000006.meta.json"
     ).resolve(strict=False)
     prioritized = out["score_aware_training"]["prioritized_pair_training"]
     assert prioritized["enabled"] is True
     assert prioritized["pair_indices"] == [3, 1]
-    assert (
-        prioritized["pair_index_domain"]
-        == "source_video_pair_indices_0_to_model_num_pairs_minus_1"
-    )
+    assert prioritized["pair_index_domain"] == "source_video_pair_indices_0_to_model_num_pairs_minus_1"
     assert prioritized["model_num_pairs"] == 4
     assert prioritized["hydrated_target_pair_count"] == 4
     assert prioritized["source_pair_indices"] == [3, 1]
     assert prioritized["local_target_rows_are_compact"] is False
     assert prioritized["arbitrary_source_pair_hydration"] is False
     assert prioritized["target_hydration_pair_indices_consumed"] is False
-    assert (
-        prioritized["target_hydration_pair_indices_consumed_by_renderer_bundle"]
-        is False
-    )
-    assert prioritized["sampling_scope"] == (
-        "full_video_target_hydration_with_prioritized_sampling"
-    )
+    assert prioritized["target_hydration_pair_indices_consumed_by_renderer_bundle"] is False
+    assert prioritized["sampling_scope"] == ("full_video_target_hydration_with_prioritized_sampling")
     assert prioritized["requires_num_pairs_covering_pair_ids"] is False
     assert prioritized["score_claim"] is False
     assert prioritized["promotion_eligible"] is False
@@ -7160,31 +6715,15 @@ def test_hinerv_execute_forwards_explicit_pr95_curriculum_total_epochs(
     assert optimizer_policy["pr95_curriculum_total_epochs"] == 29_650
     assert optimizer_policy["pr95_curriculum_total_epochs_requested"] == 29_650
     assert optimizer_policy["pr95_curriculum_total_epochs_defaulted"] is False
-    assert (
-        optimizer_policy["pr95_stage_source_weight_amplification_requested"]
-        is False
-    )
+    assert optimizer_policy["pr95_stage_source_weight_amplification_requested"] is False
     assert optimizer_policy["pr95_stage_source_weight_amplification_enabled"] is True
     assert optimizer_policy["pr95_stage_source_weight_amplification_defaulted"] is True
-    assert (
-        captured_train_kwargs["pr95_stage_source_weight_amplification_enabled"]
-        is True
-    )
+    assert captured_train_kwargs["pr95_stage_source_weight_amplification_enabled"] is True
     assert out["hi_nerv_optimizer_policy"]["pr95_curriculum_total_epochs"] == 29_650
-    assert (
-        out["hi_nerv_optimizer_policy"][
-            "pr95_stage_source_weight_amplification_enabled"
-        ]
-        is True
-    )
+    assert out["hi_nerv_optimizer_policy"]["pr95_stage_source_weight_amplification_enabled"] is True
     assert out["score_aware_training"]["pr95_curriculum_total_epochs"] == 29_650
     assert out["score_aware_training"]["pr95_curriculum_total_epochs_consumed"] is True
-    assert (
-        out["score_aware_training"][
-            "pr95_stage_source_weight_amplification_enabled"
-        ]
-        is True
-    )
+    assert out["score_aware_training"]["pr95_stage_source_weight_amplification_enabled"] is True
 
 
 def test_parse_prioritized_pair_indices_arg() -> None:
@@ -7199,8 +6738,7 @@ def test_parse_prioritized_pair_indices_arg() -> None:
 def test_parse_prioritized_pair_indices_file_arg(tmp_path: Path) -> None:
     pair_file = tmp_path / "feedback.json"
     pair_file.write_text(
-        '{"sample_generalization_gate":{"hard_pair_coverage":'
-        '{"prioritized_pair_indices":[8,2,8]}}}',
+        '{"sample_generalization_gate":{"hard_pair_coverage":{"prioritized_pair_indices":[8,2,8]}}}',
         encoding="utf-8",
     )
     args = runner_mod._parse_args(
@@ -7229,9 +6767,7 @@ def test_hinerv_priority_hydration_contract_explicit_sparse_mode() -> None:
 
     assert contract["enabled"] is True
     assert contract["sampling_scope"] == "sparse_source_pair_target_hydration"
-    assert contract["pair_index_domain"] == (
-        "source_video_pair_indices_0_to_model_num_pairs_minus_1"
-    )
+    assert contract["pair_index_domain"] == ("source_video_pair_indices_0_to_model_num_pairs_minus_1")
     assert contract["local_target_rows_are_compact"] is True
     assert contract["arbitrary_source_pair_hydration"] is True
     assert contract["target_hydration_pair_indices_consumed"] is True
@@ -7325,9 +6861,7 @@ def test_hinerv_private_smoke_refuses_positive_hard_birth_without_segnet_argmax(
         def fit_scorer_domain_bootstrap_from_targets(self, *_args, **_kwargs):
             nonlocal bootstrap_called
             bootstrap_called = True
-            raise AssertionError(
-                "hard-birth without SegNet argmax must refuse before bootstrap"
-            )
+            raise AssertionError("hard-birth without SegNet argmax must refuse before bootstrap")
 
         def num_parameters(self):
             return 123
@@ -7415,9 +6949,7 @@ def test_hinerv_private_smoke_refuses_positive_hard_birth_without_segnet_argmax(
             coder_qat_delta_weight=0.0,
             coder_qat_c1a_entropy_weight=0.0,
             coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
-            coder_qat_c1a_sample_size=(
-                runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE
-            ),
+            coder_qat_c1a_sample_size=(runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE),
             recon_pixel_weight_path=None,
             decoder_weight_waterfill_plan=None,
             recon_pixel_weight_auto_discovery=None,
@@ -7539,16 +7071,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "steps": int(steps),
                 "scorer_teacher_present": scorer_teacher is not None,
                 "segnet_margin_bootstrap_weight": float(segnet_margin_bootstrap_weight),
-                "segnet_hard_birth_bootstrap_weight": float(
-                    segnet_hard_birth_bootstrap_weight
-                ),
-                "segnet_hard_birth_bootstrap_min_ratio_floor": float(
-                    segnet_hard_birth_bootstrap_min_ratio_floor
-                ),
+                "segnet_hard_birth_bootstrap_weight": float(segnet_hard_birth_bootstrap_weight),
+                "segnet_hard_birth_bootstrap_min_ratio_floor": float(segnet_hard_birth_bootstrap_min_ratio_floor),
                 "pair_local_smoke_artifact_dir": (
-                    None
-                    if pair_local_smoke_artifact_dir is None
-                    else Path(pair_local_smoke_artifact_dir).as_posix()
+                    None if pair_local_smoke_artifact_dir is None else Path(pair_local_smoke_artifact_dir).as_posix()
                 ),
             }
             return _fake_hinerv_scorer_domain_bootstrap_payload(
@@ -7564,6 +7090,49 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 weight_decay=weight_decay,
                 grad_clip_max_norm=grad_clip_max_norm,
             )
+
+        def fit_target_region_birth_from_segnet(
+            self,
+            *,
+            scorer_teacher,
+            target_rgb_0,
+            target_rgb_1,
+            pair_indices,
+            target_segnet_argmax_1,
+            max_steps,
+            learning_rate,
+            target_min_region_ratio,
+            pose_teacher,
+            require_pose_trust,
+            grad_clip_max_norm,
+        ):
+            captured["target_region_birth_call"] = {
+                "scorer_teacher_present": scorer_teacher is not None,
+                "pose_teacher_present": pose_teacher is not None,
+                "require_pose_trust": bool(require_pose_trust),
+                "target0_shape": tuple(target_rgb_0.shape),
+                "target1_shape": tuple(target_rgb_1.shape),
+                "pair_indices": tuple(int(value) for value in pair_indices),
+                "target_segnet_argmax_shape": tuple(target_segnet_argmax_1.shape),
+                "max_steps": int(max_steps),
+                "learning_rate": float(learning_rate),
+                "target_min_region_ratio": float(target_min_region_ratio),
+                "grad_clip_max_norm": grad_clip_max_norm,
+            }
+            return {
+                "schema": "hi_nerv_target_region_birth.v1",
+                "actuator_id": "fit_target_region_birth_from_segnet",
+                "accepted": True,
+                "target_hard_won_count": 5.0,
+                "target_hard_lost_count": 1.0,
+                "net_target_support_delta": 4.0,
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": ["decoder.target_region_birth.delta"],
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
 
         def num_parameters(self):
             return 123
@@ -7618,33 +7187,23 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
         captured["bundle_source_pair_indices"] = tuple(bundle.source_pair_indices or ())
         captured["model_num_pairs"] = int(bundle.model.cfg.num_pairs)
-        captured["bundle_scorer_input_distribution_guard_weight"] = float(
-            bundle.scorer_input_distribution_guard_weight
-        )
+        captured["bundle_scorer_input_distribution_guard_weight"] = float(bundle.scorer_input_distribution_guard_weight)
         captured["bundle_scorer_input_distribution_guard_saturation_margin"] = float(
             bundle.scorer_input_distribution_guard_saturation_margin
         )
         captured["bundle_scorer_input_distribution_guard_temperature"] = float(
             bundle.scorer_input_distribution_guard_temperature
         )
-        captured["bundle_scorer_input_contrast_floor_weight"] = float(
-            bundle.scorer_input_contrast_floor_weight
-        )
+        captured["bundle_scorer_input_contrast_floor_weight"] = float(bundle.scorer_input_contrast_floor_weight)
         captured["bundle_scorer_input_contrast_floor_segnet_min_std_ratio"] = float(
             bundle.scorer_input_contrast_floor_segnet_min_std_ratio
         )
-        captured[
-            "bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
-        ] = float(bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio)
-        captured["bundle_posenet_yuv6_geometry_tether_weight"] = float(
-            bundle.posenet_yuv6_geometry_tether_weight
+        captured["bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"] = float(
+            bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
         )
-        captured["bundle_posenet_temporal_signal_floor_weight"] = float(
-            bundle.posenet_temporal_signal_floor_weight
-        )
-        captured["bundle_posenet_temporal_signal_min_std_ratio"] = float(
-            bundle.posenet_temporal_signal_min_std_ratio
-        )
+        captured["bundle_posenet_yuv6_geometry_tether_weight"] = float(bundle.posenet_yuv6_geometry_tether_weight)
+        captured["bundle_posenet_temporal_signal_floor_weight"] = float(bundle.posenet_temporal_signal_floor_weight)
+        captured["bundle_posenet_temporal_signal_min_std_ratio"] = float(bundle.posenet_temporal_signal_min_std_ratio)
         captured["bundle_posenet_temporal_signal_min_mean_abs_ratio"] = float(
             bundle.posenet_temporal_signal_min_mean_abs_ratio
         )
@@ -7657,92 +7216,66 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["bundle_segnet_direct_live_class_balanced_ce_weight"] = float(
             bundle.segnet_direct_live_class_balanced_ce_weight
         )
-        captured[
-            "bundle_segnet_direct_live_class_balanced_squared_hinge_weight"
-        ] = float(bundle.segnet_direct_live_class_balanced_squared_hinge_weight)
+        captured["bundle_segnet_direct_live_class_balanced_squared_hinge_weight"] = float(
+            bundle.segnet_direct_live_class_balanced_squared_hinge_weight
+        )
         captured["bundle_segnet_direct_live_class_region_recon_weight"] = float(
             bundle.segnet_direct_live_class_region_recon_weight
         )
         captured["bundle_segnet_direct_live_target_mass_floor_weight"] = float(
             bundle.segnet_direct_live_target_mass_floor_weight
         )
-        captured[
-            "bundle_segnet_direct_live_target_min_ratio_floor_weight"
-        ] = float(bundle.segnet_direct_live_target_min_ratio_floor_weight)
-        captured["run_prioritized_pair_indices"] = tuple(
-            kwargs["prioritized_pair_indices"]
+        captured["bundle_segnet_direct_live_target_min_ratio_floor_weight"] = float(
+            bundle.segnet_direct_live_target_min_ratio_floor_weight
         )
-        captured["scorer_space_step_guard_enabled"] = bool(
-            kwargs["scorer_space_step_guard_enabled"]
+        captured["run_prioritized_pair_indices"] = tuple(kwargs["prioritized_pair_indices"])
+        captured["scorer_space_step_guard_enabled"] = bool(kwargs["scorer_space_step_guard_enabled"])
+        captured["scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"] = float(
+            kwargs["scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"]
         )
-        captured[
-            "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
-        ] = float(kwargs["scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"])
-        captured[
-            "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
-        ] = float(kwargs["scorer_space_step_guard_min_post_segnet_occupied_class_fraction"])
+        captured["scorer_space_step_guard_min_post_segnet_occupied_class_fraction"] = float(
+            kwargs["scorer_space_step_guard_min_post_segnet_occupied_class_fraction"]
+        )
         captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] = float(
             kwargs["scorer_space_step_guard_max_post_segnet_contrast_ratio"]
         )
         captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] = float(
             kwargs["scorer_space_step_guard_max_post_segnet_distribution_mae"]
         )
-        captured[
-            "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
-        ] = float(kwargs["scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"])
-        captured[
-            "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
-        ] = float(kwargs["scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"])
+        captured["scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"] = float(
+            kwargs["scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"]
+        )
+        captured["scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"] = float(
+            kwargs["scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"]
+        )
         captured["scorer_space_step_guard_backtracking_steps"] = int(
             kwargs["scorer_space_step_guard_backtracking_steps"]
         )
-        captured[
-            "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
-        ] = float(
-            kwargs[
-                "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
-            ]
+        captured["scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"] = float(
+            kwargs["scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"]
         )
         captured["scorer_space_step_guard_backtracking_shrink"] = float(
             kwargs["scorer_space_step_guard_backtracking_shrink"]
         )
-        captured["scorer_support_ladder_enabled"] = bool(
-            kwargs["scorer_support_ladder_enabled"]
-        )
+        captured["scorer_support_ladder_enabled"] = bool(kwargs["scorer_support_ladder_enabled"])
         captured["scorer_support_ladder_target_coverage_floor"] = float(
             kwargs["scorer_support_ladder_target_coverage_floor"]
         )
         captured["scorer_support_ladder_target_min_ratio_floor"] = float(
             kwargs["scorer_support_ladder_target_min_ratio_floor"]
         )
-        captured["scorer_support_ladder_patience_steps"] = int(
-            kwargs["scorer_support_ladder_patience_steps"]
-        )
-        captured["scorer_support_ladder_growth_factor"] = float(
-            kwargs["scorer_support_ladder_growth_factor"]
-        )
-        captured["scorer_support_ladder_max_multiplier"] = float(
-            kwargs["scorer_support_ladder_max_multiplier"]
-        )
+        captured["scorer_support_ladder_patience_steps"] = int(kwargs["scorer_support_ladder_patience_steps"])
+        captured["scorer_support_ladder_growth_factor"] = float(kwargs["scorer_support_ladder_growth_factor"])
+        captured["scorer_support_ladder_max_multiplier"] = float(kwargs["scorer_support_ladder_max_multiplier"])
         captured["scorer_support_ladder_base_loss_max_when_active"] = float(
             kwargs["scorer_support_ladder_base_loss_max_when_active"]
         )
-        captured["curriculum_stage_loss_weights"] = [
-            dict(stage.loss_weights) for stage in kwargs["curriculum_stages"]
-        ]
-        captured["run_pr95_curriculum_total_epochs"] = int(
-            kwargs["pr95_curriculum_total_epochs"]
-        )
-        captured["checkpoint_selection_metric_key"] = str(
-            kwargs["checkpoint_selection_metric_key"]
-        )
-        captured["checkpoint_selection_metric_required"] = bool(
-            kwargs["checkpoint_selection_metric_required"]
-        )
+        captured["curriculum_stage_loss_weights"] = [dict(stage.loss_weights) for stage in kwargs["curriculum_stages"]]
+        captured["run_pr95_curriculum_total_epochs"] = int(kwargs["pr95_curriculum_total_epochs"])
+        captured["checkpoint_selection_metric_key"] = str(kwargs["checkpoint_selection_metric_key"])
+        captured["checkpoint_selection_metric_required"] = bool(kwargs["checkpoint_selection_metric_required"])
         dual_config = kwargs["train_time_dual_ascent_config"]
-        captured["dual_ascent_constraints"] = {
-            row["constraint_id"]: dict(row) for row in dual_config["constraints"]
-        }
+        captured["dual_ascent_constraints"] = {row["constraint_id"]: dict(row) for row in dual_config["constraints"]}
         archive = tmp_path / "fake_hinerv_sparse_hydration_archive.zip"
         _write_synthetic_pr95_archive(archive, pairs=10)
         return FakeArtifact(
@@ -7750,9 +7283,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "archive_path": archive.as_posix(),
                 "archive_bytes": archive.stat().st_size,
                 "archive_sha256": runner_mod._sha256_file(archive),
-                "substrate_artifact_metadata": dict(
-                    bundle.substrate_artifact_metadata
-                ),
+                "substrate_artifact_metadata": dict(bundle.substrate_artifact_metadata),
             }
         )
 
@@ -7805,6 +7336,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         ema_decay=0.9,
         segnet_distillation_weight=0.0,
         pose_distillation_weight=1.0,
+        pose_direct_live_distillation_weight=0.25,
+        pose_trust_required=True,
         pose_distillation_loss="mse",
         pose_distillation_huber_delta=1.0,
         recon_loss_stage_weight=1.0,
@@ -7875,99 +7408,67 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured["bundle_num_pairs"] == 10
     assert captured["bundle_source_pair_indices"] == ()
     assert captured["model_num_pairs"] == 10
-    assert captured["bundle_scorer_input_distribution_guard_weight"] == pytest.approx(
-        0.25
-    )
-    guard_dual = captured["dual_ascent_constraints"][
-        "hi_nerv_scorer_input_distribution_guard"
-    ]
+    assert captured["bundle_scorer_input_distribution_guard_weight"] == pytest.approx(0.25)
+    guard_dual = captured["dual_ascent_constraints"]["hi_nerv_scorer_input_distribution_guard"]
     assert guard_dual["metric_name"] == "loss_part_scorer_input_distribution_guard"
     assert guard_dual["loss_weight_key"] == "scorer_input_guard"
     assert guard_dual["weight_scale"] == pytest.approx(0.25)
-    assert captured[
-        "bundle_scorer_input_distribution_guard_saturation_margin"
-    ] == pytest.approx(0.03)
-    assert captured[
-        "bundle_scorer_input_distribution_guard_temperature"
-    ] == pytest.approx(0.02)
-    assert captured["bundle_scorer_input_contrast_floor_weight"] == pytest.approx(
-        0.75
-    )
-    assert captured[
-        "bundle_scorer_input_contrast_floor_segnet_min_std_ratio"
-    ] == pytest.approx(0.6)
-    assert captured[
-        "bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
-    ] == pytest.approx(0.4)
-    assert captured["bundle_posenet_yuv6_geometry_tether_weight"] == pytest.approx(
-        0.95
-    )
-    assert captured["bundle_posenet_temporal_signal_floor_weight"] == pytest.approx(
-        0.85
-    )
-    assert captured["bundle_posenet_temporal_signal_min_std_ratio"] == pytest.approx(
-        0.35
-    )
-    assert captured[
-        "bundle_posenet_temporal_signal_min_mean_abs_ratio"
-    ] == pytest.approx(0.45)
-    assert captured["bundle_segnet_direct_live_rare_class_logit_weight"] == (
-        pytest.approx(0.0)
-    )
-    assert captured["bundle_segnet_direct_live_class_balanced_hinge_weight"] == (
-        pytest.approx(0.0)
-    )
-    assert captured["bundle_segnet_direct_live_class_balanced_ce_weight"] == (
-        pytest.approx(0.25)
-    )
-    assert captured[
-        "bundle_segnet_direct_live_class_balanced_squared_hinge_weight"
-    ] == pytest.approx(0.0)
-    assert captured["bundle_segnet_direct_live_class_region_recon_weight"] == (
-        pytest.approx(0.0)
-    )
-    assert captured["bundle_segnet_direct_live_target_mass_floor_weight"] == (
-        pytest.approx(0.4)
-    )
-    assert captured[
-        "bundle_segnet_direct_live_target_min_ratio_floor_weight"
-    ] == pytest.approx(0.4)
+    assert captured["bundle_scorer_input_distribution_guard_saturation_margin"] == pytest.approx(0.03)
+    assert captured["bundle_scorer_input_distribution_guard_temperature"] == pytest.approx(0.02)
+    assert captured["bundle_scorer_input_contrast_floor_weight"] == pytest.approx(0.75)
+    assert captured["bundle_scorer_input_contrast_floor_segnet_min_std_ratio"] == pytest.approx(0.6)
+    assert captured["bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"] == pytest.approx(0.4)
+    assert captured["bundle_posenet_yuv6_geometry_tether_weight"] == pytest.approx(0.95)
+    assert captured["bundle_posenet_temporal_signal_floor_weight"] == pytest.approx(0.85)
+    assert captured["bundle_posenet_temporal_signal_min_std_ratio"] == pytest.approx(0.35)
+    assert captured["bundle_posenet_temporal_signal_min_mean_abs_ratio"] == pytest.approx(0.45)
+    assert captured["bundle_segnet_direct_live_rare_class_logit_weight"] == (pytest.approx(0.0))
+    assert captured["bundle_segnet_direct_live_class_balanced_hinge_weight"] == (pytest.approx(0.0))
+    assert captured["bundle_segnet_direct_live_class_balanced_ce_weight"] == (pytest.approx(0.25))
+    assert captured["bundle_segnet_direct_live_class_balanced_squared_hinge_weight"] == pytest.approx(0.0)
+    assert captured["bundle_segnet_direct_live_class_region_recon_weight"] == (pytest.approx(0.0))
+    assert captured["bundle_segnet_direct_live_target_mass_floor_weight"] == (pytest.approx(0.4))
+    assert captured["bundle_segnet_direct_live_target_min_ratio_floor_weight"] == pytest.approx(0.4)
     bootstrap_call = captured["scorer_domain_bootstrap_call"]
     assert bootstrap_call["scorer_teacher_present"] is True
     assert bootstrap_call["segnet_margin_bootstrap_weight"] == pytest.approx(1.5)
     assert bootstrap_call["segnet_hard_birth_bootstrap_weight"] == pytest.approx(3.0)
-    assert bootstrap_call[
-        "segnet_hard_birth_bootstrap_min_ratio_floor"
-    ] == pytest.approx(0.07)
-    bootstrap_metadata = artifact.as_dict()["substrate_artifact_metadata"][
-        "score_aware_training"
-    ]["output_head_target_bias_init"]["scorer_domain_bootstrap"]
-    assert bootstrap_metadata[
-        "segnet_hard_birth_bootstrap_requested_weight"
-    ] == pytest.approx(3.0)
-    assert bootstrap_metadata[
-        "segnet_hard_birth_bootstrap_effective_weight"
-    ] == pytest.approx(3.0)
+    assert bootstrap_call["segnet_hard_birth_bootstrap_min_ratio_floor"] == pytest.approx(0.07)
+    bootstrap_metadata = artifact.as_dict()["substrate_artifact_metadata"]["score_aware_training"][
+        "output_head_target_bias_init"
+    ]["scorer_domain_bootstrap"]
+    assert bootstrap_metadata["segnet_hard_birth_bootstrap_requested_weight"] == pytest.approx(3.0)
+    assert bootstrap_metadata["segnet_hard_birth_bootstrap_effective_weight"] == pytest.approx(3.0)
     assert bootstrap_metadata["segnet_hard_birth_bootstrap_request_consumed"] is True
-    assert bootstrap_call["pair_local_smoke_artifact_dir"] == (
-        tmp_path
-        / "private_smoke_full_priority_hydration"
-        / "hi_nerv_pair_local_actuator_smoke"
-    ).as_posix()
-    temporal_dual = captured["dual_ascent_constraints"][
-        "hi_nerv_posenet_temporal_signal_floor"
-    ]
-    assert temporal_dual["metric_name"] == (
-        "loss_part_posenet_temporal_signal_floor"
+    assert bootstrap_metadata["actuators_enabled_effective"] == {
+        "segnet_teacher": True,
+        "pose_teacher": True,
+        "hard_birth": True,
+    }
+    assert bootstrap_metadata["exact_posenet_target_pose"]["enabled"] is True
+    target_region_birth = bootstrap_metadata["target_region_birth_actuator"]
+    assert target_region_birth["accepted"] is True
+    assert target_region_birth["net_target_support_delta"] == pytest.approx(4.0)
+    target_birth_call = captured["target_region_birth_call"]
+    assert target_birth_call["scorer_teacher_present"] is True
+    assert target_birth_call["pose_teacher_present"] is True
+    assert target_birth_call["require_pose_trust"] is True
+    assert target_birth_call["target0_shape"] == (8, 384, 512, 3)
+    assert target_birth_call["target1_shape"] == (8, 384, 512, 3)
+    assert target_birth_call["pair_indices"] == tuple(range(8))
+    assert target_birth_call["target_segnet_argmax_shape"] == (8, 384, 512)
+    assert target_birth_call["max_steps"] == 32
+    assert target_birth_call["target_min_region_ratio"] == pytest.approx(0.07)
+    assert (
+        bootstrap_call["pair_local_smoke_artifact_dir"]
+        == (tmp_path / "private_smoke_full_priority_hydration" / "hi_nerv_pair_local_actuator_smoke").as_posix()
     )
+    temporal_dual = captured["dual_ascent_constraints"]["hi_nerv_posenet_temporal_signal_floor"]
+    assert temporal_dual["metric_name"] == ("loss_part_posenet_temporal_signal_floor")
     assert temporal_dual["loss_weight_key"] == "posenet_temporal_signal_floor"
     assert temporal_dual["weight_scale"] == pytest.approx(0.85)
-    geometry_dual = captured["dual_ascent_constraints"][
-        "hi_nerv_posenet_yuv6_geometry_tether"
-    ]
-    assert geometry_dual["metric_name"] == (
-        "loss_part_posenet_yuv6_geometry_tether"
-    )
+    geometry_dual = captured["dual_ascent_constraints"]["hi_nerv_posenet_yuv6_geometry_tether"]
+    assert geometry_dual["metric_name"] == ("loss_part_posenet_yuv6_geometry_tether")
     assert geometry_dual["loss_weight_key"] == "posenet_yuv6_geometry_tether"
     assert geometry_dual["weight_scale"] == pytest.approx(0.95)
     assert captured["curriculum_stage_loss_weights"]
@@ -8000,8 +7501,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert all(
-        weights["segnet_direct_live_class_balanced_squared_hinge"]
-        == pytest.approx(1.0)
+        weights["segnet_direct_live_class_balanced_squared_hinge"] == pytest.approx(1.0)
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert all(
@@ -8009,36 +7509,20 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         for weights in captured["curriculum_stage_loss_weights"]
     )
     assert captured["scorer_space_step_guard_enabled"] is True
-    assert captured[
-        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
-    ] == pytest.approx(0.4)
-    assert captured[
-        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
-    ] == pytest.approx(0.4)
-    assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (
-        pytest.approx(4.25)
-    )
+    assert captured["scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"] == pytest.approx(0.4)
+    assert captured["scorer_space_step_guard_min_post_segnet_occupied_class_fraction"] == pytest.approx(0.4)
+    assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (pytest.approx(4.25))
     assert captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] == (
         pytest.approx(runner_mod.HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD)
     )
-    assert captured[
-        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
-    ] == (
-        pytest.approx(
-            runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD
-        )
+    assert captured["scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"] == (
+        pytest.approx(runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD)
     )
-    assert captured[
-        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
-    ] == (
-        pytest.approx(
-            runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD
-        )
+    assert captured["scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"] == (
+        pytest.approx(runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD)
     )
     assert captured["scorer_space_step_guard_backtracking_steps"] == 6
-    assert captured[
-        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
-    ] == pytest.approx(
+    assert captured["scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"] == pytest.approx(
         runner_mod.HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
     )
     assert captured["scorer_space_step_guard_backtracking_shrink"] == pytest.approx(0.5)
@@ -8052,14 +7536,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured["scorer_support_ladder_patience_steps"] == 1
     assert captured["scorer_support_ladder_growth_factor"] == pytest.approx(2.0)
     assert captured["scorer_support_ladder_max_multiplier"] == pytest.approx(16.0)
-    assert captured["scorer_support_ladder_base_loss_max_when_active"] == pytest.approx(
-        0.25
-    )
+    assert captured["scorer_support_ladder_base_loss_max_when_active"] == pytest.approx(0.25)
     assert captured["run_prioritized_pair_indices"] == (7, 2)
     assert captured["run_pr95_curriculum_total_epochs"] == 8
-    assert captured["checkpoint_selection_metric_key"] == (
-        "loss_part_segnet_direct_live_escape_selection"
-    )
+    assert captured["checkpoint_selection_metric_key"] == ("loss_part_segnet_direct_live_escape_selection")
     assert captured["checkpoint_selection_metric_required"] is True
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
     training = metadata["score_aware_training"]
@@ -8094,14 +7574,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     )
     assert step_guard["backtracking_steps"] == 6
     assert step_guard["backtracking_shrink"] == pytest.approx(0.5)
-    assert priority["sampling_scope"] == (
-        "full_video_target_hydration_with_prioritized_sampling"
-    )
+    assert priority["sampling_scope"] == ("full_video_target_hydration_with_prioritized_sampling")
     assert priority["target_hydration_pair_indices_consumed"] is False
-    assert (
-        priority["target_hydration_pair_indices_consumed_by_renderer_bundle"]
-        is False
-    )
+    assert priority["target_hydration_pair_indices_consumed_by_renderer_bundle"] is False
     assert training["pr95_curriculum_total_epochs"] is None
     assert training["pr95_curriculum_total_epochs_consumed"] is False
     guard = training["scorer_input_distribution_guard"]
@@ -8136,6 +7611,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert output_init["runtime_sidecar_bytes"] == 0
     assert output_init["archive_charged_decoder_tensors"] == [
         "decoder.bootstrap.weight",
+        "decoder.target_region_birth.delta",
         "head_rgb_0.bias",
         "head_rgb_0.weight",
         "head_rgb_1.bias",
@@ -8297,18 +7773,10 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         }
 
     def fake_run_mlx_score_aware_full_main(**kwargs):
-        captured["run_pr95_curriculum_total_epochs"] = int(
-            kwargs["pr95_curriculum_total_epochs"]
-        )
-        captured["run_pr95_enabled"] = bool(
-            kwargs["pr95_faithful_curriculum_enabled"]
-        )
-        captured["archive_selection_replay_required"] = bool(
-            kwargs["archive_selection_replay_required"]
-        )
-        captured["archive_selection_replay_batch_size"] = int(
-            kwargs["archive_selection_replay_batch_size"]
-        )
+        captured["run_pr95_curriculum_total_epochs"] = int(kwargs["pr95_curriculum_total_epochs"])
+        captured["run_pr95_enabled"] = bool(kwargs["pr95_faithful_curriculum_enabled"])
+        captured["archive_selection_replay_required"] = bool(kwargs["archive_selection_replay_required"])
+        captured["archive_selection_replay_batch_size"] = int(kwargs["archive_selection_replay_batch_size"])
         replay_components = kwargs["bundle"].archive_replay_components_fn(
             tmp_path / "parseback.zip",
             {"local_pair_indices": np.array([0], dtype=np.int64)},
@@ -8327,9 +7795,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
                 "archive_path": archive.as_posix(),
                 "archive_bytes": archive.stat().st_size,
                 "archive_sha256": runner_mod._sha256_file(archive),
-                "substrate_artifact_metadata": dict(
-                    kwargs["bundle"].substrate_artifact_metadata
-                ),
+                "substrate_artifact_metadata": dict(kwargs["bundle"].substrate_artifact_metadata),
             }
         )
 
@@ -8683,9 +8149,7 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
             coder_qat_delta_weight=0.0,
             coder_qat_c1a_entropy_weight=0.0,
             coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
-            coder_qat_c1a_sample_size=(
-                runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE
-            ),
+            coder_qat_c1a_sample_size=(runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE),
             recon_pixel_weight_path=None,
             decoder_weight_waterfill_plan=None,
             recon_pixel_weight_auto_discovery=None,
@@ -8834,9 +8298,7 @@ def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
                 "planner_learning_signals": [
                     {
                         "schema": "hprc_planner_learning_signal.v1",
-                        "signal_id": (
-                            "hprc_rate_feasible_but_resolution_distortion_bound"
-                        ),
+                        "signal_id": ("hprc_rate_feasible_but_resolution_distortion_bound"),
                         "status": "route_to_pose_geometry_or_predictive_redesign",
                     }
                 ],
@@ -8867,10 +8329,7 @@ def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
     runner = json.loads(Path(out["bounded_runner_plan_path"]).read_text())
     assert runner["selected_runner_rows"] == []
     assert "no_full_coverage_compact_base_candidate" in runner["blockers"]
-    assert (
-        "implementation_readiness_blocked_fake_or_incomplete_candidate"
-        in runner["blockers"]
-    )
+    assert "implementation_readiness_blocked_fake_or_incomplete_candidate" in runner["blockers"]
     assert runner["hprc_queue_followup_signal_rows"][0]["signal_id"] == (
         "hprc_rate_feasible_but_resolution_distortion_bound"
     )
@@ -8903,62 +8362,37 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert campaign_plan["ready_for_exact_eval_dispatch"] is False
     assert campaign_plan["family_counts"]["hi_nerv"] > 0
     assert campaign_plan["family_counts"]["snerv"] > 0
-    launchable_local_rows = [
-        row
-        for row in campaign_plan["campaign_rows"]
-        if row["local_mlx_launch_command_ready"]
-    ]
+    launchable_local_rows = [row for row in campaign_plan["campaign_rows"] if row["local_mlx_launch_command_ready"]]
     assert campaign_plan["launchable_local_row_count"] == len(launchable_local_rows)
     assert launchable_local_rows == []
     assert all(row["command_argv"] for row in campaign_plan["campaign_rows"])
     assert any(
-        row["family"] == "hi_nerv"
-        and "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
-        in row["blockers"]
+        row["family"] == "hi_nerv" and "requires_verified_joint_p18_p19_recon_pixel_weight_artifact" in row["blockers"]
         for row in campaign_plan["campaign_rows"]
     )
     assert all(
-        row["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_status_is_runnable_plan"
-        ]
+        row["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_runnable_plan"]
         is row["local_mlx_launch_command_ready"]
         for row in campaign_plan["campaign_rows"]
     )
     assert all(
-        row["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_status_is_receiver_proof"
-        ]
-        is False
-        and row["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_status_is_cpu_replay_proof"
-        ]
-        is False
-        and row["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_status_is_exact_eval_authority"
-        ]
-        is False
+        row["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_receiver_proof"] is False
+        and row["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_cpu_replay_proof"] is False
+        and row["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_exact_eval_authority"] is False
         for row in campaign_plan["campaign_rows"]
     )
     assert campaign_plan["experiment_queue"]["schema"] == "experiment_queue.v1"
-    assert campaign_plan["experiment_queue_experiment_count"] == campaign_plan[
-        "campaign_row_count"
-    ]
-    snerv_campaign_rows = [
-        row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"
-    ]
+    assert campaign_plan["experiment_queue_experiment_count"] == campaign_plan["campaign_row_count"]
+    snerv_campaign_rows = [row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"]
     assert snerv_campaign_rows
     assert all(
-        (not row["local_mlx_launch_command_ready"])
-        or row["hard_byte_ceiling_satisfied_for_long_training"]
+        (not row["local_mlx_launch_command_ready"]) or row["hard_byte_ceiling_satisfied_for_long_training"]
         for row in snerv_campaign_rows
     )
     assert all(
-        row["score_lowering_gate"]["command_materialized"]
-        is row["local_mlx_launch_command_ready"]
-        and row["score_lowering_gate"]["local_mlx_executable"]
-        is row["local_mlx_launch_command_ready"]
-        and row["score_lowering_gate"]["prelaunch_allowed"]
-        is row["local_mlx_launch_command_ready"]
+        row["score_lowering_gate"]["command_materialized"] is row["local_mlx_launch_command_ready"]
+        and row["score_lowering_gate"]["local_mlx_executable"] is row["local_mlx_launch_command_ready"]
+        and row["score_lowering_gate"]["prelaunch_allowed"] is row["local_mlx_launch_command_ready"]
         and row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
         and row["score_lowering_gate"]["cpu_replay_ready"] is False
         and row["score_lowering_gate"]["exact_gate_ready"] is False
@@ -8969,18 +8403,14 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         for row in snerv_campaign_rows
     )
     assert any(
-        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
-        in row["blockers"]
+        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in row["blockers"]
         for row in snerv_campaign_rows
     )
     assert any(
-        "snerv_byte_closed_archive_export_missing"
-        in row["score_lowering_gate"]["promotion_blockers"]
+        "snerv_byte_closed_archive_export_missing" in row["score_lowering_gate"]["promotion_blockers"]
         for row in snerv_campaign_rows
     )
-    assert report["nerv_stack_synergy_audit"]["schema"] == (
-        "nerv_stack_synergy_audit.v1"
-    )
+    assert report["nerv_stack_synergy_audit"]["schema"] == ("nerv_stack_synergy_audit.v1")
     assert report["nerv_stack_synergy_audit"]["score_claim"] is False
     assert {row["stack_id"] for row in report["nerv_stack_synergy_audit"]["stacks"]} == {
         "hi_nerv",
@@ -8997,86 +8427,55 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert "pvq_nerv" in families
     assert "rt_vq_nerv" in families
     assert "pact_nerv_selector_v4" in families
-    assert families["pr95_hnerv"]["status"] == (
-        "executable_mlx_archive_export_control_arm"
-    )
-    assert "not a PR95-faithful reproduction" in families["pr95_hnerv"][
-        "execution_scope"
-    ]
+    assert families["pr95_hnerv"]["status"] == ("executable_mlx_archive_export_control_arm")
+    assert "not a PR95-faithful reproduction" in families["pr95_hnerv"]["execution_scope"]
     assert families["pact_nerv_vq"]["status"] == "executable_mlx_backend_available"
-    assert families["pact_nerv_selector_v4"]["status"] == (
-        "executable_mlx_backend_available"
-    )
+    assert families["pact_nerv_selector_v4"]["status"] == ("executable_mlx_backend_available")
     assert families["pact_nerv_selector_v4"]["section_value_profiler"] == (
         "tools/profile_pact_nerv_selector_v4_mlx_section_value.py"
     )
-    assert "pact_nerv_selector_v4" in families["pact_nerv_selector_v4"][
-        "trainer_entrypoint"
-    ]
+    assert "pact_nerv_selector_v4" in families["pact_nerv_selector_v4"]["trainer_entrypoint"]
     assert families["pvq_nerv"]["status"] == "executable_via_pact_nerv_vq_adapter"
-    assert families["hi_nerv"]["status"] == (
-        "mlx_archive_export_adapter_available_"
-        "distortion_fit_actuator_pending"
-    )
-    assert families["hi_nerv"]["trainer_entrypoint"].endswith(
-        "--execute-family hi_nerv"
-    )
+    assert families["hi_nerv"]["status"] == ("mlx_archive_export_adapter_available_distortion_fit_actuator_pending")
+    assert families["hi_nerv"]["trainer_entrypoint"].endswith("--execute-family hi_nerv")
     assert families["hi_nerv"]["archive_exporter"] == (
         "tac.substrates.hi_nerv.archive_candidate.export_hi_nerv_mlx_archive"
     )
     assert families["hi_nerv"]["stack_role"] == "primary_carrier"
     assert "super-small-rate-by-design" in families["hi_nerv"]["rate_axis_evidence"]
-    assert "cheap bytes alone cannot promote" in families["hi_nerv"][
-        "distortion_fit_blocker"
-    ]
+    assert "cheap bytes alone cannot promote" in families["hi_nerv"]["distortion_fit_blocker"]
     hinerv_plan = families["hi_nerv"]["score_aware_carrier_training_plan"]
-    assert hinerv_plan["planner_action"] == (
-        "run_receiver_closed_modelsize_ladder_before_score_aware_training"
-    )
+    assert hinerv_plan["planner_action"] == ("run_receiver_closed_modelsize_ladder_before_score_aware_training")
     assert hinerv_plan["carrier_fit_status"] == "unusable"
     assert hinerv_plan["allocator_target_surface"] == "decoder_weights"
     assert hinerv_plan["score_claim"] is False
     assert hinerv_plan["ready_for_exact_eval_dispatch"] is False
     assert "carrier_fit_unusable_d_seg" in hinerv_plan["dispatch_blockers"]
-    assert (
-        "latent_posthoc_allocator_demoted_low_leverage"
-        in hinerv_plan["dispatch_blockers"]
-    )
-    assert families["snerv"]["status"] == (
-        "executable_cpu_advisory_plus_mlx_native_export_adapter_available"
-    )
+    assert "latent_posthoc_allocator_demoted_low_leverage" in hinerv_plan["dispatch_blockers"]
+    assert families["snerv"]["status"] == ("executable_cpu_advisory_plus_mlx_native_export_adapter_available")
     assert families["snerv"]["trainer_kind"] == (
-        "mlx_native_target_hydration_receiver_export_available_"
-        "scoreaware_long_training_missing"
+        "mlx_native_target_hydration_receiver_export_available_scoreaware_long_training_missing"
     )
     assert families["snerv"]["next_action"].startswith(
         "bind_learned_mlx_scoreaware_decoder_training_to_snerv_native_export"
     )
-    assert "optional MLX-native target-hydration/export/receiver-proof attachment" in (
-        families["snerv"]["execution_scope"]
+    assert (
+        "optional MLX-native target-hydration/export/receiver-proof attachment"
+        in (families["snerv"]["execution_scope"])
     )
     assert families["snerv"]["archive_exporter"] == (
-        "tac.substrates.snerv_inverse_steg_carrier.archive_candidate."
-        "export_snerv_archive_bound_candidate_package"
+        "tac.substrates.snerv_inverse_steg_carrier.archive_candidate.export_snerv_archive_bound_candidate_package"
     )
     assert families["snerv"]["stack_role"] == "primary_carrier"
-    assert families["snerv"]["score_aware_carrier_training_plan"][
-        "score_aware_training_ready"
-    ] is False
-    assert "missing_training_stack:real_segnet_teacher" in families["snerv"][
-        "score_aware_carrier_training_plan"
-    ]["dispatch_blockers"]
+    assert families["snerv"]["score_aware_carrier_training_plan"]["score_aware_training_ready"] is False
     assert (
-        "sr_nerv_lowres_encode_superresolve_resolution_deadzone"
-        in families["snerv"]["allowed_enhancers"]
+        "missing_training_stack:real_segnet_teacher"
+        in families["snerv"]["score_aware_carrier_training_plan"]["dispatch_blockers"]
     )
+    assert "sr_nerv_lowres_encode_superresolve_resolution_deadzone" in families["snerv"]["allowed_enhancers"]
     assert "ffnerv_flow_pose_channel" in families["snerv"]["allowed_enhancers"]
-    assert families["sr_nerv"]["stack_role"] == (
-        "resolution_axis_enhancer_or_design_knob"
-    )
-    assert families["sr_nerv"]["enhancer_priority"] > families["boostnerv"][
-        "carrier_priority"
-    ]
+    assert families["sr_nerv"]["stack_role"] == ("resolution_axis_enhancer_or_design_knob")
+    assert families["sr_nerv"]["enhancer_priority"] > families["boostnerv"]["carrier_priority"]
     assert families["rnerv"]["status"] == "migration_required"
     assert families["rnerv"]["stack_role"] == "enhancer_or_search_prior"
     assert report["promotion_eligible"] is False
@@ -9092,20 +8491,11 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         repo_root=REPO_ROOT,
     )
 
-    rows = {
-        (row["family"], row["hard_byte_ceiling"]): row
-        for row in report["compact_base_campaign_rows"]
-    }
-    assert rows[("pact_nerv_vq", 178_000)]["route_status"] == (
-        "queued_for_mlx_training_archive_export_receiver_proof"
-    )
-    assert rows[("pr95_hnerv", 178_000)]["route_status"] == (
-        "queued_for_mlx_training_archive_export_receiver_proof"
-    )
+    rows = {(row["family"], row["hard_byte_ceiling"]): row for row in report["compact_base_campaign_rows"]}
+    assert rows[("pact_nerv_vq", 178_000)]["route_status"] == ("queued_for_mlx_training_archive_export_receiver_proof")
+    assert rows[("pr95_hnerv", 178_000)]["route_status"] == ("queued_for_mlx_training_archive_export_receiver_proof")
     assert rows[("pvq_nerv", 178_000)]["canonical_family"] == "pact_nerv_vq"
-    assert rows[("pvq_nerv", 178_000)]["route_status"] == (
-        "queued_for_mlx_training_archive_export_receiver_proof"
-    )
+    assert rows[("pvq_nerv", 178_000)]["route_status"] == ("queued_for_mlx_training_archive_export_receiver_proof")
     assert rows[("pact_nerv_selector_v4", 178_000)]["route_status"] == (
         "queued_for_mlx_training_archive_export_receiver_proof"
     )
@@ -9116,9 +8506,7 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
         "queued_for_mlx_archive_adapter_smoke_scoreaware_training_pending"
     )
     assert rows[("hi_nerv", 178_000)]["stack_role"] == "primary_carrier"
-    assert "export_hi_nerv_mlx_archive" in rows[("hi_nerv", 178_000)][
-        "archive_exporter"
-    ]
+    assert "export_hi_nerv_mlx_archive" in rows[("hi_nerv", 178_000)]["archive_exporter"]
     modelsize_budget = rows[("hi_nerv", 178_000)]["modelsize_budget"]
     assert modelsize_budget["schema"] == "nerv_modelsize_budget.v1"
     assert modelsize_budget["hard_byte_ceilings"] == [178_000]
@@ -9129,38 +8517,23 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
     assert snerv_budget["hard_byte_ceilings"] == [178_000]
     assert snerv_budget["selected_candidate_count"] > 0
     assert snerv_budget["ready_for_exact_eval_dispatch"] is False
-    campaign_plan = rows[("hi_nerv", 178_000)][
-        "score_aware_carrier_training_plan"
-    ]
-    assert campaign_plan["planner_action"] == (
-        "run_receiver_closed_modelsize_ladder_before_score_aware_training"
-    )
+    campaign_plan = rows[("hi_nerv", 178_000)]["score_aware_carrier_training_plan"]
+    assert campaign_plan["planner_action"] == ("run_receiver_closed_modelsize_ladder_before_score_aware_training")
     assert campaign_plan["linf_latent_posthoc_status"] == "demoted"
     assert campaign_plan["promotion_eligible"] is False
-    assert rows[("snerv", 178_000)]["route_status"] == (
-        "migration_required_before_runner_execution"
-    )
+    assert rows[("snerv", 178_000)]["route_status"] == ("migration_required_before_runner_execution")
     assert rows[("snerv", 178_000)]["stack_role"] == "primary_carrier"
-    assert rows[("sr_nerv", 178_000)]["route_status"] == (
-        "migration_required_before_runner_execution"
-    )
-    assert rows[("sr_nerv", 178_000)]["stack_role"] == (
-        "resolution_axis_enhancer_or_design_knob"
-    )
+    assert rows[("sr_nerv", 178_000)]["route_status"] == ("migration_required_before_runner_execution")
+    assert rows[("sr_nerv", 178_000)]["stack_role"] == ("resolution_axis_enhancer_or_design_knob")
     assert "scorer_mirror_check" in rows[("sr_nerv", 178_000)]["next_action"]
-    assert rows[("boostnerv", 178_000)]["route_status"] == (
-        "migration_required_before_runner_execution"
-    )
+    assert rows[("boostnerv", 178_000)]["route_status"] == ("migration_required_before_runner_execution")
     assert rows[("boostnerv", 178_000)]["stack_role"] == "enhancer_bolt_on"
     assert rows[("rnerv", 178_000)]["trainer_entrypoint"] is None
     assert rows[("rnerv", 178_000)]["stack_role"] == "enhancer_or_search_prior"
     assert rows[("pact_nerv_vq", 178_000)]["score_claim"] is False
     assert rows[("pact_nerv_vq", 178_000)]["ready_for_exact_eval_dispatch"] is False
     assert rows[("pact_nerv_selector_v4", 178_000)]["score_claim"] is False
-    assert (
-        rows[("pact_nerv_selector_v4", 178_000)]["ready_for_exact_eval_dispatch"]
-        is False
-    )
+    assert rows[("pact_nerv_selector_v4", 178_000)]["ready_for_exact_eval_dispatch"] is False
 
 
 def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() -> None:
@@ -9205,9 +8578,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert hi["use_convnext_blocks"] is True
     hi_precedence = hi["modelsize_control_contract"]["control_precedence"]
     assert hi_precedence["more_finely_grained_child_rules_take_priority"] is True
-    assert hi_precedence[
-        "official_controls_are_base_constraints_not_rate_optimizer_overrides"
-    ] is True
+    assert hi_precedence["official_controls_are_base_constraints_not_rate_optimizer_overrides"] is True
     target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
@@ -9222,18 +8593,10 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert target_hi["use_hierarchical_feature_grid"] is True
     assert target_hi["use_convnext_blocks"] is True
     assert target_hi["target_modelsize_mparams"] == 0.03
-    target_hi_precedence = target_hi["modelsize_control_contract"][
-        "control_precedence"
-    ]
-    assert target_hi_precedence["highest_specificity_active_layer"] == (
-        "pact_target_modelsize_child_rule"
-    )
-    assert target_hi_precedence[
-        "more_finely_grained_child_rules_take_priority"
-    ] is True
-    assert target_hi["modelsize_error_mparams"] == pytest.approx(
-        abs(target_hi["modelsize_mparams"] - 0.03)
-    )
+    target_hi_precedence = target_hi["modelsize_control_contract"]["control_precedence"]
+    assert target_hi_precedence["highest_specificity_active_layer"] == ("pact_target_modelsize_child_rule")
+    assert target_hi_precedence["more_finely_grained_child_rules_take_priority"] is True
+    assert target_hi["modelsize_error_mparams"] == pytest.approx(abs(target_hi["modelsize_mparams"] - 0.03))
     assert target_hi["candidate_id"].endswith("_tgtmp0p03")
     reparsed_target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
@@ -9259,9 +8622,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert official_sn["family"] == "snerv"
     assert official_sn["capacity_source"] == "official_snerv_modelsize"
     assert official_sn["modelsize_mparams"] == 0.05
-    assert official_sn["official_modelsize_solution"]["fc_dim"] == (
-        official_sn["fc_dim"]
-    )
+    assert official_sn["official_modelsize_solution"]["fc_dim"] == (official_sn["fc_dim"])
     assert official_sn["ready_for_exact_eval_dispatch"] is False
     spectra_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
@@ -9281,9 +8642,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         hard_byte_ceilings=(178_000,),
     )
     assert reparsed_spectra_sn is not None
-    assert reparsed_spectra_sn["snerv_model_size_adapter"] == (
-        SNERV_SPECTRA_PRESERVING_ADAPTER
-    )
+    assert reparsed_spectra_sn["snerv_model_size_adapter"] == (SNERV_SPECTRA_PRESERVING_ADAPTER)
     assert reparsed_spectra_sn["candidate_id"] == spectra_sn["candidate_id"]
     official_primitives_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
@@ -9297,9 +8656,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert official_primitives_sn is not None
     assert official_primitives_sn["capacity_source"] == "official_snerv_modelsize"
     assert official_primitives_sn["levels"] == 1
-    assert official_primitives_sn["snerv_model_size_adapter"] == (
-        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-    )
+    assert official_primitives_sn["snerv_model_size_adapter"] == (SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER)
     assert "_haar_lv1_" in official_primitives_sn["candidate_id"]
     assert "_adofficial_oms0p05_" in official_primitives_sn["candidate_id"]
     assert runner_mod._snerv_auto_skip_high_modes_for_resolution(
@@ -9324,16 +8681,14 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         "scalar_mean",
     }
     assert official_primitives_auto_skip_sn["nominal_under_ceiling"] is True
-    assert official_primitives_auto_skip_sn["nominal_total_payload_bytes"] < (
-        official_primitives_sn["nominal_total_payload_bytes"]
-    )
     assert (
-        runner_mod._snerv_auto_skip_high_modes_for_resolution(
-            explicit_mode="shared_mean",
-            model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
-        )
-        == ("shared_mean",)
+        official_primitives_auto_skip_sn["nominal_total_payload_bytes"]
+        < (official_primitives_sn["nominal_total_payload_bytes"])
     )
+    assert runner_mod._snerv_auto_skip_high_modes_for_resolution(
+        explicit_mode="shared_mean",
+        model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+    ) == ("shared_mean",)
     reparsed_official_primitives_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id=official_primitives_sn["candidate_id"],
@@ -9343,12 +8698,8 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert reparsed_official_primitives_sn["snerv_model_size_adapter"] == (
         SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     )
-    assert reparsed_official_primitives_sn["candidate_id"] == (
-        official_primitives_sn["candidate_id"]
-    )
-    assert reparsed_official_primitives_sn[
-        "official_skip_high_mode_token_missing"
-    ] is True
+    assert reparsed_official_primitives_sn["candidate_id"] == (official_primitives_sn["candidate_id"])
+    assert reparsed_official_primitives_sn["official_skip_high_mode_token_missing"] is True
     target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
@@ -9385,12 +8736,8 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert shared_target_hi["candidate_id"].endswith("_tgtmp0p03")
     shared_hi_contract = shared_target_hi["modelsize_control_contract"]
     assert shared_hi_contract["schema"] == "nerv_modelsize_control_contract.v1"
-    assert shared_hi_contract["control_semantics"] == (
-        "local_receiver_visible_grid_search_nearest_target"
-    )
-    assert shared_hi_contract["shared_target_modelsize_mparams_consumed_as"] == (
-        "nearest_local_param_count_target"
-    )
+    assert shared_hi_contract["control_semantics"] == ("local_receiver_visible_grid_search_nearest_target")
+    assert shared_hi_contract["shared_target_modelsize_mparams_consumed_as"] == ("nearest_local_param_count_target")
     assert shared_hi_contract["modelsize_mparams_is_official_upstream_flag"] is False
     assert shared_hi_contract["archive_bytes_authority_required"] is True
     shared_target_sn = _resolve_execute_modelsize_candidate(
@@ -9404,15 +8751,11 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert shared_target_sn["family"] == "snerv"
     assert shared_target_sn["capacity_source"] == "official_snerv_modelsize"
     assert shared_target_sn["modelsize_mparams"] == 0.05
-    assert shared_target_sn["official_modelsize_solution"]["fc_dim"] == (
-        shared_target_sn["fc_dim"]
-    )
+    assert shared_target_sn["official_modelsize_solution"]["fc_dim"] == (shared_target_sn["fc_dim"])
     assert shared_target_sn["ready_for_exact_eval_dispatch"] is False
     shared_sn_contract = shared_target_sn["modelsize_control_contract"]
     assert shared_sn_contract["schema"] == "nerv_modelsize_control_contract.v1"
-    assert shared_sn_contract["control_semantics"] == (
-        "official_snerv_modelsize_quadratic_fc_dim_solve"
-    )
+    assert shared_sn_contract["control_semantics"] == ("official_snerv_modelsize_quadratic_fc_dim_solve")
     assert shared_sn_contract["shared_target_modelsize_mparams_consumed_as"] == (
         "official_snerv_modelsize_quadratic_fc_dim_solve"
     )
@@ -9429,9 +8772,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert explicit_shared_target_sn["candidate_id"] == shared_target_sn["candidate_id"]
     assert explicit_shared_target_sn["capacity_source"] == "official_snerv_modelsize"
     assert explicit_shared_target_sn["modelsize_mparams"] == 0.05
-    assert explicit_shared_target_sn["official_modelsize_solution"]["fc_dim"] == (
-        explicit_shared_target_sn["fc_dim"]
-    )
+    assert explicit_shared_target_sn["official_modelsize_solution"]["fc_dim"] == (explicit_shared_target_sn["fc_dim"])
     explicit = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id=hi["candidate_id"],
@@ -9460,17 +8801,13 @@ def test_snerv_modelsize_resolution_uses_effective_spectra_adapter() -> None:
         snerv_spectra_preserving_adapter=True,
         snerv_model_size_adapter=None,
     )
-    assert runner_mod._effective_snerv_modelsize_adapter_for_resolution(args) == (
-        SNERV_SPECTRA_PRESERVING_ADAPTER
-    )
+    assert runner_mod._effective_snerv_modelsize_adapter_for_resolution(args) == (SNERV_SPECTRA_PRESERVING_ADAPTER)
     candidate = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
         hard_byte_ceilings=(216_000,),
         snerv_official_modelsize_mparams=(0.05,),
-        snerv_model_size_adapter=runner_mod._effective_snerv_modelsize_adapter_for_resolution(
-            args
-        ),
+        snerv_model_size_adapter=runner_mod._effective_snerv_modelsize_adapter_for_resolution(args),
     )
     assert candidate is not None
     assert candidate["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
@@ -9613,13 +8950,9 @@ def test_byte_cap_controller_uses_measured_archive_feedback() -> None:
 
     by_id = {row["candidate_id"]: row for row in attached}
     assert by_id["small"]["byte_cap_controller"]["predicted_archive_bytes"] == 90
-    assert by_id["small"]["byte_cap_controller"][
-        "predicted_under_hard_byte_ceiling"
-    ] is True
+    assert by_id["small"]["byte_cap_controller"]["predicted_under_hard_byte_ceiling"] is True
     assert by_id["large"]["byte_cap_controller"]["predicted_archive_bytes"] == 120
-    assert by_id["large"]["byte_cap_controller"][
-        "predicted_under_hard_byte_ceiling"
-    ] is False
+    assert by_id["large"]["byte_cap_controller"]["predicted_under_hard_byte_ceiling"] is False
     assert runner_mod._byte_cap_controller_predicts_under_ceiling(by_id["small"])
     assert not runner_mod._byte_cap_controller_predicts_under_ceiling(by_id["large"])
 
@@ -9752,9 +9085,7 @@ def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
     assert controller["prediction_authority"] == "uncalibrated_nominal_payload_diagnostic"
     assert controller["calibrated_archive_prediction"] is False
     assert controller["calibration_observation_count"] == 0
-    assert "byte_cap_controller_measured_archive_feedback_missing" in controller[
-        "blockers"
-    ]
+    assert "byte_cap_controller_measured_archive_feedback_missing" in controller["blockers"]
     assert not runner_mod._byte_cap_controller_predicts_under_ceiling(attached[0])
 
 
@@ -9786,10 +9117,13 @@ def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> Non
             "8",
         ]
     )
-    assert runner_mod._uncalibrated_near_cap_modelsize_launch_blocker(
-        args=launch_args,
-        modelsize_candidate=near_cap,
-    ) == "hi_nerv_modelsize_auto_near_cap_requires_measured_archive_feedback_before_long_training"
+    assert (
+        runner_mod._uncalibrated_near_cap_modelsize_launch_blocker(
+            args=launch_args,
+            modelsize_candidate=near_cap,
+        )
+        == "hi_nerv_modelsize_auto_near_cap_requires_measured_archive_feedback_before_long_training"
+    )
     probe_args = runner_mod._parse_args(
         [
             "--execute-family",
@@ -9841,13 +9175,8 @@ def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> Non
                 "family": "hi_nerv",
                 "row_id": "prior_export",
                 "decoder_codec": nominal["decoder_codec"],
-                "nominal_total_payload_bytes": nominal[
-                    "nominal_total_payload_bytes"
-                ],
-                "measured_archive_bytes": nominal[
-                    "nominal_total_payload_bytes"
-                ]
-                + 20_000,
+                "nominal_total_payload_bytes": nominal["nominal_total_payload_bytes"],
+                "measured_archive_bytes": nominal["nominal_total_payload_bytes"] + 20_000,
                 "receiver_proof_passed": True,
             }
         ],
@@ -9894,9 +9223,7 @@ def test_execute_snerv_modelsize_auto_fails_closed_when_no_nominal_candidate_und
             candidate_id="auto",
             hard_byte_ceilings=(1_000,),
             snerv_official_modelsize_mparams=(0.05,),
-            snerv_model_size_adapter=(
-                "snerv_official_mfu_hfr_tub_primitives_adapter"
-            ),
+            snerv_model_size_adapter=("snerv_official_mfu_hfr_tub_primitives_adapter"),
             snerv_temporal_modes=("official_haar_dwt1d_lowpass",),
         )
 
@@ -9965,9 +9292,7 @@ def test_explicit_snerv_modelsize_candidate_accepts_calibrated_under_cap_feedbac
                 "family": "snerv",
                 "candidate_id": candidate["candidate_id"],
                 "decoder_payload_codec": candidate["decoder_payload_codec"],
-                "nominal_total_payload_bytes": candidate[
-                    "nominal_total_payload_bytes"
-                ],
+                "nominal_total_payload_bytes": candidate["nominal_total_payload_bytes"],
                 "measured_archive_bytes": 200_000,
                 "receiver_proof_passed": True,
             }
@@ -9977,9 +9302,7 @@ def test_explicit_snerv_modelsize_candidate_accepts_calibrated_under_cap_feedbac
     assert selected is not None
     assert selected["candidate_id"] == candidate["candidate_id"]
     assert selected["byte_cap_controller"]["predicted_archive_bytes"] == 200_000
-    assert selected["byte_cap_controller"][
-        "predicted_under_hard_byte_ceiling"
-    ] is True
+    assert selected["byte_cap_controller"]["predicted_under_hard_byte_ceiling"] is True
 
 
 def test_snerv_modelsize_candidates_include_official_skip_high_mode_in_identity() -> None:
@@ -10152,12 +9475,8 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
                 "official_checkpoint_export_binding": {
                     "schema": "snerv_official_checkpoint_export_binding.v1",
                     "official_trained_checkpoint_state_dict_slice_present": True,
-                    "official_trained_checkpoint_state_dict_slice_path": (
-                        state_slice.name
-                    ),
-                    "official_trained_checkpoint_state_dict_slice_bytes": (
-                        state_slice.stat().st_size
-                    ),
+                    "official_trained_checkpoint_state_dict_slice_path": (state_slice.name),
+                    "official_trained_checkpoint_state_dict_slice_bytes": (state_slice.stat().st_size),
                     "official_trained_checkpoint_state_dict_slice_sha256": "a" * 64,
                     "official_trained_checkpoint_state_dict_slice_member_count": 2,
                     "official_trained_checkpoint_state_dict_slice_member_names": [
@@ -10195,20 +9514,14 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
             "required_nominal_payload_bytes_max": 91_875,
             "hard_byte_ceiling_measurement_bypass_enabled": True,
             "hard_byte_ceiling_checked_after_export": True,
-            "snerv_official_trained_checkpoint_state_dict_slice_path": (
-                state_slice.resolve(strict=False).as_posix()
-            ),
-            "snerv_official_trained_checkpoint_state_dict_path": (
-                state_slice.resolve(strict=False).as_posix()
-            ),
+            "snerv_official_trained_checkpoint_state_dict_slice_path": (state_slice.resolve(strict=False).as_posix()),
+            "snerv_official_trained_checkpoint_state_dict_path": (state_slice.resolve(strict=False).as_posix()),
             "snerv_official_trained_checkpoint_state_dict_slice_present": True,
             "snerv_official_trained_checkpoint_state_dict_slice_file_present": True,
             "snerv_official_trained_checkpoint_state_dict_slice_runner_arg": (
                 "--snerv-official-trained-checkpoint-state-dict-path"
             ),
-            "snerv_official_trained_checkpoint_state_dict_slice_bytes": (
-                state_slice.stat().st_size
-            ),
+            "snerv_official_trained_checkpoint_state_dict_slice_bytes": (state_slice.stat().st_size),
             "snerv_official_trained_checkpoint_state_dict_slice_sha256": "a" * 64,
             "snerv_official_trained_checkpoint_state_dict_slice_member_count": 2,
             "snerv_official_trained_checkpoint_state_dict_slice_member_names": [
@@ -10335,29 +9648,27 @@ def test_modelsize_byte_cap_feedback_loader_accepts_snerv_binary_profile_with_re
             "measured_payload_bytes": packet_path.stat().st_size,
             "nominal_total_payload_bytes": scalar["nominal_total_payload_bytes"],
             "hard_byte_ceiling": 178_000,
-                "decoder_codec": "int8_symmetric",
-                "packet_sha256": hashlib.sha256(packet_path.read_bytes()).hexdigest(),
-                "archive_path": archive_path.as_posix(),
-                "archive_sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
-                "source_bound_controls": runner_mod._byte_cap_candidate_match_controls(
-                    scalar
-                ),
-                "receiver_closed": True,
-                "receiver_closed_status": "associated_receiver_proof",
-                "receiver_proof_path": (
-                    profile.parent.parent
-                    / "snerv_run"
-                    / "snerv_mlx_native_export"
-                    / "native_train_export"
-                    / "snerv_mlx_native_archive_bound_package"
-                    / "receiver_proof"
-                    / "snerv_inverse_steg_receiver_proof.json"
-                )
-                .resolve(strict=False)
-                .as_posix(),
-                "source_path": profile.resolve(strict=False).as_posix(),
-            }
-        ]
+            "decoder_codec": "int8_symmetric",
+            "packet_sha256": hashlib.sha256(packet_path.read_bytes()).hexdigest(),
+            "archive_path": archive_path.as_posix(),
+            "archive_sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+            "source_bound_controls": runner_mod._byte_cap_candidate_match_controls(scalar),
+            "receiver_closed": True,
+            "receiver_closed_status": "associated_receiver_proof",
+            "receiver_proof_path": (
+                profile.parent.parent
+                / "snerv_run"
+                / "snerv_mlx_native_export"
+                / "native_train_export"
+                / "snerv_mlx_native_archive_bound_package"
+                / "receiver_proof"
+                / "snerv_inverse_steg_receiver_proof.json"
+            )
+            .resolve(strict=False)
+            .as_posix(),
+            "source_path": profile.resolve(strict=False).as_posix(),
+        }
+    ]
 
 
 def test_modelsize_byte_cap_feedback_loader_rejects_partial_snerv_binary_profile(
@@ -10402,9 +9713,7 @@ def test_byte_cap_controller_keeps_snerv_skip_mode_feedback_candidate_scoped(
     assert scalar_controller["calibration_observation_count"] == 1
     assert scalar_controller["predicted_archive_bytes"] == 91_445
     assert full_controller["calibration_observation_count"] == 0
-    assert "byte_cap_controller_measured_archive_feedback_missing" in full_controller[
-        "blockers"
-    ]
+    assert "byte_cap_controller_measured_archive_feedback_missing" in full_controller["blockers"]
 
 
 def test_snerv_official_modelsize_controls_require_candidate_resolution() -> None:
@@ -10431,20 +9740,12 @@ def test_snerv_official_modelsize_controls_require_candidate_resolution() -> Non
         ]
     )
 
-    assert runner_mod._snerv_official_modelsize_candidate_resolution_blockers(
-        manual
-    ) == []
-    blockers = runner_mod._snerv_official_modelsize_candidate_resolution_blockers(
-        blocked
-    )
+    assert runner_mod._snerv_official_modelsize_candidate_resolution_blockers(manual) == []
+    blockers = runner_mod._snerv_official_modelsize_candidate_resolution_blockers(blocked)
     assert (
-        "snerv_official_modelsize_control_requires_candidate_resolution:"
-        "--snerv-official-modelsize-mparams"
+        "snerv_official_modelsize_control_requires_candidate_resolution:--snerv-official-modelsize-mparams"
     ) in blockers
-    assert (
-        "snerv_official_modelsize_control_requires_candidate_resolution:"
-        "--snerv-official-enc-strds"
-    ) in blockers
+    assert ("snerv_official_modelsize_control_requires_candidate_resolution:--snerv-official-enc-strds") in blockers
     with pytest.raises(SystemExit, match="SNeRV official modelsize controls require"):
         runner_mod.main(
             [
@@ -10586,18 +9887,12 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     )
     hi_official = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
-        candidate_id=(
-            "hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_"
-            "int4_mixed_ceil36000"
-        ),
+        candidate_id=("hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_int4_mixed_ceil36000"),
         hard_byte_ceilings=(178_000,),
     )
     hi_target = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
-        candidate_id=(
-            "hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_"
-            "int4_mixed_ceil36000_tgtmp0p02"
-        ),
+        candidate_id=("hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_int4_mixed_ceil36000_tgtmp0p02"),
         hard_byte_ceilings=(178_000,),
     )
     sn = _resolve_execute_modelsize_candidate(
@@ -10608,16 +9903,14 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     sn_rich = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id=(
-            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_"
-            "mfu1-3_hfr0p25_t1_adbase_int2_symmetric_ceil36000"
+            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_mfu1-3_hfr0p25_t1_adbase_int2_symmetric_ceil36000"
         ),
         hard_byte_ceilings=(178_000,),
     )
     sn_spectra = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id=(
-            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
-            "mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
+            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
         ),
         hard_byte_ceilings=(178_000,),
     )
@@ -10649,9 +9942,7 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     )
 
     assert hi is not None
-    assert hi["candidate_id"] == (
-        "hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000"
-    )
+    assert hi["candidate_id"] == ("hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000")
     assert hi_target is not None
     assert hi_target["capacity_source"] == "local_hinerv_target_modelsize"
     assert hi_target["target_modelsize_mparams"] == 0.02
@@ -10663,10 +9954,7 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert hi["mid_injection_block_index"] == 1
     assert hi["fine_injection_block_index"] == 4
     assert hi_official is not None
-    assert hi_official["candidate_id"] == (
-        "hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_"
-        "int4_mixed_ceil36000"
-    )
+    assert hi_official["candidate_id"] == ("hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_int4_mixed_ceil36000")
     assert hi_official["use_hierarchical_feature_grid"] is True
     assert hi_official["use_convnext_blocks"] is True
     assert hi_official["local_grid_levels"] == 2
@@ -10677,17 +9965,14 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert hi_official["fine_injection_block_index"] == 4
     assert hi_official["hard_byte_ceiling"] == 36_000
     assert sn is not None
-    assert sn["candidate_id"] == (
-        "snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000"
-    )
+    assert sn["candidate_id"] == ("snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000")
     assert sn["legacy_candidate_id"] is True
     assert sn["num_pairs"] == 600
     assert sn["hard_byte_ceiling"] == 36_000
     assert sn["decoder_payload_codec"] == "int2_symmetric"
     assert sn_rich is not None
     assert sn_rich["candidate_id"] == (
-        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_"
-        "mfu1-3_hfr0p25_t1_adbase_int2_symmetric_ceil36000"
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_mfu1-3_hfr0p25_t1_adbase_int2_symmetric_ceil36000"
     )
     assert sn_rich["wavelet"] == "haar"
     assert sn_rich["fc_dim"] == 11
@@ -10696,21 +9981,16 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn_rich["mfu_scales"] == [1, 3]
     assert sn_rich["hfr_gain"] == 0.25
     assert sn_rich["temporal_context"] == 1
-    assert sn_rich["snerv_model_size_adapter"] == (
-        "snerv_fc_dim_emb_size_adapter_v1"
-    )
+    assert sn_rich["snerv_model_size_adapter"] == ("snerv_fc_dim_emb_size_adapter_v1")
     assert sn_spectra is not None
     assert sn_spectra["candidate_id"] == (
-        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
-        "mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
     )
     assert sn_spectra["patch_radius"] == 3
     assert sn_spectra["mfu_scales"] == [1, 5]
     assert sn_spectra["hfr_gain"] == pytest.approx(0.375)
     assert sn_spectra["temporal_context"] == 2
-    assert sn_spectra["snerv_model_size_adapter"] == (
-        SNERV_SPECTRA_PRESERVING_ADAPTER
-    )
+    assert sn_spectra["snerv_model_size_adapter"] == (SNERV_SPECTRA_PRESERVING_ADAPTER)
     assert sn_temporal is not None
     assert sn_temporal["temporal_context"] == 2
     assert sn_temporal["temporal_mode"] == "official_haar_dwt1d_lowpass"
@@ -10737,27 +10017,18 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn_official_requested_bits["legacy_requested_lf_bit_candidate_id"] is True
     assert sn_official_requested_bits["bits_per_coeff"] == pytest.approx(1.5)
     assert sn_official_requested_bits["step_map_bits_per_coeff"] == pytest.approx(0.5)
-    assert sn_official_requested_bits["requested_bits_per_coeff_from_candidate_id"] == (
-        pytest.approx(1.5)
-    )
-    assert sn_official_requested_bits[
-        "requested_step_map_bits_per_coeff_from_candidate_id"
-    ] == pytest.approx(0.5)
+    assert sn_official_requested_bits["requested_bits_per_coeff_from_candidate_id"] == (pytest.approx(1.5))
+    assert sn_official_requested_bits["requested_step_map_bits_per_coeff_from_candidate_id"] == pytest.approx(0.5)
     assert sn_official_requested_bits["fc_dim"] == 11
     assert sn_official_requested_bits["emb_size"] == 0
-    assert sn_official_requested_bits["snerv_model_size_adapter"] == (
-        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-    )
-    assert sn_official_requested_bits["temporal_mode"] == (
-        "official_haar_dwt1d_lowpass"
-    )
+    assert sn_official_requested_bits["snerv_model_size_adapter"] == (SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER)
+    assert sn_official_requested_bits["temporal_mode"] == ("official_haar_dwt1d_lowpass")
     assert sn_official_requested_bits["official_skip_high_mode"] == "channel_mean"
     with pytest.raises(CompactRendererMlxSpineRunnerError):
         _resolve_execute_modelsize_candidate(
             family="snerv",
             candidate_id=(
-                "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
-                "mfu1-5_hfr0p3750_t2_adspectra_int2_symmetric_ceil36000"
+                "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_mfu1-5_hfr0p3750_t2_adspectra_int2_symmetric_ceil36000"
             ),
             hard_byte_ceilings=(178_000,),
         )
@@ -10890,30 +10161,34 @@ def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> No
     np.savez_compressed(weight, weight=np.ones((1,), dtype=np.float32))
     source = tmp_path / "0.mkv"
     source.write_bytes(b"video")
-    args_a = _parse_args([
-        "--execute-family",
-        "hi_nerv",
-        "--output-dir",
-        str(tmp_path / "a"),
-        "--num-pairs",
-        "600",
-        "--epochs",
-        "8",
-        "--recon-pixel-weight-path",
-        str(weight),
-    ])
-    args_b = _parse_args([
-        "--execute-family",
-        "hi_nerv",
-        "--output-dir",
-        str(tmp_path / "b"),
-        "--num-pairs",
-        "600",
-        "--epochs",
-        "8",
-        "--recon-pixel-weight-path",
-        str(weight),
-    ])
+    args_a = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--output-dir",
+            str(tmp_path / "a"),
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "8",
+            "--recon-pixel-weight-path",
+            str(weight),
+        ]
+    )
+    args_b = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--output-dir",
+            str(tmp_path / "b"),
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "8",
+            "--recon-pixel-weight-path",
+            str(weight),
+        ]
+    )
 
     payload_a = runner_mod._active_campaign_lock_payload(
         args_a,
@@ -10928,9 +10203,7 @@ def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> No
 
     assert payload_a == payload_b
     assert payload_a["recon_pixel_weight_sha256"]
-    assert runner_mod._campaign_lock_digest(payload_a) == (
-        runner_mod._campaign_lock_digest(payload_b)
-    )
+    assert runner_mod._campaign_lock_digest(payload_a) == (runner_mod._campaign_lock_digest(payload_b))
 
 
 def test_active_campaign_lock_refuses_duplicate_active_pid(
@@ -10939,14 +10212,16 @@ def test_active_campaign_lock_refuses_duplicate_active_pid(
 ) -> None:
     source = tmp_path / "0.mkv"
     source.write_bytes(b"video")
-    args = _parse_args([
-        "--execute-family",
-        "hi_nerv",
-        "--num-pairs",
-        "600",
-        "--epochs",
-        "8",
-    ])
+    args = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "8",
+        ]
+    )
     monkeypatch.setattr(runner_mod, "_active_family_campaign_processes", lambda **_: [])
 
     lock_path = runner_mod._acquire_active_campaign_lock(
@@ -10981,14 +10256,16 @@ def test_active_campaign_lock_refuses_same_family_snerv_process(
 ) -> None:
     source = tmp_path / "0.mkv"
     source.write_bytes(b"video")
-    args = _parse_args([
-        "--execute-family",
-        "snerv",
-        "--num-pairs",
-        "32",
-        "--epochs",
-        "1",
-    ])
+    args = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--num-pairs",
+            "32",
+            "--epochs",
+            "1",
+        ]
+    )
     monkeypatch.setattr(
         runner_mod,
         "_active_process_table_rows",
@@ -11015,9 +10292,7 @@ def test_active_campaign_lock_refuses_same_family_snerv_process(
         )
 
     refusal_paths = sorted(
-        (tmp_path / ".active_compact_renderer_campaign_locks").glob(
-            "family_process_refusal_snerv_*.json"
-        )
+        (tmp_path / ".active_compact_renderer_campaign_locks").glob("family_process_refusal_snerv_*.json")
     )
     assert len(refusal_paths) == 1
     payload = json.loads(refusal_paths[0].read_text(encoding="utf-8"))
@@ -11036,10 +10311,7 @@ def test_active_family_process_detection_ignores_current_process_ancestors(
             "pid": 10,
             "ppid": 9,
             "elapsed": "00:01",
-            "command": (
-                "/bin/zsh -lc python tools/run_compact_renderer_mlx_spine_runner.py "
-                "--execute-family snerv"
-            ),
+            "command": ("/bin/zsh -lc python tools/run_compact_renderer_mlx_spine_runner.py --execute-family snerv"),
         },
         {
             "pid": 11,
@@ -11054,10 +10326,7 @@ def test_active_family_process_detection_ignores_current_process_ancestors(
             "pid": 12,
             "ppid": 1,
             "elapsed": "03:55",
-            "command": (
-                ".venv/bin/python tools/run_snerv_inverse_steg_advisory.py "
-                "--n-pairs 600"
-            ),
+            "command": (".venv/bin/python tools/run_snerv_inverse_steg_advisory.py --n-pairs 600"),
         },
     ]
 
@@ -11102,15 +10371,17 @@ def test_active_campaign_lock_allow_duplicate_skips_family_process_refusal(
 ) -> None:
     source = tmp_path / "0.mkv"
     source.write_bytes(b"video")
-    args = _parse_args([
-        "--execute-family",
-        "snerv",
-        "--num-pairs",
-        "32",
-        "--epochs",
-        "1",
-        "--allow-duplicate-campaign",
-    ])
+    args = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--num-pairs",
+            "32",
+            "--epochs",
+            "1",
+            "--allow-duplicate-campaign",
+        ]
+    )
     monkeypatch.setattr(
         runner_mod,
         "_active_process_table_rows",
@@ -11146,10 +10417,7 @@ def test_pact_compact_runners_forward_optimizer_and_shared_qat_metadata(
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
     target_fn = next(
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef)
-        and node.name == function_name
+        node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == function_name
     )
     calls = [
         node
@@ -11171,12 +10439,8 @@ def test_pact_compact_runners_forward_optimizer_and_shared_qat_metadata(
     assert "cosine_decay_total_epochs" in kw_names
     assert "cosine_decay_min_lr_ratio" in kw_names
     target_source = ast.get_source_segment(source, target_fn) or ""
-    assert '"optimizer_policy": strip_candidate_curriculum_authority_fields' in (
-        target_source
-    )
-    assert '"optimizer_controls": strip_candidate_curriculum_authority_fields' in (
-        target_source
-    )
+    assert '"optimizer_policy": strip_candidate_curriculum_authority_fields' in (target_source)
+    assert '"optimizer_controls": strip_candidate_curriculum_authority_fields' in (target_source)
     assert '"coder_aware_qat": coder_qat_metadata_row' in target_source
 
 
@@ -11186,8 +10450,7 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     target_fn = next(
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef)
-        and node.name == "_run_hi_nerv_mlx_scoreaware_smoke"
+        if isinstance(node, ast.FunctionDef) and node.name == "_run_hi_nerv_mlx_scoreaware_smoke"
     )
     calls = [
         node
@@ -11205,37 +10468,19 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "scorer_space_step_guard_enabled" in kw_names
     assert "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction" in kw_names
     assert "scorer_space_step_guard_min_post_segnet_occupied_class_fraction" in kw_names
-    assert (
-        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
-        in kw_names
-    )
+    assert "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction" in kw_names
     assert "scorer_space_step_guard_min_post_segnet_target_class_min_ratio" in kw_names
     assert "scorer_space_step_guard_max_post_segnet_target_class_ratio_drop" in kw_names
     assert "scorer_space_step_guard_max_post_segnet_contrast_ratio" in kw_names
     assert "scorer_space_step_guard_max_post_segnet_distribution_mae" in kw_names
-    assert (
-        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
-        in kw_names
-    )
-    assert (
-        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
-        in kw_names
-    )
+    assert "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae" in kw_names
+    assert "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio" in kw_names
     assert "scorer_space_step_guard_max_pose_score_term_relative_worsening" in kw_names
     assert "scorer_space_step_guard_max_pose_score_term_absolute_worsening" in kw_names
-    assert (
-        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
-        in kw_names
-    )
-    assert (
-        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
-        in kw_names
-    )
+    assert "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening" in kw_names
+    assert "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening" in kw_names
     assert "scorer_space_step_guard_max_direct_nonrate_score_worsening" in kw_names
-    assert (
-        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
-        in kw_names
-    )
+    assert "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening" in kw_names
     assert "scorer_space_step_guard_backtracking_steps" in kw_names
     assert "scorer_space_step_guard_backtracking_shrink" in kw_names
     assert "checkpoint_selection_metric_key" in kw_names
@@ -11263,9 +10508,7 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "latent_qat_cfg = CoderAwareQATConfig" in target_source
     assert 'terms[f"latent_qat_{suffix}"] = value' in target_source
     assert '"archive_section_qat_weight_policy": (' in target_source
-    assert '"train_time_dual_ascent": strip_candidate_curriculum_authority_fields' in (
-        target_source
-    )
+    assert '"train_time_dual_ascent": strip_candidate_curriculum_authority_fields' in (target_source)
 
 
 def test_snerv_native_attachment_forwards_train_time_dual_ascent_to_shared_harness() -> None:
@@ -11278,8 +10521,7 @@ def test_snerv_native_attachment_forwards_train_time_dual_ascent_to_shared_harne
     target_fn = next(
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef)
-        and node.name == "_run_score_aware_long_training_attachment"
+        if isinstance(node, ast.FunctionDef) and node.name == "_run_score_aware_long_training_attachment"
     )
     calls = [
         node
@@ -11294,12 +10536,8 @@ def test_snerv_native_attachment_forwards_train_time_dual_ascent_to_shared_harne
     target_source = ast.get_source_segment(source, target_fn) or ""
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
     assert "scorer_input_distribution_guard_weight=guard_weight" in target_source
-    assert "posenet_yuv6_geometry_tether_weight=geometry_tether_weight" in (
-        target_source
-    )
-    assert "score_aware_long_training_posenet_temporal_signal_floor_weight" in (
-        target_source
-    )
+    assert "posenet_yuv6_geometry_tether_weight=geometry_tether_weight" in (target_source)
+    assert "score_aware_long_training_posenet_temporal_signal_floor_weight" in (target_source)
     assert '"train_time_dual_ascent": (' in target_source
 
 
@@ -11385,82 +10623,47 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     args = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "1"])
 
     assert args.optimizer_kind == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
-    assert (
-        args.segnet_distillation_objective
-        == runner_mod.HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE
-    )
+    assert args.segnet_distillation_objective == runner_mod.HI_NERV_DEFAULT_SEGNET_DISTILLATION_OBJECTIVE
     assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.gradient_multiplier_by_name == []
     assert args.bias_gradient_multiplier is None
     assert args.output_head_bias_gradient_multiplier == pytest.approx(1.0)
     assert args.scorer_space_step_guard_enabled is True
-    assert (
-        args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
-        == pytest.approx(0.4)
-    )
-    assert (
-        args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
-        == pytest.approx(
-            runner_mod.HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
-        )
+    assert args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction == pytest.approx(0.4)
+    assert args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction == pytest.approx(
+        runner_mod.HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
     )
 
-    assert args.scorer_space_step_guard_max_post_segnet_contrast_ratio == (
-        pytest.approx(4.25)
-    )
+    assert args.scorer_space_step_guard_max_post_segnet_contrast_ratio == (pytest.approx(4.25))
     assert args.scorer_space_step_guard_max_post_segnet_distribution_mae == (
         pytest.approx(runner_mod.HI_NERV_SEGNET_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD)
     )
     assert args.scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae == (
-        pytest.approx(
-            runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD
-        )
+        pytest.approx(runner_mod.HI_NERV_POSENET_YUV6_DISTRIBUTION_MAE_MAX_FOR_STEP_GUARD)
     )
     assert args.scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio == (
-        pytest.approx(
-            runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD
-        )
+        pytest.approx(runner_mod.HI_NERV_POSENET_YUV6_CONTRAST_RATIO_MAX_FOR_STEP_GUARD)
     )
-    assert args.scorer_space_step_guard_max_post_segnet_argmax_disagreement == (
-        pytest.approx(0.5)
-    )
+    assert args.scorer_space_step_guard_max_post_segnet_argmax_disagreement == (pytest.approx(0.5))
     assert args.scorer_space_step_guard_max_post_pose_score_term is None
     assert args.scorer_space_step_guard_max_post_pose_direct_live_score_term is None
-    assert (
-        args.scorer_space_step_guard_max_pose_score_term_relative_worsening
-        == pytest.approx(
-            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD
-        )
+    assert args.scorer_space_step_guard_max_pose_score_term_relative_worsening == pytest.approx(
+        runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD
     )
-    assert (
-        args.scorer_space_step_guard_max_pose_score_term_absolute_worsening
-        == pytest.approx(
-            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD
-        )
+    assert args.scorer_space_step_guard_max_pose_score_term_absolute_worsening == pytest.approx(
+        runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD
     )
-    assert (
-        args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening
-        == pytest.approx(
-            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD
-        )
+    assert args.scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening == pytest.approx(
+        runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_RELATIVE_WORSENING_FOR_STEP_GUARD
     )
-    assert (
-        args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening
-        == pytest.approx(
-            runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD
-        )
+    assert args.scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening == pytest.approx(
+        runner_mod.HI_NERV_POSE_SCORE_TERM_MAX_ABSOLUTE_WORSENING_FOR_STEP_GUARD
     )
-    assert (
-        args.scorer_space_step_guard_max_direct_nonrate_score_worsening
-        == pytest.approx(
-            runner_mod.HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
-        )
+    assert args.scorer_space_step_guard_max_direct_nonrate_score_worsening == pytest.approx(
+        runner_mod.HI_NERV_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
     )
-    assert (
-        args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening
-        == pytest.approx(
-            runner_mod.HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
-        )
+    assert args.scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening == pytest.approx(
+        runner_mod.HI_NERV_BOOTSTRAP_DIRECT_NONRATE_SCORE_MAX_WORSENING_FOR_STEP_GUARD
     )
     assert args.scorer_space_step_guard_backtracking_steps == 6
     assert args.scorer_space_step_guard_backtracking_shrink == pytest.approx(0.5)
@@ -11469,10 +10672,7 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     assert args.scorer_support_ladder_growth_factor == pytest.approx(2.0)
     assert args.scorer_support_ladder_max_multiplier == pytest.approx(16.0)
     assert args.scorer_support_ladder_base_loss_max_when_active == pytest.approx(0.25)
-    assert (
-        args.checkpoint_interval_epochs
-        == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS
-    )
+    assert args.checkpoint_interval_epochs == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS
     assert args.checkpoint_dir is None
     assert args.resume_from_checkpoint is None
     assert args.hi_nerv_pr95_curriculum_total_epochs is None
@@ -11503,10 +10703,7 @@ def test_hinerv_main_forwards_direct_live_pose_weight(
 
     def fake_execute_hi_nerv(**kwargs):
         captured.update(kwargs)
-        report_path = (
-            Path(kwargs["output_dir"])
-            / "compact_renderer_mlx_spine_runner_report.json"
-        )
+        report_path = Path(kwargs["output_dir"]) / "compact_renderer_mlx_spine_runner_report.json"
         report_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema": runner_mod.COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
@@ -11573,9 +10770,7 @@ def test_hinerv_main_forwards_direct_live_pose_weight(
     out = json.loads(capsys.readouterr().out)
     assert out["mode"] == "unit_hi_nerv_forwarded"
     report_payload = json.loads(
-        (tmp_path / "out" / "compact_renderer_mlx_spine_runner_report.json").read_text(
-            encoding="utf-8"
-        )
+        (tmp_path / "out" / "compact_renderer_mlx_spine_runner_report.json").read_text(encoding="utf-8")
     )
     _assert_compact_runner_rerun_provenance(
         report_payload,
@@ -11631,14 +10826,8 @@ def test_compact_runner_checkpoint_controls_parse_and_validate() -> None:
     )
 
     assert args.checkpoint_interval_epochs == 17
-    assert (
-        args.checkpoint_retention_keep_last_n
-        == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N
-    )
-    assert (
-        args.checkpoint_retention_keep_best_n
-        == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N
-    )
+    assert args.checkpoint_retention_keep_last_n == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N
+    assert args.checkpoint_retention_keep_best_n == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N
     assert args.checkpoint_dir == Path("ssd/checkpoints")
     assert args.resume_from_checkpoint == Path("ssd/checkpoints/epoch000016.meta.json")
     assert runner_mod._resolve_checkpoint_interval_epochs(17, epochs=100) == 17
@@ -11646,10 +10835,7 @@ def test_compact_runner_checkpoint_controls_parse_and_validate() -> None:
     assert runner_mod._resolve_checkpoint_retention_keep_last_n(3) == 3
     assert runner_mod._resolve_checkpoint_retention_keep_best_n(2) == 2
     assert runner_mod._resolve_checkpoint_retention_keep_every_n_epochs(None) is None
-    assert (
-        runner_mod._resolve_checkpoint_retention_keep_every_n_epochs(1000)
-        == 1000
-    )
+    assert runner_mod._resolve_checkpoint_retention_keep_every_n_epochs(1000) == 1000
     with pytest.raises(CompactRendererMlxSpineRunnerError, match="positive integer"):
         runner_mod._resolve_checkpoint_interval_epochs(True, epochs=100)
     with pytest.raises(CompactRendererMlxSpineRunnerError, match="> 0"):
@@ -11923,9 +11109,7 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.coder_qat_c1a_entropy_weight == 0.0003
     assert args.coder_qat_c1a_sigma == 0.35
     assert args.coder_qat_c1a_sample_size == 64
-    assert args.hprc_queue_followup_report == [
-        Path("hprc_queue_followup_report.json")
-    ]
+    assert args.hprc_queue_followup_report == [Path("hprc_queue_followup_report.json")]
     assert args.allow_segnet_only_research is False
 
 
@@ -12231,17 +11415,11 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.segnet_direct_live_escape_warmup_epochs == 1
     assert hi.segnet_direct_live_escape_class_multiplier == pytest.approx(2.75)
     assert hi.scorer_input_distribution_guard_weight == pytest.approx(0.125)
-    assert hi.scorer_input_distribution_guard_saturation_margin == pytest.approx(
-        0.03125
-    )
+    assert hi.scorer_input_distribution_guard_saturation_margin == pytest.approx(0.03125)
     assert hi.scorer_input_distribution_guard_temperature == pytest.approx(0.015625)
     assert hi.scorer_input_contrast_floor_weight == pytest.approx(0.375)
-    assert hi.scorer_input_contrast_floor_segnet_min_std_ratio == pytest.approx(
-        0.625
-    )
-    assert hi.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(
-        0.75
-    )
+    assert hi.scorer_input_contrast_floor_segnet_min_std_ratio == pytest.approx(0.625)
+    assert hi.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(0.75)
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
     assert hi.mlx_prefilter_scorer_device == "gpu"
     assert hi.mlx_prefilter_progress_every == 10
@@ -12289,9 +11467,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_native_mlx_decoder_train_lr == 0.0003
     assert sn.snerv_native_mlx_decoder_train_ridge == 0.000004
     assert sn.snerv_native_mlx_decoder_train_optimizer == "lion"
-    assert sn.snerv_official_trained_checkpoint_state_dict_path == Path(
-        "official_state.npz"
-    )
+    assert sn.snerv_official_trained_checkpoint_state_dict_path == Path("official_state.npz")
     assert sn.snerv_score_aware_long_training_epochs == 17
     assert sn.snerv_score_aware_long_training_lr == 0.0025
     assert sn.snerv_score_aware_long_training_batch_pairs == 6
@@ -12308,9 +11484,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.scorer_input_distribution_guard_temperature == pytest.approx(0.02)
     assert sn.scorer_input_contrast_floor_weight == pytest.approx(0.875)
     assert sn.scorer_input_contrast_floor_segnet_min_std_ratio == pytest.approx(0.55)
-    assert sn.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(
-        0.45
-    )
+    assert sn.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(0.45)
     assert sn.snerv_score_aware_long_training_pr95_faithful_curriculum is True
     assert sn.snerv_score_aware_long_training_pr95_muon_policy == "every_stage"
 
@@ -12540,92 +11714,48 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
     assert rc == 0
     assert captured["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
     assert captured["segnet_direct_live_class_histogram_weight"] == pytest.approx(0.5)
-    assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(
-        0.75
-    )
-    assert captured["segnet_direct_live_class_balanced_ce_weight"] == pytest.approx(
-        0.625
-    )
-    assert captured[
-        "segnet_direct_live_class_balanced_squared_hinge_weight"
-    ] == pytest.approx(0.875)
-    assert captured["segnet_direct_live_class_region_recon_weight"] == pytest.approx(
-        0.9375
-    )
+    assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(0.75)
+    assert captured["segnet_direct_live_class_balanced_ce_weight"] == pytest.approx(0.625)
+    assert captured["segnet_direct_live_class_balanced_squared_hinge_weight"] == pytest.approx(0.875)
+    assert captured["segnet_direct_live_class_region_recon_weight"] == pytest.approx(0.9375)
     assert captured["recon_loss_stage_weight"] == pytest.approx(0.5)
     assert captured["segnet_loss_stage_weight"] == pytest.approx(1.5)
     assert captured["pose_loss_stage_weight"] == pytest.approx(0.25)
     assert captured["scorer_input_guard_stage_weight"] == pytest.approx(0.375)
     assert captured["scorer_input_contrast_floor_stage_weight"] == pytest.approx(0.625)
     assert captured["scorer_input_shape_tether_stage_weight"] == pytest.approx(0.875)
-    assert captured["posenet_yuv6_geometry_tether_stage_weight"] == pytest.approx(
-        0.9375
-    )
+    assert captured["posenet_yuv6_geometry_tether_stage_weight"] == pytest.approx(0.9375)
     assert captured["segnet_direct_live_stage_weight"] == pytest.approx(0.125)
     assert captured["pose_distillation_warmup_epochs"] == 2
     assert captured["scorer_input_shape_warmup_epochs"] == 3
     assert captured["segnet_direct_live_escape_warmup_epochs"] == 1
     assert captured["segnet_direct_live_escape_class_multiplier"] == pytest.approx(4.0)
     assert captured["scorer_space_step_guard_enabled"] is True
-    assert captured[
-        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
-    ] == pytest.approx(0.21)
-    assert captured[
-        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
-    ] == pytest.approx(0.22)
-    assert captured[
-        "scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"
-    ] == pytest.approx(0.23)
-    assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (
-        pytest.approx(2.4)
+    assert captured["scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"] == pytest.approx(0.21)
+    assert captured["scorer_space_step_guard_min_post_segnet_occupied_class_fraction"] == pytest.approx(0.22)
+    assert captured["scorer_space_step_guard_min_post_segnet_target_class_coverage_fraction"] == pytest.approx(0.23)
+    assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (pytest.approx(2.4))
+    assert captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] == (pytest.approx(0.24))
+    assert captured["scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"] == pytest.approx(0.25)
+    assert captured["scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"] == pytest.approx(2.5)
+    assert captured["scorer_space_step_guard_max_post_segnet_argmax_disagreement"] == (pytest.approx(0.26))
+    assert captured["scorer_space_step_guard_max_post_pose_score_term"] == (pytest.approx(1.1))
+    assert captured["scorer_space_step_guard_max_post_pose_direct_live_score_term"] == (pytest.approx(0.051))
+    assert captured["scorer_space_step_guard_max_pose_score_term_relative_worsening"] == pytest.approx(0.031)
+    assert captured["scorer_space_step_guard_max_pose_score_term_absolute_worsening"] == pytest.approx(0.032)
+    assert captured["scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"] == pytest.approx(
+        0.033
     )
-    assert captured["scorer_space_step_guard_max_post_segnet_distribution_mae"] == (
-        pytest.approx(0.24)
+    assert captured["scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"] == pytest.approx(
+        0.034
     )
-    assert captured[
-        "scorer_space_step_guard_max_post_posenet_yuv6_distribution_mae"
-    ] == pytest.approx(0.25)
-    assert captured[
-        "scorer_space_step_guard_max_post_posenet_yuv6_contrast_ratio"
-    ] == pytest.approx(2.5)
-    assert captured["scorer_space_step_guard_max_post_segnet_argmax_disagreement"] == (
-        pytest.approx(0.26)
-    )
-    assert captured["scorer_space_step_guard_max_post_pose_score_term"] == (
-        pytest.approx(1.1)
-    )
-    assert captured["scorer_space_step_guard_max_post_pose_direct_live_score_term"] == (
-        pytest.approx(0.051)
-    )
-    assert captured[
-        "scorer_space_step_guard_max_pose_score_term_relative_worsening"
-    ] == pytest.approx(0.031)
-    assert captured[
-        "scorer_space_step_guard_max_pose_score_term_absolute_worsening"
-    ] == pytest.approx(0.032)
-    assert captured[
-        "scorer_space_step_guard_max_pose_direct_live_score_term_relative_worsening"
-    ] == pytest.approx(0.033)
-    assert captured[
-        "scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
-    ] == pytest.approx(0.034)
-    assert captured["scorer_space_step_guard_max_direct_nonrate_score_worsening"] == (
-        pytest.approx(0.035)
-    )
-    assert captured[
-        "scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
-    ] == pytest.approx(2.0)
+    assert captured["scorer_space_step_guard_max_direct_nonrate_score_worsening"] == (pytest.approx(0.035))
+    assert captured["scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"] == pytest.approx(2.0)
     assert captured["scorer_space_step_guard_backtracking_steps"] == 5
-    assert captured["scorer_space_step_guard_backtracking_shrink"] == pytest.approx(
-        0.45
-    )
+    assert captured["scorer_space_step_guard_backtracking_shrink"] == pytest.approx(0.45)
     assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
     report_payload = json.loads(
-        (
-            tmp_path
-            / "snerv_direct_live"
-            / "compact_renderer_mlx_spine_runner_report.json"
-        ).read_text(encoding="utf-8")
+        (tmp_path / "snerv_direct_live" / "compact_renderer_mlx_spine_runner_report.json").read_text(encoding="utf-8")
     )
     _assert_compact_runner_rerun_provenance(
         report_payload,
@@ -12886,9 +12016,7 @@ def test_post_export_materializer_sweep_feedback_keeps_byte_saving_atoms(
                 "max_saved_bytes": 979,
                 "total_positive_saved_bytes": 979,
                 "planner_feedback": {
-                    "recommended_acquisition_rule": (
-                        "rank_rate_positive_materializer_after_inflate_parity"
-                    )
+                    "recommended_acquisition_rule": ("rank_rate_positive_materializer_after_inflate_parity")
                 },
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -12922,31 +12050,18 @@ def test_post_export_materializer_sweep_feedback_keeps_byte_saving_atoms(
 
     summary = runner_mod._post_export_materializer_sweep_feedback_summary(tmp_path)
 
-    assert summary["schema"] == (
-        "compact_carrier_post_export_sweep_feedback_summary.v1"
-    )
+    assert summary["schema"] == ("compact_carrier_post_export_sweep_feedback_summary.v1")
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["byte_saving_sweep_count"] == 1
     assert summary["zero_save_sweep_count"] == 1
     assert summary["total_positive_saved_bytes"] == 979
     assert summary["retain_target_kinds"] == ["archive_zip_repack_v1"]
-    assert summary["zero_save_target_kinds"] == [
-        "packet_member_zip_header_elide_v1"
-    ]
-    assert summary["recommended_global_rule"] == (
-        "retain_and_order_byte_saving_atoms_before_demoting_full_lane"
-    )
-    dispositions = {
-        row["target_kind"]: row["full_stack_chain_disposition"]
-        for row in summary["rows"]
-    }
-    assert dispositions["archive_zip_repack_v1"] == (
-        "retain_byte_saving_atom_for_ordered_chain_solver"
-    )
-    assert dispositions["packet_member_zip_header_elide_v1"] == (
-        "demote_only_matching_zero_save_archive_class"
-    )
+    assert summary["zero_save_target_kinds"] == ["packet_member_zip_header_elide_v1"]
+    assert summary["recommended_global_rule"] == ("retain_and_order_byte_saving_atoms_before_demoting_full_lane")
+    dispositions = {row["target_kind"]: row["full_stack_chain_disposition"] for row in summary["rows"]}
+    assert dispositions["archive_zip_repack_v1"] == ("retain_byte_saving_atom_for_ordered_chain_solver")
+    assert dispositions["packet_member_zip_header_elide_v1"] == ("demote_only_matching_zero_save_archive_class")
 
 
 def test_recon_pixel_weight_loader_records_file_custody(
@@ -12978,9 +12093,7 @@ def test_recon_pixel_weight_loader_records_file_custody(
     }
     assert metadata["stats"]["shape"] == [384, 512, 1]
     assert metadata["stats"]["nonzero_fraction"] == 1.0
-    assert metadata["producer_manifest"]["status"] == (
-        "not_found_unverified_manual_or_legacy_weight"
-    )
+    assert metadata["producer_manifest"]["status"] == ("not_found_unverified_manual_or_legacy_weight")
     assert metadata["producer_manifest"]["consumption_certified"] is False
     assert metadata["authority"] == "false_macos_mlx_research_signal"
 
@@ -13311,9 +12424,7 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
         repo_root=REPO_ROOT,
     )
 
-    assert Path(captured_train_kwargs["scorer_upstream_dir"]) == (
-        tmp_path / "canonical_upstream"
-    )
+    assert Path(captured_train_kwargs["scorer_upstream_dir"]) == (tmp_path / "canonical_upstream")
     assert captured_train_kwargs["mlx_prefilter_scorer_batch_pairs"] == 4
     assert captured_train_kwargs["mlx_prefilter_progress_every"] == 7
     assert captured_train_kwargs["optimizer_kind"] == "lion"
@@ -13357,30 +12468,20 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert post_export["queue_launch_executed"] is False
     assert post_export["experiment_count"] > 0
     assert Path(post_export["experiment_queue_path"]).is_file()
-    assert post_export["archive_record"]["source_runtime_dir"].endswith(
-        "/hi_nerv_mlx_training/submission"
-    )
+    assert post_export["archive_record"]["source_runtime_dir"].endswith("/hi_nerv_mlx_training/submission")
     assert post_export["archive_record"]["source_inflate_sh_path"].endswith(
         "/hi_nerv_mlx_training/submission/inflate.sh"
     )
     contexts = json.loads(Path(post_export["materializer_contexts_path"]).read_text())
     first_context = contexts["rows"][0]["context"]
-    assert first_context["source_runtime_dir"].endswith(
-        "/hi_nerv_mlx_training/submission"
-    )
-    assert first_context["packet_member_merge_source_runtime_dir"].endswith(
-        "/hi_nerv_mlx_training/submission"
-    )
+    assert first_context["source_runtime_dir"].endswith("/hi_nerv_mlx_training/submission")
+    assert first_context["packet_member_merge_source_runtime_dir"].endswith("/hi_nerv_mlx_training/submission")
     queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
     assert queue["schema"] == "experiment_queue.v1"
-    assert post_export["experiment_queue_state_path"].endswith(
-        "/experiment_queue.sqlite"
-    )
+    assert post_export["experiment_queue_state_path"].endswith("/experiment_queue.sqlite")
     harvest_step = queue["experiments"][0]["steps"][1]
     state_arg_index = harvest_step["command"].index("--state") + 1
-    assert harvest_step["command"][state_arg_index] == post_export[
-        "experiment_queue_state_path"
-    ]
+    assert harvest_step["command"][state_arg_index] == post_export["experiment_queue_state_path"]
     assert post_export["score_claim"] is False
     assert post_export["ready_for_exact_eval_dispatch"] is False
     post_export_execution = out["post_export_materializer_execution"]
@@ -13425,9 +12526,7 @@ def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
     gate = out["candidate_curriculum_plan"]["long_campaign_prelaunch_gate"]
     assert gate["launch_allowed"] is False
     assert "receiver_proof" in gate["post_run_requirements_excluded"]
-    assert out["candidate_feedback"]["row"][
-        "long_campaign_prelaunch_launch_allowed"
-    ] is False
+    assert out["candidate_feedback"]["row"]["long_campaign_prelaunch_launch_allowed"] is False
     assert Path(out["report_path"]).is_file()
 
 
@@ -13534,22 +12633,13 @@ def test_hinerv_trained_archive_byte_oracle_writes_receiver_closed_ladder(
     assert oracle["row"]["archive_sha256"] == archive_sha
     assert oracle["measured_byte_cap_report"]["archive_zip_bytes"] == archive.stat().st_size
     assert (
-        oracle["measured_byte_cap_report"][
-            "delta_bytes_vs_tightest_hard_byte_ceiling"
-        ]
+        oracle["measured_byte_cap_report"]["delta_bytes_vs_tightest_hard_byte_ceiling"]
         == archive.stat().st_size - 178_000
     )
-    assert (
-        oracle["row"]["measured_archive_bytes_under_tightest_hard_ceiling"]
-        is True
-    )
-    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in oracle[
-        "blockers"
-    ]
+    assert oracle["row"]["measured_archive_bytes_under_tightest_hard_ceiling"] is True
+    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in oracle["blockers"]
     assert "hi_nerv_local_cpu_replay_not_contest_auth_axis" in oracle["blockers"]
-    assert oracle["receiver_closed_modelsize_ladder"]["schema"] == (
-        "nerv_receiver_closed_modelsize_ladder.v1"
-    )
+    assert oracle["receiver_closed_modelsize_ladder"]["schema"] == ("nerv_receiver_closed_modelsize_ladder.v1")
     assert oracle["score_claim"] is False
     assert oracle["ready_for_exact_eval_dispatch"] is False
 
@@ -13601,12 +12691,8 @@ def test_hinerv_trained_archive_byte_oracle_blocks_measured_over_cap(
     assert report["archive_zip_bytes"] == 64
     assert report["delta_bytes_vs_tightest_hard_byte_ceiling"] == 32
     assert report["under_tightest_hard_byte_ceiling"] is False
-    assert "measured_archive_bytes_exceed_tightest_hard_ceiling" in report[
-        "blockers"
-    ]
-    assert "measured_archive_bytes_exceed_tightest_hard_ceiling" in oracle[
-        "blockers"
-    ]
+    assert "measured_archive_bytes_exceed_tightest_hard_ceiling" in report["blockers"]
+    assert "measured_archive_bytes_exceed_tightest_hard_ceiling" in oracle["blockers"]
     assert oracle["feedback_ready"] is False
 
 
@@ -13663,10 +12749,7 @@ def test_hinerv_trained_archive_byte_oracle_blocks_receiver_class_collapse(
     assert oracle["measured_archive_bytes"] == archive.stat().st_size
     assert oracle["row"]["post_export_receiver_cache_quality_feedback_ready"] is False
     assert oracle["feedback_ready"] is False
-    assert (
-        "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse"
-        in oracle["blockers"]
-    )
+    assert "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse" in oracle["blockers"]
     assert "hi_nerv_receiver_cache_segnet_argmax_class_collapse" in oracle["blockers"]
 
 
@@ -13722,10 +12805,7 @@ def test_hinerv_trained_archive_byte_oracle_blocks_numeric_receiver_class_collap
 
     assert oracle["row"]["post_export_receiver_cache_quality_feedback_ready"] is False
     assert oracle["feedback_ready"] is False
-    assert (
-        "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse_numeric"
-        in oracle["blockers"]
-    )
+    assert "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse_numeric" in oracle["blockers"]
 
 
 def test_hinerv_long_mlx_training_readiness_signals_summarize_actuators() -> None:
@@ -13794,9 +12874,7 @@ def test_hinerv_long_mlx_training_readiness_signals_summarize_actuators() -> Non
         optimizer_controls={"weight_decay_effective": 1.0e-4},
     )
 
-    assert signals["schema"] == (
-        "compact_hi_nerv_long_mlx_training_readiness_signals.v1"
-    )
+    assert signals["schema"] == ("compact_hi_nerv_long_mlx_training_readiness_signals.v1")
     assert signals["ready_for_controlled_long_mlx_training"] is True
     assert signals["ready_for_promotion_replay"] is True
     assert signals["control_blockers"] == []
@@ -13911,17 +12989,10 @@ def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
     assert out["modelsize_budget_evidence"]["row_count"] == 2
     assert out["modelsize_budget_evidence"]["sources"][0]["rows_added"] == 2
     plan = out["score_aware_carrier_training_plan"]
-    assert (
-        plan["planner_action"]
-        == "run_receiver_closed_modelsize_ladder_before_score_aware_training"
-    )
+    assert plan["planner_action"] == "run_receiver_closed_modelsize_ladder_before_score_aware_training"
     assert plan["modelsize_budget_receiver_closed_ready"] is False
-    assert "modelsize_budget:source_bound_modelsize_or_fc_dim_missing" in plan[
-        "dispatch_blockers"
-    ]
-    assert "modelsize_budget:modelsize_control_contract_missing_or_invalid" in plan[
-        "dispatch_blockers"
-    ]
+    assert "modelsize_budget:source_bound_modelsize_or_fc_dim_missing" in plan["dispatch_blockers"]
+    assert "modelsize_budget:modelsize_control_contract_missing_or_invalid" in plan["dispatch_blockers"]
     assert plan["evidence_summary"]["receiver_closed_selected_modelsize_archive_bytes"] == 80_000
     assert out["score_aware_training_config_gate"]["launch_allowed"] is False
     assert out["score_claim"] is False
@@ -14059,18 +13130,14 @@ def test_hinerv_refusal_rejects_raw_modelsize_budget_selected_candidates(
     assert out["training_executed"] is False
     assert out["modelsize_budget_evidence"]["row_count"] == 0
     assert source["source_schema"] == "nerv_modelsize_budget.v1"
-    assert source["authority"] == (
-        "planning_artifact_only_not_receiver_closed_ladder_evidence"
-    )
+    assert source["authority"] == ("planning_artifact_only_not_receiver_closed_ladder_evidence")
     assert source["rows_seen"] == 1
     assert source["rows_added"] == 0
     assert source["rows_rejected"] == 1
     assert source["score_claim"] is False
     assert source["promotion_eligible"] is False
     assert source["ready_for_exact_eval_dispatch"] is False
-    assert "raw_nerv_modelsize_budget_artifact_not_receiver_closed_ladder" in source[
-        "blockers"
-    ]
+    assert "raw_nerv_modelsize_budget_artifact_not_receiver_closed_ladder" in source["blockers"]
     assert "receiver_closed_modelsize_ladder_schema_required" in source["blockers"]
     assert source["rejected_rows"][0]["blockers"] == [
         "selected_candidates_are_planning_rows_not_receiver_closed_ladder",
@@ -14079,9 +13146,7 @@ def test_hinerv_refusal_rejects_raw_modelsize_budget_selected_candidates(
     ]
     plan = out["score_aware_carrier_training_plan"]
     assert plan["modelsize_budget_receiver_closed_ready"] is False
-    assert "receiver_closed_modelsize_budget_ladder_missing" in plan[
-        "dispatch_blockers"
-    ]
+    assert "receiver_closed_modelsize_budget_ladder_missing" in plan["dispatch_blockers"]
     assert out["score_claim"] is False
     assert out["promotion_eligible"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
@@ -14274,9 +13339,7 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     )
 
     assert replay_calls
-    assert out["auto_mlx_prefilter_profile_path"].endswith(
-        "local_mlx_prefilter_profile.json"
-    )
+    assert out["auto_mlx_prefilter_profile_path"].endswith("local_mlx_prefilter_profile.json")
     assert out["mlx_profile_paths"] == [out["auto_mlx_prefilter_profile_path"]]
     assert out["local_cpu_replay_gate"]["executed"] is True
     assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is True
@@ -14284,12 +13347,13 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
     assert "hi_nerv_full_video_local_prefilter_missing" not in out["blockers"]
     assert "hi_nerv_local_cpu_replay_gate_missing" not in out["blockers"]
-    assert "hi_nerv_full_video_local_prefilter_missing" not in out[
-        "candidate_feedback"
-    ]["row"]["pr95_stack_binding_blockers"]
-    assert "hi_nerv_local_cpu_replay_gate_missing" not in out["candidate_feedback"][
-        "row"
-    ]["pr95_stack_binding_blockers"]
+    assert (
+        "hi_nerv_full_video_local_prefilter_missing"
+        not in out["candidate_feedback"]["row"]["pr95_stack_binding_blockers"]
+    )
+    assert (
+        "hi_nerv_local_cpu_replay_gate_missing" not in out["candidate_feedback"]["row"]["pr95_stack_binding_blockers"]
+    )
 
 
 def test_hinerv_execute_emits_trained_archive_byte_oracle_feedback(
@@ -14438,24 +13502,16 @@ def test_hinerv_execute_emits_trained_archive_byte_oracle_feedback(
     assert score_training["archive_sha256"] == out["archive_sha256"]
     assert score_training["archive_resolution"]["archive_path"] == out["archive_path"]
     byte_feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
-    assert byte_feedback["byte_feedback_source"] == (
-        "hi_nerv_trained_archive_byte_oracle"
-    )
+    assert byte_feedback["byte_feedback_source"] == ("hi_nerv_trained_archive_byte_oracle")
     assert byte_feedback["measured_archive_bytes"] == out["archive_bytes"]
     assert byte_feedback["trained_archive_byte_oracle_path"] == oracle["path"]
-    assert out["candidate_feedback"]["row"]["measured_archive_bytes"] == out[
-        "archive_bytes"
-    ]
+    assert out["candidate_feedback"]["row"]["measured_archive_bytes"] == out["archive_bytes"]
     readiness = out["hi_nerv_long_mlx_training_readiness_signals"]
-    assert readiness["schema"] == (
-        "compact_hi_nerv_long_mlx_training_readiness_signals.v1"
-    )
+    assert readiness["schema"] == ("compact_hi_nerv_long_mlx_training_readiness_signals.v1")
     assert readiness["archive"]["measured_archive_bytes"] == out["archive_bytes"]
     assert readiness["teachers"]["real_segnet_teacher_attached"] is True
     assert readiness["teachers"]["real_posenet_teacher_attached"] is True
-    assert out["score_aware_training"]["long_mlx_training_readiness_signals"] == (
-        readiness
-    )
+    assert out["score_aware_training"]["long_mlx_training_readiness_signals"] == (readiness)
     assert readiness["score_claim"] is False
     assert readiness["ready_for_exact_eval_dispatch"] is False
     assert out["score_claim"] is False
@@ -14521,7 +13577,7 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
                         "path": weight_path.as_posix(),
                         "auto_discovery": discovery,
                         "authority": "false_macos_mlx_research_signal",
-                    }
+                    },
                 }
             },
         }
@@ -14581,18 +13637,10 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
         "segnet_direct_live_target_mass_floor": 2.0,
         "segnet_direct_live_target_min_ratio_floor": 0.0,
     }
-    assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == (
-        "auto_discovered_joint_p18_p19_file"
-    )
-    assert out["score_aware_training"]["pose_direct_live_distillation"][
-        "enabled"
-    ] is False
-    assert out["score_aware_training"]["training_telemetry_contract"][
-        "passed"
-    ] is True
-    assert "hinerv_candidate_curriculum_recon_pixel_weight_missing" not in out[
-        "blockers"
-    ]
+    assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == ("auto_discovered_joint_p18_p19_file")
+    assert out["score_aware_training"]["pose_direct_live_distillation"]["enabled"] is False
+    assert out["score_aware_training"]["training_telemetry_contract"]["passed"] is True
+    assert "hinerv_candidate_curriculum_recon_pixel_weight_missing" not in out["blockers"]
 
 
 def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
@@ -14632,9 +13680,7 @@ def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
                 "schema": "hprc_mlx_component_neutralization_profile.v1",
                 "mlx_response_summary": {"max_pairs": 128, "n_samples": 128},
                 "scorer_batch_pairs": 1,
-                "scope_status": {
-                    "full_video": "sampled_prefix_requires_full_video_rerun"
-                },
+                "scope_status": {"full_video": "sampled_prefix_requires_full_video_rerun"},
                 "section_value_rows": [],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -14667,9 +13713,7 @@ def test_hinerv_sampled_mlx_profile_does_not_unlock_default_cpu_replay(
     assert out["local_cpu_replay_gate"]["default_enabled_for_full_coverage"] is False
     assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is False
     assert out["mlx_prefilter_coverage"]["has_full_video_mlx_prefilter"] is False
-    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out[
-        "blockers"
-    ]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out["blockers"]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
     assert "sampled_mlx_prefilter_requires_full_video_rerun" in out["blockers"]
 
@@ -14809,31 +13853,20 @@ def test_hinerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
     assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is False
     assert out["mlx_prefilter_coverage"]["has_full_video_mlx_prefilter"] is True
     assert out["mlx_prefilter_coverage"]["local_replay_profile_paths"] == []
-    assert out["mlx_prefilter_coverage"]["blockers"] == [
-        "mlx_profile_batch_pairs_not_singleton"
-    ]
+    assert out["mlx_prefilter_coverage"]["blockers"] == ["mlx_profile_batch_pairs_not_singleton"]
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
     assert "hi_nerv_full_video_local_prefilter_missing" not in out["blockers"]
-    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in out[
-        "blockers"
-    ]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in out["blockers"]
     assert "hi_nerv_local_cpu_replay_gate_missing" in out["blockers"]
-    feedback_blockers = out["candidate_feedback"]["row"][
-        "pr95_stack_binding_blockers"
-    ]
+    feedback_blockers = out["candidate_feedback"]["row"]["pr95_stack_binding_blockers"]
     assert "hi_nerv_full_video_local_prefilter_missing" not in feedback_blockers
     assert "hi_nerv_local_cpu_replay_gate_missing" in feedback_blockers
     feedback_row = out["candidate_feedback"]["row"]
     assert feedback_row["mlx_prefilter_has_full_video"] is True
     assert feedback_row["mlx_prefilter_local_replay_passed"] is False
-    assert feedback_row["mlx_prefilter_blockers"] == [
-        "mlx_profile_batch_pairs_not_singleton"
-    ]
+    assert feedback_row["mlx_prefilter_blockers"] == ["mlx_profile_batch_pairs_not_singleton"]
     assert feedback_row["local_cpu_replay_gate_has_full_video_mlx_prefilter"] is True
-    assert (
-        feedback_row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"]
-        is False
-    )
+    assert feedback_row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"] is False
     assert feedback_row["local_cpu_replay_gate_executed"] is False
 
 
@@ -14876,9 +13909,7 @@ def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
     assert out["local_cpu_replay_gate"]["executed"] is False
     assert out["local_cpu_replay_gate"]["default_enabled_for_full_coverage"] is False
     assert out["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] is False
-    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out[
-        "blockers"
-    ]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out["blockers"]
 
 
 def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
@@ -14948,8 +13979,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
                         "c1a_sigma": 0.35,
                         "c1a_sample_size": 64,
                         "c1a_source": (
-                            "PR95 cat_entropy_v2 soft categorical entropy "
-                            "adapted to selected decoder weights"
+                            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected decoder weights"
                         ),
                         "authority": "false_macos_mlx_research_signal",
                     },
@@ -14957,12 +13987,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
                         "schema": "compact_recon_pixel_weight.v1",
                         "enabled": True,
                         "source_kind": "file",
-                        "path": Path(
-                            kwargs["recon_pixel_weight_path"]
-                        ).as_posix(),
-                        "sha256": runner_mod._sha256_file(
-                            Path(kwargs["recon_pixel_weight_path"])
-                        ),
+                        "path": Path(kwargs["recon_pixel_weight_path"]).as_posix(),
+                        "sha256": runner_mod._sha256_file(Path(kwargs["recon_pixel_weight_path"])),
                         "npz_key": None,
                         "normalize": kwargs["recon_pixel_weight_normalize"],
                         "scorer_terms": {
@@ -15011,9 +14037,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
             "modelsize_control_contract": {
                 "schema": "nerv_modelsize_control_contract.v1",
                 "family": "hi_nerv",
-                "control_semantics": (
-                    "local_receiver_visible_grid_search_nearest_target"
-                ),
+                "control_semantics": ("local_receiver_visible_grid_search_nearest_target"),
                 "archive_bytes_authority_required": True,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -15041,9 +14065,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
 
     assert captured_train_kwargs["coder_aware_qat"] is True
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4
-    assert captured_train_kwargs["candidate_curriculum_plan"]["coder_pressure"][
-        "quant_bits"
-    ] == 4
+    assert captured_train_kwargs["candidate_curriculum_plan"]["coder_pressure"]["quant_bits"] == 4
     assert captured_train_kwargs["latent_dim"] == 12
     assert captured_train_kwargs["embed_dim"] == 16
     assert captured_train_kwargs["decoder_channel"] == 6
@@ -15060,17 +14082,12 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert captured_waterfill["schema"] == waterfill_plan["schema"]
     assert captured_waterfill["rows"] == waterfill_plan["rows"]
     launch_custody = captured_waterfill["compact_runner_launch_custody"]
-    assert launch_custody["schema"] == (
-        "compact_hi_nerv_decoder_weight_waterfill_launch_custody.v1"
-    )
+    assert launch_custody["schema"] == ("compact_hi_nerv_decoder_weight_waterfill_launch_custody.v1")
     assert launch_custody["path"] == waterfill_plan_path.as_posix()
     assert launch_custody["sha256"] == runner_mod._sha256_file(waterfill_plan_path)
     assert launch_custody["source_schema"] == "nerv_decoder_weight_waterfill.v1"
     assert launch_custody["score_claim"] is False
-    assert (
-        captured_waterfill["receiver_proof_status"]
-        == "runtime_consumption_proof_ready"
-    )
+    assert captured_waterfill["receiver_proof_status"] == "runtime_consumption_proof_ready"
     assert captured_waterfill["full_video_coverage"] is True
     assert captured_waterfill["blockers"] == []
     assert captured_train_kwargs["recon_pixel_weight_path"] == weight_path
@@ -15088,10 +14105,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
         "c1a_entropy_weight": 0.0003,
         "c1a_sigma": 0.35,
         "c1a_sample_size": 64,
-        "c1a_source": (
-            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
-            "decoder weights"
-        ),
+        "c1a_source": ("PR95 cat_entropy_v2 soft categorical entropy adapted to selected decoder weights"),
         "authority": "false_macos_mlx_research_signal",
     }
     for key, expected in expected_coder_qat.items():
@@ -15103,42 +14117,28 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert selection["modelsize_control_contract"]["control_semantics"] == (
         "local_receiver_visible_grid_search_nearest_target"
     )
-    assert (
-        selection["modelsize_control_contract"]["archive_bytes_authority_required"]
-        is True
-    )
-    assert selection["modelsize_control_contract"]["control_precedence"][
-        "child_rules_override_parent_defaults"
-    ] is True
+    assert selection["modelsize_control_contract"]["archive_bytes_authority_required"] is True
+    assert selection["modelsize_control_contract"]["control_precedence"]["child_rules_override_parent_defaults"] is True
     precedence = out["hi_nerv_control_precedence"]
     assert precedence["more_finely_grained_child_rules_take_priority"] is True
     assert precedence["pact_controls_take_priority_inside_source_faithful_subset"] is True
-    assert precedence["highest_specificity_active_layer"] == (
-        "promotion_and_exact_eval_gates"
+    assert precedence["highest_specificity_active_layer"] == ("promotion_and_exact_eval_gates")
+    assert (
+        precedence["modelsize_control_precedence"]["highest_specificity_active_layer"]
+        == "pact_receiver_visible_modelsize_child_rule"
     )
-    assert precedence["modelsize_control_precedence"][
-        "highest_specificity_active_layer"
-    ] == "pact_receiver_visible_modelsize_child_rule"
     assert selection["candidate_curriculum_plan"]["coder_pressure"]["enabled"] is True
-    assert selection["candidate_curriculum_plan"]["coder_pressure"][
-        "quant_bits"
-    ] == 4
+    assert selection["candidate_curriculum_plan"]["coder_pressure"]["quant_bits"] == 4
     assert selection["launch_latent_dim"] == 12
     assert selection["launch_embed_dim"] == 16
     assert selection["launch_decoder_channel"] == 6
     assert selection["requested_launch_decoder_codec"] == "int4_mixed"
     assert selection["launch_decoder_codec"] == "portfolio_auto"
-    assert selection["launch_decoder_codec_policy"][
-        "portfolio_auto_intervened"
-    ] is True
+    assert selection["launch_decoder_codec_policy"]["portfolio_auto_intervened"] is True
     assert selection["launch_hi_nerv_latent_codec"] == "int16_brotli_q11"
-    assert out["score_aware_training"]["requested_launch_decoder_codec"] == (
-        "int4_mixed"
-    )
+    assert out["score_aware_training"]["requested_launch_decoder_codec"] == ("int4_mixed")
     assert out["score_aware_training"]["decoder_codec"] == "portfolio_auto"
-    assert out["score_aware_training"]["hi_nerv_latent_codec"] == (
-        "int16_brotli_q11"
-    )
+    assert out["score_aware_training"]["hi_nerv_latent_codec"] == ("int16_brotli_q11")
     waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
     assert waterfill["attached"] is True
     assert waterfill["path"] == waterfill_plan_path.as_posix()
@@ -15166,12 +14166,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert feedback["scope_matches_candidate"] is False
     assert feedback["feedback_ready"] is False
     assert feedback["measured_archive_bytes"] == out["archive_bytes"]
-    assert "partial_pair_byte_feedback_only" in out["candidate_curriculum_plan"][
-        "blockers"
-    ]
-    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in out[
-        "candidate_curriculum_plan"
-    ]["blockers"]
+    assert "partial_pair_byte_feedback_only" in out["candidate_curriculum_plan"]["blockers"]
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in out["candidate_curriculum_plan"]["blockers"]
     candidate_feedback = out["candidate_feedback"]
     assert Path(candidate_feedback["row_path"]).is_file()
     assert Path(candidate_feedback["ledger_path"]).is_file()
@@ -15180,22 +14176,12 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert candidate_feedback["row"]["measured_num_pairs"] == 2
     assert candidate_feedback["row"]["feedback_ready"] is False
     assert candidate_feedback["row"]["feedback_scope"] == "partial_pair_advisory"
-    assert "partial_pair_byte_feedback_only" in (
-        candidate_feedback["row"]["blockers"]
-    )
-    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in (
-        candidate_feedback["row"]["blockers"]
-    )
-    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in (
-        feedback["byte_oracle_blockers"]
-    )
+    assert "partial_pair_byte_feedback_only" in (candidate_feedback["row"]["blockers"])
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in (candidate_feedback["row"]["blockers"])
+    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in (feedback["byte_oracle_blockers"])
     assert candidate_feedback["score_claim"] is False
-    assert out["score_aware_training"]["recon_pixel_weight"][
-        "source_kind"
-    ] == "file"
-    assert out["score_aware_training"]["recon_pixel_weight"]["path"] == (
-        weight_path.as_posix()
-    )
+    assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == "file"
+    assert out["score_aware_training"]["recon_pixel_weight"]["path"] == (weight_path.as_posix())
     assert out["score_aware_training"]["recon_pixel_weight"]["scorer_terms"] == {
         "p18_segnet": "caller_supplied",
         "p19_posenet": "caller_supplied",
@@ -15288,9 +14274,7 @@ def test_hinerv_execute_uses_receiver_survival_portfolio_for_scorer_active_candi
             "modelsize_control_contract": {
                 "schema": "nerv_modelsize_control_contract.v1",
                 "family": "hi_nerv",
-                "control_semantics": (
-                    "local_receiver_visible_grid_search_nearest_target"
-                ),
+                "control_semantics": ("local_receiver_visible_grid_search_nearest_target"),
                 "archive_bytes_authority_required": True,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -15316,12 +14300,8 @@ def test_hinerv_execute_uses_receiver_survival_portfolio_for_scorer_active_candi
     assert selection["launch_decoder_codec"] == "portfolio_auto"
     policy = selection["launch_decoder_codec_policy"]
     assert policy["portfolio_auto_intervened"] is True
-    assert policy["policy"] == (
-        "score_preserving_receiver_survival_portfolio_under_byte_cap"
-    )
-    assert out["score_aware_training"]["requested_launch_decoder_codec"] == (
-        "int4_mixed"
-    )
+    assert policy["policy"] == ("score_preserving_receiver_survival_portfolio_under_byte_cap")
+    assert out["score_aware_training"]["requested_launch_decoder_codec"] == ("int4_mixed")
     assert out["score_aware_training"]["launch_decoder_codec"] == "portfolio_auto"
     assert out["score_aware_training"]["launch_decoder_codec_policy"] == policy
 
@@ -15363,9 +14343,7 @@ def test_hinerv_execute_threads_archive_section_telemetry_into_training(
             "substrate_artifact_metadata": {
                 "substrate_supplied_score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
-                    "archive_section_telemetry_attachment": kwargs[
-                        "archive_section_telemetry_metadata"
-                    ],
+                    "archive_section_telemetry_attachment": kwargs["archive_section_telemetry_metadata"],
                     "archive_section_qat_weight_policy": {
                         "schema": "hi_nerv_archive_section_qat_weight_policy.v1",
                         "active": True,
@@ -15417,9 +14395,7 @@ def test_hinerv_execute_threads_archive_section_telemetry_into_training(
     assert attachment["archive_zip_bytes"] == 2048
     assert attachment["section_payload_bytes"] == 1900
     assert attachment["section_count"] == 5
-    report_attachment = out["score_aware_training"][
-        "archive_section_telemetry_attachment"
-    ]
+    report_attachment = out["score_aware_training"]["archive_section_telemetry_attachment"]
     assert report_attachment["validated"] is True
     assert report_attachment["path"] == telemetry_path.as_posix()
     policy = out["score_aware_training"]["archive_section_qat_weight_policy"]
@@ -15441,9 +14417,7 @@ def test_hinerv_execute_threads_archive_section_telemetry_into_training(
             {
                 "schema": "wrong_schema.v1",
                 "profile_ready": True,
-                "sections": [
-                    {"name": "decoder_state", "role": "decoder", "bytes": 1}
-                ],
+                "sections": [{"name": "decoder_state", "role": "decoder", "bytes": 1}],
             },
             "hi_nerv_archive_section_telemetry_schema_mismatch",
         ),
@@ -15452,9 +14426,7 @@ def test_hinerv_execute_threads_archive_section_telemetry_into_training(
             {
                 "schema": "hinerv_archive_section_telemetry.v1",
                 "profile_ready": False,
-                "sections": [
-                    {"name": "decoder_state", "role": "decoder", "bytes": 1}
-                ],
+                "sections": [{"name": "decoder_state", "role": "decoder", "bytes": 1}],
             },
             "hi_nerv_archive_section_telemetry_not_profile_ready",
         ),
@@ -15471,9 +14443,7 @@ def test_hinerv_execute_threads_archive_section_telemetry_into_training(
             {
                 "schema": "hinerv_archive_section_telemetry.v1",
                 "profile_ready": True,
-                "sections": [
-                    {"name": "latents_mid", "role": "latent", "bytes": 16}
-                ],
+                "sections": [{"name": "latents_mid", "role": "latent", "bytes": 16}],
             },
             "hi_nerv_archive_section_telemetry_decoder_state_missing",
         ),
@@ -15519,9 +14489,7 @@ def test_hinerv_execute_refuses_bad_archive_section_telemetry_before_training(
     assert out["mode"] == "hi_nerv_archive_section_telemetry_launch_refused"
     assert expected_blocker in out["blockers"]
     assert "hi_nerv_training_not_launched" in out["blockers"]
-    attachment = out["score_aware_training"][
-        "archive_section_telemetry_attachment"
-    ]
+    attachment = out["score_aware_training"]["archive_section_telemetry_attachment"]
     assert attachment["attached"] is True
     assert attachment["validated"] is False
     assert expected_blocker in attachment["blockers"]
@@ -15550,9 +14518,7 @@ def test_hinerv_execute_does_not_top_level_block_when_section_telemetry_absent(
                         "schema": "hi_nerv_archive_section_qat_weight_policy.v1",
                         "attached": False,
                         "active": False,
-                        "blockers": [
-                            "hinerv_archive_section_telemetry_not_attached"
-                        ],
+                        "blockers": ["hinerv_archive_section_telemetry_not_attached"],
                     },
                 },
             },
@@ -15579,9 +14545,7 @@ def test_hinerv_execute_does_not_top_level_block_when_section_telemetry_absent(
     )
 
     assert "hinerv_archive_section_telemetry_not_attached" not in out["blockers"]
-    assert out["score_aware_training"][
-        "archive_section_telemetry_attachment"
-    ]["attached"] is False
+    assert out["score_aware_training"]["archive_section_telemetry_attachment"]["attached"] is False
 
 
 def test_hinerv_execute_failure_preserves_archive_section_telemetry_context(
@@ -15623,9 +14587,7 @@ def test_hinerv_execute_failure_preserves_archive_section_telemetry_context(
 
     assert out["mode"] == "hi_nerv_mlx_scoreaware_failed"
     assert "synthetic trainer failure" in out["failure"]
-    attachment = out["score_aware_training"][
-        "archive_section_telemetry_attachment"
-    ]
+    attachment = out["score_aware_training"]["archive_section_telemetry_attachment"]
     assert attachment["attached"] is True
     assert attachment["validated"] is True
     assert attachment["path"] == telemetry_path.as_posix()
@@ -15784,9 +14746,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
         captured["model_num_pairs"] = int(bundle.model.cfg.num_pairs)
         captured["model_fake_quant"] = dict(bundle.model.fake_quant)
-        captured["gradient_multiplier_by_name"] = dict(
-            kwargs["gradient_multiplier_by_name"]
-        )
+        captured["gradient_multiplier_by_name"] = dict(kwargs["gradient_multiplier_by_name"])
         captured["metadata"] = dict(bundle.substrate_artifact_metadata)
         return FakeArtifact({"substrate_artifact_metadata": captured["metadata"]})
 
@@ -15906,13 +14866,9 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert captured["model_num_pairs"] == 600
     assert captured["model_fake_quant"]["enabled"] is True
     assert captured["model_fake_quant"]["quant_bits"] == 4
-    assert captured["model_fake_quant"]["per_tensor_bits"] == {
-        "head_rgb_1.bias": 4
-    }
+    assert captured["model_fake_quant"]["per_tensor_bits"] == {"head_rgb_1.bias": 4}
     assert captured["model_fake_quant"]["stage_controlled"] is True
-    assert captured["gradient_multiplier_by_name"] == {
-        "head_rgb_1.bias": pytest.approx(1.414214)
-    }
+    assert captured["gradient_multiplier_by_name"] == {"head_rgb_1.bias": pytest.approx(1.414214)}
     metadata = captured["metadata"]
     assert metadata["num_pairs"] == 2
     assert metadata["training_num_pairs"] == 2
@@ -15921,10 +14877,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert receiver_proof_policy["enabled"] is False
     assert receiver_proof_policy["training_num_pairs"] == 2
     assert receiver_proof_policy["model_num_pairs"] == 600
-    assert (
-        receiver_proof_policy["partial_candidate_smoke_skips_full_receiver_proof"]
-        is True
-    )
+    assert receiver_proof_policy["partial_candidate_smoke_skips_full_receiver_proof"] is True
     consumption = metadata["modelsize_candidate_consumption"]
     assert consumption["candidate_num_pairs"] == 600
     assert consumption["training_num_pairs"] == 2
@@ -15935,21 +14888,14 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert fake_quant["configured_enabled"] is True
     assert fake_quant["initial_forward_active"] is False
     assert fake_quant["stage_controlled"] is True
-    assert (
-        fake_quant["stage_control_source"]
-        == "pr95_faithful_stage_verdict.qat_active"
-    )
+    assert fake_quant["stage_control_source"] == "pr95_faithful_stage_verdict.qat_active"
     assert fake_quant["per_tensor_waterfill_enabled"] is True
-    assert fake_quant["per_tensor_waterfill_bits_by_name"] == {
-        "head_rgb_1.bias": 4
-    }
+    assert fake_quant["per_tensor_waterfill_bits_by_name"] == {"head_rgb_1.bias": 4}
     gradient_policy = metadata["score_aware_training"]["gradient_multipliers"][
         "decoder_weight_waterfill_gradient_policy"
     ]
     assert gradient_policy["active_after_merge"] is True
-    assert gradient_policy["merged_multiplier_by_name"] == {
-        "head_rgb_1.bias": pytest.approx(1.414214)
-    }
+    assert gradient_policy["merged_multiplier_by_name"] == {"head_rgb_1.bias": pytest.approx(1.414214)}
     assert "score_claim" not in gradient_policy
     assert "promotion_eligible" not in gradient_policy
     assert "ready_for_exact_eval_dispatch" not in gradient_policy
@@ -16097,16 +15043,12 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
         )
         mx.eval(*terms.values())
         captured["extra_loss_term_keys"] = sorted(terms)
-        captured["term_values"] = {
-            key: float(value.item()) for key, value in terms.items()
-        }
+        captured["term_values"] = {key: float(value.item()) for key, value in terms.items()}
         captured["dual_loss_weight_keys"] = sorted(
-            row["loss_weight_key"]
-            for row in kwargs["train_time_dual_ascent_config"]["constraints"]
+            row["loss_weight_key"] for row in kwargs["train_time_dual_ascent_config"]["constraints"]
         )
         captured["dual_metric_names"] = sorted(
-            row["metric_name"]
-            for row in kwargs["train_time_dual_ascent_config"]["constraints"]
+            row["metric_name"] for row in kwargs["train_time_dual_ascent_config"]["constraints"]
         )
         assert bundle.train_time_section_byte_metrics is not None
         captured["section_byte_metrics"] = bundle.train_time_section_byte_metrics(
@@ -16245,18 +15187,9 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
     assert "latent_qat_quant_residual" in captured["extra_loss_term_keys"]
     assert "coder_qat_quant_residual" in captured["dual_loss_weight_keys"]
     assert "latent_qat_quant_residual" in captured["dual_loss_weight_keys"]
-    assert (
-        "train_time_section_rate_score__decoder_state"
-        in captured["dual_metric_names"]
-    )
-    assert (
-        "train_time_section_rate_score__latents_coarse"
-        in captured["dual_metric_names"]
-    )
-    assert (
-        "train_time_section_rate_score__latents_mid"
-        in captured["dual_metric_names"]
-    )
+    assert "train_time_section_rate_score__decoder_state" in captured["dual_metric_names"]
+    assert "train_time_section_rate_score__latents_coarse" in captured["dual_metric_names"]
+    assert "train_time_section_rate_score__latents_mid" in captured["dual_metric_names"]
     section_metrics = captured["section_byte_metrics"]
     assert section_metrics["source"] == "live_current_hiv1_packet"
     assert section_metrics["archive_bytes"] == 333
@@ -16301,9 +15234,7 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
     attachment = metadata["archive_section_telemetry_attachment"]
     assert attachment["generated_from_initial_model"] is True
     assert attachment["validated"] is True
-    assert attachment["startup_generation"]["source_schema"] == (
-        "hinerv_archive_section_telemetry.v1"
-    )
+    assert attachment["startup_generation"]["source_schema"] == ("hinerv_archive_section_telemetry.v1")
 
 
 def _write_hinerv_waterfill_plan(
@@ -16401,9 +15332,7 @@ def test_hinerv_waterfill_plan_candidate_mismatch_refuses_before_training(
     assert waterfill["attached"] is False
     assert waterfill["active"] is False
     assert waterfill["validated"] is False
-    assert "decoder_weight_waterfill_candidate_id_mismatch:different-hinerv-candidate" in (
-        out["blockers"]
-    )
+    assert "decoder_weight_waterfill_candidate_id_mismatch:different-hinerv-candidate" in (out["blockers"])
     assert waterfill["candidate_match"]["matched"] is False
     assert waterfill["score_claim"] is False
 
@@ -16429,9 +15358,7 @@ def test_hinerv_waterfill_plan_unknown_group_refuses_before_training(
     waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
     assert waterfill["attached"] is False
     assert waterfill["active"] is False
-    assert "decoder_weight_waterfill_group_missing:missing_decoder_group.weight" in (
-        out["blockers"]
-    )
+    assert "decoder_weight_waterfill_group_missing:missing_decoder_group.weight" in (out["blockers"])
 
 
 def test_hinerv_waterfill_plan_shape_mismatch_refuses_before_training(
@@ -16455,9 +15382,7 @@ def test_hinerv_waterfill_plan_shape_mismatch_refuses_before_training(
     waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
     assert waterfill["attached"] is False
     assert waterfill["active"] is False
-    assert "decoder_weight_waterfill_shape_mismatch:head_rgb_1.bias" in out[
-        "blockers"
-    ]
+    assert "decoder_weight_waterfill_shape_mismatch:head_rgb_1.bias" in out["blockers"]
     assert waterfill["validated_rows"][0]["declared_shape"] == [4]
 
 
@@ -16511,28 +15436,26 @@ def test_hinerv_waterfill_plan_projects_feature_grid_time_axis_for_smoke() -> No
         "ready_for_exact_eval_dispatch": False,
     }
 
-    projected_plan, metadata = (
-        runner_mod._validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
-            plan=plan,
-            metadata={
-                "schema": "compact_hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
-                "attached": True,
-                "blockers": [],
-            },
-            candidate=candidate,
-            num_pairs=1,
-            latent_dim=12,
-            embed_dim=16,
-            decoder_channel=6,
-            use_hierarchical_feature_grid=True,
-            use_convnext_blocks=True,
-            local_grid_levels=2,
-            local_grid_channels=4,
-            convnext_mlp_ratio=2,
-            convnext_kernel_size=7,
-            mid_injection_block_index=2,
-            fine_injection_block_index=5,
-        )
+    projected_plan, metadata = runner_mod._validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
+        plan=plan,
+        metadata={
+            "schema": "compact_hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
+            "attached": True,
+            "blockers": [],
+        },
+        candidate=candidate,
+        num_pairs=1,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=6,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=7,
+        mid_injection_block_index=2,
+        fine_injection_block_index=5,
     )
 
     assert projected_plan is not None
@@ -16543,9 +15466,7 @@ def test_hinerv_waterfill_plan_projects_feature_grid_time_axis_for_smoke() -> No
     assert metadata["train_time_fake_quant_bound"] is True
     assert metadata["fake_quant_forward"]["configured"] is True
     assert metadata["fake_quant_forward"]["targeted_tensor_count"] == 1
-    assert metadata["fake_quant_forward"]["per_tensor_waterfill_bits_by_name"] == {
-        group_name: 4
-    }
+    assert metadata["fake_quant_forward"]["per_tensor_waterfill_bits_by_name"] == {group_name: 4}
     projection = metadata["smoke_projection"]
     assert projection["active"] is True
     assert projection["projected_row_count"] == 1
@@ -16554,9 +15475,7 @@ def test_hinerv_waterfill_plan_projects_feature_grid_time_axis_for_smoke() -> No
     assert row["shape"] == list(smoke_shapes[group_name])
     assert row["numel"] == int(math.prod(smoke_shapes[group_name]))
     assert row["selected_bits"] == 4
-    assert row["compact_runner_smoke_projected_from_shape"] == list(
-        full_shapes[group_name]
-    )
+    assert row["compact_runner_smoke_projected_from_shape"] == list(full_shapes[group_name])
     assert projected_plan["compact_runner_smoke_projection"]["score_claim"] is False
 
 
@@ -16607,9 +15526,7 @@ def test_hinerv_waterfill_plan_compiles_gradient_multiplier_policy() -> None:
         "ready_for_exact_eval_dispatch": False,
     }
 
-    multipliers, policy = (
-        runner_mod._decoder_weight_waterfill_gradient_multiplier_by_name(plan)
-    )
+    multipliers, policy = runner_mod._decoder_weight_waterfill_gradient_multiplier_by_name(plan)
 
     assert multipliers == {
         "head_rgb_1.bias": pytest.approx(2.828427),
@@ -16770,19 +15687,11 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert captured_train_kwargs["pose_distillation_huber_delta"] == 2.5
     assert captured_train_kwargs["coder_aware_qat"] is True
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4
-    assert captured_train_kwargs["hi_nerv_optimizer_policy"]["resolved_policy"] == (
-        "native_optimizer"
-    )
-    assert captured_train_kwargs["hi_nerv_optimizer_policy"][
-        "optimizer_kind_consumed_by_native_mlx"
-    ] is True
+    assert captured_train_kwargs["hi_nerv_optimizer_policy"]["resolved_policy"] == ("native_optimizer")
+    assert captured_train_kwargs["hi_nerv_optimizer_policy"]["optimizer_kind_consumed_by_native_mlx"] is True
     plan = captured_train_kwargs["candidate_curriculum_plan"]
-    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in plan[
-        "blockers"
-    ]
-    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in plan[
-        "blockers"
-    ]
+    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in plan["blockers"]
+    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in plan["blockers"]
     binding = out["hi_nerv_modelsize_launch_pressure"]
     assert binding["source"] == "modelsize_candidate_minimum_joint_scorer_pressure"
     assert {row["field"] for row in binding["mutations"]} == {
@@ -16794,22 +15703,12 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert out["score_aware_training"]["segnet_distillation_weight"] == 1.0
     assert out["score_aware_training"]["pose_distillation_weight"] == 1.0
     assert out["score_aware_training"]["optimizer_kind"] == "adafactor"
-    assert out["score_aware_training"]["optimizer_controls"]["optimizer_kind"] == (
-        "adafactor"
-    )
-    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
-        "native_optimizer"
-    )
+    assert out["score_aware_training"]["optimizer_controls"]["optimizer_kind"] == ("adafactor")
+    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == ("native_optimizer")
     assert out["score_aware_training_config_gate"]["frontier_targeting"] is True
-    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
-        "blockers"
-    ]
-    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in out[
-        "blockers"
-    ]
-    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in out[
-        "blockers"
-    ]
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out["blockers"]
+    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in out["blockers"]
+    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in out["blockers"]
 
 
 def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
@@ -16866,9 +15765,7 @@ def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
     assert gate["real_posenet_teacher_attached"] is True
     assert gate["direct_live_escape_controls_attached"] is True
     assert gate["direct_live_escape_controls"]["shape_tether"] == pytest.approx(0.25)
-    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
-        "blockers"
-    ]
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out["blockers"]
 
 
 def test_hinerv_execute_forwards_target_mass_floor_to_live_smoke(
@@ -16912,17 +15809,15 @@ def test_hinerv_execute_forwards_target_mass_floor_to_live_smoke(
         repo_root=REPO_ROOT,
     )
 
-    assert captured_train_kwargs["segnet_direct_live_target_mass_floor_weight"] == (
-        pytest.approx(0.75)
-    )
+    assert captured_train_kwargs["segnet_direct_live_target_mass_floor_weight"] == (pytest.approx(0.75))
     assert captured_train_kwargs["segnet_direct_live_stage_weight"] == pytest.approx(2.5)
     assert out["score_aware_training_config_gate"]["launch_allowed"] is True
-    assert out["score_aware_training_config_gate"]["direct_live_escape_controls"][
+    assert out["score_aware_training_config_gate"]["direct_live_escape_controls"]["target_mass_floor"] == pytest.approx(
+        0.75
+    )
+    assert out["candidate_curriculum_plan"]["scorer_pressure"]["segnet_direct_live_subcontrol_weights"][
         "target_mass_floor"
     ] == pytest.approx(0.75)
-    assert out["candidate_curriculum_plan"]["scorer_pressure"][
-        "segnet_direct_live_subcontrol_weights"
-    ]["target_mass_floor"] == pytest.approx(0.75)
 
 
 def test_hinerv_modelsize_launch_preserves_explicit_segnet_only_research(
@@ -17050,10 +15945,7 @@ def test_hinerv_auto_policy_binds_long_pact_muon_adamw_to_pr95_every_stage() -> 
     assert default_policy["resolved_policy"] == "pr95_curriculum"
     assert default_policy["optimizer_kind"] == "pact_muon_adamw"
     assert default_policy["pr95_muon_policy"] == "every_stage"
-    assert (
-        default_policy["effective_optimizer_label"]
-        == "pr95_8stage_muon_adamw_every_stage"
-    )
+    assert default_policy["effective_optimizer_label"] == "pr95_8stage_muon_adamw_every_stage"
     assert default_policy["optimizer_kind_consumed_by_native_mlx"] is False
     assert default_policy["optimizer_kind_consumed_by_pr95_curriculum"] is True
     assert default_policy["pr95_faithful_curriculum_enabled"] is True
@@ -17156,26 +16048,16 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     proof = json.loads(Path(out["receiver_proof_report_paths"][0]).read_text())
     assert proof["runtime_consumption_proof_ready"] is True
     assert proof["receiver_contract_satisfied"] is True
-    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out[
-        "blockers"
-    ]
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out["blockers"]
     readiness = out["short_scorer_teacher_smoke_readiness"]
     assert Path(readiness["report_path"]).is_file()
     assert readiness["ready_for_long_run"] is False
-    assert "hi_nerv_short_smoke_unscored_research_smoke_enabled" in readiness[
-        "actionable_blockers"
-    ]
+    assert "hi_nerv_short_smoke_unscored_research_smoke_enabled" in readiness["actionable_blockers"]
     assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in out["blockers"]
     assert out["score_aware_training"]["optimizer_kind"] == "pact_muon_adamw"
-    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
-        "native_optimizer"
-    )
-    assert out["score_aware_training"]["optimizer_controls"][
-        "weight_decay_effective"
-    ] == pytest.approx(1.0e-4)
-    assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" not in out[
-        "blockers"
-    ]
+    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == ("native_optimizer")
+    assert out["score_aware_training"]["optimizer_controls"]["weight_decay_effective"] == pytest.approx(1.0e-4)
+    assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" not in out["blockers"]
     assert "hi_nerv_receiver_proof_missing" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
@@ -17314,9 +16196,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             "modelsize_control_contract": {
                 "schema": "nerv_modelsize_control_contract.v1",
                 "family": "snerv",
-                "control_semantics": (
-                    "manual_receiver_visible_fc_dim_feature_basis"
-                ),
+                "control_semantics": ("manual_receiver_visible_fc_dim_feature_basis"),
                 "archive_bytes_authority_required": True,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -17348,46 +16228,29 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert selection["modelsize_control_contract"]["control_semantics"] == (
         "manual_receiver_visible_fc_dim_feature_basis"
     )
-    assert (
-        selection["modelsize_control_contract"]["archive_bytes_authority_required"]
-        is True
-    )
+    assert selection["modelsize_control_contract"]["archive_bytes_authority_required"] is True
     assert selection["launch_levels"] == 2
     assert selection["launch_bits_per_coeff"] == 1.5
     assert selection["launch_decoder_payload_codec"] == "int2_symmetric"
-    assert selection["candidate_curriculum_plan"]["receiver_grammar_controls"][
-        "step_map_coder_mode"
-    ] == "waterfill"
+    assert selection["candidate_curriculum_plan"]["receiver_grammar_controls"]["step_map_coder_mode"] == "waterfill"
     assert Path(out["archive_path"]).is_file()
     assert out["archive_bytes"] == Path(out["archive_path"]).stat().st_size
     assert Path(out["receiver_archive_packet_path"]).read_bytes() == packet
     assert Path(out["advisory_report_path"]).is_file()
     assert Path(out["runtime_package_path"]).is_file()
     assert Path(out["trained_ladder_row_payload_path"]).is_file()
-    assert out["trained_ladder_row_payload"]["schema"] == (
-        "nerv_trained_ladder_row_payload.v1"
-    )
-    assert out["trained_ladder_row_payload"]["status"] == (
-        "trained_ladder_row_blocked"
-    )
-    assert out["trained_ladder_row_payload"]["archive_path_kind"] == (
-        "contest_archive_zip"
-    )
-    assert "sample_pair_count_below_full600" in out["trained_ladder_row_payload"][
-        "blockers"
-    ]
+    assert out["trained_ladder_row_payload"]["schema"] == ("nerv_trained_ladder_row_payload.v1")
+    assert out["trained_ladder_row_payload"]["status"] == ("trained_ladder_row_blocked")
+    assert out["trained_ladder_row_payload"]["archive_path_kind"] == ("contest_archive_zip")
+    assert "sample_pair_count_below_full600" in out["trained_ladder_row_payload"]["blockers"]
     assert out["receiver_proof_report_paths"]
     planner = out["score_aware_carrier_training_plan"]
     assert planner["score_aware_training_ready"] is False
     native_contract = out["snerv_mlx_native_adapter_contract"]
     assert native_contract["schema"] == "snerv_mlx_native_adapter_contract.v1"
     assert native_contract["surfaces_ready"] is True
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in (
-        native_contract["blockers"]
-    )
-    assert out["score_aware_training"]["status"] == (
-        "executed_cpu_advisory_mlx_native_training_missing"
-    )
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in (native_contract["blockers"])
+    assert out["score_aware_training"]["status"] == ("executed_cpu_advisory_mlx_native_training_missing")
     assert out["score_aware_training"]["target_bits_per_coeff"] == 1.5
     assert out["score_aware_training"]["step_map_coder_mode"] == "waterfill"
     assert out["score_aware_training"]["decoder_payload_codec"] == "int2_symmetric"
@@ -17397,34 +16260,11 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
         7,
         2,
     ]
-    assert (
-        out["score_aware_training"]["prioritized_pair_training"][
-            "consumed_by_cpu_advisory"
-        ]
-        is True
-    )
-    assert (
-        out["score_aware_training"]["prioritized_pair_training"][
-            "consumed_by_mlx_native_export"
-        ]
-        is False
-    )
-    assert (
-        out["score_aware_training"]["prioritized_pair_training"]["score_claim"]
-        is False
-    )
-    assert (
-        out["score_aware_training"]["prioritized_pair_training"][
-            "promotion_eligible"
-        ]
-        is False
-    )
-    assert (
-        out["score_aware_training"]["prioritized_pair_training"][
-            "ready_for_exact_eval_dispatch"
-        ]
-        is False
-    )
+    assert out["score_aware_training"]["prioritized_pair_training"]["consumed_by_cpu_advisory"] is True
+    assert out["score_aware_training"]["prioritized_pair_training"]["consumed_by_mlx_native_export"] is False
+    assert out["score_aware_training"]["prioritized_pair_training"]["score_claim"] is False
+    assert out["score_aware_training"]["prioritized_pair_training"]["promotion_eligible"] is False
+    assert out["score_aware_training"]["prioritized_pair_training"]["ready_for_exact_eval_dispatch"] is False
     feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
     assert feedback["candidate_num_pairs"] == 600
     assert feedback["measured_num_pairs"] == 2
@@ -17449,51 +16289,36 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert binary_profile["lf_payload_bytes"] > 0
     assert binary_profile["score_claim"] is False
     assert out["score_aware_training"]["beats_frontier_rate"] is True
-    assert out["reusable_optimization_followups"][
-        "applies_after_byte_closed_export"
-    ] is True
-    assert "final_rate_attack_and_repair_materializers" in out[
-        "reusable_optimization_followups"
-    ]["required_hooks"]
+    assert out["reusable_optimization_followups"]["applies_after_byte_closed_export"] is True
+    assert "final_rate_attack_and_repair_materializers" in out["reusable_optimization_followups"]["required_hooks"]
     post_export = out["post_export_materializer_plan"]
     assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
     assert post_export["compiled"] is True
     assert post_export["queue_launch_executed"] is False
     assert post_export["experiment_count"] > 0
     assert Path(post_export["experiment_queue_path"]).is_file()
-    assert post_export["archive_record"]["source_runtime_dir"].endswith(
-        "/snerv_archive_bound_package/submission"
-    )
+    assert post_export["archive_record"]["source_runtime_dir"].endswith("/snerv_archive_bound_package/submission")
     assert post_export["archive_record"]["source_inflate_sh_path"].endswith(
         "/snerv_archive_bound_package/submission/inflate.sh"
     )
     contexts = json.loads(Path(post_export["materializer_contexts_path"]).read_text())
     first_context = contexts["rows"][0]["context"]
-    assert first_context["source_runtime_dir"].endswith(
-        "/snerv_archive_bound_package/submission"
-    )
-    assert first_context["packet_member_merge_source_runtime_dir"].endswith(
-        "/snerv_archive_bound_package/submission"
-    )
+    assert first_context["source_runtime_dir"].endswith("/snerv_archive_bound_package/submission")
+    assert first_context["packet_member_merge_source_runtime_dir"].endswith("/snerv_archive_bound_package/submission")
     queue = json.loads(Path(post_export["experiment_queue_path"]).read_text())
     harvest_step = queue["experiments"][0]["steps"][1]
     state_arg_index = harvest_step["command"].index("--state") + 1
-    assert harvest_step["command"][state_arg_index] == post_export[
-        "experiment_queue_state_path"
-    ]
+    assert harvest_step["command"][state_arg_index] == post_export["experiment_queue_state_path"]
     post_export_execution = out["post_export_materializer_execution"]
     assert post_export_execution["requested"] is False
     assert post_export_execution["executed"] is False
     assert Path(post_export_execution["execution_path"]).is_file()
-    assert out["reusable_optimization_followups"][
-        "post_export_experiment_queue_path"
-    ] == post_export["experiment_queue_path"]
-    assert out["candidate_curriculum_plan"]["training_plan"][
-        "receiver_proof_attached"
-    ] is True
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
-        "blockers"
-    ]
+    assert (
+        out["reusable_optimization_followups"]["post_export_experiment_queue_path"]
+        == post_export["experiment_queue_path"]
+    )
+    assert out["candidate_curriculum_plan"]["training_plan"]["receiver_proof_attached"] is True
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out["blockers"]
     assert out["snerv_mlx_native_adapter_contract"]["surfaces_ready"] is True
     assert "snerv_receiver_proof_missing" not in out["blockers"]
     assert "full_video_mlx_scorer_replay_not_attached" in out["blockers"]
@@ -17540,9 +16365,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             snerv_hfr_gain=kwargs["snerv_hfr_gain"],
             snerv_temporal_context=kwargs["snerv_temporal_context"],
             snerv_temporal_mode=kwargs["snerv_temporal_mode"],
-            decoder_feature_count=(
-                int(kwargs["snerv_fc_dim"]) + int(kwargs["snerv_emb_size"])
-            ),
+            decoder_feature_count=(int(kwargs["snerv_fc_dim"]) + int(kwargs["snerv_emb_size"])),
             beats_frontier_rate=True,
             receiver_archive_replay_verified=True,
         )
@@ -17616,27 +16439,17 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             encoding="utf-8",
         )
         report = out / "snerv_mlx_native_train_export.json"
-        long_training_executed = int(
-            kwargs.get("score_aware_long_training_epochs") or 0
-        ) > 0
+        long_training_executed = int(kwargs.get("score_aware_long_training_epochs") or 0) > 0
         real_teachers_bound = bool(
             float(kwargs.get("segnet_distillation_weight") or 0.0) > 0.0
             and float(kwargs.get("pose_distillation_weight") or 0.0) > 0.0
         )
         scorer_input_distribution_guard_bound = bool(
-            float(
-                kwargs.get(
-                    "score_aware_long_training_scorer_input_distribution_guard_weight"
-                )
-                or 0.0
-            )
-            > 0.0
+            float(kwargs.get("score_aware_long_training_scorer_input_distribution_guard_weight") or 0.0) > 0.0
         )
         modelsize_candidate = dict(kwargs.get("modelsize_candidate") or {})
         omit_top_level_long_training_controls = bool(
-            modelsize_candidate.get(
-                "test_omit_top_level_score_aware_long_training_controls"
-            )
+            modelsize_candidate.get("test_omit_top_level_score_aware_long_training_controls")
         )
         hard_byte_ceiling = int(modelsize_candidate.get("hard_byte_ceiling") or 0)
         byte_cap_control = {
@@ -17645,15 +16458,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "hard_byte_ceiling": hard_byte_ceiling or None,
             "packet_bytes": packet_path.stat().st_size,
             "archive_bytes": archive.stat().st_size,
-            "under_hard_byte_ceiling": (
-                archive.stat().st_size <= hard_byte_ceiling
-                if hard_byte_ceiling > 0
-                else None
-            ),
+            "under_hard_byte_ceiling": (archive.stat().st_size <= hard_byte_ceiling if hard_byte_ceiling > 0 else None),
             "delta_bytes_vs_hard_byte_ceiling": (
-                archive.stat().st_size - hard_byte_ceiling
-                if hard_byte_ceiling > 0
-                else None
+                archive.stat().st_size - hard_byte_ceiling if hard_byte_ceiling > 0 else None
             ),
             "enforced": hard_byte_ceiling > 0,
             "blockers": [],
@@ -17701,10 +16508,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                     max_abs=0.75,
                 )
             ),
-            "native_mlx_training_executed": int(
-                kwargs.get("native_mlx_decoder_train_steps") or 0
-            )
-            > 0
+            "native_mlx_training_executed": int(kwargs.get("native_mlx_decoder_train_steps") or 0) > 0
             or long_training_executed,
             "native_mlx_training_kind": (
                 "snerv_mlx_score_aware_haar_renderer"
@@ -17717,136 +16521,66 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "score_aware_long_training_has_real_posenet_teacher": real_teachers_bound,
             "score_aware_long_training_scorer_input_distribution_guard_bound": False,
             "score_aware_long_training_kind": (
-                "snerv_mlx_score_aware_haar_renderer"
-                if long_training_executed
-                else "none"
+                "snerv_mlx_score_aware_haar_renderer" if long_training_executed else "none"
             ),
-            "score_aware_long_training_telemetry_contract_passed": (
-                long_training_executed
-            ),
+            "score_aware_long_training_telemetry_contract_passed": (long_training_executed),
             "score_aware_long_training_control_bound": long_training_executed,
             "score_aware_long_training": {
                 "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
                 "executed": long_training_executed,
-                "scorer_input_distribution_guard_bound": (
-                    scorer_input_distribution_guard_bound
-                ),
+                "scorer_input_distribution_guard_bound": (scorer_input_distribution_guard_bound),
                 "scorer_input_contrast_floor_bound": bool(
-                    float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_contrast_floor_weight"
-                        )
-                        or 0.0
-                    )
-                    > 0.0
+                    float(kwargs.get("score_aware_long_training_scorer_input_contrast_floor_weight") or 0.0) > 0.0
                 ),
                 "training_telemetry_contract": {
                     "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
                     "passed": long_training_executed,
                     "expected_scorer_input_guard_metric": long_training_executed,
                     "scorer_input_guard_metric_observed": long_training_executed,
-                    "scorer_input_guard_dual_metric_observed": (
-                        long_training_executed
-                    ),
-                    "expected_scorer_input_contrast_floor_metric": (
-                        long_training_executed
-                    ),
-                    "scorer_input_contrast_floor_metric_observed": (
-                        long_training_executed
-                    ),
-                    "scorer_input_contrast_floor_segnet_ratio_metric_observed": (
-                        long_training_executed
-                    ),
-                    "scorer_input_contrast_floor_posenet_ratio_metric_observed": (
-                        long_training_executed
-                    ),
-                    "blockers": (
-                        []
-                        if long_training_executed
-                        else ["snerv_score_aware_long_training_not_executed"]
-                    ),
+                    "scorer_input_guard_dual_metric_observed": (long_training_executed),
+                    "expected_scorer_input_contrast_floor_metric": (long_training_executed),
+                    "scorer_input_contrast_floor_metric_observed": (long_training_executed),
+                    "scorer_input_contrast_floor_segnet_ratio_metric_observed": (long_training_executed),
+                    "scorer_input_contrast_floor_posenet_ratio_metric_observed": (long_training_executed),
+                    "blockers": ([] if long_training_executed else ["snerv_score_aware_long_training_not_executed"]),
                 },
-                "requested_epochs": int(
-                    kwargs.get("score_aware_long_training_epochs") or 0
-                ),
-                "learning_rate": float(
-                    kwargs.get("score_aware_long_training_lr") or 0.0
-                ),
-                "batch_pairs": int(
-                    kwargs.get("score_aware_long_training_batch_pairs") or 0
-                ),
-                "optimizer_kind": str(
-                    kwargs.get("score_aware_long_training_optimizer") or ""
-                ),
-                "eval_roundtrip_ste_enabled": bool(
-                    kwargs.get("score_aware_long_training_eval_roundtrip_ste")
-                ),
+                "requested_epochs": int(kwargs.get("score_aware_long_training_epochs") or 0),
+                "learning_rate": float(kwargs.get("score_aware_long_training_lr") or 0.0),
+                "batch_pairs": int(kwargs.get("score_aware_long_training_batch_pairs") or 0),
+                "optimizer_kind": str(kwargs.get("score_aware_long_training_optimizer") or ""),
+                "eval_roundtrip_ste_enabled": bool(kwargs.get("score_aware_long_training_eval_roundtrip_ste")),
                 "coder_aware_qat_bound": True,
                 "pr95_faithful_curriculum_enabled": bool(
-                    kwargs.get(
-                        "score_aware_long_training_pr95_faithful_curriculum"
-                    )
+                    kwargs.get("score_aware_long_training_pr95_faithful_curriculum")
                 ),
-                "pr95_muon_policy": str(
-                    kwargs.get("score_aware_long_training_pr95_muon_policy") or ""
-                ),
+                "pr95_muon_policy": str(kwargs.get("score_aware_long_training_pr95_muon_policy") or ""),
                 "scorer_input_distribution_guard": {
                     "schema": "snerv_mlx_score_aware_scorer_input_distribution_guard.v1",
                     "enabled": bool(
-                        float(
-                            kwargs.get(
-                                "score_aware_long_training_scorer_input_distribution_guard_weight"
-                            )
-                            or 0.0
-                        )
+                        float(kwargs.get("score_aware_long_training_scorer_input_distribution_guard_weight") or 0.0)
                         > 0.0
                     ),
                     "weight": float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_distribution_guard_weight"
-                        )
-                        or 0.0
+                        kwargs.get("score_aware_long_training_scorer_input_distribution_guard_weight") or 0.0
                     ),
                     "saturation_margin": float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_distribution_guard_saturation_margin"
-                        )
-                        or 0.0
+                        kwargs.get("score_aware_long_training_scorer_input_distribution_guard_saturation_margin") or 0.0
                     ),
                     "temperature": float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_distribution_guard_temperature"
-                        )
-                        or 0.0
+                        kwargs.get("score_aware_long_training_scorer_input_distribution_guard_temperature") or 0.0
                     ),
                 },
                 "scorer_input_contrast_floor": {
                     "schema": "snerv_mlx_score_aware_scorer_input_contrast_floor.v1",
                     "enabled": bool(
-                        float(
-                            kwargs.get(
-                                "score_aware_long_training_scorer_input_contrast_floor_weight"
-                            )
-                            or 0.0
-                        )
-                        > 0.0
+                        float(kwargs.get("score_aware_long_training_scorer_input_contrast_floor_weight") or 0.0) > 0.0
                     ),
-                    "weight": float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_contrast_floor_weight"
-                        )
-                        or 0.0
-                    ),
+                    "weight": float(kwargs.get("score_aware_long_training_scorer_input_contrast_floor_weight") or 0.0),
                     "segnet_last_rgb_min_std_ratio": float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio"
-                        )
-                        or 0.0
+                        kwargs.get("score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio") or 0.0
                     ),
                     "posenet_yuv6_pair_min_std_ratio": float(
-                        kwargs.get(
-                            "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
-                        )
+                        kwargs.get("score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio")
                         or 0.0
                     ),
                 },
@@ -17855,23 +16589,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 "teacher_binding": {
                     "schema": "snerv_mlx_real_scorer_teacher_binding.v1",
                     "requested": real_teachers_bound,
-                    "segnet_distillation_weight": float(
-                        kwargs.get("segnet_distillation_weight") or 0.0
-                    ),
-                    "pose_distillation_weight": float(
-                        kwargs.get("pose_distillation_weight") or 0.0
-                    ),
-                    "pose_distillation_loss": str(
-                        kwargs.get("pose_distillation_loss") or "mse"
-                    ),
-                    "pose_distillation_huber_delta": float(
-                        kwargs.get("pose_distillation_huber_delta") or 1.0
-                    ),
+                    "segnet_distillation_weight": float(kwargs.get("segnet_distillation_weight") or 0.0),
+                    "pose_distillation_weight": float(kwargs.get("pose_distillation_weight") or 0.0),
+                    "pose_distillation_loss": str(kwargs.get("pose_distillation_loss") or "mse"),
+                    "pose_distillation_huber_delta": float(kwargs.get("pose_distillation_huber_delta") or 1.0),
                     "has_real_segnet_teacher": real_teachers_bound,
                     "has_real_posenet_teacher": real_teachers_bound,
-                    "allow_segnet_only_research": bool(
-                        kwargs.get("allow_segnet_only_research")
-                    ),
+                    "allow_segnet_only_research": bool(kwargs.get("allow_segnet_only_research")),
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -17882,15 +16606,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             },
             "native_mlx_hf_decoder_training": {
                 "schema": "snerv_native_mlx_hf_decoder_training.v1",
-                "requested_steps": int(
-                    kwargs.get("native_mlx_decoder_train_steps") or 0
-                ),
-                "learning_rate": float(
-                    kwargs.get("native_mlx_decoder_train_lr") or 0.0
-                ),
+                "requested_steps": int(kwargs.get("native_mlx_decoder_train_steps") or 0),
+                "learning_rate": float(kwargs.get("native_mlx_decoder_train_lr") or 0.0),
                 "ridge": float(kwargs.get("native_mlx_decoder_train_ridge") or 0.0),
-                "executed": int(kwargs.get("native_mlx_decoder_train_steps") or 0)
-                > 0,
+                "executed": int(kwargs.get("native_mlx_decoder_train_steps") or 0) > 0,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -17904,17 +16623,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             },
             "num_pairs": int(kwargs["num_pairs"]),
             "source_pair_indices": [
-                int(value)
-                for value in (
-                    kwargs.get("pair_indices") or tuple(range(int(kwargs["num_pairs"])))
-                )
+                int(value) for value in (kwargs.get("pair_indices") or tuple(range(int(kwargs["num_pairs"]))))
             ],
             "blockers": [
-                *(
-                    []
-                    if long_training_executed
-                    else ["snerv_mlx_score_aware_long_training_not_executed"]
-                ),
+                *([] if long_training_executed else ["snerv_mlx_score_aware_long_training_not_executed"]),
                 "contest_cpu_cuda_exact_eval_not_executed",
             ],
             "score_claim": False,
@@ -17953,9 +16665,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 "ready_for_exact_eval_dispatch": False,
             }
             payload["local_mlx_prefilter_profile_path"] = profile.as_posix()
-            payload["local_mlx_prefilter_progress_path"] = (
-                out / "local_mlx_prefilter_progress.jsonl"
-            ).as_posix()
+            payload["local_mlx_prefilter_progress_path"] = (out / "local_mlx_prefilter_progress.jsonl").as_posix()
         report.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         return payload
 
@@ -18131,17 +16841,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
     assert native_calls[0]["scorer_loop_qat_qat_bits"] == 4
     assert native_calls[0]["scorer_loop_qat_component_guard_mode"] == "pose_seg_hard"
-    assert (
-        native_calls[0]["scorer_loop_qat_pair_guard_min_score_improved_fraction"]
-        == pytest.approx(1.0)
-    )
-    assert (
-        native_calls[0]["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"]
-        == pytest.approx(0.0)
-    )
-    assert native_calls[0]["scorer_loop_qat_decoder_payload_codec"] == (
-        "int2_symmetric"
-    )
+    assert native_calls[0]["scorer_loop_qat_pair_guard_min_score_improved_fraction"] == pytest.approx(1.0)
+    assert native_calls[0]["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"] == pytest.approx(0.0)
+    assert native_calls[0]["scorer_loop_qat_decoder_payload_codec"] == ("int2_symmetric")
     assert native_calls[0]["scorer_loop_qat_lf_payload_codec"] == "portfolio_auto"
     assert native_calls[0]["native_mlx_decoder_train_steps"] == 11
     assert native_calls[0]["native_mlx_decoder_train_lr"] == pytest.approx(0.004)
@@ -18150,36 +16852,26 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["score_aware_long_training_epochs"] == 13
     assert native_calls[0]["score_aware_long_training_lr"] == pytest.approx(0.002)
     assert native_calls[0]["score_aware_long_training_batch_pairs"] == 2
-    assert (
-        native_calls[0]["score_aware_long_training_section_byte_refresh_every_steps"]
-        == 7
-    )
+    assert native_calls[0]["score_aware_long_training_section_byte_refresh_every_steps"] == 7
     assert native_calls[0]["score_aware_long_training_optimizer"] == "lion"
     assert native_calls[0]["score_aware_long_training_grad_clip_max_norm"] == 0.5
     assert native_calls[0]["score_aware_long_training_weight_decay"] is None
     assert native_calls[0]["score_aware_long_training_eval_roundtrip_ste"] is True
-    assert native_calls[0][
-        "score_aware_long_training_scorer_input_distribution_guard_weight"
-    ] == pytest.approx(0.375)
+    assert native_calls[0]["score_aware_long_training_scorer_input_distribution_guard_weight"] == pytest.approx(0.375)
     assert native_calls[0][
         "score_aware_long_training_scorer_input_distribution_guard_saturation_margin"
     ] == pytest.approx(0.03125)
-    assert native_calls[0][
-        "score_aware_long_training_scorer_input_distribution_guard_temperature"
-    ] == pytest.approx(0.015625)
-    assert native_calls[0][
-        "score_aware_long_training_scorer_input_contrast_floor_weight"
-    ] == pytest.approx(0.875)
+    assert native_calls[0]["score_aware_long_training_scorer_input_distribution_guard_temperature"] == pytest.approx(
+        0.015625
+    )
+    assert native_calls[0]["score_aware_long_training_scorer_input_contrast_floor_weight"] == pytest.approx(0.875)
     assert native_calls[0][
         "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio"
     ] == pytest.approx(0.55)
     assert native_calls[0][
         "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
     ] == pytest.approx(0.45)
-    assert (
-        native_calls[0]["score_aware_long_training_scorer_space_step_guard_enabled"]
-        is True
-    )
+    assert native_calls[0]["score_aware_long_training_scorer_space_step_guard_enabled"] is True
     assert native_calls[0][
         "score_aware_long_training_scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
     ] == pytest.approx(0.41)
@@ -18234,55 +16926,32 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0][
         "score_aware_long_training_scorer_space_step_guard_max_bootstrap_direct_nonrate_score_worsening"
     ] == pytest.approx(2.5)
-    assert (
-        native_calls[0][
-            "score_aware_long_training_scorer_space_step_guard_backtracking_steps"
-        ]
-        == 7
+    assert native_calls[0]["score_aware_long_training_scorer_space_step_guard_backtracking_steps"] == 7
+    assert native_calls[0]["score_aware_long_training_scorer_space_step_guard_backtracking_shrink"] == pytest.approx(
+        0.55
     )
-    assert native_calls[0][
-        "score_aware_long_training_scorer_space_step_guard_backtracking_shrink"
-    ] == pytest.approx(0.55)
     assert native_calls[0]["segnet_distillation_weight"] == pytest.approx(0.025)
     assert native_calls[0]["pose_distillation_weight"] == pytest.approx(0.0025)
     assert native_calls[0]["pose_distillation_loss"] == "huber"
     assert native_calls[0]["pose_distillation_huber_delta"] == pytest.approx(2.25)
-    assert native_calls[0]["segnet_distillation_objective"] == (
-        "boundary_decision_tckd"
-    )
+    assert native_calls[0]["segnet_distillation_objective"] == ("boundary_decision_tckd")
     assert native_calls[0]["distillation_temperature"] == pytest.approx(3.0)
-    assert native_calls[0]["segnet_student_live_calibration_weight"] == pytest.approx(
-        0.625
-    )
+    assert native_calls[0]["segnet_student_live_calibration_weight"] == pytest.approx(0.625)
     assert native_calls[0]["segnet_tau_boundary"] == pytest.approx(0.75)
     assert native_calls[0]["segnet_hinge_margin"] == pytest.approx(1.25)
     assert native_calls[0]["distillation_device"] == "cpu"
     assert native_calls[0]["allow_segnet_only_research"] is False
-    assert native_calls[0]["modelsize_candidate"][
-        "snerv_score_aware_long_training_epochs"
-    ] == 13
-    assert native_calls[0]["modelsize_candidate"][
-        "snerv_score_aware_long_training_section_byte_refresh_every_steps"
-    ] == 7
+    assert native_calls[0]["modelsize_candidate"]["snerv_score_aware_long_training_epochs"] == 13
+    assert (
+        native_calls[0]["modelsize_candidate"]["snerv_score_aware_long_training_section_byte_refresh_every_steps"] == 7
+    )
     assert native_calls[0]["modelsize_candidate"]["fc_dim"] == 11
-    assert native_calls[0]["modelsize_candidate"]["fc_dim_source"] == (
-        "official_modelsize_solution"
-    )
-    assert native_calls[0]["modelsize_candidate"]["official_modelsize_solution"][
-        "fc_dim"
-    ] == 11
-    assert native_calls[0]["modelsize_candidate"]["official_skip_high_mode"] == (
-        "shared_mean"
-    )
-    assert native_calls[0]["modelsize_candidate"][
-        "snerv_official_skip_high_mode"
-    ] == "shared_mean"
-    assert native_calls[0]["modelsize_candidate"][
-        "snerv_segnet_distillation_weight"
-    ] == pytest.approx(0.025)
-    assert native_calls[0]["modelsize_candidate"][
-        "snerv_pose_distillation_weight"
-    ] == pytest.approx(0.0025)
+    assert native_calls[0]["modelsize_candidate"]["fc_dim_source"] == ("official_modelsize_solution")
+    assert native_calls[0]["modelsize_candidate"]["official_modelsize_solution"]["fc_dim"] == 11
+    assert native_calls[0]["modelsize_candidate"]["official_skip_high_mode"] == ("shared_mean")
+    assert native_calls[0]["modelsize_candidate"]["snerv_official_skip_high_mode"] == "shared_mean"
+    assert native_calls[0]["modelsize_candidate"]["snerv_segnet_distillation_weight"] == pytest.approx(0.025)
+    assert native_calls[0]["modelsize_candidate"]["snerv_pose_distillation_weight"] == pytest.approx(0.0025)
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_scorer_input_distribution_guard_weight"
     ] == pytest.approx(0.375)
@@ -18319,14 +16988,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_scorer_space_step_guard_max_pose_direct_live_score_term_absolute_worsening"
     ] == pytest.approx(0.044)
-    assert native_calls[0]["modelsize_candidate"][
-        "snerv_score_aware_long_training_scorer_space_step_guard_backtracking_steps"
-    ] == 7
-    assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
-        Path(native_calls[0]["recon_pixel_weight_manifest_path"])
-        == recon_weight_manifest_path
+        native_calls[0]["modelsize_candidate"][
+            "snerv_score_aware_long_training_scorer_space_step_guard_backtracking_steps"
+        ]
+        == 7
     )
+    assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
+    assert Path(native_calls[0]["recon_pixel_weight_manifest_path"]) == recon_weight_manifest_path
     assert native_calls[0]["recon_pixel_weight_normalize"] == "none"
     assert native_calls[0]["write_mlx_prefilter_profile"] is False
     assert native_calls[0]["mlx_prefilter_scorer_device"] == "cpu"
@@ -18339,35 +17008,22 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["prioritized_pair_training"]["sampling_scope"] == (
         "score_aware_training_batches_not_target_hydration"
     )
-    assert (
-        native["prioritized_pair_training"]["consumed_by_native_mlx_train_export"]
-        is True
-    )
+    assert native["prioritized_pair_training"]["consumed_by_native_mlx_train_export"] is True
     assert native["receiver_proof_passed"] is True
     assert native["receiver_contract_satisfied"] is True
     assert native["receiver_reconstruction_verified"] is True
-    assert native["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(
-        2.5
-    )
+    assert native["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(2.5)
     assert native["receiver_target_reconstruction_mse_nchw255"] == pytest.approx(2.5)
-    assert native["receiver_export_reconstruction_mse_nchw255"] == pytest.approx(
-        0.125
-    )
-    assert native["byte_cap_control"]["schema"] == (
-        "snerv_mlx_native_hard_byte_ceiling_control.v1"
-    )
+    assert native["receiver_export_reconstruction_mse_nchw255"] == pytest.approx(0.125)
+    assert native["byte_cap_control"]["schema"] == ("snerv_mlx_native_hard_byte_ceiling_control.v1")
     assert native["byte_cap_control"]["hard_byte_ceiling"] == 178_000
     assert native["byte_cap_control"]["archive_bytes"] == native["archive_bytes"]
     assert native["byte_cap_control"]["under_hard_byte_ceiling"] is True
     assert native["step_map_packet_schema"] == "snerv_step_map_coder.adaptive.v1"
-    assert native["step_map_coder_mode"] == (
-        "waterfill_mlx_native_uniform_importance_bridge"
-    )
+    assert native["step_map_coder_mode"] == ("waterfill_mlx_native_uniform_importance_bridge")
     assert native["step_map_coder_groups"]
     assert native["native_mlx_training_executed"] is True
-    assert native["native_mlx_training_kind"] == (
-        "snerv_mlx_score_aware_haar_renderer"
-    )
+    assert native["native_mlx_training_kind"] == ("snerv_mlx_score_aware_haar_renderer")
     assert native["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert native["snerv_scorer_tether_smoke_gate"]["required"] is True
     assert native["score_aware_long_training_executed"] is True
@@ -18376,19 +17032,12 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["score_aware_long_training_real_teachers_bound"] is True
     assert native["score_aware_long_training_has_real_segnet_teacher"] is True
     assert native["score_aware_long_training_has_real_posenet_teacher"] is True
-    assert (
-        native["score_aware_long_training_scorer_input_distribution_guard_bound"]
-        is True
-    )
+    assert native["score_aware_long_training_scorer_input_distribution_guard_bound"] is True
     assert native["score_aware_long_training_coder_qat_bound"] is True
     assert native["score_aware_long_training_pr95_curriculum_bound"] is True
-    assert native["score_aware_long_training_pr95_muon_policy"] == (
-        "faithful_stage8_only"
-    )
+    assert native["score_aware_long_training_pr95_muon_policy"] == ("faithful_stage8_only")
     assert native["native_mlx_hf_decoder_training"]["requested_steps"] == 11
-    assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(
-        0.004
-    )
+    assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(0.004)
     assert native["native_mlx_hf_decoder_training"]["ridge"] == pytest.approx(0.0003)
     assert native["scorer_loop_qat_attached"] is True
     assert native["scorer_loop_qat_receiver_contract_satisfied"] is True
@@ -18407,22 +17056,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
     assert out["score_aware_training"]["scorer_tether_smoke_gate"]["passed"] is True
-    assert (
-        out["score_aware_training"]["mlx_native_receiver_reconstruction_verified"]
-        is True
-    )
-    assert out["score_aware_training"][
-        "mlx_native_receiver_target_reconstruction_mse_nchw255"
-    ] == pytest.approx(2.5)
+    assert out["score_aware_training"]["mlx_native_receiver_reconstruction_verified"] is True
+    assert out["score_aware_training"]["mlx_native_receiver_target_reconstruction_mse_nchw255"] == pytest.approx(2.5)
     assert out["score_aware_training"]["mlx_native_full600_export_verified"] is False
     top_prioritized = out["score_aware_training"]["prioritized_pair_training"]
     assert top_prioritized["consumed_by_mlx_native_export"] is True
     assert top_prioritized["mlx_native_export_blocker"] is None
     assert (
-        out["score_aware_training"]["mlx_native_file_backed_export_evidence"][
-            "file_backed_export_proof_passed"
-        ]
-        is True
+        out["score_aware_training"]["mlx_native_file_backed_export_evidence"]["file_backed_export_proof_passed"] is True
     )
     assert (
         out["score_aware_training"]["mlx_native_file_backed_export_evidence"][
@@ -18434,22 +17075,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert plan["training_plan"]["native_mlx_train_export_attached"] is True
     assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is True
     assert plan["training_plan"]["native_mlx_file_backed_export_proof_passed"] is True
-    assert (
-        plan["training_plan"][
-            "native_mlx_required_full600_file_backed_export_proof_passed"
-        ]
-        is False
-    )
+    assert plan["training_plan"]["native_mlx_required_full600_file_backed_export_proof_passed"] is False
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["native_mlx_real_segnet_teacher_bound"] is True
     assert plan["training_plan"]["native_mlx_real_posenet_teacher_bound"] is True
     assert plan["training_plan"]["native_mlx_joint_real_teachers_bound"] is True
     assert plan["training_plan"]["native_mlx_eval_roundtrip_ste_bound"] is True
-    assert (
-        plan["training_plan"]["native_mlx_differentiable_pose_preprocess_bound"]
-        is True
-    )
+    assert plan["training_plan"]["native_mlx_differentiable_pose_preprocess_bound"] is True
     assert plan["training_plan"]["native_mlx_long_training_bound"] is True
     assert plan["receiver_grammar_controls"]["step_map_coder_mode"] == "waterfill"
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
@@ -18457,34 +17090,17 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
     assert "snerv_qat_forward_missing" not in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
-    assert "snerv_candidate_curriculum_requires_waterfill_step_maps" not in plan[
-        "blockers"
-    ]
+    assert "snerv_candidate_curriculum_requires_waterfill_step_maps" not in plan["blockers"]
     assert plan["pr95_stack_binding"]["complete"] is False
-    assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
-        "blockers"
-    ]
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in plan[
-        "blockers"
-    ]
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
-        "blockers"
-    ]
+    assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan["blockers"]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in plan["blockers"]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out["blockers"]
     assert "snerv_mlx_native_receiver_proof_missing_or_failed" not in out["blockers"]
     assert "snerv_mlx_native_export_partial_pair_coverage" in out["blockers"]
-    assert "snerv_mlx_native_arbitrary_pair_hydration_not_implemented" not in out[
-        "blockers"
-    ]
-    assert "snerv_mlx_native_prioritized_pair_hydration_not_consumed" not in out[
-        "blockers"
-    ]
-    assert (
-        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
-        not in plan["blockers"]
-    )
-    assert "snerv_mlx_native_longer_staged_training_not_executed" not in out[
-        "blockers"
-    ]
+    assert "snerv_mlx_native_arbitrary_pair_hydration_not_implemented" not in out["blockers"]
+    assert "snerv_mlx_native_prioritized_pair_hydration_not_consumed" not in out["blockers"]
+    assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" not in plan["blockers"]
+    assert "snerv_mlx_native_longer_staged_training_not_executed" not in out["blockers"]
 
 
 def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
@@ -18539,9 +17155,7 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
             "receiver_contract_satisfied": True,
             "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
             "snerv_official_mfu_hfr_tub_export_bound": True,
-            "snerv_official_mfu_hfr_tub_export_bound_semantics": (
-                "receiver_payload_bound_not_source_forward_parity"
-            ),
+            "snerv_official_mfu_hfr_tub_export_bound_semantics": ("receiver_payload_bound_not_source_forward_parity"),
             "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
             "snerv_official_mfu_hfr_tub_frame_producing_export": True,
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
@@ -18710,10 +17324,7 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
     assert attachment["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert attachment["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
     assert attachment["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
-    assert (
-        attachment["packet_source"]
-        == "mlx_target_hydration_numpy_closed_form_decoder_fit"
-    )
+    assert attachment["packet_source"] == "mlx_target_hydration_numpy_closed_form_decoder_fit"
     assert attachment["official_primitive_binding"]["official_receiver_payload_bound"] is True
 
     plan = build_snerv_candidate_curriculum_plan(
@@ -18743,15 +17354,9 @@ def test_snerv_native_attachment_preserves_official_binding_for_curriculum(
     assert official_split["receiver_payload_bound"] is True
     assert official_split["frame_producing_export"] is True
     assert "snerv_official_mfu_hfr_tub_export_not_bound" not in plan["blockers"]
-    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in plan[
-        "blockers"
-    ]
-    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in plan[
-        "blockers"
-    ]
-    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in plan[
-        "blockers"
-    ]
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in plan["blockers"]
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in plan["blockers"]
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in plan["blockers"]
 
 
 def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
@@ -18974,18 +17579,13 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
         repo_root=REPO_ROOT,
     )
 
-    assert captured_advisory_kwargs["snerv_model_size_adapter"] == (
-        SNERV_SPECTRA_PRESERVING_ADAPTER
-    )
+    assert captured_advisory_kwargs["snerv_model_size_adapter"] == (SNERV_SPECTRA_PRESERVING_ADAPTER)
     assert captured_advisory_kwargs["wavelet"] == "haar"
     assert captured_advisory_kwargs["target_bits_per_coeff"] == 1.5
     assert captured_advisory_kwargs["snerv_fc_dim"] == 11
     assert captured_advisory_kwargs["snerv_emb_size"] == 2
     assert captured_advisory_kwargs["snerv_temporal_context"] == 1
-    assert (
-        captured_advisory_kwargs["snerv_temporal_mode"]
-        == "official_haar_dwt1d_lowpass"
-    )
+    assert captured_advisory_kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert captured_advisory_kwargs["snerv_mfu_scales"] == (1, 3)
     assert captured_advisory_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["n_pairs"] == 2
@@ -18993,16 +17593,11 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["wavelet"] == "haar"
     assert captured_qat_kwargs["target_bits_per_coeff"] == 1.5
     assert captured_qat_kwargs["snerv_spectra_preserving_adapter"] is True
-    assert captured_qat_kwargs["snerv_model_size_adapter"] == (
-        SNERV_SPECTRA_PRESERVING_ADAPTER
-    )
+    assert captured_qat_kwargs["snerv_model_size_adapter"] == (SNERV_SPECTRA_PRESERVING_ADAPTER)
     assert captured_qat_kwargs["snerv_fc_dim"] == 11
     assert captured_qat_kwargs["snerv_emb_size"] == 2
     assert captured_qat_kwargs["snerv_temporal_context"] == 1
-    assert (
-        captured_qat_kwargs["snerv_temporal_mode"]
-        == "official_haar_dwt1d_lowpass"
-    )
+    assert captured_qat_kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert captured_qat_kwargs["snerv_mfu_scales"] == (1, 3)
     assert captured_qat_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["qat_bits"] == 4
@@ -19013,9 +17608,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["step_map_bins"] == 8
     assert captured_qat_kwargs["perturb_scale"] == pytest.approx(0.03)
     assert captured_qat_kwargs["byte_pressure_multiplier"] == 1.25
-    assert captured_qat_kwargs["section_value_pressure_multiplier"] == pytest.approx(
-        1.75
-    )
+    assert captured_qat_kwargs["section_value_pressure_multiplier"] == pytest.approx(1.75)
     assert captured_qat_kwargs["max_archive_byte_growth"] == 77
     assert captured_qat_kwargs["byte_growth_admission_mode"] == "rate_paid"
     assert captured_qat_kwargs["pose_slack"] == 0.001
@@ -19031,9 +17624,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     qat = out["snerv_scorer_loop_qat"]
     assert qat["executed"] is True
     assert qat["component_guard_mode"] == "pose_hard"
-    assert qat["pair_robust_admission"]["schema"] == (
-        "snerv_pair_robust_admission.v1"
-    )
+    assert qat["pair_robust_admission"]["schema"] == ("snerv_pair_robust_admission.v1")
     assert qat["pair_robust_admission"]["passed"] is True
     assert qat["lf_payload_codec"] == "auto"
     assert qat["perturb_scale"] == pytest.approx(0.03)
@@ -19056,13 +17647,9 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert progress_payload["row"]["label"] == "fake_progress_eval"
     assert len(qat["progress_jsonl_sha256"]) == 64
     assert out["score_aware_training"]["scorer_loop_qat"]["executed"] is True
-    assert (
-        out["score_aware_training"]["scorer_loop_component_guard_mode"]
-        == "pose_hard"
-    )
+    assert out["score_aware_training"]["scorer_loop_component_guard_mode"] == "pose_hard"
     assert out["score_aware_training"]["status"] == (
-        "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_"
-        "mlx_native_training_missing"
+        "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_mlx_native_training_missing"
     )
     plan = out["candidate_curriculum_plan"]
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
@@ -19074,15 +17661,9 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert "snerv_qat_forward_missing" in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
     assert "snerv_receiver_proof_missing" not in plan["blockers"]
-    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
-        "blockers"
-    ]
-    assert "snerv_mlx_native_longer_staged_training_not_executed" in out[
-        "blockers"
-    ]
-    assert "snerv_longer_staged_score_aware_training_not_executed" not in out[
-        "blockers"
-    ]
+    assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out["blockers"]
+    assert "snerv_mlx_native_longer_staged_training_not_executed" in out["blockers"]
+    assert "snerv_longer_staged_score_aware_training_not_executed" not in out["blockers"]
 
 
 def test_snerv_runner_refuses_conflicting_candidate_adapter_flag(
@@ -19143,9 +17724,7 @@ def test_snerv_runner_refuses_conflicting_skip_high_mode_flag(
                 "bits_per_coeff": 1.5,
                 "step_map_bits_per_coeff": 0.5,
                 "decoder_payload_codec": "int2_symmetric",
-                "snerv_model_size_adapter": (
-                    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-                ),
+                "snerv_model_size_adapter": (SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER),
                 "official_skip_high_mode": "full",
                 "fc_dim": 11,
                 "emb_size": 2,
@@ -19183,9 +17762,7 @@ def test_snerv_runner_refuses_implicit_full_skip_high_under_byte_ceiling(
                 "bits_per_coeff": 1.5,
                 "step_map_bits_per_coeff": 0.5,
                 "decoder_payload_codec": "int2_symmetric",
-                "snerv_model_size_adapter": (
-                    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-                ),
+                "snerv_model_size_adapter": (SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER),
                 "official_skip_high_mode": "full",
                 "fc_dim": 11,
                 "emb_size": 2,
@@ -19343,32 +17920,19 @@ def test_snerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
     assert out["local_cpu_replay_gate"]["local_replay_mlx_prefilter_passed"] is False
     assert out["mlx_prefilter_coverage"]["has_full_video_mlx_prefilter"] is True
     assert out["mlx_prefilter_coverage"]["local_replay_profile_paths"] == []
-    assert out["mlx_prefilter_coverage"]["blockers"] == [
-        "mlx_profile_batch_pairs_not_singleton"
-    ]
+    assert out["mlx_prefilter_coverage"]["blockers"] == ["mlx_profile_batch_pairs_not_singleton"]
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
-    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in out[
-        "blockers"
-    ]
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" not in out["blockers"]
     assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in out["blockers"]
-    feedback_blockers = out["candidate_feedback"]["row"][
-        "pr95_stack_binding_blockers"
-    ]
+    feedback_blockers = out["candidate_feedback"]["row"]["pr95_stack_binding_blockers"]
     assert "full_video_mlx_scorer_replay_not_attached" not in feedback_blockers
     feedback_row = out["candidate_feedback"]["row"]
-    assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in feedback_row[
-        "blockers"
-    ]
+    assert "local_cpu_replay_blocked_by_mlx_prefilter_score" in feedback_row["blockers"]
     assert feedback_row["mlx_prefilter_has_full_video"] is True
     assert feedback_row["mlx_prefilter_local_replay_passed"] is False
-    assert feedback_row["mlx_prefilter_blockers"] == [
-        "mlx_profile_batch_pairs_not_singleton"
-    ]
+    assert feedback_row["mlx_prefilter_blockers"] == ["mlx_profile_batch_pairs_not_singleton"]
     assert feedback_row["local_cpu_replay_gate_has_full_video_mlx_prefilter"] is True
-    assert (
-        feedback_row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"]
-        is False
-    )
+    assert feedback_row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"] is False
     assert feedback_row["local_cpu_replay_gate_executed"] is False
 
 
@@ -19444,9 +18008,7 @@ def test_snerv_native_auto_mlx_prefilter_runs_cpu_replay_on_native_archive(
                 "ready_for_exact_eval_dispatch": False,
             },
             "local_mlx_prefilter_profile_path": native_prefilter.as_posix(),
-            "local_mlx_prefilter_progress_path": (
-                native_dir / "local_mlx_prefilter_progress.jsonl"
-            ).as_posix(),
+            "local_mlx_prefilter_progress_path": (native_dir / "local_mlx_prefilter_progress.jsonl").as_posix(),
             "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -19608,13 +18170,9 @@ def test_snerv_native_auto_mlx_prefilter_runs_cpu_replay_on_native_archive(
     assert out["auto_mlx_prefilter_profile_path"] == native_prefilter.as_posix()
     assert out["mlx_profile_paths"] == [native_prefilter.as_posix()]
     assert out["local_cpu_replay_gate"]["executed"] is True
-    assert out["local_cpu_replay_gate"]["archive_source"] == (
-        "snerv_mlx_native_export_archive"
-    )
+    assert out["local_cpu_replay_gate"]["archive_source"] == ("snerv_mlx_native_export_archive")
     assert out["local_cpu_replay_gate"]["archive_path"] == native_archive.as_posix()
-    assert out["local_cpu_replay_gate"]["runtime_submission_dir"] == (
-        native_submission.as_posix()
-    )
+    assert out["local_cpu_replay_gate"]["runtime_submission_dir"] == (native_submission.as_posix())
     assert staged_calls
     assert Path(staged_calls[0]["archive_zip_path"]) == native_archive
     assert Path(staged_calls[0]["runtime_submission_dir"]) == native_submission
@@ -19664,12 +18222,8 @@ def test_snerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
     gate = out["candidate_curriculum_plan"]["long_campaign_prelaunch_gate"]
     assert gate["launch_allowed"] is False
     assert "local_cpu_replay_gate" in gate["post_run_requirements_excluded"]
-    assert out["candidate_feedback"]["row"]["candidate_id"] == (
-        "snerv-long-candidate"
-    )
-    assert out["candidate_feedback"]["row"][
-        "long_campaign_prelaunch_launch_allowed"
-    ] is False
+    assert out["candidate_feedback"]["row"]["candidate_id"] == ("snerv-long-candidate")
+    assert out["candidate_feedback"]["row"]["long_campaign_prelaunch_launch_allowed"] is False
     assert Path(out["report_path"]).is_file()
 
 
@@ -19824,9 +18378,7 @@ def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
     assert out["execute_family"] == "snerv"
     assert "pr95_long_campaign_prelaunch_gate_failed" in out["blockers"]
     assert "snerv_pr95_staged_curriculum_missing" in out["blockers"]
-    assert out["candidate_curriculum_plan"]["training_plan"][
-        "native_mlx_long_training_bound"
-    ] is False
+    assert out["candidate_curriculum_plan"]["training_plan"]["native_mlx_long_training_bound"] is False
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         in out["candidate_curriculum_plan"]["blockers"]
@@ -19835,10 +18387,7 @@ def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
     assert native["native_mlx_full600_export_proof_ready"] is True
     assert native["native_mlx_full600_campaign_ready"] is False
     assert "snerv_mlx_native_export_closed_form_not_training" in native["blockers"]
-    assert (
-        "snerv_mlx_native_full600_not_campaign_ready_without_learned_training"
-        in native["blockers"]
-    )
+    assert "snerv_mlx_native_full600_not_campaign_ready_without_learned_training" in native["blockers"]
     assert out["score_aware_training"]["mlx_native_training_required_next"] is True
     assert out["score_claim"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
@@ -19881,9 +18430,7 @@ def test_adapt_snerv_advisory_report_consumes_existing_runtime_package(
                                 "candidate_archive_path": archive.as_posix(),
                                 "candidate_archive_sha256": archive_sha,
                                 "candidate_archive_bytes": archive_bytes,
-                                "blockers": [
-                                    "paired_contest_cpu_cuda_auth_eval_missing"
-                                ],
+                                "blockers": ["paired_contest_cpu_cuda_auth_eval_missing"],
                                 "score_claim": False,
                                 "promotion_eligible": False,
                                 "ready_for_exact_eval_dispatch": False,
@@ -19911,30 +18458,23 @@ def test_adapt_snerv_advisory_report_consumes_existing_runtime_package(
     )
 
     assert out["mode"] == "adapted_snerv_advisory_report_to_spine"
-    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(
-        report_path
-    )
+    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(report_path)
     post_export = out["post_export_materializer_plan"]
     assert post_export["compiled"] is True
-    assert post_export["archive_record"]["source_runtime_dir"].endswith(
-        "/snerv_package/submission"
-    )
+    assert post_export["archive_record"]["source_runtime_dir"].endswith("/snerv_package/submission")
     contexts = json.loads(Path(post_export["materializer_contexts_path"]).read_text())
     first_context = contexts["rows"][0]["context"]
     assert first_context["source_runtime_dir"].endswith("/snerv_package/submission")
-    assert "--source-runtime-dir" in json.loads(
-        Path(post_export["materializer_work_queue_path"]).read_text()
-    )["rows"][0]["command"]
+    assert (
+        "--source-runtime-dir"
+        in json.loads(Path(post_export["materializer_work_queue_path"]).read_text())["rows"][0]["command"]
+    )
     assert out["post_export_materializer_execution"]["requested"] is False
     assert "paired_contest_cpu_cuda_auth_eval_missing" in out["blockers"]
-    assert out["source_parity_contract"]["schema"] == (
-        "nerv_source_parity_contract.v1"
-    )
+    assert out["source_parity_contract"]["schema"] == ("nerv_source_parity_contract.v1")
     assert out["source_parity_required_for_long_training_ready"] is True
     assert out["source_parity_blockers"] == []
-    assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in out[
-        "source_parity_nonblocking_gaps"
-    ]
+    assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in out["source_parity_nonblocking_gaps"]
     legacy_contract = out["legacy_advisory_ingest_contract"]
     assert legacy_contract["schema"] == "snerv_legacy_advisory_ingest_contract.v1"
     assert legacy_contract["source_parity_consumed"] is True
@@ -19972,9 +18512,7 @@ def test_adapt_snerv_advisory_report_uses_package_dir_archive_fallback(
                 "n_pairs": 600,
                 "runtime_package_dir": package_dir.as_posix(),
                 "runtime_package": {
-                    "archive_bound_candidate_adapter_package": {
-                        "candidate_rows": []
-                    },
+                    "archive_bound_candidate_adapter_package": {"candidate_rows": []},
                     "receiver_proof": proof_payload,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -19997,12 +18535,8 @@ def test_adapt_snerv_advisory_report_uses_package_dir_archive_fallback(
 
     post_export = out["post_export_materializer_plan"]
     assert post_export["compiled"] is True
-    assert post_export["archive_record"]["absolute_path"].endswith(
-        "/snerv_package/archive.zip"
-    )
-    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out[
-        "blockers"
-    ]
+    assert post_export["archive_record"]["absolute_path"].endswith("/snerv_package/archive.zip")
+    assert "local_cpu_replay_waiting_for_full_video_mlx_prefilter" in out["blockers"]
 
 
 def test_adapt_snerv_advisory_report_accepts_archive_package_manifest(
@@ -20042,9 +18576,7 @@ def test_adapt_snerv_advisory_report_accepts_archive_package_manifest(
                             "candidate_archive_sha256": archive_sha,
                             "candidate_archive_bytes": archive_bytes,
                             "runtime_adapter_manifest": {"n_pairs": 600},
-                            "blockers": [
-                                "paired_contest_cpu_cuda_auth_eval_missing"
-                            ],
+                            "blockers": ["paired_contest_cpu_cuda_auth_eval_missing"],
                             "score_claim": False,
                             "promotion_eligible": False,
                             "ready_for_exact_eval_dispatch": False,
@@ -20067,17 +18599,15 @@ def test_adapt_snerv_advisory_report_accepts_archive_package_manifest(
         repo_root=REPO_ROOT,
     )
 
-    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(
-        package_manifest
-    )
+    assert out["source_snerv_advisory_report_sha256"] == runner_mod._sha256_file(package_manifest)
     assert out["runtime_package_dir"].endswith("/snerv_package")
     assert out["archive_sha256"] == archive_sha
     assert out["receiver_proof_report_paths"] == [proof_path.as_posix()]
     assert "snerv_packet_not_full_600_pairs" not in out["blockers"]
     assert "paired_contest_cpu_cuda_auth_eval_missing" in out["blockers"]
-    assert out["post_export_materializer_plan"]["archive_record"][
-        "source_runtime_dir"
-    ].endswith("/snerv_package/submission")
+    assert out["post_export_materializer_plan"]["archive_record"]["source_runtime_dir"].endswith(
+        "/snerv_package/submission"
+    )
 
 
 def test_pr95_stage8_execute_parser_exposes_source_lane_controls() -> None:
@@ -20124,9 +18654,7 @@ def test_adapt_pr95_stage8_report_emits_spine_runner_and_proof(
         "candidate_archive_zip_path": archive.as_posix(),
         "candidate_archive_zip_bytes": archive.stat().st_size,
         "candidate_archive_zip_sha256": runner_mod._sha256_file(archive),
-        "local_training_result": {
-            "raw_result": {"public_stage8_train_stage_called": True}
-        },
+        "local_training_result": {"raw_result": {"public_stage8_train_stage_called": True}},
         "exact_gate": {
             "schema": "exact_gate_blocker.v1",
             "blockers": ["contest_cpu_cuda_exact_eval_missing"],
@@ -20227,9 +18755,7 @@ def test_adapt_pr95_stage8_report_reuses_embedded_package_proof(
                 "package_report": {
                     "archive_bound_candidate_receiver_proof": proof,
                 },
-                "local_training_result": {
-                    "raw_result": {"public_stage8_train_stage_called": False}
-                },
+                "local_training_result": {"raw_result": {"public_stage8_train_stage_called": False}},
                 "exact_gate": {"blockers": []},
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -20341,10 +18867,7 @@ def test_pr95_hnerv_execute_arm_emits_runner_and_fail_closed_blockers(
     assert out["post_export_materializer_execution"]["requested"] is False
     assert out["post_export_materializer_execution"]["executed"] is False
     assert out["control_arm_scope"]["source_faithful_pr95_reproduction"] is False
-    assert (
-        "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction"
-        in out["blockers"]
-    )
+    assert "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction" in out["blockers"]
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]
 
 
@@ -20422,18 +18945,9 @@ def test_pr95_hnerv_execute_arm_uses_real_scorer_binding_blockers(
     )
 
     assert "pr95_segnet_posenet_network_loss_not_wired_to_mlx" not in out["blockers"]
-    assert (
-        "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss"
-        not in out["blockers"]
-    )
-    assert (
-        "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden"
-        not in out["blockers"]
-    )
-    assert (
-        "pr95_mlx_scoreaware_teacher_distillation_is_advisory_not_exact_contest_loss"
-        in out["blockers"]
-    )
+    assert "pr95_source_video_rgb_yuv6_preprocess_loss_is_not_full_scorer_loss" not in out["blockers"]
+    assert "pr95_hnerv_default_scorer_distillation_weights_are_zero_unless_cli_overridden" not in out["blockers"]
+    assert "pr95_mlx_scoreaware_teacher_distillation_is_advisory_not_exact_contest_loss" in out["blockers"]
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]
 
 
@@ -20513,23 +19027,14 @@ def test_vq_execute_forwards_optimizer_controls_and_shared_qat_metadata(
 
     report_training = out["score_aware_training"]
     assert report_training["optimizer_policy"]["schema"] == optimizer_policy["schema"]
-    assert report_training["optimizer_policy"]["resolved_policy"] == (
-        optimizer_policy["resolved_policy"]
-    )
-    assert report_training["optimizer_policy"][
-        "optimizer_kind_consumed_by_native_mlx"
-    ] is True
-    assert report_training["optimizer_policy"][
-        "optimizer_kind_consumed_by_pr95_curriculum"
-    ] is False
-    assert report_training["optimizer_controls"]["optimizer_kind"] == (
-        optimizer_controls["optimizer_kind"]
-    )
-    assert report_training["optimizer_controls"]["grad_clip_max_norm"] == (
-        optimizer_controls["grad_clip_max_norm"]
-    )
-    assert report_training["optimizer_controls"]["weight_decay_effective"] == (
-        optimizer_controls["weight_decay_effective"]
+    assert report_training["optimizer_policy"]["resolved_policy"] == (optimizer_policy["resolved_policy"])
+    assert report_training["optimizer_policy"]["optimizer_kind_consumed_by_native_mlx"] is True
+    assert report_training["optimizer_policy"]["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert report_training["optimizer_controls"]["optimizer_kind"] == (optimizer_controls["optimizer_kind"])
+    assert report_training["optimizer_controls"]["grad_clip_max_norm"] == (optimizer_controls["grad_clip_max_norm"])
+    assert (
+        report_training["optimizer_controls"]["weight_decay_effective"]
+        == (optimizer_controls["weight_decay_effective"])
     )
     assert report_training["optimizer_kind"] == "lion"
     assert report_training["native_optimizer_active"] is True
@@ -20539,9 +19044,7 @@ def test_vq_execute_forwards_optimizer_controls_and_shared_qat_metadata(
     assert qat["enabled"] is True
     assert qat["quant_bits"] == 4
     assert qat["authority"] == "false_macos_mlx_research_signal"
-    assert qat["authority_status"] == (
-        "advisory_training_loss_only_not_archive_or_score_authority"
-    )
+    assert qat["authority_status"] == ("advisory_training_loss_only_not_archive_or_score_authority")
     assert "quantizer_geometry" in qat
     assert "include_substrings" in qat
     assert "exclude_substrings" in qat
@@ -20568,9 +19071,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         receiver_dir.mkdir(parents=True, exist_ok=True)
         receiver_proof = {
             "schema": "pact_nerv_selector_v4_mlx_generated_receiver_proof.v1",
-            "proof_path": (
-                receiver_dir / "pact_nerv_selector_v4_mlx_receiver_proof.json"
-            ).as_posix(),
+            "proof_path": (receiver_dir / "pact_nerv_selector_v4_mlx_receiver_proof.json").as_posix(),
             "archive_path": archive.as_posix(),
             "archive_zip_path": archive.as_posix(),
             "archive_sha256": archive_sha,
@@ -20635,9 +19136,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
-        manifest = (
-            out / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
-        )
+        manifest = out / "hprc_representation_spine_pact_nerv_selector_v4_manifest.json"
         runner_mod._write_json(manifest, projection)
         return {
             "archive_path": archive.as_posix(),
@@ -20681,9 +19180,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
                         "delta_nonrate_score": 0.25,
                         "delta_total_mlx_score_advisory": 0.25,
                         "family": "pact_nerv",
-                        "projection_manifest_path": (
-                            projection_manifest_path.as_posix()
-                        ),
+                        "projection_manifest_path": (projection_manifest_path.as_posix()),
                         "marginal_status": "measured_full_video_mlx_advisory",
                     }
                 ],
@@ -20737,12 +19234,8 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert out["score_claim"] is False
     assert out["promotion_eligible"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
-    assert out["selector_v4_archive_surface"]["selector_codec"] == (
-        "run_length_varint_selector"
-    )
-    assert out["score_aware_training"]["scorer_coupled_rd"][
-        "fixed_marginal_byte_price"
-    ] == "25/uncompressed_total"
+    assert out["selector_v4_archive_surface"]["selector_codec"] == ("run_length_varint_selector")
+    assert out["score_aware_training"]["scorer_coupled_rd"]["fixed_marginal_byte_price"] == "25/uncompressed_total"
     optimizer_controls = captured_train_kwargs["optimizer_controls"]
     assert optimizer_controls["optimizer_kind"] == "adafactor"
     assert optimizer_controls["grad_clip_max_norm"] == pytest.approx(0.5)
@@ -20759,32 +19252,22 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert optimizer_policy["optimizer_kind_consumed_by_native_mlx"] is True
     assert optimizer_policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
     assert optimizer_policy["pr95_faithful_curriculum_enabled"] is False
-    assert out["score_aware_training"]["optimizer_policy"]["schema"] == (
-        optimizer_policy["schema"]
+    assert out["score_aware_training"]["optimizer_policy"]["schema"] == (optimizer_policy["schema"])
+    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (optimizer_policy["resolved_policy"])
+    assert out["score_aware_training"]["optimizer_policy"]["optimizer_kind_consumed_by_native_mlx"] is True
+    assert out["score_aware_training"]["optimizer_policy"]["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert out["score_aware_training"]["optimizer_controls"]["optimizer_kind"] == (optimizer_controls["optimizer_kind"])
+    assert (
+        out["score_aware_training"]["optimizer_controls"]["grad_clip_max_norm"]
+        == optimizer_controls["grad_clip_max_norm"]
     )
-    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
-        optimizer_policy["resolved_policy"]
+    assert (
+        out["score_aware_training"]["optimizer_controls"]["weight_decay_effective"]
+        == optimizer_controls["weight_decay_effective"]
     )
-    assert out["score_aware_training"]["optimizer_policy"][
-        "optimizer_kind_consumed_by_native_mlx"
-    ] is True
-    assert out["score_aware_training"]["optimizer_policy"][
-        "optimizer_kind_consumed_by_pr95_curriculum"
-    ] is False
-    assert out["score_aware_training"]["optimizer_controls"]["optimizer_kind"] == (
-        optimizer_controls["optimizer_kind"]
-    )
-    assert out["score_aware_training"]["optimizer_controls"][
-        "grad_clip_max_norm"
-    ] == optimizer_controls["grad_clip_max_norm"]
-    assert out["score_aware_training"]["optimizer_controls"][
-        "weight_decay_effective"
-    ] == optimizer_controls["weight_decay_effective"]
     assert out["score_aware_training"]["optimizer_kind"] == "adafactor"
     assert out["score_aware_training"]["native_optimizer_active"] is True
-    assert out["score_aware_training"]["effective_weight_decay"] == pytest.approx(
-        3.0e-4
-    )
+    assert out["score_aware_training"]["effective_weight_decay"] == pytest.approx(3.0e-4)
     qat = out["score_aware_training"]["coder_aware_qat"]
     assert qat["schema"] == "coder_aware_decoder_qat.v1"
     assert qat["enabled"] is True
@@ -20796,9 +19279,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert qat["c1a_sigma"] == pytest.approx(0.35)
     assert qat["c1a_sample_size"] == 64
     assert qat["authority"] == "false_macos_mlx_research_signal"
-    assert qat["authority_status"] == (
-        "advisory_training_loss_only_not_archive_or_score_authority"
-    )
+    assert qat["authority_status"] == ("advisory_training_loss_only_not_archive_or_score_authority")
     assert "quantizer_geometry" in qat
     assert "include_substrings" in qat
     assert "exclude_substrings" in qat
@@ -20825,9 +19306,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert row["receiver_proof_passed"] is True
     value_rows = {item["section_name"]: item for item in runner["section_value_rows"]}
     assert value_rows["decoder_qw"]["evidence_status"] == "measured_mlx_advisory"
-    assert value_rows["decoder_qw"]["admission_status"] == (
-        "admit_section_bytes_for_receiver_proof"
-    )
+    assert value_rows["decoder_qw"]["admission_status"] == ("admit_section_bytes_for_receiver_proof")
     post_export = out["post_export_materializer_plan"]
     assert post_export["schema"] == "compact_carrier_post_export_materializer_plan.v1"
     assert post_export["compiled"] is True
@@ -20836,9 +19315,7 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert out["post_export_materializer_execution"]["executed"] is False
     assert "full_video_mlx_scorer_replay_not_attached" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
-    assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out[
-        "blockers"
-    ]
+    assert "pact_nerv_selector_v4_spine_projection_manifest_missing" not in out["blockers"]
 
 
 def test_selector_v4_execute_arm_threads_render_quality_blocker(

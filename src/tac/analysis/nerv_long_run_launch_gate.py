@@ -5,21 +5,21 @@ Evidence for a long run accumulates across many producers (birth receipts,
 pose-trust rows, survival receipts, parse-back manifests, SNeRV source-forward
 proofs).  Nothing may consume that pile and say "approved" by vibes.  This
 module is the single machine arbiter: it scans a run root for typed evidence,
-walks the family ladder (L2 physical birth → L3 pose-trusted → L4 same-action
-survival → L5 representative/inflate), and emits a machine-readable verdict
+walks the family ladder (L2 physical birth -> L3 pose-trusted -> L4 same-action
+survival -> L5 representative/inflate), and emits a machine-readable verdict
 whose only approval path is every required row present and consistent.
 
 It also DEFINES the survival/hysteresis/coverage schemas before their
-producers exist — the gate is the contract; producers conform to it:
+producers exist: the gate is the contract; producers conform to it:
 
-* ``hi_nerv_target_region_birth_survival.v1`` — re-measurement of the SAME
+* ``hi_nerv_target_region_birth_survival.v1`` - re-measurement of the same
   accepted birth (matching ``action_id``) on one surface in
   {``fakequant_mlx``, ``parseback_mlx``, ``inflated_torch_cpu``} with
-  ``survived: bool`` and the region stats re-measured on that surface.
-* ``hi_nerv_target_region_birth_hysteresis.v1`` — same ``action_id`` after M
+  ``survived: bool`` and target-support stats re-measured on that surface.
+* ``hi_nerv_target_region_birth_hysteresis.v1`` - same ``action_id`` after M
   further steps with ``passed: bool`` (no hard-won collapse, debt not above
   pre-birth).
-* ``hi_nerv_representative_region_coverage.v1`` — hard-region-miner coverage
+* ``hi_nerv_representative_region_coverage.v1`` - hard-region-miner coverage
   row proving birth beyond the birth-at-init easy case.
 
 L4 survival is proof ONLY when the same action identity is traced through
@@ -36,6 +36,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.receiver_surface_metrics import receiver_surface_target_support_breakdown
 from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
     require_no_truthy_authority_fields,
@@ -152,14 +153,22 @@ def _frontier_pointer_status(
     }
 
 
-def _accepted_live_birth(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _accepted_live_birth(
+    rows: list[dict[str, Any]],
+    *,
+    blockers: list[str],
+) -> dict[str, Any] | None:
     for row in rows:
         if str(row.get("surface") or "live_mlx") != "live_mlx":
             continue
         if int(row.get("accepted_step_count") or 0) <= 0:
             continue
-        transitions = row.get("argmax_transitions") or {}
-        if int(transitions.get("net_target_support_delta") or 0) <= 0:
+        if not _target_support_positive(
+            row,
+            blocker="live_birth_target_support_missing",
+            not_positive_blocker="live_birth_target_support_not_positive",
+            blockers=blockers,
+        ):
             continue
         if not row.get("action_id"):
             continue
@@ -194,9 +203,41 @@ def _survival_rows_for_action(
             blockers.append(f"l4_survival_action_id_mismatch:{surface}")
             continue
         if row.get("survived") is True:
-            return row
+            if _target_support_positive(
+                row,
+                blocker=f"birth_survival_target_support_missing:{surface}",
+                not_positive_blocker=(
+                    f"birth_survival_target_support_not_positive:{surface}"
+                ),
+                blockers=blockers,
+            ):
+                return row
+            continue
         blockers.append(f"birth_not_survived:{surface}")
     return None
+
+
+def _target_support_positive(
+    row: Mapping[str, Any],
+    *,
+    blocker: str,
+    not_positive_blocker: str,
+    blockers: list[str],
+) -> bool:
+    surface = dict(row)
+    transitions = row.get("argmax_transitions")
+    if isinstance(transitions, Mapping):
+        surface.update(transitions)
+    support = receiver_surface_target_support_breakdown(surface)
+    hard_won = support.get("receiver_surface_target_hard_won_count")
+    net = support.get("receiver_surface_net_target_support_delta")
+    if hard_won is None or net is None:
+        blockers.append(blocker)
+        return False
+    if float(hard_won) <= 0.0 or float(net) <= 0.0:
+        blockers.append(not_positive_blocker)
+        return False
+    return True
 
 
 def evaluate_nerv_long_run_launch_gate(
@@ -238,7 +279,7 @@ def evaluate_nerv_long_run_launch_gate(
             index=evidence_index,
             blockers=blockers,
         )
-        live = _accepted_live_birth(birth_rows)
+        live = _accepted_live_birth(birth_rows, blockers=blockers)
         if live is None:
             blockers.append("real_video_birth_receipt_missing")
         else:
@@ -314,7 +355,7 @@ def evaluate_nerv_long_run_launch_gate(
         elif proven is not None:
             highest_level = "L4"
 
-    approved = not blockers and highest_level == ("L5" if family == "hi_nerv" else "L4")
+    approved = not blockers and highest_level == ("L5" if family == "hinerv" else "L4")
     verdict = {
         "schema": NERV_LONG_RUN_LAUNCH_GATE_SCHEMA,
         "family": family,

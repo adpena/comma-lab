@@ -9,7 +9,7 @@ written to ``--output-json``.
 
 Example:
 
-    .venv/bin/python tools/validate_nerv_long_run_gate.py \
+    uv run python tools/validate_nerv_long_run_gate.py \
         --family hinerv \
         --run-root /Volumes/VertigoDataTier/pact/experiments/results/<run> \
         --frontier-pointer .omx/state/canonical_frontier_pointer.json
