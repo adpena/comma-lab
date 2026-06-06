@@ -1429,7 +1429,30 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
         "report_path": (tmp_path / "quality.json").as_posix(),
         "archive_path": (tmp_path / "archive.zip").as_posix(),
         "archive_sha256": "a" * 64,
+        "archive_bytes": 12345,
+        "zip_member": "x",
         "candidate_cache_dir": (tmp_path / "cache").as_posix(),
+        "candidate_cache_manifest_path": (tmp_path / "cache" / "manifest.json").as_posix(),
+        "candidate_cache_manifest_sha256": "c" * 64,
+        "cache_manifest_summary": {
+            "source_kind": "hi_nerv_direct_receiver_render",
+            "raw_sha256": "b" * 64,
+            "pair_count": 1,
+            "array_sha256": {},
+        },
+        "direct_receiver_cache_report": {
+            "schema": "hi_nerv_direct_receiver_cache_report.v1",
+            "source_family": "hi_nerv",
+            "archive_sha256": "a" * 64,
+            "zip_member": "x",
+            "archive_magic": "HIV1",
+            "cached_pair_count": 1,
+            "direct_render_raw_sha256": "b" * 64,
+            "identity_audit_sha256": "d" * 64,
+            "candidate_cache_identity_mode": (
+                "hi_nerv_direct_receiver_render_cache_identity_audited_false_authority"
+            ),
+        },
         "quality_gate_path": (tmp_path / "gate.json").as_posix(),
         "quality_gate_passed": True,
             "quality_gate": {
@@ -7141,6 +7164,175 @@ def test_hinerv_execute_rejects_out_of_range_prioritized_pairs(
         )
 
 
+def test_hinerv_private_smoke_refuses_positive_hard_birth_without_segnet_argmax(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
+
+    bootstrap_called = False
+    train_called = False
+
+    class FakeHinervModel:
+        def __init__(self, cfg):
+            self.cfg = cfg
+
+        def configure_decoder_fake_quant_forward(self, **_kwargs):
+            return None
+
+        def initialize_output_head_bias_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            epsilon,
+        ):
+            return {
+                "schema": "hi_nerv_output_head_target_bias_init.v1",
+                "enabled": True,
+                "epsilon": float(epsilon),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+            }
+
+        def initialize_output_head_contrast_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            min_output_std,
+            max_gain,
+        ):
+            return _fake_hinerv_output_head_contrast_init_payload(
+                pair_indices,
+                min_output_std=min_output_std,
+                max_gain=max_gain,
+            )
+
+        def fit_scorer_domain_bootstrap_from_targets(self, *_args, **_kwargs):
+            nonlocal bootstrap_called
+            bootstrap_called = True
+            raise AssertionError(
+                "hard-birth without SegNet argmax must refuse before bootstrap"
+            )
+
+        def num_parameters(self):
+            return 123
+
+    def fake_decode_mlx_targets(
+        _video_path,
+        *,
+        num_pairs,
+        output_height,
+        output_width,
+        pair_indices=None,
+    ):
+        shape = (int(num_pairs), int(output_height), int(output_width), 3)
+        return np.zeros(shape, dtype=np.float32), np.zeros(shape, dtype=np.float32)
+
+    def fail_train(**_kwargs):
+        nonlocal train_called
+        train_called = True
+        raise AssertionError("hard-birth guard must refuse before training")
+
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "decode_mlx_targets",
+        fake_decode_mlx_targets,
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "run_mlx_score_aware_full_main",
+        fail_train,
+    )
+    monkeypatch.setattr(
+        hinerv_mlx_renderer,
+        "HinervSubstrateMLX",
+        FakeHinervModel,
+    )
+
+    with pytest.raises(
+        CompactRendererMlxSpineRunnerError,
+        match="requires real SegNet teacher argmax labels",
+    ):
+        runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
+            output_dir=tmp_path / "hard_birth_without_segnet_argmax",
+            num_pairs=1,
+            epochs=1,
+            batch_pair_indices_per_step=1,
+            learning_rate=1e-3,
+            source_video_path=tmp_path / "not_read_by_fake_decoder.mkv",
+            latent_dim=4,
+            embed_dim=4,
+            decoder_channel=4,
+            use_hierarchical_feature_grid=False,
+            use_convnext_blocks=False,
+            local_grid_levels=2,
+            local_grid_channels=4,
+            convnext_mlp_ratio=2,
+            convnext_kernel_size=7,
+            mid_injection_block_index=1,
+            fine_injection_block_index=4,
+            decoder_codec="portfolio_auto",
+            ema_decay=0.9,
+            segnet_distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_distillation_loss="mse",
+            pose_distillation_huber_delta=1.0,
+            recon_loss_stage_weight=1.0,
+            segnet_loss_stage_weight=1.0,
+            pose_loss_stage_weight=1.0,
+            scorer_input_guard_stage_weight=1.0,
+            scorer_input_contrast_floor_stage_weight=None,
+            scorer_input_shape_tether_stage_weight=None,
+            segnet_direct_live_stage_weight=None,
+            segnet_distillation_objective="kl_t2",
+            distillation_temperature=2.0,
+            segnet_tau_boundary=1.0,
+            segnet_hinge_margin=1.0,
+            scorer_domain_bootstrap_segnet_margin_weight=0.0,
+            scorer_domain_bootstrap_segnet_hard_birth_weight=2.0,
+            distillation_device="cpu",
+            requested_distillation_device=None,
+            allow_segnet_only_research=False,
+            coder_aware_qat=False,
+            coder_qat_quant_bits=8,
+            coder_qat_quant_residual_weight=0.0,
+            coder_qat_magnitude_weight=0.0,
+            coder_qat_delta_weight=0.0,
+            coder_qat_c1a_entropy_weight=0.0,
+            coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+            coder_qat_c1a_sample_size=(
+                runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE
+            ),
+            recon_pixel_weight_path=None,
+            decoder_weight_waterfill_plan=None,
+            recon_pixel_weight_auto_discovery=None,
+            auto_segnet_boundary_recon_weight=False,
+            recon_pixel_weight_tau=1.0,
+            recon_pixel_weight_normalize="mean",
+            mlx_prefilter_scorer_device=None,
+            mlx_prefilter_scorer_batch_pairs=1,
+            mlx_prefilter_progress_every=50,
+            telemetry_flush_interval_epochs=1,
+            checkpoint_interval_epochs=1,
+            checkpoint_dir=None,
+            resume_from_checkpoint=None,
+            optimizer_kind="adamw",
+            hi_nerv_optimizer_policy={},
+            optimizer_controls={},
+            prioritized_pair_indices=(),
+            random_seed=0,
+            scorer_upstream_dir=REPO_ROOT / "upstream",
+            repo_root=REPO_ROOT,
+        )
+
+    assert bootstrap_called is False
+    assert train_called is False
+
+
 def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     tmp_path: Path,
     monkeypatch,
@@ -7228,6 +7420,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             segnet_margin_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
+            pair_local_smoke_artifact_dir=None,
         ):
             captured["scorer_domain_bootstrap_call"] = {
                 "target0_shape": tuple(target_rgb_0.shape),
@@ -7240,6 +7433,11 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 ),
                 "segnet_hard_birth_bootstrap_min_ratio_floor": float(
                     segnet_hard_birth_bootstrap_min_ratio_floor
+                ),
+                "pair_local_smoke_artifact_dir": (
+                    None
+                    if pair_local_smoke_artifact_dir is None
+                    else Path(pair_local_smoke_artifact_dir).as_posix()
                 ),
             }
             return _fake_hinerv_scorer_domain_bootstrap_payload(
@@ -7268,7 +7466,13 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
 
     class FakeSegNetTeacher:
         num_classes = 8
+        frame_count = 10
         live_segnet_adapter = object()
+
+        def teacher_argmax_for_indices(self, idx):
+            import mlx.core as mx
+
+            return mx.zeros((int(idx.shape[0]), 384, 512), dtype=mx.int32)
 
         def teacher_logits_for_frames_nhwc01(self, frames):
             return frames
@@ -7624,6 +7828,21 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert bootstrap_call[
         "segnet_hard_birth_bootstrap_min_ratio_floor"
     ] == pytest.approx(0.07)
+    bootstrap_metadata = artifact.as_dict()["substrate_artifact_metadata"][
+        "score_aware_training"
+    ]["output_head_target_bias_init"]["scorer_domain_bootstrap"]
+    assert bootstrap_metadata[
+        "segnet_hard_birth_bootstrap_requested_weight"
+    ] == pytest.approx(3.0)
+    assert bootstrap_metadata[
+        "segnet_hard_birth_bootstrap_effective_weight"
+    ] == pytest.approx(3.0)
+    assert bootstrap_metadata["segnet_hard_birth_bootstrap_request_consumed"] is True
+    assert bootstrap_call["pair_local_smoke_artifact_dir"] == (
+        tmp_path
+        / "private_smoke_full_priority_hydration"
+        / "hi_nerv_pair_local_actuator_smoke"
+    ).as_posix()
     temporal_dual = captured["dual_ascent_constraints"][
         "hi_nerv_posenet_temporal_signal_floor"
     ]
@@ -7895,6 +8114,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
             segnet_margin_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
+            pair_local_smoke_artifact_dir=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -8065,6 +8285,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
         segnet_hinge_margin=1.0,
+        scorer_domain_bootstrap_segnet_hard_birth_weight=0.0,
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,
@@ -8248,6 +8469,7 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
             segnet_margin_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
+            pair_local_smoke_artifact_dir=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -8339,6 +8561,7 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
             distillation_temperature=2.0,
             segnet_tau_boundary=1.0,
             segnet_hinge_margin=1.0,
+            scorer_domain_bootstrap_segnet_hard_birth_weight=0.0,
             distillation_device="cpu",
             requested_distillation_device=None,
             allow_segnet_only_research=False,
@@ -15406,6 +15629,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
             segnet_margin_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
+            pair_local_smoke_artifact_dir=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15508,6 +15732,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
         segnet_hinge_margin=1.0,
+        scorer_domain_bootstrap_segnet_hard_birth_weight=0.0,
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,
@@ -15706,6 +15931,7 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
             segnet_margin_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_weight=0.0,
             segnet_hard_birth_bootstrap_min_ratio_floor=0.02,
+            pair_local_smoke_artifact_dir=None,
         ):
             return _fake_hinerv_scorer_domain_bootstrap_payload(
                 pair_indices,
@@ -15860,6 +16086,7 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
         segnet_hinge_margin=1.0,
+        scorer_domain_bootstrap_segnet_hard_birth_weight=0.0,
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,

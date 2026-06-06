@@ -2934,6 +2934,627 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "human_visual_fidelity_objective": False,
         }
 
+    def fit_target_region_birth_from_segnet(
+        self,
+        *,
+        scorer_teacher: Any,
+        target_rgb_0: Any,
+        target_rgb_1: Any,
+        pair_indices: Any,
+        target_segnet_argmax_1: Any | None = None,
+        pose_teacher: Any | None = None,
+        max_steps: int = 64,
+        learning_rate: float = 5.0e-4,
+        target_min_region_ratio: float = 0.02,
+        margin_tau: float = 0.3,
+        margin_floor: float = 1.0,
+        prob_floor: float = 0.55,
+        lambda_prob_floor: float = 16.0,
+        lambda_seed: float = 8.0,
+        seed_temperature: float = 0.5,
+        min_margin_mean_drop: float = 1.0e-6,
+        max_pose_output_delta_l2: float = 0.05,
+        grad_clip_max_norm: float | None = None,
+        min_region_pixels: int = 1,
+    ) -> dict[str, Any]:
+        """Run a scoped hard-birth prefit on the worst SegNet target region.
+
+        Class-aggregate losses can improve while ``target_min_ratio`` stays
+        ``0.0`` because no connected component of the target class ever wins
+        the receiver argmax (the subquantum / soft-mass-only failure mode).
+        This actuator selects the single worst-debt connected region in exact
+        contest score units, then drives a frontier-margin crossing inside
+        that region only, updating only the late archive-charged tensors with
+        local spatial leverage (``latents_fine`` / ``feature_grids.*`` /
+        ``fine_injector.*`` / ``head_rgb_1.*``).  Steps are admitted only when
+        the receiver uint8 image moves inside the region AND the region's
+        hard ratio or median frontier margin improves AND the PoseNet output
+        movement stays inside the trust cap.  The result is ordinary model
+        state: no sidecar bytes, byte accounting unchanged.
+        """
+
+        _require_mlx()
+        from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+        from tac.substrates.hi_nerv.target_region_birth import (
+            allowed_birth_update_name,
+            build_target_region_birth_receipt,
+            region_margin_stats,
+            select_worst_target_region_with_mask,
+        )
+
+        step_count = int(max_steps)
+        if step_count <= 0:
+            raise ValueError(f"max_steps must be positive; got {max_steps}")
+        lr = float(learning_rate)
+        if not math.isfinite(lr) or lr <= 0.0:
+            raise ValueError(f"learning_rate must be finite and positive; got {learning_rate}")
+        for name, value in (
+            ("target_min_region_ratio", float(target_min_region_ratio)),
+            ("margin_tau", float(margin_tau)),
+            ("margin_floor", float(margin_floor)),
+            ("prob_floor", float(prob_floor)),
+            ("lambda_prob_floor", float(lambda_prob_floor)),
+            ("lambda_seed", float(lambda_seed)),
+            ("seed_temperature", float(seed_temperature)),
+            ("min_margin_mean_drop", float(min_margin_mean_drop)),
+            ("max_pose_output_delta_l2", float(max_pose_output_delta_l2)),
+        ):
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and non-negative; got {value}")
+        if not 0.0 <= float(target_min_region_ratio) <= 1.0:
+            raise ValueError(
+                "target_min_region_ratio must be in [0, 1]; got "
+                f"{target_min_region_ratio}"
+            )
+        if float(margin_tau) <= 0.0 or float(seed_temperature) <= 0.0:
+            raise ValueError("margin_tau and seed_temperature must be positive")
+        clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
+        if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
+            raise ValueError(
+                "grad_clip_max_norm must be None or finite and positive; "
+                f"got {grad_clip_max_norm}"
+            )
+
+        import mlx.optimizers as mlx_optim
+
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim != 1 or int(idx.shape[0]) <= 0:
+            raise ValueError("pair_indices must be a non-empty rank-1 tensor")
+        target0 = mx.array(target_rgb_0).astype(mx.float32)  # type: ignore[union-attr]
+        target1 = mx.array(target_rgb_1).astype(mx.float32)  # type: ignore[union-attr]
+        for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
+            if target.ndim != 4 or int(target.shape[-1]) != 3:
+                raise ValueError(
+                    f"{name} must be NHWC with 3 channels; got "
+                    f"shape={tuple(int(v) for v in target.shape)}"
+                )
+            if int(target.shape[0]) != int(idx.shape[0]):
+                raise ValueError(
+                    f"{name} batch {int(target.shape[0])} must match "
+                    f"pair_indices length {int(idx.shape[0])}"
+                )
+
+        live_fn = getattr(scorer_teacher, "teacher_logits_for_frames_nhwc01", None)
+        if not callable(live_fn):
+            raise ValueError(
+                "scorer_teacher must expose teacher_logits_for_frames_nhwc01 for "
+                "the target-region birth actuator"
+            )
+        if target_segnet_argmax_1 is not None:
+            labels = mx.array(target_segnet_argmax_1, dtype=mx.int32)  # type: ignore[union-attr]
+        else:
+            local_indices = mx.arange(int(target1.shape[0]), dtype=mx.int32)  # type: ignore[union-attr]
+            argmax_fn = getattr(scorer_teacher, "teacher_argmax_for_indices", None)
+            logits_fn = getattr(scorer_teacher, "teacher_logits_for_indices", None)
+            if callable(argmax_fn):
+                labels = argmax_fn(local_indices)
+            elif callable(logits_fn):
+                labels = mx.argmax(logits_fn(local_indices), axis=-1)  # type: ignore[union-attr]
+            else:
+                raise ValueError(
+                    "target_segnet_argmax_1 missing and scorer_teacher exposes "
+                    "neither teacher_argmax_for_indices nor teacher_logits_for_indices"
+                )
+        if labels.ndim == 4 and int(labels.shape[-1]) == 1:
+            labels = labels[..., 0]
+        if labels.ndim != 3 or tuple(int(v) for v in labels.shape) != tuple(
+            int(v) for v in target1.shape[:3]
+        ):
+            raise ValueError(
+                "target SegNet argmax must be BHW matching target_rgb_1; got "
+                f"argmax={tuple(int(v) for v in labels.shape)} "
+                f"target={tuple(int(v) for v in target1.shape[:3])}"
+            )
+        labels = mx.stop_gradient(labels)  # type: ignore[union-attr]
+        mx.eval(labels)  # type: ignore[union-attr]
+
+        pose_fn = (
+            getattr(pose_teacher, "teacher_pose_for_yuv6_pair_nhwc", None)
+            if pose_teacher is not None
+            else None
+        )
+        pose_available = callable(pose_fn)
+
+        def _predict_pair01(model_obj: Any) -> tuple[Any, Any]:
+            pair01 = model_obj(idx) / 255.0
+            pred0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
+            pred1 = mx.transpose(pair01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
+            return pred0, pred1
+
+        def _receiver_uint8_int(pred: Any) -> np.ndarray:
+            receiver = mx.round(mx.clip(pred, 0.0, 1.0) * 255.0)  # type: ignore[union-attr]
+            mx.eval(receiver)  # type: ignore[union-attr]
+            return np.asarray(receiver, dtype=np.int16)
+
+        def _candidate_logits_np(pred1: Any) -> np.ndarray:
+            logits = live_fn(_receiver_uint8_roundtrip_ste_nhwc01(pred1))
+            mx.eval(logits)  # type: ignore[union-attr]
+            out = np.asarray(logits, dtype=np.float32)
+            if out.ndim != 4:
+                raise ValueError(
+                    "live SegNet candidate logits must be BHWC; got "
+                    f"{out.shape}"
+                )
+            return out
+
+        def _pose_output_np(pred0: Any, pred1: Any) -> np.ndarray | None:
+            if not pose_available:
+                return None
+            # Mirrors the shared posenet_yuv6_pair_nhwc255 surface: per-frame
+            # RGB->YUV6 at byte scale, concatenated to 12 channels NHWC.
+            yuv6_pair = mx.concatenate(  # type: ignore[union-attr]
+                [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+                axis=-1,
+            )
+            pose = pose_fn(yuv6_pair)
+            mx.eval(pose)  # type: ignore[union-attr]
+            return np.asarray(pose, dtype=np.float32)
+
+        base_pred0, base_pred1 = _predict_pair01(self)
+        base_pred0 = mx.stop_gradient(mx.array(base_pred0))  # type: ignore[union-attr]
+        base_pred1 = mx.stop_gradient(mx.array(base_pred1))  # type: ignore[union-attr]
+        mx.eval(base_pred0, base_pred1)  # type: ignore[union-attr]
+        initial_logits_np = _candidate_logits_np(base_pred1)
+        class_count = int(initial_logits_np.shape[-1])
+        labels_np = np.asarray(labels, dtype=np.int64)
+        if int(labels_np.max()) >= class_count:
+            raise ValueError(
+                "target SegNet argmax contains a class outside live logits: "
+                f"max_target_class={int(labels_np.max())} class_count={class_count}"
+            )
+        initial_argmax_np = np.argmax(initial_logits_np, axis=-1)
+        worst, region_mask_np = select_worst_target_region_with_mask(
+            labels_np,
+            initial_argmax_np,
+            min_region_pixels=int(min_region_pixels),
+        )
+        if worst.region_unsolved_pixel_count == 0:
+            return {
+                "schema": "hi_nerv_target_region_birth.v1",
+                "enabled": False,
+                "reason": "no_unsolved_target_region",
+                "worst_region": worst.as_dict(),
+                "accepted_step_count": 0,
+                "rejected_step_count": 0,
+                "blockers": [],
+                "runtime_sidecar_bytes": 0,
+                "human_visual_fidelity_objective": False,
+            }
+        birth_class = int(worst.class_index)
+        region_mask = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(region_mask_np, dtype=mx.float32)
+        )
+        region_pixels = float(worst.region_pixel_count)
+        total_scored_pixels = float(worst.total_scored_pixels)
+        before_stats = region_margin_stats(initial_logits_np, region_mask_np, birth_class)
+        initial_uint8 = _receiver_uint8_int(base_pred1)
+        initial_pose = _pose_output_np(base_pred0, base_pred1)
+        region_bool_np = region_mask_np > 0.0
+
+        def _impostor_logit(logits: Any) -> Any:
+            if class_count == 1:
+                return mx.zeros_like(logits[..., 0])  # type: ignore[union-attr]
+            if birth_class == 0:
+                return mx.max(logits[..., 1:], axis=-1)  # type: ignore[union-attr]
+            if birth_class == class_count - 1:
+                return mx.max(logits[..., :birth_class], axis=-1)  # type: ignore[union-attr]
+            return mx.max(  # type: ignore[union-attr]
+                mx.concatenate(
+                    [logits[..., :birth_class], logits[..., birth_class + 1 :]],
+                    axis=-1,
+                ),
+                axis=-1,
+            )
+
+        eps = 1.0e-6
+
+        def _loss_fn(model_obj: Any) -> Any:
+            _, pred1 = _predict_pair01(model_obj)
+            receiver = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
+            logits = live_fn(receiver)
+            class_logit = logits[..., birth_class]
+            impostor = _impostor_logit(logits)
+            margin_raw = impostor - class_logit
+            crossing = mx.logaddexp(  # type: ignore[union-attr]
+                (margin_raw + float(margin_floor)) / float(margin_tau),
+                0.0,
+            )
+            loss_margin = mx.sum(crossing * crossing * region_mask) / region_pixels  # type: ignore[union-attr]
+            shifted = logits - mx.max(logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
+            exp_logits = mx.exp(shifted)  # type: ignore[union-attr]
+            probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)  # type: ignore[union-attr]
+            prob_deficit = mx.maximum(  # type: ignore[union-attr]
+                float(prob_floor) - probs[..., birth_class],
+                0.0,
+            )
+            loss_prob = mx.sum(prob_deficit * prob_deficit * region_mask) / region_pixels  # type: ignore[union-attr]
+            margin_detached = mx.stop_gradient(margin_raw)  # type: ignore[union-attr]
+            masked_margin = mx.where(  # type: ignore[union-attr]
+                region_mask > 0.0,
+                margin_detached,
+                mx.array(1.0e30, dtype=margin_detached.dtype),
+            )
+            margin_min = mx.min(masked_margin)  # type: ignore[union-attr]
+            seed_weight = region_mask * mx.exp(  # type: ignore[union-attr]
+                -(margin_detached - margin_min) / float(seed_temperature)
+            )
+            seed_weight = seed_weight / mx.maximum(mx.sum(seed_weight), eps)  # type: ignore[union-attr]
+            loss_seed = mx.sum(seed_weight * crossing * crossing)  # type: ignore[union-attr]
+            pred_class = mx.argmax(logits, axis=-1)  # type: ignore[union-attr]
+            unsolved = mx.stop_gradient(  # type: ignore[union-attr]
+                mx.sum(
+                    region_mask
+                    * (pred_class != birth_class).astype(mx.float32)
+                )
+            )
+            debt_weight = 1.0 + 100.0 * unsolved / total_scored_pixels
+            return debt_weight * (
+                loss_margin
+                + float(lambda_prob_floor) * loss_prob
+                + float(lambda_seed) * loss_seed
+            )
+
+        if tree_unflatten is None:
+            raise RuntimeError("MLX tree_unflatten unavailable despite successful MLX import")
+
+        def _snapshot_parameters() -> list[tuple[Any, Any]]:
+            return [
+                (raw_name, None if leaf is None else mx.array(leaf))  # type: ignore[union-attr]
+                for raw_name, leaf in tree_flatten(self.parameters())  # type: ignore[operator]
+            ]
+
+        def _restore_parameters(snapshot: list[tuple[Any, Any]]) -> None:
+            self.update(
+                tree_unflatten(
+                    [
+                        (raw_name, None if leaf is None else mx.array(leaf))  # type: ignore[union-attr]
+                        for raw_name, leaf in snapshot
+                    ]
+                )
+            )
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+
+        def _flat_param_name(raw_name: Any) -> str:
+            if isinstance(raw_name, (tuple, list)):
+                return ".".join(str(part) for part in raw_name)
+            return str(raw_name)
+
+        def _group_for_name(name: str) -> str:
+            if name == "latents_fine" or name.startswith("latents_fine."):
+                return "latents_fine"
+            for group in ("feature_grids", "fine_injector", "head_rgb_1"):
+                if name.startswith(f"{group}."):
+                    return group
+            return "other"
+
+        def _apply_scoped_step(
+            base_snapshot: list[tuple[Any, Any]],
+            grads_tree: Any,
+            step_lr: float,
+        ) -> tuple[list[str], dict[str, float], dict[str, float]]:
+            grad_by_name = dict(tree_flatten(grads_tree))  # type: ignore[operator]
+            updated: list[tuple[Any, Any]] = []
+            applied_names: list[str] = []
+            grad_sq_by_group: dict[str, float] = {}
+            update_sq_by_group: dict[str, float] = {}
+            for raw_name, leaf in base_snapshot:
+                grad = grad_by_name.get(raw_name)
+                flat = _flat_param_name(raw_name)
+                if leaf is None or grad is None or not allowed_birth_update_name(flat):
+                    updated.append((raw_name, leaf))
+                    continue
+                grad_sq = mx.sum(grad * grad)  # type: ignore[union-attr]
+                mx.eval(grad_sq)  # type: ignore[union-attr]
+                grad_sq_value = float(grad_sq.item())
+                if grad_sq_value <= 0.0:
+                    updated.append((raw_name, leaf))
+                    continue
+                param = mx.array(leaf)  # type: ignore[union-attr]
+                step = float(step_lr) * grad
+                update = param - step
+                updated.append((raw_name, update))
+                applied_names.append(flat)
+                group = _group_for_name(flat)
+                grad_sq_by_group[group] = grad_sq_by_group.get(group, 0.0) + grad_sq_value
+                step_sq = mx.sum(step * step)  # type: ignore[union-attr]
+                mx.eval(step_sq)  # type: ignore[union-attr]
+                update_sq_by_group[group] = (
+                    update_sq_by_group.get(group, 0.0) + float(step_sq.item())
+                )
+            self.update(tree_unflatten(updated))
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+            return (
+                applied_names,
+                {name: math.sqrt(value) for name, value in grad_sq_by_group.items()},
+                {name: math.sqrt(value) for name, value in update_sq_by_group.items()},
+            )
+
+        def _region_candidate_state() -> dict[str, Any]:
+            pred0, pred1 = _predict_pair01(self)
+            pred0 = mx.stop_gradient(mx.array(pred0))  # type: ignore[union-attr]
+            pred1 = mx.stop_gradient(mx.array(pred1))  # type: ignore[union-attr]
+            mx.eval(pred0, pred1)  # type: ignore[union-attr]
+            logits_np = _candidate_logits_np(pred1)
+            stats = region_margin_stats(logits_np, region_mask_np, birth_class)
+            uint8 = _receiver_uint8_int(pred1)
+            pose = _pose_output_np(pred0, pred1)
+            float_delta = mx.max(mx.abs(pred1 - base_pred1))  # type: ignore[union-attr]
+            mx.eval(float_delta)  # type: ignore[union-attr]
+            return {
+                "stats": stats,
+                "uint8": uint8,
+                "pose": pose,
+                "logits_np": logits_np,
+                "float_rgb_delta_linf": float(float_delta.item()),
+            }
+
+        def _uint8_changed_in_region(before_u8: np.ndarray, after_u8: np.ndarray) -> int:
+            changed = np.any(before_u8 != after_u8, axis=-1)
+            return int(np.count_nonzero(changed & region_bool_np))
+
+        def _pose_delta_l2(pose: np.ndarray | None) -> float | None:
+            if pose is None or initial_pose is None:
+                return None
+            per_item = np.sqrt(np.sum((pose - initial_pose) ** 2, axis=-1))
+            return float(per_item.max())
+
+        loss_and_grad_fn = nn.value_and_grad(self, _loss_fn)  # type: ignore[union-attr]
+        initial_snapshot = _snapshot_parameters()
+        blockers: list[str] = []
+        if not pose_available:
+            blockers.append("hinerv_target_region_birth_pose_trust_telemetry_missing")
+        accepted_step_count = 0
+        rejected_step_count = 0
+        subquantum_rejected_step_count = 0
+        pose_guard_rejected_step_count = 0
+        no_progress_rejected_step_count = 0
+        receiver_quantum_growth_attempt_count = 0
+        backtracking_attempt_count = 0
+        loss_history: list[float] = []
+        accepted_update_names: set[str] = set()
+        last_grad_norm_by_group: dict[str, float] = {}
+        last_update_norm_by_group: dict[str, float] = {}
+        max_accepted_pose_delta_l2 = 0.0
+        best_stats = dict(before_stats)
+        current_lr = lr
+        max_quantum_growth_attempts = 20
+        max_backtracking_attempts = 8
+        min_lr = lr * (0.5**max_backtracking_attempts)
+        for _step in range(step_count):
+            base_snapshot = _snapshot_parameters()
+            _, step_base_pred1 = _predict_pair01(self)
+            step_base_uint8 = _receiver_uint8_int(step_base_pred1)
+            loss, grads = loss_and_grad_fn(self)
+            mx.eval(loss)  # type: ignore[union-attr]
+            loss_value = float(loss.item())
+            if not math.isfinite(loss_value):
+                _restore_parameters(initial_snapshot)
+                blockers.append("hinerv_target_region_birth_loss_not_finite")
+                break
+            loss_history.append(loss_value)
+            if clip is not None:
+                grads, _total_norm = mlx_optim.clip_grad_norm(grads, clip)
+            step_accepted = False
+            attempt_lr = current_lr
+            quantum_growth_attempts = 0
+            pose_violation_seen = False
+            while True:
+                applied_names, grad_norms, update_norms = _apply_scoped_step(
+                    base_snapshot,
+                    grads,
+                    attempt_lr,
+                )
+                if not applied_names:
+                    _restore_parameters(base_snapshot)
+                    blockers.append(
+                        "hinerv_target_region_birth_no_scoped_gradient_signal"
+                    )
+                    break
+                candidate = _region_candidate_state()
+                changed_in_region = _uint8_changed_in_region(
+                    step_base_uint8,
+                    candidate["uint8"],
+                )
+                import os as _dbg_os  # TEMP DEBUG
+
+                if _dbg_os.environ.get("TRB_DEBUG"):  # TEMP DEBUG
+                    print(  # TEMP DEBUG
+                        f"TRB lr={attempt_lr:.4g} applied={len(applied_names)} "
+                        f"changed={changed_in_region} "
+                        f"mean={candidate['stats']['margin_mean']:.6f} "
+                        f"floatlinf={candidate['float_rgb_delta_linf']:.3e} "
+                        f"groups={sorted(grad_norms)}"
+                    )
+                if changed_in_region <= 0:
+                    _restore_parameters(base_snapshot)
+                    if quantum_growth_attempts < max_quantum_growth_attempts:
+                        quantum_growth_attempts += 1
+                        receiver_quantum_growth_attempt_count += 1
+                        attempt_lr *= 2.0
+                        continue
+                    if pose_violation_seen:
+                        # The growth/shrink churn was caused by the pose cap:
+                        # every receiver-visible variant breached it.
+                        pose_guard_rejected_step_count += 1
+                    else:
+                        subquantum_rejected_step_count += 1
+                    rejected_step_count += 1
+                    break
+                pose_delta = _pose_delta_l2(candidate["pose"])
+                if pose_delta is not None and pose_delta > float(
+                    max_pose_output_delta_l2
+                ):
+                    pose_violation_seen = True
+                    _restore_parameters(base_snapshot)
+                    if attempt_lr * 0.5 >= min_lr:
+                        backtracking_attempt_count += 1
+                        attempt_lr *= 0.5
+                        continue
+                    pose_guard_rejected_step_count += 1
+                    rejected_step_count += 1
+                    break
+                stats = candidate["stats"]
+                ratio_progress = (
+                    stats["region_hard_won_pixels"]
+                    > best_stats["region_hard_won_pixels"]
+                )
+                # Mean margin registers single-pixel receiver motion; the
+                # median stays pure telemetry because one flipped pixel cannot
+                # move it, which would re-open the quantum-growth/backtrack
+                # ping-pong this acceptance rule exists to terminate.
+                margin_progress = stats["margin_mean"] < best_stats[
+                    "margin_mean"
+                ] - float(min_margin_mean_drop)
+                if not ratio_progress and not margin_progress:
+                    _restore_parameters(base_snapshot)
+                    if attempt_lr * 0.5 >= min_lr:
+                        backtracking_attempt_count += 1
+                        attempt_lr *= 0.5
+                        continue
+                    no_progress_rejected_step_count += 1
+                    rejected_step_count += 1
+                    break
+                step_accepted = True
+                accepted_step_count += 1
+                accepted_update_names.update(applied_names)
+                last_grad_norm_by_group = grad_norms
+                last_update_norm_by_group = update_norms
+                best_stats = dict(stats)
+                if pose_delta is not None:
+                    max_accepted_pose_delta_l2 = max(
+                        max_accepted_pose_delta_l2,
+                        pose_delta,
+                    )
+                current_lr = attempt_lr
+                break
+            if (
+                "hinerv_target_region_birth_no_scoped_gradient_signal" in blockers
+                or "hinerv_target_region_birth_loss_not_finite" in blockers
+            ):
+                break
+            if not step_accepted and subquantum_rejected_step_count + (
+                pose_guard_rejected_step_count + no_progress_rejected_step_count
+            ) >= 3:
+                break
+
+        if accepted_step_count == 0:
+            _restore_parameters(initial_snapshot)
+            blockers.append("hinerv_target_region_birth_no_accepted_step")
+
+        final = _region_candidate_state()
+        after_stats = final["stats"]
+        final_argmax_np = np.argmax(final["logits_np"], axis=-1)
+        argmax_flipped_region = int(
+            np.count_nonzero(
+                (final_argmax_np != initial_argmax_np) & region_bool_np
+            )
+        )
+        uint8_changed_total = _uint8_changed_in_region(initial_uint8, final["uint8"])
+        uint8_delta_abs_max = float(
+            np.abs(final["uint8"].astype(np.int32) - initial_uint8.astype(np.int32))[
+                region_bool_np
+            ].max()
+            if region_bool_np.any()
+            else 0.0
+        )
+        final_pose_delta = _pose_delta_l2(final["pose"])
+        if (
+            accepted_step_count > 0
+            and after_stats["region_hard_ratio"] < float(target_min_region_ratio)
+        ):
+            blockers.append(
+                "hinerv_target_region_birth_min_ratio_floor_not_reached"
+            )
+        pose_guard_payload: dict[str, Any] = {
+            "available": bool(pose_available),
+            "max_pose_output_delta_l2": float(max_pose_output_delta_l2),
+            "max_accepted_pose_output_delta_l2": float(max_accepted_pose_delta_l2),
+            "final_pose_output_delta_l2": (
+                None if final_pose_delta is None else float(final_pose_delta)
+            ),
+            "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
+        }
+        receipt = build_target_region_birth_receipt(
+            debt=worst,
+            before_margin_stats=before_stats,
+            after_margin_stats=after_stats,
+            receiver_uint8_changed_pixels_region=uint8_changed_total,
+            receiver_uint8_delta_abs_max=uint8_delta_abs_max,
+            receiver_float_rgb_delta_linf=float(final["float_rgb_delta_linf"]),
+            argmax_flipped_pixels_region=argmax_flipped_region,
+            accepted_step_count=accepted_step_count,
+            rejected_step_count=rejected_step_count,
+            blockers=blockers,
+            grad_norm_by_group=last_grad_norm_by_group,
+            update_norm_by_group=last_update_norm_by_group,
+            updated_parameter_names=sorted(accepted_update_names),
+            pose_guard=pose_guard_payload,
+            runtime_sidecar_bytes=0,
+        )
+        return {
+            "schema": "hi_nerv_target_region_birth.v1",
+            "enabled": True,
+            "accepted": bool(accepted_step_count > 0),
+            "birth_class_index": birth_class,
+            "worst_region": worst.as_dict(),
+            "before_region_margin_stats": dict(before_stats),
+            "after_region_margin_stats": dict(after_stats),
+            "before_region_hard_ratio": float(before_stats["region_hard_ratio"]),
+            "after_region_hard_ratio": float(after_stats["region_hard_ratio"]),
+            "target_min_region_ratio": float(target_min_region_ratio),
+            "target_min_region_ratio_reached": bool(
+                after_stats["region_hard_ratio"] >= float(target_min_region_ratio)
+            ),
+            "accepted_step_count": int(accepted_step_count),
+            "rejected_step_count": int(rejected_step_count),
+            "subquantum_rejected_step_count": int(subquantum_rejected_step_count),
+            "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
+            "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
+            "receiver_quantum_growth_attempt_count": int(
+                receiver_quantum_growth_attempt_count
+            ),
+            "backtracking_attempt_count": int(backtracking_attempt_count),
+            "loss_history_first": (loss_history[0] if loss_history else None),
+            "loss_history_last": (loss_history[-1] if loss_history else None),
+            "final_learning_rate": float(current_lr),
+            "updated_parameter_names": sorted(accepted_update_names),
+            "grad_norm_by_group": dict(last_grad_norm_by_group),
+            "update_norm_by_group": dict(last_update_norm_by_group),
+            "pose_guard": pose_guard_payload,
+            "receipt": receipt,
+            "blockers": list(blockers),
+            "archive_charged_decoder_tensors": [
+                "latents_fine",
+                "feature_grids.*",
+                "fine_injector.*",
+                "head_rgb_1.*",
+            ],
+            "runtime_sidecar_bytes": 0,
+            "receiver_surface": "clamp_round_uint8_rgb_ste_nhwc01",
+            "target_surface": "segnet_last_frame_rgb_argmax_worst_connected_region",
+            "human_visual_fidelity_objective": False,
+        }
+
     def __call__(self, pair_indices: Any) -> Any:
         z_c = mx.take(self.latents_coarse, pair_indices, axis=0)  # type: ignore[union-attr]
         z_m = mx.take(self.latents_mid, pair_indices, axis=0)  # type: ignore[union-attr]

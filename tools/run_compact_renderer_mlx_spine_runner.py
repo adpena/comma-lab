@@ -11928,6 +11928,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor=float(
                 scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
             ),
+            allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
             scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
                 scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
@@ -18018,6 +18019,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     archive_section_telemetry_metadata: Mapping[str, Any] | None = None,
     archive_selection_replay_required: bool = False,
     archive_selection_replay_batch_size: int | None = None,
+    allow_unscored_research_smoke: bool = False,
 ) -> Any:
     pairs = int(num_pairs)
     if pairs < 1:
@@ -19003,6 +19005,41 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "authority": "macos_mlx_research_signal_false_authority",
                     "dispatch_attempted": False,
                 }
+        requested_segnet_margin_bootstrap_weight = float(
+            scorer_domain_bootstrap_segnet_margin_weight
+        )
+        requested_segnet_hard_birth_bootstrap_weight = float(
+            scorer_domain_bootstrap_segnet_hard_birth_weight
+        )
+        if (
+            requested_segnet_hard_birth_bootstrap_weight > 0.0
+            and (
+                bootstrap_scorer_teacher is None
+                or target_segnet_argmax_1 is None
+            )
+            and not bool(allow_unscored_research_smoke)
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                "positive scorer-domain hard-birth requires real SegNet "
+                "teacher argmax labels; enable SegNet distillation, "
+                "direct-live SegNet distillation, or an active SegNet "
+                "direct-live subcontrol with teacher_argmax_for_indices, "
+                "or pass --allow-unscored-research-smoke for a forensic "
+                "teacherless trace"
+            )
+        effective_segnet_margin_bootstrap_weight = (
+            requested_segnet_margin_bootstrap_weight
+            if bootstrap_scorer_teacher is not None
+            else 0.0
+        )
+        effective_segnet_hard_birth_bootstrap_weight = (
+            requested_segnet_hard_birth_bootstrap_weight
+            if (
+                bootstrap_scorer_teacher is not None
+                and target_segnet_argmax_1 is not None
+            )
+            else 0.0
+        )
         bootstrap_payload = dict(
             bootstrap_initializer(
                 target_rgb_0[:bootstrap_count],
@@ -19010,15 +19047,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 pair_indices=bootstrap_pair_indices,
                 target_segnet_argmax_1=target_segnet_argmax_1,
                 scorer_teacher=bootstrap_scorer_teacher,
-                segnet_margin_bootstrap_weight=(
-                    float(scorer_domain_bootstrap_segnet_margin_weight)
-                    if bootstrap_scorer_teacher is not None
-                    else 0.0
-                ),
+                segnet_margin_bootstrap_weight=effective_segnet_margin_bootstrap_weight,
                 segnet_hard_birth_bootstrap_weight=(
-                    float(scorer_domain_bootstrap_segnet_hard_birth_weight)
-                    if bootstrap_scorer_teacher is not None
-                    else 0.0
+                    effective_segnet_hard_birth_bootstrap_weight
                 ),
                 segnet_hard_birth_bootstrap_min_ratio_floor=(
                     float(
@@ -19039,8 +19070,149 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 weight_decay=float(scorer_domain_bootstrap_weight_decay),
                 grad_clip_max_norm=scorer_domain_bootstrap_grad_clip_max_norm,
+                pair_local_smoke_artifact_dir=(
+                    output_dir / "hi_nerv_pair_local_actuator_smoke"
+                ),
             )
         )
+        bootstrap_blockers = [
+            str(value) for value in bootstrap_payload.get("blockers") or []
+        ]
+        margin_request_consumed = bool(
+            requested_segnet_margin_bootstrap_weight <= 0.0
+            or effective_segnet_margin_bootstrap_weight > 0.0
+        )
+        hard_birth_request_consumed = bool(
+            requested_segnet_hard_birth_bootstrap_weight <= 0.0
+            or effective_segnet_hard_birth_bootstrap_weight > 0.0
+        )
+        if not margin_request_consumed:
+            bootstrap_blockers.append(
+                "hi_nerv_scorer_domain_margin_requested_but_segnet_teacher_missing"
+            )
+        if not hard_birth_request_consumed:
+            bootstrap_blockers.append(
+                "hi_nerv_scorer_domain_hard_birth_requested_but_segnet_teacher_missing"
+            )
+        target_region_birth_payload: dict[str, Any] = {
+            "schema": "hi_nerv_target_region_birth.v1",
+            "enabled": False,
+            "reason": (
+                "disabled_because_scorer_domain_hard_birth_not_effective"
+                if effective_segnet_hard_birth_bootstrap_weight <= 0.0
+                else "target_region_birth_actuator_not_run"
+            ),
+            "requested_weight": requested_segnet_hard_birth_bootstrap_weight,
+            "effective_weight": effective_segnet_hard_birth_bootstrap_weight,
+            "request_consumed": hard_birth_request_consumed,
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        if effective_segnet_hard_birth_bootstrap_weight > 0.0:
+            target_region_birth_fn = getattr(
+                model,
+                "fit_target_region_birth_from_segnet",
+                None,
+            )
+            if callable(target_region_birth_fn):
+                try:
+                    target_region_birth_payload = dict(
+                        target_region_birth_fn(
+                            scorer_teacher=bootstrap_scorer_teacher,
+                            target_rgb_0=target_rgb_0[:bootstrap_count],
+                            target_rgb_1=target_rgb_1[:bootstrap_count],
+                            pair_indices=bootstrap_pair_indices,
+                            target_segnet_argmax_1=target_segnet_argmax_1,
+                            max_steps=max(8, int(scorer_domain_bootstrap_steps) * 4),
+                            learning_rate=float(
+                                scorer_domain_bootstrap_learning_rate
+                            ),
+                            target_min_region_ratio=float(
+                                scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
+                            ),
+                            grad_clip_max_norm=None,
+                        )
+                    )
+                except Exception as exc:
+                    target_region_birth_payload = {
+                        **target_region_birth_payload,
+                        "reason": "target_region_birth_actuator_failed",
+                        "blockers": [
+                            f"hi_nerv_target_region_birth_actuator_failed:{exc}"
+                        ],
+                    }
+            else:
+                target_region_birth_payload = {
+                    **target_region_birth_payload,
+                    "reason": "target_region_birth_actuator_missing",
+                    "blockers": ["hi_nerv_target_region_birth_actuator_missing"],
+                }
+            target_region_birth_payload["requested_weight"] = (
+                requested_segnet_hard_birth_bootstrap_weight
+            )
+            target_region_birth_payload["effective_weight"] = (
+                effective_segnet_hard_birth_bootstrap_weight
+            )
+            target_region_birth_payload["request_consumed"] = (
+                hard_birth_request_consumed
+            )
+            if target_region_birth_payload.get("accepted") is not True:
+                bootstrap_blockers.append(
+                    "hi_nerv_target_region_birth_actuator_not_accepted"
+                )
+            bootstrap_blockers.extend(
+                str(value)
+                for value in target_region_birth_payload.get("blockers") or []
+            )
+        bootstrap_payload["segnet_margin_bootstrap_requested_weight"] = (
+            requested_segnet_margin_bootstrap_weight
+        )
+        bootstrap_payload["segnet_margin_bootstrap_effective_weight"] = (
+            effective_segnet_margin_bootstrap_weight
+        )
+        bootstrap_payload["segnet_margin_bootstrap_request_consumed"] = (
+            margin_request_consumed
+        )
+        bootstrap_payload["segnet_hard_birth_bootstrap_requested_weight"] = (
+            requested_segnet_hard_birth_bootstrap_weight
+        )
+        bootstrap_payload["segnet_hard_birth_bootstrap_effective_weight"] = (
+            effective_segnet_hard_birth_bootstrap_weight
+        )
+        bootstrap_payload["segnet_hard_birth_bootstrap_request_consumed"] = (
+            hard_birth_request_consumed
+        )
+        if not margin_request_consumed or not hard_birth_request_consumed:
+            bootstrap_payload["scorer_teacher_required_for_requested_controls"] = True
+            bootstrap_payload["request_zeroed_reason"] = "segnet_teacher_missing"
+            bootstrap_payload["blockers"] = _dedupe(bootstrap_blockers)
+        hard_birth_payload = bootstrap_payload.get("segnet_hard_birth_bootstrap")
+        if isinstance(hard_birth_payload, dict):
+            hard_birth_payload["requested_weight"] = (
+                requested_segnet_hard_birth_bootstrap_weight
+            )
+            hard_birth_payload["effective_weight"] = (
+                effective_segnet_hard_birth_bootstrap_weight
+            )
+            hard_birth_payload["request_consumed"] = hard_birth_request_consumed
+            if not hard_birth_request_consumed:
+                hard_birth_payload["request_zeroed_reason"] = (
+                    "segnet_teacher_missing"
+                )
+                hard_birth_payload["blockers"] = _dedupe(
+                    [
+                        *[
+                            str(value)
+                            for value in hard_birth_payload.get("blockers") or []
+                        ],
+                        "hi_nerv_scorer_domain_hard_birth_requested_but_segnet_teacher_missing",
+                    ]
+                )
+        bootstrap_payload["target_region_birth_actuator"] = target_region_birth_payload
+        bootstrap_payload["blockers"] = _dedupe(bootstrap_blockers)
         bootstrap_payload["pair_index_semantics"] = bootstrap_pair_index_semantics
         bootstrap_payload["max_pairs"] = int(scorer_domain_bootstrap_max_pairs)
         bootstrap_payload["exact_segnet_target_argmax"] = (
@@ -19061,6 +19233,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 *[
                     str(value)
                     for value in bootstrap_payload.get(
+                        "archive_charged_decoder_tensors",
+                        [],
+                    )
+                ],
+                *[
+                    str(value)
+                    for value in target_region_birth_payload.get(
                         "archive_charged_decoder_tensors",
                         [],
                     )

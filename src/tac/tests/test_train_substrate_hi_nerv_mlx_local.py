@@ -2807,6 +2807,57 @@ def test_hinerv_short_scorer_smoke_readiness_requires_live_telemetry() -> None:
     ]
 
 
+def test_hinerv_short_scorer_smoke_readiness_blocks_unconsumed_hard_birth_request() -> None:
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={},
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        output_head_target_bias_init_metadata={
+            "schema": "hi_nerv_output_head_target_bias_init.v1",
+            "enabled": True,
+            "contrast_init": {
+                "schema": "hi_nerv_output_head_target_contrast_init.v1",
+                "enabled": True,
+            },
+            "scorer_domain_bootstrap": {
+                "schema": "hi_nerv_scorer_domain_bootstrap.v1",
+                "enabled": True,
+                "accepted_step_count": 1,
+                "segnet_hard_birth_bootstrap_requested_weight": 3.0,
+                "segnet_hard_birth_bootstrap_effective_weight": 0.0,
+                "segnet_hard_birth_bootstrap_request_consumed": False,
+                "segnet_hard_birth_bootstrap": {
+                    "schema": (
+                        "hi_nerv_scorer_domain_bootstrap_live_segnet_hard_birth.v1"
+                    ),
+                    "enabled": False,
+                    "requested_weight": 3.0,
+                    "effective_weight": 0.0,
+                    "request_consumed": False,
+                },
+                "metrics_after": {
+                    "segnet_hard_birth_bootstrap_candidate_target_class_min_ratio": 1.0,
+                    "segnet_hard_birth_bootstrap_score_weighted_total_unsolved_argmax_mass": 0.0,
+                },
+            },
+        },
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    gate = report["scorer_domain_hard_birth_bootstrap_gate"]
+    assert gate["hard_birth_requested_weight"] == pytest.approx(3.0)
+    assert gate["hard_birth_effective_weight"] == pytest.approx(0.0)
+    assert gate["hard_birth_request_consumed"] is False
+    assert gate["hard_birth_requested_but_not_consumed"] is True
+    assert (
+        "hi_nerv_short_smoke_scorer_domain_hard_birth_requested_but_not_consumed"
+        in report["actionable_blockers"]
+    )
+
+
 def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> None:
     report = _build_hinerv_short_scorer_smoke_readiness_report(
         train_time_controls=_short_scorer_smoke_controls(),
