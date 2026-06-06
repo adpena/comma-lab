@@ -33,6 +33,7 @@ from tac.analysis.snerv_official_primitive_replay import (
 )
 from tac.analysis.snerv_official_tub_source_forward_replay import (
     STATE_VALUE_ARTIFACT_BLOCKER,
+    TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     build_snerv_official_tub_source_forward_replay_artifact,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
@@ -90,6 +91,17 @@ OFFICIAL_MFU_HFR_TUB_WEIGHT_MAPPING_BLOCKER = (
 )
 OFFICIAL_TRAINED_CHECKPOINT_MAPPING_BLOCKER = (
     "snerv_official_trained_checkpoint_state_dict_mapping_missing"
+)
+SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS: frozenset[str] = frozenset(
+    {
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "official_hfr_weight_tensor_mapping_not_loaded",
+        "full_official_hfr_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+        STATE_VALUE_ARTIFACT_BLOCKER,
+        TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
+    }
 )
 
 
@@ -448,7 +460,7 @@ def build_snerv_official_source_forward_harness_artifact(
         and receiver_ready
         and source_forward_mapping_ready
     )
-    source_forward_authority = bool(
+    source_forward_authority_candidate = bool(
         source_forward_replay_verified and state_dict_value_artifact_ready
     )
     if (
@@ -470,9 +482,7 @@ def build_snerv_official_source_forward_harness_artifact(
         "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
         "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
     } if source_forward_replay_verified else set()
-    closed_by_source_authority = {
-        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
-    } if source_forward_authority else set()
+    closed_by_source_authority: set[str] = set()
     closed_by_source_forward = closed_by_source_replay | closed_by_source_authority
     if source_forward_replay_verified:
         nested_closed_blockers = closed_by_trained_checkpoint | closed_by_source_forward
@@ -480,7 +490,7 @@ def build_snerv_official_source_forward_harness_artifact(
             **source_replay,
             "full_stack_source_forward_parity_proven": True,
             "source_forward_replay_verified": True,
-            "source_forward_replay_authority": source_forward_authority,
+            "source_forward_replay_authority": False,
             "blockers": [
                 blocker
                 for blocker in source_replay.get("blockers") or ()
@@ -491,7 +501,7 @@ def build_snerv_official_source_forward_harness_artifact(
             **receiver_frame_replay,
             "source_forward_replay_bound": True,
             "source_forward_replay_verified": True,
-            "source_forward_replay_authority": source_forward_authority,
+            "source_forward_replay_authority": False,
             "blockers": [
                 blocker
                 for blocker in receiver_frame_replay.get("blockers") or ()
@@ -524,6 +534,37 @@ def build_snerv_official_source_forward_harness_artifact(
         if str(blocker) not in closed_by_trained_checkpoint
         and str(blocker) not in closed_by_source_forward
     ]
+    source_forward_authority_residual_blockers = (
+        _source_forward_authority_residual_blockers(blockers)
+    )
+    source_forward_authority = bool(
+        source_forward_authority_candidate
+        and not source_forward_authority_residual_blockers
+    )
+    if source_forward_authority:
+        closed_by_source_authority = {
+            "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+        }
+        blockers = [
+            blocker
+            for blocker in blockers
+            if str(blocker) not in closed_by_source_authority
+        ]
+    if source_forward_replay_verified:
+        source_replay = {
+            **source_replay,
+            "source_forward_replay_authority": source_forward_authority,
+            "source_forward_authority_residual_blockers": (
+                source_forward_authority_residual_blockers
+            ),
+        }
+        receiver_frame_replay = {
+            **receiver_frame_replay,
+            "source_forward_replay_authority": source_forward_authority,
+            "source_forward_authority_residual_blockers": (
+                source_forward_authority_residual_blockers
+            ),
+        }
 
     return {
         "schema": SCHEMA,
@@ -642,6 +683,9 @@ def build_snerv_official_source_forward_harness_artifact(
         "source_forward_authority_closed_blockers": _ordered_unique(
             sorted(closed_by_source_authority)
         ),
+        "source_forward_authority_residual_blockers": (
+            source_forward_authority_residual_blockers
+        ),
         "official_mfu_hfr_tub_primitive_replay_binding": primitive_binding,
         "receiver_runtime_decode": receiver_runtime,
         "blockers": blockers,
@@ -666,6 +710,20 @@ def _component_rows_with_closed_blockers_applied(
             ]
         out.append(item)
     return out
+
+
+def _source_forward_authority_residual_blockers(
+    blockers: Iterable[Any],
+) -> list[str]:
+    """Return blockers that keep verified replay from becoming source authority."""
+
+    return _ordered_unique(
+        [
+            str(blocker)
+            for blocker in blockers
+            if str(blocker) in SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS
+        ]
+    )
 
 
 def _checkpoint_export_binding_evidence(

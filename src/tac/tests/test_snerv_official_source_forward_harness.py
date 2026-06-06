@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import tac.analysis.snerv_official_source_forward_harness as harness_mod
 from tac.analysis.snerv_official_source_forward_harness import (
     DEFAULT_OFFICIAL_SNERV_REPO,
     OFFICIAL_SNERV_SHA,
@@ -361,6 +362,25 @@ def test_snerv_official_source_forward_harness_rejects_in_memory_only_tub_author
         "source_forward_replay_authority"
     ] is False
     assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
+
+
+def test_snerv_official_source_authority_residual_blockers_reject_stale_true_authority() -> None:
+    blockers = [
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+        TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
+        "non_authority_blocker_kept_elsewhere",
+    ]
+
+    residual = harness_mod._source_forward_authority_residual_blockers(blockers)
+
+    assert residual == [
+        "official_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+        TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
+    ]
 
 
 def test_snerv_official_source_forward_harness_consumes_receiver_bound_export_without_source_authority() -> None:
