@@ -3337,6 +3337,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         max_accepted_pose_delta_l2 = 0.0
         best_stats = dict(before_stats)
         current_lr = lr
+        consecutive_rejected_steps = 0
         max_quantum_growth_attempts = 20
         max_backtracking_attempts = 8
         min_lr = lr * (0.5**max_backtracking_attempts)
@@ -3375,16 +3376,6 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     step_base_uint8,
                     candidate["uint8"],
                 )
-                import os as _dbg_os  # TEMP DEBUG
-
-                if _dbg_os.environ.get("TRB_DEBUG"):  # TEMP DEBUG
-                    print(  # TEMP DEBUG
-                        f"TRB lr={attempt_lr:.4g} applied={len(applied_names)} "
-                        f"changed={changed_in_region} "
-                        f"mean={candidate['stats']['margin_mean']:.6f} "
-                        f"floatlinf={candidate['float_rgb_delta_linf']:.3e} "
-                        f"groups={sorted(grad_norms)}"
-                    )
                 if changed_in_region <= 0:
                     _restore_parameters(base_snapshot)
                     if quantum_growth_attempts < max_quantum_growth_attempts:
@@ -3452,10 +3443,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 or "hinerv_target_region_birth_loss_not_finite" in blockers
             ):
                 break
-            if not step_accepted and subquantum_rejected_step_count + (
-                pose_guard_rejected_step_count + no_progress_rejected_step_count
-            ) >= 3:
-                break
+            if step_accepted:
+                consecutive_rejected_steps = 0
+            else:
+                consecutive_rejected_steps += 1
+                # One chaotic step must not end a long fit; three fully
+                # rejected steps in a row means the servo is genuinely stuck.
+                if consecutive_rejected_steps >= 3:
+                    break
 
         if accepted_step_count == 0:
             _restore_parameters(initial_snapshot)
