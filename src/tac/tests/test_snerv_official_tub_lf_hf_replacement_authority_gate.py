@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 
 from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
+    FULL_REPLAY_BLOCKER,
+    NUMERICAL_SOURCE_FORWARD_PROOF_BLOCKER,
     SCHEMA,
+    SOURCE_AUTHORITY_BLOCKER,
     build_snerv_official_tub_lf_hf_replacement_authority_gate,
 )
 from tools.build_snerv_official_tub_lf_hf_replacement_authority_gate import (
@@ -95,6 +98,53 @@ def test_authority_gate_can_open_without_score_or_dispatch_authority(
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["local_mlx_long_training_allowed"] is False
+
+
+def test_authority_gate_rejects_metadata_only_source_forward_authority(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+    )
+    source["source_forward_replay_proof"] = {
+        "section_names": ["MFU", "HFR", "TUB"],
+        "shapes_match": True,
+    }
+    source["source_forward_replay_authority"] = True
+    source["source_forward_replay_closed_blockers"] = [FULL_REPLAY_BLOCKER]
+    source["source_forward_authority_closed_blockers"] = [SOURCE_AUTHORITY_BLOCKER]
+
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        source_forward_artifacts=[source],
+        checkpoint_export_reports=[_checkpoint_export_report(trained_mapping=True)],
+        output_root=tmp_path / "gate",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["official_tub_lf_hf_decoder_replacement_ready"] is False
+    assert report["full_tub_source_forward_replay_ready"] is False
+    source_evidence = report["source_forward_evidence"]
+    assert source_evidence["source_forward_replay_numerical_proof_complete"] is False
+    assert (
+        source_evidence["source_forward_replay_proof_status"][
+            "source_forward_replay_proof_status"
+        ]
+        == "metadata_only_or_incomplete_source_forward_proof"
+    )
+    blockers = set(report["queue_blockers"])
+    assert NUMERICAL_SOURCE_FORWARD_PROOF_BLOCKER in blockers
+    assert SOURCE_AUTHORITY_BLOCKER in blockers
+    assert FULL_REPLAY_BLOCKER in blockers
+    assert NUMERICAL_SOURCE_FORWARD_PROOF_BLOCKER not in report[
+        "closed_campaign_blockers"
+    ]
+    assert SOURCE_AUTHORITY_BLOCKER not in report["closed_campaign_blockers"]
+    assert FULL_REPLAY_BLOCKER not in report["closed_campaign_blockers"]
 
 
 def test_authority_gate_keeps_residual_source_forward_blockers_sticky(
@@ -424,7 +474,7 @@ def _source_forward_artifact(
     blockers = []
     if not full_tub_parity:
         blockers.append("snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing")
-    return {
+    artifact: dict[str, object] = {
         "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
         "generated_utc": "20260605T000000Z",
         "_source_path": "/ssd/source_forward.json",
@@ -484,6 +534,25 @@ def _source_forward_artifact(
         "blockers": blockers,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+    if source_authority and full_tub_parity:
+        artifact["source_forward_replay_proof"] = _complete_source_forward_proof()
+    return artifact
+
+
+def _complete_source_forward_proof() -> dict[str, object]:
+    return {
+        "official_torch_frame_hash": "1" * 64,
+        "mlx_frame_hash": "2" * 64,
+        "numpy_receiver_frame_hash": "3" * 64,
+        "parseback_frame_hash": "4" * 64,
+        "tub_output_2_hash": "5" * 64,
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu.weight": "6" * 64},
+        "hfr_tensor_hashes": {"hfr.weight": "7" * 64},
     }
 
 
