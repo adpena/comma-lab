@@ -590,6 +590,14 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         *(nested_tub.get("blockers") or ()),
         *(nested_tub.get("preserved_blockers") or ()),
     ]
+    closed_residual_blockers = _source_residual_blockers_closed_by_mapping_manifest(
+        source
+    )
+    raw_source_blocker_items = [
+        blocker
+        for blocker in raw_source_blocker_items
+        if str(blocker) not in set(closed_residual_blockers)
+    ]
     raw_source_blockers = {str(blocker) for blocker in raw_source_blocker_items}
     source_forward_authority_residual_blockers = (
         _source_forward_authority_residual_blockers(raw_source_blocker_items)
@@ -627,6 +635,7 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
     closed.extend(nested_tub_closed)
     if source_authority:
         closed.extend([SOURCE_AUTHORITY_BLOCKER, FULL_REPLAY_BLOCKER])
+    closed.extend(closed_residual_blockers)
     receiver_blockers = []
     if not receiver_ready:
         if not receiver_runtime_decode or not frame_replay:
@@ -673,7 +682,11 @@ def _source_state(source: Mapping[str, Any] | None) -> dict[str, Any]:
         "closed_campaign_blockers": _dedupe(closed),
         "blockers": _dedupe(
             [
-                *(source.get("blockers") or ()),
+                *[
+                    blocker
+                    for blocker in (source.get("blockers") or ())
+                    if str(blocker) not in set(closed_residual_blockers)
+                ],
                 *receiver_blockers,
                 *source_blockers,
             ]
@@ -730,25 +743,35 @@ def _checkpoint_state(
     state_slice = (
         binding.get("official_trained_checkpoint_state_dict_slice_present") is True
         or mapping.get("official_trained_checkpoint_loaded") is True
+        or source_mapping.get("official_trained_checkpoint_loaded") is True
     )
     combined_mfu_hfr_mapping = (
         binding.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven") is True
         or mapping.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven")
         is True
+        or source_mapping.get(
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
     )
     hfr_mapping = (
         binding.get("official_hfr_trained_checkpoint_weight_mapping_proven") is True
         or mapping.get("official_hfr_trained_checkpoint_weight_mapping_proven") is True
+        or source_mapping.get("official_hfr_trained_checkpoint_weight_mapping_proven")
+        is True
         or combined_mfu_hfr_mapping
     )
     mfu_mapping = (
         binding.get("official_mfu_trained_checkpoint_weight_mapping_proven") is True
         or mapping.get("official_mfu_trained_checkpoint_weight_mapping_proven") is True
+        or source_mapping.get("official_mfu_trained_checkpoint_weight_mapping_proven")
+        is True
         or combined_mfu_hfr_mapping
     )
     mfu_activation_bound = (
         binding.get("official_mfu_receiver_activation_payload_bound") is True
         or mapping.get("official_mfu_receiver_activation_payload_bound") is True
+        or source_mapping.get("official_mfu_receiver_activation_payload_bound") is True
     )
     mfu_hfr_mapping = (
         combined_mfu_hfr_mapping
@@ -757,14 +780,20 @@ def _checkpoint_state(
     tub_mapping = (
         binding.get("official_tub_temporal_encoder_weight_mapping_proven") is True
         or mapping.get("official_tub_temporal_encoder_weight_mapping_proven") is True
+        or source_mapping.get("official_tub_temporal_encoder_weight_mapping_proven")
+        is True
     )
     tub_output2_mapping = (
         binding.get("official_tub_output2_decoder_weight_mapping_proven") is True
         or mapping.get("official_tub_output2_decoder_weight_mapping_proven") is True
+        or source_mapping.get("official_tub_output2_decoder_weight_mapping_proven")
+        is True
     )
     mapping_verified = bool(
         binding.get("official_trained_checkpoint_state_dict_mapping_verified") is True
         or mapping.get("official_trained_checkpoint_state_dict_mapping_verified")
+        is True
+        or source_mapping.get("official_trained_checkpoint_state_dict_mapping_verified")
         is True
     )
     trained_ready = bool(state_slice and mfu_hfr_mapping and mapping_verified)
@@ -1043,6 +1072,32 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return out if out >= 0 else None
+
+
+def _source_residual_blockers_closed_by_mapping_manifest(
+    source: Mapping[str, Any],
+) -> list[str]:
+    """Close stale fixture-era mapping blockers only from source-carried proof."""
+
+    manifest = source.get("official_trained_checkpoint_mapping_manifest")
+    manifest = manifest if isinstance(manifest, Mapping) else {}
+    loaded = manifest.get("official_trained_checkpoint_loaded") is True
+    mapping_verified = (
+        manifest.get("official_trained_checkpoint_state_dict_mapping_verified")
+        is True
+    )
+    mfu_hfr = (
+        manifest.get("official_mfu_hfr_trained_checkpoint_weight_mapping_proven")
+        is True
+    )
+    mfu = manifest.get("official_mfu_trained_checkpoint_weight_mapping_proven") is True
+    hfr = manifest.get("official_hfr_trained_checkpoint_weight_mapping_proven") is True
+    if not (loaded and mapping_verified and (mfu_hfr or (mfu and hfr))):
+        return []
+    return [
+        "official_weight_tensor_mapping_not_loaded",
+        "official_hfr_weight_tensor_mapping_not_loaded",
+    ]
 
 
 def _source_forward_authority_residual_blockers(values: Sequence[Any]) -> list[str]:

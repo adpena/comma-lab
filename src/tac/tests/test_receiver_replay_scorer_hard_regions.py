@@ -268,3 +268,23 @@ def test_hard_region_recon_weight_artifact_has_custody(tmp_path: Path) -> None:
     assert manifest["consumption"]["auto_discovery_eligible"] is False
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hard_region_recon_weight_artifact_rejects_file_output_dir(tmp_path: Path) -> None:
+    reference = np.zeros((1, 2, 2), dtype=np.int16)
+    candidate = np.array([[[0, 1], [0, 0]]], dtype=np.int16)
+    report = build_receiver_replay_scorer_hard_region_report(
+        candidate_argmax=candidate,
+        reference_argmax=reference,
+        top_components=1,
+    )
+    output_file = tmp_path / "not_a_dir"
+    output_file.write_text("occupied", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="not a directory"):
+        write_hard_region_recon_pixel_weight_artifact(
+            report=report,
+            output_dir=output_file,
+            output_height=4,
+            output_width=4,
+        )

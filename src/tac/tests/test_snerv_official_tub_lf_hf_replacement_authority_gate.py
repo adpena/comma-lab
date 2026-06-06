@@ -159,6 +159,72 @@ def test_authority_gate_keeps_residual_source_forward_blockers_sticky(
     )
 
 
+def test_authority_gate_closes_stale_source_mapping_residuals_from_source_manifest(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+    )
+    residuals = [
+        "official_weight_tensor_mapping_not_loaded",
+        "official_hfr_weight_tensor_mapping_not_loaded",
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+    source["blockers"] = list(residuals)
+    source["receiver_payload_frame_replay"][
+        "source_forward_authority_residual_blockers"
+    ] = list(residuals)
+    source["official_trained_checkpoint_mapping_manifest"] = {
+        "schema": "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1",
+        "official_trained_checkpoint_loaded": True,
+        "official_trained_checkpoint_state_dict_mapping_verified": True,
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": True,
+        "official_mfu_trained_checkpoint_weight_mapping_proven": True,
+        "official_hfr_trained_checkpoint_weight_mapping_proven": True,
+        "official_tub_temporal_encoder_weight_mapping_proven": True,
+        "official_tub_output2_decoder_weight_mapping_proven": True,
+        "blockers": [],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        source_forward_artifacts=[source],
+        checkpoint_export_reports=[_checkpoint_export_report(trained_mapping=False)],
+        output_root=tmp_path / "gate",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["official_tub_lf_hf_decoder_replacement_ready"] is False
+    assert report["trained_checkpoint_state_dict_mapping_ready"] is True
+    assert report["tub_temporal_output2_weight_mapping_ready"] is True
+    assert report["source_forward_authority_residual_blockers"] == [
+        "full_official_mfu_forward_artifact_not_emitted",
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    ]
+    blockers = set(report["queue_blockers"])
+    assert "official_weight_tensor_mapping_not_loaded" not in blockers
+    assert "official_hfr_weight_tensor_mapping_not_loaded" not in blockers
+    assert "snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete" not in blockers
+    assert "snerv_official_trained_checkpoint_mfu_weight_mapping_incomplete" not in blockers
+    assert "full_official_mfu_forward_artifact_not_emitted" in blockers
+    assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in blockers
+    assert "official_weight_tensor_mapping_not_loaded" in report[
+        "closed_campaign_blockers"
+    ]
+    assert "official_hfr_weight_tensor_mapping_not_loaded" in report[
+        "closed_campaign_blockers"
+    ]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_authority_gate_preserves_source_and_checkpoint_blockers_for_partial_mapping(
     tmp_path: Path,
 ) -> None:
