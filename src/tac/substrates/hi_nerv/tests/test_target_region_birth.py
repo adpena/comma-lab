@@ -468,6 +468,12 @@ def test_region_margin_stats_reports_raw_frontier_margin() -> None:
     assert stats["region_hard_ratio"] == pytest.approx(0.5)
     assert stats["margin_min"] == pytest.approx(-0.5)
     assert stats["margin_p50"] == pytest.approx((0.7 - 0.5) / 2)
+    assert stats["margin_convention"] == "runner_up_minus_target"
+    assert stats["target_margin_convention"] == "target_minus_runner_up"
+    assert stats["target_margin_min"] == pytest.approx(-0.7)
+    assert stats["target_margin_p10"] == pytest.approx(-0.58)
+    assert stats["target_margin_p50"] == pytest.approx((0.5 - 0.7) / 2)
+    assert stats["target_margin_mean"] == pytest.approx((0.5 - 0.7) / 2)
 
 
 def test_region_margin_stats_rejects_empty_mask() -> None:

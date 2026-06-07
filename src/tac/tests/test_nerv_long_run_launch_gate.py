@@ -1321,6 +1321,10 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
         "hinerv_target_region_action_parseback_survival_missing"
         not in verdict["blocking_evidence"]
     )
+    assert (
+        "target_region_action_parseback_scorer_effect_unmeasured"
+        in verdict["blocking_evidence"]
+    )
     assert "hinerv_target_region_action_inflate_survival_missing" in verdict["blocking_evidence"]
     assert verdict["approved"] is False
 

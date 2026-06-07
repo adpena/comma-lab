@@ -543,6 +543,16 @@ def test_trace_nerv_crux_reads_sibling_birth_survival_retention(
                 "surface": "fakequant_mlx",
                 "survived": True,
                 "wrong_to_target_count": 12_183,
+                "fakequant_target_margin_certificate": {
+                    "schema": "tac.target_margin_certificate.v1",
+                    "action_id": action_id,
+                    "surface": "fakequant_mlx",
+                    "target_margin_floor": 0.0,
+                    "target_margin_floor_satisfied": True,
+                    "target_margin_min": -0.02,
+                    "target_margin_p10": 0.08,
+                    "target_margin_mean": 0.57,
+                },
             }
         ),
         encoding="utf-8",
@@ -555,6 +565,16 @@ def test_trace_nerv_crux_reads_sibling_birth_survival_retention(
                 "surface": "parseback_mlx",
                 "survived": True,
                 "wrong_to_target_count": 2,
+                "parseback_target_margin_certificate": {
+                    "schema": "tac.target_margin_certificate.v1",
+                    "action_id": action_id,
+                    "surface": "parseback_mlx",
+                    "target_margin_floor": 0.0,
+                    "target_margin_floor_satisfied": False,
+                    "target_margin_min": -2.41,
+                    "target_margin_p10": -1.33,
+                    "target_margin_mean": -0.22,
+                },
             }
         ),
         encoding="utf-8",
@@ -587,6 +607,11 @@ def test_trace_nerv_crux_reads_sibling_birth_survival_retention(
     assert metrics["parseback_wrong_to_target_retention_ratio"]["value"] == pytest.approx(
         2 / 13_488
     )
+    assert metrics["fakequant_target_margin_p10"]["value"] == pytest.approx(0.08)
+    assert metrics["fakequant_target_margin_floor_satisfied"]["value"] == pytest.approx(1.0)
+    assert metrics["parseback_target_margin_p10"]["value"] == pytest.approx(-1.33)
+    assert metrics["parseback_target_margin_floor_satisfied"]["value"] == pytest.approx(0.0)
     assert metrics["parseback_scorer_effect_survived"]["value"] == pytest.approx(0.0)
     blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "hinerv_birth_parseback_margin_floor_failed" in blockers
     assert "hinerv_birth_parseback_scorer_effect_collapse" in blockers

@@ -269,6 +269,20 @@ def _wrong_to_target_count(row: Mapping[str, Any] | None) -> int | None:
     return None
 
 
+def _margin_certificate(row: Mapping[str, Any] | None, *, surface: str) -> Mapping[str, Any] | None:
+    if row is None:
+        return None
+    for key in (
+        f"{surface}_target_margin_certificate",
+        "target_margin_certificate",
+        "margin_certificate",
+    ):
+        value = row.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return None
+
+
 def _max_live_wrong_to_target_from_action_effects(
     rows: Sequence[Mapping[str, Any]],
     *,
@@ -371,6 +385,75 @@ def _append_hinerv_birth_survival_artifact_rows(
         )
         return count, ratio
 
+    def _append_margin_certificate(
+        *,
+        surface: str,
+        path: Path,
+        row: Mapping[str, Any] | None,
+    ) -> None:
+        if row is None:
+            return
+        cert = _margin_certificate(row, surface=surface)
+        source_path = path.as_posix()
+        source_sha256 = sha256_file(path)
+        _append_metric_row(
+            rows,
+            source_path=source_path,
+            source_sha256=source_sha256,
+            stage="receiver_surface_survival",
+            axis=surface,
+            metric=f"{surface}_target_margin_certificate_present",
+            value=1.0 if cert is not None else 0.0,
+        )
+        if cert is None:
+            return
+        margin_p10 = _finite_or_none(cert.get("target_margin_p10"))
+        margin_min = _finite_or_none(cert.get("target_margin_min"))
+        margin_mean = _finite_or_none(cert.get("target_margin_mean"))
+        floor = _finite_or_none(cert.get("target_margin_floor"))
+        if floor is None:
+            floor = 0.0
+        floor_satisfied = cert.get("target_margin_floor_satisfied")
+        if floor_satisfied is None and margin_p10 is not None:
+            floor_satisfied = bool(margin_p10 >= floor)
+        blocker = (
+            "hinerv_birth_parseback_margin_floor_failed"
+            if surface == "parseback"
+            and margin_p10 is not None
+            and margin_p10 < floor
+            else None
+        )
+        for metric_name, value in (
+            (f"{surface}_target_margin_min", margin_min),
+            (f"{surface}_target_margin_p10", margin_p10),
+            (f"{surface}_target_margin_mean", margin_mean),
+            (f"{surface}_target_margin_floor", floor),
+        ):
+            _append_metric_row(
+                rows,
+                source_path=source_path,
+                source_sha256=source_sha256,
+                stage="receiver_surface_survival",
+                axis=surface,
+                metric=metric_name,
+                value=value,
+                blocker=blocker if metric_name.endswith("_target_margin_p10") else None,
+            )
+        _append_metric_row(
+            rows,
+            source_path=source_path,
+            source_sha256=source_sha256,
+            stage="receiver_surface_survival",
+            axis=surface,
+            metric=f"{surface}_target_margin_floor_satisfied",
+            value=(
+                None
+                if floor_satisfied is None
+                else (1.0 if bool(floor_satisfied) else 0.0)
+            ),
+            blocker=blocker,
+        )
+
     if live_count is not None:
         _append_metric_row(
             rows,
@@ -387,12 +470,15 @@ def _append_hinerv_birth_survival_artifact_rows(
         )
 
     _append_count(surface="fakequant", path=fakequant_path, row=fakequant)
+    _append_margin_certificate(surface="fakequant", path=fakequant_path, row=fakequant)
     parseback_count, parseback_ratio = _append_count(
         surface="parseback",
         path=parseback_path,
         row=parseback,
     )
+    _append_margin_certificate(surface="parseback", path=parseback_path, row=parseback)
     _append_count(surface="inflate", path=inflated_path, row=inflated)
+    _append_margin_certificate(surface="inflate", path=inflated_path, row=inflated)
 
     if parseback is not None:
         floor = _finite_or_none(parseback.get("scorer_effect_retention_floor"))

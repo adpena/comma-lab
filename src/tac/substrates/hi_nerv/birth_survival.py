@@ -62,7 +62,9 @@ from tac.substrates.hi_nerv.target_region_birth import region_margin_stats
 BIRTH_SURVIVAL_SCHEMA = "hi_nerv_target_region_birth_survival.v1"
 BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 BIRTH_SURVIVAL_BLOCKED_SCHEMA = "hi_nerv_target_region_birth_survival_blocked.v1"
+TARGET_MARGIN_CERTIFICATE_SCHEMA = "tac.target_margin_certificate.v1"
 MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL = 0.5
+TARGET_MARGIN_SAFETY_FLOOR = 0.0
 
 # Surfaces this producer can re-measure faithfully without an archive/inflate
 # runtime.  ``fakequant_mlx`` is the only L4 surface a scoped MLX producer can
@@ -348,6 +350,135 @@ def _region_debt_units(region_unsolved: int, total_scored_pixels: int) -> float:
     if total_scored_pixels <= 0:
         return 0.0
     return float(100.0 * int(region_unsolved) / int(total_scored_pixels))
+
+
+def _margin_float_or_none(payload: Mapping[str, Any], key: str) -> float | None:
+    try:
+        value = float(payload.get(key))
+    except (TypeError, ValueError):
+        return None
+    return value if np.isfinite(value) else None
+
+
+def _margin_int_or_default(payload: Mapping[str, Any], key: str, default: int) -> int:
+    try:
+        return int(payload.get(key, default))
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _target_margin_value(
+    margin_stats: Mapping[str, Any],
+    target_key: str,
+    legacy_runner_up_key: str,
+) -> float | None:
+    direct = _margin_float_or_none(margin_stats, target_key)
+    if direct is not None:
+        return direct
+    # ``runner_up - target`` with the same percentile can be sign-flipped for
+    # mean/p50 only.  For min/max percentiles the exact paired statistic is not
+    # recoverable unless the producer emitted explicit target-positive fields.
+    if target_key.endswith("_mean") or target_key.endswith("_p50"):
+        legacy = _margin_float_or_none(margin_stats, legacy_runner_up_key)
+        return None if legacy is None else -legacy
+    return None
+
+
+def _target_margin_certificate(
+    *,
+    action_id: str,
+    surface: str,
+    birth_class: int,
+    region_pixels: int,
+    margin_stats: Mapping[str, Any],
+    worst_region: Mapping[str, Any],
+    live_wrong_to_target: int | None,
+    surface_wrong_to_target: int,
+    retention_ratio: float | None,
+    retention_floor: float,
+    retention_required: bool,
+    scorer_effect_survived: bool,
+    first_failed_surface: str | None,
+) -> dict[str, Any]:
+    """Return the target-positive wall-crossing certificate for this surface."""
+
+    target_margin_min = _target_margin_value(
+        margin_stats,
+        "target_margin_min",
+        "margin_max",
+    )
+    target_margin_p10 = _target_margin_value(
+        margin_stats,
+        "target_margin_p10",
+        "margin_p90",
+    )
+    target_margin_p50 = _target_margin_value(
+        margin_stats,
+        "target_margin_p50",
+        "margin_p50",
+    )
+    target_margin_mean = _target_margin_value(
+        margin_stats,
+        "target_margin_mean",
+        "margin_mean",
+    )
+    floor_satisfied = (
+        None
+        if target_margin_p10 is None
+        else bool(target_margin_p10 >= TARGET_MARGIN_SAFETY_FLOOR)
+    )
+    return {
+        "schema": TARGET_MARGIN_CERTIFICATE_SCHEMA,
+        "action_id": str(action_id),
+        "surface": str(surface),
+        "family": "hinerv",
+        "pair_id": worst_region.get("pair_index"),
+        "frame_index": 1,
+        "birth_class_index": int(birth_class),
+        "target_class": int(birth_class),
+        "support_pixels": int(region_pixels),
+        "region_pixel_count": int(region_pixels),
+        "worst_region_key": [
+            _margin_int_or_default(worst_region, "batch_index", -1),
+            _margin_int_or_default(worst_region, "class_index", int(birth_class)),
+            _margin_int_or_default(worst_region, "region_label", -1),
+        ],
+        "margin_convention": "target_minus_runner_up",
+        "runner_up_margin_convention": "runner_up_minus_target",
+        "target_margin_floor": float(TARGET_MARGIN_SAFETY_FLOOR),
+        "target_margin_floor_satisfied": floor_satisfied,
+        "target_margin_min": target_margin_min,
+        "target_margin_p10": target_margin_p10,
+        "target_margin_p50": target_margin_p50,
+        "target_margin_mean": target_margin_mean,
+        "runner_up_minus_target_margin_min": _margin_float_or_none(
+            margin_stats,
+            "margin_min",
+        ),
+        "runner_up_minus_target_margin_p10": _margin_float_or_none(
+            margin_stats,
+            "margin_p10",
+        ),
+        "runner_up_minus_target_margin_p50": _margin_float_or_none(
+            margin_stats,
+            "margin_p50",
+        ),
+        "runner_up_minus_target_margin_mean": _margin_float_or_none(
+            margin_stats,
+            "margin_mean",
+        ),
+        "live_wrong_to_target_count": live_wrong_to_target,
+        "wrong_to_target_count": int(surface_wrong_to_target),
+        "surface_wrong_to_target_count": int(surface_wrong_to_target),
+        "wrong_to_target_retention_ratio": retention_ratio,
+        "scorer_effect_retention_ratio": retention_ratio,
+        "scorer_effect_retention_floor": float(retention_floor),
+        "scorer_effect_retention_required": bool(retention_required),
+        "scorer_effect_survived": bool(scorer_effect_survived),
+        "first_failed_surface": first_failed_surface,
+        "human_visual_fidelity_objective": False,
+        "authority": _NON_AUTHORITY_MARKER,
+    }
 
 
 def _read_mapping_report(report: Mapping[str, Any] | str | Path) -> dict[str, Any]:
@@ -1463,24 +1594,70 @@ def _survival_row(
     )
     scorer_effect_survived = bool(survived)
     first_failed_surface = None
+    target_margin_p10 = _target_margin_value(
+        margin_stats,
+        "target_margin_p10",
+        "margin_p90",
+    )
+    target_margin_floor_satisfied = (
+        None
+        if target_margin_p10 is None
+        else bool(target_margin_p10 >= TARGET_MARGIN_SAFETY_FLOOR)
+    )
     if retention_required:
         if live_wrong_to_target is None or live_wrong_to_target <= 0:
             scorer_effect_survived = False
             blockers.append("birth_survival_live_wrong_to_target_missing_for_retention")
             first_failed_surface = f"{surface_name}_live_effect_reference_missing"
-        elif retention_ratio is None or retention_ratio < retention_floor:
+        if target_margin_floor_satisfied is None:
+            scorer_effect_survived = False
+            blockers.append(
+                "birth_survival_target_margin_certificate_missing"
+            )
+            first_failed_surface = first_failed_surface or f"{surface_name}_target_margin_certificate_missing"
+        elif not target_margin_floor_satisfied:
+            scorer_effect_survived = False
+            blockers.append(
+                "hinerv_birth_parseback_margin_floor_failed"
+                if surface_name == "parseback_mlx"
+                else f"hinerv_birth_{surface_name}_margin_floor_failed"
+            )
+            first_failed_surface = (
+                first_failed_surface
+                or (
+                    "parseback_margin_floor"
+                    if surface_name == "parseback_mlx"
+                    else f"{surface_name}_margin_floor"
+                )
+            )
+        if retention_ratio is None or retention_ratio < retention_floor:
             scorer_effect_survived = False
             blockers.append(
                 "hinerv_birth_parseback_scorer_effect_collapse"
                 if surface_name == "parseback_mlx"
                 else f"hinerv_birth_{surface_name}_scorer_effect_collapse"
             )
-            first_failed_surface = (
+            first_failed_surface = first_failed_surface or (
                 "parseback_scorer_effect_collapse"
                 if surface_name == "parseback_mlx"
                 else f"{surface_name}_scorer_effect_collapse"
             )
     survived = bool(survived and scorer_effect_survived)
+    margin_certificate = _target_margin_certificate(
+        action_id=action_id,
+        surface=surface_name,
+        birth_class=birth_class,
+        region_pixels=region_pixels,
+        margin_stats=margin_stats,
+        worst_region=worst_region,
+        live_wrong_to_target=live_wrong_to_target,
+        surface_wrong_to_target=surface_wrong_to_target,
+        retention_ratio=retention_ratio,
+        retention_floor=retention_floor,
+        retention_required=retention_required,
+        scorer_effect_survived=scorer_effect_survived,
+        first_failed_surface=first_failed_surface,
+    )
     row: dict[str, Any] = {
         "schema": BIRTH_SURVIVAL_SCHEMA,
         "action_id": str(action_id),
@@ -1505,6 +1682,13 @@ def _survival_row(
         "region_score_debt_units": float(region_debt_units),
         "region_margin_mean": float(margin_stats["margin_mean"]),
         "region_margin_min": float(margin_stats["margin_min"]),
+        "target_margin_min": margin_certificate["target_margin_min"],
+        "target_margin_p10": margin_certificate["target_margin_p10"],
+        "target_margin_p50": margin_certificate["target_margin_p50"],
+        "target_margin_mean": margin_certificate["target_margin_mean"],
+        "target_margin_floor": float(TARGET_MARGIN_SAFETY_FLOOR),
+        "target_margin_floor_satisfied": target_margin_floor_satisfied,
+        "target_margin_certificate": margin_certificate,
         "region_hard_ratio": float(margin_stats["region_hard_ratio"]),
         "total_scored_pixels": int(total_scored_pixels),
         # Canonical receiver-surface aliases the gate's support breakdown reads.
@@ -1524,6 +1708,7 @@ def _survival_row(
     }
     if surface_name == "fakequant_mlx":
         row["fakequant_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["fakequant_target_margin_certificate"] = margin_certificate
         row["fakequant_wrong_to_target"] = surface_wrong_to_target
         row["fakequant_wrong_to_target_count"] = surface_wrong_to_target
         row["fakequant_wrong_to_target_retention_ratio"] = retention_ratio
@@ -1531,12 +1716,14 @@ def _survival_row(
         row["parseback_payload_survived"] = True
         row["parseback_action_program_survived"] = None
         row["parseback_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["parseback_target_margin_certificate"] = margin_certificate
         row["parseback_wrong_to_target"] = surface_wrong_to_target
         row["parseback_wrong_to_target_count"] = surface_wrong_to_target
         row["parseback_wrong_to_target_retention_ratio"] = retention_ratio
     elif surface_name == "inflated_torch_cpu":
         row["inflate_payload_survived"] = True
         row["inflate_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["inflate_target_margin_certificate"] = margin_certificate
         row["inflate_wrong_to_target"] = surface_wrong_to_target
         row["inflate_wrong_to_target_count"] = surface_wrong_to_target
         row["inflate_wrong_to_target_retention_ratio"] = retention_ratio

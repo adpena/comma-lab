@@ -385,13 +385,15 @@ def region_margin_stats(
     logits_bhwc: np.ndarray,
     region_mask_bhw: np.ndarray,
     class_index: int,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     """Return raw frontier-margin stats for one class within one region.
 
-    The margin convention is PR95's ``impostor - class`` (no floor, no relu):
-    negative at a pixel means the class wins the argmax there.  ``p50`` is the
-    median over region pixels — the quantity whose *delta* the crux-trace
-    consumer ingests as ``worst_region_margin_p50_delta``.
+    Legacy ``margin_*`` fields keep PR95's ``impostor - class`` convention
+    (negative at a pixel means the class wins the argmax there).  The explicit
+    ``target_margin_*`` fields use ``class - impostor`` so archive parse-back
+    survival can gate on positive target-wall safety without sign ambiguity.
+    ``margin_p50`` remains the quantity whose *delta* the crux-trace consumer
+    ingests as ``worst_region_margin_p50_delta``.
     """
 
     logits = np.asarray(logits_bhwc, dtype=np.float64)
@@ -413,14 +415,29 @@ def region_margin_stats(
     impostor[:, int(class_index)] = -np.inf
     impostor_logit = impostor.max(axis=1)
     margin = impostor_logit - class_logit
+    target_margin = class_logit - impostor_logit
     hard_won = int(np.count_nonzero(margin < 0.0))
     return {
         "region_pixel_count": float(region_pixels),
         "region_hard_ratio": float(hard_won / region_pixels),
         "region_hard_won_pixels": float(hard_won),
+        "margin_convention": "runner_up_minus_target",
         "margin_min": float(np.min(margin)),
+        "margin_p10": float(np.percentile(margin, 10.0)),
         "margin_p50": float(np.median(margin)),
+        "margin_p90": float(np.percentile(margin, 90.0)),
         "margin_mean": float(np.mean(margin)),
+        "target_margin_convention": "target_minus_runner_up",
+        "target_margin_min": float(np.min(target_margin)),
+        "target_margin_p10": float(np.percentile(target_margin, 10.0)),
+        "target_margin_p50": float(np.median(target_margin)),
+        "target_margin_p90": float(np.percentile(target_margin, 90.0)),
+        "target_margin_mean": float(np.mean(target_margin)),
+        "runner_up_minus_target_margin_min": float(np.min(margin)),
+        "runner_up_minus_target_margin_p10": float(np.percentile(margin, 10.0)),
+        "runner_up_minus_target_margin_p50": float(np.median(margin)),
+        "runner_up_minus_target_margin_p90": float(np.percentile(margin, 90.0)),
+        "runner_up_minus_target_margin_mean": float(np.mean(margin)),
     }
 
 

@@ -446,6 +446,9 @@ def _target_region_action_survival_status(
     partial_parseback_survived = False
     partial_inflate_survived = False
     same_row_parseback_inflate_survived = False
+    parseback_scorer_effect_survived = False
+    parseback_scorer_effect_measured = False
+    parseback_scorer_effect_path: str | None = None
     for path, payload in _iter_evidence_payloads(run_root):
         stack = [payload]
         while stack:
@@ -476,6 +479,16 @@ def _target_region_action_survival_status(
                     action_parseback_survived = bool(
                         parseback_payload_survived and parseback_program_survived is True
                     )
+                    scorer_effect = node.get("parseback_scorer_effect_survived")
+                    scorer_measured = (
+                        node.get("scorer_effect_survival_measured") is True
+                        or scorer_effect is not None
+                    )
+                    if scorer_measured:
+                        parseback_scorer_effect_measured = True
+                    if scorer_effect is True:
+                        parseback_scorer_effect_survived = True
+                        parseback_scorer_effect_path = path.as_posix()
                     same_row_survived = (
                         action_parseback_survived
                         and node.get("inflate_survived") is True
@@ -510,6 +523,9 @@ def _target_region_action_survival_status(
         "partial_parseback_path": partial_parseback_path,
         "partial_inflate_survived": partial_inflate_survived,
         "partial_inflate_path": partial_inflate_path,
+        "parseback_scorer_effect_survived": parseback_scorer_effect_survived,
+        "parseback_scorer_effect_measured": parseback_scorer_effect_measured,
+        "parseback_scorer_effect_path": parseback_scorer_effect_path,
     }
 
 
@@ -579,6 +595,12 @@ def _target_region_action_closure_blockers(
                 "target_region_action_parseback_survival_missing",
             }
         ]
+        if not survival_status.get("parseback_scorer_effect_survived"):
+            blockers.append(
+                "target_region_action_parseback_scorer_effect_survival_missing"
+                if survival_status.get("parseback_scorer_effect_measured")
+                else "target_region_action_parseback_scorer_effect_unmeasured"
+            )
     if survival_status.get("inflate_survived"):
         blockers = [
             blocker

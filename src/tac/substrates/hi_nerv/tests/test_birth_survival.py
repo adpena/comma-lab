@@ -99,6 +99,13 @@ def test_parseback_survival_distinguishes_payload_from_scorer_effect_collapse() 
         margin_stats={
             "margin_mean": -0.5,
             "margin_min": -2.0,
+            "margin_p10": -1.25,
+            "margin_p50": -0.5,
+            "margin_p90": 0.25,
+            "target_margin_min": -0.25,
+            "target_margin_p10": -0.125,
+            "target_margin_p50": 0.5,
+            "target_margin_mean": 0.5,
             "region_hard_ratio": 0.999,
         },
         fakequant_bits=None,
@@ -120,7 +127,16 @@ def test_parseback_survival_distinguishes_payload_from_scorer_effect_collapse() 
     assert row["live_wrong_to_target_count"] == 13_488
     assert row["parseback_wrong_to_target_count"] == 2
     assert row["wrong_to_target_retention_ratio"] == pytest.approx(2 / 13_488)
-    assert row["first_failed_surface"] == "parseback_scorer_effect_collapse"
+    assert row["first_failed_surface"] == "parseback_margin_floor"
+    assert row["target_margin_p10"] == pytest.approx(-0.125)
+    assert row["target_margin_floor_satisfied"] is False
+    cert = row["parseback_target_margin_certificate"]
+    assert cert["schema"] == "tac.target_margin_certificate.v1"
+    assert cert["margin_convention"] == "target_minus_runner_up"
+    assert cert["wrong_to_target_retention_ratio"] == pytest.approx(2 / 13_488)
+    assert cert["target_margin_p10"] == pytest.approx(-0.125)
+    assert cert["target_margin_floor_satisfied"] is False
+    assert "hinerv_birth_parseback_margin_floor_failed" in row["blockers"]
     assert "hinerv_birth_parseback_scorer_effect_collapse" in row["blockers"]
     assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
 
