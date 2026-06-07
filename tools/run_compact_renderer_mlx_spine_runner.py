@@ -19682,6 +19682,15 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         rows_written = 0
         four_arm_rows_written = 0
         source_receipt = dict(receipt or live_birth_payload)
+        if isinstance(receipt, Mapping) and isinstance(live_birth_payload, Mapping):
+            for key in (
+                "candidate_frontier_telemetry",
+                "target_region_wall_normal_lift",
+                "target_region_action_export_selection",
+                "target_region_action_parseback_survival",
+            ):
+                if key not in source_receipt and isinstance(live_birth_payload.get(key), Mapping):
+                    source_receipt[key] = live_birth_payload[key]
         source_receipt["fakequant_survived"] = fake_row.get("survived") is True
         try:
             action_effect = ActionEffect.from_hinerv_birth_receipt(

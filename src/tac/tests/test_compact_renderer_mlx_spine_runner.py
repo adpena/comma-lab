@@ -1690,6 +1690,7 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
 
     monkeypatch.setattr(survival_mod, "measure_birth_survival", fake_measure_birth_survival)
     monkeypatch.setattr(survival_mod, "measure_birth_hysteresis", fake_measure_birth_hysteresis)
+    support_sha = hashlib.sha256(b"runner wall-normal support").hexdigest()
 
     def arm_row(arm: str, *, action_kind: str, delta_seg: float, blockers: list[str] | None = None):
         old_d_seg = 0.50
@@ -1751,6 +1752,29 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
         live_birth_payload={
             "action_id": "d" * 64,
             "accepted": True,
+            "receipt": {
+                "schema": "hi_nerv_target_region_birth_receipt.v1",
+                "action_id": "d" * 64,
+                "surface": "live_mlx",
+                "worst_region": {"batch_index": 0, "class_index": 2, "region_label": 1},
+                "updated_parameter_names": ["head_rgb_1.weight"],
+                "argmax_transitions": {
+                    "wrong_to_target_count": 5,
+                    "target_to_wrong_count": 0,
+                    "wrong_to_wrong_count": 1,
+                    "net_target_support_delta": 5,
+                },
+            },
+            "target_region_wall_normal_lift": {
+                "schema": "tac.target_region_wall_normal_lift.v1",
+                "action_id": "d" * 64,
+                "sidecar_fallback": {
+                    "support_sha256": support_sha,
+                    "support_cardinality": 5,
+                    "support_encoding": "explicit_yx_u16_coordinates",
+                    "support_encoded_bytes": 20,
+                },
+            },
             "four_arm_ablation": {
                 "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
                 "action_id": "d" * 64,
@@ -1785,6 +1809,8 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
     ]
     assert [entry["schema"] for entry in effect_rows] == ["tac.action_effect.v1"] * 6
     assert effect_rows[0]["fakequant_survived"] is True
+    assert effect_rows[0]["support_sha256"] == support_sha
+    assert effect_rows[0]["support_cardinality"] == 5
     assert [entry["arm"] for entry in effect_rows[1:]] == ["A", "B", "C", "D", "E"]
     assert effect_rows[1]["class_ids"] == [2]
     assert effect_rows[1]["trained_groups"] == ["head_rgb_1"]
