@@ -1128,18 +1128,6 @@ def _apply_official_tub_output2_frame_residual(
     return np.asarray(mixed, dtype=np.float32)
 
 
-def _nearest_resize_2d(array: np.ndarray, target_h: int, target_w: int) -> np.ndarray:
-    src = np.asarray(array, dtype=np.float32)
-    if src.ndim != 2:
-        raise SnervArchiveError(f"official TUB output2 channel must be HW, got {src.shape}")
-    src_h, src_w = (int(v) for v in src.shape)
-    if src_h <= 0 or src_w <= 0 or target_h <= 0 or target_w <= 0:
-        raise SnervArchiveError("official TUB output2 resize requires positive shapes")
-    y_idx = np.minimum((np.arange(target_h) * src_h) // target_h, src_h - 1)
-    x_idx = np.minimum((np.arange(target_w) * src_w) // target_w, src_w - 1)
-    return np.asarray(src[y_idx[:, None], x_idx[None, :]], dtype=np.float32)
-
-
 def _build_official_receiver_self_consistency_reference(
     *,
     mfu: OfficialSnervMfu,
@@ -3504,7 +3492,8 @@ def _official_tub_output2_storage_plan(
         else ["snerv_tub_output2_receiver_frame_shape_mismatch"]
     )
     source_raw_bytes = int(temporal.size + raw.size) * np.dtype("<f8").itemsize
-    should_store = bool(store_for_receiver_proof)
+    store_requested = bool(store_for_receiver_proof)
+    should_store = bool(store_requested and frame_shape_matches)
     frame_decode_bound = bool(should_store and frame_shape_matches)
     stored = (
         {
@@ -3530,7 +3519,11 @@ def _official_tub_output2_storage_plan(
             "storage_policy": (
                 "store_for_receiver_proof"
                 if should_store
-                else "elide_until_receiver_frame_decode_bound"
+                else (
+                    "drop_mismatched_output2_use_mfu_hfr_tub_lf_hf_basis"
+                    if store_requested and not frame_shape_matches
+                    else "elide_until_receiver_frame_decode_bound"
+                )
             ),
             "receiver_executes_output2_fusion_from_payload": should_store,
             "receiver_frame_decode_consumes_output2": frame_decode_bound,
@@ -3538,22 +3531,24 @@ def _official_tub_output2_storage_plan(
                 "source_shape_matched"
                 if frame_decode_bound
                 else (
-                    "blocked_output2_fused_shape_mismatch"
-                    if should_store
+                    "dropped_output2_fused_shape_mismatch"
+                    if store_requested and not frame_shape_matches
                     else "elided_from_runtime_packet"
                 )
             ),
             "receiver_frame_shape": [int(v) for v in receiver_shape],
             "receiver_output2_frame_shape_match": frame_shape_matches,
-            "frame_decode_blockers": list(frame_decode_blockers if should_store else []),
+            "frame_decode_blockers": list(
+                frame_decode_blockers if store_requested else []
+            ),
             "train_time_loss_coupled": False,
             "scored_pixel_render_bound": frame_decode_bound,
             "score_lagrangian_admission": (
                 "receiver_frame_decode_bound_proof_only_false_authority"
                 if frame_decode_bound
                 else (
-                    "blocked_output2_fused_shape_mismatch_false_authority"
-                    if should_store
+                    "dropped_output2_fused_shape_mismatch_false_authority"
+                    if store_requested and not frame_shape_matches
                     else "elided_non_score_causal_payload"
                 )
             ),
@@ -3562,7 +3557,7 @@ def _official_tub_output2_storage_plan(
                 if frame_decode_bound
                 else (
                     "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
-                    if should_store
+                    if store_requested and not frame_shape_matches
                     else "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
                 )
             ),

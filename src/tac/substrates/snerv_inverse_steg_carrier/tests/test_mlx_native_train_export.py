@@ -5472,7 +5472,7 @@ def test_selected_official_packet_authority_threads_output2_frame_bound_replay(
     assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" in binding["blockers"]
 
 
-def test_selected_official_packet_authority_blocks_stored_output2_not_frame_bound() -> None:
+def test_selected_official_packet_authority_drops_mismatched_output2() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
     pairs = _tiny_pairs(pairs=1)
@@ -5559,19 +5559,18 @@ def test_selected_official_packet_authority_blocks_stored_output2_not_frame_boun
     replay = authority["official_receiver_payload_frame_replay"]
 
     assert authority["status"] == "official_payload_selected_not_frame_producing"
-    assert authority["official_tub_output2_payload_stored"] is True
-    assert authority["official_tub_output2_fusion_executed"] is True
+    assert authority["official_tub_output2_payload_stored"] is False
+    assert authority["official_tub_output2_fusion_executed"] is False
     assert authority["receiver_frame_decode_consumes_output2"] is False
     assert authority["official_tub_output2_receiver_frame_bound"] is False
     assert replay["official_tub_output2_receiver_output2_frame_shape_match"] is False
     assert "snerv_tub_output2_receiver_frame_shape_mismatch" in replay["blockers"]
-    assert (
-        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
-        in replay["blockers"]
+    assert "snerv_tub_output2_receiver_frame_shape_mismatch" in authority["blockers"]
+    assert "snerv_official_mfu_hfr_tub_selected_payload_not_frame_producing" in (
+        authority["blockers"]
     )
-    assert (
-        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
-        in authority["blockers"]
+    assert "snerv_official_tub_output2_receiver_frame_decode_not_bound" not in (
+        authority["blockers"]
     )
 
 
