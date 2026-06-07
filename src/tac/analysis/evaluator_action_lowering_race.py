@@ -106,6 +106,7 @@ def build_lowering_race_report(
         for row in race_inputs
     ]
     grouped = {target: [row for row in candidates if row["lowering_target"] == target] for target in LOWERING_TARGETS}
+    target_accounting = _target_accounting(grouped)
     statuses = {target: _target_status(target, rows) for target, rows in grouped.items()}
     viable = [row for row in candidates if row["viable"] is True]
     best = min(viable, key=lambda row: (float(row["delta_score_total"]), int(row["delta_bytes"] or 0)), default=None)
@@ -134,6 +135,8 @@ def build_lowering_race_report(
         "action_id": action_id,
         "verdict": verdict.as_dict(),
         "lowering_candidates": candidates,
+        "candidate_count": len(candidates),
+        "target_accounting": target_accounting,
         "support_identity": support_identity,
         "support_codec_summary": _support_codec_summary(support_codec_report),
         "promotion_eligible": False,
@@ -278,6 +281,24 @@ def _support_identity_status(
         ),
         "failure": failure,
         "blockers": blockers,
+    }
+
+
+def _target_accounting(
+    grouped_candidates: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> dict[str, Any]:
+    present = [
+        target
+        for target in LOWERING_TARGETS
+        if bool(grouped_candidates.get(target))
+    ]
+    missing = [target for target in LOWERING_TARGETS if target not in present]
+    return {
+        "schema": "tac.evaluator_action_lowering_race.target_accounting.v1",
+        "expected_targets": list(LOWERING_TARGETS),
+        "present_targets": present,
+        "missing_targets": missing,
+        "all_targets_accounted": not missing,
     }
 
 

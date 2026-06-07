@@ -21,6 +21,7 @@ from tac.analysis.snerv_source_forward_proof import (
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
     validate_snerv_output2_boundary_verdict,
+    validate_snerv_payload_bitflip_falsification,
     validate_snerv_source_forward_proof_action_effect,
 )
 
@@ -92,6 +93,7 @@ def _bitflip() -> dict:
         proof_passed_after_bitflip=False,
         first_failed_tensor="output_2",
         first_failed_surface="archive_parseback",
+        receiver_replay_failed=True,
         bit_offset=7,
         bit_mask=1,
     )
@@ -113,12 +115,50 @@ def _bitflip_matrix() -> dict:
                 proof_passed_after_bitflip=False,
                 first_failed_tensor=first_tensor,
                 first_failed_surface="archive_parseback",
+                receiver_replay_failed=first_tensor != "rgb_pair_uint8",
+                rgb_pair_uint8_changed=first_tensor == "rgb_pair_uint8",
                 bit_offset=idx,
                 bit_mask=1,
             )
             for idx, (section, first_tensor) in enumerate(first_tensors.items())
         }
     )
+
+
+def test_payload_bitflip_requires_receiver_or_scorer_impact() -> None:
+    row = build_snerv_payload_bitflip_falsification(
+        bitflip_section="decoder_payload.output_2",
+        baseline_section_sha256="2" * 64,
+        mutated_section_sha256="3" * 64,
+        proof_passed_after_bitflip=False,
+        first_failed_tensor="output_2",
+        first_failed_surface="archive_parseback",
+    )
+
+    status = validate_snerv_payload_bitflip_falsification(row)
+
+    assert row["passed"] is False
+    assert status["passed"] is False
+    assert (
+        "snerv_payload_bitflip_downstream_receiver_or_scorer_impact_missing"
+        in status["blockers"]
+    )
+
+
+def test_payload_bitflip_accepts_scorer_impact_with_named_surface() -> None:
+    row = build_snerv_payload_bitflip_falsification(
+        bitflip_section="decoder_payload.output_2",
+        baseline_section_sha256="2" * 64,
+        mutated_section_sha256="3" * 64,
+        proof_passed_after_bitflip=False,
+        first_failed_tensor="segnet_argmax",
+        first_failed_surface="official_scorer",
+        segnet_argmax_changed=True,
+        first_scorer_surface_changed="segnet_argmax",
+    )
+
+    assert row["passed"] is True
+    assert validate_snerv_payload_bitflip_falsification(row)["passed"] is True
 
 
 def _scorer_deltas() -> dict:

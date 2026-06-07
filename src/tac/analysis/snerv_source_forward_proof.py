@@ -319,6 +319,11 @@ def build_snerv_payload_bitflip_falsification(
     proof_passed_after_bitflip: bool,
     first_failed_tensor: str | None,
     first_failed_surface: str | None = None,
+    receiver_replay_failed: bool = False,
+    rgb_pair_uint8_changed: bool = False,
+    segnet_argmax_changed: bool = False,
+    posenet_output_changed: bool = False,
+    first_scorer_surface_changed: str | None = None,
     bit_offset: int | None = None,
     bit_mask: int | None = None,
     failure: str | None = None,
@@ -333,6 +338,11 @@ def build_snerv_payload_bitflip_falsification(
         "proof_passed": bool(proof_passed_after_bitflip),
         "first_failed_tensor": first_failed_tensor,
         "first_failed_surface": first_failed_surface,
+        "receiver_replay_failed": bool(receiver_replay_failed),
+        "rgb_pair_uint8_changed": bool(rgb_pair_uint8_changed),
+        "segnet_argmax_changed": bool(segnet_argmax_changed),
+        "posenet_output_changed": bool(posenet_output_changed),
+        "first_scorer_surface_changed": first_scorer_surface_changed,
         "bit_offset": bit_offset,
         "bit_mask": bit_mask,
         "failure": failure,
@@ -573,6 +583,29 @@ def validate_snerv_payload_bitflip_falsification(
     failed_tensor = row.get("first_failed_tensor")
     if not isinstance(failed_tensor, str) or not failed_tensor:
         blockers.append("snerv_payload_bitflip_first_failed_tensor_missing")
+    receiver_or_scorer_impacts = {
+        "receiver_replay_failed": row.get("receiver_replay_failed"),
+        "rgb_pair_uint8_changed": row.get("rgb_pair_uint8_changed"),
+        "segnet_argmax_changed": row.get("segnet_argmax_changed"),
+        "posenet_output_changed": row.get("posenet_output_changed"),
+    }
+    for field, value in receiver_or_scorer_impacts.items():
+        if not isinstance(value, bool):
+            blockers.append(f"snerv_payload_bitflip_{field}_flag_missing")
+    if not any(value is True for value in receiver_or_scorer_impacts.values()):
+        blockers.append("snerv_payload_bitflip_downstream_receiver_or_scorer_impact_missing")
+    scorer_surface = row.get("first_scorer_surface_changed")
+    scorer_changed = (
+        row.get("segnet_argmax_changed") is True
+        or row.get("posenet_output_changed") is True
+    )
+    if scorer_changed and not isinstance(scorer_surface, str):
+        blockers.append("snerv_payload_bitflip_first_scorer_surface_changed_missing")
+    if isinstance(scorer_surface, str) and scorer_surface not in {
+        "segnet_argmax",
+        "posenet_output",
+    }:
+        blockers.append("snerv_payload_bitflip_first_scorer_surface_changed_invalid")
     return {"passed": not _ordered_unique(blockers), "blockers": _ordered_unique(blockers)}
 
 
@@ -634,6 +667,15 @@ def _bitflip_noncausal_sections(
         if (
             proof.get("proof_passed") is not False
             or not str(proof.get("first_failed_tensor") or "")
+            or not any(
+                proof.get(field) is True
+                for field in (
+                    "receiver_replay_failed",
+                    "rgb_pair_uint8_changed",
+                    "segnet_argmax_changed",
+                    "posenet_output_changed",
+                )
+            )
         ):
             noncausal.append(str(section))
     return sorted(noncausal)

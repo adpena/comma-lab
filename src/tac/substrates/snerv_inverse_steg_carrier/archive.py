@@ -1702,6 +1702,8 @@ def build_snerv_archive_payload_bitflip_falsification(
     first_failed_surface: str | None = None
     failure: str | None = None
     proof_passed_after_bitflip = True
+    receiver_replay_failed = False
+    rgb_pair_uint8_changed = False
     try:
         mutated_packet = packer(
             metadata_payload=mutated_sections["metadata_payload"],
@@ -1715,12 +1717,14 @@ def build_snerv_archive_payload_bitflip_falsification(
         proof_passed_after_bitflip = False
         first_failed_tensor = first_tensor_hint
         first_failed_surface = "archive_parseback"
+        receiver_replay_failed = True
         failure = f"{type(exc).__name__}: {exc}"
     else:
         if tuple(mutated_frames.shape) != tuple(baseline_frames.shape):
             proof_passed_after_bitflip = False
             first_failed_tensor = "rgb_pair_uint8"
             first_failed_surface = "numpy_receiver"
+            rgb_pair_uint8_changed = True
             failure = (
                 f"shape_changed:{tuple(baseline_frames.shape)}->{tuple(mutated_frames.shape)}"
             )
@@ -1731,6 +1735,7 @@ def build_snerv_archive_payload_bitflip_falsification(
             proof_passed_after_bitflip = False
             first_failed_tensor = "rgb_pair_uint8"
             first_failed_surface = "numpy_receiver"
+            rgb_pair_uint8_changed = True
 
     return build_snerv_payload_bitflip_falsification(
         bitflip_section=bitflip_section,
@@ -1739,6 +1744,8 @@ def build_snerv_archive_payload_bitflip_falsification(
         proof_passed_after_bitflip=proof_passed_after_bitflip,
         first_failed_tensor=first_failed_tensor,
         first_failed_surface=first_failed_surface,
+        receiver_replay_failed=receiver_replay_failed,
+        rgb_pair_uint8_changed=rgb_pair_uint8_changed,
         bit_offset=offset,
         bit_mask=mask,
         failure=failure,

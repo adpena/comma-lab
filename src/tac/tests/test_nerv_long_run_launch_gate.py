@@ -101,6 +101,7 @@ def _snerv_source_forward_action_row(
         proof_passed_after_bitflip=bitflip_passes_proof,
         first_failed_tensor=None if bitflip_passes_proof else "output_2",
         first_failed_surface=None if bitflip_passes_proof else "archive_parseback",
+        receiver_replay_failed=not bitflip_passes_proof,
         bit_offset=17,
         bit_mask=1,
     )
@@ -167,6 +168,12 @@ def _snerv_bitflip_matrix(*, proof_passed_after_bitflip: bool = False) -> dict:
                 ),
                 first_failed_surface=(
                     None if proof_passed_after_bitflip else "archive_parseback"
+                ),
+                receiver_replay_failed=(
+                    not proof_passed_after_bitflip and first_tensor != "rgb_pair_uint8"
+                ),
+                rgb_pair_uint8_changed=(
+                    not proof_passed_after_bitflip and first_tensor == "rgb_pair_uint8"
                 ),
                 bit_offset=idx,
                 bit_mask=1,
@@ -645,6 +652,22 @@ def _native_hi_nerv_lowering_race(
     delta_score_total: float | None = -0.01,
     authority: str = "inflate_raw",
 ) -> dict:
+    targets = [
+        "backend_realization",
+        "byte_priced_sidecar",
+        "pose_compensated_composite",
+        "semantic_pose_primitive",
+    ]
+    if lowering_candidate_count <= 0:
+        candidate_targets: list[str] = []
+    elif lowering_candidate_count >= len(targets):
+        candidate_targets = [
+            best_lowering,
+            *[target for target in targets if target != best_lowering],
+        ][:lowering_candidate_count]
+    else:
+        candidate_targets = [best_lowering] * lowering_candidate_count
+    missing_targets = [target for target in targets if target not in set(candidate_targets)]
     row = {
         "schema": EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
         "fixture_not_real": True,
@@ -653,12 +676,21 @@ def _native_hi_nerv_lowering_race(
             {
                 "schema": "tac.evaluator_action_lowering_candidate.v1",
                 "action_id": action_id,
-                "lowering_target": best_lowering,
-                "viable": True,
-                "first_failing_surface": "none",
+                "lowering_target": target,
+                "viable": target == best_lowering,
+                "first_failing_surface": (
+                    "none" if target == best_lowering else "fixture_not_selected"
+                ),
             }
-            for _ in range(lowering_candidate_count)
+            for target in candidate_targets
         ],
+        "target_accounting": {
+            "schema": "tac.evaluator_action_lowering_race.target_accounting.v1",
+            "expected_targets": targets,
+            "present_targets": candidate_targets,
+            "missing_targets": missing_targets,
+            "all_targets_accounted": not missing_targets,
+        },
         "verdict": {
             "schema": "tac.evaluator_action_lowering_verdict.v1",
             "action_id": action_id,
@@ -1181,6 +1213,30 @@ def test_hinerv_gate_rejects_native_lowering_race_without_candidate_rows(
     assert (
         f"evaluator_action_lowering_race_candidate_count_not_positive:{ACTION}"
         in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_native_lowering_race_without_all_targets(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "lowering_race.json",
+        _native_hi_nerv_lowering_race(lowering_candidate_count=1),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert any(
+        blocker.startswith(f"evaluator_action_lowering_race_targets_missing:{ACTION}:")
+        for blocker in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
 

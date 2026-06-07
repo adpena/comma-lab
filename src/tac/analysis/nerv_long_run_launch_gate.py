@@ -68,6 +68,12 @@ SOURCE_QUALIFIED_METRICS_SCHEMA = "nerv_source_qualified_metrics.v1"
 HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA = "hi_nerv_short_scorer_smoke_readiness.v1"
 HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA = "hi_nerv_target_region_action_lowering_race.v1"
 EVALUATOR_ACTION_LOWERING_RACE_SCHEMA = "tac.evaluator_action_lowering_race.v1"
+EVALUATOR_ACTION_LOWERING_TARGETS: tuple[str, ...] = (
+    "backend_realization",
+    "byte_priced_sidecar",
+    "pose_compensated_composite",
+    "semantic_pose_primitive",
+)
 SUPPORTED_FAMILIES = ("hinerv", "hi_nerv", "snerv")
 SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
 SURVIVAL_SURFACE_L5 = "inflated_torch_cpu"
@@ -980,6 +986,14 @@ def _require_hi_nerv_lowering_race_evidence(
                 f"evaluator_action_lowering_race_candidate_count_not_positive:{row_id}"
             )
             continue
+        if schema == EVALUATOR_ACTION_LOWERING_RACE_SCHEMA:
+            missing_targets = _lowering_race_missing_targets(row)
+            if missing_targets:
+                candidate_blockers.append(
+                    "evaluator_action_lowering_race_targets_missing:"
+                    f"{row_id}:{','.join(missing_targets)}"
+                )
+                continue
         if row.get("same_support_as_direct_teacher") is False:
             candidate_blockers.append(
                 f"evaluator_action_lowering_race_support_mismatch:{row_id}"
@@ -1035,6 +1049,33 @@ def _lowering_race_candidate_count(row: Mapping[str, Any]) -> int | None:
     if isinstance(candidates, list):
         return len(candidates)
     return None
+
+
+def _lowering_race_missing_targets(row: Mapping[str, Any]) -> list[str]:
+    accounting = row.get("target_accounting")
+    if isinstance(accounting, Mapping):
+        missing = accounting.get("missing_targets")
+        if isinstance(missing, list):
+            return [
+                str(value)
+                for value in missing
+                if str(value) in EVALUATOR_ACTION_LOWERING_TARGETS
+            ]
+        if accounting.get("all_targets_accounted") is True:
+            return []
+    candidates = row.get("lowering_candidates")
+    if not isinstance(candidates, list):
+        return list(EVALUATOR_ACTION_LOWERING_TARGETS)
+    present = {
+        str(candidate.get("lowering_target") or "")
+        for candidate in candidates
+        if isinstance(candidate, Mapping)
+    }
+    return [
+        target
+        for target in EVALUATOR_ACTION_LOWERING_TARGETS
+        if target not in present
+    ]
 
 
 def _representative_coverage_ok(

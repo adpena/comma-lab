@@ -80,6 +80,12 @@ def test_lowering_race_blocks_sidecar_without_parseback_inflate_and_names_missin
     assert verdict["sidecar_status"] == PARSEBACK_FAILED
     assert verdict["composite_status"] == COMPOSITE_NOT_MEASURED
     assert verdict["semantic_pose_status"] == SEMANTIC_PRIMITIVE_MISSING
+    assert report["target_accounting"]["missing_targets"] == [
+        "backend_realization",
+        "pose_compensated_composite",
+        "semantic_pose_primitive",
+    ]
+    assert report["target_accounting"]["all_targets_accounted"] is False
     assert sidecar["support_encoded_bytes"] == 100
     assert sidecar["action_payload_bytes"] == 0
     assert sidecar["metadata_bytes"] == 0
