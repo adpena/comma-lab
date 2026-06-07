@@ -138,6 +138,7 @@ def test_payload_bitflip_requires_receiver_or_scorer_impact() -> None:
     status = validate_snerv_payload_bitflip_falsification(row)
 
     assert row["passed"] is False
+    assert row["first_failed_authority_pair"] == "official_torch->archive_parseback"
     assert status["passed"] is False
     assert (
         "snerv_payload_bitflip_downstream_receiver_or_scorer_impact_missing"
@@ -157,8 +158,30 @@ def test_payload_bitflip_accepts_scorer_impact_with_named_surface() -> None:
         first_scorer_surface_changed="segnet_argmax",
     )
 
+    assert row["first_failed_authority_pair"] == "official_torch->official_scorer"
     assert row["passed"] is True
     assert validate_snerv_payload_bitflip_falsification(row)["passed"] is True
+
+
+def test_payload_bitflip_requires_named_authority_pair() -> None:
+    row = build_snerv_payload_bitflip_falsification(
+        bitflip_section="decoder_payload.output_2",
+        baseline_section_sha256="2" * 64,
+        mutated_section_sha256="3" * 64,
+        proof_passed_after_bitflip=False,
+        first_failed_tensor="output_2",
+        first_failed_surface="archive_parseback",
+        receiver_replay_failed=True,
+    )
+    row["first_failed_authority_pair"] = None
+
+    status = validate_snerv_payload_bitflip_falsification(row)
+
+    assert status["passed"] is False
+    assert (
+        "snerv_payload_bitflip_first_failed_authority_pair_missing"
+        in status["blockers"]
+    )
 
 
 def _scorer_deltas() -> dict:

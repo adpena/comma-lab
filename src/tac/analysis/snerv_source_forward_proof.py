@@ -323,6 +323,7 @@ def build_snerv_payload_bitflip_falsification(
     proof_passed_after_bitflip: bool,
     first_failed_tensor: str | None,
     first_failed_surface: str | None = None,
+    first_failed_authority_pair: str | None = None,
     receiver_replay_failed: bool = False,
     rgb_pair_uint8_changed: bool = False,
     segnet_argmax_changed: bool = False,
@@ -342,6 +343,14 @@ def build_snerv_payload_bitflip_falsification(
         "proof_passed": bool(proof_passed_after_bitflip),
         "first_failed_tensor": first_failed_tensor,
         "first_failed_surface": first_failed_surface,
+        "first_failed_authority_pair": (
+            first_failed_authority_pair
+            if first_failed_authority_pair is not None
+            else _default_bitflip_authority_pair(
+                proof_passed=proof_passed_after_bitflip,
+                first_failed_surface=first_failed_surface,
+            )
+        ),
         "receiver_replay_failed": bool(receiver_replay_failed),
         "rgb_pair_uint8_changed": bool(rgb_pair_uint8_changed),
         "segnet_argmax_changed": bool(segnet_argmax_changed),
@@ -587,6 +596,9 @@ def validate_snerv_payload_bitflip_falsification(
     failed_tensor = row.get("first_failed_tensor")
     if not isinstance(failed_tensor, str) or not failed_tensor:
         blockers.append("snerv_payload_bitflip_first_failed_tensor_missing")
+    failed_authority_pair = row.get("first_failed_authority_pair")
+    if not isinstance(failed_authority_pair, str) or "->" not in failed_authority_pair:
+        blockers.append("snerv_payload_bitflip_first_failed_authority_pair_missing")
     receiver_or_scorer_impacts = {
         "receiver_replay_failed": row.get("receiver_replay_failed"),
         "rgb_pair_uint8_changed": row.get("rgb_pair_uint8_changed"),
@@ -671,6 +683,7 @@ def _bitflip_noncausal_sections(
         if (
             proof.get("proof_passed") is not False
             or not str(proof.get("first_failed_tensor") or "")
+            or "->" not in str(proof.get("first_failed_authority_pair") or "")
             or not any(
                 proof.get(field) is True
                 for field in (
@@ -683,6 +696,25 @@ def _bitflip_noncausal_sections(
         ):
             noncausal.append(str(section))
     return sorted(noncausal)
+
+
+def _default_bitflip_authority_pair(
+    *,
+    proof_passed: bool,
+    first_failed_surface: str | None,
+) -> str | None:
+    if proof_passed:
+        return None
+    surface = str(first_failed_surface or "").strip()
+    if not surface:
+        return None
+    if surface == "official_torch":
+        return "payload_mutation->official_torch"
+    if surface == "numpy_receiver":
+        return "archive_parseback->numpy_receiver"
+    if surface in SOURCE_FORWARD_SURFACES:
+        return f"{SOURCE_FORWARD_REFERENCE_SURFACE}->{surface}"
+    return f"{SOURCE_FORWARD_REFERENCE_SURFACE}->{surface}"
 
 
 def find_snerv_source_forward_proof_rows(payload: Any) -> list[dict[str, Any]]:
