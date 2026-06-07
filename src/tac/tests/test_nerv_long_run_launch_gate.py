@@ -20,7 +20,11 @@ from tac.analysis.hinerv_hard_region_miner import (
     OUTCOME_BIRTH_ACCEPTED,
     build_representative_coverage_row,
 )
-from tac.analysis.inverse_scorer_actions import TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA
+from tac.analysis.inverse_scorer_actions import (
+    SIDECAR_FALLBACK_ACCEPTED,
+    TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
+    WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
+)
 from tac.analysis.nerv_long_run_launch_gate import (
     ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
     BIRTH_HYSTERESIS_SCHEMA,
@@ -464,6 +468,37 @@ def _wall_normal_lift(
     }
 
 
+def _wall_normal_branch_receipt(
+    *,
+    action_id: str = ACTION,
+    first_failing_surface: str = SIDECAR_FALLBACK_ACCEPTED,
+    same_action_id: bool = True,
+    same_support_sha256: bool = True,
+    support_required_count: int = 1,
+    support_executable_count: int = 1,
+    blockers: list[str] | None = None,
+) -> dict:
+    return {
+        "schema": WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
+        "fixture_not_real": True,
+        "branch_count": 1,
+        "action_ids": [action_id] if same_action_id else [action_id, f"{action_id}:other"],
+        "same_action_id": same_action_id,
+        "support_sha256s": ["9" * 64],
+        "same_support_sha256": same_support_sha256,
+        "support_required_count": support_required_count,
+        "support_executable_count": support_executable_count,
+        "first_failing_surface": first_failing_surface,
+        "first_failing_action_id": action_id,
+        "first_failing_action_kind": "sidecar_grammar",
+        "branches": [],
+        "blockers": [] if blockers is None else list(blockers),
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _hi_nerv_four_arm_action_effects(*, omit_arm: str | None = None) -> list[dict]:
     rows = [
         _hi_nerv_action_effect(arm="A", action_kind="birth_only"),
@@ -604,6 +639,7 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
         },
     )
     _write(root / "wall_normal_lift.json", _wall_normal_lift())
+    _write(root / "wall_normal_branch_receipt.json", _wall_normal_branch_receipt())
     _write(root / "parseback_contract.json", _parseback_selection_contract())
     _write(root / "source_metrics.json", _source_qualified_metrics())
     _write(root / "lowering_race.json", _hi_nerv_lowering_race())
@@ -1191,6 +1227,65 @@ def test_hinerv_gate_blocks_nonrealized_wall_normal_lift(tmp_path: Path) -> None
     )
     assert (
         "target_region_wall_normal_lift_blocker:target_region_wall_normal_backend_not_realized"
+        in blocking
+    )
+
+
+def test_hinerv_gate_requires_wall_normal_branch_receipt(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    (root / "wall_normal_branch_receipt.json").unlink()
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_branch_receipt_missing" in verdict["blocking_evidence"]
+    assert (
+        f"target_region_wall_normal_branch_receipt_missing:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+
+
+def test_hinerv_gate_blocks_failed_wall_normal_branch_receipt(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "wall_normal_branch_receipt.json",
+        _wall_normal_branch_receipt(
+            first_failing_surface="BACKEND_REALIZATION_FAILED",
+            same_action_id=False,
+            same_support_sha256=False,
+            blockers=["wall_normal_branch_action_id_mismatch"],
+        ),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    blocking = verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_branch_receipt_not_accepted" in blocking
+    assert (
+        f"target_region_wall_normal_branch_receipt_action_id_mismatch:{ACTION}"
+        in blocking
+    )
+    assert (
+        f"target_region_wall_normal_branch_receipt_support_mismatch:{ACTION}"
+        in blocking
+    )
+    assert (
+        f"target_region_wall_normal_branch_receipt_failed_surface:{ACTION}:BACKEND_REALIZATION_FAILED"
+        in blocking
+    )
+    assert (
+        "target_region_wall_normal_branch_receipt_blocker:wall_normal_branch_action_id_mismatch"
         in blocking
     )
 

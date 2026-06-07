@@ -41,7 +41,11 @@ from tac.analysis.action_effect import (
     NormalizationScope,
     validate_action_effect_payload,
 )
-from tac.analysis.inverse_scorer_actions import TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA
+from tac.analysis.inverse_scorer_actions import (
+    SIDECAR_FALLBACK_ACCEPTED,
+    TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
+    WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
+)
 from tac.analysis.receiver_surface_metrics import receiver_surface_target_support_breakdown
 from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
@@ -698,6 +702,58 @@ def _require_hi_nerv_wall_normal_lift_evidence(
         blockers.extend(_dedupe(candidate_blockers))
 
 
+def _require_hi_nerv_wall_normal_branch_receipt(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    blockers: list[str],
+) -> None:
+    matches = [
+        row
+        for row in rows
+        if action_id in {str(value) for value in row.get("action_ids") or ()}
+        or str(row.get("first_failing_action_id") or "") == action_id
+    ]
+    if not matches:
+        blockers.append("target_region_wall_normal_branch_receipt_missing")
+        blockers.append(f"target_region_wall_normal_branch_receipt_missing:{action_id}")
+        return
+
+    candidate_blockers: list[str] = []
+    for row in matches:
+        row_action = str(row.get("first_failing_action_id") or action_id)
+        if not _positive_number(row.get("branch_count")):
+            candidate_blockers.append(
+                f"target_region_wall_normal_branch_receipt_empty:{row_action}"
+            )
+        if row.get("same_action_id") is not True:
+            candidate_blockers.append(
+                f"target_region_wall_normal_branch_receipt_action_id_mismatch:{row_action}"
+            )
+        if row.get("same_support_sha256") is not True:
+            candidate_blockers.append(
+                f"target_region_wall_normal_branch_receipt_support_mismatch:{row_action}"
+            )
+        required = row.get("support_required_count")
+        executable = row.get("support_executable_count")
+        if _finite_number(required) and _finite_number(executable) and int(executable) < int(required):
+            candidate_blockers.append(
+                f"target_region_wall_normal_branch_receipt_support_not_executable:{row_action}"
+            )
+        first_failing = str(row.get("first_failing_surface") or "").strip()
+        if first_failing not in {"", "none", SIDECAR_FALLBACK_ACCEPTED}:
+            candidate_blockers.append(
+                f"target_region_wall_normal_branch_receipt_failed_surface:{row_action}:{first_failing}"
+            )
+        for blocker in row.get("blockers") or ():
+            candidate_blockers.append(f"target_region_wall_normal_branch_receipt_blocker:{blocker}")
+        if not candidate_blockers:
+            return
+
+    blockers.append("target_region_wall_normal_branch_receipt_not_accepted")
+    blockers.extend(_dedupe(candidate_blockers))
+
+
 def _require_hi_nerv_four_arm_action_effect_evidence(
     rows: list[dict[str, Any]],
     *,
@@ -1130,6 +1186,12 @@ def evaluate_nerv_long_run_launch_gate(
             index=evidence_index,
             blockers=blockers,
         )
+        wall_normal_branch_rows = _collect_schema_rows(
+            root,
+            WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
         parseback_contract_rows = _collect_schema_rows(
             root,
             ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
@@ -1211,6 +1273,11 @@ def evaluate_nerv_long_run_launch_gate(
             _require_hi_nerv_action_effect_evidence(action_effect_rows, action_id=action_id, blockers=blockers)
             _require_hi_nerv_wall_normal_lift_evidence(
                 wall_normal_lift_rows,
+                action_id=action_id,
+                blockers=blockers,
+            )
+            _require_hi_nerv_wall_normal_branch_receipt(
+                wall_normal_branch_rows,
                 action_id=action_id,
                 blockers=blockers,
             )
