@@ -8,6 +8,8 @@ roundtrips across the 3-scale latent pyramid.
 
 from __future__ import annotations
 
+import hashlib
+
 import numpy as np
 import torch
 
@@ -55,6 +57,7 @@ from tac.substrates.hi_nerv.target_region_actions import (
     encode_target_region_actions_meta,
     encode_target_region_actions_payload,
     target_region_action_payload_codec,
+    target_region_action_section_telemetry,
 )
 
 
@@ -718,12 +721,19 @@ def test_target_region_action_payload_uses_split_brotli_when_streams_win():
     raw = encode_target_region_actions([action])
     payload = encode_target_region_actions_payload([action])
     decoded = decode_target_region_actions(payload)
+    telemetry = target_region_action_section_telemetry([action])
 
     assert len(payload) < len(raw)
     assert target_region_action_payload_codec(payload) == "split_brotli_v1"
     assert len(decoded) == 1
     assert np.array_equal(decoded[0].yx, yx)
     assert np.array_equal(decoded[0].rgb_u8, rgb)
+    assert telemetry["payload_codec"] == "split_brotli_v1"
+    assert telemetry["support_source"] == "split_delta_payload_coordinates"
+    assert telemetry["support_encoding"] == "brotli_split_yx_delta_streams"
+    assert 0 < telemetry["support_encoded_bytes"] < action.yx.nbytes
+    assert telemetry["payload_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert len(telemetry["program_base64_sha256"]) == 64
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke

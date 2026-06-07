@@ -214,7 +214,15 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert report["comparison"]["best_sidecar_value_per_byte"] is not None
 
     current = report["sidecar_encoding_candidates"][0]
+    payload = encode_target_region_actions_payload([action])
+    program_b64 = encode_target_region_actions_meta([action])
+    section_telemetry = report["byte_decomposition"]["target_region_action_section_telemetry"]
     assert current["candidate_id"] == "current_hiv1_target_region_action_brotli"
+    assert current["archive_sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
+    assert current["payload_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert current["target_region_action_program_sha256"] == hashlib.sha256(
+        program_b64.encode("ascii")
+    ).hexdigest()
     assert current["survival"]["parseback_survived"] is True
     assert current["survival"]["inflate_survived"] is True
     assert current["first_failed_surface"] == "support_identity_mismatch"
@@ -222,7 +230,13 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert current["action_effect"]["wrong_to_target"] == 3
     assert current["action_effect"]["target_to_wrong"] == 0
     assert current["action_effect"]["value_per_byte"] is not None
+    assert current["action_effect"]["archive_sha256"] == current["archive_sha256"]
+    assert current["action_effect"]["payload_sha256"] == current["payload_sha256"]
     assert "lowering_target=byte_priced_sidecar" in current["action_effect"]["payload_sections"]
+    assert (
+        f"target_region_action_program_sha256={current['target_region_action_program_sha256']}"
+        in current["action_effect"]["payload_sections"]
+    )
     assert report["lowering_race"]["lowering_candidates"][0]["lowering_target_source"] == "explicit"
     assert report["lowering_race"]["lowering_candidates"][0]["lowering_target"] == "byte_priced_sidecar"
     assert (
@@ -230,7 +244,10 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
         in current["action_effect"]["blockers"]
     )
     assert f"action_payload_bytes={action.rgb_u8.nbytes}" in current["action_effect"]["payload_sections"]
-    assert current["action_effect"]["support_encoded_bytes"] == action.yx.nbytes
+    assert current["support_encoding"] == section_telemetry["support_encoding"]
+    assert current["action_effect"]["support_encoded_bytes"] == section_telemetry[
+        "support_encoded_bytes"
+    ]
 
     blocked = [
         row

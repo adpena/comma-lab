@@ -79,6 +79,13 @@ EVALUATOR_ACTION_LOWERING_TARGETS: tuple[str, ...] = (
     "semantic_pose_primitive",
     "byte_entropy_rewrite",
 )
+_TARGET_REGION_ACTION_CODEC_SUPPORT_ENCODING = {
+    "raw_v1": "explicit_yx_u16_coordinates",
+    "zlib_wrapped_v1": "zlib_wrapped_raw_yx_u16_coordinates",
+    "brotli_wrapped_v1": "brotli_wrapped_raw_yx_u16_coordinates",
+    "split_brotli_v1": "brotli_split_yx_delta_streams",
+    "tile_brotli_v1": "brotli_tile_bitmap_little_endian",
+}
 SUPPORTED_FAMILIES = ("hinerv", "hi_nerv", "snerv")
 SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
 SURVIVAL_SURFACE_L5 = "inflated_torch_cpu"
@@ -252,6 +259,7 @@ def _target_region_action_archive_closure_status(
     charged_meta_path: str | None = None
     selected_archive_path: str | None = None
     selected_archive_bytes: int | None = None
+    blockers: list[str] = []
     for path, payload in _iter_evidence_payloads(run_root):
         stack = [payload]
         while stack:
@@ -275,11 +283,17 @@ def _target_region_action_archive_closure_status(
                         and base64_bytes > 0
                         and meta_bytes > 0
                     ):
-                        charged_meta_path = path.as_posix()
-                        index.setdefault(
-                            "hi_nerv_target_region_archive_actions.v1",
-                            [],
-                        ).append(path.as_posix())
+                        telemetry_blockers = _target_region_action_telemetry_blockers(
+                            target_actions
+                        )
+                        if telemetry_blockers:
+                            blockers.extend(telemetry_blockers)
+                        else:
+                            charged_meta_path = path.as_posix()
+                            index.setdefault(
+                                "hi_nerv_target_region_archive_actions.v1",
+                                [],
+                            ).append(path.as_posix())
                 for key in ("selected_archive_bytes", "archive_bytes"):
                     try:
                         archive_bytes = int(node.get(key) or 0)
@@ -302,7 +316,30 @@ def _target_region_action_archive_closure_status(
         "archive_zip_bytes_measured": selected_archive_bytes is not None,
         "selected_archive_path": selected_archive_path,
         "selected_archive_bytes": selected_archive_bytes,
+        "blockers": _dedupe(blockers),
     }
+
+
+def _target_region_action_telemetry_blockers(
+    target_actions: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    codec = str(target_actions.get("payload_codec") or "").strip()
+    expected_support_encoding = _TARGET_REGION_ACTION_CODEC_SUPPORT_ENCODING.get(codec)
+    if not expected_support_encoding:
+        blockers.append("target_region_action_payload_codec_missing_or_unknown")
+    support_encoding = str(target_actions.get("support_encoding") or "").strip()
+    if not support_encoding:
+        blockers.append("target_region_action_support_encoding_missing")
+    elif expected_support_encoding and support_encoding != expected_support_encoding:
+        blockers.append("target_region_action_support_encoding_mismatch")
+    try:
+        support_encoded_bytes = int(target_actions.get("support_encoded_bytes") or 0)
+    except (TypeError, ValueError):
+        support_encoded_bytes = 0
+    if support_encoded_bytes <= 0:
+        blockers.append("target_region_action_support_encoded_bytes_missing")
+    return blockers
 
 
 def _target_region_action_survival_status(
@@ -410,6 +447,7 @@ def _target_region_action_closure_blockers(
                 "target_region_action_archive_zip_byte_delta_missing",
             }
         ]
+    blockers.extend(str(blocker) for blocker in archive_status.get("blockers") or [])
     if survival_status.get("parseback_survived"):
         blockers = [
             blocker

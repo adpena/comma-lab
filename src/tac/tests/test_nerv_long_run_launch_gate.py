@@ -58,6 +58,25 @@ def _write(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _charged_target_region_actions(
+    *,
+    payload_codec: str = "raw_v1",
+    support_encoding: str = "explicit_yx_u16_coordinates",
+    support_encoded_bytes: int = 128,
+) -> dict[str, object]:
+    return {
+        "schema": "hi_nerv_target_region_archive_actions.v1",
+        "charged_as_hiv1_meta_blob": True,
+        "receiver_consumed": True,
+        "payload_codec": payload_codec,
+        "support_encoding": support_encoding,
+        "support_encoded_bytes": support_encoded_bytes,
+        "payload_bytes": 128,
+        "base64_text_bytes": 172,
+        "charged_meta_json_bytes": 512,
+    }
+
+
 def _snerv_tensor_surfaces(*, delta: float = 0.0) -> dict:
     base = {
         "coord_time_embedding": [[0.0, 1.0]],
@@ -890,14 +909,7 @@ def test_charged_target_region_archive_evidence_retires_materialization_blockers
         {
             "hi_nerv_archive_codec_custody": {
                 "archive_section_telemetry": {
-                    "target_region_actions": {
-                        "schema": "hi_nerv_target_region_archive_actions.v1",
-                        "charged_as_hiv1_meta_blob": True,
-                        "receiver_consumed": True,
-                        "payload_bytes": 128,
-                        "base64_text_bytes": 172,
-                        "charged_meta_json_bytes": 512,
-                    }
+                    "target_region_actions": _charged_target_region_actions()
                 }
             },
             "receiver_replay_archive_selection": {
@@ -934,6 +946,70 @@ def test_charged_target_region_archive_evidence_retires_materialization_blockers
     assert verdict["approved"] is False
 
 
+def test_target_region_archive_evidence_rejects_stale_tile_support_encoding(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_action_archive_meta_not_materialized",
+                "hinerv_target_region_action_archive_zip_byte_delta_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "archive_telemetry.json",
+        {
+            "hi_nerv_archive_codec_custody": {
+                "archive_section_telemetry": {
+                    "target_region_actions": _charged_target_region_actions(
+                        payload_codec="tile_brotli_v1",
+                        support_encoding="explicit_yx_u16_coordinates",
+                        support_encoded_bytes=139_908,
+                    )
+                }
+            },
+            "receiver_replay_archive_selection": {
+                "selected_archive_path": "/ssd/archive.zip",
+                "selected_archive_bytes": 439003,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert (
+        "hinerv_target_region_action_archive_meta_not_materialized"
+        in verdict["blocking_evidence"]
+    )
+    assert "target_region_action_support_encoding_mismatch" in verdict[
+        "blocking_evidence"
+    ]
+    assert (
+        "hinerv_target_region_action_archive_zip_byte_delta_missing"
+        not in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
 def test_target_region_action_parseback_survival_retires_parseback_blocker(
     tmp_path: Path,
 ) -> None:
@@ -962,14 +1038,7 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
         {
             "hi_nerv_archive_codec_custody": {
                 "archive_section_telemetry": {
-                    "target_region_actions": {
-                        "schema": "hi_nerv_target_region_archive_actions.v1",
-                        "charged_as_hiv1_meta_blob": True,
-                        "receiver_consumed": True,
-                        "payload_bytes": 128,
-                        "base64_text_bytes": 172,
-                        "charged_meta_json_bytes": 512,
-                    }
+                    "target_region_actions": _charged_target_region_actions()
                 }
             },
             "receiver_replay_archive_selection": {

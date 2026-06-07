@@ -179,6 +179,17 @@ def build_hinerv_target_region_action_comparison(
         if survival_identity_blockers
         else (_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None)
     )
+    current_section_telemetry = dict(
+        byte_decomposition.get("target_region_action_section_telemetry") or {}
+    )
+    current_support_encoding = str(
+        current_section_telemetry.get("support_encoding")
+        or "explicit_yx_u16_coordinates"
+    )
+    current_support_encoded_bytes = int(
+        current_section_telemetry.get("support_encoded_bytes")
+        or byte_decomposition["support_coord_u16_bytes"]
+    )
 
     base_zip = _action_free_archive_bytes(program)
     old_bytes = int(base_zip["archive_bytes_without_target_region_actions"])
@@ -187,10 +198,13 @@ def build_hinerv_target_region_action_comparison(
         action_id=chosen_action_id,
         candidate_kind="sidecar_grammar",
         support_sha256=support_sha256,
-        support_encoding="explicit_yx_u16_coordinates",
+        archive_sha256=program.archive_sha256,
+        payload_sha256=hashlib.sha256(program.stored_payload).hexdigest(),
+        program_sha256=_program_base64_sha256(program),
+        support_encoding=current_support_encoding,
         action_encoding="exact_rgb_u8",
         encoded_payload_bytes=int(byte_decomposition["stored_payload_bytes"]),
-        support_encoded_bytes=int(byte_decomposition["support_coord_u16_bytes"]),
+        support_encoded_bytes=current_support_encoded_bytes,
         action_payload_bytes=int(byte_decomposition["rgb_u8_bytes"]),
         metadata_bytes=int(byte_decomposition["meta_json_action_delta_bytes"]),
         byte_authority="exact_archive_zip_delta",
@@ -253,6 +267,9 @@ def build_hinerv_target_region_action_comparison(
                     action_id=chosen_action_id,
                     candidate_kind="sidecar_grammar_candidate",
                     support_sha256=support_sha256,
+                    archive_sha256=program.archive_sha256,
+                    payload_sha256=None,
+                    program_sha256=None,
                     support_encoding=str(support["encoding"]),
                     action_encoding=str(action["encoding"]),
                     encoded_payload_bytes=encoded_bytes,
@@ -430,6 +447,9 @@ def _comparison_row(
     action_id: str,
     candidate_kind: str,
     support_sha256: str,
+    archive_sha256: str | None,
+    payload_sha256: str | None,
+    program_sha256: str | None,
     support_encoding: str,
     action_encoding: str,
     encoded_payload_bytes: int,
@@ -486,6 +506,9 @@ def _comparison_row(
             f"support_encoded_bytes={support_encoded_bytes}",
             f"action_payload_bytes={action_payload_bytes}",
             f"metadata_bytes={metadata_bytes}",
+            f"archive_sha256={archive_sha256}",
+            f"payload_sha256={payload_sha256}",
+            f"target_region_action_program_sha256={program_sha256}",
         ),
         old_d_seg=old_d_seg,
         new_d_seg=new_d_seg,
@@ -505,6 +528,8 @@ def _comparison_row(
         parseback_survived=parseback_survived if receiver_bound else False,
         inflate_survived=inflate_survived if receiver_bound else False,
         fakequant_survived=fakequant_survived if receiver_bound else None,
+        archive_sha256=archive_sha256 if receiver_bound else None,
+        payload_sha256=payload_sha256 if receiver_bound else None,
         wrong_to_target=transitions.get("wrong_to_target_count"),
         target_to_wrong=transitions.get("target_to_wrong_count"),
         wrong_to_wrong=transitions.get("wrong_to_wrong_count"),
@@ -529,6 +554,9 @@ def _comparison_row(
         "candidate_kind": candidate_kind,
         "action_id": action_id,
         "support_sha256": support_sha256,
+        "archive_sha256": archive_sha256,
+        "payload_sha256": payload_sha256,
+        "target_region_action_program_sha256": program_sha256,
         "support_encoding": support_encoding,
         "action_encoding": action_encoding,
         "encoded_payload_bytes": int(encoded_payload_bytes),

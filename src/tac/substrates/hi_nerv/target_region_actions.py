@@ -564,24 +564,19 @@ def _split_brotli_support_payload_bytes(payload: bytes) -> int:
         (
             _pair_index,
             _frame_index,
-            _coord_mode,
+            _reserved,
             _height,
             _width,
             _pixel_count,
-            y_compressed_bytes,
-            x_compressed_bytes,
+            coord_compressed_bytes,
             rgb_compressed_bytes,
         ) = struct.unpack(
             _SPLIT_ACTION_HEADER_FMT,
             payload[offset : offset + _SPLIT_ACTION_HEADER_SIZE],
         )
         offset += _SPLIT_ACTION_HEADER_SIZE
-        total += int(y_compressed_bytes) + int(x_compressed_bytes)
-        offset += (
-            int(y_compressed_bytes)
-            + int(x_compressed_bytes)
-            + int(rgb_compressed_bytes)
-        )
+        total += int(coord_compressed_bytes)
+        offset += int(coord_compressed_bytes) + int(rgb_compressed_bytes)
         if offset > len(payload):
             raise ValueError("truncated split-brotli target-region action payload")
     if offset != len(payload):
@@ -679,6 +674,7 @@ def decode_target_region_actions_from_meta(meta: dict[str, Any]) -> list[TargetR
 def target_region_action_section_telemetry(actions: list[TargetRegionPixelAction]) -> dict[str, Any]:
     raw_payload = encode_target_region_actions(actions)
     payload = encode_target_region_actions_payload(actions)
+    program_base64 = base64.b64encode(payload).decode("ascii")
     support_telemetry = _target_region_action_support_telemetry(payload, actions)
     return {
         "schema": TARGET_REGION_ACTION_SCHEMA,
@@ -686,6 +682,8 @@ def target_region_action_section_telemetry(actions: list[TargetRegionPixelAction
         "action_count": len(actions),
         "pixel_count": int(sum(action.pixel_count for action in actions)),
         "payload_bytes": len(payload),
+        "payload_sha256": hashlib.sha256(payload).hexdigest(),
+        "program_base64_sha256": hashlib.sha256(program_base64.encode("ascii")).hexdigest(),
         "raw_payload_bytes": len(raw_payload),
         "payload_codec": target_region_action_payload_codec(payload),
         **support_telemetry,
