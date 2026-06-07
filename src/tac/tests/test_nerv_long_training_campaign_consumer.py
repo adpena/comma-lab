@@ -46,6 +46,11 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert "tools/run_compact_renderer_mlx_spine_runner.py" in first["command"]
     assert first["score_lowering_gate"]["receiver_proof_required"] is True
     assert first["score_lowering_gate"]["cpu_replay_ready"] is False
+    assert first["snerv_long_run_launch_gate"]["schema"] == (
+        "snerv_long_run_launch_gate_consumption.v1"
+    )
+    assert first["snerv_long_run_launch_gate"]["approved"] is True
+    assert first["snerv_long_run_launch_gate"]["source_forward_action_effect_indexed"] is True
     launch_contract = first["launch_authority_contract"]
     assert launch_contract["schema"] == (
         "nerv_long_training_queue_launch_authority_contract.v1"
@@ -150,6 +155,77 @@ def test_long_training_campaign_consumer_accepts_extracted_experiment_queue() ->
     assert verdict["ready_for_exact_eval_dispatch"] is False
 
 
+def test_long_training_campaign_consumer_blocks_snerv_full_run_without_launch_gate(
+) -> None:
+    queue = _runnable_snerv_queue()
+    snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
+    _drop_snerv_long_run_launch_gate(snerv)
+
+    verdict = consumer.consume_candidate(queue)
+
+    assert verdict["local_mlx_route_recommended"] is False
+    assert verdict["ready_local_mlx_experiment_count"] == 0
+    assert verdict["selected_local_mlx_experiment_ids"] == []
+    assert verdict["family_summary"]["snerv"]["ready_local_mlx_count"] == 0
+    assert (
+        f"experiment_{snerv['id']}_snerv_long_run_launch_gate_missing"
+        in verdict["blockers"]
+    )
+
+
+def test_long_training_campaign_consumer_blocks_snerv_full_run_with_stale_gate(
+) -> None:
+    queue = _runnable_snerv_queue(approve_snerv_launch_gate=False)
+    snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
+
+    verdict = consumer.consume_candidate(queue)
+
+    assert verdict["local_mlx_route_recommended"] is False
+    assert verdict["ready_local_mlx_experiment_count"] == 0
+    assert (
+        f"experiment_{snerv['id']}_snerv_long_run_launch_gate_not_approved"
+        in verdict["blockers"]
+    )
+    assert (
+        f"experiment_{snerv['id']}_snerv_long_run_launch_gate_source_forward_action_effect_missing"
+        in verdict["blockers"]
+    )
+
+
+def test_long_training_campaign_consumer_keeps_bounded_snerv_diagnostic_eligible(
+) -> None:
+    queue = _runnable_snerv_queue(
+        approve_snerv_launch_gate=False,
+        bounded_snerv_diagnostic=True,
+    )
+    snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
+    _drop_snerv_long_run_launch_gate(snerv)
+
+    verdict = consumer.consume_candidate(queue)
+
+    assert verdict["local_mlx_route_recommended"] is True
+    assert verdict["ready_local_mlx_experiment_count"] == 1
+    assert verdict["selected_local_mlx_experiment_ids"] == [snerv["id"]]
+    assert (
+        f"experiment_{snerv['id']}_snerv_long_run_launch_gate_missing"
+        not in verdict["blockers"]
+    )
+
+
+def test_long_training_campaign_consumer_does_not_gate_hinerv_with_snerv_proof(
+) -> None:
+    queue = _runnable_hinerv_queue()
+    snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
+    _drop_snerv_long_run_launch_gate(snerv)
+
+    verdict = consumer.consume_candidate(queue)
+
+    assert verdict["local_mlx_route_recommended"] is True
+    assert verdict["ready_local_mlx_experiment_count"] == 1
+    assert verdict["selected_local_mlx_experiment_ids"][0].startswith("hi_nerv_")
+    assert verdict["family_summary"]["hi_nerv"]["ready_local_mlx_count"] == 1
+
+
 def test_long_training_campaign_consumer_fails_closed_on_schema_and_authority() -> None:
     verdict = consumer.consume_candidate(
         {
@@ -220,7 +296,12 @@ def _campaign_plan() -> dict:
     )
 
 
-def _runnable_snerv_queue(queue: dict | None = None) -> dict:
+def _runnable_snerv_queue(
+    queue: dict | None = None,
+    *,
+    approve_snerv_launch_gate: bool = True,
+    bounded_snerv_diagnostic: bool = False,
+) -> dict:
     out = json.loads(json.dumps(queue or _campaign_plan()["experiment_queue"]))
     snerv = next(row for row in out["experiments"] if row["family"] == "snerv")
     snerv["status"] = "queued"
@@ -232,12 +313,83 @@ def _runnable_snerv_queue(queue: dict | None = None) -> dict:
     contract["queue_status_is_receiver_proof"] = False
     contract["queue_status_is_cpu_replay_proof"] = False
     contract["queue_status_is_exact_eval_authority"] = False
+    contract["current_command_is_bounded_proof_not_long_training"] = (
+        bounded_snerv_diagnostic
+    )
+    metadata = snerv.setdefault("metadata", {})
+    metadata["current_command_is_bounded_proof_not_long_training"] = (
+        bounded_snerv_diagnostic
+    )
+    if approve_snerv_launch_gate:
+        metadata["snerv_long_run_launch_gate"] = (
+            _approved_snerv_long_run_launch_gate()
+        )
     gate = snerv["score_lowering_gate"]
     gate["local_mlx_executable"] = True
     gate["prelaunch_allowed"] = True
     gate["cpu_replay_ready"] = False
     gate["exact_gate_ready"] = False
     return out
+
+
+def _runnable_hinerv_queue() -> dict:
+    out = json.loads(json.dumps(_campaign_plan()["experiment_queue"]))
+    selected_hinerv = False
+    for row in out["experiments"]:
+        if row["family"] != "hi_nerv" or selected_hinerv:
+            row["status"] = "disabled"
+            row["blocked"] = True
+            continue
+        selected_hinerv = True
+        row["status"] = "queued"
+        row["blocked"] = False
+        contract = row["launch_authority_contract"]
+        contract["queue_status_is_local_mlx_plan"] = True
+        contract["queue_status_is_runnable_plan"] = True
+        contract["queue_launch_blockers"] = []
+        contract["queue_status_is_receiver_proof"] = False
+        contract["queue_status_is_cpu_replay_proof"] = False
+        contract["queue_status_is_exact_eval_authority"] = False
+        gate = row["score_lowering_gate"]
+        gate["local_mlx_executable"] = True
+        gate["prelaunch_allowed"] = True
+        gate["cpu_replay_ready"] = False
+        gate["exact_gate_ready"] = False
+    return out
+
+
+def _approved_snerv_long_run_launch_gate() -> dict:
+    return {
+        "schema": "snerv_long_run_launch_gate_consumption.v1",
+        "required": True,
+        "approved": True,
+        "verdict_schema": "nerv_long_run_launch_gate.v1",
+        "gate_highest_level": "L4",
+        "gate_blocking_evidence": [],
+        "source_forward_action_effect_indexed": True,
+        "indexed_evidence_schemas": [
+            "snerv_source_forward_proof_action_effect.v1",
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotable": False,
+        "dispatch_attempted": False,
+        "gpu_launched": False,
+    }
+
+
+def _drop_snerv_long_run_launch_gate(snerv: dict) -> None:
+    snerv.pop("snerv_long_run_launch_gate", None)
+    metadata = snerv.get("metadata")
+    if isinstance(metadata, dict):
+        metadata.pop("snerv_long_run_launch_gate", None)
+    contract = snerv.get("launch_authority_contract")
+    if isinstance(contract, dict):
+        contract.pop("snerv_long_run_launch_gate", None)
 
 
 def _hinerv_official_supersession_campaign_plan() -> dict:

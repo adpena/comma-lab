@@ -525,6 +525,10 @@ from tac.analysis.snerv_binary_profile import (  # noqa: E402
     SnervBinaryProfileError,
     write_snerv_binary_profile,
 )
+from tac.analysis.snerv_long_run_launch_gate_consumption import (  # noqa: E402
+    snerv_long_run_launch_gate_blockers,
+    snerv_long_run_launch_gate_from_row,
+)
 from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
     PR95_MLX_SOURCE_VIDEO_RGB_YUV6_BLOCKERS,
 )
@@ -24218,6 +24222,27 @@ def _snerv_lf_hf_bounded_training_contract_blockers(
     return _dedupe(blockers)
 
 
+def _planner_row_snerv_long_run_launch_gate_blockers(
+    row: Mapping[str, Any],
+    *,
+    family: str,
+    payload_schema: str | None,
+) -> list[str]:
+    if str(family or "").strip().lower().replace("-", "_") != "snerv":
+        return []
+    if payload_schema == "snerv_lf_hf_replacement_queue.v1":
+        return []
+    normalized = dict(row)
+    if not str(normalized.get("family") or "").strip():
+        normalized["family"] = "snerv"
+    gate = snerv_long_run_launch_gate_from_row(normalized)
+    return snerv_long_run_launch_gate_blockers(
+        gate,
+        row=normalized,
+        label_prefix="planner_row_snerv_long_run_launch_gate",
+    )
+
+
 def _planner_row_queue_artifact_record(
     path: str | Path,
     *,
@@ -24352,6 +24377,17 @@ def _planner_row_records_from_payload(
                 if payload.get("schema") == "snerv_lf_hf_replacement_queue.v1":
                     row_status_runnable_values.update(SNERV_LF_HF_REPLACEMENT_QUEUE_RUNNABLE_STATUSES)
                     launch_blockers.extend(_snerv_lf_hf_bounded_training_contract_blockers(row))
+                launch_blockers.extend(
+                    _planner_row_snerv_long_run_launch_gate_blockers(
+                        row,
+                        family=family,
+                        payload_schema=(
+                            str(payload.get("schema"))
+                            if isinstance(payload.get("schema"), str)
+                            else None
+                        ),
+                    )
+                )
                 row_status_runnable = status_text in row_status_runnable_values and not blocked
                 launch_contract_runnable = (
                     contract_schema_valid

@@ -6505,7 +6505,24 @@ def _write_planner_row_queue_artifact(
     blocked: bool = False,
     runnable_contract: bool = True,
     command_extra: list[str] | None = None,
+    snerv_long_run_launch_gate: dict[str, object] | None = None,
 ) -> Path:
+    launch_contract = {
+        "schema": "nerv_long_training_queue_launch_authority_contract.v1",
+        "queue_status_is_local_mlx_plan": True,
+        "queue_status_is_runnable_plan": runnable_contract,
+        "queue_launch_blockers": [] if runnable_contract else ["unit_not_runnable"],
+        "queue_status_is_receiver_proof": False,
+        "queue_status_is_cpu_replay_proof": False,
+        "queue_status_is_exact_eval_authority": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if snerv_long_run_launch_gate is not None:
+        launch_contract["snerv_long_run_launch_gate"] = dict(
+            snerv_long_run_launch_gate
+        )
     payload = {
         "schema": schema,
         "score_claim": False,
@@ -6518,18 +6535,7 @@ def _write_planner_row_queue_artifact(
                 "family": family,
                 "status": status,
                 "blocked": blocked,
-                "launch_authority_contract": {
-                    "schema": "nerv_long_training_queue_launch_authority_contract.v1",
-                    "queue_status_is_local_mlx_plan": True,
-                    "queue_status_is_runnable_plan": runnable_contract,
-                    "queue_launch_blockers": [] if runnable_contract else ["unit_not_runnable"],
-                    "queue_status_is_receiver_proof": False,
-                    "queue_status_is_cpu_replay_proof": False,
-                    "queue_status_is_exact_eval_authority": False,
-                    "score_claim": False,
-                    "promotion_eligible": False,
-                    "ready_for_exact_eval_dispatch": False,
-                },
+                "launch_authority_contract": launch_contract,
                 "steps": [
                     {
                         "id": "run_mlx_first_campaign_row",
@@ -6552,6 +6558,25 @@ def _write_planner_row_queue_artifact(
     }
     path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
     return path
+
+
+def _approved_snerv_long_run_launch_gate_consumption() -> dict[str, object]:
+    return {
+        "schema": "snerv_long_run_launch_gate_consumption.v1",
+        "required": True,
+        "approved": True,
+        "verdict_schema": "nerv_long_run_launch_gate.v1",
+        "gate_highest_level": "L4",
+        "gate_blocking_evidence": [],
+        "source_forward_action_effect_indexed": True,
+        "indexed_evidence_schemas": [
+            "snerv_source_forward_proof_action_effect.v1",
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _write_snerv_lf_hf_replacement_queue_artifact(
@@ -6727,6 +6752,85 @@ def test_planner_row_launch_gate_accepts_snerv_lf_hf_replacement_queue_rows(
     assert match["score_claim"] is False
     assert match["promotion_eligible"] is False
     assert match["ready_for_exact_eval_dispatch"] is False
+
+
+def test_planner_row_launch_gate_rejects_snerv_full_run_without_launch_gate(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        family="snerv",
+        row_id="snerv::candidate::native_rate_aware_training",
+        command_extra=[
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--modelsize-candidate-id",
+            "candidate",
+        ],
+    )
+
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv::candidate::native_rate_aware_training",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=600,
+        epochs=29650,
+        modelsize_candidate_id="candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(args)
+    assert "planner_row_snerv_long_run_launch_gate_missing" in blockers
+    assert "snerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
+    guard = runner_mod._planner_row_launch_guard(args)
+    match = guard["queue_artifact_status"]["matched_records"][0]
+    assert match["row_status_runnable"] is True
+    assert match["launch_contract_runnable"] is False
+    assert (
+        "planner_row_snerv_long_run_launch_gate_missing"
+        in match["launch_contract_blockers"]
+    )
+
+
+def test_planner_row_launch_gate_accepts_snerv_full_run_with_launch_gate(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        family="snerv",
+        row_id="snerv::candidate::native_rate_aware_training",
+        command_extra=[
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--modelsize-candidate-id",
+            "candidate",
+        ],
+        snerv_long_run_launch_gate=_approved_snerv_long_run_launch_gate_consumption(),
+    )
+
+    args = SimpleNamespace(
+        execute_family="snerv",
+        planner_row_id="snerv::candidate::native_rate_aware_training",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=600,
+        epochs=29650,
+        modelsize_candidate_id="candidate",
+        repo_root=REPO_ROOT,
+    )
+
+    assert runner_mod._planner_row_launch_blockers(args) == []
+    guard = runner_mod._planner_row_launch_guard(args)
+    match = guard["queue_artifact_status"]["matched_runnable_records"][0]
+    assert match["family"] == "snerv"
+    assert match["launch_contract_runnable"] is True
 
 
 def test_planner_row_launch_gate_checks_snerv_lf_hf_solution_family(
@@ -7048,6 +7152,7 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
         tmp_path / "queue.json",
         family="snerv",
         row_id="snerv::candidate::native_rate_aware_training",
+        snerv_long_run_launch_gate=_approved_snerv_long_run_launch_gate_consumption(),
         command_extra=[
             "--num-pairs",
             "600",

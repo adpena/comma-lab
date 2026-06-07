@@ -286,7 +286,12 @@ def test_nerv_long_training_campaign_admission_blocks_active_local_mlx_process(
 def test_nerv_long_training_campaign_admission_blocks_snerv_without_launch_gate(
     tmp_path: Path,
 ) -> None:
-    verdict = _snerv_runnable_verdict(tmp_path / "ssd")
+    verdict = _snerv_runnable_verdict(
+        tmp_path / "ssd",
+        snerv_long_run_launch_gate_verdict=_approved_snerv_long_run_gate_verdict(),
+    )
+    selected = verdict["selected_local_mlx_experiments"][0]
+    selected.pop("snerv_long_run_launch_gate")
     claims = _claims_file(
         tmp_path,
         lane_id="lane_snerv_local_mlx",
@@ -309,11 +314,7 @@ def test_nerv_long_training_campaign_admission_blocks_snerv_without_launch_gate(
     assert admission["experiment_queue_ready"] is False
     assert admission["admitted_experiment_count"] == 0
     blockers = set(admission["selected_rows"][0]["blockers"])
-    assert "selected_row_snerv_long_run_launch_gate_not_approved" in blockers
-    assert (
-        "selected_row_snerv_long_run_launch_gate_source_forward_action_effect_missing"
-        in blockers
-    )
+    assert "selected_row_snerv_long_run_launch_gate_missing" in blockers
 
 
 def test_nerv_long_training_campaign_admission_accepts_snerv_with_launch_gate(

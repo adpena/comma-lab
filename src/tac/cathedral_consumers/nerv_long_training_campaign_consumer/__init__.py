@@ -18,6 +18,10 @@ from tac.analysis.nerv_long_training_campaign_plan import (
     ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
     RECEIVER_SURFACE_TRACE_CONTRACT_SCHEMA,
 )
+from tac.analysis.snerv_long_run_launch_gate_consumption import (
+    snerv_long_run_launch_gate_blockers,
+    snerv_long_run_launch_gate_from_row,
+)
 from tac.cathedral.consumer_contract import HookNumber
 
 CONSUMER_NAME = "nerv_long_training_campaign_consumer"
@@ -94,6 +98,13 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
                 label=f"experiment_{experiment_id}",
             )
         )
+        if _local_mlx_base_ready(experiment):
+            blockers.extend(
+                _snerv_long_run_launch_gate_blockers(
+                    experiment,
+                    label=f"experiment_{experiment_id}",
+                )
+            )
         gate = _mapping(experiment.get("score_lowering_gate"))
         blockers.extend(
             _authority_blockers(gate, label=f"experiment_gate_{experiment_id}")
@@ -237,6 +248,15 @@ def render_markdown(result: Mapping[str, Any]) -> str:
 
 
 def _local_mlx_ready(experiment: Mapping[str, Any]) -> bool:
+    return _local_mlx_base_ready(
+        experiment
+    ) and not _snerv_long_run_launch_gate_blockers(
+        experiment,
+        label="selected_row",
+    )
+
+
+def _local_mlx_base_ready(experiment: Mapping[str, Any]) -> bool:
     gate = _mapping(experiment.get("score_lowering_gate"))
     contract = _mapping(experiment.get("launch_authority_contract"))
     receiver_surface_contract = _mapping(contract.get("receiver_surface_trace_contract"))
@@ -261,6 +281,25 @@ def _local_mlx_ready(experiment: Mapping[str, Any]) -> bool:
         and not _truthy_authority(experiment)
         and not _truthy_authority(gate)
         and bool(_mapping_list(experiment.get("steps")))
+    )
+
+
+def _snerv_long_run_launch_gate(
+    experiment: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    return snerv_long_run_launch_gate_from_row(experiment)
+
+
+def _snerv_long_run_launch_gate_blockers(
+    experiment: Mapping[str, Any],
+    *,
+    label: str,
+) -> list[str]:
+    gate = _snerv_long_run_launch_gate(experiment)
+    return snerv_long_run_launch_gate_blockers(
+        gate,
+        row=experiment,
+        label_prefix=f"{label}_snerv_long_run_launch_gate",
     )
 
 
