@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -32,6 +34,7 @@ from tac.substrates.hi_nerv.target_region_actions import (
     TARGET_REGION_ACTION_META_KEY,
     TargetRegionPixelAction,
     encode_target_region_actions_meta,
+    target_region_action_payload_codec,
 )
 
 
@@ -203,6 +206,9 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_receiver_consump
     assert proof["exact_uint8_action_pixels_applied"] == 2
     assert proof["receiver_changed_action_pixels"] == 2
     assert proof["max_abs_action_rgb_error"] == pytest.approx(0.0)
+    assert proof["target_region_action_program_sha256"] == hashlib.sha256(
+        program.encode("ascii")
+    ).hexdigest()
     assert "target_region_action_inflate_survival_missing" in proof["blockers"]
 
 
@@ -241,6 +247,65 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_inflated_raw(
     assert proof["inflated_raw_matches_action_receiver"] is True
     assert proof["inflated_raw_action_changed_pixels"] > 0
     assert proof["inflated_raw_max_abs_error_vs_action_receiver"] == 0
+    assert "target_region_action_inflate_survival_missing" not in proof["blockers"]
+
+
+def test_hi_nerv_target_region_tile_brotli_survives_inflate_interpreter(
+    tmp_path: Path,
+) -> None:
+    y, x = np.mgrid[:8, :8]
+    mask = (x % 2) == 0
+    ys, xs = np.nonzero(mask)
+    yx = np.stack([ys, xs], axis=1).astype(np.uint16)
+    rgb = np.zeros((yx.shape[0], 3), dtype=np.uint8)
+    rgb[:, 0] = 255
+    rgb[:, 2] = np.arange(yx.shape[0], dtype=np.uint8)
+    action = TargetRegionPixelAction(
+        pair_index=1,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=yx,
+        rgb_u8=rgb,
+    )
+    program = encode_target_region_actions_meta([action])
+    stored_payload = base64.b64decode(program.encode("ascii"), validate=True)
+    assert target_region_action_payload_codec(stored_payload) == "tile_brotli_v1"
+    action_archive = _write_tiny_hiv1_archive(
+        tmp_path / "action.zip",
+        extra_meta={TARGET_REGION_ACTION_META_KEY: program},
+    )
+    with zipfile.ZipFile(action_archive, "r") as zf:
+        payload = zf.read("0.bin")
+    inflated_raw = tmp_path / "inflated.raw"
+    inflate_one_video(payload, inflated_raw, device="cpu")
+
+    proof = build_hi_nerv_target_region_action_parseback_survival(
+        action_archive,
+        expected_program_base64=program,
+        expected_payload_bytes=len(stored_payload),
+        inflated_raw_path=inflated_raw,
+    )
+
+    assert proof["survived"] is True
+    assert proof["parseback_survived"] is True
+    assert proof["inflate_survived"] is True
+    assert proof["target_region_actions"]["payload_codec"] == "tile_brotli_v1"
+    assert proof["target_region_actions"]["support_source"] == (
+        "tile_bitmap_payload_coordinates"
+    )
+    assert proof["target_region_actions"]["support_encoding"] == (
+        "brotli_tile_bitmap_little_endian"
+    )
+    assert proof["target_region_actions"]["payload_bytes"] == len(stored_payload)
+    assert proof["target_region_actions"]["support_encoded_bytes"] > 0
+    assert proof["target_region_actions"]["support_logical_yx_bytes"] == int(yx.nbytes)
+    assert proof["target_region_action_program_sha256"] == hashlib.sha256(
+        program.encode("ascii")
+    ).hexdigest()
+    assert proof["total_action_pixels"] == int(yx.shape[0])
+    assert proof["exact_uint8_action_pixels_applied"] == int(yx.shape[0])
+    assert proof["inflated_raw_matches_action_receiver"] is True
     assert "target_region_action_inflate_survival_missing" not in proof["blockers"]
 
 

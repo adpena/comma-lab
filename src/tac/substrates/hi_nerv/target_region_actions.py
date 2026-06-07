@@ -24,15 +24,21 @@ TARGET_REGION_ACTION_MAGIC = b"HTRA1"
 TARGET_REGION_ACTION_COMPRESSED_MAGIC = b"HTRZ1"
 TARGET_REGION_ACTION_BROTLI_MAGIC = b"HTRB1"
 TARGET_REGION_ACTION_SPLIT_BROTLI_MAGIC = b"HTRS1"
+TARGET_REGION_ACTION_TILE_BROTLI_MAGIC = b"HTRT1"
 TARGET_REGION_ACTION_SCHEMA = "hi_nerv_target_region_archive_actions.v1"
 _HEADER_FMT = "<5sH"
 _COMPRESSED_HEADER_FMT = "<5sI"
 _ACTION_HEADER_FMT = "<HBBHHI"
 _SPLIT_ACTION_HEADER_FMT = "<HBBHHIII"
+_TILE_ACTION_HEADER_FMT = "<HBBHHIII"
+_TILE_RECORD_FMT = "<HH"
 _HEADER_SIZE = struct.calcsize(_HEADER_FMT)
 _COMPRESSED_HEADER_SIZE = struct.calcsize(_COMPRESSED_HEADER_FMT)
 _ACTION_HEADER_SIZE = struct.calcsize(_ACTION_HEADER_FMT)
 _SPLIT_ACTION_HEADER_SIZE = struct.calcsize(_SPLIT_ACTION_HEADER_FMT)
+_TILE_ACTION_HEADER_SIZE = struct.calcsize(_TILE_ACTION_HEADER_FMT)
+_TILE_RECORD_SIZE = struct.calcsize(_TILE_RECORD_FMT)
+_TILE_BROTLI_SIZE = 16
 
 
 @dataclass(frozen=True)
@@ -105,6 +111,7 @@ def encode_target_region_actions_payload(actions: list[TargetRegionPixelAction])
     zlib_compressed = zlib.compress(raw, level=9)
     brotli_compressed = brotli.compress(raw, quality=11)
     split_brotli = _encode_split_brotli_target_region_actions(actions)
+    tile_brotli = _try_encode_tile_brotli_target_region_actions(actions)
     candidates = [
         (
             len(raw),
@@ -133,10 +140,91 @@ def encode_target_region_actions_payload(actions: list[TargetRegionPixelAction])
             split_brotli,
         ),
     ]
+    if tile_brotli is not None:
+        candidates.append((len(tile_brotli), tile_brotli))
     _size, payload = min(candidates, key=lambda item: item[0])
     if payload is raw:
         return raw
     return payload
+
+
+def _try_encode_tile_brotli_target_region_actions(
+    actions: list[TargetRegionPixelAction],
+) -> bytes | None:
+    try:
+        return _encode_tile_brotli_target_region_actions(actions)
+    except ValueError:
+        return None
+
+
+def _encode_tile_brotli_target_region_actions(
+    actions: list[TargetRegionPixelAction],
+) -> bytes:
+    if len(actions) > 65535:
+        raise ValueError(f"too many target-region actions: {len(actions)}")
+    chunks = [struct.pack(_HEADER_FMT, TARGET_REGION_ACTION_TILE_BROTLI_MAGIC, len(actions))]
+    for action in actions:
+        if action.pair_index > 65535:
+            raise ValueError(f"pair_index exceeds u16 grammar: {action.pair_index}")
+        if action.height > 65535 or action.width > 65535:
+            raise ValueError(f"geometry exceeds u16 grammar: {action.height}x{action.width}")
+        mask = _action_support_mask(action)
+        yx = _canonical_mask_yx(mask)
+        if yx.shape != action.yx.shape or not np.array_equal(yx, action.yx):
+            raise ValueError("tile-brotli grammar requires canonical row-major action order")
+        tile_payload = _encode_tile_support_payload(mask, tile_size=_TILE_BROTLI_SIZE)
+        rgb_payload = np.asarray(action.rgb_u8, dtype=np.uint8).tobytes(order="C")
+        tile_compressed = brotli.compress(tile_payload, quality=11)
+        rgb_compressed = brotli.compress(rgb_payload, quality=11)
+        chunks.append(
+            struct.pack(
+                _TILE_ACTION_HEADER_FMT,
+                int(action.pair_index),
+                int(action.frame_index),
+                _TILE_BROTLI_SIZE,
+                int(action.height),
+                int(action.width),
+                int(action.pixel_count),
+                len(tile_compressed),
+                len(rgb_compressed),
+            )
+        )
+        chunks.append(tile_compressed)
+        chunks.append(rgb_compressed)
+    return b"".join(chunks)
+
+
+def _action_support_mask(action: TargetRegionPixelAction) -> np.ndarray:
+    mask = np.zeros((int(action.height), int(action.width)), dtype=bool)
+    y = action.yx[:, 0].astype(np.int64, copy=False)
+    x = action.yx[:, 1].astype(np.int64, copy=False)
+    if len({(int(yy), int(xx)) for yy, xx in zip(y, x, strict=True)}) != action.pixel_count:
+        raise ValueError("tile-brotli grammar requires duplicate-free support")
+    mask[y, x] = True
+    return mask
+
+
+def _canonical_mask_yx(mask: np.ndarray) -> np.ndarray:
+    src = np.asarray(mask, dtype=bool)
+    ys, xs = np.nonzero(src)
+    if ys.size == 0:
+        return np.empty((0, 2), dtype=np.uint16)
+    return np.ascontiguousarray(np.stack([ys, xs], axis=1).astype(np.uint16))
+
+
+def _encode_tile_support_payload(mask: np.ndarray, *, tile_size: int) -> bytes:
+    records: list[bytes] = []
+    src = np.asarray(mask, dtype=bool)
+    for y0 in range(0, src.shape[0], tile_size):
+        for x0 in range(0, src.shape[1], tile_size):
+            block = src[y0 : y0 + tile_size, x0 : x0 + tile_size]
+            if not np.any(block):
+                continue
+            packed = np.packbits(block.astype(np.uint8).reshape(-1), bitorder="little")
+            records.append(struct.pack(_TILE_RECORD_FMT, int(y0), int(x0)) + packed.tobytes(order="C"))
+    if len(records) > 65535:
+        raise ValueError(f"too many tile support records: {len(records)}")
+    return struct.pack("<H", len(records)) + b"".join(records)
 
 
 def _encode_split_brotli_target_region_actions(
@@ -289,11 +377,119 @@ def _decode_split_brotli_target_region_actions(
     return actions
 
 
+def _decode_tile_brotli_target_region_actions(
+    blob: bytes,
+) -> list[TargetRegionPixelAction]:
+    if len(blob) < _HEADER_SIZE:
+        raise ValueError("tile-brotli target-region action payload too short")
+    magic, action_count = struct.unpack(_HEADER_FMT, blob[:_HEADER_SIZE])
+    if magic != TARGET_REGION_ACTION_TILE_BROTLI_MAGIC:
+        raise ValueError(f"bad tile-brotli target-region action magic: {magic!r}")
+    offset = _HEADER_SIZE
+    actions: list[TargetRegionPixelAction] = []
+    for _ in range(int(action_count)):
+        if offset + _TILE_ACTION_HEADER_SIZE > len(blob):
+            raise ValueError("truncated tile-brotli target-region action header")
+        (
+            pair_index,
+            frame_index,
+            tile_size,
+            height,
+            width,
+            pixel_count,
+            tile_compressed_bytes,
+            rgb_compressed_bytes,
+        ) = struct.unpack(
+            _TILE_ACTION_HEADER_FMT,
+            blob[offset : offset + _TILE_ACTION_HEADER_SIZE],
+        )
+        offset += _TILE_ACTION_HEADER_SIZE
+        if tile_size <= 0:
+            raise ValueError(f"bad tile-brotli tile size: {tile_size}")
+        tile_end = offset + int(tile_compressed_bytes)
+        rgb_end = tile_end + int(rgb_compressed_bytes)
+        if rgb_end > len(blob):
+            raise ValueError("truncated tile-brotli target-region action payload")
+        try:
+            tile_payload = brotli.decompress(blob[offset:tile_end])
+            rgb_payload = brotli.decompress(blob[tile_end:rgb_end])
+        except brotli.error as exc:
+            raise ValueError(f"bad tile-brotli target-region action payload: {exc}") from exc
+        offset = rgb_end
+        yx = _decode_tile_support_payload(
+            tile_payload,
+            height=int(height),
+            width=int(width),
+            tile_size=int(tile_size),
+        )
+        if yx.shape[0] != int(pixel_count):
+            raise ValueError(
+                "tile-brotli target-region support count mismatch: "
+                f"{yx.shape[0]} != {int(pixel_count)}"
+            )
+        expected_rgb_bytes = int(pixel_count) * 3
+        if len(rgb_payload) != expected_rgb_bytes:
+            raise ValueError(
+                "tile-brotli target-region rgb size mismatch: "
+                f"{len(rgb_payload)} != {expected_rgb_bytes}"
+            )
+        rgb = np.frombuffer(rgb_payload, dtype=np.uint8).reshape(int(pixel_count), 3)
+        actions.append(
+            TargetRegionPixelAction(
+                pair_index=int(pair_index),
+                frame_index=int(frame_index),
+                height=int(height),
+                width=int(width),
+                yx=yx,
+                rgb_u8=np.array(rgb, copy=True),
+            )
+        )
+    if offset != len(blob):
+        raise ValueError("tile-brotli target-region action payload has trailing bytes")
+    return actions
+
+
+def _decode_tile_support_payload(
+    payload: bytes,
+    *,
+    height: int,
+    width: int,
+    tile_size: int,
+) -> np.ndarray:
+    if len(payload) < 2:
+        raise ValueError("tile-brotli support payload too short")
+    tile_count = struct.unpack("<H", payload[:2])[0]
+    offset = 2
+    mask = np.zeros((int(height), int(width)), dtype=bool)
+    for _ in range(int(tile_count)):
+        if offset + _TILE_RECORD_SIZE > len(payload):
+            raise ValueError("truncated tile-brotli support record")
+        y0, x0 = struct.unpack(_TILE_RECORD_FMT, payload[offset : offset + _TILE_RECORD_SIZE])
+        offset += _TILE_RECORD_SIZE
+        if y0 >= height or x0 >= width:
+            raise ValueError(f"tile-brotli support tile origin out of range: {(y0, x0)}")
+        block_h = min(tile_size, height - int(y0))
+        block_w = min(tile_size, width - int(x0))
+        packed_len = (block_h * block_w + 7) // 8
+        if offset + packed_len > len(payload):
+            raise ValueError("truncated tile-brotli support bitmap")
+        packed = np.frombuffer(payload[offset : offset + packed_len], dtype=np.uint8)
+        offset += packed_len
+        bits = np.unpackbits(packed, bitorder="little")[: block_h * block_w]
+        block = bits.reshape(block_h, block_w).astype(bool)
+        mask[int(y0) : int(y0) + block_h, int(x0) : int(x0) + block_w] |= block
+    if offset != len(payload):
+        raise ValueError("tile-brotli support payload has trailing bytes")
+    return _canonical_mask_yx(mask)
+
+
 def decode_target_region_actions(blob: bytes) -> list[TargetRegionPixelAction]:
     """Decode the charged receiver binary grammar."""
 
     if len(blob) >= _HEADER_SIZE:
         magic, _action_count = struct.unpack(_HEADER_FMT, blob[:_HEADER_SIZE])
+        if magic == TARGET_REGION_ACTION_TILE_BROTLI_MAGIC:
+            return _decode_tile_brotli_target_region_actions(blob)
         if magic == TARGET_REGION_ACTION_SPLIT_BROTLI_MAGIC:
             return _decode_split_brotli_target_region_actions(blob)
     if len(blob) >= _COMPRESSED_HEADER_SIZE:
@@ -327,6 +523,8 @@ def decode_target_region_actions(blob: bytes) -> list[TargetRegionPixelAction]:
 
 
 def target_region_action_payload_codec(payload: bytes) -> str:
+    if payload.startswith(TARGET_REGION_ACTION_TILE_BROTLI_MAGIC):
+        return "tile_brotli_v1"
     if payload.startswith(TARGET_REGION_ACTION_SPLIT_BROTLI_MAGIC):
         return "split_brotli_v1"
     if payload.startswith(TARGET_REGION_ACTION_BROTLI_MAGIC):
@@ -354,6 +552,117 @@ def target_region_action_support_sha256(actions: list[TargetRegionPixelAction]) 
     return h.hexdigest()
 
 
+def _split_brotli_support_payload_bytes(payload: bytes) -> int:
+    magic, action_count = struct.unpack(_HEADER_FMT, payload[:_HEADER_SIZE])
+    if magic != TARGET_REGION_ACTION_SPLIT_BROTLI_MAGIC:
+        raise ValueError(f"bad split-brotli target-region action magic: {magic!r}")
+    offset = _HEADER_SIZE
+    total = 0
+    for _ in range(int(action_count)):
+        if offset + _SPLIT_ACTION_HEADER_SIZE > len(payload):
+            raise ValueError("truncated split-brotli target-region action header")
+        (
+            _pair_index,
+            _frame_index,
+            _coord_mode,
+            _height,
+            _width,
+            _pixel_count,
+            y_compressed_bytes,
+            x_compressed_bytes,
+            rgb_compressed_bytes,
+        ) = struct.unpack(
+            _SPLIT_ACTION_HEADER_FMT,
+            payload[offset : offset + _SPLIT_ACTION_HEADER_SIZE],
+        )
+        offset += _SPLIT_ACTION_HEADER_SIZE
+        total += int(y_compressed_bytes) + int(x_compressed_bytes)
+        offset += (
+            int(y_compressed_bytes)
+            + int(x_compressed_bytes)
+            + int(rgb_compressed_bytes)
+        )
+        if offset > len(payload):
+            raise ValueError("truncated split-brotli target-region action payload")
+    if offset != len(payload):
+        raise ValueError("split-brotli target-region action payload has trailing bytes")
+    return total
+
+
+def _tile_brotli_support_payload_bytes(payload: bytes) -> int:
+    magic, action_count = struct.unpack(_HEADER_FMT, payload[:_HEADER_SIZE])
+    if magic != TARGET_REGION_ACTION_TILE_BROTLI_MAGIC:
+        raise ValueError(f"bad tile-brotli target-region action magic: {magic!r}")
+    offset = _HEADER_SIZE
+    total = 0
+    for _ in range(int(action_count)):
+        if offset + _TILE_ACTION_HEADER_SIZE > len(payload):
+            raise ValueError("truncated tile-brotli target-region action header")
+        (
+            _pair_index,
+            _frame_index,
+            _tile_size,
+            _height,
+            _width,
+            _pixel_count,
+            tile_compressed_bytes,
+            rgb_compressed_bytes,
+        ) = struct.unpack(
+            _TILE_ACTION_HEADER_FMT,
+            payload[offset : offset + _TILE_ACTION_HEADER_SIZE],
+        )
+        offset += _TILE_ACTION_HEADER_SIZE
+        total += int(tile_compressed_bytes)
+        offset += int(tile_compressed_bytes) + int(rgb_compressed_bytes)
+        if offset > len(payload):
+            raise ValueError("truncated tile-brotli target-region action payload")
+    if offset != len(payload):
+        raise ValueError("tile-brotli target-region action payload has trailing bytes")
+    return total
+
+
+def _target_region_action_support_telemetry(
+    payload: bytes,
+    actions: list[TargetRegionPixelAction],
+) -> dict[str, Any]:
+    codec = target_region_action_payload_codec(payload)
+    logical_yx_bytes = int(sum(action.yx.nbytes for action in actions))
+    if codec == "tile_brotli_v1":
+        return {
+            "support_source": "tile_bitmap_payload_coordinates",
+            "support_encoding": "brotli_tile_bitmap_little_endian",
+            "support_encoded_bytes": _tile_brotli_support_payload_bytes(payload),
+            "support_logical_yx_bytes": logical_yx_bytes,
+        }
+    if codec == "split_brotli_v1":
+        return {
+            "support_source": "split_delta_payload_coordinates",
+            "support_encoding": "brotli_split_yx_delta_streams",
+            "support_encoded_bytes": _split_brotli_support_payload_bytes(payload),
+            "support_logical_yx_bytes": logical_yx_bytes,
+        }
+    if codec == "brotli_wrapped_v1":
+        return {
+            "support_source": "wrapped_raw_payload_coordinates",
+            "support_encoding": "brotli_wrapped_raw_yx_u16_coordinates",
+            "support_encoded_bytes": len(payload) - _COMPRESSED_HEADER_SIZE,
+            "support_logical_yx_bytes": logical_yx_bytes,
+        }
+    if codec == "zlib_wrapped_v1":
+        return {
+            "support_source": "wrapped_raw_payload_coordinates",
+            "support_encoding": "zlib_wrapped_raw_yx_u16_coordinates",
+            "support_encoded_bytes": len(payload) - _COMPRESSED_HEADER_SIZE,
+            "support_logical_yx_bytes": logical_yx_bytes,
+        }
+    return {
+        "support_source": "explicit_payload_coordinates",
+        "support_encoding": "explicit_yx_u16_coordinates",
+        "support_encoded_bytes": logical_yx_bytes,
+        "support_logical_yx_bytes": logical_yx_bytes,
+    }
+
+
 def encode_target_region_actions_meta(actions: list[TargetRegionPixelAction]) -> str:
     return base64.b64encode(encode_target_region_actions_payload(actions)).decode("ascii")
 
@@ -370,6 +679,7 @@ def decode_target_region_actions_from_meta(meta: dict[str, Any]) -> list[TargetR
 def target_region_action_section_telemetry(actions: list[TargetRegionPixelAction]) -> dict[str, Any]:
     raw_payload = encode_target_region_actions(actions)
     payload = encode_target_region_actions_payload(actions)
+    support_telemetry = _target_region_action_support_telemetry(payload, actions)
     return {
         "schema": TARGET_REGION_ACTION_SCHEMA,
         "meta_key": TARGET_REGION_ACTION_META_KEY,
@@ -378,10 +688,8 @@ def target_region_action_section_telemetry(actions: list[TargetRegionPixelAction
         "payload_bytes": len(payload),
         "raw_payload_bytes": len(raw_payload),
         "payload_codec": target_region_action_payload_codec(payload),
-        "support_source": "explicit_payload_coordinates",
-        "support_encoding": "explicit_yx_u16_coordinates",
+        **support_telemetry,
         "support_cardinality": int(sum(action.pixel_count for action in actions)),
-        "support_encoded_bytes": int(sum(action.yx.nbytes for action in actions)),
         "support_sha256": target_region_action_support_sha256(actions),
         "archive_executable_support": True,
         "charged_as_hiv1_meta_blob": True,

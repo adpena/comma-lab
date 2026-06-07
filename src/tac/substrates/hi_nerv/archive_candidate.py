@@ -293,6 +293,7 @@ def build_hi_nerv_target_region_action_parseback_survival(
             archive_sha256=archive_sha256,
             archive_bytes=int(path.stat().st_size),
         )
+    stored_program_sha256 = hashlib.sha256(raw_b64.encode("ascii")).hexdigest()
 
     telemetry = target_region_action_section_telemetry(actions)
     telemetry["payload_bytes"] = len(stored_payload)
@@ -415,6 +416,7 @@ def build_hi_nerv_target_region_action_parseback_survival(
         "max_abs_receiver_delta_vs_no_action": float(max_abs_base_delta),
         "expected_payload_sha256": expected_payload_sha256,
         "stored_payload_sha256": hashlib.sha256(stored_payload).hexdigest(),
+        "target_region_action_program_sha256": stored_program_sha256,
         "expected_support_sha256": expected_support_sha256,
         "expected_payload_bytes": expected_payload_bytes,
         "survived": parseback_survived,

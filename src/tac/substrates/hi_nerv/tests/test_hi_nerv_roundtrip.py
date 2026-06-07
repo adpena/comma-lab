@@ -643,7 +643,57 @@ def test_target_region_action_payload_uses_receiver_decodable_compression():
     decoded = decode_target_region_actions(payload)
 
     assert len(payload) < len(raw)
-    assert target_region_action_payload_codec(payload) == "brotli_wrapped_v1"
+    assert target_region_action_payload_codec(payload) in {"brotli_wrapped_v1", "tile_brotli_v1"}
+    assert len(decoded) == 1
+    assert np.array_equal(decoded[0].yx, yx)
+    assert np.array_equal(decoded[0].rgb_u8, rgb)
+
+
+def test_target_region_action_payload_uses_tile_brotli_when_support_is_canonical():
+    rng = np.random.default_rng(11)
+    y, x = np.mgrid[:64, :64]
+    mask = (y < 48) & ((x % 3) != 1)
+    ys, xs = np.nonzero(mask)
+    yx = np.stack([ys, xs], axis=1).astype(np.uint16)
+    rgb = rng.integers(0, 256, size=(yx.shape[0], 3), dtype=np.uint8)
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=64,
+        width=64,
+        yx=yx,
+        rgb_u8=rgb,
+    )
+
+    payload = encode_target_region_actions_payload([action])
+    decoded = decode_target_region_actions(payload)
+
+    assert target_region_action_payload_codec(payload) == "tile_brotli_v1"
+    assert len(decoded) == 1
+    assert np.array_equal(decoded[0].yx, yx)
+    assert np.array_equal(decoded[0].rgb_u8, rgb)
+
+
+def test_target_region_action_payload_does_not_mislabel_noncanonical_support_as_tile():
+    rng = np.random.default_rng(13)
+    y, x = np.mgrid[:64, :64]
+    mask = (y < 48) & ((x % 3) != 1)
+    ys, xs = np.nonzero(mask)
+    yx = np.stack([ys, xs], axis=1).astype(np.uint16)[::-1].copy()
+    rgb = rng.integers(0, 256, size=(yx.shape[0], 3), dtype=np.uint8)
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=64,
+        width=64,
+        yx=yx,
+        rgb_u8=rgb,
+    )
+
+    payload = encode_target_region_actions_payload([action])
+    decoded = decode_target_region_actions(payload)
+
+    assert target_region_action_payload_codec(payload) != "tile_brotli_v1"
     assert len(decoded) == 1
     assert np.array_equal(decoded[0].yx, yx)
     assert np.array_equal(decoded[0].rgb_u8, rgb)
