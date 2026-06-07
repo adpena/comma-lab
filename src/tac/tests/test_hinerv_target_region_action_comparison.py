@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,6 +30,8 @@ from tac.substrates.hi_nerv.target_region_actions import (
     target_region_action_decoded_support_sha256,
     target_region_action_support_sha256,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _tiny_archive_with_action(
@@ -543,6 +546,90 @@ def test_hinerv_action_comparison_consumes_birth_action_effects_for_full_lowerin
     assert (
         candidates_by_target["pose_compensated_composite"]["action_kind"]
         == "joint_line_search_composite"
+    )
+
+
+def test_hinerv_action_comparison_cli_materializes_inflate_and_consumes_action_effect_rows(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    support_sha = target_region_action_support_sha256([action])
+
+    survival = json.loads(survival_path.read_text(encoding="utf-8"))
+    survival["inflate_survived"] = False
+    survival["inflated_raw_checked"] = False
+    survival["blockers"] = ["target_region_action_inflate_survival_missing"]
+    survival_path.write_text(json.dumps(survival), encoding="utf-8")
+
+    runner = json.loads(runner_path.read_text(encoding="utf-8"))
+    direct = runner["target_region_wall_normal_lift"]["direct_teacher"]
+    direct["archive_executable_support_sha256"] = support_sha
+    direct["archive_executable_support_hash_domain"] = (
+        "target_region_action_coordinates_v1"
+    )
+    runner_path.write_text(json.dumps(runner), encoding="utf-8")
+
+    action_effects_path = tmp_path / "action_effects.jsonl"
+    action_effects_path.write_text(
+        json.dumps(
+            _lowering_source_effect(
+                action_id="hinerv-test-action",
+                support_sha256=support_sha,
+                action_kind="birth_only",
+                lowering_target="backend_realization",
+            ).as_dict(),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "comparison"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "tools/compare_hinerv_target_region_action.py",
+            "--archive",
+            archive.as_posix(),
+            "--survival-receipt",
+            survival_path.as_posix(),
+            "--runner-report",
+            runner_path.as_posix(),
+            "--action-effect-rows",
+            action_effects_path.as_posix(),
+            "--materialize-inflate-raw",
+            "--output-dir",
+            output_dir.as_posix(),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    summary = json.loads(proc.stdout)
+    materialized = output_dir / "target_region_action_parseback_inflate_survival.json"
+    manifest = output_dir / "inflate_materialization_manifest.json"
+    report_path = output_dir / "hinerv_target_region_action_sidecar_backend_comparison.json"
+
+    proof = json.loads(materialized.read_text(encoding="utf-8"))
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    custody = proof["inflated_raw_custody"]
+
+    assert summary["sidecar_current_inflate_survived"] is True
+    assert proof["action_id"] == "hinerv-test-action"
+    assert proof["parseback_survived"] is True
+    assert proof["inflate_survived"] is True
+    assert "target_region_action_inflate_survival_missing" not in proof["blockers"]
+    assert (output_dir / "inflated_from_hinerv_interpreter.raw").is_file()
+    assert custody["score_claim"] is False
+    assert custody["promotion_eligible"] is False
+    assert json.loads(manifest.read_text(encoding="utf-8"))["inflate_survived"] is True
+    assert report["comparison"]["sidecar_current_inflate_survived"] is True
+    assert report["lowering_race"]["candidate_count"] >= 2
+    assert any(
+        row["lowering_target"] == "backend_realization"
+        for row in report["lowering_race"]["lowering_candidates"]
     )
 
 
