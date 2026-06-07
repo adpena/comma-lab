@@ -14,6 +14,7 @@ region-selection math itself; they are unit fixtures, not empirical anchors
 from __future__ import annotations
 
 import importlib.util
+import math
 
 import numpy as np
 import pytest
@@ -126,6 +127,28 @@ def test_pose_trusted_birth_admission_catastrophic_guard_blocks_exact_win() -> N
     assert decision["rejection_source"] == "rejected_by_catastrophic_pose_guard"
     assert "d_pose_relative_cap_exceeded" in decision["catastrophic_guard_reasons"]
     assert "pose_score_regression_cap_exceeded" in decision["catastrophic_guard_reasons"]
+
+
+def test_pose_trusted_birth_admission_rejects_nonfinite_pose_without_raising() -> None:
+    decision = pose_trusted_birth_admission_decision(
+        old_d_seg=0.50,
+        new_d_seg=0.49,
+        old_d_pose=194.20106506347656,
+        new_d_pose=math.nan,
+        pose_output_l2_delta=math.nan,
+        raw_pose_cap_l2=0.05,
+    )
+
+    assert decision["accepted"] is False
+    assert decision["exact_score_decision"] == "rejected"
+    assert decision["catastrophic_guard_decision"] == "rejected"
+    assert decision["rejection_source"] == "rejected_by_nonfinite_pose_surface"
+    assert decision["rejected_by_nonfinite_pose_surface"] is True
+    assert decision["new_d_pose"] is None
+    assert decision["pose_output_l2_delta"] is None
+    assert decision["delta_score_nonrate"] is None
+    assert decision["nonfinite_pose_fields"] == ["new_d_pose", "pose_output_l2_delta"]
+    assert "new_d_pose_nonfinite_or_negative" in decision["catastrophic_guard_reasons"]
 
 
 def _two_region_labels() -> tuple[np.ndarray, np.ndarray]:

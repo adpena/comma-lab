@@ -971,6 +971,134 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
     assert effect_rows[-1]["interaction_or_commutator"] == pytest.approx(-0.25)
 
 
+def test_hinerv_live_birth_survival_writes_four_arm_rows_when_birth_not_accepted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    class DummyModel:
+        def __init__(self) -> None:
+            self.weight = mx.array([1.0], dtype=mx.float32)
+
+        def parameters(self):
+            return {"weight": self.weight}
+
+        def update(self, params):
+            self.weight = params["weight"]
+
+    import tac.substrates.hi_nerv.birth_survival as survival_mod
+
+    monkeypatch.setattr(
+        survival_mod,
+        "measure_birth_survival",
+        lambda *_args, **_kwargs: {
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "fakequant_mlx",
+            "action_id": "e" * 64,
+            "survived": True,
+            "blockers": [],
+        },
+    )
+    monkeypatch.setattr(
+        survival_mod,
+        "measure_birth_hysteresis",
+        lambda *_args, **_kwargs: {
+            "schema": "hi_nerv_target_region_birth_hysteresis.v1",
+            "surface": "live_mlx_continued",
+            "action_id": "e" * 64,
+            "passed": True,
+        },
+    )
+
+    def arm_row(arm: str, *, action_kind: str, blockers: list[str] | None = None):
+        old_d_seg = 0.50
+        new_d_seg = 0.49 if not blockers else 0.50
+        old_d_pose = 194.0
+        new_d_pose = 194.0
+        return {
+            "schema": "hi_nerv_target_region_birth_four_arm.v1",
+            "action_id": "e" * 64,
+            "surface": "live_mlx",
+            "authority": "batch_local_live_mlx",
+            "normalization_scope": "batch_local",
+            "action_kind": action_kind,
+            "arm": arm,
+            "pair_index": 0,
+            "worst_region": {"batch_index": 0, "class_index": 2, "region_label": 1},
+            "updated_parameter_names": ["head_rgb_0.weight"] if arm == "B" else ["head_rgb_1.weight"],
+            "trained_groups": ["compensation_head_rgb_0"] if arm == "B" else ["head_rgb_1"],
+            "exact_nonrate": {
+                "old_d_seg_batch": old_d_seg,
+                "new_d_seg_batch": new_d_seg,
+                "old_d_pose_batch": old_d_pose,
+                "new_d_pose_batch": new_d_pose,
+                "pose_term_available": True,
+            },
+            "argmax_transitions": {
+                "wrong_to_target_count": 0 if blockers else 1,
+                "target_to_wrong_count": 0,
+                "wrong_to_wrong_count": 0,
+                "net_target_support_delta": 0 if blockers else 1,
+            },
+            "receiver_surface_uint8_changed_pixels": 0 if blockers else 1,
+            "receiver_uint8_delta_abs_max": 1.0,
+            "receiver_float_rgb_delta_linf": 0.01,
+            "argmax_changed_count_region": 0 if blockers else 1,
+            "pose_output_l2_delta": 0.0,
+            "admission_decision": {
+                "arm": arm,
+                "exact_score_decision": "rejected" if blockers else "accepted",
+                "raw_cap_decision": "satisfied",
+                "catastrophic_guard_decision": "satisfied",
+                "would_accept_exact_score_if_raw_cap_disabled": not blockers,
+                "would_accept_without_catastrophic_guard": not blockers,
+                "pose_output_l2_delta": 0.0,
+                "seg_score_delta": 100.0 * (new_d_seg - old_d_seg),
+                "pose_score_delta": 0.0,
+                "rejection_source": None if not blockers else "blocked_by_test_fixture",
+            },
+            "blockers": blockers or [],
+            "restore_state_pass": True,
+        }
+
+    row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
+        model=DummyModel(),
+        output_dir=tmp_path,
+        live_birth_payload={
+            "action_id": "e" * 64,
+            "accepted": False,
+            "blockers": ["hinerv_target_region_birth_no_accepted_step"],
+            "four_arm_ablation": {
+                "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
+                "action_id": "e" * 64,
+                "arms": [
+                    arm_row("A", action_kind="birth_only", blockers=["blocked_a"]),
+                    arm_row("B", action_kind="frame0_pose_target_only"),
+                    arm_row("C", action_kind="independent_birth_plus_frame0_pose", blockers=["blocked_c"]),
+                    arm_row("D", action_kind="joint_line_search_composite", blockers=["blocked_d"]),
+                ],
+            },
+        },
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+        target_rgb_0=np.zeros((1, 2, 2, 3), dtype=np.float32),
+        target_rgb_1=np.zeros((1, 2, 2, 3), dtype=np.float32),
+    )
+
+    assert row["action_effect_rows_written"] == 4
+    assert row["four_arm_action_effect_rows_written"] == 4
+    assert "birth_survival_live_birth_not_accepted" in row["blockers"]
+    effect_rows = [
+        json.loads(line)
+        for line in (tmp_path / "hi_nerv_birth_action_effects.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert [entry["arm"] for entry in effect_rows] == ["A", "B", "C", "D"]
+    assert effect_rows[0]["blockers"] == ["blocked_a"]
+    assert effect_rows[1]["exact_score_decision"] == "accept"
+
+
 def _receiver_replay_selection_manifest(
     *,
     old_summary: dict[str, object],

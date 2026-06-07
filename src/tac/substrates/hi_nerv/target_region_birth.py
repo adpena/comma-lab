@@ -417,40 +417,60 @@ def pose_trusted_birth_admission_decision(
     ):
         if not math.isfinite(float(value)) or float(value) < 0.0:
             raise ValueError(f"{name} must be finite and non-negative; got {value}")
-    for name, value in (
-        ("old_d_pose", old_d_pose),
-        ("new_d_pose", new_d_pose),
-        ("pose_output_l2_delta", pose_output_l2_delta),
-        ("catastrophic_pose_output_l2_hard_cap", catastrophic_pose_output_l2_hard_cap),
-    ):
-        if value is not None and (not math.isfinite(float(value)) or float(value) < 0.0):
-            raise ValueError(f"{name} must be None or finite and non-negative; got {value}")
+    nonfinite_pose_fields: list[str] = []
+
+    def _finite_optional_pose_value(name: str, value: float | None) -> float | None:
+        if value is None:
+            return None
+        parsed = float(value)
+        if not math.isfinite(parsed) or parsed < 0.0:
+            nonfinite_pose_fields.append(name)
+            return None
+        return parsed
+
+    old_d_pose_value = _finite_optional_pose_value("old_d_pose", old_d_pose)
+    new_d_pose_value = _finite_optional_pose_value("new_d_pose", new_d_pose)
+    pose_output_l2_delta_value = _finite_optional_pose_value(
+        "pose_output_l2_delta",
+        pose_output_l2_delta,
+    )
+    catastrophic_pose_output_l2_hard_cap_value = _finite_optional_pose_value(
+        "catastrophic_pose_output_l2_hard_cap",
+        catastrophic_pose_output_l2_hard_cap,
+    )
 
     seg_score_delta = 100.0 * (float(new_d_seg) - float(old_d_seg))
     pose_score_delta: float | None = None
     exact_delta_score_nonrate: float | None = None
-    if old_d_pose is not None and new_d_pose is not None:
-        pose_score_delta = math.sqrt(10.0 * float(new_d_pose)) - math.sqrt(10.0 * float(old_d_pose))
+    if old_d_pose_value is not None and new_d_pose_value is not None:
+        pose_score_delta = math.sqrt(10.0 * new_d_pose_value) - math.sqrt(10.0 * old_d_pose_value)
         exact_delta_score_nonrate = seg_score_delta + pose_score_delta
 
-    raw_cap_satisfied = pose_output_l2_delta is None or float(pose_output_l2_delta) <= float(raw_pose_cap_l2)
+    raw_cap_satisfied = (
+        "pose_output_l2_delta" not in nonfinite_pose_fields
+        and (
+            pose_output_l2_delta_value is None
+            or pose_output_l2_delta_value <= float(raw_pose_cap_l2)
+        )
+    )
     exact_score_satisfied = (
         exact_delta_score_nonrate is not None
         and float(exact_delta_score_nonrate) < -float(exact_score_epsilon)
     )
 
     catastrophic_reasons: list[str] = []
-    if old_d_pose is None or new_d_pose is None or pose_score_delta is None:
+    catastrophic_reasons.extend(f"{name}_nonfinite_or_negative" for name in nonfinite_pose_fields)
+    if old_d_pose_value is None or new_d_pose_value is None or pose_score_delta is None:
         catastrophic_reasons.append("pose_distortion_endpoint_missing")
     else:
-        if float(new_d_pose) > float(old_d_pose) * (1.0 + float(catastrophic_relative_cap)):
+        if new_d_pose_value > old_d_pose_value * (1.0 + float(catastrophic_relative_cap)):
             catastrophic_reasons.append("d_pose_relative_cap_exceeded")
         if float(pose_score_delta) > float(catastrophic_pose_score_regression_cap):
             catastrophic_reasons.append("pose_score_regression_cap_exceeded")
     if (
-        catastrophic_pose_output_l2_hard_cap is not None
-        and pose_output_l2_delta is not None
-        and float(pose_output_l2_delta) > float(catastrophic_pose_output_l2_hard_cap)
+        catastrophic_pose_output_l2_hard_cap_value is not None
+        and pose_output_l2_delta_value is not None
+        and pose_output_l2_delta_value > catastrophic_pose_output_l2_hard_cap_value
     ):
         catastrophic_reasons.append("pose_output_l2_hard_cap_exceeded")
     catastrophic_guard_satisfied = not catastrophic_reasons
@@ -459,7 +479,9 @@ def pose_trusted_birth_admission_decision(
     would_accept_without_catastrophic_guard = bool(exact_score_satisfied)
     rejection_source: str | None = None
     if not accepted:
-        if not exact_score_satisfied:
+        if nonfinite_pose_fields:
+            rejection_source = "rejected_by_nonfinite_pose_surface"
+        elif not exact_score_satisfied:
             rejection_source = "rejected_by_exact_delta_score"
         elif not catastrophic_guard_satisfied:
             rejection_source = "rejected_by_catastrophic_pose_guard"
@@ -468,13 +490,13 @@ def pose_trusted_birth_admission_decision(
         "schema": POSE_TRUSTED_BIRTH_ADMISSION_DECISION_SCHEMA,
         "old_d_seg": float(old_d_seg),
         "new_d_seg": float(new_d_seg),
-        "old_d_pose": (None if old_d_pose is None else float(old_d_pose)),
-        "new_d_pose": (None if new_d_pose is None else float(new_d_pose)),
+        "old_d_pose": old_d_pose_value,
+        "new_d_pose": new_d_pose_value,
         "seg_score_delta": float(seg_score_delta),
         "pose_score_delta": pose_score_delta,
         "exact_delta_score_nonrate": exact_delta_score_nonrate,
         "delta_score_nonrate": exact_delta_score_nonrate,
-        "pose_output_l2_delta": (None if pose_output_l2_delta is None else float(pose_output_l2_delta)),
+        "pose_output_l2_delta": pose_output_l2_delta_value,
         "raw_pose_cap_l2": float(raw_pose_cap_l2),
         "raw_cap_decision": "satisfied" if raw_cap_satisfied else "violated_counterfactual_only",
         "raw_pose_cap_result": "satisfied" if raw_cap_satisfied else "violated_counterfactual_only",
@@ -483,10 +505,9 @@ def pose_trusted_birth_admission_decision(
         "catastrophic_relative_cap": float(catastrophic_relative_cap),
         "catastrophic_pose_score_regression_cap": float(catastrophic_pose_score_regression_cap),
         "catastrophic_pose_output_l2_hard_cap": (
-            None
-            if catastrophic_pose_output_l2_hard_cap is None
-            else float(catastrophic_pose_output_l2_hard_cap)
+            catastrophic_pose_output_l2_hard_cap_value
         ),
+        "nonfinite_pose_fields": list(nonfinite_pose_fields),
         "catastrophic_guard_decision": "satisfied" if catastrophic_guard_satisfied else "rejected",
         "catastrophic_guard_reasons": catastrophic_reasons,
         "accepted": accepted,
@@ -496,6 +517,9 @@ def pose_trusted_birth_admission_decision(
         "would_reject_under_raw_pose_cap": bool(not raw_cap_satisfied),
         "rejected_by_exact_delta_score": bool(rejection_source == "rejected_by_exact_delta_score"),
         "rejected_by_catastrophic_pose_guard": bool(rejection_source == "rejected_by_catastrophic_pose_guard"),
+        "rejected_by_nonfinite_pose_surface": bool(
+            rejection_source == "rejected_by_nonfinite_pose_surface"
+        ),
         "rejection_source": rejection_source,
         "raw_cap_is_counterfactual_only": True,
     }

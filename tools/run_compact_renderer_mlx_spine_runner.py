@@ -18678,6 +18678,29 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+    def _write_four_arm_action_effect_rows() -> tuple[int, list[str]]:
+        action_effect_ledger_path = out / "hi_nerv_birth_action_effects.jsonl"
+        blockers: list[str] = []
+        rows_written = 0
+        try:
+            from tac.analysis.action_effect import ActionEffect, append_action_effect
+
+            for four_arm_effect in ActionEffect.from_hinerv_four_arm_ablation(
+                live_birth_payload,
+                consumer="nerv_long_run_launch_gate",
+            ):
+                append_action_effect(four_arm_effect, action_effect_ledger_path)
+                rows_written += 1
+        except Exception as exc:
+            blockers.append(
+                f"hi_nerv_birth_four_arm_action_effect_write_failed:{type(exc).__name__}:{exc}"
+            )
+        summary["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+        summary["action_effect_rows_written"] = rows_written
+        summary["four_arm_action_effect_rows_written"] = rows_written
+        return rows_written, blockers
+
     if "accepted" in live_birth_payload and live_birth_payload.get("accepted") is not True:
         payload_blockers = [str(value) for value in live_birth_payload.get("blockers") or []]
         blocker = "birth_survival_live_birth_not_accepted"
@@ -18708,6 +18731,9 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         )
         summary["fakequant_survival_path"] = fake_path.as_posix()
         summary["hysteresis_path"] = hyst_path.as_posix()
+        _rows_written, action_effect_blockers = _write_four_arm_action_effect_rows()
+        if action_effect_blockers:
+            summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], *action_effect_blockers])
         return summary
     if scorer_teacher is None or target_labels is None or pair_indices is None:
         missing = []
@@ -18766,22 +18792,27 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     try:
         from tac.analysis.action_effect import ActionEffect, append_action_effect
 
+        rows_written = 0
+        four_arm_rows_written = 0
         source_receipt = dict(receipt or live_birth_payload)
         source_receipt["fakequant_survived"] = fake_row.get("survived") is True
-        action_effect = ActionEffect.from_hinerv_birth_receipt(
-            source_receipt,
-            consumer="nerv_long_run_launch_gate",
-        )
-        append_action_effect(action_effect, action_effect_ledger_path)
-        rows_written = 1
-        for four_arm_effect in ActionEffect.from_hinerv_four_arm_ablation(
-            live_birth_payload,
-            consumer="nerv_long_run_launch_gate",
-        ):
-            append_action_effect(four_arm_effect, action_effect_ledger_path)
+        try:
+            action_effect = ActionEffect.from_hinerv_birth_receipt(
+                source_receipt,
+                consumer="nerv_long_run_launch_gate",
+            )
+        except Exception as exc:
+            blocker = f"hi_nerv_birth_base_action_effect_write_failed:{type(exc).__name__}:{exc}"
+            summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], blocker])
+        else:
+            append_action_effect(action_effect, action_effect_ledger_path)
             rows_written += 1
+        four_arm_rows_written, four_arm_blockers = _write_four_arm_action_effect_rows()
+        rows_written += four_arm_rows_written
+        if four_arm_blockers:
+            summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], *four_arm_blockers])
         summary["action_effect_rows_written"] = rows_written
-        summary["four_arm_action_effect_rows_written"] = max(0, rows_written - 1)
+        summary["four_arm_action_effect_rows_written"] = four_arm_rows_written
     except Exception as exc:
         blocker = f"hi_nerv_birth_action_effect_write_failed:{type(exc).__name__}:{exc}"
         summary["action_effect_rows_written"] = 0
