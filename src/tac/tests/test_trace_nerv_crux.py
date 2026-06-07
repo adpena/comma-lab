@@ -503,3 +503,90 @@ def test_trace_nerv_crux_uses_telemetry_jsonl_fallback(tmp_path: Path) -> None:
     assert metrics["score_weighted_total_unsolved_argmax_mass"]["score_units"] == pytest.approx(12.5)
     assert metrics["pose_direct_live_raw_mse"]["value"] == pytest.approx(0.0025)
     assert not [row.get("blocker") for row in rows if row.get("blocker")]
+
+
+def test_trace_nerv_crux_reads_sibling_birth_survival_retention(
+    tmp_path: Path,
+) -> None:
+    action_id = "a" * 64
+    artifact = tmp_path / "training_artifact.json"
+    out = tmp_path / "trace_rows.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "final_loss_components": {
+                    "loss_part_segnet_direct_live_target_min_ratio_floor_score_weighted_total_unsolved_argmax_mass": 10.0,
+                    "loss_part_pose_direct_live_raw_mse": 1.0,
+                    "train_time_archive_bytes": 16_325,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "hi_nerv_birth_action_effects.jsonl").write_text(
+        json.dumps(
+            {
+                "schema": "tac.action_effect.v1",
+                "action_id": action_id,
+                "authority": "batch_local_live_mlx",
+                "wrong_to_target": 13_488,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "hi_nerv_birth_fakequant_survival.json").write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_target_region_birth_survival.v1",
+                "action_id": action_id,
+                "surface": "fakequant_mlx",
+                "survived": True,
+                "wrong_to_target_count": 12_183,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "hi_nerv_selected_birth_parseback_survival.json").write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_target_region_birth_survival.v1",
+                "action_id": action_id,
+                "surface": "parseback_mlx",
+                "survived": True,
+                "wrong_to_target_count": 2,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--training-artifact",
+            str(artifact),
+            "--out",
+            str(out),
+            "--allow-missing-direct-live-segnet",
+            "--allow-missing-direct-live-posenet",
+            "--allow-missing-receiver-surface-trace",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+    )
+
+    rows = json.loads(out.read_text(encoding="utf-8"))
+    metrics = _by_metric(rows)
+    assert metrics["live_wrong_to_target_count"]["value"] == pytest.approx(13_488.0)
+    assert metrics["fakequant_wrong_to_target_count"]["value"] == pytest.approx(12_183.0)
+    assert metrics["fakequant_wrong_to_target_retention_ratio"]["value"] == pytest.approx(
+        12_183 / 13_488
+    )
+    assert metrics["parseback_wrong_to_target_count"]["value"] == pytest.approx(2.0)
+    assert metrics["parseback_wrong_to_target_retention_ratio"]["value"] == pytest.approx(
+        2 / 13_488
+    )
+    assert metrics["parseback_scorer_effect_survived"]["value"] == pytest.approx(0.0)
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "hinerv_birth_parseback_scorer_effect_collapse" in blockers

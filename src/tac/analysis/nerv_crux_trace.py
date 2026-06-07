@@ -214,6 +214,219 @@ def _read_last_jsonl_mapping(path: Path) -> Mapping[str, Any] | None:
     return last
 
 
+def _read_json_mapping_if_file(path: Path) -> Mapping[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        return _read_json_mapping(path)
+    except Exception:
+        return None
+
+
+def _jsonl_mappings(path: Path) -> list[Mapping[str, Any]]:
+    out: list[Mapping[str, Any]] = []
+    if not path.is_file():
+        return out
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, Mapping):
+            out.append(payload)
+    return out
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed
+
+
+def _wrong_to_target_count(row: Mapping[str, Any] | None) -> int | None:
+    if row is None:
+        return None
+    for key in (
+        "wrong_to_target",
+        "wrong_to_target_count",
+        "target_hard_won",
+        "target_hard_won_count",
+        "region_hard_won_count",
+        "receiver_surface_wrong_to_target_count",
+        "receiver_surface_target_hard_won_count",
+    ):
+        parsed = _int_or_none(row.get(key))
+        if parsed is not None:
+            return parsed
+    transitions = row.get("argmax_transitions")
+    if isinstance(transitions, Mapping):
+        return _wrong_to_target_count(transitions)
+    return None
+
+
+def _max_live_wrong_to_target_from_action_effects(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    action_id: str | None,
+) -> int | None:
+    best: int | None = None
+    for row in rows:
+        if action_id and str(row.get("action_id") or "") != action_id:
+            continue
+        authority = str(row.get("authority") or "")
+        if authority and "live" not in authority:
+            continue
+        value = _wrong_to_target_count(row)
+        if value is None:
+            continue
+        best = value if best is None else max(best, value)
+    return best
+
+
+def _append_hinerv_birth_survival_artifact_rows(
+    rows: list[TraceRow],
+    *,
+    training_artifact_path: Path,
+) -> None:
+    """Append sibling survival artifacts missing from training_artifact.json.
+
+    Runner telemetry historically stored the crucial live/fakequant/parseback
+    birth survival receipts next to ``training_artifact.json``.  The trace is
+    supposed to diagnose where scorer signal dies, so it must consume those
+    receipts directly instead of reporting null parseback metrics.
+    """
+
+    root = training_artifact_path.parent
+    fakequant_path = root / "hi_nerv_birth_fakequant_survival.json"
+    parseback_path = root / "hi_nerv_selected_birth_parseback_survival.json"
+    inflated_path = root / "hi_nerv_birth_inflated_torch_cpu_survival.json"
+    effects_path = root / "hi_nerv_birth_action_effects.jsonl"
+
+    fakequant = _read_json_mapping_if_file(fakequant_path)
+    parseback = _read_json_mapping_if_file(parseback_path)
+    inflated = _read_json_mapping_if_file(inflated_path)
+    effects = _jsonl_mappings(effects_path)
+    if fakequant is None and parseback is None and inflated is None:
+        return
+
+    action_id = None
+    for row in (parseback, fakequant, inflated):
+        if isinstance(row, Mapping) and isinstance(row.get("action_id"), str):
+            action_id = str(row["action_id"])
+            break
+
+    live_count = None
+    for row in (parseback, fakequant, inflated):
+        if not isinstance(row, Mapping):
+            continue
+        live_count = _int_or_none(row.get("live_wrong_to_target_count"))
+        if live_count is None:
+            live_count = _int_or_none(row.get("live_wrong_to_target"))
+        if live_count is not None:
+            break
+    if live_count is None:
+        live_count = _max_live_wrong_to_target_from_action_effects(
+            effects,
+            action_id=action_id,
+        )
+
+    def _append_count(
+        *,
+        surface: str,
+        path: Path,
+        row: Mapping[str, Any] | None,
+    ) -> tuple[int | None, float | None]:
+        if row is None:
+            return None, None
+        count = _wrong_to_target_count(row)
+        ratio = (
+            None
+            if count is None or live_count is None or live_count <= 0
+            else float(count) / float(live_count)
+        )
+        source_path = path.as_posix()
+        source_sha256 = sha256_file(path)
+        _append_metric_row(
+            rows,
+            source_path=source_path,
+            source_sha256=source_sha256,
+            stage="receiver_surface_survival",
+            axis=surface,
+            metric=f"{surface}_wrong_to_target_count",
+            value=None if count is None else float(count),
+        )
+        _append_metric_row(
+            rows,
+            source_path=source_path,
+            source_sha256=source_sha256,
+            stage="receiver_surface_survival",
+            axis=surface,
+            metric=f"{surface}_wrong_to_target_retention_ratio",
+            value=ratio,
+        )
+        return count, ratio
+
+    if live_count is not None:
+        _append_metric_row(
+            rows,
+            source_path=effects_path.as_posix() if effects_path.is_file() else training_artifact_path.as_posix(),
+            source_sha256=(
+                sha256_file(effects_path)
+                if effects_path.is_file()
+                else sha256_file(training_artifact_path)
+            ),
+            stage="receiver_surface_survival",
+            axis="live",
+            metric="live_wrong_to_target_count",
+            value=float(live_count),
+        )
+
+    _append_count(surface="fakequant", path=fakequant_path, row=fakequant)
+    parseback_count, parseback_ratio = _append_count(
+        surface="parseback",
+        path=parseback_path,
+        row=parseback,
+    )
+    _append_count(surface="inflate", path=inflated_path, row=inflated)
+
+    if parseback is not None:
+        floor = _finite_or_none(parseback.get("scorer_effect_retention_floor"))
+        if floor is None:
+            floor = 0.5
+        collapsed = (
+            parseback_ratio is not None
+            and parseback_ratio < floor
+            and parseback_count is not None
+        )
+        blocker = "hinerv_birth_parseback_scorer_effect_collapse" if collapsed else None
+        _append_metric_row(
+            rows,
+            source_path=parseback_path.as_posix(),
+            source_sha256=sha256_file(parseback_path),
+            stage="receiver_surface_survival",
+            axis="parseback",
+            metric="parseback_scorer_effect_survived",
+            value=0.0 if collapsed else (1.0 if parseback.get("survived") is True else 0.0),
+            blocker=blocker,
+        )
+        if collapsed:
+            _append_metric_row(
+                rows,
+                source_path=parseback_path.as_posix(),
+                source_sha256=sha256_file(parseback_path),
+                stage="receiver_surface_survival",
+                axis="parseback",
+                metric="first_failed_surface:parseback_scorer_effect_collapse",
+                value=parseback_ratio,
+                blocker="hinerv_birth_parseback_scorer_effect_collapse",
+            )
+
+
 def _resolve_telemetry_path(
     payload: Mapping[str, Any],
     *,
@@ -589,8 +802,10 @@ def build_trace_rows_for_training_artifact(
     source = training_artifact_path.expanduser().resolve(strict=False)
     payload = _read_json_mapping(source)
     telemetry_path = _resolve_telemetry_path(payload, training_artifact_path=source)
-    telemetry_last_row = _read_last_jsonl_mapping(telemetry_path) if telemetry_path is not None else None
-    return build_trace_rows(
+    telemetry_last_row = (
+        _read_last_jsonl_mapping(telemetry_path) if telemetry_path is not None else None
+    )
+    rows = build_trace_rows(
         payload,
         source_path=source.as_posix(),
         source_sha256=sha256_file(source),
@@ -599,6 +814,8 @@ def build_trace_rows_for_training_artifact(
         require_receiver_surface_trace=bool(require_receiver_surface_trace),
         telemetry_last_row=telemetry_last_row,
     )
+    _append_hinerv_birth_survival_artifact_rows(rows, training_artifact_path=source)
+    return rows
 
 
 def write_trace_rows_for_training_artifact(
