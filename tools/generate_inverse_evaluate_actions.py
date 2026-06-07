@@ -633,6 +633,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     pr110_proof_path = out_dir / "pr110_k16_baseline_reproduction.json"
     pr110_validation_path = out_dir / "pr110_k16_baseline_validation.json"
     wall_normal_receipt_path = out_dir / "wall_normal_branch_receipt.json"
+    wall_normal_branch_action_effect_path = out_dir / "wall_normal_branch_action_effect_rows.jsonl"
     summary_path = out_dir / "summary.json"
     blocker_note_path = out_dir / "next_blocker.md"
     test_log_path = out_dir / "test_log.txt"
@@ -652,7 +653,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             *[path.as_posix() for path in args.seed_training_artifact],
         ],
     )
+    wall_normal_receipt_keys = {
+        (
+            str(branch.get("action_id") or ""),
+            str(branch.get("action_kind") or ""),
+            str(branch.get("support_sha256") or ""),
+        )
+        for branch in wall_normal_receipt.get("branches", [])
+        if isinstance(branch, Mapping)
+    }
+    wall_normal_branch_effects = [
+        effect
+        for effect in wall_normal_effects
+        if (
+            effect.action_id,
+            effect.action_kind,
+            effect.support_sha256 or "",
+        )
+        in wall_normal_receipt_keys
+    ]
     action_effect_count = _write_action_effect_ledger(output_effects, action_effect_path)
+    wall_normal_branch_action_effect_count = _write_action_effect_ledger(
+        wall_normal_branch_effects,
+        wall_normal_branch_action_effect_path,
+    )
     queue_count = _write_jsonl(queue_path, candidate_queue_rows)
     _write_jsonl(candidate_queue_alias_path, candidate_queue_rows)
     score_program_word = build_score_program_word(candidate_queue_rows)
@@ -680,12 +704,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_k16_baseline_reproduction_path": pr110_proof_path.as_posix(),
         "pr110_k16_baseline_validation_path": pr110_validation_path.as_posix(),
         "wall_normal_branch_receipt_path": wall_normal_receipt_path.as_posix(),
+        "wall_normal_branch_action_effect_rows_path": wall_normal_branch_action_effect_path.as_posix(),
         "next_blocker_path": blocker_note_path.as_posix(),
         "test_log_path": test_log_path.as_posix(),
         "seed_action_effect_count": len(seed_effects),
         "pr110_replay_row_count": len(pr110_effects),
         "inverse_candidate_count": len(inverse_effects),
         "action_effect_row_count": action_effect_count,
+        "wall_normal_branch_action_effect_row_count": wall_normal_branch_action_effect_count,
         "wall_normal_receipt_source_row_count": len(wall_normal_receipt_source_effects),
         "queue_row_count": queue_count,
         "score_program_operation_count": score_program_word["operation_count"],
@@ -713,6 +739,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "commutator_values_measured_never_invented": True,
             "pr110_input_filtered_by_family": True,
             "wall_normal_receipt_fixed_scope_filter_available": True,
+            "wall_normal_branch_action_effect_rows_emitted": True,
             "default_artifact_tier": "ssd",
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,

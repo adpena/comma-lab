@@ -1207,6 +1207,7 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert (out_dir / "score_program_word.json").is_file()
     assert (out_dir / "commutator_summary.json").is_file()
     assert (out_dir / "wall_normal_branch_receipt.json").is_file()
+    assert (out_dir / "wall_normal_branch_action_effect_rows.jsonl").is_file()
     assert (out_dir / "next_blocker.md").is_file()
     score_program_word = json.loads((out_dir / "score_program_word.json").read_text(encoding="utf-8"))
     assert score_program_word["schema"] == SCORE_PROGRAM_WORD_SCHEMA
@@ -1350,6 +1351,7 @@ def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
     )
 
     assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
     rows = read_action_effects(out_dir / "action_effect_rows.jsonl")
     hinerv_rows = [row for row in rows if row.family == "hinerv"]
     assert [row.action_kind for row in hinerv_rows] == [
@@ -1380,10 +1382,21 @@ def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
     branch_receipt = json.loads(
         (out_dir / "wall_normal_branch_receipt.json").read_text(encoding="utf-8")
     )
+    branch_rows = read_action_effects(out_dir / "wall_normal_branch_action_effect_rows.jsonl")
     assert branch_receipt["schema"] == WALL_NORMAL_BRANCH_RECEIPT_SCHEMA
     assert branch_receipt["branch_count"] == 3
     assert branch_receipt["same_action_id"] is True
     assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
+    assert summary["wall_normal_branch_action_effect_row_count"] == 3
+    assert summary["wall_normal_branch_action_effect_rows_path"] == (
+        out_dir / "wall_normal_branch_action_effect_rows.jsonl"
+    ).as_posix()
+    assert [row.action_kind for row in branch_rows] == [
+        "wall_normal_direct_teacher",
+        "wall_normal_backend_fit",
+        "wall_normal_sidecar_fallback",
+    ]
+    assert {row.action_id for row in branch_rows} == {"wall-normal-action"}
 
 
 def test_generate_inverse_evaluate_actions_cli_scopes_wall_normal_receipt_to_fixed_action(
@@ -1462,6 +1475,14 @@ def test_generate_inverse_evaluate_actions_cli_scopes_wall_normal_receipt_to_fix
     assert branch_receipt["support_sha256s"] == [support_sha]
     assert branch_receipt["blockers"] == []
     assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
+    assert summary["wall_normal_branch_action_effect_row_count"] == 3
+    assert summary["wall_normal_branch_action_effect_rows_path"] == (
+        out_dir / "wall_normal_branch_action_effect_rows.jsonl"
+    ).as_posix()
+    branch_rows = read_action_effects(out_dir / "wall_normal_branch_action_effect_rows.jsonl")
+    assert len(branch_rows) == 3
+    assert {row.action_id for row in branch_rows} == {"wall-normal-action-a"}
+    assert {row.support_sha256 for row in branch_rows} == {support_sha}
 
 
 def test_generate_inverse_evaluate_actions_cli_does_not_call_blocked_reverse_producer_missing(
