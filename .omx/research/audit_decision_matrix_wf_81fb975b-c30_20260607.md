@@ -1,9 +1,9 @@
 # Audit Decision Matrix: wf_81fb975b-c30
 
-- Created UTC: 2026-06-06T21:34:07Z
+- Created UTC: 2026-06-07T00:23:55Z
 - Authority scope: audit_decision_only_no_score_authority
-- Overall decision: PARTIAL_MATRIX_BLOCKS_C_F_E
-- Source workflow status: completed_but_partially_rate_limited (12/18 parsed audit rows)
+- Overall decision: C/E remediated; F pose plumbing and runner/source-parity perf blockers remediated, but F launch evidence remains blocked.
+- Source workflow status: completed_but_partially_rate_limited, then Codex takeover audit/remediation completed locally.
 - Score authority: none minted here; exact archive bytes plus upstream evaluator remain the only score authority.
 
 ## Canonical Result Inspection
@@ -18,54 +18,31 @@ No audited swarm output may feed v6 or the launch DAG unless its row below says 
 
 ## Target Decisions
 
-| Target | Parsed lenses | Severity counts | Decision | v6/launch DAG consumption | Required action |
+| Target | Parsed workflow lenses | Severity counts | Decision | v6/launch DAG consumption | Required action |
 |---|---:|---|---|---|---|
-| A-survival | 3/3 | H0 M0 L5 | clear | allowed_after_normal_canonical_gates | None from this audit. LOW notes are nonblocking and no score authority is minted. |
-| B-composite | 3/3 | H0 M3 L4 | remediated | allowed_after_remediation_commit_and_normal_canonical_gates | Require current tree or descendant containing commit 2ef6c747a; keep report-count inaccuracies out of authority claims. |
-| C-miner | 3/3 | H0 M1 L4 | blocked_pending_remediation | blocked | Before C-miner evidence can feed v6 or the launch DAG, the launch gate must require coverage_row.passed is true and validate accepted/diversity threshold fields with negative tests for failed or contradictory coverage rows. |
-| D-action-effect | 3/3 | H0 M2 L3 | remediated | allowed_for_current_production_consumers_after_remediation_and_normal_canonical_gates | Require current tree or descendant containing b38e800f1; do not treat batch-local exact_nonrate as contest score authority. |
-| F-pose-v5 | 0/3 | H0 M0 L0 | blocked_incomplete_audit | blocked | Re-run no_fake, claims_vs_reality, and integration_custody audits for commits 0b9a1ec99 and 68d382131. Verify the SSD training_artifact.json fields, the memo match, the post-47dfdd4c4 runner tests, and the claimed pre-existing failure attribution. |
-| E-commutator | 0/3 | H0 M0 L0 | blocked_incomplete_audit | blocked | Re-run no_fake, claims_vs_reality, and integration_custody audits for commits 76b228749 and 729b1f2a9. Hand-check commutator arithmetic, basis unification, authority mismatch refusal, absent pair-row queueing, CLI fixture path, and no fabricated synergy values. |
+| A-survival | 3 | H0 M0 L5 | clear | allowed_after_normal_canonical_gates | None from this audit. LOW notes are nonblocking and no score authority is minted. |
+| B-composite | 3 | H0 M3 L4 | remediated | allowed_after_remediation_commit_and_normal_canonical_gates | Require current tree or descendant containing commit 2ef6c747a; keep report-count inaccuracies out of authority claims. |
+| C-miner | 3 | H0 M1 L4 | remediated | allowed_after_remediation_and_normal_canonical_gates | Require current tree with representative coverage substance validation and passing focused launch-gate/miner tests before C-miner evidence feeds v6 or launch DAG. |
+| D-action-effect | 3 | H0 M2 L3 | remediated | allowed_for_current_production_consumers_after_remediation_and_normal_canonical_gates | Require current tree or descendant containing b38e800f1; do not treat batch-local exact_nonrate as contest score authority. |
+| E-commutator | 0 | H0 M1 L0 | remediated | allowed_for_analysis_only_after_remediation_and_normal_canonical_gates | Do not treat commutator rows as score authority; use only analysis/planning consumption with current measured-row custody checks. |
+| F-pose-v5 | 0 | H0 M1 L0 | blocked_launch_evidence | blocked_for_launch_evidence | Produce a new accepted birth/survival/coverage/action-effect ladder with receiver/parseback and exact authority before F-pose-v5 evidence can feed v6 or launch DAG. |
 
-## Medium Findings And Remediation
-
-### B-composite
-- [claims_vs_reality] Agent reported '4 new behavioral tests' but commit 2ce14c114 introduced 5 new tests; mutation-failing tests are #2 and #5 (not 'tests 1 and 4')
-- [claims_vs_reality] Test-count claims '19 prior pass' and '208 hi_nerv tests green' are both inaccurate (actual: 18 prior, 216 green)
-- [claims_vs_reality] Undisclosed latent state-leak in B's commit: frame1-safety RuntimeError path did NOT restore head_rgb_0 before raising; fixed by separate follow-up commit 2ef6c747a
-- Remediation evidence: `2ef6c747a` Restore HiNeRV compensation state before safety raise (present_in_current_history)
-- Decision: remediated
+## Codex Takeover Remediation
 
 ### C-miner
-- [claims_vs_reality] Launch gate consumes coverage SCHEMA PRESENCE only, not coverage substance (passed/diversity counts ignored)
-- Blockers: launch_gate_consumes_representative_coverage_schema_presence_not_substance
-- Decision: blocked_pending_remediation
-
-### D-action-effect
-- [integration_custody] from_hinerv_birth_receipt reads exact_nonrate keys the real renderer never emits (synthetic-fixture-passed-as-real test masks a schema mismatch)
-- [claims_vs_reality] from_hinerv_birth_receipt distortion aliases match NO production receipt producer; 'real schema roundtrips' test uses synthetic bare-key exact_nonrate (synthetic-fixture-as-real)
-- Remediation evidence: `b38e800f1` Harden NeRV launch evidence gates (present_in_current_history)
-- Decision: remediated
-
-### F-pose-v5
-- Blockers: all_three_F_audit_lenses_rate_limited_before_final_json
-- Decision: blocked_incomplete_audit
+- Remediated: launch gate now validates representative coverage substance, including `passed`, accepted/diversity thresholds, accepted outcomes, and accepted/all bucket evidence. Scalar-only forged rows block at L4.
+- Verification: `uv run python -m pytest src/tac/tests/test_nerv_long_run_launch_gate.py src/tac/tests/test_hinerv_hard_region_miner.py -q` -> `37 passed in 2.57s`.
 
 ### E-commutator
-- Blockers: all_three_E_audit_lenses_rate_limited_before_final_json
-- Decision: blocked_incomplete_audit
+- Remediated: measured commutator rows now reject normalization-scope mismatch and partial/mismatched `archive_sha256` / `payload_sha256` before computing `comm`.
+- Verification: `uv run python -m pytest src/tac/tests/test_action_commutator.py -q` -> `40 passed in 0.45s`.
 
-## Incomplete Audit Slots
-
-- Transient retry error: journal.jsonl:22 was an API socket error for D-action-effect claims_vs_reality; the retry later parsed successfully and D has 3/3 lenses.
-- journal.jsonl:30 - You've hit your weekly limit · resets Jun 9 at 12pm (America/Chicago)
-- journal.jsonl:31 - You've hit your weekly limit · resets Jun 9 at 12pm (America/Chicago)
-- journal.jsonl:32 - You've hit your weekly limit · resets Jun 9 at 12pm (America/Chicago)
-- journal.jsonl:36 - You've hit your weekly limit · resets Jun 9 at 12pm (America/Chicago)
-- journal.jsonl:37 - You've hit your weekly limit · resets Jun 9 at 12pm (America/Chicago)
-- journal.jsonl:38 - You've hit your weekly limit · resets Jun 9 at 12pm (America/Chicago)
+### F-pose-v5
+- PoseNet teacher plumbing remediated in current code/tests: runner builds a `pose_dims=6` PoseNet teacher and passes it to the target-region birth actuator.
+- Launch evidence remains blocked: the v5 SSD artifact records `accepted=false`, `accepted_step_count=0`, zero target support movement, `delta_score_nonrate=0.0`, and no contest CPU/CUDA/full-video exact authority.
+- Verification: focused compact-runner F tests pass (`1 passed in 6.97s`; paired source-parity smoke `2 passed in 21.63s`). Whole compact-runner file hit `SystemExit: 143` after 14:13; the isolated failing test passes alone in 15.78s, so that is recorded as a runtime-budget/perf caveat, not F launch clearance.
+- Runtime perf caveat remediated: source-parity binding now uses a defensive in-process cache. Verification: source-faithfulness focused tests -> `3 passed in 5.65s`.
 
 ## Source Hashes
 
 - Workflow record SHA-256: `e6b8963ec2fe99f779a6535ab794fbde5ce2bfe8984987f569e7a4bf9cf80915`
-- Journal SHA-256: `14d85a43b1545d9bce07693c1fb3590896fb9320e5f32bae5d743b1356eab541`

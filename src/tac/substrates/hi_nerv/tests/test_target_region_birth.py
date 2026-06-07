@@ -1146,8 +1146,8 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert telemetry["fakequant_survival_required"] is True
     assert payload["birth_gradient_surface"] == "fakequant_forward_ste"
     assert telemetry["birth_gradient_surface"] == "fakequant_forward_ste"
-    assert payload["birth_update_scope"] == "spatial_carriers"
-    assert telemetry["birth_update_scope"] == "spatial_carriers"
+    assert payload["birth_update_scope"] == "pair_latents_fine"
+    assert telemetry["birth_update_scope"] == "pair_latents_fine"
     assert payload["birth_gradient_surface_eval_count"] > 0
     assert telemetry["birth_gradient_surface_eval_count"] == payload["birth_gradient_surface_eval_count"]
     assert bool(model.decoder_fake_quant_forward_enabled) is fq_enabled_before
@@ -1156,11 +1156,8 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     attempts = telemetry["attempts"]
     assert attempts
     for record in attempts:
-        assert record["birth_update_scope"] == "spatial_carriers"
-        assert all(
-            not str(name).startswith("head_rgb_1.")
-            for name in record.get("applied_parameter_names") or []
-        )
+        assert record["birth_update_scope"] == "pair_latents_fine"
+        assert set(record.get("applied_parameter_names") or []).issubset({"latents_fine"})
         if record["decision"] == "accepted":
             assert record["fakequant_survived"] is True
             assert record["fakequant_admission"]["survived"] is True

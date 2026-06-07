@@ -2887,9 +2887,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         the receiver argmax (the subquantum / soft-mass-only failure mode).
         This actuator selects the single worst-debt connected region in exact
         contest score units, then drives a frontier-margin crossing inside
-        that region only, updating only the late archive-charged tensors with
-        local spatial leverage (``latents_fine`` / ``feature_grids.*`` /
-        ``fine_injector.*`` / ``head_rgb_1.*``).  Steps are admitted only when
+        that region only, updating only the late archive-charged tensors allowed
+        by the selected birth scope. Trusted receiver-surface runs default to the
+        pair-local fine latent row before admitting broader spatial carriers.
+        Steps are admitted only when
         the receiver uint8 image moves inside the region AND the region's
         hard ratio or median frontier margin improves AND the exact nonlinear
         Seg/Pose nonrate score improves without catastrophic pose blow-up.  The
@@ -2998,13 +2999,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         if fakequant_bits < 1 or fakequant_bits > 16:
             raise ValueError(f"fakequant_survival_bits must be in [1, 16]; got {fakequant_survival_bits}")
         resolved_birth_update_scope = (
-            "spatial_carriers"
+            "pair_latents_fine"
             if birth_update_scope is None and (bool(require_pose_trust) or bool(require_fakequant_survival))
             else "late_all"
             if birth_update_scope is None
             else str(birth_update_scope)
         )
-        valid_birth_update_scopes = {"late_all", "spatial_carriers"}
+        valid_birth_update_scopes = {"late_all", "spatial_carriers", "pair_latents_fine"}
         if resolved_birth_update_scope not in valid_birth_update_scopes:
             raise ValueError(
                 "birth_update_scope must be one of "
@@ -3726,6 +3727,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         def _birth_update_allowed(flat_name: str) -> bool:
             if not allowed_birth_update_name(flat_name):
                 return False
+            if resolved_birth_update_scope == "pair_latents_fine":
+                return flat_name == "latents_fine" or flat_name.startswith("latents_fine.")
             return not (
                 resolved_birth_update_scope == "spatial_carriers"
                 and (
@@ -5793,12 +5796,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
         receipt["trained_groups"] = sorted(trained_groups_for_action_id)
         receipt["worst_region"] = dict(worst_region_payload)
-        archive_charged_decoder_tensors = [
-            "latents_fine",
-            "feature_grids.*",
-            "fine_injector.*",
-            "head_rgb_1.*",
-        ]
+        archive_charged_decoder_tensors = ["latents_fine"]
+        if resolved_birth_update_scope in {"spatial_carriers", "late_all"}:
+            archive_charged_decoder_tensors.extend(["feature_grids.*", "fine_injector.*"])
+        if resolved_birth_update_scope == "late_all":
+            archive_charged_decoder_tensors.append("head_rgb_1.*")
         if pose_compensation_payload is not None and pose_compensation_payload["composite_accepted"]:
             archive_charged_decoder_tensors.append("head_rgb_0.*")
         payload = {
@@ -6015,6 +6017,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 target_region_forced_key=target_region_forced_key,
                 require_fakequant_survival=require_fakequant_survival,
                 fakequant_survival_bits=fakequant_survival_bits,
+                birth_update_scope=resolved_birth_update_scope,
                 _target_region_portfolio_excluded=excluded_next,
                 _target_region_portfolio_attempts=tuple(portfolio_attempts),
             )

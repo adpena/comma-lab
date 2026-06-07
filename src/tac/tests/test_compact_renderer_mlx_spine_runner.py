@@ -919,7 +919,7 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
                 "rejection_source": None if not blockers else "blocked_by_test_fixture",
             },
             "blockers": blockers or [],
-            "interaction_or_commutator": -0.25 if arm in {"C", "D"} else None,
+            "interaction_or_commutator": -0.25 if arm in {"C", "D", "E"} else None,
             "restore_state_pass": True,
         }
 
@@ -937,6 +937,7 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
                     arm_row("B", action_kind="frame0_pose_target_only", delta_seg=0.0),
                     arm_row("C", action_kind="independent_birth_plus_frame0_pose", delta_seg=-0.02),
                     arm_row("D", action_kind="joint_line_search_composite", delta_seg=-0.04),
+                    arm_row("E", action_kind="frame0_pose_then_birth_composite", delta_seg=-0.035),
                 ],
             },
         },
@@ -949,8 +950,8 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
 
     assert row["fakequant_survived"] is True
     assert row["hysteresis_passed"] is True
-    assert row["action_effect_rows_written"] == 5
-    assert row["four_arm_action_effect_rows_written"] == 4
+    assert row["action_effect_rows_written"] == 6
+    assert row["four_arm_action_effect_rows_written"] == 5
     assert float(np.asarray(model.weight)[0]) == pytest.approx(1.0)
     fake = json.loads((tmp_path / "hi_nerv_birth_fakequant_survival.json").read_text(encoding="utf-8"))
     hyst = json.loads((tmp_path / "hi_nerv_birth_hysteresis.json").read_text(encoding="utf-8"))
@@ -960,14 +961,14 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
         json.loads(line)
         for line in (tmp_path / "hi_nerv_birth_action_effects.jsonl").read_text(encoding="utf-8").splitlines()
     ]
-    assert [entry["schema"] for entry in effect_rows] == ["tac.action_effect.v1"] * 5
+    assert [entry["schema"] for entry in effect_rows] == ["tac.action_effect.v1"] * 6
     assert effect_rows[0]["fakequant_survived"] is True
-    assert [entry["arm"] for entry in effect_rows[1:]] == ["A", "B", "C", "D"]
+    assert [entry["arm"] for entry in effect_rows[1:]] == ["A", "B", "C", "D", "E"]
     assert effect_rows[1]["class_ids"] == [2]
     assert effect_rows[1]["trained_groups"] == ["head_rgb_1"]
     assert effect_rows[2]["trained_groups"] == ["compensation_head_rgb_0"]
     assert effect_rows[1]["restore_state_passed"] is True
-    assert effect_rows[-1]["action_kind"] == "joint_line_search_composite"
+    assert effect_rows[-1]["action_kind"] == "frame0_pose_then_birth_composite"
     assert effect_rows[-1]["interaction_or_commutator"] == pytest.approx(-0.25)
 
 
@@ -1077,6 +1078,7 @@ def test_hinerv_live_birth_survival_writes_four_arm_rows_when_birth_not_accepted
                     arm_row("B", action_kind="frame0_pose_target_only"),
                     arm_row("C", action_kind="independent_birth_plus_frame0_pose", blockers=["blocked_c"]),
                     arm_row("D", action_kind="joint_line_search_composite", blockers=["blocked_d"]),
+                    arm_row("E", action_kind="frame0_pose_then_birth_composite", blockers=["blocked_e"]),
                 ],
             },
         },
@@ -1087,14 +1089,14 @@ def test_hinerv_live_birth_survival_writes_four_arm_rows_when_birth_not_accepted
         target_rgb_1=np.zeros((1, 2, 2, 3), dtype=np.float32),
     )
 
-    assert row["action_effect_rows_written"] == 4
-    assert row["four_arm_action_effect_rows_written"] == 4
+    assert row["action_effect_rows_written"] == 5
+    assert row["four_arm_action_effect_rows_written"] == 5
     assert "birth_survival_live_birth_not_accepted" in row["blockers"]
     effect_rows = [
         json.loads(line)
         for line in (tmp_path / "hi_nerv_birth_action_effects.jsonl").read_text(encoding="utf-8").splitlines()
     ]
-    assert [entry["arm"] for entry in effect_rows] == ["A", "B", "C", "D"]
+    assert [entry["arm"] for entry in effect_rows] == ["A", "B", "C", "D", "E"]
     assert effect_rows[0]["blockers"] == ["blocked_a"]
     assert effect_rows[1]["exact_score_decision"] == "accept"
 
@@ -7963,7 +7965,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "grad_clip_max_norm": grad_clip_max_norm,
             }
             resolved_birth_update_scope = (
-                "spatial_carriers"
+                "pair_latents_fine"
                 if birth_update_scope is None and (bool(require_pose_trust) or bool(require_fakequant_survival))
                 else "late_all"
                 if birth_update_scope is None
@@ -8392,10 +8394,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["target_region_portfolio_max_regions"] == 4
     assert target_birth_call["target_region_forced_key"] is None
     assert target_birth_call["birth_update_scope"] is None
-    assert target_region_birth["birth_update_scope"] == "spatial_carriers"
+    assert target_region_birth["birth_update_scope"] == "pair_latents_fine"
     assert (
         target_region_birth["receipt"]["candidate_frontier_telemetry"]["birth_update_scope"]
-        == "spatial_carriers"
+        == "pair_latents_fine"
     )
     assert target_birth_call["require_fakequant_survival"] is False
     assert target_birth_call["fakequant_survival_bits"] == 8

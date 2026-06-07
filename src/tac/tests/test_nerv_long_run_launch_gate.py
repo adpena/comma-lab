@@ -33,6 +33,7 @@ from tac.analysis.nerv_long_run_launch_gate import (
     evaluate_nerv_long_run_launch_gate,
 )
 from tac.analysis.snerv_source_forward_proof import (
+    DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
     SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
     SOURCE_IDENTICAL,
     build_snerv_payload_bitflip_falsification,
@@ -83,6 +84,7 @@ def _snerv_source_forward_action_row(
     parseback_d_pose: float = 0.0,
     include_surface_provenance: bool = True,
     provenance_authority: str = "real_surface_forward_capture",
+    output2_verdict: str = SOURCE_IDENTICAL,
 ) -> dict:
     bitflip = build_snerv_payload_bitflip_falsification(
         bitflip_section="decoder_payload.output_2",
@@ -123,7 +125,9 @@ def _snerv_source_forward_action_row(
         tensors_by_surface=_snerv_tensor_surfaces(delta=tensor_delta),
         scorer_deltas=scorer_deltas,
         destructive_payload_bit_flip=bitflip,
-        output2_boundary_verdict=_snerv_output2_boundary_verdict(),
+        output2_boundary_verdict=_snerv_output2_boundary_verdict(
+            verdict=output2_verdict
+        ),
         surface_provenance=(
             _snerv_surface_provenance(provenance_authority=provenance_authority)
             if include_surface_provenance
@@ -132,11 +136,12 @@ def _snerv_source_forward_action_row(
     )
 
 
-def _snerv_output2_boundary_verdict() -> dict:
+def _snerv_output2_boundary_verdict(*, verdict: str = SOURCE_IDENTICAL) -> dict:
+    passed = verdict == SOURCE_IDENTICAL
     return {
         "schema": SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
-        "verdict": SOURCE_IDENTICAL,
-        "passed": True,
+        "verdict": verdict,
+        "passed": passed,
         "has_output2_by_surface": {
             "official_torch": True,
             "pact_mlx": True,
@@ -154,8 +159,25 @@ def _snerv_output2_boundary_verdict() -> dict:
             "sha256": "5" * 64,
             "bytes": 64,
         },
-        "minimal_causal_basis_recommendation": ["keep_output2_source_forward_bound"],
-        "blockers": [],
+        "minimal_causal_basis_recommendation": (
+            ["keep_output2_source_forward_bound"]
+            if passed
+            else [
+                "lf_carrier",
+                "hf_carrier",
+                "mfu_state",
+                "hfr_state",
+                "tub_temporal_state",
+                "pair_adapter",
+                "derive_output_2",
+            ]
+        ),
+        "blockers": [] if passed else ["snerv_output2_not_in_selected_source_forward_basis"],
+        "required_next_step": (
+            "output2_boundary_closed"
+            if passed
+            else "store_lf_hf_mfu_hfr_tub_pair_adapter_and_derive_output2"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -992,6 +1014,38 @@ def test_snerv_source_forward_tensor_delta_blocks_launch(tmp_path: Path) -> None
     )
     assert any(
         item.endswith("source_forward_tensor_delta_exceeds_tolerance:numpy_receiver:output_2")
+        for item in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_snerv_source_forward_rejects_nonidentical_output2_basis(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    _write(
+        root / "proof.json",
+        _snerv_source_forward_action_row(
+            output2_verdict=DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
+        ),
+    )
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "snerv_full_source_forward_parity_missing" in verdict["blocking_evidence"]
+    assert any(
+        item.endswith(
+            "snerv_output2_boundary_not_source_identical:"
+            "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS"
+        )
+        for item in verdict["blocking_evidence"]
+    )
+    assert any(
+        item.endswith("snerv_source_forward_launch_gate_clearable_false")
         for item in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False

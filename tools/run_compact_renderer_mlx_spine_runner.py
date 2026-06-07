@@ -25765,13 +25765,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--scorer-domain-bootstrap-segnet-hard-birth-update-scope",
-        choices=["late_all", "spatial_carriers"],
+        choices=["pair_latents_fine", "spatial_carriers", "late_all"],
         default=None,
         help=(
             "Archive-charged tensor scope for the HiNeRV hard-birth actuator. "
-            "Unset lets the model fail closed to spatial_carriers when pose or "
-            "fakequant trust is required, otherwise late_all is used for local "
-            "unit/probe runs."
+            "Unset lets the model fail closed to pair_latents_fine when pose "
+            "or fakequant trust is required, otherwise late_all is used for "
+            "local unit/probe runs."
         ),
     )
     parser.add_argument(

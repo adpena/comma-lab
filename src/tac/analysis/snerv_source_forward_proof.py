@@ -25,6 +25,15 @@ SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA = (
 SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA = (
     "snerv_payload_bitflip_falsification.v1"
 )
+SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
+SOURCE_IDENTICAL = "SOURCE_IDENTICAL"
+REPARAMETERIZED_RENAME_REQUIRED = "REPARAMETERIZED_RENAME_REQUIRED"
+DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS = "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS"
+SOURCE_FORWARD_OUTPUT2_VERDICTS: tuple[str, ...] = (
+    SOURCE_IDENTICAL,
+    REPARAMETERIZED_RENAME_REQUIRED,
+    DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
+)
 
 SOURCE_FORWARD_SURFACES: tuple[str, ...] = (
     "official_torch",
@@ -131,6 +140,7 @@ def build_snerv_source_forward_proof_action_effect(
     tensors_by_surface: Mapping[str, Mapping[str, Any]],
     scorer_deltas: Mapping[str, Any],
     destructive_payload_bit_flip: Mapping[str, Any],
+    output2_boundary_verdict: Mapping[str, Any] | None = None,
     surface_provenance: Mapping[str, Mapping[str, Any]] | None = None,
     tolerance_by_tensor: Mapping[str, float] | None = None,
     archive_bytes: int | None = None,
@@ -193,6 +203,9 @@ def build_snerv_source_forward_proof_action_effect(
     )
     blockers.extend(provenance_status["blockers"])
     normalized_surface_provenance = provenance_status["normalized_surface_provenance"]
+    output2_status = validate_snerv_output2_boundary_verdict(output2_boundary_verdict)
+    blockers.extend(output2_status["blockers"])
+    normalized_output2_boundary = output2_status["normalized_output2_boundary_verdict"]
 
     if not _looks_like_sha256(archive_sha256):
         blockers.append("source_forward_archive_sha256_invalid")
@@ -211,6 +224,9 @@ def build_snerv_source_forward_proof_action_effect(
     blockers = _ordered_unique(blockers)
     first_failed_tensor = _first_failed_tensor(blockers)
     passed = not blockers
+    launch_gate_clearable = bool(
+        passed and normalized_output2_boundary.get("verdict") == SOURCE_IDENTICAL
+    )
     return {
         "schema": SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
         "action_id": str(action_id),
@@ -231,6 +247,7 @@ def build_snerv_source_forward_proof_action_effect(
         "scorer_deltas": normalized_scorer_deltas,
         "surface_provenance": normalized_surface_provenance,
         "destructive_payload_bit_flip": dict(destructive_payload_bit_flip),
+        "output2_boundary_verdict": normalized_output2_boundary,
         "rgb_uint8_and_scorer_compared": _scorer_surfaces_present(tensor_hashes),
         "parseback_receiver_surface_compared": _parseback_receiver_surfaces_present(
             tensor_hashes
@@ -239,6 +256,7 @@ def build_snerv_source_forward_proof_action_effect(
         "source_forward_replay_verified": passed,
         "source_forward_replay_authority": passed,
         "full_stack_source_forward_replay_proven": passed,
+        "launch_gate_clearable": launch_gate_clearable,
         "first_failed_tensor": first_failed_tensor,
         "passed": passed,
         "blockers": blockers,
@@ -364,11 +382,62 @@ def validate_snerv_source_forward_proof_action_effect(
         row.get("destructive_payload_bit_flip")
     )
     blockers.extend(bitflip_status["blockers"])
+    output2_status = validate_snerv_output2_boundary_verdict(
+        row.get("output2_boundary_verdict")
+    )
+    blockers.extend(output2_status["blockers"])
+    if row.get("launch_gate_clearable") is not True:
+        blockers.append("snerv_source_forward_launch_gate_clearable_false")
     if row.get("passed") is not True:
         blockers.append("snerv_source_forward_proof_not_passed")
     if row.get("source_forward_replay_authority") is not True:
         blockers.append("snerv_source_forward_replay_authority_false")
     return {"passed": not _ordered_unique(blockers), "blockers": _ordered_unique(blockers)}
+
+
+def validate_snerv_output2_boundary_verdict(
+    row: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not isinstance(row, Mapping):
+        return {
+            "passed": False,
+            "blockers": ["snerv_output2_boundary_verdict_missing"],
+            "normalized_output2_boundary_verdict": {},
+        }
+    verdict = str(row.get("verdict") or "")
+    if row.get("schema") != SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA:
+        blockers.append("snerv_output2_boundary_verdict_schema_invalid")
+    if verdict not in SOURCE_FORWARD_OUTPUT2_VERDICTS:
+        blockers.append("snerv_output2_boundary_verdict_invalid")
+    if verdict != SOURCE_IDENTICAL:
+        blockers.append(
+            f"snerv_output2_boundary_not_source_identical:{verdict or 'missing'}"
+        )
+    if (row.get("passed") is True) != (verdict == SOURCE_IDENTICAL):
+        blockers.append("snerv_output2_boundary_passed_flag_mismatch")
+    normalized = {
+        "schema": str(row.get("schema") or ""),
+        "verdict": verdict,
+        "passed": row.get("passed") is True,
+        "has_output2_by_surface": dict(row.get("has_output2_by_surface") or {}),
+        "output2_shapes_by_surface": dict(row.get("output2_shapes_by_surface") or {}),
+        "archive_tub_output2_storage": dict(row.get("archive_tub_output2_storage") or {}),
+        "minimal_causal_basis_recommendation": list(
+            row.get("minimal_causal_basis_recommendation") or []
+        ),
+        "blockers": [str(value) for value in row.get("blockers") or []],
+        "required_next_step": row.get("required_next_step"),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return {
+        "passed": not _ordered_unique(blockers),
+        "blockers": _ordered_unique(blockers),
+        "normalized_output2_boundary_verdict": normalized,
+    }
 
 
 def validate_snerv_payload_bitflip_falsification(
@@ -700,16 +769,22 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
 
 
 __all__ = [
+    "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS",
+    "REPARAMETERIZED_RENAME_REQUIRED",
+    "SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA",
     "SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA",
     "SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA",
+    "SOURCE_FORWARD_OUTPUT2_VERDICTS",
     "SOURCE_FORWARD_SCORER_FIELDS",
     "SOURCE_FORWARD_SURFACES",
     "SOURCE_FORWARD_SURFACE_PROVENANCE_SCHEMA",
     "SOURCE_FORWARD_TENSOR_NAMES",
+    "SOURCE_IDENTICAL",
     "build_snerv_payload_bitflip_falsification",
     "build_snerv_source_forward_proof_action_effect",
     "build_snerv_source_forward_surface_provenance",
     "find_snerv_source_forward_proof_rows",
+    "validate_snerv_output2_boundary_verdict",
     "validate_snerv_payload_bitflip_falsification",
     "validate_snerv_source_forward_proof_action_effect",
 ]

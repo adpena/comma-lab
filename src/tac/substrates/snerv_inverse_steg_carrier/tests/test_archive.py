@@ -1677,7 +1677,7 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
     assert row["destructive_payload_bit_flip"]["first_failed_tensor"] == "mfu_in"
     output2_boundary = row["producer_status"]["output2_boundary_verdict"]
     assert output2_boundary["schema"] == "snerv_output2_boundary_verdict.v1"
-    assert output2_boundary["verdict"] == "SOURCE_REPARAMETERIZED_RENAME_REQUIRED"
+    assert output2_boundary["verdict"] == "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS"
     assert output2_boundary["passed"] is False
     assert output2_boundary["has_output2_by_surface"] == {
         "official_torch": False,
@@ -1690,7 +1690,18 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
         "receiver_frame_decode_consumes_output2"
     ] is False
     assert output2_boundary["required_next_step"] == (
-        "derive_output2_or_remove_output2_from_required_basis"
+        "store_lf_hf_mfu_hfr_tub_pair_adapter_and_derive_output2"
+    )
+    assert output2_boundary["minimal_causal_basis_recommendation"] == (
+        [
+            "lf_carrier",
+            "hf_carrier",
+            "mfu_state",
+            "hfr_state",
+            "tub_temporal_state",
+            "pair_adapter",
+            "derive_output_2",
+        ]
     )
     assert {
         "source_forward_tensor_missing:official_torch:output_2",
@@ -1735,6 +1746,33 @@ def test_output2_boundary_verdict_accepts_source_identical_frame_bound_payload()
     assert verdict["archive_tub_output2_storage"][
         "receiver_frame_decode_consumes_output2"
     ] is True
+
+
+def test_output2_shape_adapter_need_drops_output2_from_basis() -> None:
+    archive = _official_output2_source_forward_archive_fixture()
+    decoded = unpack_snerv_archive(archive.packet)
+    tensors = decoded.source_forward_receiver_tensor_surfaces([0])["surface_tensors"][
+        "archive_parseback"
+    ]
+    official = dict(tensors)
+    receiver = dict(tensors)
+    receiver["output_2"] = np.zeros((1, 1, 2, 2, 1), dtype=np.float32)
+
+    verdict = build_snerv_output2_boundary_verdict(
+        tensors_by_surface={
+            "official_torch": official,
+            "pact_mlx": official,
+            "archive_parseback": receiver,
+            "numpy_receiver": receiver,
+        },
+        archive_decoder_header=decoded.decode_official_mfu_hfr_tub_payload().header,
+        tolerance=0.0,
+    )
+
+    assert verdict["verdict"] == "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS"
+    assert verdict["passed"] is False
+    assert "snerv_output2_adapter_would_be_required" in verdict["blockers"]
+    assert "derive_output_2" in verdict["minimal_causal_basis_recommendation"]
 
 
 def test_official_torch_receiver_bound_capture_is_real_but_not_authority() -> None:
@@ -2748,6 +2786,12 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
         bit_offset=4,
         bit_mask=1,
     )
+    tensors_by_surface = {
+        "official_torch": tensors,
+        "pact_mlx": tensors,
+        "archive_parseback": tensors,
+        "numpy_receiver": tensors,
+    }
     return build_snerv_source_forward_proof_action_effect(
         action_id="a" * 64,
         archive_sha256="1" * 64,
@@ -2758,12 +2802,7 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
             "output_2": "5" * 64,
         },
         pair_ids=[0],
-        tensors_by_surface={
-            "official_torch": tensors,
-            "pact_mlx": tensors,
-            "archive_parseback": tensors,
-            "numpy_receiver": tensors,
-        },
+        tensors_by_surface=tensors_by_surface,
         scorer_deltas={
             "d_seg": 0.0,
             "d_pose": 0.0,
@@ -2779,6 +2818,19 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
             },
         },
         destructive_payload_bit_flip=bitflip,
+        output2_boundary_verdict=build_snerv_output2_boundary_verdict(
+            tensors_by_surface=tensors_by_surface,
+            archive_decoder_header={
+                "tub_output2_storage": {
+                    "stored": True,
+                    "source_payload_present": True,
+                    "receiver_executes_output2_fusion_from_payload": True,
+                    "receiver_frame_decode_consumes_output2": True,
+                    "receiver_output2_frame_shape_match": True,
+                }
+            },
+            tolerance=0.0,
+        ),
         surface_provenance=build_snerv_source_forward_surface_provenance(
             pair_ids=[0],
             archive_sha256="1" * 64,

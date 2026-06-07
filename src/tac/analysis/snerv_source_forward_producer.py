@@ -11,8 +11,11 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.snerv_source_forward_proof import (
+    DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
+    REPARAMETERIZED_RENAME_REQUIRED,
     SOURCE_FORWARD_SURFACES,
     SOURCE_FORWARD_TENSOR_NAMES,
+    SOURCE_IDENTICAL,
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
 )
@@ -22,10 +25,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 )
 
 SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
-SOURCE_IDENTICAL = "SOURCE_IDENTICAL"
-SOURCE_REPARAMETERIZED_RENAME_REQUIRED = "SOURCE_REPARAMETERIZED_RENAME_REQUIRED"
-OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL = "OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL"
-SOURCE_GRAPH_MISMATCH = "SOURCE_GRAPH_MISMATCH"
+SOURCE_GRAPH_UNPROVEN = "SOURCE_GRAPH_UNPROVEN"
 
 
 def build_snerv_source_forward_proof_from_archive_packet(
@@ -79,6 +79,17 @@ def build_snerv_source_forward_proof_from_archive_packet(
             else (),
         )
     )
+    official_torch_upstream_capture_status: dict[str, Any] = {
+        "schema": "snerv_official_torch_upstream_capture_status.v1",
+        "verdict": None,
+        "strict_state_dict_load_required": True,
+        "source_graph_unproven": False,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     if capture_official_torch_from_archive:
         if official_torch_tensors is not None:
             raise ValueError(
@@ -117,45 +128,78 @@ def build_snerv_source_forward_proof_from_archive_packet(
                 "capture_official_torch_from_archive and "
                 "capture_official_torch_from_upstream_fixture are mutually exclusive"
             )
-        official_torch_upstream_capture = (
-            build_official_torch_upstream_fixture_tensors(
-                official_repo_dir=official_snerv_repo_dir,
-                train_one_step=official_torch_train_one_step,
-                official_trained_checkpoint_state_dict=(
-                    official_torch_checkpoint_state_dict
-                ),
-                official_trained_checkpoint_state_dict_path=(
-                    official_torch_checkpoint_state_dict_path
-                ),
-                official_trained_checkpoint_state_dict_kind=(
-                    official_torch_checkpoint_state_dict_kind
-                ),
+        try:
+            official_torch_upstream_capture = (
+                build_official_torch_upstream_fixture_tensors(
+                    official_repo_dir=official_snerv_repo_dir,
+                    train_one_step=official_torch_train_one_step,
+                    official_trained_checkpoint_state_dict=(
+                        official_torch_checkpoint_state_dict
+                    ),
+                    official_trained_checkpoint_state_dict_path=(
+                        official_torch_checkpoint_state_dict_path
+                    ),
+                    official_trained_checkpoint_state_dict_kind=(
+                        official_torch_checkpoint_state_dict_kind
+                    ),
+                )
             )
-        )
-        official_torch_tensors = official_torch_upstream_capture["tensors"]
-        official_torch_capture_manifest = (
-            build_snerv_official_torch_upstream_capture_manifest(
-                pair_ids=pair_ids,
-                tensor_names=official_torch_tensors.keys(),
-                model_source_sha256=official_torch_upstream_capture.get(
-                    "model_source_sha256"
-                ),
-                checkpoint_sha256=official_torch_upstream_capture.get(
-                    "checkpoint_sha256"
-                ),
-                state_dict_sha256=official_torch_upstream_capture.get(
-                    "state_dict_sha256"
-                ),
-                decoder_len=official_torch_upstream_capture.get("decoder_len"),
+            official_torch_tensors = official_torch_upstream_capture["tensors"]
+            official_torch_capture_manifest = (
+                build_snerv_official_torch_upstream_capture_manifest(
+                    pair_ids=pair_ids,
+                    tensor_names=official_torch_tensors.keys(),
+                    model_source_sha256=official_torch_upstream_capture.get(
+                        "model_source_sha256"
+                    ),
+                    checkpoint_sha256=official_torch_upstream_capture.get(
+                        "checkpoint_sha256"
+                    ),
+                    state_dict_sha256=official_torch_upstream_capture.get(
+                        "state_dict_sha256"
+                    ),
+                    decoder_len=official_torch_upstream_capture.get("decoder_len"),
+                )
             )
-        )
-        official_torch_manifest_status = (
-            validate_snerv_official_torch_upstream_capture_manifest(
-                official_torch_capture_manifest,
-                pair_ids=pair_ids,
-                tensor_names=official_torch_tensors.keys(),
+            official_torch_manifest_status = (
+                validate_snerv_official_torch_upstream_capture_manifest(
+                    official_torch_capture_manifest,
+                    pair_ids=pair_ids,
+                    tensor_names=official_torch_tensors.keys(),
+                )
             )
-        )
+            official_torch_upstream_capture_status = {
+                **official_torch_upstream_capture_status,
+                "verdict": "SOURCE_GRAPH_CAPTURED",
+                "source_graph_unproven": False,
+                "blockers": [],
+            }
+        except Exception as exc:
+            official_torch_upstream_capture = {
+                "schema": "snerv_official_torch_upstream_capture_failed.v1",
+                "verdict": SOURCE_GRAPH_UNPROVEN,
+                "source_graph_unproven": True,
+                "failure_type": type(exc).__name__,
+                "failure": str(exc),
+                "blockers": [
+                    "snerv_upstream_source_graph_unproven",
+                    f"snerv_upstream_source_capture_failed:{type(exc).__name__}",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            official_torch_tensors = {}
+            official_torch_capture_manifest = None
+            official_torch_manifest_status = (
+                validate_snerv_official_torch_upstream_capture_manifest(
+                    None,
+                    pair_ids=pair_ids,
+                    tensor_names=(),
+                )
+            )
+            official_torch_upstream_capture_status = dict(official_torch_upstream_capture)
     pact_mlx_capture: dict[str, Any] | None = None
     if capture_pact_mlx_from_archive:
         if pact_mlx_tensors is not None:
@@ -226,6 +270,11 @@ def build_snerv_source_forward_proof_from_archive_packet(
                 allow_missing_reference=True,
             )
 
+    output2_boundary = build_snerv_output2_boundary_verdict(
+        tensors_by_surface=tensors_by_surface,
+        archive_decoder_header=decoded.decode_official_mfu_hfr_tub_payload().header,
+        tolerance=float(dict(tolerance_by_tensor or {}).get("output_2", 0.0)),
+    )
     bitflip = build_snerv_archive_payload_bitflip_falsification(
         archive_packet,
         bitflip_section=bitflip_section,
@@ -268,15 +317,24 @@ def build_snerv_source_forward_proof_from_archive_packet(
         tensors_by_surface=tensors_by_surface,
         scorer_deltas=dict(scorer_deltas or {}),
         destructive_payload_bit_flip=bitflip,
+        output2_boundary_verdict=output2_boundary,
         surface_provenance=provenance,
         tolerance_by_tensor=tolerance_by_tensor,
         generated_utc=generated_utc,
     )
-    output2_boundary = build_snerv_output2_boundary_verdict(
-        tensors_by_surface=tensors_by_surface,
-        archive_decoder_header=decoded.decode_official_mfu_hfr_tub_payload().header,
-        tolerance=float(dict(tolerance_by_tensor or {}).get("output_2", 0.0)),
-    )
+    if official_torch_upstream_capture_status.get("source_graph_unproven") is True:
+        row["blockers"] = _ordered_unique(
+            [
+                *row.get("blockers", ()),
+                *official_torch_upstream_capture_status.get("blockers", ()),
+            ]
+        )
+        row["passed"] = False
+        row["source_forward_replay_bound"] = False
+        row["source_forward_replay_verified"] = False
+        row["source_forward_replay_authority"] = False
+        row["full_stack_source_forward_replay_proven"] = False
+        row["launch_gate_clearable"] = False
     row["producer_status"] = {
         "schema": "snerv_source_forward_producer_status.v1",
         "archive_receiver_surfaces_bound": True,
@@ -313,6 +371,9 @@ def build_snerv_source_forward_proof_from_archive_packet(
             official_torch_upstream_capture.get("source_scope")
             if official_torch_upstream_capture is not None
             else None
+        ),
+        "official_torch_upstream_capture_status": (
+            official_torch_upstream_capture_status
         ),
         "official_torch_capture_schema": (
             official_torch_capture.get("schema")
@@ -388,7 +449,7 @@ def build_snerv_output2_boundary_verdict(
     all_have = all(has_output2.values())
 
     blockers: list[str] = []
-    verdict = SOURCE_GRAPH_MISMATCH
+    verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
     required_next_step = (
         "capture_upstream_output2_and_receiver_output2_in_same_coordinate_system"
     )
@@ -402,41 +463,44 @@ def build_snerv_output2_boundary_verdict(
             if surface != "official_torch"
         }
         if any(value is None for value in deltas.values()):
-            verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+            verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
             blockers.append("snerv_output2_shape_mismatch_across_surfaces")
-            required_next_step = "rename_or_reparameterize_frame_shaped_output2"
+            blockers.append("snerv_output2_adapter_would_be_required")
+            required_next_step = "drop_output2_and_store_mfu_hfr_tub_lf_hf_basis"
         elif any(float(value) > float(tolerance) for value in deltas.values()):
-            verdict = SOURCE_GRAPH_MISMATCH
+            verdict = REPARAMETERIZED_RENAME_REQUIRED
             blockers.append("snerv_output2_value_mismatch_across_surfaces")
-            required_next_step = "debug_output2_source_receiver_value_deltas"
+            required_next_step = "rename_receiver_state_or_rederive_output2_from_basis"
         elif not receiver_consumes_output2:
-            verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+            verdict = REPARAMETERIZED_RENAME_REQUIRED
             blockers.append("snerv_output2_tensor_present_but_not_receiver_consumed")
-            required_next_step = "bind_output2_to_receiver_frame_decode_or_rename"
+            required_next_step = "rename_receiver_side_output2_or_drop_stored_output2"
         else:
             verdict = SOURCE_IDENTICAL
             required_next_step = "output2_boundary_closed"
     elif not any(has_output2.values()):
-        verdict = SOURCE_REPARAMETERIZED_RENAME_REQUIRED
+        verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
         blockers.append("snerv_output2_not_in_selected_source_forward_basis")
-        required_next_step = "derive_output2_or_remove_output2_from_required_basis"
+        required_next_step = "store_lf_hf_mfu_hfr_tub_pair_adapter_and_derive_output2"
     elif receiver_has and not official_has:
-        verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+        verdict = REPARAMETERIZED_RENAME_REQUIRED
         blockers.append("snerv_receiver_output2_present_without_upstream_output2")
         required_next_step = "rename_receiver_side_output2_or_capture_upstream_output2"
     elif official_has and not receiver_has:
-        verdict = SOURCE_GRAPH_MISMATCH
+        verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
         blockers.append("snerv_upstream_output2_not_receiver_bound")
-        required_next_step = "carry_temporal_output2_graph_into_receiver_or_elide"
+        required_next_step = "derive_output2_from_mfu_hfr_tub_basis_or_elide_payload"
     else:
-        verdict = SOURCE_GRAPH_MISMATCH
+        verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
         blockers.append("snerv_output2_partial_surface_set")
+        required_next_step = "drop_output2_until_all_authorities_share_causal_basis"
 
     if stored and source_payload_present and not receiver_shape_matches:
         if verdict == SOURCE_IDENTICAL:
-            verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+            verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
         blockers.append("snerv_output2_stored_but_receiver_shape_mismatch")
-        required_next_step = "fix_output2_shape_or_stop_calling_it_source_output2"
+        blockers.append("snerv_output2_adapter_would_be_required")
+        required_next_step = "stop_calling_frame_shaped_payload_source_output2"
 
     return {
         "schema": SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
@@ -458,6 +522,24 @@ def build_snerv_output2_boundary_verdict(
             "score_lagrangian_admission": storage.get("score_lagrangian_admission"),
             "score_lagrangian_action": storage.get("score_lagrangian_action"),
         },
+        "minimal_causal_basis_recommendation": (
+            []
+            if verdict == SOURCE_IDENTICAL
+            else [
+                "lf_carrier",
+                "hf_carrier",
+                "mfu_state",
+                "hfr_state",
+                "tub_temporal_state",
+                "pair_adapter",
+                "derive_output_2",
+            ]
+        ),
+        "allowed_verdicts": [
+            SOURCE_IDENTICAL,
+            REPARAMETERIZED_RENAME_REQUIRED,
+            DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
+        ],
         "blockers": _ordered_unique(blockers),
         "required_next_step": required_next_step,
         "score_claim": False,
@@ -1187,14 +1269,14 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
 
 
 __all__ = [
-    "OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL",
+    "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS",
+    "REPARAMETERIZED_RENAME_REQUIRED",
     "SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY",
     "SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA",
     "SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES",
     "SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA",
-    "SOURCE_GRAPH_MISMATCH",
+    "SOURCE_GRAPH_UNPROVEN",
     "SOURCE_IDENTICAL",
-    "SOURCE_REPARAMETERIZED_RENAME_REQUIRED",
     "build_official_torch_primitive_tensors_from_archive_packet",
     "build_official_torch_upstream_fixture_tensors",
     "build_pact_mlx_primitive_tensors_from_archive_packet",
