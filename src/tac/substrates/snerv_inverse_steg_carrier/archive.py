@@ -3461,6 +3461,8 @@ def _official_tub_output2_storage_plan(
                 "scored_pixel_render_bound": False,
                 "score_lagrangian_admission": "not_present",
                 "score_lagrangian_action": "none",
+                "shape_adapter_forbidden": True,
+                "shape_adapter_applied": False,
                 "source_raw_bytes": 0,
                 "stored_raw_bytes": 0,
                 "raw_byte_savings": 0,
@@ -3559,11 +3561,13 @@ def _official_tub_output2_storage_plan(
                 "keep_only_for_receiver_proof_until_trained_source_forward_parity"
                 if frame_decode_bound
                 else (
-                    "fix_output2_shape_or_load_source_forward_tub_decoder"
+                    "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
                     if should_store
                     else "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
                 )
             ),
+            "shape_adapter_forbidden": True,
+            "shape_adapter_applied": False,
             "tensor_names": [
                 "tub.temporal_encoder_concat",
                 "tub.output2_raw",

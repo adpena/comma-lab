@@ -440,6 +440,14 @@ def build_snerv_output2_boundary_verdict(
         storage.get("receiver_frame_decode_consumes_output2")
     )
     receiver_shape_matches = bool(storage.get("receiver_output2_frame_shape_match"))
+    shape_adapter_applied = any(
+        bool(storage.get(key))
+        for key in (
+            "shape_adapter_applied",
+            "output2_shape_adapter",
+            "receiver_output2_shape_adapter_applied",
+        )
+    )
     source_payload_present = bool(storage.get("source_payload_present"))
     stored = bool(storage.get("stored"))
     official_has = bool(has_output2["official_torch"])
@@ -500,7 +508,16 @@ def build_snerv_output2_boundary_verdict(
             verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
         blockers.append("snerv_output2_stored_but_receiver_shape_mismatch")
         blockers.append("snerv_output2_adapter_would_be_required")
-        required_next_step = "stop_calling_frame_shaped_payload_source_output2"
+        required_next_step = (
+            "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
+        )
+
+    if shape_adapter_applied:
+        verdict = DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
+        blockers.append("snerv_output2_shape_adapter_forbidden")
+        required_next_step = (
+            "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
+        )
 
     return {
         "schema": SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
@@ -521,6 +538,8 @@ def build_snerv_output2_boundary_verdict(
             ),
             "score_lagrangian_admission": storage.get("score_lagrangian_admission"),
             "score_lagrangian_action": storage.get("score_lagrangian_action"),
+            "shape_adapter_forbidden": True,
+            "shape_adapter_applied": shape_adapter_applied,
         },
         "minimal_causal_basis_recommendation": (
             []

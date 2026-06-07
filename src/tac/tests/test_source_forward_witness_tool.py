@@ -35,9 +35,22 @@ def test_source_forward_witness_cli_writes_fail_closed_artifact(
     packet = _legacy_packet()
     packet_path = tmp_path / "legacy.snar"
     out = tmp_path / "witness.json"
+    proof_rows = tmp_path / "proof_rows.jsonl"
     packet_path.write_bytes(packet)
 
-    assert main(["--packet", str(packet_path), "--out", str(out)]) == 0
+    assert (
+        main(
+            [
+                "--packet",
+                str(packet_path),
+                "--out",
+                str(out),
+                "--proof-row-jsonl",
+                str(proof_rows),
+            ]
+        )
+        == 0
+    )
     payload = json.loads(out.read_text(encoding="utf-8"))
 
     assert payload["schema"] == "snerv_source_forward_witness_cli.v1"
@@ -45,6 +58,7 @@ def test_source_forward_witness_cli_writes_fail_closed_artifact(
     assert payload["launch_gate_clearable"] is False
     assert payload["score_claim"] is False
     assert payload["source_forward_proof_action_effect"] is None
+    assert proof_rows.read_text(encoding="utf-8") == ""
     assert any(
         blocker.startswith("snerv_source_forward_witness_build_failed:")
         for blocker in payload["blockers"]
@@ -91,6 +105,42 @@ def test_source_forward_witness_payload_names_official_packet_blockers(
         "snerv_output2_boundary_not_source_identical" in blocker
         for blocker in payload["blockers"]
     )
+
+
+def test_source_forward_witness_cli_writes_proof_row_jsonl(
+    tmp_path: Path,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    out = tmp_path / "witness.json"
+    proof_rows = tmp_path / "proof_rows.jsonl"
+    packet_path.write_bytes(_official_packet())
+
+    assert (
+        main(
+            [
+                "--packet",
+                str(packet_path),
+                "--out",
+                str(out),
+                "--proof-row-jsonl",
+                str(proof_rows),
+                "--capture-official-torch-from-archive-diagnostic",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    rows = [
+        json.loads(line)
+        for line in proof_rows.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert len(rows) == 1
+    assert rows[0] == payload["source_forward_proof_action_effect"]
+    assert rows[0]["schema"] == "snerv_source_forward_proof_action_effect.v1"
+    assert rows[0]["score_claim"] is False
+    assert rows[0]["promotion_eligible"] is False
 
 
 def _legacy_packet() -> bytes:

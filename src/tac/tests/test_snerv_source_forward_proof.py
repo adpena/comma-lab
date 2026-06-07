@@ -50,7 +50,12 @@ def _tensor_surfaces(*, output2_delta: float = 0.0) -> dict[str, dict[str, np.nd
     return surfaces
 
 
-def _output2_header(*, consumes: bool = True, shape_match: bool = True) -> dict:
+def _output2_header(
+    *,
+    consumes: bool = True,
+    shape_match: bool = True,
+    shape_adapter_applied: bool = False,
+) -> dict:
     return {
         "tub_output2_storage": {
             "stored": True,
@@ -58,6 +63,8 @@ def _output2_header(*, consumes: bool = True, shape_match: bool = True) -> dict:
             "receiver_executes_output2_fusion_from_payload": consumes,
             "receiver_frame_decode_consumes_output2": consumes,
             "receiver_output2_frame_shape_match": shape_match,
+            "shape_adapter_forbidden": True,
+            "shape_adapter_applied": shape_adapter_applied,
             "receiver_frame_decode_binding_status": "unit_test_receiver_bound",
             "score_lagrangian_admission": False,
             "score_lagrangian_action": "unit_test_no_score_authority",
@@ -134,6 +141,26 @@ def test_output2_boundary_verdict_blocks_receiver_side_rename_or_drop_basis() ->
     assert drop["verdict"] == DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
     assert "snerv_output2_stored_but_receiver_shape_mismatch" in drop["blockers"]
     assert "snerv_output2_adapter_would_be_required" in drop["blockers"]
+    assert drop["required_next_step"] == (
+        "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
+    )
+
+
+def test_output2_boundary_forbids_shape_adapter_even_when_values_match() -> None:
+    verdict = build_snerv_output2_boundary_verdict(
+        tensors_by_surface=_tensor_surfaces(),
+        archive_decoder_header=_output2_header(shape_adapter_applied=True),
+        tolerance=0.0,
+    )
+
+    assert verdict["verdict"] == DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS
+    assert verdict["passed"] is False
+    assert "snerv_output2_shape_adapter_forbidden" in verdict["blockers"]
+    assert verdict["archive_tub_output2_storage"]["shape_adapter_forbidden"] is True
+    assert verdict["archive_tub_output2_storage"]["shape_adapter_applied"] is True
+    status = validate_snerv_output2_boundary_verdict(verdict)
+    assert status["passed"] is False
+    assert "snerv_output2_shape_adapter_forbidden" in status["blockers"]
 
 
 def test_source_forward_proof_row_requires_clearable_output2_boundary() -> None:

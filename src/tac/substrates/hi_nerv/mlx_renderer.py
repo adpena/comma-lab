@@ -3797,8 +3797,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 {name: math.sqrt(value) for name, value in update_sq_by_group.items()},
             )
 
-        def _region_candidate_state() -> dict[str, Any]:
-            pred0, pred1 = _predict_pair01(self)
+        def _receiver_surface_state_from_predictions(pred0: Any, pred1: Any) -> dict[str, Any]:
             pred0 = mx.stop_gradient(mx.array(pred0))  # type: ignore[union-attr]
             pred1 = mx.stop_gradient(mx.array(pred1))  # type: ignore[union-attr]
             mx.eval(pred0, pred1)  # type: ignore[union-attr]
@@ -3848,6 +3847,129 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "d_seg_batch": _d_seg_batch(argmax_np),
                 "d_pose_batch": _d_pose_batch(pose),
                 "float_rgb_delta_linf": float(float_delta.item()),
+            }
+
+        def _region_candidate_state() -> dict[str, Any]:
+            pred0, pred1 = _predict_pair01(self)
+            return _receiver_surface_state_from_predictions(pred0, pred1)
+
+        def _target_region_masked_residual_oracle() -> dict[str, Any]:
+            """Price a byte-unclosed but receiver-real masked residual action.
+
+            This is not a proxy loss: it applies a literal receiver-surface RGB
+            residual from the source frame onto selected hard-region pixels,
+            then runs the same SegNet/PoseNet/evaluate math as model updates.
+            It is deliberately blocked for promotion until an archive grammar
+            carries the mask/residual bytes through parse-back/inflate.
+            """
+
+            variants: list[tuple[str, np.ndarray]] = [
+                ("active_tail", active_tail_mask_np > 0.0),
+                ("unsolved_tail", unsolved_tail_bool_np),
+                ("parent_region", region_bool_np),
+            ]
+            base_uint8 = _receiver_uint8_int(base_pred1)
+            mask_records: list[dict[str, Any]] = []
+            best_record: dict[str, Any] | None = None
+            best_nonrate_delta = float("inf")
+            for mask_name, mask_bool in variants:
+                mask_bool = np.asarray(mask_bool, dtype=bool)
+                mask_pixels = int(np.count_nonzero(mask_bool))
+                if mask_pixels <= 0:
+                    continue
+                mask_mx = mx.stop_gradient(mx.array(mask_bool.astype(np.float32)))  # type: ignore[union-attr]
+                mask4 = mx.expand_dims(mask_mx, axis=-1)  # type: ignore[union-attr]
+                oracle_pred1 = mx.where(mask4 > 0.0, target1, base_pred1)  # type: ignore[union-attr]
+                oracle_state = _receiver_surface_state_from_predictions(base_pred0, oracle_pred1)
+                pose_delta = _pose_delta_l2(oracle_state["pose"])
+                decision = _target_birth_admission_decision(
+                    new_d_seg=float(oracle_state["d_seg_batch"]),
+                    new_d_pose=oracle_state["d_pose_batch"],
+                    pose_output_l2_delta=pose_delta,
+                )
+                oracle_uint8 = oracle_state["uint8"]
+                changed_pixels = np.any(oracle_uint8 != base_uint8, axis=-1)
+                changed_outside_region = int(np.count_nonzero(changed_pixels & (~region_bool_np)))
+                changed_outside_mask = int(np.count_nonzero(changed_pixels & (~mask_bool)))
+                nonrate_delta = decision.get("exact_delta_score_nonrate")
+                if nonrate_delta is None:
+                    nonrate_delta = decision.get("seg_score_delta")
+                record = {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "mask_name": str(mask_name),
+                    "mask_pixel_count": int(mask_pixels),
+                    "receiver_uint8_changed_pixels": int(np.count_nonzero(changed_pixels)),
+                    "receiver_uint8_changed_pixels_region": int(
+                        np.count_nonzero(changed_pixels & region_bool_np)
+                    ),
+                    "receiver_uint8_changed_pixels_outside_region": changed_outside_region,
+                    "receiver_uint8_changed_pixels_outside_mask": changed_outside_mask,
+                    "physical_receiver_scope_local": bool(changed_outside_mask == 0),
+                    "scorer_effect_outside_correct_to_wrong_count": int(
+                        oracle_state["global_target_transitions"]["outside_correct_to_wrong_count"]
+                    ),
+                    "scorer_effect_outside_wrong_to_correct_count": int(
+                        oracle_state["global_target_transitions"]["outside_wrong_to_correct_count"]
+                    ),
+                    "region_argmax_transitions": dict(oracle_state["region_argmax_transitions"]),
+                    "unsolved_tail_argmax_transitions": dict(
+                        oracle_state["unsolved_tail_argmax_transitions"]
+                    ),
+                    "global_target_transitions": dict(oracle_state["global_target_transitions"]),
+                    "d_seg_batch": float(oracle_state["d_seg_batch"]),
+                    "d_pose_batch": (
+                        None
+                        if oracle_state["d_pose_batch"] is None
+                        else float(oracle_state["d_pose_batch"])
+                    ),
+                    "pose_output_delta_l2": None if pose_delta is None else float(pose_delta),
+                    "admission_decision": dict(decision),
+                    "exact_delta_score_nonrate": (
+                        None if nonrate_delta is None else float(nonrate_delta)
+                    ),
+                    "archive_closed": False,
+                    "runtime_sidecar_bytes": None,
+                    "charged_byte_sections_missing": [
+                        "target_region_mask",
+                        "target_region_rgb_residual",
+                        "receiver_runtime_apply_kernel",
+                    ],
+                }
+                mask_records.append(record)
+                if nonrate_delta is not None and float(nonrate_delta) < best_nonrate_delta:
+                    best_nonrate_delta = float(nonrate_delta)
+                    best_record = record
+
+            blockers: list[str] = [
+                "hinerv_target_region_masked_residual_archive_grammar_missing",
+                "hinerv_target_region_masked_residual_parseback_missing",
+                "hinerv_target_region_masked_residual_value_per_byte_missing",
+            ]
+            exact_accepted = bool(
+                best_record is not None
+                and best_record["admission_decision"].get("exact_score_decision") == "accepted"
+                and best_record["admission_decision"].get("catastrophic_guard_decision") == "satisfied"
+            )
+            target_support_moved = bool(
+                best_record is not None
+                and int(best_record["region_argmax_transitions"].get("wrong_to_target_count", 0)) > 0
+            )
+            if not exact_accepted:
+                blockers.append("hinerv_target_region_masked_residual_exact_score_not_accepted")
+            if not target_support_moved:
+                blockers.append("hinerv_target_region_masked_residual_no_target_support_movement")
+            return {
+                "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+                "authority": "receiver_surface_oracle_false_authority",
+                "archive_closed": False,
+                "promotion_blocked": True,
+                "human_visual_fidelity_objective": False,
+                "candidate_count": len(mask_records),
+                "candidates": mask_records,
+                "best_candidate": best_record,
+                "exact_accepted_before_archive_closure": bool(exact_accepted),
+                "target_support_moved": bool(target_support_moved),
+                "blockers": blockers,
             }
 
         def _fakequant_config_snapshot() -> dict[str, Any]:
@@ -4204,6 +4326,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pose_rejected_candidate_count = 0
         joint_rejected_candidate_count = 0
         no_progress_candidate_count = 0
+        raw_hard_birth_candidate_count = 0
+        raw_hard_birth_with_spill_candidate_count = 0
+        raw_hard_birth_pose_rejected_candidate_count = 0
         fakequant_survival_candidate_count = 0
         fakequant_survival_rejected_candidate_count = 0
         argmax_birth_quantum_growth_attempt_count = 0
@@ -4648,6 +4773,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     no_progress_candidate_count += 1
                     if support_spill:
                         spill_rejected_candidate_count += 1
+                if candidate_region_hard_won_delta > 0:
+                    raw_hard_birth_candidate_count += 1
+                    if support_spill:
+                        raw_hard_birth_with_spill_candidate_count += 1
+                    if raw_cap_rejects or catastrophic_rejects:
+                        raw_hard_birth_pose_rejected_candidate_count += 1
                 if not raw_cap_rejects:
                     pose_cap_satisfied_candidate_count += 1
                 if candidate_nonrate is not None and best_nonrate is not None and candidate_nonrate < best_nonrate:
@@ -4927,6 +5058,20 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         if accepted_step_count == 0:
             _restore_parameters(initial_snapshot)
             blockers.append("hinerv_target_region_birth_no_accepted_step")
+            if max_candidate_region_hard_won_delta > 0:
+                blockers.append("hinerv_target_region_birth_raw_hard_birth_unadmitted")
+                if max_candidate_outside_correct_to_wrong_count > 0:
+                    blockers.append("hinerv_target_region_birth_raw_hard_birth_destroyed_by_outside_spill")
+                if raw_hard_birth_pose_rejected_candidate_count > 0:
+                    blockers.append("hinerv_target_region_birth_raw_hard_birth_pose_trust_failed")
+                if resolved_birth_update_scope == "pair_latents_fine":
+                    blockers.append("hinerv_target_region_birth_pair_latent_not_region_local")
+                elif resolved_birth_update_scope == "spatial_carriers":
+                    blockers.append("hinerv_target_region_birth_spatial_carriers_not_region_local")
+            elif max_candidate_receiver_uint8_changed_pixels_region > 0:
+                blockers.append("hinerv_target_region_birth_receiver_pixels_moved_without_argmax_birth")
+            else:
+                blockers.append("hinerv_target_region_birth_no_receiver_surface_movement")
         elif accepted_receipt_snapshot is not None:
             # The optimizer may continue probing after an accepted receiver
             # crossing and then hit a terminal condition (non-finite loss,
@@ -4988,6 +5133,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         final_pose_delta = _pose_delta_l2(final["pose"])
         if accepted_step_count > 0 and after_stats["region_hard_ratio"] < float(target_min_region_ratio):
             blockers.append("hinerv_target_region_birth_min_ratio_floor_not_reached")
+        masked_residual_oracle = _target_region_masked_residual_oracle()
+        if accepted_step_count == 0 and bool(masked_residual_oracle.get("exact_accepted_before_archive_closure")):
+            blockers.append(
+                "hinerv_target_region_birth_masked_residual_oracle_positive_archive_unclosed"
+            )
         pose_guard_payload: dict[str, Any] = {
             "available": bool(pose_available),
             "input_convention": "concat_yuv6_pair_nhwc255_frame0_then_frame1",
@@ -5020,6 +5170,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_rejected_candidate_count": int(pose_rejected_candidate_count),
             "joint_rejected_candidate_count": int(joint_rejected_candidate_count),
             "no_progress_candidate_count": int(no_progress_candidate_count),
+            "raw_hard_birth_candidate_count": int(raw_hard_birth_candidate_count),
+            "raw_hard_birth_with_spill_candidate_count": int(
+                raw_hard_birth_with_spill_candidate_count
+            ),
+            "raw_hard_birth_pose_rejected_candidate_count": int(
+                raw_hard_birth_pose_rejected_candidate_count
+            ),
+            "masked_residual_oracle": masked_residual_oracle,
             "fakequant_survival_required": bool(require_fakequant_survival),
             "birth_gradient_surface": birth_gradient_surface,
             "birth_gradient_surface_eval_count": int(birth_gradient_surface_eval_count),

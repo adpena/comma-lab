@@ -599,14 +599,6 @@ def _looks_like_sha256(value: Any) -> bool:
     return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
-def _nonnegative_finite_float(value: Any) -> bool:
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return False
-    return math.isfinite(parsed) and parsed >= 0.0
-
-
 def _zero_float(value: Any) -> bool:
     try:
         parsed = float(value)

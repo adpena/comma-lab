@@ -19299,10 +19299,29 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
     )
     if row.get("survived") is True and parseback_survived and fakequant_survived:
         action_effect_ledger_path = out / "hi_nerv_birth_action_effects.jsonl"
+        action_surface = str(
+            receipt.get("surface")
+            or live_birth_payload.get("surface")
+            or live_birth_payload.get("authority")
+            or "live_mlx"
+        )
+        action_authority = str(
+            receipt.get("authority")
+            or live_birth_payload.get("authority")
+            or "batch_local_live_mlx"
+        )
+        action_normalization_scope = str(
+            receipt.get("normalization_scope")
+            or live_birth_payload.get("normalization_scope")
+            or "batch_local"
+        )
         merged_receipt = {
             **dict(receipt or live_birth_payload),
             **dict(row),
-            "surface": "inflated_torch_cpu",
+            "surface": action_surface,
+            "authority": action_authority,
+            "normalization_scope": action_normalization_scope,
+            "inflated_survival_surface": "inflated_torch_cpu",
             "fakequant_survived": True,
             "parseback_survived": True,
             "inflate_survived": True,

@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -75,6 +76,17 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--fail-on-blockers", action="store_true")
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-output-sha256", default=None)
+    parser.add_argument(
+        "--proof-row-jsonl",
+        type=Path,
+        default=None,
+        help=(
+            "Optional JSONL path for the nested "
+            "snerv_source_forward_proof_action_effect row. Writes zero rows "
+            "when row construction failed, preserving fail-closed semantics."
+        ),
+    )
+    parser.add_argument("--expected-proof-row-jsonl-sha256", default=None)
     return parser
 
 
@@ -116,6 +128,14 @@ def main(argv: list[str] | None = None) -> int:
         allow_overwrite=bool(args.allow_overwrite),
         expected_existing_sha256=args.expected_output_sha256,
     )
+    proof_row_result: dict[str, Any] | None = None
+    if args.proof_row_jsonl is not None:
+        proof_row_result = write_proof_row_jsonl(
+            args.proof_row_jsonl,
+            payload,
+            allow_overwrite=bool(args.allow_overwrite),
+            expected_existing_sha256=args.expected_proof_row_jsonl_sha256,
+        )
     print(
         json.dumps(
             {
@@ -127,6 +147,15 @@ def main(argv: list[str] | None = None) -> int:
                 "blocker_count": len(payload.get("blockers") or []),
                 "output_json": result.path,
                 "output_json_sha256": result.sha256,
+                **(
+                    {
+                        "proof_row_jsonl": proof_row_result["path"],
+                        "proof_row_jsonl_count": proof_row_result["row_count"],
+                        "proof_row_jsonl_sha256": proof_row_result["sha256"],
+                    }
+                    if proof_row_result is not None
+                    else {}
+                ),
             },
             sort_keys=True,
         )
@@ -134,6 +163,43 @@ def main(argv: list[str] | None = None) -> int:
     if args.fail_on_blockers and payload.get("blockers"):
         return 2
     return 0
+
+
+def write_proof_row_jsonl(
+    path: str | Path,
+    payload: Mapping[str, Any],
+    *,
+    allow_overwrite: bool = False,
+    expected_existing_sha256: str | None = None,
+) -> dict[str, Any]:
+    out = Path(path)
+    if not out.is_absolute():
+        out = REPO_ROOT / out
+    if out.exists():
+        existing_sha256 = sha256_bytes(out.read_bytes())
+        if expected_existing_sha256 is not None and existing_sha256 != expected_existing_sha256:
+            raise ValueError(
+                f"existing proof row JSONL sha256 mismatch for {out}: "
+                f"expected {expected_existing_sha256}, got {existing_sha256}"
+            )
+        if not allow_overwrite:
+            raise FileExistsError(f"refusing to overwrite existing proof row JSONL: {out}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    row = payload.get("source_forward_proof_action_effect")
+    if row is None:
+        content = ""
+        row_count = 0
+    elif isinstance(row, Mapping):
+        content = json.dumps(dict(row), sort_keys=True) + "\n"
+        row_count = 1
+    else:
+        raise TypeError("source_forward_proof_action_effect must be an object or null")
+    out.write_text(content, encoding="utf-8")
+    return {
+        "path": out.as_posix(),
+        "sha256": sha256_bytes(out.read_bytes()),
+        "row_count": row_count,
+    }
 
 
 def build_source_forward_witness_payload(

@@ -649,6 +649,20 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _load(path: Path) -> dict:
+    if path.suffix == ".jsonl":
+        rows: list[dict] = []
+        with path.open("r", encoding="utf-8") as fh:
+            for line_no, line in enumerate(fh, start=1):
+                text = line.strip()
+                if not text:
+                    continue
+                row = json.loads(text)
+                if not isinstance(row, dict):
+                    raise TypeError(f"{path}:{line_no}: expected JSON object")
+                rows.append(row)
+        if len(rows) != 1:
+            raise TypeError(f"{path}: expected exactly one JSONL object, got {len(rows)}")
+        return rows[0]
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise TypeError(f"{path}: expected JSON object")

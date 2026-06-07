@@ -1150,6 +1150,13 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert telemetry["birth_update_scope"] == "pair_latents_fine"
     assert payload["birth_gradient_surface_eval_count"] > 0
     assert telemetry["birth_gradient_surface_eval_count"] == payload["birth_gradient_surface_eval_count"]
+    assert telemetry["raw_hard_birth_candidate_count"] >= 0
+    assert telemetry["raw_hard_birth_with_spill_candidate_count"] >= 0
+    assert telemetry["raw_hard_birth_pose_rejected_candidate_count"] >= 0
+    assert telemetry["masked_residual_oracle"]["schema"] == "hi_nerv_target_region_masked_residual_oracle.v1"
+    assert telemetry["masked_residual_oracle"]["authority"] == "receiver_surface_oracle_false_authority"
+    assert telemetry["masked_residual_oracle"]["archive_closed"] is False
+    assert telemetry["masked_residual_oracle"]["candidate_count"] >= 1
     assert bool(model.decoder_fake_quant_forward_enabled) is fq_enabled_before
     assert bool(model.decoder_fake_quant_forward_configured_enabled) is fq_configured_before
     assert telemetry["fakequant_survival_candidate_count"] >= payload["accepted_step_count"]

@@ -33,6 +33,9 @@ from tac.substrates._shared.mlx_score_aware.adapter import (
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
 )
+from tac.tests.snerv_source_forward_fixtures import (
+    valid_snerv_source_forward_action_effect,
+)
 from tools import build_nerv_long_training_campaign_plan as cli
 
 _SOURCE_PARITY_CONTRACT_CACHE: dict[tuple[str, tuple[str, ...]], dict] = {}
@@ -1524,6 +1527,40 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     )
     assert queue["score_claim"] is False
     assert queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_campaign_cli_loads_single_source_forward_proof_jsonl_with_identity(
+    tmp_path: Path,
+) -> None:
+    proof_row = {
+        "schema": "snerv_source_forward_proof_action_effect.v1",
+        "action_id": "snerv_source_forward_row",
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    proof_jsonl = tmp_path / "source_forward_proof_rows.jsonl"
+    proof_jsonl.write_text(json.dumps(proof_row, sort_keys=True) + "\n", encoding="utf-8")
+
+    loaded = cli._load_with_source_identity(proof_jsonl)
+
+    assert loaded["schema"] == "snerv_source_forward_proof_action_effect.v1"
+    assert loaded["action_id"] == "snerv_source_forward_row"
+    assert loaded["_source_path"] == proof_jsonl.resolve(strict=False).as_posix()
+    assert loaded["_source_sha256"] == sha256(proof_jsonl.read_bytes()).hexdigest()
+
+
+def test_campaign_cli_rejects_empty_or_multirow_source_forward_jsonl(
+    tmp_path: Path,
+) -> None:
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("", encoding="utf-8")
+    multi = tmp_path / "multi.jsonl"
+    multi.write_text('{"schema":"a"}\n{"schema":"b"}\n', encoding="utf-8")
+
+    with pytest.raises(TypeError, match="expected exactly one JSONL object, got 0"):
+        cli._load_with_source_identity(empty)
+    with pytest.raises(TypeError, match="expected exactly one JSONL object, got 2"):
+        cli._load_with_source_identity(multi)
 
 
 def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blockers(
@@ -8525,19 +8562,7 @@ def _snerv_source_forward_artifact(
 
 
 def _snerv_source_forward_numerical_proof() -> dict:
-    return {
-        "official_torch_frame_hash": "1" * 64,
-        "mlx_frame_hash": "2" * 64,
-        "numpy_receiver_frame_hash": "3" * 64,
-        "parseback_frame_hash": "4" * 64,
-        "tub_output_2_hash": "5" * 64,
-        "max_abs_frame_delta_official_mlx": 0.0,
-        "max_abs_yuv6_delta_official_numpy": 0.0,
-        "seg_logit_linf_official_parseback": 0.0,
-        "pose_linf_official_parseback": 0.0,
-        "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
-        "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
-    }
+    return valid_snerv_source_forward_action_effect()
 
 
 def _approved_snerv_long_run_gate_verdict() -> dict:

@@ -13581,6 +13581,108 @@ def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
     assert "promotion_eligible" not in embedded
 
 
+def test_hinerv_inflated_birth_survival_combined_action_effect_stays_batch_local(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    action_id = "e" * 64
+    receipt = {
+        "schema": "hi_nerv_target_region_birth_receipt.v1",
+        "accepted_step_count": 1,
+        "action_id": action_id,
+        "surface": "live_mlx",
+        "authority": "batch_local_live_mlx",
+        "normalization_scope": "batch_local",
+        "action_kind": "target_region_birth",
+        "pair_index": 0,
+        "worst_region": {"batch_index": 0, "class_index": 2, "region_label": 1},
+        "updated_parameter_names": ["head_rgb_1.weight"],
+        "trained_groups": ["head_rgb_1"],
+        "exact_nonrate": {
+            "old_d_seg_batch": 0.10,
+            "new_d_seg_batch": 0.08,
+            "old_d_pose_batch": 0.0020,
+            "new_d_pose_batch": 0.0019,
+            "pose_term_available": True,
+        },
+        "argmax_transitions": {
+            "wrong_to_target_count": 5,
+            "target_to_wrong_count": 0,
+            "wrong_to_wrong_count": 1,
+            "net_target_support_delta": 5,
+        },
+        "receiver_surface_uint8_changed_pixels": 7,
+        "receiver_uint8_delta_abs_max": 4.0,
+        "receiver_float_rgb_delta_linf": 0.01,
+        "pose_guard": {"posenet_input_delta_linf_pair": 1.0 / 255.0},
+        "admission_decision": {
+            "exact_score_decision": "accept",
+            "raw_cap_decision": "satisfied",
+            "catastrophic_guard_decision": "satisfied",
+            "would_accept_exact_score_if_raw_cap_disabled": True,
+            "would_accept_without_catastrophic_guard": True,
+            "rejected_by_raw_cap": False,
+            "rejected_by_exact_score": False,
+            "rejected_by_catastrophic_guard": False,
+        },
+        "blockers": [],
+    }
+    live_birth = {"accepted": True, "action_id": action_id, "receipt": receipt}
+    local_replay = {
+        "schema": "local_submission_replay.v1",
+        "device": "cpu",
+        "evaluation_passed": True,
+        "inflated_dir": (tmp_path / "inflated").as_posix(),
+        "inflated_dir_cleanup": "retained_by_request",
+        "axis_tag": "[macOS-CPU advisory]",
+        "blockers": [],
+    }
+
+    def fake_measure(**_kwargs):
+        return {
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "inflated_torch_cpu",
+            "action_id": action_id,
+            "survived": True,
+            "blockers": [],
+            "local_replay_archive_zip_sha256": "f" * 64,
+        }
+
+    monkeypatch.setattr(
+        "tac.substrates.hi_nerv.birth_survival."
+        "measure_birth_inflated_torch_cpu_survival_from_local_replay",
+        fake_measure,
+    )
+
+    row = runner_mod._write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
+        local_cpu_replay_summary=local_replay,
+        output_dir=tmp_path,
+        live_birth_payload=live_birth,
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=[0],
+        selected_birth_parseback_survival={
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": action_id,
+            "survived": True,
+            "blockers": [],
+        },
+        live_birth_survival_bundle={"fakequant_survived": True},
+    )
+
+    assert row["combined_action_effect_rows_written"] == 1
+    ledger = tmp_path / "hi_nerv_birth_action_effects.jsonl"
+    effect = json.loads(ledger.read_text(encoding="utf-8").splitlines()[0])
+    assert validate_action_effect_payload(effect)["passed"] is True
+    assert effect["authority"] == "batch_local_live_mlx"
+    assert effect["normalization_scope"] == "batch_local"
+    assert effect["fakequant_survived"] is True
+    assert effect["parseback_survived"] is True
+    assert effect["inflate_survived"] is True
+    assert effect["archive_sha256"] == "f" * 64
+
+
 def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
     tmp_path: Path,
     monkeypatch,

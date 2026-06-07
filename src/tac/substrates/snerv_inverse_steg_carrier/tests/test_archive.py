@@ -898,6 +898,8 @@ def test_official_mfu_hfr_tub_payload_elides_output2_from_runtime_by_default() -
     assert storage["score_lagrangian_action"] == (
         "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
     )
+    assert storage["shape_adapter_forbidden"] is True
+    assert storage["shape_adapter_applied"] is False
     assert storage["tensor_names"] == [
         "tub.temporal_encoder_concat",
         "tub.output2_raw",
@@ -964,8 +966,10 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
         "blocked_output2_fused_shape_mismatch_false_authority"
     )
     assert storage["score_lagrangian_action"] == (
-        "fix_output2_shape_or_load_source_forward_tub_decoder"
+        "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
     )
+    assert storage["shape_adapter_forbidden"] is True
+    assert storage["shape_adapter_applied"] is False
     assert storage["stored_raw_bytes"] == storage["source_raw_bytes"]
     assert storage["raw_byte_savings"] == 0
     rate = header["receiver_payload_rate_classification"]

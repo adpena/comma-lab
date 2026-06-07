@@ -416,13 +416,29 @@ def validate_snerv_output2_boundary_verdict(
         )
     if (row.get("passed") is True) != (verdict == SOURCE_IDENTICAL):
         blockers.append("snerv_output2_boundary_passed_flag_mismatch")
+    raw_storage = row.get("archive_tub_output2_storage")
+    storage = raw_storage if isinstance(raw_storage, Mapping) else {}
+    shape_adapter_applied = any(
+        bool(storage.get(key))
+        for key in (
+            "shape_adapter_applied",
+            "output2_shape_adapter",
+            "receiver_output2_shape_adapter_applied",
+        )
+    )
+    if shape_adapter_applied:
+        blockers.append("snerv_output2_shape_adapter_forbidden")
     normalized = {
         "schema": str(row.get("schema") or ""),
         "verdict": verdict,
         "passed": row.get("passed") is True,
         "has_output2_by_surface": dict(row.get("has_output2_by_surface") or {}),
         "output2_shapes_by_surface": dict(row.get("output2_shapes_by_surface") or {}),
-        "archive_tub_output2_storage": dict(row.get("archive_tub_output2_storage") or {}),
+        "archive_tub_output2_storage": {
+            **dict(storage),
+            "shape_adapter_forbidden": True,
+            "shape_adapter_applied": shape_adapter_applied,
+        },
         "minimal_causal_basis_recommendation": list(
             row.get("minimal_causal_basis_recommendation") or []
         ),
