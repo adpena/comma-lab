@@ -7,8 +7,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import signal
 import sys
 from collections.abc import Mapping
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -118,6 +120,15 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--fail-on-blockers", action="store_true")
+    parser.add_argument(
+        "--max-build-seconds",
+        type=int,
+        default=180,
+        help=(
+            "Fail closed if witness construction exceeds this many seconds; "
+            "use 0 only for intentionally long source-graph probes."
+        ),
+    )
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-output-sha256", default=None)
     parser.add_argument(
@@ -206,6 +217,7 @@ def main(argv: list[str] | None = None) -> int:
             else report_resolution["official_torch_source_frame_triplets_npy"]
         ),
         checkpoint_export_report_resolution=report_resolution,
+        max_build_seconds=int(args.max_build_seconds),
     )
     result = write_json_artifact(
         out,
@@ -469,6 +481,7 @@ def build_source_forward_witness_payload(
     official_torch_source_config_kind: str = "official_trained_run_config",
     official_torch_source_frame_triplets_npy: str | Path | None = None,
     checkpoint_export_report_resolution: Mapping[str, Any] | None = None,
+    max_build_seconds: int | None = 180,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     packet = Path(packet_path).expanduser().resolve(strict=False)
@@ -516,6 +529,7 @@ def build_source_forward_witness_payload(
                 "official_torch_source_frame_triplets_requested": (
                     official_torch_source_frame_triplets_npy is not None
                 ),
+                "max_build_seconds": _timeout_seconds_or_none(max_build_seconds),
             },
             "checkpoint_export_report_resolution": (
                 dict(checkpoint_export_report_resolution)
@@ -565,6 +579,7 @@ def build_source_forward_witness_payload(
             "official_torch_source_frame_triplets_requested": (
                 official_torch_source_frame_triplets_npy is not None
             ),
+            "max_build_seconds": _timeout_seconds_or_none(max_build_seconds),
         },
         "checkpoint_export_report_resolution": (
             dict(checkpoint_export_report_resolution)
@@ -589,48 +604,49 @@ def build_source_forward_witness_payload(
                 allow_pickle=False,
             )
         )
-        row = build_snerv_source_forward_proof_from_archive_packet(
-            action_id=resolved_action_id,
-            archive_packet=packet_bytes,
-            pair_ids=pair_ids,
-            capture_official_torch_from_archive=capture_official_torch_from_archive,
-            capture_official_torch_from_upstream_fixture=(
-                capture_official_torch_from_upstream_fixture
-            ),
-            capture_official_torch_from_upstream_source_graph=(
-                capture_official_torch_from_upstream_source_graph
-            ),
-            official_snerv_repo_dir=(
-                None
-                if official_snerv_repo_dir is None
-                else Path(official_snerv_repo_dir).expanduser().as_posix()
-            ),
-            official_torch_train_one_step=official_torch_train_one_step,
-            official_torch_checkpoint_state_dict_path=(
-                None
-                if official_torch_checkpoint_state_dict_path is None
-                else Path(official_torch_checkpoint_state_dict_path)
-                .expanduser()
-                .as_posix()
-            ),
-            official_torch_checkpoint_state_dict_kind=(
-                official_torch_checkpoint_state_dict_kind
-            ),
-            official_torch_source_config_path=(
-                None
-                if official_torch_source_config_path is None
-                else Path(official_torch_source_config_path)
-                .expanduser()
-                .as_posix()
-            ),
-            official_torch_source_config_kind=official_torch_source_config_kind,
-            official_torch_source_frame_triplets_nchw255=source_frame_triplets,
-            capture_pact_mlx_from_archive=capture_pact_mlx_from_archive,
-            bitflip_section=bitflip_section,
-            bitflip_offset=bitflip_offset,
-            bitflip_mask=bitflip_mask,
-            generated_utc=generated,
-        )
+        with _witness_build_timeout(max_build_seconds):
+            row = build_snerv_source_forward_proof_from_archive_packet(
+                action_id=resolved_action_id,
+                archive_packet=packet_bytes,
+                pair_ids=pair_ids,
+                capture_official_torch_from_archive=capture_official_torch_from_archive,
+                capture_official_torch_from_upstream_fixture=(
+                    capture_official_torch_from_upstream_fixture
+                ),
+                capture_official_torch_from_upstream_source_graph=(
+                    capture_official_torch_from_upstream_source_graph
+                ),
+                official_snerv_repo_dir=(
+                    None
+                    if official_snerv_repo_dir is None
+                    else Path(official_snerv_repo_dir).expanduser().as_posix()
+                ),
+                official_torch_train_one_step=official_torch_train_one_step,
+                official_torch_checkpoint_state_dict_path=(
+                    None
+                    if official_torch_checkpoint_state_dict_path is None
+                    else Path(official_torch_checkpoint_state_dict_path)
+                    .expanduser()
+                    .as_posix()
+                ),
+                official_torch_checkpoint_state_dict_kind=(
+                    official_torch_checkpoint_state_dict_kind
+                ),
+                official_torch_source_config_path=(
+                    None
+                    if official_torch_source_config_path is None
+                    else Path(official_torch_source_config_path)
+                    .expanduser()
+                    .as_posix()
+                ),
+                official_torch_source_config_kind=official_torch_source_config_kind,
+                official_torch_source_frame_triplets_nchw255=source_frame_triplets,
+                capture_pact_mlx_from_archive=capture_pact_mlx_from_archive,
+                bitflip_section=bitflip_section,
+                bitflip_offset=bitflip_offset,
+                bitflip_mask=bitflip_mask,
+                generated_utc=generated,
+            )
     except Exception as exc:
         blocker = f"snerv_source_forward_witness_build_failed:{type(exc).__name__}"
         return {
@@ -680,6 +696,36 @@ def _parse_pair_ids(raw: str) -> list[int]:
 def _default_action_id(packet_sha256: str, pair_ids: list[int]) -> str:
     material = f"snerv-source-forward-witness:{packet_sha256}:{pair_ids}".encode()
     return hashlib.sha256(material).hexdigest()
+
+
+def _timeout_seconds_or_none(value: int | None) -> int | None:
+    if value is None:
+        return None
+    seconds = int(value)
+    return None if seconds <= 0 else seconds
+
+
+@contextmanager
+def _witness_build_timeout(seconds: int | None):
+    limit = _timeout_seconds_or_none(seconds)
+    if limit is None:
+        yield
+        return
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    previous_alarm = signal.alarm(0)
+
+    def _raise_timeout(_signum, _frame):
+        raise TimeoutError(f"snerv_source_forward_witness_build_timeout:{limit}s")
+
+    signal.signal(signal.SIGALRM, _raise_timeout)
+    signal.alarm(limit)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous_handler)
+        if previous_alarm > 0:
+            signal.alarm(previous_alarm)
 
 
 def _resolve_first_path(base_dir: Path, *values: Any) -> Path | None:

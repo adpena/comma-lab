@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -161,6 +162,44 @@ def test_source_forward_witness_build_failure_preserves_input_resolution_blocker
         blocker.startswith("snerv_source_forward_witness_build_failed:")
         for blocker in payload["blockers"]
     )
+
+
+def test_source_forward_witness_timeout_fails_closed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    packet_path.write_bytes(_official_packet())
+
+    def slow_build(**_kwargs):
+        time.sleep(2)
+        raise AssertionError("timeout did not fire")
+
+    monkeypatch.setattr(
+        witness_tool,
+        "build_snerv_source_forward_proof_from_archive_packet",
+        slow_build,
+    )
+
+    payload = build_source_forward_witness_payload(
+        packet_path=packet_path,
+        pair_ids=[0],
+        capture_official_torch_from_upstream_source_graph=True,
+        max_build_seconds=1,
+        generated_utc="2026-06-07T00:00:00Z",
+    )
+
+    assert payload["source_forward_proof_action_effect"] is None
+    assert payload["passed"] is False
+    assert payload["launch_gate_clearable"] is False
+    assert payload["capture_modes"]["max_build_seconds"] == 1
+    assert payload["build_exception"]["type"] == "TimeoutError"
+    assert payload["build_exception"]["message"] == (
+        "snerv_source_forward_witness_build_timeout:1s"
+    )
+    assert "snerv_source_forward_witness_build_failed:TimeoutError" in payload[
+        "blockers"
+    ]
 
 
 def test_source_forward_witness_missing_packet_is_fail_closed_payload(
