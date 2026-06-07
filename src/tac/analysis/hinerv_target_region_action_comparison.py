@@ -259,6 +259,20 @@ def build_hinerv_target_region_action_comparison(
         key=lambda row: int(row.get("wrong_to_target") or 0),
         default=None,
     )
+    same_support = _same_action_support_summary(
+        action_id=chosen_action_id,
+        support_sha256=support_sha256,
+        sidecar_rows=sidecar_rows,
+        backend_ladder=backend_ladder,
+    )
+    sidecar_economics = _sidecar_economics_summary(
+        byte_decomposition=byte_decomposition,
+        action_free_archive=base_zip,
+        support_cardinality=int(sum(action.pixel_count for action in program.actions)),
+        current_row=current_row,
+        best_sidecar=best_sidecar,
+        best_backend=best_backend,
+    )
     next_blocker = (
         "optimize_sidecar_grammar_current_receiver_survives_backend_does_not"
         if bool(current_row["survival"]["inflate_survived"]) and not _backend_realized(backend)
@@ -287,6 +301,7 @@ def build_hinerv_target_region_action_comparison(
         "support_sha256": support_sha256,
         "support_cardinality": int(sum(action.pixel_count for action in program.actions)),
         "byte_decomposition": byte_decomposition,
+        "sidecar_economics": sidecar_economics,
         "action_free_archive": base_zip,
         "support_identity": {
             "sidecar_support_sha256": support_sha256,
@@ -307,13 +322,18 @@ def build_hinerv_target_region_action_comparison(
                 else []
             ),
         },
+        "same_action_support": same_support,
         "sidecar_encoding_candidates": sidecar_rows,
         "backend_ladder": backend_ladder,
         "lowering_race": lowering_race,
         "comparison": {
             "best_receiver_bound_sidecar_candidate_id": current_row["candidate_id"],
             "best_sidecar_candidate_id": best_sidecar["candidate_id"],
+            "best_sidecar_value_per_byte": _row_value_per_byte(best_sidecar),
             "best_backend_tier": None if best_backend is None else best_backend["tier"],
+            "best_backend_wrong_to_target": (
+                None if best_backend is None else best_backend.get("wrong_to_target")
+            ),
             "best_lowering": lowering_race["best_lowering"],
             "first_failing_surface": lowering_race["first_failing_surface"],
             "backend_realized": _backend_realized(backend),
@@ -499,16 +519,24 @@ def _comparison_row(
 def _byte_decomposition(program: _ActionProgram) -> dict[str, Any]:
     raw_payload = encode_target_region_actions(list(program.actions))
     selected_payload = encode_target_region_actions_payload(list(program.actions))
-    support_bytes = int(sum(action.yx.nbytes for action in program.actions))
-    rgb_bytes = int(sum(action.rgb_u8.nbytes for action in program.actions))
+    support_payload = b"".join(action.yx.tobytes(order="C") for action in program.actions)
+    rgb_payload = b"".join(action.rgb_u8.tobytes(order="C") for action in program.actions)
+    support_bytes = len(support_payload)
+    rgb_bytes = len(rgb_payload)
     raw_fixed = int(len(raw_payload) - support_bytes - rgb_bytes)
-    meta_text_bytes = len(base64.b64encode(program.stored_payload))
+    meta_text = base64.b64encode(program.stored_payload)
+    meta_text_bytes = len(meta_text)
     meta_without = dict(program.meta)
     meta_without.pop(TARGET_REGION_ACTION_META_KEY, None)
-    meta_with_bytes = len(json.dumps(program.meta, separators=(",", ":"), sort_keys=True).encode("utf-8"))
-    meta_without_bytes = len(
-        json.dumps(meta_without, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    )
+    meta_with_payload = json.dumps(program.meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    meta_without_payload = json.dumps(
+        meta_without,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    meta_with_bytes = len(meta_with_payload)
+    meta_without_bytes = len(meta_without_payload)
+    meta_delta_bytes = meta_with_bytes - meta_without_bytes
     return {
         "schema": "hi_nerv_target_region_action_byte_decomposition.v1",
         "raw_payload_bytes": len(raw_payload),
@@ -522,13 +550,195 @@ def _byte_decomposition(program: _ActionProgram) -> dict[str, Any]:
         "base64_text_bytes": meta_text_bytes,
         "meta_json_bytes_with_action": meta_with_bytes,
         "meta_json_bytes_without_action": meta_without_bytes,
-        "meta_json_action_delta_bytes": meta_with_bytes - meta_without_bytes,
+        "meta_json_action_delta_bytes": meta_delta_bytes,
+        "sections": [
+            {
+                "name": "support",
+                "codec": "explicit_yx_u16_coordinates",
+                "bytes": support_bytes,
+                "bytes_per_support_pixel": _safe_div(support_bytes, sum(action.pixel_count for action in program.actions)),
+            },
+            {
+                "name": "action",
+                "codec": "exact_rgb_u8",
+                "bytes": rgb_bytes,
+                "bytes_per_support_pixel": _safe_div(rgb_bytes, sum(action.pixel_count for action in program.actions)),
+            },
+            {
+                "name": "metadata",
+                "codec": "hiv1_json_base64_target_region_actions",
+                "bytes": meta_delta_bytes,
+                "bytes_per_support_pixel": _safe_div(meta_delta_bytes, sum(action.pixel_count for action in program.actions)),
+            },
+            {
+                "name": "entropy",
+                "codec": target_region_action_payload_codec(program.stored_payload),
+                "raw_payload_bytes": len(raw_payload),
+                "stored_payload_bytes": len(program.stored_payload),
+                "payload_compression_savings_bytes": len(raw_payload) - len(program.stored_payload),
+                "stored_over_raw_ratio": _safe_div(len(program.stored_payload), len(raw_payload)),
+            },
+        ],
+        "entropy_sections": {
+            "support_coord_u16": _byte_entropy_section(support_payload),
+            "action_rgb_u8": _byte_entropy_section(rgb_payload),
+            "raw_payload": _byte_entropy_section(raw_payload),
+            "stored_payload": _byte_entropy_section(program.stored_payload),
+            "metadata_base64_text": _byte_entropy_section(meta_text),
+            "metadata_json_with_action": _byte_entropy_section(meta_with_payload),
+        },
         "action_count": len(program.actions),
         "pixel_count": int(sum(action.pixel_count for action in program.actions)),
         "target_region_action_section_telemetry": target_region_action_section_telemetry(
             list(program.actions)
         ),
     }
+
+
+def _byte_entropy_section(payload: bytes) -> dict[str, Any]:
+    data = bytes(payload)
+    if not data:
+        return {
+            "bytes": 0,
+            "empirical_entropy_bits_per_byte": 0.0,
+            "empirical_entropy_floor_bytes": 0,
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
+    counts = np.bincount(np.frombuffer(data, dtype=np.uint8), minlength=256)
+    probs = counts[counts > 0].astype(np.float64) / float(len(data))
+    entropy = float(-np.sum(probs * np.log2(probs)))
+    return {
+        "bytes": len(data),
+        "empirical_entropy_bits_per_byte": entropy,
+        "empirical_entropy_floor_bytes": math.ceil(entropy * len(data) / 8.0),
+        "unique_symbols": int(np.count_nonzero(counts)),
+        "sha256": hashlib.sha256(data).hexdigest(),
+    }
+
+
+def _sidecar_economics_summary(
+    *,
+    byte_decomposition: Mapping[str, Any],
+    action_free_archive: Mapping[str, Any],
+    support_cardinality: int,
+    current_row: Mapping[str, Any],
+    best_sidecar: Mapping[str, Any],
+    best_backend: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    current_effect = current_row.get("action_effect") if isinstance(current_row, Mapping) else {}
+    best_effect = best_sidecar.get("action_effect") if isinstance(best_sidecar, Mapping) else {}
+    archive_delta = _first_int(
+        action_free_archive,
+        "archive_delta_bytes_rebuilt_minimal_vs_without",
+    )
+    return {
+        "schema": "hi_nerv_target_region_action_sidecar_economics.v1",
+        "support_cardinality": int(support_cardinality),
+        "sections": list(byte_decomposition.get("sections") or []),
+        "entropy_sections": dict(byte_decomposition.get("entropy_sections") or {}),
+        "archive_delta_bytes": archive_delta,
+        "archive_delta_score_cost": (
+            None if archive_delta is None else float(25.0 * archive_delta / 37_545_489.0)
+        ),
+        "current_receiver_bound": _effect_value_brief(current_row),
+        "best_sidecar_by_value": _effect_value_brief(best_sidecar),
+        "best_backend_fit": (
+            None
+            if best_backend is None
+            else {
+                "tier": best_backend.get("tier"),
+                "status": best_backend.get("status"),
+                "wrong_to_target": best_backend.get("wrong_to_target"),
+                "target_to_wrong": best_backend.get("target_to_wrong"),
+                "accepted_step_count": best_backend.get("accepted_step_count"),
+                "first_failed_surface": best_backend.get("first_failed_surface"),
+                "blockers": list(best_backend.get("blockers") or []),
+            }
+        ),
+        "current_delta_score_nonrate": _first_float(
+            current_effect if isinstance(current_effect, Mapping) else {},
+            "delta_score_nonrate",
+        ),
+        "current_delta_score_total": _first_float(
+            current_effect if isinstance(current_effect, Mapping) else {},
+            "delta_score_total",
+        ),
+        "current_value_per_byte": _first_float(
+            current_effect if isinstance(current_effect, Mapping) else {},
+            "value_per_byte",
+        ),
+        "best_sidecar_value_per_byte": _first_float(
+            best_effect if isinstance(best_effect, Mapping) else {},
+            "value_per_byte",
+        ),
+        "decision_axis": "exact_score_saved_per_charged_byte",
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _same_action_support_summary(
+    *,
+    action_id: str,
+    support_sha256: str,
+    sidecar_rows: Sequence[Mapping[str, Any]],
+    backend_ladder: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    sidecar_ok = all(
+        row.get("action_id") == action_id and row.get("support_sha256") == support_sha256
+        for row in sidecar_rows
+    )
+    backend_ok = all(
+        row.get("action_id") == action_id and row.get("support_sha256") == support_sha256
+        for row in backend_ladder
+    )
+    return {
+        "schema": "hi_nerv_target_region_action_same_support_check.v1",
+        "action_id": action_id,
+        "comparison_support_sha256": support_sha256,
+        "sidecar_encoding_rows_same_action_support": bool(sidecar_ok),
+        "backend_ladder_rows_same_action_support": bool(backend_ok),
+        "all_rows_same_action_support": bool(sidecar_ok and backend_ok),
+        "sidecar_encoding_row_count": len(sidecar_rows),
+        "backend_ladder_row_count": len(backend_ladder),
+    }
+
+
+def _effect_value_brief(row: Mapping[str, Any]) -> dict[str, Any]:
+    effect = row.get("action_effect") if isinstance(row, Mapping) else {}
+    if not isinstance(effect, Mapping):
+        effect = {}
+    return {
+        "candidate_id": row.get("candidate_id"),
+        "candidate_kind": row.get("candidate_kind"),
+        "first_failed_surface": row.get("first_failed_surface"),
+        "blockers": list(row.get("blockers") or []),
+        "delta_bytes": effect.get("delta_bytes"),
+        "delta_score_nonrate": effect.get("delta_score_nonrate"),
+        "delta_score_total": effect.get("delta_score_total"),
+        "value_per_byte": effect.get("value_per_byte"),
+        "wrong_to_target": effect.get("wrong_to_target"),
+        "target_to_wrong": effect.get("target_to_wrong"),
+        "wrong_to_wrong": effect.get("wrong_to_wrong"),
+        "parseback_survived": effect.get("parseback_survived"),
+        "inflate_survived": effect.get("inflate_survived"),
+    }
+
+
+def _row_value_per_byte(row: Mapping[str, Any]) -> float | None:
+    effect = row.get("action_effect") if isinstance(row, Mapping) else {}
+    if not isinstance(effect, Mapping):
+        return None
+    return _first_float(effect, "value_per_byte")
+
+
+def _safe_div(numerator: int | float | None, denominator: int | float | None) -> float | None:
+    if denominator in (None, 0):
+        return None
+    if numerator is None:
+        return None
+    return float(numerator) / float(denominator)
 
 
 def _action_free_archive_bytes(program: _ActionProgram) -> dict[str, Any]:

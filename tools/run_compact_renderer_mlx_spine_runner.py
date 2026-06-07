@@ -266,6 +266,91 @@ def _target_region_action_payload_for_export_selection(
     return None
 
 
+def _target_region_action_id_from_selection_or_artifact(
+    export_selection: Mapping[str, Any] | None,
+    artifact_dict: Mapping[str, Any],
+) -> str | None:
+    """Recover the target-region action identity without accepting decoy actions."""
+
+    def _string(value: Any) -> str | None:
+        if isinstance(value, str) and value:
+            return value
+        return None
+
+    if isinstance(export_selection, Mapping):
+        selected = _string(export_selection.get("action_id"))
+        if selected is not None:
+            return selected
+
+    direct = _string(artifact_dict.get("action_id"))
+    if direct is not None:
+        return direct
+
+    allowed_schemas = {
+        "hi_nerv_target_region_birth.v1",
+        "hi_nerv_target_region_birth_actuator.v1",
+        "hi_nerv_target_region_birth_four_arm.v1",
+        "hi_nerv_target_region_birth_four_arm_ablation.v1",
+        "tac.target_region_wall_normal_lift.v1",
+    }
+    preferred_keys = {
+        "target_region_birth",
+        "target_region_birth_actuator",
+        "target_region_birth_payload",
+        "target_region_wall_normal_lift",
+    }
+    ignored_schemas = {
+        "tac.action_effect.v1",
+        "tac.direct_seg_wall_oracle_receipt.v1",
+        "tac.action_effect_validation.v1",
+    }
+
+    def _candidate_from_node(key: str, node: Mapping[str, Any]) -> str | None:
+        action_id = _string(node.get("action_id"))
+        if action_id is None:
+            return None
+        schema = str(node.get("schema") or "")
+        if schema in ignored_schemas:
+            return None
+        has_target_region_program = isinstance(
+            node.get("target_region_action_program_base64"),
+            str,
+        )
+        if schema in allowed_schemas or key in preferred_keys or has_target_region_program:
+            return action_id
+        return None
+
+    candidate_roots: list[tuple[str, Any]] = [
+        ("target_region_birth_payload", artifact_dict.get("target_region_birth_payload")),
+        ("target_region_birth", artifact_dict.get("target_region_birth")),
+        ("target_region_wall_normal_lift", artifact_dict.get("target_region_wall_normal_lift")),
+    ]
+    payload = _target_region_action_payload_for_export_selection(artifact_dict)
+    if isinstance(payload, Mapping):
+        candidate_roots.append(("target_region_action_payload", payload))
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, Mapping):
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, Mapping):
+            candidate_roots.append(("score_aware_training", score_training))
+
+    stack = list(reversed(candidate_roots))
+    while stack:
+        key, node = stack.pop()
+        if isinstance(node, Mapping):
+            candidate = _candidate_from_node(key, node)
+            if candidate is not None:
+                return candidate
+            for child_key, child_value in reversed(list(node.items())):
+                if isinstance(child_value, (Mapping, list, tuple)):
+                    stack.append((str(child_key), child_value))
+        elif isinstance(node, (list, tuple)):
+            for child in reversed(node):
+                if isinstance(child, (Mapping, list, tuple)):
+                    stack.append((key, child))
+    return None
+
+
 from comma_lab.local_submission_replay import (  # noqa: E402
     run_local_submission_replay,
     stage_local_replay_submission,
@@ -19674,17 +19759,10 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
         }
-    action_id = None
-    if isinstance(export_selection, Mapping):
-        action_id = export_selection.get("action_id")
-    if action_id is None:
-        action_id = artifact_dict.get("action_id")
-    if action_id is None:
-        birth_payload = artifact_dict.get("target_region_birth_payload") or artifact_dict.get(
-            "target_region_birth"
-        )
-        if isinstance(birth_payload, Mapping):
-            action_id = birth_payload.get("action_id")
+    action_id = _target_region_action_id_from_selection_or_artifact(
+        export_selection,
+        artifact_dict,
+    )
     if action_id:
         row["action_id"] = str(action_id)
     else:
@@ -19746,6 +19824,8 @@ def _write_hi_nerv_target_region_action_parseback_survival(
     row["archive_bytes"] = actual_archive_bytes
     row["target_region_action_program_sha256"] = expected_program_sha256
     row["expected_support_sha256"] = expected_support_sha256
+    if expected_support_sha256 is not None:
+        row["support_sha256"] = expected_support_sha256
     row["expected_payload_bytes"] = expected_payload_bytes
     row.update(FALSE_AUTHORITY)
     row["producer"] = "hi_nerv_runner_target_region_action_parseback_survival"
@@ -19770,6 +19850,7 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "target_region_action_program_sha256": row.get(
                 "target_region_action_program_sha256"
             ),
+            "support_sha256": row.get("support_sha256"),
             "expected_support_sha256": row.get("expected_support_sha256"),
             "expected_payload_bytes": row.get("expected_payload_bytes"),
             "total_action_pixels": row.get("total_action_pixels"),

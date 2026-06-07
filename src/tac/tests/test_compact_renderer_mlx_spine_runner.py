@@ -863,6 +863,106 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
     )
 
 
+def test_hinerv_action_parseback_survival_recovers_wall_normal_action_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive")
+
+    def fake_build_hi_nerv_target_region_action_parseback_survival(
+        archive_path,
+        *,
+        expected_program_base64=None,
+        expected_support_sha256=None,
+        expected_payload_bytes=None,
+        inflated_raw_path=None,
+    ):
+        return {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "archive_path": Path(archive_path).as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "archive_bytes": archive.stat().st_size,
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": True,
+            "total_action_pixels": 7,
+            "exact_uint8_action_pixels_applied": 7,
+            "receiver_changed_action_pixels": 7,
+            "blockers": [],
+            "score_claim": True,
+            "promotion_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "build_hi_nerv_target_region_action_parseback_survival",
+        fake_build_hi_nerv_target_region_action_parseback_survival,
+    )
+    action_id = "e" * 64
+    artifact_dict = {
+        "target_region_action_payload_bytes": 23,
+        "target_region_action_support_sha256": "support-sha",
+        "substrate_artifact_metadata": {
+            "score_aware_training": {
+                "direct_teacher": {
+                    "schema": "tac.direct_seg_wall_oracle_receipt.v1",
+                    "action_id": "direct_seg_wall:b0:c4:r1:active_tail",
+                },
+                "output_head_target_init_gate": {
+                    "metadata": {
+                        "scorer_domain_bootstrap": {
+                            "target_region_birth_actuator": {
+                                "schema": "hi_nerv_target_region_birth.v1",
+                                "action_id": action_id,
+                                "candidate_frontier_telemetry": {
+                                    "target_region_wall_normal_lift": {
+                                        "schema": "tac.target_region_wall_normal_lift.v1",
+                                        "action_id": action_id,
+                                    }
+                                },
+                            }
+                        }
+                    }
+                },
+            }
+        },
+    }
+
+    row = runner_mod._write_hi_nerv_target_region_action_parseback_survival(
+        archive_resolution={"archive_path": archive.as_posix()},
+        output_dir=tmp_path,
+        artifact_dict=artifact_dict,
+        export_selection=None,
+        target_region_action_program_base64="selected-program",
+    )
+
+    assert row is not None
+    assert row["action_id"] == action_id
+    assert row["support_sha256"] == "support-sha"
+    assert row["expected_support_sha256"] == "support-sha"
+    assert "target_region_action_parseback_survival_action_id_missing" not in row["blockers"]
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    score_training = artifact_dict["substrate_artifact_metadata"]["score_aware_training"]
+    summary = score_training["target_region_action_parseback_survival"]
+    assert summary["action_id"] == action_id
+    assert summary["support_sha256"] == "support-sha"
+    persisted = json.loads(
+        (tmp_path / "hi_nerv_target_region_action_parseback_survival.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert persisted["action_id"] == action_id
+    assert persisted["support_sha256"] == "support-sha"
+
+
 def test_hinerv_action_comparison_writer_attaches_lowering_race(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

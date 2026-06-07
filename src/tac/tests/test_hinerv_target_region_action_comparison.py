@@ -190,6 +190,15 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert report["comparison"]["first_failing_surface"] == "support_identity_mismatch"
     assert report["support_identity"]["same_as_direct_teacher"] is False
     assert report["lowering_race"]["verdict"]["sidecar_status"] == "support_identity_mismatch"
+    assert report["same_action_support"]["all_rows_same_action_support"] is True
+    assert report["sidecar_economics"]["support_cardinality"] == action.pixel_count
+    assert report["sidecar_economics"]["decision_axis"] == "exact_score_saved_per_charged_byte"
+    assert report["sidecar_economics"]["sections"][0]["name"] == "support"
+    assert report["sidecar_economics"]["sections"][1]["name"] == "action"
+    assert report["sidecar_economics"]["sections"][2]["name"] == "metadata"
+    assert report["byte_decomposition"]["entropy_sections"]["support_coord_u16"]["bytes"] == action.yx.nbytes
+    assert report["byte_decomposition"]["entropy_sections"]["action_rgb_u8"]["bytes"] == action.rgb_u8.nbytes
+    assert report["comparison"]["best_sidecar_value_per_byte"] is not None
 
     current = report["sidecar_encoding_candidates"][0]
     assert current["candidate_id"] == "current_hiv1_target_region_action_brotli"
