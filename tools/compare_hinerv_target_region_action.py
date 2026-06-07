@@ -58,12 +58,18 @@ def main() -> int:
         action_id=args.action_id,
     )
     written = write_hinerv_target_region_action_comparison(report, out_dir)
+    lowering_race = report.get("lowering_race") if isinstance(report.get("lowering_race"), dict) else {}
+    verdict = lowering_race.get("verdict") if isinstance(lowering_race.get("verdict"), dict) else {}
     summary = {
         "schema": HI_NERV_TARGET_REGION_ACTION_COMPARISON_SCHEMA,
         "output_dir": out_dir.as_posix(),
         **written,
         "action_id": report.get("action_id"),
         "support_sha256": report.get("support_sha256"),
+        "best_lowering": verdict.get("best_lowering") or lowering_race.get("best_lowering"),
+        "first_failing_surface": (
+            verdict.get("first_failing_surface") or lowering_race.get("first_failing_surface")
+        ),
         "next_blocker": (report.get("comparison") or {}).get("next_blocker"),
         "sidecar_current_inflate_survived": (report.get("comparison") or {}).get(
             "sidecar_current_inflate_survived"

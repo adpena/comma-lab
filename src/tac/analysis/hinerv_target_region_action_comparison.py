@@ -444,6 +444,7 @@ def _comparison_row(
         class_ids=_int_tuple(sidecar_admission.get("target_class")),
         region_ids=_str_tuple(sidecar_admission.get("region_id")),
         payload_sections=(
+            "lowering_target=byte_priced_sidecar",
             f"support_codec={support_encoding}",
             f"action_codec={action_encoding}",
             f"encoded_payload_bytes={int(encoded_payload_bytes)}",

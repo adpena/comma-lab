@@ -10,8 +10,10 @@ from pathlib import Path
 
 from tac.analysis.action_effect import ActionEffect
 from tac.analysis.evaluator_action_lowering_race import (
+    BYTE_ACCOUNTING_MISSING,
     COMPOSITE_NOT_MEASURED,
     INFLATE_FAILED,
+    INVALID_LOWERING_TARGET,
     PARSEBACK_FAILED,
     SEMANTIC_PRIMITIVE_MISSING,
     build_lowering_race_report,
@@ -94,6 +96,49 @@ def test_lowering_race_selects_viable_lowest_delta_candidate() -> None:
     assert report["verdict"]["delta_score_total"] < 0.0
 
 
+def test_lowering_race_uses_explicit_target_before_text_inference() -> None:
+    effect = _effect(
+        action_kind="generic_backend_sounding_name",
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+        payload_sections=(
+            "lowering_target=pose_compensated_composite",
+            "support_codec=rle",
+            "action_payload_bytes=0",
+            "metadata_bytes=0",
+        ),
+    )
+
+    report = build_lowering_race_report(action_id="action-1", action_effects=[effect])
+    candidate = report["lowering_candidates"][0]
+
+    assert candidate["lowering_target"] == "pose_compensated_composite"
+    assert candidate["lowering_target_source"] == "explicit"
+    assert report["verdict"]["best_lowering"] == "pose_compensated_composite"
+
+
+def test_lowering_race_invalid_explicit_target_fails_closed() -> None:
+    effect = _effect(
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+        payload_sections=(
+            "lowering_target=definitely_not_a_target",
+            "support_codec=rle",
+            "action_payload_bytes=0",
+            "metadata_bytes=0",
+        ),
+    )
+
+    report = build_lowering_race_report(action_id="action-1", action_effects=[effect])
+    candidate = report["lowering_candidates"][0]
+
+    assert candidate["viable"] is False
+    assert candidate["first_failing_surface"] == INVALID_LOWERING_TARGET
+    assert report["verdict"]["best_lowering"] == "none"
+
+
 def test_lowering_race_rejects_missing_byte_accounting() -> None:
     bad = _effect(payload_sections=())
     payload = bad.as_dict()
@@ -101,7 +146,32 @@ def test_lowering_race_rejects_missing_byte_accounting() -> None:
     bad = ActionEffect.from_dict(payload)
     report = build_lowering_race_report(action_id="action-1", action_effects=[bad])
 
-    assert report["lowering_candidates"][0]["first_failing_surface"] == "BYTE_ACCOUNTING_MISSING"
+    assert report["lowering_candidates"][0]["first_failing_surface"] == BYTE_ACCOUNTING_MISSING
+
+
+def test_lowering_race_rejects_missing_action_payload_or_metadata_bytes() -> None:
+    missing_action_bytes = _effect(
+        payload_sections=("support_codec=rle", "metadata_bytes=0"),
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+    )
+    missing_metadata_bytes = _effect(
+        payload_sections=("support_codec=rle", "action_payload_bytes=0"),
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+    )
+
+    report = build_lowering_race_report(
+        action_id="action-1",
+        action_effects=[missing_action_bytes, missing_metadata_bytes],
+    )
+
+    assert [row["first_failing_surface"] for row in report["lowering_candidates"]] == [
+        BYTE_ACCOUNTING_MISSING,
+        BYTE_ACCOUNTING_MISSING,
+    ]
 
 
 def test_lowering_race_rejects_blocked_negative_delta_row() -> None:

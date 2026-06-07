@@ -209,6 +209,9 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert current["action_effect"]["wrong_to_target"] == 3
     assert current["action_effect"]["target_to_wrong"] == 0
     assert current["action_effect"]["value_per_byte"] is not None
+    assert "lowering_target=byte_priced_sidecar" in current["action_effect"]["payload_sections"]
+    assert report["lowering_race"]["lowering_candidates"][0]["lowering_target_source"] == "explicit"
+    assert report["lowering_race"]["lowering_candidates"][0]["lowering_target"] == "byte_priced_sidecar"
     assert (
         "direct_teacher_and_survived_sidecar_support_hashes_diverge"
         in current["action_effect"]["blockers"]

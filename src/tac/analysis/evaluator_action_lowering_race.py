@@ -33,6 +33,7 @@ INFLATE_FAILED = "INFLATE_FAILED"
 EXACT_SCORE_REJECTED = "EXACT_SCORE_REJECTED"
 BYTE_ACCOUNTING_MISSING = "BYTE_ACCOUNTING_MISSING"
 ACTION_EFFECT_BLOCKED = "ACTION_EFFECT_BLOCKED"
+INVALID_LOWERING_TARGET = "INVALID_LOWERING_TARGET"
 
 
 @dataclass(frozen=True)
@@ -88,11 +89,11 @@ def build_lowering_race_report(
 ) -> dict[str, Any]:
     """Build the four-way lowering race for one action id."""
 
-    effects = [_coerce_effect(row) for row in action_effects]
+    race_inputs = [_coerce_race_input(row) for row in action_effects]
     if support_codec_report is not None:
-        effects.extend(_effects_from_support_codec_report(support_codec_report))
-    effects = [effect for effect in effects if effect.action_id == action_id]
-    candidates = [_candidate_row(effect) for effect in effects]
+        race_inputs.extend(_race_inputs_from_support_codec_report(support_codec_report))
+    race_inputs = [row for row in race_inputs if row.effect.action_id == action_id]
+    candidates = [_candidate_row(row) for row in race_inputs]
     grouped = {target: [row for row in candidates if row["lowering_target"] == target] for target in LOWERING_TARGETS}
     statuses = {target: _target_status(target, rows) for target, rows in grouped.items()}
     viable = [row for row in candidates if row["viable"] is True]
@@ -100,10 +101,10 @@ def build_lowering_race_report(
     first_failure = "none" if best is not None else _first_failure(statuses, candidates)
     verdict = LoweringVerdict(
         action_id=action_id,
-        pair_id=_first_pair_id(effects),
-        region_id=_first_region_id(effects),
-        support_sha256=_first_support_sha256(effects),
-        direct_teacher_status=_direct_teacher_status(effects),
+        pair_id=_first_pair_id([row.effect for row in race_inputs]),
+        region_id=_first_region_id([row.effect for row in race_inputs]),
+        support_sha256=_first_support_sha256([row.effect for row in race_inputs]),
+        direct_teacher_status=_direct_teacher_status([row.effect for row in race_inputs]),
         backend_status=statuses["backend_realization"],
         sidecar_status=statuses["byte_priced_sidecar"],
         composite_status=statuses["pose_compensated_composite"],
@@ -143,15 +144,33 @@ def write_lowering_race_report(report: Mapping[str, Any], output_dir: str | Path
     }
 
 
-def _candidate_row(effect: ActionEffect) -> dict[str, Any]:
+@dataclass(frozen=True)
+class _RaceInput:
+    effect: ActionEffect
+    explicit_lowering_target: str | None = None
+    explicit_lowering_target_raw: str | None = None
+
+
+def _candidate_row(row: _RaceInput) -> dict[str, Any]:
+    effect = row.effect
     byte_fields = _byte_fields(effect)
-    first_failure = _effect_failure(effect, byte_fields)
-    target = _lowering_target(effect)
+    explicit_target = _normalize_lowering_target(row.explicit_lowering_target)
+    invalid_explicit_target = bool(
+        row.explicit_lowering_target_raw and explicit_target is None
+    )
+    first_failure = _effect_failure(
+        effect,
+        byte_fields,
+        invalid_explicit_target=invalid_explicit_target,
+    )
+    target = explicit_target if explicit_target is not None else _lowering_target(effect)
     viable = bool(first_failure == "ok" and effect.delta_score_total is not None and effect.delta_score_total < 0.0)
     return {
         "schema": LOWERING_CANDIDATE_SCHEMA,
         "action_id": effect.action_id,
         "lowering_target": target,
+        "lowering_target_source": "explicit" if explicit_target is not None else "inferred",
+        "explicit_lowering_target": row.explicit_lowering_target_raw,
         "action_kind": effect.action_kind,
         "family": effect.family,
         "authority": effect.authority,
@@ -185,7 +204,14 @@ def _candidate_row(effect: ActionEffect) -> dict[str, Any]:
     }
 
 
-def _effect_failure(effect: ActionEffect, byte_fields: Mapping[str, int | None]) -> str:
+def _effect_failure(
+    effect: ActionEffect,
+    byte_fields: Mapping[str, int | None],
+    *,
+    invalid_explicit_target: bool,
+) -> str:
+    if invalid_explicit_target:
+        return INVALID_LOWERING_TARGET
     if effect.blockers:
         return str(effect.blockers[0] or ACTION_EFFECT_BLOCKED)
     if effect.support_encoded_bytes is None:
@@ -256,8 +282,8 @@ def _byte_fields(effect: ActionEffect) -> dict[str, int | None]:
     action_payload = _section_int(effect.payload_sections, "action_payload_bytes")
     metadata = _section_int(effect.payload_sections, "metadata_bytes")
     return {
-        "action_payload_bytes": 0 if action_payload is None and effect.support_encoded_bytes is not None else action_payload,
-        "metadata_bytes": 0 if metadata is None and effect.support_encoded_bytes is not None else metadata,
+        "action_payload_bytes": action_payload,
+        "metadata_bytes": metadata,
     }
 
 
@@ -273,13 +299,13 @@ def _section_int(sections: Sequence[str], key: str) -> int | None:
     return None
 
 
-def _effects_from_support_codec_report(report: Mapping[str, Any]) -> list[ActionEffect]:
-    out: list[ActionEffect] = []
+def _race_inputs_from_support_codec_report(report: Mapping[str, Any]) -> list[_RaceInput]:
+    out: list[_RaceInput] = []
     for sub in report.get("reports", []) if isinstance(report.get("reports"), Sequence) else []:
         if isinstance(sub, Mapping) and isinstance(sub.get("selected_action_effect"), Mapping):
-            out.append(ActionEffect.from_dict(sub["selected_action_effect"]))
+            out.append(_coerce_race_input(sub["selected_action_effect"]))
     if isinstance(report.get("selected_action_effect"), Mapping):
-        out.append(ActionEffect.from_dict(report["selected_action_effect"]))
+        out.append(_coerce_race_input(report["selected_action_effect"]))
     return out
 
 
@@ -300,8 +326,53 @@ def _support_codec_summary(report: Mapping[str, Any] | None) -> dict[str, Any]:
     return {"schema": "tac.evaluator_action_lowering_race.support_codec_summary.v1", "reports": summaries}
 
 
-def _coerce_effect(row: ActionEffect | Mapping[str, Any]) -> ActionEffect:
-    return row if isinstance(row, ActionEffect) else ActionEffect.from_dict(row)
+def _coerce_race_input(row: ActionEffect | Mapping[str, Any]) -> _RaceInput:
+    if isinstance(row, ActionEffect):
+        explicit_raw = _explicit_lowering_target_from_effect(row)
+        return _RaceInput(
+            effect=row,
+            explicit_lowering_target=explicit_raw,
+            explicit_lowering_target_raw=explicit_raw,
+        )
+    explicit_raw = _explicit_lowering_target_from_mapping(row)
+    return _RaceInput(
+        effect=ActionEffect.from_dict(row),
+        explicit_lowering_target=explicit_raw,
+        explicit_lowering_target_raw=explicit_raw,
+    )
+
+
+def _explicit_lowering_target_from_mapping(row: Mapping[str, Any]) -> str | None:
+    for key in ("lowering_target", "candidate_lowering_target"):
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    sections = row.get("payload_sections")
+    return _explicit_lowering_target_from_sections(
+        sections if isinstance(sections, Sequence) and not isinstance(sections, str | bytes) else ()
+    )
+
+
+def _explicit_lowering_target_from_effect(effect: ActionEffect) -> str | None:
+    return _explicit_lowering_target_from_sections(effect.payload_sections)
+
+
+def _explicit_lowering_target_from_sections(sections: Sequence[Any]) -> str | None:
+    for section in sections:
+        text = str(section).strip()
+        if not text:
+            continue
+        for prefix in ("lowering_target=", "candidate_lowering_target="):
+            if text.startswith(prefix):
+                return text[len(prefix) :].strip()
+    return None
+
+
+def _normalize_lowering_target(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower().replace("-", "_")
+    return normalized if normalized in LOWERING_TARGETS else None
 
 
 def _first_pair_id(effects: Sequence[ActionEffect]) -> int | None:
@@ -345,6 +416,7 @@ __all__ = [
     "DIRECT_TEACHER_NO_WALL_CROSS",
     "EXACT_SCORE_REJECTED",
     "INFLATE_FAILED",
+    "INVALID_LOWERING_TARGET",
     "LOWERING_CANDIDATE_SCHEMA",
     "LOWERING_RACE_SCHEMA",
     "LOWERING_TARGETS",
