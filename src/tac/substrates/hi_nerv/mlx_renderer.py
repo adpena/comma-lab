@@ -596,6 +596,116 @@ def _write_pair_local_smoke_artifact(
     }
 
 
+def _write_hard_region_miner_input_bundle(
+    *,
+    output_dir: str | Path | None,
+    target_labels_bhw: np.ndarray,
+    candidate_argmax_bhw: np.ndarray,
+    target_margin_bhw: np.ndarray,
+    pair_indices: np.ndarray,
+) -> dict[str, Any]:
+    schema = "hi_nerv_hard_region_miner_input_bundle.v2"
+    if output_dir is None:
+        return {
+            "schema": schema,
+            "written": False,
+            "reason": "hard_region_miner_output_dir_not_requested",
+        }
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    posix = out.as_posix()
+    if posix.startswith(("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")):
+        raise ValueError(
+            "refusing to write hard-region miner inputs to transient tmp tier: "
+            f"{out}"
+        )
+    out.mkdir(parents=True, exist_ok=True)
+    bundle_path = out / "hi_nerv_hard_region_miner_inputs.npz"
+    manifest_path = out / "hi_nerv_hard_region_miner_inputs_manifest.json"
+    labels = np.asarray(target_labels_bhw, dtype=np.int32)
+    argmax = np.asarray(candidate_argmax_bhw, dtype=np.int32)
+    margin = np.asarray(target_margin_bhw, dtype=np.float32)
+    pairs = np.asarray(pair_indices, dtype=np.int64)
+    if labels.ndim != 3 or argmax.shape != labels.shape or margin.shape != labels.shape:
+        raise ValueError(
+            "hard-region miner compact bundle requires matching BHW labels, "
+            f"argmax, and target margin; got labels={labels.shape} argmax={argmax.shape} "
+            f"margin={margin.shape}"
+        )
+    np.savez_compressed(
+        bundle_path,
+        target_labels_bhw=labels,
+        candidate_argmax_bhw=argmax,
+        target_margin_bhw=margin,
+        pair_indices=pairs,
+    )
+    bundle_bytes = bundle_path.read_bytes()
+    bundle_sha256 = hashlib.sha256(bundle_bytes).hexdigest()
+    plan_path = out / "hi_nerv_hard_region_plan.json"
+    plan_blockers: list[str] = []
+    plan_region_count = 0
+    try:
+        from tac.analysis.hinerv_hard_region_miner import (
+            build_hard_region_mining_plan,
+            mine_hard_regions_from_margin_map,
+        )
+
+        regions = mine_hard_regions_from_margin_map(
+            labels,
+            argmax,
+            margin,
+            top_k=8,
+            min_region_pixels=1,
+        )
+        plan = build_hard_region_mining_plan(
+            regions,
+            source=bundle_path.as_posix(),
+            top_k=8,
+        )
+        plan_region_count = int(plan.get("region_count") or 0)
+        plan_path.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    except Exception as exc:
+        plan_blockers.append(
+            f"hard_region_mining_plan_write_failed:{type(exc).__name__}:{exc}"
+        )
+    command = (
+        "uv run python tools/mine_hinerv_hard_regions.py "
+        f"--target-labels {bundle_path.as_posix()}::target_labels_bhw "
+        f"--candidate-argmax {bundle_path.as_posix()}::candidate_argmax_bhw "
+        f"--target-margin {bundle_path.as_posix()}::target_margin_bhw "
+        f"--output {(out / 'hi_nerv_hard_region_plan.json').as_posix()}"
+    )
+    manifest = {
+        "schema": schema,
+        "written": True,
+        "bundle_path": bundle_path.as_posix(),
+        "bundle_sha256": bundle_sha256,
+        "bundle_bytes": int(bundle_path.stat().st_size),
+        "manifest_path": manifest_path.as_posix(),
+        "keys": {
+            "target_labels_bhw": list(labels.shape),
+            "candidate_argmax_bhw": list(argmax.shape),
+            "target_margin_bhw": list(margin.shape),
+            "pair_indices": list(pairs.shape),
+        },
+        "max_rank_persisted_array": 3,
+        "compact_sufficient_statistic": "target_margin_bhw=max_other_logit-target_class_logit",
+        "full_logits_persisted": False,
+        "pair_indices": [int(value) for value in pairs.reshape(-1).tolist()],
+        "hard_region_plan_path": plan_path.as_posix(),
+        "hard_region_plan_region_count": int(plan_region_count),
+        "mine_command": command,
+        "blockers": plan_blockers,
+        "producer": "hinerv_target_region_birth",
+        "consumer": "tools/mine_hinerv_hard_regions.py",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest
+
+
 class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
     """MLX-native mirror of :class:`HinervSubstrate`.
 
@@ -2719,6 +2829,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         target_region_forced_key: Sequence[int] | None = None,
         require_fakequant_survival: bool = False,
         fakequant_survival_bits: int = 4,
+        hard_region_miner_output_dir: str | Path | None = None,
         _target_region_portfolio_excluded: Sequence[Sequence[int]] = (),
         _target_region_portfolio_attempts: Sequence[Mapping[str, Any]] = (),
     ) -> dict[str, Any]:
@@ -2980,6 +3091,21 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 f"max_target_class={int(labels_np.max())} class_count={class_count}"
             )
         initial_argmax_np = np.argmax(initial_logits_np, axis=-1)
+        target_logits_np = np.take_along_axis(
+            initial_logits_np,
+            labels_np[..., None],
+            axis=-1,
+        )[..., 0]
+        masked_logits_np = np.array(initial_logits_np, copy=True)
+        np.put_along_axis(masked_logits_np, labels_np[..., None], -np.inf, axis=-1)
+        target_margin_np = np.max(masked_logits_np, axis=-1) - target_logits_np
+        hard_region_miner_inputs = _write_hard_region_miner_input_bundle(
+            output_dir=hard_region_miner_output_dir,
+            target_labels_bhw=labels_np,
+            candidate_argmax_bhw=initial_argmax_np,
+            target_margin_bhw=target_margin_np,
+            pair_indices=np.asarray(pair_indices, dtype=np.int64),
+        )
         worst, region_mask_np = select_worst_target_region_with_mask(
             labels_np,
             initial_argmax_np,
@@ -2993,6 +3119,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "enabled": False,
                 "reason": "no_unsolved_target_region",
                 "worst_region": worst.as_dict(),
+                "hard_region_miner_inputs": hard_region_miner_inputs,
                 "accepted_step_count": 0,
                 "rejected_step_count": 0,
                 "target_region_portfolio": {
@@ -3890,6 +4017,38 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if pose_available and target_pose_np is not None
             else None
         )
+        birth_gradient_surface = (
+            "fakequant_forward_ste"
+            if bool(require_fakequant_survival)
+            else "live_forward"
+        )
+        birth_gradient_surface_eval_count = 0
+
+        def _value_and_grad_on_birth_surface(model_obj: Any) -> tuple[Any, Any]:
+            nonlocal birth_gradient_surface_eval_count
+            if not bool(require_fakequant_survival):
+                birth_gradient_surface_eval_count += 1
+                return loss_and_grad_fn(model_obj)
+            snapshot = _fakequant_config_snapshot()
+            try:
+                self.configure_decoder_fake_quant_forward(
+                    enabled=True,
+                    quant_bits=fakequant_bits,
+                    per_tensor_bits=None,
+                    stage_controlled=False,
+                )
+                loss_value, grads_tree = loss_and_grad_fn(model_obj)
+                grad_leaves = [
+                    leaf
+                    for _name, leaf in tree_flatten(grads_tree)  # type: ignore[operator]
+                    if leaf is not None
+                ]
+                mx.eval(loss_value, *grad_leaves)  # type: ignore[union-attr]
+                birth_gradient_surface_eval_count += 1
+                return loss_value, grads_tree
+            finally:
+                _restore_fakequant_config(snapshot)
+
         initial_snapshot = _snapshot_parameters()
         parameter_group_sha256_before = _parameter_group_sha256(initial_snapshot)
         blockers: list[str] = []
@@ -4013,7 +4172,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             base_snapshot = _snapshot_parameters()
             _, step_base_pred1 = _predict_pair01(self)
             step_base_uint8 = _receiver_uint8_int(step_base_pred1)
-            loss, grads = loss_and_grad_fn(self)
+            loss, grads = _value_and_grad_on_birth_surface(self)
             mx.eval(loss)  # type: ignore[union-attr]
             loss_value = float(loss.item())
             if not math.isfinite(loss_value):
@@ -4424,6 +4583,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     ),
                     "fakequant_admission": fakequant_admission,
                     "fakequant_survival_required": bool(require_fakequant_survival),
+                    "birth_gradient_surface": birth_gradient_surface,
                     "fakequant_survived": fakequant_admission.get("survived"),
                     "argmax_birth_quantum_growth_attempts_before_attempt": int(
                         quantum_growth_attempts
@@ -4699,6 +4859,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "joint_rejected_candidate_count": int(joint_rejected_candidate_count),
             "no_progress_candidate_count": int(no_progress_candidate_count),
             "fakequant_survival_required": bool(require_fakequant_survival),
+            "birth_gradient_surface": birth_gradient_surface,
+            "birth_gradient_surface_eval_count": int(birth_gradient_surface_eval_count),
             "fakequant_survival_bits": int(fakequant_bits),
             "fakequant_survival_candidate_count": int(fakequant_survival_candidate_count),
             "fakequant_survival_rejected_candidate_count": int(
@@ -5334,6 +5496,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "target_region_forced_key": (
                 None if forced_region_key is None else list(forced_region_key)
             ),
+            "hard_region_miner_inputs": hard_region_miner_inputs,
             "worst_region": worst_region_payload,
             "before_region_margin_stats": dict(before_stats),
             "after_region_margin_stats": dict(after_stats),
@@ -5360,6 +5523,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "joint_score_rejected_step_count": int(joint_score_rejected_step_count),
             "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
             "fakequant_survival_required": bool(require_fakequant_survival),
+            "birth_gradient_surface": birth_gradient_surface,
+            "birth_gradient_surface_eval_count": int(birth_gradient_surface_eval_count),
             "fakequant_survival_bits": int(fakequant_bits),
             "fakequant_survival_rejected_step_count": int(
                 fakequant_survival_rejected_step_count

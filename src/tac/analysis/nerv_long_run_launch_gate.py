@@ -60,6 +60,7 @@ REPRESENTATIVE_COVERAGE_SCHEMA = "hi_nerv_representative_region_coverage.v1"
 SNERV_SOURCE_FORWARD_SCHEMA = "snerv_official_tub_source_forward_replay.v1"
 ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA = "nerv_archive_parseback_selection_contract.v1"
 SOURCE_QUALIFIED_METRICS_SCHEMA = "nerv_source_qualified_metrics.v1"
+HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA = "hi_nerv_short_scorer_smoke_readiness.v1"
 SUPPORTED_FAMILIES = ("hinerv", "hi_nerv", "snerv")
 SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
 SURVIVAL_SURFACE_L5 = "inflated_torch_cpu"
@@ -213,6 +214,74 @@ def _pose_trusted(row: Mapping[str, Any]) -> bool:
         and isinstance(delta, (int, float))
         and float(delta) < 0.0
     )
+
+
+def _pose_trusted_by_pair_local_servo_action_effect(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    blockers: list[str],
+) -> bool:
+    """Return true when the measured pair-local composite supplies pose trust.
+
+    Older HiNeRV hard-birth receipts carried pose-guard fields directly on the
+    live birth row.  The v6 PR95-like servo writes the stronger evidence as a
+    same-action ActionEffect row: the frame-1 birth and frame-0 pose
+    compensation are replayed as a composed action and admitted by exact
+    nonlinear score.  Treat that as pose trust only when it proves both target
+    support and Pose movement on the same action identity.
+    """
+
+    matches = _action_effect_rows_for_action(rows, action_id=action_id)
+    saw_candidate = False
+    candidate_blockers: list[str] = []
+    for row in matches:
+        if str(row.get("action_kind") or "") != "joint_line_search_composite":
+            continue
+        saw_candidate = True
+        if str(row.get("exact_score_decision") or "") != "accept":
+            candidate_blockers.append("pose_trust_pair_local_servo_exact_score_not_accepted")
+            continue
+        delta_nonrate = row.get("delta_score_nonrate")
+        if not _finite_number(delta_nonrate) or float(delta_nonrate) >= 0.0:
+            candidate_blockers.append("pose_trust_pair_local_servo_exact_nonrate_not_improved")
+            continue
+        old_pose = row.get("old_d_pose")
+        new_pose = row.get("new_d_pose")
+        pose_score_delta = row.get("pose_score_delta")
+        pose_improved = (
+            _finite_number(old_pose)
+            and _finite_number(new_pose)
+            and float(new_pose) < float(old_pose)
+        ) or (_finite_number(pose_score_delta) and float(pose_score_delta) < 0.0)
+        if not pose_improved:
+            candidate_blockers.append("pose_trust_pair_local_servo_pose_not_improved")
+            continue
+        if not _positive_number(row.get("posenet_input_delta_linf_pair")):
+            candidate_blockers.append("pose_trust_pair_local_servo_posenet_input_delta_missing")
+            continue
+        if not _target_support_positive(
+            row,
+            blocker="pose_trust_pair_local_servo_target_support_missing",
+            not_positive_blocker="pose_trust_pair_local_servo_target_support_not_positive",
+            blockers=candidate_blockers,
+        ):
+            continue
+        target_to_wrong = row.get("target_to_wrong")
+        if _finite_number(target_to_wrong) and float(target_to_wrong) > 0.0:
+            candidate_blockers.append("pose_trust_pair_local_servo_target_spill_positive")
+            continue
+        if row.get("rejected_by_exact_score") is True:
+            candidate_blockers.append("pose_trust_pair_local_servo_rejected_by_exact_score")
+            continue
+        if row.get("rejected_by_catastrophic_guard") is True:
+            candidate_blockers.append("pose_trust_pair_local_servo_rejected_by_catastrophic_guard")
+            continue
+        return True
+
+    if saw_candidate:
+        blockers.extend(_dedupe(candidate_blockers))
+    return False
 
 
 def _survival_rows_for_action(
@@ -538,6 +607,68 @@ def _source_qualified_metrics_ok(
     return False
 
 
+def _source_qualified_readiness_report_ok(
+    rows: list[dict[str, Any]],
+    *,
+    family: str,
+) -> bool:
+    accepted_family_values = {family, "hi_nerv" if family == "hinerv" else family}
+    for row in rows:
+        row_family = str(row.get("family") or family).strip().lower().replace("-", "_")
+        if row_family not in accepted_family_values:
+            continue
+        teacher = row.get("teacher_gate")
+        receiver = row.get("receiver_surface_identity_gate")
+        if not isinstance(teacher, Mapping) or not isinstance(receiver, Mapping):
+            continue
+        if bool(teacher.get("mock_scorer_teacher_allowed")):
+            continue
+        if bool(teacher.get("unscored_research_smoke_enabled")):
+            continue
+        seg_requested = bool(
+            teacher.get("real_segnet_teacher_requested")
+            or teacher.get("direct_live_segnet_requested")
+        )
+        pose_requested = bool(
+            teacher.get("real_posenet_teacher_requested")
+            or teacher.get("direct_live_posenet_requested")
+        )
+        if not (seg_requested and pose_requested):
+            continue
+        if not bool(receiver.get("archive_identity_present")):
+            continue
+        if not bool(receiver.get("direct_receiver_parseback_present")):
+            continue
+        if bool(receiver.get("archive_sha256_mismatch")):
+            continue
+        if not bool(receiver.get("candidate_cache_manifest_bound")):
+            continue
+        direct_live_segnet = row.get("direct_live_segnet_gate")
+        if bool(teacher.get("direct_live_segnet_requested")) and not _mapping_has_finite_metric(
+            direct_live_segnet
+        ):
+            continue
+        direct_live_pose = row.get("direct_live_posenet_gate")
+        generic_pose = row.get("posenet_distill_gate")
+        if bool(teacher.get("direct_live_posenet_requested")):
+            pose_has_metric = _mapping_has_finite_metric(direct_live_pose)
+        else:
+            pose_has_metric = _mapping_has_finite_metric(generic_pose)
+        if not pose_has_metric:
+            continue
+        return True
+    return False
+
+
+def _mapping_has_finite_metric(value: Any) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    metrics = value.get("metrics")
+    if not isinstance(metrics, Mapping):
+        return False
+    return any(_finite_number(item) for item in metrics.values())
+
+
 def _finite_number(value: Any) -> bool:
     if isinstance(value, bool):
         return False
@@ -650,21 +781,38 @@ def evaluate_nerv_long_run_launch_gate(
             index=evidence_index,
             blockers=blockers,
         )
+        readiness_rows = _collect_schema_rows(
+            root,
+            HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
         action_effect_rows = _validated_action_effect_rows(action_effect_rows, blockers=blockers)
         if not _parseback_selection_contract_ok(parseback_contract_rows):
             blockers.append("archive_parseback_selection_contract_missing")
-        if not _source_qualified_metrics_ok(source_metric_rows, family=family):
+        source_qualified = _source_qualified_metrics_ok(
+            source_metric_rows,
+            family=family,
+        ) or _source_qualified_readiness_report_ok(
+            readiness_rows,
+            family=family,
+        )
+        if not source_qualified:
             blockers.append("source_qualified_metrics_missing")
         live = _accepted_live_birth(birth_rows, blockers=blockers)
         if live is None:
             blockers.append("real_video_birth_receipt_missing")
         else:
             highest_level = "L2"
-            if _pose_trusted(live):
+            action_id = str(live.get("action_id"))
+            if _pose_trusted(live) or _pose_trusted_by_pair_local_servo_action_effect(
+                action_effect_rows,
+                action_id=action_id,
+                blockers=blockers,
+            ):
                 highest_level = "L3"
             else:
                 blockers.append("pose_trusted_birth_receipt_missing")
-            action_id = str(live.get("action_id"))
             _require_hi_nerv_action_effect_evidence(action_effect_rows, action_id=action_id, blockers=blockers)
             _require_hi_nerv_four_arm_action_effect_evidence(
                 action_effect_rows,

@@ -5,6 +5,7 @@ import pytest
 
 from tac.substrates.hi_nerv.short_scorer_readiness import (
     HI_NERV_SHORT_SCORER_SMOKE_AXIS_TAG,
+    NERV_SOURCE_QUALIFIED_METRICS_SCHEMA,
     build_hinerv_short_scorer_smoke_readiness_report,
     hinerv_short_scorer_smoke_long_run_admission,
 )
@@ -340,6 +341,12 @@ def test_direct_live_pose_only_accepts_observed_posenet_and_dual_telemetry() -> 
         "loss_part_pose_direct_live_score_term"
     ] == pytest.approx(0.14)
     assert report["direct_live_dual_ascent_gate"]["required"] is True
+    source_metrics = report["source_qualified_metrics"]
+    assert source_metrics["schema"] == NERV_SOURCE_QUALIFIED_METRICS_SCHEMA
+    assert source_metrics["source_qualified"] is True
+    assert source_metrics["seg_metric_source"] == "SegNet last-frame RGB argmax disagreement"
+    assert source_metrics["pose_metric_source"] == "PoseNet two-frame YUV6 raw-MSE score term"
+    assert source_metrics["blockers"] == []
     assert "hi_nerv_short_smoke_real_posenet_teacher_not_requested" not in report[
         "actionable_blockers"
     ]
@@ -374,6 +381,12 @@ def test_receiver_surface_identity_requires_direct_archive_parseback_report() ->
     ] is False
     assert "hi_nerv_short_smoke_receiver_surface_parseback_missing" in report[
         "actionable_blockers"
+    ]
+    source_metrics = report["source_qualified_metrics"]
+    assert source_metrics["schema"] == NERV_SOURCE_QUALIFIED_METRICS_SCHEMA
+    assert source_metrics["source_qualified"] is False
+    assert "source_metrics_direct_receiver_parseback_missing" in source_metrics[
+        "blockers"
     ]
 
 

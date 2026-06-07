@@ -7919,13 +7919,14 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             lambda_already_won_rgb_preserve,
             already_won_margin_floor,
             lambda_pose_trust_preserve,
-            lambda_pose_target,
-            target_geometry_mode,
-            target_geometry_frontier_dilation,
-            target_region_portfolio_max_regions,
-            require_fakequant_survival,
-            fakequant_survival_bits,
-            grad_clip_max_norm,
+                lambda_pose_target,
+                target_geometry_mode,
+                target_geometry_frontier_dilation,
+                target_region_portfolio_max_regions,
+                target_region_forced_key,
+                require_fakequant_survival,
+                fakequant_survival_bits,
+                grad_clip_max_norm,
         ):
             captured["target_region_birth_call"] = {
                 "scorer_teacher_present": scorer_teacher is not None,
@@ -7948,6 +7949,11 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "target_geometry_mode": str(target_geometry_mode),
                 "target_geometry_frontier_dilation": int(target_geometry_frontier_dilation),
                 "target_region_portfolio_max_regions": int(target_region_portfolio_max_regions),
+                "target_region_forced_key": (
+                    None
+                    if target_region_forced_key is None
+                    else tuple(int(value) for value in target_region_forced_key)
+                ),
                 "require_fakequant_survival": bool(require_fakequant_survival),
                 "fakequant_survival_bits": int(fakequant_survival_bits),
                 "grad_clip_max_norm": grad_clip_max_norm,
@@ -7965,6 +7971,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                     "schema": "hi_nerv_target_region_birth_receipt.v1",
                     "surface": "live_mlx",
                     "action_id": "a" * 64,
+                    "accepted": True,
                     "accepted_step_count": 1,
                     "updated_parameter_names": ["head_rgb_1.weight"],
                     "argmax_transitions": {
@@ -7986,6 +7993,15 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                     "candidate_frontier_telemetry": {
                         "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
                         "candidate_attempt_count": 2,
+                        "final_already_won_lost_count": 0,
+                        "attempts": [
+                            {
+                                "decision": "accepted",
+                                "accepted": True,
+                                "exact_score_decision": "accepted",
+                                "catastrophic_guard_decision": "satisfied",
+                            }
+                        ],
                     },
                 },
                 "runtime_sidecar_bytes": 0,
@@ -8336,6 +8352,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     }
     assert bootstrap_metadata["exact_posenet_target_pose"]["enabled"] is True
     target_region_birth = bootstrap_metadata["target_region_birth_actuator"]
+    assert "accepted" in target_region_birth, target_region_birth
     assert target_region_birth["accepted"] is True
     assert target_region_birth["net_target_support_delta"] == pytest.approx(5.0)
     target_birth_call = captured["target_region_birth_call"]
@@ -8358,6 +8375,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["target_geometry_mode"] == "largest_unsolved_component"
     assert target_birth_call["target_geometry_frontier_dilation"] == 3
     assert target_birth_call["target_region_portfolio_max_regions"] == 4
+    assert target_birth_call["target_region_forced_key"] is None
     assert target_birth_call["require_fakequant_survival"] is False
     assert target_birth_call["fakequant_survival_bits"] == 8
     assert (

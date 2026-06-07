@@ -121,7 +121,7 @@ def _resolve_measurement_identity(
     effect_a: ActionEffect,
     effect_b: ActionEffect,
     effect_ab: ActionEffect,
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, str | None]:
     """Return shared archive/payload identities, or raise on custody mismatch.
 
     Older synthetic analysis rows may omit archive/payload hashes entirely.  But
@@ -154,7 +154,11 @@ def _resolve_measurement_identity(
             )
         return present[0]
 
-    return shared_optional_hash("archive_sha256"), shared_optional_hash("payload_sha256")
+    return (
+        shared_optional_hash("archive_sha256"),
+        shared_optional_hash("payload_sha256"),
+        shared_optional_hash("base_state_sha256"),
+    )
 
 
 def _resolve_triple(
@@ -239,7 +243,7 @@ def commutator_value(
             raise TypeError(f"{label} must be an ActionEffect; got {type(effect)!r}")
 
     authority = _resolve_authority(effect_a, effect_b, effect_ab)
-    base_archive_sha256, base_payload_sha256 = _resolve_measurement_identity(
+    base_archive_sha256, base_payload_sha256, base_state_sha256 = _resolve_measurement_identity(
         effect_a,
         effect_b,
         effect_ab,
@@ -267,6 +271,10 @@ def commutator_value(
         "second_payload_sha256": effect_b.payload_sha256,
         "composed_payload_sha256": effect_ab.payload_sha256,
         "base_payload_sha256": base_payload_sha256,
+        "first_base_state_sha256": effect_a.base_state_sha256,
+        "second_base_state_sha256": effect_b.base_state_sha256,
+        "composed_base_state_sha256": effect_ab.base_state_sha256,
+        "base_state_sha256": base_state_sha256,
         "basis": triple.basis,
         "delta_a": triple.delta_a,
         "delta_b": triple.delta_b,
@@ -348,6 +356,9 @@ def _ordered_identity_blockers(first: ActionEffect, second: ActionEffect) -> lis
         blockers.append("action_effect_authority_mismatch")
     if first.normalization_scope != second.normalization_scope:
         blockers.append("action_effect_normalization_scope_mismatch")
+    shared_base_state = _shared_hash_or_none(first.base_state_sha256, second.base_state_sha256)
+    if shared_base_state is not None and first.archive_sha256 is None and second.archive_sha256 is None:
+        return blockers
     if first.archive_sha256 is None or second.archive_sha256 is None:
         blockers.append("action_effect_base_archive_hash_missing")
     elif first.archive_sha256 != second.archive_sha256:
@@ -356,6 +367,10 @@ def _ordered_identity_blockers(first: ActionEffect, second: ActionEffect) -> lis
         blockers.append("action_effect_base_payload_hash_missing")
     elif first.payload_sha256 != second.payload_sha256:
         blockers.append("action_effect_base_payload_hash_mismatch")
+    if first.base_state_sha256 is None or second.base_state_sha256 is None:
+        blockers.append("action_effect_base_state_hash_missing")
+    elif first.base_state_sha256 != second.base_state_sha256:
+        blockers.append("action_effect_base_state_hash_mismatch")
     return blockers
 
 
@@ -430,6 +445,9 @@ def _needs_measurement_row(
         "first_payload_sha256": first.payload_sha256,
         "second_payload_sha256": second.payload_sha256,
         "base_payload_hash": _shared_hash_or_none(first.payload_sha256, second.payload_sha256),
+        "first_base_state_sha256": first.base_state_sha256,
+        "second_base_state_sha256": second.base_state_sha256,
+        "base_state_hash": _shared_hash_or_none(first.base_state_sha256, second.base_state_sha256),
         "first_delta_score_total": first.delta_score_total,
         "second_delta_score_total": second.delta_score_total,
         "first_delta_score_nonrate": first.delta_score_nonrate,

@@ -65,6 +65,7 @@ def _seg_effect(
     bytes_: int = 1000,
     archive_sha256: str | None = None,
     payload_sha256: str | None = None,
+    base_state_sha256: str | None = None,
 ) -> ActionEffect:
     """A byte-priced (total-basis) effect that moves ONLY d_seg.
 
@@ -87,6 +88,7 @@ def _seg_effect(
         new_bytes=bytes_,
         archive_sha256=archive_sha256,
         payload_sha256=payload_sha256,
+        base_state_sha256=base_state_sha256,
     )
 
 
@@ -414,6 +416,7 @@ def test_ledger_emits_measured_row_and_queue_for_missing_reverse_pair():
         "composite_action_effect_row_missing",
         "action_effect_base_archive_hash_missing",
         "action_effect_base_payload_hash_missing",
+        "action_effect_base_state_hash_missing",
     ]
 
 
@@ -508,6 +511,7 @@ def test_measurement_queue_carries_base_identity_and_blocks_when_missing():
     assert row["base_payload_hash"] is None
     assert "action_effect_base_archive_hash_missing" in row["measurement_command_blockers"]
     assert "action_effect_base_payload_hash_missing" in row["measurement_command_blockers"]
+    assert "action_effect_base_state_hash_missing" in row["measurement_command_blockers"]
 
 
 def test_measurement_queue_exposes_shared_base_hashes_when_present():
@@ -534,8 +538,22 @@ def test_measurement_queue_exposes_shared_base_hashes_when_present():
     assert row["base_payload_hash"] == payload_hash
     assert "action_effect_base_archive_hash_missing" not in row["measurement_command_blockers"]
     assert "action_effect_base_payload_hash_missing" not in row["measurement_command_blockers"]
+    assert "action_effect_base_state_hash_missing" in row["measurement_command_blockers"]
     assert "action_effect_base_archive_hash_mismatch" not in row["measurement_command_blockers"]
     assert "action_effect_base_payload_hash_mismatch" not in row["measurement_command_blockers"]
+
+
+def test_measurement_queue_accepts_shared_batch_local_base_state_hash():
+    base_state_hash = "e" * 64
+    a = _seg_effect("A", new_d_seg=0.08, base_state_sha256=base_state_hash)
+    b = _seg_effect("B", new_d_seg=0.09, base_state_sha256=base_state_hash)
+    ledger = build_commutator_ledger([a, b], [])
+
+    row = ledger["measurement_queue"][0]
+    assert row["base_state_hash"] == base_state_hash
+    assert "action_effect_base_archive_hash_missing" not in row["measurement_command_blockers"]
+    assert "action_effect_base_payload_hash_missing" not in row["measurement_command_blockers"]
+    assert "action_effect_base_state_hash_missing" not in row["measurement_command_blockers"]
 
 
 def test_measurement_queue_blocks_when_base_hashes_differ():

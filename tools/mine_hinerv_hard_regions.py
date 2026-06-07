@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: MIT
 """Rank the worst HiNeRV target-class regions into a durable mining plan.
 
-Thin CLI over ``tac.analysis.hinerv_hard_region_miner.mine_hard_regions``.  It
-reads label/argmax/logits arrays (``.npy`` or a key inside an ``.npz``),
-produces a deterministic, class-diverse ranking of the hardest target regions,
-and writes the plan JSON to a durable path (default under
-``experiments/results/`` — never ``/tmp`` per CLAUDE.md custody discipline).
+Thin CLI over ``tac.analysis.hinerv_hard_region_miner``.  It reads
+label/argmax plus either compact target-margin maps or full logits arrays
+(``.npy`` or a key inside an ``.npz``), produces a deterministic,
+class-diverse ranking of the hardest target regions, and writes the plan JSON
+to a durable path (default under ``experiments/results/`` — never ``/tmp`` per
+CLAUDE.md custody discipline).
 
 The plan is planning evidence only: it carries the
 ``planning_control_false_authority`` marker and no score/promotion keys.  It is
@@ -35,6 +36,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.analysis.hinerv_hard_region_miner import (  # noqa: E402
     build_hard_region_mining_plan,
     mine_hard_regions,
+    mine_hard_regions_from_margin_map,
 )
 
 
@@ -83,8 +85,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--logits",
-        required=True,
+        default=None,
         help="BHWC float logits (.npy or path.npz::key).",
+    )
+    parser.add_argument(
+        "--target-margin",
+        default=None,
+        help=(
+            "BHW compact PR95 target margin map (.npy or path.npz::key). "
+            "Use this instead of --logits for durable receipts."
+        ),
     )
     parser.add_argument(
         "--pose-coupling",
@@ -118,18 +128,30 @@ def main(argv: list[str] | None = None) -> int:
 
     target = _load_array(args.target_labels)
     candidate = _load_array(args.candidate_argmax)
-    logits = _load_array(args.logits)
     pose = _load_array(args.pose_coupling) if args.pose_coupling else None
+    if bool(args.logits) == bool(args.target_margin):
+        raise ValueError("exactly one of --target-margin or --logits is required")
 
-    regions = mine_hard_regions(
-        target,
-        candidate,
-        logits,
-        top_k=args.top_k,
-        pose_coupling=pose,
-        min_region_pixels=args.min_region_pixels,
-        include_solved_regions=args.include_solved_regions,
-    )
+    if args.target_margin:
+        regions = mine_hard_regions_from_margin_map(
+            target,
+            candidate,
+            _load_array(args.target_margin),
+            top_k=args.top_k,
+            pose_coupling=pose,
+            min_region_pixels=args.min_region_pixels,
+            include_solved_regions=args.include_solved_regions,
+        )
+    else:
+        regions = mine_hard_regions(
+            target,
+            candidate,
+            _load_array(args.logits),
+            top_k=args.top_k,
+            pose_coupling=pose,
+            min_region_pixels=args.min_region_pixels,
+            include_solved_regions=args.include_solved_regions,
+        )
     plan = build_hard_region_mining_plan(
         regions,
         source=str(Path(args.target_labels)),

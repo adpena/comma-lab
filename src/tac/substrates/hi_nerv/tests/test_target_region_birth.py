@@ -764,6 +764,53 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
 
 
 @skip_no_mlx
+def test_target_region_birth_persists_hard_region_miner_inputs(tmp_path) -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(11)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=1,
+        learning_rate=2.0e-3,
+        target_min_region_ratio=0.02,
+        hard_region_miner_output_dir=tmp_path / "miner",
+    )
+
+    bundle = payload["hard_region_miner_inputs"]
+    assert bundle["schema"] == "hi_nerv_hard_region_miner_input_bundle.v2"
+    assert bundle["written"] is True
+    assert bundle["score_claim"] is False
+    assert bundle["blockers"] == []
+    assert bundle["hard_region_plan_region_count"] > 0
+    assert bundle["full_logits_persisted"] is False
+    assert bundle["max_rank_persisted_array"] == 3
+    assert bundle["compact_sufficient_statistic"] == "target_margin_bhw=max_other_logit-target_class_logit"
+    assert (tmp_path / "miner" / "hi_nerv_hard_region_plan.json").is_file()
+    assert "tools/mine_hinerv_hard_regions.py" in bundle["mine_command"]
+    assert "--target-margin" in bundle["mine_command"]
+    assert "--logits" not in bundle["mine_command"]
+    with np.load(bundle["bundle_path"]) as arrays:
+        assert arrays["target_labels_bhw"].shape == labels_np.shape
+        assert arrays["candidate_argmax_bhw"].shape == labels_np.shape
+        assert arrays["target_margin_bhw"].shape == labels_np.shape
+        assert "candidate_logits_bhwc" not in arrays.files
+        assert arrays["pair_indices"].tolist() == list(range(cfg.num_pairs))
+
+
+@skip_no_mlx
 def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() -> None:
     import mlx.core as mx
 
@@ -1025,6 +1072,9 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     labels_np = _block_labels(cfg, np)
     teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
     model.initialize_output_head_bias_from_targets(target0, target1)
+    model.configure_decoder_fake_quant_forward(enabled=False, quant_bits=8)
+    fq_enabled_before = bool(model.decoder_fake_quant_forward_enabled)
+    fq_configured_before = bool(model.decoder_fake_quant_forward_configured_enabled)
 
     payload = model.fit_target_region_birth_from_segnet(
         scorer_teacher=teacher,
@@ -1040,6 +1090,12 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
 
     telemetry = payload["candidate_frontier_telemetry"]
     assert telemetry["fakequant_survival_required"] is True
+    assert payload["birth_gradient_surface"] == "fakequant_forward_ste"
+    assert telemetry["birth_gradient_surface"] == "fakequant_forward_ste"
+    assert payload["birth_gradient_surface_eval_count"] > 0
+    assert telemetry["birth_gradient_surface_eval_count"] == payload["birth_gradient_surface_eval_count"]
+    assert bool(model.decoder_fake_quant_forward_enabled) is fq_enabled_before
+    assert bool(model.decoder_fake_quant_forward_configured_enabled) is fq_configured_before
     assert telemetry["fakequant_survival_candidate_count"] >= payload["accepted_step_count"]
     attempts = telemetry["attempts"]
     assert attempts

@@ -22,6 +22,7 @@ from tac.analysis.hinerv_hard_region_miner import (
     build_hard_region_mining_plan,
     build_representative_coverage_row,
     mine_hard_regions,
+    mine_hard_regions_from_margin_map,
     size_class_for_pixels,
 )
 from tac.analysis.nerv_long_run_launch_gate import (
@@ -99,6 +100,26 @@ def test_mine_hard_regions_is_deterministic_and_round_robins_across_classes() ->
     assert plan["authority"] == "planning_control_false_authority"
     require_no_truthy_authority_fields(plan, context="hard_region_plan")
     assert _forbidden_key_paths(plan) == []
+
+
+def test_compact_target_margin_miner_matches_full_logits_ranking() -> None:
+    labels = _representative_labels()
+    candidate = np.zeros_like(labels)
+    logits = _logits_like(labels)
+    target_logits = np.take_along_axis(logits, labels[..., None], axis=-1)[..., 0]
+    masked_logits = logits.copy()
+    np.put_along_axis(masked_logits, labels[..., None], -np.inf, axis=-1)
+    target_margin = np.max(masked_logits, axis=-1) - target_logits
+
+    full = mine_hard_regions(labels, candidate, logits, top_k=4)
+    compact = mine_hard_regions_from_margin_map(
+        labels,
+        candidate,
+        target_margin,
+        top_k=4,
+    )
+
+    assert [row.as_dict() for row in compact] == [row.as_dict() for row in full]
 
 
 def test_size_class_boundaries_are_closed_open() -> None:

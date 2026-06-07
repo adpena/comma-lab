@@ -58,6 +58,51 @@ def _read_ledgers(paths: Sequence[Path]) -> list[ActionEffect]:
     return effects
 
 
+def _read_training_artifacts(paths: Sequence[Path]) -> list[ActionEffect]:
+    effects: list[ActionEffect] = []
+    for path in paths:
+        if not path.is_file():
+            raise FileNotFoundError(f"training artifact not found: {path}")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"training artifact JSON malformed at {path}: {exc}") from exc
+        if not isinstance(payload, Mapping):
+            raise ValueError(f"training artifact must be a JSON object: {path}")
+        seen_payload_ids: set[int] = set()
+        for source in _find_hinerv_four_arm_sources(payload):
+            if id(source) in seen_payload_ids:
+                continue
+            seen_payload_ids.add(id(source))
+            effects.extend(
+                ActionEffect.from_hinerv_four_arm_ablation(
+                    source,
+                    consumer="inverse_evaluate_candidate_queue",
+                )
+            )
+    return effects
+
+
+def _find_hinerv_four_arm_sources(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    out: list[Mapping[str, Any]] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, Mapping):
+            if (
+                isinstance(value.get("four_arm_ablation"), Mapping)
+                or str(value.get("schema") or "") == "hi_nerv_target_region_birth_four_arm_ablation.v1"
+            ):
+                out.append(value)
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            for child in value:
+                walk(child)
+
+    walk(payload)
+    return out
+
+
 def _unique_effects(effects: Iterable[ActionEffect]) -> list[ActionEffect]:
     by_id: dict[str, ActionEffect] = {}
     order: list[str] = []
@@ -218,6 +263,27 @@ def _commutator_measurement_blockers(commutator: Mapping[str, Any]) -> list[str]
     return _dedupe(blockers)
 
 
+def _measurement_command_blockers_for_inverse_commutator(
+    singles: Sequence[ActionEffect],
+) -> list[str]:
+    blockers = [BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING]
+    if not _all_single_effects_have_base_identity(singles):
+        blockers.append(BLOCKER_COMPOSITE_BASE_IDENTITY_PRODUCER_MISSING)
+    return blockers
+
+
+def _all_single_effects_have_base_identity(effects: Sequence[ActionEffect]) -> bool:
+    if not effects:
+        return False
+    for effect in effects:
+        if effect.base_state_sha256:
+            continue
+        if effect.archive_sha256 and effect.payload_sha256:
+            continue
+        return False
+    return True
+
+
 def _dedupe(values: Sequence[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -234,8 +300,18 @@ def _parser() -> argparse.ArgumentParser:
         "--seed-action-effects",
         action="append",
         type=Path,
-        required=True,
+        default=[],
         help="Measured HiNeRV/SNeRV ActionEffect JSONL ledger; repeatable.",
+    )
+    parser.add_argument(
+        "--seed-training-artifact",
+        action="append",
+        type=Path,
+        default=[],
+        help=(
+            "Measured training artifact containing HiNeRV four_arm_ablation payloads; "
+            "repeatable. Used to rebuild ActionEffect rows with producer-side identity."
+        ),
     )
     parser.add_argument(
         "--pr110-action-effects",
@@ -263,11 +339,17 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if not args.seed_action_effects and not args.seed_training_artifact:
+        print("FATAL: provide --seed-action-effects or --seed-training-artifact", file=sys.stderr)
+        return 2
     out_dir = args.output_dir.resolve(strict=False) if args.output_dir is not None else _default_output_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        seed_effects = _read_ledgers(args.seed_action_effects)
+        seed_effects = [
+            *_read_ledgers(args.seed_action_effects),
+            *_read_training_artifacts(args.seed_training_artifact),
+        ]
         pr110_effects = _read_ledgers(args.pr110_action_effects) if args.pr110_action_effects else []
         inverse_generation = generate_inverse_scorer_candidates(
             seed_effects,
@@ -293,10 +375,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         singles,
         composites,
         first_measurement_command=None,
-        measurement_command_blockers=[
-            BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING,
-            BLOCKER_COMPOSITE_BASE_IDENTITY_PRODUCER_MISSING,
-        ],
+        measurement_command_blockers=_measurement_command_blockers_for_inverse_commutator(singles),
         use_default_measurement_command=False,
     )
     commutator_measurement_blockers = _commutator_measurement_blockers(commutator)
@@ -324,6 +403,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "generated_at_utc": datetime.now(tz=UTC).isoformat(),
         "output_dir": out_dir.as_posix(),
         "seed_action_effect_paths": [path.as_posix() for path in args.seed_action_effects],
+        "seed_training_artifact_paths": [path.as_posix() for path in args.seed_training_artifact],
         "pr110_action_effect_paths": [path.as_posix() for path in args.pr110_action_effects],
         "action_effect_rows_path": action_effect_path.as_posix(),
         "inverse_candidate_queue_path": queue_path.as_posix(),

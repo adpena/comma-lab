@@ -359,6 +359,130 @@ def mine_hard_regions(
     ]
 
 
+def mine_hard_regions_from_margin_map(
+    target_labels: np.ndarray,
+    candidate_argmax: np.ndarray,
+    target_margin_bhw: np.ndarray,
+    *,
+    top_k: int = 8,
+    pose_coupling: np.ndarray | None = None,
+    min_region_pixels: int = 1,
+    include_solved_regions: bool = False,
+) -> list[HardRegion]:
+    """Rank hard regions from a compact per-pixel target margin map.
+
+    ``target_margin_bhw`` stores the same PR95 frontier convention used by
+    ``region_margin_stats``: ``max_other_logit - target_class_logit`` for the
+    target class at each scored pixel.  It is the sufficient statistic for
+    region-level margin difficulty, so long smokes can persist ``BHW`` margins
+    instead of bulky ``BHWC`` logits while keeping deterministic miner output.
+    """
+
+    if top_k < 1:
+        raise HardRegionMinerError(f"top_k must be >= 1; got {top_k}")
+    target = _validate_bhw("target_labels", target_labels)
+    _validate_bhw("candidate_argmax", candidate_argmax)
+    margin_map = _validate_bhw("target_margin_bhw", target_margin_bhw).astype(
+        np.float64,
+        copy=False,
+    )
+    if margin_map.shape != target.shape:
+        raise HardRegionMinerError(
+            f"target_margin_bhw must match labels BHW; got margin={margin_map.shape} labels={target.shape}"
+        )
+    pose_map: np.ndarray | None = None
+    if pose_coupling is not None:
+        pose_map = _validate_bhw("pose_coupling", pose_coupling).astype(np.float64, copy=False)
+        if pose_map.shape != target.shape:
+            raise HardRegionMinerError(
+                f"pose_coupling BHW must match labels BHW; got pose={pose_map.shape} labels={target.shape}"
+            )
+
+    debts = find_target_region_debts(
+        target_labels,
+        candidate_argmax,
+        min_region_pixels=min_region_pixels,
+    )
+    keyed: list[tuple[float, int, int, int, HardRegion]] = []
+    for debt in debts:
+        if not include_solved_regions and debt.region_unsolved_pixel_count <= 0:
+            continue
+        mask = _region_mask_for(
+            target,
+            batch_index=debt.batch_index,
+            class_index=debt.class_index,
+            region_label=debt.region_label,
+            expected_pixels=debt.region_pixel_count,
+        )
+        stats = _margin_map_stats(margin_map, mask)
+        pose_risk: float | None = None
+        if pose_map is not None:
+            flat_mask = mask.reshape(-1) > 0.0
+            pose_risk = float(np.mean(pose_map.reshape(-1)[flat_mask]))
+        region = HardRegion(
+            rank=-1,
+            debt=debt,
+            size_class=size_class_for_pixels(debt.region_pixel_count),
+            margin_mean=float(stats["margin_mean"]),
+            margin_min=float(stats["margin_min"]),
+            region_hard_won_pixels=float(stats["region_hard_won_pixels"]),
+            pose_coupling_risk_mean=pose_risk,
+        )
+        keyed.append(
+            (
+                -float(debt.score_debt_units),
+                int(debt.batch_index),
+                int(debt.class_index),
+                int(debt.region_label),
+                region,
+            )
+        )
+
+    def _sort_key(item: tuple[float, int, int, int, HardRegion]) -> tuple[float, float, float, int, int, int]:
+        neg_debt, b, c, r, region = item
+        pose_sort = abs(region.pose_coupling_risk_mean) if region.pose_coupling_risk_mean is not None else 0.0
+        return (
+            neg_debt,
+            -float(region.region_hard_won_pixels),
+            -pose_sort,
+            b,
+            c,
+            r,
+        )
+
+    keyed.sort(key=_sort_key)
+    selected = _round_robin_by_class(keyed, top_k=top_k)
+    return [
+        HardRegion(
+            rank=index,
+            debt=region.debt,
+            size_class=region.size_class,
+            margin_mean=region.margin_mean,
+            margin_min=region.margin_min,
+            region_hard_won_pixels=region.region_hard_won_pixels,
+            pose_coupling_risk_mean=region.pose_coupling_risk_mean,
+        )
+        for index, region in enumerate(selected)
+    ]
+
+
+def _margin_map_stats(target_margin_bhw: np.ndarray, region_mask_bhw: np.ndarray) -> dict[str, float]:
+    mask = np.asarray(region_mask_bhw).reshape(-1) > 0.0
+    if not np.any(mask):
+        raise HardRegionMinerError("region mask must contain at least one pixel")
+    margin = np.asarray(target_margin_bhw, dtype=np.float64).reshape(-1)[mask]
+    if margin.size == 0:
+        raise HardRegionMinerError("target margin map produced an empty region")
+    hard_won = int(np.count_nonzero(margin < 0.0))
+    return {
+        "margin_min": float(np.min(margin)),
+        "margin_p50": float(np.median(margin)),
+        "margin_mean": float(np.mean(margin)),
+        "region_hard_won_pixels": float(hard_won),
+        "region_hard_ratio": float(hard_won / margin.size),
+    }
+
+
 def build_hard_region_mining_plan(
     regions: Sequence[HardRegion],
     *,
@@ -543,5 +667,6 @@ __all__ = [
     "build_hard_region_mining_plan",
     "build_representative_coverage_row",
     "mine_hard_regions",
+    "mine_hard_regions_from_margin_map",
     "size_class_for_pixels",
 ]

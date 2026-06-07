@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import fcntl
+import hashlib
 import json
 import math
 import os
@@ -886,6 +887,7 @@ class ActionEffect:
     artifact_ref: str | None = None
     archive_sha256: str | None = None
     payload_sha256: str | None = None
+    base_state_sha256: str | None = None
     evaluator_hash: str | None = None
     dependency_hash: str | None = None
     taint_status: str = "unknown"
@@ -1016,6 +1018,7 @@ class ActionEffect:
         for name, value in (
             ("archive_sha256", self.archive_sha256),
             ("payload_sha256", self.payload_sha256),
+            ("base_state_sha256", self.base_state_sha256),
             ("evaluator_hash", self.evaluator_hash),
             ("dependency_hash", self.dependency_hash),
         ):
@@ -1065,6 +1068,7 @@ class ActionEffect:
         artifact_ref: str | None = None,
         archive_sha256: str | None = None,
         payload_sha256: str | None = None,
+        base_state_sha256: str | None = None,
         evaluator_hash: str | None = None,
         dependency_hash: str | None = None,
         taint_status: str = "unknown",
@@ -1164,6 +1168,7 @@ class ActionEffect:
             artifact_ref=None if artifact_ref is None else str(artifact_ref),
             archive_sha256=None if archive_sha256 is None else str(archive_sha256),
             payload_sha256=None if payload_sha256 is None else str(payload_sha256),
+            base_state_sha256=None if base_state_sha256 is None else str(base_state_sha256),
             evaluator_hash=None if evaluator_hash is None else str(evaluator_hash),
             dependency_hash=None if dependency_hash is None else str(dependency_hash),
             taint_status=str(taint_status),
@@ -1450,6 +1455,7 @@ class ActionEffect:
             artifact_ref=_v1_first_text(receipt, "artifact_ref", "artifact_path"),
             archive_sha256=_v1_first_text(receipt, "archive_sha256", "candidate_archive_sha256"),
             payload_sha256=_v1_first_text(receipt, "payload_sha256"),
+            base_state_sha256=_v1_base_state_sha256(receipt),
             evaluator_hash=_v1_first_text(receipt, "evaluator_hash", "scorer_hash"),
             dependency_hash=_v1_first_text(receipt, "dependency_hash"),
             taint_status=_v1_first_text(receipt, "taint_status") or "unknown",
@@ -1570,6 +1576,12 @@ class ActionEffect:
         if not isinstance(arms, Sequence) or isinstance(arms, (str, bytes)):
             return ()
         root_action_id = _v1_first_text(bundle, "action_id") or _v1_first_text(payload, "action_id")
+        root_base_state = (
+            bundle.get("parameter_group_sha256_before")
+            if isinstance(bundle.get("parameter_group_sha256_before"), Mapping)
+            else payload.get("parameter_group_sha256_before")
+        )
+        root_base_state_sha256 = _v1_base_state_sha256(bundle) or _v1_base_state_sha256(payload)
         out: list[ActionEffect] = []
         for raw in arms:
             if not isinstance(raw, Mapping):
@@ -1577,6 +1589,10 @@ class ActionEffect:
             arm_row = dict(raw)
             if root_action_id and not arm_row.get("action_id"):
                 arm_row["action_id"] = root_action_id
+            if root_base_state_sha256 and not arm_row.get("base_state_sha256"):
+                arm_row["base_state_sha256"] = root_base_state_sha256
+            if root_base_state and not arm_row.get("parameter_group_sha256_before"):
+                arm_row["parameter_group_sha256_before"] = root_base_state
             out.append(
                 cls.from_hinerv_birth_receipt(
                     arm_row,
@@ -2028,6 +2044,9 @@ class ActionEffect:
             artifact_ref=None if payload.get("artifact_ref") is None else str(payload["artifact_ref"]),
             archive_sha256=None if payload.get("archive_sha256") is None else str(payload["archive_sha256"]),
             payload_sha256=None if payload.get("payload_sha256") is None else str(payload["payload_sha256"]),
+            base_state_sha256=(
+                None if payload.get("base_state_sha256") is None else str(payload["base_state_sha256"])
+            ),
             evaluator_hash=None if payload.get("evaluator_hash") is None else str(payload["evaluator_hash"]),
             dependency_hash=None if payload.get("dependency_hash") is None else str(payload["dependency_hash"]),
             taint_status=str(payload.get("taint_status") or "unknown"),
@@ -2290,6 +2309,23 @@ def _v1_default_normalization_scope(authority: str | None) -> str:
     if text == ScoreAuthority.RECEIVER_CLOSED_FRONTIER_RATE_ATTACK.value:
         return NormalizationScope.FULL_VIDEO_EQUIV_ESTIMATE.value
     return NormalizationScope.BATCH_LOCAL.value
+
+
+def _v1_base_state_sha256(row: Mapping[str, Any]) -> str | None:
+    direct = _v1_first_text(row, "base_state_sha256", "initial_state_sha256")
+    if direct:
+        return direct
+    groups = row.get("parameter_group_sha256_before")
+    if isinstance(groups, Mapping):
+        normalized = {
+            str(key): str(value)
+            for key, value in groups.items()
+            if str(key).strip() and str(value).strip()
+        }
+        if normalized:
+            payload = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            return hashlib.sha256(payload).hexdigest()
+    return None
 
 
 def _v1_authority_is_batch_local(authority: str | None) -> bool:

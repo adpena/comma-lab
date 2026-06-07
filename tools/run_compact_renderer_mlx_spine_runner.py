@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import copy
 import hashlib
 import json
 import math
@@ -25,6 +26,7 @@ import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -14899,6 +14901,11 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
 
 
 def _hi_nerv_source_parity_binding() -> dict[str, Any]:
+    return copy.deepcopy(_hi_nerv_source_parity_binding_cached())
+
+
+@lru_cache(maxsize=1)
+def _hi_nerv_source_parity_binding_cached() -> dict[str, Any]:
     """Return the long-training source-parity binding for HiNeRV rows."""
 
     contract = build_nerv_source_parity_contract(
@@ -16554,6 +16561,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             ),
                             require_fakequant_survival=bool(coder_aware_qat),
                             fakequant_survival_bits=int(coder_qat_quant_bits),
+                            hard_region_miner_output_dir=output_dir,
                             grad_clip_max_norm=None,
                         )
                     )

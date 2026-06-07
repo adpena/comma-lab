@@ -25,6 +25,7 @@ from tac.analysis.nerv_long_run_launch_gate import (
     BIRTH_HYSTERESIS_SCHEMA,
     BIRTH_RECEIPT_SCHEMA,
     BIRTH_SURVIVAL_SCHEMA,
+    HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
     REPRESENTATIVE_COVERAGE_SCHEMA,
     SNERV_SOURCE_FORWARD_SCHEMA,
     SOURCE_QUALIFIED_METRICS_SCHEMA,
@@ -328,6 +329,34 @@ def _source_qualified_metrics() -> dict:
     }
 
 
+def _source_qualified_readiness_report(*, mock: bool = False) -> dict:
+    return {
+        "schema": HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
+        "fixture_not_real": True,
+        "teacher_gate": {
+            "real_segnet_teacher_requested": True,
+            "direct_live_segnet_requested": True,
+            "real_posenet_teacher_requested": False,
+            "direct_live_posenet_requested": True,
+            "mock_scorer_teacher_allowed": mock,
+            "unscored_research_smoke_enabled": False,
+        },
+        "direct_live_segnet_gate": {
+            "metrics": {"loss_part_segnet_direct_live_argmax_disagreement": 0.01}
+        },
+        "direct_live_posenet_gate": {
+            "metrics": {"loss_part_pose_direct_live_score_term": 0.14}
+        },
+        "posenet_distill_gate": {"metrics": {}},
+        "receiver_surface_identity_gate": {
+            "archive_identity_present": True,
+            "direct_receiver_parseback_present": True,
+            "archive_sha256_mismatch": False,
+            "candidate_cache_manifest_bound": True,
+        },
+    }
+
+
 def _full_hi_nerv_root(tmp_path: Path) -> Path:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt())
@@ -402,6 +431,61 @@ def test_live_birth_without_pose_trust_is_l2(tmp_path: Path) -> None:
     )
     assert verdict["highest_level"] == "L2"
     assert "pose_trusted_birth_receipt_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_pair_local_composite_action_effect_can_supply_pose_trust(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(root / "birth.json", _live_birth_receipt(pose_trusted=False))
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "pose_trusted_birth_receipt_missing" not in verdict["blocking_evidence"]
+    assert verdict["highest_level"] == "L5"
+    assert verdict["approved"] is True
+
+
+def test_pair_local_composite_without_pose_improvement_does_not_supply_pose_trust(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(root / "birth.json", _live_birth_receipt(pose_trusted=False))
+    four_arm_rows = [
+        (
+            _hi_nerv_action_effect(
+                arm="D",
+                action_kind="joint_line_search_composite",
+                new_d_pose=1.1e-4,
+            )
+            if row.get("arm") == "D"
+            else row
+        )
+        for row in _hi_nerv_four_arm_action_effects()
+    ]
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(),
+                *four_arm_rows,
+            ],
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "pose_trusted_birth_receipt_missing" in verdict["blocking_evidence"]
+    assert "pose_trust_pair_local_servo_pose_not_improved" in verdict["blocking_evidence"]
     assert verdict["approved"] is False
 
 
@@ -519,6 +603,42 @@ def test_full_ladder_with_fresh_pointer_approves(tmp_path: Path) -> None:
     assert verdict["blocking_evidence"] == []
     assert verdict["highest_level"] == "L5"
     assert verdict["approved"] is True
+
+
+def test_legacy_readiness_report_can_supply_source_qualified_metrics(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    (root / "source_metrics.json").unlink()
+    _write(root / "readiness.json", _source_qualified_readiness_report())
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "source_qualified_metrics_missing" not in verdict["blocking_evidence"]
+    assert verdict["approved"] is True
+
+
+def test_legacy_readiness_report_with_mock_teacher_does_not_supply_source_metrics(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    (root / "source_metrics.json").unlink()
+    _write(root / "readiness.json", _source_qualified_readiness_report(mock=True))
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "source_qualified_metrics_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
 
 
 def test_wrong_to_wrong_churn_is_not_spill_when_exact_score_improves(tmp_path: Path) -> None:

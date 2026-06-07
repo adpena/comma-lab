@@ -27,6 +27,7 @@ HI_NERV_SHORT_SCORER_SMOKE_FLOOR_COMPARISON_EPSILON = 1.0e-6
 HI_NERV_CONTEST_ORIGINAL_VIDEO_BYTES = 37_545_489
 HI_NERV_CONTEST_RATE_SCORE_PER_BYTE = 25.0 / HI_NERV_CONTEST_ORIGINAL_VIDEO_BYTES
 HI_NERV_CONTEST_SEGNET_PIXEL_SCORE_WEIGHT = 100.0
+NERV_SOURCE_QUALIFIED_METRICS_SCHEMA = "nerv_source_qualified_metrics.v1"
 _SEGNET_DIRECT_LIVE_SUBCONTROL_DUAL_KEYS = {
     "segnet_direct_live_class_histogram_weight": (
         "hi_nerv_segnet_direct_live_class_histogram"
@@ -688,6 +689,18 @@ def build_hinerv_short_scorer_smoke_readiness_report(
     receiver_surface_identity_gate = _receiver_surface_identity_gate(
         post_export_quality
     )
+    source_qualified_metrics = _source_qualified_metrics_receipt(
+        allow_mock_scorer_teacher=allow_mock_scorer_teacher,
+        unscored_research_smoke_enabled=unscored_research_smoke_enabled,
+        generic_segnet_requested=generic_segnet_requested,
+        direct_live_enabled=direct_live_enabled,
+        generic_posenet_requested=generic_posenet_requested,
+        pose_direct_live_enabled=pose_direct_live_enabled,
+        receiver_surface_identity_gate=receiver_surface_identity_gate,
+        direct_live_metrics=direct_live_metrics,
+        pose_direct_live_metrics=pose_direct_live_metrics,
+        pose_distill_metrics=pose_distill_metrics,
+    )
     segnet_argmax_probe = (
         post_export_quality.get("segnet_argmax_probe")
         if isinstance(post_export_quality, Mapping)
@@ -903,12 +916,99 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         "score_dynamics_diagnosis": score_dynamics_diagnosis,
         "receiver_cache_quality": receiver_cache_summary,
         "receiver_surface_identity_gate": receiver_surface_identity_gate,
+        "source_qualified_metrics": source_qualified_metrics,
         "final_loss_components_present": bool(final_components),
         "actionable_blockers": actionable_blockers,
         "blockers": [
             "hi_nerv_short_scorer_smoke_is_false_authority",
             *actionable_blockers,
         ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _source_qualified_metrics_receipt(
+    *,
+    allow_mock_scorer_teacher: bool,
+    unscored_research_smoke_enabled: bool,
+    generic_segnet_requested: bool,
+    direct_live_enabled: bool,
+    generic_posenet_requested: bool,
+    pose_direct_live_enabled: bool,
+    receiver_surface_identity_gate: Mapping[str, Any],
+    direct_live_metrics: Mapping[str, Any],
+    pose_direct_live_metrics: Mapping[str, Any],
+    pose_distill_metrics: Mapping[str, Any],
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if bool(allow_mock_scorer_teacher):
+        blockers.append("source_metrics_mock_scorer_teacher_enabled")
+    if bool(unscored_research_smoke_enabled):
+        blockers.append("source_metrics_unscored_research_smoke_enabled")
+    seg_requested = bool(generic_segnet_requested or direct_live_enabled)
+    pose_requested = bool(generic_posenet_requested or pose_direct_live_enabled)
+    if not seg_requested:
+        blockers.append("source_metrics_segnet_teacher_not_requested")
+    if not pose_requested:
+        blockers.append("source_metrics_posenet_teacher_not_requested")
+    if not bool(receiver_surface_identity_gate.get("archive_identity_present")):
+        blockers.append("source_metrics_archive_identity_missing")
+    if not bool(receiver_surface_identity_gate.get("direct_receiver_parseback_present")):
+        blockers.append("source_metrics_direct_receiver_parseback_missing")
+    if bool(receiver_surface_identity_gate.get("archive_sha256_mismatch")):
+        blockers.append("source_metrics_archive_sha256_mismatch")
+    if not bool(receiver_surface_identity_gate.get("candidate_cache_manifest_bound")):
+        blockers.append("source_metrics_candidate_cache_manifest_missing")
+    if direct_live_enabled and not any(
+        _finite_float(value) is not None for value in direct_live_metrics.values()
+    ):
+        blockers.append("source_metrics_segnet_direct_live_metrics_missing")
+    pose_metric_values = (
+        *pose_direct_live_metrics.values(),
+        *pose_distill_metrics.values(),
+    )
+    if pose_requested and not any(
+        _finite_float(value) is not None for value in pose_metric_values
+    ):
+        blockers.append("source_metrics_posenet_metrics_missing")
+    source_qualified = not blockers
+    return {
+        "schema": NERV_SOURCE_QUALIFIED_METRICS_SCHEMA,
+        "family": "hinerv",
+        "source_qualified": bool(source_qualified),
+        "metric_source": (
+            "upstream_evaluate_geometry"
+            if source_qualified
+            else "blocked_source_qualification"
+        ),
+        "canonical_score_source": (
+            "S=100*d_seg+sqrt(10*d_pose)+25*archive_bytes/37545489"
+            if source_qualified
+            else None
+        ),
+        "seg_metric_source": (
+            "SegNet last-frame RGB argmax disagreement"
+            if source_qualified
+            else None
+        ),
+        "pose_metric_source": (
+            "PoseNet two-frame YUV6 raw-MSE score term"
+            if source_qualified
+            else None
+        ),
+        "archive_metric_source": (
+            "archive.zip charged bytes" if source_qualified else None
+        ),
+        "receiver_parseback_bound": bool(
+            receiver_surface_identity_gate.get("direct_receiver_parseback_present")
+        ),
+        "archive_identity_present": bool(
+            receiver_surface_identity_gate.get("archive_identity_present")
+        ),
+        "candidate_cache_manifest_bound": bool(
+            receiver_surface_identity_gate.get("candidate_cache_manifest_bound")
+        ),
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
