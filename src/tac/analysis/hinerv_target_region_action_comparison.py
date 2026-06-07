@@ -24,6 +24,7 @@ import brotli  # type: ignore[import-not-found]
 import numpy as np
 
 from tac.analysis.action_effect import ActionEffect
+from tac.analysis.evaluator_action_lowering_race import build_lowering_race_report
 from tac.analysis.path_action_producer import path_tube_support_from_mask
 from tac.repo_io import sha256_file
 from tac.submission_archive import (
@@ -54,6 +55,8 @@ HI_NERV_TARGET_REGION_ACTION_COMPARISON_SCHEMA = (
 HI_NERV_TARGET_REGION_ACTION_COMPARISON_ROW_SCHEMA = (
     "hi_nerv_target_region_action_sidecar_backend_comparison_row.v1"
 )
+EVALUATOR_ACTION_LOWERING_RACE_SCHEMA = "hi_nerv_target_region_action_lowering_race.v1"
+_SUPPORT_IDENTITY_MISMATCH = "support_identity_mismatch"
 
 _BACKEND_LADDER_TIERS = (
     ("latents_fine", ("latents_fine",)),
@@ -150,6 +153,17 @@ def build_hinerv_target_region_action_comparison(
     support_rows = _support_encoding_rows(program.actions, support_masks)
     action_rows = _action_encoding_rows(program.actions)
     byte_decomposition = _byte_decomposition(program)
+    direct_support_sha = _nested_first_text(
+        direct,
+        ("support_sha256",),
+        ("action_effect", "support_sha256"),
+    )
+    sidecar_support_mismatch = bool(direct_support_sha and direct_support_sha != support_sha256)
+    support_identity_blockers = (
+        ["direct_teacher_and_survived_sidecar_support_hashes_diverge"]
+        if sidecar_support_mismatch
+        else []
+    )
 
     base_zip = _action_free_archive_bytes(program)
     old_bytes = int(base_zip["archive_bytes_without_target_region_actions"])
@@ -162,13 +176,15 @@ def build_hinerv_target_region_action_comparison(
         action_encoding="exact_rgb_u8",
         encoded_payload_bytes=int(byte_decomposition["stored_payload_bytes"]),
         support_encoded_bytes=int(byte_decomposition["support_coord_u16_bytes"]),
+        action_payload_bytes=int(byte_decomposition["rgb_u8_bytes"]),
+        metadata_bytes=int(byte_decomposition["meta_json_action_delta_bytes"]),
         byte_authority="exact_archive_zip_delta",
         old_bytes=old_bytes,
         new_bytes=int(program.archive_bytes),
         sidecar_admission=sidecar_admission,
         survival_receipt=survival_receipt,
-        first_failed_surface=None,
-        blockers=[],
+        first_failed_surface=_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None,
+        blockers=support_identity_blockers,
         exact_payload_equivalent=True,
         receiver_bound=True,
     )
@@ -177,19 +193,33 @@ def build_hinerv_target_region_action_comparison(
         for action in action_rows:
             if support["encoding"] == "explicit_yx_u16_coordinates" and action["encoding"] == "exact_rgb_u8":
                 continue
+            support_encoded_bytes = (
+                None if support["encoded_bytes"] is None else int(support["encoded_bytes"])
+            )
+            action_payload_bytes = (
+                None if action["encoded_bytes"] is None else int(action["encoded_bytes"])
+            )
             exact_payload_equivalent = bool(
                 support["lossless"] is True and action["lossless"] is True
             )
+            if support_encoded_bytes is None or action_payload_bytes is None:
+                exact_payload_equivalent = False
             encoded_bytes = (
                 int(byte_decomposition["raw_fixed_header_bytes"])
-                + int(support["encoded_bytes"])
-                + int(action["encoded_bytes"])
+                + (0 if support_encoded_bytes is None else support_encoded_bytes)
+                + (0 if action_payload_bytes is None else action_payload_bytes)
             )
-            blockers = ["target_region_action_runtime_decoder_not_bound"]
-            first_failed = "runtime_decoder_not_bound"
+            blockers = list(support_identity_blockers)
+            first_failed = _SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else "runtime_decoder_not_bound"
+            if support_encoded_bytes is None or action_payload_bytes is None:
+                blockers.append("target_region_action_candidate_byte_accounting_missing")
+                if not sidecar_support_mismatch:
+                    first_failed = "byte_accounting_missing"
             if not exact_payload_equivalent:
-                blockers.insert(0, "target_region_action_candidate_not_lossless")
-                first_failed = "action_or_support_not_lossless"
+                blockers.append("target_region_action_candidate_not_lossless")
+                if not sidecar_support_mismatch and first_failed == "runtime_decoder_not_bound":
+                    first_failed = "action_or_support_not_lossless"
+            blockers.append("target_region_action_runtime_decoder_not_bound")
             sidecar_rows.append(
                 _comparison_row(
                     candidate_id=f"{support['encoding']}__{action['encoding']}",
@@ -199,9 +229,9 @@ def build_hinerv_target_region_action_comparison(
                     support_encoding=str(support["encoding"]),
                     action_encoding=str(action["encoding"]),
                     encoded_payload_bytes=encoded_bytes,
-                    support_encoded_bytes=(
-                        None if support["encoded_bytes"] is None else int(support["encoded_bytes"])
-                    ),
+                    support_encoded_bytes=support_encoded_bytes,
+                    action_payload_bytes=action_payload_bytes,
+                    metadata_bytes=0,
                     byte_authority="exact_candidate_payload_bytes_not_receiver_bound",
                     old_bytes=0 if exact_payload_equivalent else None,
                     new_bytes=encoded_bytes if exact_payload_equivalent else None,
@@ -232,12 +262,6 @@ def build_hinerv_target_region_action_comparison(
         key=lambda row: int(row.get("wrong_to_target") or 0),
         default=None,
     )
-    direct_support_sha = _nested_first_text(
-        direct,
-        ("support_sha256",),
-        ("action_effect", "support_sha256"),
-    )
-    sidecar_support_mismatch = bool(direct_support_sha and direct_support_sha != support_sha256)
     next_blocker = (
         "optimize_sidecar_grammar_current_receiver_survives_backend_does_not"
         if bool(current_row["survival"]["inflate_survived"]) and not _backend_realized(backend)
@@ -245,6 +269,15 @@ def build_hinerv_target_region_action_comparison(
     )
     if sidecar_support_mismatch:
         next_blocker = "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+    lowering_race = _lowering_race_verdict(
+        action_id=chosen_action_id,
+        support_sha256=support_sha256,
+        direct_teacher=direct,
+        backend_fit=backend,
+        current_sidecar=current_row,
+        sidecar_rows=sidecar_rows,
+        sidecar_support_mismatch=sidecar_support_mismatch,
+    )
 
     return {
         "schema": HI_NERV_TARGET_REGION_ACTION_COMPARISON_SCHEMA,
@@ -270,10 +303,13 @@ def build_hinerv_target_region_action_comparison(
         },
         "sidecar_encoding_candidates": sidecar_rows,
         "backend_ladder": backend_ladder,
+        "lowering_race": lowering_race,
         "comparison": {
             "best_receiver_bound_sidecar_candidate_id": current_row["candidate_id"],
             "best_sidecar_candidate_id": best_sidecar["candidate_id"],
             "best_backend_tier": None if best_backend is None else best_backend["tier"],
+            "best_lowering": lowering_race["best_lowering"],
+            "first_failing_surface": lowering_race["first_failing_surface"],
             "backend_realized": _backend_realized(backend),
             "sidecar_current_inflate_survived": bool(current_row["survival"]["inflate_survived"]),
             "next_blocker": next_blocker,
@@ -337,6 +373,8 @@ def _comparison_row(
     action_encoding: str,
     encoded_payload_bytes: int,
     support_encoded_bytes: int | None,
+    action_payload_bytes: int | None,
+    metadata_bytes: int | None,
     byte_authority: str,
     old_bytes: int | None,
     new_bytes: int | None,
@@ -379,7 +417,14 @@ def _comparison_row(
         pair_ids=_int_tuple(survival_receipt.get("pair_indices")),
         class_ids=_int_tuple(sidecar_admission.get("target_class")),
         region_ids=_str_tuple(sidecar_admission.get("region_id")),
-        payload_sections=(support_encoding, action_encoding),
+        payload_sections=(
+            f"support_codec={support_encoding}",
+            f"action_codec={action_encoding}",
+            f"encoded_payload_bytes={int(encoded_payload_bytes)}",
+            f"support_encoded_bytes={support_encoded_bytes}",
+            f"action_payload_bytes={action_payload_bytes}",
+            f"metadata_bytes={metadata_bytes}",
+        ),
         old_d_seg=old_d_seg,
         new_d_seg=new_d_seg,
         old_d_pose=old_d_pose,
@@ -425,6 +470,9 @@ def _comparison_row(
         "support_encoding": support_encoding,
         "action_encoding": action_encoding,
         "encoded_payload_bytes": int(encoded_payload_bytes),
+        "support_encoded_bytes": None if support_encoded_bytes is None else int(support_encoded_bytes),
+        "action_payload_bytes": None if action_payload_bytes is None else int(action_payload_bytes),
+        "metadata_bytes": None if metadata_bytes is None else int(metadata_bytes),
         "byte_authority": byte_authority,
         "exact_payload_equivalent": bool(exact_payload_equivalent),
         "receiver_bound": bool(receiver_bound),
@@ -668,6 +716,75 @@ def _backend_ladder_rows(
             }
         )
     return rows
+
+
+def _lowering_race_verdict(
+    *,
+    action_id: str,
+    support_sha256: str,
+    direct_teacher: Mapping[str, Any],
+    backend_fit: Mapping[str, Any],
+    current_sidecar: Mapping[str, Any],
+    sidecar_rows: Sequence[Mapping[str, Any]],
+    sidecar_support_mismatch: bool,
+) -> dict[str, Any]:
+    """Summarize the fixed-action backend/sidecar lowering race.
+
+    The race consumes the same ActionEffect rows written to disk.  If the direct
+    teacher and survived sidecar supports differ, the report is still emitted
+    for diagnostics, but the verdict is forced fail-closed so a different
+    support cannot accidentally clear the backend decision.
+    """
+
+    effects: list[ActionEffect] = []
+    for row in sidecar_rows:
+        effect = row.get("action_effect") if isinstance(row, Mapping) else None
+        if isinstance(effect, Mapping):
+            effects.append(ActionEffect.from_dict(effect))
+    backend_effect = _nested_mapping(backend_fit, ("action_effect",))
+    if backend_effect:
+        effects.append(ActionEffect.from_dict(backend_effect))
+
+    report = build_lowering_race_report(action_id=action_id, action_effects=effects)
+    verdict = dict(report["verdict"])
+    if sidecar_support_mismatch:
+        verdict.update(
+            {
+                "support_sha256": support_sha256,
+                "direct_teacher_status": _SUPPORT_IDENTITY_MISMATCH,
+                "backend_status": _SUPPORT_IDENTITY_MISMATCH,
+                "sidecar_status": _SUPPORT_IDENTITY_MISMATCH,
+                "best_lowering": "none",
+                "first_failing_surface": _SUPPORT_IDENTITY_MISMATCH,
+                "authority": "none",
+                "promotion_eligible": False,
+                "delta_score_nonrate": None,
+                "delta_score_total": None,
+                "delta_bytes": None,
+                "value_per_byte": None,
+            }
+        )
+
+    return {
+        "schema": EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
+        "action_id": action_id,
+        "support_sha256": support_sha256,
+        "direct_teacher_support_sha256": _nested_first_text(
+            direct_teacher,
+            ("support_sha256",),
+            ("action_effect", "support_sha256"),
+        ),
+        "same_support_as_direct_teacher": not sidecar_support_mismatch,
+        "best_lowering": verdict["best_lowering"],
+        "first_failing_surface": verdict["first_failing_surface"],
+        "verdict": verdict,
+        "current_sidecar_candidate_id": current_sidecar.get("candidate_id"),
+        "candidate_count": len(report.get("lowering_candidates") or []),
+        "lowering_candidates": report.get("lowering_candidates") or [],
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def write_hinerv_target_region_action_comparison(

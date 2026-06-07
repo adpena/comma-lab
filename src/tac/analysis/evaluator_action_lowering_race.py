@@ -32,6 +32,7 @@ PARSEBACK_FAILED = "PARSEBACK_FAILED"
 INFLATE_FAILED = "INFLATE_FAILED"
 EXACT_SCORE_REJECTED = "EXACT_SCORE_REJECTED"
 BYTE_ACCOUNTING_MISSING = "BYTE_ACCOUNTING_MISSING"
+ACTION_EFFECT_BLOCKED = "ACTION_EFFECT_BLOCKED"
 
 
 @dataclass(frozen=True)
@@ -185,6 +186,8 @@ def _candidate_row(effect: ActionEffect) -> dict[str, Any]:
 
 
 def _effect_failure(effect: ActionEffect, byte_fields: Mapping[str, int | None]) -> str:
+    if effect.blockers:
+        return str(effect.blockers[0] or ACTION_EFFECT_BLOCKED)
     if effect.support_encoded_bytes is None:
         return BYTE_ACCOUNTING_MISSING
     if byte_fields["action_payload_bytes"] is None or byte_fields["metadata_bytes"] is None:
@@ -335,6 +338,7 @@ def _int_or_none(value: Any) -> int | None:
 
 
 __all__ = [
+    "ACTION_EFFECT_BLOCKED",
     "BACKEND_REALIZATION_FAILED",
     "BYTE_ACCOUNTING_MISSING",
     "COMPOSITE_NOT_MEASURED",

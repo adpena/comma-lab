@@ -186,15 +186,26 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert report["comparison"]["sidecar_current_inflate_survived"] is True
     assert report["comparison"]["backend_realized"] is False
     assert report["comparison"]["next_blocker"] == "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+    assert report["comparison"]["best_lowering"] == "none"
+    assert report["comparison"]["first_failing_surface"] == "support_identity_mismatch"
     assert report["support_identity"]["same_as_direct_teacher"] is False
+    assert report["lowering_race"]["verdict"]["sidecar_status"] == "support_identity_mismatch"
 
     current = report["sidecar_encoding_candidates"][0]
     assert current["candidate_id"] == "current_hiv1_target_region_action_brotli"
     assert current["survival"]["parseback_survived"] is True
     assert current["survival"]["inflate_survived"] is True
+    assert current["first_failed_surface"] == "support_identity_mismatch"
+    assert "direct_teacher_and_survived_sidecar_support_hashes_diverge" in current["blockers"]
     assert current["action_effect"]["wrong_to_target"] == 3
     assert current["action_effect"]["target_to_wrong"] == 0
     assert current["action_effect"]["value_per_byte"] is not None
+    assert (
+        "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+        in current["action_effect"]["blockers"]
+    )
+    assert f"action_payload_bytes={action.rgb_u8.nbytes}" in current["action_effect"]["payload_sections"]
+    assert current["action_effect"]["support_encoded_bytes"] == action.yx.nbytes
 
     blocked = [
         row

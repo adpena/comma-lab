@@ -104,6 +104,19 @@ def test_lowering_race_rejects_missing_byte_accounting() -> None:
     assert report["lowering_candidates"][0]["first_failing_surface"] == "BYTE_ACCOUNTING_MISSING"
 
 
+def test_lowering_race_rejects_blocked_negative_delta_row() -> None:
+    good_but_blocked = _effect(delta_good=True, parseback=True, inflate=True)
+    payload = good_but_blocked.as_dict()
+    payload["blockers"] = ["support_identity_mismatch"]
+    good_but_blocked = ActionEffect.from_dict(payload)
+
+    report = build_lowering_race_report(action_id="action-1", action_effects=[good_but_blocked])
+
+    assert report["verdict"]["best_lowering"] == "none"
+    assert report["lowering_candidates"][0]["viable"] is False
+    assert report["lowering_candidates"][0]["first_failing_surface"] == "support_identity_mismatch"
+
+
 def test_lowering_race_consumes_support_codec_report_and_cli_writes_verdict(tmp_path: Path) -> None:
     effect = _effect()
     support_codec_report = {
