@@ -1712,7 +1712,7 @@ def test_hinerv_gate_accepts_real_evaluator_action_lowering_race(
     )
 
 
-def test_hinerv_gate_keeps_sidecar_lowering_separate_from_backend_realization(
+def test_hinerv_gate_accepts_sidecar_lowering_without_backend_realization(
     tmp_path: Path,
 ) -> None:
     root = _full_hi_nerv_root(tmp_path)
@@ -1731,12 +1731,48 @@ def test_hinerv_gate_keeps_sidecar_lowering_separate_from_backend_realization(
         now_utc=NOW,
     )
 
-    assert "evaluator_action_lowering_race_not_accepted" in verdict[
+    assert "evaluator_action_lowering_race_not_accepted" not in verdict[
         "blocking_evidence"
     ]
     assert (
         f"evaluator_action_lowering_race_backend_realization_incomplete:{ACTION}"
+        not in verdict["blocking_evidence"]
+    )
+    assert not any(
+        blocker.startswith("evaluator_action_lowering_race")
+        for blocker in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is True
+
+
+def test_hinerv_gate_requires_sidecar_completion_for_sidecar_lowering(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    report = _hi_nerv_evaluator_action_lowering_race(
+        viable_target="byte_priced_sidecar"
+    )
+    report["sidecar_lowering_complete"] = False
+    report["verdict"]["sidecar_lowering_complete"] = False
+    _write(root / "lowering_race.json", report)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict[
+        "blocking_evidence"
+    ]
+    assert (
+        f"evaluator_action_lowering_race_sidecar_lowering_incomplete:{ACTION}"
         in verdict["blocking_evidence"]
+    )
+    assert (
+        f"evaluator_action_lowering_race_backend_realization_incomplete:{ACTION}"
+        not in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
 

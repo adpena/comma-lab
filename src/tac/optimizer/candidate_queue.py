@@ -735,7 +735,7 @@ def _evaluator_action_lowering_race_candidate_blockers(
         blockers.append("evaluator_action_lowering_race_authority_missing")
     if delta_total is None or not math.isfinite(delta_total) or delta_total >= 0.0:
         blockers.append("evaluator_action_lowering_race_exact_total_not_improved")
-    if backend_complete is not True:
+    if best_lowering == "backend_realization" and backend_complete is not True:
         blockers.append("evaluator_action_lowering_race_backend_realization_incomplete")
     if best_lowering == "byte_priced_sidecar" and sidecar_complete is not True:
         blockers.append("evaluator_action_lowering_race_sidecar_lowering_incomplete")

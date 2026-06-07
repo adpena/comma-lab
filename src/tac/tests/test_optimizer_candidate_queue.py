@@ -2612,10 +2612,45 @@ def test_candidate_queue_consumes_sidecar_lowering_without_backend_authority(
     ).hexdigest()
     assert (
         "evaluator_action_lowering_race_backend_realization_incomplete"
+        not in row["dispatch_blockers"]
+    )
+    assert (
+        "receiver_closed_archive_proof_required_before_promotion"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        "exact_cpu_or_cuda_replay_required_before_score_authority"
         in row["dispatch_blockers"]
     )
     assert row["promotion_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_blocks_incomplete_sidecar_lowering(
+    tmp_path: Path,
+) -> None:
+    report_path = _write_json(
+        tmp_path / "reports/lowering_race.json",
+        _lowering_race_report(
+            best_lowering="byte_priced_sidecar",
+            backend_realization_complete=False,
+            sidecar_lowering_complete=False,
+        ),
+    )
+
+    queue = build_candidate_queue([report_path], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["lowering_target"] == "byte_priced_sidecar"
+    assert (
+        "evaluator_action_lowering_race_sidecar_lowering_incomplete"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        "evaluator_action_lowering_race_backend_realization_incomplete"
+        not in row["dispatch_blockers"]
+    )
     assert validate_proxy_candidate(row) == []
 
 

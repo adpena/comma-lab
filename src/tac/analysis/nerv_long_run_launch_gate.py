@@ -1240,14 +1240,15 @@ def _lowering_race_completion_status_blockers(
         verdict.get("sidecar_lowering_complete"),
     )
     blockers: list[str] = []
-    if not isinstance(backend_complete, bool):
-        blockers.append(
-            f"evaluator_action_lowering_race_backend_realization_status_missing:{row_id}"
-        )
-    elif backend_complete is not True:
-        blockers.append(
-            f"evaluator_action_lowering_race_backend_realization_incomplete:{row_id}"
-        )
+    if best_lowering == "backend_realization":
+        if not isinstance(backend_complete, bool):
+            blockers.append(
+                f"evaluator_action_lowering_race_backend_realization_status_missing:{row_id}"
+            )
+        elif backend_complete is not True:
+            blockers.append(
+                f"evaluator_action_lowering_race_backend_realization_incomplete:{row_id}"
+            )
     if best_lowering == "byte_priced_sidecar":
         if not isinstance(sidecar_complete, bool):
             blockers.append(
