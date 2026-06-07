@@ -1261,6 +1261,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pair_indices: Any,
         learning_rate: float = 1.0e-2,
         artifact_dir: str | Path | None = None,
+        receiver_quantum_line_search: bool = True,
+        receiver_quantum_line_search_max_scale: float = 1.0e6,
+        receiver_quantum_line_search_safety: float = 1.05,
     ) -> dict[str, Any]:
         """Probe true per-pair latent controllability."""
 
@@ -1391,77 +1394,191 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         original_row_sha256 = _latent_row_digest(original_row)
         grad_row = np.ascontiguousarray(grad_np[target_index])
         grad_norm = float(np.linalg.norm(grad_row))
-        updated_np = np.array(original_np, copy=True)
-        updated_np[target_index] = updated_np[target_index] - step_lr * grad_row
-        updated_row = np.ascontiguousarray(updated_np[target_index])
-        adapter_sha256 = _latent_row_digest(updated_row)
-        adapter_bytes = int(updated_row.nbytes)
-        try:
-            self.update({"latents_fine": mx.array(updated_np)})  # type: ignore[union-attr]
-            mx.eval(self.parameters())  # type: ignore[union-attr]
+        adapter_bytes = int(original_row.nbytes)
+        receiver_uint8_half_step_normalized = 0.5 / 255.0
+        max_line_search_scale = float(receiver_quantum_line_search_max_scale)
+        if not math.isfinite(max_line_search_scale) or max_line_search_scale < 1.0:
+            max_line_search_scale = 1.0
+        line_search_safety = float(receiver_quantum_line_search_safety)
+        if not math.isfinite(line_search_safety) or line_search_safety < 1.0:
+            line_search_safety = 1.0
+
+        def _evaluate_scaled_step(scale: float) -> dict[str, Any]:
+            safe_scale = float(scale)
+            if not math.isfinite(safe_scale) or safe_scale <= 0.0:
+                raise ValueError(f"line-search scale must be positive, got {scale}")
+            updated_np = np.array(original_np, copy=True)
+            actual_lr = step_lr * safe_scale
+            updated_np[target_index] = updated_np[target_index] - actual_lr * grad_row
+            updated_row = np.ascontiguousarray(updated_np[target_index])
+            adapter_sha256 = _latent_row_digest(updated_row)
             after_target0, after_target1 = _predict_nhwc01(target_pair)
-            selected_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
-                0.5
-                * (
-                    mx.mean((after_target0 - before_target0) ** 2)  # type: ignore[union-attr]
-                    + mx.mean((after_target1 - before_target1) ** 2)  # type: ignore[union-attr]
-                )
-            )
-            selected_delta_max_abs_tensor = mx.max(  # type: ignore[union-attr]
-                mx.concatenate(  # type: ignore[union-attr]
-                    [
-                        mx.reshape(mx.abs(after_target0 - before_target0), (-1,)),  # type: ignore[union-attr]
-                        mx.reshape(mx.abs(after_target1 - before_target1), (-1,)),  # type: ignore[union-attr]
-                    ]
-                )
-            )
-            if non_target_pair is None:
-                non_target_delta_l2_tensor = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
-            else:
-                after_non_target0, after_non_target1 = _predict_nhwc01(non_target_pair)
-                non_target_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
+            try:
+                self.update({"latents_fine": mx.array(updated_np)})  # type: ignore[union-attr]
+                mx.eval(self.parameters())  # type: ignore[union-attr]
+                after_target0, after_target1 = _predict_nhwc01(target_pair)
+                selected_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
                     0.5
                     * (
-                        mx.mean((after_non_target0 - before_non_target0) ** 2)  # type: ignore[operator,union-attr]
-                        + mx.mean((after_non_target1 - before_non_target1) ** 2)  # type: ignore[operator,union-attr]
+                        mx.mean((after_target0 - before_target0) ** 2)  # type: ignore[union-attr]
+                        + mx.mean((after_target1 - before_target1) ** 2)  # type: ignore[union-attr]
                     )
                 )
-            mx.eval(
-                selected_delta_l2_tensor,
-                selected_delta_max_abs_tensor,
-                non_target_delta_l2_tensor,
-            )  # type: ignore[union-attr]
-            selected_delta_l2 = float(selected_delta_l2_tensor.item())
-            selected_delta_max_abs = float(selected_delta_max_abs_tensor.item())
-            non_target_delta_l2 = float(non_target_delta_l2_tensor.item())
-            target_uint8_stats = _uint8_change_stats(
-                before_target0,
-                before_target1,
-                after_target0,
-                after_target1,
-            )
-            if non_target_pair is None:
-                non_target_uint8_stats = {
-                    "changed_count": 0,
-                    "changed_fraction": 0.0,
-                    "delta_abs_max_uint8": 0,
-                }
-            else:
-                non_target_uint8_stats = _uint8_change_stats(
-                    before_non_target0,
-                    before_non_target1,
-                    after_non_target0,
-                    after_non_target1,
+                selected_delta_max_abs_tensor = mx.max(  # type: ignore[union-attr]
+                    mx.concatenate(  # type: ignore[union-attr]
+                        [
+                            mx.reshape(mx.abs(after_target0 - before_target0), (-1,)),  # type: ignore[union-attr]
+                            mx.reshape(mx.abs(after_target1 - before_target1), (-1,)),  # type: ignore[union-attr]
+                        ]
+                    )
                 )
-        finally:
-            self.update({"latents_fine": original_latents_fine})
-            mx.eval(self.parameters())  # type: ignore[union-attr]
+                if non_target_pair is None:
+                    non_target_delta_l2_tensor = mx.array(0.0, dtype=mx.float32)  # type: ignore[union-attr]
+                else:
+                    after_non_target0, after_non_target1 = _predict_nhwc01(non_target_pair)
+                    non_target_delta_l2_tensor = mx.sqrt(  # type: ignore[union-attr]
+                        0.5
+                        * (
+                            mx.mean((after_non_target0 - before_non_target0) ** 2)  # type: ignore[operator,union-attr]
+                            + mx.mean((after_non_target1 - before_non_target1) ** 2)  # type: ignore[operator,union-attr]
+                        )
+                    )
+                mx.eval(
+                    selected_delta_l2_tensor,
+                    selected_delta_max_abs_tensor,
+                    non_target_delta_l2_tensor,
+                )  # type: ignore[union-attr]
+                selected_delta_l2 = float(selected_delta_l2_tensor.item())
+                selected_delta_max_abs = float(selected_delta_max_abs_tensor.item())
+                non_target_delta_l2 = float(non_target_delta_l2_tensor.item())
+                target_uint8_stats = _uint8_change_stats(
+                    before_target0,
+                    before_target1,
+                    after_target0,
+                    after_target1,
+                )
+                if non_target_pair is None:
+                    non_target_uint8_stats = {
+                        "changed_count": 0,
+                        "changed_fraction": 0.0,
+                        "delta_abs_max_uint8": 0,
+                    }
+                else:
+                    non_target_uint8_stats = _uint8_change_stats(
+                        before_non_target0,
+                        before_non_target1,
+                        after_non_target0,
+                        after_non_target1,
+                    )
+            finally:
+                self.update({"latents_fine": original_latents_fine})
+                mx.eval(self.parameters())  # type: ignore[union-attr]
+            selected_delta_max_abs_uint8 = selected_delta_max_abs * 255.0
+            return {
+                "scale": safe_scale,
+                "actual_learning_rate": actual_lr,
+                "updated_row": updated_row,
+                "adapter_sha256": adapter_sha256,
+                "selected_delta_l2": selected_delta_l2,
+                "selected_delta_max_abs": selected_delta_max_abs,
+                "selected_delta_max_abs_uint8": selected_delta_max_abs_uint8,
+                "non_target_delta_l2": non_target_delta_l2,
+                "target_uint8_stats": target_uint8_stats,
+                "non_target_uint8_stats": non_target_uint8_stats,
+                "receiver_uint8_crossing_potential": bool(
+                    selected_delta_max_abs >= receiver_uint8_half_step_normalized
+                ),
+            }
+
+        def _line_search_candidate_scales(base_delta_max_abs: float) -> list[float]:
+            scales: list[float] = [1.0]
+            if not receiver_quantum_line_search:
+                return scales
+            if math.isfinite(base_delta_max_abs) and base_delta_max_abs > 0.0:
+                required = (
+                    receiver_uint8_half_step_normalized
+                    / base_delta_max_abs
+                    * line_search_safety
+                )
+                scales.extend([required, required * 2.0, required * 4.0])
+            scale = 2.0
+            while scale <= max_line_search_scale:
+                scales.append(scale)
+                scale *= 2.0
+            unique: list[float] = []
+            for value in sorted(scales):
+                if value < 1.0 or value > max_line_search_scale:
+                    continue
+                if not unique or abs(value - unique[-1]) > max(1.0e-9, unique[-1] * 1.0e-9):
+                    unique.append(value)
+            return unique
+
+        def _candidate_accepts(candidate: Mapping[str, Any]) -> bool:
+            target_stats = candidate["target_uint8_stats"]
+            non_target_stats = candidate["non_target_uint8_stats"]
+            return bool(
+                math.isfinite(float(candidate["selected_delta_l2"]))
+                and float(candidate["selected_delta_l2"]) > 0.0
+                and bool(candidate["receiver_uint8_crossing_potential"])
+                and int(target_stats["changed_count"]) > 0
+                and int(non_target_stats["changed_count"]) == 0
+                and float(candidate["non_target_delta_l2"]) <= 1.0e-12
+            )
+
+        first_candidate = _evaluate_scaled_step(1.0)
+        line_search_attempts: list[dict[str, Any]] = []
+        selected_candidate = first_candidate
+        selected_reason = "base_step"
+        for candidate_scale in _line_search_candidate_scales(
+            float(first_candidate["selected_delta_max_abs"])
+        ):
+            candidate = first_candidate if candidate_scale == 1.0 else _evaluate_scaled_step(candidate_scale)
+            line_search_attempts.append(
+                {
+                    "scale": float(candidate["scale"]),
+                    "actual_learning_rate": float(candidate["actual_learning_rate"]),
+                    "pair_local_output_delta_max_abs_uint8": float(
+                        candidate["selected_delta_max_abs_uint8"]
+                    ),
+                    "receiver_uint8_changed_count": int(
+                        candidate["target_uint8_stats"]["changed_count"]
+                    ),
+                    "non_target_pair_receiver_uint8_changed_count": int(
+                        candidate["non_target_uint8_stats"]["changed_count"]
+                    ),
+                    "receiver_uint8_crossing_potential": bool(
+                        candidate["receiver_uint8_crossing_potential"]
+                    ),
+                    "accepted": _candidate_accepts(candidate),
+                }
+            )
+            if _candidate_accepts(candidate):
+                selected_candidate = candidate
+                selected_reason = "receiver_quantum_crossing_line_search"
+                break
+            if float(candidate["selected_delta_max_abs"]) > float(
+                selected_candidate["selected_delta_max_abs"]
+            ):
+                selected_candidate = candidate
+                selected_reason = "largest_receiver_delta_without_quantum_crossing"
+
+        adapter_sha256 = str(selected_candidate["adapter_sha256"])
+        selected_delta_l2 = float(selected_candidate["selected_delta_l2"])
+        selected_delta_max_abs = float(selected_candidate["selected_delta_max_abs"])
+        selected_delta_max_abs_uint8 = float(
+            selected_candidate["selected_delta_max_abs_uint8"]
+        )
+        non_target_delta_l2 = float(selected_candidate["non_target_delta_l2"])
+        target_uint8_stats = dict(selected_candidate["target_uint8_stats"])
+        non_target_uint8_stats = dict(selected_candidate["non_target_uint8_stats"])
+        selected_line_search_scale = float(selected_candidate["scale"])
+        selected_actual_learning_rate = float(
+            selected_candidate["actual_learning_rate"]
+        )
         restored_np = np.asarray(self.latents_fine, dtype=np.float32)
         restored_row_sha256 = _latent_row_digest(restored_np[target_index])
         state_restored = restored_row_sha256 == original_row_sha256
         output_delta_l2_per_byte = selected_delta_l2 / float(adapter_bytes) if adapter_bytes > 0 else 0.0
-        receiver_uint8_half_step_normalized = 0.5 / 255.0
-        selected_delta_max_abs_uint8 = selected_delta_max_abs * 255.0
         receiver_uint8_crossing_potential = selected_delta_max_abs >= receiver_uint8_half_step_normalized
         blockers: list[str] = []
         if not math.isfinite(float(loss.item())):
@@ -1508,6 +1625,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pair_local_adapter_sha256": adapter_sha256,
             "pair_local_grad_norm": grad_norm,
             "pair_local_grad_norm_by_group": {"latents_fine": grad_norm},
+            "base_learning_rate": step_lr,
+            "actual_learning_rate": selected_actual_learning_rate,
+            "receiver_quantum_line_search_enabled": bool(
+                receiver_quantum_line_search
+            ),
+            "receiver_quantum_line_search_max_scale": float(max_line_search_scale),
+            "receiver_quantum_line_search_selected_scale": (
+                selected_line_search_scale
+            ),
+            "receiver_quantum_line_search_selected_reason": selected_reason,
+            "receiver_quantum_line_search_attempt_count": len(line_search_attempts),
+            "receiver_quantum_line_search_attempts": list(line_search_attempts),
             "pair_local_output_delta_l2": selected_delta_l2,
             "pair_local_output_delta_max_abs": selected_delta_max_abs,
             "pair_local_output_delta_max_abs_uint8": selected_delta_max_abs_uint8,
@@ -1556,6 +1685,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "pair_local_grad_norm": grad_norm,
                 "pair_local_grad_norm_by_group": {"latents_fine": grad_norm},
                 "updated_tensor_names": ["latents_fine"],
+                "base_learning_rate": step_lr,
+                "actual_learning_rate": selected_actual_learning_rate,
+                "receiver_quantum_line_search_selected_scale": (
+                    selected_line_search_scale
+                ),
             },
             "output_delta": {
                 "pair_local_output_delta_l2": selected_delta_l2,
@@ -1571,6 +1705,22 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "non_target_pair_receiver_uint8_delta_abs_max": int(non_target_uint8_stats["delta_abs_max_uint8"]),
                 "non_target_pair_output_delta_l2_max": non_target_delta_l2,
                 "pair_locality_verified": pair_locality_verified,
+                "receiver_quantum_line_search_enabled": bool(
+                    receiver_quantum_line_search
+                ),
+                "receiver_quantum_line_search_max_scale": float(
+                    max_line_search_scale
+                ),
+                "receiver_quantum_line_search_selected_scale": (
+                    selected_line_search_scale
+                ),
+                "receiver_quantum_line_search_selected_reason": selected_reason,
+                "receiver_quantum_line_search_attempt_count": len(
+                    line_search_attempts
+                ),
+                "receiver_quantum_line_search_attempts": list(
+                    line_search_attempts
+                ),
             },
             "state_restore": {
                 "checked_tensor_name": "latents_fine",

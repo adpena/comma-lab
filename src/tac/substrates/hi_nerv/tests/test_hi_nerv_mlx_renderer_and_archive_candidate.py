@@ -437,6 +437,7 @@ def test_mlx_pair_local_actuator_smoke_blocks_subquantum_receiver_delta() -> Non
         target1,
         pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
         learning_rate=1.0e-2,
+        receiver_quantum_line_search=False,
     )
 
     assert smoke["execution_completed"] is False
@@ -447,6 +448,56 @@ def test_mlx_pair_local_actuator_smoke_blocks_subquantum_receiver_delta() -> Non
     assert smoke["output_delta"]["receiver_uint8_changed"] is False
     assert smoke["output_delta"]["receiver_uint8_changed_count"] == 0
     assert smoke["output_delta"]["pair_local_output_delta_max_abs_uint8"] < 0.5
+
+
+@skip_no_mlx
+def test_mlx_pair_local_actuator_smoke_line_search_crosses_receiver_quantum() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(12)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    ramp = mx.reshape(
+        mx.linspace(0.05, 0.95, cfg.output_height * cfg.output_width),
+        (1, cfg.output_height, cfg.output_width, 1),
+    )
+    target0 = mx.tile(
+        mx.concatenate([ramp, 1.0 - ramp, 0.5 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+    target1 = mx.tile(
+        mx.concatenate([1.0 - ramp, ramp, 0.25 + 0.5 * ramp], axis=-1),
+        (cfg.num_pairs, 1, 1, 1),
+    )
+
+    smoke = model.build_pair_local_actuator_smoke_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        learning_rate=100.0,
+        receiver_quantum_line_search=True,
+        receiver_quantum_line_search_max_scale=1.0e6,
+    )
+
+    attempts = smoke["output_delta"]["receiver_quantum_line_search_attempts"]
+    assert smoke["execution_completed"] is True
+    assert smoke["output_delta"]["receiver_uint8_crossing_potential"] is True
+    assert smoke["output_delta"]["pair_local_output_delta_max_abs_uint8"] >= 0.5
+    assert smoke["output_delta"]["non_target_pair_receiver_uint8_changed_count"] == 0
+    assert smoke["output_delta"]["receiver_quantum_line_search_selected_scale"] > 1.0
+    assert smoke["gradient"]["actual_learning_rate"] > smoke["gradient"][
+        "base_learning_rate"
+    ]
+    assert attempts[0]["scale"] == 1.0
+    assert attempts[0]["receiver_uint8_crossing_potential"] is False
+    assert any(attempt["accepted"] for attempt in attempts)
+    summary = smoke["summary_for_pr95_guard"]
+    assert summary["receiver_quantum_line_search_selected_scale"] == smoke[
+        "output_delta"
+    ]["receiver_quantum_line_search_selected_scale"]
+    assert summary["receiver_quantum_line_search_attempt_count"] == len(attempts)
 
 
 @skip_no_mlx
