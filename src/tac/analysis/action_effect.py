@@ -1337,6 +1337,27 @@ class ActionEffect:
             blockers = receipt.get("blockers")
             if isinstance(blockers, Sequence) and not isinstance(blockers, (str, bytes)) and len(blockers) == 0:
                 fakequant_survived = True
+        receipt_blockers = _v1_str_tuple(receipt.get("blockers") or ())
+        raw_cap_decision = (
+            _v1_first_text(admission_decision, "raw_cap_decision")
+            or _v1_first_text(receipt, "raw_cap_decision")
+            or ("not_applicable" if receipt_blockers else None)
+        )
+        catastrophic_guard_decision = (
+            _v1_first_text(
+                admission_decision,
+                "catastrophic_guard_decision",
+            )
+            or _v1_first_text(receipt, "catastrophic_guard_decision")
+            or ("not_applicable" if receipt_blockers else None)
+        )
+        would_accept_exact_score_if_raw_cap_disabled = _v1_bool_or_none(
+            admission_decision.get("would_accept_exact_score_if_raw_cap_disabled")
+            if admission_decision
+            else receipt.get("would_accept_exact_score_if_raw_cap_disabled")
+        )
+        if would_accept_exact_score_if_raw_cap_disabled is None and receipt_blockers:
+            would_accept_exact_score_if_raw_cap_disabled = False
 
         return cls.build(
             action_id=action_id,
@@ -1394,17 +1415,9 @@ class ActionEffect:
                 "accept" if _v1_first_int(receipt, "accepted_step_count") and _v1_first_int(receipt, "accepted_step_count") > 0 else "reject"
             ),
             raw_cap_decision=_v1_first_text(admission_decision, "raw_cap_decision")
-            or _v1_first_text(receipt, "raw_cap_decision"),
-            catastrophic_guard_decision=_v1_first_text(
-                admission_decision,
-                "catastrophic_guard_decision",
-            )
-            or _v1_first_text(receipt, "catastrophic_guard_decision"),
-            would_accept_exact_score_if_raw_cap_disabled=_v1_bool_or_none(
-                admission_decision.get("would_accept_exact_score_if_raw_cap_disabled")
-                if admission_decision
-                else receipt.get("would_accept_exact_score_if_raw_cap_disabled")
-            ),
+            or raw_cap_decision,
+            catastrophic_guard_decision=catastrophic_guard_decision,
+            would_accept_exact_score_if_raw_cap_disabled=would_accept_exact_score_if_raw_cap_disabled,
             would_accept_without_catastrophic_guard=_v1_bool_or_none(
                 admission_decision.get("would_accept_without_catastrophic_guard")
                 if admission_decision
@@ -1529,7 +1542,7 @@ class ActionEffect:
             or _v1_pose_score_delta(old_d_pose, new_d_pose),
             rejection_source=_v1_first_text(admission_decision, "rejection_source")
             or _v1_first_text(receipt, "rejection_source"),
-            blockers=_v1_str_tuple(receipt.get("blockers") or ()),
+            blockers=receipt_blockers,
             interaction_or_commutator=_v1_first_float(
                 receipt,
                 "interaction_or_commutator",
