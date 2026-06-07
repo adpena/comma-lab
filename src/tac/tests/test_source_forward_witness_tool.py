@@ -237,6 +237,81 @@ def test_source_forward_witness_upstream_fixture_scope_status_is_graph_unproven(
     )
 
 
+def test_source_forward_witness_cli_threads_official_source_config(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    out = tmp_path / "witness.json"
+    source_config_path = tmp_path / "args.json"
+    packet_path.write_bytes(_official_packet())
+    source_config_path.write_text('{"fc_dim": 1152}\n', encoding="utf-8")
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_upstream_fixture_capture(**kwargs) -> dict[str, object]:
+        captured_kwargs.update(kwargs)
+        return {
+            "schema": "snerv_official_tub_source_forward_tensor_bundle.v1",
+            "pair_ids": [0],
+            "tensors": {},
+            "model_source_sha256": "8" * 64,
+            "checkpoint_sha256": "6" * 64,
+            "state_dict_sha256": "7" * 64,
+            "decoder_len": 7,
+            "source_scope": "official_trained_checkpoint",
+            "source_config_lineage": kwargs["official_trained_source_config_kind"],
+            "source_config_sha256": "9" * 64,
+            "source_config_kind": "official_snerv_t_train_config",
+            "source_config_source": kwargs["official_trained_source_config_path"],
+            "source_config_is_fixture": False,
+        }
+
+    monkeypatch.setattr(
+        source_forward_producer,
+        "build_official_torch_upstream_fixture_tensors",
+        fake_upstream_fixture_capture,
+    )
+
+    assert (
+        main(
+            [
+                "--packet",
+                str(packet_path),
+                "--out",
+                str(out),
+                "--capture-official-torch-from-upstream-fixture",
+                "--official-torch-source-config",
+                str(source_config_path),
+                "--official-torch-source-config-kind",
+                "checkpoint_export_official_trained_run_config",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    row = payload["source_forward_proof_action_effect"]
+    manifest = row["producer_status"]["official_torch_upstream_capture_manifest"]
+    status = row["producer_status"]["official_torch_upstream_capture_manifest_status"]
+    assert captured_kwargs["official_trained_source_config_path"] == (
+        source_config_path.as_posix()
+    )
+    assert (
+        captured_kwargs["official_trained_source_config_kind"]
+        == "checkpoint_export_official_trained_run_config"
+    )
+    assert payload["capture_modes"]["official_torch_source_config_requested"] is True
+    assert manifest["source_config_source"] == source_config_path.as_posix()
+    assert (
+        manifest["source_config_lineage"]
+        == "checkpoint_export_official_trained_run_config"
+    )
+    assert manifest["source_config_is_fixture"] is False
+    assert "snerv_official_torch_source_config_sha256_invalid" not in status["blockers"]
+    assert payload["launch_gate_clearable"] is False
+    assert payload["score_claim"] is False
+
+
 def test_source_forward_producer_refreshes_manifest_after_supplied_scorer_tensors() -> None:
     scorer_tensor_names = {
         "segnet_input",

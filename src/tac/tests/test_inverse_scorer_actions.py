@@ -1143,6 +1143,50 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert "inverse_scorer_composite_base_identity_producer_missing" in queued["measurement_command_blockers"]
 
 
+def test_generate_inverse_evaluate_actions_cli_filters_non_pr110_rows_from_pr110_input(
+    tmp_path: Path,
+) -> None:
+    seed_ledger = tmp_path / "seed_action_effects.jsonl"
+    pr110_ledger = tmp_path / "mixed_pr110_action_effects.jsonl"
+    out_dir = tmp_path / "out"
+    for effect in (_frame0_pose_effect(), _frame1_birth_effect(), _composite_effect()):
+        append_action_effect(effect, seed_ledger)
+    append_action_effect(_pr110_k1_replay_effect(), pr110_ledger)
+    append_action_effect(_frame1_birth_effect(), pr110_ledger)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "generate_inverse_evaluate_actions.py"),
+            "--seed-action-effects",
+            str(seed_ledger),
+            "--pr110-action-effects",
+            str(pr110_ledger),
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert summary["pr110_input_row_count"] == 2
+    assert summary["pr110_replay_row_count"] == 1
+    assert summary["pr110_filtered_non_pr110_count"] == 1
+    assert summary["pr110_filtered_non_pr110_action_ids"] == [
+        _frame1_birth_effect().action_id
+    ]
+
+    rows = read_action_effects(out_dir / "action_effect_rows.jsonl")
+    assert len([row for row in rows if row.family == "pr110"]) == 1
+    assert len(rows) == 4
+    assert _frame1_birth_effect().action_id not in {row.action_id for row in rows}
+    assert any(row.action_id.endswith("__inverse_frame1_seg") for row in rows)
+
+
 def test_generate_inverse_evaluate_actions_cli_reads_training_artifact_base_identity(tmp_path: Path) -> None:
     training_artifact = tmp_path / "training_artifact.json"
     pr110_ledger = tmp_path / "pr110_action_effects.jsonl"
@@ -1255,6 +1299,84 @@ def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
     assert branch_receipt["schema"] == WALL_NORMAL_BRANCH_RECEIPT_SCHEMA
     assert branch_receipt["branch_count"] == 3
     assert branch_receipt["same_action_id"] is True
+    assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
+
+
+def test_generate_inverse_evaluate_actions_cli_scopes_wall_normal_receipt_to_fixed_action(
+    tmp_path: Path,
+) -> None:
+    direct = _direct_wall_candidate()
+    receipt_a = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action-a",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+    receipt_b = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action-b",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+    support_sha = receipt_a["direct_teacher"]["support_sha256"]
+    training_artifact = tmp_path / "training_artifact.json"
+    pr110_ledger = tmp_path / "pr110_action_effects.jsonl"
+    out_dir = tmp_path / "out"
+    training_artifact.write_text(
+        json.dumps({"wall_normal_lifts": [receipt_a, receipt_b]}),
+        encoding="utf-8",
+    )
+    append_action_effect(_pr110_k1_replay_effect(), pr110_ledger)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "generate_inverse_evaluate_actions.py"),
+            "--seed-training-artifact",
+            str(training_artifact),
+            "--pr110-action-effects",
+            str(pr110_ledger),
+            "--wall-normal-action-id",
+            "wall-normal-action-a",
+            "--wall-normal-support-sha256",
+            support_sha,
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    branch_receipt = json.loads(
+        (out_dir / "wall_normal_branch_receipt.json").read_text(encoding="utf-8")
+    )
+
+    assert summary["wall_normal_receipt_filter"]["action_id"] == "wall-normal-action-a"
+    assert summary["wall_normal_receipt_filter"]["support_sha256"] == support_sha
+    assert summary["wall_normal_receipt_filter"]["filtered_count"] == 3
+    assert summary["wall_normal_receipt_filter"]["dropped_count"] > 0
+    assert branch_receipt["branch_count"] == 3
+    assert branch_receipt["same_action_id"] is True
+    assert branch_receipt["action_ids"] == ["wall-normal-action-a"]
+    assert branch_receipt["same_support_sha256"] is True
+    assert branch_receipt["support_sha256s"] == [support_sha]
+    assert branch_receipt["blockers"] == []
     assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
 
 

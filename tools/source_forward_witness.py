@@ -73,6 +73,11 @@ def _parser() -> argparse.ArgumentParser:
         "--official-torch-checkpoint-state-dict-kind",
         default="official_trained_checkpoint_state_dict",
     )
+    parser.add_argument("--official-torch-source-config", type=Path, default=None)
+    parser.add_argument(
+        "--official-torch-source-config-kind",
+        default="official_trained_run_config",
+    )
     parser.add_argument("--fail-on-blockers", action="store_true")
     parser.add_argument("--allow-overwrite", action="store_true")
     parser.add_argument("--expected-output-sha256", default=None)
@@ -121,6 +126,12 @@ def main(argv: list[str] | None = None) -> int:
         official_torch_checkpoint_state_dict_kind=str(
             args.official_torch_checkpoint_state_dict_kind
         ),
+        official_torch_source_config_path=(
+            None
+            if args.official_torch_source_config is None
+            else args.official_torch_source_config
+        ),
+        official_torch_source_config_kind=str(args.official_torch_source_config_kind),
     )
     result = write_json_artifact(
         out,
@@ -219,6 +230,8 @@ def build_source_forward_witness_payload(
     official_torch_checkpoint_state_dict_kind: str = (
         "official_trained_checkpoint_state_dict"
     ),
+    official_torch_source_config_path: str | Path | None = None,
+    official_torch_source_config_kind: str = "official_trained_run_config",
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     packet = Path(packet_path).expanduser().resolve(strict=False)
@@ -242,6 +255,9 @@ def build_source_forward_witness_payload(
             ),
             "official_torch_from_upstream_fixture": bool(
                 capture_official_torch_from_upstream_fixture
+            ),
+            "official_torch_source_config_requested": (
+                official_torch_source_config_path is not None
             ),
         },
         "source_forward_proof_action_effect": None,
@@ -278,6 +294,14 @@ def build_source_forward_witness_payload(
             official_torch_checkpoint_state_dict_kind=(
                 official_torch_checkpoint_state_dict_kind
             ),
+            official_torch_source_config_path=(
+                None
+                if official_torch_source_config_path is None
+                else Path(official_torch_source_config_path)
+                .expanduser()
+                .as_posix()
+            ),
+            official_torch_source_config_kind=official_torch_source_config_kind,
             capture_pact_mlx_from_archive=capture_pact_mlx_from_archive,
             bitflip_section=bitflip_section,
             bitflip_offset=bitflip_offset,

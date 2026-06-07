@@ -18,14 +18,19 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     DEFAULT_OFFICIAL_SNERV_REPO,
     PYTORCH_WAVELETS_BLOCKER,
     SCHEMA,
+    SOURCE_CONFIG_ENC2_STRDS_UNRESOLVED_BLOCKER,
     SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER,
+    SOURCE_CONFIG_FC_DIM_UNRESOLVED_BLOCKER,
     SOURCE_CONFIG_FIXTURE_BLOCKER,
     SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER,
     SOURCE_CONFIG_PATH_MISSING_BLOCKER,
+    SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER,
     STATE_VALUE_ARTIFACT_BLOCKER,
     TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     TUB_CLOSED_BY_FIXTURE_REPLAY,
     TUB_PRESERVED_BLOCKERS,
+    build_snerv_official_tub_source_config_lineage,
+    build_snerv_official_tub_source_config_lineage_from_path,
     build_snerv_official_tub_source_forward_replay_artifact,
     build_snerv_official_tub_source_forward_tensor_bundle,
     main,
@@ -44,24 +49,88 @@ def _official_repo() -> Path:
 def _resolved_source_config() -> dict[str, object]:
     return {
         "act": "gelu",
-        "conv_type": ["convnext"],
-        "crop_list": "0_0_0_0",
-        "dec_strds": [2],
-        "emb_size": 16,
-        "embed": "1.25_80",
-        "enc2_strds": [2],
-        "enc_dim": "8_16",
-        "enc_strds": [2, 2],
-        "fc_dim": 64,
-        "fc_hw": "4_4",
+        "conv_type": ["convnext", "pshuffel"],
+        "crop_list": "640_1280",
+        "dec_strds": [5, 4, 3, 2, 2],
+        "emb_size": 80,
+        "embed": "pe_1.25_80",
+        "enc2_strds": [5, 4, 3, 2],
+        "enc_dim": "64_16",
+        "enc_strds": [5, 4, 3, 2],
+        "fc_dim": 1152,
+        "fc_hw": "9_16",
         "ks": "0_1_5",
-        "lower_width": 8,
+        "lower_width": 12,
         "norm": "none",
         "num_blks": "1_1",
-        "num_blocks": 1,
+        "num_blocks": 6,
         "out_bias": "tanh",
         "reduce": 1.2,
     }
+
+
+def test_snerv_official_tub_source_config_lineage_accepts_resolved_nonfixture_config() -> None:
+    lineage = build_snerv_official_tub_source_config_lineage(
+        _resolved_source_config(),
+        source="unit_resolved_config",
+    )
+
+    assert lineage["exact_trained_config_loaded"] is True
+    assert lineage["source_config_is_fixture"] is False
+    assert lineage["source_config_kind"] == "official_snerv_t_train_config"
+    assert lineage["source_config_lineage"] == "official_trained_run_config"
+    assert lineage["blockers"] == []
+    assert len(lineage["source_config_sha256"]) == 64
+
+
+def test_snerv_official_tub_source_config_lineage_rejects_unresolved_args_yaml(
+    tmp_path: Path,
+) -> None:
+    cfg = _resolved_source_config()
+    cfg["fc_dim"] = None
+    cfg.pop("enc2_strds")
+    path = tmp_path / "args.yaml"
+    path.write_text(json.dumps(cfg, sort_keys=True) + "\n", encoding="utf-8")
+
+    lineage = build_snerv_official_tub_source_config_lineage_from_path(path)
+
+    blockers = set(lineage["blockers"])
+    assert lineage["exact_trained_config_loaded"] is False
+    assert lineage["source_config_is_fixture"] is False
+    assert SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER in blockers
+    assert SOURCE_CONFIG_FC_DIM_UNRESOLVED_BLOCKER in blockers
+    assert SOURCE_CONFIG_ENC2_STRDS_UNRESOLVED_BLOCKER in blockers
+    assert len(lineage["source_config_sha256"]) == 64
+
+
+def test_snerv_official_tub_source_config_lineage_rejects_fixture_config() -> None:
+    lineage = build_snerv_official_tub_source_config_lineage(
+        {
+            "act": "gelu",
+            "conv_type": ["convnext", "pshuffel"],
+            "crop_list": "640_1280",
+            "dec_strds": [1, 2, 2, 2, 2],
+            "emb_size": 20,
+            "embed": "",
+            "enc2_strds": [2, 2, 2, 2],
+            "enc_dim": "4_4",
+            "enc_strds": [2, 2, 2, 2],
+            "fc_dim": 8,
+            "fc_hw": "1_1",
+            "ks": "0_1_5",
+            "lower_width": 2,
+            "norm": "none",
+            "num_blks": "1_1",
+            "num_blocks": 1,
+            "out_bias": "tanh",
+            "reduce": 1.2,
+        },
+        source="unit_fixture_config",
+    )
+
+    assert lineage["exact_trained_config_loaded"] is False
+    assert lineage["source_config_is_fixture"] is True
+    assert SOURCE_CONFIG_FIXTURE_BLOCKER in lineage["blockers"]
 
 
 def test_snerv_official_tub_source_forward_replay_executes_output2_path() -> None:

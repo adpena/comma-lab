@@ -52,6 +52,9 @@ BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING = (
 BLOCKER_COMPOSITE_BASE_IDENTITY_PRODUCER_MISSING = (
     "inverse_scorer_composite_base_identity_producer_missing"
 )
+BLOCKER_WALL_NORMAL_RECEIPT_SCOPE_EMPTY = (
+    "inverse_scorer_wall_normal_receipt_fixed_scope_empty"
+)
 
 
 def _read_ledgers(paths: Sequence[Path]) -> list[ActionEffect]:
@@ -210,6 +213,74 @@ def _unique_effects(effects: Iterable[ActionEffect]) -> list[ActionEffect]:
         seen.add(key)
         out.append(effect)
     return out
+
+
+def _filter_pr110_effects(effects: Sequence[ActionEffect]) -> tuple[list[ActionEffect], list[str]]:
+    kept: list[ActionEffect] = []
+    dropped: list[str] = []
+    for effect in effects:
+        if effect.family.lower() == "pr110":
+            kept.append(effect)
+        else:
+            dropped.append(effect.action_id)
+    return kept, dropped
+
+
+def _wall_normal_receipt_effects(
+    effects: Sequence[ActionEffect],
+    *,
+    action_id: str | None,
+    support_sha256: str | None,
+    receiver_bound_only: bool,
+) -> tuple[list[ActionEffect], dict[str, Any]]:
+    filters = {
+        "action_id": action_id,
+        "support_sha256": support_sha256,
+        "receiver_bound_only": bool(receiver_bound_only),
+    }
+    if action_id is None and support_sha256 is None and not receiver_bound_only:
+        return list(effects), {
+            **filters,
+            "input_count": len(effects),
+            "filtered_count": len(effects),
+            "dropped_count": 0,
+            "blockers": [],
+        }
+
+    kept: list[ActionEffect] = []
+    dropped: list[dict[str, Any]] = []
+    for effect in effects:
+        reasons: list[str] = []
+        if action_id is not None and effect.action_id != action_id:
+            reasons.append("action_id_mismatch")
+        if support_sha256 is not None and effect.support_sha256 != support_sha256:
+            reasons.append("support_sha256_mismatch")
+        if receiver_bound_only and not (
+            effect.parseback_survived is True and effect.inflate_survived is True
+        ):
+            reasons.append("receiver_survival_missing")
+        if reasons:
+            dropped.append(
+                {
+                    "action_id": effect.action_id,
+                    "family": effect.family,
+                    "action_kind": effect.action_kind,
+                    "support_sha256": effect.support_sha256,
+                    "reasons": reasons,
+                }
+            )
+            continue
+        kept.append(effect)
+
+    blockers = [] if kept else [BLOCKER_WALL_NORMAL_RECEIPT_SCOPE_EMPTY]
+    return kept, {
+        **filters,
+        "input_count": len(effects),
+        "filtered_count": len(kept),
+        "dropped_count": len(dropped),
+        "dropped": dropped[:25],
+        "blockers": blockers,
+    }
 
 
 def _split_inverse_candidates(effects: Sequence[ActionEffect]) -> tuple[list[ActionEffect], list[ActionEffect]]:
@@ -474,6 +545,30 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Drop measured source rows whose exact_score_decision is reject.",
     )
+    parser.add_argument(
+        "--wall-normal-action-id",
+        default=None,
+        help=(
+            "Optional fixed action_id for wall-normal branch receipt construction. "
+            "Use this for sidecar/backend comparisons so stale rows cannot poison "
+            "the receipt."
+        ),
+    )
+    parser.add_argument(
+        "--wall-normal-support-sha256",
+        default=None,
+        help=(
+            "Optional fixed support SHA-256 for wall-normal branch receipt construction."
+        ),
+    )
+    parser.add_argument(
+        "--wall-normal-receiver-bound-only",
+        action="store_true",
+        help=(
+            "When building the wall-normal receipt, keep only rows that survived "
+            "parse-back and inflate."
+        ),
+    )
     return parser
 
 
@@ -490,7 +585,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             *_read_ledgers(args.seed_action_effects),
             *_read_training_artifacts(args.seed_training_artifact),
         ]
-        pr110_effects = _read_ledgers(args.pr110_action_effects) if args.pr110_action_effects else []
+        pr110_input_effects = (
+            _read_ledgers(args.pr110_action_effects) if args.pr110_action_effects else []
+        )
+        pr110_effects, non_pr110_pr110_input_action_ids = _filter_pr110_effects(
+            pr110_input_effects
+        )
         inverse_generation = generate_inverse_scorer_candidates(
             seed_effects,
             include_rejected=not args.exclude_rejected,
@@ -538,8 +638,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     test_log_path = out_dir / "test_log.txt"
 
     output_effects = _unique_effects([*pr110_effects, *inverse_effects])
+    wall_normal_receipt_source_effects = _unique_effects([*seed_effects, *output_effects])
+    wall_normal_effects, wall_normal_filter = _wall_normal_receipt_effects(
+        wall_normal_receipt_source_effects,
+        action_id=args.wall_normal_action_id,
+        support_sha256=args.wall_normal_support_sha256,
+        receiver_bound_only=args.wall_normal_receiver_bound_only,
+    )
     wall_normal_receipt = build_wall_normal_branch_receipt(
-        output_effects,
+        wall_normal_effects,
         source_artifact_paths=[
             *[path.as_posix() for path in args.seed_action_effects],
             *[path.as_posix() for path in args.seed_training_artifact],
@@ -562,6 +669,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "seed_action_effect_paths": [path.as_posix() for path in args.seed_action_effects],
         "seed_training_artifact_paths": [path.as_posix() for path in args.seed_training_artifact],
         "pr110_action_effect_paths": [path.as_posix() for path in args.pr110_action_effects],
+        "pr110_input_row_count": len(pr110_input_effects),
+        "pr110_filtered_non_pr110_count": len(non_pr110_pr110_input_action_ids),
+        "pr110_filtered_non_pr110_action_ids": non_pr110_pr110_input_action_ids[:25],
         "action_effect_rows_path": action_effect_path.as_posix(),
         "inverse_candidate_queue_path": queue_path.as_posix(),
         "candidate_queue_path": candidate_queue_alias_path.as_posix(),
@@ -576,6 +686,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_replay_row_count": len(pr110_effects),
         "inverse_candidate_count": len(inverse_effects),
         "action_effect_row_count": action_effect_count,
+        "wall_normal_receipt_source_row_count": len(wall_normal_receipt_source_effects),
         "queue_row_count": queue_count,
         "score_program_operation_count": score_program_word["operation_count"],
         "score_program_blockers": list(score_program_word["blockers"]),
@@ -589,11 +700,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         "menu_ilp_blockers": menu_ilp_blockers,
         "wall_normal_branch_count": wall_normal_receipt["branch_count"],
         "wall_normal_first_failing_surface": wall_normal_receipt["first_failing_surface"],
-        "wall_normal_blockers": list(wall_normal_receipt["blockers"]),
+        "wall_normal_blockers": _dedupe(
+            [
+                *list(wall_normal_filter.get("blockers") or []),
+                *list(wall_normal_receipt["blockers"]),
+            ]
+        ),
+        "wall_normal_receipt_filter": wall_normal_filter,
         "policy": {
             "measured_effects_only_no_synthetic_scorer_motion": True,
             "pr110_k16_baseline_required_before_menu_ilp": True,
             "commutator_values_measured_never_invented": True,
+            "pr110_input_filtered_by_family": True,
+            "wall_normal_receipt_fixed_scope_filter_available": True,
             "default_artifact_tier": "ssd",
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,

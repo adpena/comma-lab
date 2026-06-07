@@ -57,6 +57,8 @@ def build_snerv_source_forward_proof_from_archive_packet(
     official_torch_checkpoint_state_dict_kind: str = (
         "official_trained_checkpoint_state_dict"
     ),
+    official_torch_source_config_path: str | None = None,
+    official_torch_source_config_kind: str = "official_trained_run_config",
     pact_mlx_tensors: Mapping[str, Any] | None = None,
     capture_pact_mlx_from_archive: bool = False,
     scorer_tensors_by_surface: Mapping[str, Mapping[str, Any]] | None = None,
@@ -154,6 +156,12 @@ def build_snerv_source_forward_proof_from_archive_packet(
                     ),
                     official_trained_checkpoint_state_dict_kind=(
                         official_torch_checkpoint_state_dict_kind
+                    ),
+                    official_trained_source_config_path=(
+                        official_torch_source_config_path
+                    ),
+                    official_trained_source_config_kind=(
+                        official_torch_source_config_kind
                     ),
                 )
             )
@@ -1132,6 +1140,8 @@ def build_official_torch_upstream_fixture_tensors(
     official_trained_checkpoint_state_dict_kind: str = (
         "official_trained_checkpoint_state_dict"
     ),
+    official_trained_source_config_path: str | None = None,
+    official_trained_source_config_kind: str = "official_trained_run_config",
 ) -> dict[str, Any]:
     """Capture official Torch tensors from pinned upstream ``SNeRV_T.forward``."""
 
@@ -1150,6 +1160,8 @@ def build_official_torch_upstream_fixture_tensors(
         official_trained_checkpoint_state_dict_kind=(
             official_trained_checkpoint_state_dict_kind
         ),
+        official_trained_source_config_path=official_trained_source_config_path,
+        official_trained_source_config_kind=official_trained_source_config_kind,
     )
 
 
