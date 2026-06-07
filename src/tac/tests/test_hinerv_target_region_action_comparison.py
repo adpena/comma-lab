@@ -321,8 +321,38 @@ def test_hinerv_action_comparison_consumes_birth_action_effects_for_full_lowerin
         _lowering_source_effect(
             action_id="hinerv-test-action",
             support_sha256=support_sha,
+            action_kind="pair_local_latent_adapter",
+            lowering_target="pair_local_latent_action",
+        ).as_dict(),
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
+            action_kind="frame0_pose_compensation",
+            lowering_target="frame0_pose_compensation",
+        ).as_dict(),
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
+            action_kind="frame1_seg_wall_crossing",
+            lowering_target="frame1_seg_wall_crossing",
+        ).as_dict(),
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
             action_kind="joint_line_search_composite",
             lowering_target="pose_compensated_composite",
+        ).as_dict(),
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
+            action_kind="snerv_lf_hf_mfu_hfr_tub_source_state",
+            lowering_target="snerv_source_state_action",
+        ).as_dict(),
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
+            action_kind="byte_entropy_rewrite_ans",
+            lowering_target="byte_entropy_rewrite",
         ).as_dict(),
     ]
 
@@ -338,9 +368,14 @@ def test_hinerv_action_comparison_consumes_birth_action_effects_for_full_lowerin
     assert accounting["missing_targets"] == []
     assert set(accounting["present_targets"]) == {
         "backend_realization",
+        "pair_local_latent_action",
+        "frame0_pose_compensation",
+        "frame1_seg_wall_crossing",
         "byte_priced_sidecar",
         "pose_compensated_composite",
+        "snerv_source_state_action",
         "semantic_pose_primitive",
+        "byte_entropy_rewrite",
     }
     candidates_by_target = {
         row["lowering_target"]: row

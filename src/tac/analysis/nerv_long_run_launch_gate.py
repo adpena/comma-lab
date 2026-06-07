@@ -70,9 +70,14 @@ HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA = "hi_nerv_target_region_actio
 EVALUATOR_ACTION_LOWERING_RACE_SCHEMA = "tac.evaluator_action_lowering_race.v1"
 EVALUATOR_ACTION_LOWERING_TARGETS: tuple[str, ...] = (
     "backend_realization",
+    "pair_local_latent_action",
+    "frame0_pose_compensation",
+    "frame1_seg_wall_crossing",
     "byte_priced_sidecar",
     "pose_compensated_composite",
+    "snerv_source_state_action",
     "semantic_pose_primitive",
+    "byte_entropy_rewrite",
 )
 SUPPORTED_FAMILIES = ("hinerv", "hi_nerv", "snerv")
 SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
@@ -1008,12 +1013,15 @@ def _require_hi_nerv_lowering_race_evidence(
                 f"evaluator_action_lowering_race_support_mismatch:{row_id}"
             )
             continue
+        candidate_shape_blockers = _lowering_race_candidate_shape_blockers(row, row_id=row_id)
+        if candidate_shape_blockers:
+            candidate_blockers.extend(candidate_shape_blockers)
+            continue
         best_lowering = str(row.get("best_lowering") or verdict.get("best_lowering") or "none")
-        if best_lowering in {"", "none"}:
+        if best_lowering in {"", "none", "discard"}:
             candidate_blockers.append(
                 f"evaluator_action_lowering_race_no_viable_lowering:{row_id}"
             )
-            continue
         first_failing = str(
             row.get("first_failing_surface")
             or verdict.get("first_failing_surface")
@@ -1023,6 +1031,8 @@ def _require_hi_nerv_lowering_race_evidence(
             candidate_blockers.append(
                 f"evaluator_action_lowering_race_failed_surface:{row_id}:{first_failing}"
             )
+            continue
+        if best_lowering in {"", "none", "discard"}:
             continue
         authority = str(verdict.get("authority") or "").strip()
         if not authority or authority == "none":
@@ -1048,6 +1058,47 @@ def _require_hi_nerv_lowering_race_evidence(
     blockers.extend(_dedupe(candidate_blockers))
 
 
+def _lowering_race_candidate_shape_blockers(row: Mapping[str, Any], *, row_id: str) -> list[str]:
+    candidates = row.get("lowering_candidates")
+    if not isinstance(candidates, list):
+        return []
+    support_sha256 = str(row.get("support_sha256") or "").strip()
+    out: list[str] = []
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            out.append(f"evaluator_action_lowering_race_candidate_malformed:{row_id}")
+            continue
+        candidate_action_id = str(candidate.get("action_id") or "").strip()
+        if candidate_action_id and candidate_action_id != row_id:
+            out.append(f"evaluator_action_lowering_race_action_id_mismatch:{row_id}")
+        if support_sha256:
+            candidate_support = str(candidate.get("support_sha256") or "").strip()
+            if candidate_support and candidate_support != support_sha256:
+                out.append(f"evaluator_action_lowering_race_support_mismatch:{row_id}")
+        target = str(candidate.get("lowering_target") or "").strip()
+        if target == "byte_priced_sidecar":
+            if not str(candidate.get("support_encoding") or "").strip():
+                out.append(f"evaluator_action_lowering_race_selected_codec_missing:{row_id}")
+            if candidate.get("support_encoded_bytes") is None:
+                out.append(f"evaluator_action_lowering_race_byte_accounting_missing:{row_id}")
+        if candidate.get("action_payload_bytes") is None or candidate.get("metadata_bytes") is None:
+            out.append(f"evaluator_action_lowering_race_byte_accounting_missing:{row_id}")
+        if candidate.get("viable") is True:
+            authority = str(candidate.get("authority") or "").strip()
+            if not authority or authority == "none":
+                out.append(f"evaluator_action_lowering_race_authority_missing:{row_id}")
+        failure = str(candidate.get("first_failing_surface") or "").strip()
+        if failure == "BYTE_ACCOUNTING_MISSING":
+            out.append(f"evaluator_action_lowering_race_byte_accounting_missing:{row_id}")
+        elif failure == "PARSEBACK_FAILED":
+            out.append(f"evaluator_action_lowering_race_parseback_missing:{row_id}")
+        elif failure == "INFLATE_FAILED":
+            out.append(f"evaluator_action_lowering_race_inflate_missing:{row_id}")
+        elif failure == "SUPPORT_IDENTITY_MISMATCH":
+            out.append(f"evaluator_action_lowering_race_support_mismatch:{row_id}")
+    return _dedupe(out)
+
+
 def _lowering_race_candidate_count(row: Mapping[str, Any]) -> int | None:
     count = row.get("candidate_count")
     if count is not None:
@@ -1063,15 +1114,27 @@ def _lowering_race_candidate_count(row: Mapping[str, Any]) -> int | None:
 def _lowering_race_missing_targets(row: Mapping[str, Any]) -> list[str]:
     accounting = row.get("target_accounting")
     if isinstance(accounting, Mapping):
+        expected = accounting.get("expected_targets")
+        declared_expected = (
+            {str(value) for value in expected if str(value) in EVALUATOR_ACTION_LOWERING_TARGETS}
+            if isinstance(expected, list)
+            else set()
+        )
+        missing_from_expected = [
+            target
+            for target in EVALUATOR_ACTION_LOWERING_TARGETS
+            if target not in declared_expected
+        ] if declared_expected else []
         missing = accounting.get("missing_targets")
         if isinstance(missing, list):
-            return [
+            producer_missing = [
                 str(value)
                 for value in missing
                 if str(value) in EVALUATOR_ACTION_LOWERING_TARGETS
             ]
+            return _dedupe([*missing_from_expected, *producer_missing])
         if accounting.get("all_targets_accounted") is True:
-            return []
+            return missing_from_expected
     candidates = row.get("lowering_candidates")
     if not isinstance(candidates, list):
         return list(EVALUATOR_ACTION_LOWERING_TARGETS)

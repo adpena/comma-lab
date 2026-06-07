@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect
 
 LOWERING_RACE_SCHEMA = "tac.evaluator_action_lowering_race.v1"
@@ -18,9 +19,14 @@ LOWERING_CANDIDATE_SCHEMA = "tac.evaluator_action_lowering_candidate.v1"
 
 LOWERING_TARGETS = (
     "backend_realization",
+    "pair_local_latent_action",
+    "frame0_pose_compensation",
+    "frame1_seg_wall_crossing",
     "byte_priced_sidecar",
     "pose_compensated_composite",
+    "snerv_source_state_action",
     "semantic_pose_primitive",
+    "byte_entropy_rewrite",
 )
 
 DIRECT_TEACHER_NO_WALL_CROSS = "DIRECT_TEACHER_NO_WALL_CROSS"
@@ -28,6 +34,12 @@ BACKEND_REALIZATION_FAILED = "BACKEND_REALIZATION_FAILED"
 SIDECAR_TOO_EXPENSIVE = "SIDECAR_TOO_EXPENSIVE"
 COMPOSITE_NOT_MEASURED = "COMPOSITE_NOT_MEASURED"
 SEMANTIC_PRIMITIVE_MISSING = "SEMANTIC_PRIMITIVE_MISSING"
+PAIR_LOCAL_LATENT_NOT_MEASURED = "PAIR_LOCAL_LATENT_NOT_MEASURED"
+FRAME0_POSE_COMPENSATION_NOT_MEASURED = "FRAME0_POSE_COMPENSATION_NOT_MEASURED"
+FRAME1_SEG_WALL_CROSSING_NOT_MEASURED = "FRAME1_SEG_WALL_CROSSING_NOT_MEASURED"
+SNERV_SOURCE_STATE_NOT_MEASURED = "SNERV_SOURCE_STATE_NOT_MEASURED"
+BYTE_ENTROPY_REWRITE_NOT_MEASURED = "BYTE_ENTROPY_REWRITE_NOT_MEASURED"
+DISCARD_NOT_DECLARED = "DISCARD_NOT_DECLARED"
 PARSEBACK_FAILED = "PARSEBACK_FAILED"
 INFLATE_FAILED = "INFLATE_FAILED"
 FAKEQUANT_FAILED = "FAKEQUANT_FAILED"
@@ -60,6 +72,10 @@ class LoweringVerdict:
     delta_score_total: float | None
     delta_bytes: int | None
     value_per_byte: float | None
+    bytes_by_section: dict[str, int | None]
+    exact_score_terms: dict[str, float | int | None]
+    target_statuses: dict[str, str]
+    next_blocker: str
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -81,6 +97,10 @@ class LoweringVerdict:
             "delta_score_total": self.delta_score_total,
             "delta_bytes": self.delta_bytes,
             "value_per_byte": self.value_per_byte,
+            "bytes_by_section": dict(self.bytes_by_section),
+            "exact_score_terms": dict(self.exact_score_terms),
+            "target_statuses": dict(self.target_statuses),
+            "next_blocker": self.next_blocker,
         }
 
 
@@ -111,6 +131,10 @@ def build_lowering_race_report(
     viable = [row for row in candidates if row["viable"] is True]
     best = min(viable, key=lambda row: (float(row["delta_score_total"]), int(row["delta_bytes"] or 0)), default=None)
     first_failure = "none" if best is not None else _first_failure(statuses, candidates)
+    next_blocker = _next_blocker(
+        first_failure=first_failure,
+        missing_targets=target_accounting["missing_targets"],
+    )
     verdict = LoweringVerdict(
         action_id=action_id,
         pair_id=_first_pair_id([row.effect for row in race_inputs]),
@@ -121,7 +145,7 @@ def build_lowering_race_report(
         sidecar_status=statuses["byte_priced_sidecar"],
         composite_status=statuses["pose_compensated_composite"],
         semantic_pose_status=statuses["semantic_pose_primitive"],
-        best_lowering="none" if best is None else str(best["lowering_target"]),
+        best_lowering="discard" if best is None else str(best["lowering_target"]),
         first_failing_surface=first_failure,
         authority="none" if best is None else str(best["authority"]),
         promotion_eligible=False,
@@ -129,7 +153,12 @@ def build_lowering_race_report(
         delta_score_total=None if best is None else _float_or_none(best.get("delta_score_total")),
         delta_bytes=None if best is None else _int_or_none(best.get("delta_bytes")),
         value_per_byte=None if best is None else _float_or_none(best.get("value_per_byte")),
+        bytes_by_section={} if best is None else _bytes_by_section(best),
+        exact_score_terms={} if best is None else _exact_score_terms(best),
+        target_statuses=statuses,
+        next_blocker=next_blocker,
     )
+    commutator_ledger = _commutator_ledger_for_candidates(candidates, race_inputs)
     return {
         "schema": LOWERING_RACE_SCHEMA,
         "action_id": action_id,
@@ -138,6 +167,7 @@ def build_lowering_race_report(
         "candidate_count": len(candidates),
         "target_accounting": target_accounting,
         "support_identity": support_identity,
+        "commutator_ledger": commutator_ledger,
         "support_codec_summary": _support_codec_summary(support_codec_report),
         "promotion_eligible": False,
         "score_claim": False,
@@ -262,7 +292,8 @@ def _support_identity_status(
     failure: str | None = None
     if missing_count:
         blockers.append("lowering_race_support_sha256_missing")
-        failure = SUPPORT_IDENTITY_MISSING
+        if not support_hashes:
+            failure = SUPPORT_IDENTITY_MISSING
     if expected and any(support != expected for support in support_hashes):
         blockers.append("lowering_race_expected_support_sha256_mismatch")
         failure = SUPPORT_IDENTITY_MISMATCH
@@ -306,9 +337,14 @@ def _target_status(target: str, rows: Sequence[Mapping[str, Any]]) -> str:
     if not rows:
         return {
             "backend_realization": BACKEND_REALIZATION_FAILED,
+            "pair_local_latent_action": PAIR_LOCAL_LATENT_NOT_MEASURED,
+            "frame0_pose_compensation": FRAME0_POSE_COMPENSATION_NOT_MEASURED,
+            "frame1_seg_wall_crossing": FRAME1_SEG_WALL_CROSSING_NOT_MEASURED,
             "byte_priced_sidecar": SIDECAR_TOO_EXPENSIVE,
             "pose_compensated_composite": COMPOSITE_NOT_MEASURED,
+            "snerv_source_state_action": SNERV_SOURCE_STATE_NOT_MEASURED,
             "semantic_pose_primitive": SEMANTIC_PRIMITIVE_MISSING,
+            "byte_entropy_rewrite": BYTE_ENTROPY_REWRITE_NOT_MEASURED,
         }[target]
     if any(row.get("viable") is True for row in rows):
         return "accepted"
@@ -338,9 +374,31 @@ def _lowering_target(effect: ActionEffect) -> str:
             " ".join(effect.payload_sections),
         )
     ).lower()
+    if "support_codec=" in text or effect.support_encoding in {
+        "rle",
+        "bitmap_bitset",
+        "coordinate_list_u16",
+        "tile_set_8x8_bitmap",
+        "tile_set_16x16_bitmap",
+        "target_region_action_coordinates_v1",
+        "explicit_yx_u16_coordinates",
+    }:
+        return "byte_priced_sidecar"
     if (
         "frame0_pose_target_only" in text
-        or "independent_birth_plus_frame0_pose" in text
+        or "frame0_pose_compensation" in text
+        or "pose_only_compensation" in text
+    ):
+        return "frame0_pose_compensation"
+    if (
+        "frame1_seg_wall_crossing" in text
+        or "seg_wall_crossing" in text
+        or "seg_frontier" in text
+        or "wall_crossing" in text
+    ):
+        return "frame1_seg_wall_crossing"
+    if (
+        "independent_birth_plus_frame0_pose" in text
         or "joint_line_search_composite" in text
         or "frame0_pose_then_birth_composite" in text
         or "composite" in text
@@ -348,6 +406,26 @@ def _lowering_target(effect: ActionEffect) -> str:
         or "then_pose" in text
     ):
         return "pose_compensated_composite"
+    if (
+        "snerv" in text
+        or "mfu" in text
+        or "hfr" in text
+        or " tub " in f" {text} "
+        or "tub_" in text
+        or "_tub" in text
+        or "lf_hf" in text
+    ):
+        return "snerv_source_state_action"
+    if (
+        "byte_entropy" in text
+        or "entropy_rewrite" in text
+        or "byte_rewrite" in text
+        or "range_coder" in text
+        or "ans" in text
+    ):
+        return "byte_entropy_rewrite"
+    if "discard" in text or "no_op" in text:
+        return "discard"
     if (
         "semantic" in text
         or "latent_derived" in text
@@ -357,11 +435,15 @@ def _lowering_target(effect: ActionEffect) -> str:
         return "semantic_pose_primitive"
     if (
         "backend" in text
+        or "pair_local_latent" in text
+        or "pair_latent" in text
         or "wall_normal" in text
         or "adapter" in text
         or "birth_only" in text
         or "target_region_birth" in text
     ):
+        if "pair_local_latent" in text or "pair_latent" in text:
+            return "pair_local_latent_action"
         return "backend_realization"
     return "byte_priced_sidecar"
 
@@ -466,7 +548,65 @@ def _normalize_lowering_target(value: str | None) -> str | None:
     if value is None:
         return None
     normalized = value.strip().lower().replace("-", "_")
+    aliases = {
+        "backend": "backend_realization",
+        "pair_local_latent": "pair_local_latent_action",
+        "frame0_pose": "frame0_pose_compensation",
+        "frame1_seg": "frame1_seg_wall_crossing",
+        "sidecar": "byte_priced_sidecar",
+        "composite": "pose_compensated_composite",
+        "semantic_pose": "semantic_pose_primitive",
+        "byte_rewrite": "byte_entropy_rewrite",
+        "snerv": "snerv_source_state_action",
+    }
+    normalized = aliases.get(normalized, normalized)
     return normalized if normalized in LOWERING_TARGETS else None
+
+
+def _bytes_by_section(candidate: Mapping[str, Any]) -> dict[str, int | None]:
+    return {
+        "support_encoded_bytes": _int_or_none(candidate.get("support_encoded_bytes")),
+        "action_payload_bytes": _int_or_none(candidate.get("action_payload_bytes")),
+        "metadata_bytes": _int_or_none(candidate.get("metadata_bytes")),
+        "delta_bytes": _int_or_none(candidate.get("delta_bytes")),
+    }
+
+
+def _exact_score_terms(candidate: Mapping[str, Any]) -> dict[str, float | int | None]:
+    return {
+        "delta_score_nonrate": _float_or_none(candidate.get("delta_score_nonrate")),
+        "delta_score_total": _float_or_none(candidate.get("delta_score_total")),
+        "delta_bytes": _int_or_none(candidate.get("delta_bytes")),
+        "value_per_byte": _float_or_none(candidate.get("value_per_byte")),
+    }
+
+
+def _next_blocker(*, first_failure: str, missing_targets: Sequence[str]) -> str:
+    if first_failure and first_failure != "none":
+        return first_failure
+    if missing_targets:
+        return f"measure_lowering_target:{missing_targets[0]}"
+    return "none"
+
+
+def _commutator_ledger_for_candidates(
+    candidates: Sequence[Mapping[str, Any]],
+    race_inputs: Sequence[_RaceInput],
+) -> dict[str, Any]:
+    singles: list[ActionEffect] = []
+    pairs: list[ActionEffect] = []
+    for row, candidate in zip(race_inputs, candidates, strict=False):
+        target = str(candidate.get("lowering_target") or _lowering_target(row.effect))
+        if target == "pose_compensated_composite":
+            pairs.append(row.effect)
+        elif target != "discard":
+            singles.append(row.effect)
+    return build_commutator_ledger(
+        singles,
+        pairs,
+        use_default_measurement_command=False,
+        measurement_command_blockers=("lowering_race_measurement_command_not_bound",),
+    )
 
 
 def _first_pair_id(effects: Sequence[ActionEffect]) -> int | None:
@@ -518,19 +658,25 @@ __all__ = [
     "ACTION_EFFECT_BLOCKED",
     "BACKEND_REALIZATION_FAILED",
     "BYTE_ACCOUNTING_MISSING",
+    "BYTE_ENTROPY_REWRITE_NOT_MEASURED",
     "COMPOSITE_NOT_MEASURED",
     "DIRECT_TEACHER_NO_WALL_CROSS",
+    "DISCARD_NOT_DECLARED",
     "EXACT_SCORE_REJECTED",
     "FAKEQUANT_FAILED",
+    "FRAME0_POSE_COMPENSATION_NOT_MEASURED",
+    "FRAME1_SEG_WALL_CROSSING_NOT_MEASURED",
     "INFLATE_FAILED",
     "INVALID_LOWERING_TARGET",
     "LOWERING_CANDIDATE_SCHEMA",
     "LOWERING_RACE_SCHEMA",
     "LOWERING_TARGETS",
     "LOWERING_VERDICT_SCHEMA",
+    "PAIR_LOCAL_LATENT_NOT_MEASURED",
     "PARSEBACK_FAILED",
     "SEMANTIC_PRIMITIVE_MISSING",
     "SIDECAR_TOO_EXPENSIVE",
+    "SNERV_SOURCE_STATE_NOT_MEASURED",
     "SUPPORT_IDENTITY_MISMATCH",
     "SUPPORT_IDENTITY_MISSING",
     "LoweringVerdict",

@@ -15,9 +15,11 @@ from tac.analysis.evaluator_action_lowering_race import (
     FAKEQUANT_FAILED,
     INFLATE_FAILED,
     INVALID_LOWERING_TARGET,
+    LOWERING_TARGETS,
     PARSEBACK_FAILED,
     SEMANTIC_PRIMITIVE_MISSING,
     SUPPORT_IDENTITY_MISMATCH,
+    SUPPORT_IDENTITY_MISSING,
     build_lowering_race_report,
 )
 
@@ -31,7 +33,7 @@ def _effect(
     parseback: bool = False,
     inflate: bool = False,
     fakequant: bool = True,
-    support_sha256: str = "a" * 64,
+    support_sha256: str | None = "a" * 64,
     payload_sections: tuple[str, ...] = ("support_codec=rle", "action_payload_bytes=0", "metadata_bytes=0"),
 ) -> ActionEffect:
     old_d_seg, new_d_seg = (0.2, 0.19) if delta_good else (0.2, 0.2)
@@ -76,16 +78,17 @@ def test_lowering_race_blocks_sidecar_without_parseback_inflate_and_names_missin
     verdict = report["verdict"]
     sidecar = report["lowering_candidates"][0]
 
-    assert verdict["best_lowering"] == "none"
+    assert verdict["best_lowering"] == "discard"
+    assert verdict["next_blocker"] == PARSEBACK_FAILED
     assert verdict["sidecar_status"] == PARSEBACK_FAILED
     assert verdict["composite_status"] == COMPOSITE_NOT_MEASURED
     assert verdict["semantic_pose_status"] == SEMANTIC_PRIMITIVE_MISSING
-    assert report["target_accounting"]["missing_targets"] == [
-        "backend_realization",
-        "pose_compensated_composite",
-        "semantic_pose_primitive",
-    ]
+    assert report["target_accounting"]["expected_targets"] == list(LOWERING_TARGETS)
+    assert "pair_local_latent_action" in report["target_accounting"]["missing_targets"]
+    assert "frame0_pose_compensation" in report["target_accounting"]["missing_targets"]
+    assert "byte_entropy_rewrite" in report["target_accounting"]["missing_targets"]
     assert report["target_accounting"]["all_targets_accounted"] is False
+    assert report["commutator_ledger"]["schema"] == "tac.action_commutator_ledger.v1"
     assert sidecar["support_encoded_bytes"] == 100
     assert sidecar["action_payload_bytes"] == 0
     assert sidecar["metadata_bytes"] == 0
@@ -112,7 +115,7 @@ def test_lowering_race_requires_fakequant_survival_before_acceptance() -> None:
 
     report = build_lowering_race_report(action_id="action-1", action_effects=[row])
 
-    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["best_lowering"] == "discard"
     assert report["verdict"]["first_failing_surface"] == FAKEQUANT_FAILED
     assert report["lowering_candidates"][0]["viable"] is False
 
@@ -129,7 +132,7 @@ def test_lowering_race_requires_same_support_for_same_action() -> None:
 
     report = build_lowering_race_report(action_id="action-1", action_effects=[sidecar, composite])
 
-    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["best_lowering"] == "discard"
     assert report["verdict"]["first_failing_surface"] == SUPPORT_IDENTITY_MISMATCH
     assert report["support_identity"]["all_candidates_same_support"] is False
     assert "lowering_race_candidate_support_sha256_mismatch" in report["support_identity"]["blockers"]
@@ -145,7 +148,7 @@ def test_lowering_race_expected_support_hash_is_authoritative() -> None:
         expected_support_sha256="a" * 64,
     )
 
-    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["best_lowering"] == "discard"
     assert report["verdict"]["first_failing_surface"] == SUPPORT_IDENTITY_MISMATCH
     assert "lowering_race_expected_support_sha256_mismatch" in report["support_identity"]["blockers"]
 
@@ -190,7 +193,7 @@ def test_lowering_race_invalid_explicit_target_fails_closed() -> None:
 
     assert candidate["viable"] is False
     assert candidate["first_failing_surface"] == INVALID_LOWERING_TARGET
-    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["best_lowering"] == "discard"
 
 
 def test_lowering_race_rejects_missing_byte_accounting() -> None:
@@ -236,7 +239,7 @@ def test_lowering_race_rejects_blocked_negative_delta_row() -> None:
 
     report = build_lowering_race_report(action_id="action-1", action_effects=[good_but_blocked])
 
-    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["best_lowering"] == "discard"
     assert report["lowering_candidates"][0]["viable"] is False
     assert report["lowering_candidates"][0]["first_failing_surface"] == "support_identity_mismatch"
 
@@ -278,7 +281,70 @@ def test_lowering_race_consumes_support_codec_report_and_cli_writes_verdict(tmp_
 
     assert proc.returncode == 0, proc.stderr
     summary = json.loads(proc.stdout)
-    assert summary["best_lowering"] == "none"
+    assert summary["best_lowering"] == "discard"
     assert summary["first_failing_surface"] in {PARSEBACK_FAILED, INFLATE_FAILED}
     verdict = json.loads((out_dir / "lowering_verdict.json").read_text(encoding="utf-8"))
     assert verdict["action_id"] == effect.action_id
+
+
+def test_lowering_race_reports_exact_bytes_score_terms_for_winner() -> None:
+    sidecar = _effect(delta_good=True, parseback=True, inflate=True)
+
+    report = build_lowering_race_report(action_id="action-1", action_effects=[sidecar])
+    verdict = report["verdict"]
+
+    assert verdict["best_lowering"] == "byte_priced_sidecar"
+    assert verdict["bytes_by_section"] == {
+        "action_payload_bytes": 0,
+        "delta_bytes": 100,
+        "metadata_bytes": 0,
+        "support_encoded_bytes": 100,
+    }
+    assert verdict["exact_score_terms"]["delta_score_total"] == verdict["delta_score_total"]
+    assert verdict["exact_score_terms"]["value_per_byte"] == verdict["value_per_byte"]
+
+
+def test_lowering_race_missing_support_branch_does_not_poison_supported_sidecar() -> None:
+    sidecar = _effect(
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+        support_sha256="a" * 64,
+        payload_sections=(
+            "lowering_target=byte_priced_sidecar",
+            "support_codec=rle",
+            "action_payload_bytes=0",
+            "metadata_bytes=0",
+        ),
+    )
+    backend = _effect(
+        action_kind="backend_target_region_fit",
+        support_encoding=None,
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+        support_sha256=None,
+        payload_sections=(
+            "lowering_target=backend_realization",
+            "action_payload_bytes=0",
+            "metadata_bytes=0",
+        ),
+    )
+
+    report = build_lowering_race_report(
+        action_id="action-1",
+        action_effects=[sidecar, backend],
+        expected_support_sha256="a" * 64,
+    )
+    candidates = {
+        str(row["lowering_target"]): row for row in report["lowering_candidates"]
+    }
+
+    assert report["verdict"]["best_lowering"] == "byte_priced_sidecar"
+    assert report["verdict"]["first_failing_surface"] == "none"
+    assert report["support_identity"]["failure"] is None
+    assert "lowering_race_support_sha256_missing" in report["support_identity"]["blockers"]
+    assert candidates["byte_priced_sidecar"]["viable"] is True
+    assert candidates["byte_priced_sidecar"]["first_failing_surface"] == "none"
+    assert candidates["backend_realization"]["viable"] is False
+    assert candidates["backend_realization"]["first_failing_surface"] == SUPPORT_IDENTITY_MISSING

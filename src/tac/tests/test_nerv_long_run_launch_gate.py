@@ -615,9 +615,14 @@ def _hi_nerv_lowering_race(
 ) -> dict:
     targets = [
         "backend_realization",
+        "pair_local_latent_action",
+        "frame0_pose_compensation",
+        "frame1_seg_wall_crossing",
         "byte_priced_sidecar",
         "pose_compensated_composite",
+        "snerv_source_state_action",
         "semantic_pose_primitive",
+        "byte_entropy_rewrite",
     ]
     row = {
         "schema": HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
@@ -640,7 +645,7 @@ def _hi_nerv_lowering_race(
             "value_per_byte": 7.8125e-5,
         },
         "current_sidecar_candidate_id": "current_hiv1_target_region_action_brotli",
-        "candidate_count": 4,
+        "candidate_count": len(targets),
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
@@ -670,9 +675,14 @@ def _native_hi_nerv_lowering_race(
 ) -> dict:
     targets = [
         "backend_realization",
+        "pair_local_latent_action",
+        "frame0_pose_compensation",
+        "frame1_seg_wall_crossing",
         "byte_priced_sidecar",
         "pose_compensated_composite",
+        "snerv_source_state_action",
         "semantic_pose_primitive",
+        "byte_entropy_rewrite",
     ]
     if lowering_candidate_count <= 0:
         candidate_targets: list[str] = []
@@ -693,6 +703,12 @@ def _native_hi_nerv_lowering_race(
                 "schema": "tac.evaluator_action_lowering_candidate.v1",
                 "action_id": action_id,
                 "lowering_target": target,
+                "authority": authority,
+                "support_sha256": "9" * 64,
+                "support_encoding": "target_region_action_coordinates_v1",
+                "support_encoded_bytes": 8192,
+                "action_payload_bytes": 0,
+                "metadata_bytes": 0,
                 "viable": target == best_lowering,
                 "first_failing_surface": (
                     "none" if target == best_lowering else "fixture_not_selected"
@@ -1253,6 +1269,67 @@ def test_hinerv_gate_rejects_native_lowering_race_without_all_targets(
     assert any(
         blocker.startswith(f"evaluator_action_lowering_race_targets_missing:{ACTION}:")
         for blocker in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_stale_lowering_race_target_accounting(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    row = _native_hi_nerv_lowering_race(lowering_candidate_count=9)
+    row["target_accounting"]["expected_targets"] = [
+        "backend_realization",
+        "byte_priced_sidecar",
+        "pose_compensated_composite",
+        "semantic_pose_primitive",
+    ]
+    row["target_accounting"]["missing_targets"] = []
+    row["target_accounting"]["all_targets_accounted"] = True
+    _write(root / "lowering_race.json", row)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert any(
+        "pair_local_latent_action" in blocker
+        and blocker.startswith(f"evaluator_action_lowering_race_targets_missing:{ACTION}:")
+        for blocker in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_names_lowering_race_parseback_blocker(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    row = _native_hi_nerv_lowering_race(
+        lowering_candidate_count=10,
+        best_lowering="discard",
+        first_failing_surface="PARSEBACK_FAILED",
+        delta_score_total=None,
+        authority="none",
+    )
+    row["lowering_candidates"][0]["viable"] = False
+    row["lowering_candidates"][0]["first_failing_surface"] = "PARSEBACK_FAILED"
+    _write(root / "lowering_race.json", row)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert (
+        f"evaluator_action_lowering_race_parseback_missing:{ACTION}"
+        in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
 
