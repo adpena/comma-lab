@@ -139,6 +139,97 @@ def _pr110_k1_replay_effect() -> ActionEffect:
     )
 
 
+def _four_arm_training_artifact() -> dict:
+    base = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "artifact_four_arm_action",
+        "parameter_group_sha256_before": {"head_rgb_0": "a" * 64, "head_rgb_1": "b" * 64},
+        "four_arm_ablation": {
+            "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
+            "action_id": "artifact_four_arm_action",
+            "authority": "batch_local_live_mlx",
+            "normalization_scope": "batch_local",
+            "parameter_group_sha256_before": {"head_rgb_0": "a" * 64, "head_rgb_1": "b" * 64},
+            "arms": [
+                _four_arm_row("A", "birth_only", -0.2, wrong_to_target=4, uint8_changed=16),
+                _four_arm_row("B", "frame0_pose_target_only", -0.3, pose_delta=1.0),
+                _four_arm_row(
+                    "C",
+                    "independent_birth_plus_frame0_pose",
+                    -0.8,
+                    wrong_to_target=5,
+                    uint8_changed=24,
+                    pose_delta=1.5,
+                    comm=-0.3,
+                ),
+            ],
+        },
+    }
+    return {"schema": "synthetic_training_artifact.v1", "target_region_birth_actuator": base}
+
+
+def _four_arm_row(
+    arm: str,
+    action_kind: str,
+    delta: float,
+    *,
+    wrong_to_target: int = 0,
+    uint8_changed: int = 0,
+    pose_delta: float | None = None,
+    comm: float | None = None,
+) -> dict:
+    return {
+        "schema": "hi_nerv_target_region_birth_four_arm.v1",
+        "action_id": "artifact_four_arm_action",
+        "authority": "batch_local_live_mlx",
+        "normalization_scope": "batch_local",
+        "action_kind": action_kind,
+        "arm": arm,
+        "decision": "measured",
+        "accepted": True,
+        "blockers": [],
+        "pair_index": 0,
+        "worst_region": {
+            "schema": "hi_nerv_target_region_debt.v1",
+            "batch_index": 0,
+            "class_index": 4,
+            "region_label": 1,
+            "region_pixel_count": 12,
+            "region_unsolved_pixel_count": 12,
+            "score_debt_units": 1.0,
+        },
+        "updated_parameter_names": ["head_rgb_0"] if "frame0" in action_kind else ["head_rgb_1"],
+        "trained_groups": ["compensation_head_rgb_0"] if "frame0" in action_kind else ["head_rgb_1"],
+        "exact_nonrate": {
+            "old_d_seg_batch": 0.5,
+            "new_d_seg_batch": 0.5 + delta / 100.0,
+            "old_d_pose_batch": 0.2,
+            "new_d_pose_batch": 0.2,
+            "delta_score_nonrate": delta,
+            "pose_term_available": True,
+        },
+        "admission_decision": {
+            "exact_score_decision": "accepted",
+            "catastrophic_guard_decision": "satisfied",
+            "raw_cap_decision": "satisfied",
+            "pose_output_l2_delta": pose_delta,
+        },
+        "argmax_transitions": {
+            "wrong_to_target_count": wrong_to_target,
+            "target_to_wrong_count": 0,
+            "wrong_to_wrong_count": 0,
+            "net_target_support_delta": wrong_to_target,
+        },
+        "receiver_uint8_changed_pixels_region": uint8_changed,
+        "receiver_uint8_delta_abs_max": 1.0 if uint8_changed else 0.0,
+        "receiver_float_rgb_delta_linf": 1.0 / 255.0 if uint8_changed else 0.0,
+        "pose_output_l2_delta": pose_delta,
+        "interaction_or_commutator": comm,
+        "restore_state_pass": True,
+        "promotion_eligible": False,
+    }
+
+
 def test_inverse_scorer_generator_reemits_measured_candidates_and_ordered_composite() -> None:
     result = generate_inverse_scorer_candidates(
         [_frame0_pose_effect(), _frame1_birth_effect(), _composite_effect()]
@@ -239,6 +330,44 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert queued["first_measurement_command"] is None
     assert "inverse_scorer_reverse_order_composite_producer_missing" in queued["measurement_command_blockers"]
     assert "inverse_scorer_composite_base_identity_producer_missing" in queued["measurement_command_blockers"]
+
+
+def test_generate_inverse_evaluate_actions_cli_reads_training_artifact_base_identity(tmp_path: Path) -> None:
+    training_artifact = tmp_path / "training_artifact.json"
+    pr110_ledger = tmp_path / "pr110_action_effects.jsonl"
+    out_dir = tmp_path / "out"
+    training_artifact.write_text(json.dumps(_four_arm_training_artifact()), encoding="utf-8")
+    append_action_effect(_pr110_k1_replay_effect(), pr110_ledger)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "generate_inverse_evaluate_actions.py"),
+            "--seed-training-artifact",
+            str(training_artifact),
+            "--pr110-action-effects",
+            str(pr110_ledger),
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    rows = read_action_effects(out_dir / "action_effect_rows.jsonl")
+    hinerv_rows = [row for row in rows if row.family == "hinerv"]
+    assert len(hinerv_rows) == 3
+    assert all(row.base_state_sha256 for row in hinerv_rows)
+
+    commutator = json.loads((out_dir / "commutator_summary.json").read_text(encoding="utf-8"))
+    queued = commutator["measurement_queue"][0]
+    assert queued["base_state_hash"]
+    assert "action_effect_base_archive_hash_missing" not in queued["measurement_command_blockers"]
+    assert "action_effect_base_payload_hash_missing" not in queued["measurement_command_blockers"]
+    assert "inverse_scorer_composite_base_identity_producer_missing" not in queued["measurement_command_blockers"]
 
 
 def test_convert_real_pr110_k16_packet_to_action_effect_clears_reproduction_gate(tmp_path: Path) -> None:
