@@ -357,14 +357,13 @@ def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -
     )
     proof = official_payload.execute()
 
-    storage = decoded.metadata["official_tub_output2_storage"]
+    storage = official_payload.header["tub_output2_storage"]
     assert storage["stored"] is True
     assert storage["receiver_executes_output2_fusion_from_payload"] is True
     assert storage["tensor_names"] == [
         "tub.temporal_encoder_concat",
         "tub.output2_raw",
     ]
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
     assert storage["receiver_frame_decode_consumes_output2"] is True
     assert storage["receiver_frame_shape"] == [2, 3, 16, 16]
@@ -373,7 +372,7 @@ def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -
     assert rows["tub.output2_decoder_input"]["shape"] == [2, 3, 8, 8]
     assert rows["tub.output2_fused"]["shape"] == [2, 3, 16, 16]
     assert decoded.metadata["source_faithful_stack"] is False
-    assert decoded.metadata["score_claim"] is False
+    assert packet.score_claim is False
 
 
 def test_official_checkpoint_export_report_binds_tub_output2_activation_payload(
@@ -536,6 +535,169 @@ def test_official_checkpoint_export_auto_elides_tub_output2_proof_payload_by_def
         "snerv_official_tub_output2_elide_or_bind_source_faithful_frame_decode"
         not in report["blockers"]
     )
+
+
+def test_official_checkpoint_export_does_not_honor_mismatched_tub_output2_request(
+    monkeypatch,
+) -> None:
+    tool = _load_tool()
+    storage = {
+        "schema": "snerv_official_tub_output2_storage.v1",
+        "stored": False,
+        "storage_policy": "drop_mismatched_output2_use_mfu_hfr_tub_lf_hf_basis",
+        "receiver_executes_output2_fusion_from_payload": False,
+        "receiver_frame_decode_consumes_output2": False,
+        "receiver_frame_decode_binding_status": (
+            "dropped_output2_fused_shape_mismatch"
+        ),
+        "receiver_output2_frame_shape_match": False,
+        "score_lagrangian_action": (
+            "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
+        ),
+        "shape_adapter_forbidden": True,
+        "shape_adapter_applied": False,
+        "frame_decode_blockers": [
+            "snerv_tub_output2_receiver_frame_shape_mismatch"
+        ],
+        "source_raw_bytes": 15360,
+        "stored_raw_bytes": 0,
+    }
+    monkeypatch.setattr(
+        tool,
+        "_packet_metadata_from_snerv_packet",
+        lambda _packet: {},
+    )
+    monkeypatch.setattr(
+        tool,
+        "_selected_packet_official_payload_authority",
+        lambda _packet: {
+            "official_decoder_payload_selected": True,
+            "frame_producing_official_export": True,
+            "status": "frame_producing_official_export",
+            "official_tub_output2_storage": storage,
+            "official_tub_output2_receiver_executed": False,
+        },
+    )
+    monkeypatch.setattr(
+        tool,
+        "_official_receiver_tensor_map_from_packet",
+        lambda _packet: {
+            "receiver_tensor_map_verified": True,
+            "category_counts": {"official_tub_output2_payload": 2},
+            "rows": [
+                {"name": "tub.temporal_encoder_concat"},
+                {"name": "tub.output2_raw"},
+            ],
+        },
+    )
+    packet = tool.SnervArchivePacket(
+        packet=b"synthetic-authority-surface",
+        schema="synthetic",
+        section_order=(),
+        section_bytes={},
+        section_sha256={},
+        section_reports={},
+        metadata={},
+        header_bytes=0,
+        total_bytes=0,
+    )
+    model_size = tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+        official_tub_output2_store_for_receiver_proof=True,
+        official_tub_output2_export_mode="proof_only",
+    )
+
+    binding = tool._official_checkpoint_export_binding(
+        packet,
+        model_size=model_size,
+        checkpoint_state={},
+        output_dir=None,
+    )
+
+    storage = binding["official_tub_output2_storage"]
+    assert binding["official_tub_output2_export_mode"] == "proof_only"
+    assert binding["official_tub_output2_store_for_receiver_proof_requested"] is True
+    assert binding["official_tub_output2_store_for_receiver_proof_honored"] is False
+    assert binding["official_tub_output2_store_requested_but_dropped"] is True
+    assert binding["official_tub_output2_store_drop_reason"] == (
+        "drop_mismatched_output2_use_mfu_hfr_tub_lf_hf_basis"
+    )
+    assert binding["official_tub_output2_shape_adapter_forbidden"] is True
+    assert binding["official_tub_output2_shape_adapter_applied"] is False
+    assert binding["official_tub_output2_activation_payload_bound"] is False
+    assert binding["official_tub_output2_receiver_executed"] is False
+    assert binding["official_tub_output2_selected_runtime_raw_bytes"] == 0
+    assert storage["stored"] is False
+    assert storage["receiver_output2_frame_shape_match"] is False
+    assert storage["receiver_frame_decode_binding_status"] == (
+        "dropped_output2_fused_shape_mismatch"
+    )
+    assert storage["score_lagrangian_action"] == (
+        "drop_stored_output2_and_store_mfu_hfr_tub_lf_hf_pair_adapter_basis"
+    )
+    assert storage["shape_adapter_forbidden"] is True
+    assert storage["shape_adapter_applied"] is False
+    assert "snerv_tub_output2_receiver_frame_shape_mismatch" in storage[
+        "frame_decode_blockers"
+    ]
+
+
+def test_official_checkpoint_export_aborts_on_mismatched_tub_output2_request(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    state = _official_checkpoint_state_with_tub_output2_payload()
+    state["tub.output2_raw"] = (
+        np.arange(2 * 12 * 4 * 4, dtype=np.float32).reshape(2, 12, 4, 4)
+        / 251.0
+    )
+    state_path = tmp_path / "official_state_with_mismatched_tub_output2.npsd"
+    state_path.write_bytes(pack_state_dict_numpy(state))
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 31,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "official_checkpoint_tub_output2_mismatch",
+                    "snerv_model_size_adapter": (
+                        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+                    ),
+                    "official_skip_high_mode": "scalar_mean",
+                    "official_tub_output2_store_for_receiver_proof": True,
+                    "official_tub_output2_export_mode": "proof_only",
+                },
+                "hard_byte_ceilings": [100_000],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        tool.export_snerv_checkpoint_archive(
+            startup_json=startup,
+            checkpoint_meta=checkpoint_meta,
+            output_dir=tmp_path / "export",
+            state_kind="ema",
+            repo_root=tmp_path,
+        )
+    except Exception as exc:
+        assert "snerv_tub_output2_receiver_frame_shape_mismatch" in str(exc)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("mismatched official TUB output2 must fail closed")
 
 
 def test_official_checkpoint_packet_fails_closed_on_incomplete_tub_output2_pair() -> None:

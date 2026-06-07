@@ -6433,7 +6433,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "selection_policy": (
                 "forced_region_key_no_retry"
                 if forced_region_key is not None
-                else "score_debt_desc_then_next_positive_region_after_exact_admission_failure"
+                else "actuator_weighted_score_per_margin_then_next_positive_region_after_exact_admission_failure"
             ),
             "admission_authority": "exact_nonlinear_batch_local_seg_pose_nonrate",
             "representative_region_coverage": representative_region_coverage,

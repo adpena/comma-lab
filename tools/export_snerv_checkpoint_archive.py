@@ -1685,9 +1685,26 @@ def _official_checkpoint_export_binding(
         for row in receiver_tensor_map.get("rows") or ()
         if isinstance(row, dict)
     }
+    official_receiver_replay = selected_authority.get(
+        "official_receiver_payload_frame_replay"
+    )
+    if not isinstance(official_receiver_replay, dict):
+        official_receiver_replay = {}
     tub_output2_storage = packet_metadata.get("official_tub_output2_storage")
     if not isinstance(tub_output2_storage, dict):
+        tub_output2_storage = selected_authority.get("official_tub_output2_storage")
+    if not isinstance(tub_output2_storage, dict):
+        tub_output2_storage = official_receiver_replay.get(
+            "official_tub_output2_storage"
+        )
+    if not isinstance(tub_output2_storage, dict):
         tub_output2_storage = {}
+    tub_output2_receiver_executed = bool(
+        packet_metadata.get("official_tub_output2_receiver_executed") is True
+        or selected_authority.get("official_tub_output2_receiver_executed") is True
+        or official_receiver_replay.get("official_tub_output2_receiver_executed")
+        is True
+    )
     tub_output2_activation_payload_bound = bool(
         selected_authority.get("official_decoder_payload_selected") is True
         and receiver_tensor_map.get("receiver_tensor_map_verified") is True
@@ -1696,7 +1713,7 @@ def _official_checkpoint_export_binding(
         and tub_output2_storage.get("stored") is True
         and tub_output2_storage.get("receiver_executes_output2_fusion_from_payload")
         is True
-        and packet_metadata.get("official_tub_output2_receiver_executed") is True
+        and tub_output2_receiver_executed
     )
     tub_output2_score_causal_frame_bound = bool(
         tub_output2_activation_payload_bound
@@ -1710,14 +1727,24 @@ def _official_checkpoint_export_binding(
             model_size.official_tub_output2_store_for_receiver_proof,
         )
     )
-    tub_output2_store_honored = bool(
-        model_size.official_tub_output2_store_for_receiver_proof
-    )
     tub_output2_source_raw_bytes = int(
         tub_output2_storage.get("source_raw_bytes") or 0
     )
     tub_output2_selected_raw_bytes = int(
         tub_output2_storage.get("stored_raw_bytes") or 0
+    )
+    tub_output2_store_honored = bool(
+        tub_output2_storage.get("stored") is True
+        and tub_output2_selected_raw_bytes > 0
+        and tub_output2_storage.get("shape_adapter_applied") is not True
+    )
+    tub_output2_requested_but_dropped = bool(
+        tub_output2_store_requested and not tub_output2_store_honored
+    )
+    tub_output2_drop_reason = str(
+        tub_output2_storage.get("storage_policy")
+        or tub_output2_storage.get("receiver_frame_decode_binding_status")
+        or ""
     )
     native_checkpoint_export_bound = bool(
         requested
@@ -1849,6 +1876,16 @@ def _official_checkpoint_export_binding(
         "official_tub_output2_store_for_receiver_proof_honored": (
             tub_output2_store_honored
         ),
+        "official_tub_output2_store_requested_but_dropped": (
+            tub_output2_requested_but_dropped
+        ),
+        "official_tub_output2_store_drop_reason": tub_output2_drop_reason,
+        "official_tub_output2_shape_adapter_forbidden": bool(
+            tub_output2_storage.get("shape_adapter_forbidden") is True
+        ),
+        "official_tub_output2_shape_adapter_applied": bool(
+            tub_output2_storage.get("shape_adapter_applied") is True
+        ),
         "official_tub_output2_auto_elided_for_score_candidate": bool(
             tub_output2_store_requested
             and not tub_output2_store_honored
@@ -1863,7 +1900,7 @@ def _official_checkpoint_export_binding(
             tub_output2_source_raw_bytes - tub_output2_selected_raw_bytes,
         ),
         "official_tub_output2_receiver_executed": bool(
-            packet_metadata.get("official_tub_output2_receiver_executed") is True
+            tub_output2_receiver_executed
         ),
         "official_tub_output2_activation_payload_bound": (
             tub_output2_activation_payload_bound

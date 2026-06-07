@@ -123,6 +123,34 @@ def test_mine_hard_regions_ranks_crossable_debt_ahead_of_high_margin_wall() -> N
     assert regions[0].score_debt_per_margin_unit > regions[1].score_debt_per_margin_unit
 
 
+def test_mine_hard_regions_does_not_let_one_pixel_margin_speck_own_birth_queue() -> None:
+    labels = np.zeros((1, 24, 24), dtype=np.int64)
+    labels[0, 1, 1] = 1
+    labels[0, 8:16, 8:16] = 2
+    candidate = np.zeros_like(labels)
+    logits = np.zeros((*labels.shape, 3), dtype=np.float64)
+    logits[..., 0] = 1.0
+    # A single-pixel speck is nearly crossable, so its raw score-per-margin is
+    # huge; the localized birth actuator still needs enough area to move.
+    logits[labels == 1, 0] = 0.000001
+    logits[labels == 1, 1] = 0.0
+    # The 8x8 patch has lower raw score-per-margin but full actuator support.
+    logits[labels == 2, 0] = 0.02
+    logits[labels == 2, 2] = 0.0
+
+    regions = mine_hard_regions(labels, candidate, logits, top_k=2)
+
+    assert [region.class_index for region in regions] == [2, 1]
+    speck = regions[1]
+    patch = regions[0]
+    assert speck.score_debt_per_margin_unit > patch.score_debt_per_margin_unit
+    assert speck.actuator_geometry_support_ratio < patch.actuator_geometry_support_ratio
+    assert (
+        speck.actuator_weighted_score_debt_per_margin_unit
+        < patch.actuator_weighted_score_debt_per_margin_unit
+    )
+
+
 def test_compact_target_margin_miner_matches_full_logits_ranking() -> None:
     labels = _representative_labels()
     candidate = np.zeros_like(labels)

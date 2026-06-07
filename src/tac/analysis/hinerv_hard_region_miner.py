@@ -49,6 +49,7 @@ import numpy as np
 from scipy import ndimage
 
 from tac.substrates.hi_nerv.target_region_birth import (
+    TARGET_REGION_ACTUATOR_GEOMETRY_PIXEL_FLOOR,
     TargetRegionDebt,
     find_target_region_debts,
     region_margin_stats,
@@ -73,6 +74,7 @@ _VALID_OUTCOMES = frozenset({OUTCOME_BIRTH_ACCEPTED, OUTCOME_BIRTH_REJECTED})
 # substrate_artifact_metadata where the harness custody validator refuses them.
 _AUTHORITY_MARKER = "planning_control_false_authority"
 _MARGIN_CROSSING_EPS = 1.0e-6
+ACTUATOR_GEOMETRY_PIXEL_FLOOR = TARGET_REGION_ACTUATOR_GEOMETRY_PIXEL_FLOOR
 
 
 class HardRegionMinerError(ValueError):
@@ -117,6 +119,18 @@ class HardRegion:
         return float(self.debt.score_debt_units) / self.margin_crossing_hardness_mean
 
     @property
+    def actuator_geometry_support_ratio(self) -> float:
+        """How much region area is available to a localized RGB birth actuator."""
+
+        return min(1.0, float(self.debt.region_pixel_count) / ACTUATOR_GEOMETRY_PIXEL_FLOOR)
+
+    @property
+    def actuator_weighted_score_debt_per_margin_unit(self) -> float:
+        """Score-per-margin utility after rejecting sub-actuator speck singularities."""
+
+        return self.score_debt_per_margin_unit * (self.actuator_geometry_support_ratio**2)
+
+    @property
     def batch_index(self) -> int:
         return self.debt.batch_index
 
@@ -155,6 +169,11 @@ class HardRegion:
             "margin_min": float(self.margin_min),
             "margin_crossing_hardness_mean": float(self.margin_crossing_hardness_mean),
             "score_debt_per_margin_unit": float(self.score_debt_per_margin_unit),
+            "actuator_geometry_pixel_floor": int(ACTUATOR_GEOMETRY_PIXEL_FLOOR),
+            "actuator_geometry_support_ratio": float(self.actuator_geometry_support_ratio),
+            "actuator_weighted_score_debt_per_margin_unit": float(
+                self.actuator_weighted_score_debt_per_margin_unit
+            ),
             "region_hard_won_pixels": float(self.region_hard_won_pixels),
             "pose_coupling_risk_mean": (
                 None if self.pose_coupling_risk_mean is None else float(self.pose_coupling_risk_mean)
@@ -290,9 +309,12 @@ def mine_hard_regions(
     Regions are ranked globally by
     ``(-score_debt_per_margin_unit, -score_debt_units,
     -region_hard_won_pixels, -|pose_coupling_mean|, batch_index, class_index,
-    region_label)`` then passed through round-robin-by-class so no single class
-    can fill ``top_k``.  Class buckets are also visited in this utility order.
-    The result's ``rank`` field reflects the FINAL diversity-enforced position
+    region_label)`` where the first term is weighted by the actuator geometry
+    support ratio.  This keeps frontier-margin utility while preventing
+    one-pixel margin singularities from consuming the hard-birth actuator.
+    Rows are then passed through round-robin-by-class so no single class can
+    fill ``top_k``.  Class buckets are also visited in this utility order.  The
+    result's ``rank`` field reflects the FINAL diversity-enforced position
     (0-based).
     """
 
@@ -500,7 +522,7 @@ def _region_sort_key(item: tuple[float, int, int, int, HardRegion]) -> tuple[flo
     neg_debt, b, c, r, region = item
     pose_sort = abs(region.pose_coupling_risk_mean) if region.pose_coupling_risk_mean is not None else 0.0
     return (
-        -float(region.score_debt_per_margin_unit),
+        -float(region.actuator_weighted_score_debt_per_margin_unit),
         neg_debt,
         -float(region.region_hard_won_pixels),
         -pose_sort,

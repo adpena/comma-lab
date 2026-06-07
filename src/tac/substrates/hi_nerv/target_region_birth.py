@@ -42,6 +42,7 @@ ALLOWED_BIRTH_UPDATE_PREFIXES: tuple[str, ...] = (
 )
 ALLOWED_POSE_COMPENSATION_UPDATE_EXACT: tuple[str, ...] = ("head_rgb_0",)
 ALLOWED_POSE_COMPENSATION_UPDATE_PREFIXES: tuple[str, ...] = ("head_rgb_0.",)
+TARGET_REGION_ACTUATOR_GEOMETRY_PIXEL_FLOOR = 64
 
 
 def allowed_birth_update_name(name: Any) -> bool:
@@ -301,7 +302,11 @@ def select_target_region_by_margin_crossing_utility(
             )
         mean_margin = float(np.mean(margin_map.reshape(-1)[mask]))
         crossing_hardness = max(mean_margin, 1.0e-6)
-        utility = float(row.score_debt_units) / crossing_hardness
+        support_ratio = min(
+            1.0,
+            float(row.region_pixel_count) / TARGET_REGION_ACTUATOR_GEOMETRY_PIXEL_FLOOR,
+        )
+        utility = (float(row.score_debt_units) / crossing_hardness) * (support_ratio**2)
         return (
             -utility,
             -float(row.score_debt_units),

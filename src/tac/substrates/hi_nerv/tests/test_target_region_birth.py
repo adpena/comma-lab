@@ -257,6 +257,25 @@ def test_select_worst_target_region_with_mask_can_use_margin_crossing_utility() 
     assert int(utility_mask.sum()) == utility_worst.region_pixel_count == 16
 
 
+def test_select_worst_target_region_with_mask_penalizes_one_pixel_margin_speck() -> None:
+    labels = np.zeros((1, 24, 24), dtype=np.int64)
+    labels[0, 1, 1] = 1
+    labels[0, 8:16, 8:16] = 2
+    candidate = np.zeros_like(labels)
+    target_margin = np.zeros(labels.shape, dtype=np.float64)
+    target_margin[labels == 1] = 0.000001
+    target_margin[labels == 2] = 0.02
+
+    utility_worst, utility_mask = select_worst_target_region_with_mask(
+        labels,
+        candidate,
+        target_margin_bhw=target_margin,
+    )
+
+    assert utility_worst.class_index == 2
+    assert int(utility_mask.sum()) == utility_worst.region_pixel_count == 64
+
+
 def test_select_worst_target_region_with_mask_can_exclude_failed_positive_region() -> None:
     labels, candidate = _two_region_labels()
     first, _mask = select_worst_target_region_with_mask(labels, candidate)
