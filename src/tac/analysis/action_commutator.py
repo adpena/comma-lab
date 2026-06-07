@@ -375,6 +375,8 @@ def _needs_measurement_row(
     *,
     reason: str,
     first_measurement_command: str | None,
+    measurement_command_blockers: Sequence[str] = (),
+    use_default_measurement_command: bool = True,
 ) -> dict[str, Any]:
     """Emit a typed needs-measurement row (NO fabricated comm value).
 
@@ -395,18 +397,21 @@ def _needs_measurement_row(
     byte_cost = None if additive_delta_bytes is None else abs(additive_delta_bytes)
     additive_score_improvement_total = _score_improvement(additive_delta_total)
     additive_score_improvement_nonrate = _score_improvement(additive_delta_nonrate)
-    command = first_measurement_command or (
-        "uv run python tools/run_pr110_commutator_ledger.py "
-        "--action-effects <single_action_effects.jsonl> "
-        "--pair-effects <composite_action_effects.jsonl> "
-        "--output <commutator_output_dir>"
-    )
+    command = first_measurement_command
+    if command is None and use_default_measurement_command:
+        command = (
+            "uv run python tools/run_pr110_commutator_ledger.py "
+            "--action-effects <single_action_effects.jsonl> "
+            "--pair-effects <composite_action_effects.jsonl> "
+            "--output <commutator_output_dir>"
+        )
     blockers = (
         ["composite_action_effect_row_missing"]
         if reason == "no_measured_composite_for_ordered_pair"
         else ["measured_composite_incompatible"]
     )
     blockers.extend(_ordered_identity_blockers(first, second))
+    blockers.extend(str(blocker) for blocker in measurement_command_blockers)
     return {
         "schema": ACTION_COMMUTATOR_NEEDS_MEASUREMENT_SCHEMA,
         "first_action_id": first.action_id,
@@ -443,6 +448,7 @@ def _needs_measurement_row(
         "region_ids": sorted(set(first.region_ids) | set(second.region_ids)),
         "comm": None,
         "classification": None,
+        "measurement_command_available": command is not None and not measurement_command_blockers,
         "first_measurement_command": command,
         "measurement_command_blockers": _dedupe_blockers(blockers),
         **PROXY_FALSE_AUTHORITY_FIELDS,
@@ -457,6 +463,8 @@ def build_commutator_ledger(
     macro_action_limit: int = 16,
     conflict_pair_limit: int = 16,
     first_measurement_command: str | None = None,
+    measurement_command_blockers: Sequence[str] = (),
+    use_default_measurement_command: bool = True,
 ) -> dict[str, Any]:
     """Build the pairwise commutator ledger over ActionEffect rows.
 
@@ -506,6 +514,8 @@ def build_commutator_ledger(
                         second,
                         reason="no_measured_composite_for_ordered_pair",
                         first_measurement_command=first_measurement_command,
+                        measurement_command_blockers=measurement_command_blockers,
+                        use_default_measurement_command=use_default_measurement_command,
                     )
                 )
                 continue
@@ -521,6 +531,8 @@ def build_commutator_ledger(
                         second,
                         reason=f"measured_composite_incompatible:{exc.args[0] if exc.args else exc}",
                         first_measurement_command=first_measurement_command,
+                        measurement_command_blockers=measurement_command_blockers,
+                        use_default_measurement_command=use_default_measurement_command,
                     )
                 )
 

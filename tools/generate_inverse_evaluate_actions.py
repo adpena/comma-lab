@@ -41,6 +41,12 @@ from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIEL
 
 DEFAULT_SSD_ROOT = Path("/Volumes/VertigoDataTier/pact/experiments/results")
 OUTPUT_SCHEMA = "tac.inverse_evaluate_action_materialization.v1"
+BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING = (
+    "inverse_scorer_reverse_order_composite_producer_missing"
+)
+BLOCKER_COMPOSITE_BASE_IDENTITY_PRODUCER_MISSING = (
+    "inverse_scorer_composite_base_identity_producer_missing"
+)
 
 
 def _read_ledgers(paths: Sequence[Path]) -> list[ActionEffect]:
@@ -97,11 +103,16 @@ def _write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
 
 def _default_output_dir() -> Path:
     stamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
-    return DEFAULT_SSD_ROOT / f"inverse_evaluate_actions_{stamp}"
+    return DEFAULT_SSD_ROOT / f"actioneffect_inverse_scorer_{stamp}"
 
 
 def _first_blocker(summary: Mapping[str, Any]) -> str | None:
-    for key in ("pr110_k16_blockers", "inverse_generation_blockers", "menu_ilp_blockers"):
+    for key in (
+        "pr110_k16_blockers",
+        "inverse_generation_blockers",
+        "menu_ilp_blockers",
+        "commutator_measurement_blockers",
+    ):
         values = summary.get(key)
         if isinstance(values, Sequence) and not isinstance(values, (str, bytes)) and values:
             return str(values[0])
@@ -140,12 +151,81 @@ def _render_blocker_note(summary: Mapping[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "## Commutator Measurement Blockers",
+            "",
+        ]
+    )
+    lines.extend(f"- `{blocker}`" for blocker in summary["commutator_measurement_blockers"])
+    if not summary["commutator_measurement_blockers"]:
+        lines.append("- none")
+    lines.extend(
+        [
+            "",
             "All rows remain false-authority planning/advisory rows. No score, rank,",
             "promotion, dispatch, or menu-ILP authority is minted here.",
             "",
         ]
     )
     return "\n".join(lines)
+
+
+def _apply_menu_gate_to_queue(rows: Sequence[Mapping[str, Any]], blockers: Sequence[str]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    allowed = not blockers
+    for row in rows:
+        updated = dict(row)
+        updated["menu_ilp_allowed"] = allowed
+        updated["menu_ilp_blockers"] = list(blockers)
+        out.append(updated)
+    return out
+
+
+def _render_test_log(summary: Mapping[str, Any]) -> str:
+    lines = [
+        "inverse-evaluate ActionEffect materializer smoke",
+        f"schema={summary['schema']}",
+        f"action_effect_rows={summary['action_effect_row_count']}",
+        f"inverse_candidate_rows={summary['inverse_candidate_count']}",
+        f"pr110_replay_rows={summary['pr110_replay_row_count']}",
+        f"measured_commutators={summary['measured_commutator_count']}",
+        f"needs_measurement={summary['needs_measurement_count']}",
+        f"menu_ilp_allowed={summary['menu_ilp_allowed']}",
+        "assertions:",
+        f"- has_action_effect_rows={summary['action_effect_row_count'] > 0}",
+        f"- has_inverse_candidates={summary['inverse_candidate_count'] >= 3}",
+        f"- has_commutator_summary={summary['measured_commutator_count'] >= 1}",
+        f"- pr110_k16_gate_passed={not summary['pr110_k16_blockers']}",
+        f"- commutator_measurement_blockers={len(summary['commutator_measurement_blockers'])}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _commutator_measurement_blockers(commutator: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    queue = commutator.get("measurement_queue")
+    if not isinstance(queue, Sequence) or isinstance(queue, (str, bytes)):
+        return blockers
+    for row in queue:
+        if not isinstance(row, Mapping):
+            continue
+        reason = row.get("reason")
+        if isinstance(reason, str) and reason:
+            blockers.append(reason)
+        command_blockers = row.get("measurement_command_blockers")
+        if isinstance(command_blockers, Sequence) and not isinstance(command_blockers, (str, bytes)):
+            blockers.extend(str(item) for item in command_blockers if str(item).strip())
+    return _dedupe(blockers)
+
+
+def _dedupe(values: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            out.append(value)
+    return out
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -212,14 +292,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     commutator = build_commutator_ledger(
         singles,
         composites,
-        first_measurement_command=(
-            "uv run python tools/generate_inverse_evaluate_actions.py "
-            + " ".join(f"--seed-action-effects {path.as_posix()}" for path in args.seed_action_effects)
-            + " "
-            + " ".join(f"--pr110-action-effects {path.as_posix()}" for path in args.pr110_action_effects)
-            + f" --output-dir {out_dir.as_posix()}"
-        ),
+        first_measurement_command=None,
+        measurement_command_blockers=[
+            BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING,
+            BLOCKER_COMPOSITE_BASE_IDENTITY_PRODUCER_MISSING,
+        ],
+        use_default_measurement_command=False,
     )
+    commutator_measurement_blockers = _commutator_measurement_blockers(commutator)
+
+    candidate_queue_rows = _apply_menu_gate_to_queue(inverse_generation["candidate_queue"], menu_ilp_blockers)
 
     action_effect_path = out_dir / "action_effect_rows.jsonl"
     queue_path = out_dir / "inverse_candidate_queue.jsonl"
@@ -228,10 +310,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     pr110_validation_path = out_dir / "pr110_k16_baseline_validation.json"
     summary_path = out_dir / "summary.json"
     blocker_note_path = out_dir / "next_blocker.md"
+    test_log_path = out_dir / "test_log.txt"
 
     output_effects = _unique_effects([*pr110_effects, *inverse_effects])
     action_effect_count = _write_action_effect_ledger(output_effects, action_effect_path)
-    queue_count = _write_jsonl(queue_path, inverse_generation["candidate_queue"])
+    queue_count = _write_jsonl(queue_path, candidate_queue_rows)
     _write_json(commutator_path, commutator)
     _write_json(pr110_proof_path, pr110_proof)
     _write_json(pr110_validation_path, pr110_validation)
@@ -248,6 +331,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_k16_baseline_reproduction_path": pr110_proof_path.as_posix(),
         "pr110_k16_baseline_validation_path": pr110_validation_path.as_posix(),
         "next_blocker_path": blocker_note_path.as_posix(),
+        "test_log_path": test_log_path.as_posix(),
         "seed_action_effect_count": len(seed_effects),
         "pr110_replay_row_count": len(pr110_effects),
         "inverse_candidate_count": len(inverse_effects),
@@ -255,6 +339,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "queue_row_count": queue_count,
         "measured_commutator_count": commutator["measured_commutator_count"],
         "needs_measurement_count": commutator["needs_measurement_count"],
+        "commutator_measurement_blockers": commutator_measurement_blockers,
         "inverse_generation_blockers": list(inverse_generation["blockers"]),
         "pr110_k16_blockers": list(pr110_validation["blockers"]),
         "menu_ilp_allowed": not menu_ilp_blockers,
@@ -269,6 +354,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     }
     _write_json(summary_path, summary)
     blocker_note_path.write_text(_render_blocker_note(summary), encoding="utf-8")
+    test_log_path.write_text(_render_test_log(summary), encoding="utf-8")
 
     print(json.dumps(summary, indent=2, sort_keys=True) + "\n", end="")
     return 0

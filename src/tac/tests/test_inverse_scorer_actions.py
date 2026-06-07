@@ -234,3 +234,54 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
 
     commutator = json.loads((out_dir / "commutator_summary.json").read_text(encoding="utf-8"))
     assert commutator["measured_commutator_count"] == 1
+    queued = commutator["measurement_queue"][0]
+    assert queued["measurement_command_available"] is False
+    assert queued["first_measurement_command"] is None
+    assert "inverse_scorer_reverse_order_composite_producer_missing" in queued["measurement_command_blockers"]
+    assert "inverse_scorer_composite_base_identity_producer_missing" in queued["measurement_command_blockers"]
+
+
+def test_convert_real_pr110_k16_packet_to_action_effect_clears_reproduction_gate(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    packet_manifest = (
+        repo_root
+        / "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex"
+        / "packet_manifest.json"
+    )
+    archive_manifest = (
+        repo_root
+        / "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex"
+        / "archive_manifest.json"
+    )
+    ledger = tmp_path / "pr110_k16_action_effects.jsonl"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "convert_pr110_k16_packet_to_action_effect.py"),
+            "--packet-manifest",
+            str(packet_manifest),
+            "--archive-manifest",
+            str(archive_manifest),
+            "--output-jsonl",
+            str(ledger),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    conversion = json.loads(proc.stdout)
+    assert conversion["pair_count"] == 600
+    assert conversion["selector_bits"] == 1944
+    assert conversion["validation"]["passed"] is True
+
+    rows = read_action_effects(ledger)
+    assert len(rows) == 1
+    proof = build_pr110_k16_baseline_reproduction_from_action_effects(rows)
+    assert proof["passed"] is True
+    assert proof["blockers"] == []
+    assert proof["global_k"] == 16
+    assert proof["pair_count"] == 600
+    assert proof["selector_bits"] == 1944

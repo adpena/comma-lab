@@ -306,7 +306,18 @@ def _first_matching(effects: Sequence[ActionEffect], predicate: Any) -> ActionEf
     matches = [effect for effect in effects if predicate(effect) and _receiver_visible(effect)]
     if not matches:
         return None
-    return max(matches, key=lambda effect: _score_ev(effect) if _score_ev(effect) is not None else -math.inf)
+    return max(matches, key=_candidate_sort_key)
+
+
+def _candidate_sort_key(effect: ActionEffect) -> tuple[float, int, int, int, str]:
+    score_ev = _score_ev(effect)
+    return (
+        score_ev if score_ev is not None else -math.inf,
+        1 if effect.exact_score_decision == "accept" else 0,
+        1 if not effect.blockers else 0,
+        1 if effect.restore_state_pass is True else 0,
+        effect.action_kind,
+    )
 
 
 def _score_ev(effect: ActionEffect) -> float | None:

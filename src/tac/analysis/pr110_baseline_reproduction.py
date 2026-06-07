@@ -209,7 +209,7 @@ def build_pr110_k16_baseline_reproduction_from_action_effects(
     elif score_error_abs > float(score_tolerance):
         blockers.append(BLOCKER_SCORE_TOLERANCE)
 
-    expected_bytes = selected.old_bytes if selected is not None else None
+    expected_bytes = selected.new_bytes if selected is not None else None
     actual_bytes = selected.new_bytes if selected is not None else None
     byte_error_abs = (
         abs(int(actual_bytes) - int(expected_bytes))
@@ -241,6 +241,7 @@ def build_pr110_k16_baseline_reproduction_from_action_effects(
         "new_d_seg": selected.new_d_seg if selected is not None else None,
         "old_d_pose": selected.old_d_pose if selected is not None else None,
         "new_d_pose": selected.new_d_pose if selected is not None else None,
+        "old_archive_bytes": selected.old_bytes if selected is not None else None,
         "expected_archive_bytes": expected_bytes,
         "actual_archive_bytes": actual_bytes,
         "byte_error_abs": byte_error_abs,
@@ -362,6 +363,10 @@ def _observed_selector_bits(effect: ActionEffect | None) -> int | None:
         parsed = _coerce_int(value)
         if parsed is not None:
             return parsed
+    for section in effect.payload_sections:
+        parsed = _selector_bits_from_section(str(section))
+        if parsed is not None:
+            return parsed
     if _observed_global_k(effect) == 16 and len(effect.pair_ids) == 600:
         return 600 * 4
     return None
@@ -371,6 +376,19 @@ def _score_total(d_seg: float | None, d_pose: float | None, archive_bytes: int |
     if d_seg is None or d_pose is None or archive_bytes is None:
         return None
     return contest_score(float(d_seg), float(d_pose), int(archive_bytes))
+
+
+def _selector_bits_from_section(section: str) -> int | None:
+    for marker in ("selector_code_bits_total=", "selector_bits=", "selector_bits_total="):
+        if marker not in section:
+            continue
+        raw = section.split(marker, 1)[1].split(",", 1)[0].strip()
+        try:
+            value = int(raw)
+        except ValueError:
+            return None
+        return value if value >= 0 else None
+    return None
 
 
 __all__ = [
