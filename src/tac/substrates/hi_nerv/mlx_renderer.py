@@ -5138,6 +5138,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             blockers.append(
                 "hinerv_target_region_birth_masked_residual_oracle_positive_archive_unclosed"
             )
+        elif accepted_step_count == 0:
+            if not bool(masked_residual_oracle.get("target_support_moved")):
+                blockers.append(
+                    "hinerv_target_region_birth_masked_residual_oracle_no_target_support_movement"
+                )
+            if not bool(masked_residual_oracle.get("exact_accepted_before_archive_closure")):
+                blockers.append(
+                    "hinerv_target_region_birth_masked_residual_oracle_exact_score_not_accepted"
+                )
         pose_guard_payload: dict[str, Any] = {
             "available": bool(pose_available),
             "input_convention": "concat_yuv6_pair_nhwc255_frame0_then_frame1",

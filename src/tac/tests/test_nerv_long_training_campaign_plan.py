@@ -1635,6 +1635,9 @@ def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blocke
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
         max_candidates_per_family=1,
         snerv_official_source_forward_artifacts=(source_forward,),
+        snerv_official_replacement_authority_gates=(
+            _snerv_official_replacement_authority_gate(ready=True),
+        ),
         snerv_long_run_launch_gate_verdict=_approved_snerv_long_run_gate_verdict(),
     )
 
@@ -8600,11 +8603,12 @@ def _snerv_official_replacement_authority_gate(*, ready: bool) -> dict:
         "_source_path": "/Volumes/VertigoDataTier/pact/snerv_official_gate.json",
         "_source_sha256": "e" * 64,
         "official_tub_lf_hf_decoder_replacement_ready": bool(ready),
-        "official_checkpoint_export_binding_ready": True,
-        "receiver_output2_frame_replay_ready": True,
-        "trained_checkpoint_state_dict_mapping_ready": False,
-        "tub_temporal_output2_weight_mapping_ready": False,
-        "full_tub_source_forward_replay_ready": False,
+        "official_checkpoint_export_binding_ready": bool(ready),
+        "receiver_output2_frame_replay_ready": bool(ready),
+        "tub_source_fixture_replay_ready": bool(ready),
+        "trained_checkpoint_state_dict_mapping_ready": bool(ready),
+        "tub_temporal_output2_weight_mapping_ready": bool(ready),
+        "full_tub_source_forward_replay_ready": bool(ready),
         "closed_campaign_blockers": [
             "snerv_official_mfu_hfr_tub_export_not_bound",
             "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",

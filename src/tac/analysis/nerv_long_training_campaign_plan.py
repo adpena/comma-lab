@@ -781,6 +781,11 @@ def build_nerv_long_training_campaign_plan(
         if snerv_official_source_forward_artifacts
         else None
     )
+    snerv_official_replacement_authority_gate = (
+        _select_snerv_official_replacement_authority_gate(
+            snerv_official_replacement_authority_gates
+        )
+    )
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -857,6 +862,9 @@ def build_nerv_long_training_campaign_plan(
                 pr95_distortion_source_inventory=pr95_distortion_source_inventory,
                 snerv_scorer_tether_smoke_gate=snerv_scorer_tether_smoke_gate,
                 snerv_source_forward_evidence=snerv_source_forward_evidence,
+                snerv_official_replacement_authority_gate=(
+                    snerv_official_replacement_authority_gate
+                ),
                 snerv_long_run_launch_gate_verdict=snerv_long_run_launch_gate_verdict,
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
@@ -1756,6 +1764,7 @@ def _snerv_campaign_row(
     pr95_distortion_source_inventory: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_gate: Mapping[str, Any] | None = None,
     snerv_source_forward_evidence: Mapping[str, Any] | None = None,
+    snerv_official_replacement_authority_gate: Mapping[str, Any] | None = None,
     snerv_long_run_launch_gate_verdict: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
@@ -2115,7 +2124,10 @@ def _snerv_campaign_row(
     )
     derived_pr95_actuator_execution_evidence = (
         _snerv_pr95_actuator_execution_evidence_from_source_forward(
-            snerv_source_forward_evidence
+            snerv_source_forward_evidence,
+            official_replacement_authority_gate=(
+                snerv_official_replacement_authority_gate
+            ),
         )
     )
     pr95_actuator_execution_evidence = (
@@ -3701,6 +3713,31 @@ def _snerv_source_forward_evidence_active(
     )
 
 
+def _select_snerv_official_replacement_authority_gate(
+    gates: Sequence[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    ready: list[Mapping[str, Any]] = []
+    valid: list[Mapping[str, Any]] = []
+    for gate in gates:
+        if not isinstance(gate, Mapping):
+            continue
+        if gate.get("schema") != "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1":
+            continue
+        valid.append(gate)
+        if (
+            gate.get("official_tub_lf_hf_decoder_replacement_ready") is True
+            and gate.get("official_checkpoint_export_binding_ready") is True
+            and gate.get("receiver_output2_frame_replay_ready") is True
+            and gate.get("tub_source_fixture_replay_ready") is True
+            and gate.get("trained_checkpoint_state_dict_mapping_ready") is True
+            and gate.get("tub_temporal_output2_weight_mapping_ready") is True
+            and gate.get("full_tub_source_forward_replay_ready") is True
+        ):
+            ready.append(gate)
+    selected = (ready or valid)[0] if (ready or valid) else None
+    return dict(selected) if isinstance(selected, Mapping) else None
+
+
 def _snerv_long_run_launch_gate_status(
     verdict: Mapping[str, Any] | None,
     *,
@@ -3837,6 +3874,8 @@ def _hinerv_pr95_actuator_execution_evidence_from_feedback(
 
 def _snerv_pr95_actuator_execution_evidence_from_source_forward(
     source_forward_evidence: Mapping[str, Any] | None,
+    *,
+    official_replacement_authority_gate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Translate canonical SNeRV source-forward proof into PR95 actuator evidence.
 
@@ -3928,6 +3967,10 @@ def _snerv_pr95_actuator_execution_evidence_from_source_forward(
     servo_receipt = source_forward_evidence.get("pair_local_distortion_servo_receipt")
     if isinstance(servo_receipt, Mapping):
         evidence["pair_local_distortion_servo_receipt"] = dict(servo_receipt)
+    if isinstance(official_replacement_authority_gate, Mapping):
+        evidence["snerv_official_tub_lf_hf_decoder_replacement_authority_gate"] = dict(
+            official_replacement_authority_gate
+        )
     return evidence
 
 
