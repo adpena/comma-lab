@@ -49,6 +49,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--path-action-candidates", type=Path, required=True)
     parser.add_argument("--action-effect-rows", type=Path, default=None)
+    parser.add_argument("--survival-receipts", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     args = parser.parse_args()
 
@@ -58,8 +59,16 @@ def main() -> int:
     if args.action_effect_rows is not None:
         effects_path = args.action_effect_rows.expanduser().resolve(strict=True)
         effects = [ActionEffect.from_dict(row) for row in _read_jsonl(effects_path)]
+    survival_receipts = []
+    if args.survival_receipts is not None:
+        receipts_path = args.survival_receipts.expanduser().resolve(strict=True)
+        survival_receipts = _read_jsonl(receipts_path)
     out_dir = (args.output_dir or _default_output_dir()).expanduser().resolve(strict=False)
-    report = route_support_codecs_for_path_candidates(candidates, source_effects=effects)
+    report = route_support_codecs_for_path_candidates(
+        candidates,
+        source_effects=effects,
+        survival_receipts=survival_receipts,
+    )
     written = write_support_codec_router_report(report, out_dir.as_posix())
     selected = [
         sub.get("selected_support_encoding")
@@ -70,6 +79,7 @@ def main() -> int:
         "schema": SUPPORT_CODEC_ROUTER_SCHEMA,
         "path_action_candidates": candidates_path.as_posix(),
         "action_effect_rows": args.action_effect_rows.as_posix() if args.action_effect_rows is not None else None,
+        "survival_receipts": args.survival_receipts.as_posix() if args.survival_receipts is not None else None,
         "output_dir": out_dir.as_posix(),
         **written,
         "selected_support_encodings": selected,

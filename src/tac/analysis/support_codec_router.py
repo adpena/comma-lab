@@ -14,6 +14,8 @@ import numpy as np
 from tac.analysis.action_effect import ActionEffect
 from tac.analysis.inverse_scorer_actions import build_candidate_queue
 from tac.analysis.path_action_producer import (
+    BLOCKER_PATH_ACTION_INFLATE_MISSING,
+    BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
     PathTubeSupport,
     support_mask_sha256,
 )
@@ -46,6 +48,9 @@ class SupportCodecCandidate:
     decoder_runtime_estimate: str | None = None
     archive_executable: bool = True
     selected: bool = False
+    parseback_survived: bool = False
+    inflate_survived: bool = False
+    survival_receipt_id: str | None = None
     blocker_status: str = "ok"
     blockers: tuple[str, ...] = ()
     rejection_reason: str | None = None
@@ -65,6 +70,9 @@ class SupportCodecCandidate:
             "decoder_runtime_estimate": self.decoder_runtime_estimate,
             "archive_executable": bool(self.archive_executable),
             "selected": bool(self.selected),
+            "parseback_survived": bool(self.parseback_survived),
+            "inflate_survived": bool(self.inflate_survived),
+            "survival_receipt_id": self.survival_receipt_id,
             "blocker_status": self.blocker_status,
             "blockers": list(self.blockers),
             "rejection_reason": self.rejection_reason,
@@ -75,6 +83,7 @@ def route_support_codecs_for_path_candidate(
     candidate: Mapping[str, Any],
     *,
     source_effect: ActionEffect | Mapping[str, Any] | None = None,
+    survival_receipts: Iterable[Mapping[str, Any]] = (),
     action_payload_bytes: int = 0,
     metadata_bytes: int = 0,
     tile_sizes: Sequence[int] = (8, 16),
@@ -113,10 +122,33 @@ def route_support_codecs_for_path_candidate(
         base_blockers=base_blockers,
     )
     selected = _select_candidate(rows)
+    survival_receipt = (
+        None
+        if selected is None
+        else _matched_survival_receipt(selected, survival_receipts)
+    )
     selected_rows: list[SupportCodecCandidate] = []
     for row in rows:
         if selected is not None and row.support_encoding == selected.support_encoding:
-            selected_rows.append(_replace_candidate(row, selected=True))
+            selected_rows.append(
+                _replace_candidate(
+                    row,
+                    selected=True,
+                    parseback_survived=bool(
+                        survival_receipt
+                        and survival_receipt.get("parseback_survived") is True
+                    ),
+                    inflate_survived=bool(
+                        survival_receipt
+                        and survival_receipt.get("inflate_survived") is True
+                    ),
+                    survival_receipt_id=(
+                        _survival_receipt_id(survival_receipt)
+                        if survival_receipt is not None
+                        else None
+                    ),
+                )
+            )
         elif selected is not None and not row.blockers:
             selected_rows.append(
                 _replace_candidate(
@@ -128,7 +160,15 @@ def route_support_codecs_for_path_candidate(
             )
         else:
             selected_rows.append(row)
-    effect = None if selected is None or source_effect is None else _selected_action_effect(source_effect, selected)
+    effect = (
+        None
+        if selected is None or source_effect is None
+        else _selected_action_effect(
+            source_effect,
+            selected,
+            survival_receipt=survival_receipt,
+        )
+    )
     queue_rows = [] if effect is None else build_candidate_queue([effect])
     return {
         "schema": SUPPORT_CODEC_REPORT_SCHEMA,
@@ -152,6 +192,7 @@ def route_support_codecs_for_path_candidates(
     candidates: Iterable[Mapping[str, Any]],
     *,
     source_effects: Iterable[ActionEffect | Mapping[str, Any]] = (),
+    survival_receipts: Iterable[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Route multiple path candidates and emit a selected-only queue."""
 
@@ -159,8 +200,13 @@ def route_support_codecs_for_path_candidates(
         effect.action_id if isinstance(effect, ActionEffect) else str(effect.get("action_id") or ""): effect
         for effect in source_effects
     }
+    survival_rows = [dict(row) for row in survival_receipts if isinstance(row, Mapping)]
     reports = [
-        route_support_codecs_for_path_candidate(row, source_effect=effects_by_id.get(str(row.get("action_id") or "")))
+        route_support_codecs_for_path_candidate(
+            row,
+            source_effect=effects_by_id.get(str(row.get("action_id") or "")),
+            survival_receipts=survival_rows,
+        )
         for row in candidates
         if _mapping(row.get("support"))
     ]
@@ -299,6 +345,9 @@ def _replace_candidate(
     row: SupportCodecCandidate,
     *,
     selected: bool | None = None,
+    parseback_survived: bool | None = None,
+    inflate_survived: bool | None = None,
+    survival_receipt_id: str | None = None,
     blockers: Sequence[str] | None = None,
     blocker_status: str | None = None,
     rejection_reason: str | None = None,
@@ -318,6 +367,21 @@ def _replace_candidate(
         decoder_runtime_estimate=row.decoder_runtime_estimate,
         archive_executable=row.archive_executable and not blocker_tuple,
         selected=row.selected if selected is None else selected,
+        parseback_survived=(
+            row.parseback_survived
+            if parseback_survived is None
+            else parseback_survived
+        ),
+        inflate_survived=(
+            row.inflate_survived
+            if inflate_survived is None
+            else inflate_survived
+        ),
+        survival_receipt_id=(
+            row.survival_receipt_id
+            if survival_receipt_id is None
+            else survival_receipt_id
+        ),
         blocker_status=row.blocker_status if blocker_status is None else blocker_status,
         blockers=blocker_tuple,
         rejection_reason=row.rejection_reason if rejection_reason is None else rejection_reason,
@@ -334,11 +398,32 @@ def _select_candidate(rows: Sequence[SupportCodecCandidate]) -> SupportCodecCand
 def _selected_action_effect(
     source_effect: ActionEffect | Mapping[str, Any],
     selected: SupportCodecCandidate,
+    *,
+    survival_receipt: Mapping[str, Any] | None = None,
 ) -> ActionEffect:
     effect = source_effect if isinstance(source_effect, ActionEffect) else ActionEffect.from_dict(source_effect)
     payload = effect.as_dict()
     old_bytes = int(payload["old_bytes"] or 0)
     total_bytes = int(selected.total_cost_bytes or 0)
+    parseback_survived = bool(
+        survival_receipt and survival_receipt.get("parseback_survived") is True
+    )
+    inflate_survived = bool(
+        survival_receipt and survival_receipt.get("inflate_survived") is True
+    )
+    blockers = list(effect.blockers)
+    if parseback_survived:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != BLOCKER_PATH_ACTION_PARSEBACK_MISSING
+        ]
+    if inflate_survived:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != BLOCKER_PATH_ACTION_INFLATE_MISSING
+        ]
     return ActionEffect.build(
         action_id=effect.action_id,
         family=effect.family,
@@ -369,8 +454,8 @@ def _selected_action_effect(
         new_bytes=old_bytes + total_bytes,
         receiver_surface=effect.receiver_surface,
         exact_score_decision="reject",
-        parseback_survived=False,
-        inflate_survived=False,
+        parseback_survived=parseback_survived,
+        inflate_survived=inflate_survived,
         fakequant_survived=effect.fakequant_survived,
         hard_won_count=effect.hard_won_count,
         wrong_to_target=effect.wrong_to_target,
@@ -396,8 +481,37 @@ def _selected_action_effect(
         segnet_margin_delta=effect.segnet_margin_delta,
         fakequant_segnet_margin_delta=effect.fakequant_segnet_margin_delta,
         parseback_segnet_margin_delta=effect.parseback_segnet_margin_delta,
-        blockers=effect.blockers,
+        blockers=blockers,
     )
+
+
+def _matched_survival_receipt(
+    selected: SupportCodecCandidate,
+    receipts: Iterable[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    for receipt in receipts:
+        if not isinstance(receipt, Mapping):
+            continue
+        if str(receipt.get("action_id") or "") != selected.action_id:
+            continue
+        if str(receipt.get("support_sha256") or "") != selected.support_sha256:
+            continue
+        if str(receipt.get("support_encoding") or "") != selected.support_encoding:
+            continue
+        if (
+            receipt.get("parseback_survived") is True
+            and receipt.get("inflate_survived") is True
+        ):
+            return receipt
+    return None
+
+
+def _survival_receipt_id(receipt: Mapping[str, Any]) -> str | None:
+    for key in ("receipt_id", "survival_receipt_id", "artifact_sha256", "sha256"):
+        value = receipt.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _mask_from_path_tube_support(support: Mapping[str, Any]) -> np.ndarray:

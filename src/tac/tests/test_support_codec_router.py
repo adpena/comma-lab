@@ -15,6 +15,8 @@ from tac.analysis.path_action_producer import path_tube_support_from_mask
 from tac.analysis.support_codec_router import (
     BLOCKER_CODEC_DECODED_HASH_MISMATCH,
     BLOCKER_CODEC_RESEARCH_ONLY,
+    BLOCKER_PATH_ACTION_INFLATE_MISSING,
+    BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
     route_support_codecs_for_path_candidate,
 )
 
@@ -161,6 +163,80 @@ def test_selected_action_effect_includes_codec_bytes_and_stays_non_promotable() 
     assert report["candidate_queue"][0]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_selected_rle_action_effect_survives_with_same_action_receipt() -> None:
+    mask = np.zeros((64, 96), dtype=bool)
+    mask[8:10, 5:91] = True
+    mask[42:44, 5:91] = True
+    candidate = _candidate_from_mask(mask)
+    effect = _source_effect(candidate)
+    receipt = {
+        "schema": "tac.support_codec_survival_receipt.v1",
+        "receipt_id": "rle-survival-fixture",
+        "action_id": candidate["action_id"],
+        "support_sha256": candidate["support"]["support_sha256"],
+        "support_encoding": "rle",
+        "encoded_program_sha256": "1" * 64,
+        "decoded_support_sha256": candidate["support"]["support_sha256"],
+        "decoded_action_sha256": "2" * 64,
+        "archive_sha256": "3" * 64,
+        "parseback_survived": True,
+        "inflate_survived": True,
+        "authority": "archive_parseback_inflate_same_action",
+    }
+
+    report = route_support_codecs_for_path_candidate(
+        candidate,
+        source_effect=effect,
+        survival_receipts=[receipt],
+    )
+    selected = report["selected_action_effect"]
+    selected_row = next(row for row in report["support_codec_candidates"] if row["selected"])
+
+    assert report["selected_support_encoding"] == "rle"
+    assert selected_row["parseback_survived"] is True
+    assert selected_row["inflate_survived"] is True
+    assert selected_row["survival_receipt_id"] == "rle-survival-fixture"
+    assert selected["support_encoding"] == "rle"
+    assert selected["parseback_survived"] is True
+    assert selected["inflate_survived"] is True
+    assert BLOCKER_PATH_ACTION_PARSEBACK_MISSING not in selected["blockers"]
+    assert BLOCKER_PATH_ACTION_INFLATE_MISSING not in selected["blockers"]
+    assert report["candidate_queue"][0]["support_encoding"] == "rle"
+    assert report["candidate_queue"][0]["parseback_survived"] is True
+    assert report["candidate_queue"][0]["inflate_survived"] is True
+
+
+def test_selected_rle_survival_receipt_must_match_same_action_identity() -> None:
+    mask = np.zeros((64, 96), dtype=bool)
+    mask[8:10, 5:91] = True
+    mask[42:44, 5:91] = True
+    candidate = _candidate_from_mask(mask)
+    receipt = {
+        "schema": "tac.support_codec_survival_receipt.v1",
+        "receipt_id": "wrong-support",
+        "action_id": candidate["action_id"],
+        "support_sha256": "f" * 64,
+        "support_encoding": "rle",
+        "parseback_survived": True,
+        "inflate_survived": True,
+    }
+
+    report = route_support_codecs_for_path_candidate(
+        candidate,
+        source_effect=_source_effect(candidate),
+        survival_receipts=[receipt],
+    )
+    selected = report["selected_action_effect"]
+    selected_row = next(row for row in report["support_codec_candidates"] if row["selected"])
+
+    assert report["selected_support_encoding"] == "rle"
+    assert selected_row["parseback_survived"] is False
+    assert selected_row["inflate_survived"] is False
+    assert selected_row["survival_receipt_id"] is None
+    assert selected["parseback_survived"] is False
+    assert selected["inflate_survived"] is False
+
+
 def test_route_path_action_support_codecs_cli_writes_selected_only_queue(tmp_path: Path) -> None:
     mask = np.zeros((64, 96), dtype=bool)
     mask[8:10, 5:91] = True
@@ -169,8 +245,24 @@ def test_route_path_action_support_codecs_cli_writes_selected_only_queue(tmp_pat
     effect = _source_effect(candidate)
     candidates_path = tmp_path / "path_action_candidates.jsonl"
     effects_path = tmp_path / "action_effect_rows.jsonl"
+    receipts_path = tmp_path / "survival_receipts.jsonl"
     candidates_path.write_text(json.dumps(candidate) + "\n", encoding="utf-8")
     effects_path.write_text(json.dumps(effect.as_dict()) + "\n", encoding="utf-8")
+    receipts_path.write_text(
+        json.dumps(
+            {
+                "schema": "tac.support_codec_survival_receipt.v1",
+                "receipt_id": "cli-rle-survived",
+                "action_id": candidate["action_id"],
+                "support_sha256": candidate["support"]["support_sha256"],
+                "support_encoding": "rle",
+                "parseback_survived": True,
+                "inflate_survived": True,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     out_dir = tmp_path / "out"
     repo_root = Path(__file__).resolve().parents[3]
 
@@ -182,6 +274,8 @@ def test_route_path_action_support_codecs_cli_writes_selected_only_queue(tmp_pat
             str(candidates_path),
             "--action-effect-rows",
             str(effects_path),
+            "--survival-receipts",
+            str(receipts_path),
             "--output-dir",
             str(out_dir),
         ],
@@ -198,3 +292,5 @@ def test_route_path_action_support_codecs_cli_writes_selected_only_queue(tmp_pat
     assert summary["selected_support_encodings"] == ["rle"]
     report = json.loads((out_dir / "support_codec_router_report.json").read_text(encoding="utf-8"))
     assert report["reports"][0]["selected_support_encoding"] == "rle"
+    assert report["reports"][0]["selected_action_effect"]["parseback_survived"] is True
+    assert report["reports"][0]["selected_action_effect"]["inflate_survived"] is True
