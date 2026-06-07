@@ -12,10 +12,12 @@ from tac.analysis.action_effect import ActionEffect
 from tac.analysis.evaluator_action_lowering_race import (
     BYTE_ACCOUNTING_MISSING,
     COMPOSITE_NOT_MEASURED,
+    FAKEQUANT_FAILED,
     INFLATE_FAILED,
     INVALID_LOWERING_TARGET,
     PARSEBACK_FAILED,
     SEMANTIC_PRIMITIVE_MISSING,
+    SUPPORT_IDENTITY_MISMATCH,
     build_lowering_race_report,
 )
 
@@ -28,6 +30,8 @@ def _effect(
     delta_good: bool = False,
     parseback: bool = False,
     inflate: bool = False,
+    fakequant: bool = True,
+    support_sha256: str = "a" * 64,
     payload_sections: tuple[str, ...] = ("support_codec=rle", "action_payload_bytes=0", "metadata_bytes=0"),
 ) -> ActionEffect:
     old_d_seg, new_d_seg = (0.2, 0.19) if delta_good else (0.2, 0.2)
@@ -56,10 +60,11 @@ def _effect(
         exact_score_decision="reject",
         parseback_survived=parseback,
         inflate_survived=inflate,
+        fakequant_survived=fakequant,
         wrong_to_target=1,
         support_source="fixture",
         support_cardinality=10,
-        support_sha256="a" * 64,
+        support_sha256=support_sha256,
         support_encoding=support_encoding,
         support_encoded_bytes=100,
         support_research_only=False,
@@ -94,6 +99,49 @@ def test_lowering_race_selects_viable_lowest_delta_candidate() -> None:
     assert report["verdict"]["best_lowering"] in {"byte_priced_sidecar", "pose_compensated_composite"}
     assert report["verdict"]["first_failing_surface"] == "none"
     assert report["verdict"]["delta_score_total"] < 0.0
+
+
+def test_lowering_race_requires_fakequant_survival_before_acceptance() -> None:
+    row = _effect(delta_good=True, parseback=True, inflate=True, fakequant=False)
+
+    report = build_lowering_race_report(action_id="action-1", action_effects=[row])
+
+    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["first_failing_surface"] == FAKEQUANT_FAILED
+    assert report["lowering_candidates"][0]["viable"] is False
+
+
+def test_lowering_race_requires_same_support_for_same_action() -> None:
+    sidecar = _effect(delta_good=True, parseback=True, inflate=True, support_sha256="a" * 64)
+    composite = _effect(
+        action_kind="frame1_seg_then_frame0_pose_composite",
+        delta_good=True,
+        parseback=True,
+        inflate=True,
+        support_sha256="b" * 64,
+    )
+
+    report = build_lowering_race_report(action_id="action-1", action_effects=[sidecar, composite])
+
+    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["first_failing_surface"] == SUPPORT_IDENTITY_MISMATCH
+    assert report["support_identity"]["all_candidates_same_support"] is False
+    assert "lowering_race_candidate_support_sha256_mismatch" in report["support_identity"]["blockers"]
+    assert all(row["viable"] is False for row in report["lowering_candidates"])
+
+
+def test_lowering_race_expected_support_hash_is_authoritative() -> None:
+    sidecar = _effect(delta_good=True, parseback=True, inflate=True, support_sha256="b" * 64)
+
+    report = build_lowering_race_report(
+        action_id="action-1",
+        action_effects=[sidecar],
+        expected_support_sha256="a" * 64,
+    )
+
+    assert report["verdict"]["best_lowering"] == "none"
+    assert report["verdict"]["first_failing_surface"] == SUPPORT_IDENTITY_MISMATCH
+    assert "lowering_race_expected_support_sha256_mismatch" in report["support_identity"]["blockers"]
 
 
 def test_lowering_race_uses_explicit_target_before_text_inference() -> None:

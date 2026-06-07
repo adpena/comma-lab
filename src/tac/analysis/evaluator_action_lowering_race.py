@@ -30,10 +30,13 @@ COMPOSITE_NOT_MEASURED = "COMPOSITE_NOT_MEASURED"
 SEMANTIC_PRIMITIVE_MISSING = "SEMANTIC_PRIMITIVE_MISSING"
 PARSEBACK_FAILED = "PARSEBACK_FAILED"
 INFLATE_FAILED = "INFLATE_FAILED"
+FAKEQUANT_FAILED = "FAKEQUANT_FAILED"
 EXACT_SCORE_REJECTED = "EXACT_SCORE_REJECTED"
 BYTE_ACCOUNTING_MISSING = "BYTE_ACCOUNTING_MISSING"
 ACTION_EFFECT_BLOCKED = "ACTION_EFFECT_BLOCKED"
 INVALID_LOWERING_TARGET = "INVALID_LOWERING_TARGET"
+SUPPORT_IDENTITY_MISSING = "SUPPORT_IDENTITY_MISSING"
+SUPPORT_IDENTITY_MISMATCH = "SUPPORT_IDENTITY_MISMATCH"
 
 
 @dataclass(frozen=True)
@@ -86,6 +89,7 @@ def build_lowering_race_report(
     action_id: str,
     action_effects: Iterable[ActionEffect | Mapping[str, Any]] = (),
     support_codec_report: Mapping[str, Any] | None = None,
+    expected_support_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Build the four-way lowering race for one action id."""
 
@@ -93,7 +97,14 @@ def build_lowering_race_report(
     if support_codec_report is not None:
         race_inputs.extend(_race_inputs_from_support_codec_report(support_codec_report))
     race_inputs = [row for row in race_inputs if row.effect.action_id == action_id]
-    candidates = [_candidate_row(row) for row in race_inputs]
+    support_identity = _support_identity_status(
+        [row.effect for row in race_inputs],
+        expected_support_sha256=expected_support_sha256,
+    )
+    candidates = [
+        _candidate_row(row, support_identity_failure=support_identity["failure"])
+        for row in race_inputs
+    ]
     grouped = {target: [row for row in candidates if row["lowering_target"] == target] for target in LOWERING_TARGETS}
     statuses = {target: _target_status(target, rows) for target, rows in grouped.items()}
     viable = [row for row in candidates if row["viable"] is True]
@@ -123,6 +134,7 @@ def build_lowering_race_report(
         "action_id": action_id,
         "verdict": verdict.as_dict(),
         "lowering_candidates": candidates,
+        "support_identity": support_identity,
         "support_codec_summary": _support_codec_summary(support_codec_report),
         "promotion_eligible": False,
         "score_claim": False,
@@ -151,7 +163,7 @@ class _RaceInput:
     explicit_lowering_target_raw: str | None = None
 
 
-def _candidate_row(row: _RaceInput) -> dict[str, Any]:
+def _candidate_row(row: _RaceInput, *, support_identity_failure: str | None = None) -> dict[str, Any]:
     effect = row.effect
     byte_fields = _byte_fields(effect)
     explicit_target = _normalize_lowering_target(row.explicit_lowering_target)
@@ -162,6 +174,7 @@ def _candidate_row(row: _RaceInput) -> dict[str, Any]:
         effect,
         byte_fields,
         invalid_explicit_target=invalid_explicit_target,
+        support_identity_failure=support_identity_failure,
     )
     target = explicit_target if explicit_target is not None else _lowering_target(effect)
     viable = bool(first_failure == "ok" and effect.delta_score_total is not None and effect.delta_score_total < 0.0)
@@ -209,9 +222,14 @@ def _effect_failure(
     byte_fields: Mapping[str, int | None],
     *,
     invalid_explicit_target: bool,
+    support_identity_failure: str | None,
 ) -> str:
     if invalid_explicit_target:
         return INVALID_LOWERING_TARGET
+    if not effect.support_sha256:
+        return SUPPORT_IDENTITY_MISSING
+    if support_identity_failure:
+        return support_identity_failure
     if effect.blockers:
         return str(effect.blockers[0] or ACTION_EFFECT_BLOCKED)
     if effect.support_encoded_bytes is None:
@@ -222,9 +240,45 @@ def _effect_failure(
         return PARSEBACK_FAILED
     if effect.inflate_survived is not True:
         return INFLATE_FAILED
+    if effect.fakequant_survived is not True:
+        return FAKEQUANT_FAILED
     if effect.delta_score_total is None or effect.delta_score_total >= 0.0:
         return EXACT_SCORE_REJECTED
     return "ok"
+
+
+def _support_identity_status(
+    effects: Sequence[ActionEffect],
+    *,
+    expected_support_sha256: str | None,
+) -> dict[str, Any]:
+    expected = str(expected_support_sha256 or "").strip()
+    support_hashes = _dedupe(effect.support_sha256 for effect in effects if effect.support_sha256)
+    missing_count = sum(1 for effect in effects if not effect.support_sha256)
+    blockers: list[str] = []
+    failure: str | None = None
+    if missing_count:
+        blockers.append("lowering_race_support_sha256_missing")
+        failure = SUPPORT_IDENTITY_MISSING
+    if expected and any(support != expected for support in support_hashes):
+        blockers.append("lowering_race_expected_support_sha256_mismatch")
+        failure = SUPPORT_IDENTITY_MISMATCH
+    if not expected and len(support_hashes) > 1:
+        blockers.append("lowering_race_candidate_support_sha256_mismatch")
+        failure = SUPPORT_IDENTITY_MISMATCH
+    return {
+        "schema": "tac.evaluator_action_lowering_race.support_identity.v1",
+        "expected_support_sha256": expected or None,
+        "support_sha256s": support_hashes,
+        "missing_support_sha256_count": missing_count,
+        "all_candidates_same_support": (
+            missing_count == 0
+            and bool(support_hashes)
+            and (all(support == expected for support in support_hashes) if expected else len(support_hashes) == 1)
+        ),
+        "failure": failure,
+        "blockers": blockers,
+    }
 
 
 def _target_status(target: str, rows: Sequence[Mapping[str, Any]]) -> str:
@@ -408,6 +462,18 @@ def _int_or_none(value: Any) -> int | None:
     return None
 
 
+def _dedupe(values: Iterable[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
 __all__ = [
     "ACTION_EFFECT_BLOCKED",
     "BACKEND_REALIZATION_FAILED",
@@ -415,6 +481,7 @@ __all__ = [
     "COMPOSITE_NOT_MEASURED",
     "DIRECT_TEACHER_NO_WALL_CROSS",
     "EXACT_SCORE_REJECTED",
+    "FAKEQUANT_FAILED",
     "INFLATE_FAILED",
     "INVALID_LOWERING_TARGET",
     "LOWERING_CANDIDATE_SCHEMA",
@@ -424,6 +491,8 @@ __all__ = [
     "PARSEBACK_FAILED",
     "SEMANTIC_PRIMITIVE_MISSING",
     "SIDECAR_TOO_EXPENSIVE",
+    "SUPPORT_IDENTITY_MISMATCH",
+    "SUPPORT_IDENTITY_MISSING",
     "LoweringVerdict",
     "build_lowering_race_report",
     "write_lowering_race_report",
