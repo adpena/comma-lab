@@ -20,6 +20,8 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     SCHEMA,
     SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER,
     SOURCE_CONFIG_FIXTURE_BLOCKER,
+    SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER,
+    SOURCE_CONFIG_PATH_MISSING_BLOCKER,
     STATE_VALUE_ARTIFACT_BLOCKER,
     TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     TUB_CLOSED_BY_FIXTURE_REPLAY,
@@ -37,6 +39,29 @@ def _official_repo() -> Path:
     if not DEFAULT_OFFICIAL_SNERV_REPO.exists():
         pytest.skip(f"official SNeRV checkout is absent: {DEFAULT_OFFICIAL_SNERV_REPO}")
     return DEFAULT_OFFICIAL_SNERV_REPO
+
+
+def _resolved_source_config() -> dict[str, object]:
+    return {
+        "act": "gelu",
+        "conv_type": ["convnext"],
+        "crop_list": "0_0_0_0",
+        "dec_strds": [2],
+        "emb_size": 16,
+        "embed": "1.25_80",
+        "enc2_strds": [2],
+        "enc_dim": "8_16",
+        "enc_strds": [2, 2],
+        "fc_dim": 64,
+        "fc_hw": "4_4",
+        "ks": "0_1_5",
+        "lower_width": 8,
+        "norm": "none",
+        "num_blks": "1_1",
+        "num_blocks": 1,
+        "out_bias": "tanh",
+        "reduce": 1.2,
+    }
 
 
 def test_snerv_official_tub_source_forward_replay_executes_output2_path() -> None:
@@ -260,6 +285,55 @@ def test_snerv_official_tub_source_forward_replay_blocks_authority_without_value
     assert SOURCE_CONFIG_FIXTURE_BLOCKER in artifact["blockers"]
 
 
+def test_snerv_official_tub_requested_source_config_is_preserved_but_not_fixture_executed() -> None:
+    artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        official_trained_source_config=_resolved_source_config(),
+        generated_utc="20260604T000003Z",
+    )
+
+    requested = artifact["requested_source_config_lineage"]
+    assert requested["source_config_lineage"] == "official_trained_run_config"
+    assert requested["source_config_source"] == (
+        "in_memory_official_trained_source_config"
+    )
+    assert requested["source_config_is_fixture"] is False
+    assert requested["exact_trained_config_loaded"] is False
+    assert SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER in requested["blockers"]
+    assert SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER in artifact["blockers"]
+    assert (
+        SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER
+        in artifact["preserved_blockers"]
+    )
+    assert artifact["requested_source_config_exact_trained_config_loaded"] is False
+    assert len(artifact["requested_source_config_sha256"]) == 64
+    assert artifact["source_forward_replay_authority"] is False
+    assert artifact["score_claim"] is False
+    assert artifact["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_official_tub_requested_source_config_missing_path_fails_closed(
+    tmp_path: Path,
+) -> None:
+    missing = tmp_path / "missing_args.json"
+
+    artifact = build_snerv_official_tub_source_forward_replay_artifact(
+        official_repo_dir=_official_repo(),
+        official_trained_source_config_path=missing,
+        generated_utc="20260604T000004Z",
+    )
+
+    requested = artifact["requested_source_config_lineage"]
+    assert requested["source_config_source"] == missing.as_posix()
+    assert requested["exact_trained_config_loaded"] is False
+    assert SOURCE_CONFIG_PATH_MISSING_BLOCKER in requested["blockers"]
+    assert SOURCE_CONFIG_PATH_MISSING_BLOCKER in artifact["blockers"]
+    assert SOURCE_CONFIG_PATH_MISSING_BLOCKER in artifact["preserved_blockers"]
+    assert artifact["source_forward_replay_authority"] is False
+    assert artifact["score_claim"] is False
+    assert artifact["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_official_tub_source_forward_replay_rejects_fixture_value_state_npz_authority(
     tmp_path: Path,
 ) -> None:
@@ -391,6 +465,39 @@ def test_snerv_official_tub_replay_cli_writes_json(tmp_path: Path) -> None:
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["schema"] == SCHEMA
     assert payload["source_forward_replay_executed"] is True
+    assert payload["score_claim"] is False
+
+
+def test_snerv_official_tub_replay_cli_threads_requested_source_config(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "tub_replay.json"
+    source_config_path = tmp_path / "source_config.json"
+    source_config_path.write_text(
+        json.dumps(_resolved_source_config(), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    rc = main(
+        [
+            "--official-repo-dir",
+            _official_repo().as_posix(),
+            "--generated-utc",
+            "20260604T000005Z",
+            "--official-trained-source-config-path",
+            source_config_path.as_posix(),
+            "--write-json",
+            out.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["requested_source_config_source"] == source_config_path.as_posix()
+    assert len(payload["requested_source_config_sha256"]) == 64
+    assert payload["requested_source_config_exact_trained_config_loaded"] is False
+    assert SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER in payload["blockers"]
+    assert payload["source_forward_replay_authority"] is False
     assert payload["score_claim"] is False
 
 

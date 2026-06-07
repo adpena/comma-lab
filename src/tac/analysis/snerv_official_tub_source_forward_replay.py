@@ -121,6 +121,34 @@ SOURCE_CONFIG_FIXTURE_BLOCKER = (
 SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER = (
     "snerv_official_trained_checkpoint_exact_source_config_missing"
 )
+SOURCE_CONFIG_PATH_MISSING_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_path_missing"
+)
+SOURCE_CONFIG_UNREADABLE_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_unreadable"
+)
+SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_unresolved_model_fields"
+)
+SOURCE_CONFIG_FC_DIM_UNRESOLVED_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_fc_dim_unresolved"
+)
+SOURCE_CONFIG_ENC_DIM_UNRESOLVED_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_enc_dim_unresolved"
+)
+SOURCE_CONFIG_ENC2_STRDS_UNRESOLVED_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_enc2_strds_unresolved"
+)
+SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_not_executed_by_fixture"
+)
+EXACT_SOURCE_CONFIG_LINEAGES = frozenset(
+    {
+        "official_trained_run_config",
+        "checkpoint_export_official_trained_run_config",
+        "official_submission_config",
+    }
+)
 
 
 class _OfficialTubCheckpointLoadFailed(RuntimeError):
@@ -172,6 +200,9 @@ def build_snerv_official_tub_source_forward_replay_artifact(
     official_trained_checkpoint_state_dict_kind: str = (
         "official_trained_checkpoint_state_dict"
     ),
+    official_trained_source_config: Mapping[str, Any] | None = None,
+    official_trained_source_config_path: str | Path | None = None,
+    official_trained_source_config_kind: str = "official_trained_run_config",
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed executable TUB source-forward replay artifact."""
@@ -234,6 +265,9 @@ def build_snerv_official_tub_source_forward_replay_artifact(
             official_trained_checkpoint_state_dict_kind=(
                 official_trained_checkpoint_state_dict_kind
             ),
+            official_trained_source_config=official_trained_source_config,
+            official_trained_source_config_path=official_trained_source_config_path,
+            official_trained_source_config_kind=official_trained_source_config_kind,
         )
     except _OfficialTubCheckpointLoadFailed as exc:
         blockers = _ordered_unique(
@@ -289,6 +323,9 @@ def build_snerv_official_tub_source_forward_replay_artifact(
     )
     mapping_manifest = payload["official_trained_checkpoint_mapping_manifest"]
     source_config_lineage = dict(payload.get("source_config_lineage") or {})
+    requested_source_config_lineage = dict(
+        payload.get("requested_source_config_lineage") or {}
+    )
     checkpoint_load = dict(payload.get("official_trained_checkpoint_load") or {})
     state_dict_artifact = payload.get("official_trained_checkpoint_state_dict_artifact")
     state_dict_artifact = (
@@ -310,7 +347,14 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         for blocker in source_config_lineage.get("blockers", ())
         if str(blocker)
     ]
-    preserved = _ordered_unique([*preserved, *source_config_blockers])
+    requested_source_config_blockers = [
+        str(blocker)
+        for blocker in requested_source_config_lineage.get("blockers", ())
+        if str(blocker)
+    ]
+    preserved = _ordered_unique(
+        [*preserved, *source_config_blockers, *requested_source_config_blockers]
+    )
     full_source_parity = bool(
         replay_passed
         and mapping_verified
@@ -375,6 +419,16 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "official_trained_checkpoint_export_lineage_verified": checkpoint_export_lineage,
         "official_trained_checkpoint_exact_source_config_verified": exact_source_config,
         "source_config_lineage": source_config_lineage,
+        "requested_source_config_lineage": requested_source_config_lineage,
+        "requested_source_config_exact_trained_config_loaded": (
+            requested_source_config_lineage.get("exact_trained_config_loaded")
+        ),
+        "requested_source_config_sha256": requested_source_config_lineage.get(
+            "source_config_sha256"
+        ),
+        "requested_source_config_source": requested_source_config_lineage.get(
+            "source_config_source"
+        ),
         "source_config_lineage_schema": source_config_lineage.get("schema"),
         "source_config_kind": source_config_lineage.get("source_config_kind"),
         "source_config_source": source_config_lineage.get("source_config_source"),
@@ -485,11 +539,19 @@ def _run_source_fixture(
     official_trained_checkpoint_state_dict: Mapping[str, Any] | None,
     official_trained_checkpoint_state_dict_path: str | Path | None,
     official_trained_checkpoint_state_dict_kind: str,
+    official_trained_source_config: Mapping[str, Any] | None,
+    official_trained_source_config_path: str | Path | None,
+    official_trained_source_config_kind: str,
 ) -> dict[str, Any]:
     import torch
 
     cfg = TubFixtureConfig()
     source_config_lineage = _source_config_lineage_for_fixture(cfg)
+    requested_source_config_lineage = _requested_source_config_lineage(
+        source_config=official_trained_source_config,
+        source_config_path=official_trained_source_config_path,
+        source_config_kind=official_trained_source_config_kind,
+    )
     torch.manual_seed(20260604)
     with _official_tub_import_context(official_root):
         with warnings.catch_warnings():
@@ -681,6 +743,7 @@ def _run_source_fixture(
     return {
         "source_fixture_config": asdict(cfg),
         "source_config_lineage": source_config_lineage,
+        "requested_source_config_lineage": requested_source_config_lineage,
         "source_training_smoke": training_smoke,
         "official_trained_checkpoint_load": checkpoint_public,
         "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
@@ -1536,6 +1599,9 @@ def build_snerv_official_tub_source_forward_tensor_bundle(
     official_trained_checkpoint_state_dict_kind: str = (
         "official_trained_checkpoint_state_dict"
     ),
+    official_trained_source_config: Mapping[str, Any] | None = None,
+    official_trained_source_config_path: str | Path | None = None,
+    official_trained_source_config_kind: str = "official_trained_run_config",
 ) -> dict[str, Any]:
     """Capture SourceForwardProof tensors from the real upstream ``SNeRV_T`` graph."""
 
@@ -1550,6 +1616,9 @@ def build_snerv_official_tub_source_forward_tensor_bundle(
         official_trained_checkpoint_state_dict_kind=(
             official_trained_checkpoint_state_dict_kind
         ),
+        official_trained_source_config=official_trained_source_config,
+        official_trained_source_config_path=official_trained_source_config_path,
+        official_trained_source_config_kind=official_trained_source_config_kind,
     )
     return dict(payload["source_forward_tensor_bundle"])
 
@@ -1564,6 +1633,9 @@ def build_snerv_official_tub_source_forward_receiver_archive_packet(
     official_trained_checkpoint_state_dict_kind: str = (
         "official_trained_checkpoint_state_dict"
     ),
+    official_trained_source_config: Mapping[str, Any] | None = None,
+    official_trained_source_config_path: str | Path | None = None,
+    official_trained_source_config_kind: str = "official_trained_run_config",
 ) -> dict[str, Any]:
     """Build a byte-real receiver archive from upstream ``SNeRV_T`` fixture tensors.
 
@@ -1583,6 +1655,9 @@ def build_snerv_official_tub_source_forward_receiver_archive_packet(
         official_trained_checkpoint_state_dict_kind=(
             official_trained_checkpoint_state_dict_kind
         ),
+        official_trained_source_config=official_trained_source_config,
+        official_trained_source_config_path=official_trained_source_config_path,
+        official_trained_source_config_kind=official_trained_source_config_kind,
     )
     return payload
 
@@ -1595,11 +1670,19 @@ def _run_source_fixture_for_receiver_archive(
     official_trained_checkpoint_state_dict: Mapping[str, Any] | None,
     official_trained_checkpoint_state_dict_path: str | Path | None,
     official_trained_checkpoint_state_dict_kind: str,
+    official_trained_source_config: Mapping[str, Any] | None,
+    official_trained_source_config_path: str | Path | None,
+    official_trained_source_config_kind: str,
 ) -> dict[str, Any]:
     import torch
 
     cfg = TubFixtureConfig()
     source_config_lineage = _source_config_lineage_for_fixture(cfg)
+    requested_source_config_lineage = _requested_source_config_lineage(
+        source_config=official_trained_source_config,
+        source_config_path=official_trained_source_config_path,
+        source_config_kind=official_trained_source_config_kind,
+    )
     torch.manual_seed(20260604)
     with _official_tub_import_context(official_root):
         with warnings.catch_warnings():
@@ -1678,6 +1761,8 @@ def _run_source_fixture_for_receiver_archive(
         "schema": "snerv_official_tub_source_forward_receiver_archive_packet.v1",
         "archive_packet": archive_packet,
         "source_forward_tensor_bundle": source_tensor_bundle,
+        "source_config_lineage": source_config_lineage,
+        "requested_source_config_lineage": requested_source_config_lineage,
         "source_forward_output2_blocker": (
             "snerv_official_tub_output2_feature_space_not_receiver_frame_residual"
         ),
@@ -2249,6 +2334,131 @@ def _hash_json_exact(payload: Mapping[str, Any]) -> str:
     return sha256(encoded).hexdigest()
 
 
+def build_snerv_official_tub_source_config_lineage(
+    source_config: Mapping[str, Any],
+    *,
+    source: str,
+    source_config_kind: str = "official_trained_run_config",
+) -> dict[str, Any]:
+    """Classify an official SNeRV_T config without granting replay authority.
+
+    Official ``train_snerv_t.py`` writes ``args.yaml`` before ``train()``
+    resolves model-defining fields such as ``fc_dim`` and the final ``enc_dim``.
+    This helper makes that boundary executable: unresolved or fixture-shaped
+    configs are visible blocker evidence, while a resolved config can be carried
+    forward to a future real-frame source-forward replay without pretending that
+    the current tiny fixture used it.
+    """
+
+    normalized = _normalize_source_config(source_config)
+    blockers = _source_config_model_field_blockers(normalized)
+    kind = str(source_config_kind or "").strip() or "unknown_source_config"
+    fixture_like = _source_config_matches_fixture(normalized)
+    if fixture_like:
+        blockers.append(SOURCE_CONFIG_FIXTURE_BLOCKER)
+    if kind not in EXACT_SOURCE_CONFIG_LINEAGES:
+        blockers.append(SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER)
+    exact = bool(not blockers)
+    return {
+        "schema": "snerv_official_tub_source_config_lineage.v1",
+        "source_config_kind": "official_snerv_t_train_config",
+        "source_config_source": str(source),
+        "source_config_lineage": kind,
+        "source_config_sha256": _hash_json_exact(normalized),
+        "source_config_is_fixture": fixture_like,
+        "source_fixture_not_training_config": False,
+        "exact_trained_config_loaded": exact,
+        "config": normalized,
+        "required_model_fields": _required_source_config_fields(),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_snerv_official_tub_source_config_lineage_from_path(
+    source_config_path: str | Path,
+    *,
+    source_config_kind: str = "official_trained_run_config",
+) -> dict[str, Any]:
+    path = Path(source_config_path).expanduser()
+    if not path.is_file():
+        return _source_config_path_error_lineage(
+            path,
+            source_config_kind=source_config_kind,
+            blocker=SOURCE_CONFIG_PATH_MISSING_BLOCKER,
+        )
+    try:
+        payload = _load_source_config_file(path)
+    except Exception as exc:
+        lineage = _source_config_path_error_lineage(
+            path,
+            source_config_kind=source_config_kind,
+            blocker=SOURCE_CONFIG_UNREADABLE_BLOCKER,
+        )
+        lineage["failure"] = f"{type(exc).__name__}: {exc}"
+        return lineage
+    if not isinstance(payload, Mapping):
+        lineage = _source_config_path_error_lineage(
+            path,
+            source_config_kind=source_config_kind,
+            blocker=SOURCE_CONFIG_UNREADABLE_BLOCKER,
+        )
+        lineage["failure"] = "source config did not decode to a mapping"
+        return lineage
+    return build_snerv_official_tub_source_config_lineage(
+        payload,
+        source=path.as_posix(),
+        source_config_kind=source_config_kind,
+    )
+
+
+def _requested_source_config_lineage(
+    *,
+    source_config: Mapping[str, Any] | None,
+    source_config_path: str | Path | None,
+    source_config_kind: str,
+) -> dict[str, Any]:
+    if source_config is None and source_config_path is None:
+        return {
+            "schema": "snerv_official_tub_source_config_lineage.v1",
+            "source_config_kind": "not_requested",
+            "source_config_source": None,
+            "source_config_lineage": "not_requested",
+            "source_config_sha256": None,
+            "source_config_is_fixture": False,
+            "source_fixture_not_training_config": False,
+            "exact_trained_config_loaded": False,
+            "config": {},
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+    if source_config is not None:
+        lineage = build_snerv_official_tub_source_config_lineage(
+            source_config,
+            source="in_memory_official_trained_source_config",
+            source_config_kind=source_config_kind,
+        )
+    else:
+        lineage = build_snerv_official_tub_source_config_lineage_from_path(
+            Path(str(source_config_path)),
+            source_config_kind=source_config_kind,
+        )
+    if lineage.get("exact_trained_config_loaded") is True:
+        lineage = dict(lineage)
+        lineage["exact_trained_config_loaded"] = False
+        lineage["blockers"] = _ordered_unique(
+            [
+                *(
+                    str(blocker)
+                    for blocker in lineage.get("blockers", ())
+                    if str(blocker)
+                ),
+                SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER,
+            ]
+        )
+    return lineage
+
+
 def _source_config_lineage_for_fixture(cfg: TubFixtureConfig) -> dict[str, Any]:
     config = asdict(cfg)
     return {
@@ -2274,13 +2484,182 @@ def _source_config_lineage_is_exact(lineage: Mapping[str, Any]) -> bool:
         lineage.get("exact_trained_config_loaded") is True
         and lineage.get("source_config_is_fixture") is not True
         and str(lineage.get("source_config_lineage") or "")
-        in {
-            "official_trained_run_config",
-            "checkpoint_export_official_trained_run_config",
-            "official_submission_config",
-        }
+        in EXACT_SOURCE_CONFIG_LINEAGES
         and len(str(lineage.get("source_config_sha256") or "")) == 64
     )
+
+
+def _load_source_config_file(path: Path) -> Mapping[str, Any]:
+    if path.suffix.lower() == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        import yaml  # type: ignore[import-untyped]
+
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError("source config did not decode to a mapping")
+    return payload
+
+
+def _source_config_path_error_lineage(
+    path: Path,
+    *,
+    source_config_kind: str,
+    blocker: str,
+) -> dict[str, Any]:
+    return {
+        "schema": "snerv_official_tub_source_config_lineage.v1",
+        "source_config_kind": "official_snerv_t_train_config",
+        "source_config_source": path.as_posix(),
+        "source_config_lineage": str(source_config_kind or "unknown_source_config"),
+        "source_config_sha256": None,
+        "source_config_is_fixture": False,
+        "source_fixture_not_training_config": False,
+        "exact_trained_config_loaded": False,
+        "config": {},
+        "blockers": [blocker, SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _normalize_source_config(source_config: Mapping[str, Any]) -> dict[str, Any]:
+    out = dict(source_config)
+    for key in ("enc_strds", "enc2_strds", "dec_strds"):
+        if key in out:
+            out[key] = _int_list_or_none(out[key])
+    if "conv_type" in out:
+        out["conv_type"] = _str_list_or_none(out["conv_type"])
+    for key in ("fc_dim", "lower_width", "num_blocks", "emb_size"):
+        if key in out:
+            out[key] = _int_or_none(out[key])
+    if "reduce" in out:
+        out["reduce"] = _float_or_none(out["reduce"])
+    for key in (
+        "embed",
+        "ks",
+        "num_blks",
+        "enc_dim",
+        "fc_hw",
+        "norm",
+        "act",
+        "out_bias",
+        "crop_list",
+    ):
+        if key in out and out[key] is not None:
+            out[key] = str(out[key])
+    return out
+
+
+def _required_source_config_fields() -> list[str]:
+    return [
+        "embed",
+        "ks",
+        "num_blks",
+        "enc_strds",
+        "enc_dim",
+        "enc2_strds",
+        "conv_type",
+        "norm",
+        "act",
+        "dec_strds",
+        "fc_dim",
+        "fc_hw",
+        "reduce",
+        "lower_width",
+        "num_blocks",
+        "out_bias",
+        "crop_list",
+        "emb_size",
+    ]
+
+
+def _source_config_model_field_blockers(config: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    missing = [key for key in _required_source_config_fields() if key not in config]
+    if missing:
+        blockers.append(SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER)
+    if _int_or_none(config.get("fc_dim")) is None or int(config.get("fc_dim") or 0) <= 0:
+        blockers.append(SOURCE_CONFIG_FC_DIM_UNRESOLVED_BLOCKER)
+    if not _enc_dim_resolved(config.get("enc_dim")):
+        blockers.append(SOURCE_CONFIG_ENC_DIM_UNRESOLVED_BLOCKER)
+    enc2 = config.get("enc2_strds")
+    if (
+        not isinstance(enc2, list)
+        or not enc2
+        or not all(isinstance(value, int) and value > 0 for value in enc2)
+    ):
+        blockers.append(SOURCE_CONFIG_ENC2_STRDS_UNRESOLVED_BLOCKER)
+    dec = config.get("dec_strds")
+    if (
+        not isinstance(dec, list)
+        or not dec
+        or not all(isinstance(value, int) and value > 0 for value in dec)
+    ):
+        blockers.append(SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER)
+    return _ordered_unique(blockers)
+
+
+def _source_config_matches_fixture(config: Mapping[str, Any]) -> bool:
+    fixture = _normalize_source_config(asdict(TubFixtureConfig()))
+    return all(config.get(key) == value for key, value in fixture.items())
+
+
+def _enc_dim_resolved(value: Any) -> bool:
+    text = str(value or "")
+    parts = text.split("_")
+    if len(parts) != 2:
+        return False
+    try:
+        return int(float(parts[0])) > 0 and int(float(parts[1])) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _int_list_or_none(value: Any) -> list[int] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        raw_values: Sequence[Any] = [part for part in value.replace(",", "_").split("_") if part]
+    elif isinstance(value, Sequence) and not isinstance(value, bytes | bytearray):
+        raw_values = value
+    else:
+        raw_values = [value]
+    out: list[int] = []
+    for item in raw_values:
+        parsed = _int_or_none(item)
+        if parsed is None:
+            return None
+        out.append(parsed)
+    return out
+
+
+def _str_list_or_none(value: Any) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return [part for part in value.replace(",", "_").split("_") if part]
+    if isinstance(value, Sequence) and not isinstance(value, bytes | bytearray):
+        return [str(part) for part in value]
+    return [str(value)]
+
+
+def _int_or_none(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if np.isfinite(out) else None
 
 
 def _write_deterministic_state_npz(
@@ -2482,6 +2861,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--official-trained-checkpoint-state-dict-kind",
         default="official_trained_checkpoint_state_dict",
     )
+    parser.add_argument("--official-trained-source-config-path", type=Path, default=None)
+    parser.add_argument(
+        "--official-trained-source-config-kind",
+        default="official_trained_run_config",
+    )
     args = parser.parse_args(argv)
     if args.write_state_dict_npz is not None and not args.train_one_step:
         parser.error("--write-state-dict-npz requires --train-one-step")
@@ -2496,6 +2880,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         official_trained_checkpoint_state_dict_kind=(
             args.official_trained_checkpoint_state_dict_kind
         ),
+        official_trained_source_config_path=args.official_trained_source_config_path,
+        official_trained_source_config_kind=args.official_trained_source_config_kind,
         generated_utc=args.generated_utc,
     )
     text = json.dumps(payload, indent=2, sort_keys=True)
@@ -2519,13 +2905,25 @@ __all__ = [
     "CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER",
     "CHECKPOINT_LOAD_UNEXPECTED_KEYS_BLOCKER",
     "DEFAULT_OFFICIAL_SNERV_REPO",
+    "EXACT_SOURCE_CONFIG_LINEAGES",
     "FALSE_AUTHORITY",
     "PYTORCH_WAVELETS_BLOCKER",
     "SCHEMA",
+    "SOURCE_CONFIG_ENC2_STRDS_UNRESOLVED_BLOCKER",
+    "SOURCE_CONFIG_ENC_DIM_UNRESOLVED_BLOCKER",
+    "SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER",
+    "SOURCE_CONFIG_FC_DIM_UNRESOLVED_BLOCKER",
+    "SOURCE_CONFIG_FIXTURE_BLOCKER",
+    "SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER",
+    "SOURCE_CONFIG_PATH_MISSING_BLOCKER",
+    "SOURCE_CONFIG_UNREADABLE_BLOCKER",
+    "SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER",
     "STATE_VALUE_ARTIFACT_BLOCKER",
     "TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER",
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
     "TUB_PRESERVED_BLOCKERS",
+    "build_snerv_official_tub_source_config_lineage",
+    "build_snerv_official_tub_source_config_lineage_from_path",
     "build_snerv_official_tub_source_forward_receiver_archive_packet",
     "build_snerv_official_tub_source_forward_replay_artifact",
     "build_snerv_official_tub_source_forward_tensor_bundle",
