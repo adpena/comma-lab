@@ -18,6 +18,7 @@ import pytest
 
 from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects
+from tac.analysis.evaluator_action_lowering_race import LOWERING_RACE_SCHEMA
 from tac.analysis.inverse_scorer_actions import (
     BACKEND_REALIZATION_FAILED,
     BLOCKER_ARCHIVE_CLOSED_BIRTH_REQUIRES_EXECUTABLE_SUPPORT,
@@ -1208,6 +1209,7 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert (out_dir / "commutator_summary.json").is_file()
     assert (out_dir / "wall_normal_branch_receipt.json").is_file()
     assert (out_dir / "wall_normal_branch_action_effect_rows.jsonl").is_file()
+    assert (out_dir / "wall_normal_branch_lowering_race.json").is_file()
     assert (out_dir / "next_blocker.md").is_file()
     score_program_word = json.loads((out_dir / "score_program_word.json").read_text(encoding="utf-8"))
     assert score_program_word["schema"] == SCORE_PROGRAM_WORD_SCHEMA
@@ -1383,7 +1385,11 @@ def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
         (out_dir / "wall_normal_branch_receipt.json").read_text(encoding="utf-8")
     )
     branch_rows = read_action_effects(out_dir / "wall_normal_branch_action_effect_rows.jsonl")
+    lowering_race = json.loads(
+        (out_dir / "wall_normal_branch_lowering_race.json").read_text(encoding="utf-8")
+    )
     assert branch_receipt["schema"] == WALL_NORMAL_BRANCH_RECEIPT_SCHEMA
+    assert lowering_race["schema"] == LOWERING_RACE_SCHEMA
     assert branch_receipt["branch_count"] == 3
     assert branch_receipt["same_action_id"] is True
     assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
@@ -1391,6 +1397,12 @@ def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
     assert summary["wall_normal_branch_action_effect_rows_path"] == (
         out_dir / "wall_normal_branch_action_effect_rows.jsonl"
     ).as_posix()
+    assert summary["wall_normal_branch_lowering_race_path"] == (
+        out_dir / "wall_normal_branch_lowering_race.json"
+    ).as_posix()
+    assert summary["wall_normal_branch_lowering_candidate_count"] == 3
+    assert len(lowering_race["lowering_candidates"]) == 3
+    assert lowering_race["support_identity"]["all_candidates_same_support"] is True
     assert [row.action_kind for row in branch_rows] == [
         "wall_normal_direct_teacher",
         "wall_normal_backend_fit",
@@ -1479,10 +1491,20 @@ def test_generate_inverse_evaluate_actions_cli_scopes_wall_normal_receipt_to_fix
     assert summary["wall_normal_branch_action_effect_rows_path"] == (
         out_dir / "wall_normal_branch_action_effect_rows.jsonl"
     ).as_posix()
+    assert summary["wall_normal_branch_lowering_race_path"] == (
+        out_dir / "wall_normal_branch_lowering_race.json"
+    ).as_posix()
+    assert summary["wall_normal_branch_lowering_candidate_count"] == 3
     branch_rows = read_action_effects(out_dir / "wall_normal_branch_action_effect_rows.jsonl")
+    lowering_race = json.loads(
+        (out_dir / "wall_normal_branch_lowering_race.json").read_text(encoding="utf-8")
+    )
     assert len(branch_rows) == 3
     assert {row.action_id for row in branch_rows} == {"wall-normal-action-a"}
     assert {row.support_sha256 for row in branch_rows} == {support_sha}
+    assert lowering_race["schema"] == LOWERING_RACE_SCHEMA
+    assert len(lowering_race["lowering_candidates"]) == 3
+    assert lowering_race["support_identity"]["support_sha256s"] == [support_sha]
 
 
 def test_generate_inverse_evaluate_actions_cli_does_not_call_blocked_reverse_producer_missing(

@@ -30,6 +30,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.action_commutator import build_commutator_ledger  # noqa: E402
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects  # noqa: E402
+from tac.analysis.evaluator_action_lowering_race import build_lowering_race_report  # noqa: E402
 from tac.analysis.inverse_scorer_actions import (  # noqa: E402
     build_masked_residual_oracle_action_effect,
     build_score_program_word,
@@ -299,6 +300,37 @@ def _write_action_effect_ledger(effects: Sequence[ActionEffect], path: Path) -> 
     for effect in effects:
         append_action_effect(effect, path)
     return len(effects)
+
+
+def _build_wall_normal_branch_lowering_race(
+    effects: Sequence[ActionEffect],
+    receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    action_ids = [
+        str(value)
+        for value in receipt.get("action_ids", [])
+        if isinstance(value, str) and value
+    ]
+    if len(action_ids) != 1:
+        return {
+            "schema": "tac.evaluator_action_lowering_race.blocked.v1",
+            "action_id": None if not action_ids else action_ids[0],
+            "blockers": ["wall_normal_branch_action_id_missing_or_ambiguous"],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    support_hashes = [
+        str(value)
+        for value in receipt.get("support_sha256s", [])
+        if isinstance(value, str) and value
+    ]
+    expected_support_sha256 = support_hashes[0] if len(support_hashes) == 1 else None
+    return build_lowering_race_report(
+        action_id=action_ids[0],
+        action_effects=effects,
+        expected_support_sha256=expected_support_sha256,
+    )
 
 
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
@@ -634,6 +666,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     pr110_validation_path = out_dir / "pr110_k16_baseline_validation.json"
     wall_normal_receipt_path = out_dir / "wall_normal_branch_receipt.json"
     wall_normal_branch_action_effect_path = out_dir / "wall_normal_branch_action_effect_rows.jsonl"
+    wall_normal_branch_lowering_race_path = out_dir / "wall_normal_branch_lowering_race.json"
     summary_path = out_dir / "summary.json"
     blocker_note_path = out_dir / "next_blocker.md"
     test_log_path = out_dir / "test_log.txt"
@@ -672,6 +705,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         in wall_normal_receipt_keys
     ]
+    wall_normal_branch_lowering_race = _build_wall_normal_branch_lowering_race(
+        wall_normal_branch_effects,
+        wall_normal_receipt,
+    )
     action_effect_count = _write_action_effect_ledger(output_effects, action_effect_path)
     wall_normal_branch_action_effect_count = _write_action_effect_ledger(
         wall_normal_branch_effects,
@@ -685,6 +722,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     _write_json(pr110_proof_path, pr110_proof)
     _write_json(pr110_validation_path, pr110_validation)
     _write_json(wall_normal_receipt_path, wall_normal_receipt)
+    _write_json(wall_normal_branch_lowering_race_path, wall_normal_branch_lowering_race)
 
     summary = {
         "schema": OUTPUT_SCHEMA,
@@ -705,6 +743,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_k16_baseline_validation_path": pr110_validation_path.as_posix(),
         "wall_normal_branch_receipt_path": wall_normal_receipt_path.as_posix(),
         "wall_normal_branch_action_effect_rows_path": wall_normal_branch_action_effect_path.as_posix(),
+        "wall_normal_branch_lowering_race_path": wall_normal_branch_lowering_race_path.as_posix(),
         "next_blocker_path": blocker_note_path.as_posix(),
         "test_log_path": test_log_path.as_posix(),
         "seed_action_effect_count": len(seed_effects),
@@ -713,6 +752,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "action_effect_row_count": action_effect_count,
         "wall_normal_branch_action_effect_row_count": wall_normal_branch_action_effect_count,
         "wall_normal_receipt_source_row_count": len(wall_normal_receipt_source_effects),
+        "wall_normal_branch_lowering_candidate_count": len(
+            wall_normal_branch_lowering_race.get("lowering_candidates", [])
+        ),
         "queue_row_count": queue_count,
         "score_program_operation_count": score_program_word["operation_count"],
         "score_program_blockers": list(score_program_word["blockers"]),
@@ -740,6 +782,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "pr110_input_filtered_by_family": True,
             "wall_normal_receipt_fixed_scope_filter_available": True,
             "wall_normal_branch_action_effect_rows_emitted": True,
+            "wall_normal_branch_lowering_race_emitted": True,
             "default_artifact_tier": "ssd",
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
