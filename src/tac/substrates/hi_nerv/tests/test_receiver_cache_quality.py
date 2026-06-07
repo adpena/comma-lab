@@ -17,6 +17,7 @@ from tac.substrates.hi_nerv.archive_candidate import (
     build_hi_nerv_archive_replay_components,
     build_hi_nerv_target_region_action_parseback_survival,
 )
+from tac.substrates.hi_nerv.inflate import inflate_one_video
 from tac.substrates.hi_nerv.receiver_cache_quality import (
     HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA,
     HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA,
@@ -203,6 +204,44 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_receiver_consump
     assert proof["receiver_changed_action_pixels"] == 2
     assert proof["max_abs_action_rgb_error"] == pytest.approx(0.0)
     assert "target_region_action_inflate_survival_missing" in proof["blockers"]
+
+
+def test_hi_nerv_target_region_action_parseback_survival_proves_inflated_raw(
+    tmp_path: Path,
+) -> None:
+    action = TargetRegionPixelAction(
+        pair_index=1,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=np.array([[2, 3], [4, 5]], dtype=np.uint16),
+        rgb_u8=np.array([[255, 0, 17], [0, 255, 33]], dtype=np.uint8),
+    )
+    program = encode_target_region_actions_meta([action])
+    action_archive = _write_tiny_hiv1_archive(
+        tmp_path / "action.zip",
+        extra_meta={TARGET_REGION_ACTION_META_KEY: program},
+    )
+    with zipfile.ZipFile(action_archive, "r") as zf:
+        payload = zf.read("0.bin")
+    inflated_raw = tmp_path / "inflated.raw"
+    inflate_one_video(payload, inflated_raw, device="cpu")
+
+    proof = build_hi_nerv_target_region_action_parseback_survival(
+        action_archive,
+        expected_program_base64=program,
+        inflated_raw_path=inflated_raw,
+    )
+
+    assert proof["survived"] is True
+    assert proof["fakequant_survived"] is True
+    assert proof["parseback_survived"] is True
+    assert proof["inflate_survived"] is True
+    assert proof["inflated_raw_checked"] is True
+    assert proof["inflated_raw_matches_action_receiver"] is True
+    assert proof["inflated_raw_action_changed_pixels"] > 0
+    assert proof["inflated_raw_max_abs_error_vs_action_receiver"] == 0
+    assert "target_region_action_inflate_survival_missing" not in proof["blockers"]
 
 
 def test_hi_nerv_archive_replay_components_attach_segnet_teacher_metrics(

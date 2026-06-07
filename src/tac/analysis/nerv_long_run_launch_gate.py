@@ -214,7 +214,9 @@ def _positive_unclosed_masked_oracle_birth(rows: list[dict[str, Any]]) -> dict[s
             continue
         if oracle.get("target_support_moved") is not True:
             continue
-        return dict(oracle)
+        out = dict(oracle)
+        out.setdefault("action_id", row.get("action_id"))
+        return out
     return None
 
 
@@ -289,6 +291,7 @@ def _target_region_action_archive_closure_status(
 def _target_region_action_survival_status(
     run_root: Path,
     *,
+    action_id: str | None = None,
     index: dict[str, list[str]],
 ) -> dict[str, Any]:
     parseback_path: str | None = None
@@ -305,6 +308,10 @@ def _target_region_action_survival_status(
                         "hi_nerv_target_region_action_parseback_survival.v1",
                         [],
                     ).append(path.as_posix())
+                    row_action_id = str(node.get("action_id") or "")
+                    if action_id and row_action_id != str(action_id):
+                        stack.extend(node.values())
+                        continue
                     if (
                         node.get("survived") is True
                         and node.get("fakequant_survived") is True
@@ -1086,6 +1093,7 @@ def evaluate_nerv_long_run_launch_gate(
                 )
                 survival_status = _target_region_action_survival_status(
                     root,
+                    action_id=str(unclosed_oracle.get("action_id") or ""),
                     index=evidence_index,
                 )
                 blockers.append("real_video_birth_receipt_archive_unclosed")

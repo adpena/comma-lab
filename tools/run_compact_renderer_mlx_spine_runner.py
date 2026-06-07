@@ -181,6 +181,7 @@ def _select_target_region_action_program_from_birth_payload(
         "candidate_count": len(candidates),
         "eligible_candidate_count": len(eligible_candidates),
         "selected_for_export": True,
+        "action_id": selected.get("action_id"),
         "target_region_action_payload_bytes": _candidate_payload_bytes(selected),
         "target_region_action_pixel_count": selected.get("target_region_action_pixel_count"),
         "target_region_action_program_sha256": hashlib.sha256(
@@ -204,6 +205,36 @@ def _select_target_region_action_program_from_birth_payload(
         "ready_for_exact_eval_dispatch": False,
     }
     return program, selection
+
+
+def _target_region_action_payload_for_export_selection(
+    artifact_dict: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    for key in ("target_region_birth_payload", "target_region_birth"):
+        value = artifact_dict.get(key)
+        if isinstance(value, Mapping):
+            return value
+    if isinstance(artifact_dict.get("target_region_action_program_base64"), str):
+        keys = {
+            "action_id",
+            "target_region_action_payload_bytes",
+            "target_region_action_pixel_count",
+            "target_region_action_program_base64",
+            "target_region_action_program_sha256",
+            "target_region_action_section_telemetry",
+            "target_region_action_support_cardinality",
+            "target_region_action_support_encoded_bytes",
+            "target_region_action_support_encoding",
+            "target_region_action_support_sha256",
+            "target_support_moved",
+            "accepted",
+            "exact_score_decision",
+            "exact_delta_score_nonrate",
+            "admission_decision",
+            "region_argmax_transitions",
+        }
+        return {key: artifact_dict.get(key) for key in keys if key in artifact_dict}
+    return None
 
 
 from comma_lab.local_submission_replay import (  # noqa: E402
@@ -10619,8 +10650,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         target_region_action_program_base64,
         target_region_action_export_selection,
     ) = _select_target_region_action_program_from_birth_payload(
-        artifact_dict.get("target_region_birth_payload")
-        or artifact_dict.get("target_region_birth")
+        _target_region_action_payload_for_export_selection(artifact_dict)
     )
     target_region_action_parseback_survival = _write_hi_nerv_target_region_action_parseback_survival(
         archive_resolution=archive_resolution,
@@ -19403,13 +19433,15 @@ def _promote_hi_nerv_selected_birth_parseback_survival(
     output_dir: str | Path,
     artifact_dict: dict[str, Any],
 ) -> dict[str, Any] | None:
-    archive_raw = archive_resolution.get("archive_path")
+    archive_raw = archive_resolution.get("archive_path") or artifact_dict.get("archive_path")
     if not archive_raw:
         return None
     archive = Path(str(archive_raw)).expanduser().resolve(strict=False)
     if not archive.is_file():
         return None
     candidate_kind = str(archive_resolution.get("candidate_kind") or "archive")
+    actual_archive_sha256 = _sha256_file(archive)
+    actual_archive_bytes = int(archive.stat().st_size)
     safe_kind = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in candidate_kind)
     candidate_path = archive.parent / f"hi_nerv_birth_parseback_survival_{safe_kind}.json"
     if not candidate_path.is_file():
@@ -19426,14 +19458,32 @@ def _promote_hi_nerv_selected_birth_parseback_survival(
     if str(row.get("schema") or "") != "hi_nerv_target_region_birth_survival_candidate.v1":
         return None
     promoted = dict(row)
+    blockers = [str(value) for value in promoted.get("blockers") or []]
+    candidate_archive_sha256 = promoted.get("selected_archive_sha256") or promoted.get(
+        "archive_sha256"
+    )
+    if candidate_archive_sha256 and str(candidate_archive_sha256) != actual_archive_sha256:
+        blockers.append("selected_birth_parseback_candidate_archive_sha256_mismatch")
+    candidate_archive_bytes = _positive_int_or_none(
+        promoted.get("selected_archive_bytes") or promoted.get("archive_bytes")
+    )
+    if candidate_archive_bytes is not None and candidate_archive_bytes != actual_archive_bytes:
+        blockers.append("selected_birth_parseback_candidate_archive_bytes_mismatch")
+    if blockers:
+        promoted["survived"] = False
+        promoted["fakequant_survived"] = False
+        promoted["parseback_survived"] = False
     promoted["source_schema"] = row.get("schema")
     promoted["schema"] = str(row.get("source_schema") or "hi_nerv_target_region_birth_survival.v1")
     promoted["canonical_launch_gate_schema"] = True
     promoted["selected_archive_path"] = archive.as_posix()
-    promoted["selected_archive_sha256"] = archive_resolution.get("archive_sha256") or _sha256_file(archive)
+    promoted["selected_archive_sha256"] = actual_archive_sha256
+    promoted["selected_archive_bytes"] = actual_archive_bytes
     promoted["selected_candidate_kind"] = candidate_kind
     promoted["source_candidate_artifact_path"] = candidate_path.as_posix()
     promoted["producer"] = "hi_nerv_runner_selected_birth_parseback_survival"
+    promoted["blockers"] = _dedupe(blockers)
+    promoted.update(FALSE_AUTHORITY)
     out = Path(output_dir).expanduser().resolve(strict=False)
     out.mkdir(parents=True, exist_ok=True)
     promoted_path = out / "hi_nerv_selected_birth_parseback_survival.json"
@@ -19498,17 +19548,53 @@ def _write_hi_nerv_target_region_action_parseback_survival(
     export_selection: Mapping[str, Any] | None,
     target_region_action_program_base64: str | None,
 ) -> dict[str, Any] | None:
-    if not isinstance(export_selection, Mapping) or export_selection.get("selected_for_export") is not True:
+    selected_for_export = bool(
+        isinstance(export_selection, Mapping)
+        and export_selection.get("selected_for_export") is True
+    )
+    has_selected_program = bool(
+        isinstance(target_region_action_program_base64, str)
+        and target_region_action_program_base64
+    )
+    if not selected_for_export and not has_selected_program:
         return None
-    archive_raw = archive_resolution.get("archive_path")
+    archive_raw = archive_resolution.get("archive_path") or artifact_dict.get("archive_path")
     if not archive_raw:
         return None
     archive = Path(str(archive_raw)).expanduser().resolve(strict=False)
     if not archive.is_file():
         return None
+    actual_archive_sha256 = _sha256_file(archive)
+    actual_archive_bytes = int(archive.stat().st_size)
     out = Path(output_dir).expanduser().resolve(strict=False)
     out.mkdir(parents=True, exist_ok=True)
     path = out / "hi_nerv_target_region_action_parseback_survival.json"
+    expected_support_sha256 = (
+        str(export_selection.get("target_region_action_support_sha256"))
+        if isinstance(export_selection, Mapping)
+        and export_selection.get("target_region_action_support_sha256")
+        else (
+            str(artifact_dict.get("target_region_action_support_sha256"))
+            if artifact_dict.get("target_region_action_support_sha256")
+            else None
+        )
+    )
+    expected_payload_bytes = _positive_int_or_none(
+        export_selection.get("target_region_action_payload_bytes")
+        if isinstance(export_selection, Mapping)
+        else artifact_dict.get("target_region_action_payload_bytes")
+    )
+    expected_program_sha256 = None
+    if isinstance(target_region_action_program_base64, str):
+        expected_program_sha256 = hashlib.sha256(
+            target_region_action_program_base64.encode("ascii")
+        ).hexdigest()
+    inflated_raw_path = (
+        archive_resolution.get("inflated_raw_path")
+        or archive_resolution.get("raw_output_path")
+        or artifact_dict.get("inflated_raw_path")
+        or artifact_dict.get("raw_output_path")
+    )
     try:
         from tac.substrates.hi_nerv.archive_candidate import (
             build_hi_nerv_target_region_action_parseback_survival,
@@ -19518,14 +19604,9 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             build_hi_nerv_target_region_action_parseback_survival(
                 archive,
                 expected_program_base64=target_region_action_program_base64,
-                expected_support_sha256=(
-                    str(export_selection.get("target_region_action_support_sha256"))
-                    if export_selection.get("target_region_action_support_sha256")
-                    else None
-                ),
-                expected_payload_bytes=_positive_int_or_none(
-                    export_selection.get("target_region_action_payload_bytes")
-                ),
+                expected_support_sha256=expected_support_sha256,
+                expected_payload_bytes=expected_payload_bytes,
+                inflated_raw_path=inflated_raw_path,
             )
         )
     except Exception as exc:
@@ -19547,15 +19628,91 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "ready_for_exact_eval_dispatch": False,
             **FALSE_AUTHORITY,
         }
+    action_id = None
+    if isinstance(export_selection, Mapping):
+        action_id = export_selection.get("action_id")
+    if action_id is None:
+        action_id = artifact_dict.get("action_id")
+    if action_id is None:
+        birth_payload = artifact_dict.get("target_region_birth_payload") or artifact_dict.get(
+            "target_region_birth"
+        )
+        if isinstance(birth_payload, Mapping):
+            action_id = birth_payload.get("action_id")
+    if action_id:
+        row["action_id"] = str(action_id)
+    else:
+        row["blockers"] = _dedupe(
+            [
+                *[str(value) for value in row.get("blockers") or []],
+                "target_region_action_parseback_survival_action_id_missing",
+            ]
+        )
+    builder_archive_sha256 = row.get("archive_sha256")
+    builder_archive_bytes = _positive_int_or_none(row.get("archive_bytes"))
+    if builder_archive_sha256 and str(builder_archive_sha256) != actual_archive_sha256:
+        row["blockers"] = _dedupe(
+            [
+                *[str(value) for value in row.get("blockers") or []],
+                "target_region_action_parseback_archive_sha256_mismatch",
+            ]
+        )
+    if builder_archive_bytes is not None and builder_archive_bytes != actual_archive_bytes:
+        row["blockers"] = _dedupe(
+            [
+                *[str(value) for value in row.get("blockers") or []],
+                "target_region_action_parseback_archive_bytes_mismatch",
+            ]
+        )
+    if expected_support_sha256 is None:
+        row["blockers"] = _dedupe(
+            [
+                *[str(value) for value in row.get("blockers") or []],
+                "target_region_action_parseback_survival_support_sha256_missing",
+            ]
+        )
+    if expected_payload_bytes is None:
+        row["blockers"] = _dedupe(
+            [
+                *[str(value) for value in row.get("blockers") or []],
+                "target_region_action_parseback_survival_payload_bytes_missing",
+            ]
+        )
+    parseback_custody_blocker_prefixes = (
+        "target_region_action_expected_program_decode_failed",
+        "target_region_action_parseback_archive_bytes_mismatch",
+        "target_region_action_parseback_archive_sha256_mismatch",
+        "target_region_action_parseback_survival_action_id_missing",
+        "target_region_action_parseback_survival_payload_bytes_missing",
+        "target_region_action_parseback_survival_support_sha256_missing",
+        "target_region_action_payload_bytes_mismatch",
+        "target_region_action_payload_mismatch",
+        "target_region_action_support_sha256_mismatch",
+    )
+    if any(
+        str(blocker).startswith(parseback_custody_blocker_prefixes)
+        for blocker in row.get("blockers") or []
+    ):
+        row["survived"] = False
+        row["fakequant_survived"] = False
+        row["parseback_survived"] = False
+    row["archive_sha256"] = actual_archive_sha256
+    row["archive_bytes"] = actual_archive_bytes
+    row["target_region_action_program_sha256"] = expected_program_sha256
+    row["expected_support_sha256"] = expected_support_sha256
+    row["expected_payload_bytes"] = expected_payload_bytes
+    row.update(FALSE_AUTHORITY)
     row["producer"] = "hi_nerv_runner_target_region_action_parseback_survival"
     row["artifact_path"] = path.as_posix()
-    row["target_region_action_export_selection"] = _strip_substrate_metadata_authority_fields(
-        dict(export_selection)
-    )
+    if isinstance(export_selection, Mapping):
+        row["target_region_action_export_selection"] = _strip_substrate_metadata_authority_fields(
+            dict(export_selection)
+        )
     summary = _strip_substrate_metadata_authority_fields(
         {
             "schema": row.get("schema"),
             "surface": row.get("surface"),
+            "action_id": row.get("action_id"),
             "survived": row.get("survived"),
             "fakequant_survived": row.get("fakequant_survived"),
             "parseback_survived": row.get("parseback_survived"),
@@ -19564,6 +19721,11 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "archive_path": row.get("archive_path"),
             "archive_sha256": row.get("archive_sha256"),
             "archive_bytes": row.get("archive_bytes"),
+            "target_region_action_program_sha256": row.get(
+                "target_region_action_program_sha256"
+            ),
+            "expected_support_sha256": row.get("expected_support_sha256"),
+            "expected_payload_bytes": row.get("expected_payload_bytes"),
             "total_action_pixels": row.get("total_action_pixels"),
             "exact_uint8_action_pixels_applied": row.get(
                 "exact_uint8_action_pixels_applied"

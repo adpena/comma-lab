@@ -734,6 +734,7 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
         {
             "schema": "hi_nerv_target_region_action_parseback_survival.v1",
             "surface": "parseback_mlx",
+            "action_id": ACTION,
             "survived": True,
             "fakequant_survived": True,
             "parseback_survived": True,
@@ -768,6 +769,56 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
         not in verdict["blocking_evidence"]
     )
     assert "hinerv_target_region_action_inflate_survival_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_target_region_action_parseback_survival_requires_same_action_id(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_action_parseback_survival_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "target_region_action_parseback_survival.json",
+        {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": "b" * 64,
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "hinerv_target_region_action_parseback_survival_missing" in (
+        verdict["blocking_evidence"]
+    )
     assert verdict["approved"] is False
 
 

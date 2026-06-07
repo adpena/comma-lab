@@ -38,7 +38,7 @@ from tac.submission_archive import (
     MINIMAL_SINGLE_MEMBER_NAME,
     build_minimal_single_member_archive_bytes,
 )
-from tac.substrates._shared.inflate_runtime import CAMERA_HW
+from tac.substrates._shared.inflate_runtime import CAMERA_HW, rgb_pair_to_uint8_frames
 from tac.substrates._shared.pact_nerv_full_main import write_contest_runtime
 from tac.substrates.hi_nerv.architecture import (
     HinervConfig,
@@ -226,6 +226,7 @@ def build_hi_nerv_target_region_action_parseback_survival(
     expected_program_base64: str | None = None,
     expected_support_sha256: str | None = None,
     expected_payload_bytes: int | None = None,
+    inflated_raw_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Prove charged target-region action survival through HIV1 parse-back.
 
@@ -388,9 +389,18 @@ def build_hi_nerv_target_region_action_parseback_survival(
     parseback_survived = bool(total_pixels > 0 and exact_applied_pixels == total_pixels)
     if not parseback_survived:
         blockers.append("target_region_action_parseback_survival_failed")
+    inflate = _target_region_action_inflated_raw_survival(
+        action_model=action_model,
+        base_model=base_model,
+        pair_indices=pair_indices,
+        cfg=cfg,
+        inflated_raw_path=inflated_raw_path,
+    )
+    blockers.extend(str(blocker) for blocker in inflate.get("blockers") or [])
+    inflate_survived = bool(inflate.get("inflate_survived") is True)
     return {
         "schema": HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA,
-        "surface": "parseback_mlx",
+        "surface": "inflate_raw" if inflate.get("inflated_raw_checked") else "parseback_mlx",
         "archive_path": path.as_posix(),
         "archive_sha256": archive_sha256,
         "archive_bytes": int(path.stat().st_size),
@@ -410,17 +420,135 @@ def build_hi_nerv_target_region_action_parseback_survival(
         "survived": parseback_survived,
         "fakequant_survived": parseback_survived,
         "parseback_survived": parseback_survived,
-        "inflate_survived": False,
+        **inflate,
+        "inflate_survived": inflate_survived,
         "blockers": _dedupe_strings(
             [
                 *blockers,
-                "target_region_action_inflate_survival_missing",
+                *([] if inflate_survived else ["target_region_action_inflate_survival_missing"]),
             ]
         ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         **FALSE_AUTHORITY,
+    }
+
+
+def _target_region_action_camera_uint8_pairs(
+    model: torch.nn.Module,
+    pair_indices: torch.Tensor,
+) -> np.ndarray:
+    with torch.no_grad():
+        rgb_0, rgb_1 = model(pair_indices)
+    frames: list[np.ndarray] = []
+    for index in range(int(pair_indices.numel())):
+        frames.append(
+            rgb_pair_to_uint8_frames(
+                rgb_0[index : index + 1],
+                rgb_1[index : index + 1],
+                input_range="unit",
+            )
+        )
+    if not frames:
+        return np.empty((0, 2, CAMERA_HW[0], CAMERA_HW[1], 3), dtype=np.uint8)
+    return np.stack(frames, axis=0)
+
+
+def _target_region_action_inflated_raw_survival(
+    *,
+    action_model: torch.nn.Module,
+    base_model: torch.nn.Module,
+    pair_indices: torch.Tensor,
+    cfg: HinervConfig,
+    inflated_raw_path: str | Path | None,
+) -> dict[str, Any]:
+    if inflated_raw_path is None:
+        return {
+            "inflated_raw_checked": False,
+            "inflate_survived": False,
+            "blockers": ["target_region_action_inflate_survival_missing"],
+        }
+    raw_path = Path(inflated_raw_path).expanduser().resolve(strict=False)
+    if not raw_path.is_file():
+        return {
+            "inflated_raw_checked": True,
+            "inflated_raw_path": raw_path.as_posix(),
+            "inflate_survived": False,
+            "blockers": ["target_region_action_inflated_raw_missing"],
+        }
+    frame_bytes = int(CAMERA_HW[0]) * int(CAMERA_HW[1]) * 3
+    expected_bytes = int(cfg.num_pairs) * 2 * frame_bytes
+    actual_bytes = int(raw_path.stat().st_size)
+    if actual_bytes != expected_bytes:
+        return {
+            "inflated_raw_checked": True,
+            "inflated_raw_path": raw_path.as_posix(),
+            "inflated_raw_sha256": sha256_file(raw_path),
+            "inflated_raw_bytes": actual_bytes,
+            "expected_inflated_raw_bytes": expected_bytes,
+            "inflate_survived": False,
+            "blockers": ["target_region_action_inflated_raw_size_mismatch"],
+        }
+    try:
+        action_pairs = _target_region_action_camera_uint8_pairs(action_model, pair_indices)
+        base_pairs = _target_region_action_camera_uint8_pairs(base_model, pair_indices)
+        raw = np.memmap(
+            raw_path,
+            dtype=np.uint8,
+            mode="r",
+            shape=(int(cfg.num_pairs) * 2, int(CAMERA_HW[0]), int(CAMERA_HW[1]), 3),
+        )
+        raw_pairs = np.stack(
+            [
+                np.stack(
+                    [
+                        np.asarray(raw[int(pair) * 2], dtype=np.uint8),
+                        np.asarray(raw[int(pair) * 2 + 1], dtype=np.uint8),
+                    ],
+                    axis=0,
+                )
+                for pair in pair_indices.tolist()
+            ],
+            axis=0,
+        )
+    except Exception as exc:
+        return {
+            "inflated_raw_checked": True,
+            "inflated_raw_path": raw_path.as_posix(),
+            "inflated_raw_sha256": sha256_file(raw_path),
+            "inflated_raw_bytes": actual_bytes,
+            "inflate_survived": False,
+            "failure": f"{type(exc).__name__}:{exc}",
+            "blockers": ["target_region_action_inflated_raw_compare_failed"],
+        }
+    abs_error = np.abs(
+        raw_pairs.astype(np.int16, copy=False) - action_pairs.astype(np.int16, copy=False)
+    )
+    action_delta = np.not_equal(action_pairs, base_pairs)
+    raw_matches_action = bool(np.array_equal(raw_pairs, action_pairs))
+    changed_values = int(np.count_nonzero(action_delta))
+    changed_pixels = int(np.count_nonzero(np.any(action_delta, axis=-1)))
+    inflate_survived = bool(raw_matches_action and changed_pixels > 0)
+    blockers: list[str] = []
+    if not raw_matches_action:
+        blockers.append("target_region_action_inflated_raw_mismatch")
+    if changed_pixels <= 0:
+        blockers.append("target_region_action_inflated_raw_no_action_delta")
+    return {
+        "inflated_raw_checked": True,
+        "inflated_raw_path": raw_path.as_posix(),
+        "inflated_raw_sha256": sha256_file(raw_path),
+        "inflated_raw_bytes": actual_bytes,
+        "expected_inflated_raw_bytes": expected_bytes,
+        "inflated_raw_pair_indices": [int(pair) for pair in pair_indices.tolist()],
+        "inflated_raw_matches_action_receiver": raw_matches_action,
+        "inflated_raw_action_changed_values": changed_values,
+        "inflated_raw_action_changed_pixels": changed_pixels,
+        "inflated_raw_total_pair_pixels": int(raw_pairs.shape[0] * raw_pairs.shape[1] * raw_pairs.shape[2] * raw_pairs.shape[3]),
+        "inflated_raw_max_abs_error_vs_action_receiver": int(abs_error.max()) if abs_error.size else 0,
+        "inflate_survived": inflate_survived,
+        "blockers": blockers,
     }
 
 

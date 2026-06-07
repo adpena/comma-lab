@@ -14,6 +14,7 @@ import sys
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import numpy as np
 import pytest
@@ -684,9 +685,9 @@ def test_hinerv_selected_birth_parseback_survival_promotes_only_selected_candida
         "survived": True,
         "candidate_kind": "ema",
         "blockers": [],
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
+        "score_claim": True,
+        "promotion_eligible": True,
+        "ready_for_exact_eval_dispatch": True,
     }
     candidate_path = archive.parent / "hi_nerv_birth_parseback_survival_ema.json"
     candidate_path.write_text(json.dumps(candidate_row), encoding="utf-8")
@@ -718,6 +719,251 @@ def test_hinerv_selected_birth_parseback_survival_promotes_only_selected_candida
     persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
     persisted_training = persisted["substrate_artifact_metadata"]["score_aware_training"]
     assert persisted_training["selected_birth_parseback_survival"]["survived"] is True
+
+
+def test_hinerv_selected_birth_parseback_survival_uses_artifact_archive_path(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "ema" / "archive.zip"
+    archive.parent.mkdir()
+    archive.write_bytes(b"unit archive")
+    candidate_row = {
+        "schema": "hi_nerv_target_region_birth_survival_candidate.v1",
+        "source_schema": "hi_nerv_target_region_birth_survival.v1",
+        "surface": "parseback_mlx",
+        "action_id": "b" * 64,
+        "survived": True,
+        "candidate_kind": "ema",
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    candidate_path = archive.parent / "hi_nerv_birth_parseback_survival_ema.json"
+    candidate_path.write_text(json.dumps(candidate_row), encoding="utf-8")
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    artifact_dict = {
+        "archive_path": archive.as_posix(),
+        "substrate_artifact_metadata": {"score_aware_training": {}},
+    }
+
+    promoted = runner_mod._promote_hi_nerv_selected_birth_parseback_survival(
+        archive_resolution={
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "candidate_kind": "ema",
+        },
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+    )
+
+    assert promoted is not None
+    assert promoted["schema"] == "hi_nerv_target_region_birth_survival.v1"
+    assert promoted["selected_archive_path"] == archive.as_posix()
+    assert promoted["selected_archive_bytes"] == archive.stat().st_size
+    assert promoted["score_claim"] is False
+    assert promoted["promotion_eligible"] is False
+    assert promoted["ready_for_exact_eval_dispatch"] is False
+    assert (
+        artifact_dict["selected_birth_parseback_survival"]["action_id"]
+        == "b" * 64
+    )
+
+
+def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive")
+    calls: list[dict[str, Any]] = []
+
+    def fake_build_hi_nerv_target_region_action_parseback_survival(
+        archive_path,
+        *,
+        expected_program_base64=None,
+        expected_support_sha256=None,
+        expected_payload_bytes=None,
+        inflated_raw_path=None,
+    ):
+        calls.append(
+            {
+                "archive_path": Path(archive_path).as_posix(),
+                "expected_program_base64": expected_program_base64,
+                "expected_support_sha256": expected_support_sha256,
+                "expected_payload_bytes": expected_payload_bytes,
+                "inflated_raw_path": inflated_raw_path,
+            }
+        )
+        return {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "archive_path": Path(archive_path).as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "archive_bytes": archive.stat().st_size,
+                "survived": True,
+                "fakequant_survived": True,
+                "parseback_survived": True,
+                "inflate_survived": False,
+                "blockers": [],
+                "score_claim": True,
+                "promotion_eligible": True,
+                "ready_for_exact_eval_dispatch": True,
+            }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "build_hi_nerv_target_region_action_parseback_survival",
+        fake_build_hi_nerv_target_region_action_parseback_survival,
+    )
+    artifact_dict = {
+        "action_id": "c" * 64,
+        "target_region_action_payload_bytes": 17,
+        "target_region_action_support_sha256": "support-sha",
+        "substrate_artifact_metadata": {"score_aware_training": {}},
+    }
+
+    row = runner_mod._write_hi_nerv_target_region_action_parseback_survival(
+        archive_resolution={"archive_path": archive.as_posix()},
+        output_dir=tmp_path,
+        artifact_dict=artifact_dict,
+        export_selection=None,
+        target_region_action_program_base64="selected-program",
+    )
+
+    assert row is not None
+    assert row["action_id"] == "c" * 64
+    assert row["target_region_action_program_sha256"] == hashlib.sha256(
+        b"selected-program"
+    ).hexdigest()
+    assert row["expected_support_sha256"] == "support-sha"
+    assert row["expected_payload_bytes"] == 17
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert calls == [
+        {
+                "archive_path": archive.as_posix(),
+                "expected_program_base64": "selected-program",
+                "expected_support_sha256": "support-sha",
+                "expected_payload_bytes": 17,
+                "inflated_raw_path": None,
+            }
+        ]
+    assert row["survived"] is True
+    assert "target_region_action_export_selection" not in row
+    score_training = artifact_dict["substrate_artifact_metadata"][
+        "score_aware_training"
+    ]
+    assert score_training["target_region_action_parseback_survival"]["survived"] is True
+    assert score_training["target_region_action_parseback_survival"]["action_id"] == (
+        "c" * 64
+    )
+
+
+def test_hinerv_action_parseback_survival_blocks_archive_custody_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive")
+
+    def fake_build_hi_nerv_target_region_action_parseback_survival(
+        archive_path,
+        *,
+        expected_program_base64=None,
+        expected_support_sha256=None,
+        expected_payload_bytes=None,
+        inflated_raw_path=None,
+    ):
+        return {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "archive_path": Path(archive_path).as_posix(),
+            "archive_sha256": "0" * 64,
+            "archive_bytes": archive.stat().st_size + 1,
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "blockers": [],
+            "score_claim": True,
+            "promotion_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "build_hi_nerv_target_region_action_parseback_survival",
+        fake_build_hi_nerv_target_region_action_parseback_survival,
+    )
+
+    row = runner_mod._write_hi_nerv_target_region_action_parseback_survival(
+        archive_resolution={"archive_path": archive.as_posix()},
+        output_dir=tmp_path,
+        artifact_dict={"substrate_artifact_metadata": {"score_aware_training": {}}},
+        export_selection={
+            "selected_for_export": True,
+            "action_id": "d" * 64,
+            "target_region_action_payload_bytes": 17,
+            "target_region_action_support_sha256": "support-sha",
+        },
+        target_region_action_program_base64="selected-program",
+    )
+
+    assert row is not None
+    assert row["archive_sha256"] == runner_mod._sha256_file(archive)
+    assert row["archive_bytes"] == archive.stat().st_size
+    assert row["survived"] is False
+    assert row["parseback_survived"] is False
+    assert "target_region_action_parseback_archive_sha256_mismatch" in row["blockers"]
+    assert "target_region_action_parseback_archive_bytes_mismatch" in row["blockers"]
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+
+
+def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> None:
+    valid = {
+        "action_id": "e" * 64,
+        "target_region_action_program_base64": "valid-program",
+        "target_region_action_payload_bytes": 4,
+        "target_region_action_section_telemetry": {
+            "support_sha256": "valid-support",
+            "support_cardinality": 2,
+            "support_encoding": "packbits",
+            "support_encoded_bytes": 2,
+        },
+        "accepted": True,
+        "target_support_moved": True,
+        "exact_delta_score_nonrate": -0.1,
+    }
+    artifact = {
+        "target_region_birth_payload": valid,
+        "substrate_artifact_metadata": {
+            "stale": {
+                "action_id": "f" * 64,
+                "target_region_action_program_base64": "decoy-program",
+                "target_region_action_payload_bytes": 1,
+                "accepted": True,
+                "target_support_moved": True,
+                "exact_delta_score_nonrate": -999.0,
+            }
+        },
+    }
+
+    payload = runner_mod._target_region_action_payload_for_export_selection(artifact)
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
+        payload
+    )
+
+    assert program == "valid-program"
+    assert selection is not None
+    assert selection["action_id"] == "e" * 64
+    assert selection["target_region_action_support_sha256"] == "valid-support"
 
 
 def test_hinerv_live_birth_survival_rows_fail_closed_on_missing_inputs(tmp_path: Path) -> None:
