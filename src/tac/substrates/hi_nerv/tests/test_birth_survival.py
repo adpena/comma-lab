@@ -83,6 +83,48 @@ def test_reconstruct_birth_region_mask_matches_named_region() -> None:
     assert xs.min() == 6 and xs.max() == 13
 
 
+def test_parseback_survival_distinguishes_payload_from_scorer_effect_collapse() -> None:
+    row = birth_survival_mod._survival_row(
+        action_id="a" * 64,
+        surface="parseback_mlx",
+        survived=True,
+        birth_class=1,
+        region_pixels=13_488,
+        region_hard_won=2,
+        target_hard_lost=0,
+        net_target_support_delta=2,
+        initial_in_region_target=0,
+        region_unsolved=13_486,
+        region_debt_units=6.86,
+        margin_stats={
+            "margin_mean": -0.5,
+            "margin_min": -2.0,
+            "region_hard_ratio": 0.999,
+        },
+        fakequant_bits=None,
+        total_scored_pixels=196_608,
+        worst_region={
+            "batch_index": 0,
+            "class_index": 1,
+            "region_label": 7,
+            "region_pixel_count": 13_488,
+            "region_unsolved_pixel_count": 13_488,
+        },
+        pose_compensation_survival={"required": False, "survived": None, "blockers": []},
+        live_wrong_to_target_count=13_488,
+    )
+
+    assert row["parseback_payload_survived"] is True
+    assert row["parseback_scorer_effect_survived"] is False
+    assert row["survived"] is False
+    assert row["live_wrong_to_target_count"] == 13_488
+    assert row["parseback_wrong_to_target_count"] == 2
+    assert row["wrong_to_target_retention_ratio"] == pytest.approx(2 / 13_488)
+    assert row["first_failed_surface"] == "parseback_scorer_effect_collapse"
+    assert "hinerv_birth_parseback_scorer_effect_collapse" in row["blockers"]
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
+
+
 def test_reconstruct_birth_region_mask_uses_packed_unsolved_region() -> None:
     labels = np.ones((1, 4, 6), dtype=np.int64)
     mask_bool = np.zeros_like(labels, dtype=bool)

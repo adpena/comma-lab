@@ -730,6 +730,34 @@ def test_v1_from_hinerv_birth_receipt_real_schema_roundtrips() -> None:
     assert roundtrip.segnet_margin_delta == pytest.approx(-0.7)
 
 
+def test_v1_from_hinerv_birth_receipt_carries_wall_normal_support_identity() -> None:
+    receipt, action_id = _real_birth_receipt(surface="parseback_mlx")
+    support_sha = hashlib.sha256(b"same wall-normal support").hexdigest()
+    receipt["target_region_wall_normal_lift"] = {
+        "schema": "tac.target_region_wall_normal_lift.v1",
+        "action_id": action_id,
+        "sidecar_fallback": {
+            "support_sha256": support_sha,
+            "support_cardinality": 2286,
+            "support_encoding": "brotli_tile_bitmap_little_endian",
+            "support_encoded_bytes": 1454,
+        },
+        "direct_teacher": {
+            "archive_executable_support_sha256": support_sha,
+            "archive_executable_support_cardinality": 2286,
+        },
+    }
+
+    eff = ActionEffect.from_hinerv_birth_receipt(receipt)
+
+    assert eff.support_sha256 == support_sha
+    assert eff.support_cardinality == 2286
+    assert eff.support_encoding == "brotli_tile_bitmap_little_endian"
+    assert eff.support_encoded_bytes == 1454
+    assert eff.support_research_only is None
+    assert ActionEffect.from_dict(eff.as_dict()).support_sha256 == support_sha
+
+
 def test_v1_from_hinerv_birth_receipt_no_pose_teacher_leaves_distortion_none() -> None:
     receipt, _ = _real_birth_receipt(with_exact_nonrate=False)
     eff = ActionEffect.from_hinerv_birth_receipt(receipt)

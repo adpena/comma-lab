@@ -201,7 +201,12 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_receiver_consump
 
     assert proof["schema"] == "hi_nerv_target_region_action_parseback_survival.v1"
     assert proof["survived"] is True
-    assert proof["fakequant_survived"] is True
+    assert proof["fakequant_survived"] is False
+    assert proof["fakequant_survival_measured"] is False
+    assert proof["parseback_payload_survived"] is True
+    assert proof["parseback_program_survived"] is True
+    assert proof["parseback_scorer_effect_survived"] is None
+    assert proof["scorer_effect_survival_measured"] is False
     assert proof["parseback_survived"] is True
     assert proof["inflate_survived"] is False
     assert proof["total_action_pixels"] == 2
@@ -254,7 +259,12 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_inflated_raw(
     )
 
     assert proof["survived"] is True
-    assert proof["fakequant_survived"] is True
+    assert proof["fakequant_survived"] is False
+    assert proof["fakequant_survival_measured"] is False
+    assert proof["parseback_payload_survived"] is True
+    assert proof["parseback_program_survived"] is True
+    assert proof["parseback_scorer_effect_survived"] is None
+    assert proof["scorer_effect_survival_measured"] is False
     assert proof["parseback_survived"] is True
     assert proof["inflate_survived"] is True
     assert proof["inflated_raw_checked"] is True

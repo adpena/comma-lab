@@ -1348,6 +1348,10 @@ class ActionEffect:
         action_section_telemetry = _v1_mapping(
             receipt.get("target_region_action_section_telemetry")
         )
+        support_identity = _v1_hinerv_birth_support_identity(
+            receipt,
+            action_section_telemetry=action_section_telemetry,
+        )
         before_margin_stats = _v1_mapping(receipt.get("before_region_margin_stats"))
         after_margin_stats = _v1_mapping(receipt.get("after_region_margin_stats"))
         before_margin_p50 = _v1_first_float(before_margin_stats, "margin_p50")
@@ -1635,14 +1639,14 @@ class ActionEffect:
                 "pose_input_delta_linf_pair",
             )
             or receiver_delta_linf,
-            support_source=_v1_first_text(action_section_telemetry, "support_source"),
-            support_cardinality=_v1_first_int(action_section_telemetry, "support_cardinality"),
-            support_sha256=_v1_first_text(action_section_telemetry, "support_sha256"),
-            support_encoding=_v1_first_text(action_section_telemetry, "support_encoding"),
-            support_encoded_bytes=_v1_first_int(action_section_telemetry, "support_encoded_bytes"),
+            support_source=_v1_first_text(support_identity, "support_source"),
+            support_cardinality=_v1_first_int(support_identity, "support_cardinality"),
+            support_sha256=_v1_first_text(support_identity, "support_sha256"),
+            support_encoding=_v1_first_text(support_identity, "support_encoding"),
+            support_encoded_bytes=_v1_first_int(support_identity, "support_encoded_bytes"),
             support_research_only=(
                 None
-                if action_section_telemetry
+                if support_identity
                 else (
                     True
                     if region_ids and action_kind in {"target_region_birth", "birth_only"}
@@ -2398,6 +2402,102 @@ def _v1_release_ledger_lock(fh) -> None:
 
 def _v1_mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _v1_hinerv_birth_support_identity(
+    receipt: Mapping[str, Any],
+    *,
+    action_section_telemetry: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Extract the archive-executable target-region action support identity.
+
+    HiNeRV birth receipts can carry support metadata at several receiver
+    surfaces: root action-section telemetry, runner export selection,
+    parse-back survival, and the wall-normal sidecar/direct-teacher receipt.
+    ActionEffect rows are the DAG currency, so they must expose the same
+    action/support identity without requiring downstream tools to re-walk the
+    full smoke payload.
+    """
+
+    candidates: list[Mapping[str, Any]] = []
+
+    def _append(value: Any) -> None:
+        if isinstance(value, Mapping):
+            candidates.append(value)
+
+    def _append_wall_normal(value: Any) -> None:
+        wall = _v1_mapping(value)
+        if not wall:
+            return
+        _append(wall)
+        _append(wall.get("sidecar_fallback"))
+        direct = _v1_mapping(wall.get("direct_teacher"))
+        _append(direct)
+        _append(direct.get("action_effect"))
+
+    _append(action_section_telemetry)
+    _append(receipt.get("target_region_action_export_selection"))
+    _append(receipt.get("target_region_action_parseback_survival"))
+    _append_wall_normal(receipt.get("target_region_wall_normal_lift"))
+    telemetry = _v1_mapping(receipt.get("candidate_frontier_telemetry"))
+    _append_wall_normal(telemetry.get("target_region_wall_normal_lift"))
+    masked = _v1_mapping(telemetry.get("masked_residual_oracle"))
+    for key in ("best_wall_normal_candidate", "best_candidate", "selected_candidate"):
+        candidate = _v1_mapping(masked.get(key))
+        _append(candidate)
+        _append(candidate.get("target_region_action_section_telemetry"))
+        _append(candidate.get("direct_seg_wall_oracle"))
+
+    support_sha256 = None
+    support_cardinality = None
+    support_encoding = None
+    support_encoded_bytes = None
+    support_source = None
+    for row in candidates:
+        if support_sha256 is None:
+            support_sha256 = _v1_first_text(
+                row,
+                "support_sha256",
+                "target_region_action_support_sha256",
+                "archive_executable_support_sha256",
+                "expected_support_sha256",
+            )
+        if support_cardinality is None:
+            support_cardinality = _v1_first_int(
+                row,
+                "support_cardinality",
+                "target_region_action_support_cardinality",
+                "archive_executable_support_cardinality",
+                "target_region_action_pixel_count",
+                "total_action_pixels",
+            )
+        if support_encoding is None:
+            support_encoding = _v1_first_text(
+                row,
+                "support_encoding",
+                "target_region_action_support_encoding",
+                "archive_executable_support_encoding",
+            )
+        if support_encoded_bytes is None:
+            support_encoded_bytes = _v1_first_int(
+                row,
+                "support_encoded_bytes",
+                "target_region_action_support_encoded_bytes",
+                "archive_executable_support_encoded_bytes",
+            )
+        if support_source is None:
+            support_source = _v1_first_text(row, "support_source")
+    return {
+        key: value
+        for key, value in {
+            "support_source": support_source,
+            "support_cardinality": support_cardinality,
+            "support_sha256": support_sha256,
+            "support_encoding": support_encoding,
+            "support_encoded_bytes": support_encoded_bytes,
+        }.items()
+        if value is not None
+    }
 
 
 def _v1_hinerv_birth_authority(

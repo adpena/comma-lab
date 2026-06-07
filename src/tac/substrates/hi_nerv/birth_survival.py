@@ -62,6 +62,7 @@ from tac.substrates.hi_nerv.target_region_birth import region_margin_stats
 BIRTH_SURVIVAL_SCHEMA = "hi_nerv_target_region_birth_survival.v1"
 BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 BIRTH_SURVIVAL_BLOCKED_SCHEMA = "hi_nerv_target_region_birth_survival_blocked.v1"
+MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL = 0.5
 
 # Surfaces this producer can re-measure faithfully without an archive/inflate
 # runtime.  ``fakequant_mlx`` is the only L4 surface a scoped MLX producer can
@@ -211,6 +212,51 @@ def _live_worst_region(live_birth_payload: Mapping[str, Any]) -> Mapping[str, An
     if not isinstance(worst, Mapping):
         raise BirthSurvivalError("live_birth_payload missing worst_region; cannot reconstruct the birth region")
     return worst
+
+
+def _first_int_from_mappings(*nodes: Mapping[str, Any], keys: tuple[str, ...]) -> int | None:
+    for node in nodes:
+        if not isinstance(node, Mapping):
+            continue
+        for key in keys:
+            value = node.get(key)
+            try:
+                if value is not None:
+                    return int(value)
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def _live_wrong_to_target_count(live_birth_payload: Mapping[str, Any]) -> int | None:
+    """Return the live accepted scorer-effect magnitude for retention gates."""
+
+    receipt = live_birth_payload.get("receipt")
+    receipt = receipt if isinstance(receipt, Mapping) else {}
+    nodes = (
+        live_birth_payload,
+        receipt,
+        live_birth_payload.get("argmax_transitions"),
+        receipt.get("argmax_transitions"),
+        live_birth_payload.get("region_argmax_transitions"),
+        receipt.get("region_argmax_transitions"),
+        live_birth_payload.get("argmax_transition_counts"),
+        receipt.get("argmax_transition_counts"),
+    )
+    return _first_int_from_mappings(
+        *(node for node in nodes if isinstance(node, Mapping)),
+        keys=(
+            "wrong_to_target",
+            "wrong_to_target_count",
+            "seg_wrong_to_target_count",
+            "target_hard_won",
+            "target_hard_won_count",
+            "hard_won_count",
+            "receiver_surface_wrong_to_target",
+            "receiver_surface_wrong_to_target_count",
+            "receiver_surface_target_hard_won_count",
+        ),
+    )
 
 
 def _predict_pair01_nhwc01(model: Any, pair_indices: Any) -> tuple[Any, Any]:
@@ -884,6 +930,7 @@ def measure_birth_survival(
         action_id=action_id,
         surface=surface_name,
         survived=survived,
+        live_wrong_to_target_count=_live_wrong_to_target_count(live_birth_payload),
         birth_class=birth_class,
         region_pixels=region_pixels,
         region_hard_won=region_hard_won,
@@ -1034,6 +1081,7 @@ def measure_birth_parseback_survival_from_report(
         action_id=action_id,
         surface="parseback_mlx",
         survived=survived,
+        live_wrong_to_target_count=_live_wrong_to_target_count(live_birth_payload),
         birth_class=birth_class,
         region_pixels=region_pixels,
         region_hard_won=region_hard_won,
@@ -1207,6 +1255,7 @@ def measure_birth_inflated_torch_cpu_survival_from_local_replay(
         action_id=action_id,
         surface="inflated_torch_cpu",
         survived=survived,
+        live_wrong_to_target_count=_live_wrong_to_target_count(live_birth_payload),
         birth_class=birth_class,
         region_pixels=region_pixels,
         region_hard_won=region_hard_won,
@@ -1376,6 +1425,7 @@ def _survival_row(
     worst_region: Mapping[str, Any],
     pose_compensation_survival: Mapping[str, Any] | None = None,
     surface_meta: Mapping[str, Any] | None = None,
+    live_wrong_to_target_count: int | None = None,
 ) -> dict[str, Any]:
     """Assemble the survival row in the gate's canonical schema.
 
@@ -1397,11 +1447,55 @@ def _survival_row(
     pose_required = bool(pose_payload.get("required"))
     pose_survived = None if not pose_required else bool(pose_payload.get("survived"))
     blockers = [str(item) for item in pose_payload.get("blockers") or []]
+    surface_name = str(surface)
+    live_wrong_to_target = (
+        None if live_wrong_to_target_count is None else int(live_wrong_to_target_count)
+    )
+    surface_wrong_to_target = int(region_hard_won)
+    retention_ratio = (
+        None
+        if live_wrong_to_target is None or live_wrong_to_target <= 0
+        else float(surface_wrong_to_target) / float(live_wrong_to_target)
+    )
+    retention_floor = float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL)
+    retention_required = bool(
+        surface_name in {"fakequant_mlx", "parseback_mlx", "inflated_torch_cpu"}
+    )
+    scorer_effect_survived = bool(survived)
+    first_failed_surface = None
+    if retention_required:
+        if live_wrong_to_target is None or live_wrong_to_target <= 0:
+            scorer_effect_survived = False
+            blockers.append("birth_survival_live_wrong_to_target_missing_for_retention")
+            first_failed_surface = f"{surface_name}_live_effect_reference_missing"
+        elif retention_ratio is None or retention_ratio < retention_floor:
+            scorer_effect_survived = False
+            blockers.append(
+                "hinerv_birth_parseback_scorer_effect_collapse"
+                if surface_name == "parseback_mlx"
+                else f"hinerv_birth_{surface_name}_scorer_effect_collapse"
+            )
+            first_failed_surface = (
+                "parseback_scorer_effect_collapse"
+                if surface_name == "parseback_mlx"
+                else f"{surface_name}_scorer_effect_collapse"
+            )
+    survived = bool(survived and scorer_effect_survived)
     row: dict[str, Any] = {
         "schema": BIRTH_SURVIVAL_SCHEMA,
         "action_id": str(action_id),
-        "surface": str(surface),
+        "surface": surface_name,
         "survived": bool(survived),
+        "scorer_effect_survived": bool(scorer_effect_survived),
+        "live_wrong_to_target": live_wrong_to_target,
+        "live_wrong_to_target_count": live_wrong_to_target,
+        "surface_wrong_to_target_count": surface_wrong_to_target,
+        f"{surface_name}_wrong_to_target_count": surface_wrong_to_target,
+        "scorer_effect_retention_ratio": retention_ratio,
+        "wrong_to_target_retention_ratio": retention_ratio,
+        "scorer_effect_retention_floor": retention_floor,
+        "scorer_effect_retention_required": retention_required,
+        "first_failed_surface": first_failed_surface,
         "family": "hinerv",
         "birth_class_index": int(birth_class),
         "region_pixel_count": int(region_pixels),
@@ -1428,6 +1522,24 @@ def _survival_row(
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
     }
+    if surface_name == "fakequant_mlx":
+        row["fakequant_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["fakequant_wrong_to_target"] = surface_wrong_to_target
+        row["fakequant_wrong_to_target_count"] = surface_wrong_to_target
+        row["fakequant_wrong_to_target_retention_ratio"] = retention_ratio
+    elif surface_name == "parseback_mlx":
+        row["parseback_payload_survived"] = True
+        row["parseback_action_program_survived"] = None
+        row["parseback_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["parseback_wrong_to_target"] = surface_wrong_to_target
+        row["parseback_wrong_to_target_count"] = surface_wrong_to_target
+        row["parseback_wrong_to_target_retention_ratio"] = retention_ratio
+    elif surface_name == "inflated_torch_cpu":
+        row["inflate_payload_survived"] = True
+        row["inflate_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["inflate_wrong_to_target"] = surface_wrong_to_target
+        row["inflate_wrong_to_target_count"] = surface_wrong_to_target
+        row["inflate_wrong_to_target_retention_ratio"] = retention_ratio
     if fakequant_bits is not None:
         row["fakequant_bits"] = int(fakequant_bits)
     if surface_meta:
