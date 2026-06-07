@@ -35,6 +35,21 @@ SCORER_ATOM_ACTUATOR_EXECUTION_EVIDENCE_SCHEMA = (
     "pr95_scorer_atom_actuator_execution_evidence.v1"
 )
 PACT_NERV_RECEIVER_COMPILER_DAG_SCHEMA = "pact_nerv_receiver_compiler_dag.v1"
+SNERV_OFFICIAL_REPLACEMENT_AUTHORITY_GATE_SCHEMA = (
+    "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1"
+)
+SNERV_OFFICIAL_REPLACEMENT_FALSE_AUTHORITY_BLOCKER = (
+    "snerv_official_tub_lf_hf_decoder_replacement_false_authority"
+)
+SNERV_OFFICIAL_REPLACEMENT_REQUIRED_READY_FIELDS = (
+    "official_tub_lf_hf_decoder_replacement_ready",
+    "official_checkpoint_export_binding_ready",
+    "receiver_output2_frame_replay_ready",
+    "tub_source_fixture_replay_ready",
+    "trained_checkpoint_state_dict_mapping_ready",
+    "tub_temporal_output2_weight_mapping_ready",
+    "full_tub_source_forward_replay_ready",
+)
 
 PR95_SOURCE_REL = Path(
     "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
@@ -798,6 +813,9 @@ def build_pr95_scorer_atom_actuator_contract(family: str) -> dict[str, Any]:
                 "checkpoint_export_lineage_bound",
                 "mfu_hfr_tub_source_forward_parity_proven",
                 "tub_output2_source_forward_parity_proven",
+                "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1",
+                "official_replacement_authority_gate_source_path_sha256",
+                "official_replacement_authority_gate_ready_without_queue_blockers",
                 "nerv_pair_local_distortion_servo_receipt.v1",
                 "exact_pair_local_score_delta",
                 "fakequant_archive_parseback_survival",
@@ -2516,6 +2534,10 @@ def _snerv_actuator_execution_evidence_ok(
         execution,
         evidence=evidence,
     )
+    authority_gate_ok = _snerv_execution_has_official_replacement_authority_gate(
+        execution,
+        evidence=evidence,
+    )
     return bool(
         base_ok
         and state_schema_ok
@@ -2525,7 +2547,62 @@ def _snerv_actuator_execution_evidence_ok(
         and mfu_hfr_tub_ok
         and output2_ok
         and source_forward_proof_ok
+        and authority_gate_ok
     ), evidence
+
+
+def _snerv_execution_has_official_replacement_authority_gate(
+    execution: Mapping[str, Any],
+    *,
+    evidence: list[str],
+) -> bool:
+    gate = _first_mapping(
+        execution,
+        (
+            "snerv_official_tub_lf_hf_decoder_replacement_authority_gate",
+            "snerv_official_replacement_authority_gate",
+            "official_replacement_authority_gate",
+            "snerv_authority_gate_report",
+        ),
+    )
+    if not gate:
+        evidence.append("snerv_official_replacement_authority_gate_missing")
+        return False
+    schema_ok = gate.get("schema") == SNERV_OFFICIAL_REPLACEMENT_AUTHORITY_GATE_SCHEMA
+    if schema_ok:
+        evidence.append(f"snerv_official_replacement_authority_gate_schema={gate.get('schema')}")
+    source_path = str(gate.get("_source_path") or gate.get("source_path") or "").strip()
+    source_sha = str(gate.get("_source_sha256") or gate.get("source_sha256") or "").strip()
+    source_bound_ok = bool(source_path) and _is_sha256_text(source_sha)
+    if source_bound_ok:
+        evidence.append("snerv_official_replacement_authority_gate_source_path_sha256")
+    ready_fields_ok = all(gate.get(field) is True for field in SNERV_OFFICIAL_REPLACEMENT_REQUIRED_READY_FIELDS)
+    if ready_fields_ok:
+        evidence.append("snerv_official_replacement_authority_gate_all_ready_fields")
+    queue_blockers = _string_list(gate.get("queue_blockers"))
+    residual_blockers = _string_list(gate.get("source_forward_authority_residual_blockers"))
+    gate_blockers = [
+        blocker
+        for blocker in _string_list(gate.get("blockers"))
+        if blocker != SNERV_OFFICIAL_REPLACEMENT_FALSE_AUTHORITY_BLOCKER
+    ]
+    no_blockers_ok = not queue_blockers and not residual_blockers and not gate_blockers
+    if no_blockers_ok:
+        evidence.append("snerv_official_replacement_authority_gate_no_residual_blockers")
+    false_authority_ok = (
+        gate.get("score_claim") is False
+        and gate.get("promotion_eligible") is False
+        and gate.get("ready_for_exact_eval_dispatch") is False
+    )
+    if false_authority_ok:
+        evidence.append("snerv_official_replacement_authority_gate_false_authority_only")
+    return bool(
+        schema_ok
+        and source_bound_ok
+        and ready_fields_ok
+        and no_blockers_ok
+        and false_authority_ok
+    )
 
 
 def _snerv_execution_has_numerical_source_forward_proof(

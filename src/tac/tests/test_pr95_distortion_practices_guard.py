@@ -256,6 +256,26 @@ def test_pr95_distortion_guard_rejects_boolean_only_snerv_source_forward_evidenc
     )
 
 
+def test_pr95_distortion_guard_rejects_snerv_without_official_authority_gate() -> None:
+    row = _snerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence.pop("snerv_official_tub_lf_hf_decoder_replacement_authority_gate")
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert "snerv_official_replacement_authority_gate_missing" in actuator_row[
+        "observed_evidence"
+    ]
+
+
 def test_pr95_distortion_guard_rejects_inline_only_hinerv_actuator_evidence() -> None:
     row = _hinerv_row()
     evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
@@ -513,6 +533,9 @@ def test_pr95_family_actuator_contract_splits_hinerv_and_snerv() -> None:
     assert "snerv_official_source_forward_state_artifact.v1" in snerv[
         "required_execution_evidence"
     ]
+    assert "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1" in snerv[
+        "required_execution_evidence"
+    ]
     assert "nerv_pair_local_distortion_servo_receipt.v1" in snerv[
         "required_execution_evidence"
     ]
@@ -657,11 +680,42 @@ def _snerv_actuator_execution_evidence() -> dict:
             "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
             "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
         },
+        "snerv_official_tub_lf_hf_decoder_replacement_authority_gate": (
+            _snerv_official_replacement_authority_gate()
+        ),
         "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
             "snerv"
         ),
         "score_claim": False,
         "promotion_eligible": False,
+    }
+
+
+def _snerv_official_replacement_authority_gate() -> dict:
+    return {
+        "schema": "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/Volumes/VertigoDataTier/pact/snerv_official_replacement_authority_gate.json",
+        "_source_sha256": "8" * 64,
+        "official_tub_lf_hf_decoder_replacement_ready": True,
+        "official_checkpoint_export_binding_ready": True,
+        "receiver_output2_frame_replay_ready": True,
+        "tub_source_fixture_replay_ready": True,
+        "trained_checkpoint_state_dict_mapping_ready": True,
+        "tub_temporal_output2_weight_mapping_ready": True,
+        "full_tub_source_forward_replay_ready": True,
+        "closed_campaign_blockers": [
+            "snerv_official_mfu_hfr_tub_export_not_bound",
+            "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
+            "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
+            "snerv_official_tub_output2_receiver_frame_decode_not_bound",
+        ],
+        "source_forward_authority_residual_blockers": [],
+        "queue_blockers": [],
+        "blockers": ["snerv_official_tub_lf_hf_decoder_replacement_false_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
