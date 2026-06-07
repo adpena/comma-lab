@@ -163,6 +163,37 @@ def test_source_forward_witness_build_failure_preserves_input_resolution_blocker
     )
 
 
+def test_source_forward_witness_missing_packet_is_fail_closed_payload(
+    tmp_path: Path,
+) -> None:
+    missing_packet = tmp_path / "missing.snar"
+
+    payload = build_source_forward_witness_payload(
+        packet_path=missing_packet,
+        pair_ids=[0],
+        checkpoint_export_report_resolution={
+            "schema": "snerv_source_forward_witness_input_resolution.v1",
+            "checkpoint_export_report_requested": True,
+            "blockers": [
+                "snerv_source_forward_witness_report_packet_path_missing_on_disk"
+            ],
+        },
+        generated_utc="2026-06-07T00:00:00Z",
+    )
+
+    assert payload["source_forward_proof_action_effect"] is None
+    assert payload["packet_sha256"] is None
+    assert payload["packet_bytes"] is None
+    assert payload["passed"] is False
+    assert payload["launch_gate_clearable"] is False
+    assert "snerv_source_forward_witness_report_packet_path_missing_on_disk" in (
+        payload["blockers"]
+    )
+    assert "snerv_source_forward_witness_packet_path_missing_on_disk" in (
+        payload["blockers"]
+    )
+
+
 def test_source_forward_witness_cli_writes_proof_row_jsonl(
     tmp_path: Path,
 ) -> None:
@@ -683,6 +714,50 @@ def test_source_forward_witness_report_resolution_refuses_startup_as_config(
     )
     assert "snerv_source_forward_witness_report_source_frame_triplets_missing" in (
         resolution["blockers"]
+    )
+
+
+def test_source_forward_witness_report_resolution_marks_stale_paths(
+    tmp_path: Path,
+) -> None:
+    report_path = tmp_path / "snerv_checkpoint_archive_export.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "packet_path": "stale_packet.snar",
+                "official_torch_source_config_path": "stale_args.json",
+                "source_frame_triplets_npy": "stale_triplets.npy",
+                "official_checkpoint_export_binding": {
+                    "official_trained_checkpoint_state_dict_slice_path": (
+                        "stale_state.npz"
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    resolution = resolve_checkpoint_export_report_witness_inputs(report_path)
+
+    assert resolution["packet_path"] == (
+        tmp_path / "stale_packet.snar"
+    ).resolve(strict=False).as_posix()
+    assert "snerv_source_forward_witness_report_packet_path_missing_on_disk" in (
+        resolution["blockers"]
+    )
+    assert (
+        "snerv_source_forward_witness_report_checkpoint_state_dict_path_missing_on_disk"
+        in resolution["blockers"]
+    )
+    assert (
+        "snerv_source_forward_witness_report_source_config_path_missing_on_disk"
+        in resolution["blockers"]
+    )
+    assert (
+        "snerv_source_forward_witness_report_source_frame_triplets_missing_on_disk"
+        in resolution["blockers"]
     )
 
 

@@ -392,17 +392,33 @@ def resolve_checkpoint_export_report_witness_inputs(
     if report_path is not None:
         if resolved_packet is None:
             blockers.append("snerv_source_forward_witness_report_packet_path_missing")
+        elif not resolved_packet.is_file():
+            blockers.append(
+                "snerv_source_forward_witness_report_packet_path_missing_on_disk"
+            )
         if resolved_state_dict is None:
             blockers.append(
                 "snerv_source_forward_witness_report_checkpoint_state_dict_path_missing"
+            )
+        elif not resolved_state_dict.is_file():
+            blockers.append(
+                "snerv_source_forward_witness_report_checkpoint_state_dict_path_missing_on_disk"
             )
         if resolved_config is None:
             blockers.append(
                 "snerv_source_forward_witness_report_source_config_path_missing"
             )
+        elif not resolved_config.is_file():
+            blockers.append(
+                "snerv_source_forward_witness_report_source_config_path_missing_on_disk"
+            )
         if resolved_triplets is None:
             blockers.append(
                 "snerv_source_forward_witness_report_source_frame_triplets_missing"
+            )
+        elif not resolved_triplets.is_file():
+            blockers.append(
+                "snerv_source_forward_witness_report_source_frame_triplets_missing_on_disk"
             )
     return {
         "schema": "snerv_source_forward_witness_input_resolution.v1",
@@ -457,9 +473,6 @@ def build_source_forward_witness_payload(
 ) -> dict[str, Any]:
     packet = Path(packet_path).expanduser().resolve(strict=False)
     generated = generated_utc or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    packet_bytes = packet.read_bytes()
-    packet_sha256 = sha256_bytes(packet_bytes)
-    resolved_action_id = action_id or _default_action_id(packet_sha256, pair_ids)
     resolution_blockers = [
         str(value)
         for value in (
@@ -469,6 +482,58 @@ def build_source_forward_witness_payload(
         )
         or []
     ]
+    if not packet.is_file():
+        missing_blocker = "snerv_source_forward_witness_packet_path_missing_on_disk"
+        fallback_material = f"missing-packet:{packet.as_posix()}:{pair_ids}".encode()
+        return {
+            "schema": SNERV_SOURCE_FORWARD_WITNESS_SCHEMA,
+            "generated_utc": generated,
+            "family": "snerv",
+            "packet_path": packet.as_posix(),
+            "packet_bytes": None,
+            "packet_sha256": None,
+            "pair_ids": list(pair_ids),
+            "action_id": action_id or hashlib.sha256(fallback_material).hexdigest(),
+            "capture_modes": {
+                "checkpoint_export_report_requested": bool(
+                    (checkpoint_export_report_resolution or {}).get(
+                        "checkpoint_export_report_requested"
+                    )
+                ),
+                "pact_mlx_from_archive": bool(capture_pact_mlx_from_archive),
+                "official_torch_from_archive_diagnostic": bool(
+                    capture_official_torch_from_archive
+                ),
+                "official_torch_from_upstream_fixture": bool(
+                    capture_official_torch_from_upstream_fixture
+                ),
+                "official_torch_from_upstream_source_graph": bool(
+                    capture_official_torch_from_upstream_source_graph
+                ),
+                "official_torch_source_config_requested": (
+                    official_torch_source_config_path is not None
+                ),
+                "official_torch_source_frame_triplets_requested": (
+                    official_torch_source_frame_triplets_npy is not None
+                ),
+            },
+            "checkpoint_export_report_resolution": (
+                dict(checkpoint_export_report_resolution)
+                if isinstance(checkpoint_export_report_resolution, Mapping)
+                else None
+            ),
+            "source_forward_proof_action_effect": None,
+            "validation_status": {"passed": False, "blockers": []},
+            "passed": False,
+            "launch_gate_clearable": False,
+            "output2_verdict": None,
+            "first_failed_tensor": None,
+            "blockers": _ordered_unique([*resolution_blockers, missing_blocker]),
+            **FALSE_AUTHORITY,
+        }
+    packet_bytes = packet.read_bytes()
+    packet_sha256 = sha256_bytes(packet_bytes)
+    resolved_action_id = action_id or _default_action_id(packet_sha256, pair_ids)
     base: dict[str, Any] = {
         "schema": SNERV_SOURCE_FORWARD_WITNESS_SCHEMA,
         "generated_utc": generated,
