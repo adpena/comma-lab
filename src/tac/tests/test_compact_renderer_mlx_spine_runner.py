@@ -81,9 +81,9 @@ def test_hinerv_runner_short_smoke_readiness_consumes_strict_launch_actuators() 
         )
     ]
     call = source[
-        source.index("short_scorer_smoke_readiness = _write_hi_nerv_runner_short_scorer_smoke_readiness(") : source.index(
-            "short_scorer_smoke_readiness_summary ="
-        )
+        source.index(
+            "short_scorer_smoke_readiness = _write_hi_nerv_runner_short_scorer_smoke_readiness("
+        ) : source.index("short_scorer_smoke_readiness_summary =")
     ]
 
     assert "require_section_byte_dual_ascent" in helper
@@ -303,14 +303,38 @@ def test_hinerv_runner_binds_target_support_floor_to_loss_and_contract() -> None
     compact_main_hi_branch = "".join(main_hi_branch.split())
     compact_execute_to_smoke_call = "".join(execute_to_smoke_call.split())
 
-    assert "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight)," in compact_body
-    assert "segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight)," in compact_body
-    assert "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),segnet_direct_live_target_min_ratio_floor_weight=float(" in compact_body
-    assert "segnet_direct_live_target_mass_floor_weight=(args.segnet_direct_live_target_mass_floor_weight)," in compact_main_hi_branch
-    assert "segnet_direct_live_target_min_ratio_floor_weight=(args.segnet_direct_live_target_min_ratio_floor_weight)," in compact_main_hi_branch
-    assert "posenet_yuv6_geometry_tether_stage_weight=(args.posenet_yuv6_geometry_tether_stage_weight)," in compact_main_hi_branch
-    assert "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight)," in compact_execute_to_smoke_call
-    assert "segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight)," in compact_execute_to_smoke_call
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),"
+        in compact_body
+    )
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),"
+        in compact_body
+    )
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),segnet_direct_live_target_min_ratio_floor_weight=float("
+        in compact_body
+    )
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=(args.segnet_direct_live_target_mass_floor_weight),"
+        in compact_main_hi_branch
+    )
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight=(args.segnet_direct_live_target_min_ratio_floor_weight),"
+        in compact_main_hi_branch
+    )
+    assert (
+        "posenet_yuv6_geometry_tether_stage_weight=(args.posenet_yuv6_geometry_tether_stage_weight),"
+        in compact_main_hi_branch
+    )
+    assert (
+        "segnet_direct_live_target_mass_floor_weight=float(segnet_direct_live_target_mass_floor_weight),"
+        in compact_execute_to_smoke_call
+    )
+    assert (
+        "segnet_direct_live_target_min_ratio_floor_weight=float(segnet_direct_live_target_min_ratio_floor_weight),"
+        in compact_execute_to_smoke_call
+    )
 
 
 def test_hinerv_runner_binds_archive_parseback_selection_to_receiver_gate() -> None:
@@ -817,10 +841,7 @@ def test_hinerv_selected_birth_parseback_survival_uses_artifact_archive_path(
     assert promoted["score_claim"] is False
     assert promoted["promotion_eligible"] is False
     assert promoted["ready_for_exact_eval_dispatch"] is False
-    assert (
-        artifact_dict["selected_birth_parseback_survival"]["action_id"]
-        == "b" * 64
-    )
+    assert artifact_dict["selected_birth_parseback_survival"]["action_id"] == "b" * 64
 
 
 def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
@@ -856,15 +877,15 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
             "archive_path": Path(archive_path).as_posix(),
             "archive_sha256": runner_mod._sha256_file(archive),
             "archive_bytes": archive.stat().st_size,
-                "survived": True,
-                "fakequant_survived": True,
-                "parseback_survived": True,
-                "inflate_survived": False,
-                "blockers": [],
-                "score_claim": True,
-                "promotion_eligible": True,
-                "ready_for_exact_eval_dispatch": True,
-            }
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "blockers": [],
+            "score_claim": True,
+            "promotion_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        }
 
     monkeypatch.setattr(
         archive_candidate,
@@ -897,9 +918,7 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
 
     assert row is not None
     assert row["action_id"] == "c" * 64
-    assert row["target_region_action_program_sha256"] == hashlib.sha256(
-        b"selected-program"
-    ).hexdigest()
+    assert row["target_region_action_program_sha256"] == hashlib.sha256(b"selected-program").hexdigest()
     assert row["expected_support_sha256"] == "support-sha"
     assert row["expected_payload_bytes"] == 17
     assert row["score_claim"] is False
@@ -907,28 +926,20 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
     assert row["ready_for_exact_eval_dispatch"] is False
     assert calls == [
         {
-                "archive_path": archive.as_posix(),
-                "expected_program_base64": "selected-program",
-                "expected_support_sha256": "support-sha",
-                "expected_payload_bytes": 17,
-                "inflated_raw_path": None,
-            }
-        ]
+            "archive_path": archive.as_posix(),
+            "expected_program_base64": "selected-program",
+            "expected_support_sha256": "support-sha",
+            "expected_payload_bytes": 17,
+            "inflated_raw_path": None,
+        }
+    ]
     assert row["survived"] is True
     assert "target_region_action_export_selection" not in row
-    score_training = artifact_dict["substrate_artifact_metadata"][
-        "score_aware_training"
-    ]
+    score_training = artifact_dict["substrate_artifact_metadata"]["score_aware_training"]
     assert score_training["target_region_action_parseback_survival"]["survived"] is True
-    assert score_training["target_region_action_parseback_survival"]["action_id"] == (
-        "c" * 64
-    )
-    metadata_survival = artifact_dict["substrate_artifact_metadata"][
-        "target_region_action_parseback_survival"
-    ]
-    persisted_artifact = json.loads(
-        (tmp_path / "training_artifact.json").read_text(encoding="utf-8")
-    )
+    assert score_training["target_region_action_parseback_survival"]["action_id"] == ("c" * 64)
+    metadata_survival = artifact_dict["substrate_artifact_metadata"]["target_region_action_parseback_survival"]
+    persisted_artifact = json.loads((tmp_path / "training_artifact.json").read_text(encoding="utf-8"))
     persisted_metadata_survival = persisted_artifact["substrate_artifact_metadata"][
         "target_region_action_parseback_survival"
     ]
@@ -1031,9 +1042,7 @@ def test_hinerv_action_parseback_survival_recovers_wall_normal_action_id(
     assert summary["action_id"] == action_id
     assert summary["support_sha256"] == "support-sha"
     persisted = json.loads(
-        (tmp_path / "hi_nerv_target_region_action_parseback_survival.json").read_text(
-            encoding="utf-8"
-        )
+        (tmp_path / "hi_nerv_target_region_action_parseback_survival.json").read_text(encoding="utf-8")
     )
     assert persisted["action_id"] == action_id
     assert persisted["support_sha256"] == "support-sha"
@@ -1127,9 +1136,9 @@ def test_hinerv_action_comparison_writer_attaches_lowering_race(
     assert artifact_dict["target_region_action_lowering_race"]["action_id"] == action_id
     assert Path(artifact_dict["target_region_action_comparison_path"]).is_file()
     assert (
-        artifact_dict["substrate_artifact_metadata"]["score_aware_training"][
-            "target_region_action_lowering_race"
-        ]["best_lowering"]
+        artifact_dict["substrate_artifact_metadata"]["score_aware_training"]["target_region_action_lowering_race"][
+            "best_lowering"
+        ]
         == "pose_compensated_composite"
     )
 
@@ -1233,23 +1242,90 @@ def test_hinerv_live_to_parseback_delta_audit_writer_attaches_false_authority(
     assert row["promotion_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     persisted = json.loads(
-        (tmp_path / "hi_nerv_live_to_parseback_scorer_effect_delta_audit.json").read_text(
-            encoding="utf-8"
-        )
+        (tmp_path / "hi_nerv_live_to_parseback_scorer_effect_delta_audit.json").read_text(encoding="utf-8")
     )
     assert persisted["checkpoint_identity"]["exported_state_npz_sha256"] == "d" * 64
-    assert artifact_dict["substrate_artifact_metadata"][
-        "score_aware_training"
-    ]["live_to_parseback_scorer_effect_delta_audit"]["first_divergence"] == (
-        "quantization_mismatch"
-    )
-    training_artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
-    nested = training_artifact["substrate_artifact_metadata"][
+    assert artifact_dict["substrate_artifact_metadata"]["score_aware_training"][
         "live_to_parseback_scorer_effect_delta_audit"
-    ]
+    ]["first_divergence"] == ("quantization_mismatch")
+    training_artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    nested = training_artifact["substrate_artifact_metadata"]["live_to_parseback_scorer_effect_delta_audit"]
     assert "score_claim" not in nested
     assert "promotion_eligible" not in nested
     assert "ready_for_exact_eval_dispatch" not in nested
+
+
+def test_hinerv_archive_quantizer_parity_writer_threads_action_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    archive = tmp_path / "ema" / "archive.zip"
+    archive.parent.mkdir()
+    archive.write_bytes(b"unit archive")
+    (archive.parent / "hi_nerv_mlx_live_receiver_export_parity.json").write_text(
+        json.dumps({"schema": "hi_nerv_mlx_live_receiver_export_parity_proof.v1"}),
+        encoding="utf-8",
+    )
+    (archive.parent / "hi_nerv_mlx_exported_state_npz_manifest.json").write_text(
+        json.dumps({"schema": "framework_agnostic_npz_bridge_manifest.v1"}),
+        encoding="utf-8",
+    )
+    artifact_path = tmp_path / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps({"substrate_artifact_metadata": {"score_aware_training": {}}}),
+        encoding="utf-8",
+    )
+    artifact_dict = {"substrate_artifact_metadata": {"score_aware_training": {}}}
+
+    def fake_build_hi_nerv_archive_quantizer_parity_receipt(**kwargs: object) -> dict[str, object]:
+        assert str(kwargs["archive_path"]).endswith("archive.zip")
+        assert kwargs["live_to_parseback_audit"]["action_id"] == "a" * 64
+        return {
+            "schema": "hi_nerv_archive_quantizer_parity_receipt.v1",
+            "action_id": "a" * 64,
+            "support_sha256": "b" * 64,
+            "archive_sha256": "c" * 64,
+            "first_failed_surface": "latents_fine_quantizer_delta",
+            "tensor_group_rows": [{"tensor_group": "latents_fine"}],
+            "worst_tensor_rows": [{"tensor_name": "latents_fine"}],
+            "next_operator": "bind ArchiveRoundtripQAT",
+            "blockers": ["hi_nerv_archive_quantizer_parity_latents_fine_quantizer_delta"],
+            "score_claim": True,
+            "promotion_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "build_hi_nerv_archive_quantizer_parity_receipt",
+        fake_build_hi_nerv_archive_quantizer_parity_receipt,
+    )
+
+    row = runner_mod._write_hi_nerv_archive_quantizer_parity_receipt(
+        archive_resolution={"archive_path": archive.as_posix()},
+        output_dir=tmp_path,
+        artifact_dict=artifact_dict,
+        live_to_parseback_audit={
+            "schema": "hi_nerv_live_to_parseback_scorer_effect_delta_audit.v1",
+            "action_id": "a" * 64,
+            "support_sha256": "b" * 64,
+        },
+    )
+
+    assert row is not None
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    persisted = json.loads((tmp_path / "hi_nerv_archive_quantizer_parity_receipt.json").read_text(encoding="utf-8"))
+    assert persisted["first_failed_surface"] == "latents_fine_quantizer_delta"
+    nested = artifact_dict["substrate_artifact_metadata"]["score_aware_training"]["archive_quantizer_parity_receipt"]
+    assert nested["first_failed_surface"] == "latents_fine_quantizer_delta"
+    training_artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    nested_artifact = training_artifact["substrate_artifact_metadata"]["archive_quantizer_parity_receipt"]
+    assert "score_claim" not in nested_artifact
+    assert "promotion_eligible" not in nested_artifact
 
 
 def test_hinerv_action_parseback_survival_blocks_archive_custody_mismatch(
@@ -1330,9 +1406,7 @@ def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> N
             "support_sha256": "mask-support",
             "support_hash_domain": "bool_mask_bhw",
             "archive_executable_support_sha256": "valid-support",
-            "archive_executable_support_hash_domain": (
-                "target_region_action_coordinates_v1"
-            ),
+            "archive_executable_support_hash_domain": ("target_region_action_coordinates_v1"),
         },
         "accepted": True,
         "target_support_moved": True,
@@ -1353,9 +1427,7 @@ def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> N
     }
 
     payload = runner_mod._target_region_action_payload_for_export_selection(artifact)
-    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
-        payload
-    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
 
     assert program == "valid-program"
     assert selection is not None
@@ -1402,9 +1474,7 @@ def test_hinerv_action_program_selection_inherits_nested_action_identity() -> No
         },
     }
 
-    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
-        payload
-    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
 
     assert program == "nested-program"
     assert selection is not None
@@ -1475,9 +1545,7 @@ def test_hinerv_action_program_selection_prefers_wall_normal_support() -> None:
         },
     }
 
-    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
-        payload
-    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
 
     assert program == "wall-normal-program"
     assert selection is not None
@@ -1528,11 +1596,7 @@ def test_hinerv_action_payload_selection_reads_persisted_readiness_metadata() ->
             "score_aware_training": {
                 "short_scorer_teacher_smoke_readiness": {
                     "output_head_target_init_gate": {
-                        "metadata": {
-                            "scorer_domain_bootstrap": {
-                                "target_region_birth_actuator": nested_birth
-                            }
-                        }
+                        "metadata": {"scorer_domain_bootstrap": {"target_region_birth_actuator": nested_birth}}
                     }
                 }
             }
@@ -1540,9 +1604,7 @@ def test_hinerv_action_payload_selection_reads_persisted_readiness_metadata() ->
     }
 
     payload = runner_mod._target_region_action_payload_for_export_selection(artifact)
-    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
-        payload
-    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
 
     assert payload is nested_birth
     assert program == "nested-program"
@@ -1591,11 +1653,7 @@ def test_hinerv_action_payload_selection_reloads_persisted_training_artifact(
             "score_aware_training": {
                 "short_scorer_teacher_smoke_readiness": {
                     "output_head_target_init_gate": {
-                        "metadata": {
-                            "scorer_domain_bootstrap": {
-                                "target_region_birth_actuator": nested_birth
-                            }
-                        }
+                        "metadata": {"scorer_domain_bootstrap": {"target_region_birth_actuator": nested_birth}}
                     }
                 }
             }
@@ -1610,15 +1668,11 @@ def test_hinerv_action_payload_selection_reloads_persisted_training_artifact(
         "substrate_artifact_metadata": {"score_aware_training": {}},
     }
 
-    payload = (
-        runner_mod._target_region_action_payload_for_export_selection_with_persisted_artifact(
-            artifact_dict,
-            training_dir=tmp_path,
-        )
+    payload = runner_mod._target_region_action_payload_for_export_selection_with_persisted_artifact(
+        artifact_dict,
+        training_dir=tmp_path,
     )
-    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
-        payload
-    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
 
     assert payload == nested_birth
     assert artifact_dict["target_region_birth_payload"] == nested_birth
@@ -1644,9 +1698,7 @@ def test_hinerv_action_program_selection_rejects_missing_direct_support() -> Non
         "exact_delta_score_nonrate": -0.1,
     }
 
-    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
-        payload
-    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(payload)
 
     assert program is None
     assert selection is not None
@@ -1654,10 +1706,7 @@ def test_hinerv_action_program_selection_rejects_missing_direct_support() -> Non
     assert selection["best_candidate_action_id"] == "e" * 64
     assert selection["best_candidate_same_support_as_direct_teacher"] is False
     assert selection["best_candidate_direct_teacher_support_sha256"] is None
-    assert (
-        "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
-        in selection["blockers"]
-    )
+    assert "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate" in selection["blockers"]
 
 
 def test_hinerv_live_birth_survival_rows_fail_closed_on_missing_inputs(tmp_path: Path) -> None:
@@ -1826,9 +1875,7 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
             "pair_index": 0,
             "worst_region": {"batch_index": 0, "class_index": 2, "region_label": 1},
             "updated_parameter_names": ["head_rgb_1.weight"] if arm != "B" else ["head_rgb_0.weight"],
-            "trained_groups": (
-                ["head_rgb_1"] if arm != "B" else ["compensation_head_rgb_0"]
-            ),
+            "trained_groups": (["head_rgb_1"] if arm != "B" else ["compensation_head_rgb_0"]),
             "exact_nonrate": {
                 "old_d_seg_batch": old_d_seg,
                 "new_d_seg_batch": new_d_seg,
@@ -6955,9 +7002,7 @@ def _write_planner_row_queue_artifact(
         "ready_for_exact_eval_dispatch": False,
     }
     if snerv_long_run_launch_gate is not None:
-        launch_contract["snerv_long_run_launch_gate"] = dict(
-            snerv_long_run_launch_gate
-        )
+        launch_contract["snerv_long_run_launch_gate"] = dict(snerv_long_run_launch_gate)
     payload = {
         "schema": schema,
         "score_claim": False,
@@ -7225,10 +7270,7 @@ def test_planner_row_launch_gate_rejects_snerv_full_run_without_launch_gate(
     match = guard["queue_artifact_status"]["matched_records"][0]
     assert match["row_status_runnable"] is True
     assert match["launch_contract_runnable"] is False
-    assert (
-        "planner_row_snerv_long_run_launch_gate_missing"
-        in match["launch_contract_blockers"]
-    )
+    assert "planner_row_snerv_long_run_launch_gate_missing" in match["launch_contract_blockers"]
 
 
 def test_planner_row_launch_gate_accepts_snerv_full_run_with_launch_gate(
@@ -9026,16 +9068,16 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             lambda_already_won_rgb_preserve,
             already_won_margin_floor,
             lambda_pose_trust_preserve,
-                lambda_pose_target,
-                target_geometry_mode,
-                target_geometry_frontier_dilation,
-                target_region_portfolio_max_regions,
-                target_region_forced_key,
-                require_fakequant_survival,
-                fakequant_survival_bits,
-                hard_region_miner_output_dir,
-                birth_update_scope,
-                grad_clip_max_norm,
+            lambda_pose_target,
+            target_geometry_mode,
+            target_geometry_frontier_dilation,
+            target_region_portfolio_max_regions,
+            target_region_forced_key,
+            require_fakequant_survival,
+            fakequant_survival_bits,
+            hard_region_miner_output_dir,
+            birth_update_scope,
+            grad_clip_max_norm,
         ):
             captured["target_region_birth_call"] = {
                 "scorer_teacher_present": scorer_teacher is not None,
@@ -9154,9 +9196,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         def fit_target_region_birth_backend_ladder_from_segnet(self, **kwargs):
             captured["target_region_birth_ladder_call"] = {
                 "birth_update_scope_present": "birth_update_scope" in kwargs,
-                "target_region_portfolio_max_regions": int(
-                    kwargs["target_region_portfolio_max_regions"]
-                ),
+                "target_region_portfolio_max_regions": int(kwargs["target_region_portfolio_max_regions"]),
                 "target_region_forced_key": kwargs["target_region_forced_key"],
             }
             # Mirror the real ladder contract: one backend scope owns one
@@ -9250,9 +9290,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         archive_output_dir,
         **kwargs,
     ):
-        captured["export_target_region_action_program_base64"] = kwargs.get(
-            "target_region_action_program_base64"
-        )
+        captured["export_target_region_action_program_base64"] = kwargs.get("target_region_action_program_base64")
         Path(archive_output_dir).mkdir(parents=True, exist_ok=True)
         archive = Path(archive_output_dir) / "fake_hinerv_action_program_archive.zip"
         _write_synthetic_pr95_archive(archive, pairs=10)
@@ -9582,9 +9620,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     action_effect_ledger = Path(bootstrap_metadata["action_effect_ledger_path"])
     assert action_effect_ledger.is_file()
     action_effect_rows = [
-        json.loads(line)
-        for line in action_effect_ledger.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in action_effect_ledger.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
     assert len(action_effect_rows) == 1
     action_effect_row = action_effect_rows[0]
@@ -9609,13 +9645,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert "accepted" in target_region_birth, target_region_birth
     assert target_region_birth["accepted"] is True
     assert target_region_birth["net_target_support_delta"] == pytest.approx(5.0)
-    assert (
-        captured["export_target_region_action_program_base64"]
-        == "runner-selected-action-program"
-    )
-    assert captured["parseback_expected_program_base64"] == (
-        "runner-selected-action-program"
-    )
+    assert captured["export_target_region_action_program_base64"] == "runner-selected-action-program"
+    assert captured["parseback_expected_program_base64"] == ("runner-selected-action-program")
     assert captured["parseback_expected_support_sha256"] == "runner-action-support"
     assert captured["parseback_expected_payload_bytes"] == 17
     ladder_call = captured["target_region_birth_ladder_call"]
@@ -9647,14 +9678,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_region_birth["birth_update_scope"] == "pair_latents_fine"
     assert target_region_birth["selected_backend_scope"] == "pair_latents_fine"
     assert target_region_birth["backend_ladder_exhausted"] is False
-    assert target_region_birth["backend_fit_ladder"]["schema"] == (
-        "hi_nerv_target_region_birth_backend_ladder.v1"
-    )
+    assert target_region_birth["backend_fit_ladder"]["schema"] == ("hi_nerv_target_region_birth_backend_ladder.v1")
     assert target_region_birth["backend_fit_ladder_attempts"][0]["accepted"] is True
-    assert (
-        target_region_birth["receipt"]["candidate_frontier_telemetry"]["birth_update_scope"]
-        == "pair_latents_fine"
-    )
+    assert target_region_birth["receipt"]["candidate_frontier_telemetry"]["birth_update_scope"] == "pair_latents_fine"
     assert target_birth_call["require_fakequant_survival"] is False
     assert target_birth_call["fakequant_survival_bits"] == 8
     assert (
@@ -9999,9 +10025,7 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
 
     def fake_write_mlx_renderer_prefilter_profile(**kwargs):
         captured["prefilter_profile_scorer_device"] = kwargs["scorer_device"]
-        captured["prefilter_profile_scorer_batch_pairs"] = int(
-            kwargs["scorer_batch_pairs"]
-        )
+        captured["prefilter_profile_scorer_batch_pairs"] = int(kwargs["scorer_batch_pairs"])
         output_path = Path(kwargs["output_path"])
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
@@ -14804,8 +14828,7 @@ def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
         }
 
     monkeypatch.setattr(
-        "tac.substrates.hi_nerv.birth_survival."
-        "measure_birth_inflated_torch_cpu_survival_from_local_replay",
+        "tac.substrates.hi_nerv.birth_survival.measure_birth_inflated_torch_cpu_survival_from_local_replay",
         fake_measure,
     )
     artifact = {"substrate_artifact_metadata": {"score_aware_training": {}}}
@@ -14840,18 +14863,10 @@ def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
     assert written["action_id"] == action_id
     assert written["survived"] is True
     assert artifact["birth_inflated_torch_cpu_survival"]["artifact_path"] == path.as_posix()
-    embedded = artifact["substrate_artifact_metadata"]["score_aware_training"][
-        "birth_inflated_torch_cpu_survival"
-    ]
-    metadata_embedded = artifact["substrate_artifact_metadata"][
-        "birth_inflated_torch_cpu_survival"
-    ]
-    persisted_artifact = json.loads(
-        (tmp_path / "training_artifact.json").read_text(encoding="utf-8")
-    )
-    persisted_metadata_embedded = persisted_artifact["substrate_artifact_metadata"][
-        "birth_inflated_torch_cpu_survival"
-    ]
+    embedded = artifact["substrate_artifact_metadata"]["score_aware_training"]["birth_inflated_torch_cpu_survival"]
+    metadata_embedded = artifact["substrate_artifact_metadata"]["birth_inflated_torch_cpu_survival"]
+    persisted_artifact = json.loads((tmp_path / "training_artifact.json").read_text(encoding="utf-8"))
+    persisted_metadata_embedded = persisted_artifact["substrate_artifact_metadata"]["birth_inflated_torch_cpu_survival"]
     assert embedded["surface"] == "inflated_torch_cpu"
     assert embedded["survived"] is True
     for nested in (embedded, metadata_embedded, persisted_metadata_embedded):
@@ -14928,8 +14943,7 @@ def test_hinerv_inflated_birth_survival_combined_action_effect_stays_batch_local
         }
 
     monkeypatch.setattr(
-        "tac.substrates.hi_nerv.birth_survival."
-        "measure_birth_inflated_torch_cpu_survival_from_local_replay",
+        "tac.substrates.hi_nerv.birth_survival.measure_birth_inflated_torch_cpu_survival_from_local_replay",
         fake_measure,
     )
 

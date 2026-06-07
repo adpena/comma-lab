@@ -179,8 +179,7 @@ def _select_target_region_action_program_from_birth_payload(
                     if support is not None:
                         preferences.append(
                             (
-                                _string(wall_normal.get("action_id"))
-                                or _action_id_from_node(value),
+                                _string(wall_normal.get("action_id")) or _action_id_from_node(value),
                                 support,
                             )
                         )
@@ -218,17 +217,10 @@ def _select_target_region_action_program_from_birth_payload(
                 candidate = dict(node)
                 if _string(candidate.get("action_id")) is None and current_action_id:
                     candidate["action_id"] = current_action_id
-                    candidate["target_region_action_id_source"] = (
-                        "inherited_payload_context"
-                    )
-                if (
-                    _string(candidate.get("direct_teacher_support_sha256")) is None
-                    and current_direct_support
-                ):
+                    candidate["target_region_action_id_source"] = "inherited_payload_context"
+                if _string(candidate.get("direct_teacher_support_sha256")) is None and current_direct_support:
                     candidate["direct_teacher_support_sha256"] = current_direct_support
-                    candidate["direct_teacher_support_sha256_source"] = (
-                        "inherited_payload_context"
-                    )
+                    candidate["direct_teacher_support_sha256_source"] = "inherited_payload_context"
                 candidates.append(candidate)
             for value in node.values():
                 if isinstance(value, (Mapping, list, tuple)):
@@ -243,9 +235,7 @@ def _select_target_region_action_program_from_birth_payload(
                     _visit(
                         value,
                         inherited_action_id=inherited_action_id,
-                        inherited_direct_teacher_support_sha256=(
-                            inherited_direct_teacher_support_sha256
-                        ),
+                        inherited_direct_teacher_support_sha256=(inherited_direct_teacher_support_sha256),
                     )
 
     _visit(payload)
@@ -284,15 +274,9 @@ def _select_target_region_action_program_from_birth_payload(
     def _candidate_exact_accepted(row: Mapping[str, Any]) -> bool:
         decision = row.get("admission_decision")
         decision = decision if isinstance(decision, Mapping) else {}
-        exact_decision = str(
-            row.get("exact_score_decision")
-            or decision.get("exact_score_decision")
-            or ""
-        ).lower()
+        exact_decision = str(row.get("exact_score_decision") or decision.get("exact_score_decision") or "").lower()
         return bool(
-            row.get("accepted") is True
-            or decision.get("accepted") is True
-            or exact_decision in {"accept", "accepted"}
+            row.get("accepted") is True or decision.get("accepted") is True or exact_decision in {"accept", "accepted"}
         )
 
     def _candidate_support_moved(row: Mapping[str, Any]) -> bool:
@@ -334,10 +318,7 @@ def _select_target_region_action_program_from_birth_payload(
         same_support = _candidate_same_support_as_direct_teacher(row)
         delta = _candidate_delta_nonrate(row)
         payload_bytes = _candidate_payload_bytes(row)
-        total_delta = (
-            delta
-            + (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES)) * float(payload_bytes)
-        )
+        total_delta = delta + (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES)) * float(payload_bytes)
         return (
             0 if exact_accepted else 1,
             0 if support_moved else 1,
@@ -359,11 +340,9 @@ def _select_target_region_action_program_from_birth_payload(
         eligible_candidates = [
             row
             for row in all_eligible_candidates
-            if _candidate_action_support_sha256(row)
-            == wall_normal_preferred_support_sha256
+            if _candidate_action_support_sha256(row) == wall_normal_preferred_support_sha256
             and (
-                wall_normal_preferred_action_id is None
-                or _candidate_action_id(row) == wall_normal_preferred_action_id
+                wall_normal_preferred_action_id is None or _candidate_action_id(row) == wall_normal_preferred_action_id
             )
         ]
     else:
@@ -385,8 +364,7 @@ def _select_target_region_action_program_from_birth_payload(
             "wall_normal_preferred_support_sha256": wall_normal_preferred_support_sha256,
             "best_candidate_matches_wall_normal_support": (
                 wall_normal_preferred_support_sha256 is not None
-                and _candidate_action_support_sha256(best)
-                == wall_normal_preferred_support_sha256
+                and _candidate_action_support_sha256(best) == wall_normal_preferred_support_sha256
             ),
             "best_candidate_exact_accepted": _candidate_exact_accepted(best),
             "best_candidate_support_moved": _candidate_support_moved(best),
@@ -422,9 +400,7 @@ def _select_target_region_action_program_from_birth_payload(
         ),
         "target_region_action_payload_bytes": _candidate_payload_bytes(selected),
         "target_region_action_pixel_count": selected.get("target_region_action_pixel_count"),
-        "target_region_action_program_sha256": hashlib.sha256(
-            program.encode("ascii")
-        ).hexdigest(),
+        "target_region_action_program_sha256": hashlib.sha256(program.encode("ascii")).hexdigest(),
         "target_region_action_support_sha256": telemetry.get("support_sha256"),
         "target_region_action_support_cardinality": telemetry.get("support_cardinality"),
         "target_region_action_support_encoding": telemetry.get("support_encoding"),
@@ -434,8 +410,7 @@ def _select_target_region_action_program_from_birth_payload(
         "exact_delta_score_nonrate": _candidate_delta_nonrate(selected),
         "estimated_delta_score_total": _candidate_key(selected)[3],
         "estimated_rate_score_delta": (
-            (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES))
-            * float(_candidate_payload_bytes(selected))
+            (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES)) * float(_candidate_payload_bytes(selected))
         ),
         "target_support_moved": selected.get("target_support_moved"),
         "archive_closed_before_export": bool(selected.get("archive_closed") is True),
@@ -511,9 +486,7 @@ def _target_region_action_payload_for_export_selection_with_persisted_artifact(
     payload = _target_region_action_payload_for_export_selection(artifact_dict)
     if isinstance(payload, Mapping):
         return payload
-    artifact_path = Path(training_dir).expanduser().resolve(strict=False) / (
-        "training_artifact.json"
-    )
+    artifact_path = Path(training_dir).expanduser().resolve(strict=False) / ("training_artifact.json")
     if not artifact_path.is_file():
         return None
     try:
@@ -4905,9 +4878,7 @@ def _run_snerv_native_mlx_export_attachment(
         )
         artifact["native_mlx_archive_export_requested"] = bool(run_archive_export)
         artifact["native_mlx_archive_export_policy"] = (
-            "receiver_archive_proof"
-            if run_archive_export
-            else "packet_only_bounded_smoke_no_archive_authority"
+            "receiver_archive_proof" if run_archive_export else "packet_only_bounded_smoke_no_archive_authority"
         )
         native_training_export_guard = build_snerv_mlx_native_training_export_guard(artifact)
         blockers = [
@@ -10655,10 +10626,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_domain_bootstrap_segnet_hard_birth_forced_region_key=(
                 None
                 if scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
-                else tuple(
-                    int(part)
-                    for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
-                )
+                else tuple(int(part) for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key)
             ),
             scorer_domain_bootstrap_segnet_hard_birth_update_scope=(
                 None
@@ -11052,9 +11020,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         target_region_action_program_base64=target_region_action_program_base64,
     )
     if isinstance(target_region_action_parseback_survival, Mapping):
-        artifact_dict["target_region_action_parseback_survival"] = dict(
-            target_region_action_parseback_survival
-        )
+        artifact_dict["target_region_action_parseback_survival"] = dict(target_region_action_parseback_survival)
     target_region_action_comparison = _write_hi_nerv_target_region_action_comparison_report(
         archive_resolution=archive_resolution,
         output_dir=training_dir,
@@ -11066,38 +11032,42 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         ),
     )
     if isinstance(target_region_action_comparison, Mapping):
-        artifact_dict["target_region_action_comparison"] = dict(
-            target_region_action_comparison
-        )
+        artifact_dict["target_region_action_comparison"] = dict(target_region_action_comparison)
         lowering_race = target_region_action_comparison.get("lowering_race")
         if isinstance(lowering_race, Mapping):
             artifact_dict["target_region_action_lowering_race"] = dict(lowering_race)
-    live_to_parseback_scorer_effect_delta_audit = (
-        _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
-            archive_resolution=archive_resolution,
-            output_dir=training_dir,
-            artifact_dict=artifact_dict,
-            target_region_action_export_selection=(
-                target_region_action_export_selection
-                if isinstance(target_region_action_export_selection, Mapping)
-                else None
-            ),
-            target_region_action_parseback_survival=(
-                target_region_action_parseback_survival
-                if isinstance(target_region_action_parseback_survival, Mapping)
-                else None
-            ),
-            selected_birth_parseback_survival=(
-                selected_birth_parseback_survival
-                if isinstance(selected_birth_parseback_survival, Mapping)
-                else None
-            ),
-        )
+    live_to_parseback_scorer_effect_delta_audit = _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
+        archive_resolution=archive_resolution,
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        target_region_action_export_selection=(
+            target_region_action_export_selection
+            if isinstance(target_region_action_export_selection, Mapping)
+            else None
+        ),
+        target_region_action_parseback_survival=(
+            target_region_action_parseback_survival
+            if isinstance(target_region_action_parseback_survival, Mapping)
+            else None
+        ),
+        selected_birth_parseback_survival=(
+            selected_birth_parseback_survival if isinstance(selected_birth_parseback_survival, Mapping) else None
+        ),
     )
     if isinstance(live_to_parseback_scorer_effect_delta_audit, Mapping):
-        artifact_dict["live_to_parseback_scorer_effect_delta_audit"] = dict(
+        artifact_dict["live_to_parseback_scorer_effect_delta_audit"] = dict(live_to_parseback_scorer_effect_delta_audit)
+    archive_quantizer_parity_receipt = _write_hi_nerv_archive_quantizer_parity_receipt(
+        archive_resolution=archive_resolution,
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        live_to_parseback_audit=(
             live_to_parseback_scorer_effect_delta_audit
-        )
+            if isinstance(live_to_parseback_scorer_effect_delta_audit, Mapping)
+            else None
+        ),
+    )
+    if isinstance(archive_quantizer_parity_receipt, Mapping):
+        artifact_dict["archive_quantizer_parity_receipt"] = dict(archive_quantizer_parity_receipt)
     _attach_hi_nerv_archive_codec_custody(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
@@ -11249,9 +11219,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         local_cpu_replay_summary=(local_cpu_replay_summary if isinstance(local_cpu_replay_summary, Mapping) else None),
         output_dir=training_dir,
         live_birth_payload=(
-            post_export_live_birth_payload
-            if isinstance(post_export_live_birth_payload, Mapping)
-            else None
+            post_export_live_birth_payload if isinstance(post_export_live_birth_payload, Mapping) else None
         ),
         scorer_teacher=None,
         pose_teacher=None,
@@ -11260,9 +11228,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         target_labels=None,
         pair_indices=None,
         selected_birth_parseback_survival=(
-            selected_birth_parseback_survival
-            if isinstance(selected_birth_parseback_survival, Mapping)
-            else None
+            selected_birth_parseback_survival if isinstance(selected_birth_parseback_survival, Mapping) else None
         ),
         live_birth_survival_bundle=(
             post_export_live_birth_survival_bundle
@@ -11573,8 +11539,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     )
     blockers.extend(train_receiver_class_escape_contract.get("blockers") or [])
     action_effect_ledger_path = training_dir / "hi_nerv_birth_action_effects.jsonl"
-    action_effect_sources, action_effect_source_blockers = (
-        _load_runner_action_effect_sources_from_jsonl(action_effect_ledger_path)
+    action_effect_sources, action_effect_source_blockers = _load_runner_action_effect_sources_from_jsonl(
+        action_effect_ledger_path
     )
     blockers.extend(action_effect_source_blockers)
     long_mlx_training_readiness_signals = _hi_nerv_long_mlx_training_readiness_signals(
@@ -11645,9 +11611,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "archive_selection_manifest_path": artifact_dict.get("archive_selection_manifest_path"),
             "scorer_upstream_snapshot": _scorer_upstream_metadata(scorer_upstream),
             "training_artifact": artifact_dict,
-            "action_effect_source_paths": (
-                [action_effect_ledger_path.as_posix()] if action_effect_sources else []
-            ),
+            "action_effect_source_paths": ([action_effect_ledger_path.as_posix()] if action_effect_sources else []),
             "action_effect_source_count": len(action_effect_sources),
             "trained_archive_byte_oracle": trained_archive_byte_oracle,
             "decoder_weight_waterfill_from_trained_ladder": (decoder_weight_waterfill_from_trained_ladder),
@@ -11839,13 +11803,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                             "artifact_path": birth_inflated_torch_cpu_survival.get("artifact_path"),
                             "producer": birth_inflated_torch_cpu_survival.get("producer"),
                             "blockers": [
-                                str(value)
-                                for value in birth_inflated_torch_cpu_survival.get("blockers") or []
+                                str(value) for value in birth_inflated_torch_cpu_survival.get("blockers") or []
                             ],
                             "combined_action_effect_rows_written": (
-                                birth_inflated_torch_cpu_survival.get(
-                                    "combined_action_effect_rows_written"
-                                )
+                                birth_inflated_torch_cpu_survival.get("combined_action_effect_rows_written")
                             ),
                             "score_claim": False,
                             "promotion_eligible": False,
@@ -12304,14 +12265,10 @@ def _load_runner_action_effect_sources_from_jsonl(
         try:
             payload = json.loads(line)
         except json.JSONDecodeError as exc:
-            blockers.append(
-                f"action_effect_source_jsonl_invalid:{ledger.as_posix()}:{line_no}:{exc.msg}"
-            )
+            blockers.append(f"action_effect_source_jsonl_invalid:{ledger.as_posix()}:{line_no}:{exc.msg}")
             continue
         if not isinstance(payload, Mapping):
-            blockers.append(
-                f"action_effect_source_jsonl_non_mapping:{ledger.as_posix()}:{line_no}"
-            )
+            blockers.append(f"action_effect_source_jsonl_non_mapping:{ledger.as_posix()}:{line_no}")
             continue
         row = dict(payload)
         row.setdefault("source", ledger.as_posix())
@@ -17119,9 +17076,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             if hard_birth_pose_trust_preserve_defaulted
             else requested_hard_birth_pose_trust_preserve_weight
         )
-        requested_hard_birth_pose_target_weight = float(
-            scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight
-        )
+        requested_hard_birth_pose_target_weight = float(scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight)
         hard_birth_pose_teacher_requested = bool(
             requested_segnet_hard_birth_bootstrap_weight > 0.0
             and (
@@ -17155,9 +17110,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "schema": "hi_nerv_bootstrap_exact_posenet_target_pose.v1",
                     "enabled": False,
                     "reason": "posenet_pair_teacher_build_failed",
-                    "blockers": [
-                        f"hi_nerv_bootstrap_posenet_pair_teacher_build_failed:{pose_teacher_exc}"
-                    ],
+                    "blockers": [f"hi_nerv_bootstrap_posenet_pair_teacher_build_failed:{pose_teacher_exc}"],
                     "pair_count": int(bootstrap_count),
                     "pair_index_semantics": bootstrap_pair_index_semantics,
                     "runtime_sidecar_bytes": 0,
@@ -17290,9 +17243,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                         "target_segnet_argmax_1": target_segnet_argmax_1,
                         "max_steps": max(8, int(scorer_domain_bootstrap_steps) * 4),
                         "learning_rate": float(scorer_domain_bootstrap_learning_rate),
-                        "target_min_region_ratio": float(
-                            scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
-                        ),
+                        "target_min_region_ratio": float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor),
                         "pose_teacher": bootstrap_pose_scorer_teacher,
                         "require_pose_trust": bool(pose_trust_required),
                         "lambda_support_preserve": float(
@@ -17310,13 +17261,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                         "already_won_margin_floor": float(
                             scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor
                         ),
-                        "lambda_pose_trust_preserve": float(
-                            effective_hard_birth_pose_trust_preserve_weight
-                        ),
+                        "lambda_pose_trust_preserve": float(effective_hard_birth_pose_trust_preserve_weight),
                         "lambda_pose_target": float(requested_hard_birth_pose_target_weight),
-                        "target_geometry_mode": str(
-                            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
-                        ),
+                        "target_geometry_mode": str(scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode),
                         "target_geometry_frontier_dilation": int(
                             scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
                         ),
@@ -17327,8 +17274,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             None
                             if scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
                             else tuple(
-                                int(part)
-                                for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
+                                int(part) for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
                             )
                         ),
                         "require_fakequant_survival": bool(coder_aware_qat),
@@ -17337,9 +17283,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                         "grad_clip_max_norm": None,
                     }
                     if explicit_birth_update_scope is None and callable(target_region_birth_ladder_fn):
-                        ladder_payload = dict(
-                            target_region_birth_ladder_fn(**target_region_birth_kwargs)
-                        )
+                        ladder_payload = dict(target_region_birth_ladder_fn(**target_region_birth_kwargs))
                         canonical_birth_payload = (
                             ladder_payload.get("selected_payload")
                             if ladder_payload.get("accepted") is True
@@ -17356,14 +17300,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             target_region_birth_payload["backend_fit_ladder_attempts"] = list(
                                 ladder_payload.get("attempts") or []
                             )
-                            target_region_birth_payload["selected_backend_scope"] = (
-                                ladder_payload.get("selected_scope")
-                            )
+                            target_region_birth_payload["selected_backend_scope"] = ladder_payload.get("selected_scope")
                             target_region_birth_payload["backend_ladder_exhausted"] = not bool(
                                 ladder_payload.get("accepted")
                             )
-                            target_region_birth_payload["backend_realization_verdict"] = (
-                                ladder_payload.get("backend_realization_verdict")
+                            target_region_birth_payload["backend_realization_verdict"] = ladder_payload.get(
+                                "backend_realization_verdict"
                             )
                         else:
                             target_region_birth_payload = ladder_payload
@@ -17380,16 +17322,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             "reason": "target_region_birth_actuator_missing",
                             "blockers": ["hi_nerv_target_region_birth_actuator_missing"],
                         }
-                    if (
-                        bool(pose_trust_required)
-                        and target_region_birth_payload.get("accepted") is True
-                    ):
+                    if bool(pose_trust_required) and target_region_birth_payload.get("accepted") is True:
                         pose_trusted_blockers = _hi_nerv_pose_trusted_birth_payload_blockers(
                             target_region_birth_payload
                         )
-                        target_region_birth_payload["pose_trusted_validation_blockers"] = list(
-                            pose_trusted_blockers
-                        )
+                        target_region_birth_payload["pose_trusted_validation_blockers"] = list(pose_trusted_blockers)
                         target_region_birth_payload["pose_trusted_validated"] = not pose_trusted_blockers
                         if pose_trusted_blockers:
                             target_region_birth_payload["accepted"] = False
@@ -17429,9 +17366,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         bootstrap_payload["segnet_hard_birth_pose_trust_preserve_effective_weight"] = (
             effective_hard_birth_pose_trust_preserve_weight
         )
-        bootstrap_payload["segnet_hard_birth_pose_trust_preserve_defaulted"] = (
-            hard_birth_pose_trust_preserve_defaulted
-        )
+        bootstrap_payload["segnet_hard_birth_pose_trust_preserve_defaulted"] = hard_birth_pose_trust_preserve_defaulted
         bootstrap_payload["segnet_hard_birth_pose_target_requested_weight"] = requested_hard_birth_pose_target_weight
         bootstrap_payload["segnet_hard_birth_target_geometry_mode"] = str(
             scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
@@ -17560,9 +17495,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "schema": "compact_renderer_mlx_spine_runner_report.v1",
             "family": "hi_nerv",
             "status": (
-                "bounded_wall_normal_receipt_complete"
-                if receipt is not None
-                else "bounded_wall_normal_receipt_missing"
+                "bounded_wall_normal_receipt_complete" if receipt is not None else "bounded_wall_normal_receipt_missing"
             ),
             "stop_after_wall_normal_receipt": True,
             "training_started": False,
@@ -17584,9 +17517,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 receipt_path.as_posix() if receipt_path is not None else None
             ),
             "target_region_wall_normal_lift": receipt,
-            "scorer_domain_bootstrap": output_head_target_bias_init_payload.get(
-                "scorer_domain_bootstrap"
-            ),
+            "scorer_domain_bootstrap": output_head_target_bias_init_payload.get("scorer_domain_bootstrap"),
             "blockers": _dedupe(blockers),
         }
         path = output_dir / "target_region_wall_normal_lift_stop_artifact.json"
@@ -17896,9 +17827,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "substrate_artifact_metadata": artifact_metadata,
         }
         if isinstance(target_region_action_export_selection, Mapping):
-            export_artifact_dict["target_region_birth_payload"] = dict(
-                target_region_action_export_selection
-            )
+            export_artifact_dict["target_region_birth_payload"] = dict(target_region_action_export_selection)
         _write_hi_nerv_target_region_action_parseback_survival(
             archive_resolution={
                 "archive_path": Path(archive_path).as_posix(),
@@ -18431,9 +18360,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "score_authority": "false_macos_mlx_research_signal",
     }
     if target_region_action_export_selection is not None:
-        artifact_metadata["score_aware_training"][
-            "target_region_action_export_selection"
-        ] = _strip_substrate_metadata_authority_fields(target_region_action_export_selection)
+        artifact_metadata["score_aware_training"]["target_region_action_export_selection"] = (
+            _strip_substrate_metadata_authority_fields(target_region_action_export_selection)
+        )
 
     def _hi_nerv_archive_replay_components_with_birth_survival(
         archive_path: str | Path,
@@ -18464,22 +18393,22 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 canonical_for_launch_gate=False,
             )
             if isinstance(row, Mapping):
-                artifact_metadata["score_aware_training"][
-                    "last_birth_parseback_survival"
-                ] = _strip_substrate_metadata_authority_fields({
-                    "schema": row.get("schema"),
-                    "surface": row.get("surface"),
-                    "action_id": row.get("action_id"),
-                    "candidate_kind": row.get("candidate_kind"),
-                    "survived": row.get("survived"),
-                    "artifact_path": row.get("artifact_path"),
-                    "blockers": [
-                        str(value) for value in row.get("blockers") or []
-                    ],
-                    "score_claim": False,
-                    "promotion_eligible": False,
-                    "ready_for_exact_eval_dispatch": False,
-                })
+                artifact_metadata["score_aware_training"]["last_birth_parseback_survival"] = (
+                    _strip_substrate_metadata_authority_fields(
+                        {
+                            "schema": row.get("schema"),
+                            "surface": row.get("surface"),
+                            "action_id": row.get("action_id"),
+                            "candidate_kind": row.get("candidate_kind"),
+                            "survived": row.get("survived"),
+                            "artifact_path": row.get("artifact_path"),
+                            "blockers": [str(value) for value in row.get("blockers") or []],
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    )
+                )
         return components
 
     bundle_kwargs: dict[str, Any] = {
@@ -19391,9 +19320,7 @@ def _snapshot_mlx_model_parameters(model: Any) -> list[tuple[Any, Any]]:
         import mlx.core as mx
         from mlx.utils import tree_flatten
     except Exception as exc:  # pragma: no cover - environment guard
-        raise CompactRendererMlxSpineRunnerError(
-            "MLX parameter snapshot requires mlx.utils.tree_flatten"
-        ) from exc
+        raise CompactRendererMlxSpineRunnerError("MLX parameter snapshot requires mlx.utils.tree_flatten") from exc
     snapshot: list[tuple[Any, Any]] = []
     for raw_name, leaf in tree_flatten(model.parameters()):
         snapshot.append((raw_name, mx.array(leaf)))
@@ -19406,9 +19333,7 @@ def _restore_mlx_model_parameters(model: Any, snapshot: list[tuple[Any, Any]]) -
         import mlx.core as mx
         from mlx.utils import tree_unflatten
     except Exception as exc:  # pragma: no cover - environment guard
-        raise CompactRendererMlxSpineRunnerError(
-            "MLX parameter restore requires mlx.utils.tree_unflatten"
-        ) from exc
+        raise CompactRendererMlxSpineRunnerError("MLX parameter restore requires mlx.utils.tree_unflatten") from exc
     model.update(tree_unflatten([(name, mx.array(value)) for name, value in snapshot]))
     mx.eval(model.parameters())
 
@@ -19454,10 +19379,7 @@ def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> 
     pose_cap = pose_guard.get("max_pose_output_delta_l2")
     if not isinstance(accepted_delta, (int, float)) or not isinstance(pose_cap, (int, float)):
         blockers.append("hi_nerv_pose_trusted_birth_pose_cap_telemetry_missing")
-    elif (
-        float(accepted_delta) > float(pose_cap)
-        and pose_guard.get("raw_pose_cap_is_counterfactual_only") is not True
-    ):
+    elif float(accepted_delta) > float(pose_cap) and pose_guard.get("raw_pose_cap_is_counterfactual_only") is not True:
         blockers.append("hi_nerv_pose_trusted_birth_pose_cap_exceeded")
 
     nonrate_raw = row.get("exact_nonrate")
@@ -19516,8 +19438,7 @@ def _hi_nerv_pose_trusted_birth_payload_blockers(payload: Mapping[str, Any]) -> 
     )
     if v6_decision_seen and not any(
         _decision_text(row, "exact_score_decision", "composite_exact_score_decision") == "accepted"
-        and _decision_text(row, "catastrophic_guard_decision", "composite_catastrophic_guard_decision")
-        == "satisfied"
+        and _decision_text(row, "catastrophic_guard_decision", "composite_catastrophic_guard_decision") == "satisfied"
         for row in admission_rows
     ):
         blockers.append("hi_nerv_pose_trusted_birth_v6_admission_decision_missing")
@@ -19606,9 +19527,7 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
                 append_action_effect(four_arm_effect, action_effect_ledger_path)
                 rows_written += 1
         except Exception as exc:
-            blockers.append(
-                f"hi_nerv_birth_four_arm_action_effect_write_failed:{type(exc).__name__}:{exc}"
-            )
+            blockers.append(f"hi_nerv_birth_four_arm_action_effect_write_failed:{type(exc).__name__}:{exc}")
         summary["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
         summary["action_effect_rows_written"] = rows_written
         summary["four_arm_action_effect_rows_written"] = rows_written
@@ -19646,7 +19565,9 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         summary["hysteresis_path"] = hyst_path.as_posix()
         _rows_written, action_effect_blockers = _write_four_arm_action_effect_rows()
         if action_effect_blockers:
-            summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], *action_effect_blockers])
+            summary["blockers"] = _dedupe(
+                [*[str(value) for value in summary.get("blockers") or []], *action_effect_blockers]
+            )
         return summary
     if scorer_teacher is None or target_labels is None or pair_indices is None:
         missing = []
@@ -19732,7 +19653,9 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         four_arm_rows_written, four_arm_blockers = _write_four_arm_action_effect_rows()
         rows_written += four_arm_rows_written
         if four_arm_blockers:
-            summary["blockers"] = _dedupe([*[str(value) for value in summary.get("blockers") or []], *four_arm_blockers])
+            summary["blockers"] = _dedupe(
+                [*[str(value) for value in summary.get("blockers") or []], *four_arm_blockers]
+            )
         summary["action_effect_rows_written"] = rows_written
         summary["four_arm_action_effect_rows_written"] = four_arm_rows_written
     except Exception as exc:
@@ -19808,10 +19731,7 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
 
     out = Path(output_dir).expanduser().resolve(strict=False)
     out.mkdir(parents=True, exist_ok=True)
-    safe_kind = "".join(
-        ch if ch.isalnum() or ch in {"-", "_"} else "_"
-        for ch in str(candidate_kind or "archive")
-    )
+    safe_kind = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in str(candidate_kind or "archive"))
     row_path = out / f"hi_nerv_birth_parseback_survival_{safe_kind}.json"
 
     def _blocked(
@@ -19920,10 +19840,7 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
             authority="parseback_mlx",
             producer="hi_nerv_runner_archive_selection_birth_parseback_survival",
             consumer="nerv_long_run_launch_gate",
-            parseback_survived=(
-                row.get("parseback_scorer_effect_survived", row.get("survived"))
-                is True
-            ),
+            parseback_survived=(row.get("parseback_scorer_effect_survived", row.get("survived")) is True),
             wrong_to_target=_int_or_none(row.get("wrong_to_target_count")),
             target_to_wrong=_int_or_none(row.get("target_to_wrong_count")),
             wrong_to_wrong=_int_or_none(row.get("wrong_to_wrong_count")),
@@ -19978,9 +19895,7 @@ def _promote_hi_nerv_selected_birth_parseback_survival(
         return None
     promoted = dict(row)
     blockers = [str(value) for value in promoted.get("blockers") or []]
-    candidate_archive_sha256 = promoted.get("selected_archive_sha256") or promoted.get(
-        "archive_sha256"
-    )
+    candidate_archive_sha256 = promoted.get("selected_archive_sha256") or promoted.get("archive_sha256")
     if candidate_archive_sha256 and str(candidate_archive_sha256) != actual_archive_sha256:
         blockers.append("selected_birth_parseback_candidate_archive_sha256_mismatch")
     candidate_archive_bytes = _positive_int_or_none(
@@ -20068,12 +19983,10 @@ def _write_hi_nerv_target_region_action_parseback_survival(
     target_region_action_program_base64: str | None,
 ) -> dict[str, Any] | None:
     selected_for_export = bool(
-        isinstance(export_selection, Mapping)
-        and export_selection.get("selected_for_export") is True
+        isinstance(export_selection, Mapping) and export_selection.get("selected_for_export") is True
     )
     has_selected_program = bool(
-        isinstance(target_region_action_program_base64, str)
-        and target_region_action_program_base64
+        isinstance(target_region_action_program_base64, str) and target_region_action_program_base64
     )
     if not selected_for_export and not has_selected_program:
         return None
@@ -20090,8 +20003,7 @@ def _write_hi_nerv_target_region_action_parseback_survival(
     path = out / "hi_nerv_target_region_action_parseback_survival.json"
     expected_support_sha256 = (
         str(export_selection.get("target_region_action_support_sha256"))
-        if isinstance(export_selection, Mapping)
-        and export_selection.get("target_region_action_support_sha256")
+        if isinstance(export_selection, Mapping) and export_selection.get("target_region_action_support_sha256")
         else (
             str(artifact_dict.get("target_region_action_support_sha256"))
             if artifact_dict.get("target_region_action_support_sha256")
@@ -20105,9 +20017,7 @@ def _write_hi_nerv_target_region_action_parseback_survival(
     )
     expected_program_sha256 = None
     if isinstance(target_region_action_program_base64, str):
-        expected_program_sha256 = hashlib.sha256(
-            target_region_action_program_base64.encode("ascii")
-        ).hexdigest()
+        expected_program_sha256 = hashlib.sha256(target_region_action_program_base64.encode("ascii")).hexdigest()
     inflated_raw_path = (
         archive_resolution.get("inflated_raw_path")
         or archive_resolution.get("raw_output_path")
@@ -20139,9 +20049,7 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "fakequant_survived": False,
             "parseback_survived": False,
             "inflate_survived": False,
-            "blockers": [
-                f"target_region_action_parseback_survival_write_failed:{type(exc).__name__}:{exc}"
-            ],
+            "blockers": [f"target_region_action_parseback_survival_write_failed:{type(exc).__name__}:{exc}"],
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -20201,10 +20109,7 @@ def _write_hi_nerv_target_region_action_parseback_survival(
         "target_region_action_payload_mismatch",
         "target_region_action_support_sha256_mismatch",
     )
-    if any(
-        str(blocker).startswith(parseback_custody_blocker_prefixes)
-        for blocker in row.get("blockers") or []
-    ):
+    if any(str(blocker).startswith(parseback_custody_blocker_prefixes) for blocker in row.get("blockers") or []):
         row["survived"] = False
         row["fakequant_survived"] = False
         row["parseback_survived"] = False
@@ -20232,12 +20137,8 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "fakequant_survival_measured": row.get("fakequant_survival_measured"),
             "parseback_payload_survived": row.get("parseback_payload_survived"),
             "parseback_program_survived": row.get("parseback_program_survived"),
-            "parseback_scorer_effect_survived": row.get(
-                "parseback_scorer_effect_survived"
-            ),
-            "scorer_effect_survival_measured": row.get(
-                "scorer_effect_survival_measured"
-            ),
+            "parseback_scorer_effect_survived": row.get("parseback_scorer_effect_survived"),
+            "scorer_effect_survival_measured": row.get("scorer_effect_survival_measured"),
             "parseback_survived": row.get("parseback_survived"),
             "inflate_survived": row.get("inflate_survived"),
             "first_failed_surface": row.get("first_failed_surface"),
@@ -20245,16 +20146,12 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "archive_path": row.get("archive_path"),
             "archive_sha256": row.get("archive_sha256"),
             "archive_bytes": row.get("archive_bytes"),
-            "target_region_action_program_sha256": row.get(
-                "target_region_action_program_sha256"
-            ),
+            "target_region_action_program_sha256": row.get("target_region_action_program_sha256"),
             "support_sha256": row.get("support_sha256"),
             "expected_support_sha256": row.get("expected_support_sha256"),
             "expected_payload_bytes": row.get("expected_payload_bytes"),
             "total_action_pixels": row.get("total_action_pixels"),
-            "exact_uint8_action_pixels_applied": row.get(
-                "exact_uint8_action_pixels_applied"
-            ),
+            "exact_uint8_action_pixels_applied": row.get("exact_uint8_action_pixels_applied"),
             "receiver_changed_action_pixels": row.get("receiver_changed_action_pixels"),
             "blockers": [str(value) for value in row.get("blockers") or []],
             "score_claim": False,
@@ -20376,10 +20273,8 @@ def _write_hi_nerv_target_region_action_comparison_report(
             write_hinerv_target_region_action_comparison,
         )
 
-        action_effect_sources, action_effect_source_blockers = (
-            _load_runner_action_effect_sources_from_jsonl(
-                out / "hi_nerv_birth_action_effects.jsonl"
-            )
+        action_effect_sources, action_effect_source_blockers = _load_runner_action_effect_sources_from_jsonl(
+            out / "hi_nerv_birth_action_effects.jsonl"
         )
         report = dict(
             build_hinerv_target_region_action_comparison_from_archive(
@@ -20471,9 +20366,7 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
     """Write the exact-action audit for live/fakequant -> parse-back collapse."""
 
     out = Path(output_dir).expanduser().resolve(strict=False)
-    fakequant_survival = _load_optional_runner_mapping_json(
-        out / "hi_nerv_birth_fakequant_survival.json"
-    )
+    fakequant_survival = _load_optional_runner_mapping_json(out / "hi_nerv_birth_fakequant_survival.json")
     if fakequant_survival is None:
         metadata = artifact_dict.get("substrate_artifact_metadata")
         metadata = metadata if isinstance(metadata, Mapping) else {}
@@ -20481,13 +20374,9 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
         score_training = score_training if isinstance(score_training, Mapping) else {}
         supplied_training = metadata.get("substrate_supplied_score_aware_training")
         supplied_training = supplied_training if isinstance(supplied_training, Mapping) else {}
-        live_bundle = score_training.get("live_birth_survival") or supplied_training.get(
-            "live_birth_survival"
-        )
+        live_bundle = score_training.get("live_birth_survival") or supplied_training.get("live_birth_survival")
         if isinstance(live_bundle, Mapping):
-            fakequant_survival = _load_optional_runner_mapping_json(
-                live_bundle.get("fakequant_survival_path")
-            )
+            fakequant_survival = _load_optional_runner_mapping_json(live_bundle.get("fakequant_survival_path"))
 
     archive_raw = (
         (selected_birth_parseback_survival or {}).get("selected_archive_path")
@@ -20501,16 +20390,12 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
         else None
     )
     live_receiver_export_parity = (
-        _load_optional_runner_mapping_json(
-            archive.parent / "hi_nerv_mlx_live_receiver_export_parity.json"
-        )
+        _load_optional_runner_mapping_json(archive.parent / "hi_nerv_mlx_live_receiver_export_parity.json")
         if archive is not None
         else None
     )
     exported_state_manifest = (
-        _load_optional_runner_mapping_json(
-            archive.parent / "hi_nerv_mlx_exported_state_npz_manifest.json"
-        )
+        _load_optional_runner_mapping_json(archive.parent / "hi_nerv_mlx_exported_state_npz_manifest.json")
         if archive is not None
         else None
     )
@@ -20528,9 +20413,7 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
 
         row = dict(
             build_hinerv_live_to_parseback_scorer_effect_delta_audit(
-                fakequant_survival=(
-                    fakequant_survival if isinstance(fakequant_survival, Mapping) else None
-                ),
+                fakequant_survival=(fakequant_survival if isinstance(fakequant_survival, Mapping) else None),
                 selected_birth_parseback_survival=(
                     selected_birth_parseback_survival
                     if isinstance(selected_birth_parseback_survival, Mapping)
@@ -20547,14 +20430,10 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
                     else None
                 ),
                 live_receiver_export_parity=(
-                    live_receiver_export_parity
-                    if isinstance(live_receiver_export_parity, Mapping)
-                    else None
+                    live_receiver_export_parity if isinstance(live_receiver_export_parity, Mapping) else None
                 ),
                 exported_state_manifest=(
-                    exported_state_manifest
-                    if isinstance(exported_state_manifest, Mapping)
-                    else None
+                    exported_state_manifest if isinstance(exported_state_manifest, Mapping) else None
                 ),
                 archive_resolution=archive_resolution,
             )
@@ -20565,9 +20444,7 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
             "family": "hinerv",
             "first_divergence": "tensor_not_exported",
             "first_failed_surface": "tensor_not_exported",
-            "blockers": [
-                f"hi_nerv_live_to_parseback_delta_audit_write_failed:{type(exc).__name__}:{exc}"
-            ],
+            "blockers": [f"hi_nerv_live_to_parseback_delta_audit_write_failed:{type(exc).__name__}:{exc}"],
             "promotion_eligible": False,
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
@@ -20582,33 +20459,27 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
     artifact_dict["live_to_parseback_scorer_effect_delta_audit"] = dict(row)
     metadata = artifact_dict.get("substrate_artifact_metadata")
     if isinstance(metadata, dict):
-        metadata["live_to_parseback_scorer_effect_delta_audit"] = (
-            _strip_substrate_metadata_authority_fields(row)
-        )
+        metadata["live_to_parseback_scorer_effect_delta_audit"] = _strip_substrate_metadata_authority_fields(row)
         score_training = metadata.get("score_aware_training")
         if isinstance(score_training, dict):
-            score_training["live_to_parseback_scorer_effect_delta_audit"] = (
-                _strip_substrate_metadata_authority_fields(
-                    {
-                        "schema": row.get("schema"),
-                        "action_id": row.get("action_id"),
-                        "support_sha256": row.get("support_sha256"),
-                        "archive_sha256": row.get("archive_sha256"),
-                        "first_divergence": row.get("first_divergence"),
-                        "retention": row.get("retention"),
-                        "parseback_payload_survived": row.get("parseback_payload_survived"),
-                        "parseback_program_survived": row.get("parseback_program_survived"),
-                        "parseback_scorer_effect_survived": row.get(
-                            "parseback_scorer_effect_survived"
-                        ),
-                        "next_operator": row.get("next_operator"),
-                        "blockers": [str(value) for value in row.get("blockers") or []],
-                        "artifact_path": row.get("artifact_path"),
-                        "score_claim": False,
-                        "promotion_eligible": False,
-                        "ready_for_exact_eval_dispatch": False,
-                    }
-                )
+            score_training["live_to_parseback_scorer_effect_delta_audit"] = _strip_substrate_metadata_authority_fields(
+                {
+                    "schema": row.get("schema"),
+                    "action_id": row.get("action_id"),
+                    "support_sha256": row.get("support_sha256"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "first_divergence": row.get("first_divergence"),
+                    "retention": row.get("retention"),
+                    "parseback_payload_survived": row.get("parseback_payload_survived"),
+                    "parseback_program_survived": row.get("parseback_program_survived"),
+                    "parseback_scorer_effect_survived": row.get("parseback_scorer_effect_survived"),
+                    "next_operator": row.get("next_operator"),
+                    "blockers": [str(value) for value in row.get("blockers") or []],
+                    "artifact_path": row.get("artifact_path"),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
             )
     artifact_path = out / "training_artifact.json"
     if artifact_path.is_file():
@@ -20633,19 +20504,139 @@ def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
                             "archive_sha256": row.get("archive_sha256"),
                             "first_divergence": row.get("first_divergence"),
                             "retention": row.get("retention"),
-                            "parseback_scorer_effect_survived": row.get(
-                                "parseback_scorer_effect_survived"
-                            ),
+                            "parseback_scorer_effect_survived": row.get("parseback_scorer_effect_survived"),
                             "next_operator": row.get("next_operator"),
-                            "blockers": [
-                                str(value) for value in row.get("blockers") or []
-                            ],
+                            "blockers": [str(value) for value in row.get("blockers") or []],
                             "artifact_path": row.get("artifact_path"),
                             "score_claim": False,
                             "promotion_eligible": False,
                             "ready_for_exact_eval_dispatch": False,
                         }
                     )
+                )
+            artifact["substrate_artifact_metadata"] = artifact_metadata
+            artifact_path.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+    return row
+
+
+def _write_hi_nerv_archive_quantizer_parity_receipt(
+    *,
+    archive_resolution: Mapping[str, Any],
+    output_dir: str | Path,
+    artifact_dict: dict[str, Any],
+    live_to_parseback_audit: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Write action-bound HIV1 tensor/section quantizer parity evidence."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    archive_raw = (
+        (live_to_parseback_audit or {}).get("archive_path")
+        or archive_resolution.get("archive_path")
+        or artifact_dict.get("archive_path")
+    )
+    archive = (
+        Path(str(archive_raw)).expanduser().resolve(strict=False)
+        if isinstance(archive_raw, str) and archive_raw
+        else None
+    )
+    if archive is None:
+        return None
+    archive_parent = archive.parent
+    exported_state_manifest = _load_optional_runner_mapping_json(
+        archive_parent / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    )
+    live_receiver_export_parity = _load_optional_runner_mapping_json(
+        archive_parent / "hi_nerv_mlx_live_receiver_export_parity.json"
+    )
+    try:
+        from tac.substrates.hi_nerv.archive_candidate import (
+            build_hi_nerv_archive_quantizer_parity_receipt,
+        )
+
+        row = dict(
+            build_hi_nerv_archive_quantizer_parity_receipt(
+                archive_path=archive,
+                exported_state_npz_path=archive_parent / "hi_nerv_mlx_exported_state.npz",
+                exported_state_manifest=(
+                    exported_state_manifest if isinstance(exported_state_manifest, Mapping) else None
+                ),
+                live_receiver_export_parity=(
+                    live_receiver_export_parity if isinstance(live_receiver_export_parity, Mapping) else None
+                ),
+                live_to_parseback_audit=(
+                    live_to_parseback_audit if isinstance(live_to_parseback_audit, Mapping) else None
+                ),
+            )
+        )
+    except Exception as exc:
+        row = {
+            "schema": "hi_nerv_archive_quantizer_parity_receipt.v1",
+            "family": "hinerv",
+            "parity_ready": False,
+            "first_failed_surface": "archive_quantizer_parity_writer_failed",
+            "next_operator": "repair archive quantizer parity writer",
+            "blockers": [f"hi_nerv_archive_quantizer_parity_write_failed:{type(exc).__name__}:{exc}"],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+    path = out / "hi_nerv_archive_quantizer_parity_receipt.json"
+    row["artifact_path"] = path.as_posix()
+    row["producer"] = "hi_nerv_runner_archive_quantizer_parity_receipt"
+    row.update(FALSE_AUTHORITY)
+    _write_json(path, row)
+
+    artifact_dict["archive_quantizer_parity_receipt"] = dict(row)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["archive_quantizer_parity_receipt"] = _strip_substrate_metadata_authority_fields(row)
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["archive_quantizer_parity_receipt"] = _strip_substrate_metadata_authority_fields(
+                {
+                    "schema": row.get("schema"),
+                    "action_id": row.get("action_id"),
+                    "support_sha256": row.get("support_sha256"),
+                    "archive_sha256": row.get("archive_sha256"),
+                    "first_failed_surface": row.get("first_failed_surface"),
+                    "tensor_group_rows": row.get("tensor_group_rows"),
+                    "worst_tensor_rows": row.get("worst_tensor_rows"),
+                    "next_operator": row.get("next_operator"),
+                    "blockers": [str(value) for value in row.get("blockers") or []],
+                    "artifact_path": row.get("artifact_path"),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            )
+    artifact_path = out / "training_artifact.json"
+    if artifact_path.is_file():
+        try:
+            artifact = _load_json(artifact_path)
+        except Exception:
+            artifact = None
+        if isinstance(artifact, dict):
+            artifact["archive_quantizer_parity_receipt"] = dict(row)
+            artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+            artifact_metadata["archive_quantizer_parity_receipt"] = _strip_substrate_metadata_authority_fields(row)
+            score_training = artifact_metadata.get("score_aware_training")
+            if isinstance(score_training, dict):
+                score_training["archive_quantizer_parity_receipt"] = _strip_substrate_metadata_authority_fields(
+                    {
+                        "schema": row.get("schema"),
+                        "action_id": row.get("action_id"),
+                        "support_sha256": row.get("support_sha256"),
+                        "first_failed_surface": row.get("first_failed_surface"),
+                        "next_operator": row.get("next_operator"),
+                        "artifact_path": row.get("artifact_path"),
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
                 )
             artifact["substrate_artifact_metadata"] = artifact_metadata
             artifact_path.write_text(
@@ -20745,8 +20736,7 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
         and str(selected_birth_parseback_survival.get("action_id") or "") == action_id
     )
     fakequant_survived = (
-        isinstance(live_birth_survival_bundle, Mapping)
-        and live_birth_survival_bundle.get("fakequant_survived") is True
+        isinstance(live_birth_survival_bundle, Mapping) and live_birth_survival_bundle.get("fakequant_survived") is True
     )
     if row.get("survived") is True and parseback_survived and fakequant_survived:
         action_effect_ledger_path = out / "hi_nerv_birth_action_effects.jsonl"
@@ -20757,14 +20747,10 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
             or "live_mlx"
         )
         action_authority = str(
-            receipt.get("authority")
-            or live_birth_payload.get("authority")
-            or "batch_local_live_mlx"
+            receipt.get("authority") or live_birth_payload.get("authority") or "batch_local_live_mlx"
         )
         action_normalization_scope = str(
-            receipt.get("normalization_scope")
-            or live_birth_payload.get("normalization_scope")
-            or "batch_local"
+            receipt.get("normalization_scope") or live_birth_payload.get("normalization_scope") or "batch_local"
         )
         merged_receipt = {
             **dict(receipt or live_birth_payload),
@@ -20803,9 +20789,7 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
             else:
                 row["combined_action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
                 row["combined_action_effect_rows_written"] = 0
-                row["combined_action_effect_blockers"] = [
-                    str(value) for value in status.get("blockers") or []
-                ]
+                row["combined_action_effect_blockers"] = [str(value) for value in status.get("blockers") or []]
         except Exception as exc:
             row["combined_action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
             row["combined_action_effect_rows_written"] = 0
@@ -20829,9 +20813,7 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
                         "artifact_path": row.get("artifact_path"),
                         "producer": row.get("producer"),
                         "blockers": [str(value) for value in row.get("blockers") or []],
-                        "combined_action_effect_rows_written": row.get(
-                            "combined_action_effect_rows_written"
-                        ),
+                        "combined_action_effect_rows_written": row.get("combined_action_effect_rows_written"),
                         "score_claim": False,
                         "promotion_eligible": False,
                         "ready_for_exact_eval_dispatch": False,
@@ -20858,9 +20840,7 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
                             "artifact_path": row.get("artifact_path"),
                             "producer": row.get("producer"),
                             "blockers": [str(value) for value in row.get("blockers") or []],
-                            "combined_action_effect_rows_written": row.get(
-                                "combined_action_effect_rows_written"
-                            ),
+                            "combined_action_effect_rows_written": row.get("combined_action_effect_rows_written"),
                             "score_claim": False,
                             "promotion_eligible": False,
                             "ready_for_exact_eval_dispatch": False,
@@ -23870,21 +23850,15 @@ def _parse_nonnegative_int_csv(value: str) -> tuple[int, ...]:
 def _parse_target_region_key_csv(value: str) -> tuple[int, int, int]:
     parts = [part.strip() for part in str(value).split(",")]
     if len(parts) != 3 or any(not part for part in parts):
-        raise CompactRendererMlxSpineRunnerError(
-            "target-region key must be exactly batch,class,region"
-        )
+        raise CompactRendererMlxSpineRunnerError("target-region key must be exactly batch,class,region")
     parsed: list[int] = []
     for part in parts:
         try:
             value_int = int(part)
         except ValueError as exc:
-            raise CompactRendererMlxSpineRunnerError(
-                f"invalid target-region key integer {part!r}"
-            ) from exc
+            raise CompactRendererMlxSpineRunnerError(f"invalid target-region key integer {part!r}") from exc
         if value_int < 0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"invalid negative target-region key integer {part!r}"
-            )
+            raise CompactRendererMlxSpineRunnerError(f"invalid negative target-region key integer {part!r}")
         parsed.append(value_int)
     return (int(parsed[0]), int(parsed[1]), int(parsed[2]))
 
@@ -24905,11 +24879,7 @@ def _planner_row_records_from_payload(
                     _planner_row_snerv_long_run_launch_gate_blockers(
                         row,
                         family=family,
-                        payload_schema=(
-                            str(payload.get("schema"))
-                            if isinstance(payload.get("schema"), str)
-                            else None
-                        ),
+                        payload_schema=(str(payload.get("schema")) if isinstance(payload.get("schema"), str) else None),
                     )
                 )
                 row_status_runnable = status_text in row_status_runnable_values and not blocked
@@ -27273,19 +27243,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-domain-bootstrap-segnet-hard-birth-already-won-hard-preserve-weight",
         default=0.0,
         type=float,
-        help=(
-            "Weight for a hard target-class margin floor on already-won pixels "
-            "inside the selected target region."
-        ),
+        help=("Weight for a hard target-class margin floor on already-won pixels inside the selected target region."),
     )
     parser.add_argument(
         "--scorer-domain-bootstrap-segnet-hard-birth-already-won-rgb-preserve-weight",
         default=0.0,
         type=float,
-        help=(
-            "Weight for decoded-RGB locality preservation on already-won pixels "
-            "inside the selected target region."
-        ),
+        help=("Weight for decoded-RGB locality preservation on already-won pixels inside the selected target region."),
     )
     parser.add_argument(
         "--scorer-domain-bootstrap-segnet-hard-birth-already-won-margin-floor",
@@ -27300,10 +27264,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--scorer-domain-bootstrap-segnet-hard-birth-pose-trust-preserve-weight",
         default=0.0,
         type=float,
-        help=(
-            "Weight for PoseNet output trust-cap preservation inside the "
-            "hard-birth actuator loss."
-        ),
+        help=("Weight for PoseNet output trust-cap preservation inside the hard-birth actuator loss."),
     )
     parser.add_argument(
         "--scorer-domain-bootstrap-segnet-hard-birth-pose-target-weight",
@@ -29630,9 +29591,7 @@ def main(argv: list[str] | None = None) -> int:
             scorer_domain_bootstrap_segnet_hard_birth_forced_region_key=(
                 None
                 if args.scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
-                else _parse_target_region_key_csv(
-                    args.scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
-                )
+                else _parse_target_region_key_csv(args.scorer_domain_bootstrap_segnet_hard_birth_forced_region_key)
             ),
             scorer_domain_bootstrap_segnet_hard_birth_update_scope=(
                 None

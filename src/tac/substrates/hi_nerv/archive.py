@@ -51,7 +51,9 @@ import base64
 import hashlib
 import json
 import struct
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
@@ -102,9 +104,7 @@ LATENT_HI_AC_MAGIC: bytes = b"HILA1"
 LATENT_HI_AC_HEADER_FMT: str = "<5sIIII"
 LATENT_HI_AC_HEADER_SIZE: int = struct.calcsize(LATENT_HI_AC_HEADER_FMT)
 assert LATENT_HI_AC_HEADER_SIZE == 21, "HiNeRV latent hi-ac header invariant"
-HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA: str = (
-    "hinerv_archive_section_telemetry.v1"
-)
+HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA: str = "hinerv_archive_section_telemetry.v1"
 _RECEIVER_DERIVABLE_META_KEYS: tuple[str, ...] = (
     "_latent_codec_lossless",
     "_latent_raw_bytes_coarse",
@@ -182,9 +182,7 @@ def _strip_receiver_derivable_meta(meta: dict[str, object]) -> dict[str, object]
 
 def _read_hiv1_layout(blob: bytes) -> _Hiv1Layout:
     if len(blob) < HIV1_HEADER_SIZE:
-        raise ValueError(
-            f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})"
-        )
+        raise ValueError(f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})")
     (
         magic,
         version,
@@ -209,9 +207,7 @@ def _read_hiv1_layout(blob: bytes) -> _Hiv1Layout:
     end_lat_f = end_lat_m + lat_f_len
     end_meta = end_lat_f + meta_len
     if end_meta != len(blob):
-        raise ValueError(
-            f"archive size {len(blob)} != expected {end_meta} from header"
-        )
+        raise ValueError(f"archive size {len(blob)} != expected {end_meta} from header")
     return _Hiv1Layout(
         schema_version=int(version),
         latent_dim_coarse=int(dim_c),
@@ -275,9 +271,7 @@ def _latent_codec_quant_bits(codec: str) -> int:
     ):
         return 2
     valid = ", ".join(SUPPORTED_LATENT_CODECS)
-    raise ValueError(
-        f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}"
-    )
+    raise ValueError(f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}")
 
 
 def _latent_unsigned_max(bits: int) -> int:
@@ -332,9 +326,7 @@ def _pack_unsigned_values(values: np.ndarray, *, bits: int) -> bytes:
     if flat.size == 0:
         raise ValueError("HiNeRV latent quant stream must be non-empty")
     if int(flat.max(initial=0)) > max_unsigned:
-        raise ValueError(
-            f"latent quant value exceeds {quant_bits}-bit unsigned max {max_unsigned}"
-        )
+        raise ValueError(f"latent quant value exceeds {quant_bits}-bit unsigned max {max_unsigned}")
     if quant_bits == 16:
         signed = flat.astype(np.int32) - 32767
         return signed.astype("<i2", copy=False).tobytes()
@@ -371,17 +363,12 @@ def _unpack_unsigned_values(
         return (signed + 32767).astype(np.uint16, copy=False)
     if quant_bits == 8:
         if len(payload) != expected_symbols:
-            raise ValueError(
-                f"{name} decoded int8 bytes {len(payload)} != {expected_symbols}"
-            )
+            raise ValueError(f"{name} decoded int8 bytes {len(payload)} != {expected_symbols}")
         return np.frombuffer(payload, dtype=np.uint8).copy()
     per_byte = 8 // quant_bits
     expected_bytes = (expected_symbols * quant_bits + 7) // 8
     if len(payload) != expected_bytes:
-        raise ValueError(
-            f"{name} decoded packed int{quant_bits} bytes {len(payload)} != "
-            f"{expected_bytes}"
-        )
+        raise ValueError(f"{name} decoded packed int{quant_bits} bytes {len(payload)} != {expected_bytes}")
     packed = np.frombuffer(payload, dtype=np.uint8)
     mask = (1 << quant_bits) - 1
     out = np.empty(len(packed) * per_byte, dtype=np.uint8)
@@ -399,6 +386,87 @@ def _encode_quantized_latents(
     q_unsigned, scale, zero_point = _quantize_latents_to_unsigned(latents, bits=bits)
     raw = _pack_unsigned_values(q_unsigned, bits=bits)
     return _encode_latent_blob(raw, codec=codec), scale, zero_point
+
+
+def hiv1_quantize_dequantize_for_training(
+    values: Any,
+    *,
+    section_config: Mapping[str, Any],
+) -> Any:
+    """Return the exact HIV1 archive-decoded value for train-time QAT.
+
+    This is the forward contract that HiNeRV training fake-quant must mirror:
+    the value produced here matches the latent section encode/decode path used
+    by :func:`pack_archive` and :func:`parse_archive`.  NumPy arrays return
+    decoded NumPy arrays.  Torch and MLX arrays use a straight-through wrapper
+    so gradients still flow through the unquantized value while the forward
+    value is archive-decoded.
+    """
+
+    section_kind = str(
+        section_config.get("section_kind") or section_config.get("kind") or section_config.get("section_id") or "latent"
+    )
+    if section_kind not in {
+        "latent",
+        "latents",
+        "latents_coarse",
+        "latents_mid",
+        "latents_fine",
+    }:
+        raise ValueError(
+            f"hiv1_quantize_dequantize_for_training currently supports only HIV1 latent sections; got {section_kind!r}"
+        )
+    latent_codec = str(section_config.get("latent_codec", LATENT_CODEC_RAW_INT16))
+    decoded_np = _hiv1_latent_roundtrip_numpy(values, latent_codec=latent_codec)
+    if isinstance(values, torch.Tensor):
+        decoded = torch.from_numpy(decoded_np).to(device=values.device, dtype=values.dtype)
+        return values + (decoded - values).detach()
+    module = type(values).__module__
+    if module.startswith("mlx."):
+        import mlx.core as mx  # type: ignore[import-not-found]
+
+        decoded = mx.array(decoded_np, dtype=values.dtype)
+        return values + mx.stop_gradient(decoded - values)
+    return decoded_np
+
+
+def hiv1_roundtrip_ste(values: Any, *, section_config: Mapping[str, Any]) -> Any:
+    """Alias for the HIV1 archive-decoded straight-through training value."""
+
+    return hiv1_quantize_dequantize_for_training(
+        values,
+        section_config=section_config,
+    )
+
+
+def _hiv1_latent_roundtrip_numpy(values: Any, *, latent_codec: str) -> np.ndarray:
+    if isinstance(values, torch.Tensor):
+        source = values.detach().to(dtype=torch.float32, device="cpu")
+    else:
+        source = torch.from_numpy(np.asarray(values, dtype=np.float32).copy())
+    encoded, scale, zero_point = _encode_quantized_latents(
+        source,
+        codec=str(latent_codec),
+    )
+    bits = _latent_codec_quant_bits(str(latent_codec))
+    raw = _decode_latent_blob(
+        encoded,
+        codec=str(latent_codec),
+        expected_raw_bytes=_latent_unwrapped_byte_count(source.numel(), codec=str(latent_codec)),
+        name="hiv1_training_roundtrip_latent",
+    )
+    q_unsigned = _unpack_unsigned_values(
+        raw,
+        bits=bits,
+        n_symbols=source.numel(),
+        name="hiv1_training_roundtrip_latent",
+    )
+    decoded = _dequantize_unsigned_latents(
+        torch.from_numpy(q_unsigned.astype(np.float32, copy=False)).view(source.shape),
+        scale,
+        zero_point,
+    )
+    return decoded.detach().cpu().numpy().astype(np.float32, copy=False)
 
 
 def pack_archive(
@@ -421,13 +489,9 @@ def pack_archive(
         ("latents_fine", latents_fine),
     ):
         if lat.dim() != 2:
-            raise ValueError(
-                f"{name} must be 2-D (num_pairs, latent_dim); got {tuple(lat.shape)}"
-            )
+            raise ValueError(f"{name} must be 2-D (num_pairs, latent_dim); got {tuple(lat.shape)}")
     num_pairs = int(latents_coarse.shape[0])
-    if not (
-        latents_mid.shape[0] == num_pairs and latents_fine.shape[0] == num_pairs
-    ):
+    if not (latents_mid.shape[0] == num_pairs and latents_fine.shape[0] == num_pairs):
         raise ValueError("all 3 latent scales must share num_pairs")
 
     dim_c = int(latents_coarse.shape[1])
@@ -522,9 +586,7 @@ def build_archive_section_telemetry(
     meta_payload = blob[layout.meta_range[0] : layout.meta_range[1]]
     meta = json.loads(meta_payload.decode("utf-8"))
     latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
-    decoder_codec_name = decoder_state_codec_stats(
-        blob[layout.decoder_range[0] : layout.decoder_range[1]]
-    ).codec
+    decoder_codec_name = decoder_state_codec_stats(blob[layout.decoder_range[0] : layout.decoder_range[1]]).codec
     blockers: list[str] = []
     target_region_actions: dict[str, object] | None = None
     if TARGET_REGION_ACTION_META_KEY in meta:
@@ -546,9 +608,7 @@ def build_archive_section_telemetry(
                 target_region_actions["base64_text_bytes"] = None
             target_region_actions["charged_meta_json_bytes"] = len(meta_payload)
             blockers.extend(
-                str(blocker)
-                for blocker in target_region_actions.get("interpretation_blockers", [])
-                if str(blocker)
+                str(blocker) for blocker in target_region_actions.get("interpretation_blockers", []) if str(blocker)
             )
         except ValueError as exc:
             blockers.append(f"target_region_action_meta_invalid:{exc}")
@@ -578,11 +638,7 @@ def build_archive_section_telemetry(
             row["scale"] = scale
         if raw_bytes is not None:
             row["raw_bytes"] = int(raw_bytes)
-            row["coded_to_raw_ratio"] = (
-                None
-                if int(raw_bytes) <= 0
-                else float(len(payload)) / float(raw_bytes)
-            )
+            row["coded_to_raw_ratio"] = None if int(raw_bytes) <= 0 else float(len(payload)) / float(raw_bytes)
         return row
 
     latent_rows = [
@@ -676,9 +732,7 @@ def build_archive_section_telemetry(
         payload["archive_zip_bytes"] = int(archive_zip_bytes)
         payload["archive_zip_overhead_bytes"] = int(overhead)
         payload["archive_zip_overhead_fraction"] = (
-            None
-            if int(archive_zip_bytes) <= 0
-            else float(overhead) / float(archive_zip_bytes)
+            None if int(archive_zip_bytes) <= 0 else float(overhead) / float(archive_zip_bytes)
         )
         payload["sections_with_zip_overhead"] = [
             *sections,
@@ -706,11 +760,7 @@ def repack_archive_decoder_codec(
     """
 
     sections = split_archive_sections(blob)
-    state = (
-        decoder_state_dict
-        if decoder_state_dict is not None
-        else _deserialize_state_dict(sections.decoder_blob)
-    )
+    state = decoder_state_dict if decoder_state_dict is not None else _deserialize_state_dict(sections.decoder_blob)
     decoder_blob = _serialize_state_dict(state, codec=decoder_codec)
     meta = dict(sections.meta)
     if extra_meta:
@@ -746,9 +796,7 @@ def repack_archive_decoder_codec(
 
 def parse_archive(blob: bytes) -> HinervArchive:
     if len(blob) < HIV1_HEADER_SIZE:
-        raise ValueError(
-            f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})"
-        )
+        raise ValueError(f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})")
     (
         magic,
         version,
@@ -774,9 +822,7 @@ def parse_archive(blob: bytes) -> HinervArchive:
     end_lat_f = end_lat_m + lat_f_len
     end_meta = end_lat_f + meta_len
     if end_meta != len(blob):
-        raise ValueError(
-            f"archive size {len(blob)} != expected {end_meta} from header"
-        )
+        raise ValueError(f"archive size {len(blob)} != expected {end_meta} from header")
 
     decoder_blob = blob[end_header:end_decoder]
     lat_c_blob = blob[end_decoder:end_lat_c]
@@ -861,9 +907,7 @@ def _encode_latent_blob(raw: bytes, *, codec: str) -> bytes:
     if normalized == LATENT_CODEC_HI_AC_INT16_Q11:
         return _encode_latent_hi_ac_blob(raw)
     valid = ", ".join(SUPPORTED_LATENT_CODECS)
-    raise ValueError(
-        f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}"
-    )
+    raise ValueError(f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}")
 
 
 def _decode_latent_blob(
@@ -896,13 +940,10 @@ def _decode_latent_blob(
         )
     else:
         valid = ", ".join(SUPPORTED_LATENT_CODECS)
-        raise ValueError(
-            f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}"
-        )
+        raise ValueError(f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}")
     if len(raw) != int(expected_raw_bytes):
         raise ValueError(
-            f"{name} decoded latent bytes {len(raw)} != expected {int(expected_raw_bytes)} "
-            f"for codec {normalized}"
+            f"{name} decoded latent bytes {len(raw)} != expected {int(expected_raw_bytes)} for codec {normalized}"
         )
     return raw
 
@@ -970,9 +1011,7 @@ def _decode_latent_hi_ac_blob(
         histogram=hist,
         n_symbols=int(n_symbols),
     )
-    words = (
-        hi.astype(np.uint16).astype("<u2") << np.uint16(8)
-    ) | lo.astype(np.uint16).astype("<u2")
+    words = (hi.astype(np.uint16).astype("<u2") << np.uint16(8)) | lo.astype(np.uint16).astype("<u2")
     return words.astype("<u2", copy=False).tobytes()
 
 

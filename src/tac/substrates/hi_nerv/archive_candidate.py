@@ -47,6 +47,7 @@ from tac.substrates.hi_nerv.architecture import (
 )
 from tac.substrates.hi_nerv.archive import (
     build_archive_section_telemetry,
+    hiv1_quantize_dequantize_for_training,
     pack_archive,
     parse_archive,
 )
@@ -66,35 +67,25 @@ from tac.substrates.hprc.representation_spine import (
     write_representation_spine_projection,
 )
 
-HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = (
-    "hi_nerv_mlx_archive_bound_adapter_package.v1"
-)
+HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA = "hi_nerv_mlx_archive_bound_adapter_package.v1"
 HI_NERV_MLX_RECEIVER_PROOF_SCHEMA = "hi_nerv_mlx_generated_receiver_proof.v1"
 HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID = "hi_nerv_mlx_archive_export"
 HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY = "hi_nerv_mlx"
 HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND = "hi_nerv_mlx_archive"
-HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA = (
-    "hi_nerv_decoder_preparation_rendered_pixel_proof.v1"
-)
-HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA = (
-    "hi_nerv_mlx_live_receiver_export_parity_proof.v1"
-)
-HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA = (
-    "hi_nerv_target_region_action_parseback_survival.v1"
-)
+HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA = "hi_nerv_decoder_preparation_rendered_pixel_proof.v1"
+HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA = "hi_nerv_mlx_live_receiver_export_parity_proof.v1"
+HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA = "hi_nerv_target_region_action_parseback_survival.v1"
+HI_NERV_ARCHIVE_QUANTIZER_PARITY_RECEIPT_SCHEMA = "hi_nerv_archive_quantizer_parity_receipt.v1"
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
 _STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
 _STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 _BITSTREAM_PREPARATION_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
 _ARCHIVE_SECTION_TELEMETRY_NAME = "hi_nerv_archive_section_telemetry.json"
+_ARCHIVE_QUANTIZER_PARITY_RECEIPT_NAME = "hi_nerv_archive_quantizer_parity_receipt.json"
 _LIVE_RECEIVER_EXPORT_PARITY_NAME = "hi_nerv_mlx_live_receiver_export_parity.json"
-_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME = (
-    "hi_nerv_live_receiver_codec_portfolio_selection.json"
-)
-_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA = (
-    "hi_nerv_live_receiver_codec_portfolio_selection.v1"
-)
+_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME = "hi_nerv_live_receiver_codec_portfolio_selection.json"
+_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA = "hi_nerv_live_receiver_codec_portfolio_selection.v1"
 _PORTFOLIO_AUTO_CODEC_ALIASES = frozenset({"auto", "portfolio_auto", "int8_auto"})
 _LIVE_RECEIVER_CODEC_PORTFOLIO_CANDIDATES = (
     "fp16_enveloped",
@@ -186,22 +177,14 @@ def build_hi_nerv_archive_replay_components(
         "archive_replay_pair_count": float(pair_indices.size),
         "archive_replay_archive_bytes": float(path.stat().st_size),
         "archive_replay_payload_bytes": float(len(payload)),
-        "archive_replay_candidate_is_ema": (
-            1.0 if str(candidate_kind).lower() == "ema" else 0.0
-        ),
+        "archive_replay_candidate_is_ema": (1.0 if str(candidate_kind).lower() == "ema" else 0.0),
         "parseback_rgb_pair_mse": pair_mse,
         "parseback_rgb_frame0_mse": frame0_mse,
         "parseback_rgb_frame1_mse": frame1_mse,
         "selection_health_parseback_rgb_std": float(np.std(receiver_nhwc)),
-        "selection_health_parseback_rgb_dynamic_range": float(
-            np.max(receiver_nhwc) - np.min(receiver_nhwc)
-        ),
-        "selection_health_parseback_rgb_temporal_delta_std": float(
-            np.std(temporal_delta)
-        ),
-        "selection_health_parseback_rgb_temporal_delta_mean_abs": float(
-            np.mean(np.abs(temporal_delta))
-        ),
+        "selection_health_parseback_rgb_dynamic_range": float(np.max(receiver_nhwc) - np.min(receiver_nhwc)),
+        "selection_health_parseback_rgb_temporal_delta_std": float(np.std(temporal_delta)),
+        "selection_health_parseback_rgb_temporal_delta_mean_abs": float(np.mean(np.abs(temporal_delta))),
     }
     _attach_segnet_archive_replay_components(
         out,
@@ -306,11 +289,7 @@ def build_hi_nerv_target_region_action_parseback_survival(
     telemetry["payload_codec"] = target_region_action_payload_codec(stored_payload)
     telemetry["base64_text_bytes"] = len(raw_b64.encode("ascii"))
     blockers: list[str] = []
-    blockers.extend(
-        str(blocker)
-        for blocker in telemetry.get("interpretation_blockers", [])
-        if str(blocker)
-    )
+    blockers.extend(str(blocker) for blocker in telemetry.get("interpretation_blockers", []) if str(blocker))
     expected_payload_sha256: str | None = None
     if expected_program_base64:
         try:
@@ -321,14 +300,10 @@ def build_hi_nerv_target_region_action_parseback_survival(
             expected_payload_sha256 = hashlib.sha256(expected_payload).hexdigest()
         except Exception as exc:
             expected_payload = b""
-            blockers.append(
-                f"target_region_action_expected_program_decode_failed:{type(exc).__name__}"
-            )
+            blockers.append(f"target_region_action_expected_program_decode_failed:{type(exc).__name__}")
         if expected_payload and expected_payload != stored_payload:
             blockers.append("target_region_action_payload_mismatch")
-    if expected_support_sha256 and str(expected_support_sha256) != str(
-        telemetry.get("support_sha256") or ""
-    ):
+    if expected_support_sha256 and str(expected_support_sha256) != str(telemetry.get("support_sha256") or ""):
         blockers.append("target_region_action_support_sha256_mismatch")
     if expected_payload_bytes is not None and int(expected_payload_bytes) != len(stored_payload):
         blockers.append("target_region_action_payload_bytes_mismatch")
@@ -441,9 +416,7 @@ def build_hi_nerv_target_region_action_parseback_survival(
         "parseback_program_survived": parseback_survived,
         "parseback_scorer_effect_survived": None,
         "scorer_effect_survival_measured": False,
-        "first_failed_surface": (
-            None if parseback_survived else "parseback_action_program_survival_failed"
-        ),
+        "first_failed_surface": (None if parseback_survived else "parseback_action_program_survival_failed"),
         "parseback_survived": parseback_survived,
         **inflate,
         "inflate_survived": inflate_survived,
@@ -547,9 +520,7 @@ def _target_region_action_inflated_raw_survival(
             "failure": f"{type(exc).__name__}:{exc}",
             "blockers": ["target_region_action_inflated_raw_compare_failed"],
         }
-    abs_error = np.abs(
-        raw_pairs.astype(np.int16, copy=False) - action_pairs.astype(np.int16, copy=False)
-    )
+    abs_error = np.abs(raw_pairs.astype(np.int16, copy=False) - action_pairs.astype(np.int16, copy=False))
     action_delta = np.not_equal(action_pairs, base_pairs)
     raw_matches_action = bool(np.array_equal(raw_pairs, action_pairs))
     changed_values = int(np.count_nonzero(action_delta))
@@ -570,7 +541,9 @@ def _target_region_action_inflated_raw_survival(
         "inflated_raw_matches_action_receiver": raw_matches_action,
         "inflated_raw_action_changed_values": changed_values,
         "inflated_raw_action_changed_pixels": changed_pixels,
-        "inflated_raw_total_pair_pixels": int(raw_pairs.shape[0] * raw_pairs.shape[1] * raw_pairs.shape[2] * raw_pairs.shape[3]),
+        "inflated_raw_total_pair_pixels": int(
+            raw_pairs.shape[0] * raw_pairs.shape[1] * raw_pairs.shape[2] * raw_pairs.shape[3]
+        ),
         "inflated_raw_max_abs_error_vs_action_receiver": int(abs_error.max()) if abs_error.size else 0,
         "inflate_survived": inflate_survived,
         "blockers": blockers,
@@ -656,9 +629,7 @@ def _hi_nerv_meta_with_target_region_actions(
     if target_region_action_program_base64 in (None, ""):
         return meta
     if not isinstance(target_region_action_program_base64, str):
-        raise TypeError(
-            "target_region_action_program_base64 must be base64 text when supplied"
-        )
+        raise TypeError("target_region_action_program_base64 must be base64 text when supplied")
     meta[TARGET_REGION_ACTION_META_KEY] = target_region_action_program_base64
     # Validate against the receiver grammar before bytes are packed.
     decode_target_region_actions_from_meta(dict(meta))
@@ -670,17 +641,10 @@ def _read_hiv1_payload_from_archive_zip(archive_zip_path: Path) -> bytes:
         raise FileNotFoundError(f"HiNeRV archive.zip missing: {archive_zip_path}")
     with zipfile.ZipFile(archive_zip_path, "r") as zf:
         file_names = [name for name in zf.namelist() if not name.endswith("/")]
-        receiver_names = [
-            name
-            for name in file_names
-            if name in {"0.bin", MINIMAL_SINGLE_MEMBER_NAME}
-        ]
+        receiver_names = [name for name in file_names if name in {"0.bin", MINIMAL_SINGLE_MEMBER_NAME}]
         candidates = receiver_names or file_names
         if len(candidates) != 1:
-            raise ValueError(
-                "HiNeRV archive replay requires exactly one receiver payload "
-                f"member; got {file_names}"
-            )
+            raise ValueError(f"HiNeRV archive replay requires exactly one receiver payload member; got {file_names}")
         return zf.read(candidates[0])
 
 
@@ -707,9 +671,7 @@ def _hinerv_config_from_archive_meta(arc: Any) -> HinervConfig:
         num_pairs=int(arc.latents_fine.shape[0]),
         output_height=int(meta["output_height"]),
         output_width=int(meta["output_width"]),
-        use_hierarchical_feature_grid=bool(
-            meta.get("use_hierarchical_feature_grid", False)
-        ),
+        use_hierarchical_feature_grid=bool(meta.get("use_hierarchical_feature_grid", False)),
         use_convnext_blocks=bool(meta.get("use_convnext_blocks", False)),
         local_grid_levels=int(meta.get("local_grid_levels", 1)),
         local_grid_channels=int(meta.get("local_grid_channels", 0)),
@@ -728,8 +690,7 @@ def _local_pair_indices_from_batch(batch: Any) -> np.ndarray:
         )
         if source is None:
             raise ValueError(
-                "HiNeRV archive replay batch mapping must contain one of "
-                "local_pair_indices, pair_indices, or indices"
+                "HiNeRV archive replay batch mapping must contain one of local_pair_indices, pair_indices, or indices"
             )
     arr = np.asarray(source, dtype=np.int64).reshape(-1)
     if np.any(arr < 0):
@@ -743,9 +704,7 @@ def _target_rows_nhwc01(target: Any, pair_indices: np.ndarray, name: str) -> np.
         raise ValueError(f"{name} must be NHWC RGB; got shape={arr.shape}")
     max_pair = int(pair_indices.max()) if pair_indices.size else -1
     if max_pair >= int(arr.shape[0]):
-        raise ValueError(
-            f"{name} has {arr.shape[0]} rows but replay requested pair {max_pair}"
-        )
+        raise ValueError(f"{name} has {arr.shape[0]} rows but replay requested pair {max_pair}")
     rows = np.ascontiguousarray(arr[pair_indices])
     if not np.all(np.isfinite(rows)):
         raise ValueError(f"{name} contains non-finite replay rows")
@@ -787,29 +746,23 @@ def _attach_segnet_archive_replay_components(
             "HiNeRV archive replay SegNet argmax shape mismatch: "
             f"candidate={candidate_argmax.shape} target={target_argmax.shape}"
         )
-    num_classes = int(
-        getattr(scorer_teacher, "num_classes", int(candidate_logits.shape[-1]))
-    )
+    num_classes = int(getattr(scorer_teacher, "num_classes", int(candidate_logits.shape[-1])))
     d_seg = float(np.mean(candidate_argmax != target_argmax))
     out["parseback_segnet_argmax_disagreement_score_units"] = 100.0 * d_seg
     out["selection_health_segnet_direct_live_argmax_disagreement_rate"] = d_seg
-    out[
-        "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
-    ] = _occupied_class_fraction(candidate_argmax, num_classes=num_classes)
+    out["selection_health_segnet_direct_live_candidate_occupied_class_fraction"] = _occupied_class_fraction(
+        candidate_argmax, num_classes=num_classes
+    )
     coverage = _target_class_coverage(
         candidate_argmax,
         target_argmax,
         num_classes=num_classes,
     )
-    out[
-        "selection_health_segnet_direct_live_candidate_target_class_coverage_fraction"
-    ] = coverage["coverage_fraction"]
-    out[
-        "selection_health_segnet_direct_live_candidate_target_any_class_coverage_fraction"
-    ] = coverage["any_coverage_fraction"]
-    out[
-        "selection_health_segnet_direct_live_candidate_target_class_min_ratio"
-    ] = coverage["min_ratio"]
+    out["selection_health_segnet_direct_live_candidate_target_class_coverage_fraction"] = coverage["coverage_fraction"]
+    out["selection_health_segnet_direct_live_candidate_target_any_class_coverage_fraction"] = coverage[
+        "any_coverage_fraction"
+    ]
+    out["selection_health_segnet_direct_live_candidate_target_class_min_ratio"] = coverage["min_ratio"]
 
 
 def _segnet_target_argmax_for_batch(
@@ -924,12 +877,8 @@ def _attach_posenet_archive_replay_components(
     raw_mse_f = float(raw_mse.item())
     out["parseback_posenet_direct_live_score_term"] = float(score.item())
     out["selection_health_parseback_posenet_direct_live_raw_mse"] = raw_mse_f
-    out["selection_health_parseback_posenet_yuv6_pair_std"] = float(
-        mx.std(yuv6_pair).item()
-    )
-    out["selection_health_parseback_posenet_yuv6_temporal_delta_std"] = float(
-        mx.std(yuv6_delta).item()
-    )
+    out["selection_health_parseback_posenet_yuv6_pair_std"] = float(mx.std(yuv6_pair).item())
+    out["selection_health_parseback_posenet_yuv6_temporal_delta_std"] = float(mx.std(yuv6_delta).item())
 
 
 def _first_mapping_value(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any | None:
@@ -961,10 +910,7 @@ def _write_and_reload_exported_state_via_numpy_bridge(
         require_finite=True,
     )
     if manifest.get("consumption_recommended") is not True:
-        raise ValueError(
-            "HiNeRV MLX export NPZ bridge is not consumption-recommended: "
-            f"{manifest.get('blockers')}"
-        )
+        raise ValueError(f"HiNeRV MLX export NPZ bridge is not consumption-recommended: {manifest.get('blockers')}")
     return npz_to_numpy_primitives(npz_path.read_bytes()), manifest
 
 
@@ -974,9 +920,7 @@ def _require_exported_tensor(
 ) -> torch.Tensor:
     if key not in exported_state_dict:
         raise ValueError(f"exported_state_dict missing {key!r}")
-    return torch.from_numpy(np.asarray(exported_state_dict[key]).copy()).to(
-        dtype=torch.float32
-    )
+    return torch.from_numpy(np.asarray(exported_state_dict[key]).copy()).to(dtype=torch.float32)
 
 
 def _tensor_sha256(tensor: torch.Tensor) -> str:
@@ -1025,20 +969,13 @@ def _load_receiver_model_for_pixel_proof(
 ) -> torch.nn.Module:
     model = HinervSubstrate(cfg).eval()
     state = {
-        name: tensor.detach().clone().to(dtype=torch.float32, device="cpu")
-        for name, tensor in decoder_state.items()
+        name: tensor.detach().clone().to(dtype=torch.float32, device="cpu") for name, tensor in decoder_state.items()
     }
     state.update(
         {
-            "latents_coarse": latents_coarse.detach()
-            .clone()
-            .to(dtype=torch.float32, device="cpu"),
-            "latents_mid": latents_mid.detach()
-            .clone()
-            .to(dtype=torch.float32, device="cpu"),
-            "latents_fine": latents_fine.detach()
-            .clone()
-            .to(dtype=torch.float32, device="cpu"),
+            "latents_coarse": latents_coarse.detach().clone().to(dtype=torch.float32, device="cpu"),
+            "latents_mid": latents_mid.detach().clone().to(dtype=torch.float32, device="cpu"),
+            "latents_fine": latents_fine.detach().clone().to(dtype=torch.float32, device="cpu"),
         }
     )
     model.load_state_dict(state, strict=True)
@@ -1050,12 +987,7 @@ def _render_receiver_pixels(
     pair_indices: torch.Tensor,
 ) -> torch.Tensor:
     rgb_0, rgb_1 = model(pair_indices)
-    return (
-        torch.stack((rgb_0, rgb_1), dim=1)
-        .detach()
-        .to(dtype=torch.float32, device="cpu")
-        .contiguous()
-    )
+    return torch.stack((rgb_0, rgb_1), dim=1).detach().to(dtype=torch.float32, device="cpu").contiguous()
 
 
 def _sample_pair_indices_for_pixel_proof(
@@ -1077,10 +1009,7 @@ def _sample_pair_indices_for_pixel_proof(
     elif pair_count == 1:
         values = [0]
     else:
-        values = [
-            round(index * (total - 1) / float(pair_count - 1))
-            for index in range(pair_count)
-        ]
+        values = [round(index * (total - 1) / float(pair_count - 1)) for index in range(pair_count)]
     return torch.tensor(values, dtype=torch.long)
 
 
@@ -1163,9 +1092,7 @@ def _build_mlx_live_receiver_export_parity_proof(
                     "receiver_decode_passed": False,
                     "proof_status": "live_receiver_shape_mismatch",
                     "live_tensor_shape": [int(value) for value in live_pixels.shape],
-                    "receiver_tensor_shape": [
-                        int(value) for value in receiver_np.shape
-                    ],
+                    "receiver_tensor_shape": [int(value) for value in receiver_np.shape],
                     "blockers": [
                         *proof["blockers"],
                         "hi_nerv_mlx_live_receiver_export_shape_mismatch",
@@ -1176,10 +1103,7 @@ def _build_mlx_live_receiver_export_parity_proof(
         delta = np.abs(live_pixels - receiver_np)
         max_abs_delta = float(delta.max()) if delta.size else 0.0
         mean_abs_delta = float(delta.mean()) if delta.size else 0.0
-        passed = bool(
-            mean_abs_delta <= float(max_mean_abs_delta)
-            and max_abs_delta <= float(max_max_abs_delta)
-        )
+        passed = bool(mean_abs_delta <= float(max_mean_abs_delta) and max_abs_delta <= float(max_max_abs_delta))
         lossy_latent_codec = bool(_latent_codec_is_lossy(latent_codec))
         measured_lossy_delta = bool(lossy_latent_codec and not passed)
         proof.update(
@@ -1203,11 +1127,7 @@ def _build_mlx_live_receiver_export_parity_proof(
                 "receiver_tensor_sha256": _sha256_numpy_array(receiver_np),
                 "blockers": [
                     *proof["blockers"],
-                    *(
-                        []
-                        if passed or measured_lossy_delta
-                        else ["hi_nerv_mlx_live_receiver_export_parity_failed"]
-                    ),
+                    *([] if passed or measured_lossy_delta else ["hi_nerv_mlx_live_receiver_export_parity_failed"]),
                 ],
             }
         )
@@ -1237,6 +1157,570 @@ def _sha256_numpy_array(array: np.ndarray) -> str:
     return h.hexdigest()
 
 
+def build_hi_nerv_archive_quantizer_parity_receipt(
+    *,
+    archive_path: str | Path,
+    exported_state_npz_path: str | Path | None = None,
+    exported_state_manifest: Mapping[str, Any] | None = None,
+    live_receiver_export_parity: Mapping[str, Any] | None = None,
+    live_to_parseback_audit: Mapping[str, Any] | None = None,
+    max_worst_tensors: int = 16,
+) -> dict[str, Any]:
+    """Compare exported tensors against exact HIV1 parse-back decoded tensors.
+
+    The receipt is false-authority by design.  It names the first archive
+    quantizer surface that can explain a live/fakequant scorer-effect birth
+    collapsing after parse-back, without writing large tensor dumps.
+    """
+
+    archive = Path(archive_path).expanduser().resolve(strict=False)
+    receipt: dict[str, Any] = {
+        "schema": HI_NERV_ARCHIVE_QUANTIZER_PARITY_RECEIPT_SCHEMA,
+        "family": "hinerv",
+        "archive_path": archive.as_posix(),
+        "archive_sha256": sha256_file(archive) if archive.is_file() else None,
+        "quantizer_contract": "HIV1QuantizerMirror.latent_sections.v1",
+        "contract": "fakequant_forward_must_equal_hiv1_archive_parseback_decoded_forward",
+        "action_id": _mapping_get_text(live_to_parseback_audit, "action_id"),
+        "support_sha256": _mapping_get_text(live_to_parseback_audit, "support_sha256"),
+        "decoded_action_sha256": _mapping_get_text(
+            live_to_parseback_audit,
+            "decoded_action_sha256",
+        ),
+        "live_wrong_to_target": _nested_int(
+            live_to_parseback_audit,
+            ("retention", "live_wrong_to_target"),
+        ),
+        "fakequant_wrong_to_target": _nested_int(
+            live_to_parseback_audit,
+            ("retention", "fakequant_wrong_to_target"),
+        ),
+        "parseback_wrong_to_target": _nested_int(
+            live_to_parseback_audit,
+            ("retention", "parseback_wrong_to_target"),
+        ),
+        "fakequant_retention": _nested_float(
+            live_to_parseback_audit,
+            ("retention", "fakequant_wrong_to_target_retention_ratio"),
+        ),
+        "parseback_retention": _nested_float(
+            live_to_parseback_audit,
+            ("retention", "parseback_wrong_to_target_retention_ratio"),
+        ),
+        "fakequant_vs_archive_decoded_max_abs_delta": None,
+        "archive_decoded_vs_parseback_max_abs_delta": 0.0,
+        "support_local_max_abs_delta": None,
+        "support_local_delta": None,
+        "blockers": [
+            "hi_nerv_archive_quantizer_parity_is_local_false_authority",
+            "scorer_replay_not_executed",
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    try:
+        payload_bytes, archive_member_name = _read_hi_nerv_archive_payload(archive)
+        arc = parse_archive(payload_bytes)
+        telemetry = build_archive_section_telemetry(
+            payload_bytes,
+            archive_zip_bytes=archive.stat().st_size if archive.suffix == ".zip" else None,
+        )
+    except Exception as exc:
+        receipt.update(
+            {
+                "parity_ready": False,
+                "first_failed_surface": "archive_parseback_failed",
+                "next_operator": "repair HIV1 archive parse-back before QAT mirror",
+                "failure": repr(exc),
+                "blockers": [
+                    *receipt["blockers"],
+                    f"hi_nerv_archive_quantizer_parity_parseback_failed:{type(exc).__name__}",
+                ],
+            }
+        )
+        return receipt
+
+    receipt.update(
+        {
+            "archive_member_name": archive_member_name,
+            "hiv1_payload_bytes": len(payload_bytes),
+            "hiv1_payload_sha256": hashlib.sha256(payload_bytes).hexdigest(),
+            "archive_section_telemetry": _compact_archive_section_telemetry(telemetry),
+        }
+    )
+    npz_path = (
+        Path(exported_state_npz_path).expanduser().resolve(strict=False)
+        if exported_state_npz_path is not None
+        else archive.parent / _STATE_NPZ_NAME
+    )
+    if not npz_path.is_file():
+        receipt.update(
+            {
+                "parity_ready": False,
+                "first_failed_surface": "exported_state_npz_missing",
+                "next_operator": "persist exported_state NPZ beside archive before quantizer parity",
+                "exported_state_npz_path": npz_path.as_posix(),
+                "blockers": [
+                    *receipt["blockers"],
+                    "hi_nerv_archive_quantizer_parity_exported_state_npz_missing",
+                ],
+            }
+        )
+        return receipt
+
+    rows: list[dict[str, Any]] = []
+    worst_rows: list[dict[str, Any]] = []
+    group_stats: dict[str, dict[str, Any]] = {}
+    missing_exported: list[str] = []
+    missing_parseback: list[str] = []
+    try:
+        with np.load(npz_path, allow_pickle=False) as state_npz:
+            state_names = {str(name) for name in state_npz.files}
+            parsed_arrays: dict[str, np.ndarray] = {
+                "latents_coarse": arc.latents_coarse.detach().cpu().numpy(),
+                "latents_mid": arc.latents_mid.detach().cpu().numpy(),
+                "latents_fine": arc.latents_fine.detach().cpu().numpy(),
+                **{name: tensor.detach().cpu().numpy() for name, tensor in arc.decoder_state_dict.items()},
+            }
+            for name in sorted(state_names | set(parsed_arrays)):
+                if name not in state_names:
+                    missing_exported.append(name)
+                    continue
+                if name not in parsed_arrays:
+                    missing_parseback.append(name)
+                    continue
+                row = _archive_quantizer_tensor_delta_row(
+                    name=name,
+                    exported=state_npz[name],
+                    parseback=parsed_arrays[name],
+                    latent_codec=str(telemetry.get("latent_codec") or "int16_raw"),
+                    section_rows=telemetry.get("sections") or [],
+                )
+                rows.append(row)
+                _accumulate_archive_quantizer_group(group_stats, row)
+                worst_rows.append(row)
+    except Exception as exc:
+        receipt.update(
+            {
+                "parity_ready": False,
+                "first_failed_surface": "exported_state_npz_parse_failed",
+                "next_operator": "repair exported_state NPZ before quantizer parity",
+                "exported_state_npz_path": npz_path.as_posix(),
+                "failure": repr(exc),
+                "blockers": [
+                    *receipt["blockers"],
+                    f"hi_nerv_archive_quantizer_parity_npz_failed:{type(exc).__name__}",
+                ],
+            }
+        )
+        return receipt
+
+    worst_rows.sort(
+        key=lambda row: float(row.get("max_abs_delta") or -1.0),
+        reverse=True,
+    )
+    group_rows = _finalize_archive_quantizer_group_rows(group_stats)
+    first_failed_surface = _first_archive_quantizer_failed_surface(
+        group_rows=group_rows,
+        missing_exported=missing_exported,
+        missing_parseback=missing_parseback,
+        live_receiver_export_parity=live_receiver_export_parity,
+        live_to_parseback_audit=live_to_parseback_audit,
+    )
+    blockers = list(receipt["blockers"])
+    if missing_exported:
+        blockers.append("hi_nerv_archive_quantizer_parity_parseback_tensor_not_exported")
+    if missing_parseback:
+        blockers.append("hi_nerv_archive_quantizer_parity_exported_tensor_not_parseback")
+    if first_failed_surface != "hiv1_quantizer_parity_passed":
+        blockers.append(f"hi_nerv_archive_quantizer_parity_{first_failed_surface}")
+    receipt.update(
+        {
+            "parity_ready": True,
+            "exported_state_npz_path": npz_path.as_posix(),
+            "exported_state_manifest": (
+                dict(exported_state_manifest) if isinstance(exported_state_manifest, Mapping) else None
+            ),
+            "tensor_count_compared": len(rows),
+            "decoder_tensor_count_compared": int(sum(1 for row in rows if row["section_id"] == "decoder_state")),
+            "latent_tensor_count_compared": int(
+                sum(1 for row in rows if str(row["section_id"]).startswith("latents_"))
+            ),
+            "missing_exported_tensor_count": len(missing_exported),
+            "missing_parseback_tensor_count": len(missing_parseback),
+            "missing_exported_tensors": missing_exported[:32],
+            "missing_parseback_tensors": missing_parseback[:32],
+            "tensor_group_rows": group_rows,
+            "worst_tensor_rows": [
+                _compact_archive_quantizer_tensor_row(row) for row in worst_rows[: max(0, int(max_worst_tensors))]
+            ],
+            "first_failed_surface": first_failed_surface,
+            "next_operator": _archive_quantizer_next_operator(first_failed_surface),
+            "live_receiver_export_parity": (
+                _compact_live_receiver_export_parity(live_receiver_export_parity)
+                if isinstance(live_receiver_export_parity, Mapping)
+                else None
+            ),
+            "blockers": _dedupe_text(blockers),
+            "parseback_scorer_effect_survived": (
+                None
+                if not isinstance(live_to_parseback_audit, Mapping)
+                else live_to_parseback_audit.get("parseback_scorer_effect_survived")
+            ),
+        }
+    )
+    return receipt
+
+
+def _read_hi_nerv_archive_payload(archive: Path) -> tuple[bytes, str]:
+    if not archive.is_file():
+        raise FileNotFoundError(str(archive))
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive, "r") as zf:
+            names = zf.namelist()
+            if MINIMAL_SINGLE_MEMBER_NAME not in names:
+                raise ValueError(f"archive.zip missing {MINIMAL_SINGLE_MEMBER_NAME!r}; names={names}")
+            return zf.read(MINIMAL_SINGLE_MEMBER_NAME), MINIMAL_SINGLE_MEMBER_NAME
+    return archive.read_bytes(), archive.name
+
+
+def _archive_quantizer_tensor_delta_row(
+    *,
+    name: str,
+    exported: np.ndarray,
+    parseback: np.ndarray,
+    latent_codec: str,
+    section_rows: Sequence[Any],
+) -> dict[str, Any]:
+    exported_arr = np.asarray(exported, dtype=np.float32)
+    parseback_arr = np.asarray(parseback, dtype=np.float32)
+    section_id = _archive_section_id_for_tensor(name)
+    group = _archive_tensor_group_for_name(name)
+    row: dict[str, Any] = {
+        "tensor_name": name,
+        "tensor_group": group,
+        "section_id": section_id,
+        "source_shape": [int(value) for value in exported_arr.shape],
+        "parseback_shape": [int(value) for value in parseback_arr.shape],
+        "source_dtype": str(np.asarray(exported).dtype),
+        "parseback_dtype": str(np.asarray(parseback).dtype),
+        "live_sha256": _sha256_numpy_array(exported_arr),
+        "parseback_sha256": _sha256_numpy_array(parseback_arr),
+        "archive_decoded_vs_parseback_max_abs_delta": 0.0,
+    }
+    section = _section_row_by_name(section_rows, section_id)
+    if section:
+        row["section_bytes"] = section.get("bytes")
+        row["section_sha256"] = section.get("sha256")
+        row["section_codec"] = section.get("codec")
+    if tuple(exported_arr.shape) != tuple(parseback_arr.shape):
+        row.update(
+            {
+                "shape_matches": False,
+                "max_abs_delta": None,
+                "mean_abs_delta": None,
+                "changed_element_count": None,
+                "first_failed_surface": f"{section_id}_shape_mismatch",
+            }
+        )
+        return row
+    delta = np.abs(exported_arr - parseback_arr)
+    max_abs = float(delta.max()) if delta.size else 0.0
+    mean_abs = float(delta.mean()) if delta.size else 0.0
+    row.update(
+        {
+            "shape_matches": True,
+            "max_abs_delta": max_abs,
+            "mean_abs_delta": mean_abs,
+            "p99_abs_delta": float(np.quantile(delta.reshape(-1), 0.99)) if delta.size else 0.0,
+            "changed_element_count": int(np.count_nonzero(delta > 0.0)),
+            "element_count": int(delta.size),
+            "hiv1_training_roundtrip_max_abs_delta": _training_roundtrip_delta(
+                name=name,
+                exported_arr=exported_arr,
+                parseback_arr=parseback_arr,
+                latent_codec=latent_codec,
+            ),
+            "first_failed_surface": (
+                "hiv1_quantizer_parity_passed" if max_abs == 0.0 else f"{section_id}_quantizer_delta"
+            ),
+        }
+    )
+    return row
+
+
+def _training_roundtrip_delta(
+    *,
+    name: str,
+    exported_arr: np.ndarray,
+    parseback_arr: np.ndarray,
+    latent_codec: str,
+) -> float | None:
+    if name not in _LATENT_KEYS:
+        return None
+    roundtrip = hiv1_quantize_dequantize_for_training(
+        exported_arr,
+        section_config={"section_id": name, "latent_codec": latent_codec},
+    )
+    delta = np.abs(np.asarray(roundtrip, dtype=np.float32) - parseback_arr)
+    return float(delta.max()) if delta.size else 0.0
+
+
+def _archive_section_id_for_tensor(name: str) -> str:
+    if name in _LATENT_KEYS:
+        return name
+    return "decoder_state"
+
+
+def _archive_tensor_group_for_name(name: str) -> str:
+    if name in _LATENT_KEYS:
+        return name
+    for group in (
+        "head_rgb_1",
+        "head_rgb_0",
+        "fine_injector",
+        "mid_injector",
+        "coarse_injector",
+        "feature_grids",
+        "blocks",
+        "convnext_blocks",
+    ):
+        if name == group or name.startswith(f"{group}."):
+            return group
+    return "decoder_other"
+
+
+def _section_row_by_name(section_rows: Sequence[Any], section_id: str) -> Mapping[str, Any]:
+    for row in section_rows:
+        if isinstance(row, Mapping) and row.get("name") == section_id:
+            return row
+    return {}
+
+
+def _accumulate_archive_quantizer_group(
+    group_stats: dict[str, dict[str, Any]],
+    row: Mapping[str, Any],
+) -> None:
+    group = str(row.get("tensor_group") or "unknown")
+    stats = group_stats.setdefault(
+        group,
+        {
+            "tensor_group": group,
+            "section_ids": set(),
+            "tensor_count": 0,
+            "element_count": 0,
+            "changed_element_count": 0,
+            "max_abs_delta": 0.0,
+            "weighted_abs_delta_sum": 0.0,
+            "worst_tensor_name": None,
+            "worst_tensor_max_abs_delta": 0.0,
+            "shape_mismatch_count": 0,
+        },
+    )
+    stats["tensor_count"] += 1
+    stats["section_ids"].add(str(row.get("section_id") or "unknown"))
+    if row.get("shape_matches") is not True:
+        stats["shape_mismatch_count"] += 1
+        return
+    element_count = int(row.get("element_count") or 0)
+    changed_count = int(row.get("changed_element_count") or 0)
+    max_abs = float(row.get("max_abs_delta") or 0.0)
+    mean_abs = float(row.get("mean_abs_delta") or 0.0)
+    stats["element_count"] += element_count
+    stats["changed_element_count"] += changed_count
+    stats["weighted_abs_delta_sum"] += mean_abs * float(element_count)
+    if max_abs >= float(stats.get("max_abs_delta") or 0.0):
+        stats["max_abs_delta"] = max_abs
+    if max_abs >= float(stats.get("worst_tensor_max_abs_delta") or 0.0):
+        stats["worst_tensor_name"] = row.get("tensor_name")
+        stats["worst_tensor_max_abs_delta"] = max_abs
+
+
+def _finalize_archive_quantizer_group_rows(
+    group_stats: Mapping[str, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for stats in group_stats.values():
+        element_count = int(stats.get("element_count") or 0)
+        mean_abs = (
+            None if element_count <= 0 else float(stats.get("weighted_abs_delta_sum") or 0.0) / float(element_count)
+        )
+        rows.append(
+            {
+                "tensor_group": stats.get("tensor_group"),
+                "section_ids": sorted(str(v) for v in stats.get("section_ids", set())),
+                "tensor_count": int(stats.get("tensor_count") or 0),
+                "element_count": element_count,
+                "changed_element_count": int(stats.get("changed_element_count") or 0),
+                "shape_mismatch_count": int(stats.get("shape_mismatch_count") or 0),
+                "max_abs_delta": float(stats.get("max_abs_delta") or 0.0),
+                "mean_abs_delta": mean_abs,
+                "worst_tensor_name": stats.get("worst_tensor_name"),
+                "worst_tensor_max_abs_delta": float(stats.get("worst_tensor_max_abs_delta") or 0.0),
+            }
+        )
+    rows.sort(key=lambda row: float(row.get("max_abs_delta") or -1.0), reverse=True)
+    return rows
+
+
+def _first_archive_quantizer_failed_surface(
+    *,
+    group_rows: Sequence[Mapping[str, Any]],
+    missing_exported: Sequence[str],
+    missing_parseback: Sequence[str],
+    live_receiver_export_parity: Mapping[str, Any] | None,
+    live_to_parseback_audit: Mapping[str, Any] | None,
+) -> str:
+    if missing_exported:
+        return "parseback_tensor_not_exported"
+    if missing_parseback:
+        return "exported_tensor_not_parseback"
+    if isinstance(live_to_parseback_audit, Mapping) and (
+        live_to_parseback_audit.get("parseback_scorer_effect_survived") is False
+    ):
+        for group in ("latents_fine", "head_rgb_1", "fine_injector", "feature_grids"):
+            row = next((item for item in group_rows if item.get("tensor_group") == group), None)
+            if row and float(row.get("max_abs_delta") or 0.0) > 0.0:
+                return f"{group}_quantizer_delta"
+        if isinstance(live_receiver_export_parity, Mapping) and (live_receiver_export_parity.get("passed") is not True):
+            return "rendered_receiver_pixel_delta"
+        return "parseback_scorer_effect_collapse_without_tensor_delta"
+    for row in group_rows:
+        if float(row.get("max_abs_delta") or 0.0) > 0.0:
+            return f"{row.get('tensor_group')}_quantizer_delta"
+    return "hiv1_quantizer_parity_passed"
+
+
+def _archive_quantizer_next_operator(first_failed_surface: str) -> str:
+    if first_failed_surface == "hiv1_quantizer_parity_passed":
+        return "move to receiver-surface scorer preprocess/logit margin trace"
+    if first_failed_surface.endswith("_quantizer_delta"):
+        return (
+            "bind ArchiveRoundtripQAT to the named tensor group and require "
+            "archive-roundtrip scorer-margin survival before export"
+        )
+    if first_failed_surface in {
+        "parseback_tensor_not_exported",
+        "exported_tensor_not_parseback",
+    }:
+        return "repair exported_state_dict to HIV1 decoder_state_dict tensor mapping"
+    if first_failed_surface == "rendered_receiver_pixel_delta":
+        return "localize receiver pixel delta to sampled pair and tensor group"
+    return "attach scorer-preprocess/logit/argmax trace after HIV1 parse-back"
+
+
+def _compact_archive_section_telemetry(telemetry: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": telemetry.get("schema"),
+        "archive_payload_kind": telemetry.get("archive_payload_kind"),
+        "hprc_bin_bytes": telemetry.get("hprc_bin_bytes"),
+        "archive_zip_bytes": telemetry.get("archive_zip_bytes"),
+        "decoder_codec": telemetry.get("decoder_codec"),
+        "latent_codec": telemetry.get("latent_codec"),
+        "sections": [
+            {
+                key: row.get(key)
+                for key in ("name", "role", "bytes", "codec", "quant_bits", "sha256")
+                if isinstance(row, Mapping) and key in row
+            }
+            for row in telemetry.get("sections") or []
+            if isinstance(row, Mapping)
+        ],
+    }
+
+
+def _compact_archive_quantizer_tensor_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "tensor_name",
+        "tensor_group",
+        "section_id",
+        "source_shape",
+        "parseback_shape",
+        "source_dtype",
+        "parseback_dtype",
+        "section_bytes",
+        "section_codec",
+        "max_abs_delta",
+        "mean_abs_delta",
+        "p99_abs_delta",
+        "changed_element_count",
+        "element_count",
+        "hiv1_training_roundtrip_max_abs_delta",
+        "first_failed_surface",
+    )
+    return {key: row.get(key) for key in keys if key in row}
+
+
+def _compact_live_receiver_export_parity(
+    proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        key: proof.get(key)
+        for key in (
+            "schema",
+            "passed",
+            "receiver_decode_passed",
+            "proof_status",
+            "latent_codec",
+            "lossy_latent_codec",
+            "max_abs_delta",
+            "mean_abs_delta",
+            "changed_element_count",
+            "pair_indices",
+            "blockers",
+        )
+        if key in proof
+    }
+
+
+def _mapping_get_text(source: Mapping[str, Any] | None, key: str) -> str | None:
+    if not isinstance(source, Mapping):
+        return None
+    value = source.get(key)
+    return value if isinstance(value, str) and value else None
+
+
+def _nested_int(source: Mapping[str, Any] | None, path: Sequence[str]) -> int | None:
+    value = _nested_value(source, path)
+    try:
+        return None if value is None else int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _nested_float(source: Mapping[str, Any] | None, path: Sequence[str]) -> float | None:
+    value = _nested_value(source, path)
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if np.isfinite(out) else None
+
+
+def _nested_value(source: Mapping[str, Any] | None, path: Sequence[str]) -> Any:
+    current: Any = source
+    for key in path:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _dedupe_text(values: Sequence[Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
 def _live_receiver_export_parity_extra_blockers(
     proof: Mapping[str, Any],
 ) -> list[str]:
@@ -1253,10 +1737,7 @@ def _live_receiver_codec_portfolio_extra_blockers(
     selection: Mapping[str, Any],
 ) -> list[str]:
     selected = selection.get("selected_row")
-    selected_passed = (
-        isinstance(selected, Mapping)
-        and selected.get("live_receiver_export_parity_passed") is True
-    )
+    selected_passed = isinstance(selected, Mapping) and selected.get("live_receiver_export_parity_passed") is True
     if selected_passed:
         return []
     return [
@@ -1335,17 +1816,13 @@ def _build_decoder_rendered_pixel_proof(
     proof.update(
         {
             "proof_status": (
-                "sampled_rendered_pixels_changed"
-                if rendered_pixels_changed
-                else "sampled_rendered_pixels_no_change"
+                "sampled_rendered_pixels_changed" if rendered_pixels_changed else "sampled_rendered_pixels_no_change"
             ),
             "decoder_state_changed": True,
             "rendered_pixels_changed": rendered_pixels_changed,
             "changed_rendered_pixel_count": changed_pixel_count,
             "max_abs_rendered_pixel_delta": max_abs_delta,
-            "mean_abs_rendered_pixel_delta": (
-                float(delta.mean().item()) if delta.numel() else 0.0
-            ),
+            "mean_abs_rendered_pixel_delta": (float(delta.mean().item()) if delta.numel() else 0.0),
             "rendered_tensor_shape": [int(value) for value in after_pixels.shape],
             "rendered_tensor_sha256_before": _tensor_sha256(before_pixels),
             "rendered_tensor_sha256_after": _tensor_sha256(after_pixels),
@@ -1416,17 +1893,13 @@ def pack_archive_from_exported_state_dict(
         ("latents_fine", latents_fine),
     ):
         if tuple(int(v) for v in tensor.shape) != expected_shapes[key]:
-            raise ValueError(
-                f"{key} shape {tuple(tensor.shape)} != {expected_shapes[key]}"
-            )
+            raise ValueError(f"{key} shape {tuple(tensor.shape)} != {expected_shapes[key]}")
 
     decoder_state: dict[str, torch.Tensor] = {}
     for name, arr in exported_state_dict.items():
         if name in _LATENT_KEYS:
             continue
-        decoder_state[name] = torch.from_numpy(np.asarray(arr).copy()).to(
-            dtype=torch.float32
-        )
+        decoder_state[name] = torch.from_numpy(np.asarray(arr).copy()).to(dtype=torch.float32)
     validate_decoder_state_dict(
         decoder_state,
         cfg,
@@ -1467,6 +1940,60 @@ def pack_archive_from_exported_state_dict(
     return blob
 
 
+def project_hi_nerv_hiv1_receiver_state(
+    *,
+    exported_state_dict: Mapping[str, np.ndarray],
+    cfg: HinervConfig,
+    decoder_codec: str = "int8_mixed",
+    pruning_ratio: float = 0.0,
+    quant_noise_bits: int | None = None,
+    quant_noise_scale: float = 0.0,
+    quant_noise_seed: int = 0,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+    latent_codec: str = "int16_raw",
+    target_region_action_program_base64: str | None = None,
+) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    """Project exported tensors through exact HIV1 pack -> parse receiver state."""
+
+    blob, bitstream_report = pack_archive_from_exported_state_dict(
+        exported_state_dict=dict(exported_state_dict),
+        cfg=cfg,
+        decoder_codec=decoder_codec,
+        pruning_ratio=pruning_ratio,
+        quant_noise_bits=quant_noise_bits,
+        quant_noise_scale=quant_noise_scale,
+        quant_noise_seed=quant_noise_seed,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        latent_codec=latent_codec,
+        target_region_action_program_base64=target_region_action_program_base64,
+        return_bitstream_report=True,
+    )
+    arc = parse_archive(blob)
+    projected: dict[str, np.ndarray] = {
+        "latents_coarse": arc.latents_coarse.detach().cpu().numpy().astype(np.float32),
+        "latents_mid": arc.latents_mid.detach().cpu().numpy().astype(np.float32),
+        "latents_fine": arc.latents_fine.detach().cpu().numpy().astype(np.float32),
+        **{name: tensor.detach().cpu().numpy().astype(np.float32) for name, tensor in arc.decoder_state_dict.items()},
+    }
+    report = {
+        "schema": "hi_nerv_hiv1_receiver_state_projection.v1",
+        "projection_kind": "exported_state_dict_to_exact_hiv1_pack_parse_receiver_state",
+        "decoder_codec": decoder_codec,
+        "latent_codec": latent_codec,
+        "tensor_count": len(projected),
+        "tensor_names_sorted": sorted(projected),
+        "hiv1_payload_bytes": len(blob),
+        "hiv1_payload_sha256": hashlib.sha256(blob).hexdigest(),
+        "archive_section_telemetry": build_archive_section_telemetry(blob),
+        "bitstream_preparation": dict(bitstream_report),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    return projected, report
+
+
 def _normalize_decoder_codec(codec: str) -> str:
     return str(codec).strip().lower()
 
@@ -1497,8 +2024,7 @@ def _build_single_codec_portfolio_selection_report(
 ) -> dict[str, Any]:
     ceiling = None if hard_byte_ceiling is None else int(hard_byte_ceiling)
     receiver_survived = bool(
-        live_receiver_export_parity.get("receiver_decode_passed")
-        or live_receiver_export_parity.get("passed")
+        live_receiver_export_parity.get("receiver_decode_passed") or live_receiver_export_parity.get("passed")
     )
     lossy_latent_codec = _latent_codec_is_lossy(latent_codec)
     row = {
@@ -1510,16 +2036,10 @@ def _build_single_codec_portfolio_selection_report(
         "archive_bytes": int(archive_bytes),
         "archive_sha256": archive_zip_build.get("archive_sha256"),
         "archive_zip_build": dict(archive_zip_build),
-        "under_hard_byte_ceiling": (
-            None if ceiling is None else bool(int(archive_bytes) <= ceiling)
-        ),
-        "live_receiver_export_parity_passed": bool(
-            live_receiver_export_parity.get("passed")
-        ),
+        "under_hard_byte_ceiling": (None if ceiling is None else bool(int(archive_bytes) <= ceiling)),
+        "live_receiver_export_parity_passed": bool(live_receiver_export_parity.get("passed")),
         "live_receiver_export_receiver_survived": bool(receiver_survived),
-        "live_receiver_export_parity_status": live_receiver_export_parity.get(
-            "proof_status"
-        ),
+        "live_receiver_export_parity_status": live_receiver_export_parity.get("proof_status"),
         "mean_abs_delta": live_receiver_export_parity.get("mean_abs_delta"),
         "max_abs_delta": live_receiver_export_parity.get("max_abs_delta"),
         "blockers": list(live_receiver_export_parity.get("blockers") or []),
@@ -1531,20 +2051,11 @@ def _build_single_codec_portfolio_selection_report(
         "full_video_scorer_value_replay_not_executed",
     ]
     if not bool(row["live_receiver_export_receiver_survived"]):
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving"
-        )
-    if (
-        not bool(row["live_receiver_export_parity_passed"])
-        and not bool(lossy_latent_codec and receiver_survived)
-    ):
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity"
-        )
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving")
+    if not bool(row["live_receiver_export_parity_passed"]) and not bool(lossy_latent_codec and receiver_survived):
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity")
     if ceiling is not None and int(archive_bytes) > ceiling:
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_selected_codec_over_hard_byte_ceiling"
-        )
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_selected_codec_over_hard_byte_ceiling")
     return {
         "schema": _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA,
         "requested_decoder_codec": str(requested_decoder_codec),
@@ -1556,12 +2067,8 @@ def _build_single_codec_portfolio_selection_report(
         "hard_byte_ceiling": ceiling,
         "candidate_count": 1,
         "measured_candidate_count": 1,
-        "parity_passing_candidate_count": int(
-            bool(row["live_receiver_export_parity_passed"])
-        ),
-        "receiver_surviving_candidate_count": int(
-            bool(row["live_receiver_export_receiver_survived"])
-        ),
+        "parity_passing_candidate_count": int(bool(row["live_receiver_export_parity_passed"])),
+        "receiver_surviving_candidate_count": int(bool(row["live_receiver_export_receiver_survived"])),
         "selected_row": row,
         "rows": [row],
         "blockers": blockers,
@@ -1614,9 +2121,7 @@ def _select_live_receiver_portfolio_archive(
                 target_region_action_program_base64=target_region_action_program_base64,
                 return_bitstream_report=True,
             )
-            archive_zip_bytes, archive_zip_build = (
-                build_minimal_single_member_archive_bytes(bin_bytes)
-            )
+            archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(bin_bytes)
             live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
                 model=model,
                 archive_bytes=bin_bytes,
@@ -1630,8 +2135,7 @@ def _select_live_receiver_portfolio_archive(
             )
             emitted_codec = str(archive_section_telemetry.get("decoder_codec") or codec)
             receiver_survived = bool(
-                live_receiver_export_parity.get("receiver_decode_passed")
-                or live_receiver_export_parity.get("passed")
+                live_receiver_export_parity.get("receiver_decode_passed") or live_receiver_export_parity.get("passed")
             )
             row = {
                 "decoder_codec_requested": codec,
@@ -1643,23 +2147,13 @@ def _select_live_receiver_portfolio_archive(
                 "archive_bytes": len(archive_zip_bytes),
                 "archive_sha256": archive_zip_build.get("archive_sha256"),
                 "archive_zip_build": dict(archive_zip_build),
-                "under_hard_byte_ceiling": (
-                    None
-                    if ceiling is None
-                    else bool(len(archive_zip_bytes) <= ceiling)
-                ),
-                "live_receiver_export_parity_passed": bool(
-                    live_receiver_export_parity.get("passed")
-                ),
+                "under_hard_byte_ceiling": (None if ceiling is None else bool(len(archive_zip_bytes) <= ceiling)),
+                "live_receiver_export_parity_passed": bool(live_receiver_export_parity.get("passed")),
                 "live_receiver_export_receiver_survived": bool(receiver_survived),
-                "live_receiver_export_parity_status": (
-                    live_receiver_export_parity.get("proof_status")
-                ),
+                "live_receiver_export_parity_status": (live_receiver_export_parity.get("proof_status")),
                 "mean_abs_delta": live_receiver_export_parity.get("mean_abs_delta"),
                 "max_abs_delta": live_receiver_export_parity.get("max_abs_delta"),
-                "parity_blockers": list(
-                    live_receiver_export_parity.get("blockers") or []
-                ),
+                "parity_blockers": list(live_receiver_export_parity.get("blockers") or []),
                 **FALSE_AUTHORITY,
             }
             rows.append(row)
@@ -1681,20 +2175,10 @@ def _select_live_receiver_portfolio_archive(
             )
 
     measured = [row for row in rows if row.get("status") == "measured"]
-    under_ceiling = [
-        row
-        for row in measured
-        if ceiling is None or int(row["archive_bytes"]) <= ceiling
-    ]
+    under_ceiling = [row for row in measured if ceiling is None or int(row["archive_bytes"]) <= ceiling]
     eligible_scope = under_ceiling or measured
-    parity_passing = [
-        row for row in eligible_scope if bool(row.get("live_receiver_export_parity_passed"))
-    ]
-    receiver_surviving = [
-        row
-        for row in eligible_scope
-        if bool(row.get("live_receiver_export_receiver_survived"))
-    ]
+    parity_passing = [row for row in eligible_scope if bool(row.get("live_receiver_export_parity_passed"))]
+    receiver_surviving = [row for row in eligible_scope if bool(row.get("live_receiver_export_receiver_survived"))]
     if parity_passing:
         selected_row = min(parity_passing, key=lambda row: int(row["archive_bytes"]))
         selection_mode = "cheapest_live_receiver_parity_passing_codec"
@@ -1730,56 +2214,31 @@ def _select_live_receiver_portfolio_archive(
     if not measured:
         blockers.append("hi_nerv_live_receiver_codec_portfolio_no_measured_codec")
     if ceiling is not None and measured and not under_ceiling:
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_no_candidate_under_hard_byte_ceiling"
-        )
-    if (
-        measured
-        and not parity_passing
-        and not (_latent_codec_is_lossy(latent_codec) and receiver_surviving)
-    ):
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_no_parity_passing_codec"
-        )
-    if selected_row is not None and not bool(
-        selected_row.get("live_receiver_export_receiver_survived")
-    ):
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving"
-        )
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_no_candidate_under_hard_byte_ceiling")
+    if measured and not parity_passing and not (_latent_codec_is_lossy(latent_codec) and receiver_surviving):
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_no_parity_passing_codec")
+    if selected_row is not None and not bool(selected_row.get("live_receiver_export_receiver_survived")):
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_selected_not_receiver_surviving")
     if (
         selected_row is not None
         and not bool(selected_row.get("live_receiver_export_parity_passed"))
         and not bool(
-            _latent_codec_is_lossy(latent_codec)
-            and selected_row.get("live_receiver_export_receiver_survived")
+            _latent_codec_is_lossy(latent_codec) and selected_row.get("live_receiver_export_receiver_survived")
         )
     ):
-        blockers.append(
-            "hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity"
-        )
-    selected_requested_codec = (
-        str(selected_row["decoder_codec_requested"]) if selected_row is not None else None
-    )
+        blockers.append("hi_nerv_live_receiver_codec_portfolio_selected_codec_failed_parity")
+    selected_requested_codec = str(selected_row["decoder_codec_requested"]) if selected_row is not None else None
     selected_effective_codec = (
-        str(selected_row.get("decoder_codec_emitted") or selected_requested_codec)
-        if selected_row is not None
-        else None
+        str(selected_row.get("decoder_codec_emitted") or selected_requested_codec) if selected_row is not None else None
     )
     if (
         selected_requested_codec is None
         or selected_requested_codec not in candidate_payloads
         or selected_effective_codec is None
     ):
-        raise ValueError(
-            "HiNeRV live-receiver codec portfolio could not select a measured codec"
-        )
-    bin_bytes, bitstream_report, live_receiver_export_parity = candidate_payloads[
-        selected_requested_codec
-    ]
-    archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(
-        bin_bytes
-    )
+        raise ValueError("HiNeRV live-receiver codec portfolio could not select a measured codec")
+    bin_bytes, bitstream_report, live_receiver_export_parity = candidate_payloads[selected_requested_codec]
+    archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(bin_bytes)
     selection_report = {
         "schema": _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA,
         "requested_decoder_codec": str(requested_decoder_codec),
@@ -1829,28 +2288,21 @@ def export_hi_nerv_mlx_archive(
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
 
-    root = (
-        Path(repo_root)
-        if repo_root is not None
-        else Path(__file__).resolve().parents[4]
-    )
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[4]
     out_dir = Path(output_dir)
     if not out_dir.is_absolute():
         out_dir = root / out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = model.cfg
-    exported_state_dict, npz_bridge_manifest = (
-        _write_and_reload_exported_state_via_numpy_bridge(
-            exported_state_dict=model.export_state_dict(),
-            output_dir=out_dir,
-            source_backend=source_backend,
-        )
+    exported_state_dict, npz_bridge_manifest = _write_and_reload_exported_state_via_numpy_bridge(
+        exported_state_dict=model.export_state_dict(),
+        output_dir=out_dir,
+        source_backend=source_backend,
     )
     requested_decoder_codec = str(decoder_codec)
     if (
-        _normalize_decoder_codec(requested_decoder_codec)
-        in _PORTFOLIO_AUTO_CODEC_ALIASES
+        _normalize_decoder_codec(requested_decoder_codec) in _PORTFOLIO_AUTO_CODEC_ALIASES
         and str(source_backend) == "mlx"
     ):
         (
@@ -1874,9 +2326,7 @@ def export_hi_nerv_mlx_archive(
             target_region_action_program_base64=target_region_action_program_base64,
             hard_byte_ceiling=hard_byte_ceiling,
         )
-        effective_decoder_codec = str(
-            live_receiver_codec_portfolio_selection["selected_decoder_codec"]
-        )
+        effective_decoder_codec = str(live_receiver_codec_portfolio_selection["selected_decoder_codec"])
     else:
         bin_bytes, bitstream_report = pack_archive_from_exported_state_dict(
             exported_state_dict=exported_state_dict,
@@ -1898,27 +2348,21 @@ def export_hi_nerv_mlx_archive(
             source_backend=source_backend,
             latent_codec=latent_codec,
         )
-        archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(
-            bin_bytes
-        )
+        archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(bin_bytes)
         archive_section_probe = build_archive_section_telemetry(
             bin_bytes,
             archive_zip_bytes=len(archive_zip_bytes),
         )
-        effective_decoder_codec = str(
-            archive_section_probe.get("decoder_codec") or requested_decoder_codec
-        )
-        live_receiver_codec_portfolio_selection = (
-            _build_single_codec_portfolio_selection_report(
-                requested_decoder_codec=requested_decoder_codec,
-                selected_decoder_codec=effective_decoder_codec,
-                latent_codec=latent_codec,
-                archive_bytes=len(archive_zip_bytes),
-                payload_bytes=len(bin_bytes),
-                archive_zip_build=archive_zip_build,
-                live_receiver_export_parity=live_receiver_export_parity,
-                hard_byte_ceiling=hard_byte_ceiling,
-            )
+        effective_decoder_codec = str(archive_section_probe.get("decoder_codec") or requested_decoder_codec)
+        live_receiver_codec_portfolio_selection = _build_single_codec_portfolio_selection_report(
+            requested_decoder_codec=requested_decoder_codec,
+            selected_decoder_codec=effective_decoder_codec,
+            latent_codec=latent_codec,
+            archive_bytes=len(archive_zip_bytes),
+            payload_bytes=len(bin_bytes),
+            archive_zip_build=archive_zip_build,
+            live_receiver_export_parity=live_receiver_export_parity,
+            hard_byte_ceiling=hard_byte_ceiling,
         )
     bitstream_report = {
         **dict(bitstream_report),
@@ -1927,12 +2371,8 @@ def export_hi_nerv_mlx_archive(
         "requested_decoder_codec": requested_decoder_codec,
         "decoder_codec_requested_by_export": requested_decoder_codec,
         "decoder_codec_selected_by_export": effective_decoder_codec,
-        "live_receiver_codec_portfolio_selection": (
-            live_receiver_codec_portfolio_selection
-        ),
-        "live_receiver_codec_portfolio_selection_schema": (
-            _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA
-        ),
+        "live_receiver_codec_portfolio_selection": (live_receiver_codec_portfolio_selection),
+        "live_receiver_codec_portfolio_selection_schema": (_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA),
     }
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
@@ -1946,9 +2386,7 @@ def export_hi_nerv_mlx_archive(
         json.dumps(live_receiver_export_parity, indent=2, sort_keys=True),
         encoding="utf-8",
     )
-    live_receiver_codec_portfolio_selection_path = (
-        out_dir / _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME
-    )
+    live_receiver_codec_portfolio_selection_path = out_dir / _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME
     live_receiver_codec_portfolio_selection_path.write_text(
         json.dumps(
             live_receiver_codec_portfolio_selection,
@@ -1973,12 +2411,8 @@ def export_hi_nerv_mlx_archive(
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)
     archive_zip_path = out_dir / "archive.zip"
-    archive_zip_bytes, archive_zip_build_fresh = build_minimal_single_member_archive_bytes(
-        bin_bytes
-    )
-    if archive_zip_build_fresh.get("archive_sha256") != archive_zip_build.get(
-        "archive_sha256"
-    ):
+    archive_zip_bytes, archive_zip_build_fresh = build_minimal_single_member_archive_bytes(bin_bytes)
+    if archive_zip_build_fresh.get("archive_sha256") != archive_zip_build.get("archive_sha256"):
         archive_zip_build = archive_zip_build_fresh
     archive_zip_path.write_bytes(archive_zip_bytes)
     archive_sha256 = sha256_file(archive_zip_path)
@@ -1993,9 +2427,7 @@ def export_hi_nerv_mlx_archive(
         bin_bytes,
         archive_zip_bytes=int(archive_bytes),
     )
-    archive_section_decoder_codec = str(
-        archive_section_telemetry.get("decoder_codec") or ""
-    )
+    archive_section_decoder_codec = str(archive_section_telemetry.get("decoder_codec") or "")
     if archive_section_decoder_codec != str(effective_decoder_codec):
         raise ValueError(
             "HiNeRV effective decoder codec custody mismatch: "
@@ -2007,15 +2439,24 @@ def export_hi_nerv_mlx_archive(
         json.dumps(archive_section_telemetry, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    archive_quantizer_parity_receipt = build_hi_nerv_archive_quantizer_parity_receipt(
+        archive_path=archive_zip_path,
+        exported_state_npz_path=_state_bridge_paths(out_dir)[0],
+        exported_state_manifest=npz_bridge_manifest,
+        live_receiver_export_parity=live_receiver_export_parity,
+    )
+    archive_quantizer_parity_receipt_path = out_dir / _ARCHIVE_QUANTIZER_PARITY_RECEIPT_NAME
+    archive_quantizer_parity_receipt["artifact_path"] = archive_quantizer_parity_receipt_path.as_posix()
+    archive_quantizer_parity_receipt_path.write_text(
+        json.dumps(archive_quantizer_parity_receipt, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
     if hard_byte_ceiling is not None:
         ceiling = int(hard_byte_ceiling)
         if ceiling <= 0:
             raise ValueError("hard_byte_ceiling must be positive when supplied")
         if int(archive_bytes) > ceiling:
-            raise ValueError(
-                "HiNeRV archive exceeds hard_byte_ceiling: "
-                f"{archive_bytes} > {ceiling}"
-            )
+            raise ValueError(f"HiNeRV archive exceeds hard_byte_ceiling: {archive_bytes} > {ceiling}")
     write_representation_spine_projection(
         output_dir=out_dir,
         spine=build_hi_nerv_spine_from_archive_payload(
@@ -2037,25 +2478,17 @@ def export_hi_nerv_mlx_archive(
                 "requested_decoder_codec": requested_decoder_codec,
                 "latent_codec": latent_codec,
                 "archive_section_telemetry": archive_section_telemetry,
-                "archive_section_telemetry_path": (
-                    archive_section_telemetry_path.as_posix()
-                ),
-                "hi_nerv_live_receiver_codec_portfolio_selection": (
-                    live_receiver_codec_portfolio_selection
-                ),
+                "archive_section_telemetry_path": (archive_section_telemetry_path.as_posix()),
+                "hi_nerv_archive_quantizer_parity_receipt": (archive_quantizer_parity_receipt),
+                "hi_nerv_archive_quantizer_parity_receipt_path": (archive_quantizer_parity_receipt_path.as_posix()),
+                "hi_nerv_live_receiver_codec_portfolio_selection": (live_receiver_codec_portfolio_selection),
                 "hi_nerv_live_receiver_codec_portfolio_selection_path": (
                     live_receiver_codec_portfolio_selection_path.as_posix()
                 ),
                 "hi_nerv_bitstream_preparation": bitstream_report,
-                "hi_nerv_bitstream_preparation_path": (
-                    bitstream_report_path.as_posix()
-                ),
-                "hi_nerv_mlx_live_receiver_export_parity": (
-                    live_receiver_export_parity
-                ),
-                "hi_nerv_mlx_live_receiver_export_parity_path": (
-                    live_receiver_export_parity_path.as_posix()
-                ),
+                "hi_nerv_bitstream_preparation_path": (bitstream_report_path.as_posix()),
+                "hi_nerv_mlx_live_receiver_export_parity": (live_receiver_export_parity),
+                "hi_nerv_mlx_live_receiver_export_parity_path": (live_receiver_export_parity_path.as_posix()),
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge": {
                     "artifact_path": npz_bridge_manifest["artifact_path"],
@@ -2098,25 +2531,17 @@ def export_hi_nerv_mlx_archive(
                 "runtime_source_outside_archive_zip": True,
                 "upstream_evaluate_rate_uses_archive_zip_stat_only": True,
                 "archive_section_telemetry": archive_section_telemetry,
-                "archive_section_telemetry_path": (
-                    archive_section_telemetry_path.as_posix()
-                ),
-                "hi_nerv_live_receiver_codec_portfolio_selection": (
-                    live_receiver_codec_portfolio_selection
-                ),
+                "archive_section_telemetry_path": (archive_section_telemetry_path.as_posix()),
+                "hi_nerv_archive_quantizer_parity_receipt": (archive_quantizer_parity_receipt),
+                "hi_nerv_archive_quantizer_parity_receipt_path": (archive_quantizer_parity_receipt_path.as_posix()),
+                "hi_nerv_live_receiver_codec_portfolio_selection": (live_receiver_codec_portfolio_selection),
                 "hi_nerv_live_receiver_codec_portfolio_selection_path": (
                     live_receiver_codec_portfolio_selection_path.as_posix()
                 ),
                 "hi_nerv_bitstream_preparation": bitstream_report,
-                "hi_nerv_bitstream_preparation_path": (
-                    bitstream_report_path.as_posix()
-                ),
-                "hi_nerv_mlx_live_receiver_export_parity": (
-                    live_receiver_export_parity
-                ),
-                "hi_nerv_mlx_live_receiver_export_parity_path": (
-                    live_receiver_export_parity_path.as_posix()
-                ),
+                "hi_nerv_bitstream_preparation_path": (bitstream_report_path.as_posix()),
+                "hi_nerv_mlx_live_receiver_export_parity": (live_receiver_export_parity),
+                "hi_nerv_mlx_live_receiver_export_parity_path": (live_receiver_export_parity_path.as_posix()),
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge_manifest": npz_bridge_manifest,
                 "mlx_numpy_portability_contract": (
@@ -2129,12 +2554,8 @@ def export_hi_nerv_mlx_archive(
             candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
             extra_blockers=[
-                *_live_receiver_export_parity_extra_blockers(
-                    live_receiver_export_parity
-                ),
-                *_live_receiver_codec_portfolio_extra_blockers(
-                    live_receiver_codec_portfolio_selection
-                ),
+                *_live_receiver_export_parity_extra_blockers(live_receiver_export_parity),
+                *_live_receiver_codec_portfolio_extra_blockers(live_receiver_codec_portfolio_selection),
             ],
             mlx_triage_argv=mlx_triage_argv,
         )
@@ -2177,43 +2598,32 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         target_region_action_program_base64=target_region_action_program_base64,
         hard_byte_ceiling=hard_byte_ceiling,
     )
-    root = (
-        Path(repo_root)
-        if repo_root is not None
-        else Path(__file__).resolve().parents[4]
-    )
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[4]
     out_dir = Path(output_dir)
     if not out_dir.is_absolute():
         out_dir = root / out_dir
     cfg = model.cfg
     _, npz_bridge_manifest_path = _state_bridge_paths(out_dir)
-    npz_bridge_manifest = json.loads(
-        npz_bridge_manifest_path.read_text(encoding="utf-8")
-    )
+    npz_bridge_manifest = json.loads(npz_bridge_manifest_path.read_text(encoding="utf-8"))
     bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
     bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
     live_receiver_export_parity_path = out_dir / _LIVE_RECEIVER_EXPORT_PARITY_NAME
-    live_receiver_export_parity = json.loads(
-        live_receiver_export_parity_path.read_text(encoding="utf-8")
-    )
-    live_receiver_codec_portfolio_selection_path = (
-        out_dir / _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME
-    )
+    live_receiver_export_parity = json.loads(live_receiver_export_parity_path.read_text(encoding="utf-8"))
+    live_receiver_codec_portfolio_selection_path = out_dir / _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME
     live_receiver_codec_portfolio_selection = json.loads(
         live_receiver_codec_portfolio_selection_path.read_text(encoding="utf-8")
     )
     archive_section_telemetry_path = out_dir / _ARCHIVE_SECTION_TELEMETRY_NAME
-    archive_section_telemetry = json.loads(
-        archive_section_telemetry_path.read_text(encoding="utf-8")
-    )
+    archive_section_telemetry = json.loads(archive_section_telemetry_path.read_text(encoding="utf-8"))
+    archive_quantizer_parity_receipt_path = out_dir / _ARCHIVE_QUANTIZER_PARITY_RECEIPT_NAME
+    archive_quantizer_parity_receipt = json.loads(archive_quantizer_parity_receipt_path.read_text(encoding="utf-8"))
     effective_decoder_codec = str(
         archive_section_telemetry.get("decoder_codec")
         or live_receiver_codec_portfolio_selection.get("selected_decoder_codec")
         or decoder_codec
     )
     requested_decoder_codec = str(
-        live_receiver_codec_portfolio_selection.get("requested_decoder_codec")
-        or decoder_codec
+        live_receiver_codec_portfolio_selection.get("requested_decoder_codec") or decoder_codec
     )
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID,
@@ -2241,18 +2651,16 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "latent_codec": latent_codec,
             "archive_section_telemetry": archive_section_telemetry,
             "archive_section_telemetry_path": archive_section_telemetry_path.as_posix(),
-            "hi_nerv_live_receiver_codec_portfolio_selection": (
-                live_receiver_codec_portfolio_selection
-            ),
+            "hi_nerv_archive_quantizer_parity_receipt": (archive_quantizer_parity_receipt),
+            "hi_nerv_archive_quantizer_parity_receipt_path": (archive_quantizer_parity_receipt_path.as_posix()),
+            "hi_nerv_live_receiver_codec_portfolio_selection": (live_receiver_codec_portfolio_selection),
             "hi_nerv_live_receiver_codec_portfolio_selection_path": (
                 live_receiver_codec_portfolio_selection_path.as_posix()
             ),
             "hi_nerv_bitstream_preparation": bitstream_report,
             "hi_nerv_bitstream_preparation_path": bitstream_report_path.as_posix(),
             "hi_nerv_mlx_live_receiver_export_parity": live_receiver_export_parity,
-            "hi_nerv_mlx_live_receiver_export_parity_path": (
-                live_receiver_export_parity_path.as_posix()
-            ),
+            "hi_nerv_mlx_live_receiver_export_parity_path": (live_receiver_export_parity_path.as_posix()),
             "num_pairs": int(cfg.num_pairs),
             "state_npz_bridge_manifest": npz_bridge_manifest,
             "mlx_numpy_portability_contract": (
@@ -2266,24 +2674,25 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
         extra_blockers=[
             *_live_receiver_export_parity_extra_blockers(live_receiver_export_parity),
-            *_live_receiver_codec_portfolio_extra_blockers(
-                live_receiver_codec_portfolio_selection
-            ),
+            *_live_receiver_codec_portfolio_extra_blockers(live_receiver_codec_portfolio_selection),
         ],
         mlx_triage_argv=mlx_triage_argv,
     )
 
 
 __all__ = [
+    "HI_NERV_ARCHIVE_QUANTIZER_PARITY_RECEIPT_SCHEMA",
     "HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID",
     "HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY",
     "HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND",
     "HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA",
+    "build_hi_nerv_archive_quantizer_parity_receipt",
     "build_hi_nerv_target_region_action_parseback_survival",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
     "hi_nerv_meta_from_config",
     "hi_nerv_mlx_numpy_portability_contract",
     "pack_archive_from_exported_state_dict",
+    "project_hi_nerv_hiv1_receiver_state",
 ]

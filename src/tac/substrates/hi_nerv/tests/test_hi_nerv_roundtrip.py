@@ -40,6 +40,7 @@ from tac.substrates.hi_nerv.archive import (
     LATENT_CODEC_RAW_INT8,
     LATENT_CODEC_RAW_INT16,
     build_archive_section_telemetry,
+    hiv1_quantize_dequantize_for_training,
     pack_archive,
     parse_archive,
     repack_archive_decoder_codec,
@@ -112,10 +113,7 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors():
     torch.manual_seed(0)
     model = HinervSubstrate(cfg)
     sd = model.state_dict()
-    decoder_sd = {
-        k: v for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     lc = sd["latents_coarse"].clone()
     lm = sd["latents_mid"].clone()
     lf = sd["latents_fine"].clone()
@@ -145,16 +143,44 @@ def test_header_size_invariant_is_33_bytes():
     assert HIV1_HEADER_SIZE == 33
 
 
-def test_archive_section_telemetry_reports_exact_hiv1_sections():
+def test_hiv1_training_roundtrip_matches_parseback_latent_decode():
     cfg = _smoke_cfg()
     torch.manual_seed(7)
     model = HinervSubstrate(cfg)
     sd = model.state_dict()
     decoder_sd = {
-        k: v
-        for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+        key: value for key, value in sd.items() if key not in ("latents_coarse", "latents_mid", "latents_fine")
     }
+    latents = sd["latents_fine"].clone() * 3.0
+
+    for codec in (
+        LATENT_CODEC_RAW_INT16,
+        LATENT_CODEC_RAW_INT8,
+        LATENT_CODEC_PACKED_INT4,
+    ):
+        blob = pack_archive(
+            decoder_sd,
+            sd["latents_coarse"],
+            sd["latents_mid"],
+            latents,
+            _smoke_meta(cfg),
+            latent_codec=codec,
+        )
+        parsed = parse_archive(blob)
+        training_forward = hiv1_quantize_dequantize_for_training(
+            latents,
+            section_config={"section_id": "latents_fine", "latent_codec": codec},
+        )
+
+        assert torch.equal(training_forward, parsed.latents_fine)
+
+
+def test_archive_section_telemetry_reports_exact_hiv1_sections():
+    cfg = _smoke_cfg()
+    torch.manual_seed(7)
+    model = HinervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
 
     blob = pack_archive(
         decoder_sd,
@@ -197,11 +223,7 @@ def test_lossless_brotli_latent_codec_roundtrips_receiver_latents_and_shrinks():
     torch.manual_seed(101)
     model = HinervSubstrate(cfg)
     sd = model.state_dict()
-    decoder_sd = {
-        k: v
-        for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     lc = torch.zeros_like(sd["latents_coarse"])
     lm = torch.zeros_like(sd["latents_mid"])
     lf = torch.zeros_like(sd["latents_fine"])
@@ -231,9 +253,7 @@ def test_lossless_brotli_latent_codec_roundtrips_receiver_latents_and_shrinks():
         + len(coded_sections.latents_mid_blob)
         + len(coded_sections.latents_fine_blob)
     ) < (
-        len(raw_sections.latents_coarse_blob)
-        + len(raw_sections.latents_mid_blob)
-        + len(raw_sections.latents_fine_blob)
+        len(raw_sections.latents_coarse_blob) + len(raw_sections.latents_mid_blob) + len(raw_sections.latents_fine_blob)
     )
     assert coded_sections.meta["_latent_codec"] == LATENT_CODEC_BROTLI_INT16_Q11
     assert "_latent_codec_lossless" not in coded_sections.meta
@@ -276,9 +296,7 @@ def test_lossless_high_byte_arithmetic_latent_codec_roundtrips_and_shrinks():
         + len(coded_sections.latents_mid_blob)
         + len(coded_sections.latents_fine_blob)
     ) < (
-        len(raw_sections.latents_coarse_blob)
-        + len(raw_sections.latents_mid_blob)
-        + len(raw_sections.latents_fine_blob)
+        len(raw_sections.latents_coarse_blob) + len(raw_sections.latents_mid_blob) + len(raw_sections.latents_fine_blob)
     )
     assert coded_sections.latents_coarse_blob[:5] == b"HILA1"
     assert torch.equal(parsed.latents_coarse, lc)
@@ -291,20 +309,10 @@ def test_lower_bit_latent_codecs_roundtrip_with_bounded_quant_error():
     torch.manual_seed(202)
     model = HinervSubstrate(cfg)
     sd = model.state_dict()
-    decoder_sd = {
-        k: v
-        for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
-    lc = torch.linspace(-1.0, 1.0, sd["latents_coarse"].numel()).view_as(
-        sd["latents_coarse"]
-    )
-    lm = torch.linspace(-0.5, 0.75, sd["latents_mid"].numel()).view_as(
-        sd["latents_mid"]
-    )
-    lf = torch.linspace(-2.0, 0.25, sd["latents_fine"].numel()).view_as(
-        sd["latents_fine"]
-    )
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
+    lc = torch.linspace(-1.0, 1.0, sd["latents_coarse"].numel()).view_as(sd["latents_coarse"])
+    lm = torch.linspace(-0.5, 0.75, sd["latents_mid"].numel()).view_as(sd["latents_mid"])
+    lf = torch.linspace(-2.0, 0.25, sd["latents_fine"].numel()).view_as(sd["latents_fine"])
     raw_blob = pack_archive(
         decoder_sd,
         lc,
@@ -315,9 +323,7 @@ def test_lower_bit_latent_codecs_roundtrip_with_bounded_quant_error():
     )
     raw_sections = split_archive_sections(raw_blob)
     raw_latent_bytes = (
-        len(raw_sections.latents_coarse_blob)
-        + len(raw_sections.latents_mid_blob)
-        + len(raw_sections.latents_fine_blob)
+        len(raw_sections.latents_coarse_blob) + len(raw_sections.latents_mid_blob) + len(raw_sections.latents_fine_blob)
     )
     cases = (
         (LATENT_CODEC_RAW_INT8, 8),
@@ -342,9 +348,7 @@ def test_lower_bit_latent_codecs_roundtrip_with_bounded_quant_error():
         telemetry = build_archive_section_telemetry(blob)
         rows = {row["name"]: row for row in telemetry["sections"]}
         coded_latent_bytes = (
-            len(sections.latents_coarse_blob)
-            + len(sections.latents_mid_blob)
-            + len(sections.latents_fine_blob)
+            len(sections.latents_coarse_blob) + len(sections.latents_mid_blob) + len(sections.latents_fine_blob)
         )
         assert coded_latent_bytes < raw_latent_bytes
         assert sections.meta["_latent_codec"] == codec
@@ -379,8 +383,7 @@ def test_parse_archive_rejects_wrong_magic():
     torch.manual_seed(0)
     model = HinervSubstrate(cfg)
     decoder_sd = {
-        k: v for k, v in model.state_dict().items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+        k: v for k, v in model.state_dict().items() if k not in ("latents_coarse", "latents_mid", "latents_fine")
     }
     sd = model.state_dict()
     blob = bytearray(
@@ -411,10 +414,7 @@ def test_forward_pass_after_roundtrip_matches_original_within_tolerance():
         rgb_0_a, rgb_1_a = model(idx)
 
     sd = model.state_dict()
-    decoder_sd = {
-        k: v for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     blob = pack_archive(
         decoder_sd,
         sd["latents_coarse"].clone(),
@@ -441,10 +441,7 @@ def test_receiver_rejects_missing_decoder_weight_before_rendering():
     torch.manual_seed(23)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     decoder_sd.pop("head_rgb_1.bias")
 
     blob = pack_archive(
@@ -469,10 +466,7 @@ def test_receiver_rejects_unexpected_decoder_weight_before_rendering():
     torch.manual_seed(24)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     decoder_sd["extra.weight"] = torch.zeros(1)
 
     blob = pack_archive(
@@ -497,10 +491,7 @@ def test_receiver_rejects_shape_corrupt_decoder_weight_before_rendering():
     torch.manual_seed(25)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v.clone() for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v.clone() for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     decoder_sd["head_rgb_0.bias"] = decoder_sd["head_rgb_0.bias"][:2].clone()
 
     blob = pack_archive(
@@ -525,10 +516,7 @@ def test_receiver_loads_complete_archive_state_strictly(monkeypatch):
     torch.manual_seed(26)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     blob = pack_archive(
         decoder_sd,
         sd["latents_coarse"].clone(),
@@ -564,11 +552,7 @@ def test_receiver_consumes_charged_target_region_action_from_archive_meta():
     torch.manual_seed(27)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v
-        for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     base_blob = pack_archive(
         decoder_sd,
         sd["latents_coarse"].clone(),
@@ -609,18 +593,12 @@ def test_receiver_consumes_charged_target_region_action_from_archive_meta():
     assert action_section_telemetry["target_region_actions"]["pixel_count"] == 2
     assert action_section_telemetry["target_region_actions"]["payload_bytes"] > 0
     assert action_section_telemetry["target_region_actions"]["base64_text_bytes"] > 0
-    assert action_section_telemetry["target_region_actions"]["support_source"] == (
-        "explicit_payload_coordinates"
-    )
-    assert action_section_telemetry["target_region_actions"]["support_encoding"] == (
-        "explicit_yx_u16_coordinates"
-    )
+    assert action_section_telemetry["target_region_actions"]["support_source"] == ("explicit_payload_coordinates")
+    assert action_section_telemetry["target_region_actions"]["support_encoding"] == ("explicit_yx_u16_coordinates")
     assert action_section_telemetry["target_region_actions"]["support_cardinality"] == 2
     assert action_section_telemetry["target_region_actions"]["support_encoded_bytes"] == 8
     assert len(action_section_telemetry["target_region_actions"]["support_sha256"]) == 64
-    assert len(
-        action_section_telemetry["target_region_actions"]["encoded_program_sha256"]
-    ) == 64
+    assert len(action_section_telemetry["target_region_actions"]["encoded_program_sha256"]) == 64
     assert action_section_telemetry["target_region_actions"]["decoded_support_sha256"] == (
         target_region_action_decoded_support_sha256([action])
     )
@@ -744,21 +722,19 @@ def test_target_region_action_decoded_hashes_are_coordinate_order_invariant():
         rgb_u8=np.array([[71, 80, 90], [40, 50, 60], [10, 20, 30]], dtype=np.uint8),
     )
 
-    assert target_region_action_support_sha256([action]) != target_region_action_support_sha256(
+    assert target_region_action_support_sha256([action]) != target_region_action_support_sha256([reordered])
+    assert target_region_action_decoded_support_sha256([action]) == target_region_action_decoded_support_sha256(
         [reordered]
     )
-    assert target_region_action_decoded_support_sha256(
-        [action]
-    ) == target_region_action_decoded_support_sha256([reordered])
-    assert target_region_action_decoded_action_sha256(
-        [action]
-    ) == target_region_action_decoded_action_sha256([reordered])
-    assert target_region_action_decoded_support_sha256(
-        [action]
-    ) == target_region_action_decoded_support_sha256([changed_values])
-    assert target_region_action_decoded_action_sha256(
-        [action]
-    ) != target_region_action_decoded_action_sha256([changed_values])
+    assert target_region_action_decoded_action_sha256([action]) == target_region_action_decoded_action_sha256(
+        [reordered]
+    )
+    assert target_region_action_decoded_support_sha256([action]) == target_region_action_decoded_support_sha256(
+        [changed_values]
+    )
+    assert target_region_action_decoded_action_sha256([action]) != target_region_action_decoded_action_sha256(
+        [changed_values]
+    )
 
 
 def test_target_region_action_telemetry_hashes_interpreted_payload_not_intent():
@@ -785,19 +761,11 @@ def test_target_region_action_telemetry_hashes_interpreted_payload_not_intent():
 
     telemetry = target_region_action_section_telemetry_for_payload([expected], payload)
 
-    assert telemetry["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
-        [actual]
-    )
-    assert telemetry["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
-        [actual]
-    )
-    assert telemetry["expected_decoded_action_sha256"] == target_region_action_decoded_action_sha256(
-        [expected]
-    )
+    assert telemetry["decoded_support_sha256"] == target_region_action_decoded_support_sha256([actual])
+    assert telemetry["decoded_action_sha256"] == target_region_action_decoded_action_sha256([actual])
+    assert telemetry["expected_decoded_action_sha256"] == target_region_action_decoded_action_sha256([expected])
     assert telemetry["interpreter_payload_matches_expected_actions"] is False
-    assert telemetry["interpretation_blockers"] == [
-        "target_region_action_interpreted_decoded_action_sha256_mismatch"
-    ]
+    assert telemetry["interpretation_blockers"] == ["target_region_action_interpreted_decoded_action_sha256_mismatch"]
 
 
 def test_target_region_action_rejects_duplicate_support_coordinates():
@@ -845,12 +813,8 @@ def test_target_region_action_payload_uses_split_brotli_when_streams_win():
     assert 0 < telemetry["support_encoded_bytes"] < action.yx.nbytes
     assert telemetry["payload_sha256"] == hashlib.sha256(payload).hexdigest()
     assert telemetry["encoded_program_sha256"] == hashlib.sha256(payload).hexdigest()
-    assert telemetry["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
-        [action]
-    )
-    assert telemetry["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
-        [action]
-    )
+    assert telemetry["decoded_support_sha256"] == target_region_action_decoded_support_sha256([action])
+    assert telemetry["decoded_action_sha256"] == target_region_action_decoded_action_sha256([action])
     assert len(telemetry["program_base64_sha256"]) == 64
 
 
@@ -860,10 +824,7 @@ def test_byte_mutation_changes_inflate_output_no_op_proof():
     torch.manual_seed(13)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
 
     blob_a = pack_archive(
         decoder_sd,
@@ -896,11 +857,7 @@ def test_decoder_bitstream_preparation_and_repack_are_receiver_visible():
     torch.manual_seed(7)
     model = HinervSubstrate(cfg).eval()
     sd = model.state_dict()
-    decoder_sd = {
-        k: v.clone()
-        for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v.clone() for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
 
     prepared = prepare_hi_nerv_decoder_bitstream_state(
         decoder_sd,
@@ -913,10 +870,7 @@ def test_decoder_bitstream_preparation_and_repack_are_receiver_visible():
     assert prepared.report["shape_preserved"] is True
     assert prepared.report["pruning"]["actual_new_zero_values"] > 0
     assert prepared.report["quant_noise"]["changed_tensor_count"] > 0
-    assert any(
-        not torch.equal(prepared.state_dict[name], decoder_sd[name])
-        for name in decoder_sd
-    )
+    assert any(not torch.equal(prepared.state_dict[name], decoder_sd[name]) for name in decoder_sd)
 
     blob = pack_archive(
         prepared.state_dict,
@@ -977,14 +931,8 @@ def test_three_scale_latent_pyramid_is_distinct():
     assert model.latents_mid.shape == (cfg.num_pairs, cfg.latent_dim_mid)
     assert model.latents_fine.shape == (cfg.num_pairs, cfg.latent_dim_fine)
     # Three distinct dims (or at least different parameters)
-    n_latent_params = (
-        model.latents_coarse.numel()
-        + model.latents_mid.numel()
-        + model.latents_fine.numel()
-    )
-    assert n_latent_params == cfg.num_pairs * (
-        cfg.latent_dim_coarse + cfg.latent_dim_mid + cfg.latent_dim_fine
-    )
+    n_latent_params = model.latents_coarse.numel() + model.latents_mid.numel() + model.latents_fine.numel()
+    assert n_latent_params == cfg.num_pairs * (cfg.latent_dim_coarse + cfg.latent_dim_mid + cfg.latent_dim_fine)
 
 
 def test_trilinear_upsample_interpolates_temporal_local_grid() -> None:
@@ -999,8 +947,12 @@ def test_trilinear_upsample_interpolates_temporal_local_grid() -> None:
     )
 
     assert sampled.shape == (3, 3, 4, 1)
-    assert torch.equal(sampled[0, :, :, 0], torch.tensor([[0, 1, 0, 1], [2, 3, 2, 3], [0, 1, 0, 1]], dtype=torch.float32))
-    assert torch.equal(sampled[2, :, :, 0], torch.tensor([[8, 9, 8, 9], [10, 11, 10, 11], [8, 9, 8, 9]], dtype=torch.float32))
+    assert torch.equal(
+        sampled[0, :, :, 0], torch.tensor([[0, 1, 0, 1], [2, 3, 2, 3], [0, 1, 0, 1]], dtype=torch.float32)
+    )
+    assert torch.equal(
+        sampled[2, :, :, 0], torch.tensor([[8, 9, 8, 9], [10, 11, 10, 11], [8, 9, 8, 9]], dtype=torch.float32)
+    )
     half_time = trilinear_upsample(
         grid,
         torch.tensor([1], dtype=torch.long),
@@ -1047,9 +999,7 @@ def test_official_feature_grid_convnext_mode_is_receiver_visible() -> None:
     assert authority["local_receiver_visible"] is True
     assert authority["official_grid_trilinear3d_temporal_only_bound"] is True
     assert authority["official_core_forward_parity_proven"] is False
-    assert "hinerv_official_feature_grid_source_forward_parity_missing" in authority[
-        "blockers"
-    ]
+    assert "hinerv_official_feature_grid_source_forward_parity_missing" in authority["blockers"]
     assert any(isinstance(module, HierarchicalFeatureGrid) for module in model.modules())
     assert any(isinstance(module, ConvNeXtBlock) for module in model.modules())
     assert "feature_grids.0.grids.0" in model.state_dict()
@@ -1061,10 +1011,7 @@ def test_official_feature_grid_convnext_mode_is_receiver_visible() -> None:
     assert rgb_1.shape == (2, 3, cfg.output_height, cfg.output_width)
     assert float(rgb_0.min()) >= 0.0 and float(rgb_0.max()) <= 1.0
 
-    base_state = {
-        name: tensor.detach().clone()
-        for name, tensor in model.state_dict().items()
-    }
+    base_state = {name: tensor.detach().clone() for name, tensor in model.state_dict().items()}
     pair_indices = torch.tensor([0, 1], dtype=torch.long)
     with torch.no_grad():
         baseline_0, baseline_1 = model(pair_indices)
@@ -1121,11 +1068,7 @@ def test_official_feature_grid_convnext_archive_roundtrip_preserves_forward() ->
         rgb_0_a, rgb_1_a = model(idx)
 
     sd = model.state_dict()
-    decoder_sd = {
-        k: v
-        for k, v in sd.items()
-        if k not in ("latents_coarse", "latents_mid", "latents_fine")
-    }
+    decoder_sd = {k: v for k, v in sd.items() if k not in ("latents_coarse", "latents_mid", "latents_fine")}
     blob = pack_archive(
         decoder_sd,
         sd["latents_coarse"].clone(),
