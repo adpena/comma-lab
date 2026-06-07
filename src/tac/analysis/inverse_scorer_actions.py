@@ -141,10 +141,15 @@ def build_candidate_queue(
 ) -> list[dict[str, Any]]:
     """Build menu-ILP input rows without optimizing a menu."""
 
-    by_id = {candidate.effect.action_id: candidate for candidate in candidates or ()}
+    candidate_list = list(candidates or ())
+    by_id = {candidate.effect.action_id: candidate for candidate in candidate_list}
     rows: list[dict[str, Any]] = []
-    for effect in effects:
-        candidate = by_id.get(effect.action_id)
+    for index, effect in enumerate(effects):
+        candidate = (
+            candidate_list[index]
+            if index < len(candidate_list) and candidate_list[index].effect == effect
+            else by_id.get(effect.action_id)
+        )
         blockers = _candidate_blockers(effect)
         cluster = candidate.menu_cluster_hint if candidate is not None else _menu_cluster_hint(effect)
         score_program_operation = _score_program_operation_for_effect(
@@ -214,18 +219,25 @@ def build_score_program_word(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any
     """
 
     operations: list[dict[str, Any]] = []
-    blockers: list[str] = []
+    candidate_blockers: list[str] = []
+    blockers_by_basis: dict[str, list[str]] = {}
+    clean_basis: set[str] = set()
     promotion_blockers: list[str] = []
     total_score_ev = 0.0
     total_byte_cost = 0
     have_score_ev = False
     have_byte_cost = False
+    executable_operation_count = 0
     for index, row in enumerate(rows):
         operation = _score_program_operation_from_row(row, index=index)
         operations.append(operation)
-        blockers.extend(str(value) for value in row.get("blockers") or [])
-        blockers.extend(str(value) for value in row.get("menu_ilp_blockers") or [])
-        blockers.extend(str(value) for value in operation.get("blockers") or [])
+        runtime_blockers = _score_program_runtime_blockers(row, operation)
+        candidate_blockers.extend(runtime_blockers)
+        basis = str(operation.get("basis") or "unknown")
+        blockers_by_basis.setdefault(basis, []).extend(runtime_blockers)
+        if not runtime_blockers:
+            clean_basis.add(basis)
+            executable_operation_count += 1
         promotion_blockers.extend(str(value) for value in row.get("promotion_blockers") or [])
         promotion_blockers.extend(str(value) for value in operation.get("promotion_blockers") or [])
         score_ev = _finite_or_none(row.get("score_ev"))
@@ -237,15 +249,23 @@ def build_score_program_word(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any
             have_byte_cost = True
             total_byte_cost += abs(byte_cost)
 
+    blockers: list[str] = []
+    for basis, basis_blockers in blockers_by_basis.items():
+        if basis not in clean_basis:
+            blockers.extend(basis_blockers)
     word_blockers = _dedupe(blockers)
+    all_candidate_blockers = _dedupe(candidate_blockers)
     word_promotion_blockers = _dedupe(promotion_blockers)
     return {
         "schema": SCORE_PROGRAM_WORD_SCHEMA,
         "interpreter": SCORE_PROGRAM_INTERPRETER,
         "operation_count": len(operations),
+        "executable_operation_count": executable_operation_count,
         "operations": operations,
         "blocked": bool(word_blockers),
         "blockers": word_blockers,
+        "candidate_blockers": all_candidate_blockers,
+        "basis_with_clean_candidate": sorted(clean_basis),
         "promotion_blockers": word_promotion_blockers,
         "total_score_ev": total_score_ev if have_score_ev else None,
         "total_byte_cost": total_byte_cost if have_byte_cost else None,
@@ -418,6 +438,19 @@ def _score_program_operation_from_row(row: Mapping[str, Any], *, index: int) -> 
     operation.setdefault("blockers", list(row.get("blockers") or []))
     operation.setdefault("promotion_blockers", list(row.get("promotion_blockers") or []))
     return operation
+
+
+def _score_program_runtime_blockers(
+    row: Mapping[str, Any],
+    operation: Mapping[str, Any],
+) -> list[str]:
+    return _dedupe(
+        [
+            *[str(value) for value in row.get("blockers") or []],
+            *[str(value) for value in row.get("menu_ilp_blockers") or []],
+            *[str(value) for value in operation.get("blockers") or []],
+        ]
+    )
 
 
 def _score_program_opcode_and_basis(

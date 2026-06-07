@@ -21,6 +21,7 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_SCORE_PROGRAM_INFLATE_MISSING,
     BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING,
     SCORE_PROGRAM_WORD_SCHEMA,
+    build_score_program_word,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (
@@ -30,6 +31,7 @@ from tac.analysis.pr110_baseline_reproduction import (
     build_pr110_k16_baseline_reproduction_from_action_effects,
     validate_pr110_k16_baseline_reproduction,
 )
+from tools import generate_inverse_evaluate_actions as inverse_materializer
 
 
 def _frame0_pose_effect() -> ActionEffect:
@@ -371,6 +373,49 @@ def test_inverse_scorer_generator_keeps_both_ordered_composites() -> None:
     ledger = build_commutator_ledger(singles, composites)
     assert ledger["measured_commutator_count"] == 2
     assert ledger["needs_measurement_count"] == 0
+
+
+def test_score_program_word_keeps_blocked_alternative_candidate_local() -> None:
+    result = generate_inverse_scorer_candidates(
+        [
+            _frame0_pose_effect(),
+            _frame1_birth_effect(),
+            _composite_effect(),
+            _reverse_composite_effect(),
+        ]
+    )
+    rows = [dict(row) for row in result["candidate_queue"]]
+    for row in rows:
+        row["menu_ilp_allowed"] = True
+        row["menu_ilp_blockers"] = []
+    blocked = dict(rows[-1])
+    blocked["action_id"] = f"{blocked['action_id']}__blocked_alternative"
+    blocked["blockers"] = ["blocked_alternative_receiver_motion_missing"]
+    blocked["score_program_operation"] = dict(blocked["score_program_operation"])
+    blocked["score_program_operation"]["action_id"] = blocked["action_id"]
+    blocked["score_program_operation"]["blockers"] = list(blocked["blockers"])
+    rows.append(blocked)
+
+    word = build_score_program_word(rows)
+
+    assert "blocked_alternative_receiver_motion_missing" not in word["blockers"]
+    assert "blocked_alternative_receiver_motion_missing" in word["candidate_blockers"]
+    assert word["executable_operation_count"] == len(rows) - 1
+    assert "B3_both_frame_composite" in word["basis_with_clean_candidate"]
+
+
+def test_inverse_materializer_preserves_distinct_same_action_id_rows() -> None:
+    clean = _composite_effect()
+    payload = clean.as_dict()
+    payload["blockers"] = ["same_action_id_distinct_attempt_blocked"]
+    blocked = ActionEffect.from_dict(payload)
+
+    rows = inverse_materializer._unique_effects([clean, blocked, clean])
+
+    assert [row.blockers for row in rows] == [
+        (),
+        ("same_action_id_distinct_attempt_blocked",),
+    ]
 
 
 def test_inverse_scorer_generator_names_missing_composite_without_inventing_row() -> None:

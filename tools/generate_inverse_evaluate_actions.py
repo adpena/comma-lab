@@ -105,13 +105,15 @@ def _find_hinerv_four_arm_sources(payload: Mapping[str, Any]) -> list[Mapping[st
 
 
 def _unique_effects(effects: Iterable[ActionEffect]) -> list[ActionEffect]:
-    by_id: dict[str, ActionEffect] = {}
-    order: list[str] = []
+    seen: set[str] = set()
+    out: list[ActionEffect] = []
     for effect in effects:
-        if effect.action_id not in by_id:
-            order.append(effect.action_id)
-        by_id[effect.action_id] = effect
-    return [by_id[action_id] for action_id in order]
+        key = json.dumps(effect.as_dict(), sort_keys=True, separators=(",", ":"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(effect)
+    return out
 
 
 def _split_inverse_candidates(effects: Sequence[ActionEffect]) -> tuple[list[ActionEffect], list[ActionEffect]]:
