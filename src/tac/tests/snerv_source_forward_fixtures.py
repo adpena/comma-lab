@@ -51,6 +51,7 @@ def valid_snerv_source_forward_action_effect(
         surface_provenance=build_snerv_source_forward_surface_provenance(
             pair_ids=pair_ids,
             archive_sha256=archive_sha256,
+            extra_by_surface={"official_torch": _official_torch_lineage()},
         ),
     )
 
@@ -88,6 +89,17 @@ def _snerv_scorer_deltas() -> dict[str, Any]:
             surface: {"d_seg": 0.0, "d_pose": 0.0}
             for surface in SOURCE_FORWARD_SURFACES
         },
+    }
+
+
+def _official_torch_lineage() -> dict[str, str]:
+    return {
+        "trained_checkpoint_lineage": "official_trained_checkpoint_state_dict",
+        "checkpoint_sha256": "6" * 64,
+        "state_dict_sha256": "7" * 64,
+        "model_source_sha256": "8" * 64,
+        "source_scope": "official_trained_checkpoint",
+        "capture_origin": "official_upstream_trained_checkpoint",
     }
 
 

@@ -105,6 +105,31 @@ def _scorer_deltas() -> dict:
     }
 
 
+def _official_torch_lineage(*, source_scope: str = "official_trained_checkpoint") -> dict[str, str]:
+    return {
+        "trained_checkpoint_lineage": "official_trained_checkpoint_state_dict",
+        "checkpoint_sha256": "6" * 64,
+        "state_dict_sha256": "7" * 64,
+        "model_source_sha256": "8" * 64,
+        "source_scope": source_scope,
+        "capture_origin": (
+            "official_upstream_trained_checkpoint"
+            if source_scope == "official_trained_checkpoint"
+            else "official_upstream_source_fixture"
+        ),
+    }
+
+
+def _surface_provenance(*, source_scope: str = "official_trained_checkpoint") -> dict:
+    return build_snerv_source_forward_surface_provenance(
+        pair_ids=[0],
+        archive_sha256=ARCHIVE_SHA,
+        extra_by_surface={
+            "official_torch": _official_torch_lineage(source_scope=source_scope)
+        },
+    )
+
+
 def test_output2_boundary_verdict_accepts_only_source_identical_receiver_consumed() -> None:
     verdict = _source_identical_output2_verdict()
 
@@ -180,10 +205,7 @@ def test_source_forward_proof_row_requires_clearable_output2_boundary() -> None:
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
         output2_boundary_verdict=blocked_boundary,
-        surface_provenance=build_snerv_source_forward_surface_provenance(
-            pair_ids=[0],
-            archive_sha256=ARCHIVE_SHA,
-        ),
+        surface_provenance=_surface_provenance(),
     )
 
     assert row["passed"] is False
@@ -205,13 +227,33 @@ def test_source_forward_proof_row_clears_when_output2_boundary_is_source_identic
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
         output2_boundary_verdict=_source_identical_output2_verdict(),
-        surface_provenance=build_snerv_source_forward_surface_provenance(
-            pair_ids=[0],
-            archive_sha256=ARCHIVE_SHA,
-        ),
+        surface_provenance=_surface_provenance(),
     )
 
     assert set(row["tensor_names"]) == set(SOURCE_FORWARD_TENSOR_NAMES)
     assert row["passed"] is True
     assert row["launch_gate_clearable"] is True
     assert validate_snerv_source_forward_proof_action_effect(row)["passed"] is True
+
+
+def test_source_forward_proof_rejects_fixture_scope_official_torch_authority() -> None:
+    row = build_snerv_source_forward_proof_action_effect(
+        action_id=ACTION_ID,
+        archive_sha256=ARCHIVE_SHA,
+        archive_bytes=123,
+        payload_section_hashes={"decoder_payload.output_2": "2" * 64},
+        pair_ids=[0],
+        tensors_by_surface=_tensor_surfaces(),
+        scorer_deltas=_scorer_deltas(),
+        destructive_payload_bit_flip=_bitflip(),
+        output2_boundary_verdict=_source_identical_output2_verdict(),
+        surface_provenance=_surface_provenance(source_scope="official_source_fixture_state"),
+    )
+
+    status = validate_snerv_source_forward_proof_action_effect(row)
+    assert row["passed"] is False
+    assert status["passed"] is False
+    assert (
+        "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
+        in status["blockers"]
+    )

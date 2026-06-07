@@ -1493,6 +1493,7 @@ def test_source_forward_producer_scorer_capture_can_complete_scorer_surface_set(
         checkpoint_sha256="2" * 64,
         state_dict_sha256="3" * 64,
         decoder_len=6,
+        source_scope="official_trained_checkpoint",
     )
 
     row = build_snerv_source_forward_proof_from_archive_packet(
@@ -1576,6 +1577,7 @@ def test_official_torch_upstream_manifest_fails_closed_on_pair_or_hash_drift() -
         checkpoint_sha256="not-a-sha",
         state_dict_sha256="3" * 64,
         decoder_len=6,
+        source_scope="official_trained_checkpoint",
     )
 
     status = validate_snerv_official_torch_upstream_capture_manifest(
@@ -1609,7 +1611,7 @@ def test_source_forward_producer_can_capture_upstream_official_torch_fixture() -
 
     status = row["producer_status"]
     assert status["official_torch_captured_from_upstream_fixture"] is True
-    assert status["official_torch_upstream_capture_manifest_passed"] is True
+    assert status["official_torch_upstream_capture_manifest_passed"] is False
     assert status["official_torch_upstream_capture_schema"] == (
         "snerv_official_tub_source_forward_tensor_bundle.v1"
     )
@@ -1617,13 +1619,13 @@ def test_source_forward_producer_can_capture_upstream_official_torch_fixture() -
     assert row["tensor_hashes"]["official_torch"]["output_2"]
     assert row["tensor_hashes"]["official_torch"]["rgb_pair_uint8"]
     assert row["passed"] is False
-    assert not any(
-        blocker
-        == (
-            "snerv_source_forward_surface_provenance_authority_not_real:"
-            "official_torch:tensor_capture_authority"
-        )
-        for blocker in row["blockers"]
+    assert (
+        "snerv_source_forward_surface_provenance_authority_not_real:"
+        "official_torch:tensor_capture_authority"
+    ) in row["blockers"]
+    assert (
+        "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
+        in row["blockers"]
     )
     assert "source_forward_tensor_shape_mismatch:archive_parseback:mfu_in" in row[
         "blockers"
@@ -1647,6 +1649,8 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
         checkpoint_sha256=source_bundle["checkpoint_sha256"],
         state_dict_sha256=source_bundle["state_dict_sha256"],
         decoder_len=source_bundle["decoder_len"],
+        source_scope=source_bundle["source_scope"],
+        capture_origin="official_upstream_source_fixture",
     )
     reference = unpack_snerv_archive(
         packet["archive_packet"]
@@ -1686,7 +1690,7 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
     assert packet["source_forward_output2_blocker"] == (
         "snerv_official_tub_output2_feature_space_not_receiver_frame_residual"
     )
-    assert row["producer_status"]["official_torch_upstream_capture_manifest_passed"] is True
+    assert row["producer_status"]["official_torch_upstream_capture_manifest_passed"] is False
     assert row["producer_status"]["pact_mlx_captured_from_archive"] is True
     assert row["producer_status"]["torch_scorer_capture_surface_count"] == 4
     assert row["producer_status"]["parseback_receiver_rgb_uint8_equal"] is True
@@ -1724,6 +1728,9 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
         ]
     )
     assert {
+        "snerv_source_forward_surface_provenance_authority_not_real:"
+        "official_torch:tensor_capture_authority",
+        "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing",
         "source_forward_tensor_missing:official_torch:output_2",
         "source_forward_tensor_missing:pact_mlx:output_2",
         "source_forward_tensor_missing:archive_parseback:output_2",
@@ -2854,6 +2861,18 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
         surface_provenance=build_snerv_source_forward_surface_provenance(
             pair_ids=[0],
             archive_sha256="1" * 64,
+            extra_by_surface={
+                "official_torch": {
+                    "trained_checkpoint_lineage": (
+                        "official_trained_checkpoint_state_dict"
+                    ),
+                    "checkpoint_sha256": "6" * 64,
+                    "state_dict_sha256": "7" * 64,
+                    "model_source_sha256": "8" * 64,
+                    "source_scope": "official_trained_checkpoint",
+                    "capture_origin": "official_upstream_trained_checkpoint",
+                }
+            },
         ),
     )
 

@@ -13,6 +13,7 @@ import numpy as np
 from tac.analysis.snerv_source_forward_proof import (
     DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
     REPARAMETERIZED_RENAME_REQUIRED,
+    SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES,
     SOURCE_FORWARD_SURFACES,
     SOURCE_FORWARD_TENSOR_NAMES,
     SOURCE_IDENTICAL,
@@ -159,6 +160,16 @@ def build_snerv_source_forward_proof_from_archive_packet(
                         "state_dict_sha256"
                     ),
                     decoder_len=official_torch_upstream_capture.get("decoder_len"),
+                    source_scope=official_torch_upstream_capture.get("source_scope"),
+                    trained_checkpoint_lineage=(
+                        official_torch_checkpoint_state_dict_kind
+                    ),
+                    capture_origin=(
+                        "official_upstream_trained_checkpoint"
+                        if official_torch_upstream_capture.get("source_scope")
+                        == "official_trained_checkpoint"
+                        else "official_upstream_source_fixture"
+                    ),
                 )
             )
             official_torch_manifest_status = (
@@ -304,6 +315,12 @@ def build_snerv_source_forward_proof_from_archive_packet(
             "official_torch": _official_torch_tensor_capture_authority(
                 official_torch_tensors=official_torch_tensors,
                 receiver_bound_capture=official_torch_capture is not None,
+                manifest_status=official_torch_manifest_status,
+            )
+        },
+        extra_by_surface={
+            "official_torch": _official_torch_surface_provenance_extra(
+                manifest=official_torch_capture_manifest,
                 manifest_status=official_torch_manifest_status,
             )
         },
@@ -587,6 +604,9 @@ def build_snerv_official_torch_upstream_capture_manifest(
     state_dict_sha256: str | None = None,
     decoder_len: int | None = None,
     capture_authority: str = SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY,
+    source_scope: str | None = None,
+    trained_checkpoint_lineage: str = "official_trained_checkpoint_state_dict",
+    capture_origin: str = "official_upstream_trained_checkpoint",
 ) -> dict[str, Any]:
     """Build the manifest required for official Torch SourceForward authority.
 
@@ -611,6 +631,9 @@ def build_snerv_official_torch_upstream_capture_manifest(
         "checkpoint_sha256": checkpoint_sha256,
         "state_dict_sha256": state_dict_sha256,
         "decoder_len": None if decoder_len is None else int(decoder_len),
+        "source_scope": source_scope,
+        "trained_checkpoint_lineage": str(trained_checkpoint_lineage),
+        "capture_origin": str(capture_origin),
         "pair_ids": [int(value) for value in pair_ids],
         "tensor_names": sorted(str(name) for name in tensor_names),
         "upstream_forward_replay_verified": True,
@@ -664,6 +687,17 @@ def validate_snerv_official_torch_upstream_capture_manifest(
     for field in ("model_source_sha256", "checkpoint_sha256", "state_dict_sha256"):
         if not _looks_like_sha256(row.get(field)):
             blockers.append(f"snerv_official_torch_{field}_invalid")
+    if (
+        str(row.get("trained_checkpoint_lineage") or "")
+        not in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES
+    ):
+        blockers.append(
+            "snerv_official_torch_trained_checkpoint_lineage_missing"
+        )
+    if str(row.get("source_scope") or "") != "official_trained_checkpoint":
+        blockers.append(
+            "snerv_official_torch_trained_checkpoint_source_scope_missing"
+        )
     manifest_pair_ids = _normalize_pair_ids(row.get("pair_ids"))
     expected_pair_ids = _normalize_pair_ids(pair_ids)
     if manifest_pair_ids != expected_pair_ids:
@@ -684,6 +718,25 @@ def validate_snerv_official_torch_upstream_capture_manifest(
     return {
         "passed": not _ordered_unique(blockers),
         "blockers": _ordered_unique(blockers),
+    }
+
+
+def _official_torch_surface_provenance_extra(
+    *,
+    manifest: Mapping[str, Any] | None,
+    manifest_status: Mapping[str, Any],
+) -> dict[str, Any]:
+    if manifest_status.get("passed") is not True or not isinstance(manifest, Mapping):
+        return {}
+    return {
+        "trained_checkpoint_lineage": str(
+            manifest.get("trained_checkpoint_lineage") or ""
+        ),
+        "checkpoint_sha256": str(manifest.get("checkpoint_sha256") or ""),
+        "state_dict_sha256": str(manifest.get("state_dict_sha256") or ""),
+        "model_source_sha256": str(manifest.get("model_source_sha256") or ""),
+        "source_scope": str(manifest.get("source_scope") or ""),
+        "capture_origin": str(manifest.get("capture_origin") or ""),
     }
 
 

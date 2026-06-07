@@ -90,6 +90,19 @@ SOURCE_FORWARD_FORBIDDEN_PROVENANCE_TOKENS: tuple[str, ...] = (
     "receiver_bound",
     "not_upstream",
 )
+SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES: tuple[str, ...] = (
+    "official_trained_checkpoint_state_dict",
+    "checkpoint_export_official_trained_checkpoint_state_dict",
+    "official_trained_checkpoint_state_dict_slice",
+)
+SOURCE_FORWARD_OPTIONAL_PROVENANCE_FIELDS: tuple[str, ...] = (
+    "trained_checkpoint_lineage",
+    "checkpoint_sha256",
+    "state_dict_sha256",
+    "model_source_sha256",
+    "source_scope",
+    "capture_origin",
+)
 
 
 def build_snerv_source_forward_surface_provenance(
@@ -100,6 +113,7 @@ def build_snerv_source_forward_surface_provenance(
     backend_by_surface: Mapping[str, str] | None = None,
     tensor_capture_authority_by_surface: Mapping[str, str] | None = None,
     scorer_capture_authority_by_surface: Mapping[str, str] | None = None,
+    extra_by_surface: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Build canonical per-surface custody for SourceForwardProof producers."""
 
@@ -107,9 +121,15 @@ def build_snerv_source_forward_surface_provenance(
     backends = dict(backend_by_surface or {})
     tensor_authority = dict(tensor_capture_authority_by_surface or {})
     scorer_authority = dict(scorer_capture_authority_by_surface or {})
+    extras = {
+        str(surface): dict(value)
+        for surface, value in dict(extra_by_surface or {}).items()
+        if isinstance(value, Mapping)
+    }
     normalized_pair_ids = _normalize_pair_ids(pair_ids)
     return {
         surface: {
+            **extras.get(surface, {}),
             "schema": SOURCE_FORWARD_SURFACE_PROVENANCE_SCHEMA,
             "surface": surface,
             "producer": str(producers.get(surface) or f"{surface}_source_forward"),
@@ -565,6 +585,11 @@ def _validate_surface_provenance(
                 blockers.append(
                     f"snerv_source_forward_surface_provenance_archive_sha256_mismatch:{surface}"
                 )
+        if surface == SOURCE_FORWARD_REFERENCE_SURFACE:
+            _validate_official_torch_trained_checkpoint_lineage(
+                surface_map,
+                blockers=blockers,
+            )
         normalized[surface] = {
             "schema": str(surface_map.get("schema") or ""),
             "surface": str(surface_map.get("surface") or ""),
@@ -578,12 +603,38 @@ def _validate_surface_provenance(
                 if "archive_sha256" in surface_map
                 else {}
             ),
+            **{
+                field: str(surface_map.get(field) or "")
+                for field in SOURCE_FORWARD_OPTIONAL_PROVENANCE_FIELDS
+                if field in surface_map
+            },
         }
     return {
         "passed": not _ordered_unique(blockers),
         "blockers": _ordered_unique(blockers),
         "normalized_surface_provenance": normalized,
     }
+
+
+def _validate_official_torch_trained_checkpoint_lineage(
+    surface_map: Mapping[str, Any],
+    *,
+    blockers: list[str],
+) -> None:
+    lineage = str(surface_map.get("trained_checkpoint_lineage") or "")
+    if lineage not in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES:
+        blockers.append(
+            "snerv_source_forward_official_torch_trained_checkpoint_lineage_missing"
+        )
+    if str(surface_map.get("source_scope") or "") != "official_trained_checkpoint":
+        blockers.append(
+            "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
+        )
+    for field in ("checkpoint_sha256", "state_dict_sha256"):
+        if not _looks_like_sha256(surface_map.get(field)):
+            blockers.append(
+                f"snerv_source_forward_official_torch_{field}_invalid"
+            )
 
 
 def _validate_scorer_deltas(row: Any) -> dict[str, Any]:
