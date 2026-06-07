@@ -21,6 +21,12 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     unpack_snerv_archive,
 )
 
+SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
+SOURCE_IDENTICAL = "SOURCE_IDENTICAL"
+SOURCE_REPARAMETERIZED_RENAME_REQUIRED = "SOURCE_REPARAMETERIZED_RENAME_REQUIRED"
+OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL = "OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL"
+SOURCE_GRAPH_MISMATCH = "SOURCE_GRAPH_MISMATCH"
+
 
 def build_snerv_source_forward_proof_from_archive_packet(
     *,
@@ -266,6 +272,11 @@ def build_snerv_source_forward_proof_from_archive_packet(
         tolerance_by_tensor=tolerance_by_tensor,
         generated_utc=generated_utc,
     )
+    output2_boundary = build_snerv_output2_boundary_verdict(
+        tensors_by_surface=tensors_by_surface,
+        archive_decoder_header=decoded.decode_official_mfu_hfr_tub_payload().header,
+        tolerance=float(dict(tolerance_by_tensor or {}).get("output_2", 0.0)),
+    )
     row["producer_status"] = {
         "schema": "snerv_source_forward_producer_status.v1",
         "archive_receiver_surfaces_bound": True,
@@ -331,8 +342,129 @@ def build_snerv_source_forward_proof_from_archive_packet(
         "torch_scorer_capture_surfaces": sorted(scorer_capture_by_surface),
         "scorer_surface_count": len(dict(scorer_tensors_by_surface or {}))
         + len(scorer_capture_by_surface),
+        "output2_boundary_verdict": output2_boundary,
     }
     return row
+
+
+def build_snerv_output2_boundary_verdict(
+    *,
+    tensors_by_surface: Mapping[str, Mapping[str, Any]],
+    archive_decoder_header: Mapping[str, Any],
+    tolerance: float = 0.0,
+) -> dict[str, Any]:
+    """Classify whether ``output_2`` is one causal tensor or a boundary gap.
+
+    This is intentionally stricter than RGB parity.  A receiver may produce the
+    correct uint8 frames while ``output_2`` is absent, reparameterized, or merely
+    a frame-shaped residual side channel.  Long-run SNeRV source-forward launch
+    needs that distinction as a typed proof field, not an English note.
+    """
+
+    surfaces = {
+        surface: dict(tensors_by_surface.get(surface) or {})
+        for surface in SOURCE_FORWARD_SURFACES
+    }
+    has_output2 = {
+        surface: "output_2" in tensors for surface, tensors in surfaces.items()
+    }
+    shapes = {
+        surface: list(np.asarray(tensors["output_2"]).shape)
+        for surface, tensors in surfaces.items()
+        if "output_2" in tensors
+    }
+    storage_raw = dict(archive_decoder_header).get("tub_output2_storage")
+    storage = dict(storage_raw) if isinstance(storage_raw, Mapping) else {}
+    receiver_consumes_output2 = bool(
+        storage.get("receiver_frame_decode_consumes_output2")
+    )
+    receiver_shape_matches = bool(storage.get("receiver_output2_frame_shape_match"))
+    source_payload_present = bool(storage.get("source_payload_present"))
+    stored = bool(storage.get("stored"))
+    official_has = bool(has_output2["official_torch"])
+    receiver_has = bool(
+        has_output2["archive_parseback"] or has_output2["numpy_receiver"]
+    )
+    all_have = all(has_output2.values())
+
+    blockers: list[str] = []
+    verdict = SOURCE_GRAPH_MISMATCH
+    required_next_step = (
+        "capture_upstream_output2_and_receiver_output2_in_same_coordinate_system"
+    )
+    if all_have:
+        deltas = {
+            surface: _max_abs_delta_or_none(
+                surfaces["official_torch"]["output_2"],
+                surfaces[surface]["output_2"],
+            )
+            for surface in SOURCE_FORWARD_SURFACES
+            if surface != "official_torch"
+        }
+        if any(value is None for value in deltas.values()):
+            verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+            blockers.append("snerv_output2_shape_mismatch_across_surfaces")
+            required_next_step = "rename_or_reparameterize_frame_shaped_output2"
+        elif any(float(value) > float(tolerance) for value in deltas.values()):
+            verdict = SOURCE_GRAPH_MISMATCH
+            blockers.append("snerv_output2_value_mismatch_across_surfaces")
+            required_next_step = "debug_output2_source_receiver_value_deltas"
+        elif not receiver_consumes_output2:
+            verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+            blockers.append("snerv_output2_tensor_present_but_not_receiver_consumed")
+            required_next_step = "bind_output2_to_receiver_frame_decode_or_rename"
+        else:
+            verdict = SOURCE_IDENTICAL
+            required_next_step = "output2_boundary_closed"
+    elif not any(has_output2.values()):
+        verdict = SOURCE_REPARAMETERIZED_RENAME_REQUIRED
+        blockers.append("snerv_output2_not_in_selected_source_forward_basis")
+        required_next_step = "derive_output2_or_remove_output2_from_required_basis"
+    elif receiver_has and not official_has:
+        verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+        blockers.append("snerv_receiver_output2_present_without_upstream_output2")
+        required_next_step = "rename_receiver_side_output2_or_capture_upstream_output2"
+    elif official_has and not receiver_has:
+        verdict = SOURCE_GRAPH_MISMATCH
+        blockers.append("snerv_upstream_output2_not_receiver_bound")
+        required_next_step = "carry_temporal_output2_graph_into_receiver_or_elide"
+    else:
+        verdict = SOURCE_GRAPH_MISMATCH
+        blockers.append("snerv_output2_partial_surface_set")
+
+    if stored and source_payload_present and not receiver_shape_matches:
+        if verdict == SOURCE_IDENTICAL:
+            verdict = OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL
+        blockers.append("snerv_output2_stored_but_receiver_shape_mismatch")
+        required_next_step = "fix_output2_shape_or_stop_calling_it_source_output2"
+
+    return {
+        "schema": SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
+        "verdict": verdict,
+        "passed": verdict == SOURCE_IDENTICAL,
+        "has_output2_by_surface": has_output2,
+        "output2_shapes_by_surface": shapes,
+        "archive_tub_output2_storage": {
+            "stored": stored,
+            "source_payload_present": source_payload_present,
+            "receiver_executes_output2_fusion_from_payload": bool(
+                storage.get("receiver_executes_output2_fusion_from_payload")
+            ),
+            "receiver_frame_decode_consumes_output2": receiver_consumes_output2,
+            "receiver_output2_frame_shape_match": receiver_shape_matches,
+            "receiver_frame_decode_binding_status": storage.get(
+                "receiver_frame_decode_binding_status"
+            ),
+            "score_lagrangian_admission": storage.get("score_lagrangian_admission"),
+            "score_lagrangian_action": storage.get("score_lagrangian_action"),
+        },
+        "blockers": _ordered_unique(blockers),
+        "required_next_step": required_next_step,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA = (
@@ -786,6 +918,17 @@ def _surface_rgb_pair_tensor_for_scorer(surface_tensors: Mapping[str, Any]) -> A
     return None
 
 
+def _max_abs_delta_or_none(left: Any, right: Any) -> float | None:
+    left_arr = np.asarray(left, dtype=np.float64)
+    right_arr = np.asarray(right, dtype=np.float64)
+    if left_arr.shape != right_arr.shape:
+        return None
+    delta = np.abs(left_arr - right_arr)
+    if not np.all(np.isfinite(delta)):
+        return None
+    return float(np.max(delta)) if delta.size else 0.0
+
+
 def _pair_ids_to_frame_indices(pair_ids: Sequence[int], pair_count: int) -> list[int]:
     out: list[int] = []
     for pair_id in pair_ids:
@@ -1044,13 +1187,19 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
 
 
 __all__ = [
+    "OUTPUT2_FAKE_FRAME_SHAPED_SIDECHANNEL",
     "SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY",
     "SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA",
     "SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES",
+    "SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA",
+    "SOURCE_GRAPH_MISMATCH",
+    "SOURCE_IDENTICAL",
+    "SOURCE_REPARAMETERIZED_RENAME_REQUIRED",
     "build_official_torch_primitive_tensors_from_archive_packet",
     "build_official_torch_upstream_fixture_tensors",
     "build_pact_mlx_primitive_tensors_from_archive_packet",
     "build_snerv_official_torch_upstream_capture_manifest",
+    "build_snerv_output2_boundary_verdict",
     "build_snerv_scorer_deltas_from_surface_metrics",
     "build_snerv_source_forward_proof_from_archive_packet",
     "build_torch_scorer_source_forward_surface",

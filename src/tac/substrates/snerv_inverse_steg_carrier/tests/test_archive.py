@@ -19,6 +19,7 @@ from tac.analysis.snerv_source_forward_producer import (
     build_official_torch_primitive_tensors_from_archive_packet,
     build_pact_mlx_primitive_tensors_from_archive_packet,
     build_snerv_official_torch_upstream_capture_manifest,
+    build_snerv_output2_boundary_verdict,
     build_snerv_scorer_deltas_from_surface_metrics,
     build_snerv_source_forward_proof_from_archive_packet,
     build_torch_scorer_source_forward_surface,
@@ -1674,6 +1675,23 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
     assert row["scorer_deltas"]["delta_score_nonrate"] == 0.0
     assert row["first_failed_tensor"] == "output_2"
     assert row["destructive_payload_bit_flip"]["first_failed_tensor"] == "mfu_in"
+    output2_boundary = row["producer_status"]["output2_boundary_verdict"]
+    assert output2_boundary["schema"] == "snerv_output2_boundary_verdict.v1"
+    assert output2_boundary["verdict"] == "SOURCE_REPARAMETERIZED_RENAME_REQUIRED"
+    assert output2_boundary["passed"] is False
+    assert output2_boundary["has_output2_by_surface"] == {
+        "official_torch": False,
+        "pact_mlx": False,
+        "archive_parseback": False,
+        "numpy_receiver": False,
+    }
+    assert output2_boundary["archive_tub_output2_storage"]["stored"] is False
+    assert output2_boundary["archive_tub_output2_storage"][
+        "receiver_frame_decode_consumes_output2"
+    ] is False
+    assert output2_boundary["required_next_step"] == (
+        "derive_output2_or_remove_output2_from_required_basis"
+    )
     assert {
         "source_forward_tensor_missing:official_torch:output_2",
         "source_forward_tensor_missing:pact_mlx:output_2",
@@ -1688,6 +1706,35 @@ def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() ->
         blocker.startswith("source_forward_tensor_delta_exceeds_tolerance:")
         for blocker in row["blockers"]
     )
+
+
+def test_output2_boundary_verdict_accepts_source_identical_frame_bound_payload() -> None:
+    archive = _official_output2_source_forward_archive_fixture()
+    decoded = unpack_snerv_archive(archive.packet)
+    tensors = decoded.source_forward_receiver_tensor_surfaces([0])["surface_tensors"][
+        "archive_parseback"
+    ]
+
+    verdict = build_snerv_output2_boundary_verdict(
+        tensors_by_surface=dict.fromkeys(
+            (
+                "official_torch",
+                "pact_mlx",
+                "archive_parseback",
+                "numpy_receiver",
+            ),
+            tensors,
+        ),
+        archive_decoder_header=decoded.decode_official_mfu_hfr_tub_payload().header,
+        tolerance=0.0,
+    )
+
+    assert verdict["verdict"] == "SOURCE_IDENTICAL"
+    assert verdict["passed"] is True
+    assert verdict["blockers"] == []
+    assert verdict["archive_tub_output2_storage"][
+        "receiver_frame_decode_consumes_output2"
+    ] is True
 
 
 def test_official_torch_receiver_bound_capture_is_real_but_not_authority() -> None:
