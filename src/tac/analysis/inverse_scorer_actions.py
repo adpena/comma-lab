@@ -16,11 +16,14 @@ atoms stay missing; callers get blockers instead of synthetic candidate rows.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
+
+import numpy as np
 
 from tac.analysis.action_effect import ActionEffect
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
@@ -30,6 +33,7 @@ INVERSE_SCORER_QUEUE_ROW_SCHEMA = "tac.inverse_scorer_candidate_queue_row.v1"
 SCORE_PROGRAM_WORD_SCHEMA = "tac.score_program_word.v1"
 SCORE_PROGRAM_OPERATION_SCHEMA = "tac.score_program_operation.v1"
 SCORE_PROGRAM_INTERPRETER = "inflate_action_word_v1"
+DIRECT_SEG_WALL_ORACLE_SCHEMA = "tac.direct_seg_wall_oracle_receipt.v1"
 
 BLOCKER_NO_FRAME0_POSE = "inverse_scorer_frame0_pose_action_missing"
 BLOCKER_NO_FRAME1_SEG = "inverse_scorer_frame1_seg_margin_action_missing"
@@ -39,6 +43,14 @@ BLOCKER_SCORE_DELTA_MISSING = "inverse_scorer_exact_delta_missing"
 BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING = "score_program_archive_hash_missing"
 BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING = "score_program_parseback_survival_missing"
 BLOCKER_SCORE_PROGRAM_INFLATE_MISSING = "score_program_inflate_survival_missing"
+BLOCKER_DIRECT_SEG_WALL_EMPTY_SUPPORT = "direct_seg_wall_oracle_empty_support"
+BLOCKER_DIRECT_SEG_WALL_NO_UINT8_MOTION = "direct_seg_wall_oracle_no_uint8_motion"
+BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING = (
+    "uint8_motion_without_segnet_wall_crossing"
+)
+BLOCKER_DIRECT_SEG_WALL_EXACT_SCORE_NOT_IMPROVED = (
+    "direct_seg_wall_oracle_exact_score_not_improved"
+)
 
 
 @dataclass(frozen=True)
@@ -49,6 +61,164 @@ class InverseCandidate:
     menu_cluster_hint: str
     dependencies: tuple[str, ...] = ()
     conflicts: tuple[str, ...] = ()
+
+
+def build_direct_seg_wall_oracle_receipt(
+    *,
+    action_id: str,
+    authority: str,
+    pair_id: int,
+    target_class: int,
+    support_mask: Any,
+    before_argmax: Any,
+    after_argmax: Any,
+    old_d_seg: float,
+    new_d_seg: float,
+    old_d_pose: float | None = None,
+    new_d_pose: float | None = None,
+    before_uint8: Any | None = None,
+    after_uint8: Any | None = None,
+    region_id: str | None = None,
+    support_source: str = "direct_seg_wall_oracle_support_mask",
+    support_encoding: str = "bool_packbits_not_archive_priced",
+    support_encoded_bytes: int | None = None,
+    producer: str = "direct_seg_wall_oracle",
+    consumer: str | None = "inverse_evaluate_candidate_queue",
+) -> dict[str, Any]:
+    """Build a measured teacher receipt for direct SegNet wall crossing.
+
+    This helper does not run SegNet and does not fabricate an optimizer result.
+    It consumes caller-supplied pre/post argmax and optional uint8 surfaces, then
+    emits the exact failure classification needed by HiNeRV/SNeRV fitting code:
+    did receiver-visible motion cross the target argmax wall, or did it merely
+    move pixels inside the wrong chamber?
+    """
+
+    support = np.asarray(support_mask, dtype=bool)
+    before = np.asarray(before_argmax)
+    after = np.asarray(after_argmax)
+    if support.shape != before.shape or support.shape != after.shape:
+        raise ValueError(
+            "support_mask, before_argmax, and after_argmax must share shape; "
+            f"got support={support.shape} before={before.shape} after={after.shape}"
+        )
+    support_cardinality = int(np.count_nonzero(support))
+    before_target = before == int(target_class)
+    after_target = after == int(target_class)
+    wrong_to_target = int(np.count_nonzero(support & (~before_target) & after_target))
+    target_to_wrong = int(np.count_nonzero(support & before_target & (~after_target)))
+    wrong_to_wrong = int(
+        np.count_nonzero(
+            support
+            & (~before_target)
+            & (~after_target)
+            & (np.asarray(before) != np.asarray(after))
+        )
+    )
+    argmax_changed = int(np.count_nonzero(support & (np.asarray(before) != np.asarray(after))))
+    uint8_changed: int | None = None
+    uint8_delta_linf: float | None = None
+    if before_uint8 is not None and after_uint8 is not None:
+        before_u8 = np.asarray(before_uint8)
+        after_u8 = np.asarray(after_uint8)
+        if before_u8.shape != after_u8.shape:
+            raise ValueError(
+                f"before_uint8/after_uint8 shape mismatch: {before_u8.shape} != {after_u8.shape}"
+            )
+        if before_u8.ndim == support.ndim + 1:
+            delta = np.abs(after_u8.astype(np.int16) - before_u8.astype(np.int16))
+            moved = np.any(delta > 0, axis=-1)
+            uint8_delta_linf = float(np.max(delta[support])) if np.any(support) else 0.0
+        elif before_u8.ndim == support.ndim:
+            delta = np.abs(after_u8.astype(np.int16) - before_u8.astype(np.int16))
+            moved = delta > 0
+            uint8_delta_linf = float(np.max(delta[support])) if np.any(support) else 0.0
+        else:
+            raise ValueError(
+                "uint8 surfaces must be support-shaped or support+channel-shaped; "
+                f"got uint8={before_u8.shape} support={support.shape}"
+            )
+        uint8_changed = int(np.count_nonzero(moved & support))
+
+    blockers: list[str] = []
+    if support_cardinality <= 0:
+        blockers.append(BLOCKER_DIRECT_SEG_WALL_EMPTY_SUPPORT)
+    if uint8_changed == 0:
+        blockers.append(BLOCKER_DIRECT_SEG_WALL_NO_UINT8_MOTION)
+    if (uint8_changed or 0) > 0 and wrong_to_target <= 0:
+        blockers.append(BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING)
+
+    provisional = ActionEffect.build(
+        action_id=str(action_id),
+        family="direct_seg_wall_oracle",
+        action_kind="direct_seg_wall_teacher",
+        inverse_source="segnet_margin_gradient",
+        frame_index=1,
+        frame_incidence="seg_pose_joint",
+        candidate_status="measured" if wrong_to_target > 0 else "rejected",
+        authority=str(authority),
+        producer=str(producer),
+        consumer=consumer,
+        pair_ids=[int(pair_id)],
+        class_ids=[int(target_class)],
+        region_ids=[] if region_id is None else [str(region_id)],
+        payload_sections=["receiver_rgb_frame1_teacher_delta"],
+        old_d_seg=float(old_d_seg),
+        new_d_seg=float(new_d_seg),
+        old_d_pose=old_d_pose,
+        new_d_pose=new_d_pose,
+        receiver_surface={
+            "uint8_changed_pixels": uint8_changed,
+            "seg_argmax_changed_pixels": argmax_changed,
+            "seg_wrong_to_target_count": wrong_to_target,
+            "seg_target_to_wrong_count": target_to_wrong,
+            "seg_wrong_to_wrong_count": wrong_to_wrong,
+            "seg_input_delta_linf": uint8_delta_linf,
+        },
+        exact_score_decision="not_applicable",
+        hard_won_count=wrong_to_target,
+        wrong_to_target=wrong_to_target,
+        target_to_wrong=target_to_wrong,
+        wrong_to_wrong=wrong_to_wrong,
+        net_target_support_delta=wrong_to_target - target_to_wrong,
+        uint8_changed_count_region=uint8_changed,
+        seg_input_delta_linf_region=uint8_delta_linf,
+        argmax_changed_count_region=argmax_changed,
+        blockers=blockers,
+    )
+    exact_blockers = list(blockers)
+    if provisional.delta_score_nonrate is None or provisional.delta_score_nonrate >= 0.0:
+        exact_blockers.append(BLOCKER_DIRECT_SEG_WALL_EXACT_SCORE_NOT_IMPROVED)
+    effect_payload = provisional.as_dict()
+    effect_payload["exact_score_decision"] = "accept" if not exact_blockers else "reject"
+    effect_payload["blockers"] = exact_blockers
+    effect = ActionEffect.from_dict(effect_payload)
+    support_hash = _support_mask_sha256(support)
+    return {
+        "schema": DIRECT_SEG_WALL_ORACLE_SCHEMA,
+        "action_id": effect.action_id,
+        "authority": effect.authority,
+        "pair_id": int(pair_id),
+        "target_class": int(target_class),
+        "support_source": str(support_source),
+        "support_cardinality": int(support_cardinality),
+        "support_sha256": support_hash,
+        "support_encoding": str(support_encoding),
+        "support_encoded_bytes": support_encoded_bytes,
+        "archive_executable": bool(
+            support_encoded_bytes is not None and int(support_encoded_bytes) > 0
+        ),
+        "wrong_to_target_count": int(wrong_to_target),
+        "target_to_wrong_count": int(target_to_wrong),
+        "wrong_to_wrong_count": int(wrong_to_wrong),
+        "argmax_changed_count": int(argmax_changed),
+        "uint8_changed_pixels": uint8_changed,
+        "uint8_delta_linf": uint8_delta_linf,
+        "crossed_target_wall": bool(wrong_to_target > 0),
+        "blockers": list(effect.blockers),
+        "action_effect": effect.as_dict(),
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
 
 
 def generate_inverse_scorer_candidates(
@@ -618,6 +788,15 @@ def _score_ev(effect: ActionEffect) -> float | None:
         return None
     value = -float(delta)
     return value if math.isfinite(value) else None
+
+
+def _support_mask_sha256(mask: np.ndarray) -> str:
+    mask_bool = np.ascontiguousarray(np.asarray(mask, dtype=bool))
+    h = hashlib.sha256()
+    h.update(str(tuple(int(v) for v in mask_bool.shape)).encode("ascii"))
+    h.update(b"\0")
+    h.update(np.packbits(mask_bool.reshape(-1).astype(np.uint8)).tobytes())
+    return h.hexdigest()
 
 
 def _byte_cost(effect: ActionEffect) -> int | None:

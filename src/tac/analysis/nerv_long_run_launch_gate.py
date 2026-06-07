@@ -217,6 +217,103 @@ def _positive_unclosed_masked_oracle_birth(rows: list[dict[str, Any]]) -> dict[s
     return None
 
 
+def _target_region_action_archive_closure_status(
+    run_root: Path,
+    *,
+    index: dict[str, list[str]],
+) -> dict[str, Any]:
+    """Find receiver-charged target-region action archive evidence.
+
+    The masked oracle is produced before export, so its candidate blockers are
+    necessarily conservative.  Retire only the blockers proven by later charged
+    archive telemetry; parseback/inflate survival remain separate gates.
+    """
+
+    charged_meta_path: str | None = None
+    selected_archive_path: str | None = None
+    selected_archive_bytes: int | None = None
+    for path, payload in _iter_evidence_payloads(run_root):
+        stack = [payload]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, Mapping):
+                target_actions = node.get("target_region_actions")
+                if isinstance(target_actions, Mapping):
+                    try:
+                        payload_bytes = int(target_actions.get("payload_bytes") or 0)
+                        base64_bytes = int(target_actions.get("base64_text_bytes") or 0)
+                        meta_bytes = int(target_actions.get("charged_meta_json_bytes") or 0)
+                    except (TypeError, ValueError):
+                        payload_bytes = 0
+                        base64_bytes = 0
+                        meta_bytes = 0
+                    if (
+                        target_actions.get("schema") == "hi_nerv_target_region_archive_actions.v1"
+                        and target_actions.get("charged_as_hiv1_meta_blob") is True
+                        and target_actions.get("receiver_consumed") is True
+                        and payload_bytes > 0
+                        and base64_bytes > 0
+                        and meta_bytes > 0
+                    ):
+                        charged_meta_path = path.as_posix()
+                        index.setdefault(
+                            "hi_nerv_target_region_archive_actions.v1",
+                            [],
+                        ).append(path.as_posix())
+                for key in ("selected_archive_bytes", "archive_bytes"):
+                    try:
+                        archive_bytes = int(node.get(key) or 0)
+                    except (TypeError, ValueError):
+                        archive_bytes = 0
+                    if archive_bytes > 0:
+                        selected_archive_bytes = archive_bytes
+                        raw_archive_path = node.get("selected_archive_path") or node.get(
+                            "archive_path"
+                        )
+                        selected_archive_path = (
+                            str(raw_archive_path) if raw_archive_path else path.as_posix()
+                        )
+                stack.extend(node.values())
+            elif isinstance(node, (list, tuple)):
+                stack.extend(node)
+    return {
+        "charged_meta_materialized": charged_meta_path is not None,
+        "charged_meta_path": charged_meta_path,
+        "archive_zip_bytes_measured": selected_archive_bytes is not None,
+        "selected_archive_path": selected_archive_path,
+        "selected_archive_bytes": selected_archive_bytes,
+    }
+
+
+def _target_region_action_closure_blockers(
+    oracle: Mapping[str, Any],
+    *,
+    archive_status: Mapping[str, Any],
+) -> list[str]:
+    blockers = [str(blocker) for blocker in oracle.get("blockers") or []]
+    if archive_status.get("charged_meta_materialized"):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "hinerv_target_region_action_archive_meta_not_materialized",
+                "target_region_action_archive_meta_not_materialized",
+            }
+        ]
+    if archive_status.get("archive_zip_bytes_measured"):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "hinerv_target_region_action_archive_zip_byte_delta_missing",
+                "target_region_action_archive_zip_byte_delta_missing",
+            }
+        ]
+    return blockers
+
+
 def _pose_trusted(row: Mapping[str, Any]) -> bool:
     pose_guard = row.get("pose_guard") or {}
     nonrate = row.get("exact_nonrate") or {}
@@ -827,8 +924,17 @@ def evaluate_nerv_long_run_launch_gate(
             if unclosed_oracle is None:
                 blockers.append("real_video_birth_receipt_missing")
             else:
+                archive_status = _target_region_action_archive_closure_status(
+                    root,
+                    index=evidence_index,
+                )
                 blockers.append("real_video_birth_receipt_archive_unclosed")
-                blockers.extend(str(blocker) for blocker in unclosed_oracle.get("blockers") or [])
+                blockers.extend(
+                    _target_region_action_closure_blockers(
+                        unclosed_oracle,
+                        archive_status=archive_status,
+                    )
+                )
         else:
             highest_level = "L2"
             action_id = str(live.get("action_id"))

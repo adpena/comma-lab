@@ -47,6 +47,7 @@ CLAUDE.md compliance: deterministic, no /tmp, no scorer load.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import struct
@@ -64,6 +65,7 @@ from tac.substrates._shared.decoder_state_codec import (
 from tac.substrates.hi_nerv.target_region_actions import (
     TARGET_REGION_ACTION_META_KEY,
     decode_target_region_actions_from_meta,
+    target_region_action_payload_codec,
     target_region_action_section_telemetry,
 )
 
@@ -530,9 +532,15 @@ def build_archive_section_telemetry(
             actions = decode_target_region_actions_from_meta(meta)
             target_region_actions = target_region_action_section_telemetry(actions)
             raw_b64 = meta.get(TARGET_REGION_ACTION_META_KEY)
-            target_region_actions["base64_text_bytes"] = (
-                len(raw_b64.encode("ascii")) if isinstance(raw_b64, str) else None
-            )
+            if isinstance(raw_b64, str):
+                stored_payload = base64.b64decode(raw_b64.encode("ascii"), validate=True)
+                target_region_actions["payload_bytes"] = len(stored_payload)
+                target_region_actions["payload_codec"] = target_region_action_payload_codec(
+                    stored_payload
+                )
+                target_region_actions["base64_text_bytes"] = len(raw_b64.encode("ascii"))
+            else:
+                target_region_actions["base64_text_bytes"] = None
             target_region_actions["charged_meta_json_bytes"] = len(meta_payload)
         except ValueError as exc:
             blockers.append(f"target_region_action_meta_invalid:{exc}")

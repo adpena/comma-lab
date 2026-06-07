@@ -235,6 +235,28 @@ def test_select_worst_target_region_with_mask_matches_row() -> None:
     assert xs.min() == worst.bbox_x0 and xs.max() + 1 == worst.bbox_x1
 
 
+def test_select_worst_target_region_with_mask_can_use_margin_crossing_utility() -> None:
+    labels = np.zeros((1, 16, 16), dtype=np.int64)
+    labels[0, 0:8, :] = 1
+    labels[0, 12:14, 0:8] = 2
+    candidate = np.zeros_like(labels)
+    target_margin = np.zeros(labels.shape, dtype=np.float64)
+    target_margin[labels == 1] = 6.0
+    target_margin[labels == 2] = 0.01
+
+    raw_worst, _raw_mask = select_worst_target_region_with_mask(labels, candidate)
+    utility_worst, utility_mask = select_worst_target_region_with_mask(
+        labels,
+        candidate,
+        target_margin_bhw=target_margin,
+    )
+
+    assert raw_worst.class_index == 1
+    assert utility_worst.class_index == 2
+    assert utility_worst.score_debt_units < raw_worst.score_debt_units
+    assert int(utility_mask.sum()) == utility_worst.region_pixel_count == 16
+
+
 def test_select_worst_target_region_with_mask_can_exclude_failed_positive_region() -> None:
     labels, candidate = _two_region_labels()
     first, _mask = select_worst_target_region_with_mask(labels, candidate)
@@ -1188,6 +1210,16 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert synthesis["target_region_action_pixel_count"] > 0
     assert synthesis["target_region_action_program_base64"]
     assert synthesis["target_region_action_section_telemetry"]["receiver_consumed"] is True
+    assert synthesis["target_region_action_section_telemetry"]["support_encoding"] == (
+        "explicit_yx_u16_coordinates"
+    )
+    assert synthesis["target_region_action_section_telemetry"]["support_encoded_bytes"] > 0
+    assert len(synthesis["target_region_action_section_telemetry"]["support_sha256"]) == 64
+    direct_wall = synthesis["direct_seg_wall_oracle"]
+    assert direct_wall["schema"] == "tac.direct_seg_wall_oracle_receipt.v1"
+    assert direct_wall["support_cardinality"] == synthesis["target_region_action_pixel_count"]
+    assert len(direct_wall["support_sha256"]) == 64
+    assert direct_wall["action_effect"]["family"] == "direct_seg_wall_oracle"
     assert bool(model.decoder_fake_quant_forward_enabled) is fq_enabled_before
     assert bool(model.decoder_fake_quant_forward_configured_enabled) is fq_configured_before
     assert telemetry["fakequant_survival_candidate_count"] >= payload["accepted_step_count"]

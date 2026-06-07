@@ -78,26 +78,23 @@ def _select_target_region_action_program_from_birth_payload(
     if not candidates:
         return None, None
 
-    def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, float, int]:
+    def _candidate_payload_bytes(row: Mapping[str, Any]) -> int:
+        telemetry = row.get("target_region_action_section_telemetry")
+        if isinstance(telemetry, Mapping):
+            try:
+                payload_bytes = int(telemetry.get("payload_bytes") or 0)
+            except (TypeError, ValueError):
+                payload_bytes = 0
+            if payload_bytes > 0:
+                return payload_bytes
+        try:
+            return int(row.get("target_region_action_payload_bytes") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _candidate_delta_nonrate(row: Mapping[str, Any]) -> float:
         decision = row.get("admission_decision")
         decision = decision if isinstance(decision, Mapping) else {}
-        exact_decision = str(
-            row.get("exact_score_decision")
-            or decision.get("exact_score_decision")
-            or ""
-        ).lower()
-        exact_accepted = bool(
-            row.get("accepted") is True
-            or decision.get("accepted") is True
-            or exact_decision in {"accept", "accepted"}
-        )
-        transitions = row.get("region_argmax_transitions")
-        transitions = transitions if isinstance(transitions, Mapping) else {}
-        support_moved = bool(
-            row.get("target_support_moved") is True
-            or int(transitions.get("wrong_to_target_count") or 0) > 0
-            or int(transitions.get("net_target_support_delta") or 0) > 0
-        )
         delta_raw = row.get("exact_delta_score_nonrate")
         if delta_raw is None:
             delta_raw = decision.get("exact_delta_score_nonrate")
@@ -105,29 +102,91 @@ def _select_target_region_action_program_from_birth_payload(
             delta = float(delta_raw)
         except (TypeError, ValueError):
             delta = float("inf")
-        if not math.isfinite(delta):
-            delta = float("inf")
-        try:
-            payload_bytes = int(row.get("target_region_action_payload_bytes") or 0)
-        except (TypeError, ValueError):
-            payload_bytes = 0
+        return delta if math.isfinite(delta) else float("inf")
+
+    def _candidate_exact_accepted(row: Mapping[str, Any]) -> bool:
+        decision = row.get("admission_decision")
+        decision = decision if isinstance(decision, Mapping) else {}
+        exact_decision = str(
+            row.get("exact_score_decision")
+            or decision.get("exact_score_decision")
+            or ""
+        ).lower()
+        return bool(
+            row.get("accepted") is True
+            or decision.get("accepted") is True
+            or exact_decision in {"accept", "accepted"}
+        )
+
+    def _candidate_support_moved(row: Mapping[str, Any]) -> bool:
+        transitions = row.get("region_argmax_transitions")
+        transitions = transitions if isinstance(transitions, Mapping) else {}
+        return bool(
+            row.get("target_support_moved") is True
+            or int(transitions.get("wrong_to_target_count") or 0) > 0
+            or int(transitions.get("net_target_support_delta") or 0) > 0
+        )
+
+    def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, float, int, float]:
+        exact_accepted = _candidate_exact_accepted(row)
+        support_moved = _candidate_support_moved(row)
+        delta = _candidate_delta_nonrate(row)
+        payload_bytes = _candidate_payload_bytes(row)
+        total_delta = (
+            delta
+            + (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES)) * float(payload_bytes)
+        )
         return (
             0 if exact_accepted else 1,
             0 if support_moved else 1,
-            delta,
+            total_delta,
             payload_bytes,
+            delta,
         )
 
-    selected = min(candidates, key=_candidate_key)
+    eligible_candidates = [
+        row
+        for row in candidates
+        if _candidate_exact_accepted(row)
+        and _candidate_support_moved(row)
+        and _candidate_key(row)[2] < 0.0
+    ]
+    if not eligible_candidates:
+        best = min(candidates, key=_candidate_key)
+        return None, {
+            "schema": "hi_nerv_target_region_action_program_export_selection.v1",
+            "candidate_count": len(candidates),
+            "selected_for_export": False,
+            "blockers": [
+                "hi_nerv_target_region_action_no_total_score_improving_support_moving_candidate"
+            ],
+            "best_candidate_exact_accepted": _candidate_exact_accepted(best),
+            "best_candidate_support_moved": _candidate_support_moved(best),
+            "best_candidate_exact_delta_score_nonrate": _candidate_delta_nonrate(best),
+            "best_candidate_estimated_delta_score_total": _candidate_key(best)[2],
+            "best_candidate_target_region_action_payload_bytes": _candidate_payload_bytes(best),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    selected = min(eligible_candidates, key=_candidate_key)
     program = selected.get("target_region_action_program_base64")
     if not isinstance(program, str) or not program:
         return None, None
     selection = {
         "schema": "hi_nerv_target_region_action_program_export_selection.v1",
         "candidate_count": len(candidates),
-        "target_region_action_payload_bytes": selected.get("target_region_action_payload_bytes"),
+        "eligible_candidate_count": len(eligible_candidates),
+        "selected_for_export": True,
+        "target_region_action_payload_bytes": _candidate_payload_bytes(selected),
         "target_region_action_pixel_count": selected.get("target_region_action_pixel_count"),
-        "exact_delta_score_nonrate": selected.get("exact_delta_score_nonrate"),
+        "exact_delta_score_nonrate": _candidate_delta_nonrate(selected),
+        "estimated_delta_score_total": _candidate_key(selected)[2],
+        "estimated_rate_score_delta": (
+            (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES))
+            * float(_candidate_payload_bytes(selected))
+        ),
         "target_support_moved": selected.get("target_support_moved"),
         "archive_closed_before_export": bool(selected.get("archive_closed") is True),
         "source_schema": selected.get("schema"),

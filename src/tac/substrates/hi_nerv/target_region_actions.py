@@ -9,19 +9,26 @@ render and before scorer/raw-output surfaces.
 from __future__ import annotations
 
 import base64
+import hashlib
 import struct
+import zlib
 from dataclasses import dataclass
 from typing import Any
 
+import brotli  # type: ignore[import-not-found]
 import numpy as np
 import torch
 
 TARGET_REGION_ACTION_META_KEY = "_target_region_actions_v1_b64"
 TARGET_REGION_ACTION_MAGIC = b"HTRA1"
+TARGET_REGION_ACTION_COMPRESSED_MAGIC = b"HTRZ1"
+TARGET_REGION_ACTION_BROTLI_MAGIC = b"HTRB1"
 TARGET_REGION_ACTION_SCHEMA = "hi_nerv_target_region_archive_actions.v1"
 _HEADER_FMT = "<5sH"
+_COMPRESSED_HEADER_FMT = "<5sI"
 _ACTION_HEADER_FMT = "<HBBHHI"
 _HEADER_SIZE = struct.calcsize(_HEADER_FMT)
+_COMPRESSED_HEADER_SIZE = struct.calcsize(_COMPRESSED_HEADER_FMT)
 _ACTION_HEADER_SIZE = struct.calcsize(_ACTION_HEADER_FMT)
 
 
@@ -90,9 +97,41 @@ def encode_target_region_actions(actions: list[TargetRegionPixelAction]) -> byte
     return b"".join(chunks)
 
 
-def decode_target_region_actions(blob: bytes) -> list[TargetRegionPixelAction]:
-    """Decode the charged receiver binary grammar."""
+def encode_target_region_actions_payload(actions: list[TargetRegionPixelAction]) -> bytes:
+    raw = encode_target_region_actions(actions)
+    zlib_compressed = zlib.compress(raw, level=9)
+    brotli_compressed = brotli.compress(raw, quality=11)
+    candidates = [
+        (
+            len(raw),
+            raw,
+        ),
+        (
+            len(zlib_compressed) + _COMPRESSED_HEADER_SIZE,
+            struct.pack(
+                _COMPRESSED_HEADER_FMT,
+                TARGET_REGION_ACTION_COMPRESSED_MAGIC,
+                len(raw),
+            )
+            + zlib_compressed,
+        ),
+        (
+            len(brotli_compressed) + _COMPRESSED_HEADER_SIZE,
+            struct.pack(
+                _COMPRESSED_HEADER_FMT,
+                TARGET_REGION_ACTION_BROTLI_MAGIC,
+                len(raw),
+            )
+            + brotli_compressed,
+        ),
+    ]
+    _size, payload = min(candidates, key=lambda item: item[0])
+    if payload is raw:
+        return raw
+    return payload
 
+
+def _decode_raw_target_region_actions(blob: bytes) -> list[TargetRegionPixelAction]:
     if len(blob) < _HEADER_SIZE:
         raise ValueError("target-region action payload too short")
     magic, action_count = struct.unpack(_HEADER_FMT, blob[:_HEADER_SIZE])
@@ -139,8 +178,67 @@ def decode_target_region_actions(blob: bytes) -> list[TargetRegionPixelAction]:
     return actions
 
 
+def decode_target_region_actions(blob: bytes) -> list[TargetRegionPixelAction]:
+    """Decode the charged receiver binary grammar."""
+
+    if len(blob) >= _COMPRESSED_HEADER_SIZE:
+        magic, raw_size = struct.unpack(
+            _COMPRESSED_HEADER_FMT,
+            blob[:_COMPRESSED_HEADER_SIZE],
+        )
+        if magic == TARGET_REGION_ACTION_COMPRESSED_MAGIC:
+            try:
+                raw = zlib.decompress(blob[_COMPRESSED_HEADER_SIZE:])
+            except zlib.error as exc:
+                raise ValueError(f"bad compressed target-region action payload: {exc}") from exc
+            if len(raw) != int(raw_size):
+                raise ValueError(
+                    "target-region action decompressed size mismatch: "
+                    f"{len(raw)} != {int(raw_size)}"
+                )
+            return _decode_raw_target_region_actions(raw)
+        if magic == TARGET_REGION_ACTION_BROTLI_MAGIC:
+            try:
+                raw = brotli.decompress(blob[_COMPRESSED_HEADER_SIZE:])
+            except brotli.error as exc:
+                raise ValueError(f"bad brotli target-region action payload: {exc}") from exc
+            if len(raw) != int(raw_size):
+                raise ValueError(
+                    "target-region action decompressed size mismatch: "
+                    f"{len(raw)} != {int(raw_size)}"
+                )
+            return _decode_raw_target_region_actions(raw)
+    return _decode_raw_target_region_actions(blob)
+
+
+def target_region_action_payload_codec(payload: bytes) -> str:
+    if payload.startswith(TARGET_REGION_ACTION_BROTLI_MAGIC):
+        return "brotli_wrapped_v1"
+    if payload.startswith(TARGET_REGION_ACTION_COMPRESSED_MAGIC):
+        return "zlib_wrapped_v1"
+    return "raw_v1"
+
+
+def target_region_action_support_sha256(actions: list[TargetRegionPixelAction]) -> str:
+    h = hashlib.sha256()
+    for action in actions:
+        h.update(
+            struct.pack(
+                "<IHHHII",
+                int(action.pair_index),
+                int(action.frame_index),
+                int(action.height),
+                int(action.width),
+                int(action.pixel_count),
+                0,
+            )
+        )
+        h.update(np.asarray(action.yx, dtype="<u2").tobytes(order="C"))
+    return h.hexdigest()
+
+
 def encode_target_region_actions_meta(actions: list[TargetRegionPixelAction]) -> str:
-    return base64.b64encode(encode_target_region_actions(actions)).decode("ascii")
+    return base64.b64encode(encode_target_region_actions_payload(actions)).decode("ascii")
 
 
 def decode_target_region_actions_from_meta(meta: dict[str, Any]) -> list[TargetRegionPixelAction]:
@@ -153,13 +251,22 @@ def decode_target_region_actions_from_meta(meta: dict[str, Any]) -> list[TargetR
 
 
 def target_region_action_section_telemetry(actions: list[TargetRegionPixelAction]) -> dict[str, Any]:
-    payload = encode_target_region_actions(actions)
+    raw_payload = encode_target_region_actions(actions)
+    payload = encode_target_region_actions_payload(actions)
     return {
         "schema": TARGET_REGION_ACTION_SCHEMA,
         "meta_key": TARGET_REGION_ACTION_META_KEY,
         "action_count": len(actions),
         "pixel_count": int(sum(action.pixel_count for action in actions)),
         "payload_bytes": len(payload),
+        "raw_payload_bytes": len(raw_payload),
+        "payload_codec": target_region_action_payload_codec(payload),
+        "support_source": "explicit_payload_coordinates",
+        "support_encoding": "explicit_yx_u16_coordinates",
+        "support_cardinality": int(sum(action.pixel_count for action in actions)),
+        "support_encoded_bytes": int(sum(action.yx.nbytes for action in actions)),
+        "support_sha256": target_region_action_support_sha256(actions),
+        "archive_executable_support": True,
         "charged_as_hiv1_meta_blob": True,
         "receiver_consumed": True,
     }

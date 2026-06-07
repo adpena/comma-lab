@@ -3191,6 +3191,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             min_region_pixels=int(min_region_pixels),
             excluded_region_keys=portfolio_excluded_keys,
             forced_region_key=forced_region_key,
+            target_margin_bhw=target_margin_np,
         )
         if worst.region_unsolved_pixel_count == 0:
             return {
@@ -3881,11 +3882,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             carries the mask/residual bytes through parse-back/inflate.
             """
 
+            from tac.analysis.inverse_scorer_actions import (
+                build_direct_seg_wall_oracle_receipt,
+            )
             from tac.substrates.hi_nerv.target_region_actions import (
                 TARGET_REGION_ACTION_META_KEY,
                 TargetRegionPixelAction,
-                encode_target_region_actions,
                 encode_target_region_actions_meta,
+                encode_target_region_actions_payload,
                 target_region_action_section_telemetry,
             )
 
@@ -3943,9 +3947,55 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         )
                     )
                 action_payload_bytes = (
-                    len(encode_target_region_actions(action_records))
+                    len(encode_target_region_actions_payload(action_records))
                     if action_records
                     else 0
+                )
+                action_section_telemetry = (
+                    target_region_action_section_telemetry(action_records)
+                    if action_records
+                    else None
+                )
+                action_support_encoded_bytes = (
+                    int(action_section_telemetry["support_encoded_bytes"])
+                    if isinstance(action_section_telemetry, dict)
+                    and "support_encoded_bytes" in action_section_telemetry
+                    else None
+                )
+                direct_wall_receipt = build_direct_seg_wall_oracle_receipt(
+                    action_id=(
+                        "direct_seg_wall:"
+                        f"b{int(worst.batch_index)}:"
+                        f"c{int(worst.class_index)}:"
+                        f"r{int(worst.region_label)}:"
+                        f"{mask_name}"
+                    ),
+                    authority="batch_local_live_mlx",
+                    pair_id=int(oracle_pair_indices_np[0]) if oracle_pair_indices_np.size else 0,
+                    target_class=int(birth_class),
+                    support_mask=action_mask,
+                    before_argmax=initial_argmax_np,
+                    after_argmax=oracle_state["argmax_np"],
+                    before_uint8=base_uint8,
+                    after_uint8=oracle_uint8,
+                    old_d_seg=float(initial_d_seg),
+                    new_d_seg=float(oracle_state["d_seg_batch"]),
+                    old_d_pose=initial_d_pose,
+                    new_d_pose=oracle_state["d_pose_batch"],
+                    region_id=(
+                        f"b{int(worst.batch_index)}/"
+                        f"c{int(worst.class_index)}/"
+                        f"r{int(worst.region_label)}"
+                    ),
+                    support_source=f"{mask_name}:receiver_uint8_changed_intersect_mask",
+                    support_encoding=(
+                        "explicit_yx_u16_coordinates"
+                        if action_records
+                        else "research_only_empty_action_mask"
+                    ),
+                    support_encoded_bytes=action_support_encoded_bytes,
+                    producer="hinerv_target_region_masked_residual_oracle",
+                    consumer="inverse_evaluate_candidate_queue",
                 )
                 value_per_payload_byte = (
                     None
@@ -4006,11 +4056,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "target_region_action_payload_bytes": int(action_payload_bytes),
                     "target_region_action_pixel_count": int(action_pixel_count),
                     "target_region_action_value_per_payload_byte_nonrate": value_per_payload_byte,
-                    "target_region_action_section_telemetry": (
-                        target_region_action_section_telemetry(action_records)
-                        if action_records
-                        else None
-                    ),
+                    "target_region_action_section_telemetry": action_section_telemetry,
+                    "direct_seg_wall_oracle": direct_wall_receipt,
                     "target_region_action_program_base64": (
                         encode_target_region_actions_meta(action_records)
                         if action_records

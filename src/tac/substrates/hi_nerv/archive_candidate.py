@@ -1588,6 +1588,12 @@ def export_hi_nerv_mlx_archive(
         submission_dir,
         substrate_pkg_name="hi_nerv",
         repo_root=root,
+        runtime_module_files=(
+            "architecture.py",
+            "archive.py",
+            "inflate.py",
+            "target_region_actions.py",
+        ),
         vendor_shared_inflate_runtime=True,
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)

@@ -18,6 +18,9 @@ with:
 * margin difficulty (mean / min frontier margin via ``region_margin_stats``)
   — a region whose wrong pixels sit just below the decision boundary is easier
   to birth than one deep in an impostor's basin;
+* score-per-margin utility — the evaluator prices wrong pixels linearly, but
+  an actuator must first cross the local argmax wall, so a smaller-margin
+  region can be higher value than a larger high-margin region;
 * a size class (``small`` < 64 px, ``medium`` < 4096 px, ``large`` otherwise)
   so coverage can prove birth at multiple spatial scales;
 * an optional pose-coupling risk (mean of a supplied per-pixel pose-Jacobian
@@ -69,6 +72,7 @@ _VALID_OUTCOMES = frozenset({OUTCOME_BIRTH_ACCEPTED, OUTCOME_BIRTH_REJECTED})
 # A planning row must never carry these as truthy — coverage rows embed inside
 # substrate_artifact_metadata where the harness custody validator refuses them.
 _AUTHORITY_MARKER = "planning_control_false_authority"
+_MARGIN_CROSSING_EPS = 1.0e-6
 
 
 class HardRegionMinerError(ValueError):
@@ -99,6 +103,18 @@ class HardRegion:
     margin_min: float
     region_hard_won_pixels: float
     pose_coupling_risk_mean: float | None
+
+    @property
+    def margin_crossing_hardness_mean(self) -> float:
+        """Positive mean impostor margin an action must overcome."""
+
+        return max(float(self.margin_mean), _MARGIN_CROSSING_EPS)
+
+    @property
+    def score_debt_per_margin_unit(self) -> float:
+        """Contest SegNet debt divided by mean argmax-crossing hardness."""
+
+        return float(self.debt.score_debt_units) / self.margin_crossing_hardness_mean
 
     @property
     def batch_index(self) -> int:
@@ -137,6 +153,8 @@ class HardRegion:
             "size_class": self.size_class,
             "margin_mean": float(self.margin_mean),
             "margin_min": float(self.margin_min),
+            "margin_crossing_hardness_mean": float(self.margin_crossing_hardness_mean),
+            "score_debt_per_margin_unit": float(self.score_debt_per_margin_unit),
             "region_hard_won_pixels": float(self.region_hard_won_pixels),
             "pose_coupling_risk_mean": (
                 None if self.pose_coupling_risk_mean is None else float(self.pose_coupling_risk_mean)
@@ -201,17 +219,23 @@ def _round_robin_by_class(
 ) -> list[HardRegion]:
     """Interleave class-grouped regions so one class cannot fill ``top_k``.
 
-    ``ranked`` is already in global hardness order.  We bucket by
-    ``class_index`` (preserving within-class hardness order), then take one
-    region from each class per round.  Class buckets are visited in ascending
-    ``class_index`` so the result is fully deterministic.
+    ``ranked`` is already in evaluator utility order.  We bucket by
+    ``class_index`` (preserving within-class order), then take one region from
+    each class per round.  Class buckets are visited by their best current
+    utility, not by numeric class id, so a giant high-margin region cannot force
+    the birth actuator away from a smaller but much more crossable target.
     """
 
     by_class: dict[int, list[HardRegion]] = defaultdict(list)
     for _key in ranked:
         region = _key[4]
         by_class[int(region.class_index)].append(region)
-    ordered_classes = sorted(by_class)
+    class_order_key: dict[int, tuple[float, float, float, int, int, int]] = {}
+    for item in ranked:
+        region = item[4]
+        cls = int(region.class_index)
+        class_order_key.setdefault(cls, _region_sort_key(item))
+    ordered_classes = sorted(by_class, key=lambda cls: class_order_key[cls])
     selected: list[HardRegion] = []
     exhausted = False
     cursor = 0
@@ -263,11 +287,13 @@ def mine_hard_regions(
 
     Ordering
     --------
-    Regions are ranked globally by ``(-score_debt_units, -region_hard_won_pixels,
-    -|pose_coupling_mean|, batch_index, class_index, region_label)`` then passed
-    through round-robin-by-class so no single class can fill ``top_k``.  Within
-    a class the hardness order is preserved.  The result's ``rank`` field
-    reflects the FINAL diversity-enforced position (0-based).
+    Regions are ranked globally by
+    ``(-score_debt_per_margin_unit, -score_debt_units,
+    -region_hard_won_pixels, -|pose_coupling_mean|, batch_index, class_index,
+    region_label)`` then passed through round-robin-by-class so no single class
+    can fill ``top_k``.  Class buckets are also visited in this utility order.
+    The result's ``rank`` field reflects the FINAL diversity-enforced position
+    (0-based).
     """
 
     if top_k < 1:
@@ -340,19 +366,7 @@ def mine_hard_regions(
         )
 
     # Sort globally with full deterministic key including the difficulty signal.
-    def _sort_key(item: tuple[float, int, int, int, HardRegion]) -> tuple[float, float, float, int, int, int]:
-        neg_debt, b, c, r, region = item
-        pose_sort = abs(region.pose_coupling_risk_mean) if region.pose_coupling_risk_mean is not None else 0.0
-        return (
-            neg_debt,
-            -float(region.region_hard_won_pixels),
-            -pose_sort,
-            b,
-            c,
-            r,
-        )
-
-    keyed.sort(key=_sort_key)
+    keyed.sort(key=_region_sort_key)
     selected = _round_robin_by_class(keyed, top_k=top_k)
     return [
         HardRegion(
@@ -449,19 +463,7 @@ def mine_hard_regions_from_margin_map(
             )
         )
 
-    def _sort_key(item: tuple[float, int, int, int, HardRegion]) -> tuple[float, float, float, int, int, int]:
-        neg_debt, b, c, r, region = item
-        pose_sort = abs(region.pose_coupling_risk_mean) if region.pose_coupling_risk_mean is not None else 0.0
-        return (
-            neg_debt,
-            -float(region.region_hard_won_pixels),
-            -pose_sort,
-            b,
-            c,
-            r,
-        )
-
-    keyed.sort(key=_sort_key)
+    keyed.sort(key=_region_sort_key)
     selected = _round_robin_by_class(keyed, top_k=top_k)
     return [
         HardRegion(
@@ -492,6 +494,20 @@ def _margin_map_stats(target_margin_bhw: np.ndarray, region_mask_bhw: np.ndarray
         "region_hard_won_pixels": float(hard_won),
         "region_hard_ratio": float(hard_won / margin.size),
     }
+
+
+def _region_sort_key(item: tuple[float, int, int, int, HardRegion]) -> tuple[float, float, float, float, int, int, int]:
+    neg_debt, b, c, r, region = item
+    pose_sort = abs(region.pose_coupling_risk_mean) if region.pose_coupling_risk_mean is not None else 0.0
+    return (
+        -float(region.score_debt_per_margin_unit),
+        neg_debt,
+        -float(region.region_hard_won_pixels),
+        -pose_sort,
+        b,
+        c,
+        r,
+    )
 
 
 def build_hard_region_mining_plan(

@@ -233,6 +233,86 @@ def select_worst_target_region(
     )
 
 
+def _mask_for_debt_row(
+    target: np.ndarray,
+    candidate: np.ndarray,
+    row: TargetRegionDebt,
+) -> np.ndarray:
+    frame_target = target[row.batch_index]
+    frame_candidate = candidate[row.batch_index]
+    if row.region_unsolved_pixel_count > 0:
+        label_mask = (frame_target == row.class_index) & (
+            frame_candidate != row.class_index
+        )
+    else:
+        label_mask = frame_target == row.class_index
+    labeled, _count = ndimage.label(label_mask)
+    mask = np.zeros(target.shape, dtype=np.float32)
+    mask[row.batch_index] = (labeled == row.region_label).astype(np.float32)
+    if int(np.count_nonzero(mask)) != row.region_pixel_count:
+        raise RuntimeError(
+            "target-region mask reconstruction drifted from the priced row; "
+            f"mask={int(np.count_nonzero(mask))} row={row.region_pixel_count} "
+            f"(batch={row.batch_index} class={row.class_index} region={row.region_label})"
+        )
+    return mask
+
+
+def select_target_region_by_margin_crossing_utility(
+    debts: Sequence[TargetRegionDebt],
+    *,
+    target_labels: np.ndarray,
+    candidate_argmax: np.ndarray,
+    target_margin_bhw: np.ndarray,
+) -> TargetRegionDebt:
+    """Select the highest SegNet score debt per target-margin unit.
+
+    Raw unsolved-pixel debt is the evaluator price, but class birth is a
+    threshold-crossing problem: a high-debt region deep behind an impostor
+    margin can be lower expected value than a smaller region already near the
+    argmax wall.  This selector mirrors the durable hard-region miner so the
+    live actuator consumes the same sufficient statistic it writes to disk.
+    """
+
+    if not debts:
+        raise ValueError("at least one target-region debt row is required")
+    target, candidate = _validate_label_pair(target_labels, candidate_argmax)
+    margin_map = np.asarray(target_margin_bhw, dtype=np.float64)
+    if margin_map.ndim == 4 and margin_map.shape[-1] == 1:
+        margin_map = margin_map[..., 0]
+    if margin_map.shape != target.shape:
+        raise ValueError(
+            "target_margin_bhw must match target_labels BHW; got "
+            f"margin={margin_map.shape} target={target.shape}"
+        )
+
+    def _key(row: TargetRegionDebt) -> tuple[float, float, int, int, int]:
+        if not math.isfinite(row.score_debt_units) or row.score_debt_units < 0.0:
+            raise ValueError(
+                "score_debt_units must be finite and non-negative; got "
+                f"{row.score_debt_units} for batch={row.batch_index} "
+                f"class={row.class_index} region={row.region_label}"
+            )
+        mask = _mask_for_debt_row(target, candidate, row).reshape(-1) > 0.0
+        if not np.any(mask):
+            raise RuntimeError(
+                "target-region margin mask reconstruction selected zero pixels "
+                f"(batch={row.batch_index} class={row.class_index} region={row.region_label})"
+            )
+        mean_margin = float(np.mean(margin_map.reshape(-1)[mask]))
+        crossing_hardness = max(mean_margin, 1.0e-6)
+        utility = float(row.score_debt_units) / crossing_hardness
+        return (
+            -utility,
+            -float(row.score_debt_units),
+            int(row.batch_index),
+            int(row.class_index),
+            int(row.region_label),
+        )
+
+    return min(debts, key=_key)
+
+
 def select_worst_target_region_with_mask(
     target_labels: np.ndarray,
     candidate_argmax: np.ndarray,
@@ -240,6 +320,7 @@ def select_worst_target_region_with_mask(
     min_region_pixels: int = 1,
     excluded_region_keys: Sequence[Sequence[int]] | None = None,
     forced_region_key: Sequence[int] | None = None,
+    target_margin_bhw: np.ndarray | None = None,
 ) -> tuple[TargetRegionDebt, np.ndarray]:
     """Return the worst region row plus its full-batch BHW float32 mask."""
 
@@ -282,23 +363,16 @@ def select_worst_target_region_with_mask(
         ]
         positive = [row for row in filtered if row.region_unsolved_pixel_count > 0]
         debts = positive or filtered
-    worst = select_worst_target_region(debts)
-    frame_target = target[worst.batch_index]
-    frame_candidate = candidate[worst.batch_index]
-    if worst.region_unsolved_pixel_count > 0:
-        label_mask = (frame_target == worst.class_index) & (
-            frame_candidate != worst.class_index
+    if target_margin_bhw is not None and forced is None:
+        worst = select_target_region_by_margin_crossing_utility(
+            debts,
+            target_labels=target,
+            candidate_argmax=candidate,
+            target_margin_bhw=target_margin_bhw,
         )
     else:
-        label_mask = frame_target == worst.class_index
-    labeled, _count = ndimage.label(label_mask)
-    mask = np.zeros(target.shape, dtype=np.float32)
-    mask[worst.batch_index] = (labeled == worst.region_label).astype(np.float32)
-    if int(np.count_nonzero(mask)) != worst.region_pixel_count:
-        raise RuntimeError(
-            "worst-region mask reconstruction drifted from the priced row; "
-            f"mask={int(np.count_nonzero(mask))} row={worst.region_pixel_count}"
-        )
+        worst = select_worst_target_region(debts)
+    mask = _mask_for_debt_row(target, candidate, worst)
     return worst, mask
 
 

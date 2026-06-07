@@ -8,6 +8,7 @@ roundtrips across the 3-scale latent pyramid.
 
 from __future__ import annotations
 
+import numpy as np
 import torch
 
 from tac.substrates.hi_nerv.architecture import (
@@ -49,7 +50,11 @@ from tac.substrates.hi_nerv.inflate import build_model_from_archive
 from tac.substrates.hi_nerv.target_region_actions import (
     TARGET_REGION_ACTION_META_KEY,
     TargetRegionPixelAction,
+    decode_target_region_actions,
+    encode_target_region_actions,
     encode_target_region_actions_meta,
+    encode_target_region_actions_payload,
+    target_region_action_payload_codec,
 )
 
 
@@ -596,6 +601,16 @@ def test_receiver_consumes_charged_target_region_action_from_archive_meta():
     assert action_section_telemetry["target_region_actions"]["pixel_count"] == 2
     assert action_section_telemetry["target_region_actions"]["payload_bytes"] > 0
     assert action_section_telemetry["target_region_actions"]["base64_text_bytes"] > 0
+    assert action_section_telemetry["target_region_actions"]["support_source"] == (
+        "explicit_payload_coordinates"
+    )
+    assert action_section_telemetry["target_region_actions"]["support_encoding"] == (
+        "explicit_yx_u16_coordinates"
+    )
+    assert action_section_telemetry["target_region_actions"]["support_cardinality"] == 2
+    assert action_section_telemetry["target_region_actions"]["support_encoded_bytes"] == 8
+    assert len(action_section_telemetry["target_region_actions"]["support_sha256"]) == 64
+    assert action_section_telemetry["target_region_actions"]["archive_executable_support"] is True
     assert action_section_telemetry["target_region_actions"]["charged_as_hiv1_meta_blob"] is True
     assert torch.allclose(base0, action0)
     assert not torch.allclose(base1, action1)
@@ -607,6 +622,31 @@ def test_receiver_consumes_charged_target_region_action_from_archive_meta():
         torch.round(action1[0, :, 4, 5] * 255).to(torch.uint8),
         torch.tensor([0, 255, 33], dtype=torch.uint8),
     )
+
+
+def test_target_region_action_payload_uses_receiver_decodable_compression():
+    y, x = np.mgrid[:32, :32]
+    yx = np.stack([y.ravel(), x.ravel()], axis=1).astype(np.uint16)
+    rgb = np.zeros((yx.shape[0], 3), dtype=np.uint8)
+    rgb[:, 0] = 255
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=32,
+        width=32,
+        yx=yx,
+        rgb_u8=rgb,
+    )
+
+    raw = encode_target_region_actions([action])
+    payload = encode_target_region_actions_payload([action])
+    decoded = decode_target_region_actions(payload)
+
+    assert len(payload) < len(raw)
+    assert target_region_action_payload_codec(payload) == "brotli_wrapped_v1"
+    assert len(decoded) == 1
+    assert np.array_equal(decoded[0].yx, yx)
+    assert np.array_equal(decoded[0].rgb_u8, rgb)
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke

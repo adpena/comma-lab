@@ -1795,6 +1795,42 @@ def test_runner_selects_nested_support_moving_target_region_action() -> None:
     assert selection["ready_for_exact_eval_dispatch"] is False
 
 
+def test_runner_refuses_worsening_target_region_action_export() -> None:
+    from tools.run_compact_renderer_mlx_spine_runner import (
+        _select_target_region_action_program_from_birth_payload,
+    )
+
+    payload = {
+        "schema": "hi_nerv_target_region_birth_payload.v1",
+        "candidate_frontier_telemetry": {
+            "masked_residual_oracle": {
+                "candidates": [
+                    {
+                        "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                        "target_region_action_program_base64": "worsening-action",
+                        "target_support_moved": True,
+                        "exact_delta_score_nonrate": 16.4,
+                        "target_region_action_section_telemetry": {"payload_bytes": 66348},
+                        "admission_decision": {"exact_score_decision": "accept"},
+                    }
+                ],
+            },
+        },
+    }
+
+    program, selection = _select_target_region_action_program_from_birth_payload(payload)
+
+    assert program is None
+    assert selection is not None
+    assert selection["selected_for_export"] is False
+    assert selection["blockers"] == [
+        "hi_nerv_target_region_action_no_total_score_improving_support_moving_candidate"
+    ]
+    assert selection["best_candidate_estimated_delta_score_total"] > 0.0
+    assert selection["promotion_eligible"] is False
+    assert selection["ready_for_exact_eval_dispatch"] is False
+
+
 def test_archive_portfolio_auto_selects_receiver_parity_surviving_codec(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

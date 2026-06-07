@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
+
 from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects
 from tac.analysis.inverse_scorer_actions import (
@@ -20,7 +22,10 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING,
     BLOCKER_SCORE_PROGRAM_INFLATE_MISSING,
     BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING,
+    BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING,
+    DIRECT_SEG_WALL_ORACLE_SCHEMA,
     SCORE_PROGRAM_WORD_SCHEMA,
+    build_direct_seg_wall_oracle_receipt,
     build_score_program_word,
     generate_inverse_scorer_candidates,
 )
@@ -162,6 +167,77 @@ def _with_base_state(effect: ActionEffect, base_state_sha256: str) -> ActionEffe
     payload = effect.as_dict()
     payload["base_state_sha256"] = base_state_sha256
     return ActionEffect.from_dict(payload)
+
+
+def test_direct_seg_wall_oracle_accepts_measured_wrong_to_target_crossing() -> None:
+    support = np.zeros((1, 4, 4), dtype=bool)
+    support[0, 1:3, 1:3] = True
+    before_argmax = np.zeros((1, 4, 4), dtype=np.int64)
+    after_argmax = before_argmax.copy()
+    after_argmax[support] = 2
+    before_u8 = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    after_u8 = before_u8.copy()
+    after_u8[support] = np.array([255, 0, 0], dtype=np.uint8)
+
+    receipt = build_direct_seg_wall_oracle_receipt(
+        action_id="direct-wall-positive",
+        authority="batch_local_live_mlx",
+        pair_id=0,
+        target_class=2,
+        support_mask=support,
+        before_argmax=before_argmax,
+        after_argmax=after_argmax,
+        before_uint8=before_u8,
+        after_uint8=after_u8,
+        old_d_seg=0.50,
+        new_d_seg=0.49,
+        old_d_pose=0.20,
+        new_d_pose=0.20,
+        region_id="b0/c2/r1",
+        support_encoded_bytes=16,
+    )
+
+    assert receipt["schema"] == DIRECT_SEG_WALL_ORACLE_SCHEMA
+    assert receipt["crossed_target_wall"] is True
+    assert receipt["archive_executable"] is True
+    assert receipt["support_cardinality"] == 4
+    assert len(receipt["support_sha256"]) == 64
+    assert receipt["blockers"] == []
+    effect = ActionEffect.from_dict(receipt["action_effect"])
+    assert effect.exact_score_decision == "accept"
+    assert effect.wrong_to_target == 4
+    assert effect.delta_score_nonrate < 0.0
+
+
+def test_direct_seg_wall_oracle_labels_uint8_motion_without_wall_crossing() -> None:
+    support = np.ones((1, 2, 3), dtype=bool)
+    before_argmax = np.zeros((1, 2, 3), dtype=np.int64)
+    after_argmax = np.ones((1, 2, 3), dtype=np.int64)
+    before_u8 = np.zeros((1, 2, 3, 3), dtype=np.uint8)
+    after_u8 = np.full((1, 2, 3, 3), 127, dtype=np.uint8)
+
+    receipt = build_direct_seg_wall_oracle_receipt(
+        action_id="direct-wall-v31-negative",
+        authority="batch_local_live_mlx",
+        pair_id=0,
+        target_class=2,
+        support_mask=support,
+        before_argmax=before_argmax,
+        after_argmax=after_argmax,
+        before_uint8=before_u8,
+        after_uint8=after_u8,
+        old_d_seg=0.50,
+        new_d_seg=0.51,
+        old_d_pose=0.20,
+        new_d_pose=0.19,
+    )
+
+    assert receipt["crossed_target_wall"] is False
+    assert receipt["uint8_changed_pixels"] == 6
+    assert BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING in receipt["blockers"]
+    effect = ActionEffect.from_dict(receipt["action_effect"])
+    assert effect.exact_score_decision == "reject"
+    assert effect.wrong_to_target == 0
 
 
 def _pr110_k1_replay_effect() -> ActionEffect:

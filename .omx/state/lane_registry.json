@@ -70736,15 +70736,15 @@
       "id": "hi_nerv_target_region_birth_v33_archive_action_materializer",
       "name": "HiNeRV target-region birth v33 archive action materializer",
       "phase": 0.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "/Users/adpena/Projects/pact/tools/run_compact_renderer_mlx_spine_runner.py"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v33_archive_action_materializer_20260607T021349Z/compact_renderer_mlx_spine_runner_report.json"
         },
         "contest_cuda": {
           "status": false,
@@ -70813,6 +70813,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "hi_nerv_target_region_birth_v35_compressed_action_payload",
+      "name": "HiNeRV target-region birth v35 compressed action payload",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "hi_nerv_target_region_birth_v35_portfolio_geometry",
+      "name": "HiNeRV target-region portfolio geometry birth smoke v35",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "hi_nerv_target_region_birth_v34_score_per_margin_planner",
+      "name": "HiNeRV target-region birth v34 score-per-margin planner",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Hard-region miner ranks score debt per margin-crossing hardness; receiver target action codec uses charged compressed payload telemetry; runner refuses non-support-moving or total-score-worsening target action exports"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "ruff dirty HiNeRV slice passed; pytest hard_region_miner+long_run_gate+hi_nerv roundtrip+archive_candidate => 120 passed; inverse_scorer_actions+target_region_birth => 51 passed; lane_maturity validate OK"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -70822,5 +70945,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-07T02:15:58Z"
+  "updated_at": "2026-06-07T02:35:56Z"
 }

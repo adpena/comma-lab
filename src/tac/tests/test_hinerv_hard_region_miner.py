@@ -89,17 +89,38 @@ def test_mine_hard_regions_is_deterministic_and_round_robins_across_classes() ->
 
     assert [region.as_dict() for region in first] == [region.as_dict() for region in second]
     assert [region.rank for region in first] == [0, 1, 2, 3]
-    assert [region.class_index for region in first] == [1, 2, 3, 1]
-    assert [region.debt.region_pixel_count for region in first] == [16, 100, 4225, 9]
-    assert [region.size_class for region in first] == ["small", "medium", "large", "small"]
+    assert [region.class_index for region in first] == [3, 2, 1, 1]
+    assert [region.debt.region_pixel_count for region in first] == [4225, 100, 16, 9]
+    assert [region.size_class for region in first] == ["large", "medium", "small", "small"]
 
     plan = build_hard_region_mining_plan(first, source="unit-test", top_k=4)
     assert plan["distinct_classes"] == [1, 2, 3]
-    assert plan["distinct_class_size_buckets"] == [[1, "small"], [2, "medium"], [3, "large"]]
+    assert plan["distinct_class_size_buckets"] == [[3, "large"], [2, "medium"], [1, "small"]]
     assert plan["size_class_histogram"] == {"small": 2, "medium": 1, "large": 1}
     assert plan["authority"] == "planning_control_false_authority"
     require_no_truthy_authority_fields(plan, context="hard_region_plan")
     assert _forbidden_key_paths(plan) == []
+
+
+def test_mine_hard_regions_ranks_crossable_debt_ahead_of_high_margin_wall() -> None:
+    labels = np.zeros((1, 16, 16), dtype=np.int64)
+    labels[0, 0:8, :] = 1
+    labels[0, 12:14, 0:8] = 2
+    candidate = np.zeros_like(labels)
+    logits = np.zeros((*labels.shape, 3), dtype=np.float64)
+    logits[..., 0] = 1.0
+    # Class 1 has much more raw debt, but it is deep behind the impostor wall.
+    logits[labels == 1, 0] = 6.0
+    logits[labels == 1, 1] = 0.0
+    # Class 2 is smaller, but almost at the argmax frontier.
+    logits[labels == 2, 0] = 0.01
+    logits[labels == 2, 2] = 0.0
+
+    regions = mine_hard_regions(labels, candidate, logits, top_k=2)
+
+    assert [region.class_index for region in regions] == [2, 1]
+    assert regions[0].debt.score_debt_units < regions[1].debt.score_debt_units
+    assert regions[0].score_debt_per_margin_unit > regions[1].score_debt_per_margin_unit
 
 
 def test_compact_target_margin_miner_matches_full_logits_ranking() -> None:

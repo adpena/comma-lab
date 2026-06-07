@@ -536,6 +536,78 @@ def test_positive_masked_oracle_is_classified_as_archive_unclosed_birth(
     assert verdict["approved"] is False
 
 
+def test_charged_target_region_archive_evidence_retires_materialization_blockers(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_action_archive_meta_not_materialized",
+                "hinerv_target_region_action_parseback_survival_missing",
+                "hinerv_target_region_action_inflate_survival_missing",
+                "hinerv_target_region_action_archive_zip_byte_delta_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "archive_telemetry.json",
+        {
+            "hi_nerv_archive_codec_custody": {
+                "archive_section_telemetry": {
+                    "target_region_actions": {
+                        "schema": "hi_nerv_target_region_archive_actions.v1",
+                        "charged_as_hiv1_meta_blob": True,
+                        "receiver_consumed": True,
+                        "payload_bytes": 128,
+                        "base64_text_bytes": 172,
+                        "charged_meta_json_bytes": 512,
+                    }
+                }
+            },
+            "receiver_replay_archive_selection": {
+                "selected_archive_path": "/ssd/archive.zip",
+                "selected_archive_bytes": 439003,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "real_video_birth_receipt_archive_unclosed" in verdict["blocking_evidence"]
+    assert (
+        "hinerv_target_region_action_archive_meta_not_materialized"
+        not in verdict["blocking_evidence"]
+    )
+    assert (
+        "hinerv_target_region_action_archive_zip_byte_delta_missing"
+        not in verdict["blocking_evidence"]
+    )
+    assert (
+        "hinerv_target_region_action_parseback_survival_missing"
+        in verdict["blocking_evidence"]
+    )
+    assert "hinerv_target_region_action_inflate_survival_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
 def test_live_birth_without_pose_trust_is_l2(tmp_path: Path) -> None:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt(pose_trusted=False))
