@@ -1027,7 +1027,7 @@ def _wall_normal_sidecar_branch_effect(
         blockers.append(BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED)
     blockers.append(BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING)
     if sidecar.get("support_sha256") and sidecar.get("support_sha256") != support.get("support_sha256"):
-        blockers.append("direct_teacher_and_sidecar_support_hashes_diverge")
+        blockers.append("direct_teacher_and_survived_sidecar_support_hashes_diverge")
     payload_bytes = _first_int(sidecar, "payload_bytes")
     return ActionEffect.build(
         action_id=action_id,

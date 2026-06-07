@@ -298,6 +298,7 @@ def _target_region_action_survival_status(
     run_root: Path,
     *,
     action_id: str | None = None,
+    support_sha256: str | None = None,
     index: dict[str, list[str]],
 ) -> dict[str, Any]:
     parseback_path: str | None = None
@@ -316,6 +317,10 @@ def _target_region_action_survival_status(
                     ).append(path.as_posix())
                     row_action_id = str(node.get("action_id") or "")
                     if action_id and row_action_id != str(action_id):
+                        stack.extend(node.values())
+                        continue
+                    row_support_sha256 = _target_region_action_support_sha256(node)
+                    if support_sha256 and row_support_sha256 != str(support_sha256):
                         stack.extend(node.values())
                         continue
                     if (
@@ -337,6 +342,33 @@ def _target_region_action_survival_status(
         "inflate_survived": inflate_survived,
         "inflate_path": inflate_path,
     }
+
+
+def _target_region_action_support_sha256(payload: Mapping[str, Any]) -> str:
+    candidates: list[Any] = [
+        payload.get("expected_support_sha256"),
+        payload.get("support_sha256"),
+    ]
+    target_region_actions = payload.get("target_region_actions")
+    if isinstance(target_region_actions, Mapping):
+        candidates.extend(
+            [
+                target_region_actions.get("support_sha256"),
+                target_region_actions.get("expected_support_sha256"),
+            ]
+        )
+    telemetry = payload.get("target_region_action_section_telemetry")
+    if isinstance(telemetry, Mapping):
+        candidates.extend(
+            [
+                telemetry.get("support_sha256"),
+                telemetry.get("expected_support_sha256"),
+            ]
+        )
+    for value in candidates:
+        if isinstance(value, str) and value:
+            return value
+    return ""
 
 
 def _target_region_action_closure_blockers(
@@ -484,6 +516,7 @@ def _survival_rows_for_action(
     *,
     action_id: str,
     surface: str,
+    expected_support_sha256: str | None = None,
     blockers: list[str],
 ) -> dict[str, Any] | None:
     for row in rows:
@@ -493,6 +526,14 @@ def _survival_rows_for_action(
             blockers.append("action_id_survival_mismatch")
             blockers.append(f"l4_survival_action_id_mismatch:{surface}")
             continue
+        row_support_sha256 = _target_region_action_support_sha256(row)
+        if expected_support_sha256:
+            if not row_support_sha256:
+                blockers.append(f"birth_survival_support_sha256_missing:{surface}")
+                continue
+            if row_support_sha256 != str(expected_support_sha256):
+                blockers.append(f"birth_survival_support_sha256_mismatch:{surface}")
+                continue
         if row.get("pose_compensation_required") is True and row.get("pose_compensation_survived") is not True:
             blockers.append(f"birth_survival_pose_compensation_not_survived:{surface}")
             continue
@@ -542,6 +583,56 @@ def _action_effect_rows_for_action(
     return [row for row in rows if str(row.get("action_id") or "") == action_id]
 
 
+def _action_effect_support_sha256(row: Mapping[str, Any]) -> str:
+    value = row.get("support_sha256")
+    return value if isinstance(value, str) else ""
+
+
+def _action_effect_has_receiver_survival(row: Mapping[str, Any]) -> bool:
+    return (
+        row.get("fakequant_survived") is True
+        and row.get("parseback_survived") is True
+        and row.get("inflate_survived") is True
+    )
+
+
+def _expected_hi_nerv_action_support_sha256(
+    *,
+    action_id: str,
+    action_effect_rows: list[dict[str, Any]],
+    wall_normal_branch_rows: list[dict[str, Any]],
+    lowering_race_rows: list[dict[str, Any]],
+    live_birth_row: Mapping[str, Any],
+) -> str:
+    candidates: list[str] = []
+    live_support = _target_region_action_support_sha256(live_birth_row)
+    if live_support:
+        candidates.append(live_support)
+    for row in _action_effect_rows_for_action(action_effect_rows, action_id=action_id):
+        support_sha256 = _action_effect_support_sha256(row)
+        if support_sha256:
+            candidates.append(support_sha256)
+    for row in wall_normal_branch_rows:
+        action_ids = {str(value) for value in row.get("action_ids") or ()}
+        if action_id not in action_ids:
+            continue
+        support_hashes = [
+            str(value)
+            for value in row.get("support_sha256s") or ()
+            if isinstance(value, str) and value
+        ]
+        if row.get("same_support_sha256") is True and len(support_hashes) == 1:
+            candidates.append(support_hashes[0])
+    for row in lowering_race_rows:
+        if str(row.get("action_id") or "") != action_id:
+            continue
+        support_sha256 = row.get("support_sha256")
+        if isinstance(support_sha256, str) and support_sha256:
+            candidates.append(support_sha256)
+    unique = _dedupe(candidates)
+    return unique[0] if len(unique) == 1 else ""
+
+
 def _validated_action_effect_rows(
     rows: list[dict[str, Any]],
     *,
@@ -565,6 +656,7 @@ def _require_hi_nerv_action_effect_evidence(
     rows: list[dict[str, Any]],
     *,
     action_id: str,
+    expected_support_sha256: str | None = None,
     blockers: list[str],
 ) -> None:
     matches = _action_effect_rows_for_action(rows, action_id=action_id)
@@ -582,7 +674,35 @@ def _require_hi_nerv_action_effect_evidence(
         blockers.append("action_effect_same_action_parseback_survival_missing")
     if not any(row.get("inflate_survived") is True for row in matches):
         blockers.append("action_effect_same_action_inflate_survival_missing")
-    best = next((row for row in matches if _action_effect_has_required_v6_fields(row)), matches[0])
+    receiver_rows = [row for row in matches if _action_effect_has_receiver_survival(row)]
+    complete_receiver_rows = [
+        row for row in receiver_rows if _action_effect_has_required_v6_fields(row)
+    ]
+    if not complete_receiver_rows:
+        blockers.append("action_effect_same_action_same_support_receiver_survival_missing")
+    proof_support_hashes = {
+        _action_effect_support_sha256(row)
+        for row in complete_receiver_rows
+        if _action_effect_support_sha256(row)
+    }
+    if complete_receiver_rows and not proof_support_hashes:
+        blockers.append("action_effect_same_action_same_support_sha256_missing")
+    elif len(proof_support_hashes) > 1:
+        blockers.append("action_effect_same_action_same_support_sha256_mismatch")
+    if expected_support_sha256 and expected_support_sha256 not in proof_support_hashes:
+        blockers.append("action_effect_same_action_same_support_sha256_mismatch")
+        blockers.append(
+            "action_effect_same_action_same_support_receiver_survival_missing"
+        )
+        complete_receiver_rows = [
+            row
+            for row in complete_receiver_rows
+            if _action_effect_support_sha256(row) == expected_support_sha256
+        ]
+    best = next(
+        iter(complete_receiver_rows),
+        next((row for row in matches if _action_effect_has_required_v6_fields(row)), matches[0]),
+    )
     for field in (
         "hard_won_count",
         "wrong_to_target",
@@ -1249,6 +1369,7 @@ def evaluate_nerv_long_run_launch_gate(
                 survival_status = _target_region_action_survival_status(
                     root,
                     action_id=str(unclosed_oracle.get("action_id") or ""),
+                    support_sha256=_target_region_action_support_sha256(unclosed_oracle),
                     index=evidence_index,
                 )
                 blockers.append("real_video_birth_receipt_archive_unclosed")
@@ -1262,6 +1383,13 @@ def evaluate_nerv_long_run_launch_gate(
         else:
             highest_level = "L2"
             action_id = str(live.get("action_id"))
+            expected_support_sha256 = _expected_hi_nerv_action_support_sha256(
+                action_id=action_id,
+                action_effect_rows=action_effect_rows,
+                wall_normal_branch_rows=wall_normal_branch_rows,
+                lowering_race_rows=lowering_race_rows,
+                live_birth_row=live,
+            )
             if _pose_trusted(live) or _pose_trusted_by_pair_local_servo_action_effect(
                 action_effect_rows,
                 action_id=action_id,
@@ -1270,7 +1398,12 @@ def evaluate_nerv_long_run_launch_gate(
                 highest_level = "L3"
             else:
                 blockers.append("pose_trusted_birth_receipt_missing")
-            _require_hi_nerv_action_effect_evidence(action_effect_rows, action_id=action_id, blockers=blockers)
+            _require_hi_nerv_action_effect_evidence(
+                action_effect_rows,
+                action_id=action_id,
+                expected_support_sha256=expected_support_sha256,
+                blockers=blockers,
+            )
             _require_hi_nerv_wall_normal_lift_evidence(
                 wall_normal_lift_rows,
                 action_id=action_id,
@@ -1297,6 +1430,7 @@ def evaluate_nerv_long_run_launch_gate(
                     survival_rows,
                     action_id=action_id,
                     surface=surface,
+                    expected_support_sha256=expected_support_sha256,
                     blockers=blockers,
                 )
                 if row is None:
@@ -1320,6 +1454,7 @@ def evaluate_nerv_long_run_launch_gate(
                 survival_rows,
                 action_id=action_id,
                 surface=SURVIVAL_SURFACE_L5,
+                expected_support_sha256=expected_support_sha256,
                 blockers=blockers,
             )
             if inflate_row is None:

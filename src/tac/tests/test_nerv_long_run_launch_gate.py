@@ -322,6 +322,7 @@ def _survival(
     include_support: bool = True,
     hard_won: int = 2048,
     net_support: int = 2048,
+    support_sha256: str = "9" * 64,
 ) -> dict:
     argmax_transitions = (
         {
@@ -337,6 +338,7 @@ def _survival(
         "fixture_not_real": True,
         "surface": surface,
         "action_id": action_id,
+        "support_sha256": support_sha256,
         "survived": survived,
         "argmax_transitions": argmax_transitions,
     }
@@ -356,6 +358,7 @@ def _hi_nerv_action_effect(
     rejected_by_catastrophic_guard: bool = False,
     target_to_wrong: int = 0,
     wrong_to_wrong: int = 0,
+    support_sha256: str = "9" * 64,
 ) -> dict:
     return ActionEffect.build(
         action_id=ACTION,
@@ -392,6 +395,12 @@ def _hi_nerv_action_effect(
         uint8_changed_count_region=4096,
         seg_input_delta_linf_region=1.0 / 255.0,
         posenet_input_delta_linf_pair=1.0 / 255.0,
+        support_sha256=support_sha256,
+        support_source="archive_executable_target_region_action_support",
+        support_cardinality=2048,
+        support_encoding="target_region_action_coordinates_v1",
+        support_encoded_bytes=8192,
+        support_research_only=False,
         arm=arm,
     ).as_dict()
 
@@ -747,6 +756,7 @@ def test_charged_target_region_archive_evidence_retires_materialization_blockers
             "promotion_blocked": True,
             "exact_accepted_before_archive_closure": True,
             "target_support_moved": True,
+            "target_region_action_section_telemetry": {"support_sha256": "a" * 64},
             "blockers": [
                 "hinerv_target_region_action_archive_meta_not_materialized",
                 "hinerv_target_region_action_parseback_survival_missing",
@@ -865,6 +875,7 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
             "total_action_pixels": 32,
             "exact_uint8_action_pixels_applied": 32,
             "receiver_changed_action_pixels": 32,
+            "target_region_actions": {"support_sha256": "a" * 64},
             "blockers": ["target_region_action_inflate_survival_missing"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -925,6 +936,58 @@ def test_target_region_action_parseback_survival_requires_same_action_id(
             "fakequant_survived": True,
             "parseback_survived": True,
             "inflate_survived": False,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "hinerv_target_region_action_parseback_survival_missing" in (
+        verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_target_region_action_parseback_survival_requires_same_support(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "target_region_action_section_telemetry": {"support_sha256": "a" * 64},
+            "blockers": [
+                "hinerv_target_region_action_parseback_survival_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "target_region_action_parseback_survival.json",
+        {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": ACTION,
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "target_region_actions": {"support_sha256": "b" * 64},
             "blockers": [],
             "score_claim": False,
             "promotion_eligible": False,
@@ -1017,6 +1080,31 @@ def test_hinerv_gate_rejects_failed_evaluator_action_lowering_race(tmp_path: Pat
         in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_same_action_survival_with_different_support(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(root / "fakequant.json", _survival("fakequant_mlx", support_sha256="8" * 64))
+    _write(root / "parseback.json", _survival("parseback_mlx", support_sha256="8" * 64))
+    _write(root / "inflate.json", _survival("inflated_torch_cpu", support_sha256="8" * 64))
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    blocking = verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+    assert "birth_survival_support_sha256_mismatch:fakequant_mlx" in blocking
+    assert "birth_survival_support_sha256_mismatch:parseback_mlx" in blocking
+    assert "birth_survival_support_sha256_mismatch:inflated_torch_cpu" in blocking
+    assert "birth_survival_receipt_missing:fakequant_mlx" in blocking
+    assert "birth_survival_receipt_missing:parseback_mlx" in blocking
+    assert "birth_survival_receipt_missing:inflated_torch_cpu" in blocking
 
 
 def test_pair_local_composite_without_pose_improvement_does_not_supply_pose_trust(
@@ -1474,6 +1562,33 @@ def test_target_to_wrong_still_blocks_hinerv_action_effect(tmp_path: Path) -> No
     )
 
     assert "action_effect_v1_spill_positive:target_to_wrong" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_hinerv_action_effect_survival_must_be_same_support(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(support_sha256="9" * 64),
+                _hi_nerv_action_effect(support_sha256="8" * 64),
+                *_hi_nerv_four_arm_action_effects(),
+            ],
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert (
+        "action_effect_same_action_same_support_sha256_mismatch"
+        in verdict["blocking_evidence"]
+    )
     assert verdict["approved"] is False
 
 

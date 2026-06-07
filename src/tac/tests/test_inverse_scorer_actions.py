@@ -558,6 +558,47 @@ def test_wall_normal_lift_prefers_archive_executable_support_for_branch_identity
     assert "wall_normal_branch_action_id_mismatch" not in branch_receipt["blockers"]
 
 
+def test_wall_normal_branch_receipt_promotes_survived_sidecar_support_divergence() -> None:
+    direct = _direct_wall_candidate(
+        archive_executable_support_sha256="a" * 64,
+    )
+    sidecar = _direct_wall_candidate(
+        archive_executable_support_sha256="a" * 64,
+    )
+    sidecar["target_region_action_section_telemetry"]["support_sha256"] = "b" * 64
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=sidecar,
+    )
+
+    effects = build_wall_normal_branch_action_effects(receipt)
+    sidecar_effect = next(
+        effect
+        for effect in effects
+        if effect.action_kind == "wall_normal_sidecar_fallback"
+    )
+    branch_receipt = build_wall_normal_branch_receipt(effects)
+
+    assert (
+        "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+        in sidecar_effect.blockers
+    )
+    assert (
+        "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+        in branch_receipt["blockers"]
+    )
+    assert branch_receipt["same_support_sha256"] is True
+    assert branch_receipt["support_executable_count"] == 3
+
+
 def test_target_region_wall_normal_lift_blocks_when_direct_teacher_missing() -> None:
     receipt = build_target_region_wall_normal_lift_receipt(
         action_id="wall-normal-action",
