@@ -952,6 +952,34 @@ def _require_hi_nerv_lowering_race_evidence(
         verdict = row.get("verdict")
         verdict = verdict if isinstance(verdict, Mapping) else {}
         row_id = str(row.get("action_id") or verdict.get("action_id") or action_id)
+        schema = str(row.get("schema") or "")
+        if schema == EVALUATOR_ACTION_LOWERING_RACE_SCHEMA:
+            support_identity = row.get("support_identity")
+            if not isinstance(support_identity, Mapping):
+                candidate_blockers.append(
+                    f"evaluator_action_lowering_race_support_identity_missing:{row_id}"
+                )
+                continue
+            support_failure = str(support_identity.get("failure") or "").strip()
+            if support_failure:
+                candidate_blockers.append(
+                    f"evaluator_action_lowering_race_support_identity_failed:{row_id}:{support_failure}"
+                )
+                continue
+            if support_identity.get("all_candidates_same_support") is not True:
+                candidate_blockers.append(
+                    f"evaluator_action_lowering_race_support_mismatch:{row_id}"
+                )
+                continue
+        candidate_count = _lowering_race_candidate_count(row)
+        if (
+            schema == EVALUATOR_ACTION_LOWERING_RACE_SCHEMA
+            or candidate_count is not None
+        ) and (candidate_count is None or candidate_count <= 0):
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_candidate_count_not_positive:{row_id}"
+            )
+            continue
         if row.get("same_support_as_direct_teacher") is False:
             candidate_blockers.append(
                 f"evaluator_action_lowering_race_support_mismatch:{row_id}"
@@ -991,16 +1019,22 @@ def _require_hi_nerv_lowering_race_evidence(
                 f"evaluator_action_lowering_race_nonrate_delta_invalid:{row_id}"
             )
             continue
-        candidate_count = row.get("candidate_count")
-        if candidate_count is not None and (not _finite_number(candidate_count) or int(candidate_count) <= 0):
-            candidate_blockers.append(
-                f"evaluator_action_lowering_race_candidate_count_not_positive:{row_id}"
-            )
-            continue
         return
 
     blockers.append("evaluator_action_lowering_race_not_accepted")
     blockers.extend(_dedupe(candidate_blockers))
+
+
+def _lowering_race_candidate_count(row: Mapping[str, Any]) -> int | None:
+    count = row.get("candidate_count")
+    if count is not None:
+        if not _finite_number(count):
+            return 0
+        return int(count)
+    candidates = row.get("lowering_candidates")
+    if isinstance(candidates, list):
+        return len(candidates)
+    return None
 
 
 def _representative_coverage_ok(

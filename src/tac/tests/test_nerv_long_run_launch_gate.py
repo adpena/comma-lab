@@ -30,6 +30,7 @@ from tac.analysis.nerv_long_run_launch_gate import (
     BIRTH_HYSTERESIS_SCHEMA,
     BIRTH_RECEIPT_SCHEMA,
     BIRTH_SURVIVAL_SCHEMA,
+    EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
     HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
     HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
     REPRESENTATIVE_COVERAGE_SCHEMA,
@@ -632,6 +633,60 @@ def _hi_nerv_lowering_race(
     }
 
 
+def _native_hi_nerv_lowering_race(
+    *,
+    action_id: str = ACTION,
+    include_support_identity: bool = True,
+    all_candidates_same_support: bool = True,
+    support_failure: str | None = None,
+    lowering_candidate_count: int = 1,
+    best_lowering: str = "byte_priced_sidecar",
+    first_failing_surface: str = "none",
+    delta_score_total: float | None = -0.01,
+    authority: str = "inflate_raw",
+) -> dict:
+    row = {
+        "schema": EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
+        "fixture_not_real": True,
+        "action_id": action_id,
+        "lowering_candidates": [
+            {
+                "schema": "tac.evaluator_action_lowering_candidate.v1",
+                "action_id": action_id,
+                "lowering_target": best_lowering,
+                "viable": True,
+                "first_failing_surface": "none",
+            }
+            for _ in range(lowering_candidate_count)
+        ],
+        "verdict": {
+            "schema": "tac.evaluator_action_lowering_verdict.v1",
+            "action_id": action_id,
+            "best_lowering": best_lowering,
+            "first_failing_surface": first_failing_surface,
+            "authority": authority,
+            "delta_score_nonrate": -0.02,
+            "delta_score_total": delta_score_total,
+            "delta_bytes": 128,
+            "value_per_byte": 7.8125e-5,
+        },
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if include_support_identity:
+        row["support_identity"] = {
+            "schema": "tac.evaluator_action_lowering_race.support_identity.v1",
+            "expected_support_sha256": "9" * 64,
+            "support_sha256s": ["9" * 64],
+            "missing_support_sha256_count": 0,
+            "all_candidates_same_support": all_candidates_same_support,
+            "failure": support_failure,
+            "blockers": [] if support_failure is None else [support_failure],
+        }
+    return row
+
+
 def _full_hi_nerv_root(tmp_path: Path) -> Path:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt())
@@ -1077,6 +1132,54 @@ def test_hinerv_gate_rejects_failed_evaluator_action_lowering_race(tmp_path: Pat
     assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
     assert (
         f"evaluator_action_lowering_race_support_mismatch:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_native_lowering_race_without_support_identity(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "lowering_race.json",
+        _native_hi_nerv_lowering_race(include_support_identity=False),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert (
+        f"evaluator_action_lowering_race_support_identity_missing:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_native_lowering_race_without_candidate_rows(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "lowering_race.json",
+        _native_hi_nerv_lowering_race(lowering_candidate_count=0),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert (
+        f"evaluator_action_lowering_race_candidate_count_not_positive:{ACTION}"
         in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
