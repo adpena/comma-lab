@@ -23,6 +23,8 @@ from tac.substrates.hi_nerv.target_region_actions import (
     TargetRegionPixelAction,
     encode_target_region_actions_meta,
     encode_target_region_actions_payload,
+    target_region_action_decoded_action_sha256,
+    target_region_action_decoded_support_sha256,
     target_region_action_support_sha256,
 )
 
@@ -91,6 +93,8 @@ def _tiny_archive_with_action(tmp_path: Path) -> tuple[Path, TargetRegionPixelAc
 def _receipts(tmp_path: Path, archive: Path, action: TargetRegionPixelAction) -> tuple[Path, Path]:
     action_id = "hinerv-test-action"
     support_sha = target_region_action_support_sha256([action])
+    decoded_support_sha = target_region_action_decoded_support_sha256([action])
+    decoded_action_sha = target_region_action_decoded_action_sha256([action])
     payload = encode_target_region_actions_payload([action])
     program_b64 = encode_target_region_actions_meta([action])
     survival = {
@@ -112,6 +116,8 @@ def _receipts(tmp_path: Path, archive: Path, action: TargetRegionPixelAction) ->
         "target_region_actions": {
             "payload_bytes": len(payload),
             "support_sha256": support_sha,
+            "decoded_support_sha256": decoded_support_sha,
+            "decoded_action_sha256": decoded_action_sha,
             "support_cardinality": action.pixel_count,
         },
         "blockers": [],
@@ -223,6 +229,12 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert current["target_region_action_program_sha256"] == hashlib.sha256(
         program_b64.encode("ascii")
     ).hexdigest()
+    assert current["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [action]
+    )
+    assert current["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [action]
+    )
     assert current["survival"]["parseback_survived"] is True
     assert current["survival"]["inflate_survived"] is True
     assert current["first_failed_surface"] == "support_identity_mismatch"
@@ -235,6 +247,14 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert "lowering_target=byte_priced_sidecar" in current["action_effect"]["payload_sections"]
     assert (
         f"target_region_action_program_sha256={current['target_region_action_program_sha256']}"
+        in current["action_effect"]["payload_sections"]
+    )
+    assert (
+        f"decoded_support_sha256={current['decoded_support_sha256']}"
+        in current["action_effect"]["payload_sections"]
+    )
+    assert (
+        f"decoded_action_sha256={current['decoded_action_sha256']}"
         in current["action_effect"]["payload_sections"]
     )
     assert report["lowering_race"]["lowering_candidates"][0]["lowering_target_source"] == "explicit"
@@ -440,6 +460,8 @@ def test_hinerv_action_comparison_rejects_survival_receipt_support_mismatch(
     survival_path, runner_path = _receipts(tmp_path, archive, action)
     survival = json.loads(survival_path.read_text(encoding="utf-8"))
     survival["target_region_actions"]["support_sha256"] = "c" * 64
+    survival["target_region_actions"].pop("decoded_support_sha256", None)
+    survival["target_region_actions"].pop("decoded_action_sha256", None)
     survival_path.write_text(json.dumps(survival), encoding="utf-8")
 
     report = build_hinerv_target_region_action_comparison_from_archive(
@@ -487,6 +509,58 @@ def test_hinerv_action_comparison_rejects_survival_receipt_program_mismatch(
         "target_region_action_survival_identity_mismatch"
     )
     assert report["comparison"]["sidecar_current_inflate_survived"] is False
+
+
+def test_hinerv_action_comparison_rejects_survival_receipt_decoded_action_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    survival = json.loads(survival_path.read_text(encoding="utf-8"))
+    survival["target_region_actions"]["decoded_action_sha256"] = "e" * 64
+    survival_path.write_text(json.dumps(survival), encoding="utf-8")
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+    )
+
+    current = report["sidecar_encoding_candidates"][0]
+    assert report["survival_identity"]["passed"] is False
+    assert report["survival_identity"]["same_decoded_action_sha256"] is False
+    assert "target_region_action_survival_decoded_action_sha256_mismatch" in report[
+        "survival_identity"
+    ]["blockers"]
+    assert current["receiver_bound"] is False
+    assert current["first_failed_surface"] == (
+        "target_region_action_survival_identity_mismatch"
+    )
+    assert report["comparison"]["sidecar_current_inflate_survived"] is False
+
+
+def test_hinerv_action_comparison_accepts_legacy_support_hash_drift_when_decoded_support_matches(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    survival = json.loads(survival_path.read_text(encoding="utf-8"))
+    survival["target_region_actions"]["support_sha256"] = "c" * 64
+    survival_path.write_text(json.dumps(survival), encoding="utf-8")
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+    )
+
+    assert report["survival_identity"]["passed"] is True
+    assert report["survival_identity"]["same_support_sha256"] is False
+    assert report["survival_identity"]["same_decoded_support_sha256"] is True
+    assert report["survival_identity"]["same_decoded_action_sha256"] is True
+    assert report["sidecar_encoding_candidates"][0]["first_failed_surface"] == (
+        "support_identity_mismatch"
+    )
 
 
 def _lowering_source_effect(

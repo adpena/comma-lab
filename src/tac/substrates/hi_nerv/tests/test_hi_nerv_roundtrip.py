@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 
 import numpy as np
+import pytest
 import torch
 
 from tac.substrates.hi_nerv.architecture import (
@@ -56,8 +57,11 @@ from tac.substrates.hi_nerv.target_region_actions import (
     encode_target_region_actions,
     encode_target_region_actions_meta,
     encode_target_region_actions_payload,
+    target_region_action_decoded_action_sha256,
+    target_region_action_decoded_support_sha256,
     target_region_action_payload_codec,
     target_region_action_section_telemetry,
+    target_region_action_support_sha256,
 )
 
 
@@ -613,6 +617,15 @@ def test_receiver_consumes_charged_target_region_action_from_archive_meta():
     assert action_section_telemetry["target_region_actions"]["support_cardinality"] == 2
     assert action_section_telemetry["target_region_actions"]["support_encoded_bytes"] == 8
     assert len(action_section_telemetry["target_region_actions"]["support_sha256"]) == 64
+    assert len(
+        action_section_telemetry["target_region_actions"]["encoded_program_sha256"]
+    ) == 64
+    assert action_section_telemetry["target_region_actions"]["decoded_support_sha256"] == (
+        target_region_action_decoded_support_sha256([action])
+    )
+    assert action_section_telemetry["target_region_actions"]["decoded_action_sha256"] == (
+        target_region_action_decoded_action_sha256([action])
+    )
     assert action_section_telemetry["target_region_actions"]["archive_executable_support"] is True
     assert action_section_telemetry["target_region_actions"]["charged_as_hiv1_meta_blob"] is True
     assert torch.allclose(base0, action0)
@@ -702,11 +715,69 @@ def test_target_region_action_payload_does_not_mislabel_noncanonical_support_as_
     assert np.array_equal(decoded[0].rgb_u8, rgb)
 
 
+def test_target_region_action_decoded_hashes_are_coordinate_order_invariant():
+    yx = np.array([[1, 2], [4, 5], [2, 3]], dtype=np.uint16)
+    rgb = np.array([[10, 20, 30], [40, 50, 60], [70, 80, 90]], dtype=np.uint8)
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=yx,
+        rgb_u8=rgb,
+    )
+    reordered = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=yx[::-1].copy(),
+        rgb_u8=rgb[::-1].copy(),
+    )
+    changed_values = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=yx[::-1].copy(),
+        rgb_u8=np.array([[71, 80, 90], [40, 50, 60], [10, 20, 30]], dtype=np.uint8),
+    )
+
+    assert target_region_action_support_sha256([action]) != target_region_action_support_sha256(
+        [reordered]
+    )
+    assert target_region_action_decoded_support_sha256(
+        [action]
+    ) == target_region_action_decoded_support_sha256([reordered])
+    assert target_region_action_decoded_action_sha256(
+        [action]
+    ) == target_region_action_decoded_action_sha256([reordered])
+    assert target_region_action_decoded_support_sha256(
+        [action]
+    ) == target_region_action_decoded_support_sha256([changed_values])
+    assert target_region_action_decoded_action_sha256(
+        [action]
+    ) != target_region_action_decoded_action_sha256([changed_values])
+
+
+def test_target_region_action_rejects_duplicate_support_coordinates():
+    with pytest.raises(ValueError, match="duplicate-free"):
+        TargetRegionPixelAction(
+            pair_index=0,
+            frame_index=1,
+            height=8,
+            width=8,
+            yx=np.array([[1, 2], [1, 2]], dtype=np.uint16),
+            rgb_u8=np.array([[10, 20, 30], [40, 50, 60]], dtype=np.uint8),
+        )
+
+
 def test_target_region_action_payload_uses_split_brotli_when_streams_win():
     rng = np.random.default_rng(7)
     n = 512
-    y = (np.arange(n, dtype=np.uint16) % 64).astype(np.uint16)
-    x = ((np.arange(n, dtype=np.uint16) * 7) % 64).astype(np.uint16)
+    idx = np.arange(n, dtype=np.uint16)
+    y = (idx // 16).astype(np.uint16)
+    x = ((idx * 5) % 64).astype(np.uint16)
     yx = np.stack([y, x], axis=1).astype(np.uint16)
     rgb = rng.integers(0, 256, size=(n, 3), dtype=np.uint8)
     action = TargetRegionPixelAction(
@@ -733,6 +804,13 @@ def test_target_region_action_payload_uses_split_brotli_when_streams_win():
     assert telemetry["support_encoding"] == "brotli_split_yx_delta_streams"
     assert 0 < telemetry["support_encoded_bytes"] < action.yx.nbytes
     assert telemetry["payload_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert telemetry["encoded_program_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert telemetry["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [action]
+    )
+    assert telemetry["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [action]
+    )
     assert len(telemetry["program_base64_sha256"]) == 64
 
 

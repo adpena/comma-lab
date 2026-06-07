@@ -165,20 +165,6 @@ def build_hinerv_target_region_action_comparison(
         if sidecar_support_mismatch
         else []
     )
-    survival_identity = _survival_identity_status(
-        survival_receipt,
-        action_id=chosen_action_id,
-        support_sha256=support_sha256,
-        archive_sha256=program.archive_sha256,
-        program_sha256=_program_base64_sha256(program),
-    )
-    survival_identity_blockers = list(survival_identity["blockers"])
-    current_receiver_bound = not survival_identity_blockers
-    current_first_failed = (
-        _SURVIVAL_IDENTITY_MISMATCH
-        if survival_identity_blockers
-        else (_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None)
-    )
     current_section_telemetry = dict(
         byte_decomposition.get("target_region_action_section_telemetry") or {}
     )
@@ -190,6 +176,32 @@ def build_hinerv_target_region_action_comparison(
         current_section_telemetry.get("support_encoded_bytes")
         or byte_decomposition["support_coord_u16_bytes"]
     )
+    current_encoded_program_sha256 = str(
+        current_section_telemetry.get("encoded_program_sha256")
+        or hashlib.sha256(program.stored_payload).hexdigest()
+    )
+    current_decoded_support_sha256 = _optional_text(
+        current_section_telemetry.get("decoded_support_sha256")
+    )
+    current_decoded_action_sha256 = _optional_text(
+        current_section_telemetry.get("decoded_action_sha256")
+    )
+    survival_identity = _survival_identity_status(
+        survival_receipt,
+        action_id=chosen_action_id,
+        support_sha256=support_sha256,
+        archive_sha256=program.archive_sha256,
+        program_sha256=_program_base64_sha256(program),
+        decoded_support_sha256=current_decoded_support_sha256,
+        decoded_action_sha256=current_decoded_action_sha256,
+    )
+    survival_identity_blockers = list(survival_identity["blockers"])
+    current_receiver_bound = not survival_identity_blockers
+    current_first_failed = (
+        _SURVIVAL_IDENTITY_MISMATCH
+        if survival_identity_blockers
+        else (_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None)
+    )
 
     base_zip = _action_free_archive_bytes(program)
     old_bytes = int(base_zip["archive_bytes_without_target_region_actions"])
@@ -200,7 +212,10 @@ def build_hinerv_target_region_action_comparison(
         support_sha256=support_sha256,
         archive_sha256=program.archive_sha256,
         payload_sha256=hashlib.sha256(program.stored_payload).hexdigest(),
+        encoded_program_sha256=current_encoded_program_sha256,
         program_sha256=_program_base64_sha256(program),
+        decoded_support_sha256=current_decoded_support_sha256,
+        decoded_action_sha256=current_decoded_action_sha256,
         support_encoding=current_support_encoding,
         action_encoding="exact_rgb_u8",
         encoded_payload_bytes=int(byte_decomposition["stored_payload_bytes"]),
@@ -269,7 +284,10 @@ def build_hinerv_target_region_action_comparison(
                     support_sha256=support_sha256,
                     archive_sha256=program.archive_sha256,
                     payload_sha256=None,
+                    encoded_program_sha256=None,
                     program_sha256=None,
+                    decoded_support_sha256=current_decoded_support_sha256,
+                    decoded_action_sha256=None,
                     support_encoding=str(support["encoding"]),
                     action_encoding=str(action["encoding"]),
                     encoded_payload_bytes=encoded_bytes,
@@ -350,6 +368,8 @@ def build_hinerv_target_region_action_comparison(
         "archive_bytes": int(program.archive_bytes),
         "action_count": action_count,
         "support_sha256": support_sha256,
+        "decoded_support_sha256": current_decoded_support_sha256,
+        "decoded_action_sha256": current_decoded_action_sha256,
         "support_cardinality": int(sum(action.pixel_count for action in program.actions)),
         "byte_decomposition": byte_decomposition,
         "sidecar_economics": sidecar_economics,
@@ -449,7 +469,10 @@ def _comparison_row(
     support_sha256: str,
     archive_sha256: str | None,
     payload_sha256: str | None,
+    encoded_program_sha256: str | None,
     program_sha256: str | None,
+    decoded_support_sha256: str | None,
+    decoded_action_sha256: str | None,
     support_encoding: str,
     action_encoding: str,
     encoded_payload_bytes: int,
@@ -508,7 +531,10 @@ def _comparison_row(
             f"metadata_bytes={metadata_bytes}",
             f"archive_sha256={archive_sha256}",
             f"payload_sha256={payload_sha256}",
+            f"encoded_program_sha256={encoded_program_sha256}",
             f"target_region_action_program_sha256={program_sha256}",
+            f"decoded_support_sha256={decoded_support_sha256}",
+            f"decoded_action_sha256={decoded_action_sha256}",
         ),
         old_d_seg=old_d_seg,
         new_d_seg=new_d_seg,
@@ -554,8 +580,11 @@ def _comparison_row(
         "candidate_kind": candidate_kind,
         "action_id": action_id,
         "support_sha256": support_sha256,
+        "decoded_support_sha256": decoded_support_sha256,
+        "decoded_action_sha256": decoded_action_sha256,
         "archive_sha256": archive_sha256,
         "payload_sha256": payload_sha256,
+        "encoded_program_sha256": encoded_program_sha256,
         "target_region_action_program_sha256": program_sha256,
         "support_encoding": support_encoding,
         "action_encoding": action_encoding,
@@ -1290,6 +1319,8 @@ def _survival_identity_status(
     support_sha256: str,
     archive_sha256: str,
     program_sha256: str | None,
+    decoded_support_sha256: str | None,
+    decoded_action_sha256: str | None,
 ) -> dict[str, Any]:
     observed_action_id = _nested_first_text(
         survival,
@@ -1314,15 +1345,30 @@ def _survival_identity_status(
         ("expected_program_sha256",),
         ("target_region_actions", "program_sha256"),
         ("target_region_actions", "target_region_action_program_sha256"),
+        ("target_region_actions", "program_base64_sha256"),
+    )
+    observed_decoded_support_sha256 = _nested_first_text(
+        survival,
+        ("decoded_support_sha256",),
+        ("target_region_actions", "decoded_support_sha256"),
+    )
+    observed_decoded_action_sha256 = _nested_first_text(
+        survival,
+        ("decoded_action_sha256",),
+        ("target_region_actions", "decoded_action_sha256"),
     )
     blockers: list[str] = []
+    decoded_support_matches = (
+        decoded_support_sha256 is not None
+        and observed_decoded_support_sha256 == decoded_support_sha256
+    )
     if not observed_action_id:
         blockers.append("target_region_action_survival_action_id_missing")
     elif observed_action_id != action_id:
         blockers.append("target_region_action_survival_action_id_mismatch")
-    if not observed_support_sha256:
+    if not observed_support_sha256 and not decoded_support_matches:
         blockers.append("target_region_action_survival_support_sha256_missing")
-    elif observed_support_sha256 != support_sha256:
+    elif observed_support_sha256 != support_sha256 and not decoded_support_matches:
         blockers.append("target_region_action_survival_support_sha256_mismatch")
     if not observed_archive_sha256:
         blockers.append("target_region_action_survival_archive_sha256_missing")
@@ -1333,18 +1379,42 @@ def _survival_identity_status(
             blockers.append("target_region_action_survival_program_sha256_missing")
         elif observed_program_sha256 != program_sha256:
             blockers.append("target_region_action_survival_program_sha256_mismatch")
+    if decoded_support_sha256 is not None:
+        if not observed_decoded_support_sha256:
+            blockers.append("target_region_action_survival_decoded_support_sha256_missing")
+        elif observed_decoded_support_sha256 != decoded_support_sha256:
+            blockers.append("target_region_action_survival_decoded_support_sha256_mismatch")
+    if decoded_action_sha256 is not None:
+        if not observed_decoded_action_sha256:
+            blockers.append("target_region_action_survival_decoded_action_sha256_missing")
+        elif observed_decoded_action_sha256 != decoded_action_sha256:
+            blockers.append("target_region_action_survival_decoded_action_sha256_mismatch")
     return {
         "schema": "hi_nerv_target_region_action_survival_identity.v1",
         "action_id": action_id,
         "support_sha256": support_sha256,
+        "decoded_support_sha256": decoded_support_sha256,
+        "decoded_action_sha256": decoded_action_sha256,
         "archive_sha256": archive_sha256,
         "target_region_action_program_sha256": program_sha256,
         "survival_action_id": observed_action_id,
         "survival_support_sha256": observed_support_sha256,
+        "survival_decoded_support_sha256": observed_decoded_support_sha256,
+        "survival_decoded_action_sha256": observed_decoded_action_sha256,
         "survival_archive_sha256": observed_archive_sha256,
         "survival_program_sha256": observed_program_sha256,
         "same_action_id": observed_action_id == action_id,
         "same_support_sha256": observed_support_sha256 == support_sha256,
+        "same_decoded_support_sha256": (
+            observed_decoded_support_sha256 == decoded_support_sha256
+            if decoded_support_sha256 is not None
+            else None
+        ),
+        "same_decoded_action_sha256": (
+            observed_decoded_action_sha256 == decoded_action_sha256
+            if decoded_action_sha256 is not None
+            else None
+        ),
         "same_archive_sha256": observed_archive_sha256 == archive_sha256,
         "same_program_sha256": (
             observed_program_sha256 == program_sha256 if program_sha256 is not None else None
@@ -1434,6 +1504,13 @@ def _first_text(payload: Mapping[str, Any], *keys: str) -> str | None:
         if isinstance(value, str) and value:
             return value
     return None
+
+
+def _optional_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or None
 
 
 def _first_float(payload: Mapping[str, Any], *keys: str) -> float | None:

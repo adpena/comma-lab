@@ -57,7 +57,7 @@ from tac.substrates.hi_nerv.target_region_actions import (
     TARGET_REGION_ACTION_META_KEY,
     decode_target_region_actions_from_meta,
     target_region_action_payload_codec,
-    target_region_action_section_telemetry,
+    target_region_action_section_telemetry_for_payload,
     wrap_model_with_target_region_actions,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
@@ -295,8 +295,8 @@ def build_hi_nerv_target_region_action_parseback_survival(
         )
     stored_program_sha256 = hashlib.sha256(raw_b64.encode("ascii")).hexdigest()
 
-    telemetry = target_region_action_section_telemetry(actions)
-    telemetry["payload_bytes"] = len(stored_payload)
+    telemetry = target_region_action_section_telemetry_for_payload(actions, stored_payload)
+    telemetry["program_base64_sha256"] = stored_program_sha256
     telemetry["payload_codec"] = target_region_action_payload_codec(stored_payload)
     telemetry["base64_text_bytes"] = len(raw_b64.encode("ascii"))
     blockers: list[str] = []

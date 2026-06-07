@@ -71,6 +71,8 @@ class TargetRegionPixelAction:
             raise ValueError("target-region action must contain at least one pixel")
         if int(np.max(yx[:, 0])) >= int(self.height) or int(np.max(yx[:, 1])) >= int(self.width):
             raise ValueError("target-region action coordinate exceeds declared geometry")
+        if np.unique(yx, axis=0).shape[0] != yx.shape[0]:
+            raise ValueError("target-region action support must be duplicate-free")
         object.__setattr__(self, "yx", np.ascontiguousarray(yx))
         object.__setattr__(self, "rgb_u8", np.ascontiguousarray(rgb))
 
@@ -552,6 +554,58 @@ def target_region_action_support_sha256(actions: list[TargetRegionPixelAction]) 
     return h.hexdigest()
 
 
+def target_region_action_decoded_support_sha256(
+    actions: list[TargetRegionPixelAction],
+) -> str:
+    """Hash the decoded support semantics, independent of coordinate order."""
+
+    h = hashlib.sha256()
+    h.update(b"HTRA_DECODED_SUPPORT_CANON_V1")
+    support_keys: set[tuple[int, int, int, int, int, int]] = set()
+    for action in actions:
+        for y, x in np.asarray(action.yx, dtype=np.uint16):
+            support_keys.add(
+                (
+                    int(action.pair_index),
+                    int(action.frame_index),
+                    int(action.height),
+                    int(action.width),
+                    int(y),
+                    int(x),
+                )
+            )
+    for key in sorted(support_keys):
+        h.update(struct.pack("<IBHHHH", *key))
+    return h.hexdigest()
+
+
+def target_region_action_decoded_action_sha256(
+    actions: list[TargetRegionPixelAction],
+) -> str:
+    """Hash final decoded paint semantics, independent of coordinate order."""
+
+    h = hashlib.sha256()
+    h.update(b"HTRA_DECODED_ACTION_CANON_V1")
+    final_values: dict[tuple[int, int, int, int, int, int], tuple[int, int, int]] = {}
+    for action in actions:
+        yx = np.asarray(action.yx, dtype=np.uint16)
+        rgb = np.asarray(action.rgb_u8, dtype=np.uint8)
+        for (y, x), (r, g, b) in zip(yx, rgb, strict=True):
+            final_values[
+                (
+                    int(action.pair_index),
+                    int(action.frame_index),
+                    int(action.height),
+                    int(action.width),
+                    int(y),
+                    int(x),
+                )
+            ] = (int(r), int(g), int(b))
+    for key, rgb in sorted(final_values.items()):
+        h.update(struct.pack("<IBHHHHBBB", *key, *rgb))
+    return h.hexdigest()
+
+
 def _split_brotli_support_payload_bytes(payload: bytes) -> int:
     magic, action_count = struct.unpack(_HEADER_FMT, payload[:_HEADER_SIZE])
     if magic != TARGET_REGION_ACTION_SPLIT_BROTLI_MAGIC:
@@ -672,23 +726,37 @@ def decode_target_region_actions_from_meta(meta: dict[str, Any]) -> list[TargetR
 
 
 def target_region_action_section_telemetry(actions: list[TargetRegionPixelAction]) -> dict[str, Any]:
+    return target_region_action_section_telemetry_for_payload(
+        actions,
+        encode_target_region_actions_payload(actions),
+    )
+
+
+def target_region_action_section_telemetry_for_payload(
+    actions: list[TargetRegionPixelAction],
+    payload: bytes,
+) -> dict[str, Any]:
     raw_payload = encode_target_region_actions(actions)
-    payload = encode_target_region_actions_payload(actions)
-    program_base64 = base64.b64encode(payload).decode("ascii")
-    support_telemetry = _target_region_action_support_telemetry(payload, actions)
+    stored_payload = bytes(payload)
+    program_base64 = base64.b64encode(stored_payload).decode("ascii")
+    encoded_program_sha256 = hashlib.sha256(stored_payload).hexdigest()
+    support_telemetry = _target_region_action_support_telemetry(stored_payload, actions)
     return {
         "schema": TARGET_REGION_ACTION_SCHEMA,
         "meta_key": TARGET_REGION_ACTION_META_KEY,
         "action_count": len(actions),
         "pixel_count": int(sum(action.pixel_count for action in actions)),
-        "payload_bytes": len(payload),
-        "payload_sha256": hashlib.sha256(payload).hexdigest(),
+        "payload_bytes": len(stored_payload),
+        "payload_sha256": encoded_program_sha256,
+        "encoded_program_sha256": encoded_program_sha256,
         "program_base64_sha256": hashlib.sha256(program_base64.encode("ascii")).hexdigest(),
         "raw_payload_bytes": len(raw_payload),
-        "payload_codec": target_region_action_payload_codec(payload),
+        "payload_codec": target_region_action_payload_codec(stored_payload),
         **support_telemetry,
         "support_cardinality": int(sum(action.pixel_count for action in actions)),
         "support_sha256": target_region_action_support_sha256(actions),
+        "decoded_support_sha256": target_region_action_decoded_support_sha256(actions),
+        "decoded_action_sha256": target_region_action_decoded_action_sha256(actions),
         "archive_executable_support": True,
         "charged_as_hiv1_meta_blob": True,
         "receiver_consumed": True,

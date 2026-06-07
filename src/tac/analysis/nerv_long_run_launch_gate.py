@@ -339,6 +339,14 @@ def _target_region_action_telemetry_blockers(
         support_encoded_bytes = 0
     if support_encoded_bytes <= 0:
         blockers.append("target_region_action_support_encoded_bytes_missing")
+    for field, blocker in (
+        ("encoded_program_sha256", "target_region_action_encoded_program_sha256_missing"),
+        ("decoded_support_sha256", "target_region_action_decoded_support_sha256_missing"),
+        ("decoded_action_sha256", "target_region_action_decoded_action_sha256_missing"),
+    ):
+        value = str(target_actions.get(field) or "").strip()
+        if not value:
+            blockers.append(blocker)
     return blockers
 
 
