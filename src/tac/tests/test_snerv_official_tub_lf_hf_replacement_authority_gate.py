@@ -150,6 +150,46 @@ def test_authority_gate_rejects_metadata_only_source_forward_authority(
     assert FULL_REPLAY_BLOCKER not in report["closed_campaign_blockers"]
 
 
+def test_authority_gate_rejects_fixture_scope_source_forward_action_effect(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+    )
+    proof = valid_snerv_source_forward_action_effect()
+    proof["surface_provenance"]["official_torch"]["source_scope"] = (
+        "official_source_fixture_state"
+    )
+    proof["surface_provenance"]["official_torch"]["capture_origin"] = (
+        "official_upstream_source_fixture"
+    )
+    source["source_forward_replay_proof"] = proof
+
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        source_forward_artifacts=[source],
+        checkpoint_export_reports=[_checkpoint_export_report(trained_mapping=True)],
+        output_root=tmp_path / "gate",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["official_tub_lf_hf_decoder_replacement_ready"] is False
+    proof_status = report["source_forward_evidence"]["source_forward_replay_proof_status"]
+    assert proof_status["source_forward_replay_action_effect_valid"] is False
+    assert (
+        "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
+        in proof_status["source_forward_replay_action_effect_blockers"]
+    )
+    blockers = set(report["queue_blockers"])
+    assert NUMERICAL_SOURCE_FORWARD_PROOF_BLOCKER in blockers
+    assert SOURCE_AUTHORITY_BLOCKER in blockers
+    assert FULL_REPLAY_BLOCKER in blockers
+
+
 def test_authority_gate_keeps_residual_source_forward_blockers_sticky(
     tmp_path: Path,
 ) -> None:

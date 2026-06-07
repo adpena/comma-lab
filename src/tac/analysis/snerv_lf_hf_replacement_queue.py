@@ -459,10 +459,7 @@ def _source_forward_replay_proof(
         selected.get("source_forward_replay_proof"),
         replay.get("source_forward_replay_proof"),
     ):
-        if not isinstance(raw, Mapping):
-            continue
-        status = _source_forward_replay_proof_status(raw)
-        if status["source_forward_replay_numerical_proof_complete"] is True:
+        if isinstance(raw, Mapping):
             return dict(raw)
     return None
 

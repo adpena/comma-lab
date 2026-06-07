@@ -765,7 +765,18 @@ def test_lf_hf_queue_rejects_metadata_only_source_forward_authority(
     assert row["command_argv"] == []
     assert evidence["source_forward_replay_authority"] is False
     assert evidence["source_forward_replay_numerical_proof_complete"] is False
-    assert evidence["source_forward_replay_proof"] is None
+    assert evidence["source_forward_replay_proof"] == {
+        "section_names": ["MFU", "HFR", "TUB"],
+        "shapes_match": True,
+    }
+    assert evidence["source_forward_replay_proof_status"][
+        "source_forward_replay_proof_status"
+    ] == "metadata_only_or_incomplete_source_forward_proof"
+    assert "source_forward_action_effect_proof_missing" in (
+        evidence["source_forward_replay_proof_status"][
+            "source_forward_replay_invalid_fields"
+        ]
+    )
     assert (
         "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
         in blockers
@@ -1338,6 +1349,62 @@ def test_lf_hf_queue_consumes_nested_state_mapping_manifest_without_source_autho
     assert evidence["source_forward_replay_authority"] is False
     assert official["score_claim"] is False
     assert official["command_argv"] == []
+
+
+def test_lf_hf_queue_rejects_fixture_scope_source_forward_action_effect(
+    tmp_path: Path,
+) -> None:
+    source = _source_forward_artifact(
+        official_export_bound=True,
+        receiver_consumes_output2=True,
+        source_authority=True,
+        full_tub_parity=True,
+        state_dict_path=_write_fake_state_dict(tmp_path),
+    )
+    proof = valid_snerv_source_forward_action_effect()
+    proof["surface_provenance"]["official_torch"]["source_scope"] = (
+        "official_source_fixture_state"
+    )
+    proof["surface_provenance"]["official_torch"]["capture_origin"] = (
+        "official_upstream_source_fixture"
+    )
+    source["source_forward_replay_proof"] = proof
+
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        source_forward_artifacts=[source],
+        candidate_feedback_rows=[_candidate_feedback_row(guard_proof_passed=True)],
+        official_replacement_authority_gates=[
+            _official_replacement_authority_gate(ready=False)
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    official = next(
+        row
+        for row in report["queue_rows"]
+        if row["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    blockers = set(official["blockers"])
+    proof_status = official["source_forward_evidence"][
+        "source_forward_replay_proof_status"
+    ]
+    assert official["blocked"] is True
+    assert official["command_argv"] == []
+    assert proof_status["source_forward_replay_action_effect_valid"] is False
+    assert (
+        "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
+        in proof_status["source_forward_replay_action_effect_blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing"
+        in blockers
+    )
 
 
 def test_lf_hf_queue_consumes_value_domain_noncollapse_for_lf_conditioned_hf(
