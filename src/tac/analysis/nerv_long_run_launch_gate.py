@@ -464,10 +464,20 @@ def _target_region_action_survival_status(
                     if support_sha256 and row_support_sha256 != str(support_sha256):
                         stack.extend(node.values())
                         continue
+                    parseback_program_survived = node.get("parseback_program_survived")
+                    if parseback_program_survived is None:
+                        parseback_program_survived = (
+                            node.get("survived") is True
+                            and node.get("parseback_survived") is True
+                        )
+                    parseback_payload_survived = (
+                        node.get("parseback_payload_survived", True) is not False
+                    )
+                    action_parseback_survived = bool(
+                        parseback_payload_survived and parseback_program_survived is True
+                    )
                     same_row_survived = (
-                        node.get("survived") is True
-                        and node.get("fakequant_survived") is True
-                        and node.get("parseback_survived") is True
+                        action_parseback_survived
                         and node.get("inflate_survived") is True
                     )
                     if same_row_survived:
@@ -477,11 +487,7 @@ def _target_region_action_survival_status(
                         inflate_survived = True
                         inflate_path = path.as_posix()
                     else:
-                        if (
-                            node.get("survived") is True
-                            and node.get("fakequant_survived") is True
-                            and node.get("parseback_survived") is True
-                        ):
+                        if action_parseback_survived:
                             parseback_survived = True
                             parseback_path = path.as_posix()
                             partial_parseback_survived = True
