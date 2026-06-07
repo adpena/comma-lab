@@ -926,6 +926,10 @@ def test_v1_from_pair_local_admission_real_admission_roundtrips_structurally() -
     assert eff.segnet_margin_delta == pytest.approx(-0.5)
     assert eff.fakequant_segnet_margin_delta == pytest.approx(-0.4)
     assert eff.parseback_segnet_margin_delta == pytest.approx(-0.3)
+    roundtrip = ActionEffect.from_dict(eff.as_dict())
+    assert roundtrip.segnet_margin_delta == pytest.approx(-0.5)
+    assert roundtrip.fakequant_segnet_margin_delta == pytest.approx(-0.4)
+    assert roundtrip.parseback_segnet_margin_delta == pytest.approx(-0.3)
     # deltas-only admission ⇒ no absolute endpoints ⇒ no fabricated nonrate.
     assert eff.old_d_seg is None
     assert eff.delta_score_nonrate is None

@@ -103,6 +103,8 @@ def _frame1_birth_effect() -> ActionEffect:
         argmax_changed_count_region=7,
         wrong_to_target=5,
         segnet_margin_delta=-0.125,
+        fakequant_segnet_margin_delta=-0.100,
+        parseback_segnet_margin_delta=-0.075,
         support_source="explicit_payload_coordinates",
         support_cardinality=32,
         support_sha256="a" * 64,
@@ -792,7 +794,11 @@ def test_candidate_queue_carries_support_hash_continuity() -> None:
     assert frame1["support_encoded_bytes"] == 64
     assert frame1["support_research_only"] is False
     assert frame1["segnet_margin_delta"] == pytest.approx(-0.125)
+    assert frame1["fakequant_segnet_margin_delta"] == pytest.approx(-0.100)
+    assert frame1["parseback_segnet_margin_delta"] == pytest.approx(-0.075)
     assert frame1["score_program_operation"]["segnet_margin_delta"] == pytest.approx(-0.125)
+    assert frame1["score_program_operation"]["fakequant_segnet_margin_delta"] == pytest.approx(-0.100)
+    assert frame1["score_program_operation"]["parseback_segnet_margin_delta"] == pytest.approx(-0.075)
     assert BLOCKER_REGION_SUPPORT_RESEARCH_ONLY not in frame1["blockers"]
 
 
