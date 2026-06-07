@@ -586,6 +586,7 @@ def test_v1_promotion_eligible_true_raises() -> None:
     payload = base.as_dict()
     payload.pop("old_archive_bytes")
     payload.pop("new_archive_bytes")
+    payload.pop("restore_state_passed")
     with pytest.raises(ValueError, match="promotion_eligible"):
         ActionEffect(**{**payload, "promotion_eligible": True})
 
@@ -605,6 +606,58 @@ def test_v1_built_effect_schema_and_planning_marker() -> None:
     assert eff.schema == ACTION_EFFECT_V1_SCHEMA
     assert eff.promotion_eligible is False
     assert eff.authority == ACTION_EFFECT_PLANNING_AUTHORITY
+
+
+def test_v1_inverse_candidate_metadata_roundtrips() -> None:
+    eff = ActionEffect.build(
+        action_id="frame0_pose_candidate_0001",
+        family="selector",
+        action_kind="inverse_scorer_candidate",
+        inverse_source="posenet_yuv6_gradient",
+        frame_index=0,
+        frame_incidence="pose_only",
+        candidate_status="generated",
+        authority=ACTION_EFFECT_PLANNING_AUTHORITY,
+        producer="inverse_scorer_actions",
+        old_d_seg=0.001,
+        new_d_seg=0.001,
+        old_d_pose=0.0004,
+        new_d_pose=0.00035,
+        old_bytes=178_258,
+        new_bytes=178_258,
+    )
+
+    payload = eff.as_dict()
+    assert payload["inverse_source"] == "posenet_yuv6_gradient"
+    assert payload["frame_index"] == 0
+    assert payload["frame_incidence"] == "pose_only"
+    assert payload["candidate_status"] == "generated"
+    roundtrip = ActionEffect.from_dict(payload)
+    assert roundtrip.inverse_source == "posenet_yuv6_gradient"
+    assert roundtrip.frame_index == 0
+    assert roundtrip.frame_incidence == "pose_only"
+    assert roundtrip.candidate_status == "generated"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("inverse_source", "unknown_inverse", "inverse_source"),
+        ("frame_index", 2, "frame_index"),
+        ("frame_incidence", "seg_only", "frame_incidence"),
+        ("candidate_status", "promoted", "candidate_status"),
+    ],
+)
+def test_v1_inverse_candidate_metadata_rejects_unknown_values(field: str, value: object, match: str) -> None:
+    kwargs = {
+        "action_id": "candidate_bad_metadata",
+        "family": "selector",
+        "authority": ACTION_EFFECT_PLANNING_AUTHORITY,
+        "producer": "unit_test",
+        field: value,
+    }
+    with pytest.raises(ValueError, match=match):
+        ActionEffect.build(**kwargs)
 
 
 def test_v1_carries_no_canonical_false_authority_keys() -> None:
@@ -768,6 +821,11 @@ def test_v1_from_hinerv_four_arm_ablation_expands_all_real_arm_rows() -> None:
             "pair_index": 0,
             "worst_region": receipt["worst_region"],
             "updated_parameter_names": ["head_rgb_0.weight"] if arm_id == "B" else ["head_rgb_1.weight"],
+            "trained_groups": (
+                ["compensation_head_rgb_0"]
+                if arm_id == "B"
+                else ["head_rgb_1"]
+            ),
             "exact_nonrate": {
                 "old_d_seg_batch": old_d_seg,
                 "new_d_seg_batch": new_d_seg,
@@ -830,12 +888,18 @@ def test_v1_from_hinerv_four_arm_ablation_expands_all_real_arm_rows() -> None:
     ]
     assert effects[0].exact_score_decision == "accept"
     assert effects[1].exact_score_decision == "reject"
+    assert effects[0].class_ids == (receipt["worst_region"]["class_index"],)
+    assert effects[0].trained_groups == ("head_rgb_1",)
+    assert effects[1].trained_groups == ("compensation_head_rgb_0",)
     assert effects[1].rejected_by_exact_score is True
     assert effects[1].blockers == ("b_has_no_seg_birth",)
     assert effects[2].interaction_or_commutator == pytest.approx(-0.125)
     assert effects[3].wrong_to_target == 3
     roundtrip = [ActionEffect.from_dict(effect.as_dict()) for effect in effects]
+    assert roundtrip[0].class_ids == effects[0].class_ids
     assert roundtrip[1].blockers == ("b_has_no_seg_birth",)
+    assert roundtrip[1].trained_groups == ("compensation_head_rgb_0",)
+    assert roundtrip[1].as_dict()["restore_state_passed"] == roundtrip[1].restore_state_pass
     assert roundtrip[1].rejected_by_exact_score is True
     assert roundtrip[3].arm == "D"
 

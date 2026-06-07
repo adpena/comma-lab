@@ -208,6 +208,18 @@ def commutator_value(
         "second_action_id": _effect_action_id(effect_b),
         "composed_action_id": _effect_action_id(effect_ab),
         "authority": authority,
+        "first_authority": effect_a.authority,
+        "second_authority": effect_b.authority,
+        "composed_authority": effect_ab.authority,
+        "first_normalization_scope": effect_a.normalization_scope,
+        "second_normalization_scope": effect_b.normalization_scope,
+        "composed_normalization_scope": effect_ab.normalization_scope,
+        "first_archive_sha256": effect_a.archive_sha256,
+        "second_archive_sha256": effect_b.archive_sha256,
+        "composed_archive_sha256": effect_ab.archive_sha256,
+        "first_payload_sha256": effect_a.payload_sha256,
+        "second_payload_sha256": effect_b.payload_sha256,
+        "composed_payload_sha256": effect_ab.payload_sha256,
         "basis": triple.basis,
         "delta_a": triple.delta_a,
         "delta_b": triple.delta_b,
@@ -222,6 +234,7 @@ def commutator_value(
             "negative_commutator_means_superadditive_score_improvement": True,
             "basis_is_consistent_across_all_three_rows": True,
             "authority_must_match_across_all_three_rows": True,
+            "ordered_composition_identity_fields_carried": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
@@ -272,6 +285,43 @@ def _composite_match(
     return j >= 0
 
 
+def _shared_hash_or_none(first_hash: str | None, second_hash: str | None) -> str | None:
+    """Return the shared hash when both action rows identify the same base."""
+
+    if first_hash is None or second_hash is None:
+        return None
+    return first_hash if first_hash == second_hash else None
+
+
+def _ordered_identity_blockers(first: ActionEffect, second: ActionEffect) -> list[str]:
+    """Return fail-closed blockers for incomparable ordered pair candidates."""
+
+    blockers: list[str] = []
+    if str(first.authority).strip() != str(second.authority).strip():
+        blockers.append("action_effect_authority_mismatch")
+    if first.normalization_scope != second.normalization_scope:
+        blockers.append("action_effect_normalization_scope_mismatch")
+    if first.archive_sha256 is None or second.archive_sha256 is None:
+        blockers.append("action_effect_base_archive_hash_missing")
+    elif first.archive_sha256 != second.archive_sha256:
+        blockers.append("action_effect_base_archive_hash_mismatch")
+    if first.payload_sha256 is None or second.payload_sha256 is None:
+        blockers.append("action_effect_base_payload_hash_missing")
+    elif first.payload_sha256 != second.payload_sha256:
+        blockers.append("action_effect_base_payload_hash_mismatch")
+    return blockers
+
+
+def _dedupe_blockers(blockers: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for blocker in blockers:
+        if blocker and blocker not in seen:
+            out.append(blocker)
+            seen.add(blocker)
+    return out
+
+
 def _needs_measurement_row(
     first: ActionEffect,
     second: ActionEffect,
@@ -309,8 +359,7 @@ def _needs_measurement_row(
         if reason == "no_measured_composite_for_ordered_pair"
         else ["measured_composite_incompatible"]
     )
-    if not parts_share_authority:
-        blockers.append("action_effect_authority_mismatch")
+    blockers.extend(_ordered_identity_blockers(first, second))
     return {
         "schema": ACTION_COMMUTATOR_NEEDS_MEASUREMENT_SCHEMA,
         "first_action_id": first.action_id,
@@ -320,6 +369,15 @@ def _needs_measurement_row(
         "first_authority": first.authority,
         "second_authority": second.authority,
         "authority_compatible": parts_share_authority,
+        "first_normalization_scope": first.normalization_scope,
+        "second_normalization_scope": second.normalization_scope,
+        "normalization_scope_compatible": first.normalization_scope == second.normalization_scope,
+        "first_archive_sha256": first.archive_sha256,
+        "second_archive_sha256": second.archive_sha256,
+        "base_archive_hash": _shared_hash_or_none(first.archive_sha256, second.archive_sha256),
+        "first_payload_sha256": first.payload_sha256,
+        "second_payload_sha256": second.payload_sha256,
+        "base_payload_hash": _shared_hash_or_none(first.payload_sha256, second.payload_sha256),
         "first_delta_score_total": first.delta_score_total,
         "second_delta_score_total": second.delta_score_total,
         "first_delta_score_nonrate": first.delta_score_nonrate,
@@ -339,7 +397,7 @@ def _needs_measurement_row(
         "comm": None,
         "classification": None,
         "first_measurement_command": command,
-        "measurement_command_blockers": blockers,
+        "measurement_command_blockers": _dedupe_blockers(blockers),
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
 

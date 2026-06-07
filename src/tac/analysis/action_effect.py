@@ -85,6 +85,22 @@ _ACTION_EFFECT_V1_FORBIDDEN_SCORE_CLAIM_KEYS = frozenset(
 )
 _ACTION_EFFECT_V1_DECISIONS = frozenset({"accept", "reject", "not_applicable"})
 _ACTION_EFFECT_V1_TAINT_STATUSES = frozenset({"clean", "tainted", "remediated", "unknown"})
+_ACTION_EFFECT_V1_INVERSE_SOURCES = frozenset(
+    {
+        "segnet_margin_gradient",
+        "posenet_yuv6_gradient",
+        "frame0_pose_nullseg",
+        "joint_seg_pose_projection",
+        "integer_receiver_line_search",
+        "manual_pr110_replay",
+        "qrgb_basis",
+        "commutator_macro_action",
+        "menu_ilp_candidate",
+    }
+)
+_ACTION_EFFECT_V1_FRAME_INDICES = frozenset({0, 1, "both"})
+_ACTION_EFFECT_V1_FRAME_INCIDENCES = frozenset({"pose_only", "seg_pose_joint"})
+_ACTION_EFFECT_V1_CANDIDATE_STATUSES = frozenset({"generated", "measured", "selected", "rejected", "composed"})
 
 
 class ScoreAuthority(StrEnum):
@@ -832,13 +848,19 @@ class ActionEffect:
     action_id: str
     family: str
     action_kind: str = "unspecified_action"
+    inverse_source: str | None = None
+    frame_index: int | str | None = None
+    frame_incidence: str | None = None
+    candidate_status: str | None = None
     authority: str = ACTION_EFFECT_PLANNING_AUTHORITY
     normalization_scope: str = NormalizationScope.BATCH_LOCAL.value
     producer: str = "unknown"
     consumer: str | None = None
     pair_ids: tuple[int, ...] = ()
+    class_ids: tuple[int, ...] = ()
     region_ids: tuple[str, ...] = ()
     payload_sections: tuple[str, ...] = ()
+    trained_groups: tuple[str, ...] = ()
     old_d_seg: float | None = None
     new_d_seg: float | None = None
     old_d_pose: float | None = None
@@ -895,6 +917,23 @@ class ActionEffect:
             raise ValueError("action_id must be a non-empty string")
         if not isinstance(self.action_kind, str) or not self.action_kind.strip():
             raise ValueError("action_kind must be a non-empty string")
+        if self.inverse_source is not None and self.inverse_source not in _ACTION_EFFECT_V1_INVERSE_SOURCES:
+            raise ValueError(
+                "inverse_source must be one of "
+                f"{sorted(_ACTION_EFFECT_V1_INVERSE_SOURCES)}; got {self.inverse_source!r}"
+            )
+        if self.frame_index is not None and self.frame_index not in _ACTION_EFFECT_V1_FRAME_INDICES:
+            raise ValueError("frame_index must be 0, 1, 'both', or None")
+        if self.frame_incidence is not None and self.frame_incidence not in _ACTION_EFFECT_V1_FRAME_INCIDENCES:
+            raise ValueError(
+                "frame_incidence must be one of "
+                f"{sorted(_ACTION_EFFECT_V1_FRAME_INCIDENCES)}; got {self.frame_incidence!r}"
+            )
+        if self.candidate_status is not None and self.candidate_status not in _ACTION_EFFECT_V1_CANDIDATE_STATUSES:
+            raise ValueError(
+                "candidate_status must be one of "
+                f"{sorted(_ACTION_EFFECT_V1_CANDIDATE_STATUSES)}; got {self.candidate_status!r}"
+            )
         if not isinstance(self.authority, str) or not self.authority.strip():
             raise ValueError("authority is REQUIRED and must be a non-empty string")
         if self.normalization_scope not in {item.value for item in NormalizationScope}:
@@ -964,10 +1003,14 @@ class ActionEffect:
             _v1_validate_optional_finite_float(name, value)
         if not isinstance(self.pair_ids, tuple):
             raise ValueError("pair_ids must be a tuple")
+        if not isinstance(self.class_ids, tuple):
+            raise ValueError("class_ids must be a tuple")
         if not isinstance(self.region_ids, tuple):
             raise ValueError("region_ids must be a tuple")
         if not isinstance(self.payload_sections, tuple):
             raise ValueError("payload_sections must be a tuple")
+        if not isinstance(self.trained_groups, tuple):
+            raise ValueError("trained_groups must be a tuple")
         if not isinstance(self.blockers, tuple):
             raise ValueError("blockers must be a tuple")
         for name, value in (
@@ -988,13 +1031,19 @@ class ActionEffect:
         action_id: str,
         family: str,
         action_kind: str = "unspecified_action",
+        inverse_source: str | None = None,
+        frame_index: int | str | None = None,
+        frame_incidence: str | None = None,
+        candidate_status: str | None = None,
         authority: str,
         normalization_scope: str | None = None,
         producer: str,
         consumer: str | None = None,
         pair_ids: Sequence[int] = (),
+        class_ids: Sequence[int] = (),
         region_ids: Sequence[str] = (),
         payload_sections: Sequence[str] = (),
+        trained_groups: Sequence[str] = (),
         old_d_seg: float | None = None,
         new_d_seg: float | None = None,
         old_d_pose: float | None = None,
@@ -1067,13 +1116,19 @@ class ActionEffect:
             action_id=str(action_id),
             family=str(family),
             action_kind=str(action_kind),
+            inverse_source=None if inverse_source is None else str(inverse_source),
+            frame_index=_v1_frame_index_or_none(frame_index),
+            frame_incidence=None if frame_incidence is None else str(frame_incidence),
+            candidate_status=None if candidate_status is None else str(candidate_status),
             authority=normalized_authority,
             normalization_scope=normalized_scope,
             producer=str(producer),
             consumer=None if consumer is None else str(consumer),
             pair_ids=_v1_int_tuple(pair_ids),
+            class_ids=_v1_int_tuple(class_ids),
             region_ids=_v1_str_tuple(region_ids),
             payload_sections=_v1_str_tuple(payload_sections),
+            trained_groups=_v1_str_tuple(trained_groups),
             old_d_seg=old_d_seg,
             new_d_seg=new_d_seg,
             old_d_pose=old_d_pose,
@@ -1156,8 +1211,10 @@ class ActionEffect:
         * ``authority`` ← the receipt ``surface`` (e.g. ``fakequant_mlx`` /
           ``parseback_mlx`` / ``inflated_torch_cpu``), falling back to the
           receipt ``authority`` marker.
-        * ``payload_sections`` ← ``updated_parameter_names``; byte delta from
-          ``runtime_sidecar_bytes`` (new-state-only unless explicit before/after).
+        * ``payload_sections`` ← ``updated_parameter_names``; ``trained_groups``
+          carries the coarser action identity/training groups. Byte delta comes
+          from ``runtime_sidecar_bytes`` (new-state-only unless explicit
+          before/after).
         """
 
         if not isinstance(receipt_or_payload, Mapping):
@@ -1180,6 +1237,8 @@ class ActionEffect:
         region_id = _v1_birth_region_id(worst)
         region_ids = (region_id,) if region_id else ()
         pair_ids = _v1_birth_pair_ids(receipt, worst)
+        class_id = _v1_first_int(worst, "class_index")
+        class_ids = () if class_id is None else (class_id,)
 
         exact = _v1_mapping(receipt.get("exact_nonrate"))
         old_d_seg = _v1_first_float(
@@ -1218,6 +1277,9 @@ class ActionEffect:
             new_bytes = old_bytes + sidecar
 
         payload_sections = _v1_str_tuple(receipt.get("updated_parameter_names"))
+        trained_groups = _v1_str_tuple(receipt.get("trained_groups"))
+        if not trained_groups:
+            trained_groups = _v1_str_tuple(receipt.get("action_trained_groups"))
         parseback_survived, inflate_survived = _v1_birth_survival_flags(receipt, surface)
         transitions = _v1_mapping(receipt.get("argmax_transitions"))
         if not transitions:
@@ -1280,8 +1342,10 @@ class ActionEffect:
             producer="hinerv_target_region_birth",
             consumer=consumer,
             pair_ids=pair_ids,
+            class_ids=class_ids,
             region_ids=region_ids,
             payload_sections=payload_sections,
+            trained_groups=trained_groups,
             old_d_seg=old_d_seg,
             new_d_seg=new_d_seg,
             old_d_pose=old_d_pose,
@@ -1892,12 +1956,15 @@ class ActionEffect:
 
         payload = asdict(self)
         payload["pair_ids"] = list(self.pair_ids)
+        payload["class_ids"] = list(self.class_ids)
         payload["region_ids"] = list(self.region_ids)
         payload["payload_sections"] = list(self.payload_sections)
+        payload["trained_groups"] = list(self.trained_groups)
         payload["blockers"] = list(self.blockers)
         payload["receiver_surface"] = self.receiver_surface.as_dict()
         payload["old_archive_bytes"] = self.old_bytes
         payload["new_archive_bytes"] = self.new_bytes
+        payload["restore_state_passed"] = self.restore_state_pass
         return payload
 
     @classmethod
@@ -1915,6 +1982,10 @@ class ActionEffect:
             action_id=str(payload["action_id"]),
             family=str(payload.get("family") or "shared"),
             action_kind=str(payload.get("action_kind") or "unknown_action"),
+            inverse_source=None if payload.get("inverse_source") is None else str(payload["inverse_source"]),
+            frame_index=_v1_frame_index_or_none(payload.get("frame_index")),
+            frame_incidence=None if payload.get("frame_incidence") is None else str(payload["frame_incidence"]),
+            candidate_status=None if payload.get("candidate_status") is None else str(payload["candidate_status"]),
             authority=str(payload.get("authority") or ""),
             normalization_scope=(
                 None
@@ -1924,8 +1995,10 @@ class ActionEffect:
             producer=str(payload.get("producer") or "unknown"),
             consumer=None if payload.get("consumer") is None else str(payload["consumer"]),
             pair_ids=_v1_int_tuple(payload.get("pair_ids") or ()),
+            class_ids=_v1_int_tuple(payload.get("class_ids") or ()),
             region_ids=_v1_str_tuple(payload.get("region_ids") or ()),
             payload_sections=_v1_str_tuple(payload.get("payload_sections") or ()),
+            trained_groups=_v1_str_tuple(payload.get("trained_groups") or ()),
             old_d_seg=_v1_first_float(payload, "old_d_seg"),
             new_d_seg=_v1_first_float(payload, "new_d_seg"),
             old_d_pose=_v1_first_float(payload, "old_d_pose"),
@@ -1951,7 +2024,7 @@ class ActionEffect:
             rejected_by_catastrophic_guard=_v1_bool_or_none(payload.get("rejected_by_catastrophic_guard")),
             parseback_survived=_v1_bool_or_none(payload.get("parseback_survived")),
             inflate_survived=_v1_bool_or_none(payload.get("inflate_survived")),
-            restore_state_pass=_v1_bool_or_none(payload.get("restore_state_pass")),
+            restore_state_pass=_v1_first_bool(payload, "restore_state_pass", "restore_state_passed"),
             artifact_ref=None if payload.get("artifact_ref") is None else str(payload["artifact_ref"]),
             archive_sha256=None if payload.get("archive_sha256") is None else str(payload["archive_sha256"]),
             payload_sha256=None if payload.get("payload_sha256") is None else str(payload["payload_sha256"]),
@@ -2380,6 +2453,18 @@ def _v1_int_or_none(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _v1_frame_index_or_none(value: Any) -> int | str | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if value == "both":
+        return "both"
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return parsed
 
 
 def _v1_bool_or_none(value: Any) -> bool | None:

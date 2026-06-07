@@ -56,9 +56,12 @@ def _seg_effect(
     action_id: str,
     *,
     authority: str = "fakequant_mlx",
+    normalization_scope: str | None = None,
     old_d_seg: float = 0.10,
     new_d_seg: float = 0.10,
     bytes_: int = 1000,
+    archive_sha256: str | None = None,
+    payload_sha256: str | None = None,
 ) -> ActionEffect:
     """A byte-priced (total-basis) effect that moves ONLY d_seg.
 
@@ -71,6 +74,7 @@ def _seg_effect(
         action_id=action_id,
         family="hinerv",
         authority=authority,
+        normalization_scope=normalization_scope,
         producer="fixture",
         old_d_seg=old_d_seg,
         new_d_seg=new_d_seg,
@@ -78,6 +82,8 @@ def _seg_effect(
         new_d_pose=0.10,
         old_bytes=bytes_,
         new_bytes=bytes_,
+        archive_sha256=archive_sha256,
+        payload_sha256=payload_sha256,
     )
 
 
@@ -141,6 +147,23 @@ def test_commutator_exact_additive_arithmetic():
     assert row["comm"] == pytest.approx(0.0, abs=1e-9)
     assert row["classification"] == CLASSIFICATION_ADDITIVE
     assert row["macro_action_recommended"] is False
+
+
+def test_commutator_noop_identity_is_additive_both_orders():
+    noop = _seg_effect("noop", new_d_seg=0.10)
+    a = _seg_effect("A", new_d_seg=0.08)
+    a_then_noop = _seg_effect("A__then__noop", new_d_seg=0.08)
+    noop_then_a = _seg_effect("noop__then__A", new_d_seg=0.08)
+
+    assert noop.delta_score_total == pytest.approx(0.0)
+    assert noop.delta_bytes == 0
+
+    right_identity = commutator_value(a, noop, a_then_noop)
+    left_identity = commutator_value(noop, a, noop_then_a)
+    assert right_identity["comm"] == pytest.approx(0.0, abs=1e-9)
+    assert left_identity["comm"] == pytest.approx(0.0, abs=1e-9)
+    assert right_identity["classification"] == CLASSIFICATION_ADDITIVE
+    assert left_identity["classification"] == CLASSIFICATION_ADDITIVE
 
 
 # ── 2. classification thresholds honor eps ──────────────────────────────────
@@ -282,7 +305,29 @@ def test_ledger_emits_measured_row_and_queue_for_missing_reverse_pair():
     assert q["additive_delta_bytes"] == 0
     assert q["byte_cost"] == 0
     assert q["first_measurement_command"].startswith("uv run python tools/run_pr110_commutator_ledger.py")
-    assert q["measurement_command_blockers"] == ["composite_action_effect_row_missing"]
+    assert q["measurement_command_blockers"] == [
+        "composite_action_effect_row_missing",
+        "action_effect_base_archive_hash_missing",
+        "action_effect_base_payload_hash_missing",
+    ]
+
+
+def test_ledger_matches_measured_composites_by_order_not_unordered_pair():
+    a = _seg_effect("A", new_d_seg=0.08)
+    b = _seg_effect("B", new_d_seg=0.09)
+    ba = _seg_effect("B__then__A", new_d_seg=0.095)
+    ledger = build_commutator_ledger([a, b], [ba])
+
+    assert ledger["ordered_pair_count"] == 2
+    assert ledger["measured_commutator_count"] == 1
+    measured = ledger["rows"][0]
+    assert measured["first_action_id"] == "B"
+    assert measured["second_action_id"] == "A"
+    assert measured["composed_action_id"] == "B__then__A"
+    queued = ledger["measurement_queue"][0]
+    assert queued["first_action_id"] == "A"
+    assert queued["second_action_id"] == "B"
+    assert queued["proposed_composite_action_id"] == "A__then__B"
 
 
 def test_ledger_queue_when_no_pair_effects_at_all():
@@ -319,6 +364,97 @@ def test_ledger_queues_pair_with_incompatible_authority_never_fabricates():
     assert incompat[0]["authority_compatible"] is False
     assert "incompatible" in incompat[0]["reason"]
     assert "action_effect_authority_mismatch" in incompat[0]["measurement_command_blockers"]
+
+
+def test_measurement_queue_blocks_normalization_scope_mismatch() -> None:
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="same_advisory_surface",
+        normalization_scope="batch_local",
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="same_advisory_surface",
+        normalization_scope="full_video_exact",
+    )
+    ledger = build_commutator_ledger([a, b], [])
+
+    row = ledger["measurement_queue"][0]
+    assert row["authority_compatible"] is True
+    assert row["normalization_scope_compatible"] is False
+    assert "action_effect_authority_mismatch" not in row["measurement_command_blockers"]
+    assert "action_effect_normalization_scope_mismatch" in row["measurement_command_blockers"]
+
+
+def test_measurement_queue_carries_base_identity_and_blocks_when_missing():
+    a = _seg_effect("A", new_d_seg=0.08, authority="contest_cpu")
+    b = _seg_effect("B", new_d_seg=0.09, authority="contest_cpu")
+    ledger = build_commutator_ledger([a, b], [])
+
+    row = ledger["measurement_queue"][0]
+    assert row["first_authority"] == "contest_cpu"
+    assert row["second_authority"] == "contest_cpu"
+    assert row["first_normalization_scope"] == "full_video_exact"
+    assert row["second_normalization_scope"] == "full_video_exact"
+    assert row["normalization_scope_compatible"] is True
+    assert row["base_archive_hash"] is None
+    assert row["base_payload_hash"] is None
+    assert "action_effect_base_archive_hash_missing" in row["measurement_command_blockers"]
+    assert "action_effect_base_payload_hash_missing" in row["measurement_command_blockers"]
+
+
+def test_measurement_queue_exposes_shared_base_hashes_when_present():
+    archive_hash = "a" * 64
+    payload_hash = "b" * 64
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="contest_cpu",
+        archive_sha256=archive_hash,
+        payload_sha256=payload_hash,
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="contest_cpu",
+        archive_sha256=archive_hash,
+        payload_sha256=payload_hash,
+    )
+    ledger = build_commutator_ledger([a, b], [])
+
+    row = ledger["measurement_queue"][0]
+    assert row["base_archive_hash"] == archive_hash
+    assert row["base_payload_hash"] == payload_hash
+    assert "action_effect_base_archive_hash_missing" not in row["measurement_command_blockers"]
+    assert "action_effect_base_payload_hash_missing" not in row["measurement_command_blockers"]
+    assert "action_effect_base_archive_hash_mismatch" not in row["measurement_command_blockers"]
+    assert "action_effect_base_payload_hash_mismatch" not in row["measurement_command_blockers"]
+
+
+def test_measurement_queue_blocks_when_base_hashes_differ():
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="contest_cpu",
+        archive_sha256="a" * 64,
+        payload_sha256="b" * 64,
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="contest_cpu",
+        archive_sha256="c" * 64,
+        payload_sha256="d" * 64,
+    )
+    ledger = build_commutator_ledger([a, b], [])
+
+    row = ledger["measurement_queue"][0]
+    assert row["base_archive_hash"] is None
+    assert row["base_payload_hash"] is None
+    assert "action_effect_base_archive_hash_mismatch" in row["measurement_command_blockers"]
+    assert "action_effect_base_payload_hash_mismatch" in row["measurement_command_blockers"]
 
 
 def test_measurement_queue_ranks_authority_compatible_before_cross_authority():
