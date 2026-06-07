@@ -1148,6 +1148,10 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert telemetry["birth_gradient_surface"] == "fakequant_forward_ste"
     assert payload["birth_update_scope"] == "pair_latents_fine"
     assert telemetry["birth_update_scope"] == "pair_latents_fine"
+    synthesis_controls = telemetry["masked_residual_synthesis_controls"]
+    assert synthesis_controls["enabled"] is True
+    assert synthesis_controls["steps"] == 12
+    assert synthesis_controls["learning_rate"] == pytest.approx(7.5e-2)
     assert payload["birth_gradient_surface_eval_count"] > 0
     assert telemetry["birth_gradient_surface_eval_count"] == payload["birth_gradient_surface_eval_count"]
     assert telemetry["raw_hard_birth_candidate_count"] >= 0
@@ -1157,6 +1161,33 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert telemetry["masked_residual_oracle"]["authority"] == "receiver_surface_oracle_false_authority"
     assert telemetry["masked_residual_oracle"]["archive_closed"] is False
     assert telemetry["masked_residual_oracle"]["candidate_count"] >= 1
+    synthesis_candidates = [
+        candidate
+        for candidate in telemetry["masked_residual_oracle"]["candidates"]
+        if candidate["oracle_kind"] == "scorer_causal_pixel_synthesis"
+    ]
+    assert synthesis_candidates
+    synthesis = synthesis_candidates[0]
+    assert synthesis["mask_name"] == "active_tail_scorer_synthesis"
+    assert synthesis["synthesis_optimizer"] == "masked_receiver_pixel_adam"
+    assert synthesis["synthesis_optimized_surface"] == "live_segnet_receiver_uint8_ste"
+    assert synthesis["synthesis_steps"] > 0
+    assert synthesis["archive_closed"] is False
+    assert synthesis["promotion_blocked"] is True
+    assert "target_region_action_archive_meta_not_materialized" in synthesis[
+        "charged_byte_sections_missing"
+    ]
+    assert "target_region_action_parseback_survival_missing" in synthesis[
+        "charged_byte_sections_missing"
+    ]
+    assert "target_region_action_inflate_survival_missing" in synthesis[
+        "charged_byte_sections_missing"
+    ]
+    assert synthesis["target_region_action_meta_key"] == "_target_region_actions_v1_b64"
+    assert synthesis["target_region_action_payload_bytes"] > 0
+    assert synthesis["target_region_action_pixel_count"] > 0
+    assert synthesis["target_region_action_program_base64"]
+    assert synthesis["target_region_action_section_telemetry"]["receiver_consumed"] is True
     assert bool(model.decoder_fake_quant_forward_enabled) is fq_enabled_before
     assert bool(model.decoder_fake_quant_forward_configured_enabled) is fq_configured_before
     assert telemetry["fakequant_survival_candidate_count"] >= payload["accepted_step_count"]

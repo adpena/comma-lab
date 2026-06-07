@@ -2875,6 +2875,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         target_region_forced_key: Sequence[int] | None = None,
         require_fakequant_survival: bool = False,
         fakequant_survival_bits: int = 4,
+        masked_residual_synthesis_steps: int = 12,
+        masked_residual_synthesis_learning_rate: float = 7.5e-2,
         hard_region_miner_output_dir: str | Path | None = None,
         birth_update_scope: str | None = None,
         _target_region_portfolio_excluded: Sequence[Sequence[int]] = (),
@@ -2998,6 +3000,21 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         fakequant_bits = int(fakequant_survival_bits)
         if fakequant_bits < 1 or fakequant_bits > 16:
             raise ValueError(f"fakequant_survival_bits must be in [1, 16]; got {fakequant_survival_bits}")
+        synthesis_step_count = int(masked_residual_synthesis_steps)
+        if synthesis_step_count < 0:
+            raise ValueError(
+                "masked_residual_synthesis_steps must be >= 0; "
+                f"got {masked_residual_synthesis_steps}"
+            )
+        synthesis_lr = float(masked_residual_synthesis_learning_rate)
+        if synthesis_step_count > 0 and (
+            not math.isfinite(synthesis_lr) or synthesis_lr <= 0.0
+        ):
+            raise ValueError(
+                "masked_residual_synthesis_learning_rate must be finite and "
+                "positive when masked_residual_synthesis_steps > 0; "
+                f"got {masked_residual_synthesis_learning_rate}"
+            )
         resolved_birth_update_scope = (
             "pair_latents_fine"
             if birth_update_scope is None and (bool(require_pose_trust) or bool(require_fakequant_survival))
@@ -3020,6 +3037,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
         if idx.ndim != 1 or int(idx.shape[0]) <= 0:
             raise ValueError("pair_indices must be a non-empty rank-1 tensor")
+        mx.eval(idx)  # type: ignore[union-attr]
         target0 = mx.array(target_rgb_0).astype(mx.float32)  # type: ignore[union-attr]
         target1 = mx.array(target_rgb_1).astype(mx.float32)  # type: ignore[union-attr]
         for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
@@ -3863,6 +3881,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             carries the mask/residual bytes through parse-back/inflate.
             """
 
+            from tac.substrates.hi_nerv.target_region_actions import (
+                TARGET_REGION_ACTION_META_KEY,
+                TargetRegionPixelAction,
+                encode_target_region_actions,
+                encode_target_region_actions_meta,
+                target_region_action_section_telemetry,
+            )
+
+            oracle_pair_indices_np = np.asarray(idx, dtype=np.int64).reshape(-1)
             variants: list[tuple[str, np.ndarray]] = [
                 ("active_tail", active_tail_mask_np > 0.0),
                 ("unsolved_tail", unsolved_tail_bool_np),
@@ -3872,14 +3899,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mask_records: list[dict[str, Any]] = []
             best_record: dict[str, Any] | None = None
             best_nonrate_delta = float("inf")
-            for mask_name, mask_bool in variants:
+
+            def _build_masked_oracle_record(
+                *,
+                mask_name: str,
+                mask_bool: np.ndarray,
+                oracle_pred1: Any,
+                optimizer_trace: dict[str, Any] | None = None,
+            ) -> dict[str, Any]:
                 mask_bool = np.asarray(mask_bool, dtype=bool)
                 mask_pixels = int(np.count_nonzero(mask_bool))
-                if mask_pixels <= 0:
-                    continue
-                mask_mx = mx.stop_gradient(mx.array(mask_bool.astype(np.float32)))  # type: ignore[union-attr]
-                mask4 = mx.expand_dims(mask_mx, axis=-1)  # type: ignore[union-attr]
-                oracle_pred1 = mx.where(mask4 > 0.0, target1, base_pred1)  # type: ignore[union-attr]
                 oracle_state = _receiver_surface_state_from_predictions(base_pred0, oracle_pred1)
                 pose_delta = _pose_delta_l2(oracle_state["pose"])
                 decision = _target_birth_admission_decision(
@@ -3894,9 +3923,54 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 nonrate_delta = decision.get("exact_delta_score_nonrate")
                 if nonrate_delta is None:
                     nonrate_delta = decision.get("seg_score_delta")
+                action_mask = changed_pixels & mask_bool
+                action_pixel_count = int(np.count_nonzero(action_mask))
+                action_records: list[TargetRegionPixelAction] = []
+                for batch_index, pair_index in enumerate(oracle_pair_indices_np.tolist()):
+                    local_mask = action_mask[int(batch_index)]
+                    if not np.any(local_mask):
+                        continue
+                    yx = np.argwhere(local_mask).astype(np.uint16, copy=False)
+                    rgb = oracle_uint8[int(batch_index)][local_mask].astype(np.uint8, copy=False)
+                    action_records.append(
+                        TargetRegionPixelAction(
+                            pair_index=int(pair_index),
+                            frame_index=1,
+                            height=int(oracle_uint8.shape[1]),
+                            width=int(oracle_uint8.shape[2]),
+                            yx=yx,
+                            rgb_u8=rgb,
+                        )
+                    )
+                action_payload_bytes = (
+                    len(encode_target_region_actions(action_records))
+                    if action_records
+                    else 0
+                )
+                value_per_payload_byte = (
+                    None
+                    if not action_payload_bytes
+                    or nonrate_delta is None
+                    else float(-float(nonrate_delta) / float(action_payload_bytes))
+                )
+                action_closure_blockers = (
+                    [
+                        "target_region_action_archive_meta_not_materialized",
+                        "target_region_action_parseback_survival_missing",
+                        "target_region_action_inflate_survival_missing",
+                        "target_region_action_archive_zip_byte_delta_missing",
+                    ]
+                    if action_records
+                    else ["target_region_action_payload_missing"]
+                )
                 record = {
                     "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
                     "mask_name": str(mask_name),
+                    "oracle_kind": (
+                        "scorer_causal_pixel_synthesis"
+                        if optimizer_trace is not None
+                        else "source_rgb_residual_copy"
+                    ),
                     "mask_pixel_count": int(mask_pixels),
                     "receiver_uint8_changed_pixels": int(np.count_nonzero(changed_pixels)),
                     "receiver_uint8_changed_pixels_region": int(
@@ -3927,23 +4001,194 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "exact_delta_score_nonrate": (
                         None if nonrate_delta is None else float(nonrate_delta)
                     ),
+                    "target_region_action_schema": "hi_nerv_target_region_archive_actions.v1",
+                    "target_region_action_meta_key": TARGET_REGION_ACTION_META_KEY,
+                    "target_region_action_payload_bytes": int(action_payload_bytes),
+                    "target_region_action_pixel_count": int(action_pixel_count),
+                    "target_region_action_value_per_payload_byte_nonrate": value_per_payload_byte,
+                    "target_region_action_section_telemetry": (
+                        target_region_action_section_telemetry(action_records)
+                        if action_records
+                        else None
+                    ),
+                    "target_region_action_program_base64": (
+                        encode_target_region_actions_meta(action_records)
+                        if action_records
+                        else None
+                    ),
                     "archive_closed": False,
+                    "promotion_blocked": True,
                     "runtime_sidecar_bytes": None,
-                    "charged_byte_sections_missing": [
-                        "target_region_mask",
-                        "target_region_rgb_residual",
-                        "receiver_runtime_apply_kernel",
-                    ],
+                    "charged_byte_sections_missing": action_closure_blockers,
                 }
+                if optimizer_trace is not None:
+                    record.update(optimizer_trace)
+                return record
+
+            def _append_oracle_record(record: dict[str, Any]) -> None:
+                nonlocal best_record, best_nonrate_delta
                 mask_records.append(record)
+                nonrate_delta = record.get("exact_delta_score_nonrate")
                 if nonrate_delta is not None and float(nonrate_delta) < best_nonrate_delta:
                     best_nonrate_delta = float(nonrate_delta)
                     best_record = record
 
+            for mask_name, mask_bool in variants:
+                mask_bool = np.asarray(mask_bool, dtype=bool)
+                mask_pixels = int(np.count_nonzero(mask_bool))
+                if mask_pixels <= 0:
+                    continue
+                mask_mx = mx.stop_gradient(mx.array(mask_bool.astype(np.float32)))  # type: ignore[union-attr]
+                mask4 = mx.expand_dims(mask_mx, axis=-1)  # type: ignore[union-attr]
+                oracle_pred1 = mx.where(mask4 > 0.0, target1, base_pred1)  # type: ignore[union-attr]
+                _append_oracle_record(
+                    _build_masked_oracle_record(
+                        mask_name=mask_name,
+                        mask_bool=mask_bool,
+                        oracle_pred1=oracle_pred1,
+                    )
+                )
+
+            synthesis_mask_bool = np.asarray(active_tail_mask_np > 0.0, dtype=bool)
+            synthesis_mask_pixels = int(np.count_nonzero(synthesis_mask_bool))
+            if synthesis_mask_pixels > 0 and synthesis_step_count > 0:
+                synth_mask = mx.stop_gradient(  # type: ignore[union-attr]
+                    mx.array(synthesis_mask_bool.astype(np.float32), dtype=mx.float32)
+                )
+                synth_mask4 = mx.expand_dims(synth_mask, axis=-1)  # type: ignore[union-attr]
+                synth_target = mx.stop_gradient(mx.array(target1, dtype=mx.float32))  # type: ignore[union-attr]
+                synth_base = mx.stop_gradient(mx.array(base_pred1, dtype=mx.float32))  # type: ignore[union-attr]
+                synth_steps = int(synthesis_step_count)
+                synth_lr = float(synthesis_lr)
+                preserve_weight = max(1.0, float(synthesis_mask_pixels) / max(float(total_scored_pixels), 1.0))
+                outside_weight = max(1.0, float(outside_region_pixels) / max(float(total_scored_pixels), 1.0))
+
+                def _synthesis_loss(patch: Any) -> Any:
+                    constrained = mx.where(  # type: ignore[union-attr]
+                        synth_mask4 > 0.0,
+                        mx.clip(patch, 0.0, 1.0),
+                        synth_base,
+                    )
+                    receiver = _receiver_uint8_roundtrip_ste_nhwc01(constrained)
+                    logits = live_fn(receiver)
+                    class_logit = logits[..., birth_class]
+                    impostor = _impostor_logit(logits)
+                    margin_raw = impostor - class_logit
+                    crossing = mx.logaddexp(  # type: ignore[union-attr]
+                        (margin_raw + float(margin_floor)) / float(margin_tau),
+                        0.0,
+                    )
+                    target_loss = mx.sum(crossing * crossing * synth_mask) / float(synthesis_mask_pixels)  # type: ignore[union-attr]
+                    target_rgb_pull = mx.sum(  # type: ignore[union-attr]
+                        (constrained - synth_target)
+                        * (constrained - synth_target)
+                        * synth_mask4
+                    ) / max(float(synthesis_mask_pixels) * 3.0, 1.0)
+                    won_preserve_loss = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+                    if global_already_won_pixels > 0.0:
+                        target_label_logit = mx.sum(logits * target_label_one_hot, axis=-1)  # type: ignore[union-attr]
+                        target_competitor_logits = mx.where(  # type: ignore[union-attr]
+                            target_label_one_hot > 0.0,
+                            mx.array(-1.0e30, dtype=logits.dtype),
+                            logits,
+                        )
+                        target_impostor = mx.max(target_competitor_logits, axis=-1)  # type: ignore[union-attr]
+                        target_margin = target_impostor - target_label_logit
+                        margin_erosion = mx.maximum(  # type: ignore[union-attr]
+                            target_margin - initial_target_margin_reference,
+                            0.0,
+                        )
+                        won_preserve_loss = (  # type: ignore[assignment]
+                            float(lambda_support_preserve)
+                            * preserve_weight
+                            * mx.sum(margin_erosion * margin_erosion * global_already_won_mask)
+                            / global_already_won_pixels
+                        )
+                    outside_preserve_loss = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+                    if outside_region_pixels > 0.0 and float(lambda_outside_argmax_preserve) > 0.0:
+                        initial_winner_logit = mx.sum(logits * initial_argmax_one_hot, axis=-1)  # type: ignore[union-attr]
+                        competitor_logits = mx.where(  # type: ignore[union-attr]
+                            initial_argmax_one_hot > 0.0,
+                            mx.array(-1.0e30, dtype=logits.dtype),
+                            logits,
+                        )
+                        initial_winner_impostor = mx.max(competitor_logits, axis=-1)  # type: ignore[union-attr]
+                        outside_margin_erosion = mx.maximum(  # type: ignore[union-attr]
+                            (initial_winner_impostor - initial_winner_logit)
+                            - initial_argmax_margin_reference,
+                            0.0,
+                        )
+                        outside_preserve_loss = (  # type: ignore[assignment]
+                            float(lambda_outside_argmax_preserve)
+                            * outside_weight
+                            * mx.sum(outside_margin_erosion * outside_margin_erosion * outside_region_mask)
+                            / outside_region_pixels
+                        )
+                    return (
+                        target_loss
+                        + 1.0e-3 * target_rgb_pull
+                        + won_preserve_loss
+                        + outside_preserve_loss
+                    )
+
+                loss_and_grad_patch = mx.value_and_grad(_synthesis_loss)  # type: ignore[union-attr]
+                patch = mx.array(base_pred1, dtype=mx.float32)  # type: ignore[union-attr]
+                adam_m = mx.zeros_like(patch)  # type: ignore[union-attr]
+                adam_v = mx.zeros_like(patch)  # type: ignore[union-attr]
+                loss_initial: float | None = None
+                loss_final: float | None = None
+                grad_l2_initial: float | None = None
+                grad_l2_final: float | None = None
+                for synth_step in range(synth_steps):
+                    loss_value, grad = loss_and_grad_patch(patch)
+                    masked_grad = mx.where(synth_mask4 > 0.0, grad, mx.zeros_like(grad))  # type: ignore[union-attr]
+                    grad_l2 = mx.sqrt(mx.sum(masked_grad * masked_grad))  # type: ignore[union-attr]
+                    mx.eval(loss_value, grad_l2, masked_grad)  # type: ignore[union-attr]
+                    if synth_step == 0:
+                        loss_initial = float(loss_value.item())
+                        grad_l2_initial = float(grad_l2.item())
+                    loss_final = float(loss_value.item())
+                    grad_l2_final = float(grad_l2.item())
+                    adam_m = 0.9 * adam_m + 0.1 * masked_grad
+                    adam_v = 0.999 * adam_v + 0.001 * masked_grad * masked_grad
+                    bias_m = 1.0 - 0.9 ** float(synth_step + 1)
+                    bias_v = 1.0 - 0.999 ** float(synth_step + 1)
+                    step = (adam_m / bias_m) / (mx.sqrt(adam_v / bias_v) + 1.0e-6)  # type: ignore[union-attr]
+                    patch = mx.where(  # type: ignore[union-attr]
+                        synth_mask4 > 0.0,
+                        mx.clip(patch - float(synth_lr) * step, 0.0, 1.0),
+                        synth_base,
+                    )
+                    mx.eval(patch)  # type: ignore[union-attr]
+                synthesized_pred1 = mx.where(  # type: ignore[union-attr]
+                    synth_mask4 > 0.0,
+                    mx.clip(patch, 0.0, 1.0),
+                    synth_base,
+                )
+                _append_oracle_record(
+                    _build_masked_oracle_record(
+                        mask_name="active_tail_scorer_synthesis",
+                        mask_bool=synthesis_mask_bool,
+                        oracle_pred1=synthesized_pred1,
+                        optimizer_trace={
+                            "synthesis_optimizer": "masked_receiver_pixel_adam",
+                            "synthesis_steps": int(synth_steps),
+                            "synthesis_learning_rate": float(synth_lr),
+                            "synthesis_loss_initial": loss_initial,
+                            "synthesis_loss_final": loss_final,
+                            "synthesis_grad_l2_initial": grad_l2_initial,
+                            "synthesis_grad_l2_final": grad_l2_final,
+                            "synthesis_preserves_already_won_pixels_by_construction": True,
+                            "synthesis_optimized_surface": "live_segnet_receiver_uint8_ste",
+                        },
+                    )
+                )
+
             blockers: list[str] = [
-                "hinerv_target_region_masked_residual_archive_grammar_missing",
-                "hinerv_target_region_masked_residual_parseback_missing",
-                "hinerv_target_region_masked_residual_value_per_byte_missing",
+                "hinerv_target_region_action_archive_meta_not_materialized",
+                "hinerv_target_region_action_parseback_survival_missing",
+                "hinerv_target_region_action_inflate_survival_missing",
+                "hinerv_target_region_action_archive_zip_byte_delta_missing",
             ]
             exact_accepted = bool(
                 best_record is not None
@@ -5187,6 +5432,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 raw_hard_birth_pose_rejected_candidate_count
             ),
             "masked_residual_oracle": masked_residual_oracle,
+            "masked_residual_synthesis_controls": {
+                "enabled": bool(synthesis_step_count > 0),
+                "steps": int(synthesis_step_count),
+                "learning_rate": float(synthesis_lr),
+            },
             "fakequant_survival_required": bool(require_fakequant_survival),
             "birth_gradient_surface": birth_gradient_surface,
             "birth_gradient_surface_eval_count": int(birth_gradient_surface_eval_count),
@@ -6184,6 +6434,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 target_region_forced_key=target_region_forced_key,
                 require_fakequant_survival=require_fakequant_survival,
                 fakequant_survival_bits=fakequant_survival_bits,
+                masked_residual_synthesis_steps=masked_residual_synthesis_steps,
+                masked_residual_synthesis_learning_rate=(
+                    masked_residual_synthesis_learning_rate
+                ),
                 birth_update_scope=resolved_birth_update_scope,
                 _target_region_portfolio_excluded=excluded_next,
                 _target_region_portfolio_attempts=tuple(portfolio_attempts),
