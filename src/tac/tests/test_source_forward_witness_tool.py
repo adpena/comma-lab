@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 import tac.analysis.snerv_source_forward_producer as source_forward_producer
+import tools.source_forward_witness as witness_tool
 from tac.analysis.snerv_source_forward_proof import (
     SOURCE_FORWARD_SURFACES,
     SOURCE_FORWARD_TENSOR_NAMES,
@@ -113,6 +114,51 @@ def test_source_forward_witness_payload_names_official_packet_blockers(
     assert payload["first_failed_tensor"] is not None
     assert any(
         "snerv_output2_boundary_not_source_identical" in blocker
+        for blocker in payload["blockers"]
+    )
+
+
+def test_source_forward_witness_build_failure_preserves_input_resolution_blockers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    packet_path.write_bytes(_official_packet())
+
+    def fail_build(**_kwargs):
+        raise RuntimeError("strict source graph inputs unavailable")
+
+    monkeypatch.setattr(
+        witness_tool,
+        "build_snerv_source_forward_proof_from_archive_packet",
+        fail_build,
+    )
+    payload = build_source_forward_witness_payload(
+        packet_path=packet_path,
+        pair_ids=[0],
+        capture_official_torch_from_upstream_source_graph=True,
+        checkpoint_export_report_resolution={
+            "schema": "snerv_source_forward_witness_input_resolution.v1",
+            "checkpoint_export_report_requested": True,
+            "blockers": [
+                "snerv_source_forward_witness_report_source_config_path_missing",
+                "snerv_source_forward_witness_report_source_frame_triplets_missing",
+            ],
+        },
+        generated_utc="2026-06-07T00:00:00Z",
+    )
+
+    assert payload["source_forward_proof_action_effect"] is None
+    assert payload["passed"] is False
+    assert payload["launch_gate_clearable"] is False
+    assert "snerv_source_forward_witness_report_source_config_path_missing" in (
+        payload["blockers"]
+    )
+    assert "snerv_source_forward_witness_report_source_frame_triplets_missing" in (
+        payload["blockers"]
+    )
+    assert any(
+        blocker.startswith("snerv_source_forward_witness_build_failed:")
         for blocker in payload["blockers"]
     )
 

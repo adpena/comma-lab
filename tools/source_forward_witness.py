@@ -460,6 +460,15 @@ def build_source_forward_witness_payload(
     packet_bytes = packet.read_bytes()
     packet_sha256 = sha256_bytes(packet_bytes)
     resolved_action_id = action_id or _default_action_id(packet_sha256, pair_ids)
+    resolution_blockers = [
+        str(value)
+        for value in (
+            (checkpoint_export_report_resolution or {}).get("blockers")
+            if isinstance(checkpoint_export_report_resolution, Mapping)
+            else []
+        )
+        or []
+    ]
     base: dict[str, Any] = {
         "schema": SNERV_SOURCE_FORWARD_WITNESS_SCHEMA,
         "generated_utc": generated,
@@ -565,21 +574,13 @@ def build_source_forward_witness_payload(
                 "type": type(exc).__name__,
                 "message": str(exc),
             },
-            "blockers": [blocker],
+            "blockers": _ordered_unique([*resolution_blockers, blocker]),
         }
     validation = validate_snerv_source_forward_proof_action_effect(row)
     output2 = row.get("output2_boundary_verdict")
     blockers = _ordered_unique(
         [
-            *[
-                str(value)
-                for value in (
-                    (checkpoint_export_report_resolution or {}).get("blockers")
-                    if isinstance(checkpoint_export_report_resolution, Mapping)
-                    else []
-                )
-                or []
-            ],
+            *resolution_blockers,
             *[str(value) for value in row.get("blockers") or []],
             *[
                 f"snerv_source_forward_proof_invalid:{value}"
