@@ -649,6 +649,33 @@ def test_target_region_action_payload_uses_receiver_decodable_compression():
     assert np.array_equal(decoded[0].rgb_u8, rgb)
 
 
+def test_target_region_action_payload_uses_split_brotli_when_streams_win():
+    rng = np.random.default_rng(7)
+    n = 512
+    y = (np.arange(n, dtype=np.uint16) % 64).astype(np.uint16)
+    x = ((np.arange(n, dtype=np.uint16) * 7) % 64).astype(np.uint16)
+    yx = np.stack([y, x], axis=1).astype(np.uint16)
+    rgb = rng.integers(0, 256, size=(n, 3), dtype=np.uint8)
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=64,
+        width=64,
+        yx=yx,
+        rgb_u8=rgb,
+    )
+
+    raw = encode_target_region_actions([action])
+    payload = encode_target_region_actions_payload([action])
+    decoded = decode_target_region_actions(payload)
+
+    assert len(payload) < len(raw)
+    assert target_region_action_payload_codec(payload) == "split_brotli_v1"
+    assert len(decoded) == 1
+    assert np.array_equal(decoded[0].yx, yx)
+    assert np.array_equal(decoded[0].rgb_u8, rgb)
+
+
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke
 def test_byte_mutation_changes_inflate_output_no_op_proof():
     cfg = _smoke_cfg()
