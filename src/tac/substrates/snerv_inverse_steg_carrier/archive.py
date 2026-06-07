@@ -2301,6 +2301,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     skip_high_codec: str | None = None,
     skip_high_source_shape: tuple[int, int, int, int] | None = None,
     tub_input_codec: str | None = None,
+    source_forward_replay_proof: Mapping[str, Any] | None = None,
 ) -> bytes:
     """Encode executable official MFU/HFR/TUB receiver primitive bytes.
 
@@ -2406,9 +2407,29 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         ),
         tub_output2_raw=output2_plan["effective"].get("output2_raw"),
     )
+    source_forward_proof_status_header: dict[str, Any] = {}
+    if source_forward_replay_proof is not None:
+        source_forward_proof_status_header["source_forward_replay_proof"] = dict(
+            source_forward_replay_proof
+        )
     source_forward_proof_status = (
-        _official_mfu_hfr_tub_source_forward_proof_status_from_header({})
+        _official_mfu_hfr_tub_source_forward_proof_status_from_header(
+            source_forward_proof_status_header
+        )
     )
+    source_forward_proof_complete = bool(
+        source_forward_proof_status["source_forward_replay_numerical_proof_complete"]
+    )
+    if source_forward_replay_proof is not None and not source_forward_proof_complete:
+        raise SnervArchiveError(
+            "official primitive payload source-forward proof is incomplete: "
+            + ",".join(
+                str(value)
+                for value in source_forward_proof_status[
+                    "source_forward_replay_invalid_fields"
+                ]
+            )
+        )
     header = {
         "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         "codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC,
@@ -2464,11 +2485,17 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         ),
         "receiver_export_payload_bound": True,
         "receiver_export_self_consistency_verified": True,
-        "source_forward_replay_bound_by_export": False,
+        "source_forward_replay_bound_by_export": source_forward_proof_complete,
+        **(
+            {"source_forward_replay_proof": dict(source_forward_replay_proof)}
+            if source_forward_replay_proof is not None
+            else {}
+        ),
         "source_forward_replay_proof_status": source_forward_proof_status,
         "source_forward_blockers": list(source_forward_blockers),
         "receiver_runtime_decode_proven_by_payload": False,
-        "source_forward_replay_authority": False,
+        "source_forward_replay_verified": source_forward_proof_complete,
+        "source_forward_replay_authority": source_forward_proof_complete,
         **FALSE_AUTHORITY,
     }
     return _pack_subpacket(SNERV_DECODER_MAGIC, header, compressed)

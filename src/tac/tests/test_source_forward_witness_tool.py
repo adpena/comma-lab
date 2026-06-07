@@ -1,0 +1,240 @@
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+from tac.analysis.snerv_step_map_coder import encode_step_maps
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    encode_decoder_payload,
+    encode_lf_metadata_payload,
+    encode_lf_quant_payload,
+    encode_official_mfu_hfr_tub_decoder_payload,
+    pack_snerv_archive,
+)
+from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
+    OfficialConvTranspose2dNchw,
+    OfficialResidualBlocksWithInputConv,
+    OfficialSnervMfu,
+    OfficialSnervMfuSpec,
+)
+from tools.source_forward_witness import build_source_forward_witness_payload, main
+
+
+def test_source_forward_witness_cli_writes_fail_closed_artifact(
+    tmp_path: Path,
+) -> None:
+    packet = _legacy_packet()
+    packet_path = tmp_path / "legacy.snar"
+    out = tmp_path / "witness.json"
+    packet_path.write_bytes(packet)
+
+    assert main(["--packet", str(packet_path), "--out", str(out)]) == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+
+    assert payload["schema"] == "snerv_source_forward_witness_cli.v1"
+    assert payload["passed"] is False
+    assert payload["launch_gate_clearable"] is False
+    assert payload["score_claim"] is False
+    assert payload["source_forward_proof_action_effect"] is None
+    assert any(
+        blocker.startswith("snerv_source_forward_witness_build_failed:")
+        for blocker in payload["blockers"]
+    )
+    assert (
+        main(
+            [
+                "--packet",
+                str(packet_path),
+                "--out",
+                str(out),
+                "--allow-overwrite",
+                "--expected-output-sha256",
+                payload_file_sha256(out),
+                "--fail-on-blockers",
+            ]
+        )
+        == 2
+    )
+
+
+def test_source_forward_witness_payload_names_official_packet_blockers(
+    tmp_path: Path,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    packet_path.write_bytes(_official_packet())
+
+    payload = build_source_forward_witness_payload(
+        packet_path=packet_path,
+        pair_ids=[0],
+        capture_official_torch_from_archive=True,
+        generated_utc="2026-06-07T00:00:00Z",
+    )
+
+    assert payload["source_forward_proof_action_effect"] is not None
+    assert payload["passed"] is False
+    assert payload["launch_gate_clearable"] is False
+    assert payload["output2_verdict"] in {
+        "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS",
+        "REPARAMETERIZED_RENAME_REQUIRED",
+    }
+    assert payload["first_failed_tensor"] is not None
+    assert any(
+        "snerv_output2_boundary_not_source_identical" in blocker
+        for blocker in payload["blockers"]
+    )
+
+
+def _legacy_packet() -> bytes:
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=1)),
+        step_map_packet=encode_step_maps(
+            [np.ones((1, 1), dtype=np.float32)],
+            bins=4,
+        ).packet,
+        metadata={"lf_plane_count": 1, "levels": 1, "wavelet": "haar"},
+    )
+    return archive.packet
+
+
+def _official_packet() -> bytes:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    bundle["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    bundle["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=np.linspace(
+            0.0,
+            1.0,
+            1 * 6 * 8 * 8,
+            dtype=np.float64,
+        ).reshape(1, 6, 8, 8),
+        tub_output2_raw=np.full((2, 12, 8, 8), 0.125, dtype=np.float64),
+        store_tub_output2_for_receiver_proof=True,
+    )
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=encode_step_maps(
+            [np.ones((1, 1), dtype=np.float32)],
+            bins=4,
+        ).packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+    return archive.packet
+
+
+def _official_payload_fixture(seed: int = 17) -> dict[str, object]:
+    rng = np.random.default_rng(seed)
+    spec = OfficialSnervMfuSpec(
+        low_channels=1,
+        mid_channels=1,
+        high_channels=1,
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=0,
+    )
+    mfu = OfficialSnervMfu(
+        spec=spec,
+        upsample_mid=OfficialConvTranspose2dNchw(
+            rng.standard_normal((1, 1, 2, 2)) * 0.04,
+            rng.standard_normal(1) * 0.01,
+            stride=2,
+        ),
+        rb_mid=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(
+                rng.standard_normal((1, 2, 3, 3)) * 0.04,
+                rng.standard_normal(1) * 0.01,
+                padding=1,
+            ),
+            residual_blocks=(),
+        ),
+        upsample_high=OfficialConvTranspose2dNchw(
+            rng.standard_normal((1, 1, 2, 2)) * 0.04,
+            rng.standard_normal(1) * 0.01,
+            stride=2,
+        ),
+        rb_high=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(
+                rng.standard_normal((1, 2, 3, 3)) * 0.04,
+                rng.standard_normal(1) * 0.01,
+                padding=1,
+            ),
+            residual_blocks=(),
+        ),
+    )
+    yy, xx = np.mgrid[0:8, 0:8].astype(np.float64)
+    return {
+        "mfu": mfu,
+        "hfr_heads": OfficialHfrHeads(
+            lh_head=_official_hfr_head(rng),
+            hl_head=_official_hfr_head(rng),
+            hh_head=_official_hfr_head(rng),
+        ),
+        "low": rng.standard_normal((1, 1, 2, 2)) * 0.2,
+        "skip_mid": rng.standard_normal((1, 1, 4, 4)) * 0.2,
+        "skip_high": rng.standard_normal((1, 1, 8, 8)) * 0.2,
+        "tub_current": np.stack([np.sin(xx / 3.0) + np.cos(yy / 4.0)], axis=0),
+        "tub_previous": np.stack(
+            [np.sin((xx - 1.0) / 3.0) + np.cos(yy / 4.0)],
+            axis=0,
+        ),
+        "tub_next_frame": np.stack(
+            [np.sin((xx + 1.0) / 3.0) + np.cos(yy / 4.0)],
+            axis=0,
+        ),
+        "temporal_encoder_output_shape": (1, 4, 4, 4),
+        "fc_hw": (2, 2),
+        "output2_decoder_output_shape": (2, 8, 4, 4),
+    }
+
+
+def _official_hfr_head(rng: np.random.Generator) -> OfficialHfrConvBlock:
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(
+            rng.standard_normal((2, 1, 1, 1)) * 0.04,
+            rng.standard_normal(2) * 0.01,
+        ),
+        conv2=OfficialConv2dNchw(
+            rng.standard_normal((3, 2, 3, 3)) * 0.04,
+            rng.standard_normal(3) * 0.01,
+            padding=1,
+        ),
+    )
+
+
+def payload_file_sha256(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()

@@ -778,6 +778,26 @@ def test_official_mfu_hfr_tub_payload_accepts_action_effect_source_forward_claim
     assert decoded.header["source_forward_replay_authority"] is True
 
 
+def test_official_mfu_hfr_tub_payload_binds_action_effect_proof_at_encode() -> None:
+    action_effect = _source_forward_action_effect_fixture()
+
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **_official_payload_fixture(),
+        source_forward_replay_proof=action_effect,
+    )
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+    proof = decoded.execute()
+
+    assert decoded.header["source_forward_replay_proof"] == action_effect
+    assert decoded.header["source_forward_replay_bound_by_export"] is True
+    assert decoded.header["source_forward_replay_verified"] is True
+    assert decoded.header["source_forward_replay_authority"] is True
+    status = decoded.header["source_forward_replay_proof_status"]
+    assert status["source_forward_replay_action_effect_valid"] is True
+    assert status["source_forward_replay_numerical_proof_complete"] is True
+    assert proof["source_forward_replay_proof_status"] == status
+
+
 def test_official_mfu_hfr_tub_archive_payload_bitflip_falsifies_receiver_replay() -> None:
     decoder_payload = encode_official_mfu_hfr_tub_decoder_payload(
         **_official_payload_fixture()

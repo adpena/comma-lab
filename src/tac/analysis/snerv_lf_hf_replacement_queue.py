@@ -29,6 +29,10 @@ from tac.analysis.snerv_lf_hf_runtime_binding import (
 from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
     summarize_snerv_official_tub_lf_hf_replacement_authority_gates,
 )
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    validate_snerv_source_forward_proof_action_effect,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
@@ -451,150 +455,16 @@ def _source_forward_replay_proof(
     selected: Mapping[str, Any],
     replay: Mapping[str, Any],
 ) -> Mapping[str, Any] | None:
-    direct_proof = selected.get("source_forward_replay_proof")
-    direct_status = _source_forward_replay_proof_status(
-        direct_proof if isinstance(direct_proof, Mapping) else None
-    )
-    if direct_status["source_forward_replay_numerical_proof_complete"] is True:
-        return dict(direct_proof)
-    return _canonical_source_forward_authority_proof(selected, replay)
-
-
-def _canonical_source_forward_authority_proof(
-    selected: Mapping[str, Any],
-    replay: Mapping[str, Any],
-) -> dict[str, Any] | None:
-    source_replay = selected.get("source_forward_replay")
-    source_replay = source_replay if isinstance(source_replay, Mapping) else {}
-    if not (
-        selected.get("source_forward_replay_authority") is True
-        and selected.get("full_tub_source_forward_parity_proven") is True
-        and not selected.get("blockers")
-        and source_replay.get("source_forward_replay_authority") is True
-        and source_replay.get("source_forward_replay_verified") is True
-        and source_replay.get("full_stack_source_forward_parity_proven") is True
-        and source_replay.get("replay_ran") is True
-        and not source_replay.get("blockers")
-        and replay.get("source_forward_replay_authority") is True
-        and replay.get("source_forward_replay_bound") is True
-        and replay.get("source_forward_replay_verified") is True
-        and replay.get("receiver_runtime_decode_proven") is True
-        and replay.get("frame_producing_official_payload_replay_proven") is True
-        and replay.get("receiver_frame_decode_consumes_output2") is True
-        and not replay.get("blockers")
+    for raw in (
+        selected.get("source_forward_replay_proof"),
+        replay.get("source_forward_replay_proof"),
     ):
-        return None
-    if not _zero_float(source_replay.get("max_abs_error")):
-        return None
-    official_frame_hash = source_replay.get("official_output_sha256")
-    portable_frame_hash = source_replay.get("portable_output_sha256")
-    receiver_frame_hash = replay.get("decoded_frames_sha256")
-    parseback_frame_hash = (
-        replay.get("output_bundle_sha256") or replay.get("decoded_frames_sha256")
-    )
-    if not all(
-        _looks_like_sha256(value)
-        for value in (
-            official_frame_hash,
-            portable_frame_hash,
-            receiver_frame_hash,
-            parseback_frame_hash,
-        )
-    ):
-        return None
-    if str(official_frame_hash) != str(portable_frame_hash):
-        return None
-
-    mfu_row = _canonical_component_row(selected, "mfu")
-    hfr_row = _canonical_component_row(selected, "hfr")
-    tub_row = _canonical_component_row(selected, "tub")
-    if not all(
-        _component_row_zero_hash_parity(row, require_full_stack=(name == "tub"))
-        for name, row in (("mfu", mfu_row), ("hfr", hfr_row), ("tub", tub_row))
-    ):
-        return None
-    mfu_hash = str(mfu_row.get("official_output_sha256"))
-    hfr_hash = str(hfr_row.get("official_output_sha256"))
-    tub_output2_hash = _canonical_tub_output2_hash(selected, tub_row)
-    if not _looks_like_sha256(tub_output2_hash):
-        return None
-
-    return {
-        "official_torch_frame_hash": str(official_frame_hash),
-        "mlx_frame_hash": str(portable_frame_hash),
-        "numpy_receiver_frame_hash": str(receiver_frame_hash),
-        "parseback_frame_hash": str(parseback_frame_hash),
-        "tub_output_2_hash": str(tub_output2_hash),
-        "max_abs_frame_delta_official_mlx": 0.0,
-        "max_abs_yuv6_delta_official_numpy": 0.0,
-        "seg_logit_linf_official_parseback": 0.0,
-        "pose_linf_official_parseback": 0.0,
-        "mfu_tensor_hashes": {"mfu_official_output": mfu_hash},
-        "hfr_tensor_hashes": {"hfr_official_output": hfr_hash},
-        "derived_from": "canonical_source_forward_authority_hashes.v1",
-    }
-
-
-def _canonical_component_row(
-    selected: Mapping[str, Any],
-    component_id: str,
-) -> Mapping[str, Any]:
-    rows = selected.get("component_rows")
-    if isinstance(rows, Mapping):
-        row = rows.get(component_id)
-        return row if isinstance(row, Mapping) else {}
-    if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
-        for row in rows:
-            if isinstance(row, Mapping) and row.get("component_id") == component_id:
-                return row
-    return {}
-
-
-def _component_row_zero_hash_parity(
-    row: Mapping[str, Any],
-    *,
-    require_full_stack: bool = False,
-) -> bool:
-    official_hash = row.get("official_output_sha256")
-    portable_hash = row.get("portable_output_sha256")
-    return bool(
-        row
-        and row.get("source_forward_parity_proven") is True
-        and (not require_full_stack or row.get("full_stack_source_forward_parity_proven") is True)
-        and not row.get("blockers")
-        and _zero_float(row.get("max_abs_error"))
-        and _looks_like_sha256(official_hash)
-        and _looks_like_sha256(portable_hash)
-        and str(official_hash) == str(portable_hash)
-    )
-
-
-def _canonical_tub_output2_hash(
-    selected: Mapping[str, Any],
-    tub_row: Mapping[str, Any],
-) -> str | None:
-    tub_replay = selected.get("official_tub_source_forward_replay")
-    tub_replay = tub_replay if isinstance(tub_replay, Mapping) else {}
-    if not (
-        tub_replay.get("source_forward_replay_authority") is True
-        and tub_replay.get("full_tub_source_forward_parity_proven") is True
-        and not tub_replay.get("blockers")
-    ):
-        return None
-    output2 = tub_replay.get("portable_output2_fusion")
-    output2 = output2 if isinstance(output2, Mapping) else {}
-    source_hash = output2.get("source_output_sha256")
-    portable_hash = output2.get("portable_output_sha256")
-    if not (
-        output2.get("output_hashes_bit_identical") is True
-        and not output2.get("blockers")
-        and _zero_float(output2.get("max_abs_error"))
-        and _looks_like_sha256(source_hash)
-        and _looks_like_sha256(portable_hash)
-        and str(source_hash) == str(portable_hash)
-    ):
-        return None
-    return str(source_hash)
+        if not isinstance(raw, Mapping):
+            continue
+        status = _source_forward_replay_proof_status(raw)
+        if status["source_forward_replay_numerical_proof_complete"] is True:
+            return dict(raw)
+    return None
 
 
 def _first_source_forward_mapping(
@@ -650,9 +520,15 @@ def _source_forward_axis_trace_measurements(
 def _source_forward_replay_proof_status(
     proof: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    proof_present = isinstance(proof, Mapping)
     missing = list(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS)
     invalid: list[str] = []
-    if isinstance(proof, Mapping):
+    action_effect_status: dict[str, Any] | None = None
+    if proof_present and proof.get("schema") == SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+        action_effect_status = validate_snerv_source_forward_proof_action_effect(proof)
+        missing = []
+        invalid = list(action_effect_status["blockers"])
+    elif proof_present:
         missing = [
             field
             for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
@@ -677,22 +553,41 @@ def _source_forward_replay_proof_status(
                 )
             ):
                 invalid.append(field)
-    complete = bool(isinstance(proof, Mapping) and not missing and not invalid)
+        invalid.append("source_forward_action_effect_proof_missing")
+    complete = bool(
+        proof_present
+        and not missing
+        and not invalid
+        and action_effect_status is not None
+        and action_effect_status["passed"] is True
+    )
     return {
         "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
-        "source_forward_replay_proof_present": isinstance(proof, Mapping),
+        "source_forward_replay_proof_present": proof_present,
         "source_forward_replay_required_fields": list(
             OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
         ),
         "source_forward_replay_required_fields_missing": missing,
         "source_forward_replay_invalid_fields": _dedupe(invalid),
+        "source_forward_replay_action_effect_schema": (
+            SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA
+        ),
+        "source_forward_replay_action_effect_valid": bool(
+            action_effect_status is not None
+            and action_effect_status["passed"] is True
+        ),
+        "source_forward_replay_action_effect_blockers": (
+            []
+            if action_effect_status is None
+            else list(action_effect_status["blockers"])
+        ),
         "source_forward_replay_numerical_proof_complete": complete,
         "source_forward_replay_proof_status": (
             "complete_numerical_source_forward_proof_present"
             if complete
             else (
                 "metadata_only_or_incomplete_source_forward_proof"
-                if isinstance(proof, Mapping)
+                if proof_present
                 else "missing_source_forward_proof"
             )
         ),

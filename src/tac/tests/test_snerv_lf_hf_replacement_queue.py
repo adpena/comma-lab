@@ -12,6 +12,9 @@ from tac.analysis.snerv_lf_hf_replacement_queue import (
     SCHEMA,
     build_snerv_lf_hf_replacement_queue,
 )
+from tac.tests.snerv_source_forward_fixtures import (
+    valid_snerv_source_forward_action_effect,
+)
 from tools.build_snerv_lf_hf_replacement_queue import main as cli_main
 
 
@@ -623,7 +626,7 @@ def test_lf_hf_queue_ready_gate_cannot_mask_missing_source_forward_proof(
     assert row["command_argv"] == []
 
 
-def test_lf_hf_queue_consumes_canonical_source_forward_hash_authority_without_legacy_proof(
+def test_lf_hf_queue_rejects_canonical_source_forward_hash_authority_without_action_effect(
     tmp_path: Path,
 ) -> None:
     state_dict_path = _write_fake_state_dict(tmp_path)
@@ -718,35 +721,20 @@ def test_lf_hf_queue_consumes_canonical_source_forward_hash_authority_without_le
         if item["solution_family"] == "official_tub_lf_hf_decoder_replacement"
     )
     blockers = set(row["blockers"])
-    assert "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing" not in (
-        blockers
+    assert "snerv_official_mfu_hfr_tub_numerical_source_forward_proof_missing" in blockers
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in blockers
     )
-    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" not in (
-        blockers
-    )
-    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" not in (
-        blockers
-    )
-    assert "snerv_ready_official_tub_lf_hf_gate_contradicts_source_forward_queue_blockers" not in (
-        blockers
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in blockers
+    assert (
+        "snerv_ready_official_tub_lf_hf_gate_contradicts_source_forward_queue_blockers"
+        in blockers
     )
     source_evidence = row["source_forward_evidence"]
-    assert source_evidence["source_forward_replay_authority"] is True
-    assert source_evidence["source_forward_replay_numerical_proof_complete"] is True
-    assert source_evidence["source_forward_replay_proof"] == {
-        "official_torch_frame_hash": "1" * 64,
-        "mlx_frame_hash": "1" * 64,
-        "numpy_receiver_frame_hash": "b" * 64,
-        "parseback_frame_hash": "d" * 64,
-        "tub_output_2_hash": "5" * 64,
-        "max_abs_frame_delta_official_mlx": 0.0,
-        "max_abs_yuv6_delta_official_numpy": 0.0,
-        "seg_logit_linf_official_parseback": 0.0,
-        "pose_linf_official_parseback": 0.0,
-        "mfu_tensor_hashes": {"mfu_official_output": "2" * 64},
-        "hfr_tensor_hashes": {"hfr_official_output": "3" * 64},
-        "derived_from": "canonical_source_forward_authority_hashes.v1",
-    }
+    assert source_evidence["source_forward_replay_authority"] is False
+    assert source_evidence["source_forward_replay_numerical_proof_complete"] is False
+    assert source_evidence["source_forward_replay_proof"] is None
 
 
 def test_lf_hf_queue_rejects_metadata_only_source_forward_authority(
@@ -764,7 +752,10 @@ def test_lf_hf_queue_rejects_metadata_only_source_forward_authority(
     artifact["official_tub_source_forward_replay"] = None
     replay = artifact["receiver_payload_frame_replay"]
     assert isinstance(replay, dict)
-    assert isinstance(replay.get("source_forward_replay_proof"), dict)
+    replay["source_forward_replay_proof"] = {
+        "section_names": ["MFU", "HFR", "TUB"],
+        "shapes_match": True,
+    }
 
     row = _official_row_for_source_forward_artifact(tmp_path, artifact)
     evidence = row["source_forward_evidence"]
@@ -922,6 +913,10 @@ def test_lf_hf_queue_rejects_partial_canonical_source_forward_authority(
         full_tub_parity=True,
         state_dict_path=_write_fake_state_dict(tmp_path),
     )
+    replay = artifact["receiver_payload_frame_replay"]
+    assert isinstance(replay, dict)
+    replay.pop("source_forward_replay_proof", None)
+    artifact.pop("source_forward_replay_proof", None)
     _apply_source_forward_authority_mutation(artifact, mutation)
 
     row = _official_row_for_source_forward_artifact(tmp_path, artifact)
@@ -2789,19 +2784,7 @@ def _source_forward_artifact(
         else None
     )
     source_forward_replay_proof = (
-        {
-            "official_torch_frame_hash": "1" * 64,
-            "mlx_frame_hash": "1" * 64,
-            "numpy_receiver_frame_hash": "b" * 64,
-            "parseback_frame_hash": "d" * 64,
-            "tub_output_2_hash": "5" * 64,
-            "max_abs_frame_delta_official_mlx": 0.0,
-            "max_abs_yuv6_delta_official_numpy": 0.0,
-            "seg_logit_linf_official_parseback": 0.0,
-            "pose_linf_official_parseback": 0.0,
-            "mfu_tensor_hashes": {"mfu_official_output": "2" * 64},
-            "hfr_tensor_hashes": {"hfr_official_output": "3" * 64},
-        }
+        valid_snerv_source_forward_action_effect()
         if source_authority
         else None
     )

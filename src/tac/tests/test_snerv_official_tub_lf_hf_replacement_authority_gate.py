@@ -11,6 +11,9 @@ from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
     SOURCE_AUTHORITY_BLOCKER,
     build_snerv_official_tub_lf_hf_replacement_authority_gate,
 )
+from tac.tests.snerv_source_forward_fixtures import (
+    valid_snerv_source_forward_action_effect,
+)
 from tools.build_snerv_official_tub_lf_hf_replacement_authority_gate import (
     main as cli_main,
 )
@@ -541,19 +544,7 @@ def _source_forward_artifact(
 
 
 def _complete_source_forward_proof() -> dict[str, object]:
-    return {
-        "official_torch_frame_hash": "1" * 64,
-        "mlx_frame_hash": "2" * 64,
-        "numpy_receiver_frame_hash": "3" * 64,
-        "parseback_frame_hash": "4" * 64,
-        "tub_output_2_hash": "5" * 64,
-        "max_abs_frame_delta_official_mlx": 0.0,
-        "max_abs_yuv6_delta_official_numpy": 0.0,
-        "seg_logit_linf_official_parseback": 0.0,
-        "pose_linf_official_parseback": 0.0,
-        "mfu_tensor_hashes": {"mfu.weight": "6" * 64},
-        "hfr_tensor_hashes": {"hfr.weight": "7" * 64},
-    }
+    return valid_snerv_source_forward_action_effect()
 
 
 def _checkpoint_export_report(*, trained_mapping: bool) -> dict[str, object]:

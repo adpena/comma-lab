@@ -13,6 +13,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    validate_snerv_source_forward_proof_action_effect,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
@@ -820,9 +824,15 @@ def _source_forward_replay_numerical_proof_complete(
 def _source_forward_replay_proof_status(
     proof: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    proof_present = isinstance(proof, Mapping)
     missing = list(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS)
     invalid: list[str] = []
-    if isinstance(proof, Mapping):
+    action_effect_status: dict[str, Any] | None = None
+    if proof_present and proof.get("schema") == SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+        action_effect_status = validate_snerv_source_forward_proof_action_effect(proof)
+        missing = []
+        invalid = list(action_effect_status["blockers"])
+    elif proof_present:
         missing = [
             field
             for field in OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
@@ -847,22 +857,41 @@ def _source_forward_replay_proof_status(
                 )
             ):
                 invalid.append(field)
-    complete = bool(isinstance(proof, Mapping) and not missing and not invalid)
+        invalid.append("source_forward_action_effect_proof_missing")
+    complete = bool(
+        proof_present
+        and not missing
+        and not invalid
+        and action_effect_status is not None
+        and action_effect_status["passed"] is True
+    )
     return {
         "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
-        "source_forward_replay_proof_present": isinstance(proof, Mapping),
+        "source_forward_replay_proof_present": proof_present,
         "source_forward_replay_required_fields": list(
             OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS
         ),
         "source_forward_replay_required_fields_missing": missing,
         "source_forward_replay_invalid_fields": _dedupe(invalid),
+        "source_forward_replay_action_effect_schema": (
+            SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA
+        ),
+        "source_forward_replay_action_effect_valid": bool(
+            action_effect_status is not None
+            and action_effect_status["passed"] is True
+        ),
+        "source_forward_replay_action_effect_blockers": (
+            []
+            if action_effect_status is None
+            else list(action_effect_status["blockers"])
+        ),
         "source_forward_replay_numerical_proof_complete": complete,
         "source_forward_replay_proof_status": (
             "complete_numerical_source_forward_proof_present"
             if complete
             else (
                 "metadata_only_or_incomplete_source_forward_proof"
-                if isinstance(proof, Mapping)
+                if proof_present
                 else "missing_source_forward_proof"
             )
         ),
