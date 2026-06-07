@@ -640,6 +640,29 @@ def test_v1_inverse_candidate_metadata_roundtrips() -> None:
 
 
 @pytest.mark.parametrize(
+    "inverse_source",
+    [
+        "path_tube_support",
+        "path_tube_segnet_margin_frontier",
+        "frame0_pose_temporal_path",
+        "selector_temporal_path",
+    ],
+)
+def test_v1_accepts_path_action_inverse_sources(inverse_source: str) -> None:
+    eff = ActionEffect.build(
+        action_id=f"path_{inverse_source}",
+        family="hinerv",
+        authority=ACTION_EFFECT_PLANNING_AUTHORITY,
+        producer="path_action_producer",
+        inverse_source=inverse_source,
+        payload_sections=["path_tube_support"],
+    )
+
+    assert eff.inverse_source == inverse_source
+    assert ActionEffect.from_dict(eff.as_dict()).inverse_source == inverse_source
+
+
+@pytest.mark.parametrize(
     ("field", "value", "match"),
     [
         ("inverse_source", "unknown_inverse", "inverse_source"),
