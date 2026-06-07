@@ -615,3 +615,60 @@ def test_trace_nerv_crux_reads_sibling_birth_survival_retention(
     blockers = {row.get("blocker") for row in rows if row.get("blocker")}
     assert "hinerv_birth_parseback_margin_floor_failed" in blockers
     assert "hinerv_birth_parseback_scorer_effect_collapse" in blockers
+
+
+def test_trace_nerv_crux_blocks_parseback_survival_without_margin_certificate(
+    tmp_path: Path,
+) -> None:
+    artifact = tmp_path / "training_artifact.json"
+    out = tmp_path / "trace_rows.json"
+    action_id = "b" * 64
+    artifact.write_text(json.dumps({}), encoding="utf-8")
+    (tmp_path / "hi_nerv_birth_action_effects.jsonl").write_text(
+        json.dumps(
+            {
+                "schema": "tac.action_effect.v1",
+                "action_id": action_id,
+                "authority": "batch_local_live_mlx",
+                "wrong_to_target": 16,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "hi_nerv_selected_birth_parseback_survival.json").write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_target_region_birth_survival.v1",
+                "action_id": action_id,
+                "surface": "parseback_mlx",
+                "survived": True,
+                "wrong_to_target_count": 16,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--training-artifact",
+            str(artifact),
+            "--out",
+            str(out),
+            "--allow-missing-direct-live-segnet",
+            "--allow-missing-direct-live-posenet",
+            "--allow-missing-receiver-surface-trace",
+        ],
+        check=True,
+        cwd=REPO_ROOT,
+    )
+
+    rows = json.loads(out.read_text(encoding="utf-8"))
+    metrics = _by_metric(rows)
+    assert metrics["parseback_target_margin_certificate_present"]["value"] == pytest.approx(
+        0.0
+    )
+    blockers = {row.get("blocker") for row in rows if row.get("blocker")}
+    assert "hinerv_birth_parseback_margin_certificate_missing" in blockers

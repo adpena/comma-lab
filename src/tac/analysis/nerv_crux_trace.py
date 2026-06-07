@@ -396,6 +396,11 @@ def _append_hinerv_birth_survival_artifact_rows(
         cert = _margin_certificate(row, surface=surface)
         source_path = path.as_posix()
         source_sha256 = sha256_file(path)
+        missing_blocker = (
+            "hinerv_birth_parseback_margin_certificate_missing"
+            if surface == "parseback" and cert is None
+            else None
+        )
         _append_metric_row(
             rows,
             source_path=source_path,
@@ -404,6 +409,7 @@ def _append_hinerv_birth_survival_artifact_rows(
             axis=surface,
             metric=f"{surface}_target_margin_certificate_present",
             value=1.0 if cert is not None else 0.0,
+            blocker=missing_blocker,
         )
         if cert is None:
             return
