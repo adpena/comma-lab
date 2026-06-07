@@ -275,6 +275,11 @@ def test_hinerv_action_comparison_uses_archive_executable_direct_support(
     assert report["comparison"]["next_blocker"] == (
         "optimize_sidecar_grammar_current_receiver_survives_backend_does_not"
     )
+    lowering_identity = report["lowering_race"]["support_identity"]
+    assert lowering_identity["expected_support_sha256"] == support_sha
+    assert lowering_identity["support_sha256s"] == [support_sha]
+    assert lowering_identity["all_candidates_same_support"] is True
+    assert lowering_identity["blockers"] == []
 
 
 def test_hinerv_action_comparison_rejects_survival_receipt_archive_mismatch(

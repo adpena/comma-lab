@@ -993,7 +993,11 @@ def _lowering_race_verdict(
     if backend_effect:
         effects.append(ActionEffect.from_dict(backend_effect))
 
-    report = build_lowering_race_report(action_id=action_id, action_effects=effects)
+    report = build_lowering_race_report(
+        action_id=action_id,
+        action_effects=effects,
+        expected_support_sha256=support_sha256,
+    )
     verdict = dict(report["verdict"])
     if sidecar_support_mismatch or sidecar_survival_identity_mismatch:
         first_failing_surface = (
@@ -1033,6 +1037,7 @@ def _lowering_race_verdict(
         "current_sidecar_candidate_id": current_sidecar.get("candidate_id"),
         "candidate_count": len(report.get("lowering_candidates") or []),
         "lowering_candidates": report.get("lowering_candidates") or [],
+        "support_identity": report.get("support_identity") or {},
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
