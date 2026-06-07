@@ -2445,9 +2445,34 @@ def test_official_tub_input_prune_report_prices_noncausal_bytes() -> None:
         == "unused_synthetic_float64"
     )
     assert report["tub_bitflip_causality"]["noncausal"] is True
+    assert report["tub_bitflip_causality"]["validation_blockers"] == []
+    assert "matrix_blockers" not in report["tub_bitflip_causality"]
+    assert "blockers" not in report["tub_bitflip_causality"]
     assert report["blockers"] == []
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
+
+
+def test_official_tub_input_prune_rejects_already_pruned_packets() -> None:
+    source = _official_output2_source_forward_archive_fixture()
+    pruned = build_snerv_official_tub_input_pruned_packet(source.packet)
+
+    with pytest.raises(SnervArchiveError, match="already use unused_synthetic"):
+        build_snerv_official_tub_input_pruned_packet(pruned.packet)
+
+    report = build_snerv_official_tub_input_prune_report(pruned.packet)
+
+    assert report["passed"] is False
+    assert report["verdict"] == "REIFY_REQUIRED_OR_KEEP"
+    assert report["candidate_packet_bytes"] is None
+    assert report["delta_bytes"] is None
+    assert report["bytes_saved"] == 0
+    assert report["byte_value"] is None
+    assert report["launch_gate_clearable"] is False
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["blockers"] == ["snerv_tub_inputs_already_unused_synthetic"]
 
 
 def test_official_tub_input_prune_report_fails_closed_when_receiver_render_fails() -> None:

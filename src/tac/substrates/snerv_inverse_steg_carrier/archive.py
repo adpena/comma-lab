@@ -1845,18 +1845,21 @@ def build_snerv_official_tub_input_prune_report(packet: bytes) -> dict[str, Any]
     source_packet = bytes(packet)
     decoded = unpack_snerv_archive(source_packet)
     if not is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
-        return {
-            "schema": OFFICIAL_TUB_INPUT_PRUNE_REPORT_SCHEMA,
-            "verdict": "NOT_OFFICIAL_MFU_HFR_TUB",
-            "passed": False,
-            "blockers": ["snerv_tub_prune_requires_official_mfu_hfr_tub_payload"],
-            **FALSE_AUTHORITY,
-        }
+        return _blocked_snerv_official_tub_input_prune_report(
+            source_packet,
+            "snerv_tub_prune_requires_official_mfu_hfr_tub_payload",
+        )
     source_payload = decode_official_mfu_hfr_tub_decoder_payload(
         decoded.sections["decoder_payload"]
     )
     source_header = source_payload.header
     source_tub_storage = dict(source_header.get("tub_input_storage") or {})
+    if source_tub_storage.get("codec") == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
+        return _blocked_snerv_official_tub_input_prune_report(
+            source_packet,
+            "snerv_tub_inputs_already_unused_synthetic",
+            source_tub_input_storage=source_tub_storage,
+        )
     try:
         source_frames = decoded.decode_frames(clip_to_uint8_range=True)
     except Exception as exc:
@@ -1867,7 +1870,10 @@ def build_snerv_official_tub_input_prune_report(packet: bytes) -> dict[str, Any]
             failure=f"{type(exc).__name__}:{exc}",
         )
     try:
-        candidate = build_snerv_official_tub_input_pruned_packet(source_packet)
+        candidate = _build_snerv_official_tub_input_pruned_packet_unchecked(
+            decoded,
+            source_payload,
+        )
         candidate_decoded = unpack_snerv_archive(candidate.packet)
         candidate_payload = decode_official_mfu_hfr_tub_decoder_payload(
             candidate_decoded.sections["decoder_payload"]
@@ -1897,20 +1903,12 @@ def build_snerv_official_tub_input_prune_report(packet: bytes) -> dict[str, Any]
     )
     candidate_tub_raw = int(candidate_tub_storage.get("stored_raw_bytes") or 0)
     raw_tub_saved = int(source_tub_raw - candidate_tub_raw)
-    bitflip_matrix = build_snerv_archive_payload_bitflip_falsification_matrix(
+    tub_proof = build_snerv_archive_payload_bitflip_falsification(
         source_packet,
-        sections=("decoder_payload.tub",),
+        bitflip_section="decoder_payload.tub",
     )
-    tub_proof = dict(bitflip_matrix.get("section_proofs", {})).get(
-        "decoder_payload.tub",
-        {},
-    )
-    tub_noncausal = bool(
-        "decoder_payload.tub" in bitflip_matrix.get("noncausal_sections", [])
-    )
+    tub_noncausal = _is_noncausal_payload_bitflip_proof(tub_proof)
     blockers: list[str] = []
-    if source_tub_storage.get("codec") == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
-        blockers.append("snerv_tub_inputs_already_unused_synthetic")
     if not tub_noncausal:
         blockers.append("snerv_tub_input_bitflip_not_proven_noncausal")
     if not receiver_rgb_equal:
@@ -1945,11 +1943,10 @@ def build_snerv_official_tub_input_prune_report(packet: bytes) -> dict[str, Any]
         "raw_tub_input_bytes_saved": int(max(0, raw_tub_saved)),
         "receiver_rgb_equal": receiver_rgb_equal,
         "max_abs_receiver_delta": max_abs_receiver_delta,
-        "tub_bitflip_causality": {
-            "noncausal": tub_noncausal,
-            "proof": tub_proof,
-            "matrix_blockers": list(bitflip_matrix.get("blockers") or []),
-        },
+        "tub_bitflip_causality": _noncausal_tub_bitflip_causality_report(
+            tub_proof,
+            noncausal=tub_noncausal,
+        ),
         "section": "decoder_payload.tub",
         "causality": "noncausal" if tub_noncausal else "unproven_or_causal",
         "byte_value": 0 if tub_noncausal else None,
@@ -1995,7 +1992,12 @@ def _blocked_snerv_official_tub_input_prune_report(
 
 
 def build_snerv_official_tub_input_pruned_packet(packet: bytes) -> SnervArchivePacket:
-    """Repack an official MFU/HFR/TUB archive with nonconsumed TUB inputs pruned."""
+    """Repack an official payload only if pruning is byte-positive and lossless.
+
+    This is a receiver-surface transform, not score authority.  It raises rather
+    than returning a candidate when TUB inputs were already pruned, receiver
+    uint8 frames change, or packet bytes fail to shrink.
+    """
 
     source_packet = bytes(packet)
     decoded = unpack_snerv_archive(source_packet)
@@ -2006,6 +2008,28 @@ def build_snerv_official_tub_input_pruned_packet(packet: bytes) -> SnervArchiveP
     source_payload = decode_official_mfu_hfr_tub_decoder_payload(
         decoded.sections["decoder_payload"]
     )
+    source_tub_storage = dict(source_payload.header.get("tub_input_storage") or {})
+    if source_tub_storage.get("codec") == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
+        raise SnervArchiveError("official TUB inputs already use unused_synthetic codec")
+    source_frames = decoded.decode_frames(clip_to_uint8_range=True)
+    candidate = _build_snerv_official_tub_input_pruned_packet_unchecked(
+        decoded,
+        source_payload,
+    )
+    candidate_frames = unpack_snerv_archive(candidate.packet).decode_frames(
+        clip_to_uint8_range=True
+    )
+    if not _receiver_uint8_frames_equal(source_frames, candidate_frames):
+        raise SnervArchiveError("TUB input pruning changed receiver uint8 frames")
+    if len(candidate.packet) >= len(source_packet):
+        raise SnervArchiveError("TUB input pruning did not reduce packet bytes")
+    return candidate
+
+
+def _build_snerv_official_tub_input_pruned_packet_unchecked(
+    decoded: DecodedSnervArchive,
+    source_payload: OfficialMfuHfrTubReceiverPayload,
+) -> SnervArchivePacket:
     mutated_sections = dict(decoded.sections)
     mutated_sections["decoder_payload"] = (
         _reencode_official_payload_with_tub_inputs_pruned(source_payload)
@@ -2090,6 +2114,58 @@ def _max_abs_delta_np(left: Any, right: Any) -> float | None:
     if not np.all(np.isfinite(delta)):
         return None
     return float(np.max(delta)) if delta.size else 0.0
+
+
+def _receiver_uint8_frames_equal(left: Any, right: Any) -> bool:
+    left_arr = np.asarray(left)
+    right_arr = np.asarray(right)
+    return bool(
+        tuple(left_arr.shape) == tuple(right_arr.shape)
+        and np.array_equal(
+            np.rint(left_arr).astype(np.uint8),
+            np.rint(right_arr).astype(np.uint8),
+        )
+    )
+
+
+def _is_noncausal_payload_bitflip_proof(proof: Mapping[str, Any]) -> bool:
+    return bool(
+        proof.get("proof_passed") is True
+        and not str(proof.get("first_failed_tensor") or "")
+        and proof.get("receiver_replay_failed") is False
+        and proof.get("rgb_pair_uint8_changed") is False
+        and proof.get("segnet_argmax_changed") is False
+        and proof.get("posenet_output_changed") is False
+    )
+
+
+def _noncausal_tub_bitflip_causality_report(
+    proof: Mapping[str, Any],
+    *,
+    noncausal: bool,
+) -> dict[str, Any]:
+    validation_blockers = [] if noncausal else list(proof.get("blockers") or [])
+    return {
+        "schema": "snerv_official_tub_bitflip_noncausality.v1",
+        "noncausal": bool(noncausal),
+        "logical_source_forward_causality": (
+            "noncausal" if noncausal else "causal_or_unproven"
+        ),
+        "bitflip_section": str(proof.get("bitflip_section") or ""),
+        "baseline_section_sha256": str(proof.get("baseline_section_sha256") or ""),
+        "mutated_section_sha256": str(proof.get("mutated_section_sha256") or ""),
+        "proof_survived_receiver_replay": proof.get("proof_passed") is True,
+        "first_failed_tensor": proof.get("first_failed_tensor"),
+        "first_failed_surface": proof.get("first_failed_surface"),
+        "receiver_replay_failed": proof.get("receiver_replay_failed") is True,
+        "rgb_pair_uint8_changed": proof.get("rgb_pair_uint8_changed") is True,
+        "segnet_argmax_changed": proof.get("segnet_argmax_changed") is True,
+        "posenet_output_changed": proof.get("posenet_output_changed") is True,
+        "bit_offset": proof.get("bit_offset"),
+        "bit_mask": proof.get("bit_mask"),
+        "validation_blockers": validation_blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _canonical_official_decoder_logical_bitflip_section(section: str) -> str | None:
