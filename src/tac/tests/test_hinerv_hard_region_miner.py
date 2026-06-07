@@ -297,6 +297,7 @@ def _four_arm_action_effect_rows(*, action_id: str) -> list[dict[str, Any]]:
         _action_effect_row(action_id=action_id, arm="B", action_kind="frame0_pose_target_only"),
         _action_effect_row(action_id=action_id, arm="C", action_kind="independent_birth_plus_frame0_pose"),
         _action_effect_row(action_id=action_id, arm="D", action_kind="joint_line_search_composite"),
+        _action_effect_row(action_id=action_id, arm="E", action_kind="frame0_pose_then_birth_composite"),
     ]
 
 

@@ -5435,6 +5435,107 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             measured_state = _region_candidate_state()
             return measured_snapshot, measured_state, sorted(updated_names), []
 
+        def _measure_frame0_pose_then_birth_arm(
+            pose_snapshot: list[tuple[Any, Any]] | None,
+            pose_updated_names: Sequence[str],
+        ) -> tuple[dict[str, Any] | None, list[str], dict[str, Any] | None, list[str]]:
+            """Measure the real reverse order: frame0 pose arm, then birth.
+
+            This is deliberately not the disjoint snapshot composition used by
+            arm C.  The birth gradients are evaluated from the posed live model
+            state, then applied through the same scoped actuator used by accepted
+            birth updates.  Missing gradient/surface movement is emitted as a
+            blocker instead of being inferred from the forward-order arm.
+            """
+
+            if pose_snapshot is None:
+                return (
+                    None,
+                    sorted(str(name) for name in pose_updated_names),
+                    None,
+                    ["hinerv_four_arm_pose_then_birth_pose_snapshot_missing"],
+                )
+            _restore_parameters(pose_snapshot)
+            best_state: dict[str, Any] | None = None
+            best_snapshot: list[tuple[Any, Any]] | None = None
+            best_decision: dict[str, Any] | None = None
+            best_rank: tuple[int, int, float] | None = None
+            blockers_for_arm: list[str] = []
+            birth_applied_names: set[str] = set()
+            for _reverse_step in range(ablation_compensation_steps):
+                step_snapshot = _snapshot_parameters()
+                birth_loss, birth_grads = _value_and_grad_on_birth_surface(self)
+                mx.eval(birth_loss)  # type: ignore[union-attr]
+                if not math.isfinite(float(birth_loss.item())):
+                    _restore_parameters(step_snapshot)
+                    blockers_for_arm.append("hinerv_four_arm_pose_then_birth_loss_not_finite")
+                    break
+                applied, _grad_norms, _update_norms = _apply_scoped_step(
+                    step_snapshot,
+                    birth_grads,
+                    lr,
+                    step_direction=-1.0,
+                )
+                if not applied:
+                    _restore_parameters(step_snapshot)
+                    blockers_for_arm.append(
+                        "hinerv_four_arm_pose_then_birth_no_scoped_gradient_signal"
+                    )
+                    break
+                birth_applied_names.update(applied)
+                candidate = _region_candidate_state()
+                candidate_pose_delta = _pose_delta_l2(candidate["pose"])
+                candidate_decision = _target_birth_admission_decision(
+                    new_d_seg=float(candidate["d_seg_batch"]),
+                    new_d_pose=candidate["d_pose_batch"],
+                    pose_output_l2_delta=candidate_pose_delta,
+                )
+                transitions = dict(candidate["region_argmax_transitions"])
+                candidate_nonrate = _nonrate_score(
+                    candidate["d_seg_batch"],
+                    candidate["d_pose_batch"],
+                )
+                delta_sort = (
+                    float("inf")
+                    if candidate_nonrate is None or initial_nonrate is None
+                    else float(candidate_nonrate - initial_nonrate)
+                )
+                rank = (
+                    int(transitions["wrong_to_target_count"]),
+                    int(transitions["net_target_support_delta"]),
+                    -delta_sort,
+                )
+                if best_rank is None or rank > best_rank:
+                    best_rank = rank
+                    best_state = candidate
+                    best_snapshot = _snapshot_parameters()
+                    best_decision = dict(candidate_decision)
+                if (
+                    int(transitions["wrong_to_target_count"]) > 0
+                    and int(transitions["net_target_support_delta"]) > 0
+                    and candidate_decision["exact_score_decision"] == "accepted"
+                    and candidate_decision["catastrophic_guard_decision"] == "satisfied"
+                ):
+                    break
+            if best_snapshot is not None:
+                _restore_parameters(best_snapshot)
+            updated_names = sorted(
+                {
+                    *[str(name) for name in pose_updated_names],
+                    *[str(name) for name in birth_applied_names],
+                }
+            )
+            if best_state is None:
+                return best_state, updated_names, best_decision, _dedupe_arm_blockers(blockers_for_arm)
+            best_transitions = dict(best_state["region_argmax_transitions"])
+            if int(best_transitions["wrong_to_target_count"]) <= 0:
+                blockers_for_arm.append("hinerv_four_arm_pose_then_birth_no_target_support_movement")
+            if best_decision is not None and best_decision["exact_score_decision"] != "accepted":
+                blockers_for_arm.append("hinerv_four_arm_pose_then_birth_not_exact_score_admitted")
+            if best_decision is not None and best_decision["catastrophic_guard_decision"] != "satisfied":
+                blockers_for_arm.append("hinerv_four_arm_pose_then_birth_catastrophic_guard_rejected")
+            return best_state, updated_names, best_decision, _dedupe_arm_blockers(blockers_for_arm)
+
         four_arm_ablation_payload: dict[str, Any] | None = None
         if emit_four_arm_ablation:
             restore_target_snapshot = final_model_snapshot
@@ -5603,6 +5704,34 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         interaction_or_commutator=comm_d,
                     )
                 )
+                (
+                    arm_e_state,
+                    arm_e_names,
+                    arm_e_decision,
+                    arm_e_blockers,
+                ) = _measure_frame0_pose_then_birth_arm(arm_b_snapshot, arm_b_names)
+                delta_e = (
+                    None
+                    if arm_e_state is None or initial_nonrate is None or _nonrate_score(arm_e_state["d_seg_batch"], arm_e_state["d_pose_batch"]) is None
+                    else float(_nonrate_score(arm_e_state["d_seg_batch"], arm_e_state["d_pose_batch"]) - initial_nonrate)  # type: ignore[operator]
+                )
+                comm_e = (
+                    None
+                    if not all(isinstance(value, (int, float)) for value in (delta_a, delta_b, delta_e))
+                    else float(delta_e - float(delta_b) - float(delta_a))  # type: ignore[operator]
+                )
+                arm_rows.append(
+                    _ablation_arm_row(
+                        arm="E",
+                        action_kind="frame0_pose_then_birth_composite",
+                        state=arm_e_state,
+                        updated_names=arm_e_names,
+                        admission_decision=arm_e_decision,
+                        decision="measured" if arm_e_state is not None else "blocked",
+                        blockers_for_arm=arm_e_blockers,
+                        interaction_or_commutator=comm_e,
+                    )
+                )
                 four_arm_ablation_payload = {
                     "schema": "hi_nerv_target_region_birth_four_arm_ablation.v1",
                     "action_id": action_identity,
@@ -5610,7 +5739,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "normalization_scope": "batch_local",
                     "producer": "hinerv_target_region_birth",
                     "arm_count": len(arm_rows),
-                    "required_arms": ["A", "B", "C", "D"],
+                    "required_arms": ["A", "B", "C", "D", "E"],
                     "measured_arms": [str(row.get("arm")) for row in arm_rows if not row.get("blockers")],
                     "blocked_arms": [
                         str(row.get("arm"))
@@ -5626,6 +5755,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         {
                             "basis": "D_minus_A_minus_B",
                             "value": arm_rows[3].get("interaction_or_commutator"),
+                        },
+                        {
+                            "basis": "E_minus_B_minus_A",
+                            "value": arm_rows[4].get("interaction_or_commutator"),
                         },
                     ],
                     "restore_state_pass": True,

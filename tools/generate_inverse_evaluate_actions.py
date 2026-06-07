@@ -30,6 +30,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.analysis.action_commutator import build_commutator_ledger  # noqa: E402
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects  # noqa: E402
 from tac.analysis.inverse_scorer_actions import (  # noqa: E402
+    build_score_program_word,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (  # noqa: E402
@@ -384,6 +385,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     action_effect_path = out_dir / "action_effect_rows.jsonl"
     queue_path = out_dir / "inverse_candidate_queue.jsonl"
+    score_program_word_path = out_dir / "score_program_word.json"
     commutator_path = out_dir / "commutator_summary.json"
     pr110_proof_path = out_dir / "pr110_k16_baseline_reproduction.json"
     pr110_validation_path = out_dir / "pr110_k16_baseline_validation.json"
@@ -394,6 +396,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     output_effects = _unique_effects([*pr110_effects, *inverse_effects])
     action_effect_count = _write_action_effect_ledger(output_effects, action_effect_path)
     queue_count = _write_jsonl(queue_path, candidate_queue_rows)
+    score_program_word = build_score_program_word(candidate_queue_rows)
+    _write_json(score_program_word_path, score_program_word)
     _write_json(commutator_path, commutator)
     _write_json(pr110_proof_path, pr110_proof)
     _write_json(pr110_validation_path, pr110_validation)
@@ -407,6 +411,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_action_effect_paths": [path.as_posix() for path in args.pr110_action_effects],
         "action_effect_rows_path": action_effect_path.as_posix(),
         "inverse_candidate_queue_path": queue_path.as_posix(),
+        "score_program_word_path": score_program_word_path.as_posix(),
         "commutator_summary_path": commutator_path.as_posix(),
         "pr110_k16_baseline_reproduction_path": pr110_proof_path.as_posix(),
         "pr110_k16_baseline_validation_path": pr110_validation_path.as_posix(),
@@ -417,6 +422,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "inverse_candidate_count": len(inverse_effects),
         "action_effect_row_count": action_effect_count,
         "queue_row_count": queue_count,
+        "score_program_operation_count": score_program_word["operation_count"],
+        "score_program_blockers": list(score_program_word["blockers"]),
+        "score_program_promotion_blockers": list(score_program_word["promotion_blockers"]),
         "measured_commutator_count": commutator["measured_commutator_count"],
         "needs_measurement_count": commutator["needs_measurement_count"],
         "commutator_measurement_blockers": commutator_measurement_blockers,

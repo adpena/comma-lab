@@ -27,12 +27,18 @@ from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIEL
 
 INVERSE_SCORER_GENERATION_SCHEMA = "tac.inverse_scorer_action_generation.v1"
 INVERSE_SCORER_QUEUE_ROW_SCHEMA = "tac.inverse_scorer_candidate_queue_row.v1"
+SCORE_PROGRAM_WORD_SCHEMA = "tac.score_program_word.v1"
+SCORE_PROGRAM_OPERATION_SCHEMA = "tac.score_program_operation.v1"
+SCORE_PROGRAM_INTERPRETER = "inflate_action_word_v1"
 
 BLOCKER_NO_FRAME0_POSE = "inverse_scorer_frame0_pose_action_missing"
 BLOCKER_NO_FRAME1_SEG = "inverse_scorer_frame1_seg_margin_action_missing"
 BLOCKER_NO_COMPOSITE = "inverse_scorer_composite_action_missing"
 BLOCKER_RECEIVER_SURFACE_MISSING = "inverse_scorer_receiver_surface_motion_missing"
 BLOCKER_SCORE_DELTA_MISSING = "inverse_scorer_exact_delta_missing"
+BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING = "score_program_archive_hash_missing"
+BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING = "score_program_parseback_survival_missing"
+BLOCKER_SCORE_PROGRAM_INFLATE_MISSING = "score_program_inflate_survival_missing"
 
 
 @dataclass(frozen=True)
@@ -64,7 +70,7 @@ def generate_inverse_scorer_candidates(
 
     frame0 = _first_matching(effects, _is_frame0_pose_action)
     frame1 = _first_matching(effects, _is_frame1_seg_action)
-    composite = _first_matching(effects, _is_composite_action)
+    composites = _matching(effects, _is_composite_action)
 
     frame0_candidate: InverseCandidate | None = None
     frame1_candidate: InverseCandidate | None = None
@@ -80,28 +86,24 @@ def generate_inverse_scorer_candidates(
         frame1_candidate = _build_candidate(frame1, "frame1_seg", dependencies=(), conflicts=())
         candidates.append(frame1_candidate)
 
-    if composite is None:
+    if not composites:
         blockers.append(BLOCKER_NO_COMPOSITE)
     else:
-        deps = tuple(
-            candidate.effect.action_id
-            for candidate in (frame1_candidate, frame0_candidate)
-            if candidate is not None
-        )
-        action_id_override = (
-            f"{deps[0]}__then__{deps[1]}__inverse_composite"
-            if len(deps) == 2
-            else None
-        )
-        candidates.append(
-            _build_candidate(
+        for composite in composites:
+            deps, action_id_override = _composite_dependencies_and_id(
                 composite,
-                "composite",
-                dependencies=deps,
-                conflicts=(),
-                action_id_override=action_id_override,
+                frame0_candidate=frame0_candidate,
+                frame1_candidate=frame1_candidate,
             )
-        )
+            candidates.append(
+                _build_candidate(
+                    composite,
+                    "composite",
+                    dependencies=deps,
+                    conflicts=(),
+                    action_id_override=action_id_override,
+                )
+            )
 
     if not include_rejected:
         candidates = [
@@ -112,6 +114,7 @@ def generate_inverse_scorer_candidates(
 
     candidate_effects = [candidate.effect for candidate in candidates]
     queue_rows = build_candidate_queue(candidate_effects, candidates)
+    score_program_word = build_score_program_word(queue_rows)
     return {
         "schema": INVERSE_SCORER_GENERATION_SCHEMA,
         "input_effect_count": len(effects),
@@ -120,11 +123,13 @@ def generate_inverse_scorer_candidates(
         "passed": not blockers,
         "action_effects": candidate_effects,
         "candidate_queue": queue_rows,
+        "score_program_word": score_program_word,
         "policy": {
             "measured_effects_only_no_synthetic_scorer_motion": True,
             "promotion_eligible_is_false_for_generated_rows": True,
             "frame0_pose_only_maps_to_pose_incidence": True,
             "frame1_maps_to_seg_pose_joint_incidence": True,
+            "score_program_word_is_planning_only": True,
         },
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
@@ -141,6 +146,13 @@ def build_candidate_queue(
     for effect in effects:
         candidate = by_id.get(effect.action_id)
         blockers = _candidate_blockers(effect)
+        cluster = candidate.menu_cluster_hint if candidate is not None else _menu_cluster_hint(effect)
+        score_program_operation = _score_program_operation_for_effect(
+            effect,
+            index=len(rows),
+            menu_cluster_hint=cluster,
+            row_blockers=blockers,
+        )
         rows.append(
             {
                 "schema": INVERSE_SCORER_QUEUE_ROW_SCHEMA,
@@ -151,15 +163,33 @@ def build_candidate_queue(
                 "pair_id": effect.pair_ids[0] if effect.pair_ids else None,
                 "pair_ids": list(effect.pair_ids),
                 "region_ids": list(effect.region_ids),
-                "menu_cluster_hint": (
-                    candidate.menu_cluster_hint if candidate is not None else _menu_cluster_hint(effect)
-                ),
+                "class_ids": list(effect.class_ids),
+                "payload_sections": list(effect.payload_sections),
+                "trained_groups": list(effect.trained_groups),
+                "frame_index": effect.frame_index,
+                "frame_incidence": effect.frame_incidence,
+                "menu_cluster_hint": cluster,
+                "score_program_opcode": score_program_operation["opcode"],
+                "evaluator_action_basis": score_program_operation["basis"],
+                "backend": score_program_operation["backend"],
+                "receiver_visible": _receiver_visible(effect),
+                "fakequant_survived": effect.fakequant_survived,
+                "parseback_survived": effect.parseback_survived,
+                "inflate_survived": effect.inflate_survived,
+                "archive_sha256": effect.archive_sha256,
+                "payload_sha256": effect.payload_sha256,
+                "base_state_sha256": effect.base_state_sha256,
                 "score_ev": _score_ev(effect),
                 "byte_cost": _byte_cost(effect),
+                "delta_score_nonrate": effect.delta_score_nonrate,
+                "delta_score_total": effect.delta_score_total,
+                "delta_bytes": effect.delta_bytes,
                 "value_per_byte": effect.value_per_byte,
                 "dependencies": list(candidate.dependencies if candidate is not None else ()),
                 "conflicts": list(candidate.conflicts if candidate is not None else ()),
                 "blockers": blockers,
+                "promotion_blockers": _score_program_promotion_blockers(effect),
+                "score_program_operation": score_program_operation,
                 "menu_ilp_allowed": False,
                 "menu_ilp_blockers": [
                     "menu_ilp_blocked_until_pr110_k16_baseline_reproduces",
@@ -172,6 +202,66 @@ def build_candidate_queue(
             }
         )
     return rows
+
+
+def build_score_program_word(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Compile candidate rows into a deterministic evaluator-action word.
+
+    The word is a planning artifact for the score-program compiler: it lowers
+    measured ``ActionEffect`` rows into opcodes, basis labels, backend targets,
+    exact score economics, and survival blockers.  It does not optimize,
+    synthesize missing scorer motion, or promote an archive.
+    """
+
+    operations: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    promotion_blockers: list[str] = []
+    total_score_ev = 0.0
+    total_byte_cost = 0
+    have_score_ev = False
+    have_byte_cost = False
+    for index, row in enumerate(rows):
+        operation = _score_program_operation_from_row(row, index=index)
+        operations.append(operation)
+        blockers.extend(str(value) for value in row.get("blockers") or [])
+        blockers.extend(str(value) for value in row.get("menu_ilp_blockers") or [])
+        blockers.extend(str(value) for value in operation.get("blockers") or [])
+        promotion_blockers.extend(str(value) for value in row.get("promotion_blockers") or [])
+        promotion_blockers.extend(str(value) for value in operation.get("promotion_blockers") or [])
+        score_ev = _finite_or_none(row.get("score_ev"))
+        if score_ev is not None:
+            have_score_ev = True
+            total_score_ev += score_ev
+        byte_cost = _int_or_none(row.get("byte_cost"))
+        if byte_cost is not None:
+            have_byte_cost = True
+            total_byte_cost += abs(byte_cost)
+
+    word_blockers = _dedupe(blockers)
+    word_promotion_blockers = _dedupe(promotion_blockers)
+    return {
+        "schema": SCORE_PROGRAM_WORD_SCHEMA,
+        "interpreter": SCORE_PROGRAM_INTERPRETER,
+        "operation_count": len(operations),
+        "operations": operations,
+        "blocked": bool(word_blockers),
+        "blockers": word_blockers,
+        "promotion_blockers": word_promotion_blockers,
+        "total_score_ev": total_score_ev if have_score_ev else None,
+        "total_byte_cost": total_byte_cost if have_byte_cost else None,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "policy": {
+            "measured_effects_only_no_synthetic_scorer_motion": True,
+            "exact_delta_score_required_per_operation": True,
+            "receiver_surface_motion_required_per_operation": True,
+            "parseback_and_inflate_required_for_promotion": True,
+            "menu_ilp_requires_pr110_k16_baseline": True,
+        },
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
 
 
 def candidate_queue_jsonl(rows: Iterable[Mapping[str, Any]]) -> str:
@@ -252,6 +342,130 @@ def _candidate_blockers(effect: ActionEffect) -> list[str]:
     return _dedupe(blockers)
 
 
+def _score_program_operation_for_effect(
+    effect: ActionEffect,
+    *,
+    index: int,
+    menu_cluster_hint: str,
+    row_blockers: Sequence[str],
+) -> dict[str, Any]:
+    opcode, basis = _score_program_opcode_and_basis(menu_cluster_hint, effect)
+    blockers = list(row_blockers)
+    promotion_blockers = _score_program_promotion_blockers(effect)
+    return {
+        "schema": SCORE_PROGRAM_OPERATION_SCHEMA,
+        "index": int(index),
+        "action_id": effect.action_id,
+        "opcode": opcode,
+        "basis": basis,
+        "backend": _score_program_backend(effect),
+        "family": effect.family,
+        "authority": effect.authority,
+        "normalization_scope": effect.normalization_scope,
+        "pair_ids": list(effect.pair_ids),
+        "frame_index": effect.frame_index,
+        "frame_incidence": effect.frame_incidence,
+        "region_ids": list(effect.region_ids),
+        "class_ids": list(effect.class_ids),
+        "payload_sections": list(effect.payload_sections),
+        "trained_groups": list(effect.trained_groups),
+        "delta_score_nonrate": effect.delta_score_nonrate,
+        "delta_score_total": effect.delta_score_total,
+        "delta_bytes": effect.delta_bytes,
+        "value_per_byte": effect.value_per_byte,
+        "receiver_visible": _receiver_visible(effect),
+        "survival": {
+            "fakequant": effect.fakequant_survived,
+            "parseback": effect.parseback_survived,
+            "inflate": effect.inflate_survived,
+        },
+        "archive_sha256": effect.archive_sha256,
+        "payload_sha256": effect.payload_sha256,
+        "base_state_sha256": effect.base_state_sha256,
+        "blockers": _dedupe(blockers),
+        "promotion_blockers": promotion_blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _score_program_operation_from_row(row: Mapping[str, Any], *, index: int) -> dict[str, Any]:
+    embedded = row.get("score_program_operation")
+    if isinstance(embedded, Mapping):
+        operation = dict(embedded)
+    else:
+        opcode, basis = _score_program_opcode_and_basis(
+            str(row.get("menu_cluster_hint") or ""),
+            None,
+        )
+        operation = {
+            "schema": SCORE_PROGRAM_OPERATION_SCHEMA,
+            "action_id": str(row.get("action_id") or ""),
+            "opcode": opcode,
+            "basis": basis,
+            "backend": str(row.get("backend") or "native_score_program"),
+            "pair_ids": list(row.get("pair_ids") or []),
+            "frame_index": row.get("frame_index"),
+            "frame_incidence": row.get("frame_incidence"),
+            "region_ids": list(row.get("region_ids") or []),
+        }
+    operation["index"] = int(index)
+    operation.setdefault("schema", SCORE_PROGRAM_OPERATION_SCHEMA)
+    operation.setdefault("score_claim", False)
+    operation.setdefault("promotion_eligible", False)
+    operation.setdefault("ready_for_exact_eval_dispatch", False)
+    operation.setdefault("blockers", list(row.get("blockers") or []))
+    operation.setdefault("promotion_blockers", list(row.get("promotion_blockers") or []))
+    return operation
+
+
+def _score_program_opcode_and_basis(
+    menu_cluster_hint: str,
+    effect: ActionEffect | None,
+) -> tuple[str, str]:
+    cluster = str(menu_cluster_hint or "").lower()
+    if cluster == "frame0_pose" or (effect is not None and effect.frame_index == 0):
+        return "APPLY_FRAME0_POSE_ACTION", "B0_frame0_pose_only"
+    if cluster == "frame1_seg_margin" or (effect is not None and effect.frame_index == 1):
+        return "APPLY_FRAME1_SEG_ACTION", "B1_frame1_seg_wall_cross"
+    if cluster == "frame1_birth_frame0_pose_comp" or (
+        effect is not None and effect.frame_index == "both"
+    ):
+        return "APPLY_BOTH_FRAME_COMPOSITE", "B3_both_frame_composite"
+    if effect is not None and effect.family == "frontier_rate_attack":
+        return "APPLY_QRGB_OR_SCORER_EFFECT", "B4_byte_archive_grammar"
+    if effect is not None and effect.family == "snerv":
+        return "RENDER_BASE_WITNESS_PAIR", "B5_source_forward_representation"
+    return "APPLY_QRGB_OR_SCORER_EFFECT", "B2_frame1_joint_seg_pose_trust"
+
+
+def _score_program_backend(effect: ActionEffect) -> str:
+    family = effect.family.lower()
+    if family == "hinerv":
+        return "hinerv_grid_adapter"
+    if family == "snerv":
+        return "snerv_lf_hf_mfu_hfr_tub"
+    if family == "pr110":
+        return "selector_vm"
+    if family == "frontier_rate_attack":
+        return "byte_archive_rewrite"
+    if family == "pact_nerv":
+        return "semantic_pose_renderer"
+    return "native_score_program"
+
+
+def _score_program_promotion_blockers(effect: ActionEffect) -> list[str]:
+    blockers: list[str] = []
+    if not effect.archive_sha256:
+        blockers.append(BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING)
+    if effect.parseback_survived is not True:
+        blockers.append(BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING)
+    if effect.inflate_survived is not True:
+        blockers.append(BLOCKER_SCORE_PROGRAM_INFLATE_MISSING)
+    return _dedupe(blockers)
+
+
 def _receiver_visible(effect: ActionEffect) -> bool:
     surface = effect.receiver_surface
     return any(
@@ -274,6 +488,8 @@ def _receiver_visible(effect: ActionEffect) -> bool:
 
 def _is_frame0_pose_action(effect: ActionEffect) -> bool:
     text = " ".join([effect.action_kind, effect.arm or "", *effect.trained_groups, *effect.payload_sections]).lower()
+    if _composite_text(text):
+        return False
     return (
         "frame0_pose" in text
         or "pose_target_only" in text
@@ -294,19 +510,62 @@ def _is_frame1_seg_action(effect: ActionEffect) -> bool:
 
 def _is_composite_action(effect: ActionEffect) -> bool:
     text = " ".join([effect.action_kind, effect.arm or "", *effect.trained_groups, *effect.payload_sections]).lower()
+    return _composite_text(text) or effect.interaction_or_commutator is not None
+
+
+def _composite_text(text: str) -> bool:
     return (
         "composite" in text
         or "joint_line_search" in text
         or "birth_plus_frame0_pose" in text
-        or effect.interaction_or_commutator is not None
     )
 
 
 def _first_matching(effects: Sequence[ActionEffect], predicate: Any) -> ActionEffect | None:
-    matches = [effect for effect in effects if predicate(effect) and _receiver_visible(effect)]
+    matches = _matching(effects, predicate)
     if not matches:
         return None
-    return max(matches, key=_candidate_sort_key)
+    return matches[0]
+
+
+def _matching(effects: Sequence[ActionEffect], predicate: Any) -> list[ActionEffect]:
+    matches = [effect for effect in effects if predicate(effect) and _receiver_visible(effect)]
+    return sorted(matches, key=_candidate_sort_key, reverse=True)
+
+
+def _composite_dependencies_and_id(
+    composite: ActionEffect,
+    *,
+    frame0_candidate: InverseCandidate | None,
+    frame1_candidate: InverseCandidate | None,
+) -> tuple[tuple[str, ...], str | None]:
+    ordered = _composite_order(composite)
+    by_kind = {
+        "frame0_pose": frame0_candidate,
+        "frame1_seg": frame1_candidate,
+    }
+    deps = tuple(
+        by_kind[kind].effect.action_id
+        for kind in ordered
+        if by_kind.get(kind) is not None
+    )
+    action_id_override = (
+        f"{deps[0]}__then__{deps[1]}__inverse_composite"
+        if len(deps) == 2
+        else None
+    )
+    return deps, action_id_override
+
+
+def _composite_order(effect: ActionEffect) -> tuple[str, str]:
+    text = " ".join([effect.action_kind, effect.arm or "", *effect.trained_groups, *effect.payload_sections]).lower()
+    if (
+        "frame0_pose_then_birth" in text
+        or "pose_then_birth" in text
+        or "pose_then_seg" in text
+    ):
+        return ("frame0_pose", "frame1_seg")
+    return ("frame1_seg", "frame0_pose")
 
 
 def _candidate_sort_key(effect: ActionEffect) -> tuple[float, int, int, int, str]:
@@ -365,16 +624,39 @@ def _dedupe(values: Sequence[str]) -> list[str]:
     return out
 
 
+def _finite_or_none(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    return out if math.isfinite(out) else None
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        out = int(value)
+    except (TypeError, ValueError):
+        return None
+    return out
+
+
 __all__ = [
     "BLOCKER_NO_COMPOSITE",
     "BLOCKER_NO_FRAME0_POSE",
     "BLOCKER_NO_FRAME1_SEG",
     "BLOCKER_RECEIVER_SURFACE_MISSING",
     "BLOCKER_SCORE_DELTA_MISSING",
+    "BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING",
+    "BLOCKER_SCORE_PROGRAM_INFLATE_MISSING",
+    "BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING",
     "INVERSE_SCORER_GENERATION_SCHEMA",
     "INVERSE_SCORER_QUEUE_ROW_SCHEMA",
+    "SCORE_PROGRAM_INTERPRETER",
+    "SCORE_PROGRAM_OPERATION_SCHEMA",
+    "SCORE_PROGRAM_WORD_SCHEMA",
     "InverseCandidate",
     "build_candidate_queue",
+    "build_score_program_word",
     "candidate_queue_jsonl",
     "generate_inverse_scorer_candidates",
 ]

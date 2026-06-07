@@ -71,6 +71,7 @@ HINERV_REQUIRED_FOUR_ARM_ACTION_KINDS = {
     "B": "frame0_pose_target_only",
     "C": "independent_birth_plus_frame0_pose",
     "D": "joint_line_search_composite",
+    "E": "frame0_pose_then_birth_composite",
 }
 
 

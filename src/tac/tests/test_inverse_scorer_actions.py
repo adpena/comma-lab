@@ -17,6 +17,10 @@ from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects
 from tac.analysis.inverse_scorer_actions import (
     BLOCKER_NO_COMPOSITE,
+    BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING,
+    BLOCKER_SCORE_PROGRAM_INFLATE_MISSING,
+    BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING,
+    SCORE_PROGRAM_WORD_SCHEMA,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (
@@ -117,6 +121,41 @@ def _composite_effect() -> ActionEffect:
     )
 
 
+def _reverse_composite_effect() -> ActionEffect:
+    return ActionEffect.build(
+        action_id="real_pose_then_birth_composite_source",
+        family="hinerv",
+        action_kind="frame0_pose_then_birth_composite",
+        authority="batch_local_live_mlx",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        region_ids=["b0/c4/r1"],
+        trained_groups=["compensation_head_rgb_0", "high_grid", "output_head_rgb_1"],
+        old_d_seg=0.50,
+        new_d_seg=0.465,
+        old_d_pose=0.20,
+        new_d_pose=0.145,
+        receiver_surface={
+            "uint8_changed_pixels": 44,
+            "seg_input_delta_linf": 1.0,
+            "posenet_input_delta_linf": 1.0,
+            "seg_argmax_changed_pixels": 10,
+            "seg_wrong_to_target_count": 7,
+            "pose_output_l2_delta": 1.4,
+        },
+        uint8_changed_count_region=44,
+        seg_input_delta_linf_region=1.0,
+        posenet_input_delta_linf_pair=1.0,
+        argmax_changed_count_region=10,
+        wrong_to_target=7,
+        pose_output_l2_delta=1.4,
+        interaction_or_commutator=-0.2,
+        exact_score_decision="accept",
+    )
+
+
 def _pr110_k1_replay_effect() -> ActionEffect:
     return ActionEffect.build(
         action_id="lfv1v2_k01_replay",
@@ -161,6 +200,15 @@ def _four_arm_training_artifact() -> dict:
                     uint8_changed=24,
                     pose_delta=1.5,
                     comm=-0.3,
+                ),
+                _four_arm_row(
+                    "E",
+                    "frame0_pose_then_birth_composite",
+                    -0.7,
+                    wrong_to_target=5,
+                    uint8_changed=24,
+                    pose_delta=1.4,
+                    comm=-0.2,
                 ),
             ],
         },
@@ -257,6 +305,66 @@ def test_inverse_scorer_generator_reemits_measured_candidates_and_ordered_compos
     assert len(queue) == 3
     assert all(row["menu_ilp_allowed"] is False for row in queue)
     assert all("pr110_k16_baseline_reproduction_missing" in row["menu_ilp_blockers"] for row in queue)
+    assert [row["score_program_opcode"] for row in queue] == [
+        "APPLY_FRAME0_POSE_ACTION",
+        "APPLY_FRAME1_SEG_ACTION",
+        "APPLY_BOTH_FRAME_COMPOSITE",
+    ]
+    assert [row["evaluator_action_basis"] for row in queue] == [
+        "B0_frame0_pose_only",
+        "B1_frame1_seg_wall_cross",
+        "B3_both_frame_composite",
+    ]
+    assert {row["backend"] for row in queue} == {"hinerv_grid_adapter"}
+    assert all(row["receiver_visible"] is True for row in queue)
+    assert all(row["score_program_operation"]["score_claim"] is False for row in queue)
+    assert all(
+        BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING in row["promotion_blockers"]
+        for row in queue
+    )
+
+    word = result["score_program_word"]
+    assert word["schema"] == SCORE_PROGRAM_WORD_SCHEMA
+    assert word["interpreter"] == "inflate_action_word_v1"
+    assert word["operation_count"] == 3
+    assert [op["opcode"] for op in word["operations"]] == [
+        "APPLY_FRAME0_POSE_ACTION",
+        "APPLY_FRAME1_SEG_ACTION",
+        "APPLY_BOTH_FRAME_COMPOSITE",
+    ]
+    assert word["score_claim"] is False
+    assert word["promotion_eligible"] is False
+    assert word["ready_for_exact_eval_dispatch"] is False
+    assert "pr110_k16_baseline_reproduction_missing" in word["blockers"]
+    assert BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING in word["promotion_blockers"]
+    assert BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING in word["promotion_blockers"]
+    assert BLOCKER_SCORE_PROGRAM_INFLATE_MISSING in word["promotion_blockers"]
+
+
+def test_inverse_scorer_generator_keeps_both_ordered_composites() -> None:
+    result = generate_inverse_scorer_candidates(
+        [
+            _frame0_pose_effect(),
+            _frame1_birth_effect(),
+            _composite_effect(),
+            _reverse_composite_effect(),
+        ]
+    )
+
+    assert result["passed"] is True
+    assert result["candidate_count"] == 4
+    effects = result["action_effects"]
+    singles = [effect for effect in effects if effect.frame_index != "both"]
+    composites = [effect for effect in effects if effect.frame_index == "both"]
+    assert len(singles) == 2
+    assert len(composites) == 2
+    assert {composite.action_id for composite in composites} == {
+        f"{singles[1].action_id}__then__{singles[0].action_id}__inverse_composite",
+        f"{singles[0].action_id}__then__{singles[1].action_id}__inverse_composite",
+    }
+    ledger = build_commutator_ledger(singles, composites)
+    assert ledger["measured_commutator_count"] == 2
+    assert ledger["needs_measurement_count"] == 0
 
 
 def test_inverse_scorer_generator_names_missing_composite_without_inventing_row() -> None:
@@ -320,8 +428,18 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert len(rows) == 4
     assert any(row.family == "pr110" for row in rows)
     assert (out_dir / "inverse_candidate_queue.jsonl").is_file()
+    assert (out_dir / "score_program_word.json").is_file()
     assert (out_dir / "commutator_summary.json").is_file()
     assert (out_dir / "next_blocker.md").is_file()
+    score_program_word = json.loads((out_dir / "score_program_word.json").read_text(encoding="utf-8"))
+    assert score_program_word["schema"] == SCORE_PROGRAM_WORD_SCHEMA
+    assert score_program_word["operation_count"] == 3
+    assert [row["opcode"] for row in score_program_word["operations"]] == [
+        "APPLY_FRAME0_POSE_ACTION",
+        "APPLY_FRAME1_SEG_ACTION",
+        "APPLY_BOTH_FRAME_COMPOSITE",
+    ]
+    assert score_program_word["score_claim"] is False
 
     commutator = json.loads((out_dir / "commutator_summary.json").read_text(encoding="utf-8"))
     assert commutator["measured_commutator_count"] == 1
@@ -359,15 +477,13 @@ def test_generate_inverse_evaluate_actions_cli_reads_training_artifact_base_iden
     assert proc.returncode == 0, proc.stderr
     rows = read_action_effects(out_dir / "action_effect_rows.jsonl")
     hinerv_rows = [row for row in rows if row.family == "hinerv"]
-    assert len(hinerv_rows) == 3
+    assert len(hinerv_rows) == 4
     assert all(row.base_state_sha256 for row in hinerv_rows)
 
     commutator = json.loads((out_dir / "commutator_summary.json").read_text(encoding="utf-8"))
-    queued = commutator["measurement_queue"][0]
-    assert queued["base_state_hash"]
-    assert "action_effect_base_archive_hash_missing" not in queued["measurement_command_blockers"]
-    assert "action_effect_base_payload_hash_missing" not in queued["measurement_command_blockers"]
-    assert "inverse_scorer_composite_base_identity_producer_missing" not in queued["measurement_command_blockers"]
+    assert commutator["measured_commutator_count"] == 2
+    assert commutator["needs_measurement_count"] == 0
+    assert commutator["measurement_queue"] == []
 
 
 def test_convert_real_pr110_k16_packet_to_action_effect_clears_reproduction_gate(tmp_path: Path) -> None:

@@ -33,6 +33,8 @@ from tac.analysis.nerv_long_run_launch_gate import (
     evaluate_nerv_long_run_launch_gate,
 )
 from tac.analysis.snerv_source_forward_proof import (
+    SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
+    SOURCE_IDENTICAL,
     build_snerv_payload_bitflip_falsification,
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
@@ -121,12 +123,43 @@ def _snerv_source_forward_action_row(
         tensors_by_surface=_snerv_tensor_surfaces(delta=tensor_delta),
         scorer_deltas=scorer_deltas,
         destructive_payload_bit_flip=bitflip,
+        output2_boundary_verdict=_snerv_output2_boundary_verdict(),
         surface_provenance=(
             _snerv_surface_provenance(provenance_authority=provenance_authority)
             if include_surface_provenance
             else None
         ),
     )
+
+
+def _snerv_output2_boundary_verdict() -> dict:
+    return {
+        "schema": SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
+        "verdict": SOURCE_IDENTICAL,
+        "passed": True,
+        "has_output2_by_surface": {
+            "official_torch": True,
+            "pact_mlx": True,
+            "archive_parseback": True,
+            "numpy_receiver": True,
+        },
+        "output2_shapes_by_surface": {
+            "official_torch": [1, 1, 2, 2],
+            "pact_mlx": [1, 1, 2, 2],
+            "archive_parseback": [1, 1, 2, 2],
+            "numpy_receiver": [1, 1, 2, 2],
+        },
+        "archive_tub_output2_storage": {
+            "section": "decoder_payload.output_2",
+            "sha256": "5" * 64,
+            "bytes": 64,
+        },
+        "minimal_causal_basis_recommendation": ["keep_output2_source_forward_bound"],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _snerv_surface_provenance(
@@ -296,6 +329,13 @@ def _hi_nerv_four_arm_action_effects(*, omit_arm: str | None = None) -> list[dic
             arm="D",
             action_kind="joint_line_search_composite",
             new_d_seg=0.0007,
+            new_d_pose=8.0e-5,
+            raw_cap_decision="violated_counterfactual_only",
+        ),
+        _hi_nerv_action_effect(
+            arm="E",
+            action_kind="frame0_pose_then_birth_composite",
+            new_d_seg=0.00072,
             new_d_pose=8.0e-5,
             raw_cap_decision="violated_counterfactual_only",
         ),
@@ -711,6 +751,29 @@ def test_missing_hinerv_four_arm_action_effect_blocks_ladder(tmp_path: Path) -> 
 
     assert verdict["approved"] is False
     assert "action_effect_four_arm_missing:D" in verdict["blocking_evidence"]
+
+
+def test_missing_hinerv_reverse_order_action_effect_blocks_ladder(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(),
+                *_hi_nerv_four_arm_action_effects(omit_arm="E"),
+            ],
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "action_effect_four_arm_missing:E" in verdict["blocking_evidence"]
 
 
 def test_failed_representative_coverage_blocks_l5(tmp_path: Path) -> None:
