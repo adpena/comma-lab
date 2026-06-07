@@ -441,6 +441,7 @@ def build_target_region_wall_normal_lift_receipt(
     )
     sidecar_exact_delta = _first_float(sidecar, "exact_delta_score_nonrate")
     sidecar_available = bool(sidecar_payload_bytes > 0 and direct_usable_wall_normal)
+    sidecar_archive_closed = bool(sidecar.get("archive_closed") is True)
 
     blockers: list[str] = []
     if not direct:
@@ -502,8 +503,32 @@ def build_target_region_wall_normal_lift_receipt(
         decision_state = "BACKEND_REALIZATION_FAILED"
         first_failing_surface = "backend_fit"
 
+    if not direct or not direct_teacher_is_true_wall_normal or not direct_crossed:
+        direct_decision_state = "DIRECT_TEACHER_NO_WALL_CROSS"
+    elif not direct_exact_accept:
+        direct_decision_state = "DIRECT_TEACHER_EXACT_REJECTED"
+    else:
+        direct_decision_state = "DIRECT_TEACHER_ACCEPTED"
+
+    if not direct_usable_wall_normal:
+        backend_decision_state = "SKIPPED_DIRECT_TEACHER_FAILED"
+    elif backend_realized_wall and backend_exact_accept:
+        backend_decision_state = "BACKEND_REALIZATION_ACCEPTED"
+    else:
+        backend_decision_state = "BACKEND_REALIZATION_FAILED"
+
+    if not direct_usable_wall_normal:
+        sidecar_decision_state = "SKIPPED_DIRECT_TEACHER_FAILED"
+    elif sidecar_payload_bytes <= 0:
+        sidecar_decision_state = "SIDECAR_FALLBACK_MISSING"
+    elif sidecar_archive_closed:
+        sidecar_decision_state = "SIDECAR_FALLBACK_ACCEPTED"
+    else:
+        sidecar_decision_state = "SUPPORT_NOT_ARCHIVE_EXECUTABLE"
+
     direct_summary = {
         "available": bool(direct),
+        "decision_state": direct_decision_state,
         "source": str(direct.get("oracle_kind") or "unknown"),
         "inverse_source": direct_inverse_source,
         "inverse_basis": direct_wall.get("inverse_basis"),
@@ -534,6 +559,7 @@ def build_target_region_wall_normal_lift_receipt(
     }
     backend_summary = {
         "attempted": bool(backend),
+        "decision_state": backend_decision_state,
         "realized_target_wall": bool(backend_realized_wall),
         "accepted_step_count": _first_int(backend, "accepted_step_count", default=0),
         "wrong_to_target_count": int(backend_wrong_to_target),
@@ -558,6 +584,7 @@ def build_target_region_wall_normal_lift_receipt(
     }
     sidecar_summary = {
         "available": bool(sidecar_available),
+        "decision_state": sidecar_decision_state,
         "compiled": False,
         "payload_bytes": int(sidecar_payload_bytes),
         "exact_delta_score_nonrate": sidecar_exact_delta,
@@ -565,7 +592,8 @@ def build_target_region_wall_normal_lift_receipt(
             sidecar,
             "target_region_action_value_per_payload_byte_nonrate",
         ),
-        "archive_closed": bool(sidecar.get("archive_closed") is True),
+        "archive_closed": sidecar_archive_closed,
+        "archive_executable": sidecar_archive_closed,
         "support_sha256": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
             "support_sha256"
         ),

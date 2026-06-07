@@ -311,6 +311,20 @@ def build_snerv_source_forward_proof_from_archive_packet(
                 },
                 allow_missing_reference=True,
             )
+            if official_torch_capture_manifest is not None:
+                official_torch_capture_manifest = (
+                    _refresh_official_torch_manifest_tensor_set(
+                        official_torch_capture_manifest,
+                        tensor_names=tensors_by_surface["official_torch"].keys(),
+                    )
+                )
+                official_torch_manifest_status = (
+                    validate_snerv_official_torch_upstream_capture_manifest(
+                        official_torch_capture_manifest,
+                        pair_ids=pair_ids,
+                        tensor_names=tensors_by_surface["official_torch"].keys(),
+                    )
+                )
 
     output2_boundary = build_snerv_output2_boundary_verdict(
         tensors_by_surface=tensors_by_surface,
@@ -790,6 +804,37 @@ def validate_snerv_official_torch_upstream_capture_manifest(
         "passed": not _ordered_unique(blockers),
         "blockers": _ordered_unique(blockers),
     }
+
+
+def _refresh_official_torch_manifest_tensor_set(
+    manifest: Mapping[str, Any],
+    *,
+    tensor_names: Sequence[str],
+) -> dict[str, Any]:
+    """Recompute manifest authority after official scorer tensors are appended."""
+
+    row = dict(manifest)
+    return build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=_normalize_pair_ids(row.get("pair_ids")),
+        tensor_names=[str(name) for name in tensor_names],
+        model_source_sha256=row.get("model_source_sha256"),
+        checkpoint_sha256=row.get("checkpoint_sha256"),
+        state_dict_sha256=row.get("state_dict_sha256"),
+        decoder_len=row.get("decoder_len"),
+        capture_authority=str(
+            row.get("capture_authority")
+            or SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
+        ),
+        source_scope=row.get("source_scope"),
+        trained_checkpoint_lineage=str(
+            row.get("trained_checkpoint_lineage")
+            or "official_trained_checkpoint_state_dict"
+        ),
+        capture_origin=str(
+            row.get("capture_origin")
+            or "official_upstream_trained_checkpoint"
+        ),
+    )
 
 
 def _official_torch_surface_provenance_extra(

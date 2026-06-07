@@ -404,8 +404,10 @@ def test_target_region_wall_normal_lift_selects_backend_when_realized() -> None:
     ]
     assert receipt["direct_teacher"]["crossed_target_wall"] is True
     assert receipt["direct_teacher"]["teacher_is_true_wall_normal"] is True
+    assert receipt["direct_teacher"]["decision_state"] == "DIRECT_TEACHER_ACCEPTED"
     assert receipt["decision_state"] == "BACKEND_REALIZATION_ACCEPTED"
     assert receipt["backend_fit"]["realized_target_wall"] is True
+    assert receipt["backend_fit"]["decision_state"] == "BACKEND_REALIZATION_ACCEPTED"
     assert receipt["backend_fit"]["realization_gap_wrong_to_target_count"] == 0
     assert receipt["selected_next_operator"] == "backend_fit_live"
     assert receipt["next_required_surface"] == "fakequant_archive_parseback_survival"
@@ -430,8 +432,11 @@ def test_target_region_wall_normal_lift_names_backend_gap_and_sidecar_fallback()
 
     assert receipt["direct_teacher"]["crossed_target_wall"] is True
     assert receipt["backend_fit"]["realized_target_wall"] is False
+    assert receipt["backend_fit"]["decision_state"] == "BACKEND_REALIZATION_FAILED"
     assert receipt["backend_fit"]["realization_gap_wrong_to_target_count"] == 4
     assert receipt["sidecar_fallback"]["available"] is True
+    assert receipt["sidecar_fallback"]["decision_state"] == "SUPPORT_NOT_ARCHIVE_EXECUTABLE"
+    assert receipt["sidecar_fallback"]["archive_executable"] is False
     assert receipt["sidecar_fallback"]["payload_bytes"] == 23
     assert receipt["selected_next_operator"] == "byte_priced_action_fallback"
     assert receipt["next_required_surface"] == "archive_materialize_parseback_inflate"
@@ -452,7 +457,9 @@ def test_target_region_wall_normal_lift_blocks_when_direct_teacher_missing() -> 
     )
 
     assert receipt["direct_teacher"]["available"] is False
+    assert receipt["direct_teacher"]["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert receipt["backend_fit"]["attempted"] is False
+    assert receipt["backend_fit"]["decision_state"] == "SKIPPED_DIRECT_TEACHER_FAILED"
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
     assert receipt["next_required_surface"] == "inverse_scorer_candidate_generation"
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING in receipt["blockers"]
@@ -475,8 +482,11 @@ def test_target_region_wall_normal_lift_keeps_non_crossing_teacher_out_of_backen
 
     assert receipt["direct_teacher"]["available"] is True
     assert receipt["direct_teacher"]["crossed_target_wall"] is False
+    assert receipt["direct_teacher"]["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert receipt["backend_fit"]["realized_target_wall"] is False
+    assert receipt["backend_fit"]["decision_state"] == "SKIPPED_DIRECT_TEACHER_FAILED"
     assert receipt["sidecar_fallback"]["available"] is False
+    assert receipt["sidecar_fallback"]["decision_state"] == "SKIPPED_DIRECT_TEACHER_FAILED"
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
     assert receipt["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED in receipt["blockers"]
@@ -511,7 +521,9 @@ def test_target_region_wall_normal_lift_rejects_crossing_teacher_without_exact_s
 
     assert receipt["direct_teacher"]["crossed_target_wall"] is True
     assert receipt["direct_teacher"]["exact_score_decision"] == "reject"
+    assert receipt["direct_teacher"]["decision_state"] == "DIRECT_TEACHER_EXACT_REJECTED"
     assert receipt["sidecar_fallback"]["available"] is False
+    assert receipt["sidecar_fallback"]["decision_state"] == "SKIPPED_DIRECT_TEACHER_FAILED"
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
     assert receipt["decision_state"] == "DIRECT_TEACHER_EXACT_REJECTED"
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED in (
@@ -536,6 +548,7 @@ def test_target_region_wall_normal_lift_rejects_masked_residual_as_true_wall_nor
     assert receipt["direct_teacher"]["inverse_source"] == "masked_residual"
     assert receipt["direct_teacher"]["teacher_is_true_wall_normal"] is False
     assert receipt["direct_teacher"]["qualified_crossed_target_wall"] is False
+    assert receipt["direct_teacher"]["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
     assert receipt["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert receipt["first_failing_surface"] == "direct_teacher_basis"
