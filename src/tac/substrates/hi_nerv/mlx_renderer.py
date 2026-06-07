@@ -4692,8 +4692,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             # keeps the gradient (and therefore the receiver-visible motion)
             # confined to head_rgb_0; frame1's birth state must not move.
             pred1 = mx.stop_gradient(pred1)  # type: ignore[union-attr]
+            receiver0 = _receiver_uint8_roundtrip_ste_nhwc01(pred0)
+            receiver1 = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
             yuv6_pair = mx.concatenate(  # type: ignore[union-attr]
-                [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+                [rgb_to_yuv6_mlx(receiver0 * 255.0), rgb_to_yuv6_mlx(receiver1 * 255.0)],
                 axis=-1,
             )
             pose = pose_fn(yuv6_pair)
@@ -4711,8 +4713,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         def _pose_target_frame0_loss_fn(model_obj: Any) -> Any:
             pred0, pred1 = _predict_pair01(model_obj)
             pred1 = mx.stop_gradient(pred1)  # type: ignore[union-attr]
+            receiver0 = _receiver_uint8_roundtrip_ste_nhwc01(pred0)
+            receiver1 = _receiver_uint8_roundtrip_ste_nhwc01(pred1)
             yuv6_pair = mx.concatenate(  # type: ignore[union-attr]
-                [rgb_to_yuv6_mlx(pred0 * 255.0), rgb_to_yuv6_mlx(pred1 * 255.0)],
+                [rgb_to_yuv6_mlx(receiver0 * 255.0), rgb_to_yuv6_mlx(receiver1 * 255.0)],
                 axis=-1,
             )
             pose = pose_fn(yuv6_pair)

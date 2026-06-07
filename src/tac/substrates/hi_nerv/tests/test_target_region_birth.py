@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -131,6 +132,21 @@ def test_allowed_birth_update_name_scopes_late_tensors_only() -> None:
     assert not allowed_birth_update_name("latent_embed.weight")
     assert not allowed_birth_update_name("blocks.0.conv.weight")
     assert not allowed_birth_update_name("mid_injector.proj.weight")
+
+
+def test_frame0_compensation_pose_losses_use_receiver_uint8_surface() -> None:
+    """Pose compensation must optimize the same receiver surface it admits."""
+
+    source = (Path(__file__).parents[1] / "mlx_renderer.py").read_text(encoding="utf-8")
+    section = source[
+        source.index("def _pose_compensation_loss_fn")
+        : source.index("def _apply_compensation_step")
+    ]
+
+    assert section.count("_receiver_uint8_roundtrip_ste_nhwc01(pred0)") >= 2
+    assert section.count("_receiver_uint8_roundtrip_ste_nhwc01(pred1)") >= 2
+    assert "rgb_to_yuv6_mlx(pred0 * 255.0)" not in section
+    assert "rgb_to_yuv6_mlx(pred1 * 255.0)" not in section
 
 
 def test_hinerv_birth_backend_scope_registry_charges_exact_tensors() -> None:
@@ -2262,13 +2278,12 @@ def test_compensation_never_relaxes_birth_allow_list_invariant() -> None:
 
 
 @skip_no_mlx
-def test_frame0_compensation_records_initial_raw_pose_cap_counterfactual() -> None:
-    """Compensation must record the exact initial raw-pose-cap surface.
+def test_frame0_compensation_optimizes_receiver_surface_pose_cap() -> None:
+    """Compensation must train on the same receiver pose surface it admits.
 
-    The cap checks movement from the initial live pose.  A compensator trained
-    against source-video target pose can look useful while still violating that
-    cap.  In v6 that cap is counterfactual telemetry only; exact nonlinear
-    score plus catastrophic guard owns admission.
+    A compensator trained against float RGB can look useful while violating the
+    admitted uint8/YUV6 pose surface.  The frame0 arm must optimize the receiver
+    roundtrip before PoseNet so the accepted composite is not a proxy win.
     """
 
     import mlx.core as mx
@@ -2298,7 +2313,7 @@ def test_frame0_compensation_records_initial_raw_pose_cap_counterfactual() -> No
     assert payload["accepted"] is True
     assert payload["composite_accepted"] is True
     assert payload["pose_guard"]["raw_pose_cap_is_counterfactual_only"] is True
-    assert payload["pose_guard"]["max_accepted_pose_output_delta_l2"] > payload["pose_guard"][
+    assert payload["pose_guard"]["max_accepted_pose_output_delta_l2"] <= payload["pose_guard"][
         "max_pose_output_delta_l2"
     ]
     pc = payload["pose_compensation"]
@@ -2306,8 +2321,12 @@ def test_frame0_compensation_records_initial_raw_pose_cap_counterfactual() -> No
     accepted_attempts = [record for record in pc["attempts"] if record["accepted"]]
     assert accepted_attempts
     for record in accepted_attempts:
-        assert record["composite_raw_cap_decision"] == "violated_counterfactual_only"
-        assert record["composite_pose_output_delta_l2"] > payload["pose_guard"]["max_pose_output_delta_l2"]
+        assert record["composite_raw_cap_decision"] == "satisfied"
+        assert (
+            record["composite_pose_output_delta_l2"]
+            <= payload["pose_guard"]["max_pose_output_delta_l2"]
+        )
+        assert record["composite_pose_cap_satisfied"] is True
         assert record["composite_exact_score_decision"] == "accepted"
         assert record["composite_catastrophic_guard_decision"] == "satisfied"
         assert record["would_accept_exact_score_if_raw_cap_disabled"] is True

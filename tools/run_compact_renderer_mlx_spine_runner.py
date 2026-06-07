@@ -20194,8 +20194,18 @@ def _write_hi_nerv_target_region_action_parseback_survival(
             "action_id": row.get("action_id"),
             "survived": row.get("survived"),
             "fakequant_survived": row.get("fakequant_survived"),
+            "fakequant_survival_measured": row.get("fakequant_survival_measured"),
+            "parseback_payload_survived": row.get("parseback_payload_survived"),
+            "parseback_program_survived": row.get("parseback_program_survived"),
+            "parseback_scorer_effect_survived": row.get(
+                "parseback_scorer_effect_survived"
+            ),
+            "scorer_effect_survival_measured": row.get(
+                "scorer_effect_survival_measured"
+            ),
             "parseback_survived": row.get("parseback_survived"),
             "inflate_survived": row.get("inflate_survived"),
+            "first_failed_surface": row.get("first_failed_surface"),
             "artifact_path": row.get("artifact_path"),
             "archive_path": row.get("archive_path"),
             "archive_sha256": row.get("archive_sha256"),
