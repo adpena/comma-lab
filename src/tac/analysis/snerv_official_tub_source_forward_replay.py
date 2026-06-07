@@ -115,6 +115,12 @@ CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER = (
 CHECKPOINT_LOAD_EXPLICIT_EXPORT_LINEAGE_BLOCKER = (
     "snerv_official_trained_checkpoint_state_dict_requires_explicit_export_lineage"
 )
+SOURCE_CONFIG_FIXTURE_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_config_fixture_forbidden"
+)
+SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER = (
+    "snerv_official_trained_checkpoint_exact_source_config_missing"
+)
 
 
 class _OfficialTubCheckpointLoadFailed(RuntimeError):
@@ -282,6 +288,7 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         else _tub_fixture_replay_blockers(payload)
     )
     mapping_manifest = payload["official_trained_checkpoint_mapping_manifest"]
+    source_config_lineage = dict(payload.get("source_config_lineage") or {})
     checkpoint_load = dict(payload.get("official_trained_checkpoint_load") or {})
     state_dict_artifact = payload.get("official_trained_checkpoint_state_dict_artifact")
     state_dict_artifact = (
@@ -297,10 +304,18 @@ def build_snerv_official_tub_source_forward_replay_artifact(
     checkpoint_export_lineage = _mapping_manifest_has_checkpoint_export_lineage(
         mapping_manifest
     )
+    exact_source_config = _source_config_lineage_is_exact(source_config_lineage)
+    source_config_blockers = [
+        str(blocker)
+        for blocker in source_config_lineage.get("blockers", ())
+        if str(blocker)
+    ]
+    preserved = _ordered_unique([*preserved, *source_config_blockers])
     full_source_parity = bool(
         replay_passed
         and mapping_verified
         and checkpoint_export_lineage
+        and exact_source_config
     )
     source_forward_authority = bool(
         full_source_parity and state_dict_value_artifact_ready
@@ -326,6 +341,10 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         preserved = _ordered_unique([*preserved, STATE_VALUE_ARTIFACT_BLOCKER])
     if replay_passed and mapping_verified and not checkpoint_export_lineage:
         preserved = _ordered_unique([*preserved, TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER])
+    if replay_passed and mapping_verified and checkpoint_export_lineage and not exact_source_config:
+        preserved = _ordered_unique(
+            [*preserved, SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER]
+        )
     closed_blockers = list(TUB_CLOSED_BY_FIXTURE_REPLAY) if replay_passed else []
     if full_source_parity:
         closed_blockers.extend(
@@ -354,6 +373,14 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "official_trained_checkpoint_state_dict_mapping_verified": mapping_verified,
         "official_trained_checkpoint_load": checkpoint_load,
         "official_trained_checkpoint_export_lineage_verified": checkpoint_export_lineage,
+        "official_trained_checkpoint_exact_source_config_verified": exact_source_config,
+        "source_config_lineage": source_config_lineage,
+        "source_config_lineage_schema": source_config_lineage.get("schema"),
+        "source_config_kind": source_config_lineage.get("source_config_kind"),
+        "source_config_source": source_config_lineage.get("source_config_source"),
+        "source_config_lineage_name": source_config_lineage.get("source_config_lineage"),
+        "source_config_sha256": source_config_lineage.get("source_config_sha256"),
+        "source_config_is_fixture": source_config_lineage.get("source_config_is_fixture"),
         "official_trained_checkpoint_mapping_manifest": mapping_manifest,
         "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
         "official_trained_checkpoint_state_dict_path": (
@@ -462,6 +489,7 @@ def _run_source_fixture(
     import torch
 
     cfg = TubFixtureConfig()
+    source_config_lineage = _source_config_lineage_for_fixture(cfg)
     torch.manual_seed(20260604)
     with _official_tub_import_context(official_root):
         with warnings.catch_warnings():
@@ -648,9 +676,11 @@ def _run_source_fixture(
             if checkpoint_loaded
             else "official_source_fixture_state"
         ),
+        source_config_lineage=source_config_lineage,
     )
     return {
         "source_fixture_config": asdict(cfg),
+        "source_config_lineage": source_config_lineage,
         "source_training_smoke": training_smoke,
         "official_trained_checkpoint_load": checkpoint_public,
         "official_trained_checkpoint_state_dict_artifact": state_dict_artifact,
@@ -1569,6 +1599,7 @@ def _run_source_fixture_for_receiver_archive(
     import torch
 
     cfg = TubFixtureConfig()
+    source_config_lineage = _source_config_lineage_for_fixture(cfg)
     torch.manual_seed(20260604)
     with _official_tub_import_context(official_root):
         with warnings.catch_warnings():
@@ -1630,6 +1661,7 @@ def _run_source_fixture_for_receiver_archive(
             if checkpoint_loaded
             else "official_source_fixture_state"
         ),
+        source_config_lineage=source_config_lineage,
         repeat_mfu_batch=2,
         include_output2=False,
     )
@@ -1670,11 +1702,14 @@ def _source_forward_tensor_bundle_from_manual(
     checkpoint_sha256: str,
     decoder_len: int,
     source_scope: str,
+    source_config_lineage: Mapping[str, Any],
     repeat_mfu_batch: int = 1,
     include_output2: bool = True,
 ) -> dict[str, Any]:
-    source_forward_replay_authority = (
+    exact_source_config = _source_config_lineage_is_exact(source_config_lineage)
+    source_forward_replay_authority = bool(
         str(source_scope) == "official_trained_checkpoint"
+        and exact_source_config
     )
     repeat = max(1, int(repeat_mfu_batch))
     mfu_low = _repeat_first_axis(manual["mfu_low"], repeat)
@@ -1757,6 +1792,16 @@ def _source_forward_tensor_bundle_from_manual(
         "model_source_sha256": model_source_sha256,
         "state_dict_sha256": state_dict_sha256,
         "checkpoint_sha256": checkpoint_sha256,
+        "source_config_lineage": str(
+            source_config_lineage.get("source_config_lineage") or ""
+        ),
+        "source_config_sha256": source_config_lineage.get("source_config_sha256"),
+        "source_config_kind": source_config_lineage.get("source_config_kind"),
+        "source_config_source": source_config_lineage.get("source_config_source"),
+        "source_config_is_fixture": bool(
+            source_config_lineage.get("source_config_is_fixture") is True
+        ),
+        "exact_source_config_verified": exact_source_config,
         "decoder_len": int(decoder_len),
         "source_scope": str(source_scope),
         "upstream_forward_replay_verified": True,
@@ -2193,6 +2238,49 @@ def _hash_state_dict_exact(state_dict: Mapping[str, Any]) -> str:
         h.update(_hash_array_exact(array).encode("utf-8"))
         h.update(b"\0")
     return h.hexdigest()
+
+
+def _hash_json_exact(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
+
+
+def _source_config_lineage_for_fixture(cfg: TubFixtureConfig) -> dict[str, Any]:
+    config = asdict(cfg)
+    return {
+        "schema": "snerv_official_tub_source_config_lineage.v1",
+        "source_config_kind": "official_snerv_t_tub_source_fixture_config",
+        "source_config_source": "deterministic_official_source_fixture",
+        "source_config_lineage": "official_source_fixture_config",
+        "source_config_sha256": _hash_json_exact(config),
+        "source_config_is_fixture": True,
+        "source_fixture_not_training_config": True,
+        "exact_trained_config_loaded": False,
+        "config": config,
+        "blockers": [
+            SOURCE_CONFIG_FIXTURE_BLOCKER,
+            SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER,
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _source_config_lineage_is_exact(lineage: Mapping[str, Any]) -> bool:
+    return bool(
+        lineage.get("exact_trained_config_loaded") is True
+        and lineage.get("source_config_is_fixture") is not True
+        and str(lineage.get("source_config_lineage") or "")
+        in {
+            "official_trained_run_config",
+            "checkpoint_export_official_trained_run_config",
+            "official_submission_config",
+        }
+        and len(str(lineage.get("source_config_sha256") or "")) == 64
+    )
 
 
 def _write_deterministic_state_npz(

@@ -17,6 +17,7 @@ from tac.analysis.snerv_source_forward_proof import (
     SOURCE_FORWARD_TENSOR_NAMES,
     SOURCE_IDENTICAL,
     build_snerv_payload_bitflip_falsification,
+    build_snerv_payload_bitflip_falsification_matrix,
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
     validate_snerv_output2_boundary_verdict,
@@ -96,6 +97,30 @@ def _bitflip() -> dict:
     )
 
 
+def _bitflip_matrix() -> dict:
+    first_tensors = {
+        "metadata_payload": "coord_time_embedding",
+        "lf_payload": "tub_in",
+        "decoder_payload": "output_2",
+        "step_map_packet": "rgb_pair_uint8",
+    }
+    return build_snerv_payload_bitflip_falsification_matrix(
+        {
+            section: build_snerv_payload_bitflip_falsification(
+                bitflip_section=section,
+                baseline_section_sha256=f"{idx + 1:x}" * 64,
+                mutated_section_sha256=f"{idx + 5:x}" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor=first_tensor,
+                first_failed_surface="archive_parseback",
+                bit_offset=idx,
+                bit_mask=1,
+            )
+            for idx, (section, first_tensor) in enumerate(first_tensors.items())
+        }
+    )
+
+
 def _scorer_deltas() -> dict:
     return {
         "d_seg": 0.0,
@@ -108,12 +133,17 @@ def _scorer_deltas() -> dict:
     }
 
 
-def _official_torch_lineage(*, source_scope: str = "official_trained_checkpoint") -> dict[str, str]:
+def _official_torch_lineage(*, source_scope: str = "official_trained_checkpoint") -> dict[str, str | bool]:
     return {
         "trained_checkpoint_lineage": "official_trained_checkpoint_state_dict",
         "checkpoint_sha256": "6" * 64,
         "state_dict_sha256": "7" * 64,
         "model_source_sha256": "8" * 64,
+        "source_config_lineage": "official_trained_run_config",
+        "source_config_sha256": "9" * 64,
+        "source_config_kind": "official_snerv_t_train_config",
+        "source_config_source": "unit_test_exact_trained_config",
+        "source_config_is_fixture": False,
         "source_scope": source_scope,
         "capture_origin": (
             "official_upstream_trained_checkpoint"
@@ -143,6 +173,11 @@ def test_official_upstream_manifest_fixture_scope_is_not_authority() -> None:
         model_source_sha256="8" * 64,
         checkpoint_sha256="6" * 64,
         state_dict_sha256="7" * 64,
+        source_config_lineage="official_trained_run_config",
+        source_config_sha256="9" * 64,
+        source_config_kind="official_snerv_t_train_config",
+        source_config_source="unit_test_exact_trained_config",
+        source_config_is_fixture=False,
         decoder_len=7,
         source_scope="official_source_fixture_state",
         trained_checkpoint_lineage="official_trained_checkpoint_state_dict",
@@ -177,6 +212,11 @@ def test_official_upstream_manifest_partial_tensor_set_is_not_authority() -> Non
         model_source_sha256="8" * 64,
         checkpoint_sha256="6" * 64,
         state_dict_sha256="7" * 64,
+        source_config_lineage="official_trained_run_config",
+        source_config_sha256="9" * 64,
+        source_config_kind="official_snerv_t_train_config",
+        source_config_source="unit_test_exact_trained_config",
+        source_config_is_fixture=False,
         decoder_len=7,
         source_scope="official_trained_checkpoint",
         trained_checkpoint_lineage="official_trained_checkpoint_state_dict",
@@ -200,6 +240,36 @@ def test_official_upstream_manifest_partial_tensor_set_is_not_authority() -> Non
         )
         for blocker in status["blockers"]
     )
+
+
+def test_official_upstream_manifest_fixture_config_is_not_authority() -> None:
+    manifest = build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[0],
+        tensor_names=SOURCE_FORWARD_TENSOR_NAMES,
+        model_source_sha256="8" * 64,
+        checkpoint_sha256="6" * 64,
+        state_dict_sha256="7" * 64,
+        source_config_lineage="official_source_fixture_config",
+        source_config_sha256="9" * 64,
+        source_config_kind="official_snerv_t_tub_source_fixture_config",
+        source_config_source="deterministic_official_source_fixture",
+        source_config_is_fixture=True,
+        decoder_len=7,
+        source_scope="official_trained_checkpoint",
+        trained_checkpoint_lineage="official_trained_checkpoint_state_dict",
+        capture_origin="official_upstream_trained_checkpoint",
+    )
+
+    assert manifest["capture_verdict"] == SOURCE_GRAPH_UNPROVEN
+    assert manifest["source_forward_replay_authority"] is False
+    status = validate_snerv_official_torch_upstream_capture_manifest(
+        manifest,
+        pair_ids=[0],
+        tensor_names=SOURCE_FORWARD_TENSOR_NAMES,
+    )
+    assert status["passed"] is False
+    assert "snerv_official_torch_trained_config_lineage_missing" in status["blockers"]
+    assert "snerv_official_torch_source_config_fixture_forbidden" in status["blockers"]
 
 
 def test_output2_boundary_verdict_accepts_only_source_identical_receiver_consumed() -> None:
@@ -298,6 +368,7 @@ def test_source_forward_proof_row_requires_clearable_output2_boundary() -> None:
         tensors_by_surface=_tensor_surfaces(),
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
+        destructive_payload_bit_flip_matrix=_bitflip_matrix(),
         output2_boundary_verdict=blocked_boundary,
         surface_provenance=_surface_provenance(),
     )
@@ -320,6 +391,7 @@ def test_source_forward_proof_row_clears_when_output2_boundary_is_source_identic
         tensors_by_surface=_tensor_surfaces(),
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
+        destructive_payload_bit_flip_matrix=_bitflip_matrix(),
         output2_boundary_verdict=_source_identical_output2_verdict(),
         surface_provenance=_surface_provenance(),
     )
@@ -340,6 +412,7 @@ def test_source_forward_proof_rejects_fixture_scope_official_torch_authority() -
         tensors_by_surface=_tensor_surfaces(),
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
+        destructive_payload_bit_flip_matrix=_bitflip_matrix(),
         output2_boundary_verdict=_source_identical_output2_verdict(),
         surface_provenance=_surface_provenance(source_scope="official_source_fixture_state"),
     )
@@ -365,6 +438,7 @@ def test_source_forward_proof_rejects_official_torch_missing_upstream_capture_au
         tensors_by_surface=_tensor_surfaces(),
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
+        destructive_payload_bit_flip_matrix=_bitflip_matrix(),
         output2_boundary_verdict=_source_identical_output2_verdict(),
         surface_provenance=provenance,
     )
@@ -391,6 +465,7 @@ def test_source_forward_proof_rejects_official_torch_missing_model_source_sha() 
         tensors_by_surface=_tensor_surfaces(),
         scorer_deltas=_scorer_deltas(),
         destructive_payload_bit_flip=_bitflip(),
+        destructive_payload_bit_flip_matrix=_bitflip_matrix(),
         output2_boundary_verdict=_source_identical_output2_verdict(),
         surface_provenance=provenance,
     )

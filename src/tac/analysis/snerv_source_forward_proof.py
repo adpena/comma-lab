@@ -25,6 +25,15 @@ SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA = (
 SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA = (
     "snerv_payload_bitflip_falsification.v1"
 )
+SNERV_PAYLOAD_BITFLIP_FALSIFICATION_MATRIX_SCHEMA = (
+    "snerv_payload_bitflip_falsification_matrix.v1"
+)
+SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS: tuple[str, ...] = (
+    "metadata_payload",
+    "lf_payload",
+    "decoder_payload",
+    "step_map_packet",
+)
 SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
 SOURCE_IDENTICAL = "SOURCE_IDENTICAL"
 REPARAMETERIZED_RENAME_REQUIRED = "REPARAMETERIZED_RENAME_REQUIRED"
@@ -95,11 +104,21 @@ SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES: tuple[str, ...] = (
     "checkpoint_export_official_trained_checkpoint_state_dict",
     "official_trained_checkpoint_state_dict_slice",
 )
+SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CONFIG_LINEAGES: tuple[str, ...] = (
+    "official_trained_run_config",
+    "checkpoint_export_official_trained_run_config",
+    "official_submission_config",
+)
 SOURCE_FORWARD_OPTIONAL_PROVENANCE_FIELDS: tuple[str, ...] = (
     "trained_checkpoint_lineage",
     "checkpoint_sha256",
     "state_dict_sha256",
     "model_source_sha256",
+    "source_config_lineage",
+    "source_config_sha256",
+    "source_config_kind",
+    "source_config_source",
+    "source_config_is_fixture",
     "source_scope",
     "capture_origin",
 )
@@ -160,6 +179,7 @@ def build_snerv_source_forward_proof_action_effect(
     tensors_by_surface: Mapping[str, Mapping[str, Any]],
     scorer_deltas: Mapping[str, Any],
     destructive_payload_bit_flip: Mapping[str, Any],
+    destructive_payload_bit_flip_matrix: Mapping[str, Any] | None = None,
     output2_boundary_verdict: Mapping[str, Any] | None = None,
     surface_provenance: Mapping[str, Mapping[str, Any]] | None = None,
     tolerance_by_tensor: Mapping[str, float] | None = None,
@@ -212,6 +232,10 @@ def build_snerv_source_forward_proof_action_effect(
         destructive_payload_bit_flip
     )
     blockers.extend(bitflip_status["blockers"])
+    bitflip_matrix_status = validate_snerv_payload_bitflip_falsification_matrix(
+        destructive_payload_bit_flip_matrix
+    )
+    blockers.extend(bitflip_matrix_status["blockers"])
 
     score_status = _validate_scorer_deltas(scorer_deltas)
     blockers.extend(score_status["blockers"])
@@ -267,6 +291,9 @@ def build_snerv_source_forward_proof_action_effect(
         "scorer_deltas": normalized_scorer_deltas,
         "surface_provenance": normalized_surface_provenance,
         "destructive_payload_bit_flip": dict(destructive_payload_bit_flip),
+        "destructive_payload_bit_flip_matrix": bitflip_matrix_status[
+            "normalized_matrix"
+        ],
         "output2_boundary_verdict": normalized_output2_boundary,
         "rgb_uint8_and_scorer_compared": _scorer_surfaces_present(tensor_hashes),
         "parseback_receiver_surface_compared": _parseback_receiver_surfaces_present(
@@ -313,6 +340,28 @@ def build_snerv_payload_bitflip_falsification(
     }
     status = validate_snerv_payload_bitflip_falsification(row)
     return {**row, "passed": not status["blockers"], "blockers": status["blockers"]}
+
+
+def build_snerv_payload_bitflip_falsification_matrix(
+    section_proofs: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Bundle destructive payload mutations across every charged SNeRV section."""
+
+    normalized = {str(key): dict(value) for key, value in section_proofs.items()}
+    row = {
+        "schema": SNERV_PAYLOAD_BITFLIP_FALSIFICATION_MATRIX_SCHEMA,
+        "required_sections": list(SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS),
+        "section_proofs": normalized,
+        "covered_sections": sorted(normalized),
+        "noncausal_sections": _bitflip_noncausal_sections(normalized),
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+    status = validate_snerv_payload_bitflip_falsification_matrix(row)
+    return {
+        **row,
+        "passed": status["passed"],
+        "blockers": status["blockers"],
+    }
 
 
 def validate_snerv_source_forward_proof_action_effect(
@@ -402,6 +451,10 @@ def validate_snerv_source_forward_proof_action_effect(
         row.get("destructive_payload_bit_flip")
     )
     blockers.extend(bitflip_status["blockers"])
+    bitflip_matrix_status = validate_snerv_payload_bitflip_falsification_matrix(
+        row.get("destructive_payload_bit_flip_matrix")
+    )
+    blockers.extend(bitflip_matrix_status["blockers"])
     output2_status = validate_snerv_output2_boundary_verdict(
         row.get("output2_boundary_verdict")
     )
@@ -521,6 +574,69 @@ def validate_snerv_payload_bitflip_falsification(
     if not isinstance(failed_tensor, str) or not failed_tensor:
         blockers.append("snerv_payload_bitflip_first_failed_tensor_missing")
     return {"passed": not _ordered_unique(blockers), "blockers": _ordered_unique(blockers)}
+
+
+def validate_snerv_payload_bitflip_falsification_matrix(
+    row: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not isinstance(row, Mapping):
+        return {
+            "passed": False,
+            "blockers": ["snerv_payload_bitflip_matrix_missing"],
+            "normalized_matrix": {},
+        }
+    if row.get("schema") != SNERV_PAYLOAD_BITFLIP_FALSIFICATION_MATRIX_SCHEMA:
+        blockers.append("snerv_payload_bitflip_matrix_schema_invalid")
+    section_proofs = row.get("section_proofs")
+    if not isinstance(section_proofs, Mapping):
+        blockers.append("snerv_payload_bitflip_matrix_section_proofs_missing")
+        section_proofs = {}
+    normalized_proofs: dict[str, dict[str, Any]] = {}
+    covered_sections = {str(section) for section in section_proofs}
+    missing_sections = sorted(set(SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS) - covered_sections)
+    for section in missing_sections:
+        blockers.append(f"snerv_payload_bitflip_matrix_section_missing:{section}")
+    for section, proof_value in section_proofs.items():
+        section_name = str(section)
+        proof = dict(proof_value) if isinstance(proof_value, Mapping) else {}
+        if str(proof.get("bitflip_section") or "") != section_name:
+            blockers.append(
+                f"snerv_payload_bitflip_matrix_section_name_mismatch:{section_name}"
+            )
+        proof_status = validate_snerv_payload_bitflip_falsification(proof)
+        blockers.extend(
+            f"snerv_payload_bitflip_matrix_{section_name}:{blocker}"
+            for blocker in proof_status["blockers"]
+        )
+        normalized_proofs[section_name] = proof
+    normalized = {
+        "schema": SNERV_PAYLOAD_BITFLIP_FALSIFICATION_MATRIX_SCHEMA,
+        "required_sections": list(SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS),
+        "covered_sections": sorted(covered_sections),
+        "missing_sections": missing_sections,
+        "noncausal_sections": _bitflip_noncausal_sections(normalized_proofs),
+        "section_proofs": normalized_proofs,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+    return {
+        "passed": not _ordered_unique(blockers),
+        "blockers": _ordered_unique(blockers),
+        "normalized_matrix": normalized,
+    }
+
+
+def _bitflip_noncausal_sections(
+    section_proofs: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    noncausal: list[str] = []
+    for section, proof in section_proofs.items():
+        if (
+            proof.get("proof_passed") is not False
+            or not str(proof.get("first_failed_tensor") or "")
+        ):
+            noncausal.append(str(section))
+    return sorted(noncausal)
 
 
 def find_snerv_source_forward_proof_rows(payload: Any) -> list[dict[str, Any]]:
@@ -658,11 +774,28 @@ def _validate_official_torch_trained_checkpoint_lineage(
         blockers.append(
             "snerv_source_forward_official_torch_capture_origin_missing"
         )
+    config_lineage = str(surface_map.get("source_config_lineage") or "")
+    if config_lineage not in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CONFIG_LINEAGES:
+        blockers.append(
+            "snerv_source_forward_official_torch_trained_config_lineage_missing"
+        )
+    if _truthy_flag(surface_map.get("source_config_is_fixture")):
+        blockers.append(
+            "snerv_source_forward_official_torch_source_config_fixture_forbidden"
+        )
     for field in ("checkpoint_sha256", "state_dict_sha256", "model_source_sha256"):
         if not _looks_like_sha256(surface_map.get(field)):
             blockers.append(
                 f"snerv_source_forward_official_torch_{field}_invalid"
             )
+    if not _looks_like_sha256(surface_map.get("source_config_sha256")):
+        blockers.append(
+            "snerv_source_forward_official_torch_source_config_sha256_invalid"
+        )
+
+
+def _truthy_flag(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes"}
 
 
 def _validate_scorer_deltas(row: Any) -> dict[str, Any]:
@@ -867,7 +1000,9 @@ __all__ = [
     "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS",
     "REPARAMETERIZED_RENAME_REQUIRED",
     "SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA",
+    "SNERV_PAYLOAD_BITFLIP_FALSIFICATION_MATRIX_SCHEMA",
     "SNERV_PAYLOAD_BITFLIP_FALSIFICATION_SCHEMA",
+    "SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS",
     "SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA",
     "SOURCE_FORWARD_OUTPUT2_VERDICTS",
     "SOURCE_FORWARD_SCORER_FIELDS",
@@ -876,10 +1011,12 @@ __all__ = [
     "SOURCE_FORWARD_TENSOR_NAMES",
     "SOURCE_IDENTICAL",
     "build_snerv_payload_bitflip_falsification",
+    "build_snerv_payload_bitflip_falsification_matrix",
     "build_snerv_source_forward_proof_action_effect",
     "build_snerv_source_forward_surface_provenance",
     "find_snerv_source_forward_proof_rows",
     "validate_snerv_output2_boundary_verdict",
     "validate_snerv_payload_bitflip_falsification",
+    "validate_snerv_payload_bitflip_falsification_matrix",
     "validate_snerv_source_forward_proof_action_effect",
 ]

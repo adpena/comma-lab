@@ -18,6 +18,8 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     DEFAULT_OFFICIAL_SNERV_REPO,
     PYTORCH_WAVELETS_BLOCKER,
     SCHEMA,
+    SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER,
+    SOURCE_CONFIG_FIXTURE_BLOCKER,
     STATE_VALUE_ARTIFACT_BLOCKER,
     TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     TUB_CLOSED_BY_FIXTURE_REPLAY,
@@ -92,6 +94,11 @@ def test_snerv_official_tub_source_forward_replay_executes_output2_path() -> Non
         assert blocker in artifact["closed_blockers"]
     for blocker in TUB_PRESERVED_BLOCKERS:
         assert blocker in artifact["preserved_blockers"]
+    assert SOURCE_CONFIG_FIXTURE_BLOCKER in artifact["preserved_blockers"]
+    assert SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER in artifact["preserved_blockers"]
+    assert artifact["official_trained_checkpoint_exact_source_config_verified"] is False
+    assert artifact["source_config_is_fixture"] is True
+    assert len(artifact["source_config_sha256"]) == 64
 
 
 def test_snerv_official_tub_source_forward_tensor_bundle_names_proof_tensors() -> None:
@@ -109,6 +116,10 @@ def test_snerv_official_tub_source_forward_tensor_bundle_names_proof_tensors() -
     assert bundle["receiver_bound_capture"] is False
     assert bundle["source_scope"] == "official_source_fixture_state"
     assert bundle["source_forward_replay_authority"] is False
+    assert bundle["source_config_lineage"] == "official_source_fixture_config"
+    assert bundle["source_config_is_fixture"] is True
+    assert bundle["exact_source_config_verified"] is False
+    assert len(bundle["source_config_sha256"]) == 64
     tensors = bundle["tensors"]
     assert {
         "coord_time_embedding",
@@ -136,6 +147,9 @@ def test_snerv_official_tub_replay_preserves_dependency_and_checkpoint_blockers(
     assert artifact["dependency_contract"]["functional_haar_shim_used_for_fixture"] is True
     assert artifact["dependency_contract"]["shim_score_authority"] is False
     assert artifact["source_fixture_not_training_config"] is True
+    assert artifact["official_trained_checkpoint_exact_source_config_verified"] is False
+    assert SOURCE_CONFIG_FIXTURE_BLOCKER in artifact["blockers"]
+    assert SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER in artifact["blockers"]
     assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in artifact["blockers"]
     assert (
         "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing"
@@ -174,6 +188,7 @@ def test_snerv_official_tub_source_forward_replay_persists_value_state_npz(
     assert artifact["official_trained_checkpoint_loaded"] is True
     assert artifact["official_trained_checkpoint_state_dict_mapping_verified"] is True
     assert artifact["full_tub_source_forward_parity_proven"] is False
+    assert artifact["official_trained_checkpoint_exact_source_config_verified"] is False
     assert (
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is True
     )
@@ -181,6 +196,8 @@ def test_snerv_official_tub_source_forward_replay_persists_value_state_npz(
     assert artifact["official_trained_checkpoint_export_lineage_verified"] is False
     assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
     assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
+    assert SOURCE_CONFIG_FIXTURE_BLOCKER in artifact["blockers"]
+    assert SOURCE_CONFIG_EXACT_LINEAGE_BLOCKER in artifact["blockers"]
     assert artifact["official_trained_checkpoint_state_dict_path"] == state_path.as_posix()
     assert artifact["official_trained_checkpoint_state_dict_slice_present"] is True
     assert artifact["official_trained_checkpoint_state_dict_slice_file_present"] is True
@@ -237,8 +254,10 @@ def test_snerv_official_tub_source_forward_replay_blocks_authority_without_value
         artifact["official_trained_checkpoint_state_dict_value_artifact_ready"] is False
     )
     assert artifact["source_forward_replay_authority"] is False
+    assert artifact["official_trained_checkpoint_exact_source_config_verified"] is False
     assert STATE_VALUE_ARTIFACT_BLOCKER not in artifact["blockers"]
     assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
+    assert SOURCE_CONFIG_FIXTURE_BLOCKER in artifact["blockers"]
 
 
 def test_snerv_official_tub_source_forward_replay_rejects_fixture_value_state_npz_authority(

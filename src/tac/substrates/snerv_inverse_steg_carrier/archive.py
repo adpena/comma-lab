@@ -25,6 +25,7 @@ from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
     SOURCE_FORWARD_TENSOR_NAMES,
     build_snerv_payload_bitflip_falsification,
+    build_snerv_payload_bitflip_falsification_matrix,
     validate_snerv_source_forward_proof_action_effect,
 )
 from tac.analysis.snerv_step_map_coder import decode_step_maps
@@ -1696,19 +1697,19 @@ def build_snerv_archive_payload_bitflip_falsification(
         if decoded.schema == SNERV_ARCHIVE_SCHEMA_V2
         else pack_snerv_archive
     )
-    mutated_packet = packer(
-        metadata_payload=mutated_sections["metadata_payload"],
-        lf_payload=mutated_sections["lf_payload"],
-        decoder_payload=mutated_sections["decoder_payload"],
-        step_map_packet=mutated_sections["step_map_packet"],
-        metadata=decoded.metadata,
-    ).packet
 
     first_failed_tensor: str | None = None
     first_failed_surface: str | None = None
     failure: str | None = None
     proof_passed_after_bitflip = True
     try:
+        mutated_packet = packer(
+            metadata_payload=mutated_sections["metadata_payload"],
+            lf_payload=mutated_sections["lf_payload"],
+            decoder_payload=mutated_sections["decoder_payload"],
+            step_map_packet=mutated_sections["step_map_packet"],
+            metadata=decoded.metadata,
+        ).packet
         mutated_frames = decode_snerv_archive_frames(mutated_packet)
     except Exception as exc:
         proof_passed_after_bitflip = False
@@ -1742,6 +1743,109 @@ def build_snerv_archive_payload_bitflip_falsification(
         bit_mask=mask,
         failure=failure,
     )
+
+
+def build_snerv_archive_payload_bitflip_falsification_matrix(
+    packet: bytes,
+    *,
+    bit_offset: int = 0,
+    bit_mask: int = 1,
+    sections: Sequence[str] = SECTION_ORDER,
+) -> dict[str, Any]:
+    """Mutate every charged SNeRV archive section and report proof coverage."""
+
+    section_proofs: dict[str, dict[str, Any]] = {}
+    decoded = unpack_snerv_archive(packet)
+    for section in sections:
+        section_name = str(section)
+        section = decoded.sections[section_name]
+        section_proofs[section_name] = _search_section_bitflip_falsification(
+            packet,
+            bitflip_section=section_name,
+            section_bytes=section,
+            preferred_offset=int(bit_offset),
+            preferred_mask=int(bit_mask),
+        )
+    return build_snerv_payload_bitflip_falsification_matrix(section_proofs)
+
+
+def _search_section_bitflip_falsification(
+    packet: bytes,
+    *,
+    bitflip_section: str,
+    section_bytes: bytes,
+    preferred_offset: int,
+    preferred_mask: int,
+) -> dict[str, Any]:
+    """Find a single-bit mutation that proves a section is receiver-causal."""
+
+    best: dict[str, Any] | None = None
+    length = len(section_bytes)
+    offsets = _candidate_bitflip_offsets(length, preferred_offset)
+    masks = _candidate_bitflip_masks(preferred_mask)
+    for offset in offsets:
+        for mask in masks:
+            proof = build_snerv_archive_payload_bitflip_falsification(
+                packet,
+                bitflip_section=bitflip_section,
+                bit_offset=offset,
+                bit_mask=mask,
+            )
+            best = proof if best is None else best
+            if proof.get("passed") is True:
+                return proof
+    if best is not None:
+        best = dict(best)
+        best["section_causality"] = "no_receiver_surface_change_found"
+        return best
+    raise SnervArchiveError(f"SNeRV bitflip section {bitflip_section!r} is empty")
+
+
+def _candidate_bitflip_offsets(length: int, preferred_offset: int) -> list[int]:
+    if length <= 0:
+        return []
+    raw = [
+        preferred_offset,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        8,
+        13,
+        21,
+        34,
+        55,
+        length // 2,
+        length - 1,
+    ]
+    return [
+        offset
+        for offset in _ordered_unique_ints(raw)
+        if 0 <= offset < length
+    ]
+
+
+def _candidate_bitflip_masks(preferred_mask: int) -> list[int]:
+    return [
+        mask
+        for mask in _ordered_unique_ints(
+            [preferred_mask, 1, 2, 4, 8, 16, 32, 64, 128]
+        )
+        if 1 <= mask <= 255
+    ]
+
+
+def _ordered_unique_ints(values: Sequence[int]) -> list[int]:
+    out: list[int] = []
+    seen: set[int] = set()
+    for value in values:
+        item = int(value)
+        if item not in seen:
+            out.append(item)
+            seen.add(item)
+    return out
 
 
 def decode_snerv_archive_frame_planes_from_decoded(

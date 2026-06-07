@@ -13,6 +13,7 @@ import numpy as np
 from tac.analysis.snerv_source_forward_proof import (
     DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
     REPARAMETERIZED_RENAME_REQUIRED,
+    SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CONFIG_LINEAGES,
     SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES,
     SOURCE_FORWARD_SURFACES,
     SOURCE_FORWARD_TENSOR_NAMES,
@@ -22,11 +23,16 @@ from tac.analysis.snerv_source_forward_proof import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     build_snerv_archive_payload_bitflip_falsification,
+    build_snerv_archive_payload_bitflip_falsification_matrix,
     unpack_snerv_archive,
 )
 
 SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
 SOURCE_GRAPH_UNPROVEN = "SOURCE_GRAPH_UNPROVEN"
+
+
+def _truthy_flag(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes"}
 
 
 class _SourceGraphUnprovenError(RuntimeError):
@@ -168,6 +174,21 @@ def build_snerv_source_forward_proof_from_archive_packet(
                     ),
                     state_dict_sha256=official_torch_upstream_capture.get(
                         "state_dict_sha256"
+                    ),
+                    source_config_lineage=official_torch_upstream_capture.get(
+                        "source_config_lineage"
+                    ),
+                    source_config_sha256=official_torch_upstream_capture.get(
+                        "source_config_sha256"
+                    ),
+                    source_config_kind=official_torch_upstream_capture.get(
+                        "source_config_kind"
+                    ),
+                    source_config_source=official_torch_upstream_capture.get(
+                        "source_config_source"
+                    ),
+                    source_config_is_fixture=official_torch_upstream_capture.get(
+                        "source_config_is_fixture"
                     ),
                     decoder_len=official_torch_upstream_capture.get("decoder_len"),
                     source_scope=official_torch_upstream_capture.get("source_scope"),
@@ -349,6 +370,11 @@ def build_snerv_source_forward_proof_from_archive_packet(
         bit_offset=int(bitflip_offset),
         bit_mask=int(bitflip_mask),
     )
+    bitflip_matrix = build_snerv_archive_payload_bitflip_falsification_matrix(
+        archive_packet,
+        bit_offset=int(bitflip_offset),
+        bit_mask=int(bitflip_mask),
+    )
     payload_section_hashes = {
         name: _section_sha256(section)
         for name, section in decoded.sections.items()
@@ -391,6 +417,7 @@ def build_snerv_source_forward_proof_from_archive_packet(
         tensors_by_surface=tensors_by_surface,
         scorer_deltas=dict(scorer_deltas or {}),
         destructive_payload_bit_flip=bitflip,
+        destructive_payload_bit_flip_matrix=bitflip_matrix,
         output2_boundary_verdict=output2_boundary,
         surface_provenance=provenance,
         tolerance_by_tensor=tolerance_by_tensor,
@@ -659,6 +686,11 @@ def build_snerv_official_torch_upstream_capture_manifest(
     model_source_sha256: str | None = None,
     checkpoint_sha256: str | None = None,
     state_dict_sha256: str | None = None,
+    source_config_lineage: str | None = None,
+    source_config_sha256: str | None = None,
+    source_config_kind: str | None = None,
+    source_config_source: str | None = None,
+    source_config_is_fixture: bool | str | int | None = None,
     decoder_len: int | None = None,
     capture_authority: str = SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY,
     source_scope: str | None = None,
@@ -688,15 +720,20 @@ def build_snerv_official_torch_upstream_capture_manifest(
     )
     source_scope_text = str(source_scope or "")
     lineage_text = str(trained_checkpoint_lineage)
+    config_lineage_text = str(source_config_lineage or "")
+    config_is_fixture = _truthy_flag(source_config_is_fixture)
     source_forward_replay_authority = bool(
         str(capture_authority) == SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
         and source_scope_text == "official_trained_checkpoint"
         and lineage_text in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES
+        and config_lineage_text in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CONFIG_LINEAGES
+        and not config_is_fixture
         and bool(normalized_pair_ids)
         and source_forward_tensor_set_complete
         and _looks_like_sha256(model_source_sha256)
         and _looks_like_sha256(checkpoint_sha256)
         and _looks_like_sha256(state_dict_sha256)
+        and _looks_like_sha256(source_config_sha256)
         and decoder_len is not None
     )
     return {
@@ -714,6 +751,13 @@ def build_snerv_official_torch_upstream_capture_manifest(
         "model_source_sha256": model_source_sha256,
         "checkpoint_sha256": checkpoint_sha256,
         "state_dict_sha256": state_dict_sha256,
+        "source_config_lineage": config_lineage_text,
+        "source_config_sha256": source_config_sha256,
+        "source_config_kind": None if source_config_kind is None else str(source_config_kind),
+        "source_config_source": (
+            None if source_config_source is None else str(source_config_source)
+        ),
+        "source_config_is_fixture": bool(config_is_fixture),
         "decoder_len": None if decoder_len is None else int(decoder_len),
         "source_scope": source_scope_text,
         "trained_checkpoint_lineage": lineage_text,
@@ -783,6 +827,15 @@ def validate_snerv_official_torch_upstream_capture_manifest(
         blockers.append(
             "snerv_official_torch_trained_checkpoint_lineage_missing"
         )
+    if (
+        str(row.get("source_config_lineage") or "")
+        not in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CONFIG_LINEAGES
+    ):
+        blockers.append("snerv_official_torch_trained_config_lineage_missing")
+    if row.get("source_config_is_fixture") is True:
+        blockers.append("snerv_official_torch_source_config_fixture_forbidden")
+    if not _looks_like_sha256(row.get("source_config_sha256")):
+        blockers.append("snerv_official_torch_source_config_sha256_invalid")
     if str(row.get("source_scope") or "") != "official_trained_checkpoint":
         blockers.append(
             "snerv_official_torch_trained_checkpoint_source_scope_missing"
@@ -832,6 +885,11 @@ def _refresh_official_torch_manifest_tensor_set(
         model_source_sha256=row.get("model_source_sha256"),
         checkpoint_sha256=row.get("checkpoint_sha256"),
         state_dict_sha256=row.get("state_dict_sha256"),
+        source_config_lineage=row.get("source_config_lineage"),
+        source_config_sha256=row.get("source_config_sha256"),
+        source_config_kind=row.get("source_config_kind"),
+        source_config_source=row.get("source_config_source"),
+        source_config_is_fixture=row.get("source_config_is_fixture"),
         decoder_len=row.get("decoder_len"),
         capture_authority=str(
             row.get("capture_authority")
@@ -863,6 +921,11 @@ def _official_torch_surface_provenance_extra(
         "checkpoint_sha256": str(manifest.get("checkpoint_sha256") or ""),
         "state_dict_sha256": str(manifest.get("state_dict_sha256") or ""),
         "model_source_sha256": str(manifest.get("model_source_sha256") or ""),
+        "source_config_lineage": str(manifest.get("source_config_lineage") or ""),
+        "source_config_sha256": str(manifest.get("source_config_sha256") or ""),
+        "source_config_kind": str(manifest.get("source_config_kind") or ""),
+        "source_config_source": str(manifest.get("source_config_source") or ""),
+        "source_config_is_fixture": bool(manifest.get("source_config_is_fixture") is True),
         "source_scope": str(manifest.get("source_scope") or ""),
         "capture_origin": str(manifest.get("capture_origin") or ""),
     }

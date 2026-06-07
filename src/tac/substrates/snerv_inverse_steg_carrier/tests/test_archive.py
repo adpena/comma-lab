@@ -27,6 +27,7 @@ from tac.analysis.snerv_source_forward_producer import (
 )
 from tac.analysis.snerv_source_forward_proof import (
     build_snerv_payload_bitflip_falsification,
+    build_snerv_payload_bitflip_falsification_matrix,
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
 )
@@ -48,6 +49,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SNERV_DECODER_MAGIC,
     SnervArchiveError,
     build_snerv_archive_payload_bitflip_falsification,
+    build_snerv_archive_payload_bitflip_falsification_matrix,
     decode_decoder_payload,
     decode_lf_metadata_payload,
     decode_lf_quant_payload,
@@ -834,6 +836,42 @@ def test_official_mfu_hfr_tub_archive_payload_bitflip_falsifies_receiver_replay(
     assert proof["first_failed_surface"] in {"archive_parseback", "numpy_receiver"}
     assert proof["passed"] is True
     assert proof["blockers"] == []
+
+
+def test_official_mfu_hfr_tub_archive_payload_bitflip_matrix_covers_sections() -> None:
+    decoder_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **_official_payload_fixture()
+    )
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 1,
+            "channels": 3,
+        },
+    )
+
+    matrix = build_snerv_archive_payload_bitflip_falsification_matrix(
+        archive.packet,
+        bit_offset=0,
+        bit_mask=1,
+    )
+
+    assert matrix["schema"] == "snerv_payload_bitflip_falsification_matrix.v1"
+    assert matrix["passed"] is False
+    assert set(matrix["covered_sections"]) == set(SECTION_ORDER)
+    assert matrix["noncausal_sections"] == ["metadata_payload", "step_map_packet"]
+    assert "snerv_payload_bitflip_matrix_metadata_payload:snerv_payload_bitflip_did_not_falsify_proof" in matrix["blockers"]
+    assert matrix["section_proofs"]["lf_payload"]["passed"] is True
+    assert matrix["section_proofs"]["decoder_payload"]["passed"] is True
 
 
 def test_official_mfu_hfr_tub_decoder_payload_uses_bounded_lzma_by_default(
@@ -2813,6 +2851,50 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
         bit_offset=4,
         bit_mask=1,
     )
+    bitflip_matrix = build_snerv_payload_bitflip_falsification_matrix(
+        {
+            "metadata_payload": build_snerv_payload_bitflip_falsification(
+                bitflip_section="metadata_payload",
+                baseline_section_sha256="1" * 64,
+                mutated_section_sha256="5" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor="coord_time_embedding",
+                first_failed_surface="archive_parseback",
+                bit_offset=0,
+                bit_mask=1,
+            ),
+            "lf_payload": build_snerv_payload_bitflip_falsification(
+                bitflip_section="lf_payload",
+                baseline_section_sha256="2" * 64,
+                mutated_section_sha256="6" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor="tub_in",
+                first_failed_surface="archive_parseback",
+                bit_offset=1,
+                bit_mask=1,
+            ),
+            "decoder_payload": build_snerv_payload_bitflip_falsification(
+                bitflip_section="decoder_payload",
+                baseline_section_sha256="3" * 64,
+                mutated_section_sha256="7" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor="output_2",
+                first_failed_surface="archive_parseback",
+                bit_offset=2,
+                bit_mask=1,
+            ),
+            "step_map_packet": build_snerv_payload_bitflip_falsification(
+                bitflip_section="step_map_packet",
+                baseline_section_sha256="4" * 64,
+                mutated_section_sha256="8" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor="rgb_pair_uint8",
+                first_failed_surface="archive_parseback",
+                bit_offset=3,
+                bit_mask=1,
+            ),
+        }
+    )
     tensors_by_surface = {
         "official_torch": tensors,
         "pact_mlx": tensors,
@@ -2845,6 +2927,7 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
             },
         },
         destructive_payload_bit_flip=bitflip,
+        destructive_payload_bit_flip_matrix=bitflip_matrix,
         output2_boundary_verdict=build_snerv_output2_boundary_verdict(
             tensors_by_surface=tensors_by_surface,
             archive_decoder_header={
@@ -2872,6 +2955,11 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
                     "checkpoint_sha256": "6" * 64,
                     "state_dict_sha256": "7" * 64,
                     "model_source_sha256": "8" * 64,
+                    "source_config_lineage": "official_trained_run_config",
+                    "source_config_sha256": "9" * 64,
+                    "source_config_kind": "official_snerv_t_train_config",
+                    "source_config_source": "unit_test_exact_trained_config",
+                    "source_config_is_fixture": False,
                     "source_scope": "official_trained_checkpoint",
                     "capture_origin": "official_upstream_trained_checkpoint",
                 }

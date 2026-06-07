@@ -10,6 +10,7 @@ from tac.analysis.snerv_source_forward_proof import (
     SOURCE_FORWARD_SURFACES,
     SOURCE_IDENTICAL,
     build_snerv_payload_bitflip_falsification,
+    build_snerv_payload_bitflip_falsification_matrix,
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
 )
@@ -47,6 +48,7 @@ def valid_snerv_source_forward_action_effect(
             bit_offset=17,
             bit_mask=1,
         ),
+        destructive_payload_bit_flip_matrix=_snerv_bitflip_matrix(),
         output2_boundary_verdict=_source_identical_output2_verdict(),
         surface_provenance=build_snerv_source_forward_surface_provenance(
             pair_ids=pair_ids,
@@ -95,12 +97,41 @@ def _snerv_scorer_deltas() -> dict[str, Any]:
     }
 
 
-def _official_torch_lineage() -> dict[str, str]:
+def _snerv_bitflip_matrix() -> dict[str, Any]:
+    first_tensors = {
+        "metadata_payload": "coord_time_embedding",
+        "lf_payload": "tub_in",
+        "decoder_payload": "output_2",
+        "step_map_packet": "rgb_pair_uint8",
+    }
+    return build_snerv_payload_bitflip_falsification_matrix(
+        {
+            section: build_snerv_payload_bitflip_falsification(
+                bitflip_section=section,
+                baseline_section_sha256=f"{idx + 1:x}" * 64,
+                mutated_section_sha256=f"{idx + 5:x}" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor=first_tensor,
+                first_failed_surface="archive_parseback",
+                bit_offset=idx,
+                bit_mask=1,
+            )
+            for idx, (section, first_tensor) in enumerate(first_tensors.items())
+        }
+    )
+
+
+def _official_torch_lineage() -> dict[str, str | bool]:
     return {
         "trained_checkpoint_lineage": "official_trained_checkpoint_state_dict",
         "checkpoint_sha256": "6" * 64,
         "state_dict_sha256": "7" * 64,
         "model_source_sha256": "8" * 64,
+        "source_config_lineage": "official_trained_run_config",
+        "source_config_sha256": "9" * 64,
+        "source_config_kind": "official_snerv_t_train_config",
+        "source_config_source": "unit_test_exact_trained_config",
+        "source_config_is_fixture": False,
         "source_scope": "official_trained_checkpoint",
         "capture_origin": "official_upstream_trained_checkpoint",
     }
