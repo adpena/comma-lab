@@ -289,6 +289,7 @@ def _direct_wall_candidate(
     *,
     wrong_to_target: int = 4,
     inverse_source: str = "segnet_margin_vjp",
+    archive_executable_support_sha256: str | None = None,
 ) -> dict:
     support = np.zeros((1, 4, 4), dtype=bool)
     support[0, 1:3, 1:3] = True
@@ -315,6 +316,10 @@ def _direct_wall_candidate(
         new_d_pose=0.20,
         region_id="b0/c2/r1",
         support_encoded_bytes=16,
+        archive_executable_support_sha256=archive_executable_support_sha256,
+        archive_executable_support_encoding="target_region_action_coordinates_v1",
+        archive_executable_support_cardinality=4,
+        archive_executable_support_encoded_bytes=16,
         inverse_source=inverse_source,
         inverse_basis=(
             "support_projected_segnet_margin_vjp"
@@ -514,6 +519,44 @@ def test_wall_normal_lift_receipt_materializes_same_action_branch_effects() -> N
     assert {row["action_id"] for row in rows} == {"wall-normal-action"}
     sidecar_row = next(row for row in rows if row["action_kind"] == "wall_normal_sidecar_fallback")
     assert BLOCKER_SCORE_DELTA_MISSING in sidecar_row["blockers"]
+
+
+def test_wall_normal_lift_prefers_archive_executable_support_for_branch_identity() -> None:
+    direct = _direct_wall_candidate(
+        archive_executable_support_sha256="b" * 64,
+    )
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+
+    assert receipt["direct_teacher"]["support_sha256"] != (
+        receipt["direct_teacher"]["archive_executable_support_sha256"]
+    )
+    assert receipt["direct_teacher"]["archive_executable_support_sha256"] == "b" * 64
+    assert receipt["direct_teacher"]["archive_executable_support_encoding"] == (
+        "target_region_action_coordinates_v1"
+    )
+
+    effects = build_wall_normal_branch_action_effects(receipt)
+    assert {effect.action_id for effect in effects} == {"wall-normal-action"}
+    assert {effect.support_sha256 for effect in effects} == {"b" * 64}
+    assert {effect.support_source for effect in effects} == {
+        "archive_executable_target_region_action_support"
+    }
+    branch_receipt = build_wall_normal_branch_receipt(effects)
+    assert branch_receipt["same_action_id"] is True
+    assert branch_receipt["same_support_sha256"] is True
+    assert branch_receipt["support_sha256s"] == ["b" * 64]
+    assert "wall_normal_branch_action_id_mismatch" not in branch_receipt["blockers"]
 
 
 def test_target_region_wall_normal_lift_blocks_when_direct_teacher_missing() -> None:

@@ -590,6 +590,22 @@ def build_target_region_wall_normal_lift_receipt(
         "support_cardinality": direct_wall.get("support_cardinality"),
         "support_encoding": direct_wall.get("support_encoding"),
         "support_encoded_bytes": direct_wall.get("support_encoded_bytes"),
+        "support_hash_domain": direct_wall.get("support_hash_domain"),
+        "archive_executable_support_sha256": direct_wall.get(
+            "archive_executable_support_sha256"
+        ),
+        "archive_executable_support_hash_domain": direct_wall.get(
+            "archive_executable_support_hash_domain"
+        ),
+        "archive_executable_support_encoding": direct_wall.get(
+            "archive_executable_support_encoding"
+        ),
+        "archive_executable_support_cardinality": direct_wall.get(
+            "archive_executable_support_cardinality"
+        ),
+        "archive_executable_support_encoded_bytes": direct_wall.get(
+            "archive_executable_support_encoded_bytes"
+        ),
         "support_research_only": direct_wall.get("archive_executable") is not True,
         "action_effect": (
             direct_effect.as_dict()
@@ -858,6 +874,27 @@ def build_wall_normal_branch_receipt(
 
 
 def _wall_normal_support_identity(direct: Mapping[str, Any]) -> dict[str, Any]:
+    archive_support_sha256 = direct.get("archive_executable_support_sha256")
+    if archive_support_sha256:
+        return {
+            "support_source": "archive_executable_target_region_action_support",
+            "support_cardinality": _first_int(
+                direct,
+                "archive_executable_support_cardinality",
+                default=_first_int(direct, "support_cardinality"),
+            ),
+            "support_sha256": str(archive_support_sha256),
+            "support_encoding": str(
+                direct.get("archive_executable_support_encoding")
+                or "target_region_action_coordinates_v1"
+            ),
+            "support_encoded_bytes": _first_int(
+                direct,
+                "archive_executable_support_encoded_bytes",
+                default=_first_int(direct, "support_encoded_bytes"),
+            ),
+            "support_research_only": False,
+        }
     return {
         "support_source": direct.get("support_source"),
         "support_cardinality": _first_int(direct, "support_cardinality"),
