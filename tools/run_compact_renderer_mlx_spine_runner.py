@@ -17801,7 +17801,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         # Keep the byte cap coupled to the final archive, not only to train-time
         # duals; otherwise the optimizer can price a cap that export never enforces.
-        return export_hi_nerv_mlx_archive(
+        archive_path, archive_sha256, archive_bytes = export_hi_nerv_mlx_archive(
             model_obj,
             archive_output_dir,
             repo_root=repo_root,
@@ -17818,6 +17818,32 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             target_region_action_program_base64=target_region_action_program_base64,
             hard_byte_ceiling=hard_byte_ceiling,
         )
+        export_artifact_dict: dict[str, Any] = {
+            "archive_path": Path(archive_path).as_posix(),
+            "archive_sha256": archive_sha256,
+            "archive_bytes": int(archive_bytes),
+            "substrate_artifact_metadata": artifact_metadata,
+        }
+        if isinstance(target_region_action_export_selection, Mapping):
+            export_artifact_dict["target_region_birth_payload"] = dict(
+                target_region_action_export_selection
+            )
+        _write_hi_nerv_target_region_action_parseback_survival(
+            archive_resolution={
+                "archive_path": Path(archive_path).as_posix(),
+                "archive_sha256": archive_sha256,
+                "archive_bytes": int(archive_bytes),
+            },
+            output_dir=archive_output_dir,
+            artifact_dict=export_artifact_dict,
+            export_selection=(
+                target_region_action_export_selection
+                if isinstance(target_region_action_export_selection, Mapping)
+                else None
+            ),
+            target_region_action_program_base64=target_region_action_program_base64,
+        )
+        return archive_path, archive_sha256, archive_bytes
 
     artifact_metadata = {
         "schema": "compact_renderer_hi_nerv_mlx_adapter_smoke_metadata.v1",

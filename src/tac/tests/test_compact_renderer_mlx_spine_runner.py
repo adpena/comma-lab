@@ -8992,6 +8992,48 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         _write_synthetic_pr95_archive(archive, pairs=10)
         return archive, runner_mod._sha256_file(archive), archive.stat().st_size
 
+    def fake_build_hi_nerv_target_region_action_parseback_survival(
+        archive_path,
+        *,
+        expected_program_base64=None,
+        expected_support_sha256=None,
+        expected_payload_bytes=None,
+        inflated_raw_path=None,
+    ):
+        archive = Path(archive_path)
+        captured["parseback_expected_program_base64"] = expected_program_base64
+        captured["parseback_expected_support_sha256"] = expected_support_sha256
+        captured["parseback_expected_payload_bytes"] = expected_payload_bytes
+        captured["parseback_inflated_raw_path"] = inflated_raw_path
+        return {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "archive_path": archive.as_posix(),
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "archive_bytes": archive.stat().st_size,
+            "target_region_actions": {
+                "schema": "hi_nerv_target_region_archive_actions.v1",
+                "payload_bytes": expected_payload_bytes,
+                "payload_codec": "unit_fake_selected_program",
+                "support_sha256": expected_support_sha256,
+                "decoded_support_sha256": "decoded-support",
+                "decoded_action_sha256": "decoded-action",
+                "support_cardinality": 3,
+                "support_encoding": "explicit_yx_u16_coordinates",
+                "support_encoded_bytes": 12,
+                "charged_as_hiv1_meta_blob": True,
+                "receiver_consumed": True,
+            },
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
     def fake_run_mlx_score_aware_full_main(**kwargs):
         bundle = kwargs["bundle"]
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
@@ -9125,6 +9167,11 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         hinerv_archive_candidate,
         "export_hi_nerv_mlx_archive",
         fake_export_hi_nerv_mlx_archive,
+    )
+    monkeypatch.setattr(
+        hinerv_archive_candidate,
+        "build_hi_nerv_target_region_action_parseback_survival",
+        fake_build_hi_nerv_target_region_action_parseback_survival,
     )
     monkeypatch.setattr(
         hinerv_mlx_renderer,
@@ -9300,6 +9347,11 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["export_target_region_action_program_base64"]
         == "runner-selected-action-program"
     )
+    assert captured["parseback_expected_program_base64"] == (
+        "runner-selected-action-program"
+    )
+    assert captured["parseback_expected_support_sha256"] == "runner-action-support"
+    assert captured["parseback_expected_payload_bytes"] == 17
     target_birth_call = captured["target_region_birth_call"]
     assert target_birth_call["scorer_teacher_present"] is True
     assert target_birth_call["pose_teacher_present"] is True
