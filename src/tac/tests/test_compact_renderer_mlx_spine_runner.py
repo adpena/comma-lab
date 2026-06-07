@@ -8931,6 +8931,52 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "ready_for_exact_eval_dispatch": False,
             }
 
+        def fit_target_region_birth_backend_ladder_from_segnet(self, **kwargs):
+            captured["target_region_birth_ladder_call"] = {
+                "birth_update_scope_present": "birth_update_scope" in kwargs,
+                "target_region_portfolio_max_regions": int(
+                    kwargs["target_region_portfolio_max_regions"]
+                ),
+                "target_region_forced_key": kwargs["target_region_forced_key"],
+            }
+            # Mirror the real ladder contract: one backend scope owns one
+            # region at a time, so region-portfolio fallback is disabled inside
+            # the scope ladder even if the runner's broader portfolio knob is
+            # configured for non-ladder diagnostics.
+            inner_kwargs = dict(kwargs)
+            inner_kwargs["target_region_portfolio_max_regions"] = 1
+            selected = self.fit_target_region_birth_from_segnet(
+                **inner_kwargs,
+                birth_update_scope="pair_latents_fine",
+            )
+            return {
+                "schema": "hi_nerv_target_region_birth_backend_ladder.v1",
+                "accepted": True,
+                "backend_realization_verdict": "accepted_backend_birth",
+                "selected_scope": "pair_latents_fine",
+                "selected_attempt_index": 0,
+                "selected_payload": selected,
+                "last_payload": selected,
+                "birth_update_ladder": ["pair_latents_fine"],
+                "attempt_count": 1,
+                "attempts": [
+                    {
+                        "schema": "hi_nerv_target_region_birth_backend_ladder_action_effect.v1",
+                        "birth_update_scope": "pair_latents_fine",
+                        "accepted": True,
+                        "wrong_to_target_count": 5,
+                        "exact_delta_score_nonrate": -0.1,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
         def num_parameters(self):
             return 123
 
@@ -9352,6 +9398,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     )
     assert captured["parseback_expected_support_sha256"] == "runner-action-support"
     assert captured["parseback_expected_payload_bytes"] == 17
+    ladder_call = captured["target_region_birth_ladder_call"]
+    assert ladder_call["birth_update_scope_present"] is False
+    assert ladder_call["target_region_portfolio_max_regions"] == 4
+    assert ladder_call["target_region_forced_key"] is None
     target_birth_call = captured["target_region_birth_call"]
     assert target_birth_call["scorer_teacher_present"] is True
     assert target_birth_call["pose_teacher_present"] is True
@@ -9371,10 +9421,16 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["lambda_pose_target"] == pytest.approx(41.0)
     assert target_birth_call["target_geometry_mode"] == "largest_unsolved_component"
     assert target_birth_call["target_geometry_frontier_dilation"] == 3
-    assert target_birth_call["target_region_portfolio_max_regions"] == 4
+    assert target_birth_call["target_region_portfolio_max_regions"] == 1
     assert target_birth_call["target_region_forced_key"] is None
-    assert target_birth_call["birth_update_scope"] is None
+    assert target_birth_call["birth_update_scope"] == "pair_latents_fine"
     assert target_region_birth["birth_update_scope"] == "pair_latents_fine"
+    assert target_region_birth["selected_backend_scope"] == "pair_latents_fine"
+    assert target_region_birth["backend_ladder_exhausted"] is False
+    assert target_region_birth["backend_fit_ladder"]["schema"] == (
+        "hi_nerv_target_region_birth_backend_ladder.v1"
+    )
+    assert target_region_birth["backend_fit_ladder_attempts"][0]["accepted"] is True
     assert (
         target_region_birth["receipt"]["candidate_frontier_telemetry"]["birth_update_scope"]
         == "pair_latents_fine"

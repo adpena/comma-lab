@@ -17243,72 +17243,117 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "ready_for_exact_eval_dispatch": False,
         }
         if effective_segnet_hard_birth_bootstrap_weight > 0.0:
-            target_region_birth_fn = getattr(
+            explicit_birth_update_scope = (
+                None
+                if scorer_domain_bootstrap_segnet_hard_birth_update_scope is None
+                else str(scorer_domain_bootstrap_segnet_hard_birth_update_scope)
+            )
+            target_region_birth_fn = getattr(model, "fit_target_region_birth_from_segnet", None)
+            target_region_birth_ladder_fn = getattr(
                 model,
-                "fit_target_region_birth_from_segnet",
+                "fit_target_region_birth_backend_ladder_from_segnet",
                 None,
             )
-            if callable(target_region_birth_fn):
+            if callable(target_region_birth_fn) or callable(target_region_birth_ladder_fn):
                 try:
-                    target_region_birth_payload = dict(
-                        target_region_birth_fn(
-                            scorer_teacher=bootstrap_scorer_teacher,
-                            target_rgb_0=target_rgb_0[:bootstrap_count],
-                            target_rgb_1=target_rgb_1[:bootstrap_count],
-                            pair_indices=bootstrap_pair_indices,
-                            target_segnet_argmax_1=target_segnet_argmax_1,
-                            max_steps=max(8, int(scorer_domain_bootstrap_steps) * 4),
-                            learning_rate=float(scorer_domain_bootstrap_learning_rate),
-                            target_min_region_ratio=float(scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor),
-                            pose_teacher=bootstrap_pose_scorer_teacher,
-                            require_pose_trust=bool(pose_trust_required),
-                            lambda_support_preserve=float(
-                                scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight
-                            ),
-                            lambda_outside_argmax_preserve=float(
-                                scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight
-                            ),
-                            lambda_already_won_hard_preserve=float(
-                                scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight
-                            ),
-                            lambda_already_won_rgb_preserve=float(
-                                scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight
-                            ),
-                            already_won_margin_floor=float(
-                                scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor
-                            ),
-                            lambda_pose_trust_preserve=float(
-                                effective_hard_birth_pose_trust_preserve_weight
-                            ),
-                            lambda_pose_target=float(requested_hard_birth_pose_target_weight),
-                            target_geometry_mode=str(
-                                scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
-                            ),
-                            target_geometry_frontier_dilation=int(
-                                scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
-                            ),
-                            target_region_portfolio_max_regions=int(
-                                scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions
-                            ),
-                            target_region_forced_key=(
-                                None
-                                if scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
-                                else tuple(
-                                    int(part)
-                                    for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
-                                )
-                            ),
-                            require_fakequant_survival=bool(coder_aware_qat),
-                            fakequant_survival_bits=int(coder_qat_quant_bits),
-                            hard_region_miner_output_dir=output_dir,
-                            birth_update_scope=(
-                                None
-                                if scorer_domain_bootstrap_segnet_hard_birth_update_scope is None
-                                else str(scorer_domain_bootstrap_segnet_hard_birth_update_scope)
-                            ),
-                            grad_clip_max_norm=None,
+                    target_region_birth_kwargs = {
+                        "scorer_teacher": bootstrap_scorer_teacher,
+                        "target_rgb_0": target_rgb_0[:bootstrap_count],
+                        "target_rgb_1": target_rgb_1[:bootstrap_count],
+                        "pair_indices": bootstrap_pair_indices,
+                        "target_segnet_argmax_1": target_segnet_argmax_1,
+                        "max_steps": max(8, int(scorer_domain_bootstrap_steps) * 4),
+                        "learning_rate": float(scorer_domain_bootstrap_learning_rate),
+                        "target_min_region_ratio": float(
+                            scorer_domain_bootstrap_segnet_hard_birth_min_ratio_floor
+                        ),
+                        "pose_teacher": bootstrap_pose_scorer_teacher,
+                        "require_pose_trust": bool(pose_trust_required),
+                        "lambda_support_preserve": float(
+                            scorer_domain_bootstrap_segnet_hard_birth_support_preserve_weight
+                        ),
+                        "lambda_outside_argmax_preserve": float(
+                            scorer_domain_bootstrap_segnet_hard_birth_outside_argmax_preserve_weight
+                        ),
+                        "lambda_already_won_hard_preserve": float(
+                            scorer_domain_bootstrap_segnet_hard_birth_already_won_hard_preserve_weight
+                        ),
+                        "lambda_already_won_rgb_preserve": float(
+                            scorer_domain_bootstrap_segnet_hard_birth_already_won_rgb_preserve_weight
+                        ),
+                        "already_won_margin_floor": float(
+                            scorer_domain_bootstrap_segnet_hard_birth_already_won_margin_floor
+                        ),
+                        "lambda_pose_trust_preserve": float(
+                            effective_hard_birth_pose_trust_preserve_weight
+                        ),
+                        "lambda_pose_target": float(requested_hard_birth_pose_target_weight),
+                        "target_geometry_mode": str(
+                            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode
+                        ),
+                        "target_geometry_frontier_dilation": int(
+                            scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
+                        ),
+                        "target_region_portfolio_max_regions": int(
+                            scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions
+                        ),
+                        "target_region_forced_key": (
+                            None
+                            if scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
+                            else tuple(
+                                int(part)
+                                for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
+                            )
+                        ),
+                        "require_fakequant_survival": bool(coder_aware_qat),
+                        "fakequant_survival_bits": int(coder_qat_quant_bits),
+                        "hard_region_miner_output_dir": output_dir,
+                        "grad_clip_max_norm": None,
+                    }
+                    if explicit_birth_update_scope is None and callable(target_region_birth_ladder_fn):
+                        ladder_payload = dict(
+                            target_region_birth_ladder_fn(**target_region_birth_kwargs)
                         )
-                    )
+                        canonical_birth_payload = (
+                            ladder_payload.get("selected_payload")
+                            if ladder_payload.get("accepted") is True
+                            else ladder_payload.get("last_payload")
+                        )
+                        if isinstance(canonical_birth_payload, Mapping):
+                            target_region_birth_payload = dict(canonical_birth_payload)
+                            ladder_summary = {
+                                key: value
+                                for key, value in ladder_payload.items()
+                                if key not in {"selected_payload", "last_payload"}
+                            }
+                            target_region_birth_payload["backend_fit_ladder"] = ladder_summary
+                            target_region_birth_payload["backend_fit_ladder_attempts"] = list(
+                                ladder_payload.get("attempts") or []
+                            )
+                            target_region_birth_payload["selected_backend_scope"] = (
+                                ladder_payload.get("selected_scope")
+                            )
+                            target_region_birth_payload["backend_ladder_exhausted"] = not bool(
+                                ladder_payload.get("accepted")
+                            )
+                            target_region_birth_payload["backend_realization_verdict"] = (
+                                ladder_payload.get("backend_realization_verdict")
+                            )
+                        else:
+                            target_region_birth_payload = ladder_payload
+                    elif callable(target_region_birth_fn):
+                        target_region_birth_payload = dict(
+                            target_region_birth_fn(
+                                **target_region_birth_kwargs,
+                                birth_update_scope=explicit_birth_update_scope,
+                            )
+                        )
+                    else:
+                        target_region_birth_payload = {
+                            **target_region_birth_payload,
+                            "reason": "target_region_birth_actuator_missing",
+                            "blockers": ["hi_nerv_target_region_birth_actuator_missing"],
+                        }
                     if (
                         bool(pose_trust_required)
                         and target_region_birth_payload.get("accepted") is True
@@ -27036,13 +27081,20 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--scorer-domain-bootstrap-segnet-hard-birth-update-scope",
-        choices=["pair_latents_fine", "spatial_carriers", "late_all"],
+        choices=[
+            "pair_latents_fine",
+            "latents_fine",
+            "latents_fine_head_rgb_1",
+            "latents_fine_head_rgb_1_fine_injector",
+            "latents_fine_head_rgb_1_fine_injector_feature_grids",
+            "spatial_carriers",
+            "late_all",
+        ],
         default=None,
         help=(
-            "Archive-charged tensor scope for the HiNeRV hard-birth actuator. "
-            "Unset lets the model fail closed to pair_latents_fine when pose "
-            "or fakequant trust is required, otherwise late_all is used for "
-            "local unit/probe runs."
+            "Explicit single archive-charged tensor scope for the HiNeRV "
+            "hard-birth actuator. Unset runs the backend-fit ladder on the "
+            "same target region and keeps this flag as an ablation override."
         ),
     )
     parser.add_argument(

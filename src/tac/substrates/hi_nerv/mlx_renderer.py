@@ -7133,12 +7133,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         ladder_start_snapshot = _snapshot_parameters()
         attempts: list[dict[str, Any]] = []
         selected_payload: dict[str, Any] | None = None
+        last_payload: dict[str, Any] | None = None
         selected_scope: str | None = None
         forced_region_key = fit_kwargs.get("target_region_forced_key")
         initial_region_key: tuple[int, int, int] | None = None
         sidecar_exact_available = False
-        if "target_region_portfolio_max_regions" not in fit_kwargs:
-            fit_kwargs["target_region_portfolio_max_regions"] = 1
+        requested_portfolio_max_regions = fit_kwargs.get("target_region_portfolio_max_regions")
+        fit_kwargs["target_region_portfolio_max_regions"] = 1
 
         for attempt_index, scope in enumerate(ladder):
             _restore_parameters(ladder_start_snapshot)
@@ -7157,6 +7158,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 if initial_region_key is not None and forced_region_key is None:
                     forced_region_key = initial_region_key
             sidecar_exact_available = sidecar_exact_available or _sidecar_exact_candidate(payload)
+            last_payload = dict(payload)
             effect = _action_effect(
                 attempt_index=attempt_index,
                 scope=scope,
@@ -7214,6 +7216,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
             ),
             "selected_payload": selected_payload,
+            "last_payload": last_payload,
             "birth_update_ladder": list(ladder),
             "attempt_count": len(attempts),
             "attempts": attempts,
@@ -7225,6 +7228,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ),
             "sidecar_exact_accepted_before_archive_closure": bool(sidecar_exact_available),
             "unavailable_backend_tiers": unavailable_tiers,
+            "region_portfolio_max_regions_requested": requested_portfolio_max_regions,
+            "region_portfolio_disabled_inside_backend_ladder": True,
             "last_first_failed_surface": last_effect.get("first_failed_surface"),
             "last_recommended_next_operator": last_effect.get("recommended_next_operator"),
             "blockers": blockers,
