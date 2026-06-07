@@ -45,6 +45,7 @@ def valid_snerv_source_forward_action_effect(
             proof_passed_after_bitflip=False,
             first_failed_tensor="output_2",
             first_failed_surface="archive_parseback",
+            receiver_replay_failed=True,
             bit_offset=17,
             bit_mask=1,
         ),
@@ -113,6 +114,7 @@ def _snerv_bitflip_matrix() -> dict[str, Any]:
                 proof_passed_after_bitflip=False,
                 first_failed_tensor=first_tensor,
                 first_failed_surface="archive_parseback",
+                receiver_replay_failed=True,
                 bit_offset=idx,
                 bit_mask=1,
             )

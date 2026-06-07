@@ -29,6 +29,7 @@ from tac.analysis.pr95_distortion_practices_guard import (
     build_pr95_posenet_marginal_telemetry_contract,
     build_pr95_scorer_atom_actuator_contract,
 )
+from tac.tests.snerv_source_forward_fixtures import valid_snerv_source_forward_action_effect
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -251,6 +252,29 @@ def test_pr95_distortion_guard_rejects_boolean_only_snerv_source_forward_evidenc
     assert compiler_nodes["receiver_surface_integer_search"]["green"] is False
     rows = {row["practice_id"]: row for row in guard["practice_rows"]}
     actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert "snerv_complete_numerical_source_forward_proof_present" not in (
+        actuator_row["observed_evidence"]
+    )
+
+
+def test_pr95_distortion_guard_rejects_hash_only_snerv_source_forward_metadata() -> None:
+    row = _snerv_row()
+    evidence = dict(row["pr95_scorer_atom_actuator_execution_evidence"])
+    evidence["source_forward_replay_proof"] = _legacy_snerv_source_forward_metadata()
+    row["pr95_scorer_atom_actuator_execution_evidence"] = evidence
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert (
+        "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing"
+        in guard["blockers"]
+    )
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    actuator_row = rows["family_local_scorer_atom_actuator_contract"]
+    assert "snerv_legacy_source_forward_metadata_rejected" in actuator_row[
+        "observed_evidence"
+    ]
     assert "snerv_complete_numerical_source_forward_proof_present" not in (
         actuator_row["observed_evidence"]
     )
@@ -667,19 +691,7 @@ def _snerv_actuator_execution_evidence() -> dict:
         "checkpoint_export_lineage_bound": True,
         "mfu_hfr_tub_source_forward_parity_proven": True,
         "tub_output2_source_forward_parity_proven": True,
-        "source_forward_replay_proof": {
-            "official_torch_frame_hash": "1" * 64,
-            "mlx_frame_hash": "2" * 64,
-            "numpy_receiver_frame_hash": "3" * 64,
-            "parseback_frame_hash": "4" * 64,
-            "tub_output_2_hash": "5" * 64,
-            "max_abs_frame_delta_official_mlx": 0.0,
-            "max_abs_yuv6_delta_official_numpy": 0.0,
-            "seg_logit_linf_official_parseback": 0.0,
-            "pose_linf_official_parseback": 0.0,
-            "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
-            "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
-        },
+        "source_forward_replay_proof": valid_snerv_source_forward_action_effect(),
         "snerv_official_tub_lf_hf_decoder_replacement_authority_gate": (
             _snerv_official_replacement_authority_gate()
         ),
@@ -688,6 +700,22 @@ def _snerv_actuator_execution_evidence() -> dict:
         ),
         "score_claim": False,
         "promotion_eligible": False,
+    }
+
+
+def _legacy_snerv_source_forward_metadata() -> dict:
+    return {
+        "official_torch_frame_hash": "1" * 64,
+        "mlx_frame_hash": "2" * 64,
+        "numpy_receiver_frame_hash": "3" * 64,
+        "parseback_frame_hash": "4" * 64,
+        "tub_output_2_hash": "5" * 64,
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu.upsample_mid.weight": "6" * 64},
+        "hfr_tensor_hashes": {"hfr.lh.conv1.weight": "7" * 64},
     }
 
 

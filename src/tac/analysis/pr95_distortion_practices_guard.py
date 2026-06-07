@@ -19,6 +19,10 @@ from tac.analysis.nerv_pair_local_distortion_servo import (
     build_pr95_grade_pair_local_servo_report,
 )
 from tac.analysis.pr95_stack_binding_requirements import FALSE_AUTHORITY
+from tac.analysis.snerv_source_forward_proof import (
+    SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    validate_snerv_source_forward_proof_action_effect,
+)
 from tac.contest_eval_contract import build_score_allocation_contract
 
 SCHEMA = "pr95_distortion_practices_guard.v1"
@@ -2610,47 +2614,18 @@ def _snerv_execution_has_numerical_source_forward_proof(
     *,
     evidence: list[str],
 ) -> bool:
-    status = execution.get("source_forward_replay_proof_status")
-    status = status if isinstance(status, Mapping) else {}
-    if status.get("source_forward_replay_numerical_proof_complete") is True:
-        evidence.append("snerv_numerical_source_forward_status_complete")
-        return True
     proof = execution.get("source_forward_replay_proof")
-    proof = proof if isinstance(proof, Mapping) else execution
-    hash_fields = (
-        "official_torch_frame_hash",
-        "mlx_frame_hash",
-        "numpy_receiver_frame_hash",
-        "parseback_frame_hash",
-        "tub_output_2_hash",
-    )
-    numeric_fields = (
-        "max_abs_frame_delta_official_mlx",
-        "max_abs_yuv6_delta_official_numpy",
-        "seg_logit_linf_official_parseback",
-        "pose_linf_official_parseback",
-    )
-    tensor_group_fields = ("mfu_tensor_hashes", "hfr_tensor_hashes")
-    hash_ok = all(_is_sha256_text(proof.get(field)) for field in hash_fields)
-    numeric_ok = all(_non_negative_float_value(proof.get(field)) is not None for field in numeric_fields)
-    groups_ok = True
-    for field in tensor_group_fields:
-        group = proof.get(field)
-        if not isinstance(group, Mapping) or not group:
-            groups_ok = False
-            break
-        if any(not str(name) or not _is_sha256_text(value) for name, value in group.items()):
-            groups_ok = False
-            break
-    if hash_ok:
-        evidence.append("snerv_source_forward_frame_and_tub_hashes_bound")
-    if numeric_ok:
-        evidence.append("snerv_source_forward_numeric_deltas_bound")
-    if groups_ok:
-        evidence.append("snerv_source_forward_mfu_hfr_tensor_hash_groups_bound")
-    if hash_ok and numeric_ok and groups_ok:
+    proof = proof if isinstance(proof, Mapping) else {}
+    if proof.get("schema") != SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+        if proof:
+            evidence.append("snerv_legacy_source_forward_metadata_rejected")
+        return False
+    validation = validate_snerv_source_forward_proof_action_effect(proof)
+    if validation.get("passed") is True:
         evidence.append("snerv_complete_numerical_source_forward_proof_present")
-    return bool(hash_ok and numeric_ok and groups_ok)
+        return True
+    evidence.append("snerv_source_forward_action_effect_validation_failed")
+    return False
 
 
 def _axis_trace_measured_axes(row: Mapping[str, Any]) -> set[str]:
