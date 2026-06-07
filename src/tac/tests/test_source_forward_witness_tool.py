@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+import tac.analysis.snerv_source_forward_producer as source_forward_producer
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
@@ -141,6 +142,49 @@ def test_source_forward_witness_cli_writes_proof_row_jsonl(
     assert rows[0]["schema"] == "snerv_source_forward_proof_action_effect.v1"
     assert rows[0]["score_claim"] is False
     assert rows[0]["promotion_eligible"] is False
+
+
+def test_source_forward_witness_upstream_pair_mismatch_is_graph_unproven(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    packet_path.write_bytes(_official_packet())
+
+    def fake_upstream_capture(**_kwargs) -> dict[str, object]:
+        return {
+            "schema": "snerv_official_tub_source_forward_tensor_bundle.v1",
+            "pair_ids": [1],
+            "tensors": {},
+            "model_source_sha256": "8" * 64,
+            "checkpoint_sha256": "6" * 64,
+            "state_dict_sha256": "7" * 64,
+            "decoder_len": 7,
+            "source_scope": "official_trained_checkpoint",
+        }
+
+    monkeypatch.setattr(
+        source_forward_producer,
+        "build_official_torch_upstream_fixture_tensors",
+        fake_upstream_capture,
+    )
+    payload = build_source_forward_witness_payload(
+        packet_path=packet_path,
+        pair_ids=[0],
+        capture_official_torch_from_upstream_fixture=True,
+        generated_utc="2026-06-07T00:00:00Z",
+    )
+    status = payload["source_forward_proof_action_effect"]["producer_status"][
+        "official_torch_upstream_capture_status"
+    ]
+
+    assert payload["passed"] is False
+    assert payload["launch_gate_clearable"] is False
+    assert status["verdict"] == "SOURCE_GRAPH_UNPROVEN"
+    assert status["source_graph_unproven"] is True
+    assert "snerv_upstream_source_capture_pair_ids_mismatch" in status["blockers"]
+    assert "snerv_upstream_source_graph_unproven" in payload["blockers"]
+    assert "snerv_upstream_source_capture_pair_ids_mismatch" in payload["blockers"]
 
 
 def _legacy_packet() -> bytes:

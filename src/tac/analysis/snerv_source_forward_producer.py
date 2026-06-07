@@ -29,6 +29,12 @@ SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
 SOURCE_GRAPH_UNPROVEN = "SOURCE_GRAPH_UNPROVEN"
 
 
+class _SourceGraphUnprovenError(RuntimeError):
+    def __init__(self, message: str, *, blockers: Sequence[str]) -> None:
+        self.blockers = [str(value) for value in blockers]
+        super().__init__(message)
+
+
 def build_snerv_source_forward_proof_from_archive_packet(
     *,
     action_id: str,
@@ -145,6 +151,10 @@ def build_snerv_source_forward_proof_from_archive_packet(
                     ),
                 )
             )
+            _require_upstream_capture_pair_ids_match(
+                official_torch_upstream_capture,
+                pair_ids=pair_ids,
+            )
             official_torch_tensors = official_torch_upstream_capture["tensors"]
             official_torch_capture_manifest = (
                 build_snerv_official_torch_upstream_capture_manifest(
@@ -186,16 +196,18 @@ def build_snerv_source_forward_proof_from_archive_packet(
                 "blockers": [],
             }
         except Exception as exc:
+            source_graph_blockers = [
+                "snerv_upstream_source_graph_unproven",
+                *list(getattr(exc, "blockers", ())),
+                f"snerv_upstream_source_capture_failed:{type(exc).__name__}",
+            ]
             official_torch_upstream_capture = {
                 "schema": "snerv_official_torch_upstream_capture_failed.v1",
                 "verdict": SOURCE_GRAPH_UNPROVEN,
                 "source_graph_unproven": True,
                 "failure_type": type(exc).__name__,
                 "failure": str(exc),
-                "blockers": [
-                    "snerv_upstream_source_graph_unproven",
-                    f"snerv_upstream_source_capture_failed:{type(exc).__name__}",
-                ],
+                "blockers": _ordered_unique(source_graph_blockers),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_or_kill_eligible": False,
@@ -621,9 +633,30 @@ def build_snerv_official_torch_upstream_capture_manifest(
         source_path = Path(official_repo_dir) / "model" / "snerv_t.py"
         if source_path.is_file():
             model_source_sha256 = sha256(source_path.read_bytes()).hexdigest()
+    normalized_pair_ids = _normalize_pair_ids(pair_ids)
+    normalized_tensor_names = sorted(str(name) for name in tensor_names)
+    source_scope_text = str(source_scope or "")
+    lineage_text = str(trained_checkpoint_lineage)
+    source_forward_replay_authority = bool(
+        str(capture_authority) == SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
+        and source_scope_text == "official_trained_checkpoint"
+        and lineage_text in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES
+        and bool(normalized_pair_ids)
+        and bool(normalized_tensor_names)
+        and _looks_like_sha256(model_source_sha256)
+        and _looks_like_sha256(checkpoint_sha256)
+        and _looks_like_sha256(state_dict_sha256)
+        and decoder_len is not None
+    )
     return {
         "schema": SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA,
         "capture_authority": str(capture_authority),
+        "capture_verdict": (
+            "SOURCE_GRAPH_CAPTURED"
+            if source_forward_replay_authority
+            else SOURCE_GRAPH_UNPROVEN
+        ),
+        "source_graph_unproven": not source_forward_replay_authority,
         "model_class": "SNeRV_T",
         "model_source_path": "model/snerv_t.py",
         "model_source_lines": SNERV_OFFICIAL_TORCH_UPSTREAM_SOURCE_LINES,
@@ -631,14 +664,14 @@ def build_snerv_official_torch_upstream_capture_manifest(
         "checkpoint_sha256": checkpoint_sha256,
         "state_dict_sha256": state_dict_sha256,
         "decoder_len": None if decoder_len is None else int(decoder_len),
-        "source_scope": source_scope,
-        "trained_checkpoint_lineage": str(trained_checkpoint_lineage),
+        "source_scope": source_scope_text,
+        "trained_checkpoint_lineage": lineage_text,
         "capture_origin": str(capture_origin),
-        "pair_ids": [int(value) for value in pair_ids],
-        "tensor_names": sorted(str(name) for name in tensor_names),
-        "upstream_forward_replay_verified": True,
+        "pair_ids": normalized_pair_ids,
+        "tensor_names": normalized_tensor_names,
+        "upstream_forward_replay_verified": source_forward_replay_authority,
         "receiver_bound_capture": False,
-        "source_forward_replay_authority": True,
+        "source_forward_replay_authority": source_forward_replay_authority,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -665,6 +698,10 @@ def validate_snerv_official_torch_upstream_capture_manifest(
     row = dict(manifest)
     if row.get("schema") != SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_MANIFEST_SCHEMA:
         blockers.append("snerv_official_torch_upstream_capture_manifest_schema_invalid")
+    if row.get("source_graph_unproven") is True:
+        blockers.append("snerv_official_torch_source_graph_unproven")
+    if str(row.get("capture_verdict") or "") == SOURCE_GRAPH_UNPROVEN:
+        blockers.append("snerv_official_torch_capture_verdict_source_graph_unproven")
     if (
         str(row.get("capture_authority") or "")
         != SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
@@ -753,6 +790,22 @@ def _official_torch_tensor_capture_authority(
     if manifest_status.get("passed") is True:
         return SNERV_OFFICIAL_TORCH_UPSTREAM_CAPTURE_AUTHORITY
     return "metadata_only_missing_upstream_source_manifest"
+
+
+def _require_upstream_capture_pair_ids_match(
+    capture: Mapping[str, Any],
+    *,
+    pair_ids: Sequence[int],
+) -> None:
+    observed = _normalize_pair_ids(capture.get("pair_ids"))
+    expected = _normalize_pair_ids(pair_ids)
+    if observed != expected:
+        raise _SourceGraphUnprovenError(
+            "official upstream SNeRV_T capture pair ids do not match proof pair ids",
+            blockers=[
+                "snerv_upstream_source_capture_pair_ids_mismatch",
+            ],
+        )
 
 
 def build_pact_mlx_primitive_tensors_from_archive_packet(

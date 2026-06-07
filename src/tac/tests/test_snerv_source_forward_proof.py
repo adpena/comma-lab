@@ -4,7 +4,10 @@ from __future__ import annotations
 import numpy as np
 
 from tac.analysis.snerv_source_forward_producer import (
+    SOURCE_GRAPH_UNPROVEN,
+    build_snerv_official_torch_upstream_capture_manifest,
     build_snerv_output2_boundary_verdict,
+    validate_snerv_official_torch_upstream_capture_manifest,
 )
 from tac.analysis.snerv_source_forward_proof import (
     DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
@@ -127,6 +130,40 @@ def _surface_provenance(*, source_scope: str = "official_trained_checkpoint") ->
         extra_by_surface={
             "official_torch": _official_torch_lineage(source_scope=source_scope)
         },
+    )
+
+
+def test_official_upstream_manifest_fixture_scope_is_not_authority() -> None:
+    manifest = build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[0],
+        tensor_names=SOURCE_FORWARD_TENSOR_NAMES,
+        model_source_sha256="8" * 64,
+        checkpoint_sha256="6" * 64,
+        state_dict_sha256="7" * 64,
+        decoder_len=7,
+        source_scope="official_source_fixture_state",
+        trained_checkpoint_lineage="official_trained_checkpoint_state_dict",
+        capture_origin="official_upstream_source_fixture",
+    )
+
+    assert manifest["capture_verdict"] == SOURCE_GRAPH_UNPROVEN
+    assert manifest["source_graph_unproven"] is True
+    assert manifest["upstream_forward_replay_verified"] is False
+    assert manifest["source_forward_replay_authority"] is False
+    status = validate_snerv_official_torch_upstream_capture_manifest(
+        manifest,
+        pair_ids=[0],
+        tensor_names=SOURCE_FORWARD_TENSOR_NAMES,
+    )
+    assert status["passed"] is False
+    assert "snerv_official_torch_source_graph_unproven" in status["blockers"]
+    assert (
+        "snerv_official_torch_capture_verdict_source_graph_unproven"
+        in status["blockers"]
+    )
+    assert (
+        "snerv_official_torch_trained_checkpoint_source_scope_missing"
+        in status["blockers"]
     )
 
 
