@@ -1211,6 +1211,8 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert (out_dir / "wall_normal_branch_action_effect_rows.jsonl").is_file()
     assert (out_dir / "wall_normal_branch_lowering_race.json").is_file()
     assert (out_dir / "next_blocker.md").is_file()
+    note = (out_dir / "next_blocker.md").read_text(encoding="utf-8")
+    assert "wall_normal_branch_lowering_race.json" in note
     score_program_word = json.loads((out_dir / "score_program_word.json").read_text(encoding="utf-8"))
     assert score_program_word["schema"] == SCORE_PROGRAM_WORD_SCHEMA
     assert score_program_word["operation_count"] == 3

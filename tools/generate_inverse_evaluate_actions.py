@@ -378,6 +378,8 @@ def _render_blocker_note(summary: Mapping[str, Any]) -> str:
         f"- pr110_replay_rows: `{summary['pr110_replay_row_count']}`",
         f"- menu_ilp_allowed: `{summary['menu_ilp_allowed']}`",
         f"- wall_normal_first_failing_surface: `{summary['wall_normal_first_failing_surface']}`",
+        f"- wall_normal_branch_action_effect_rows: `{summary['wall_normal_branch_action_effect_row_count']}`",
+        f"- wall_normal_branch_lowering_candidates: `{summary['wall_normal_branch_lowering_candidate_count']}`",
         "",
         "## First Blocker",
         "",
@@ -407,6 +409,15 @@ def _render_blocker_note(summary: Mapping[str, Any]) -> str:
     lines.extend(f"- `{blocker}`" for blocker in summary["wall_normal_blockers"])
     if not summary["wall_normal_blockers"]:
         lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "## Wall-Normal Artifacts",
+            "",
+            f"- branch_action_effect_rows: `{summary['wall_normal_branch_action_effect_rows_path']}`",
+            f"- branch_lowering_race: `{summary['wall_normal_branch_lowering_race_path']}`",
+        ]
+    )
     lines.extend(
         [
             "",
@@ -451,6 +462,7 @@ def _render_test_log(summary: Mapping[str, Any]) -> str:
         f"menu_ilp_allowed={summary['menu_ilp_allowed']}",
         f"wall_normal_first_failing_surface={summary['wall_normal_first_failing_surface']}",
         f"wall_normal_branch_count={summary['wall_normal_branch_count']}",
+        f"wall_normal_branch_lowering_candidates={summary['wall_normal_branch_lowering_candidate_count']}",
         "assertions:",
         f"- has_action_effect_rows={summary['action_effect_row_count'] > 0}",
         f"- has_inverse_candidates={summary['inverse_candidate_count'] >= 3}",
