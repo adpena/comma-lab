@@ -36,6 +36,7 @@ from tac.substrates.hi_nerv.birth_survival import (
     BLOCKED_SURVIVAL_SURFACES,
     BirthSurvivalError,
     measure_birth_hysteresis,
+    measure_birth_inflated_torch_cpu_survival_from_local_replay,
     measure_birth_parseback_survival_from_report,
     measure_birth_survival,
     reconstruct_birth_region_mask,
@@ -219,6 +220,31 @@ def test_unknown_surface_rejected() -> None:
         )
 
 
+def test_inflated_survival_blocks_when_local_replay_deleted_raw(tmp_path) -> None:
+    labels = np.zeros((1, 874, 1164), dtype=np.int64)
+    labels[0, 4:10, 6:14] = 1
+    inflated_dir = tmp_path / "inflated"
+    inflated_dir.mkdir()
+    summary = _inflated_local_replay_summary(
+        tmp_path,
+        inflated_dir,
+        cleanup="deleted_after_success",
+    )
+    row = measure_birth_inflated_torch_cpu_survival_from_local_replay(
+        local_replay_summary=summary,
+        scorer_teacher=object(),
+        target_labels=labels,
+        live_birth_payload=_synthetic_birth_payload_for_inflated_surface(),
+        pair_indices=[0],
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_BLOCKED_SCHEMA
+    assert row["surface"] == "inflated_torch_cpu"
+    assert row["blocker"] == "birth_survival_inflated_raw_not_retained"
+    assert "survived" not in row
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
+
+
 # ---------------------------------------------------------------------------
 # MLX behavioral fixtures (mirror test_target_region_birth.py conventions)
 # ---------------------------------------------------------------------------
@@ -390,6 +416,68 @@ def _live_birth_pair(payload: dict, pair_indices) -> int:
     pair_np = np.asarray(pair_indices, dtype=np.int64).reshape(-1)
     batch_index = int(payload["worst_region"]["batch_index"])
     return int(pair_np[batch_index])
+
+
+def _inflated_local_replay_summary(tmp_path, inflated_dir, *, cleanup="retained_by_request"):
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"not-a-real-archive-for-unit-surface-test")
+    report = tmp_path / "report.txt"
+    report.write_text("local replay report placeholder\n", encoding="utf-8")
+    return {
+        "schema": "local_submission_replay.v1",
+        "submission_dir": (tmp_path / "submission").as_posix(),
+        "source_runtime_submission_dir": (tmp_path / "runtime").as_posix(),
+        "archive_zip_path": archive.as_posix(),
+        "device": "cpu",
+        "returncode": 0,
+        "evaluation_passed": True,
+        "report_path": report.as_posix(),
+        "stdout_path": (tmp_path / "stdout.txt").as_posix(),
+        "stderr_path": (tmp_path / "stderr.txt").as_posix(),
+        "archive_bytes": 123,
+        "inflated_dir": inflated_dir.as_posix(),
+        "inflated_dir_cleanup": cleanup,
+        "axis_tag": "[macOS-CPU advisory]",
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _synthetic_birth_payload_for_inflated_surface() -> dict:
+    action_id = "c" * 64
+    worst_region = {
+        "batch_index": 0,
+        "class_index": 1,
+        "region_label": 1,
+        "region_pixel_count": 48,
+        "region_unsolved_pixel_count": 48,
+        "total_scored_pixels": 874 * 1164,
+    }
+    return {
+        "schema": "hi_nerv_target_region_birth_payload.v1",
+        "accepted": True,
+        "action_id": action_id,
+        "worst_region": worst_region,
+        "receipt": {
+            "schema": "hi_nerv_target_region_birth_receipt.v1",
+            "action_id": action_id,
+            "surface": "live_mlx",
+            "worst_region": worst_region,
+        },
+    }
+
+
+def _write_retained_official_raw_pair(raw_path, *, birth_region_red=True) -> None:
+    h, w = 874, 1164
+    frames = np.zeros((2, h, w, 3), dtype=np.uint8)
+    frames[..., 1] = 180
+    if birth_region_red:
+        frames[1, 4:10, 6:14, 0] = 220
+        frames[1, 4:10, 6:14, 1] = 20
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
+    frames.tofile(raw_path)
 
 
 # ---------------------------------------------------------------------------
@@ -823,6 +911,41 @@ def test_parseback_survival_remeasures_pose_compensation_for_composite_birth(tmp
     assert row["pose_compensation_survival"]["live_composite_d_pose_batch"] == pytest.approx(10_000.0)
     assert row["pose_compensation_survival"]["pose_surface_receiver_uint8_roundtrip"] is True
     assert "pose_compensation_survival_pose_teacher_missing" not in row["blockers"]
+
+
+@skip_no_mlx
+def test_inflated_torch_cpu_survival_reads_retained_raw_pair(tmp_path) -> None:
+    import mlx.core as mx
+
+    labels = np.zeros((1, 874, 1164), dtype=np.int64)
+    labels[0, 4:10, 6:14] = 1
+    inflated_dir = tmp_path / "inflated"
+    _write_retained_official_raw_pair(inflated_dir / "0.raw")
+    summary = _inflated_local_replay_summary(tmp_path, inflated_dir)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels))
+
+    row = measure_birth_inflated_torch_cpu_survival_from_local_replay(
+        local_replay_summary=summary,
+        scorer_teacher=teacher,
+        target_labels=labels,
+        live_birth_payload=_synthetic_birth_payload_for_inflated_surface(),
+        pair_indices=[0],
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_SCHEMA
+    assert row["surface"] == "inflated_torch_cpu"
+    assert row["survived"] is True
+    assert row["region_hard_won_count"] == 48
+    assert row["net_target_support_delta"] == 48
+    assert row["receiver_surface_target_hard_won_count"] == 48
+    assert row["local_replay_summary_schema"] == "local_submission_replay.v1"
+    assert row["local_replay_axis_tag"] == "[macOS-CPU advisory]"
+    assert row["inflated_raw_pair_read_mode"] == "numpy.memmap_slice"
+    assert row["inflated_raw_frame_shape_nhwc"] == [874, 1164, 3]
+    assert row["inflated_torch_cpu_memmap_full_video_materialized"] is False
+    assert row["inflated_raw_path"].endswith("0.raw")
+    assert row["blockers"] == []
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
 
 
 def test_parseback_report_action_id_mismatch_blocks_without_survival() -> None:

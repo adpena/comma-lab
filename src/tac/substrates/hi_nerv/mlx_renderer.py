@@ -2876,6 +2876,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         require_fakequant_survival: bool = False,
         fakequant_survival_bits: int = 4,
         hard_region_miner_output_dir: str | Path | None = None,
+        birth_update_scope: str | None = None,
         _target_region_portfolio_excluded: Sequence[Sequence[int]] = (),
         _target_region_portfolio_attempts: Sequence[Mapping[str, Any]] = (),
     ) -> dict[str, Any]:
@@ -2996,6 +2997,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         fakequant_bits = int(fakequant_survival_bits)
         if fakequant_bits < 1 or fakequant_bits > 16:
             raise ValueError(f"fakequant_survival_bits must be in [1, 16]; got {fakequant_survival_bits}")
+        resolved_birth_update_scope = (
+            "spatial_carriers"
+            if birth_update_scope is None and (bool(require_pose_trust) or bool(require_fakequant_survival))
+            else "late_all"
+            if birth_update_scope is None
+            else str(birth_update_scope)
+        )
+        valid_birth_update_scopes = {"late_all", "spatial_carriers"}
+        if resolved_birth_update_scope not in valid_birth_update_scopes:
+            raise ValueError(
+                "birth_update_scope must be one of "
+                f"{sorted(valid_birth_update_scopes)}; got {birth_update_scope!r}"
+            )
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
             raise ValueError(f"grad_clip_max_norm must be None or finite and positive; got {grad_clip_max_norm}")
@@ -3709,6 +3723,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 return "compensation_head_rgb_0"
             return "out_of_scope"
 
+        def _birth_update_allowed(flat_name: str) -> bool:
+            if not allowed_birth_update_name(flat_name):
+                return False
+            return not (
+                resolved_birth_update_scope == "spatial_carriers"
+                and (
+                    flat_name == "head_rgb_1"
+                    or flat_name.startswith("head_rgb_1.")
+                )
+            )
+
         def _parameter_group_sha256(snapshot: list[tuple[Any, Any]]) -> dict[str, str]:
             """Hash every parameter group so 'scoped' is a receipt, not a claim."""
 
@@ -3742,7 +3767,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             for raw_name, leaf in base_snapshot:
                 grad = grad_by_name.get(raw_name)
                 flat = _flat_param_name(raw_name)
-                if leaf is None or grad is None or not allowed_birth_update_name(flat):
+                if leaf is None or grad is None or not _birth_update_allowed(flat):
                     updated.append((raw_name, leaf))
                     continue
                 grad_sq = mx.sum(grad * grad)  # type: ignore[union-attr]
@@ -4714,12 +4739,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "fakequant_admission": fakequant_admission,
                     "fakequant_survival_required": bool(require_fakequant_survival),
                     "birth_gradient_surface": birth_gradient_surface,
+                    "birth_update_scope": resolved_birth_update_scope,
                     "fakequant_survived": fakequant_admission.get("survived"),
                     "argmax_birth_quantum_growth_attempts_before_attempt": int(
                         quantum_growth_attempts
                     ),
                     "decision": "pending",
                     "update_orientation": candidate_update_orientation,
+                    "applied_parameter_names": sorted(applied_names),
+                    "grad_norm_by_group": dict(grad_norms),
+                    "update_norm_by_group": dict(update_norms),
                     "bidirectional_probe": bidirectional_probe,
                 }
 
@@ -4991,6 +5020,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "fakequant_survival_required": bool(require_fakequant_survival),
             "birth_gradient_surface": birth_gradient_surface,
             "birth_gradient_surface_eval_count": int(birth_gradient_surface_eval_count),
+            "birth_update_scope": resolved_birth_update_scope,
             "fakequant_survival_bits": int(fakequant_bits),
             "fakequant_survival_candidate_count": int(fakequant_survival_candidate_count),
             "fakequant_survival_rejected_candidate_count": int(
@@ -5676,6 +5706,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "fakequant_survival_required": bool(require_fakequant_survival),
             "birth_gradient_surface": birth_gradient_surface,
             "birth_gradient_surface_eval_count": int(birth_gradient_surface_eval_count),
+            "birth_update_scope": resolved_birth_update_scope,
             "fakequant_survival_bits": int(fakequant_bits),
             "fakequant_survival_rejected_step_count": int(
                 fakequant_survival_rejected_step_count

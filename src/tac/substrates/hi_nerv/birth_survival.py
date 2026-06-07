@@ -54,6 +54,7 @@ from typing import Any
 import numpy as np
 from scipy import ndimage
 
+from tac.contest_eval_contract import CAMERA_SIZE_WH, RGB_CHANNELS, SEQ_LEN
 from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.target_region_birth import region_margin_stats
 
@@ -316,6 +317,29 @@ def _read_mapping_report(report: Mapping[str, Any] | str | Path) -> dict[str, An
     return dict(payload)
 
 
+def _read_mapping_payload(payload: Mapping[str, Any] | str | Path, *, label: str) -> dict[str, Any]:
+    if isinstance(payload, Mapping):
+        return dict(payload)
+    path = Path(payload).expanduser().resolve(strict=False)
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise BirthSurvivalError(f"could not read {label}: {path}") from exc
+    if not isinstance(loaded, Mapping):
+        raise BirthSurvivalError(f"{label} must be a JSON object: {path}")
+    return dict(loaded)
+
+
+def _sha256_file_or_none(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def _direct_receiver_report(report: Mapping[str, Any]) -> Mapping[str, Any]:
     direct = report.get("direct_receiver_cache_report")
     if isinstance(direct, Mapping):
@@ -451,6 +475,138 @@ def _render_parseback_pair01_nhwc01(
             "parseback_receiver_model": "hiv1_build_model_from_archive_torch_cpu",
             "parseback_pair_indices": [int(value) for value in pair_indices.tolist()],
         },
+    )
+
+
+def _inflated_raw_spans(
+    inflated_dir: Path,
+    *,
+    camera_size_wh: tuple[int, int],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    width, height = (int(camera_size_wh[0]), int(camera_size_wh[1]))
+    frame_bytes = int(width) * int(height) * RGB_CHANNELS
+    spans: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    next_pair = 0
+    for raw_path in sorted(inflated_dir.rglob("*.raw")):
+        size = int(raw_path.stat().st_size)
+        if frame_bytes <= 0 or size % frame_bytes != 0:
+            blockers.append(f"birth_survival_inflated_raw_size_mismatch:{raw_path.name}")
+            continue
+        frame_count = size // frame_bytes
+        pair_count = frame_count // SEQ_LEN
+        if pair_count <= 0:
+            blockers.append(f"birth_survival_inflated_raw_no_complete_pairs:{raw_path.name}")
+            continue
+        spans.append(
+            {
+                "path": raw_path,
+                "start_pair": next_pair,
+                "end_pair_exclusive": next_pair + pair_count,
+                "frame_count": frame_count,
+                "pair_count": pair_count,
+                "bytes": size,
+                "sha256": _sha256_file_or_none(raw_path),
+            }
+        )
+        next_pair += pair_count
+    if not spans and not blockers:
+        blockers.append("birth_survival_inflated_raw_files_missing")
+    return spans, blockers
+
+
+def _read_inflated_pair01_nhwc01(
+    *,
+    inflated_dir: Path,
+    pair_index: int,
+    camera_size_wh: tuple[int, int],
+) -> tuple[tuple[Any, Any] | None, dict[str, Any], str | None]:
+    """Read one upstream-inflated raw pair without materializing the video."""
+
+    _require_mlx()
+    import mlx.core as mx
+
+    width, height = (int(camera_size_wh[0]), int(camera_size_wh[1]))
+    spans, blockers = _inflated_raw_spans(inflated_dir, camera_size_wh=(width, height))
+    if blockers and not spans:
+        return None, {"inflated_raw_blockers": blockers}, blockers[0]
+    for span in spans:
+        if int(span["start_pair"]) <= int(pair_index) < int(span["end_pair_exclusive"]):
+            local_pair = int(pair_index) - int(span["start_pair"])
+            frame0_index = local_pair * SEQ_LEN
+            frame1_index = frame0_index + 1
+            raw_path = Path(span["path"])
+            try:
+                mmap = np.memmap(
+                    raw_path,
+                    dtype=np.uint8,
+                    mode="r",
+                    shape=(int(span["frame_count"]), height, width, RGB_CHANNELS),
+                )
+                pair = np.asarray(
+                    mmap[frame0_index : frame1_index + 1],
+                    dtype=np.float32,
+                ) / 255.0
+            except Exception as exc:
+                return (
+                    None,
+                    {
+                        "inflated_raw_path": raw_path.as_posix(),
+                        "inflated_raw_read_error": f"{type(exc).__name__}:{exc}",
+                    },
+                    "birth_survival_inflated_raw_pair_read_failed",
+                )
+            finally:
+                try:
+                    del mmap  # type: ignore[possibly-used-before-assignment]
+                except UnboundLocalError:
+                    pass
+            if pair.shape != (SEQ_LEN, height, width, RGB_CHANNELS):
+                return (
+                    None,
+                    {
+                        "inflated_raw_path": raw_path.as_posix(),
+                        "inflated_pair_shape": [int(v) for v in pair.shape],
+                    },
+                    "birth_survival_inflated_raw_pair_shape_mismatch",
+                )
+            meta = {
+                "inflated_raw_path": raw_path.as_posix(),
+                "inflated_raw_sha256": span.get("sha256"),
+                "inflated_raw_bytes": int(span["bytes"]),
+                "inflated_global_pair_index": int(pair_index),
+                "inflated_raw_local_pair_index": int(local_pair),
+                "inflated_raw_frame_indices": [int(frame0_index), int(frame1_index)],
+                "inflated_raw_frame_shape_nhwc": [int(height), int(width), RGB_CHANNELS],
+                "inflated_raw_frame_dtype": "uint8",
+                "inflated_raw_pair_read_mode": "numpy.memmap_slice",
+                "inflated_raw_span_start_pair": int(span["start_pair"]),
+                "inflated_raw_span_end_pair_exclusive": int(span["end_pair_exclusive"]),
+            }
+            return (
+                (
+                    mx.array(pair[0:1], dtype=mx.float32),  # type: ignore[union-attr]
+                    mx.array(pair[1:2], dtype=mx.float32),  # type: ignore[union-attr]
+                ),
+                meta,
+                None,
+            )
+    return (
+        None,
+        {
+            "inflated_raw_pair_index": int(pair_index),
+            "inflated_raw_spans": [
+                {
+                    "path": Path(span["path"]).as_posix(),
+                    "start_pair": int(span["start_pair"]),
+                    "end_pair_exclusive": int(span["end_pair_exclusive"]),
+                    "pair_count": int(span["pair_count"]),
+                }
+                for span in spans
+            ],
+            "inflated_raw_blockers": blockers,
+        },
+        "birth_survival_inflated_birth_pair_not_found",
     )
 
 
@@ -901,6 +1057,196 @@ def measure_birth_parseback_survival_from_report(
     )
 
 
+def measure_birth_inflated_torch_cpu_survival_from_local_replay(
+    *,
+    local_replay_summary: Mapping[str, Any] | str | Path,
+    scorer_teacher: Any,
+    pose_teacher: Any | None = None,
+    target_rgb_0: Any | None = None,
+    target_rgb_1: Any | None = None,
+    target_labels: Any,
+    live_birth_payload: Mapping[str, Any],
+    pair_indices: Any,
+    pose_d_pose_tolerance_abs: float = 1.0e-8,
+    pose_d_pose_tolerance_rel: float = 5.0e-2,
+    camera_size_wh: tuple[int, int] = CAMERA_SIZE_WH,
+) -> dict[str, Any]:
+    """Re-measure an accepted birth on retained upstream CPU-inflated bytes.
+
+    This is the L5 receiver surface: the candidate archive has already traveled
+    through upstream ``evaluate.sh`` / ``inflate.sh`` on local CPU, and this
+    producer reads the retained ``*.raw`` RGB tensor exactly as
+    ``TensorVideoDataset`` does.  It memmaps only the live birth pair so the
+    proof does not persist or load full-video tensors.
+    """
+
+    action_id = _live_action_id(live_birth_payload)
+    try:
+        summary = _read_mapping_payload(local_replay_summary, label="local replay summary")
+    except BirthSurvivalError as exc:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_local_replay_summary_unreadable",
+            reason=str(exc),
+        )
+    if summary.get("schema") != "local_submission_replay.v1":
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_local_replay_schema_mismatch",
+            reason=f"expected local_submission_replay.v1, got {summary.get('schema')!r}",
+        )
+    if str(summary.get("device") or "") != "cpu":
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_local_replay_not_cpu",
+            reason=f"local replay device must be cpu, got {summary.get('device')!r}",
+        )
+    if summary.get("evaluation_passed") is not True:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_local_replay_not_passed",
+            reason="upstream local replay did not pass, so inflated bytes are not a valid surface",
+        )
+    cleanup = str(summary.get("inflated_dir_cleanup") or "")
+    if cleanup not in {"retained_by_request", "retained_by_request_after_success"}:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_raw_not_retained",
+            reason=f"local replay inflated_dir_cleanup={cleanup!r}; rerun with keep_inflated=True",
+        )
+    inflated_dir_raw = summary.get("inflated_dir")
+    if not isinstance(inflated_dir_raw, str) or not inflated_dir_raw.strip():
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_dir_missing_from_summary",
+        )
+    inflated_dir = Path(inflated_dir_raw).expanduser().resolve(strict=False)
+    if not inflated_dir.is_dir():
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker="birth_survival_inflated_dir_missing",
+            reason=f"retained inflated_dir does not exist: {inflated_dir}",
+        )
+
+    pair_np = _requested_pair_indices_np(pair_indices)
+    worst_region = _live_worst_region(live_birth_payload)
+    birth_batch = int(worst_region["batch_index"])
+    if not 0 <= birth_batch < int(pair_np.shape[0]):
+        raise BirthSurvivalError(
+            "live birth batch_index is outside the supplied pair_indices: "
+            f"batch_index={birth_batch} pair_count={int(pair_np.shape[0])}"
+        )
+    birth_pair = int(pair_np[birth_batch])
+    pair_frames, surface_meta, blocker = _read_inflated_pair01_nhwc01(
+        inflated_dir=inflated_dir,
+        pair_index=birth_pair,
+        camera_size_wh=camera_size_wh,
+    )
+    if blocker is not None or pair_frames is None:
+        return _blocked_survival_row(
+            action_id=action_id,
+            surface="inflated_torch_cpu",
+            blocker=blocker or "birth_survival_inflated_pair_read_failed",
+            extra={
+                **surface_meta,
+                "local_replay_report_path": summary.get("report_path"),
+                "local_replay_axis_tag": summary.get("axis_tag"),
+                "local_replay_summary_schema": summary.get("schema"),
+                "local_replay_inflated_dir": inflated_dir.as_posix(),
+            },
+        )
+
+    birth_class = int(worst_region["class_index"])
+    region_mask_np, region_pixels = reconstruct_birth_region_mask(target_labels, worst_region)
+    region_mask_np = np.ascontiguousarray(region_mask_np[birth_batch : birth_batch + 1])
+    initial_in_region_target = _initial_in_region_target_count(worst_region)
+    live_pose_compensation = _live_pose_compensation(live_birth_payload)
+
+    support = _region_support_from_frame1_nhwc01(
+        scorer_teacher=scorer_teacher,
+        frame1_nhwc01=pair_frames[1],
+        region_mask_np=region_mask_np,
+        birth_class=birth_class,
+    )
+    target_rgb_0_birth = _target_rgb_birth_row(target_rgb_0, batch_index=birth_batch, name="target_rgb_0")
+    target_rgb_1_birth = _target_rgb_birth_row(target_rgb_1, batch_index=birth_batch, name="target_rgb_1")
+    pose_compensation_survival = _pose_compensation_survival_on_surface(
+        object(),
+        pose_teacher=pose_teacher,
+        target_rgb_0=target_rgb_0_birth,
+        target_rgb_1=target_rgb_1_birth,
+        pair_indices=np.ascontiguousarray(np.array([birth_pair], dtype=np.int64)),
+        live_pose_compensation=live_pose_compensation,
+        surface_pair01_nhwc01=pair_frames,
+        d_pose_tolerance_abs=float(pose_d_pose_tolerance_abs),
+        d_pose_tolerance_rel=float(pose_d_pose_tolerance_rel),
+    )
+
+    region_hard_won = int(support["region_hard_won"])
+    net_target_support_delta = int(region_hard_won - initial_in_region_target)
+    target_support_survived = bool(region_hard_won >= 1 and net_target_support_delta > 0)
+    compensation_required = bool(pose_compensation_survival["required"])
+    compensation_survived = (
+        True
+        if not compensation_required
+        else bool(pose_compensation_survival["survived"])
+    )
+    survived = bool(target_support_survived and compensation_survived)
+    region_debt_units = _region_debt_units(int(support["region_unsolved"]), int(support["total_scored_pixels"]))
+    archive_path = Path(str(summary.get("archive_zip_path") or "")).expanduser()
+    archive_path = archive_path.resolve(strict=False) if str(archive_path) else archive_path
+
+    return _survival_row(
+        action_id=action_id,
+        surface="inflated_torch_cpu",
+        survived=survived,
+        birth_class=birth_class,
+        region_pixels=region_pixels,
+        region_hard_won=region_hard_won,
+        target_hard_lost=max(0, initial_in_region_target - region_hard_won),
+        net_target_support_delta=net_target_support_delta,
+        initial_in_region_target=initial_in_region_target,
+        region_unsolved=int(support["region_unsolved"]),
+        region_debt_units=region_debt_units,
+        margin_stats=support["stats"],
+        fakequant_bits=None,
+        total_scored_pixels=int(support["total_scored_pixels"]),
+        worst_region=worst_region,
+        pose_compensation_survival=pose_compensation_survival,
+        surface_meta={
+            **surface_meta,
+            "local_replay_summary_schema": str(summary.get("schema") or ""),
+            "local_replay_report_path": summary.get("report_path"),
+            "local_replay_stdout_path": summary.get("stdout_path"),
+            "local_replay_stderr_path": summary.get("stderr_path"),
+            "local_replay_axis_tag": summary.get("axis_tag"),
+            "local_replay_device": summary.get("device"),
+            "local_replay_archive_zip_path": summary.get("archive_zip_path"),
+            "local_replay_archive_zip_sha256": (
+                _sha256_file_or_none(archive_path) if archive_path.is_file() else None
+            ),
+            "local_replay_archive_bytes": summary.get("archive_bytes"),
+            "local_replay_inflated_dir": inflated_dir.as_posix(),
+            "local_replay_inflated_dir_cleanup": cleanup,
+            "inflated_torch_cpu_source": "upstream_evaluate_sh_retained_raw_tensor",
+            "inflated_torch_cpu_tensor_dataset_shape_contract": [
+                "N",
+                int(camera_size_wh[1]),
+                int(camera_size_wh[0]),
+                RGB_CHANNELS,
+            ],
+            "inflated_torch_cpu_memmap_full_video_materialized": False,
+        },
+    )
+
+
 def measure_birth_hysteresis(
     model: Any,
     *,
@@ -1095,6 +1441,7 @@ def _blocked_survival_row(
     surface: str,
     blocker: str | None = None,
     reason: str | None = None,
+    extra: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Typed FAIL-CLOSED row for surfaces this producer cannot stand up.
 
@@ -1105,12 +1452,13 @@ def _blocked_survival_row(
     """
 
     blocker = blocker or _SURVIVAL_SURFACE_BLOCKER.get(str(surface), "birth_survival_surface_unsupported")
-    return {
+    row = {
         "schema": BIRTH_SURVIVAL_BLOCKED_SCHEMA,
         "action_id": str(action_id),
         "surface": str(surface),
         "blocked": True,
         "blocker": blocker,
+        "blockers": [blocker],
         "reason": reason or (
             "scoped MLX survival producer cannot build a faithful "
             f"{surface} surface (no archive parse-back / torch inflate runtime here)"
@@ -1118,6 +1466,9 @@ def _blocked_survival_row(
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
     }
+    if isinstance(extra, Mapping):
+        row.update(dict(extra))
+    return row
 
 
 __all__ = [
@@ -1128,6 +1479,7 @@ __all__ = [
     "FAITHFUL_SURVIVAL_SURFACES",
     "BirthSurvivalError",
     "measure_birth_hysteresis",
+    "measure_birth_inflated_torch_cpu_survival_from_local_replay",
     "measure_birth_parseback_survival_from_report",
     "measure_birth_survival",
     "reconstruct_birth_region_mask",

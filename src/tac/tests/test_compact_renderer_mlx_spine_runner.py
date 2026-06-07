@@ -7926,6 +7926,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 target_region_forced_key,
                 require_fakequant_survival,
                 fakequant_survival_bits,
+                hard_region_miner_output_dir,
+                birth_update_scope,
                 grad_clip_max_norm,
         ):
             captured["target_region_birth_call"] = {
@@ -7956,14 +7958,24 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 ),
                 "require_fakequant_survival": bool(require_fakequant_survival),
                 "fakequant_survival_bits": int(fakequant_survival_bits),
+                "hard_region_miner_output_dir": hard_region_miner_output_dir,
+                "birth_update_scope": birth_update_scope,
                 "grad_clip_max_norm": grad_clip_max_norm,
             }
+            resolved_birth_update_scope = (
+                "spatial_carriers"
+                if birth_update_scope is None and (bool(require_pose_trust) or bool(require_fakequant_survival))
+                else "late_all"
+                if birth_update_scope is None
+                else str(birth_update_scope)
+            )
             return {
                 "schema": "hi_nerv_target_region_birth.v1",
                 "actuator_id": "fit_target_region_birth_from_segnet",
                 "accepted": True,
                 "accepted_step_count": 1,
                 "action_id": "a" * 64,
+                "birth_update_scope": resolved_birth_update_scope,
                 "target_hard_won_count": 5.0,
                 "target_hard_lost_count": 0.0,
                 "net_target_support_delta": 5.0,
@@ -7973,7 +7985,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                     "action_id": "a" * 64,
                     "accepted": True,
                     "accepted_step_count": 1,
-                    "updated_parameter_names": ["head_rgb_1.weight"],
+                    "updated_parameter_names": ["latents_fine"],
                     "argmax_transitions": {
                         "target_hard_won_count": 5.0,
                         "target_hard_lost_count": 0.0,
@@ -7993,6 +8005,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                     "candidate_frontier_telemetry": {
                         "schema": "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1",
                         "candidate_attempt_count": 2,
+                        "birth_update_scope": resolved_birth_update_scope,
                         "final_already_won_lost_count": 0,
                         "attempts": [
                             {
@@ -8000,6 +8013,8 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                                 "accepted": True,
                                 "exact_score_decision": "accepted",
                                 "catastrophic_guard_decision": "satisfied",
+                                "birth_update_scope": resolved_birth_update_scope,
+                                "applied_parameter_names": ["latents_fine"],
                             }
                         ],
                     },
@@ -8376,6 +8391,12 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["target_geometry_frontier_dilation"] == 3
     assert target_birth_call["target_region_portfolio_max_regions"] == 4
     assert target_birth_call["target_region_forced_key"] is None
+    assert target_birth_call["birth_update_scope"] is None
+    assert target_region_birth["birth_update_scope"] == "spatial_carriers"
+    assert (
+        target_region_birth["receipt"]["candidate_frontier_telemetry"]["birth_update_scope"]
+        == "spatial_carriers"
+    )
     assert target_birth_call["require_fakequant_survival"] is False
     assert target_birth_call["fakequant_survival_bits"] == 8
     assert (
@@ -13481,6 +13502,81 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert "local_cpu_replay_not_executed" not in out["blockers"]
     assert "local_cpu_replay_not_run_partial_pair_coverage" not in out["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in out["blockers"]
+
+
+def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    action_id = "d" * 64
+    local_replay = {
+        "schema": "local_submission_replay.v1",
+        "device": "cpu",
+        "evaluation_passed": True,
+        "inflated_dir": (tmp_path / "inflated").as_posix(),
+        "inflated_dir_cleanup": "retained_by_request",
+        "axis_tag": "[macOS-CPU advisory]",
+        "blockers": [],
+    }
+    live_birth = {
+        "accepted": True,
+        "action_id": action_id,
+        "receipt": {
+            "schema": "hi_nerv_target_region_birth_receipt.v1",
+            "action_id": action_id,
+            "surface": "live_mlx",
+        },
+    }
+    calls: list[dict[str, object]] = []
+
+    def fake_measure(**kwargs):
+        calls.append(kwargs)
+        return {
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "inflated_torch_cpu",
+            "action_id": action_id,
+            "survived": True,
+            "blockers": [],
+            "region_hard_won_count": 3,
+            "receiver_surface_target_hard_won_count": 3,
+            "receiver_surface_net_target_support_delta": 3,
+        }
+
+    monkeypatch.setattr(
+        "tac.substrates.hi_nerv.birth_survival."
+        "measure_birth_inflated_torch_cpu_survival_from_local_replay",
+        fake_measure,
+    )
+    artifact = {"substrate_artifact_metadata": {"score_aware_training": {}}}
+
+    row = runner_mod._write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
+        local_cpu_replay_summary=local_replay,
+        output_dir=tmp_path,
+        live_birth_payload=live_birth,
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=[0],
+        artifact_dict=artifact,
+    )
+
+    assert calls
+    assert calls[0]["local_replay_summary"] == local_replay
+    assert row["schema"] == "hi_nerv_target_region_birth_survival.v1"
+    assert row["surface"] == "inflated_torch_cpu"
+    assert row["producer"] == "hi_nerv_runner_local_cpu_replay_birth_survival"
+    path = tmp_path / "hi_nerv_birth_inflated_torch_cpu_survival.json"
+    assert path.is_file()
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["action_id"] == action_id
+    assert written["survived"] is True
+    assert artifact["birth_inflated_torch_cpu_survival"]["artifact_path"] == path.as_posix()
+    embedded = artifact["substrate_artifact_metadata"]["score_aware_training"][
+        "birth_inflated_torch_cpu_survival"
+    ]
+    assert embedded["surface"] == "inflated_torch_cpu"
+    assert embedded["survived"] is True
+    assert "score_claim" not in embedded
+    assert "promotion_eligible" not in embedded
 
 
 def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(

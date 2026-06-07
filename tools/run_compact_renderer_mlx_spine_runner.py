@@ -8931,6 +8931,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation: int = 1,
     scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions: int = 4,
     scorer_domain_bootstrap_segnet_hard_birth_forced_region_key: Sequence[int] | None = None,
+    scorer_domain_bootstrap_segnet_hard_birth_update_scope: str | None = None,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = (
@@ -10088,6 +10089,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
                 )
             ),
+            scorer_domain_bootstrap_segnet_hard_birth_update_scope=(
+                None
+                if scorer_domain_bootstrap_segnet_hard_birth_update_scope is None
+                else str(scorer_domain_bootstrap_segnet_hard_birth_update_scope)
+            ),
             allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
             scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
@@ -10534,6 +10540,55 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
         )
+    post_export_artifact_metadata = (
+        artifact_dict.get("substrate_artifact_metadata")
+        if isinstance(artifact_dict.get("substrate_artifact_metadata"), Mapping)
+        else {}
+    )
+    post_export_score_training_metadata = (
+        post_export_artifact_metadata.get("score_aware_training")
+        if isinstance(post_export_artifact_metadata.get("score_aware_training"), Mapping)
+        else {}
+    )
+    post_export_live_birth_payload = (
+        artifact_dict.get("target_region_birth_payload")
+        or artifact_dict.get("target_region_birth")
+        or post_export_score_training_metadata.get("target_region_birth_payload")
+        or post_export_score_training_metadata.get("target_region_birth")
+        or post_export_score_training_metadata.get("target_region_birth_actuator")
+        or selected_birth_parseback_survival
+    )
+    post_export_live_birth_survival_bundle = (
+        post_export_score_training_metadata.get("live_birth_survival")
+        if isinstance(post_export_score_training_metadata, Mapping)
+        else None
+    )
+    birth_inflated_torch_cpu_survival = _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
+        local_cpu_replay_summary=(local_cpu_replay_summary if isinstance(local_cpu_replay_summary, Mapping) else None),
+        output_dir=training_dir,
+        live_birth_payload=(
+            post_export_live_birth_payload
+            if isinstance(post_export_live_birth_payload, Mapping)
+            else None
+        ),
+        scorer_teacher=None,
+        pose_teacher=None,
+        target_rgb_0=None,
+        target_rgb_1=None,
+        target_labels=None,
+        pair_indices=None,
+        selected_birth_parseback_survival=(
+            selected_birth_parseback_survival
+            if isinstance(selected_birth_parseback_survival, Mapping)
+            else None
+        ),
+        live_birth_survival_bundle=(
+            post_export_live_birth_survival_bundle
+            if isinstance(post_export_live_birth_survival_bundle, Mapping)
+            else None
+        ),
+        artifact_dict=artifact_dict,
+    )
     post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
         post_export_receiver_cache_quality
     )
@@ -11092,6 +11147,32 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "post_export_receiver_cache_quality": (post_export_receiver_cache_quality_summary),
                 "receiver_surface_replay_trace": receiver_surface_replay_trace,
                 "receiver_replay_parseback_servo_lift": (receiver_replay_parseback_servo_lift),
+                "birth_inflated_torch_cpu_survival": (
+                    _strip_substrate_metadata_authority_fields(
+                        {
+                            "schema": birth_inflated_torch_cpu_survival.get("schema"),
+                            "surface": birth_inflated_torch_cpu_survival.get("surface"),
+                            "action_id": birth_inflated_torch_cpu_survival.get("action_id"),
+                            "survived": birth_inflated_torch_cpu_survival.get("survived"),
+                            "artifact_path": birth_inflated_torch_cpu_survival.get("artifact_path"),
+                            "producer": birth_inflated_torch_cpu_survival.get("producer"),
+                            "blockers": [
+                                str(value)
+                                for value in birth_inflated_torch_cpu_survival.get("blockers") or []
+                            ],
+                            "combined_action_effect_rows_written": (
+                                birth_inflated_torch_cpu_survival.get(
+                                    "combined_action_effect_rows_written"
+                                )
+                            ),
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    )
+                    if isinstance(birth_inflated_torch_cpu_survival, Mapping)
+                    else None
+                ),
                 "short_scorer_teacher_smoke_readiness": (short_scorer_smoke_readiness_summary),
                 "nerv_crux_trace": nerv_crux_trace,
                 "train_receiver_class_escape_contract": (train_receiver_class_escape_contract),
@@ -15376,6 +15457,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation: int = 1,
     scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions: int = 4,
     scorer_domain_bootstrap_segnet_hard_birth_forced_region_key: Sequence[int] | None = None,
+    scorer_domain_bootstrap_segnet_hard_birth_update_scope: str | None = None,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -16562,6 +16644,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             require_fakequant_survival=bool(coder_aware_qat),
                             fakequant_survival_bits=int(coder_qat_quant_bits),
                             hard_region_miner_output_dir=output_dir,
+                            birth_update_scope=(
+                                None
+                                if scorer_domain_bootstrap_segnet_hard_birth_update_scope is None
+                                else str(scorer_domain_bootstrap_segnet_hard_birth_update_scope)
+                            ),
                             grad_clip_max_norm=None,
                         )
                     )
@@ -19115,6 +19202,205 @@ def _promote_hi_nerv_selected_birth_parseback_survival(
                 encoding="utf-8",
             )
     return promoted
+
+
+def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
+    *,
+    local_cpu_replay_summary: Mapping[str, Any] | None,
+    output_dir: str | Path,
+    live_birth_payload: Mapping[str, Any] | None,
+    scorer_teacher: Any | None,
+    target_labels: Any | None,
+    pair_indices: Any | None,
+    pose_teacher: Any | None = None,
+    target_rgb_0: Any | None = None,
+    target_rgb_1: Any | None = None,
+    selected_birth_parseback_survival: Mapping[str, Any] | None = None,
+    live_birth_survival_bundle: Mapping[str, Any] | None = None,
+    artifact_dict: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Write same-action inflated-torch CPU survival from retained local replay."""
+
+    if not isinstance(live_birth_payload, Mapping):
+        return None
+    receipt = live_birth_payload.get("receipt")
+    receipt = receipt if isinstance(receipt, Mapping) else {}
+    action_id = str(live_birth_payload.get("action_id") or receipt.get("action_id") or "")
+    if not action_id:
+        return None
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    row_path = out / "hi_nerv_birth_inflated_torch_cpu_survival.json"
+
+    def _blocked(blocker: str, reason: str | None = None) -> dict[str, Any]:
+        row = {
+            "schema": "hi_nerv_target_region_birth_survival_blocked.v1",
+            "surface": "inflated_torch_cpu",
+            "action_id": action_id,
+            "blocked": True,
+            "blocker": blocker,
+            "blockers": [blocker],
+            "reason": reason or blocker,
+            "producer": "hi_nerv_runner_local_cpu_replay_birth_survival",
+            "artifact_path": row_path.as_posix(),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        _write_json(row_path, row)
+        return row
+
+    if not isinstance(local_cpu_replay_summary, Mapping):
+        row = _blocked("birth_survival_inflated_local_replay_summary_missing")
+    elif scorer_teacher is None:
+        row = _blocked("birth_survival_inflated_scorer_teacher_missing")
+    elif target_labels is None:
+        row = _blocked("birth_survival_inflated_target_labels_missing")
+    elif pair_indices is None:
+        row = _blocked("birth_survival_inflated_pair_indices_missing")
+    else:
+        try:
+            from tac.substrates.hi_nerv.birth_survival import (
+                measure_birth_inflated_torch_cpu_survival_from_local_replay,
+            )
+
+            row = dict(
+                measure_birth_inflated_torch_cpu_survival_from_local_replay(
+                    local_replay_summary=local_cpu_replay_summary,
+                    scorer_teacher=scorer_teacher,
+                    pose_teacher=pose_teacher,
+                    target_rgb_0=target_rgb_0,
+                    target_rgb_1=target_rgb_1,
+                    target_labels=target_labels,
+                    live_birth_payload=live_birth_payload,
+                    pair_indices=pair_indices,
+                )
+            )
+        except Exception as exc:
+            row = _blocked(
+                "birth_survival_inflated_remeasurement_failed",
+                reason=f"{type(exc).__name__}:{exc}",
+            )
+
+    row["artifact_path"] = row_path.as_posix()
+    row["producer"] = "hi_nerv_runner_local_cpu_replay_birth_survival"
+    _write_json(row_path, row)
+
+    parseback_survived = (
+        isinstance(selected_birth_parseback_survival, Mapping)
+        and selected_birth_parseback_survival.get("survived") is True
+        and str(selected_birth_parseback_survival.get("action_id") or "") == action_id
+    )
+    fakequant_survived = (
+        isinstance(live_birth_survival_bundle, Mapping)
+        and live_birth_survival_bundle.get("fakequant_survived") is True
+    )
+    if row.get("survived") is True and parseback_survived and fakequant_survived:
+        action_effect_ledger_path = out / "hi_nerv_birth_action_effects.jsonl"
+        merged_receipt = {
+            **dict(receipt or live_birth_payload),
+            **dict(row),
+            "surface": "inflated_torch_cpu",
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": True,
+            "artifact_path": row_path.as_posix(),
+            "archive_sha256": (
+                row.get("local_replay_archive_zip_sha256")
+                or row.get("parseback_archive_sha256")
+                or row.get("archive_sha256")
+            ),
+        }
+        try:
+            from tac.analysis.action_effect import (
+                ActionEffect,
+                append_action_effect,
+                validate_action_effect_payload,
+            )
+
+            effect = ActionEffect.from_hinerv_birth_receipt(
+                merged_receipt,
+                consumer="nerv_long_run_launch_gate",
+            )
+            record = effect.as_dict()
+            status = validate_action_effect_payload(record)
+            if status.get("passed") is True:
+                append_action_effect(effect, action_effect_ledger_path)
+                row["combined_action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+                row["combined_action_effect_rows_written"] = 1
+            else:
+                row["combined_action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+                row["combined_action_effect_rows_written"] = 0
+                row["combined_action_effect_blockers"] = [
+                    str(value) for value in status.get("blockers") or []
+                ]
+        except Exception as exc:
+            row["combined_action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
+            row["combined_action_effect_rows_written"] = 0
+            row["combined_action_effect_blockers"] = [f"{type(exc).__name__}:{exc}"]
+        _write_json(row_path, row)
+
+    if artifact_dict is not None:
+        artifact_dict["birth_inflated_torch_cpu_survival"] = dict(row)
+        metadata = artifact_dict.get("substrate_artifact_metadata")
+        if isinstance(metadata, dict):
+            metadata["birth_inflated_torch_cpu_survival"] = dict(row)
+            score_training = metadata.get("score_aware_training")
+            if isinstance(score_training, dict):
+                score_training["birth_inflated_torch_cpu_survival"] = _strip_substrate_metadata_authority_fields(
+                    {
+                        "schema": row.get("schema"),
+                        "surface": row.get("surface"),
+                        "action_id": row.get("action_id"),
+                        "survived": row.get("survived"),
+                        "artifact_path": row.get("artifact_path"),
+                        "producer": row.get("producer"),
+                        "blockers": [str(value) for value in row.get("blockers") or []],
+                        "combined_action_effect_rows_written": row.get(
+                            "combined_action_effect_rows_written"
+                        ),
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                )
+        artifact_path = out / "training_artifact.json"
+        if artifact_path.is_file():
+            try:
+                artifact = _load_json(artifact_path)
+            except Exception:
+                artifact = None
+            if isinstance(artifact, dict):
+                artifact["birth_inflated_torch_cpu_survival"] = dict(row)
+                artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+                artifact_metadata["birth_inflated_torch_cpu_survival"] = dict(row)
+                score_training = artifact_metadata.get("score_aware_training")
+                if isinstance(score_training, dict):
+                    score_training["birth_inflated_torch_cpu_survival"] = _strip_substrate_metadata_authority_fields(
+                        {
+                            "schema": row.get("schema"),
+                            "surface": row.get("surface"),
+                            "action_id": row.get("action_id"),
+                            "survived": row.get("survived"),
+                            "artifact_path": row.get("artifact_path"),
+                            "producer": row.get("producer"),
+                            "blockers": [str(value) for value in row.get("blockers") or []],
+                            "combined_action_effect_rows_written": row.get(
+                                "combined_action_effect_rows_written"
+                            ),
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    )
+                artifact["substrate_artifact_metadata"] = artifact_metadata
+                artifact_path.write_text(
+                    json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+    return row
 
 
 def _hi_nerv_receiver_replay_selection_score(
@@ -25478,6 +25764,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-update-scope",
+        choices=["late_all", "spatial_carriers"],
+        default=None,
+        help=(
+            "Archive-charged tensor scope for the HiNeRV hard-birth actuator. "
+            "Unset lets the model fail closed to spatial_carriers when pose or "
+            "fakequant trust is required, otherwise late_all is used for local "
+            "unit/probe runs."
+        ),
+    )
+    parser.add_argument(
         "--no-scorer-space-step-guard",
         action="store_false",
         dest="scorer_space_step_guard_enabled",
@@ -27733,6 +28030,11 @@ def main(argv: list[str] | None = None) -> int:
                 else _parse_target_region_key_csv(
                     args.scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
                 )
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_update_scope=(
+                None
+                if args.scorer_domain_bootstrap_segnet_hard_birth_update_scope is None
+                else str(args.scorer_domain_bootstrap_segnet_hard_birth_update_scope)
             ),
             scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(
