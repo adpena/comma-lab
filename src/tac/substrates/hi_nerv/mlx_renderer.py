@@ -5837,6 +5837,152 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "reference_region_stats": "current_best_live_mlx",
             "human_visual_fidelity_objective": False,
         }
+
+        def _birth_rejection_breakdown_payload() -> dict[str, Any]:
+            """Summarize why the exact receiver-surface birth did or did not admit."""
+
+            state = (
+                "accepted"
+                if accepted_step_count > 0
+                else "rejected"
+                if candidate_attempt_count > 0 or rejected_step_count > 0 or blockers
+                else "missing"
+            )
+            raw_hard_birth_unadmitted = bool(
+                accepted_step_count == 0 and max_candidate_region_hard_won_delta > 0
+            )
+            causes = {
+                "raw_hard_birth_unadmitted": raw_hard_birth_unadmitted,
+                "outside_spill": bool(
+                    accepted_step_count == 0
+                    and max_candidate_outside_correct_to_wrong_count > 0
+                ),
+                "pose_trust_failed": bool(
+                    accepted_step_count == 0
+                    and raw_hard_birth_pose_rejected_candidate_count > 0
+                ),
+                "pair_latent_not_region_local": bool(
+                    raw_hard_birth_unadmitted
+                    and resolved_birth_update_scope == "pair_latents_fine"
+                ),
+                "spatial_carriers_not_region_local": bool(
+                    raw_hard_birth_unadmitted
+                    and resolved_birth_update_scope == "spatial_carriers"
+                ),
+                "receiver_pixels_moved_without_argmax_birth": bool(
+                    accepted_step_count == 0
+                    and max_candidate_receiver_uint8_changed_pixels_region > 0
+                    and max_candidate_region_hard_won_delta <= 0
+                ),
+                "no_receiver_surface_movement": bool(
+                    accepted_step_count == 0
+                    and max_candidate_receiver_uint8_changed_pixels_region <= 0
+                ),
+                "exact_score_rejected": bool(
+                    accepted_step_count == 0
+                    and (joint_score_rejected_step_count > 0 or joint_rejected_candidate_count > 0)
+                ),
+                "fakequant_survival_failed": bool(
+                    accepted_step_count == 0 and fakequant_survival_rejected_step_count > 0
+                ),
+                "masked_residual_oracle_no_target_support": bool(
+                    accepted_step_count == 0
+                    and not bool(masked_residual_oracle.get("target_support_moved"))
+                ),
+                "masked_residual_oracle_exact_score_not_accepted": bool(
+                    accepted_step_count == 0
+                    and not bool(masked_residual_oracle.get("exact_accepted_before_archive_closure"))
+                ),
+                "masked_residual_oracle_positive_archive_unclosed": bool(
+                    accepted_step_count == 0
+                    and bool(masked_residual_oracle.get("exact_accepted_before_archive_closure"))
+                ),
+            }
+            if state == "accepted":
+                first_failed_surface = None
+                next_operator = "receiver_survival_parseback_and_archive_section_measurement"
+            elif causes["no_receiver_surface_movement"]:
+                first_failed_surface = "continuous_to_uint8_receiver_quantum"
+                next_operator = "increase_receiver_quantum_or_train_through_qat"
+            elif causes["receiver_pixels_moved_without_argmax_birth"]:
+                first_failed_surface = "segnet_argmax_margin_crossing"
+                next_operator = "direct_wall_normal_or_output_head_margin_actuator"
+            elif causes["outside_spill"]:
+                first_failed_surface = "support_trust_region"
+                next_operator = "localized_backend_basis_or_stronger_support_projection"
+            elif causes["pose_trust_failed"]:
+                first_failed_surface = "pose_trust_region"
+                next_operator = "frame0_pose_compensation_composite_or_pose_trust_projection"
+            elif causes["fakequant_survival_failed"]:
+                first_failed_surface = "fakequant_survival"
+                next_operator = "qat_survival_ladder_same_action_support"
+            elif causes["exact_score_rejected"]:
+                first_failed_surface = "exact_nonlinear_seg_pose_score"
+                next_operator = "joint_seg_pose_trust_region_or_frame0_compensation"
+            elif causes["masked_residual_oracle_positive_archive_unclosed"]:
+                first_failed_surface = "archive_parseback_closure"
+                next_operator = "sidecar_archive_survival_and_backend_lowering_race"
+            elif causes["masked_residual_oracle_no_target_support"]:
+                first_failed_surface = "masked_residual_oracle_support"
+                next_operator = "regenerate_direct_inverse_scorer_wall_normal_teacher"
+            elif causes["masked_residual_oracle_exact_score_not_accepted"]:
+                first_failed_surface = "masked_residual_oracle_exact_score"
+                next_operator = "joint_exact_score_admission_or_new_teacher_direction"
+            elif causes["pair_latent_not_region_local"] or causes["spatial_carriers_not_region_local"]:
+                first_failed_surface = "backend_actuator_region_locality"
+                next_operator = "backend_fit_ladder_next_scope_or_byte_priced_sidecar"
+            else:
+                first_failed_surface = "unknown_birth_rejection_surface" if state == "rejected" else None
+                next_operator = "emit_candidate_attempt_trace_and_backend_ladder"
+            return {
+                "schema": "hi_nerv_target_region_birth_rejection_breakdown.v1",
+                "state": state,
+                "accepted": bool(accepted_step_count > 0),
+                "first_failed_surface": first_failed_surface,
+                "recommended_next_operator": next_operator,
+                "birth_update_scope": resolved_birth_update_scope,
+                "accepted_step_count": int(accepted_step_count),
+                "rejected_step_count": int(rejected_step_count),
+                "candidate_attempt_count": int(candidate_attempt_count),
+                "subquantum_rejected_step_count": int(subquantum_rejected_step_count),
+                "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
+                "joint_score_rejected_step_count": int(joint_score_rejected_step_count),
+                "fakequant_survival_rejected_step_count": int(
+                    fakequant_survival_rejected_step_count
+                ),
+                "max_candidate_receiver_uint8_changed_pixels_region": int(
+                    max_candidate_receiver_uint8_changed_pixels_region
+                ),
+                "max_candidate_argmax_flipped_pixels_region": int(
+                    max_candidate_argmax_flipped_pixels_region
+                ),
+                "max_candidate_region_hard_won_delta": int(max_candidate_region_hard_won_delta),
+                "max_candidate_region_hard_ratio_delta": float(
+                    max_candidate_region_hard_ratio_delta
+                ),
+                "max_candidate_outside_correct_to_wrong_count": int(
+                    max_candidate_outside_correct_to_wrong_count
+                ),
+                "raw_hard_birth_pose_rejected_candidate_count": int(
+                    raw_hard_birth_pose_rejected_candidate_count
+                ),
+                "max_candidate_nonrate_improvement": float(max_candidate_nonrate_improvement),
+                "masked_residual_oracle_target_support_moved": bool(
+                    masked_residual_oracle.get("target_support_moved")
+                ),
+                "masked_residual_oracle_exact_accepted_before_archive_closure": bool(
+                    masked_residual_oracle.get("exact_accepted_before_archive_closure")
+                ),
+                "causes": causes,
+                "blockers": list(dict.fromkeys(str(blocker) for blocker in blockers)),
+                "authority": "batch_local_live_mlx_false_authority",
+                "promotion_eligible": False,
+                "score_claim": False,
+                "human_visual_fidelity_objective": False,
+            }
+
+        birth_rejection_breakdown = _birth_rejection_breakdown_payload()
+        candidate_frontier_telemetry["birth_rejection_breakdown"] = birth_rejection_breakdown
         # Frame0 composite-compensation payload (batch-local authority). The
         # compensated scope (``head_rgb_0.*``) is recorded SEPARATELY from the
         # birth ``updated_parameter_names`` so the receipt's birth-scope check
@@ -6517,6 +6663,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
         receipt["trained_groups"] = sorted(trained_groups_for_action_id)
         receipt["worst_region"] = dict(worst_region_payload)
+        receipt["birth_rejection_breakdown"] = dict(birth_rejection_breakdown)
         from tac.analysis.inverse_scorer_actions import (
             build_target_region_wall_normal_lift_receipt,
         )
@@ -6604,6 +6751,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 fakequant_survival_rejected_step_count
             ),
             "candidate_frontier_telemetry": candidate_frontier_telemetry,
+            "birth_rejection_breakdown": birth_rejection_breakdown,
             "target_region_wall_normal_lift": target_region_wall_normal_lift,
             "post_acceptance_terminal_events": list(post_acceptance_terminal_events),
             "argmax_transitions": argmax_transitions,

@@ -1114,6 +1114,12 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
     assert payload["receiver_quantum_growth_attempt_count"] >= 1
     assert payload["argmax_birth_quantum_growth_attempt_count"] >= 0
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
+    breakdown = payload["birth_rejection_breakdown"]
+    assert breakdown["schema"] == "hi_nerv_target_region_birth_rejection_breakdown.v1"
+    assert breakdown["state"] == "rejected"
+    assert breakdown["first_failed_surface"] == "continuous_to_uint8_receiver_quantum"
+    assert breakdown["causes"]["no_receiver_surface_movement"] is True
+    assert payload["receipt"]["birth_rejection_breakdown"] == breakdown
     assert payload["updated_parameter_names"] == []
     all_after = {
         (".".join(str(p) for p in raw) if isinstance(raw, (tuple, list)) else str(raw)): np.array(leaf, copy=True)
@@ -1492,6 +1498,12 @@ def test_target_region_birth_pose_guard_blocks_visible_pose_harm() -> None:
     assert payload["pose_guard_rejected_step_count"] >= 1 or payload["subquantum_rejected_step_count"] >= 1
     assert "hinerv_target_region_birth_pose_trust_telemetry_missing" not in payload["blockers"]
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
+    breakdown = payload["birth_rejection_breakdown"]
+    assert breakdown["state"] == "rejected"
+    if payload["pose_guard_rejected_step_count"] >= 1:
+        assert breakdown["first_failed_surface"] in {"support_trust_region", "pose_trust_region"}
+        assert breakdown["causes"]["pose_trust_failed"] is True
+    assert payload["candidate_frontier_telemetry"]["birth_rejection_breakdown"] == breakdown
 
 
 @skip_no_mlx
