@@ -14,10 +14,14 @@ from tac.analysis.path_action_producer import (
     BLOCKER_PATH_ACTION_INFLATE_MISSING,
     BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
     BLOCKER_PATH_SUPPORT_NOT_BIRTH,
+    BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF,
     build_path_action_candidates_from_arrays,
+    build_pose_temporal_path_candidates_from_arrays,
+    build_selector_temporal_path_candidates_from_rows,
     decode_path_tube_payload,
     path_tube_support_from_mask,
     rdp_simplify,
+    selector_sequence_encoding_comparison,
     support_mask_sha256,
 )
 
@@ -124,6 +128,84 @@ def test_rdp_simplify_keeps_endpoints_and_reduces_near_line() -> None:
     assert rdp_simplify(points, epsilon=0.1) == [(4, 0), (4, 11)]
 
 
+def test_pose_temporal_path_candidate_is_rate_priced_and_non_promotable() -> None:
+    result = build_pose_temporal_path_candidates_from_arrays(
+        pair_indices=np.asarray([0, 1, 2, 3, 4], dtype=np.int64),
+        pose_residuals=np.asarray([0.0, 0.1, 0.2, 0.1, 0.0], dtype=np.float32),
+        base_archive_bytes=2000,
+        old_d_seg=0.2,
+        new_d_seg=0.2,
+        old_d_pose=0.3,
+        new_d_pose=0.3,
+    )
+
+    effect = result["action_effects"][0]
+    candidate = result["path_action_candidates"][0]
+    assert effect.action_kind == "frame0_pose_temporal_path"
+    assert effect.inverse_source == "frame0_pose_temporal_path"
+    assert effect.frame_index == 0
+    assert effect.frame_incidence == "pose_only"
+    assert effect.delta_bytes == candidate["temporal_payload_bytes"]
+    assert effect.delta_score_total is not None and effect.delta_score_total > 0.0
+    assert effect.value_per_byte is not None
+    assert effect.parseback_survived is False
+    assert effect.inflate_survived is False
+    assert effect.promotion_eligible is False
+    assert BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF in effect.blockers
+    assert result["candidate_queue"][0]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_selector_temporal_path_candidate_uses_pr110_sequence_and_blocks_launch() -> None:
+    result = build_selector_temporal_path_candidates_from_rows(
+        {
+            "selector_sequence": [0, 0, 2, 2, 2, 1, 1, 0],
+            "base_archive_bytes": 3000,
+        },
+        base_archive_bytes=3000,
+        old_d_seg=0.2,
+        new_d_seg=0.2,
+        old_d_pose=0.3,
+        new_d_pose=0.3,
+    )
+
+    effect = result["action_effects"][0]
+    candidate = result["path_action_candidates"][0]
+    comparison = candidate["temporal_path"]["selector_comparison"]
+    assert effect.family == "pr110"
+    assert effect.action_kind == "selector_temporal_path"
+    assert effect.inverse_source == "selector_temporal_path"
+    assert effect.frame_index == "both"
+    assert effect.delta_bytes == candidate["temporal_payload_bytes"]
+    assert comparison["selector_count"] == 8
+    assert comparison["unique_modes"] == 3
+    assert comparison["path_temporal_bytes"] == candidate["temporal_payload_bytes"]
+    assert BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF in result["candidate_queue"][0]["blockers"]
+    assert result["candidate_queue"][0]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_selector_temporal_path_preserves_sparse_pair_rows() -> None:
+    result = build_selector_temporal_path_candidates_from_rows(
+        [
+            {"scope": {"pair_index": 3}, "selector_id": 2},
+            {"scope": {"pair_index": 9}, "selector_id": 4},
+        ],
+        base_archive_bytes=3000,
+    )
+
+    effect = result["action_effects"][0]
+    temporal_path = result["path_action_candidates"][0]["temporal_path"]
+    assert list(effect.pair_ids) == [3, 9]
+    assert temporal_path["pair_min"] == 3
+    assert temporal_path["pair_max"] == 9
+    assert temporal_path["pair_count"] == 2
+
+
+def test_selector_sequence_comparison_can_prefer_rle_over_path_payload() -> None:
+    comparison = selector_sequence_encoding_comparison([0, 0, 0, 1, 1, 0], path_payload_bytes=99)
+    assert comparison["rle_bytes"] < comparison["path_temporal_bytes"]
+    assert comparison["best_encoding"] in {"raw_fixed_width", "rle"}
+
+
 def test_generate_path_action_candidates_cli_writes_valid_action_effect_rows(tmp_path: Path) -> None:
     target, argmax, margin, pair_indices = _hard_region_arrays()
     npz = tmp_path / "hard_region.npz"
@@ -135,6 +217,26 @@ def test_generate_path_action_candidates_cli_writes_valid_action_effect_rows(tmp
         pair_indices=pair_indices,
     )
     out_dir = tmp_path / "out"
+    pose_json = tmp_path / "pose.json"
+    pose_json.write_text(
+        json.dumps(
+            {
+                "pair_indices": [0, 1, 2, 3],
+                "pose_residuals": [0.0, 0.1, 0.05, 0.0],
+                "base_archive_bytes": 1000,
+                "old_d_seg": 0.2,
+                "new_d_seg": 0.2,
+                "old_d_pose": 0.3,
+                "new_d_pose": 0.3,
+            }
+        ),
+        encoding="utf-8",
+    )
+    selector_json = tmp_path / "selector.json"
+    selector_json.write_text(
+        json.dumps({"selector_sequence": [0, 0, 1, 1, 2, 2], "base_archive_bytes": 1000}),
+        encoding="utf-8",
+    )
     repo_root = Path(__file__).resolve().parents[3]
     proc = subprocess.run(
         [
@@ -150,6 +252,10 @@ def test_generate_path_action_candidates_cli_writes_valid_action_effect_rows(tmp
             "0.2",
             "--old-d-pose",
             "0.3",
+            "--pose-trajectory-json",
+            str(pose_json),
+            "--selector-rows-json",
+            str(selector_json),
         ],
         cwd=repo_root,
         text=True,
@@ -158,8 +264,8 @@ def test_generate_path_action_candidates_cli_writes_valid_action_effect_rows(tmp
     )
     assert proc.returncode == 0, proc.stderr
     summary = json.loads(proc.stdout)
-    assert summary["action_effect_row_count"] == 1
-    assert summary["candidate_queue_row_count"] == 1
+    assert summary["action_effect_row_count"] == 3
+    assert summary["candidate_queue_row_count"] == 3
     assert summary["ready_for_exact_eval_dispatch"] is False
 
     validate = subprocess.run(

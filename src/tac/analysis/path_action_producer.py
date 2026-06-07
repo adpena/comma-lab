@@ -10,9 +10,11 @@ crossing, or bypass parse-back/inflate gates.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import struct
 import zlib
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import pairwise
 from typing import Any
@@ -25,15 +27,20 @@ from tac.analysis.inverse_scorer_actions import build_candidate_queue
 PATH_ACTION_PRODUCER_SCHEMA = "tac.path_action_producer.v1"
 PATH_SUPPORT_SCHEMA = "tac.path_tube_support.v1"
 PATH_ACTION_CANDIDATE_SCHEMA = "tac.path_action_candidate.v1"
+TEMPORAL_PATH_SCHEMA = "tac.temporal_path_payload.v1"
 PATH_SUPPORT_MAGIC = b"PTUB1"
 _HEADER_FMT = "<5sHHBHHHII"
 _POINT_FMT = "<HH"
 _HEADER_SIZE = struct.calcsize(_HEADER_FMT)
+_TEMPORAL_QUANT_SCALE = 1_000_000
 
 BLOCKER_PATH_SUPPORT_EMPTY = "path_action_support_empty"
 BLOCKER_PATH_SUPPORT_NOT_BIRTH = "path_action_support_without_wrong_to_target_is_not_birth"
 BLOCKER_PATH_ACTION_PARSEBACK_MISSING = "path_action_parseback_survival_missing"
 BLOCKER_PATH_ACTION_INFLATE_MISSING = "path_action_inflate_survival_missing"
+BLOCKER_PATH_POSE_TRAJECTORY_EMPTY = "path_action_pose_trajectory_empty"
+BLOCKER_PATH_SELECTOR_TRAJECTORY_EMPTY = "path_action_selector_trajectory_empty"
+BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF = "path_action_trajectory_receiver_proof_missing"
 
 
 @dataclass(frozen=True)
@@ -126,6 +133,11 @@ class PathTubeSupport:
             "support_encoded_bytes": len(payload),
             "support_decode_sha256": hashlib.sha256(decoded.astype(np.uint8).tobytes(order="C")).hexdigest(),
             "archive_executable": True,
+            "profile": {
+                "schema": "tac.path_tube_profile.v1",
+                "kind": "uniform_tube",
+                "tube_width": int(self.tube_width),
+            },
             "path_yx": [list(point) for point in self.path_yx],
             "residual_add_yx": [list(point) for point in self.residual_add_yx],
             "residual_remove_yx": [list(point) for point in self.residual_remove_yx],
@@ -317,6 +329,157 @@ def build_path_action_candidates_from_arrays(
     }
 
 
+def build_pose_temporal_path_candidates_from_arrays(
+    *,
+    pair_indices: Sequence[int] | np.ndarray,
+    pose_residuals: Sequence[float] | np.ndarray | None = None,
+    pose_action_profile: Sequence[float] | np.ndarray | None = None,
+    rdp_epsilon: float = 0.25,
+    base_archive_bytes: int = 0,
+    old_d_seg: float | None = None,
+    new_d_seg: float | None = None,
+    old_d_pose: float | None = None,
+    new_d_pose: float | None = None,
+    authority: str = "batch_local_path_action",
+) -> dict[str, Any]:
+    """Emit one frame-0 PoseNet temporal-path ActionEffect when data exists."""
+
+    pairs = _int_array(pair_indices, name="pair_indices")
+    values_source = pose_action_profile if pose_action_profile is not None else pose_residuals
+    values = _float_array(values_source, name="pose_action_profile_or_residuals")
+    if pairs.size != values.size:
+        raise ValueError(f"pair_indices and pose values must have same length; got {pairs.size} and {values.size}")
+    active = np.isfinite(values) & (np.abs(values) > 0.0)
+    if not np.any(active):
+        return _empty_temporal_result(BLOCKER_PATH_POSE_TRAJECTORY_EMPTY)
+    pairs = pairs[active]
+    values = values[active]
+    payload = _temporal_path_payload(
+        family="hinerv",
+        action_kind="frame0_pose_temporal_path",
+        pair_indices=pairs,
+        values=values,
+        rdp_epsilon=rdp_epsilon,
+    )
+    encoded = _encode_temporal_payload(payload)
+    payload_bytes = len(encoded)
+    payload_sha256 = hashlib.sha256(encoded).hexdigest()
+    old_bytes = int(base_archive_bytes)
+    effect = ActionEffect.build(
+        action_id=f"pose_path:p{int(pairs.min())}-{int(pairs.max())}:{payload_sha256[:16]}",
+        family="hinerv",
+        action_kind="frame0_pose_temporal_path",
+        inverse_source="frame0_pose_temporal_path",
+        frame_index=0,
+        frame_incidence="pose_only",
+        candidate_status="generated",
+        authority=authority,
+        normalization_scope="batch_local",
+        producer="path_action_producer",
+        consumer="inverse_evaluate_candidate_queue",
+        pair_ids=tuple(int(v) for v in pairs.tolist()),
+        payload_sections=["frame0_pose_temporal_path", f"temporal_payload_bytes={payload_bytes}"],
+        old_d_seg=old_d_seg,
+        new_d_seg=new_d_seg,
+        old_d_pose=old_d_pose,
+        new_d_pose=new_d_pose,
+        old_bytes=old_bytes,
+        new_bytes=old_bytes + payload_bytes,
+        receiver_surface={
+            "pose_output_l2_delta": float(np.linalg.norm(values)),
+            "pose_temporal_path_active_pairs": int(pairs.size),
+        },
+        exact_score_decision="reject",
+        parseback_survived=False,
+        inflate_survived=False,
+        fakequant_survived=None,
+        posenet_input_delta_linf_pair=float(np.max(np.abs(values))),
+        pose_output_l2_delta=float(np.linalg.norm(values)),
+        payload_sha256=payload_sha256,
+        blockers=[
+            BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF,
+            BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
+            BLOCKER_PATH_ACTION_INFLATE_MISSING,
+        ],
+    )
+    return _temporal_result(effect=effect, payload=payload, encoded=encoded)
+
+
+def build_selector_temporal_path_candidates_from_rows(
+    rows: Sequence[Mapping[str, Any]] | Mapping[str, Any],
+    *,
+    rdp_epsilon: float = 0.0,
+    base_archive_bytes: int = 0,
+    old_d_seg: float | None = None,
+    new_d_seg: float | None = None,
+    old_d_pose: float | None = None,
+    new_d_pose: float | None = None,
+    authority: str = "batch_local_selector_path",
+) -> dict[str, Any]:
+    """Emit one selector temporal-path ActionEffect from PR110-style rows."""
+
+    pair_indices, sequence, source = _selector_sequence_from_rows(rows)
+    if sequence.size == 0:
+        return _empty_temporal_result(BLOCKER_PATH_SELECTOR_TRAJECTORY_EMPTY)
+    payload = _temporal_path_payload(
+        family="pr110",
+        action_kind="selector_temporal_path",
+        pair_indices=pair_indices,
+        values=sequence.astype(np.float64),
+        rdp_epsilon=rdp_epsilon,
+        value_kind="selector_id",
+    )
+    payload["source"] = source
+    encoded = b""
+    for _ in range(8):
+        prior_len = len(encoded)
+        payload["selector_comparison"] = selector_sequence_encoding_comparison(sequence, path_payload_bytes=prior_len)
+        encoded = _encode_temporal_payload(payload)
+        if len(encoded) == prior_len:
+            break
+    payload["selector_comparison"] = selector_sequence_encoding_comparison(sequence, path_payload_bytes=len(encoded))
+    encoded = _encode_temporal_payload(payload)
+    payload_bytes = len(encoded)
+    payload_sha256 = hashlib.sha256(encoded).hexdigest()
+    old_bytes = int(base_archive_bytes)
+    effect = ActionEffect.build(
+        action_id=f"selector_path:n{sequence.size}:{payload_sha256[:16]}",
+        family="pr110",
+        action_kind="selector_temporal_path",
+        inverse_source="selector_temporal_path",
+        frame_index="both",
+        frame_incidence="seg_pose_joint",
+        candidate_status="generated",
+        authority=authority,
+        normalization_scope="batch_local",
+        producer="path_action_producer",
+        consumer="inverse_evaluate_candidate_queue",
+        pair_ids=tuple(int(v) for v in pair_indices.tolist()),
+        payload_sections=["selector_temporal_path", f"temporal_payload_bytes={payload_bytes}"],
+        old_d_seg=old_d_seg,
+        new_d_seg=new_d_seg,
+        old_d_pose=old_d_pose,
+        new_d_pose=new_d_pose,
+        old_bytes=old_bytes,
+        new_bytes=old_bytes + payload_bytes,
+        receiver_surface={
+            "selector_temporal_path_pairs": int(sequence.size),
+            "selector_unique_modes": int(np.unique(sequence).size),
+        },
+        exact_score_decision="reject",
+        parseback_survived=False,
+        inflate_survived=False,
+        fakequant_survived=None,
+        payload_sha256=payload_sha256,
+        blockers=[
+            BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF,
+            BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
+            BLOCKER_PATH_ACTION_INFLATE_MISSING,
+        ],
+    )
+    return _temporal_result(effect=effect, payload=payload, encoded=encoded)
+
+
 def path_tube_support_from_mask(
     mask: np.ndarray,
     *,
@@ -425,6 +588,116 @@ def support_encoding_comparison(mask: np.ndarray, *, path_payload_bytes: int) ->
     }
 
 
+def selector_sequence_encoding_comparison(sequence: Sequence[int] | np.ndarray, *, path_payload_bytes: int) -> dict[str, Any]:
+    values = _int_array(sequence, name="selector_sequence")
+    if values.size == 0:
+        raw_bits = 0
+    else:
+        max_symbol = max(1, int(values.max()))
+        raw_bits = int(values.size * max(1, math.ceil(math.log2(max_symbol + 1))))
+    raw_bytes = math.ceil(raw_bits / 8.0)
+    return {
+        "schema": "tac.selector_temporal_encoding_comparison.v1",
+        "selector_count": int(values.size),
+        "unique_modes": int(np.unique(values).size) if values.size else 0,
+        "raw_fixed_width_bytes": raw_bytes,
+        "rle_bytes": _selector_rle_bytes(values),
+        "path_temporal_bytes": int(path_payload_bytes),
+        "best_encoding": min(
+            {
+                "raw_fixed_width": raw_bytes,
+                "rle": _selector_rle_bytes(values),
+                "path_temporal": int(path_payload_bytes),
+            }.items(),
+            key=lambda item: item[1],
+        )[0],
+    }
+
+
+def _temporal_result(*, effect: ActionEffect, payload: dict[str, Any], encoded: bytes) -> dict[str, Any]:
+    candidate = {
+        "schema": PATH_ACTION_CANDIDATE_SCHEMA,
+        "action_id": effect.action_id,
+        "family": effect.family,
+        "action_kind": effect.action_kind,
+        "temporal_path": payload,
+        "temporal_payload_bytes": len(encoded),
+        "temporal_payload_sha256": hashlib.sha256(encoded).hexdigest(),
+        "blockers": list(effect.blockers),
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return {
+        "schema": PATH_ACTION_PRODUCER_SCHEMA,
+        "candidate_count": 1,
+        "blockers": [],
+        "action_effects": [effect],
+        "candidate_queue": build_candidate_queue([effect]),
+        "path_action_candidates": [candidate],
+        "comparison": payload.get("selector_comparison", payload.get("comparison", {})),
+        "policy": {
+            "path_actions_do_not_clear_launch_gate": True,
+            "receiver_proof_required": True,
+            "rate_term_included_in_action_effect": True,
+        },
+    }
+
+
+def _empty_temporal_result(blocker: str) -> dict[str, Any]:
+    return {
+        "schema": PATH_ACTION_PRODUCER_SCHEMA,
+        "candidate_count": 0,
+        "blockers": [blocker],
+        "action_effects": [],
+        "candidate_queue": [],
+        "path_action_candidates": [],
+        "comparison": {},
+    }
+
+
+def _temporal_path_payload(
+    *,
+    family: str,
+    action_kind: str,
+    pair_indices: np.ndarray,
+    values: np.ndarray,
+    rdp_epsilon: float,
+    value_kind: str = "float_profile",
+) -> dict[str, Any]:
+    quantized = np.rint(values.astype(np.float64) * _TEMPORAL_QUANT_SCALE).astype(np.int64)
+    points = [(int(pair), int(value)) for pair, value in zip(pair_indices.tolist(), quantized.tolist(), strict=True)]
+    simplified = _rdp_simplify_numeric(points, epsilon=rdp_epsilon * _TEMPORAL_QUANT_SCALE)
+    payload = {
+        "schema": TEMPORAL_PATH_SCHEMA,
+        "family": family,
+        "action_kind": action_kind,
+        "value_kind": value_kind,
+        "quant_scale": _TEMPORAL_QUANT_SCALE,
+        "pair_count": int(pair_indices.size),
+        "pair_min": int(pair_indices.min()),
+        "pair_max": int(pair_indices.max()),
+        "control_point_count": len(simplified),
+        "control_points": [[int(pair), int(value)] for pair, value in simplified],
+        "profile_linf": float(np.max(np.abs(values))) if values.size else 0.0,
+        "profile_l2": float(np.linalg.norm(values)) if values.size else 0.0,
+    }
+    payload["payload_decode_sha256"] = hashlib.sha256(
+        np.column_stack([pair_indices.astype("<i8"), quantized.astype("<i8")]).tobytes(order="C")
+    ).hexdigest()
+    payload["comparison"] = {
+        "schema": "tac.temporal_path_encoding_comparison.v1",
+        "sample_count": int(pair_indices.size),
+        "raw_int64_pair_value_bytes": int(pair_indices.size * 16),
+        "control_point_int64_bytes": int(len(simplified) * 16),
+    }
+    return payload
+
+
+def _encode_temporal_payload(payload: Mapping[str, Any]) -> bytes:
+    return zlib.compress(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8"), level=9)
+
+
 def _centerline_path(mask: np.ndarray, *, epsilon: float) -> tuple[list[tuple[int, int]], int]:
     ys, xs = np.nonzero(mask)
     y0, y1 = int(ys.min()), int(ys.max())
@@ -481,6 +754,33 @@ def rdp_simplify(points: list[tuple[int, int]], *, epsilon: float) -> list[tuple
     return [points[0], points[-1]]
 
 
+def _rdp_simplify_numeric(points: list[tuple[int, int]], *, epsilon: float) -> list[tuple[int, int]]:
+    if len(points) <= 2:
+        return list(points)
+    start = np.array(points[0], dtype=np.float64)
+    end = np.array(points[-1], dtype=np.float64)
+    segment = end - start
+    denom = float(np.dot(segment, segment))
+    max_dist = -1.0
+    max_index = 0
+    for index, point in enumerate(points[1:-1], start=1):
+        p = np.array(point, dtype=np.float64)
+        if denom == 0.0:
+            dist = float(np.linalg.norm(p - start))
+        else:
+            t = float(np.dot(p - start, segment) / denom)
+            proj = start + max(0.0, min(1.0, t)) * segment
+            dist = float(np.linalg.norm(p - proj))
+        if dist > max_dist:
+            max_dist = dist
+            max_index = index
+    if max_dist > float(epsilon):
+        left = _rdp_simplify_numeric(points[: max_index + 1], epsilon=epsilon)
+        right = _rdp_simplify_numeric(points[max_index:], epsilon=epsilon)
+        return left[:-1] + right
+    return [points[0], points[-1]]
+
+
 def _paint_point(mask: np.ndarray, point: tuple[int, int], radius: int) -> None:
     y, x = point
     y0, y1 = max(0, y - radius), min(mask.shape[0] - 1, y + radius)
@@ -521,6 +821,19 @@ def _rle_bytes(flat: np.ndarray) -> int:
     return int(runs * 3)
 
 
+def _selector_rle_bytes(values: np.ndarray) -> int:
+    if values.size == 0:
+        return 0
+    runs = 1
+    prev = int(values[0])
+    for value in values[1:]:
+        cur = int(value)
+        if cur != prev:
+            runs += 1
+            prev = cur
+    return int(runs * 4)
+
+
 def _worst_unsolved_class(labels: np.ndarray, argmax: np.ndarray) -> int:
     classes, counts = np.unique(labels[labels != argmax], return_counts=True)
     if classes.size == 0:
@@ -550,19 +863,133 @@ def _path_action_id(*, pair_index: int, target_class: int, support_sha256: str) 
     return f"path_tube:p{int(pair_index)}:c{int(target_class)}:{support_sha256[:16]}"
 
 
+def _int_array(values: Sequence[int] | np.ndarray, *, name: str) -> np.ndarray:
+    arr = np.asarray(values)
+    if arr.ndim != 1:
+        raise ValueError(f"{name} must be a 1D sequence; got {arr.shape}")
+    if arr.size == 0:
+        return arr.astype(np.int64)
+    numeric = arr.astype(np.float64)
+    if not np.all(np.isfinite(numeric)):
+        raise ValueError(f"{name} must contain finite values")
+    if not np.all(numeric == np.rint(numeric)):
+        raise ValueError(f"{name} must contain integer-valued entries")
+    return arr.astype(np.int64)
+
+
+def _float_array(values: Sequence[float] | np.ndarray | None, *, name: str) -> np.ndarray:
+    if values is None:
+        raise ValueError(f"{name} is required")
+    arr = np.asarray(values, dtype=np.float64)
+    if arr.ndim != 1:
+        raise ValueError(f"{name} must be a 1D sequence; got {arr.shape}")
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} must contain finite values")
+    return arr
+
+
+def _selector_sequence_from_rows(
+    rows: Sequence[Mapping[str, Any]] | Mapping[str, Any],
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    if isinstance(rows, Mapping):
+        direct = _first_sequence(
+            rows,
+            "selector_sequence",
+            "selector_ids",
+            "selectors",
+            "mode_sequence",
+            "modes",
+        )
+        if direct is not None:
+            sequence = _int_array(direct, name="selector_sequence")
+            return (
+                np.arange(sequence.size, dtype=np.int64),
+                sequence,
+                {"source_kind": "direct_selector_sequence"},
+            )
+        nested = rows.get("selector")
+        if isinstance(nested, Mapping):
+            direct = _first_sequence(nested, "selector_sequence", "selector_ids", "selectors", "mode_sequence", "modes")
+            if direct is not None:
+                sequence = _int_array(direct, name="selector_sequence")
+                return (
+                    np.arange(sequence.size, dtype=np.int64),
+                    sequence,
+                    {"source_kind": "nested_selector_sequence"},
+                )
+        atoms = rows.get("atoms")
+        if isinstance(atoms, Sequence) and not isinstance(atoms, (str, bytes)):
+            rows = atoms
+        else:
+            return (
+                np.asarray([], dtype=np.int64),
+                np.asarray([], dtype=np.int64),
+                {"source_kind": "missing_selector_sequence"},
+            )
+    by_pair: dict[int, int] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        pair = _first_int(row, "pair_index", "pair_id")
+        mode = _first_int(row, "selector_id", "selector", "mode", "mode_id", "atom_mode")
+        scope = row.get("scope")
+        if pair is None and isinstance(scope, Mapping):
+            pair = _first_int(scope, "pair_index", "pair_id")
+        if mode is None and isinstance(scope, Mapping):
+            mode = _first_int(scope, "selector_id", "selector", "mode", "mode_id")
+        if pair is not None and mode is not None:
+            by_pair[int(pair)] = int(mode)
+    if not by_pair:
+        return (
+            np.asarray([], dtype=np.int64),
+            np.asarray([], dtype=np.int64),
+            {"source_kind": "missing_selector_rows"},
+        )
+    pair_indices = np.asarray(sorted(by_pair), dtype=np.int64)
+    sequence = np.asarray([by_pair[int(pair)] for pair in pair_indices], dtype=np.int64)
+    return pair_indices, sequence, {"source_kind": "pair_mode_rows", "row_count": len(by_pair)}
+
+
+def _first_sequence(row: Mapping[str, Any], *keys: str) -> Sequence[Any] | None:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            return value
+    return None
+
+
+def _first_int(row: Mapping[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return int(value)
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+    return None
+
+
 __all__ = [
     "BLOCKER_PATH_ACTION_INFLATE_MISSING",
     "BLOCKER_PATH_ACTION_PARSEBACK_MISSING",
+    "BLOCKER_PATH_POSE_TRAJECTORY_EMPTY",
+    "BLOCKER_PATH_SELECTOR_TRAJECTORY_EMPTY",
     "BLOCKER_PATH_SUPPORT_NOT_BIRTH",
+    "BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF",
     "PATH_ACTION_CANDIDATE_SCHEMA",
     "PATH_ACTION_PRODUCER_SCHEMA",
     "PATH_SUPPORT_SCHEMA",
+    "TEMPORAL_PATH_SCHEMA",
     "PathTubeSupport",
     "build_path_action_candidates_from_arrays",
+    "build_pose_temporal_path_candidates_from_arrays",
+    "build_selector_temporal_path_candidates_from_rows",
     "decode_path_tube_payload",
     "largest_connected_component",
     "path_tube_support_from_mask",
     "rdp_simplify",
+    "selector_sequence_encoding_comparison",
     "support_encoding_comparison",
     "support_mask_sha256",
 ]
