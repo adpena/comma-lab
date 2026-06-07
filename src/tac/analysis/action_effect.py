@@ -921,6 +921,9 @@ class ActionEffect:
     pose_output_l2_delta: float | None = None
     seg_score_delta: float | None = None
     pose_score_delta: float | None = None
+    segnet_margin_delta: float | None = None
+    fakequant_segnet_margin_delta: float | None = None
+    parseback_segnet_margin_delta: float | None = None
     rejection_source: str | None = None
     blockers: tuple[str, ...] = ()
     interaction_or_commutator: float | None = None
@@ -1018,6 +1021,9 @@ class ActionEffect:
         for name, value in (
             ("seg_score_delta", self.seg_score_delta),
             ("pose_score_delta", self.pose_score_delta),
+            ("segnet_margin_delta", self.segnet_margin_delta),
+            ("fakequant_segnet_margin_delta", self.fakequant_segnet_margin_delta),
+            ("parseback_segnet_margin_delta", self.parseback_segnet_margin_delta),
             ("interaction_or_commutator", self.interaction_or_commutator),
         ):
             _v1_validate_optional_finite_float(name, value)
@@ -1112,6 +1118,9 @@ class ActionEffect:
         pose_output_l2_delta: float | None = None,
         seg_score_delta: float | None = None,
         pose_score_delta: float | None = None,
+        segnet_margin_delta: float | None = None,
+        fakequant_segnet_margin_delta: float | None = None,
+        parseback_segnet_margin_delta: float | None = None,
         rejection_source: str | None = None,
         blockers: Sequence[str] = (),
         interaction_or_commutator: float | None = None,
@@ -1218,6 +1227,9 @@ class ActionEffect:
             pose_output_l2_delta=pose_output_l2_delta,
             seg_score_delta=seg_score_delta,
             pose_score_delta=pose_score_delta,
+            segnet_margin_delta=segnet_margin_delta,
+            fakequant_segnet_margin_delta=fakequant_segnet_margin_delta,
+            parseback_segnet_margin_delta=parseback_segnet_margin_delta,
             rejection_source=None if rejection_source is None else str(rejection_source),
             blockers=_v1_str_tuple(blockers),
             interaction_or_commutator=interaction_or_commutator,
@@ -1332,6 +1344,19 @@ class ActionEffect:
         action_section_telemetry = _v1_mapping(
             receipt.get("target_region_action_section_telemetry")
         )
+        before_margin_stats = _v1_mapping(receipt.get("before_region_margin_stats"))
+        after_margin_stats = _v1_mapping(receipt.get("after_region_margin_stats"))
+        before_margin_p50 = _v1_first_float(before_margin_stats, "margin_p50")
+        after_margin_p50 = _v1_first_float(after_margin_stats, "margin_p50")
+        margin_p50_delta = _v1_first_float(
+            receipt,
+            "segnet_margin_delta",
+            "target_margin_delta",
+            "worst_region_margin_p50_delta",
+            "receiver_surface_worst_region_margin_p50_delta",
+        )
+        if margin_p50_delta is None and before_margin_p50 is not None and after_margin_p50 is not None:
+            margin_p50_delta = after_margin_p50 - before_margin_p50
         receiver_delta_linf = None if receiver_uint8_delta_abs_max is None else receiver_uint8_delta_abs_max / 255.0
         admission_decision = _v1_mapping(receipt.get("admission_decision"))
         if not admission_decision:
@@ -1573,6 +1598,17 @@ class ActionEffect:
             or (None if old_d_seg is None or new_d_seg is None else 100.0 * (new_d_seg - old_d_seg)),
             pose_score_delta=_v1_first_float(admission_decision, "pose_score_delta")
             or _v1_pose_score_delta(old_d_pose, new_d_pose),
+            segnet_margin_delta=margin_p50_delta,
+            fakequant_segnet_margin_delta=_v1_first_float(
+                receipt,
+                "fakequant_segnet_margin_delta",
+                "fakequant_worst_region_margin_p50_delta",
+            ),
+            parseback_segnet_margin_delta=_v1_first_float(
+                receipt,
+                "parseback_segnet_margin_delta",
+                "parseback_worst_region_margin_p50_delta",
+            ),
             rejection_source=_v1_first_text(admission_decision, "rejection_source")
             or _v1_first_text(receipt, "rejection_source"),
             blockers=receipt_blockers,
@@ -1804,6 +1840,20 @@ class ActionEffect:
                 transition_values,
                 "posenet_input_delta_linf_pair",
                 "pose_input_delta_linf_pair",
+            ),
+            segnet_margin_delta=_v1_first_float(
+                transition_values,
+                "segnet_margin_delta",
+                "target_margin_delta",
+                "receiver_surface_worst_region_margin_p50_delta",
+            ),
+            fakequant_segnet_margin_delta=_v1_first_float(
+                transition_values,
+                "fakequant_segnet_margin_delta",
+            ),
+            parseback_segnet_margin_delta=_v1_first_float(
+                transition_values,
+                "parseback_segnet_margin_delta",
             ),
             reference_bytes=reference_bytes,
         )
@@ -2136,6 +2186,13 @@ class ActionEffect:
             pose_output_l2_delta=_v1_float_or_none(payload.get("pose_output_l2_delta")),
             seg_score_delta=_v1_float_or_none(payload.get("seg_score_delta")),
             pose_score_delta=_v1_float_or_none(payload.get("pose_score_delta")),
+            segnet_margin_delta=_v1_float_or_none(payload.get("segnet_margin_delta")),
+            fakequant_segnet_margin_delta=_v1_float_or_none(
+                payload.get("fakequant_segnet_margin_delta")
+            ),
+            parseback_segnet_margin_delta=_v1_float_or_none(
+                payload.get("parseback_segnet_margin_delta")
+            ),
             rejection_source=(
                 None if payload.get("rejection_source") is None else str(payload["rejection_source"])
             ),

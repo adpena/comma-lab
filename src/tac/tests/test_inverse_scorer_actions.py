@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects
@@ -101,6 +102,7 @@ def _frame1_birth_effect() -> ActionEffect:
         seg_input_delta_linf_region=1.0,
         argmax_changed_count_region=7,
         wrong_to_target=5,
+        segnet_margin_delta=-0.125,
         support_source="explicit_payload_coordinates",
         support_cardinality=32,
         support_sha256="a" * 64,
@@ -142,6 +144,7 @@ def _composite_effect() -> ActionEffect:
         wrong_to_target=8,
         pose_output_l2_delta=1.5,
         interaction_or_commutator=-0.25,
+        segnet_margin_delta=-0.25,
         support_source="explicit_payload_coordinates",
         support_cardinality=48,
         support_sha256="a" * 64,
@@ -788,6 +791,8 @@ def test_candidate_queue_carries_support_hash_continuity() -> None:
     assert frame1["support_encoding"] == "explicit_yx_u16_coordinates"
     assert frame1["support_encoded_bytes"] == 64
     assert frame1["support_research_only"] is False
+    assert frame1["segnet_margin_delta"] == pytest.approx(-0.125)
+    assert frame1["score_program_operation"]["segnet_margin_delta"] == pytest.approx(-0.125)
     assert BLOCKER_REGION_SUPPORT_RESEARCH_ONLY not in frame1["blockers"]
 
 

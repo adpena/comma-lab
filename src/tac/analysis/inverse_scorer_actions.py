@@ -715,6 +715,23 @@ def build_masked_residual_oracle_action_effect(
         pose_output_l2_delta=_first_float(candidate, "pose_output_delta_l2"),
         seg_score_delta=_first_float(admission, "seg_score_delta"),
         pose_score_delta=_first_float(admission, "pose_score_delta"),
+        segnet_margin_delta=_first_float(
+            candidate,
+            "segnet_margin_delta",
+            "target_region_margin_delta",
+            "worst_region_margin_p50_delta",
+            "receiver_surface_worst_region_margin_p50_delta",
+        ),
+        fakequant_segnet_margin_delta=_first_float(
+            candidate,
+            "fakequant_segnet_margin_delta",
+            "fakequant_worst_region_margin_p50_delta",
+        ),
+        parseback_segnet_margin_delta=_first_float(
+            candidate,
+            "parseback_segnet_margin_delta",
+            "parseback_worst_region_margin_p50_delta",
+        ),
         rejection_source=(
             None if admission.get("rejection_source") is None else str(admission["rejection_source"])
         ),
@@ -889,6 +906,9 @@ def build_candidate_queue(
                 "byte_cost": _byte_cost(effect),
                 "delta_score_nonrate": effect.delta_score_nonrate,
                 "delta_score_total": effect.delta_score_total,
+                "segnet_margin_delta": effect.segnet_margin_delta,
+                "fakequant_segnet_margin_delta": effect.fakequant_segnet_margin_delta,
+                "parseback_segnet_margin_delta": effect.parseback_segnet_margin_delta,
                 "delta_bytes": effect.delta_bytes,
                 "value_per_byte": effect.value_per_byte,
                 "dependencies": list(candidate.dependencies if candidate is not None else ()),
@@ -1166,6 +1186,9 @@ def _score_program_operation_for_effect(
         "trained_groups": list(effect.trained_groups),
         "delta_score_nonrate": effect.delta_score_nonrate,
         "delta_score_total": effect.delta_score_total,
+        "segnet_margin_delta": effect.segnet_margin_delta,
+        "fakequant_segnet_margin_delta": effect.fakequant_segnet_margin_delta,
+        "parseback_segnet_margin_delta": effect.parseback_segnet_margin_delta,
         "delta_bytes": effect.delta_bytes,
         "value_per_byte": effect.value_per_byte,
         "receiver_visible": _receiver_visible(effect),
@@ -1204,6 +1227,9 @@ def _score_program_operation_from_row(row: Mapping[str, Any], *, index: int) -> 
             "frame_index": row.get("frame_index"),
             "frame_incidence": row.get("frame_incidence"),
             "region_ids": list(row.get("region_ids") or []),
+            "segnet_margin_delta": row.get("segnet_margin_delta"),
+            "fakequant_segnet_margin_delta": row.get("fakequant_segnet_margin_delta"),
+            "parseback_segnet_margin_delta": row.get("parseback_segnet_margin_delta"),
         }
     operation["index"] = int(index)
     operation.setdefault("schema", SCORE_PROGRAM_OPERATION_SCHEMA)

@@ -700,9 +700,11 @@ def test_v1_from_hinerv_birth_receipt_real_schema_roundtrips() -> None:
     assert eff.uint8_changed_count_region == 12
     assert eff.seg_input_delta_linf_region == pytest.approx(0.03125)
     assert eff.posenet_input_delta_linf_pair == pytest.approx(0.015625)
+    assert eff.segnet_margin_delta == pytest.approx(-0.7)
     roundtrip = ActionEffect.from_dict(eff.as_dict())
     assert roundtrip.hard_won_count == 10
     assert roundtrip.uint8_changed_count_region == 12
+    assert roundtrip.segnet_margin_delta == pytest.approx(-0.7)
 
 
 def test_v1_from_hinerv_birth_receipt_no_pose_teacher_leaves_distortion_none() -> None:
@@ -921,6 +923,9 @@ def test_v1_from_pair_local_admission_real_admission_roundtrips_structurally() -
     assert eff.net_target_support_delta == 8
     assert eff.uint8_changed_count_region == 12
     assert eff.seg_input_delta_linf_region == pytest.approx(0.01)
+    assert eff.segnet_margin_delta == pytest.approx(-0.5)
+    assert eff.fakequant_segnet_margin_delta == pytest.approx(-0.4)
+    assert eff.parseback_segnet_margin_delta == pytest.approx(-0.3)
     # deltas-only admission ⇒ no absolute endpoints ⇒ no fabricated nonrate.
     assert eff.old_d_seg is None
     assert eff.delta_score_nonrate is None
