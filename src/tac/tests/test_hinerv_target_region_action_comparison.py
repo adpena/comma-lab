@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -94,7 +96,7 @@ def _receipts(tmp_path: Path, archive: Path, action: TargetRegionPixelAction) ->
         "action_id": action_id,
         "archive_path": archive.as_posix(),
         "archive_bytes": archive.stat().st_size,
-        "archive_sha256": "a" * 64,
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
         "fakequant_survived": True,
         "parseback_survived": True,
         "inflate_survived": True,
@@ -275,6 +277,34 @@ def test_hinerv_action_comparison_uses_archive_executable_direct_support(
     )
 
 
+def test_hinerv_action_comparison_rejects_survival_receipt_archive_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    survival = json.loads(survival_path.read_text(encoding="utf-8"))
+    survival["archive_sha256"] = "a" * 64
+    survival_path.write_text(json.dumps(survival), encoding="utf-8")
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+    )
+
+    current = report["sidecar_encoding_candidates"][0]
+    assert report["survival_identity"]["passed"] is False
+    assert "target_region_action_survival_archive_sha256_mismatch" in report[
+        "survival_identity"
+    ]["blockers"]
+    assert current["receiver_bound"] is False
+    assert current["first_failed_surface"] == (
+        "target_region_action_survival_identity_mismatch"
+    )
+    assert report["comparison"]["sidecar_current_inflate_survived"] is False
+    assert report["lowering_race"]["same_survival_identity_as_archive"] is False
+
+
 def test_hinerv_action_comparison_writes_report_and_action_effect_rows(tmp_path: Path) -> None:
     archive, action = _tiny_archive_with_action(tmp_path)
     survival_path, runner_path = _receipts(tmp_path, archive, action)
@@ -294,3 +324,41 @@ def test_hinerv_action_comparison_writes_report_and_action_effect_rows(tmp_path:
     rows = [json.loads(line) for line in rows_path.read_text().splitlines()]
     assert rows[0]["schema"] == "tac.action_effect.v1"
     assert rows[0]["action_id"] == "hinerv-test-action"
+
+
+def test_compare_hinerv_action_cli_surfaces_report_blocker(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    out_dir = tmp_path / "cli_out"
+
+    from tools import compare_hinerv_target_region_action as cli
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "compare_hinerv_target_region_action.py",
+            "--archive",
+            archive.as_posix(),
+            "--survival-receipt",
+            survival_path.as_posix(),
+            "--runner-report",
+            runner_path.as_posix(),
+            "--output-dir",
+            out_dir.as_posix(),
+        ],
+    )
+
+    assert cli.main() == 0
+    summary = json.loads(capsys.readouterr().out)
+
+    assert summary["action_id"] == "hinerv-test-action"
+    assert summary["support_sha256"] == target_region_action_support_sha256([action])
+    assert summary["best_lowering"] == "none"
+    assert summary["first_failing_surface"] == "support_identity_mismatch"
+    assert summary["next_blocker"] == "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+    assert summary["sidecar_current_inflate_survived"] is True

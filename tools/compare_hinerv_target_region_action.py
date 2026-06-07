@@ -58,6 +58,7 @@ def main() -> int:
         action_id=args.action_id,
     )
     written = write_hinerv_target_region_action_comparison(report, out_dir)
+    comparison = report.get("comparison") if isinstance(report.get("comparison"), dict) else {}
     lowering_race = report.get("lowering_race") if isinstance(report.get("lowering_race"), dict) else {}
     verdict = lowering_race.get("verdict") if isinstance(lowering_race.get("verdict"), dict) else {}
     summary = {
@@ -66,14 +67,18 @@ def main() -> int:
         **written,
         "action_id": report.get("action_id"),
         "support_sha256": report.get("support_sha256"),
-        "best_lowering": verdict.get("best_lowering") or lowering_race.get("best_lowering"),
+        "best_lowering": (
+            comparison.get("best_lowering")
+            or verdict.get("best_lowering")
+            or lowering_race.get("best_lowering")
+        ),
         "first_failing_surface": (
-            verdict.get("first_failing_surface") or lowering_race.get("first_failing_surface")
+            comparison.get("first_failing_surface")
+            or verdict.get("first_failing_surface")
+            or lowering_race.get("first_failing_surface")
         ),
-        "next_blocker": (report.get("comparison") or {}).get("next_blocker"),
-        "sidecar_current_inflate_survived": (report.get("comparison") or {}).get(
-            "sidecar_current_inflate_survived"
-        ),
+        "next_blocker": comparison.get("next_blocker"),
+        "sidecar_current_inflate_survived": comparison.get("sidecar_current_inflate_survived"),
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,

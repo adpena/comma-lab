@@ -57,6 +57,7 @@ HI_NERV_TARGET_REGION_ACTION_COMPARISON_ROW_SCHEMA = (
 )
 EVALUATOR_ACTION_LOWERING_RACE_SCHEMA = "hi_nerv_target_region_action_lowering_race.v1"
 _SUPPORT_IDENTITY_MISMATCH = "support_identity_mismatch"
+_SURVIVAL_IDENTITY_MISMATCH = "target_region_action_survival_identity_mismatch"
 
 _BACKEND_LADDER_TIERS = (
     ("latents_fine", ("latents_fine",)),
@@ -161,6 +162,19 @@ def build_hinerv_target_region_action_comparison(
         if sidecar_support_mismatch
         else []
     )
+    survival_identity = _survival_identity_status(
+        survival_receipt,
+        action_id=chosen_action_id,
+        support_sha256=support_sha256,
+        archive_sha256=program.archive_sha256,
+    )
+    survival_identity_blockers = list(survival_identity["blockers"])
+    current_receiver_bound = not survival_identity_blockers
+    current_first_failed = (
+        _SURVIVAL_IDENTITY_MISMATCH
+        if survival_identity_blockers
+        else (_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None)
+    )
 
     base_zip = _action_free_archive_bytes(program)
     old_bytes = int(base_zip["archive_bytes_without_target_region_actions"])
@@ -179,11 +193,11 @@ def build_hinerv_target_region_action_comparison(
         old_bytes=old_bytes,
         new_bytes=int(program.archive_bytes),
         sidecar_admission=sidecar_admission,
-        survival_receipt=survival_receipt,
-        first_failed_surface=_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None,
-        blockers=support_identity_blockers,
+        survival_receipt=survival_receipt if current_receiver_bound else {},
+        first_failed_surface=current_first_failed,
+        blockers=[*survival_identity_blockers, *support_identity_blockers],
         exact_payload_equivalent=True,
-        receiver_bound=True,
+        receiver_bound=current_receiver_bound,
     )
     sidecar_rows = [current_row]
     for support in support_rows:
@@ -206,15 +220,27 @@ def build_hinerv_target_region_action_comparison(
                 + (0 if support_encoded_bytes is None else support_encoded_bytes)
                 + (0 if action_payload_bytes is None else action_payload_bytes)
             )
-            blockers = list(support_identity_blockers)
-            first_failed = _SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else "runtime_decoder_not_bound"
+            blockers = [*survival_identity_blockers, *support_identity_blockers]
+            first_failed = (
+                _SURVIVAL_IDENTITY_MISMATCH
+                if survival_identity_blockers
+                else (
+                    _SUPPORT_IDENTITY_MISMATCH
+                    if sidecar_support_mismatch
+                    else "runtime_decoder_not_bound"
+                )
+            )
             if support_encoded_bytes is None or action_payload_bytes is None:
                 blockers.append("target_region_action_candidate_byte_accounting_missing")
-                if not sidecar_support_mismatch:
+                if not sidecar_support_mismatch and not survival_identity_blockers:
                     first_failed = "byte_accounting_missing"
             if not exact_payload_equivalent:
                 blockers.append("target_region_action_candidate_not_lossless")
-                if not sidecar_support_mismatch and first_failed == "runtime_decoder_not_bound":
+                if (
+                    not sidecar_support_mismatch
+                    and not survival_identity_blockers
+                    and first_failed == "runtime_decoder_not_bound"
+                ):
                     first_failed = "action_or_support_not_lossless"
             blockers.append("target_region_action_runtime_decoder_not_bound")
             sidecar_rows.append(
@@ -280,6 +306,8 @@ def build_hinerv_target_region_action_comparison(
     )
     if sidecar_support_mismatch:
         next_blocker = "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+    if survival_identity_blockers:
+        next_blocker = survival_identity_blockers[0]
     lowering_race = _lowering_race_verdict(
         action_id=chosen_action_id,
         support_sha256=support_sha256,
@@ -288,6 +316,7 @@ def build_hinerv_target_region_action_comparison(
         current_sidecar=current_row,
         sidecar_rows=sidecar_rows,
         sidecar_support_mismatch=sidecar_support_mismatch,
+        sidecar_survival_identity_mismatch=bool(survival_identity_blockers),
     )
 
     return {
@@ -322,6 +351,7 @@ def build_hinerv_target_region_action_comparison(
                 else []
             ),
         },
+        "survival_identity": survival_identity,
         "same_action_support": same_support,
         "sidecar_encoding_candidates": sidecar_rows,
         "backend_ladder": backend_ladder,
@@ -944,6 +974,7 @@ def _lowering_race_verdict(
     current_sidecar: Mapping[str, Any],
     sidecar_rows: Sequence[Mapping[str, Any]],
     sidecar_support_mismatch: bool,
+    sidecar_survival_identity_mismatch: bool,
 ) -> dict[str, Any]:
     """Summarize the fixed-action backend/sidecar lowering race.
 
@@ -964,15 +995,20 @@ def _lowering_race_verdict(
 
     report = build_lowering_race_report(action_id=action_id, action_effects=effects)
     verdict = dict(report["verdict"])
-    if sidecar_support_mismatch:
+    if sidecar_support_mismatch or sidecar_survival_identity_mismatch:
+        first_failing_surface = (
+            _SURVIVAL_IDENTITY_MISMATCH
+            if sidecar_survival_identity_mismatch
+            else _SUPPORT_IDENTITY_MISMATCH
+        )
         verdict.update(
             {
                 "support_sha256": support_sha256,
-                "direct_teacher_status": _SUPPORT_IDENTITY_MISMATCH,
-                "backend_status": _SUPPORT_IDENTITY_MISMATCH,
-                "sidecar_status": _SUPPORT_IDENTITY_MISMATCH,
+                "direct_teacher_status": first_failing_surface,
+                "backend_status": first_failing_surface,
+                "sidecar_status": first_failing_surface,
                 "best_lowering": "none",
-                "first_failing_surface": _SUPPORT_IDENTITY_MISMATCH,
+                "first_failing_surface": first_failing_surface,
                 "authority": "none",
                 "promotion_eligible": False,
                 "delta_score_nonrate": None,
@@ -990,6 +1026,7 @@ def _lowering_race_verdict(
             "comparison_support_sha256"
         ],
         "same_support_as_direct_teacher": not sidecar_support_mismatch,
+        "same_survival_identity_as_archive": not sidecar_survival_identity_mismatch,
         "best_lowering": verdict["best_lowering"],
         "first_failing_surface": verdict["first_failing_surface"],
         "verdict": verdict,
@@ -1174,6 +1211,57 @@ def _direct_teacher_support_identity(direct: Mapping[str, Any]) -> dict[str, str
         ),
         "archive_executable_support_sha256": archive_sha,
         "mask_support_sha256": mask_sha,
+    }
+
+
+def _survival_identity_status(
+    survival: Mapping[str, Any],
+    *,
+    action_id: str,
+    support_sha256: str,
+    archive_sha256: str,
+) -> dict[str, Any]:
+    observed_action_id = _nested_first_text(
+        survival,
+        ("action_id",),
+        ("target_region_actions", "action_id"),
+    )
+    observed_support_sha256 = _nested_first_text(
+        survival,
+        ("target_region_actions", "support_sha256"),
+        ("expected_support_sha256",),
+        ("support_sha256",),
+    )
+    observed_archive_sha256 = _nested_first_text(
+        survival,
+        ("archive_sha256",),
+        ("expected_archive_sha256",),
+        ("archive", "sha256"),
+    )
+    blockers: list[str] = []
+    if observed_action_id and observed_action_id != action_id:
+        blockers.append("target_region_action_survival_action_id_mismatch")
+    if not observed_support_sha256:
+        blockers.append("target_region_action_survival_support_sha256_missing")
+    elif observed_support_sha256 != support_sha256:
+        blockers.append("target_region_action_survival_support_sha256_mismatch")
+    if not observed_archive_sha256:
+        blockers.append("target_region_action_survival_archive_sha256_missing")
+    elif observed_archive_sha256 != archive_sha256:
+        blockers.append("target_region_action_survival_archive_sha256_mismatch")
+    return {
+        "schema": "hi_nerv_target_region_action_survival_identity.v1",
+        "action_id": action_id,
+        "support_sha256": support_sha256,
+        "archive_sha256": archive_sha256,
+        "survival_action_id": observed_action_id,
+        "survival_support_sha256": observed_support_sha256,
+        "survival_archive_sha256": observed_archive_sha256,
+        "same_action_id": observed_action_id in (None, action_id),
+        "same_support_sha256": observed_support_sha256 == support_sha256,
+        "same_archive_sha256": observed_archive_sha256 == archive_sha256,
+        "passed": not blockers,
+        "blockers": blockers,
     }
 
 
