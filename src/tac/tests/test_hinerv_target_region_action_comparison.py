@@ -310,6 +310,35 @@ def test_hinerv_action_comparison_rejects_survival_receipt_archive_mismatch(
     assert report["lowering_race"]["same_survival_identity_as_archive"] is False
 
 
+def test_hinerv_action_comparison_rejects_survival_receipt_missing_action_id(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    survival = json.loads(survival_path.read_text(encoding="utf-8"))
+    survival.pop("action_id")
+    survival_path.write_text(json.dumps(survival), encoding="utf-8")
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+    )
+
+    current = report["sidecar_encoding_candidates"][0]
+    assert report["survival_identity"]["passed"] is False
+    assert report["survival_identity"]["same_action_id"] is False
+    assert "target_region_action_survival_action_id_missing" in report[
+        "survival_identity"
+    ]["blockers"]
+    assert current["receiver_bound"] is False
+    assert current["first_failed_surface"] == (
+        "target_region_action_survival_identity_mismatch"
+    )
+    assert "target_region_action_survival_action_id_missing" in current["blockers"]
+    assert report["comparison"]["sidecar_current_inflate_survived"] is False
+
+
 def test_hinerv_action_comparison_writes_report_and_action_effect_rows(tmp_path: Path) -> None:
     archive, action = _tiny_archive_with_action(tmp_path)
     survival_path, runner_path = _receipts(tmp_path, archive, action)

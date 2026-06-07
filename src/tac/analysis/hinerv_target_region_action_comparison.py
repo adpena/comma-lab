@@ -1244,7 +1244,9 @@ def _survival_identity_status(
         ("archive", "sha256"),
     )
     blockers: list[str] = []
-    if observed_action_id and observed_action_id != action_id:
+    if not observed_action_id:
+        blockers.append("target_region_action_survival_action_id_missing")
+    elif observed_action_id != action_id:
         blockers.append("target_region_action_survival_action_id_mismatch")
     if not observed_support_sha256:
         blockers.append("target_region_action_survival_support_sha256_missing")
@@ -1262,7 +1264,7 @@ def _survival_identity_status(
         "survival_action_id": observed_action_id,
         "survival_support_sha256": observed_support_sha256,
         "survival_archive_sha256": observed_archive_sha256,
-        "same_action_id": observed_action_id in (None, action_id),
+        "same_action_id": observed_action_id == action_id,
         "same_support_sha256": observed_support_sha256 == support_sha256,
         "same_archive_sha256": observed_archive_sha256 == archive_sha256,
         "passed": not blockers,
