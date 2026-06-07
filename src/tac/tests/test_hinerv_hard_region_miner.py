@@ -122,6 +122,27 @@ def test_compact_target_margin_miner_matches_full_logits_ranking() -> None:
     assert [row.as_dict() for row in compact] == [row.as_dict() for row in full]
 
 
+def test_hard_region_miner_uses_unsolved_component_not_full_class_mask() -> None:
+    labels = np.zeros((1, 16, 16), dtype=np.int64)
+    labels[0, 2:10, 2:10] = 1
+    candidate = labels.copy()
+    candidate[0, 4:6, 4:6] = 0
+    logits = _logits_like(labels, class_count=2)
+    target_margin = np.zeros(labels.shape, dtype=np.float64)
+
+    full = mine_hard_regions(labels, candidate, logits, top_k=1)
+    compact = mine_hard_regions_from_margin_map(labels, candidate, target_margin, top_k=1)
+
+    assert len(full) == 1
+    assert len(compact) == 1
+    assert full[0].class_index == 1
+    assert compact[0].class_index == 1
+    assert full[0].debt.region_pixel_count == 4
+    assert compact[0].debt.region_pixel_count == 4
+    assert full[0].debt.region_unsolved_pixel_count == 4
+    assert compact[0].debt.region_unsolved_pixel_count == 4
+
+
 def test_size_class_boundaries_are_closed_open() -> None:
     assert size_class_for_pixels(1) == "small"
     assert size_class_for_pixels(63) == "small"

@@ -70613,11 +70613,11 @@
       "id": "hi_nerv_target_region_birth_v31_action_payload",
       "name": "HiNeRV target-region birth v31 charged action payload",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/analysis/hinerv_hard_region_miner.py now reconstructs positive-debt regions from the same connected unsolved-pixel mask as target_region_birth; regression covers tiny unsolved island inside large semantic class"
         },
         "real_archive_empirical": {
           "status": false,
@@ -70632,8 +70632,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "uv run ruff check src/tac/analysis/hinerv_hard_region_miner.py src/tac/tests/test_hinerv_hard_region_miner.py; uv run pytest src/tac/tests/test_hinerv_hard_region_miner.py => 12 passed; real v31 bundle mines 8 regions after fix"
         },
         "three_clean_review": {
           "status": false,
@@ -70658,5 +70658,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-07T01:58:38Z"
+  "updated_at": "2026-06-07T02:05:17Z"
 }

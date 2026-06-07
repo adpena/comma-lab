@@ -158,23 +158,30 @@ def _validate_bhw(name: str, array: np.ndarray) -> np.ndarray:
 
 def _region_mask_for(
     target_bhw: np.ndarray,
+    candidate_bhw: np.ndarray,
     *,
     batch_index: int,
     class_index: int,
     region_label: int,
     expected_pixels: int,
+    expected_unsolved_pixels: int,
 ) -> np.ndarray:
     """Reconstruct the BHW float32 mask for ONE priced region.
 
-    ``find_target_region_debts`` assigns ``region_label`` per
-    ``ndimage.label`` over the per-frame class mask, so we relabel the same way
-    and select the matching component.  We assert the pixel count matches the
-    priced row so a relabel drift surfaces loudly instead of silently scoring a
-    different region.
+    ``find_target_region_debts`` assigns positive-debt ``region_label`` values
+    over connected wrong target-class pixels, not over the whole semantic class.
+    Reuse that exact debt mask here so the miner, actuator, and parse-back
+    receipts share one coordinate system.  Solved diagnostic rows still fall
+    back to full class components.
     """
 
     frame_target = target_bhw[batch_index]
-    labeled, _count = ndimage.label(frame_target == class_index)
+    frame_candidate = candidate_bhw[batch_index]
+    if int(expected_unsolved_pixels) > 0:
+        label_mask = (frame_target == class_index) & (frame_candidate != class_index)
+    else:
+        label_mask = frame_target == class_index
+    labeled, _count = ndimage.label(label_mask)
     mask = np.zeros(target_bhw.shape, dtype=np.float32)
     mask[batch_index] = (labeled == region_label).astype(np.float32)
     found = int(np.count_nonzero(mask))
@@ -269,7 +276,7 @@ def mine_hard_regions(
     # ``candidate_argmax`` shape is validated against ``target`` inside
     # ``find_target_region_debts`` (matching-shape check) below; validate it
     # here too for an early, miner-scoped error message.
-    _validate_bhw("candidate_argmax", candidate_argmax)
+    candidate = _validate_bhw("candidate_argmax", candidate_argmax)
     logits = np.asarray(logits_bhwc, dtype=np.float64)
     if logits.ndim != 4:
         raise HardRegionMinerError(f"logits_bhwc must be BHWC; got shape {np.asarray(logits_bhwc).shape}")
@@ -298,10 +305,12 @@ def mine_hard_regions(
             continue
         mask = _region_mask_for(
             target,
+            candidate,
             batch_index=debt.batch_index,
             class_index=debt.class_index,
             region_label=debt.region_label,
             expected_pixels=debt.region_pixel_count,
+            expected_unsolved_pixels=debt.region_unsolved_pixel_count,
         )
         stats = region_margin_stats(logits, mask, debt.class_index)
         pose_risk: float | None = None
@@ -381,7 +390,7 @@ def mine_hard_regions_from_margin_map(
     if top_k < 1:
         raise HardRegionMinerError(f"top_k must be >= 1; got {top_k}")
     target = _validate_bhw("target_labels", target_labels)
-    _validate_bhw("candidate_argmax", candidate_argmax)
+    candidate = _validate_bhw("candidate_argmax", candidate_argmax)
     margin_map = _validate_bhw("target_margin_bhw", target_margin_bhw).astype(
         np.float64,
         copy=False,
@@ -409,10 +418,12 @@ def mine_hard_regions_from_margin_map(
             continue
         mask = _region_mask_for(
             target,
+            candidate,
             batch_index=debt.batch_index,
             class_index=debt.class_index,
             region_label=debt.region_label,
             expected_pixels=debt.region_pixel_count,
+            expected_unsolved_pixels=debt.region_unsolved_pixel_count,
         )
         stats = _margin_map_stats(margin_map, mask)
         pose_risk: float | None = None
