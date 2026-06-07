@@ -89,10 +89,18 @@ _ACTION_EFFECT_V1_TAINT_STATUSES = frozenset({"clean", "tainted", "remediated", 
 _ACTION_EFFECT_V1_INVERSE_SOURCES = frozenset(
     {
         "segnet_margin_gradient",
+        "segnet_margin_vjp",
+        "segnet_target_margin_vjp",
+        "target_margin_vjp",
+        "support_projected_segnet_margin_vjp",
         "posenet_yuv6_gradient",
         "frame0_pose_nullseg",
         "joint_seg_pose_projection",
         "integer_receiver_line_search",
+        "masked_residual",
+        "receiver_surface_masked_rgb_residual_on_support",
+        "scorer_causal_pixel_synthesis",
+        "source_rgb_residual_copy",
         "manual_pr110_replay",
         "qrgb_basis",
         "commutator_macro_action",
@@ -900,6 +908,12 @@ class ActionEffect:
     uint8_changed_count_region: int | None = None
     seg_input_delta_linf_region: float | None = None
     posenet_input_delta_linf_pair: float | None = None
+    support_source: str | None = None
+    support_cardinality: int | None = None
+    support_sha256: str | None = None
+    support_encoding: str | None = None
+    support_encoded_bytes: int | None = None
+    support_research_only: bool | None = None
     arm: str | None = None
     old_region_debt: float | None = None
     new_region_debt: float | None = None
@@ -986,9 +1000,13 @@ class ActionEffect:
             ("wrong_to_wrong", self.wrong_to_wrong),
             ("uint8_changed_count_region", self.uint8_changed_count_region),
             ("argmax_changed_count_region", self.argmax_changed_count_region),
+            ("support_cardinality", self.support_cardinality),
+            ("support_encoded_bytes", self.support_encoded_bytes),
         ):
             _v1_validate_optional_nonnegative_int(name, value)
         _v1_validate_optional_int("net_target_support_delta", self.net_target_support_delta)
+        if self.support_sha256 is not None and not is_sha256_hex(self.support_sha256):
+            raise ValueError("support_sha256 must be a SHA-256 hex string or None")
         for name, value in (
             ("seg_input_delta_linf_region", self.seg_input_delta_linf_region),
             ("posenet_input_delta_linf_pair", self.posenet_input_delta_linf_pair),
@@ -1081,6 +1099,12 @@ class ActionEffect:
         uint8_changed_count_region: int | None = None,
         seg_input_delta_linf_region: float | None = None,
         posenet_input_delta_linf_pair: float | None = None,
+        support_source: str | None = None,
+        support_cardinality: int | None = None,
+        support_sha256: str | None = None,
+        support_encoding: str | None = None,
+        support_encoded_bytes: int | None = None,
+        support_research_only: bool | None = None,
         arm: str | None = None,
         old_region_debt: float | None = None,
         new_region_debt: float | None = None,
@@ -1181,6 +1205,12 @@ class ActionEffect:
             uint8_changed_count_region=uint8_changed_count_region,
             seg_input_delta_linf_region=seg_input_delta_linf_region,
             posenet_input_delta_linf_pair=posenet_input_delta_linf_pair,
+            support_source=None if support_source is None else str(support_source),
+            support_cardinality=support_cardinality,
+            support_sha256=None if support_sha256 is None else str(support_sha256),
+            support_encoding=None if support_encoding is None else str(support_encoding),
+            support_encoded_bytes=support_encoded_bytes,
+            support_research_only=_v1_bool_or_none(support_research_only),
             arm=None if arm is None else str(arm),
             old_region_debt=old_region_debt,
             new_region_debt=new_region_debt,
@@ -1298,6 +1328,9 @@ class ActionEffect:
             receipt,
             "receiver_uint8_delta_abs_max",
             "receiver_surface_uint8_delta_abs_max",
+        )
+        action_section_telemetry = _v1_mapping(
+            receipt.get("target_region_action_section_telemetry")
         )
         receiver_delta_linf = None if receiver_uint8_delta_abs_max is None else receiver_uint8_delta_abs_max / 255.0
         admission_decision = _v1_mapping(receipt.get("admission_decision"))
@@ -1562,6 +1595,20 @@ class ActionEffect:
                 "pose_input_delta_linf_pair",
             )
             or receiver_delta_linf,
+            support_source=_v1_first_text(action_section_telemetry, "support_source"),
+            support_cardinality=_v1_first_int(action_section_telemetry, "support_cardinality"),
+            support_sha256=_v1_first_text(action_section_telemetry, "support_sha256"),
+            support_encoding=_v1_first_text(action_section_telemetry, "support_encoding"),
+            support_encoded_bytes=_v1_first_int(action_section_telemetry, "support_encoded_bytes"),
+            support_research_only=(
+                None
+                if action_section_telemetry
+                else (
+                    True
+                    if region_ids and action_kind in {"target_region_birth", "birth_only"}
+                    else None
+                )
+            ),
             reference_bytes=reference_bytes,
         )
 
@@ -2072,6 +2119,16 @@ class ActionEffect:
             uint8_changed_count_region=_v1_int_or_none(payload.get("uint8_changed_count_region")),
             seg_input_delta_linf_region=_v1_float_or_none(payload.get("seg_input_delta_linf_region")),
             posenet_input_delta_linf_pair=_v1_float_or_none(payload.get("posenet_input_delta_linf_pair")),
+            support_source=(
+                None if payload.get("support_source") is None else str(payload["support_source"])
+            ),
+            support_cardinality=_v1_int_or_none(payload.get("support_cardinality")),
+            support_sha256=None if payload.get("support_sha256") is None else str(payload["support_sha256"]),
+            support_encoding=(
+                None if payload.get("support_encoding") is None else str(payload["support_encoding"])
+            ),
+            support_encoded_bytes=_v1_int_or_none(payload.get("support_encoded_bytes")),
+            support_research_only=_v1_bool_or_none(payload.get("support_research_only")),
             arm=None if payload.get("arm") is None else str(payload["arm"]),
             old_region_debt=_v1_float_or_none(payload.get("old_region_debt")),
             new_region_debt=_v1_float_or_none(payload.get("new_region_debt")),

@@ -18,7 +18,10 @@ import numpy as np
 from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects
 from tac.analysis.inverse_scorer_actions import (
+    BLOCKER_ARCHIVE_CLOSED_BIRTH_REQUIRES_EXECUTABLE_SUPPORT,
     BLOCKER_NO_COMPOSITE,
+    BLOCKER_REGION_SUPPORT_IDENTITY_MISSING,
+    BLOCKER_REGION_SUPPORT_RESEARCH_ONLY,
     BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING,
     BLOCKER_SCORE_PROGRAM_INFLATE_MISSING,
     BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING,
@@ -28,6 +31,7 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED,
     BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING,
     BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED,
+    BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_TRUE_WALL_NORMAL,
     BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED,
     DIRECT_SEG_WALL_ORACLE_SCHEMA,
     SCORE_PROGRAM_WORD_SCHEMA,
@@ -97,6 +101,12 @@ def _frame1_birth_effect() -> ActionEffect:
         seg_input_delta_linf_region=1.0,
         argmax_changed_count_region=7,
         wrong_to_target=5,
+        support_source="explicit_payload_coordinates",
+        support_cardinality=32,
+        support_sha256="a" * 64,
+        support_encoding="explicit_yx_u16_coordinates",
+        support_encoded_bytes=64,
+        support_research_only=False,
         exact_score_decision="accept",
     )
 
@@ -132,6 +142,12 @@ def _composite_effect() -> ActionEffect:
         wrong_to_target=8,
         pose_output_l2_delta=1.5,
         interaction_or_commutator=-0.25,
+        support_source="explicit_payload_coordinates",
+        support_cardinality=48,
+        support_sha256="a" * 64,
+        support_encoding="explicit_yx_u16_coordinates",
+        support_encoded_bytes=96,
+        support_research_only=False,
         exact_score_decision="accept",
     )
 
@@ -167,6 +183,12 @@ def _reverse_composite_effect() -> ActionEffect:
         wrong_to_target=7,
         pose_output_l2_delta=1.4,
         interaction_or_commutator=-0.2,
+        support_source="explicit_payload_coordinates",
+        support_cardinality=44,
+        support_sha256="a" * 64,
+        support_encoding="explicit_yx_u16_coordinates",
+        support_encoded_bytes=88,
+        support_research_only=False,
         exact_score_decision="accept",
     )
 
@@ -248,7 +270,11 @@ def test_direct_seg_wall_oracle_labels_uint8_motion_without_wall_crossing() -> N
     assert effect.wrong_to_target == 0
 
 
-def _direct_wall_candidate(*, wrong_to_target: int = 4) -> dict:
+def _direct_wall_candidate(
+    *,
+    wrong_to_target: int = 4,
+    inverse_source: str = "segnet_margin_vjp",
+) -> dict:
     support = np.zeros((1, 4, 4), dtype=bool)
     support[0, 1:3, 1:3] = True
     before_argmax = np.zeros((1, 4, 4), dtype=np.int64)
@@ -274,6 +300,20 @@ def _direct_wall_candidate(*, wrong_to_target: int = 4) -> dict:
         new_d_pose=0.20,
         region_id="b0/c2/r1",
         support_encoded_bytes=16,
+        inverse_source=inverse_source,
+        inverse_basis=(
+            "support_projected_segnet_margin_vjp"
+            if inverse_source == "segnet_margin_vjp"
+            else "receiver_surface_masked_rgb_residual_on_support"
+        ),
+        uses_official_seg_preprocess=True,
+        uses_target_class_margin=inverse_source == "segnet_margin_vjp",
+        margin_convention=(
+            "target_minus_max_wrong"
+            if inverse_source == "segnet_margin_vjp"
+            else "measured_argmax_transition_after_candidate"
+        ),
+        frontier_pixel_policy="fixture_support",
     )
     return {
         "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
@@ -358,6 +398,8 @@ def test_target_region_wall_normal_lift_selects_backend_when_realized() -> None:
         "BackendRealization",
     ]
     assert receipt["direct_teacher"]["crossed_target_wall"] is True
+    assert receipt["direct_teacher"]["teacher_is_true_wall_normal"] is True
+    assert receipt["decision_state"] == "BACKEND_REALIZATION_ACCEPTED"
     assert receipt["backend_fit"]["realized_target_wall"] is True
     assert receipt["backend_fit"]["realization_gap_wrong_to_target_count"] == 0
     assert receipt["selected_next_operator"] == "backend_fit_live"
@@ -390,6 +432,7 @@ def test_target_region_wall_normal_lift_names_backend_gap_and_sidecar_fallback()
     assert receipt["next_required_surface"] == "archive_materialize_parseback_inflate"
     assert BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED in receipt["blockers"]
     assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in receipt["blockers"]
+    assert receipt["decision_state"] == "BACKEND_REALIZATION_FAILED"
     assert receipt["score_claim"] is False
 
 
@@ -409,6 +452,7 @@ def test_target_region_wall_normal_lift_blocks_when_direct_teacher_missing() -> 
     assert receipt["next_required_surface"] == "inverse_scorer_candidate_generation"
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING in receipt["blockers"]
     assert BLOCKER_WALL_NORMAL_BACKEND_FIT_MISSING in receipt["blockers"]
+    assert receipt["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert receipt["backend_realization_required_before_long_run"] is True
     assert receipt["promotion_eligible"] is False
 
@@ -429,6 +473,7 @@ def test_target_region_wall_normal_lift_keeps_non_crossing_teacher_out_of_backen
     assert receipt["backend_fit"]["realized_target_wall"] is False
     assert receipt["sidecar_fallback"]["available"] is False
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
+    assert receipt["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED in receipt["blockers"]
     assert BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED not in receipt["blockers"]
     assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED not in receipt["blockers"]
@@ -463,10 +508,36 @@ def test_target_region_wall_normal_lift_rejects_crossing_teacher_without_exact_s
     assert receipt["direct_teacher"]["exact_score_decision"] == "reject"
     assert receipt["sidecar_fallback"]["available"] is False
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
+    assert receipt["decision_state"] == "DIRECT_TEACHER_EXACT_REJECTED"
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED in (
         receipt["blockers"]
     )
     assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED not in receipt["blockers"]
+
+
+def test_target_region_wall_normal_lift_rejects_masked_residual_as_true_wall_normal() -> None:
+    direct = _direct_wall_candidate(inverse_source="masked_residual")
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(wrong_to_target=4),
+        sidecar_candidate=direct,
+    )
+
+    assert receipt["direct_teacher"]["crossed_target_wall"] is True
+    assert receipt["direct_teacher"]["inverse_source"] == "masked_residual"
+    assert receipt["direct_teacher"]["teacher_is_true_wall_normal"] is False
+    assert receipt["direct_teacher"]["qualified_crossed_target_wall"] is False
+    assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
+    assert receipt["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
+    assert receipt["first_failing_surface"] == "direct_teacher_basis"
+    assert receipt["sidecar_fallback"]["available"] is False
+    assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_TRUE_WALL_NORMAL in receipt[
+        "blockers"
+    ]
 
 
 def _pr110_k1_replay_effect() -> ActionEffect:
@@ -678,6 +749,46 @@ def test_inverse_scorer_generator_keeps_both_ordered_composites() -> None:
     ledger = build_commutator_ledger(singles, composites)
     assert ledger["measured_commutator_count"] == 2
     assert ledger["needs_measurement_count"] == 0
+
+
+def test_inverse_scorer_marks_missing_region_support_research_only() -> None:
+    payload = _frame1_birth_effect().as_dict()
+    for key in (
+        "support_source",
+        "support_cardinality",
+        "support_sha256",
+        "support_encoding",
+        "support_encoded_bytes",
+    ):
+        payload[key] = None
+    payload["support_research_only"] = None
+    unsupported_birth = ActionEffect.from_dict(payload)
+
+    result = generate_inverse_scorer_candidates(
+        [_frame0_pose_effect(), unsupported_birth, _composite_effect()]
+    )
+
+    frame1 = next(row for row in result["candidate_queue"] if row["frame_index"] == 1)
+    assert frame1["support_research_only"] is True
+    assert frame1["support_source"] == "action_effect_region_id_only_no_pixel_support"
+    assert BLOCKER_REGION_SUPPORT_RESEARCH_ONLY in frame1["blockers"]
+    assert BLOCKER_REGION_SUPPORT_IDENTITY_MISSING in frame1["blockers"]
+    assert BLOCKER_ARCHIVE_CLOSED_BIRTH_REQUIRES_EXECUTABLE_SUPPORT in frame1["blockers"]
+
+
+def test_candidate_queue_carries_support_hash_continuity() -> None:
+    result = generate_inverse_scorer_candidates(
+        [_frame0_pose_effect(), _frame1_birth_effect(), _composite_effect()]
+    )
+
+    frame1 = next(row for row in result["candidate_queue"] if row["frame_index"] == 1)
+    assert frame1["support_source"] == "explicit_payload_coordinates"
+    assert frame1["support_cardinality"] == 32
+    assert frame1["support_sha256"] == "a" * 64
+    assert frame1["support_encoding"] == "explicit_yx_u16_coordinates"
+    assert frame1["support_encoded_bytes"] == 64
+    assert frame1["support_research_only"] is False
+    assert BLOCKER_REGION_SUPPORT_RESEARCH_ONLY not in frame1["blockers"]
 
 
 def test_score_program_word_keeps_blocked_alternative_candidate_local() -> None:

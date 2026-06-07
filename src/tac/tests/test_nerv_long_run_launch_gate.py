@@ -349,9 +349,12 @@ def _wall_normal_lift(
     selected_next_operator: str = "backend_fit_live",
     direct_crossed: bool = True,
     direct_exact_score_decision: str | None = None,
+    direct_exact_delta_score_nonrate: float | None = None,
+    direct_teacher_is_true_wall_normal: bool = True,
     backend_realized: bool = True,
     backend_wrong_to_target: int = 2048,
     exact_score_decision: str = "accept",
+    backend_action_effect_action_id: str | None = None,
     blockers: list[str] | None = None,
 ) -> dict:
     return {
@@ -366,8 +369,19 @@ def _wall_normal_lift(
         "direct_teacher": {
             "available": True,
             "crossed_target_wall": direct_crossed,
+            "teacher_is_true_wall_normal": direct_teacher_is_true_wall_normal,
+            "inverse_source": (
+                "segnet_margin_vjp"
+                if direct_teacher_is_true_wall_normal
+                else "masked_residual"
+            ),
             "wrong_to_target_count": 4096 if direct_crossed else 0,
             "target_to_wrong_count": 0,
+            "exact_delta_score_nonrate": (
+                direct_exact_delta_score_nonrate
+                if direct_exact_delta_score_nonrate is not None
+                else (-1.0 if direct_crossed else 0.0)
+            ),
             "exact_score_decision": (
                 direct_exact_score_decision
                 if direct_exact_score_decision is not None
@@ -380,6 +394,11 @@ def _wall_normal_lift(
             "wrong_to_target_count": backend_wrong_to_target,
             "target_to_wrong_count": 0,
             "exact_score_decision": exact_score_decision,
+            "action_effect": (
+                None
+                if backend_action_effect_action_id is None
+                else {"action_id": backend_action_effect_action_id}
+            ),
         },
         "sidecar_fallback": {"available": False, "payload_bytes": 0},
         "selected_next_operator": selected_next_operator,
@@ -663,6 +682,95 @@ def test_charged_target_region_archive_evidence_retires_materialization_blockers
     assert verdict["approved"] is False
 
 
+def test_target_region_action_parseback_survival_retires_parseback_blocker(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_action_archive_meta_not_materialized",
+                "hinerv_target_region_action_parseback_survival_missing",
+                "hinerv_target_region_action_inflate_survival_missing",
+                "hinerv_target_region_action_archive_zip_byte_delta_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "archive_telemetry.json",
+        {
+            "hi_nerv_archive_codec_custody": {
+                "archive_section_telemetry": {
+                    "target_region_actions": {
+                        "schema": "hi_nerv_target_region_archive_actions.v1",
+                        "charged_as_hiv1_meta_blob": True,
+                        "receiver_consumed": True,
+                        "payload_bytes": 128,
+                        "base64_text_bytes": 172,
+                        "charged_meta_json_bytes": 512,
+                    }
+                }
+            },
+            "receiver_replay_archive_selection": {
+                "selected_archive_path": "/ssd/archive.zip",
+                "selected_archive_bytes": 439003,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write(
+        root / "target_region_action_parseback_survival.json",
+        {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "total_action_pixels": 32,
+            "exact_uint8_action_pixels_applied": 32,
+            "receiver_changed_action_pixels": 32,
+            "blockers": ["target_region_action_inflate_survival_missing"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert (
+        "hinerv_target_region_action_archive_meta_not_materialized"
+        not in verdict["blocking_evidence"]
+    )
+    assert (
+        "hinerv_target_region_action_archive_zip_byte_delta_missing"
+        not in verdict["blocking_evidence"]
+    )
+    assert (
+        "hinerv_target_region_action_parseback_survival_missing"
+        not in verdict["blocking_evidence"]
+    )
+    assert "hinerv_target_region_action_inflate_survival_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
 def test_live_birth_without_pose_trust_is_l2(tmp_path: Path) -> None:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt(pose_trusted=False))
@@ -925,6 +1033,84 @@ def test_hinerv_gate_rejects_wall_normal_without_direct_exact_score(tmp_path: Pa
     )
     assert (
         f"target_region_wall_normal_lift_direct_teacher_exact_score_not_accepted:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+
+
+def test_hinerv_gate_rejects_wall_normal_direct_accept_without_score_improvement(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "wall_normal_lift.json",
+        _wall_normal_lift(direct_exact_delta_score_nonrate=0.0),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_lift_not_backend_realized" in (
+        verdict["blocking_evidence"]
+    )
+    assert (
+        f"target_region_wall_normal_lift_direct_teacher_nonnegative_delta:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+
+
+def test_hinerv_gate_rejects_wall_normal_backend_action_id_mismatch(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "wall_normal_lift.json",
+        _wall_normal_lift(backend_action_effect_action_id=f"{ACTION}:other"),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_lift_not_backend_realized" in (
+        verdict["blocking_evidence"]
+    )
+    assert (
+        f"target_region_wall_normal_lift_backend_action_id_mismatch:{ACTION}:{ACTION}:other"
+        in verdict["blocking_evidence"]
+    )
+
+
+def test_hinerv_gate_rejects_masked_residual_as_wall_normal_teacher(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "wall_normal_lift.json",
+        _wall_normal_lift(direct_teacher_is_true_wall_normal=False),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_lift_not_backend_realized" in (
+        verdict["blocking_evidence"]
+    )
+    assert (
+        f"target_region_wall_normal_lift_direct_teacher_not_true_wall_normal:{ACTION}"
         in verdict["blocking_evidence"]
     )
 

@@ -286,12 +286,54 @@ def _target_region_action_archive_closure_status(
     }
 
 
+def _target_region_action_survival_status(
+    run_root: Path,
+    *,
+    index: dict[str, list[str]],
+) -> dict[str, Any]:
+    parseback_path: str | None = None
+    inflate_path: str | None = None
+    parseback_survived = False
+    inflate_survived = False
+    for path, payload in _iter_evidence_payloads(run_root):
+        stack = [payload]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, Mapping):
+                if str(node.get("schema") or "") == "hi_nerv_target_region_action_parseback_survival.v1":
+                    index.setdefault(
+                        "hi_nerv_target_region_action_parseback_survival.v1",
+                        [],
+                    ).append(path.as_posix())
+                    if (
+                        node.get("survived") is True
+                        and node.get("fakequant_survived") is True
+                        and node.get("parseback_survived") is True
+                    ):
+                        parseback_survived = True
+                        parseback_path = path.as_posix()
+                    if node.get("inflate_survived") is True:
+                        inflate_survived = True
+                        inflate_path = path.as_posix()
+                stack.extend(node.values())
+            elif isinstance(node, (list, tuple)):
+                stack.extend(node)
+    return {
+        "parseback_survived": parseback_survived,
+        "parseback_path": parseback_path,
+        "inflate_survived": inflate_survived,
+        "inflate_path": inflate_path,
+    }
+
+
 def _target_region_action_closure_blockers(
     oracle: Mapping[str, Any],
     *,
     archive_status: Mapping[str, Any],
+    survival_status: Mapping[str, Any] | None = None,
 ) -> list[str]:
     blockers = [str(blocker) for blocker in oracle.get("blockers") or []]
+    survival_status = survival_status if isinstance(survival_status, Mapping) else {}
     if archive_status.get("charged_meta_materialized"):
         blockers = [
             blocker
@@ -310,6 +352,26 @@ def _target_region_action_closure_blockers(
             not in {
                 "hinerv_target_region_action_archive_zip_byte_delta_missing",
                 "target_region_action_archive_zip_byte_delta_missing",
+            }
+        ]
+    if survival_status.get("parseback_survived"):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "hinerv_target_region_action_parseback_survival_missing",
+                "target_region_action_parseback_survival_missing",
+            }
+        ]
+    if survival_status.get("inflate_survived"):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "hinerv_target_region_action_inflate_survival_missing",
+                "target_region_action_inflate_survival_missing",
             }
         ]
     return blockers
@@ -573,14 +635,30 @@ def _require_hi_nerv_wall_normal_lift_evidence(
             candidate_blockers.append(
                 f"target_region_wall_normal_lift_direct_teacher_not_crossed:{row_id}"
             )
+        if direct.get("teacher_is_true_wall_normal") is not True:
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_direct_teacher_not_true_wall_normal:{row_id}"
+            )
         direct_decision = str(direct.get("exact_score_decision") or "").strip()
         if direct_decision not in {"accept", "accepted"}:
             candidate_blockers.append(
                 f"target_region_wall_normal_lift_direct_teacher_exact_score_not_accepted:{row_id}"
             )
+        direct_delta = direct.get("exact_delta_score_nonrate")
+        if not _negative_number(direct_delta):
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_direct_teacher_nonnegative_delta:{row_id}"
+            )
         if backend.get("realized_target_wall") is not True:
             candidate_blockers.append(
                 f"target_region_wall_normal_lift_backend_not_realized:{row_id}"
+            )
+        backend_effect = backend.get("action_effect")
+        backend_effect = backend_effect if isinstance(backend_effect, Mapping) else {}
+        backend_effect_action_id = str(backend_effect.get("action_id") or "").strip()
+        if backend_effect_action_id and backend_effect_action_id != row_id:
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_backend_action_id_mismatch:{row_id}:{backend_effect_action_id}"
             )
         if not _positive_number(backend.get("wrong_to_target_count")):
             candidate_blockers.append(
@@ -596,9 +674,12 @@ def _require_hi_nerv_wall_normal_lift_evidence(
         if (
             selected == "backend_fit_live"
             and direct.get("crossed_target_wall") is True
+            and direct.get("teacher_is_true_wall_normal") is True
             and direct_decision in {"accept", "accepted"}
+            and _negative_number(direct_delta)
             and backend.get("realized_target_wall") is True
             and _positive_number(backend.get("wrong_to_target_count"))
+            and (not backend_effect_action_id or backend_effect_action_id == row_id)
             and decision in {"accept", "accepted"}
             and not row.get("blockers")
         ):
@@ -867,6 +948,10 @@ def _positive_number(value: Any) -> bool:
     return _finite_number(value) and float(value) > 0.0
 
 
+def _negative_number(value: Any) -> bool:
+    return _finite_number(value) and float(value) < 0.0
+
+
 def _positive_int_or_none(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
@@ -999,11 +1084,16 @@ def evaluate_nerv_long_run_launch_gate(
                     root,
                     index=evidence_index,
                 )
+                survival_status = _target_region_action_survival_status(
+                    root,
+                    index=evidence_index,
+                )
                 blockers.append("real_video_birth_receipt_archive_unclosed")
                 blockers.extend(
                     _target_region_action_closure_blockers(
                         unclosed_oracle,
                         archive_status=archive_status,
+                        survival_status=survival_status,
                     )
                 )
         else:

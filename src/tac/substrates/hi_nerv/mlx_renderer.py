@@ -4053,6 +4053,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mask_records: list[dict[str, Any]] = []
             best_record: dict[str, Any] | None = None
             best_nonrate_delta = float("inf")
+            best_wall_normal_record: dict[str, Any] | None = None
+            best_wall_normal_delta = float("inf")
 
             def _build_masked_oracle_record(
                 *,
@@ -4112,6 +4114,27 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     and "support_encoded_bytes" in action_section_telemetry
                     else None
                 )
+                scorer_synthesis_teacher = optimizer_trace is not None
+                inverse_source = (
+                    "support_projected_segnet_margin_vjp"
+                    if scorer_synthesis_teacher
+                    else "masked_residual"
+                )
+                inverse_basis = (
+                    "support_projected_receiver_pixel_adam_ste"
+                    if scorer_synthesis_teacher
+                    else "receiver_surface_masked_rgb_residual_on_support"
+                )
+                margin_convention = (
+                    "max_wrong_minus_target_softplus_on_official_live_seg_preprocess"
+                    if scorer_synthesis_teacher
+                    else "measured_argmax_transition_after_candidate"
+                )
+                frontier_policy = (
+                    f"{mask_name}:active_tail_target_margin_frontier"
+                    if scorer_synthesis_teacher
+                    else mask_name
+                )
                 direct_wall_receipt = build_direct_seg_wall_oracle_receipt(
                     action_id=(
                         "direct_seg_wall:"
@@ -4144,6 +4167,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         else "research_only_empty_action_mask"
                     ),
                     support_encoded_bytes=action_support_encoded_bytes,
+                    inverse_source=inverse_source,
+                    inverse_basis=inverse_basis,
+                    uses_official_seg_preprocess=True,
+                    uses_target_class_margin=scorer_synthesis_teacher,
+                    margin_convention=margin_convention,
+                    frontier_pixel_policy=frontier_policy,
                     producer="hinerv_target_region_masked_residual_oracle",
                     consumer="inverse_evaluate_candidate_queue",
                 )
@@ -4217,6 +4246,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "promotion_blocked": True,
                     "runtime_sidecar_bytes": None,
                     "charged_byte_sections_missing": action_closure_blockers,
+                    "candidate_is_true_wall_normal_teacher": bool(
+                        direct_wall_receipt.get("teacher_is_true_wall_normal") is True
+                    ),
                 }
                 if optimizer_trace is not None:
                     record.update(optimizer_trace)
@@ -4224,11 +4256,24 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
 
             def _append_oracle_record(record: dict[str, Any]) -> None:
                 nonlocal best_record, best_nonrate_delta
+                nonlocal best_wall_normal_record, best_wall_normal_delta
                 mask_records.append(record)
                 nonrate_delta = record.get("exact_delta_score_nonrate")
                 if nonrate_delta is not None and float(nonrate_delta) < best_nonrate_delta:
                     best_nonrate_delta = float(nonrate_delta)
                     best_record = record
+                direct_wall = record.get("direct_seg_wall_oracle")
+                true_teacher = (
+                    isinstance(direct_wall, Mapping)
+                    and direct_wall.get("teacher_is_true_wall_normal") is True
+                )
+                if (
+                    true_teacher
+                    and nonrate_delta is not None
+                    and float(nonrate_delta) < best_wall_normal_delta
+                ):
+                    best_wall_normal_delta = float(nonrate_delta)
+                    best_wall_normal_record = record
 
             for mask_name, mask_bool in variants:
                 mask_bool = np.asarray(mask_bool, dtype=bool)
@@ -4454,6 +4499,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "candidate_count": len(mask_records),
                 "candidates": mask_records,
                 "best_candidate": best_record,
+                "best_wall_normal_candidate": best_wall_normal_record,
                 "exact_accepted_before_archive_closure": bool(exact_accepted),
                 "target_support_moved": bool(target_support_moved),
                 "blockers": blockers,
@@ -6470,7 +6516,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             target_class=int(birth_class),
             region_id=region_id,
             direct_teacher_candidate=(
-                masked_residual_oracle.get("best_candidate")
+                masked_residual_oracle.get("best_wall_normal_candidate")
+                or masked_residual_oracle.get("best_candidate")
                 if isinstance(masked_residual_oracle, Mapping)
                 else None
             ),

@@ -10,6 +10,7 @@ shared archive-bound receiver proof/package.
 
 from __future__ import annotations
 
+import base64
 import copy
 import hashlib
 import json
@@ -55,6 +56,8 @@ from tac.substrates.hi_nerv.bitstream import (
 from tac.substrates.hi_nerv.target_region_actions import (
     TARGET_REGION_ACTION_META_KEY,
     decode_target_region_actions_from_meta,
+    target_region_action_payload_codec,
+    target_region_action_section_telemetry,
     wrap_model_with_target_region_actions,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
@@ -75,6 +78,9 @@ HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA = (
 )
 HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA = (
     "hi_nerv_mlx_live_receiver_export_parity_proof.v1"
+)
+HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA = (
+    "hi_nerv_target_region_action_parseback_survival.v1"
 )
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
@@ -103,6 +109,18 @@ _LIVE_RECEIVER_CODEC_PORTFOLIO_CANDIDATES = (
     "int2_mixed",
     "int2_scale_bundled",
 )
+
+
+def _dedupe_strings(values: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
 
 
 def build_hi_nerv_archive_replay_components(
@@ -200,6 +218,210 @@ def build_hi_nerv_archive_replay_components(
         batch=batch,
     )
     return {key: value for key, value in out.items() if math.isfinite(float(value))}
+
+
+def build_hi_nerv_target_region_action_parseback_survival(
+    archive_path: str | Path,
+    *,
+    expected_program_base64: str | None = None,
+    expected_support_sha256: str | None = None,
+    expected_payload_bytes: int | None = None,
+) -> dict[str, Any]:
+    """Prove charged target-region action survival through HIV1 parse-back.
+
+    This parses the exported archive, decodes the charged action sidecar,
+    renders the same receiver with and without the sidecar, and verifies that
+    every encoded support pixel is overwritten with the exact uint8 RGB action
+    value. It is receiver evidence, not score authority.
+    """
+
+    path = Path(archive_path).expanduser().resolve(strict=False)
+
+    def _blocked(blocker: str, **extra: Any) -> dict[str, Any]:
+        return {
+            "schema": HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA,
+            "surface": "parseback_mlx",
+            "archive_path": path.as_posix(),
+            "survived": False,
+            "fakequant_survived": False,
+            "parseback_survived": False,
+            "inflate_survived": False,
+            "blockers": [blocker],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            **extra,
+            **FALSE_AUTHORITY,
+        }
+
+    if not path.is_file():
+        return _blocked("target_region_action_archive_zip_missing")
+    archive_sha256 = sha256_file(path)
+    try:
+        payload = _read_hiv1_payload_from_archive_zip(path)
+        arc = parse_archive(payload)
+    except Exception as exc:
+        return _blocked(
+            "target_region_action_archive_parseback_failed",
+            archive_sha256=archive_sha256,
+            archive_bytes=int(path.stat().st_size),
+            failure=f"{type(exc).__name__}:{exc}",
+        )
+
+    meta = dict(getattr(arc, "meta", {}) or {})
+    raw_b64 = meta.get(TARGET_REGION_ACTION_META_KEY)
+    if not isinstance(raw_b64, str) or not raw_b64:
+        return _blocked(
+            "target_region_action_meta_missing",
+            archive_sha256=archive_sha256,
+            archive_bytes=int(path.stat().st_size),
+        )
+    try:
+        stored_payload = base64.b64decode(raw_b64.encode("ascii"), validate=True)
+        actions = decode_target_region_actions_from_meta(meta)
+    except Exception as exc:
+        return _blocked(
+            "target_region_action_meta_decode_failed",
+            archive_sha256=archive_sha256,
+            archive_bytes=int(path.stat().st_size),
+            failure=f"{type(exc).__name__}:{exc}",
+        )
+    if not actions:
+        return _blocked(
+            "target_region_action_empty",
+            archive_sha256=archive_sha256,
+            archive_bytes=int(path.stat().st_size),
+        )
+
+    telemetry = target_region_action_section_telemetry(actions)
+    telemetry["payload_bytes"] = len(stored_payload)
+    telemetry["payload_codec"] = target_region_action_payload_codec(stored_payload)
+    telemetry["base64_text_bytes"] = len(raw_b64.encode("ascii"))
+    blockers: list[str] = []
+    expected_payload_sha256: str | None = None
+    if expected_program_base64:
+        try:
+            expected_payload = base64.b64decode(
+                str(expected_program_base64).encode("ascii"),
+                validate=True,
+            )
+            expected_payload_sha256 = hashlib.sha256(expected_payload).hexdigest()
+        except Exception as exc:
+            expected_payload = b""
+            blockers.append(
+                f"target_region_action_expected_program_decode_failed:{type(exc).__name__}"
+            )
+        if expected_payload and expected_payload != stored_payload:
+            blockers.append("target_region_action_payload_mismatch")
+    if expected_support_sha256 and str(expected_support_sha256) != str(
+        telemetry.get("support_sha256") or ""
+    ):
+        blockers.append("target_region_action_support_sha256_mismatch")
+    if expected_payload_bytes is not None and int(expected_payload_bytes) != len(stored_payload):
+        blockers.append("target_region_action_payload_bytes_mismatch")
+
+    pair_indices = torch.tensor(
+        sorted({int(action.pair_index) for action in actions}),
+        dtype=torch.long,
+    )
+    pair_to_batch = {int(pair): index for index, pair in enumerate(pair_indices.tolist())}
+    try:
+        cfg = _hinerv_config_from_archive_meta(arc)
+        action_model = _load_receiver_model_for_pixel_proof(
+            cfg=cfg,
+            decoder_state=arc.decoder_state_dict,
+            latents_coarse=arc.latents_coarse,
+            latents_mid=arc.latents_mid,
+            latents_fine=arc.latents_fine,
+            meta=meta,
+        )
+        base_meta = dict(meta)
+        base_meta.pop(TARGET_REGION_ACTION_META_KEY, None)
+        base_model = _load_receiver_model_for_pixel_proof(
+            cfg=cfg,
+            decoder_state=arc.decoder_state_dict,
+            latents_coarse=arc.latents_coarse,
+            latents_mid=arc.latents_mid,
+            latents_fine=arc.latents_fine,
+            meta=base_meta,
+        )
+        with torch.no_grad():
+            action_pixels = _render_receiver_pixels(action_model, pair_indices)
+            base_pixels = _render_receiver_pixels(base_model, pair_indices)
+    except Exception as exc:
+        return _blocked(
+            "target_region_action_receiver_render_failed",
+            archive_sha256=archive_sha256,
+            archive_bytes=int(path.stat().st_size),
+            target_region_actions=telemetry,
+            failure=f"{type(exc).__name__}:{exc}",
+        )
+
+    action_np = action_pixels.detach().cpu().numpy().astype(np.float32, copy=False)
+    base_np = base_pixels.detach().cpu().numpy().astype(np.float32, copy=False)
+    total_pixels = 0
+    exact_applied_pixels = 0
+    changed_pixels = 0
+    max_abs_error = 0.0
+    max_abs_base_delta = 0.0
+    for action in actions:
+        batch_index = pair_to_batch[int(action.pair_index)]
+        frame_index = int(action.frame_index)
+        y = action.yx[:, 0].astype(np.int64, copy=False)
+        x = action.yx[:, 1].astype(np.int64, copy=False)
+        observed = action_np[batch_index, frame_index, :, y, x]
+        base_values = base_np[batch_index, frame_index, :, y, x]
+        if observed.shape[0] == 3 and observed.ndim == 2:
+            observed = np.transpose(observed, (1, 0))
+            base_values = np.transpose(base_values, (1, 0))
+        expected = action.rgb_u8.astype(np.float32) / 255.0
+        abs_error = np.abs(observed - expected)
+        base_delta = np.abs(observed - base_values)
+        total_pixels += int(action.pixel_count)
+        exact_applied_pixels += int(np.count_nonzero(np.all(abs_error <= 1.0e-7, axis=1)))
+        changed_pixels += int(np.count_nonzero(np.any(base_delta > 0.0, axis=1)))
+        if abs_error.size:
+            max_abs_error = max(max_abs_error, float(abs_error.max()))
+        if base_delta.size:
+            max_abs_base_delta = max(max_abs_base_delta, float(base_delta.max()))
+
+    parseback_survived = bool(total_pixels > 0 and exact_applied_pixels == total_pixels)
+    if not parseback_survived:
+        blockers.append("target_region_action_parseback_survival_failed")
+    return {
+        "schema": HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA,
+        "surface": "parseback_mlx",
+        "archive_path": path.as_posix(),
+        "archive_sha256": archive_sha256,
+        "archive_bytes": int(path.stat().st_size),
+        "hiv1_payload_bytes": len(payload),
+        "target_region_actions": telemetry,
+        "action_count": len(actions),
+        "pair_indices": [int(value) for value in pair_indices.tolist()],
+        "total_action_pixels": int(total_pixels),
+        "exact_uint8_action_pixels_applied": int(exact_applied_pixels),
+        "receiver_changed_action_pixels": int(changed_pixels),
+        "max_abs_action_rgb_error": float(max_abs_error),
+        "max_abs_receiver_delta_vs_no_action": float(max_abs_base_delta),
+        "expected_payload_sha256": expected_payload_sha256,
+        "stored_payload_sha256": hashlib.sha256(stored_payload).hexdigest(),
+        "expected_support_sha256": expected_support_sha256,
+        "expected_payload_bytes": expected_payload_bytes,
+        "survived": parseback_survived,
+        "fakequant_survived": parseback_survived,
+        "parseback_survived": parseback_survived,
+        "inflate_survived": False,
+        "blockers": _dedupe_strings(
+            [
+                *blockers,
+                "target_region_action_inflate_survival_missing",
+            ]
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
 
 
 def hi_nerv_mlx_numpy_portability_contract(
@@ -1904,6 +2126,8 @@ __all__ = [
     "HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY",
     "HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND",
+    "HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA",
+    "build_hi_nerv_target_region_action_parseback_survival",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
     "hi_nerv_meta_from_config",

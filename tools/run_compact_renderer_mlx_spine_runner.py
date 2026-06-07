@@ -174,6 +174,8 @@ def _select_target_region_action_program_from_birth_payload(
     program = selected.get("target_region_action_program_base64")
     if not isinstance(program, str) or not program:
         return None, None
+    telemetry = selected.get("target_region_action_section_telemetry")
+    telemetry = telemetry if isinstance(telemetry, Mapping) else {}
     selection = {
         "schema": "hi_nerv_target_region_action_program_export_selection.v1",
         "candidate_count": len(candidates),
@@ -181,6 +183,13 @@ def _select_target_region_action_program_from_birth_payload(
         "selected_for_export": True,
         "target_region_action_payload_bytes": _candidate_payload_bytes(selected),
         "target_region_action_pixel_count": selected.get("target_region_action_pixel_count"),
+        "target_region_action_program_sha256": hashlib.sha256(
+            program.encode("ascii")
+        ).hexdigest(),
+        "target_region_action_support_sha256": telemetry.get("support_sha256"),
+        "target_region_action_support_cardinality": telemetry.get("support_cardinality"),
+        "target_region_action_support_encoding": telemetry.get("support_encoding"),
+        "target_region_action_support_encoded_bytes": telemetry.get("support_encoded_bytes"),
         "exact_delta_score_nonrate": _candidate_delta_nonrate(selected),
         "estimated_delta_score_total": _candidate_key(selected)[2],
         "estimated_rate_score_delta": (
@@ -9009,6 +9018,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     hi_nerv_latent_codec: str = "auto",
     modelsize_candidate: Mapping[str, Any] | None = None,
     allow_unscored_research_smoke: bool = False,
+    stop_after_wall_normal_receipt: bool = False,
     modelsize_budget_json_paths: tuple[str | Path, ...] = (),
     receiver_closed_ladder_json_paths: tuple[str | Path, ...] = (),
     ema_decay: float = 0.9,
@@ -10352,6 +10362,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
+            stop_after_wall_normal_receipt=bool(stop_after_wall_normal_receipt),
             candidate_curriculum_plan=launch_curriculum_plan,
             modelsize_candidate=candidate or None,
             archive_section_telemetry=archive_section_telemetry,
@@ -10435,6 +10446,49 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
 
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
     training_dir = out / "hi_nerv_mlx_training"
+    if artifact_dict.get("stop_after_wall_normal_receipt") is True:
+        receipt = artifact_dict.get("target_region_wall_normal_lift")
+        receipt = dict(receipt) if isinstance(receipt, Mapping) else None
+        blockers = [str(value) for value in artifact_dict.get("blockers") or ()]
+        report = _base_report(
+            output_dir=out,
+            mode="hi_nerv_wall_normal_receipt_bounded_smoke",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        report.update(
+            {
+                "execute_family": "hi_nerv",
+                "training_executed": False,
+                "stop_after_wall_normal_receipt": True,
+                "trainer_launch_allowed": True,
+                "requested_distillation_device": effective_requested_distillation_device,
+                "distillation_device": str(distillation_device),
+                "score_claim": False,
+                "rank_or_kill_eligible": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "source_video_path": resolved_source_video.as_posix(),
+                "target_region_birth_payload": artifact_dict.get("target_region_birth_payload"),
+                "target_region_wall_normal_lift": receipt,
+                "target_region_wall_normal_lift_receipt_path": artifact_dict.get(
+                    "target_region_wall_normal_lift_receipt_path"
+                ),
+                "training_artifact_report_path": artifact_dict.get("report_path"),
+                "score_aware_training_config_gate": config_gate,
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
+                "hi_nerv_optimizer_policy": optimizer_policy,
+                "hi_nerv_optimizer_controls": optimizer_controls,
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
+                "blockers": _dedupe(blockers),
+            }
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, report)
+        return {**report, "report_path": path.as_posix()}
     archive_resolution = _hi_nerv_runner_archive_resolution_from_artifact(
         artifact_dict=artifact_dict,
         training_dir=training_dir,
@@ -10561,6 +10615,28 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     )
     if isinstance(selected_birth_parseback_survival, Mapping):
         artifact_dict["selected_birth_parseback_survival"] = dict(selected_birth_parseback_survival)
+    (
+        target_region_action_program_base64,
+        target_region_action_export_selection,
+    ) = _select_target_region_action_program_from_birth_payload(
+        artifact_dict.get("target_region_birth_payload")
+        or artifact_dict.get("target_region_birth")
+    )
+    target_region_action_parseback_survival = _write_hi_nerv_target_region_action_parseback_survival(
+        archive_resolution=archive_resolution,
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        export_selection=(
+            target_region_action_export_selection
+            if isinstance(target_region_action_export_selection, Mapping)
+            else None
+        ),
+        target_region_action_program_base64=target_region_action_program_base64,
+    )
+    if isinstance(target_region_action_parseback_survival, Mapping):
+        artifact_dict["target_region_action_parseback_survival"] = dict(
+            target_region_action_parseback_survival
+        )
     _attach_hi_nerv_archive_codec_custody(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
@@ -15701,6 +15777,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
+    stop_after_wall_normal_receipt: bool = False,
     pr95_curriculum_total_epochs: int | None = None,
     pr95_stage_source_weight_amplification_enabled: bool = False,
     candidate_curriculum_plan: Mapping[str, Any] | None = None,
@@ -16956,6 +17033,59 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+    if bool(stop_after_wall_normal_receipt):
+        output_dir = Path(output_dir).expanduser().resolve(strict=False)
+        receipt = None
+        if isinstance(target_region_birth_payload, Mapping):
+            maybe_receipt = target_region_birth_payload.get("target_region_wall_normal_lift")
+            if isinstance(maybe_receipt, Mapping):
+                receipt = dict(maybe_receipt)
+        receipt_path: Path | None = None
+        if receipt is not None:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            receipt_path = output_dir / "target_region_wall_normal_lift_receipt.json"
+            _write_json(receipt_path, receipt)
+        blockers = []
+        if receipt is None:
+            blockers.append("target_region_wall_normal_lift_receipt_missing")
+        else:
+            blockers.extend(str(value) for value in receipt.get("blockers") or ())
+        report = {
+            "schema": "compact_renderer_mlx_spine_runner_report.v1",
+            "family": "hi_nerv",
+            "status": (
+                "bounded_wall_normal_receipt_complete"
+                if receipt is not None
+                else "bounded_wall_normal_receipt_missing"
+            ),
+            "stop_after_wall_normal_receipt": True,
+            "training_started": False,
+            "training_executed": False,
+            "score_claim": False,
+            "rank_or_kill_eligible": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "false_authority_reason": (
+                "bounded_hi_nerv_wall_normal_diagnostic; requires parseback, "
+                "full-video replay, receiver proof, and exact evaluate.py gate"
+            ),
+            "output_dir": output_dir.as_posix(),
+            "source_video_path": Path(source_video_path).expanduser().resolve(strict=False).as_posix(),
+            "num_pairs": int(num_pairs),
+            "epochs": int(epochs),
+            "target_region_birth_payload": target_region_birth_payload,
+            "target_region_wall_normal_lift_receipt_path": (
+                receipt_path.as_posix() if receipt_path is not None else None
+            ),
+            "target_region_wall_normal_lift": receipt,
+            "scorer_domain_bootstrap": output_head_target_bias_init_payload.get(
+                "scorer_domain_bootstrap"
+            ),
+            "blockers": _dedupe(blockers),
+        }
+        path = output_dir / "target_region_wall_normal_lift_stop_artifact.json"
+        _write_json(path, report)
+        return {**report, "report_path": path.as_posix()}
     startup_archive_section_telemetry_metadata: dict[str, Any] | None = None
     if archive_section_telemetry is None and hard_byte_ceiling is not None and bool(coder_aware_qat):
         (
@@ -19358,6 +19488,120 @@ def _promote_hi_nerv_selected_birth_parseback_survival(
                 encoding="utf-8",
             )
     return promoted
+
+
+def _write_hi_nerv_target_region_action_parseback_survival(
+    *,
+    archive_resolution: Mapping[str, Any],
+    output_dir: str | Path,
+    artifact_dict: dict[str, Any],
+    export_selection: Mapping[str, Any] | None,
+    target_region_action_program_base64: str | None,
+) -> dict[str, Any] | None:
+    if not isinstance(export_selection, Mapping) or export_selection.get("selected_for_export") is not True:
+        return None
+    archive_raw = archive_resolution.get("archive_path")
+    if not archive_raw:
+        return None
+    archive = Path(str(archive_raw)).expanduser().resolve(strict=False)
+    if not archive.is_file():
+        return None
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "hi_nerv_target_region_action_parseback_survival.json"
+    try:
+        from tac.substrates.hi_nerv.archive_candidate import (
+            build_hi_nerv_target_region_action_parseback_survival,
+        )
+
+        row = dict(
+            build_hi_nerv_target_region_action_parseback_survival(
+                archive,
+                expected_program_base64=target_region_action_program_base64,
+                expected_support_sha256=(
+                    str(export_selection.get("target_region_action_support_sha256"))
+                    if export_selection.get("target_region_action_support_sha256")
+                    else None
+                ),
+                expected_payload_bytes=_positive_int_or_none(
+                    export_selection.get("target_region_action_payload_bytes")
+                ),
+            )
+        )
+    except Exception as exc:
+        row = {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "archive_path": archive.as_posix(),
+            "archive_sha256": _sha256_file(archive),
+            "archive_bytes": int(archive.stat().st_size),
+            "survived": False,
+            "fakequant_survived": False,
+            "parseback_survived": False,
+            "inflate_survived": False,
+            "blockers": [
+                f"target_region_action_parseback_survival_write_failed:{type(exc).__name__}:{exc}"
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+    row["producer"] = "hi_nerv_runner_target_region_action_parseback_survival"
+    row["artifact_path"] = path.as_posix()
+    row["target_region_action_export_selection"] = _strip_substrate_metadata_authority_fields(
+        dict(export_selection)
+    )
+    summary = _strip_substrate_metadata_authority_fields(
+        {
+            "schema": row.get("schema"),
+            "surface": row.get("surface"),
+            "survived": row.get("survived"),
+            "fakequant_survived": row.get("fakequant_survived"),
+            "parseback_survived": row.get("parseback_survived"),
+            "inflate_survived": row.get("inflate_survived"),
+            "artifact_path": row.get("artifact_path"),
+            "archive_path": row.get("archive_path"),
+            "archive_sha256": row.get("archive_sha256"),
+            "archive_bytes": row.get("archive_bytes"),
+            "total_action_pixels": row.get("total_action_pixels"),
+            "exact_uint8_action_pixels_applied": row.get(
+                "exact_uint8_action_pixels_applied"
+            ),
+            "receiver_changed_action_pixels": row.get("receiver_changed_action_pixels"),
+            "blockers": [str(value) for value in row.get("blockers") or []],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
+    _write_json(path, row)
+    artifact_dict["target_region_action_parseback_survival"] = dict(row)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["target_region_action_parseback_survival"] = dict(row)
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["target_region_action_parseback_survival"] = dict(summary)
+    artifact_path = out / "training_artifact.json"
+    if artifact_path.is_file():
+        try:
+            artifact = _load_json(artifact_path)
+        except Exception:
+            artifact = None
+        if isinstance(artifact, dict):
+            artifact["target_region_action_parseback_survival"] = dict(row)
+            artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+            artifact_metadata["target_region_action_parseback_survival"] = dict(row)
+            score_training = artifact_metadata.get("score_aware_training")
+            if isinstance(score_training, dict):
+                score_training["target_region_action_parseback_survival"] = dict(summary)
+            artifact["substrate_artifact_metadata"] = artifact_metadata
+            artifact_path.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+    return row
 
 
 def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
@@ -26475,6 +26719,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--stop-after-wall-normal-receipt",
+        action="store_true",
+        help=(
+            "HiNeRV bounded diagnostic: stop after target-region birth emits "
+            "the TargetRegionWallNormalLift receipt, writing a false-authority "
+            "report instead of continuing into export/replay machinery."
+        ),
+    )
+    parser.add_argument(
         "--modelsize-budget-json",
         action="append",
         default=[],
@@ -28387,6 +28640,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             allow_segnet_only_research=args.allow_segnet_only_research,
             allow_unscored_research_smoke=args.allow_unscored_research_smoke,
+            stop_after_wall_normal_receipt=bool(args.stop_after_wall_normal_receipt),
             modelsize_budget_json_paths=tuple(args.modelsize_budget_json),
             receiver_closed_ladder_json_paths=tuple(args.receiver_closed_ladder_json),
             coder_aware_qat=args.coder_aware_qat,

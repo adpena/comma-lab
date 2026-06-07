@@ -60,6 +60,60 @@ skip_no_mlx = pytest.mark.skipif(
 )
 
 
+def test_target_region_action_parseback_survival_fails_closed_for_missing_archive(
+    tmp_path,
+) -> None:
+    from tac.substrates.hi_nerv.archive_candidate import (
+        HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA,
+        build_hi_nerv_target_region_action_parseback_survival,
+    )
+
+    report = build_hi_nerv_target_region_action_parseback_survival(
+        tmp_path / "missing_archive.zip",
+    )
+
+    assert report["schema"] == HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA
+    assert report["survived"] is False
+    assert report["parseback_survived"] is False
+    assert report["inflate_survived"] is False
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["blockers"] == ["target_region_action_archive_zip_missing"]
+
+
+def test_target_region_action_parseback_survival_requires_charged_action_meta(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    archive_path = tmp_path / "archive.zip"
+    archive_path.write_bytes(b"archive-placeholder")
+
+    class ParsedArchive:
+        def __init__(self) -> None:
+            self.meta: dict[str, str] = {}
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "_read_hiv1_payload_from_archive_zip",
+        lambda _path: b"hiv1-payload",
+    )
+    monkeypatch.setattr(archive_candidate, "parse_archive", lambda _payload: ParsedArchive())
+
+    report = archive_candidate.build_hi_nerv_target_region_action_parseback_survival(
+        archive_path,
+    )
+
+    assert report["schema"] == archive_candidate.HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA
+    assert report["survived"] is False
+    assert report["parseback_survived"] is False
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["archive_bytes"] == len(b"archive-placeholder")
+    assert report["blockers"] == ["target_region_action_meta_missing"]
+
+
 def test_allowed_birth_update_name_scopes_late_tensors_only() -> None:
     assert allowed_birth_update_name("head_rgb_1.weight")
     assert allowed_birth_update_name("head_rgb_1.bias")
@@ -1213,6 +1267,7 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert synthesis["synthesis_optimizer"] == "masked_receiver_pixel_adam"
     assert synthesis["synthesis_optimized_surface"] == "live_segnet_receiver_uint8_ste"
     assert synthesis["synthesis_steps"] > 0
+    assert synthesis["candidate_is_true_wall_normal_teacher"] is True
     assert synthesis["archive_closed"] is False
     assert synthesis["promotion_blocked"] is True
     assert "target_region_action_archive_meta_not_materialized" in synthesis[
@@ -1238,7 +1293,15 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert direct_wall["schema"] == "tac.direct_seg_wall_oracle_receipt.v1"
     assert direct_wall["support_cardinality"] == synthesis["target_region_action_pixel_count"]
     assert len(direct_wall["support_sha256"]) == 64
+    assert direct_wall["inverse_source"] == "support_projected_segnet_margin_vjp"
+    assert direct_wall["inverse_basis"] == "support_projected_receiver_pixel_adam_ste"
+    assert direct_wall["uses_official_seg_preprocess"] is True
+    assert direct_wall["uses_target_class_margin"] is True
+    assert direct_wall["teacher_is_true_wall_normal"] is True
     assert direct_wall["action_effect"]["family"] == "direct_seg_wall_oracle"
+    best_wall = telemetry["masked_residual_oracle"]["best_wall_normal_candidate"]
+    assert best_wall is not None
+    assert best_wall["direct_seg_wall_oracle"]["teacher_is_true_wall_normal"] is True
     wall_lift = payload["target_region_wall_normal_lift"]
     assert wall_lift["schema"] == "tac.target_region_wall_normal_lift.v1"
     assert wall_lift["operator"] == "TargetRegionWallNormalLift"
@@ -1251,6 +1314,13 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
         "BytePricedActionFallback",
         "ExactReplayAdmission",
     ]
+    assert wall_lift["direct_teacher"]["inverse_source"] == "support_projected_segnet_margin_vjp"
+    assert wall_lift["direct_teacher"]["teacher_is_true_wall_normal"] is True
+    assert wall_lift["direct_teacher"]["qualified_crossed_target_wall"] is True
+    assert (
+        "target_region_wall_normal_direct_teacher_not_true_wall_normal"
+        not in wall_lift["blockers"]
+    )
     assert wall_lift["direct_teacher"]["action_effect"]["family"] == "direct_seg_wall_oracle"
     assert wall_lift["direct_teacher"]["support_sha256"] == direct_wall["support_sha256"]
     assert wall_lift["backend_fit"]["action_effect"]["family"] == "hinerv"
@@ -1260,6 +1330,9 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert wall_lift["sidecar_fallback"]["payload_bytes"] == synthesis[
         "target_region_action_payload_bytes"
     ]
+    assert wall_lift["sidecar_fallback"]["available"] is (
+        wall_lift["direct_teacher"]["exact_score_decision"] in {"accept", "accepted"}
+    )
     assert wall_lift["parseback_required_before_promotion"] is True
     assert wall_lift["promotion_eligible"] is False
     assert payload["candidate_frontier_telemetry"]["target_region_wall_normal_lift"] == wall_lift

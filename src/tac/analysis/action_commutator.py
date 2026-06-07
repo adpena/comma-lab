@@ -280,6 +280,7 @@ def commutator_value(
         "delta_b": triple.delta_b,
         "delta_ab": triple.delta_ab,
         "comm": comm,
+        "interaction_or_commutator": comm,
         "synergy_score_units": -comm,
         "classification": classification,
         "eps": float(eps),

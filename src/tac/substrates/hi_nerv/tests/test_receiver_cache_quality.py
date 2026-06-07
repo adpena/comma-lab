@@ -15,6 +15,7 @@ from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.archive_candidate import (
     build_hi_nerv_archive_replay_components,
+    build_hi_nerv_target_region_action_parseback_survival,
 )
 from tac.substrates.hi_nerv.receiver_cache_quality import (
     HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA,
@@ -166,6 +167,42 @@ def test_hi_nerv_archive_replay_components_consume_target_region_actions(
     assert action_components["parseback_rgb_pair_mse"] < base_components[
         "parseback_rgb_pair_mse"
     ]
+
+
+def test_hi_nerv_target_region_action_parseback_survival_proves_receiver_consumption(
+    tmp_path: Path,
+) -> None:
+    action = TargetRegionPixelAction(
+        pair_index=1,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=np.array([[2, 3], [4, 5]], dtype=np.uint16),
+        rgb_u8=np.array([[255, 0, 17], [0, 255, 33]], dtype=np.uint8),
+    )
+    program = encode_target_region_actions_meta([action])
+    action_archive = _write_tiny_hiv1_archive(
+        tmp_path / "action.zip",
+        extra_meta={TARGET_REGION_ACTION_META_KEY: program},
+    )
+
+    proof = build_hi_nerv_target_region_action_parseback_survival(
+        action_archive,
+        expected_program_base64=program,
+        expected_support_sha256=None,
+        expected_payload_bytes=None,
+    )
+
+    assert proof["schema"] == "hi_nerv_target_region_action_parseback_survival.v1"
+    assert proof["survived"] is True
+    assert proof["fakequant_survived"] is True
+    assert proof["parseback_survived"] is True
+    assert proof["inflate_survived"] is False
+    assert proof["total_action_pixels"] == 2
+    assert proof["exact_uint8_action_pixels_applied"] == 2
+    assert proof["receiver_changed_action_pixels"] == 2
+    assert proof["max_abs_action_rgb_error"] == pytest.approx(0.0)
+    assert "target_region_action_inflate_survival_missing" in proof["blockers"]
 
 
 def test_hi_nerv_archive_replay_components_attach_segnet_teacher_metrics(

@@ -12,6 +12,7 @@ compiler stack.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections.abc import Iterable, Mapping, Sequence
@@ -30,6 +31,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.analysis.action_commutator import build_commutator_ledger  # noqa: E402
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects  # noqa: E402
 from tac.analysis.inverse_scorer_actions import (  # noqa: E402
+    build_masked_residual_oracle_action_effect,
     build_score_program_word,
     generate_inverse_scorer_candidates,
 )
@@ -81,6 +83,11 @@ def _read_training_artifacts(paths: Sequence[Path]) -> list[ActionEffect]:
                     consumer="inverse_evaluate_candidate_queue",
                 )
             )
+        for source in _find_hinerv_masked_residual_candidates(payload):
+            if id(source) in seen_payload_ids:
+                continue
+            seen_payload_ids.add(id(source))
+            effects.append(_masked_residual_candidate_to_effect(source, path))
     return effects
 
 
@@ -102,6 +109,64 @@ def _find_hinerv_four_arm_sources(payload: Mapping[str, Any]) -> list[Mapping[st
 
     walk(payload)
     return out
+
+
+def _find_hinerv_masked_residual_candidates(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    out: list[Mapping[str, Any]] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, Mapping):
+            if str(value.get("schema") or "") == "hi_nerv_target_region_masked_residual_oracle_candidate.v1":
+                out.append(value)
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            for child in value:
+                walk(child)
+
+    walk(payload)
+    return out
+
+
+def _masked_residual_candidate_to_effect(
+    candidate: Mapping[str, Any],
+    source_path: Path,
+) -> ActionEffect:
+    region_id = _region_id_from_candidate(candidate)
+    return build_masked_residual_oracle_action_effect(
+        candidate,
+        action_id=f"{_stable_short_id(candidate)}__wall_normal_branch",
+        pair_id=_first_int(candidate, "pair_id", "pair_index", default=0),
+        target_class=_first_int(candidate, "target_class", "class_index", default=0),
+        region_id=region_id,
+        authority="batch_local_live_mlx",
+        producer=f"hinerv_masked_residual_artifact:{source_path.as_posix()}",
+    )
+
+
+def _region_id_from_candidate(candidate: Mapping[str, Any]) -> str:
+    region = candidate.get("region_id")
+    if isinstance(region, str) and region.strip():
+        return region
+    batch = _first_int(candidate, "batch_index", default=0)
+    klass = _first_int(candidate, "target_class", "class_index", default=0)
+    label = _first_int(candidate, "region_label", default=0)
+    return f"b{batch}/c{klass}/r{label}"
+
+
+def _stable_short_id(candidate: Mapping[str, Any]) -> str:
+    raw = json.dumps(dict(candidate), sort_keys=True, default=str, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def _first_int(payload: Mapping[str, Any], *keys: str, default: int = 0) -> int:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return value
+    return int(default)
 
 
 def _unique_effects(effects: Iterable[ActionEffect]) -> list[ActionEffect]:
@@ -417,6 +482,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     action_effect_path = out_dir / "action_effect_rows.jsonl"
     queue_path = out_dir / "inverse_candidate_queue.jsonl"
+    candidate_queue_alias_path = out_dir / "candidate_queue.jsonl"
     score_program_word_path = out_dir / "score_program_word.json"
     commutator_path = out_dir / "commutator_summary.json"
     pr110_proof_path = out_dir / "pr110_k16_baseline_reproduction.json"
@@ -428,6 +494,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     output_effects = _unique_effects([*pr110_effects, *inverse_effects])
     action_effect_count = _write_action_effect_ledger(output_effects, action_effect_path)
     queue_count = _write_jsonl(queue_path, candidate_queue_rows)
+    _write_jsonl(candidate_queue_alias_path, candidate_queue_rows)
     score_program_word = build_score_program_word(candidate_queue_rows)
     _write_json(score_program_word_path, score_program_word)
     _write_json(commutator_path, commutator)
@@ -443,6 +510,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_action_effect_paths": [path.as_posix() for path in args.pr110_action_effects],
         "action_effect_rows_path": action_effect_path.as_posix(),
         "inverse_candidate_queue_path": queue_path.as_posix(),
+        "candidate_queue_path": candidate_queue_alias_path.as_posix(),
         "score_program_word_path": score_program_word_path.as_posix(),
         "commutator_summary_path": commutator_path.as_posix(),
         "pr110_k16_baseline_reproduction_path": pr110_proof_path.as_posix(),
