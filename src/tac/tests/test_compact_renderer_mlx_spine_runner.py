@@ -1169,6 +1169,56 @@ def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> N
     assert selection["same_support_as_direct_teacher"] is True
 
 
+def test_hinerv_action_program_selection_inherits_nested_action_identity() -> None:
+    payload = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "d" * 64,
+        "direct_teacher": {
+            "schema": "tac.direct_seg_wall_oracle_receipt.v1",
+            "archive_executable_support_sha256": "archive-support",
+            "support_sha256": "bool-mask-support",
+        },
+        "candidate_frontier_telemetry": {
+            "masked_residual": {
+                "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                "direct_seg_wall_oracle": {
+                    "action_id": "direct_seg_wall:b0:c4:r1:active_tail",
+                    "support_sha256": "bool-mask-support",
+                },
+                "target_region_action_program_base64": "nested-program",
+                "target_region_action_payload_bytes": 17,
+                "target_region_action_pixel_count": 3,
+                "target_region_action_section_telemetry": {
+                    "support_sha256": "archive-support",
+                    "support_cardinality": 3,
+                    "support_encoding": "explicit_yx_u16_coordinates",
+                    "support_encoded_bytes": 12,
+                    "payload_bytes": 17,
+                },
+                "accepted": True,
+                "exact_score_decision": "accept",
+                "exact_delta_score_nonrate": -1.0,
+                "region_argmax_transitions": {
+                    "wrong_to_target_count": 3,
+                    "net_target_support_delta": 3,
+                },
+            }
+        },
+    }
+
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
+        payload
+    )
+
+    assert program == "nested-program"
+    assert selection is not None
+    assert selection["selected_for_export"] is True
+    assert selection["action_id"] == "d" * 64
+    assert selection["target_region_action_support_sha256"] == "archive-support"
+    assert selection["direct_teacher_support_sha256"] == "archive-support"
+    assert selection["same_support_as_direct_teacher"] is True
+
+
 def test_hinerv_action_program_selection_rejects_missing_direct_support() -> None:
     payload = {
         "action_id": "e" * 64,

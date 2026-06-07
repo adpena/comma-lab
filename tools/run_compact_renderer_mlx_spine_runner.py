@@ -61,18 +61,116 @@ def _select_target_region_action_program_from_birth_payload(
 
     candidates: list[dict[str, Any]] = []
 
-    def _visit(node: Any) -> None:
+    def _string(value: Any) -> str | None:
+        return value if isinstance(value, str) and value else None
+
+    def _direct_teacher_archive_support_sha256_from_node(
+        node: Mapping[str, Any],
+    ) -> str | None:
+        for key in (
+            "direct_teacher_support_sha256",
+            "direct_teacher_archive_executable_support_sha256",
+        ):
+            value = _string(node.get(key))
+            if value is not None:
+                return value
+        for key in (
+            "direct_seg_wall_oracle",
+            "direct_teacher",
+            "target_region_wall_normal_lift",
+        ):
+            direct = node.get(key)
+            if not isinstance(direct, Mapping):
+                continue
+            for support_key in (
+                "archive_executable_support_sha256",
+                "target_region_action_support_sha256",
+            ):
+                value = _string(direct.get(support_key))
+                if value is not None:
+                    return value
+            action_effect = direct.get("action_effect")
+            if isinstance(action_effect, Mapping):
+                value = _string(action_effect.get("support_sha256"))
+                if value is not None:
+                    return value
+        return None
+
+    def _direct_teacher_support_sha256_from_node(node: Mapping[str, Any]) -> str | None:
+        value = _direct_teacher_archive_support_sha256_from_node(node)
+        if value is not None:
+            return value
+        for key in (
+            "direct_seg_wall_oracle",
+            "direct_teacher",
+            "target_region_wall_normal_lift",
+        ):
+            direct = node.get(key)
+            if not isinstance(direct, Mapping):
+                continue
+            value = _string(direct.get("support_sha256"))
+            if value is not None:
+                return value
+        return None
+
+    def _action_id_from_node(node: Mapping[str, Any]) -> str | None:
+        value = _string(node.get("action_id"))
+        if value is not None:
+            return value
+        wall_normal = node.get("target_region_wall_normal_lift")
+        if isinstance(wall_normal, Mapping):
+            value = _string(wall_normal.get("action_id"))
+            if value is not None:
+                return value
+        return None
+
+    def _visit(
+        node: Any,
+        *,
+        inherited_action_id: str | None = None,
+        inherited_direct_teacher_support_sha256: str | None = None,
+    ) -> None:
         if isinstance(node, Mapping):
+            current_action_id = _action_id_from_node(node) or inherited_action_id
+            current_direct_support = (
+                _direct_teacher_archive_support_sha256_from_node(node)
+                or inherited_direct_teacher_support_sha256
+                or _direct_teacher_support_sha256_from_node(node)
+            )
             program = node.get("target_region_action_program_base64")
             if isinstance(program, str) and program:
-                candidates.append(dict(node))
+                candidate = dict(node)
+                if _string(candidate.get("action_id")) is None and current_action_id:
+                    candidate["action_id"] = current_action_id
+                    candidate["target_region_action_id_source"] = (
+                        "inherited_payload_context"
+                    )
+                if (
+                    _string(candidate.get("direct_teacher_support_sha256")) is None
+                    and current_direct_support
+                ):
+                    candidate["direct_teacher_support_sha256"] = current_direct_support
+                    candidate["direct_teacher_support_sha256_source"] = (
+                        "inherited_payload_context"
+                    )
+                candidates.append(candidate)
             for value in node.values():
                 if isinstance(value, (Mapping, list, tuple)):
-                    _visit(value)
+                    _visit(
+                        value,
+                        inherited_action_id=current_action_id,
+                        inherited_direct_teacher_support_sha256=current_direct_support,
+                    )
         elif isinstance(node, (list, tuple)):
             for value in node:
                 if isinstance(value, (Mapping, list, tuple)):
-                    _visit(value)
+                    _visit(
+                        value,
+                        inherited_action_id=inherited_action_id,
+                        inherited_direct_teacher_support_sha256=(
+                            inherited_direct_teacher_support_sha256
+                        ),
+                    )
 
     _visit(payload)
     if not candidates:
@@ -134,6 +232,9 @@ def _select_target_region_action_program_from_birth_payload(
         return str(value) if isinstance(value, str) and value else None
 
     def _candidate_direct_teacher_support_sha256(row: Mapping[str, Any]) -> str | None:
+        value = row.get("direct_teacher_support_sha256")
+        if isinstance(value, str) and value:
+            return value
         direct = row.get("direct_seg_wall_oracle")
         direct = direct if isinstance(direct, Mapping) else {}
         value = direct.get("archive_executable_support_sha256") or direct.get("support_sha256")
