@@ -266,11 +266,38 @@ def _commutator_measurement_blockers(commutator: Mapping[str, Any]) -> list[str]
 
 def _measurement_command_blockers_for_inverse_commutator(
     singles: Sequence[ActionEffect],
+    composites: Sequence[ActionEffect],
 ) -> list[str]:
-    blockers = [BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING]
+    blockers: list[str] = []
+    if not _has_reverse_order_composite(composites):
+        blockers.append(BLOCKER_REVERSE_ORDER_COMPOSITE_PRODUCER_MISSING)
     if not _all_single_effects_have_base_identity(singles):
         blockers.append(BLOCKER_COMPOSITE_BASE_IDENTITY_PRODUCER_MISSING)
     return blockers
+
+
+def _has_reverse_order_composite(effects: Sequence[ActionEffect]) -> bool:
+    for effect in effects:
+        action_id = effect.action_id.lower()
+        frame0_pos = action_id.find("inverse_frame0_pose")
+        frame1_pos = action_id.find("inverse_frame1_seg")
+        if frame0_pos >= 0 and frame1_pos >= 0 and frame0_pos < frame1_pos:
+            return True
+        text = " ".join(
+            [
+                effect.action_kind,
+                effect.arm or "",
+                *effect.trained_groups,
+                *effect.payload_sections,
+            ]
+        ).lower()
+        if (
+            "frame0_pose_then_birth" in text
+            or "pose_then_birth" in text
+            or "pose_then_seg" in text
+        ):
+            return True
+    return False
 
 
 def _all_single_effects_have_base_identity(effects: Sequence[ActionEffect]) -> bool:
@@ -376,7 +403,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         singles,
         composites,
         first_measurement_command=None,
-        measurement_command_blockers=_measurement_command_blockers_for_inverse_commutator(singles),
+        measurement_command_blockers=_measurement_command_blockers_for_inverse_commutator(
+            singles,
+            composites,
+        ),
         use_default_measurement_command=False,
     )
     commutator_measurement_blockers = _commutator_measurement_blockers(commutator)

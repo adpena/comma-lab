@@ -156,6 +156,12 @@ def _reverse_composite_effect() -> ActionEffect:
     )
 
 
+def _with_base_state(effect: ActionEffect, base_state_sha256: str) -> ActionEffect:
+    payload = effect.as_dict()
+    payload["base_state_sha256"] = base_state_sha256
+    return ActionEffect.from_dict(payload)
+
+
 def _pr110_k1_replay_effect() -> ActionEffect:
     return ActionEffect.build(
         action_id="lfv1v2_k01_replay",
@@ -484,6 +490,51 @@ def test_generate_inverse_evaluate_actions_cli_reads_training_artifact_base_iden
     assert commutator["measured_commutator_count"] == 2
     assert commutator["needs_measurement_count"] == 0
     assert commutator["measurement_queue"] == []
+
+
+def test_generate_inverse_evaluate_actions_cli_does_not_call_blocked_reverse_producer_missing(
+    tmp_path: Path,
+) -> None:
+    seed_ledger = tmp_path / "seed_action_effects.jsonl"
+    pr110_ledger = tmp_path / "pr110_action_effects.jsonl"
+    out_dir = tmp_path / "out"
+    base_a = "1" * 64
+    base_b = "2" * 64
+    for effect in (
+        _with_base_state(_frame0_pose_effect(), base_a),
+        _with_base_state(_frame1_birth_effect(), base_a),
+        _with_base_state(_composite_effect(), base_a),
+        _with_base_state(_reverse_composite_effect(), base_b),
+    ):
+        append_action_effect(effect, seed_ledger)
+    append_action_effect(_pr110_k1_replay_effect(), pr110_ledger)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "generate_inverse_evaluate_actions.py"),
+            "--seed-action-effects",
+            str(seed_ledger),
+            "--pr110-action-effects",
+            str(pr110_ledger),
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    summary = json.loads(proc.stdout)
+    assert "inverse_scorer_reverse_order_composite_producer_missing" not in (
+        summary["commutator_measurement_blockers"]
+    )
+    assert any(
+        str(blocker).startswith("measured_composite_incompatible:base_state_sha256 mismatch")
+        for blocker in summary["commutator_measurement_blockers"]
+    )
 
 
 def test_convert_real_pr110_k16_packet_to_action_effect_clears_reproduction_gate(tmp_path: Path) -> None:
