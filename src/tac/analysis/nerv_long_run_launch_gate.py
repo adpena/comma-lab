@@ -238,6 +238,21 @@ def _rejected_live_birth_receipt_blockers(rows: list[dict[str, Any]]) -> list[st
         if not row.get("action_id"):
             blockers.append("live_birth_action_id_missing")
         blockers.extend(str(blocker) for blocker in row.get("blockers") or [])
+        breakdown = row.get("birth_rejection_breakdown")
+        if isinstance(breakdown, Mapping):
+            state = str(breakdown.get("state") or "").strip()
+            if state:
+                blockers.append(f"live_birth_rejection_state:{state}")
+            first_failed_surface = str(breakdown.get("first_failed_surface") or "").strip()
+            if first_failed_surface:
+                blockers.append(
+                    f"live_birth_rejection_first_failed_surface:{first_failed_surface}"
+                )
+            causes = breakdown.get("causes")
+            if isinstance(causes, Mapping):
+                for cause, active in sorted(causes.items()):
+                    if active is True:
+                        blockers.append(f"live_birth_rejection_cause:{cause}")
     return _dedupe(blockers)
 
 

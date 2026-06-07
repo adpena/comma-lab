@@ -1918,6 +1918,43 @@ def test_zero_net_support_is_not_a_birth(tmp_path: Path) -> None:
     assert "live_birth_target_support_not_positive" in verdict["blocking_evidence"]
 
 
+def test_rejected_live_birth_receipt_carries_first_failed_surface(tmp_path: Path) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt(hard_won=0, net_support=0)
+    row["accepted_step_count"] = 0
+    row["blockers"] = ["hinerv_target_region_birth_no_accepted_step"]
+    row["birth_rejection_breakdown"] = {
+        "schema": "hi_nerv_target_region_birth_rejection_breakdown.v1",
+        "state": "rejected",
+        "first_failed_surface": "segnet_argmax_margin_crossing",
+        "causes": {
+            "receiver_pixels_moved_without_argmax_birth": True,
+            "pose_trust_failed": False,
+        },
+    }
+    _write(root / "birth.json", row)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    blockers = verdict["blocking_evidence"]
+    assert "real_video_birth_receipt_not_accepted" in blockers
+    assert "real_video_birth_receipt_missing" not in blockers
+    assert "live_birth_rejection_state:rejected" in blockers
+    assert (
+        "live_birth_rejection_first_failed_surface:segnet_argmax_margin_crossing"
+        in blockers
+    )
+    assert (
+        "live_birth_rejection_cause:receiver_pixels_moved_without_argmax_birth"
+        in blockers
+    )
+
+
 def test_survival_action_id_mismatch_is_named(tmp_path: Path) -> None:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt())
