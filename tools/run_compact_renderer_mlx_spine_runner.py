@@ -17726,14 +17726,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "output_head_target_bias_init": {
-                **strip_candidate_curriculum_authority_fields(output_head_target_bias_init_payload),
+                **_strip_substrate_metadata_authority_fields(output_head_target_bias_init_payload),
                 "bound_to_renderer_model": bool(output_head_target_bias_init),
                 "compression_time_only": True,
                 "runtime_sidecar_bytes": 0,
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "scorer_domain_bootstrap": {
-                **strip_candidate_curriculum_authority_fields(
+                **_strip_substrate_metadata_authority_fields(
                     output_head_target_bias_init_payload.get(
                         "scorer_domain_bootstrap",
                         {},

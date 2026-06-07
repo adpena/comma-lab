@@ -1647,6 +1647,9 @@ def _source_forward_tensor_bundle_from_manual(
     repeat_mfu_batch: int = 1,
     include_output2: bool = True,
 ) -> dict[str, Any]:
+    source_forward_replay_authority = (
+        str(source_scope) == "official_trained_checkpoint"
+    )
     repeat = max(1, int(repeat_mfu_batch))
     mfu_low = _repeat_first_axis(manual["mfu_low"], repeat)
     mfu_skip_mid = _repeat_first_axis(manual["mfu_skip_mid"], repeat)
@@ -1732,7 +1735,7 @@ def _source_forward_tensor_bundle_from_manual(
         "source_scope": str(source_scope),
         "upstream_forward_replay_verified": True,
         "receiver_bound_capture": False,
-        "source_forward_replay_authority": True,
+        "source_forward_replay_authority": source_forward_replay_authority,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,

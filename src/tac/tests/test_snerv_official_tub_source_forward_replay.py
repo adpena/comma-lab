@@ -106,6 +106,8 @@ def test_snerv_official_tub_source_forward_tensor_bundle_names_proof_tensors() -
     assert len(bundle["checkpoint_sha256"]) == 64
     assert bundle["upstream_forward_replay_verified"] is True
     assert bundle["receiver_bound_capture"] is False
+    assert bundle["source_scope"] == "official_source_fixture_state"
+    assert bundle["source_forward_replay_authority"] is False
     tensors = bundle["tensors"]
     assert {
         "coord_time_embedding",
