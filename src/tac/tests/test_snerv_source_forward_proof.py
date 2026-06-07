@@ -167,6 +167,38 @@ def test_official_upstream_manifest_fixture_scope_is_not_authority() -> None:
     )
 
 
+def test_official_upstream_manifest_partial_tensor_set_is_not_authority() -> None:
+    manifest = build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[0],
+        tensor_names=["output_2"],
+        model_source_sha256="8" * 64,
+        checkpoint_sha256="6" * 64,
+        state_dict_sha256="7" * 64,
+        decoder_len=7,
+        source_scope="official_trained_checkpoint",
+        trained_checkpoint_lineage="official_trained_checkpoint_state_dict",
+        capture_origin="official_upstream_trained_checkpoint",
+    )
+
+    assert manifest["capture_verdict"] == SOURCE_GRAPH_UNPROVEN
+    assert manifest["source_graph_unproven"] is True
+    assert manifest["upstream_forward_replay_verified"] is False
+    assert manifest["source_forward_replay_authority"] is False
+    assert "rgb_pair_uint8" in manifest["missing_required_tensor_names"]
+    status = validate_snerv_official_torch_upstream_capture_manifest(
+        manifest,
+        pair_ids=[0],
+        tensor_names=["output_2"],
+    )
+    assert status["passed"] is False
+    assert any(
+        blocker.startswith(
+            "snerv_official_torch_manifest_missing_required_tensors:"
+        )
+        for blocker in status["blockers"]
+    )
+
+
 def test_output2_boundary_verdict_accepts_only_source_identical_receiver_consumed() -> None:
     verdict = _source_identical_output2_verdict()
 

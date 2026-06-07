@@ -654,6 +654,12 @@ def build_snerv_official_torch_upstream_capture_manifest(
             model_source_sha256 = sha256(source_path.read_bytes()).hexdigest()
     normalized_pair_ids = _normalize_pair_ids(pair_ids)
     normalized_tensor_names = sorted(str(name) for name in tensor_names)
+    required_tensor_names = set(SOURCE_FORWARD_TENSOR_NAMES)
+    supplied_tensor_names = set(normalized_tensor_names)
+    missing_required_tensor_names = sorted(required_tensor_names - supplied_tensor_names)
+    source_forward_tensor_set_complete = required_tensor_names.issubset(
+        supplied_tensor_names
+    )
     source_scope_text = str(source_scope or "")
     lineage_text = str(trained_checkpoint_lineage)
     source_forward_replay_authority = bool(
@@ -661,7 +667,7 @@ def build_snerv_official_torch_upstream_capture_manifest(
         and source_scope_text == "official_trained_checkpoint"
         and lineage_text in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES
         and bool(normalized_pair_ids)
-        and bool(normalized_tensor_names)
+        and source_forward_tensor_set_complete
         and _looks_like_sha256(model_source_sha256)
         and _looks_like_sha256(checkpoint_sha256)
         and _looks_like_sha256(state_dict_sha256)
@@ -688,6 +694,7 @@ def build_snerv_official_torch_upstream_capture_manifest(
         "capture_origin": str(capture_origin),
         "pair_ids": normalized_pair_ids,
         "tensor_names": normalized_tensor_names,
+        "missing_required_tensor_names": missing_required_tensor_names,
         "upstream_forward_replay_verified": source_forward_replay_authority,
         "receiver_bound_capture": False,
         "source_forward_replay_authority": source_forward_replay_authority,
@@ -760,6 +767,14 @@ def validate_snerv_official_torch_upstream_capture_manifest(
         blockers.append("snerv_official_torch_pair_ids_mismatch")
     manifest_tensor_names = {str(name) for name in row.get("tensor_names") or ()}
     supplied_tensor_names = {str(name) for name in tensor_names}
+    missing_required_from_manifest = sorted(
+        set(SOURCE_FORWARD_TENSOR_NAMES) - manifest_tensor_names
+    )
+    if missing_required_from_manifest:
+        blockers.append(
+            "snerv_official_torch_manifest_missing_required_tensors:"
+            + ",".join(missing_required_from_manifest)
+        )
     missing_from_manifest = sorted(supplied_tensor_names - manifest_tensor_names)
     if missing_from_manifest:
         blockers.append(
