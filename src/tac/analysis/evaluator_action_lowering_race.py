@@ -338,11 +338,30 @@ def _lowering_target(effect: ActionEffect) -> str:
             " ".join(effect.payload_sections),
         )
     ).lower()
-    if "composite" in text or "pose_then" in text or "then_pose" in text:
+    if (
+        "frame0_pose_target_only" in text
+        or "independent_birth_plus_frame0_pose" in text
+        or "joint_line_search_composite" in text
+        or "frame0_pose_then_birth_composite" in text
+        or "composite" in text
+        or "pose_then" in text
+        or "then_pose" in text
+    ):
         return "pose_compensated_composite"
-    if "semantic" in text or "latent_derived" in text or "semantic_pose" in text:
+    if (
+        "semantic" in text
+        or "latent_derived" in text
+        or "semantic_pose" in text
+        or "qrgb" in text
+    ):
         return "semantic_pose_primitive"
-    if "backend" in text or "wall_normal" in text or "adapter" in text:
+    if (
+        "backend" in text
+        or "wall_normal" in text
+        or "adapter" in text
+        or "birth_only" in text
+        or "target_region_birth" in text
+    ):
         return "backend_realization"
     return "byte_priced_sidecar"
 

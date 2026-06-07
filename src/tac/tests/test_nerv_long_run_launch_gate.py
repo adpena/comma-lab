@@ -611,8 +611,15 @@ def _hi_nerv_lowering_race(
     same_support: bool = True,
     delta_score_total: float | None = -0.01,
     authority: str = "inflate_raw",
+    include_target_accounting: bool = True,
 ) -> dict:
-    return {
+    targets = [
+        "backend_realization",
+        "byte_priced_sidecar",
+        "pose_compensated_composite",
+        "semantic_pose_primitive",
+    ]
+    row = {
         "schema": HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
         "fixture_not_real": True,
         "action_id": action_id,
@@ -638,6 +645,15 @@ def _hi_nerv_lowering_race(
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    if include_target_accounting:
+        row["target_accounting"] = {
+            "schema": "tac.evaluator_action_lowering_race.target_accounting.v1",
+            "expected_targets": targets,
+            "present_targets": list(targets),
+            "missing_targets": [],
+            "all_targets_accounted": True,
+        }
+    return row
 
 
 def _native_hi_nerv_lowering_race(
@@ -1237,6 +1253,30 @@ def test_hinerv_gate_rejects_native_lowering_race_without_all_targets(
     assert any(
         blocker.startswith(f"evaluator_action_lowering_race_targets_missing:{ACTION}:")
         for blocker in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_wrapper_lowering_race_without_target_accounting(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "lowering_race.json",
+        _hi_nerv_lowering_race(include_target_accounting=False),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert (
+        f"evaluator_action_lowering_race_target_accounting_missing:{ACTION}"
+        in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False
 

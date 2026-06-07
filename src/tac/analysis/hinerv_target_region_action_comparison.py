@@ -89,6 +89,7 @@ def build_hinerv_target_region_action_comparison_from_archive(
     survival_receipt: Mapping[str, Any] | str | Path,
     runner_report: Mapping[str, Any] | str | Path | None = None,
     action_id: str | None = None,
+    action_effect_sources: Sequence[ActionEffect | Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build a comparison report from a byte-closed HIV1 archive and receipts."""
 
@@ -123,6 +124,7 @@ def build_hinerv_target_region_action_comparison_from_archive(
         wall_normal_lift=wall_normal,
         sidecar_candidate=sidecar_candidate,
         action_id=action_id,
+        action_effect_sources=action_effect_sources,
     )
 
 
@@ -133,6 +135,7 @@ def build_hinerv_target_region_action_comparison(
     wall_normal_lift: Mapping[str, Any] | None = None,
     sidecar_candidate: Mapping[str, Any] | None = None,
     action_id: str | None = None,
+    action_effect_sources: Sequence[ActionEffect | Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build the fixed-action sidecar-vs-backend report."""
 
@@ -315,6 +318,7 @@ def build_hinerv_target_region_action_comparison(
         backend_fit=backend,
         current_sidecar=current_row,
         sidecar_rows=sidecar_rows,
+        action_effect_sources=action_effect_sources,
         sidecar_support_mismatch=sidecar_support_mismatch,
         sidecar_survival_identity_mismatch=bool(survival_identity_blockers),
     )
@@ -474,7 +478,7 @@ def _comparison_row(
         class_ids=_int_tuple(sidecar_admission.get("target_class")),
         region_ids=_str_tuple(sidecar_admission.get("region_id")),
         payload_sections=(
-            "lowering_target=byte_priced_sidecar",
+            f"lowering_target={_candidate_lowering_target(support_encoding=support_encoding, action_encoding=action_encoding)}",
             f"support_codec={support_encoding}",
             f"action_codec={action_encoding}",
             f"encoded_payload_bytes={int(encoded_payload_bytes)}",
@@ -545,6 +549,19 @@ def _comparison_row(
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _candidate_lowering_target(*, support_encoding: str, action_encoding: str) -> str:
+    text = f"{support_encoding} {action_encoding}".lower()
+    if (
+        "path_tube" in text
+        or "class_attractor" in text
+        or "semantic" in text
+        or "median_scalar" in text
+        or "low_rank" in text
+    ):
+        return "semantic_pose_primitive"
+    return "byte_priced_sidecar"
 
 
 def _byte_decomposition(program: _ActionProgram) -> dict[str, Any]:
@@ -973,6 +990,7 @@ def _lowering_race_verdict(
     backend_fit: Mapping[str, Any],
     current_sidecar: Mapping[str, Any],
     sidecar_rows: Sequence[Mapping[str, Any]],
+    action_effect_sources: Sequence[ActionEffect | Mapping[str, Any]],
     sidecar_support_mismatch: bool,
     sidecar_survival_identity_mismatch: bool,
 ) -> dict[str, Any]:
@@ -992,6 +1010,7 @@ def _lowering_race_verdict(
     backend_effect = _nested_mapping(backend_fit, ("action_effect",))
     if backend_effect:
         effects.append(ActionEffect.from_dict(backend_effect))
+    effects.extend(_coerce_action_effect_source_rows(action_effect_sources))
 
     report = build_lowering_race_report(
         action_id=action_id,
@@ -1037,11 +1056,27 @@ def _lowering_race_verdict(
         "current_sidecar_candidate_id": current_sidecar.get("candidate_id"),
         "candidate_count": len(report.get("lowering_candidates") or []),
         "lowering_candidates": report.get("lowering_candidates") or [],
+        "target_accounting": report.get("target_accounting") or {},
         "support_identity": report.get("support_identity") or {},
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _coerce_action_effect_source_rows(
+    rows: Sequence[ActionEffect | Mapping[str, Any]],
+) -> list[ActionEffect]:
+    effects: list[ActionEffect] = []
+    for row in rows:
+        try:
+            if isinstance(row, ActionEffect):
+                effects.append(row)
+            elif isinstance(row, Mapping):
+                effects.append(ActionEffect.from_dict(row))
+        except Exception:
+            continue
+    return effects
 
 
 def write_hinerv_target_region_action_comparison(

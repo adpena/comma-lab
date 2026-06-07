@@ -997,11 +997,13 @@ def test_hinerv_action_comparison_writer_attaches_lowering_race(
         survival_receipt,
         runner_report=None,
         action_id=None,
+        action_effect_sources=(),
     ):
         assert Path(archive_path) == archive
         assert survival_receipt is parseback
         assert runner_report is artifact_dict
         assert action_id == "e" * 64
+        assert tuple(action_effect_sources) == ()
         return {
             "schema": "hi_nerv_target_region_action_sidecar_backend_comparison.v1",
             "action_id": action_id,
@@ -1217,6 +1219,143 @@ def test_hinerv_action_program_selection_inherits_nested_action_identity() -> No
     assert selection["target_region_action_support_sha256"] == "archive-support"
     assert selection["direct_teacher_support_sha256"] == "archive-support"
     assert selection["same_support_as_direct_teacher"] is True
+
+
+def test_hinerv_action_program_selection_prefers_wall_normal_support() -> None:
+    payload = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "d" * 64,
+        "target_region_wall_normal_lift": {
+            "schema": "tac.target_region_wall_normal_lift.v1",
+            "action_id": "d" * 64,
+            "direct_teacher": {
+                "archive_executable_support_sha256": "preferred-support",
+                "support_sha256": "bool-mask-support",
+            },
+            "sidecar_fallback": {
+                "support_sha256": "preferred-support",
+            },
+        },
+        "candidate_frontier_telemetry": {
+            "masked_residual": {
+                "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+                "best_candidate": {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "direct_seg_wall_oracle": {
+                        "archive_executable_support_sha256": "generic-support",
+                        "support_sha256": "generic-bool-mask-support",
+                    },
+                    "target_region_action_program_base64": "generic-program",
+                    "target_region_action_payload_bytes": 8,
+                    "target_region_action_section_telemetry": {
+                        "support_sha256": "generic-support",
+                        "support_cardinality": 4,
+                        "support_encoding": "packbits",
+                        "support_encoded_bytes": 2,
+                        "payload_bytes": 8,
+                    },
+                    "accepted": True,
+                    "target_support_moved": True,
+                    "exact_delta_score_nonrate": -10.0,
+                },
+                "best_wall_normal_candidate": {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "direct_seg_wall_oracle": {
+                        "archive_executable_support_sha256": "preferred-support",
+                        "support_sha256": "bool-mask-support",
+                    },
+                    "target_region_action_program_base64": "wall-normal-program",
+                    "target_region_action_payload_bytes": 16,
+                    "target_region_action_section_telemetry": {
+                        "support_sha256": "preferred-support",
+                        "support_cardinality": 6,
+                        "support_encoding": "explicit_yx_u16_coordinates",
+                        "support_encoded_bytes": 12,
+                        "payload_bytes": 16,
+                    },
+                    "accepted": True,
+                    "target_support_moved": True,
+                    "exact_delta_score_nonrate": -1.0,
+                },
+            },
+        },
+    }
+
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
+        payload
+    )
+
+    assert program == "wall-normal-program"
+    assert selection is not None
+    assert selection["selected_for_export"] is True
+    assert selection["action_id"] == "d" * 64
+    assert selection["wall_normal_preferred_action_id"] == "d" * 64
+    assert selection["wall_normal_preferred_support_sha256"] == "preferred-support"
+    assert selection["selected_matches_wall_normal_support"] is True
+    assert selection["target_region_action_support_sha256"] == "preferred-support"
+    assert selection["direct_teacher_support_sha256"] == "preferred-support"
+    assert selection["exact_delta_score_nonrate"] == -1.0
+
+
+def test_hinerv_action_payload_selection_reads_persisted_readiness_metadata() -> None:
+    nested_birth = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "d" * 64,
+        "target_region_wall_normal_lift": {
+            "schema": "tac.target_region_wall_normal_lift.v1",
+            "action_id": "d" * 64,
+            "sidecar_fallback": {"support_sha256": "preferred-support"},
+            "direct_teacher": {
+                "archive_executable_support_sha256": "preferred-support",
+            },
+        },
+        "candidate_frontier_telemetry": {
+            "masked_residual_oracle": {
+                "best_wall_normal_candidate": {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "target_region_action_program_base64": "nested-program",
+                    "target_region_action_payload_bytes": 9,
+                    "target_region_action_section_telemetry": {
+                        "support_sha256": "preferred-support",
+                        "payload_bytes": 9,
+                    },
+                    "direct_seg_wall_oracle": {
+                        "archive_executable_support_sha256": "preferred-support",
+                    },
+                    "accepted": True,
+                    "target_support_moved": True,
+                    "exact_delta_score_nonrate": -1.0,
+                },
+            },
+        },
+    }
+    artifact = {
+        "substrate_artifact_metadata": {
+            "score_aware_training": {
+                "short_scorer_teacher_smoke_readiness": {
+                    "output_head_target_init_gate": {
+                        "metadata": {
+                            "scorer_domain_bootstrap": {
+                                "target_region_birth_actuator": nested_birth
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    payload = runner_mod._target_region_action_payload_for_export_selection(artifact)
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
+        payload
+    )
+
+    assert payload is nested_birth
+    assert program == "nested-program"
+    assert selection is not None
+    assert selection["selected_for_export"] is True
+    assert selection["selected_matches_wall_normal_support"] is True
+    assert selection["target_region_action_support_sha256"] == "preferred-support"
 
 
 def test_hinerv_action_program_selection_rejects_missing_direct_support() -> None:

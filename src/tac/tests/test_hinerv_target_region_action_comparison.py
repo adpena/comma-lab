@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from tac.analysis.action_effect import ActionEffect
 from tac.analysis.hinerv_target_region_action_comparison import (
     build_hinerv_target_region_action_comparison_from_archive,
     write_hinerv_target_region_action_comparison,
@@ -192,6 +193,12 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert report["comparison"]["first_failing_surface"] == "support_identity_mismatch"
     assert report["support_identity"]["same_as_direct_teacher"] is False
     assert report["lowering_race"]["verdict"]["sidecar_status"] == "support_identity_mismatch"
+    assert report["lowering_race"]["target_accounting"]["schema"] == (
+        "tac.evaluator_action_lowering_race.target_accounting.v1"
+    )
+    assert "byte_priced_sidecar" in report["lowering_race"]["target_accounting"][
+        "present_targets"
+    ]
     assert report["same_action_support"]["all_rows_same_action_support"] is True
     assert report["sidecar_economics"]["support_cardinality"] == action.pixel_count
     assert report["sidecar_economics"]["decision_axis"] == "exact_score_saved_per_charged_byte"
@@ -280,6 +287,66 @@ def test_hinerv_action_comparison_uses_archive_executable_direct_support(
     assert lowering_identity["support_sha256s"] == [support_sha]
     assert lowering_identity["all_candidates_same_support"] is True
     assert lowering_identity["blockers"] == []
+    accounting = report["lowering_race"]["target_accounting"]
+    assert "semantic_pose_primitive" in accounting["present_targets"]
+    assert "backend_realization" in accounting["missing_targets"]
+    assert "pose_compensated_composite" in accounting["missing_targets"]
+
+
+def test_hinerv_action_comparison_consumes_birth_action_effects_for_full_lowering_race(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    runner = json.loads(runner_path.read_text(encoding="utf-8"))
+    support_sha = target_region_action_support_sha256([action])
+    direct = runner["target_region_wall_normal_lift"]["direct_teacher"]
+    direct["archive_executable_support_sha256"] = support_sha
+    direct["archive_executable_support_hash_domain"] = (
+        "target_region_action_coordinates_v1"
+    )
+    runner_path.write_text(json.dumps(runner), encoding="utf-8")
+
+    source_effects = [
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
+            action_kind="birth_only",
+            lowering_target="backend_realization",
+        ).as_dict(),
+        _lowering_source_effect(
+            action_id="hinerv-test-action",
+            support_sha256=support_sha,
+            action_kind="joint_line_search_composite",
+            lowering_target="pose_compensated_composite",
+        ).as_dict(),
+    ]
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+        action_effect_sources=source_effects,
+    )
+
+    accounting = report["lowering_race"]["target_accounting"]
+    assert accounting["all_targets_accounted"] is True
+    assert accounting["missing_targets"] == []
+    assert set(accounting["present_targets"]) == {
+        "backend_realization",
+        "byte_priced_sidecar",
+        "pose_compensated_composite",
+        "semantic_pose_primitive",
+    }
+    candidates_by_target = {
+        row["lowering_target"]: row
+        for row in report["lowering_race"]["lowering_candidates"]
+    }
+    assert candidates_by_target["backend_realization"]["action_kind"] == "birth_only"
+    assert (
+        candidates_by_target["pose_compensated_composite"]["action_kind"]
+        == "joint_line_search_composite"
+    )
 
 
 def test_hinerv_action_comparison_rejects_survival_receipt_archive_mismatch(
@@ -308,6 +375,63 @@ def test_hinerv_action_comparison_rejects_survival_receipt_archive_mismatch(
     )
     assert report["comparison"]["sidecar_current_inflate_survived"] is False
     assert report["lowering_race"]["same_survival_identity_as_archive"] is False
+
+
+def _lowering_source_effect(
+    *,
+    action_id: str,
+    support_sha256: str,
+    action_kind: str,
+    lowering_target: str,
+) -> ActionEffect:
+    return ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind=action_kind,
+        inverse_source="joint_seg_pose_projection",
+        frame_index=1,
+        frame_incidence="seg_pose_joint",
+        candidate_status="measured",
+        authority="inflate_raw",
+        normalization_scope="batch_local",
+        producer="unit_test",
+        consumer="long_run_readiness_dag",
+        pair_ids=[0],
+        region_ids=["b0/c4/r1"],
+        payload_sections=(
+            f"lowering_target={lowering_target}",
+            "support_codec=receiver_survived_support",
+            "action_payload_bytes=0",
+            "metadata_bytes=0",
+        ),
+        old_d_seg=0.50,
+        new_d_seg=0.47,
+        old_d_pose=2.0,
+        new_d_pose=1.9,
+        old_bytes=1000,
+        new_bytes=1000,
+        receiver_surface={
+            "uint8_changed_pixels": 4,
+            "seg_argmax_changed_pixels": 4,
+            "seg_wrong_to_target_count": 3,
+            "seg_target_hard_lost_count": 0,
+        },
+        exact_score_decision="accept",
+        parseback_survived=True,
+        inflate_survived=True,
+        fakequant_survived=True,
+        wrong_to_target=3,
+        target_to_wrong=0,
+        wrong_to_wrong=1,
+        net_target_support_delta=3,
+        uint8_changed_count_region=4,
+        support_source="receiver_survived_target_region_action",
+        support_cardinality=4,
+        support_sha256=support_sha256,
+        support_encoding="receiver_survived_support",
+        support_encoded_bytes=0,
+        support_research_only=False,
+    )
 
 
 def test_hinerv_action_comparison_rejects_survival_receipt_missing_action_id(

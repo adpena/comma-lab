@@ -986,7 +986,16 @@ def _require_hi_nerv_lowering_race_evidence(
                 f"evaluator_action_lowering_race_candidate_count_not_positive:{row_id}"
             )
             continue
-        if schema == EVALUATOR_ACTION_LOWERING_RACE_SCHEMA:
+        if schema in {
+            EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
+            HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
+        }:
+            target_accounting = row.get("target_accounting")
+            if not isinstance(target_accounting, Mapping):
+                candidate_blockers.append(
+                    f"evaluator_action_lowering_race_target_accounting_missing:{row_id}"
+                )
+                continue
             missing_targets = _lowering_race_missing_targets(row)
             if missing_targets:
                 candidate_blockers.append(

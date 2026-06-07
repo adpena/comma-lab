@@ -124,6 +124,82 @@ def _select_target_region_action_program_from_birth_payload(
                 return value
         return None
 
+    def _wall_normal_export_preference_from_payload(
+        node: Any,
+    ) -> tuple[str | None, str | None]:
+        """Return the wall-normal action/support that export must preserve.
+
+        The masked-residual oracle may also contain a larger generic sidecar.
+        Exporting that row breaks the A/B/C comparison contract even if it has a
+        better local proxy delta, because the proven direct teacher and sidecar
+        fallback no longer share support.  Prefer the wall-normal receipt's
+        archive-executable support whenever it is present.
+        """
+
+        preferences: list[tuple[str | None, str]] = []
+
+        def _wall_normal_support(wall_normal: Mapping[str, Any]) -> str | None:
+            sidecar = wall_normal.get("sidecar_fallback")
+            if isinstance(sidecar, Mapping):
+                for key in (
+                    "support_sha256",
+                    "target_region_action_support_sha256",
+                    "archive_executable_support_sha256",
+                ):
+                    value = _string(sidecar.get(key))
+                    if value is not None:
+                        return value
+            direct = wall_normal.get("direct_teacher")
+            if isinstance(direct, Mapping):
+                for key in (
+                    "archive_executable_support_sha256",
+                    "target_region_action_support_sha256",
+                    "support_sha256",
+                ):
+                    value = _string(direct.get(key))
+                    if value is not None:
+                        return value
+                action_effect = direct.get("action_effect")
+                if isinstance(action_effect, Mapping):
+                    value = _string(action_effect.get("support_sha256"))
+                    if value is not None:
+                        return value
+            return None
+
+        def _visit_preference(value: Any) -> None:
+            if isinstance(value, Mapping):
+                wall_normal_nodes: list[Mapping[str, Any]] = []
+                if str(value.get("schema") or "") == "tac.target_region_wall_normal_lift.v1":
+                    wall_normal_nodes.append(value)
+                nested = value.get("target_region_wall_normal_lift")
+                if isinstance(nested, Mapping):
+                    wall_normal_nodes.append(nested)
+                for wall_normal in wall_normal_nodes:
+                    support = _wall_normal_support(wall_normal)
+                    if support is not None:
+                        preferences.append(
+                            (
+                                _string(wall_normal.get("action_id"))
+                                or _action_id_from_node(value),
+                                support,
+                            )
+                        )
+                for child in value.values():
+                    if isinstance(child, (Mapping, list, tuple)):
+                        _visit_preference(child)
+            elif isinstance(value, (list, tuple)):
+                for child in value:
+                    if isinstance(child, (Mapping, list, tuple)):
+                        _visit_preference(child)
+
+        _visit_preference(node)
+        return preferences[0] if preferences else (None, None)
+
+    (
+        wall_normal_preferred_action_id,
+        wall_normal_preferred_support_sha256,
+    ) = _wall_normal_export_preference_from_payload(payload)
+
     def _visit(
         node: Any,
         *,
@@ -189,6 +265,9 @@ def _select_target_region_action_program_from_birth_payload(
             return int(row.get("target_region_action_payload_bytes") or 0)
         except (TypeError, ValueError):
             return 0
+
+    def _candidate_action_id(row: Mapping[str, Any]) -> str | None:
+        return _string(row.get("action_id"))
 
     def _candidate_delta_nonrate(row: Mapping[str, Any]) -> float:
         decision = row.get("admission_decision")
@@ -268,7 +347,7 @@ def _select_target_region_action_program_from_birth_payload(
             delta,
         )
 
-    eligible_candidates = [
+    all_eligible_candidates = [
         row
         for row in candidates
         if _candidate_exact_accepted(row)
@@ -276,15 +355,39 @@ def _select_target_region_action_program_from_birth_payload(
         and _candidate_same_support_as_direct_teacher(row)
         and _candidate_key(row)[3] < 0.0
     ]
+    if wall_normal_preferred_support_sha256 is not None:
+        eligible_candidates = [
+            row
+            for row in all_eligible_candidates
+            if _candidate_action_support_sha256(row)
+            == wall_normal_preferred_support_sha256
+            and (
+                wall_normal_preferred_action_id is None
+                or _candidate_action_id(row) == wall_normal_preferred_action_id
+            )
+        ]
+    else:
+        eligible_candidates = all_eligible_candidates
     if not eligible_candidates:
-        best = min(candidates, key=_candidate_key)
+        best = min(all_eligible_candidates or candidates, key=_candidate_key)
+        blocker = (
+            "hi_nerv_target_region_action_no_wall_normal_same_support_candidate"
+            if wall_normal_preferred_support_sha256 is not None
+            else "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
+        )
         return None, {
             "schema": "hi_nerv_target_region_action_program_export_selection.v1",
             "candidate_count": len(candidates),
+            "eligible_candidate_count": len(all_eligible_candidates),
             "selected_for_export": False,
-            "blockers": [
-                "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
-            ],
+            "blockers": [blocker],
+            "wall_normal_preferred_action_id": wall_normal_preferred_action_id,
+            "wall_normal_preferred_support_sha256": wall_normal_preferred_support_sha256,
+            "best_candidate_matches_wall_normal_support": (
+                wall_normal_preferred_support_sha256 is not None
+                and _candidate_action_support_sha256(best)
+                == wall_normal_preferred_support_sha256
+            ),
             "best_candidate_exact_accepted": _candidate_exact_accepted(best),
             "best_candidate_support_moved": _candidate_support_moved(best),
             "best_candidate_same_support_as_direct_teacher": _candidate_same_support_as_direct_teacher(best),
@@ -311,6 +414,12 @@ def _select_target_region_action_program_from_birth_payload(
         "eligible_candidate_count": len(eligible_candidates),
         "selected_for_export": True,
         "action_id": selected.get("action_id"),
+        "wall_normal_preferred_action_id": wall_normal_preferred_action_id,
+        "wall_normal_preferred_support_sha256": wall_normal_preferred_support_sha256,
+        "selected_matches_wall_normal_support": (
+            wall_normal_preferred_support_sha256 is None
+            or telemetry.get("support_sha256") == wall_normal_preferred_support_sha256
+        ),
         "target_region_action_payload_bytes": _candidate_payload_bytes(selected),
         "target_region_action_pixel_count": selected.get("target_region_action_pixel_count"),
         "target_region_action_program_sha256": hashlib.sha256(
@@ -345,6 +454,32 @@ def _target_region_action_payload_for_export_selection(
         value = artifact_dict.get(key)
         if isinstance(value, Mapping):
             return value
+    nested_paths = (
+        (
+            "substrate_artifact_metadata",
+            "score_aware_training",
+            "short_scorer_teacher_smoke_readiness",
+            "output_head_target_init_gate",
+            "metadata",
+            "scorer_domain_bootstrap",
+            "target_region_birth_actuator",
+        ),
+        (
+            "substrate_artifact_metadata",
+            "score_aware_training",
+            "scorer_domain_bootstrap",
+            "target_region_birth_actuator",
+        ),
+    )
+    for nested_path in nested_paths:
+        node: Any = artifact_dict
+        for key in nested_path:
+            if not isinstance(node, Mapping):
+                node = None
+                break
+            node = node.get(key)
+        if isinstance(node, Mapping):
+            return node
     if isinstance(artifact_dict.get("target_region_action_program_base64"), str):
         keys = {
             "action_id",
@@ -20083,14 +20218,28 @@ def _write_hi_nerv_target_region_action_comparison_report(
             write_hinerv_target_region_action_comparison,
         )
 
+        action_effect_sources, action_effect_source_blockers = (
+            _load_runner_action_effect_sources_from_jsonl(
+                out / "hi_nerv_birth_action_effects.jsonl"
+            )
+        )
         report = dict(
             build_hinerv_target_region_action_comparison_from_archive(
                 archive,
                 survival_receipt=parseback_survival,
                 runner_report=artifact_dict,
                 action_id=action_id or None,
+                action_effect_sources=action_effect_sources,
             )
         )
+        if action_effect_source_blockers:
+            report["blockers"] = _dedupe(
+                [
+                    *[str(value) for value in report.get("blockers") or []],
+                    *action_effect_source_blockers,
+                ]
+            )
+        report["action_effect_source_count"] = len(action_effect_sources)
         written = write_hinerv_target_region_action_comparison(report, out)
     except Exception as exc:
         return _blocked(
