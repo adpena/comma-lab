@@ -8356,6 +8356,7 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     monkeypatch,
 ) -> None:
     from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
     from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
 
     captured: dict[str, object] = {}
@@ -8545,6 +8546,23 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "target_hard_won_count": 5.0,
                 "target_hard_lost_count": 0.0,
                 "net_target_support_delta": 5.0,
+                "target_support_moved": True,
+                "exact_score_decision": "accepted",
+                "exact_delta_score_nonrate": -1.0,
+                "target_region_action_program_base64": "runner-selected-action-program",
+                "target_region_action_payload_bytes": 17,
+                "target_region_action_pixel_count": 3,
+                "target_region_action_section_telemetry": {
+                    "support_sha256": "runner-action-support",
+                    "support_cardinality": 3,
+                    "support_encoding": "explicit_yx_u16_coordinates",
+                    "support_encoded_bytes": 12,
+                    "payload_bytes": 17,
+                },
+                "direct_seg_wall_oracle": {
+                    "archive_executable_support_sha256": "runner-action-support",
+                    "support_sha256": "bool-mask-support",
+                },
                 "receipt": {
                     "schema": "hi_nerv_target_region_birth_receipt.v1",
                     "surface": "live_mlx",
@@ -8641,6 +8659,19 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         shape = (int(num_pairs), int(output_height), int(output_width), 3)
         return np.zeros(shape, dtype=np.float32), np.zeros(shape, dtype=np.float32)
 
+    def fake_export_hi_nerv_mlx_archive(
+        _model_obj,
+        archive_output_dir,
+        **kwargs,
+    ):
+        captured["export_target_region_action_program_base64"] = kwargs.get(
+            "target_region_action_program_base64"
+        )
+        Path(archive_output_dir).mkdir(parents=True, exist_ok=True)
+        archive = Path(archive_output_dir) / "fake_hinerv_action_program_archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=10)
+        return archive, runner_mod._sha256_file(archive), archive.stat().st_size
+
     def fake_run_mlx_score_aware_full_main(**kwargs):
         bundle = kwargs["bundle"]
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
@@ -8735,6 +8766,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["checkpoint_selection_metric_required"] = bool(kwargs["checkpoint_selection_metric_required"])
         dual_config = kwargs["train_time_dual_ascent_config"]
         captured["dual_ascent_constraints"] = {row["constraint_id"]: dict(row) for row in dual_config["constraints"]}
+        captured["export_callback_result"] = bundle.export_archive_fn(
+            bundle.model,
+            tmp_path / "fake_hinerv_action_program_export",
+        )
         archive = tmp_path / "fake_hinerv_sparse_hydration_archive.zip"
         _write_synthetic_pr95_archive(archive, pairs=10)
         return FakeArtifact(
@@ -8765,6 +8800,11 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         mlx_score_aware_pkg,
         "build_mlx_posenet_pair_teacher",
         lambda *args, **kwargs: FakePoseNetTeacher(),
+    )
+    monkeypatch.setattr(
+        hinerv_archive_candidate,
+        "export_hi_nerv_mlx_archive",
+        fake_export_hi_nerv_mlx_archive,
     )
     monkeypatch.setattr(
         hinerv_mlx_renderer,
@@ -8936,6 +8976,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert "accepted" in target_region_birth, target_region_birth
     assert target_region_birth["accepted"] is True
     assert target_region_birth["net_target_support_delta"] == pytest.approx(5.0)
+    assert (
+        captured["export_target_region_action_program_base64"]
+        == "runner-selected-action-program"
+    )
     target_birth_call = captured["target_region_birth_call"]
     assert target_birth_call["scorer_teacher_present"] is True
     assert target_birth_call["pose_teacher_present"] is True
