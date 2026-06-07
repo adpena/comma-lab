@@ -19,6 +19,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.evaluator_action_lowering_race import (
+    LOWERING_RACE_SCHEMA as EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
+)
 from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.optimization.archive_bound_candidate_contract import (
     ArchiveBoundCandidateContractError,
@@ -114,6 +117,9 @@ RUNTIME_ADAPTER_BOOLEAN_FIELDS: frozenset[str] = frozenset(
     }
 )
 UNKNOWN_CANDIDATES_REASON = "unsupported_candidates_schema_requires_explicit_adapter_or_codec_op_param_sweep_manifest_v1"
+HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA = (
+    "hi_nerv_target_region_action_lowering_race.v1"
+)
 ARCHIVE_BOUND_CONTRACT_TRIGGER_FIELDS: frozenset[str] = frozenset(
     {
         "archive_path",
@@ -497,6 +503,180 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _evaluator_action_lowering_race_candidates(
+    payload: Mapping[str, Any],
+    *,
+    source_path: Path,
+    repo_root: Path,
+) -> list[dict[str, Any]]:
+    action_id = str(payload.get("action_id") or "").strip()
+    verdict = _mapping(payload.get("verdict"))
+    best_lowering = str(
+        payload.get("best_lowering") or verdict.get("best_lowering") or ""
+    ).strip()
+    row_id = action_id or hashlib.sha256(
+        json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()[:16]
+    selected_candidate = _selected_lowering_candidate(payload, best_lowering)
+    authority = str(
+        verdict.get("authority") or selected_candidate.get("authority") or ""
+    ).strip()
+    delta_total = _as_float(verdict.get("delta_score_total"))
+    delta_nonrate = _as_float(verdict.get("delta_score_nonrate"))
+    delta_bytes = _as_int(verdict.get("delta_bytes"))
+    source_rel = _repo_rel(source_path, repo_root)
+    source_sha = _sha256_file(source_path) if source_path.exists() else None
+    support_sha256 = (
+        str(
+            payload.get("support_sha256")
+            or verdict.get("support_sha256")
+            or selected_candidate.get("support_sha256")
+            or ""
+        ).strip()
+        or None
+    )
+    backend_complete = payload.get(
+        "backend_realization_complete",
+        verdict.get("backend_realization_complete"),
+    )
+    sidecar_complete = payload.get(
+        "sidecar_lowering_complete",
+        verdict.get("sidecar_lowering_complete"),
+    )
+    blockers = _evaluator_action_lowering_race_candidate_blockers(
+        payload,
+        best_lowering=best_lowering,
+        authority=authority,
+        delta_total=delta_total,
+        backend_complete=backend_complete,
+        sidecar_complete=sidecar_complete,
+    )
+    row = _base_candidate(
+        f"evaluator_action_lowering_race:{row_id}:{best_lowering or 'none'}",
+        source_path=source_path,
+        repo_root=repo_root,
+    )
+    row.update(
+        {
+            "schema": "optimizer_candidate_queue_row_v1",
+            "candidate_kind": "evaluator_action_lowering_race_selected_action",
+            "status": "blocked_planning_signal_only",
+            "target_kind": "evaluator_action_lowering",
+            "operation_family": "evaluator_action_lowering_race",
+            "operation_families": ["evaluator_action_lowering_race"],
+            "operation_id": f"{row_id}:{best_lowering or 'none'}",
+            "action_id": action_id or None,
+            "lowering_target": best_lowering or None,
+            "candidate_family": "evaluator_action_lowering_race",
+            "representation_family": str(payload.get("schema") or ""),
+            "substrate_family": (
+                "hinerv"
+                if "hi_nerv" in str(payload.get("schema") or "")
+                else "evaluator_action"
+            ),
+            "param_schema": str(payload.get("schema") or ""),
+            "candidate_params": {
+                "action_id": action_id or None,
+                "best_lowering": best_lowering or None,
+                "support_sha256": support_sha256,
+                "backend_realization_complete": backend_complete,
+                "sidecar_lowering_complete": sidecar_complete,
+            },
+            "consumer_payload": {
+                "source_schema": payload.get("schema"),
+                "source_artifact_path": source_rel,
+                "source_artifact_sha256": source_sha,
+                "action_id": action_id or None,
+                "selected_lowering": best_lowering or None,
+                "selected_lowering_candidate": dict(selected_candidate),
+                "verdict": dict(verdict),
+            },
+            "source_artifact_path": source_rel,
+            "source_artifact_sha256": source_sha,
+            "authority": authority or "none",
+            "authority_surface": authority or "none",
+            "support_sha256": support_sha256,
+            "backend_realization_complete": backend_complete,
+            "sidecar_lowering_complete": sidecar_complete,
+            "expected_delta_score": delta_total,
+            "rank_score": delta_total,
+            "delta_score_total": delta_total,
+            "delta_score_nonrate": delta_nonrate,
+            "predicted_delta_bytes": delta_bytes,
+            "predicted_delta_bytes_scope": "selected_lowering_action_effect",
+            "candidate_saved_bytes": (
+                int(-delta_bytes)
+                if delta_bytes is not None and delta_bytes < 0
+                else 0
+            ),
+            "score_delta_scope": (
+                "action_effect_exact_terms_nonpromotional_until_archive_authority"
+            ),
+            "consumer_surfaces": [
+                "tac.optimizer.candidate_queue.build_candidate_queue",
+                "tac.optimization.byte_shaving_campaign.build_signal_surface_from_candidate_queue",
+            ],
+            "blockers": blockers,
+            "axis_tag": "[action-effect-planning]",
+        }
+    )
+    _add_blockers(row, blockers)
+    return [row]
+
+
+def _selected_lowering_candidate(
+    payload: Mapping[str, Any],
+    best_lowering: str,
+) -> Mapping[str, Any]:
+    candidates = payload.get("lowering_candidates")
+    if not isinstance(candidates, list):
+        return {}
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        if str(candidate.get("lowering_target") or "") != best_lowering:
+            continue
+        if candidate.get("viable") is True:
+            return candidate
+    for candidate in candidates:
+        if (
+            isinstance(candidate, Mapping)
+            and str(candidate.get("lowering_target") or "") == best_lowering
+        ):
+            return candidate
+    return {}
+
+
+def _evaluator_action_lowering_race_candidate_blockers(
+    payload: Mapping[str, Any],
+    *,
+    best_lowering: str,
+    authority: str,
+    delta_total: float | None,
+    backend_complete: Any,
+    sidecar_complete: Any,
+) -> list[str]:
+    blockers = [
+        "evaluator_action_lowering_race_queue_row_is_planning_only",
+        "receiver_closed_archive_proof_required_before_promotion",
+        "exact_cpu_or_cuda_replay_required_before_score_authority",
+    ]
+    if best_lowering in {"", "none", "discard"}:
+        blockers.append("evaluator_action_lowering_race_no_viable_lowering")
+    if not authority or authority == "none":
+        blockers.append("evaluator_action_lowering_race_authority_missing")
+    if delta_total is None or not math.isfinite(delta_total) or delta_total >= 0.0:
+        blockers.append("evaluator_action_lowering_race_exact_total_not_improved")
+    if backend_complete is not True:
+        blockers.append("evaluator_action_lowering_race_backend_realization_incomplete")
+    if best_lowering == "byte_priced_sidecar" and sidecar_complete is not True:
+        blockers.append("evaluator_action_lowering_race_sidecar_lowering_incomplete")
+    support_identity = _mapping(payload.get("support_identity"))
+    if support_identity and support_identity.get("all_candidates_same_support") is not True:
+        blockers.append("evaluator_action_lowering_race_support_identity_not_closed")
+    return _ordered_unique(blockers)
 
 
 def _annotate_archive_candidate_verification(
@@ -1785,6 +1965,18 @@ def extract_candidates_from_source(path: Path, *, repo_root: Path) -> SourceExtr
         return SourceExtraction(
             schema=schema,
             rows=_byte_shaving_campaign_candidates(
+                payload,
+                source_path=path,
+                repo_root=repo_root,
+            ),
+        )
+    if schema in {
+        EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
+        HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
+    }:
+        return SourceExtraction(
+            schema=schema,
+            rows=_evaluator_action_lowering_race_candidates(
                 payload,
                 source_path=path,
                 repo_root=repo_root,

@@ -2519,3 +2519,119 @@ def test_concrete_eval_queue_outranks_lower_numeric_proxy_score(tmp_path: Path) 
         "v_real",
         "lower_proxy_only",
     ]
+
+
+def _lowering_race_report(
+    *,
+    best_lowering: str,
+    backend_realization_complete: bool,
+    sidecar_lowering_complete: bool,
+) -> dict[str, object]:
+    return {
+        "schema": "tac.evaluator_action_lowering_race.v1",
+        "action_id": "hard-action-1",
+        "support_sha256": "9" * 64,
+        "best_lowering": best_lowering,
+        "backend_realization_complete": backend_realization_complete,
+        "sidecar_lowering_complete": sidecar_lowering_complete,
+        "support_identity": {
+            "schema": "tac.evaluator_action_lowering_race.support_identity.v1",
+            "all_candidates_same_support": True,
+            "support_sha256s": ["9" * 64],
+        },
+        "verdict": {
+            "schema": "tac.evaluator_action_lowering_verdict.v1",
+            "action_id": "hard-action-1",
+            "best_lowering": best_lowering,
+            "first_failing_surface": "none",
+            "authority": "batch_local_live_mlx",
+            "backend_realization_complete": backend_realization_complete,
+            "sidecar_lowering_complete": sidecar_lowering_complete,
+            "delta_score_nonrate": -0.031,
+            "delta_score_total": -0.028,
+            "delta_bytes": 128,
+            "value_per_byte": 0.00021875,
+        },
+        "lowering_candidates": [
+            {
+                "schema": "tac.evaluator_action_lowering_candidate.v1",
+                "action_id": "hard-action-1",
+                "lowering_target": best_lowering,
+                "authority": "batch_local_live_mlx",
+                "support_sha256": "9" * 64,
+                "support_encoding": "target_region_action_coordinates_v1",
+                "support_encoded_bytes": 4096,
+                "action_payload_bytes": 128,
+                "metadata_bytes": 32,
+                "viable": True,
+                "first_failing_surface": "none",
+            }
+        ],
+    }
+
+
+def test_candidate_queue_consumes_sidecar_lowering_without_backend_authority(
+    tmp_path: Path,
+) -> None:
+    report_path = _write_json(
+        tmp_path / "reports/lowering_race.json",
+        _lowering_race_report(
+            best_lowering="byte_priced_sidecar",
+            backend_realization_complete=False,
+            sidecar_lowering_complete=True,
+        ),
+    )
+
+    queue = build_candidate_queue([report_path], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert queue["source_schemas"][0]["extracted_candidate_count"] == 1
+    assert row["candidate_kind"] == "evaluator_action_lowering_race_selected_action"
+    assert row["lowering_target"] == "byte_priced_sidecar"
+    assert row["sidecar_lowering_complete"] is True
+    assert row["backend_realization_complete"] is False
+    assert row["delta_score_total"] == -0.028
+    assert row["source_artifact_sha256"] == hashlib.sha256(
+        report_path.read_bytes()
+    ).hexdigest()
+    assert (
+        "evaluator_action_lowering_race_backend_realization_incomplete"
+        in row["dispatch_blockers"]
+    )
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_keeps_backend_lowering_nonpromotional_until_exact_replay(
+    tmp_path: Path,
+) -> None:
+    report_path = _write_json(
+        tmp_path / "reports/lowering_race.json",
+        _lowering_race_report(
+            best_lowering="backend_realization",
+            backend_realization_complete=True,
+            sidecar_lowering_complete=False,
+        ),
+    )
+
+    queue = build_candidate_queue([report_path], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["lowering_target"] == "backend_realization"
+    assert row["backend_realization_complete"] is True
+    assert (
+        "evaluator_action_lowering_race_backend_realization_incomplete"
+        not in row["dispatch_blockers"]
+    )
+    assert (
+        "receiver_closed_archive_proof_required_before_promotion"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        "exact_cpu_or_cuda_replay_required_before_score_authority"
+        in row["dispatch_blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["promotable"] is False
+    assert validate_proxy_candidate(row) == []
