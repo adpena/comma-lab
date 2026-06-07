@@ -109,6 +109,10 @@ SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CONFIG_LINEAGES: tuple[str, ...] = (
     "checkpoint_export_official_trained_run_config",
     "official_submission_config",
 )
+SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CAPTURE_ORIGINS: tuple[str, ...] = (
+    "official_upstream_trained_checkpoint",
+    "official_upstream_trained_checkpoint_source_graph",
+)
 SOURCE_FORWARD_OPTIONAL_PROVENANCE_FIELDS: tuple[str, ...] = (
     "trained_checkpoint_lineage",
     "checkpoint_sha256",
@@ -812,7 +816,10 @@ def _validate_official_torch_trained_checkpoint_lineage(
         blockers.append(
             "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
         )
-    if str(surface_map.get("capture_origin") or "") != "official_upstream_trained_checkpoint":
+    if (
+        str(surface_map.get("capture_origin") or "")
+        not in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_CAPTURE_ORIGINS
+    ):
         blockers.append(
             "snerv_source_forward_official_torch_capture_origin_missing"
         )

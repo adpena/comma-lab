@@ -173,7 +173,11 @@ def _scorer_deltas() -> dict:
     }
 
 
-def _official_torch_lineage(*, source_scope: str = "official_trained_checkpoint") -> dict[str, str | bool]:
+def _official_torch_lineage(
+    *,
+    source_scope: str = "official_trained_checkpoint",
+    capture_origin: str | None = None,
+) -> dict[str, str | bool]:
     return {
         "trained_checkpoint_lineage": "official_trained_checkpoint_state_dict",
         "checkpoint_sha256": "6" * 64,
@@ -186,14 +190,22 @@ def _official_torch_lineage(*, source_scope: str = "official_trained_checkpoint"
         "source_config_is_fixture": False,
         "source_scope": source_scope,
         "capture_origin": (
-            "official_upstream_trained_checkpoint"
-            if source_scope == "official_trained_checkpoint"
-            else "official_upstream_source_fixture"
+            capture_origin
+            if capture_origin is not None
+            else (
+                "official_upstream_trained_checkpoint"
+                if source_scope == "official_trained_checkpoint"
+                else "official_upstream_source_fixture"
+            )
         ),
     }
 
 
-def _surface_provenance(*, source_scope: str = "official_trained_checkpoint") -> dict:
+def _surface_provenance(
+    *,
+    source_scope: str = "official_trained_checkpoint",
+    capture_origin: str | None = None,
+) -> dict:
     return build_snerv_source_forward_surface_provenance(
         pair_ids=[0],
         archive_sha256=ARCHIVE_SHA,
@@ -201,7 +213,10 @@ def _surface_provenance(*, source_scope: str = "official_trained_checkpoint") ->
             "official_torch": "upstream_snerv_t_forward_source_graph"
         },
         extra_by_surface={
-            "official_torch": _official_torch_lineage(source_scope=source_scope)
+            "official_torch": _official_torch_lineage(
+                source_scope=source_scope,
+                capture_origin=capture_origin,
+            )
         },
     )
 
@@ -440,6 +455,34 @@ def test_source_forward_proof_row_clears_when_output2_boundary_is_source_identic
     assert row["passed"] is True
     assert row["launch_gate_clearable"] is True
     assert validate_snerv_source_forward_proof_action_effect(row)["passed"] is True
+
+
+def test_source_forward_proof_accepts_strict_source_graph_capture_origin() -> None:
+    row = build_snerv_source_forward_proof_action_effect(
+        action_id=ACTION_ID,
+        archive_sha256=ARCHIVE_SHA,
+        archive_bytes=123,
+        payload_section_hashes={"decoder_payload.output_2": "2" * 64},
+        pair_ids=[0],
+        tensors_by_surface=_tensor_surfaces(),
+        scorer_deltas=_scorer_deltas(),
+        destructive_payload_bit_flip=_bitflip(),
+        destructive_payload_bit_flip_matrix=_bitflip_matrix(),
+        output2_boundary_verdict=_source_identical_output2_verdict(),
+        surface_provenance=_surface_provenance(
+            capture_origin="official_upstream_trained_checkpoint_source_graph"
+        ),
+    )
+
+    status = validate_snerv_source_forward_proof_action_effect(row)
+
+    assert row["passed"] is True
+    assert row["launch_gate_clearable"] is True
+    assert status["passed"] is True
+    assert (
+        "snerv_source_forward_official_torch_capture_origin_missing"
+        not in status["blockers"]
+    )
 
 
 def test_source_forward_proof_rejects_fixture_scope_official_torch_authority() -> None:
