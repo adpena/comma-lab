@@ -220,6 +220,27 @@ def _accepted_live_birth(
     return None
 
 
+def _rejected_live_birth_receipt_blockers(rows: list[dict[str, Any]]) -> list[str]:
+    blockers: list[str] = []
+    for row in rows:
+        if str(row.get("surface") or "live_mlx") != "live_mlx":
+            continue
+        if int(row.get("accepted_step_count") or 0) <= 0:
+            blockers.append("live_birth_accepted_step_missing_or_zero")
+        local_blockers: list[str] = []
+        _target_support_positive(
+            row,
+            blocker="live_birth_target_support_missing",
+            not_positive_blocker="live_birth_target_support_not_positive",
+            blockers=local_blockers,
+        )
+        blockers.extend(local_blockers)
+        if not row.get("action_id"):
+            blockers.append("live_birth_action_id_missing")
+        blockers.extend(str(blocker) for blocker in row.get("blockers") or [])
+    return _dedupe(blockers)
+
+
 def _positive_unclosed_masked_oracle_birth(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Return a positive receiver-surface oracle that is still byte-unclosed."""
 
@@ -366,8 +387,13 @@ def _target_region_action_survival_status(
 ) -> dict[str, Any]:
     parseback_path: str | None = None
     inflate_path: str | None = None
+    partial_parseback_path: str | None = None
+    partial_inflate_path: str | None = None
     parseback_survived = False
     inflate_survived = False
+    partial_parseback_survived = False
+    partial_inflate_survived = False
+    same_row_parseback_inflate_survived = False
     for path, payload in _iter_evidence_payloads(run_root):
         stack = [payload]
         while stack:
@@ -386,16 +412,33 @@ def _target_region_action_survival_status(
                     if support_sha256 and row_support_sha256 != str(support_sha256):
                         stack.extend(node.values())
                         continue
-                    if (
+                    same_row_survived = (
                         node.get("survived") is True
                         and node.get("fakequant_survived") is True
                         and node.get("parseback_survived") is True
-                    ):
+                        and node.get("inflate_survived") is True
+                    )
+                    if same_row_survived:
+                        same_row_parseback_inflate_survived = True
                         parseback_survived = True
                         parseback_path = path.as_posix()
-                    if node.get("inflate_survived") is True:
                         inflate_survived = True
                         inflate_path = path.as_posix()
+                    else:
+                        if (
+                            node.get("survived") is True
+                            and node.get("fakequant_survived") is True
+                            and node.get("parseback_survived") is True
+                        ):
+                            parseback_survived = True
+                            parseback_path = path.as_posix()
+                            partial_parseback_survived = True
+                            partial_parseback_path = path.as_posix()
+                        if node.get("inflate_survived") is True:
+                            inflate_survived = True
+                            inflate_path = path.as_posix()
+                            partial_inflate_survived = True
+                            partial_inflate_path = path.as_posix()
                 stack.extend(node.values())
             elif isinstance(node, (list, tuple)):
                 stack.extend(node)
@@ -404,6 +447,11 @@ def _target_region_action_survival_status(
         "parseback_path": parseback_path,
         "inflate_survived": inflate_survived,
         "inflate_path": inflate_path,
+        "same_row_parseback_inflate_survived": same_row_parseback_inflate_survived,
+        "partial_parseback_survived": partial_parseback_survived,
+        "partial_parseback_path": partial_parseback_path,
+        "partial_inflate_survived": partial_inflate_survived,
+        "partial_inflate_path": partial_inflate_path,
     }
 
 
@@ -483,6 +531,11 @@ def _target_region_action_closure_blockers(
                 "target_region_action_inflate_survival_missing",
             }
         ]
+    if (
+        (survival_status.get("partial_parseback_survived") or survival_status.get("partial_inflate_survived"))
+        and not survival_status.get("same_row_parseback_inflate_survived")
+    ):
+        blockers.append("target_region_action_parseback_inflate_same_row_survival_missing")
     return blockers
 
 
@@ -1087,6 +1140,14 @@ def _require_hi_nerv_lowering_race_evidence(
             continue
         if best_lowering in {"", "none", "discard"}:
             continue
+        completion_blockers = _lowering_race_completion_status_blockers(
+            row,
+            row_id=row_id,
+            best_lowering=best_lowering,
+        )
+        if completion_blockers:
+            candidate_blockers.extend(completion_blockers)
+            continue
         authority = str(verdict.get("authority") or "").strip()
         if not authority or authority == "none":
             candidate_blockers.append(
@@ -1109,6 +1170,42 @@ def _require_hi_nerv_lowering_race_evidence(
 
     blockers.append("evaluator_action_lowering_race_not_accepted")
     blockers.extend(_dedupe(candidate_blockers))
+
+
+def _lowering_race_completion_status_blockers(
+    row: Mapping[str, Any],
+    *,
+    row_id: str,
+    best_lowering: str,
+) -> list[str]:
+    verdict = row.get("verdict") if isinstance(row.get("verdict"), Mapping) else {}
+    backend_complete = row.get(
+        "backend_realization_complete",
+        verdict.get("backend_realization_complete"),
+    )
+    sidecar_complete = row.get(
+        "sidecar_lowering_complete",
+        verdict.get("sidecar_lowering_complete"),
+    )
+    blockers: list[str] = []
+    if not isinstance(backend_complete, bool):
+        blockers.append(
+            f"evaluator_action_lowering_race_backend_realization_status_missing:{row_id}"
+        )
+    elif backend_complete is not True:
+        blockers.append(
+            f"evaluator_action_lowering_race_backend_realization_incomplete:{row_id}"
+        )
+    if best_lowering == "byte_priced_sidecar":
+        if not isinstance(sidecar_complete, bool):
+            blockers.append(
+                f"evaluator_action_lowering_race_sidecar_lowering_status_missing:{row_id}"
+            )
+        elif sidecar_complete is not True:
+            blockers.append(
+                f"evaluator_action_lowering_race_sidecar_lowering_incomplete:{row_id}"
+            )
+    return blockers
 
 
 def _lowering_race_candidate_shape_blockers(row: Mapping[str, Any], *, row_id: str) -> list[str]:
@@ -1560,7 +1657,11 @@ def evaluate_nerv_long_run_launch_gate(
         if live is None:
             unclosed_oracle = _positive_unclosed_masked_oracle_birth(birth_rows)
             if unclosed_oracle is None:
-                blockers.append("real_video_birth_receipt_missing")
+                if birth_rows:
+                    blockers.append("real_video_birth_receipt_not_accepted")
+                    blockers.extend(_rejected_live_birth_receipt_blockers(birth_rows))
+                else:
+                    blockers.append("real_video_birth_receipt_missing")
             else:
                 archive_status = _target_region_action_archive_closure_status(
                     root,

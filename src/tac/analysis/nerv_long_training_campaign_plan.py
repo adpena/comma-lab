@@ -3826,7 +3826,7 @@ def _snerv_source_forward_numerical_proof_complete(
             validation = validate_snerv_source_forward_proof_action_effect(action_effect)
             if validation.get("passed") is not True:
                 return False
-        elif status.get("source_forward_replay_action_effect_valid") is not True:
+        else:
             return False
         if status.get("source_forward_replay_numerical_proof_complete") is True:
             return True

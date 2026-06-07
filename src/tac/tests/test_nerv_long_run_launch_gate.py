@@ -179,7 +179,10 @@ def _snerv_bitflip_matrix(*, proof_passed_after_bitflip: bool = False) -> dict:
     first_tensors = {
         "metadata_payload": "coord_time_embedding",
         "lf_payload": "tub_in",
-        "decoder_payload": "output_2",
+        "decoder_payload.mfu": "mfu_out",
+        "decoder_payload.hfr": "hfr_out",
+        "decoder_payload.tub": "tub_in",
+        "decoder_payload.output_2": "output_2",
         "step_map_packet": "rgb_pair_uint8",
     }
     return build_snerv_payload_bitflip_falsification_matrix(
@@ -651,7 +654,7 @@ def _hi_nerv_lowering_effect(
 def _hi_nerv_evaluator_action_lowering_race(
     *,
     omit_target: str | None = None,
-    viable_target: str = "frame1_seg_wall_crossing",
+    viable_target: str = "backend_realization",
 ) -> dict:
     return build_lowering_race_report(
         action_id=ACTION,
@@ -740,6 +743,13 @@ def _hi_nerv_lowering_race(
         "semantic_pose_primitive",
         "byte_entropy_rewrite",
     ]
+    improved = (
+        first_failing_surface == "none"
+        and delta_score_total is not None
+        and delta_score_total < 0.0
+    )
+    backend_complete = best_lowering == "backend_realization" and improved
+    sidecar_complete = best_lowering == "byte_priced_sidecar" and improved
     row = {
         "schema": HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
         "fixture_not_real": True,
@@ -749,11 +759,15 @@ def _hi_nerv_lowering_race(
         "same_support_as_direct_teacher": same_support,
         "best_lowering": best_lowering,
         "first_failing_surface": first_failing_surface,
+        "backend_realization_complete": backend_complete,
+        "sidecar_lowering_complete": sidecar_complete,
         "verdict": {
             "schema": "tac.evaluator_action_lowering_verdict.v1",
             "action_id": action_id,
             "best_lowering": best_lowering,
             "first_failing_surface": first_failing_surface,
+            "backend_realization_complete": backend_complete,
+            "sidecar_lowering_complete": sidecar_complete,
             "authority": authority,
             "delta_score_nonrate": -0.02,
             "delta_score_total": delta_score_total,
@@ -810,10 +824,19 @@ def _native_hi_nerv_lowering_race(
     else:
         candidate_targets = [best_lowering] * lowering_candidate_count
     missing_targets = [target for target in targets if target not in set(candidate_targets)]
+    improved = (
+        first_failing_surface == "none"
+        and delta_score_total is not None
+        and delta_score_total < 0.0
+    )
+    backend_complete = best_lowering == "backend_realization" and improved
+    sidecar_complete = best_lowering == "byte_priced_sidecar" and improved
     row = {
         "schema": EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
         "fixture_not_real": True,
         "action_id": action_id,
+        "backend_realization_complete": backend_complete,
+        "sidecar_lowering_complete": sidecar_complete,
         "lowering_candidates": [
             {
                 "schema": "tac.evaluator_action_lowering_candidate.v1",
@@ -844,6 +867,8 @@ def _native_hi_nerv_lowering_race(
             "action_id": action_id,
             "best_lowering": best_lowering,
             "first_failing_surface": first_failing_surface,
+            "backend_realization_complete": backend_complete,
+            "sidecar_lowering_complete": sidecar_complete,
             "authority": authority,
             "delta_score_nonrate": -0.02,
             "delta_score_total": delta_score_total,
@@ -886,7 +911,10 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
     _write(root / "wall_normal_branch_receipt.json", _wall_normal_branch_receipt())
     _write(root / "parseback_contract.json", _parseback_selection_contract())
     _write(root / "source_metrics.json", _source_qualified_metrics())
-    _write(root / "lowering_race.json", _hi_nerv_lowering_race())
+    _write(
+        root / "lowering_race.json",
+        _hi_nerv_lowering_race(best_lowering="backend_realization"),
+    )
     _write(
         root / "hysteresis.json",
         {
@@ -1261,7 +1289,7 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
             "total_action_pixels": 32,
             "exact_uint8_action_pixels_applied": 32,
             "receiver_changed_action_pixels": 32,
-            "target_region_actions": {"support_sha256": "a" * 64},
+            "target_region_actions": {"support_sha256": "9" * 64},
             "blockers": ["target_region_action_inflate_survival_missing"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -1289,6 +1317,84 @@ def test_target_region_action_parseback_survival_retires_parseback_blocker(
         not in verdict["blocking_evidence"]
     )
     assert "hinerv_target_region_action_inflate_survival_missing" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_target_region_action_parseback_and_inflate_must_be_same_row(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_action_parseback_survival_missing",
+                "hinerv_target_region_action_inflate_survival_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "target_region_action_parseback_survival.json",
+        {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": ACTION,
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": False,
+            "total_action_pixels": 32,
+            "exact_uint8_action_pixels_applied": 32,
+            "receiver_changed_action_pixels": 32,
+            "target_region_actions": {"support_sha256": "9" * 64},
+            "blockers": ["target_region_action_inflate_survival_missing"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write(
+        root / "target_region_action_inflate_survival.json",
+        {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "inflated_torch_cpu",
+            "action_id": ACTION,
+            "survived": False,
+            "fakequant_survived": False,
+            "parseback_survived": False,
+            "inflate_survived": True,
+            "target_region_actions": {"support_sha256": "9" * 64},
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "hinerv_target_region_action_parseback_survival_missing" not in (
+        verdict["blocking_evidence"]
+    )
+    assert "hinerv_target_region_action_inflate_survival_missing" not in (
+        verdict["blocking_evidence"]
+    )
+    assert "target_region_action_parseback_inflate_same_row_survival_missing" in (
+        verdict["blocking_evidence"]
+    )
     assert verdict["approved"] is False
 
 
@@ -1585,6 +1691,8 @@ def test_hinerv_gate_accepts_real_evaluator_action_lowering_race(
     assert report["target_accounting"]["all_targets_accounted"] is True
     assert set(report["target_accounting"]["present_targets"]) == set(LOWERING_TARGETS)
     assert sum(row["viable"] is True for row in report["lowering_candidates"]) == 1
+    assert report["backend_realization_complete"] is True
+    assert report["sidecar_lowering_complete"] is False
     assert report["verdict"]["delta_score_total"] < 0.0
 
     verdict = evaluate_nerv_long_run_launch_gate(
@@ -1602,6 +1710,35 @@ def test_hinerv_gate_accepts_real_evaluator_action_lowering_race(
         blocker.startswith("evaluator_action_lowering_race")
         for blocker in verdict["blocking_evidence"]
     )
+
+
+def test_hinerv_gate_keeps_sidecar_lowering_separate_from_backend_realization(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    report = _hi_nerv_evaluator_action_lowering_race(
+        viable_target="byte_priced_sidecar"
+    )
+    _write(root / "lowering_race.json", report)
+
+    assert report["sidecar_lowering_complete"] is True
+    assert report["backend_realization_complete"] is False
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict[
+        "blocking_evidence"
+    ]
+    assert (
+        f"evaluator_action_lowering_race_backend_realization_incomplete:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
 
 
 def test_hinerv_gate_blocks_real_lowering_race_missing_one_target(
@@ -1776,7 +1913,8 @@ def test_zero_net_support_is_not_a_birth(tmp_path: Path) -> None:
         now_utc=NOW,
     )
     assert verdict["highest_level"] == "none"
-    assert "real_video_birth_receipt_missing" in verdict["blocking_evidence"]
+    assert "real_video_birth_receipt_not_accepted" in verdict["blocking_evidence"]
+    assert "real_video_birth_receipt_missing" not in verdict["blocking_evidence"]
     assert "live_birth_target_support_not_positive" in verdict["blocking_evidence"]
 
 

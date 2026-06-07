@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import sys
@@ -21,6 +22,7 @@ from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.target_region_actions import (
     TargetRegionPixelAction,
+    encode_target_region_actions,
     encode_target_region_actions_meta,
     encode_target_region_actions_payload,
     target_region_action_decoded_action_sha256,
@@ -29,7 +31,11 @@ from tac.substrates.hi_nerv.target_region_actions import (
 )
 
 
-def _tiny_archive_with_action(tmp_path: Path) -> tuple[Path, TargetRegionPixelAction]:
+def _tiny_archive_with_action(
+    tmp_path: Path,
+    *,
+    stored_payload: bytes | None = None,
+) -> tuple[Path, TargetRegionPixelAction]:
     cfg = HinervConfig(
         latent_dim_coarse=2,
         latent_dim_mid=2,
@@ -64,6 +70,11 @@ def _tiny_archive_with_action(tmp_path: Path) -> tuple[Path, TargetRegionPixelAc
         for key, value in dict(model.state_dict()).items()
         if key not in {"latents_coarse", "latents_mid", "latents_fine"}
     }
+    action_payload = (
+        encode_target_region_actions_payload([action])
+        if stored_payload is None
+        else bytes(stored_payload)
+    )
     meta = {
         "embed_dim": cfg.embed_dim,
         "initial_grid_h": cfg.initial_grid_h,
@@ -75,7 +86,7 @@ def _tiny_archive_with_action(tmp_path: Path) -> tuple[Path, TargetRegionPixelAc
         "fine_injection_block_index": cfg.fine_injection_block_index,
         "output_height": cfg.output_height,
         "output_width": cfg.output_width,
-        "_target_region_actions_v1_b64": encode_target_region_actions_meta([action]),
+        "_target_region_actions_v1_b64": base64.b64encode(action_payload).decode("ascii"),
     }
     packet = pack_archive(
         decoder_state,
@@ -90,13 +101,23 @@ def _tiny_archive_with_action(tmp_path: Path) -> tuple[Path, TargetRegionPixelAc
     return archive, action
 
 
-def _receipts(tmp_path: Path, archive: Path, action: TargetRegionPixelAction) -> tuple[Path, Path]:
+def _receipts(
+    tmp_path: Path,
+    archive: Path,
+    action: TargetRegionPixelAction,
+    *,
+    stored_payload: bytes | None = None,
+) -> tuple[Path, Path]:
     action_id = "hinerv-test-action"
     support_sha = target_region_action_support_sha256([action])
     decoded_support_sha = target_region_action_decoded_support_sha256([action])
     decoded_action_sha = target_region_action_decoded_action_sha256([action])
-    payload = encode_target_region_actions_payload([action])
-    program_b64 = encode_target_region_actions_meta([action])
+    payload = (
+        encode_target_region_actions_payload([action])
+        if stored_payload is None
+        else bytes(stored_payload)
+    )
+    program_b64 = base64.b64encode(payload).decode("ascii")
     survival = {
         "schema": "hi_nerv_target_region_action_parseback_survival.v1",
         "action_id": action_id,
@@ -323,8 +344,59 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert any(row["support_encoding"] == "path_tube_zlib_rdp2" for row in blocked)
     assert any(row["action_encoding"] == "constant_class_attractor_rgb_u8" for row in blocked)
     assert any(row["old_archive_zip_bytes"] is None for row in blocked)
+    assert all(
+        row["decoded_action_sha256"] == current["decoded_action_sha256"]
+        for row in blocked
+        if row["exact_payload_equivalent"] is True
+    )
     assert all(row["promotion_eligible"] is False for row in report["sidecar_encoding_candidates"])
     assert any(row["status"] == "measured" for row in report["backend_ladder"])
+
+
+def test_hinerv_action_comparison_uses_stored_payload_telemetry_not_reencoded_best_codec(
+    tmp_path: Path,
+) -> None:
+    raw_payload = encode_target_region_actions(
+        [
+            TargetRegionPixelAction(
+                pair_index=0,
+                frame_index=1,
+                height=8,
+                width=8,
+                yx=np.asarray([[1, 1], [1, 2], [2, 1], [2, 2], [4, 5]], dtype=np.uint16),
+                rgb_u8=np.asarray(
+                    [[255, 0, 0], [254, 1, 0], [0, 255, 0], [0, 254, 1], [20, 30, 40]],
+                    dtype=np.uint8,
+                ),
+            )
+        ]
+    )
+    archive, action = _tiny_archive_with_action(tmp_path, stored_payload=raw_payload)
+    assert encode_target_region_actions_payload([action]) != raw_payload
+    survival_path, runner_path = _receipts(
+        tmp_path,
+        archive,
+        action,
+        stored_payload=raw_payload,
+    )
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+    )
+
+    current = report["sidecar_encoding_candidates"][0]
+    section_telemetry = report["byte_decomposition"]["target_region_action_section_telemetry"]
+    assert report["byte_decomposition"]["payload_codec"] == "raw_v1"
+    assert section_telemetry["payload_codec"] == "raw_v1"
+    assert section_telemetry["payload_bytes"] == len(raw_payload)
+    assert section_telemetry["encoded_program_sha256"] == hashlib.sha256(
+        raw_payload
+    ).hexdigest()
+    assert current["encoded_program_sha256"] == hashlib.sha256(raw_payload).hexdigest()
+    assert current["support_encoding"] == "explicit_yx_u16_coordinates"
+    assert current["support_encoded_bytes"] == action.yx.nbytes
 
 
 def test_hinerv_action_comparison_uses_archive_executable_direct_support(
@@ -448,6 +520,10 @@ def test_hinerv_action_comparison_consumes_birth_action_effects_for_full_lowerin
     accounting = report["lowering_race"]["target_accounting"]
     assert accounting["all_targets_accounted"] is True
     assert accounting["missing_targets"] == []
+    assert report["lowering_race"]["sidecar_lowering_complete"] is True
+    assert report["lowering_race"]["backend_realization_complete"] is True
+    assert report["lowering_race"]["verdict"]["sidecar_lowering_complete"] is True
+    assert report["lowering_race"]["verdict"]["backend_realization_complete"] is True
     assert set(accounting["present_targets"]) == {
         "backend_realization",
         "pair_local_latent_action",

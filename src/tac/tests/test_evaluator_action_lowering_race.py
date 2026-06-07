@@ -294,6 +294,10 @@ def test_lowering_race_reports_exact_bytes_score_terms_for_winner() -> None:
     verdict = report["verdict"]
 
     assert verdict["best_lowering"] == "byte_priced_sidecar"
+    assert verdict["sidecar_lowering_complete"] is True
+    assert verdict["backend_realization_complete"] is False
+    assert report["sidecar_lowering_complete"] is True
+    assert report["backend_realization_complete"] is False
     assert verdict["bytes_by_section"] == {
         "action_payload_bytes": 0,
         "delta_bytes": 100,
@@ -341,6 +345,8 @@ def test_lowering_race_missing_support_branch_does_not_poison_supported_sidecar(
     }
 
     assert report["verdict"]["best_lowering"] == "byte_priced_sidecar"
+    assert report["verdict"]["sidecar_lowering_complete"] is True
+    assert report["verdict"]["backend_realization_complete"] is False
     assert report["verdict"]["first_failing_surface"] == "none"
     assert report["support_identity"]["failure"] is None
     assert "lowering_race_support_sha256_missing" in report["support_identity"]["blockers"]

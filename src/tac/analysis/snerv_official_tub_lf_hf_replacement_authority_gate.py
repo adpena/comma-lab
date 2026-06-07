@@ -885,6 +885,14 @@ def _source_forward_replay_proof_status(
             if action_effect_status is None
             else list(action_effect_status["blockers"])
         ),
+        "source_forward_proof_action_effect": (
+            dict(proof)
+            if (
+                proof_present
+                and proof.get("schema") == SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA
+            )
+            else None
+        ),
         "source_forward_replay_numerical_proof_complete": complete,
         "source_forward_replay_proof_status": (
             "complete_numerical_source_forward_proof_present"

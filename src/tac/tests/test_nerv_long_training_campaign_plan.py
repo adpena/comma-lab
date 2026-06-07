@@ -1616,7 +1616,7 @@ def test_snerv_source_forward_numerical_proof_rejects_legacy_metadata_only() -> 
     evidence["source_forward_replay_proof_status"][
         "source_forward_replay_action_effect_valid"
     ] = True
-    assert plan_module._snerv_source_forward_numerical_proof_complete(evidence) is True
+    assert plan_module._snerv_source_forward_numerical_proof_complete(evidence) is False
 
 
 def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blockers(
@@ -8529,6 +8529,7 @@ def _snerv_source_forward_artifact(
     )
     out = {
         "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+        "artifact_count": 1,
         "generated_utc": "20260605T000000Z",
         "_source_path": "/Volumes/VertigoDataTier/pact/snerv_forward_harness.json",
         "_source_sha256": "a" * 64,
@@ -8613,6 +8614,7 @@ def _snerv_source_forward_artifact(
             "source_forward_replay_action_effect_schema": (
                 "snerv_source_forward_proof_action_effect.v1"
             ),
+            "source_forward_proof_action_effect": dict(source_forward_proof),
             "source_forward_replay_action_effect_valid": True,
             "source_forward_replay_action_effect_blockers": [],
             "source_forward_replay_numerical_proof_complete": True,

@@ -64,6 +64,8 @@ class LoweringVerdict:
     sidecar_status: str
     composite_status: str
     semantic_pose_status: str
+    backend_realization_complete: bool
+    sidecar_lowering_complete: bool
     best_lowering: str
     first_failing_surface: str
     authority: str
@@ -89,6 +91,8 @@ class LoweringVerdict:
             "sidecar_status": self.sidecar_status,
             "composite_status": self.composite_status,
             "semantic_pose_status": self.semantic_pose_status,
+            "backend_realization_complete": self.backend_realization_complete,
+            "sidecar_lowering_complete": self.sidecar_lowering_complete,
             "best_lowering": self.best_lowering,
             "first_failing_surface": self.first_failing_surface,
             "authority": self.authority,
@@ -145,6 +149,8 @@ def build_lowering_race_report(
         sidecar_status=statuses["byte_priced_sidecar"],
         composite_status=statuses["pose_compensated_composite"],
         semantic_pose_status=statuses["semantic_pose_primitive"],
+        backend_realization_complete=statuses["backend_realization"] == "accepted",
+        sidecar_lowering_complete=statuses["byte_priced_sidecar"] == "accepted",
         best_lowering="discard" if best is None else str(best["lowering_target"]),
         first_failing_surface=first_failure,
         authority="none" if best is None else str(best["authority"]),
@@ -163,6 +169,8 @@ def build_lowering_race_report(
         "schema": LOWERING_RACE_SCHEMA,
         "action_id": action_id,
         "verdict": verdict.as_dict(),
+        "backend_realization_complete": verdict.backend_realization_complete,
+        "sidecar_lowering_complete": verdict.sidecar_lowering_complete,
         "lowering_candidates": candidates,
         "candidate_count": len(candidates),
         "target_accounting": target_accounting,

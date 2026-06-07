@@ -46,7 +46,6 @@ from tac.substrates.hi_nerv.target_region_actions import (
     encode_target_region_actions_payload,
     encode_target_region_actions_payload_variants,
     target_region_action_payload_codec,
-    target_region_action_section_telemetry,
     target_region_action_section_telemetry_for_payload,
     target_region_action_support_sha256,
 )
@@ -301,7 +300,9 @@ def build_hinerv_target_region_action_comparison(
                     encoded_program_sha256=None,
                     program_sha256=None,
                     decoded_support_sha256=current_decoded_support_sha256,
-                    decoded_action_sha256=None,
+                    decoded_action_sha256=(
+                        current_decoded_action_sha256 if exact_payload_equivalent else None
+                    ),
                     support_encoding=str(support["encoding"]),
                     action_encoding=str(action["encoding"]),
                     encoded_payload_bytes=encoded_bytes,
@@ -833,8 +834,9 @@ def _byte_decomposition(program: _ActionProgram) -> dict[str, Any]:
         },
         "action_count": len(program.actions),
         "pixel_count": int(sum(action.pixel_count for action in program.actions)),
-        "target_region_action_section_telemetry": target_region_action_section_telemetry(
-            list(program.actions)
+        "target_region_action_section_telemetry": target_region_action_section_telemetry_for_payload(
+            list(program.actions),
+            program.stored_payload,
         ),
     }
 
@@ -1290,6 +1292,8 @@ def _lowering_race_verdict(
                 "sidecar_status": first_failing_surface,
                 "best_lowering": "none",
                 "first_failing_surface": first_failing_surface,
+                "backend_realization_complete": False,
+                "sidecar_lowering_complete": False,
                 "authority": "none",
                 "promotion_eligible": False,
                 "delta_score_nonrate": None,
@@ -1310,6 +1314,12 @@ def _lowering_race_verdict(
         "same_survival_identity_as_archive": not sidecar_survival_identity_mismatch,
         "best_lowering": verdict["best_lowering"],
         "first_failing_surface": verdict["first_failing_surface"],
+        "backend_realization_complete": bool(
+            verdict.get("backend_realization_complete") is True
+        ),
+        "sidecar_lowering_complete": bool(
+            verdict.get("sidecar_lowering_complete") is True
+        ),
         "verdict": verdict,
         "current_sidecar_candidate_id": current_sidecar.get("candidate_id"),
         "candidate_count": len(report.get("lowering_candidates") or []),
