@@ -35,6 +35,28 @@ SCORE_PROGRAM_OPERATION_SCHEMA = "tac.score_program_operation.v1"
 SCORE_PROGRAM_INTERPRETER = "inflate_action_word_v1"
 DIRECT_SEG_WALL_ORACLE_SCHEMA = "tac.direct_seg_wall_oracle_receipt.v1"
 TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA = "tac.target_region_wall_normal_lift.v1"
+WALL_NORMAL_BRANCH_RECEIPT_SCHEMA = "tac.target_region_wall_normal_branch_receipt.v1"
+
+DIRECT_TEACHER_NO_WALL_CROSS = "DIRECT_TEACHER_NO_WALL_CROSS"
+DIRECT_TEACHER_EXACT_REJECTED = "DIRECT_TEACHER_EXACT_REJECTED"
+BACKEND_REALIZATION_FAILED = "BACKEND_REALIZATION_FAILED"
+SIDECAR_FALLBACK_ACCEPTED = "SIDECAR_FALLBACK_ACCEPTED"
+SUPPORT_NOT_ARCHIVE_EXECUTABLE = "SUPPORT_NOT_ARCHIVE_EXECUTABLE"
+SURVIVAL_FAILED_FAKEQUANT = "SURVIVAL_FAILED_FAKEQUANT"
+SURVIVAL_FAILED_PARSEBACK = "SURVIVAL_FAILED_PARSEBACK"
+INFLATE_AUTHORITY_MISSING = "INFLATE_AUTHORITY_MISSING"
+WALL_NORMAL_FIRST_FAILING_SURFACES = frozenset(
+    {
+        DIRECT_TEACHER_NO_WALL_CROSS,
+        DIRECT_TEACHER_EXACT_REJECTED,
+        BACKEND_REALIZATION_FAILED,
+        SIDECAR_FALLBACK_ACCEPTED,
+        SUPPORT_NOT_ARCHIVE_EXECUTABLE,
+        SURVIVAL_FAILED_FAKEQUANT,
+        SURVIVAL_FAILED_PARSEBACK,
+        INFLATE_AUTHORITY_MISSING,
+    }
+)
 
 BLOCKER_NO_FRAME0_POSE = "inverse_scorer_frame0_pose_action_missing"
 BLOCKER_NO_FRAME1_SEG = "inverse_scorer_frame1_seg_margin_action_missing"
@@ -502,35 +524,29 @@ def build_target_region_wall_normal_lift_receipt(
         selected = "direct_wall_teacher_gap"
         next_surface = "inverse_scorer_candidate_generation"
 
-    if not direct:
-        decision_state = "DIRECT_TEACHER_NO_WALL_CROSS"
-        first_failing_surface = "direct_teacher"
-    elif not direct_teacher_is_true_wall_normal:
-        decision_state = "DIRECT_TEACHER_NO_WALL_CROSS"
-        first_failing_surface = "direct_teacher_basis"
-    elif not direct_crossed:
-        decision_state = "DIRECT_TEACHER_NO_WALL_CROSS"
-        first_failing_surface = "segnet_argmax_margin"
+    if not direct or not direct_teacher_is_true_wall_normal or not direct_crossed:
+        decision_state = DIRECT_TEACHER_NO_WALL_CROSS
+        first_failing_surface = DIRECT_TEACHER_NO_WALL_CROSS
     elif not direct_exact_accept:
-        decision_state = "DIRECT_TEACHER_EXACT_REJECTED"
-        first_failing_surface = "exact_nonlinear_score"
+        decision_state = DIRECT_TEACHER_EXACT_REJECTED
+        first_failing_surface = DIRECT_TEACHER_EXACT_REJECTED
     elif backend_realized_wall and backend_exact_accept:
         decision_state = "BACKEND_REALIZATION_ACCEPTED"
         first_failing_surface = None
     elif backend and not backend_realized_wall:
-        decision_state = "BACKEND_REALIZATION_FAILED"
-        first_failing_surface = "backend_realization"
+        decision_state = BACKEND_REALIZATION_FAILED
+        first_failing_surface = BACKEND_REALIZATION_FAILED
     elif sidecar_available:
-        decision_state = "SUPPORT_NOT_ARCHIVE_EXECUTABLE"
-        first_failing_surface = "archive_materialize_parseback_inflate"
+        decision_state = SUPPORT_NOT_ARCHIVE_EXECUTABLE
+        first_failing_surface = SUPPORT_NOT_ARCHIVE_EXECUTABLE
     else:
-        decision_state = "BACKEND_REALIZATION_FAILED"
-        first_failing_surface = "backend_fit"
+        decision_state = BACKEND_REALIZATION_FAILED
+        first_failing_surface = BACKEND_REALIZATION_FAILED
 
     if not direct or not direct_teacher_is_true_wall_normal or not direct_crossed:
-        direct_decision_state = "DIRECT_TEACHER_NO_WALL_CROSS"
+        direct_decision_state = DIRECT_TEACHER_NO_WALL_CROSS
     elif not direct_exact_accept:
-        direct_decision_state = "DIRECT_TEACHER_EXACT_REJECTED"
+        direct_decision_state = DIRECT_TEACHER_EXACT_REJECTED
     else:
         direct_decision_state = "DIRECT_TEACHER_ACCEPTED"
 
@@ -539,16 +555,16 @@ def build_target_region_wall_normal_lift_receipt(
     elif backend_realized_wall and backend_exact_accept:
         backend_decision_state = "BACKEND_REALIZATION_ACCEPTED"
     else:
-        backend_decision_state = "BACKEND_REALIZATION_FAILED"
+        backend_decision_state = BACKEND_REALIZATION_FAILED
 
     if not direct_usable_wall_normal:
         sidecar_decision_state = "SKIPPED_DIRECT_TEACHER_FAILED"
     elif sidecar_payload_bytes <= 0:
         sidecar_decision_state = "SIDECAR_FALLBACK_MISSING"
     elif sidecar_archive_closed:
-        sidecar_decision_state = "SIDECAR_FALLBACK_ACCEPTED"
+        sidecar_decision_state = SIDECAR_FALLBACK_ACCEPTED
     else:
-        sidecar_decision_state = "SUPPORT_NOT_ARCHIVE_EXECUTABLE"
+        sidecar_decision_state = SUPPORT_NOT_ARCHIVE_EXECUTABLE
 
     direct_summary = {
         "available": bool(direct),
@@ -743,6 +759,102 @@ def build_wall_normal_branch_action_effects(
             )
         )
     return tuple(effects)
+
+
+def build_wall_normal_branch_receipt(
+    measured_effects: Sequence[ActionEffect | Mapping[str, Any]],
+    *,
+    source_artifact_paths: Sequence[str] = (),
+) -> dict[str, Any]:
+    """Summarize branch-level wall-normal evidence with one strict failure label.
+
+    This receipt is the machine-readable bridge between the current HiNeRV
+    target-region work and the long-run gate.  It consumes already-measured
+    ``ActionEffect`` rows; it does not synthesize scorer motion or score.  The
+    first-failing surface vocabulary is deliberately finite so later tools can
+    branch without re-interpreting prose.
+    """
+
+    effects = [
+        effect
+        for effect in _coerce_effects(measured_effects)
+        if _is_wall_normal_receipt_effect(effect)
+    ]
+    branches = [_wall_normal_branch_receipt_row(effect) for effect in effects]
+    first_branch = _first_wall_normal_failure_branch(branches)
+    action_ids = sorted({str(row["action_id"]) for row in branches if row.get("action_id")})
+    support_hashes = sorted(
+        {
+            str(row["support_sha256"])
+            for row in branches
+            if isinstance(row.get("support_sha256"), str) and row.get("support_sha256")
+        }
+    )
+    support_required_count = sum(1 for effect in effects if _requires_region_support(effect))
+    support_executable_count = sum(1 for row in branches if row["support_executable"] is True)
+    blockers: list[str] = []
+    if not branches:
+        blockers.append("wall_normal_branch_evidence_missing")
+    if len(action_ids) > 1:
+        blockers.append("wall_normal_branch_action_id_mismatch")
+    if support_required_count and support_executable_count < support_required_count:
+        blockers.append(SUPPORT_NOT_ARCHIVE_EXECUTABLE)
+    if any(
+        "direct_teacher_and_survived_sidecar_support_hashes_diverge" in row["blockers"]
+        for row in branches
+    ):
+        blockers.append("direct_teacher_and_survived_sidecar_support_hashes_diverge")
+
+    first_surface = (
+        str(first_branch["first_failing_surface"])
+        if first_branch is not None
+        else (
+            SIDECAR_FALLBACK_ACCEPTED
+            if branches and support_executable_count == support_required_count
+            else DIRECT_TEACHER_NO_WALL_CROSS
+        )
+    )
+    if first_surface not in WALL_NORMAL_FIRST_FAILING_SURFACES:
+        first_surface = SUPPORT_NOT_ARCHIVE_EXECUTABLE
+    return {
+        "schema": WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
+        "branch_count": len(branches),
+        "branches": branches,
+        "action_ids": action_ids,
+        "same_action_id": len(action_ids) <= 1,
+        "support_sha256s": support_hashes,
+        "same_support_sha256": (
+            bool(branches)
+            and len(support_hashes) <= 1
+            and all(row["support_executable"] is True for row in branches)
+        ),
+        "support_required_count": support_required_count,
+        "support_executable_count": support_executable_count,
+        "source_artifact_paths": [str(path) for path in source_artifact_paths],
+        "first_failing_surface": first_surface,
+        "first_failing_action_id": None if first_branch is None else first_branch["action_id"],
+        "first_failing_action_kind": None if first_branch is None else first_branch["action_kind"],
+        "blockers": _dedupe(blockers),
+        "promotion_eligible": False,
+        "score_claim": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "policy": {
+            "measured_action_effects_only": True,
+            "exact_one_first_failing_surface": True,
+            "allowed_first_failing_surfaces": sorted(WALL_NORMAL_FIRST_FAILING_SURFACES),
+            "same_action_id_and_support_required_before_long_run": True,
+            "survival_chain": [
+                "direct_teacher",
+                "backend_realization",
+                "sidecar_support",
+                "fakequant",
+                "parseback",
+                "inflate",
+            ],
+        },
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
 
 
 def _wall_normal_support_identity(direct: Mapping[str, Any]) -> dict[str, Any]:
@@ -1054,6 +1166,146 @@ def build_masked_residual_oracle_action_effect(
         support_research_only=not bool(support.get("archive_executable_support") is True),
         blockers=_dedupe(blockers),
     )
+
+
+def _is_wall_normal_receipt_effect(effect: ActionEffect) -> bool:
+    if effect.family.lower() != "hinerv":
+        return False
+    text = " ".join(
+        [
+            effect.action_kind,
+            effect.arm or "",
+            effect.inverse_source or "",
+            *effect.payload_sections,
+            *effect.trained_groups,
+        ]
+    ).lower()
+    return bool(
+        "wall_normal" in text
+        or "target_region_birth_sidecar" in text
+        or "sidecar_grammar" in text
+        or "frame1_seg_margin_inverse_candidate" in text
+        or "target_region_birth" in text
+    )
+
+
+def _wall_normal_branch_receipt_row(effect: ActionEffect) -> dict[str, Any]:
+    first_failing_surface = _wall_normal_first_failing_surface_for_effect(effect)
+    return {
+        "schema": "tac.target_region_wall_normal_branch.v1",
+        "action_id": effect.action_id,
+        "action_kind": effect.action_kind,
+        "arm": effect.arm,
+        "branch_kind": _wall_normal_branch_kind(effect),
+        "family": effect.family,
+        "authority": effect.authority,
+        "normalization_scope": effect.normalization_scope,
+        "pair_ids": list(effect.pair_ids),
+        "region_ids": list(effect.region_ids),
+        "class_ids": list(effect.class_ids),
+        "support_source": effect.support_source,
+        "support_cardinality": effect.support_cardinality,
+        "support_sha256": effect.support_sha256,
+        "support_encoding": effect.support_encoding,
+        "support_encoded_bytes": effect.support_encoded_bytes,
+        "support_research_only": effect.support_research_only,
+        "support_executable": _effect_has_executable_wall_support(effect),
+        "wrong_to_target": effect.wrong_to_target,
+        "target_to_wrong": effect.target_to_wrong,
+        "wrong_to_wrong": effect.wrong_to_wrong,
+        "argmax_changed_count_region": effect.argmax_changed_count_region,
+        "uint8_changed_count_region": effect.uint8_changed_count_region,
+        "old_d_seg": effect.old_d_seg,
+        "new_d_seg": effect.new_d_seg,
+        "old_d_pose": effect.old_d_pose,
+        "new_d_pose": effect.new_d_pose,
+        "delta_score_nonrate": effect.delta_score_nonrate,
+        "delta_score_total": effect.delta_score_total,
+        "delta_bytes": effect.delta_bytes,
+        "value_per_byte": effect.value_per_byte,
+        "exact_score_decision": effect.exact_score_decision,
+        "fakequant_survived": effect.fakequant_survived,
+        "parseback_survived": effect.parseback_survived,
+        "inflate_survived": effect.inflate_survived,
+        "first_failing_surface": first_failing_surface,
+        "blockers": list(effect.blockers),
+        "promotion_eligible": False,
+        "score_claim": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _first_wall_normal_failure_branch(branches: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
+    if not branches:
+        return None
+    priority = {
+        DIRECT_TEACHER_NO_WALL_CROSS: 0,
+        DIRECT_TEACHER_EXACT_REJECTED: 1,
+        BACKEND_REALIZATION_FAILED: 2,
+        SUPPORT_NOT_ARCHIVE_EXECUTABLE: 3,
+        SURVIVAL_FAILED_FAKEQUANT: 4,
+        SURVIVAL_FAILED_PARSEBACK: 5,
+        INFLATE_AUTHORITY_MISSING: 6,
+        SIDECAR_FALLBACK_ACCEPTED: 7,
+    }
+    return min(branches, key=lambda row: priority.get(str(row.get("first_failing_surface")), 99))
+
+
+def _wall_normal_first_failing_surface_for_effect(effect: ActionEffect) -> str:
+    branch = _wall_normal_branch_kind(effect)
+    blockers = set(effect.blockers)
+    wrong_to_target = effect.wrong_to_target or 0
+    if branch == "direct_teacher":
+        if wrong_to_target <= 0 or BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED in blockers:
+            return DIRECT_TEACHER_NO_WALL_CROSS
+        if (
+            effect.exact_score_decision == "reject"
+            or BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED in blockers
+        ):
+            return DIRECT_TEACHER_EXACT_REJECTED
+    if branch == "backend_fit" and (
+        wrong_to_target <= 0 or BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED in blockers
+    ):
+        return BACKEND_REALIZATION_FAILED
+    if not _effect_has_executable_wall_support(effect):
+        return SUPPORT_NOT_ARCHIVE_EXECUTABLE
+    if effect.fakequant_survived is False:
+        return SURVIVAL_FAILED_FAKEQUANT
+    if effect.parseback_survived is False:
+        return SURVIVAL_FAILED_PARSEBACK
+    if effect.inflate_survived is not True:
+        return INFLATE_AUTHORITY_MISSING
+    if branch == "sidecar_fallback":
+        return SIDECAR_FALLBACK_ACCEPTED
+    if effect.exact_score_decision == "reject":
+        return DIRECT_TEACHER_EXACT_REJECTED
+    return SIDECAR_FALLBACK_ACCEPTED
+
+
+def _wall_normal_branch_kind(effect: ActionEffect) -> str:
+    text = " ".join(
+        [
+            effect.action_kind,
+            effect.arm or "",
+            effect.inverse_source or "",
+            *effect.payload_sections,
+            *effect.trained_groups,
+        ]
+    ).lower()
+    if "backend" in text or "fit" in text or "head_rgb_1" in text:
+        return "backend_fit"
+    if "sidecar" in text or "grammar" in text or "masked_residual" in text:
+        return "sidecar_fallback"
+    if "direct" in text or "seg_margin" in text or "segnet_margin" in text:
+        return "direct_teacher"
+    return "unknown"
+
+
+def _effect_has_executable_wall_support(effect: ActionEffect) -> bool:
+    if "direct_teacher_and_survived_sidecar_support_hashes_diverge" in effect.blockers:
+        return False
+    return _has_executable_region_support(effect)
 
 
 def generate_inverse_scorer_candidates(
@@ -1445,13 +1697,20 @@ def _candidate_blockers(effect: ActionEffect) -> list[str]:
 
 def _requires_region_support(effect: ActionEffect) -> bool:
     return bool(
-        effect.frame_index in {1, "both"}
-        and (
-            effect.region_ids
-            or effect.wrong_to_target is not None
-            or effect.target_to_wrong is not None
-            or effect.wrong_to_wrong is not None
+        (
+            effect.frame_index in {1, "both"}
+            and (
+                effect.region_ids
+                or effect.wrong_to_target is not None
+                or effect.target_to_wrong is not None
+                or effect.wrong_to_wrong is not None
+            )
         )
+        or effect.support_source is not None
+        or effect.support_cardinality is not None
+        or effect.support_sha256 is not None
+        or effect.support_encoding is not None
+        or effect.support_encoded_bytes is not None
     )
 
 
@@ -1890,6 +2149,7 @@ def _int_or_none(value: Any) -> int | None:
 
 
 __all__ = [
+    "BACKEND_REALIZATION_FAILED",
     "BLOCKER_ARCHIVE_CLOSED_BIRTH_REQUIRES_EXECUTABLE_SUPPORT",
     "BLOCKER_DIRECT_SEG_WALL_EMPTY_SUPPORT",
     "BLOCKER_DIRECT_SEG_WALL_EXACT_SCORE_NOT_IMPROVED",
@@ -1915,13 +2175,22 @@ __all__ = [
     "BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED",
     "BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING",
     "DIRECT_SEG_WALL_ORACLE_SCHEMA",
+    "DIRECT_TEACHER_EXACT_REJECTED",
+    "DIRECT_TEACHER_NO_WALL_CROSS",
+    "INFLATE_AUTHORITY_MISSING",
     "INVERSE_SCORER_GENERATION_SCHEMA",
     "INVERSE_SCORER_QUEUE_ROW_SCHEMA",
     "SCORE_PROGRAM_INTERPRETER",
     "SCORE_PROGRAM_OPERATION_SCHEMA",
     "SCORE_PROGRAM_WORD_SCHEMA",
+    "SIDECAR_FALLBACK_ACCEPTED",
+    "SUPPORT_NOT_ARCHIVE_EXECUTABLE",
+    "SURVIVAL_FAILED_FAKEQUANT",
+    "SURVIVAL_FAILED_PARSEBACK",
     "TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA",
     "TRUE_SEG_WALL_NORMAL_INVERSE_SOURCES",
+    "WALL_NORMAL_BRANCH_RECEIPT_SCHEMA",
+    "WALL_NORMAL_FIRST_FAILING_SURFACES",
     "InverseCandidate",
     "build_candidate_queue",
     "build_direct_seg_wall_oracle_receipt",
@@ -1929,6 +2198,7 @@ __all__ = [
     "build_score_program_word",
     "build_target_region_wall_normal_lift_receipt",
     "build_wall_normal_branch_action_effects",
+    "build_wall_normal_branch_receipt",
     "candidate_queue_jsonl",
     "generate_inverse_scorer_candidates",
 ]

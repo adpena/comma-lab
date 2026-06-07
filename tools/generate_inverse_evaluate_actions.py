@@ -34,6 +34,7 @@ from tac.analysis.inverse_scorer_actions import (  # noqa: E402
     build_masked_residual_oracle_action_effect,
     build_score_program_word,
     build_wall_normal_branch_action_effects,
+    build_wall_normal_branch_receipt,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (  # noqa: E402
@@ -251,6 +252,7 @@ def _default_output_dir() -> Path:
 
 def _first_blocker(summary: Mapping[str, Any]) -> str | None:
     for key in (
+        "wall_normal_blockers",
         "pr110_k16_blockers",
         "inverse_generation_blockers",
         "menu_ilp_blockers",
@@ -272,6 +274,7 @@ def _render_blocker_note(summary: Mapping[str, Any]) -> str:
         f"- inverse_candidate_rows: `{summary['inverse_candidate_count']}`",
         f"- pr110_replay_rows: `{summary['pr110_replay_row_count']}`",
         f"- menu_ilp_allowed: `{summary['menu_ilp_allowed']}`",
+        f"- wall_normal_first_failing_surface: `{summary['wall_normal_first_failing_surface']}`",
         "",
         "## First Blocker",
         "",
@@ -290,6 +293,16 @@ def _render_blocker_note(summary: Mapping[str, Any]) -> str:
     )
     lines.extend(f"- `{blocker}`" for blocker in summary["inverse_generation_blockers"])
     if not summary["inverse_generation_blockers"]:
+        lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "## Wall-Normal Branch Blockers",
+            "",
+        ]
+    )
+    lines.extend(f"- `{blocker}`" for blocker in summary["wall_normal_blockers"])
+    if not summary["wall_normal_blockers"]:
         lines.append("- none")
     lines.extend(
         [
@@ -333,6 +346,8 @@ def _render_test_log(summary: Mapping[str, Any]) -> str:
         f"measured_commutators={summary['measured_commutator_count']}",
         f"needs_measurement={summary['needs_measurement_count']}",
         f"menu_ilp_allowed={summary['menu_ilp_allowed']}",
+        f"wall_normal_first_failing_surface={summary['wall_normal_first_failing_surface']}",
+        f"wall_normal_branch_count={summary['wall_normal_branch_count']}",
         "assertions:",
         f"- has_action_effect_rows={summary['action_effect_row_count'] > 0}",
         f"- has_inverse_candidates={summary['inverse_candidate_count'] >= 3}",
@@ -517,11 +532,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     commutator_path = out_dir / "commutator_summary.json"
     pr110_proof_path = out_dir / "pr110_k16_baseline_reproduction.json"
     pr110_validation_path = out_dir / "pr110_k16_baseline_validation.json"
+    wall_normal_receipt_path = out_dir / "wall_normal_branch_receipt.json"
     summary_path = out_dir / "summary.json"
     blocker_note_path = out_dir / "next_blocker.md"
     test_log_path = out_dir / "test_log.txt"
 
     output_effects = _unique_effects([*pr110_effects, *inverse_effects])
+    wall_normal_receipt = build_wall_normal_branch_receipt(
+        output_effects,
+        source_artifact_paths=[
+            *[path.as_posix() for path in args.seed_action_effects],
+            *[path.as_posix() for path in args.seed_training_artifact],
+        ],
+    )
     action_effect_count = _write_action_effect_ledger(output_effects, action_effect_path)
     queue_count = _write_jsonl(queue_path, candidate_queue_rows)
     _write_jsonl(candidate_queue_alias_path, candidate_queue_rows)
@@ -530,6 +553,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     _write_json(commutator_path, commutator)
     _write_json(pr110_proof_path, pr110_proof)
     _write_json(pr110_validation_path, pr110_validation)
+    _write_json(wall_normal_receipt_path, wall_normal_receipt)
 
     summary = {
         "schema": OUTPUT_SCHEMA,
@@ -545,6 +569,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "commutator_summary_path": commutator_path.as_posix(),
         "pr110_k16_baseline_reproduction_path": pr110_proof_path.as_posix(),
         "pr110_k16_baseline_validation_path": pr110_validation_path.as_posix(),
+        "wall_normal_branch_receipt_path": wall_normal_receipt_path.as_posix(),
         "next_blocker_path": blocker_note_path.as_posix(),
         "test_log_path": test_log_path.as_posix(),
         "seed_action_effect_count": len(seed_effects),
@@ -562,6 +587,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pr110_k16_blockers": list(pr110_validation["blockers"]),
         "menu_ilp_allowed": not menu_ilp_blockers,
         "menu_ilp_blockers": menu_ilp_blockers,
+        "wall_normal_branch_count": wall_normal_receipt["branch_count"],
+        "wall_normal_first_failing_surface": wall_normal_receipt["first_failing_surface"],
+        "wall_normal_blockers": list(wall_normal_receipt["blockers"]),
         "policy": {
             "measured_effects_only_no_synthetic_scorer_motion": True,
             "pr110_k16_baseline_required_before_menu_ilp": True,

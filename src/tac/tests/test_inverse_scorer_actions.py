@@ -19,6 +19,7 @@ import pytest
 from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect, append_action_effect, read_action_effects
 from tac.analysis.inverse_scorer_actions import (
+    BACKEND_REALIZATION_FAILED,
     BLOCKER_ARCHIVE_CLOSED_BIRTH_REQUIRES_EXECUTABLE_SUPPORT,
     BLOCKER_NO_COMPOSITE,
     BLOCKER_REGION_SUPPORT_IDENTITY_MISSING,
@@ -37,12 +38,18 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED,
     BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING,
     DIRECT_SEG_WALL_ORACLE_SCHEMA,
+    DIRECT_TEACHER_NO_WALL_CROSS,
     SCORE_PROGRAM_WORD_SCHEMA,
+    SIDECAR_FALLBACK_ACCEPTED,
+    SUPPORT_NOT_ARCHIVE_EXECUTABLE,
     TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
+    WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
+    WALL_NORMAL_FIRST_FAILING_SURFACES,
     build_direct_seg_wall_oracle_receipt,
     build_score_program_word,
     build_target_region_wall_normal_lift_receipt,
     build_wall_normal_branch_action_effects,
+    build_wall_normal_branch_receipt,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (
@@ -446,6 +453,7 @@ def test_target_region_wall_normal_lift_names_backend_gap_and_sidecar_fallback()
     assert BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED in receipt["blockers"]
     assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in receipt["blockers"]
     assert receipt["decision_state"] == "BACKEND_REALIZATION_FAILED"
+    assert receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
     assert receipt["score_claim"] is False
 
 
@@ -613,11 +621,142 @@ def test_target_region_wall_normal_lift_rejects_masked_residual_as_true_wall_nor
     assert receipt["direct_teacher"]["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
     assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
     assert receipt["decision_state"] == "DIRECT_TEACHER_NO_WALL_CROSS"
-    assert receipt["first_failing_surface"] == "direct_teacher_basis"
+    assert receipt["first_failing_surface"] == DIRECT_TEACHER_NO_WALL_CROSS
     assert receipt["sidecar_fallback"]["available"] is False
     assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_TRUE_WALL_NORMAL in receipt[
         "blockers"
     ]
+
+
+def test_wall_normal_branch_receipt_names_one_strict_first_failure() -> None:
+    direct = _direct_wall_candidate()
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+    effects = build_wall_normal_branch_action_effects(
+        receipt,
+        artifact_ref="/tmp/training_artifact.json",
+    )
+
+    branch_receipt = build_wall_normal_branch_receipt(
+        effects,
+        source_artifact_paths=["/tmp/training_artifact.json"],
+    )
+
+    assert branch_receipt["schema"] == WALL_NORMAL_BRANCH_RECEIPT_SCHEMA
+    assert branch_receipt["branch_count"] == 3
+    assert branch_receipt["same_action_id"] is True
+    assert branch_receipt["same_support_sha256"] is True
+    assert branch_receipt["support_executable_count"] == 3
+    assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
+    assert branch_receipt["first_failing_surface"] in WALL_NORMAL_FIRST_FAILING_SURFACES
+    backend = next(
+        row
+        for row in branch_receipt["branches"]
+        if row["action_kind"] == "wall_normal_backend_fit"
+    )
+    assert backend["first_failing_surface"] == BACKEND_REALIZATION_FAILED
+
+
+def test_wall_normal_branch_receipt_prioritizes_support_mismatch_before_survival() -> None:
+    sidecar = ActionEffect.build(
+        action_id="same-action",
+        family="hinerv",
+        action_kind="sidecar_grammar",
+        authority="inflate_raw",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        region_ids=["b0/c4/r1"],
+        payload_sections=["support_codec=explicit_yx_u16_coordinates"],
+        old_d_seg=0.49,
+        new_d_seg=0.25,
+        old_d_pose=194.0,
+        new_d_pose=190.0,
+        old_bytes=1,
+        new_bytes=2,
+        receiver_surface={
+            "uint8_changed_pixels": 16,
+            "seg_argmax_changed_pixels": 8,
+            "seg_wrong_to_target_count": 8,
+        },
+        exact_score_decision="reject",
+        fakequant_survived=True,
+        parseback_survived=True,
+        inflate_survived=True,
+        wrong_to_target=8,
+        support_source="survived_target_region_action_sidecar",
+        support_cardinality=8,
+        support_sha256="b" * 64,
+        support_encoding="explicit_yx_u16_coordinates",
+        support_encoded_bytes=16,
+        support_research_only=False,
+        blockers=["direct_teacher_and_survived_sidecar_support_hashes_diverge"],
+    )
+
+    receipt = build_wall_normal_branch_receipt([sidecar])
+
+    assert receipt["first_failing_surface"] == SUPPORT_NOT_ARCHIVE_EXECUTABLE
+    assert receipt["support_executable_count"] == 0
+    assert receipt["same_support_sha256"] is False
+    assert (
+        "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+        in receipt["blockers"]
+    )
+    assert receipt["branches"][0]["first_failing_surface"] == SUPPORT_NOT_ARCHIVE_EXECUTABLE
+
+
+def test_wall_normal_branch_receipt_accepts_survived_sidecar_fallback() -> None:
+    sidecar = ActionEffect.build(
+        action_id="same-action",
+        family="hinerv",
+        action_kind="sidecar_grammar",
+        authority="inflate_raw",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        region_ids=["b0/c4/r1"],
+        payload_sections=["support_codec=explicit_yx_u16_coordinates"],
+        old_d_seg=0.49,
+        new_d_seg=0.25,
+        old_d_pose=194.0,
+        new_d_pose=190.0,
+        old_bytes=1,
+        new_bytes=2,
+        receiver_surface={
+            "uint8_changed_pixels": 16,
+            "seg_argmax_changed_pixels": 8,
+            "seg_wrong_to_target_count": 8,
+        },
+        exact_score_decision="accept",
+        fakequant_survived=True,
+        parseback_survived=True,
+        inflate_survived=True,
+        wrong_to_target=8,
+        support_source="survived_target_region_action_sidecar",
+        support_cardinality=8,
+        support_sha256="b" * 64,
+        support_encoding="explicit_yx_u16_coordinates",
+        support_encoded_bytes=16,
+        support_research_only=False,
+    )
+
+    receipt = build_wall_normal_branch_receipt([sidecar])
+
+    assert receipt["first_failing_surface"] == SIDECAR_FALLBACK_ACCEPTED
+    assert receipt["support_executable_count"] == 1
+    assert receipt["blockers"] == []
 
 
 def _pr110_k1_replay_effect() -> ActionEffect:
@@ -983,6 +1122,7 @@ def test_generate_inverse_evaluate_actions_cli_writes_artifacts(tmp_path: Path) 
     assert (out_dir / "inverse_candidate_queue.jsonl").is_file()
     assert (out_dir / "score_program_word.json").is_file()
     assert (out_dir / "commutator_summary.json").is_file()
+    assert (out_dir / "wall_normal_branch_receipt.json").is_file()
     assert (out_dir / "next_blocker.md").is_file()
     score_program_word = json.loads((out_dir / "score_program_word.json").read_text(encoding="utf-8"))
     assert score_program_word["schema"] == SCORE_PROGRAM_WORD_SCHEMA
@@ -1108,6 +1248,14 @@ def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
     sidecar_row = next(row for row in hinerv_queue if row["action_kind"] == "wall_normal_sidecar_fallback")
     assert BLOCKER_SCORE_DELTA_MISSING in sidecar_row["blockers"]
     assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in sidecar_row["blockers"]
+
+    branch_receipt = json.loads(
+        (out_dir / "wall_normal_branch_receipt.json").read_text(encoding="utf-8")
+    )
+    assert branch_receipt["schema"] == WALL_NORMAL_BRANCH_RECEIPT_SCHEMA
+    assert branch_receipt["branch_count"] == 3
+    assert branch_receipt["same_action_id"] is True
+    assert branch_receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
 
 
 def test_generate_inverse_evaluate_actions_cli_does_not_call_blocked_reverse_producer_missing(
