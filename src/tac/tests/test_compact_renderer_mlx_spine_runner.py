@@ -1358,6 +1358,82 @@ def test_hinerv_action_payload_selection_reads_persisted_readiness_metadata() ->
     assert selection["target_region_action_support_sha256"] == "preferred-support"
 
 
+def test_hinerv_action_payload_selection_reloads_persisted_training_artifact(
+    tmp_path: Path,
+) -> None:
+    nested_birth = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "d" * 64,
+        "target_region_wall_normal_lift": {
+            "schema": "tac.target_region_wall_normal_lift.v1",
+            "action_id": "d" * 64,
+            "sidecar_fallback": {"support_sha256": "preferred-support"},
+            "direct_teacher": {
+                "archive_executable_support_sha256": "preferred-support",
+            },
+        },
+        "candidate_frontier_telemetry": {
+            "masked_residual_oracle": {
+                "best_wall_normal_candidate": {
+                    "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                    "target_region_action_program_base64": "persisted-program",
+                    "target_region_action_payload_bytes": 11,
+                    "target_region_action_section_telemetry": {
+                        "support_sha256": "preferred-support",
+                        "payload_bytes": 11,
+                    },
+                    "direct_seg_wall_oracle": {
+                        "archive_executable_support_sha256": "preferred-support",
+                    },
+                    "accepted": True,
+                    "target_support_moved": True,
+                    "exact_delta_score_nonrate": -1.0,
+                },
+            },
+        },
+    }
+    persisted_artifact = {
+        "substrate_artifact_metadata": {
+            "score_aware_training": {
+                "short_scorer_teacher_smoke_readiness": {
+                    "output_head_target_init_gate": {
+                        "metadata": {
+                            "scorer_domain_bootstrap": {
+                                "target_region_birth_actuator": nested_birth
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (tmp_path / "training_artifact.json").write_text(
+        json.dumps(persisted_artifact),
+        encoding="utf-8",
+    )
+    artifact_dict: dict[str, Any] = {
+        "archive_path": "/archive.zip",
+        "substrate_artifact_metadata": {"score_aware_training": {}},
+    }
+
+    payload = (
+        runner_mod._target_region_action_payload_for_export_selection_with_persisted_artifact(
+            artifact_dict,
+            training_dir=tmp_path,
+        )
+    )
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
+        payload
+    )
+
+    assert payload == nested_birth
+    assert artifact_dict["target_region_birth_payload"] == nested_birth
+    assert program == "persisted-program"
+    assert selection is not None
+    assert selection["target_region_action_support_sha256"] == "preferred-support"
+    assert selection["selected_matches_wall_normal_support"] is True
+
+
 def test_hinerv_action_program_selection_rejects_missing_direct_support() -> None:
     payload = {
         "action_id": "e" * 64,

@@ -503,6 +503,36 @@ def _target_region_action_payload_for_export_selection(
     return None
 
 
+def _target_region_action_payload_for_export_selection_with_persisted_artifact(
+    artifact_dict: dict[str, Any],
+    *,
+    training_dir: str | Path,
+) -> Mapping[str, Any] | None:
+    payload = _target_region_action_payload_for_export_selection(artifact_dict)
+    if isinstance(payload, Mapping):
+        return payload
+    artifact_path = Path(training_dir).expanduser().resolve(strict=False) / (
+        "training_artifact.json"
+    )
+    if not artifact_path.is_file():
+        return None
+    try:
+        persisted = _load_json(artifact_path)
+    except Exception:
+        return None
+    if not isinstance(persisted, Mapping):
+        return None
+    payload = _target_region_action_payload_for_export_selection(persisted)
+    if isinstance(payload, Mapping):
+        # The post-export runner keeps archive resolution in memory while the
+        # trainer writes readiness telemetry to disk.  Reattach only the exact
+        # payload needed for export/comparison so later receipts cannot miss the
+        # proven action or scan unrelated metadata.
+        artifact_dict["target_region_birth_payload"] = dict(payload)
+        return payload
+    return None
+
+
 def _target_region_action_id_from_selection_or_artifact(
     export_selection: Mapping[str, Any] | None,
     artifact_dict: Mapping[str, Any],
@@ -11005,7 +11035,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         target_region_action_program_base64,
         target_region_action_export_selection,
     ) = _select_target_region_action_program_from_birth_payload(
-        _target_region_action_payload_for_export_selection(artifact_dict)
+        _target_region_action_payload_for_export_selection_with_persisted_artifact(
+            artifact_dict,
+            training_dir=training_dir,
+        )
     )
     target_region_action_parseback_survival = _write_hi_nerv_target_region_action_parseback_survival(
         archive_resolution=archive_resolution,

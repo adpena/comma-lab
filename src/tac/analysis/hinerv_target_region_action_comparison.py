@@ -170,6 +170,7 @@ def build_hinerv_target_region_action_comparison(
         action_id=chosen_action_id,
         support_sha256=support_sha256,
         archive_sha256=program.archive_sha256,
+        program_sha256=_program_base64_sha256(program),
     )
     survival_identity_blockers = list(survival_identity["blockers"])
     current_receiver_bound = not survival_identity_blockers
@@ -1260,6 +1261,7 @@ def _survival_identity_status(
     action_id: str,
     support_sha256: str,
     archive_sha256: str,
+    program_sha256: str | None,
 ) -> dict[str, Any]:
     observed_action_id = _nested_first_text(
         survival,
@@ -1278,6 +1280,13 @@ def _survival_identity_status(
         ("expected_archive_sha256",),
         ("archive", "sha256"),
     )
+    observed_program_sha256 = _nested_first_text(
+        survival,
+        ("target_region_action_program_sha256",),
+        ("expected_program_sha256",),
+        ("target_region_actions", "program_sha256"),
+        ("target_region_actions", "target_region_action_program_sha256"),
+    )
     blockers: list[str] = []
     if not observed_action_id:
         blockers.append("target_region_action_survival_action_id_missing")
@@ -1291,20 +1300,37 @@ def _survival_identity_status(
         blockers.append("target_region_action_survival_archive_sha256_missing")
     elif observed_archive_sha256 != archive_sha256:
         blockers.append("target_region_action_survival_archive_sha256_mismatch")
+    if program_sha256 is not None:
+        if not observed_program_sha256:
+            blockers.append("target_region_action_survival_program_sha256_missing")
+        elif observed_program_sha256 != program_sha256:
+            blockers.append("target_region_action_survival_program_sha256_mismatch")
     return {
         "schema": "hi_nerv_target_region_action_survival_identity.v1",
         "action_id": action_id,
         "support_sha256": support_sha256,
         "archive_sha256": archive_sha256,
+        "target_region_action_program_sha256": program_sha256,
         "survival_action_id": observed_action_id,
         "survival_support_sha256": observed_support_sha256,
         "survival_archive_sha256": observed_archive_sha256,
+        "survival_program_sha256": observed_program_sha256,
         "same_action_id": observed_action_id == action_id,
         "same_support_sha256": observed_support_sha256 == support_sha256,
         "same_archive_sha256": observed_archive_sha256 == archive_sha256,
+        "same_program_sha256": (
+            observed_program_sha256 == program_sha256 if program_sha256 is not None else None
+        ),
         "passed": not blockers,
         "blockers": blockers,
     }
+
+
+def _program_base64_sha256(program: _ActionProgram) -> str | None:
+    raw_b64 = program.meta.get(TARGET_REGION_ACTION_META_KEY)
+    if not isinstance(raw_b64, str) or not raw_b64:
+        return None
+    return hashlib.sha256(raw_b64.encode("ascii")).hexdigest()
 
 
 def _backend_realized(backend: Mapping[str, Any]) -> bool:
