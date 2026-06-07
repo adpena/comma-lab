@@ -97,6 +97,26 @@ SNERV_DECODER_MAGIC = b"SNDC1"
 SNERV_LF_PAYLOAD_INTN_CODEC_PROOF = _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF
 HEADER_LEN_FMT = "<I"
 SECTION_ORDER = ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
+OFFICIAL_DECODER_LOGICAL_BITFLIP_SECTION_ALIASES = {
+    "decoder_payload.mfu": "decoder_payload.mfu",
+    "decoder_payload.hfr": "decoder_payload.hfr",
+    "decoder_payload.hf": "decoder_payload.hfr",
+    "decoder_payload.tub": "decoder_payload.tub",
+    "decoder_payload.output2": "decoder_payload.output_2",
+    "decoder_payload.output_2": "decoder_payload.output_2",
+}
+OFFICIAL_DECODER_LOGICAL_BITFLIP_TENSOR_PREFIXES = {
+    "decoder_payload.mfu": ("mfu.", "inputs.mfu."),
+    "decoder_payload.hfr": ("hfr.",),
+    "decoder_payload.tub": ("inputs.tub.",),
+    "decoder_payload.output_2": ("tub.temporal_encoder_concat", "tub.output2_raw"),
+}
+OFFICIAL_DECODER_LOGICAL_BITFLIP_FIRST_TENSOR = {
+    "decoder_payload.mfu": "mfu_out",
+    "decoder_payload.hfr": "hfr_out",
+    "decoder_payload.tub": "tub_in",
+    "decoder_payload.output_2": "output_2",
+}
 SNAR2_VERSION = 1
 SNAR2_SECTION_HASH_BYTES = 8
 _SNAR2_HEADER_FMT = "<5sBBBBHBBIBBHH4I4Q"
@@ -1656,6 +1676,17 @@ def build_snerv_archive_payload_bitflip_falsification(
 
     decoded = unpack_snerv_archive(packet)
     if bitflip_section not in decoded.sections:
+        logical_section = _canonical_official_decoder_logical_bitflip_section(
+            bitflip_section
+        )
+        if logical_section is not None:
+            return _search_official_decoder_logical_bitflip_falsification(
+                packet,
+                decoded=decoded,
+                logical_section=logical_section,
+                preferred_offset=int(bit_offset),
+                preferred_mask=int(bit_mask),
+            )
         raise SnervArchiveError(f"unknown SNeRV bitflip section {bitflip_section!r}")
     first_tensor_hint = _bitflip_section_first_tensor(
         bitflip_section,
@@ -1757,7 +1788,15 @@ def build_snerv_archive_payload_bitflip_falsification_matrix(
     *,
     bit_offset: int = 0,
     bit_mask: int = 1,
-    sections: Sequence[str] = SECTION_ORDER,
+    sections: Sequence[str] = (
+        "metadata_payload",
+        "lf_payload",
+        "decoder_payload.mfu",
+        "decoder_payload.hfr",
+        "decoder_payload.tub",
+        "decoder_payload.output_2",
+        "step_map_packet",
+    ),
 ) -> dict[str, Any]:
     """Mutate every charged SNeRV archive section and report proof coverage."""
 
@@ -1765,15 +1804,318 @@ def build_snerv_archive_payload_bitflip_falsification_matrix(
     decoded = unpack_snerv_archive(packet)
     for section in sections:
         section_name = str(section)
-        section = decoded.sections[section_name]
-        section_proofs[section_name] = _search_section_bitflip_falsification(
-            packet,
-            bitflip_section=section_name,
-            section_bytes=section,
-            preferred_offset=int(bit_offset),
-            preferred_mask=int(bit_mask),
+        if section_name in decoded.sections:
+            section = decoded.sections[section_name]
+            section_proofs[section_name] = _search_section_bitflip_falsification(
+                packet,
+                bitflip_section=section_name,
+                section_bytes=section,
+                preferred_offset=int(bit_offset),
+                preferred_mask=int(bit_mask),
+            )
+            continue
+        logical_section = _canonical_official_decoder_logical_bitflip_section(
+            section_name
+        )
+        if logical_section is None:
+            raise SnervArchiveError(f"unknown SNeRV bitflip section {section_name!r}")
+        section_proofs[logical_section] = (
+            _search_official_decoder_logical_bitflip_falsification(
+                packet,
+                decoded=decoded,
+                logical_section=logical_section,
+                preferred_offset=int(bit_offset),
+                preferred_mask=int(bit_mask),
+            )
         )
     return build_snerv_payload_bitflip_falsification_matrix(section_proofs)
+
+
+def _canonical_official_decoder_logical_bitflip_section(section: str) -> str | None:
+    return OFFICIAL_DECODER_LOGICAL_BITFLIP_SECTION_ALIASES.get(
+        str(section or "").strip().lower()
+    )
+
+
+def _search_official_decoder_logical_bitflip_falsification(
+    packet: bytes,
+    *,
+    decoded: DecodedSnervArchive,
+    logical_section: str,
+    preferred_offset: int,
+    preferred_mask: int,
+) -> dict[str, Any]:
+    if not is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        raise SnervArchiveError(
+            f"{logical_section!r} requires an official MFU/HFR/TUB decoder payload"
+        )
+    raw, manifest_rows = _official_decoder_raw_manifest_with_offsets(
+        decoded.sections["decoder_payload"]
+    )
+    selected = _official_decoder_logical_manifest_rows(
+        manifest_rows,
+        logical_section=logical_section,
+    )
+    if not selected:
+        first_tensor = OFFICIAL_DECODER_LOGICAL_BITFLIP_FIRST_TENSOR[logical_section]
+        decoder_hash = _sha256(decoded.sections["decoder_payload"])
+        return build_snerv_payload_bitflip_falsification(
+            bitflip_section=logical_section,
+            baseline_section_sha256=decoder_hash,
+            mutated_section_sha256=decoder_hash,
+            proof_passed_after_bitflip=True,
+            first_failed_tensor=None,
+            first_failed_surface=None,
+            bit_offset=preferred_offset,
+            bit_mask=preferred_mask,
+            failure=f"logical_decoder_group_missing:{logical_section}:{first_tensor}",
+        )
+    best: dict[str, Any] | None = None
+    candidate_offsets = _logical_decoder_candidate_offsets(
+        selected,
+        preferred_offset=preferred_offset,
+    )
+    masks = _candidate_bitflip_masks(preferred_mask)
+    for offset in candidate_offsets:
+        for mask in masks:
+            proof = _build_official_decoder_logical_bitflip_falsification(
+                decoded=decoded,
+                raw=raw,
+                manifest_rows=manifest_rows,
+                logical_section=logical_section,
+                raw_offset=offset,
+                bit_mask=mask,
+            )
+            best = proof if best is None else best
+            if proof.get("passed") is True:
+                return proof
+    if best is not None:
+        best = dict(best)
+        best["section_causality"] = "no_receiver_surface_change_found"
+        return best
+    raise SnervArchiveError(f"SNeRV logical bitflip section {logical_section!r} is empty")
+
+
+def _build_official_decoder_logical_bitflip_falsification(
+    *,
+    decoded: DecodedSnervArchive,
+    raw: bytes,
+    manifest_rows: Sequence[Mapping[str, Any]],
+    logical_section: str,
+    raw_offset: int,
+    bit_mask: int,
+) -> dict[str, Any]:
+    first_tensor_hint = OFFICIAL_DECODER_LOGICAL_BITFLIP_FIRST_TENSOR[logical_section]
+    selected = _official_decoder_logical_manifest_rows(
+        manifest_rows,
+        logical_section=logical_section,
+    )
+    baseline_group_hash = _sha256(_logical_decoder_group_bytes(raw, selected))
+    try:
+        baseline_frames = decoded.decode_frames(clip_to_uint8_range=True)
+    except Exception as exc:
+        return build_snerv_payload_bitflip_falsification(
+            bitflip_section=logical_section,
+            baseline_section_sha256=baseline_group_hash,
+            mutated_section_sha256=baseline_group_hash,
+            proof_passed_after_bitflip=True,
+            first_failed_tensor=None,
+            bit_offset=raw_offset,
+            bit_mask=bit_mask,
+            failure=f"baseline_receiver_replay_failed:{type(exc).__name__}:{exc}",
+        )
+    raw_mut = bytearray(raw)
+    if raw_offset < 0 or raw_offset >= len(raw_mut):
+        raise SnervArchiveError(
+            f"SNeRV logical bitflip raw offset {raw_offset} outside decoder tensor bytes"
+        )
+    mask = int(bit_mask)
+    if mask <= 0 or mask > 255:
+        raise SnervArchiveError("SNeRV logical bitflip mask must be in [1, 255]")
+    raw_mut[raw_offset] ^= mask
+    mutated_raw = bytes(raw_mut)
+    mutated_group_hash = _sha256(_logical_decoder_group_bytes(mutated_raw, selected))
+    mutated_decoder_payload = _repack_official_decoder_payload_with_raw(
+        decoded.sections["decoder_payload"],
+        raw=mutated_raw,
+        manifest_rows=manifest_rows,
+    )
+    mutated_sections = dict(decoded.sections)
+    mutated_sections["decoder_payload"] = mutated_decoder_payload
+    packer = (
+        pack_snerv_archive_snar2
+        if decoded.schema == SNERV_ARCHIVE_SCHEMA_V2
+        else pack_snerv_archive
+    )
+
+    first_failed_tensor: str | None = None
+    first_failed_surface: str | None = None
+    failure: str | None = None
+    proof_passed_after_bitflip = True
+    receiver_replay_failed = False
+    rgb_pair_uint8_changed = False
+    try:
+        mutated_packet = packer(
+            metadata_payload=mutated_sections["metadata_payload"],
+            lf_payload=mutated_sections["lf_payload"],
+            decoder_payload=mutated_sections["decoder_payload"],
+            step_map_packet=mutated_sections["step_map_packet"],
+            metadata=decoded.metadata,
+        ).packet
+        mutated_frames = decode_snerv_archive_frames(mutated_packet)
+    except Exception as exc:
+        proof_passed_after_bitflip = False
+        first_failed_tensor = first_tensor_hint
+        first_failed_surface = "archive_parseback"
+        receiver_replay_failed = True
+        failure = f"{type(exc).__name__}: {exc}"
+    else:
+        if tuple(mutated_frames.shape) != tuple(baseline_frames.shape):
+            proof_passed_after_bitflip = False
+            first_failed_tensor = "rgb_pair_uint8"
+            first_failed_surface = "numpy_receiver"
+            rgb_pair_uint8_changed = True
+            failure = (
+                f"shape_changed:{tuple(baseline_frames.shape)}->{tuple(mutated_frames.shape)}"
+            )
+        elif not np.array_equal(
+            np.rint(mutated_frames).astype(np.uint8),
+            np.rint(baseline_frames).astype(np.uint8),
+        ):
+            proof_passed_after_bitflip = False
+            first_failed_tensor = "rgb_pair_uint8"
+            first_failed_surface = "numpy_receiver"
+            rgb_pair_uint8_changed = True
+
+    return build_snerv_payload_bitflip_falsification(
+        bitflip_section=logical_section,
+        baseline_section_sha256=baseline_group_hash,
+        mutated_section_sha256=mutated_group_hash,
+        proof_passed_after_bitflip=proof_passed_after_bitflip,
+        first_failed_tensor=first_failed_tensor,
+        first_failed_surface=first_failed_surface,
+        receiver_replay_failed=receiver_replay_failed,
+        rgb_pair_uint8_changed=rgb_pair_uint8_changed,
+        bit_offset=raw_offset,
+        bit_mask=mask,
+        failure=failure,
+    )
+
+
+def _official_decoder_raw_manifest_with_offsets(
+    decoder_payload: bytes,
+) -> tuple[bytes, list[dict[str, Any]]]:
+    header, compressed = _unpack_subpacket(
+        decoder_payload,
+        magic=SNERV_DECODER_MAGIC,
+        schema=DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    if _sha256(compressed) != str(header["compressed_sha256"]):
+        raise SnervArchiveError("official primitive payload compressed sha256 mismatch")
+    try:
+        raw = lzma.decompress(compressed)
+    except lzma.LZMAError as exc:
+        raise SnervArchiveError("official primitive payload decompression failed") from exc
+    if len(raw) != int(header["raw_tensor_bytes"]):
+        raise SnervArchiveError("official primitive payload raw byte count mismatch")
+    if _sha256(raw) != str(header["raw_tensor_sha256"]):
+        raise SnervArchiveError("official primitive payload raw sha256 mismatch")
+    rows: list[dict[str, Any]] = []
+    cursor = 0
+    for row in header.get("tensor_manifest") or []:
+        row_map = dict(row)
+        nbytes = int(row_map.get("bytes", -1))
+        if nbytes <= 0:
+            raise SnervArchiveError("official primitive tensor manifest byte count invalid")
+        row_map["raw_offset"] = cursor
+        row_map["raw_end"] = cursor + nbytes
+        rows.append(row_map)
+        cursor += nbytes
+    if cursor != len(raw):
+        raise SnervArchiveError("official primitive tensor manifest/raw size mismatch")
+    return raw, rows
+
+
+def _official_decoder_logical_manifest_rows(
+    manifest_rows: Sequence[Mapping[str, Any]],
+    *,
+    logical_section: str,
+) -> list[dict[str, Any]]:
+    prefixes = OFFICIAL_DECODER_LOGICAL_BITFLIP_TENSOR_PREFIXES[logical_section]
+    out: list[dict[str, Any]] = []
+    for row in manifest_rows:
+        name = str(row.get("name") or "")
+        if any(name == prefix or name.startswith(prefix) for prefix in prefixes):
+            out.append(dict(row))
+    return out
+
+
+def _logical_decoder_candidate_offsets(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    preferred_offset: int,
+) -> list[int]:
+    raw_offsets: list[int] = []
+    for row in rows:
+        start = int(row["raw_offset"])
+        end = int(row["raw_end"])
+        if end <= start:
+            continue
+        raw_offsets.extend(
+            [
+                start + max(0, int(preferred_offset) % (end - start)),
+                start,
+                start + ((end - start) // 2),
+                end - 1,
+            ]
+        )
+    return _ordered_unique_ints(raw_offsets)
+
+
+def _logical_decoder_group_bytes(
+    raw: bytes,
+    rows: Sequence[Mapping[str, Any]],
+) -> bytes:
+    return b"".join(
+        raw[int(row["raw_offset"]) : int(row["raw_end"])]
+        for row in rows
+    )
+
+
+def _repack_official_decoder_payload_with_raw(
+    decoder_payload: bytes,
+    *,
+    raw: bytes,
+    manifest_rows: Sequence[Mapping[str, Any]],
+) -> bytes:
+    header, _compressed = _unpack_subpacket(
+        decoder_payload,
+        magic=SNERV_DECODER_MAGIC,
+        schema=DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    new_manifest: list[dict[str, Any]] = []
+    for row in manifest_rows:
+        clean = {
+            key: value
+            for key, value in dict(row).items()
+            if key not in {"raw_offset", "raw_end"}
+        }
+        start = int(row["raw_offset"])
+        end = int(row["raw_end"])
+        clean["sha256"] = _sha256(raw[start:end])
+        new_manifest.append(clean)
+    compressed = lzma.compress(
+        raw,
+        format=lzma.FORMAT_XZ,
+        preset=DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
+    )
+    new_header = dict(header)
+    new_header["tensor_manifest"] = new_manifest
+    new_header["raw_tensor_bytes"] = len(raw)
+    new_header["raw_tensor_sha256"] = _sha256(raw)
+    new_header["compressed_bytes"] = len(compressed)
+    new_header["compressed_sha256"] = _sha256(compressed)
+    return _pack_subpacket(SNERV_DECODER_MAGIC, new_header, compressed)
 
 
 def _search_section_bitflip_falsification(

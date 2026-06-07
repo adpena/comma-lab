@@ -15,6 +15,7 @@ from tac.analysis.snerv_source_forward_proof import (
 )
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    build_snerv_archive_payload_bitflip_falsification_matrix,
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
@@ -117,6 +118,27 @@ def test_source_forward_witness_payload_names_official_packet_blockers(
         "snerv_output2_boundary_not_source_identical" in blocker
         for blocker in payload["blockers"]
     )
+
+
+def test_official_packet_bitflip_matrix_covers_logical_source_basis() -> None:
+    matrix = build_snerv_archive_payload_bitflip_falsification_matrix(
+        _official_packet()
+    )
+
+    assert matrix["schema"] == "snerv_payload_bitflip_falsification_matrix.v1"
+    assert matrix["required_sections"] == [
+        "metadata_payload",
+        "lf_payload",
+        "decoder_payload.mfu",
+        "decoder_payload.hfr",
+        "decoder_payload.tub",
+        "decoder_payload.output_2",
+        "step_map_packet",
+    ]
+    assert set(matrix["section_proofs"]) == set(matrix["required_sections"])
+    for section, proof in matrix["section_proofs"].items():
+        assert proof["bitflip_section"] == section
+        assert proof["baseline_section_sha256"] != proof["mutated_section_sha256"]
 
 
 def test_source_forward_witness_build_failure_preserves_input_resolution_blockers(

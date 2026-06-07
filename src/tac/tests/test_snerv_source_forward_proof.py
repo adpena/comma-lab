@@ -13,6 +13,7 @@ from tac.analysis.snerv_source_forward_proof import (
     DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS,
     REPARAMETERIZED_RENAME_REQUIRED,
     SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA,
+    SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS,
     SOURCE_FORWARD_SURFACES,
     SOURCE_FORWARD_TENSOR_NAMES,
     SOURCE_IDENTICAL,
@@ -102,8 +103,11 @@ def _bitflip() -> dict:
 def _bitflip_matrix() -> dict:
     first_tensors = {
         "metadata_payload": "coord_time_embedding",
-        "lf_payload": "tub_in",
-        "decoder_payload": "output_2",
+        "lf_payload": "lf_payload",
+        "decoder_payload.mfu": "mfu_out",
+        "decoder_payload.hfr": "hfr_out",
+        "decoder_payload.tub": "tub_in",
+        "decoder_payload.output_2": "output_2",
         "step_map_packet": "rgb_pair_uint8",
     }
     return build_snerv_payload_bitflip_falsification_matrix(
@@ -182,6 +186,40 @@ def test_payload_bitflip_requires_named_authority_pair() -> None:
         "snerv_payload_bitflip_first_failed_authority_pair_missing"
         in status["blockers"]
     )
+
+
+def test_payload_bitflip_matrix_requires_logical_snerv_source_basis() -> None:
+    matrix = build_snerv_payload_bitflip_falsification_matrix(
+        {
+            section: build_snerv_payload_bitflip_falsification(
+                bitflip_section=section,
+                baseline_section_sha256=f"{idx + 1:x}" * 64,
+                mutated_section_sha256=f"{idx + 5:x}" * 64,
+                proof_passed_after_bitflip=False,
+                first_failed_tensor="rgb_pair_uint8",
+                first_failed_surface="numpy_receiver",
+                rgb_pair_uint8_changed=True,
+                bit_offset=idx,
+                bit_mask=1,
+            )
+            for idx, section in enumerate(
+                ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
+            )
+        }
+    )
+
+    assert matrix["passed"] is False
+    assert tuple(matrix["required_sections"]) == SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS
+    for logical_section in (
+        "decoder_payload.mfu",
+        "decoder_payload.hfr",
+        "decoder_payload.tub",
+        "decoder_payload.output_2",
+    ):
+        assert (
+            f"snerv_payload_bitflip_matrix_section_missing:{logical_section}"
+            in matrix["blockers"]
+        )
 
 
 def _scorer_deltas() -> dict:
