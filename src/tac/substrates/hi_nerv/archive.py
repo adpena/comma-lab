@@ -61,6 +61,11 @@ from tac.substrates._shared.decoder_state_codec import (
     deserialize_decoder_state_dict,
     serialize_decoder_state_dict,
 )
+from tac.substrates.hi_nerv.target_region_actions import (
+    TARGET_REGION_ACTION_META_KEY,
+    decode_target_region_actions_from_meta,
+    target_region_action_section_telemetry,
+)
 
 HIV1_MAGIC: bytes = b"HIV1"
 HIV1_SCHEMA_VERSION: int = 1
@@ -512,11 +517,25 @@ def build_archive_section_telemetry(
     """Return exact HIV1 section bytes for byte-cap/modelsize controllers."""
 
     layout = _read_hiv1_layout(blob)
-    meta = json.loads(blob[layout.meta_range[0] : layout.meta_range[1]].decode("utf-8"))
+    meta_payload = blob[layout.meta_range[0] : layout.meta_range[1]]
+    meta = json.loads(meta_payload.decode("utf-8"))
     latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
     decoder_codec_name = decoder_state_codec_stats(
         blob[layout.decoder_range[0] : layout.decoder_range[1]]
     ).codec
+    blockers: list[str] = []
+    target_region_actions: dict[str, object] | None = None
+    if TARGET_REGION_ACTION_META_KEY in meta:
+        try:
+            actions = decode_target_region_actions_from_meta(meta)
+            target_region_actions = target_region_action_section_telemetry(actions)
+            raw_b64 = meta.get(TARGET_REGION_ACTION_META_KEY)
+            target_region_actions["base64_text_bytes"] = (
+                len(raw_b64.encode("ascii")) if isinstance(raw_b64, str) else None
+            )
+            target_region_actions["charged_meta_json_bytes"] = len(meta_payload)
+        except ValueError as exc:
+            blockers.append(f"target_region_action_meta_invalid:{exc}")
 
     def _section_row(
         *,
@@ -632,8 +651,10 @@ def build_archive_section_telemetry(
         "section_payload_bytes": int(section_payload_bytes),
         "sections": sections,
         "dominant_sections": dominant_sections[:4],
-        "blockers": [],
+        "blockers": blockers,
     }
+    if target_region_actions is not None:
+        payload["target_region_actions"] = target_region_actions
     if archive_zip_bytes is not None:
         overhead = int(archive_zip_bytes) - len(blob)
         payload["archive_zip_bytes"] = int(archive_zip_bytes)

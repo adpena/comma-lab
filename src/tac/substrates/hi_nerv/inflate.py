@@ -31,13 +31,14 @@ from .architecture import (
     validate_decoder_state_dict,
 )
 from .archive import HinervArchive, parse_archive
+from .target_region_actions import wrap_model_with_target_region_actions
 
 
 def build_model_from_archive(
     archive_bytes: bytes,
     *,
     device: str = "cpu",
-) -> tuple[HinervArchive, HinervConfig, HinervSubstrate]:
+) -> tuple[HinervArchive, HinervConfig, torch.nn.Module]:
     """Parse HIV1 bytes and build the exact receiver model used by inflate."""
 
     arc = parse_archive(archive_bytes)
@@ -89,7 +90,8 @@ def build_model_from_archive(
         dtype=model.latents_fine.dtype,
     )
     model.load_state_dict(full_state, strict=True)
-    return arc, cfg, model
+    receiver_model = wrap_model_with_target_region_actions(model, meta)
+    return arc, cfg, receiver_model
 
 
 def inflate_one_video(

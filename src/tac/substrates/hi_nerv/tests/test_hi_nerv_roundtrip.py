@@ -46,6 +46,11 @@ from tac.substrates.hi_nerv.bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
 )
 from tac.substrates.hi_nerv.inflate import build_model_from_archive
+from tac.substrates.hi_nerv.target_region_actions import (
+    TARGET_REGION_ACTION_META_KEY,
+    TargetRegionPixelAction,
+    encode_target_region_actions_meta,
+)
 
 
 def _smoke_cfg() -> HinervConfig:
@@ -539,6 +544,69 @@ def test_receiver_loads_complete_archive_state_strictly(monkeypatch):
     assert observed["strict"] is True
     assert set(LATENT_STATE_KEYS).issubset(observed["keys"])
     assert set(decoder_sd).issubset(observed["keys"])
+
+
+def test_receiver_consumes_charged_target_region_action_from_archive_meta():
+    cfg = _smoke_cfg()
+    torch.manual_seed(27)
+    model = HinervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    base_blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+    )
+    action = TargetRegionPixelAction(
+        pair_index=1,
+        frame_index=1,
+        height=cfg.output_height,
+        width=cfg.output_width,
+        yx=torch.tensor([[2, 3], [4, 5]], dtype=torch.int64).numpy(),
+        rgb_u8=torch.tensor([[255, 0, 17], [0, 255, 33]], dtype=torch.uint8).numpy(),
+    )
+    action_blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        {
+            **_smoke_meta(cfg),
+            TARGET_REGION_ACTION_META_KEY: encode_target_region_actions_meta([action]),
+        },
+    )
+
+    _, _, base_receiver = build_model_from_archive(base_blob)
+    action_archive, _, action_receiver = build_model_from_archive(action_blob)
+    action_section_telemetry = build_archive_section_telemetry(action_blob)
+    idx = torch.tensor([1], dtype=torch.long)
+
+    with torch.no_grad():
+        base0, base1 = base_receiver(idx)
+        action0, action1 = action_receiver(idx)
+
+    assert TARGET_REGION_ACTION_META_KEY in action_archive.meta
+    assert action_section_telemetry["target_region_actions"]["action_count"] == 1
+    assert action_section_telemetry["target_region_actions"]["pixel_count"] == 2
+    assert action_section_telemetry["target_region_actions"]["payload_bytes"] > 0
+    assert action_section_telemetry["target_region_actions"]["base64_text_bytes"] > 0
+    assert action_section_telemetry["target_region_actions"]["charged_as_hiv1_meta_blob"] is True
+    assert torch.allclose(base0, action0)
+    assert not torch.allclose(base1, action1)
+    assert torch.equal(
+        torch.round(action1[0, :, 2, 3] * 255).to(torch.uint8),
+        torch.tensor([255, 0, 17], dtype=torch.uint8),
+    )
+    assert torch.equal(
+        torch.round(action1[0, :, 4, 5] * 255).to(torch.uint8),
+        torch.tensor([0, 255, 33], dtype=torch.uint8),
+    )
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke

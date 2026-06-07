@@ -26,6 +26,11 @@ from tac.substrates.hi_nerv.receiver_cache_quality import (
     build_hi_nerv_receiver_cache_segnet_argmax_probe,
     write_hi_nerv_receiver_cache_quality_report,
 )
+from tac.substrates.hi_nerv.target_region_actions import (
+    TARGET_REGION_ACTION_META_KEY,
+    TargetRegionPixelAction,
+    encode_target_region_actions_meta,
+)
 
 
 def test_hi_nerv_receiver_cache_quality_writes_direct_cache_from_archive(
@@ -119,6 +124,48 @@ def test_hi_nerv_archive_replay_components_parse_minimal_x_member(
     assert components["parseback_rgb_pair_mse"] < 1.0e-3
     assert components["selection_health_parseback_rgb_dynamic_range"] > 0.0
     assert components["selection_health_parseback_rgb_temporal_delta_std"] >= 0.0
+
+
+def test_hi_nerv_archive_replay_components_consume_target_region_actions(
+    tmp_path: Path,
+) -> None:
+    action = TargetRegionPixelAction(
+        pair_index=1,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=np.array([[2, 3]], dtype=np.uint16),
+        rgb_u8=np.array([[255, 0, 17]], dtype=np.uint8),
+    )
+    base_archive = _write_tiny_hiv1_archive(tmp_path / "base.zip")
+    action_archive = _write_tiny_hiv1_archive(
+        tmp_path / "action.zip",
+        extra_meta={
+            TARGET_REGION_ACTION_META_KEY: encode_target_region_actions_meta([action])
+        },
+    )
+    target0, target1 = _render_tiny_hiv1_targets()
+    target1[1, 2, 3] = np.array([1.0, 0.0, 17.0 / 255.0], dtype=np.float32)
+
+    base_components = build_hi_nerv_archive_replay_components(
+        base_archive,
+        {"local_pair_indices": np.array([1], dtype=np.int64)},
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+    )
+    action_components = build_hi_nerv_archive_replay_components(
+        action_archive,
+        {"local_pair_indices": np.array([1], dtype=np.int64)},
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+    )
+
+    assert action_components["parseback_rgb_frame1_mse"] < base_components[
+        "parseback_rgb_frame1_mse"
+    ]
+    assert action_components["parseback_rgb_pair_mse"] < base_components[
+        "parseback_rgb_pair_mse"
+    ]
 
 
 def test_hi_nerv_archive_replay_components_attach_segnet_teacher_metrics(
@@ -747,7 +794,12 @@ def _write_scorer_input_cache(root: Path, *, temporal_delta: float) -> None:
     )
 
 
-def _write_tiny_hiv1_archive(path: Path, *, member_name: str = "0.bin") -> Path:
+def _write_tiny_hiv1_archive(
+    path: Path,
+    *,
+    member_name: str = "0.bin",
+    extra_meta: dict[str, object] | None = None,
+) -> Path:
     cfg = HinervConfig(
         latent_dim_coarse=2,
         latent_dim_mid=2,
@@ -771,23 +823,26 @@ def _write_tiny_hiv1_archive(path: Path, *, member_name: str = "0.bin") -> Path:
         for key, value in dict(model.state_dict()).items()
         if key not in {"latents_coarse", "latents_mid", "latents_fine"}
     }
+    meta = {
+        "embed_dim": cfg.embed_dim,
+        "initial_grid_h": cfg.initial_grid_h,
+        "initial_grid_w": cfg.initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "sin_frequency": cfg.sin_frequency,
+        "num_upsample_blocks": cfg.num_upsample_blocks,
+        "mid_injection_block_index": cfg.mid_injection_block_index,
+        "fine_injection_block_index": cfg.fine_injection_block_index,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+    }
+    if extra_meta:
+        meta.update(extra_meta)
     packet = pack_archive(
         decoder_state,
         model.latents_coarse.detach(),
         model.latents_mid.detach(),
         model.latents_fine.detach(),
-        {
-            "embed_dim": cfg.embed_dim,
-            "initial_grid_h": cfg.initial_grid_h,
-            "initial_grid_w": cfg.initial_grid_w,
-            "decoder_channels": list(cfg.decoder_channels),
-            "sin_frequency": cfg.sin_frequency,
-            "num_upsample_blocks": cfg.num_upsample_blocks,
-            "mid_injection_block_index": cfg.mid_injection_block_index,
-            "fine_injection_block_index": cfg.fine_injection_block_index,
-            "output_height": cfg.output_height,
-            "output_width": cfg.output_width,
-        },
+        meta,
     )
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr(member_name, packet)

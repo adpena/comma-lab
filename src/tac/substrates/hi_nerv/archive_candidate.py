@@ -52,6 +52,9 @@ from tac.substrates.hi_nerv.archive import (
 from tac.substrates.hi_nerv.bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
 )
+from tac.substrates.hi_nerv.target_region_actions import (
+    wrap_model_with_target_region_actions,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.representation_spine import (
     build_hi_nerv_spine_from_archive_payload,
@@ -141,6 +144,7 @@ def build_hi_nerv_archive_replay_components(
         latents_coarse=arc.latents_coarse,
         latents_mid=arc.latents_mid,
         latents_fine=arc.latents_fine,
+        meta=arc.meta,
     )
     torch_pair_indices = torch.tensor(pair_indices.tolist(), dtype=torch.long)
     with torch.no_grad():
@@ -622,7 +626,8 @@ def _load_receiver_model_for_pixel_proof(
     latents_coarse: torch.Tensor,
     latents_mid: torch.Tensor,
     latents_fine: torch.Tensor,
-) -> HinervSubstrate:
+    meta: Mapping[str, Any] | None = None,
+) -> torch.nn.Module:
     model = HinervSubstrate(cfg).eval()
     state = {
         name: tensor.detach().clone().to(dtype=torch.float32, device="cpu")
@@ -642,11 +647,11 @@ def _load_receiver_model_for_pixel_proof(
         }
     )
     model.load_state_dict(state, strict=True)
-    return model
+    return wrap_model_with_target_region_actions(model, dict(meta or {}))
 
 
 def _render_receiver_pixels(
-    model: HinervSubstrate,
+    model: torch.nn.Module,
     pair_indices: torch.Tensor,
 ) -> torch.Tensor:
     rgb_0, rgb_1 = model(pair_indices)
@@ -751,6 +756,7 @@ def _build_mlx_live_receiver_export_parity_proof(
             latents_coarse=arc.latents_coarse,
             latents_mid=arc.latents_mid,
             latents_fine=arc.latents_fine,
+            meta=arc.meta,
         )
         with torch.no_grad():
             receiver_pixels = _render_receiver_pixels(receiver_model, pair_indices)
