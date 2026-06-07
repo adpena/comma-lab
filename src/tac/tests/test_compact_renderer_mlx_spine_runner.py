@@ -6954,6 +6954,24 @@ def test_compact_family_interrupted_report_preserves_false_authority_custody(
     telemetry = tmp_path / "hi_nerv_mlx_training" / "telemetry.jsonl"
     telemetry.parent.mkdir()
     telemetry.write_text('{"epoch":0,"loss":1.0}\n', encoding="utf-8")
+    action_effect_ledger = telemetry.parent / "hi_nerv_scorer_bootstrap_action_effects.jsonl"
+    action_effect = ActionEffect.build(
+        action_id="hinerv-scorer-domain-bootstrap-test",
+        family="hinerv",
+        action_kind="scorer_domain_hard_birth_bootstrap",
+        authority="batch_local_live_mlx",
+        producer="test",
+        normalization_scope="batch_local",
+        old_d_seg=0.50,
+        new_d_seg=0.25,
+        old_d_pose=None,
+        new_d_pose=None,
+        blockers=("fakequant_survival_missing",),
+    ).as_dict()
+    action_effect_ledger.write_text(
+        json.dumps(action_effect, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     startup = tmp_path / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
     startup.write_text(
         '{"schema":"compact_carrier_startup_marker.v1"}\n',
@@ -6994,7 +7012,22 @@ def test_compact_family_interrupted_report_preserves_false_authority_custody(
     assert "hi_nerv_training_interrupted_before_export" in report["blockers"]
     evidence_by_name = {Path(row["path"]).name: row for row in report["evidence_files"]}
     assert "telemetry.jsonl" in evidence_by_name
+    assert "hi_nerv_scorer_bootstrap_action_effects.jsonl" in evidence_by_name
     assert evidence_by_name["telemetry.jsonl"]["sha256"] == runner_mod._sha256_file(telemetry)
+    assert evidence_by_name["hi_nerv_scorer_bootstrap_action_effects.jsonl"]["sha256"] == (
+        runner_mod._sha256_file(action_effect_ledger)
+    )
+    interrupted_effects = report["interrupted_action_effects"]
+    assert interrupted_effects["present"] is True
+    assert interrupted_effects["row_count"] == 1
+    assert interrupted_effects["source_paths"] == [action_effect_ledger.as_posix()]
+    assert interrupted_effects["rows"][0]["action_id"] == "hinerv-scorer-domain-bootstrap-test"
+    assert interrupted_effects["rows"][0]["authority"] == "batch_local_live_mlx"
+    assert interrupted_effects["rows"][0]["promotion_eligible"] is False
+    assert interrupted_effects["validation_rows"][0]["passed"] is True
+    assert interrupted_effects["score_claim"] is False
+    assert interrupted_effects["promotion_eligible"] is False
+    assert interrupted_effects["ready_for_exact_eval_dispatch"] is False
     report_path = tmp_path / "compact_renderer_mlx_spine_runner_report.json"
     assert report_path.is_file()
 

@@ -24337,6 +24337,8 @@ def _compact_family_interruption_evidence_files(output_dir: Path) -> list[dict[s
         "training_artifact.json",
         "decoder_weight_gradient_saliency.json",
         "final_checkpoint_emission_failed.json",
+        "hi_nerv_birth_action_effects.jsonl",
+        "hi_nerv_scorer_bootstrap_action_effects.jsonl",
     }
     checkpoint_suffixes = (
         ".meta.json",
@@ -24377,6 +24379,77 @@ def _compact_family_interruption_evidence_files(output_dir: Path) -> list[dict[s
     return files
 
 
+def _compact_family_interrupted_action_effect_summary(output_dir: Path) -> dict[str, Any]:
+    """Preserve ActionEffect rows that landed before an interrupted export."""
+
+    candidates = (
+        output_dir / "hi_nerv_mlx_training" / "hi_nerv_scorer_bootstrap_action_effects.jsonl",
+        output_dir / "hi_nerv_mlx_training" / "hi_nerv_birth_action_effects.jsonl",
+        output_dir / "hi_nerv_birth_action_effects.jsonl",
+    )
+    rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    source_paths: list[str] = []
+    for ledger in candidates:
+        loaded_rows, load_blockers = _load_runner_action_effect_sources_from_jsonl(ledger)
+        blockers.extend(load_blockers)
+        if loaded_rows:
+            source_paths.append(ledger.as_posix())
+            rows.extend(dict(row) for row in loaded_rows)
+    validation_rows: list[dict[str, Any]] = []
+    if rows:
+        try:
+            from tac.analysis.action_effect import validate_action_effect_payload
+        except Exception as exc:  # pragma: no cover - import failure is surfaced.
+            blockers.append(f"interrupted_action_effect_validation_import_failed:{type(exc).__name__}:{exc}")
+        else:
+            for row in rows:
+                validation = validate_action_effect_payload(row)
+                validation_rows.append(
+                    {
+                        "action_id": row.get("action_id"),
+                        "authority": row.get("authority"),
+                        "action_kind": row.get("action_kind"),
+                        "passed": bool(validation.get("passed")),
+                        "blockers": list(validation.get("blockers") or []),
+                    }
+                )
+                blockers.extend(str(value) for value in validation.get("blockers") or [])
+    row_summaries = [
+        {
+            "action_id": row.get("action_id"),
+            "authority": row.get("authority"),
+            "action_kind": row.get("action_kind"),
+            "producer": row.get("producer"),
+            "normalization_scope": row.get("normalization_scope"),
+            "old_d_seg": row.get("old_d_seg"),
+            "new_d_seg": row.get("new_d_seg"),
+            "seg_score_delta": row.get("seg_score_delta"),
+            "delta_score_nonrate": row.get("delta_score_nonrate"),
+            "delta_score_total": row.get("delta_score_total"),
+            "value_per_byte": row.get("value_per_byte"),
+            "promotion_eligible": bool(row.get("promotion_eligible") is True),
+            "row_blockers": list(row.get("blockers") or []),
+            "source": row.get("source"),
+            "row_id": row.get("row_id"),
+        }
+        for row in rows
+    ]
+    return {
+        "schema": "compact_family_interrupted_action_effect_summary.v1",
+        "present": bool(rows),
+        "row_count": len(rows),
+        "source_paths": source_paths,
+        "rows": row_summaries,
+        "validation_rows": validation_rows,
+        "blockers": _dedupe(blockers),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _write_compact_family_interrupted_report(
     *,
     output_dir: Path,
@@ -24412,6 +24485,7 @@ def _write_compact_family_interrupted_report(
         source_video_path=source_video_path,
         hard_byte_ceilings=hard_byte_ceilings,
     )
+    interrupted_action_effects = _compact_family_interrupted_action_effect_summary(output_dir)
     invocation_provenance = _compact_runner_invocation_provenance(
         args=args,
         output_dir=output_dir,
@@ -24441,6 +24515,7 @@ def _write_compact_family_interrupted_report(
         "command_args": _jsonable_lock_value(_compact_runner_public_command_args(args)),
         "evidence_files": _compact_family_interruption_evidence_files(output_dir),
         "telemetry_summary": telemetry_summary,
+        "interrupted_action_effects": interrupted_action_effects,
         "training_executed": training_executed,
         "training_started": True,
         "score_authority": "false_macos_mlx_research_signal",
@@ -24490,6 +24565,7 @@ def _write_compact_family_interrupted_report_from_startup_marker(
     )
     telemetry_summary = _compact_family_telemetry_summary(output_dir)
     training_started = bool(telemetry_summary.get("row_count"))
+    interrupted_action_effects = _compact_family_interrupted_action_effect_summary(output_dir)
     recovered_snerv_training = _recovered_snerv_training_from_telemetry_summary(
         family=family,
         telemetry_summary=telemetry_summary,
@@ -24527,6 +24603,7 @@ def _write_compact_family_interrupted_report_from_startup_marker(
         "command_args": startup.get("command_args"),
         "evidence_files": _compact_family_interruption_evidence_files(output_dir),
         "telemetry_summary": telemetry_summary,
+        "interrupted_action_effects": interrupted_action_effects,
         "training_executed": training_started,
         "training_started": training_started,
         "score_authority": "false_macos_mlx_research_signal",
