@@ -109,45 +109,52 @@ def encode_target_region_actions(actions: list[TargetRegionPixelAction]) -> byte
 
 
 def encode_target_region_actions_payload(actions: list[TargetRegionPixelAction]) -> bytes:
+    candidates = [
+        (len(payload), payload)
+        for payload in encode_target_region_actions_payload_variants(actions).values()
+    ]
+    _size, payload = min(candidates, key=lambda item: item[0])
+    return payload
+
+
+def encode_target_region_actions_payload_variants(
+    actions: list[TargetRegionPixelAction],
+) -> dict[str, bytes]:
+    """Return concrete receiver-decodable lossless lowerings for one action set.
+
+    These are not abstract byte estimates: each payload is accepted by
+    :func:`decode_target_region_actions`.  Archive-level economics can therefore
+    rebuild the exact HIV1 meta payload for a grammar variant without pretending
+    that an unimplemented support/action factorization is receiver authority.
+    """
+
     raw = encode_target_region_actions(actions)
     zlib_compressed = zlib.compress(raw, level=9)
     brotli_compressed = brotli.compress(raw, quality=11)
-    split_brotli = _encode_split_brotli_target_region_actions(actions)
-    tile_brotli = _try_encode_tile_brotli_target_region_actions(actions)
-    candidates = [
-        (
-            len(raw),
-            raw,
-        ),
-        (
-            len(zlib_compressed) + _COMPRESSED_HEADER_SIZE,
+    variants = {
+        "raw_v1": raw,
+        "zlib_wrapped_v1": (
             struct.pack(
                 _COMPRESSED_HEADER_FMT,
                 TARGET_REGION_ACTION_COMPRESSED_MAGIC,
                 len(raw),
             )
-            + zlib_compressed,
+            + zlib_compressed
         ),
-        (
-            len(brotli_compressed) + _COMPRESSED_HEADER_SIZE,
+        "brotli_wrapped_v1": (
             struct.pack(
                 _COMPRESSED_HEADER_FMT,
                 TARGET_REGION_ACTION_BROTLI_MAGIC,
                 len(raw),
             )
-            + brotli_compressed,
+            + brotli_compressed
         ),
-        (
-            len(split_brotli),
-            split_brotli,
-        ),
-    ]
+        "split_brotli_v1": _encode_split_brotli_target_region_actions(actions),
+    }
+    tile_brotli = _try_encode_tile_brotli_target_region_actions(actions)
     if tile_brotli is not None:
-        candidates.append((len(tile_brotli), tile_brotli))
-    _size, payload = min(candidates, key=lambda item: item[0])
-    if payload is raw:
-        return raw
-    return payload
+        variants["tile_brotli_v1"] = tile_brotli
+    return variants
 
 
 def _try_encode_tile_brotli_target_region_actions(

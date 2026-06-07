@@ -255,7 +255,17 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert current["action_effect"]["value_per_byte"] is not None
     assert current["action_effect"]["archive_sha256"] == current["archive_sha256"]
     assert current["action_effect"]["payload_sha256"] == current["payload_sha256"]
+    assert current["old_archive_zip_bytes"] == report["action_free_archive"][
+        "archive_bytes_without_target_region_actions"
+    ]
+    assert current["new_archive_zip_bytes"] == archive.stat().st_size
+    assert current["archive_zip_delta_bytes"] == (
+        current["new_archive_zip_bytes"] - current["old_archive_zip_bytes"]
+    )
     assert "lowering_target=byte_priced_sidecar" in current["action_effect"]["payload_sections"]
+    assert "byte_authority=exact_archive_zip_delta" in current["action_effect"][
+        "payload_sections"
+    ]
     assert (
         f"target_region_action_program_sha256={current['target_region_action_program_sha256']}"
         in current["action_effect"]["payload_sections"]
@@ -280,15 +290,39 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
         "support_encoded_bytes"
     ]
 
+    variants = report["receiver_payload_variants"]
+    assert variants
+    assert all(row["candidate_kind"] == "sidecar_receiver_payload_variant" for row in variants)
+    assert all(
+        row["byte_authority"]
+        == "exact_rebuilt_minimal_archive_zip_variant_not_inflated"
+        for row in variants
+    )
+    assert all(row["old_archive_zip_bytes"] == current["old_archive_zip_bytes"] for row in variants)
+    assert all(row["new_archive_zip_bytes"] is not None for row in variants)
+    assert all(row["archive_zip_delta_bytes"] is not None for row in variants)
+    assert all(row["decoded_support_sha256"] == current["decoded_support_sha256"] for row in variants)
+    assert all(row["decoded_action_sha256"] == current["decoded_action_sha256"] for row in variants)
+    assert all("target_region_action_payload_variant_not_inflated" in row["blockers"] for row in variants)
+    assert all(
+        "byte_authority=exact_rebuilt_minimal_archive_zip_variant_not_inflated"
+        in row["action_effect"]["payload_sections"]
+        for row in variants
+    )
+
     blocked = [
         row
         for row in report["sidecar_encoding_candidates"]
-        if row["candidate_id"] != "current_hiv1_target_region_action_brotli"
+        if (
+            row["candidate_id"] != "current_hiv1_target_region_action_brotli"
+            and row["candidate_kind"] != "sidecar_receiver_payload_variant"
+        )
     ]
     assert blocked
     assert any("target_region_action_runtime_decoder_not_bound" in row["blockers"] for row in blocked)
     assert any(row["support_encoding"] == "path_tube_zlib_rdp2" for row in blocked)
     assert any(row["action_encoding"] == "constant_class_attractor_rgb_u8" for row in blocked)
+    assert any(row["old_archive_zip_bytes"] is None for row in blocked)
     assert all(row["promotion_eligible"] is False for row in report["sidecar_encoding_candidates"])
     assert any(row["status"] == "measured" for row in report["backend_ladder"])
 

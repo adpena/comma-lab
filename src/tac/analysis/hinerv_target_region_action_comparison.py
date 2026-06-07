@@ -44,8 +44,10 @@ from tac.substrates.hi_nerv.target_region_actions import (
     decode_target_region_actions,
     encode_target_region_actions,
     encode_target_region_actions_payload,
+    encode_target_region_actions_payload_variants,
     target_region_action_payload_codec,
     target_region_action_section_telemetry,
+    target_region_action_section_telemetry_for_payload,
     target_region_action_support_sha256,
 )
 
@@ -233,6 +235,18 @@ def build_hinerv_target_region_action_comparison(
         receiver_bound=current_receiver_bound,
     )
     sidecar_rows = [current_row]
+    variant_rows = _receiver_payload_variant_rows(
+        program=program,
+        action_id=chosen_action_id,
+        support_sha256=support_sha256,
+        decoded_support_sha256=current_decoded_support_sha256,
+        decoded_action_sha256=current_decoded_action_sha256,
+        action_free_archive=base_zip,
+        sidecar_admission=sidecar_admission,
+        survival_identity_blockers=survival_identity_blockers,
+        support_identity_blockers=support_identity_blockers,
+    )
+    sidecar_rows.extend(variant_rows)
     for support in support_rows:
         for action in action_rows:
             if support["encoding"] == "explicit_yx_u16_coordinates" and action["encoding"] == "exact_rgb_u8":
@@ -295,8 +309,8 @@ def build_hinerv_target_region_action_comparison(
                     action_payload_bytes=action_payload_bytes,
                     metadata_bytes=0,
                     byte_authority="exact_candidate_payload_bytes_not_receiver_bound",
-                    old_bytes=0 if exact_payload_equivalent else None,
-                    new_bytes=encoded_bytes if exact_payload_equivalent else None,
+                    old_bytes=None,
+                    new_bytes=None,
                     sidecar_admission=sidecar_admission if exact_payload_equivalent else {},
                     survival_receipt={},
                     first_failed_surface=first_failed,
@@ -377,6 +391,7 @@ def build_hinerv_target_region_action_comparison(
         "byte_decomposition": byte_decomposition,
         "sidecar_economics": sidecar_economics,
         "action_free_archive": base_zip,
+        "receiver_payload_variants": variant_rows,
         "support_identity": {
             "sidecar_support_sha256": support_sha256,
             "direct_teacher_support_sha256": direct_support_sha,
@@ -526,12 +541,15 @@ def _comparison_row(
         region_ids=_str_tuple(sidecar_admission.get("region_id")),
         payload_sections=(
             f"lowering_target={_candidate_lowering_target(support_encoding=support_encoding, action_encoding=action_encoding)}",
+            f"byte_authority={byte_authority}",
             f"support_codec={support_encoding}",
             f"action_codec={action_encoding}",
             f"encoded_payload_bytes={int(encoded_payload_bytes)}",
             f"support_encoded_bytes={support_encoded_bytes}",
             f"action_payload_bytes={action_payload_bytes}",
             f"metadata_bytes={metadata_bytes}",
+            f"old_archive_zip_bytes={old_bytes}",
+            f"new_archive_zip_bytes={new_bytes}",
             f"archive_sha256={archive_sha256}",
             f"payload_sha256={payload_sha256}",
             f"encoded_program_sha256={encoded_program_sha256}",
@@ -596,6 +614,11 @@ def _comparison_row(
         "action_payload_bytes": None if action_payload_bytes is None else int(action_payload_bytes),
         "metadata_bytes": None if metadata_bytes is None else int(metadata_bytes),
         "byte_authority": byte_authority,
+        "old_archive_zip_bytes": None if old_bytes is None else int(old_bytes),
+        "new_archive_zip_bytes": None if new_bytes is None else int(new_bytes),
+        "archive_zip_delta_bytes": (
+            None if old_bytes is None or new_bytes is None else int(new_bytes) - int(old_bytes)
+        ),
         "exact_payload_equivalent": bool(exact_payload_equivalent),
         "receiver_bound": bool(receiver_bound),
         "first_failed_surface": first_failed_surface,
@@ -610,6 +633,118 @@ def _comparison_row(
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _receiver_payload_variant_rows(
+    *,
+    program: _ActionProgram,
+    action_id: str,
+    support_sha256: str,
+    decoded_support_sha256: str | None,
+    decoded_action_sha256: str | None,
+    action_free_archive: Mapping[str, Any],
+    sidecar_admission: Mapping[str, Any],
+    survival_identity_blockers: Sequence[str],
+    support_identity_blockers: Sequence[str],
+) -> list[dict[str, Any]]:
+    """Rows for concrete receiver-decoded payload variants with archive bytes.
+
+    These rows are still blocked until a generated archive is actually
+    parseback/inflate-tested.  The useful thing they prove is narrower and
+    exact: for the same decoded evaluator action, this payload grammar would
+    charge this many final minimal ``archive.zip`` bytes.
+    """
+
+    old_bytes = _first_int(
+        action_free_archive,
+        "archive_bytes_without_target_region_actions",
+    )
+    rows: list[dict[str, Any]] = []
+    seen_payload_sha256: set[str] = {hashlib.sha256(program.stored_payload).hexdigest()}
+    variants = encode_target_region_actions_payload_variants(list(program.actions))
+    logical_rgb_bytes = int(sum(action.rgb_u8.nbytes for action in program.actions))
+    for codec, payload in variants.items():
+        payload_sha = hashlib.sha256(payload).hexdigest()
+        if payload_sha in seen_payload_sha256:
+            continue
+        seen_payload_sha256.add(payload_sha)
+        try:
+            decoded = decode_target_region_actions(payload)
+            telemetry = target_region_action_section_telemetry_for_payload(decoded, payload)
+            variant_decoded_support = _optional_text(telemetry.get("decoded_support_sha256"))
+            variant_decoded_action = _optional_text(telemetry.get("decoded_action_sha256"))
+            same_action = (
+                bool(variant_decoded_support)
+                and bool(variant_decoded_action)
+                and variant_decoded_support == decoded_support_sha256
+                and variant_decoded_action == decoded_action_sha256
+            )
+            archive_record = _archive_bytes_with_target_region_payload(program, payload)
+            blockers = [
+                *survival_identity_blockers,
+                *support_identity_blockers,
+            ]
+            first_failed = "target_region_action_payload_variant_not_inflated"
+            if not same_action:
+                blockers.append("target_region_action_payload_variant_decoded_identity_mismatch")
+                first_failed = "target_region_action_variant_decoded_identity_mismatch"
+            blockers.append("target_region_action_payload_variant_not_inflated")
+            rows.append(
+                _comparison_row(
+                    candidate_id=f"receiver_payload_variant_{codec}",
+                    action_id=action_id,
+                    candidate_kind="sidecar_receiver_payload_variant",
+                    support_sha256=support_sha256,
+                    archive_sha256=str(archive_record["archive_zip_sha256"]),
+                    payload_sha256=payload_sha,
+                    encoded_program_sha256=payload_sha,
+                    program_sha256=str(archive_record["program_base64_sha256"]),
+                    decoded_support_sha256=variant_decoded_support,
+                    decoded_action_sha256=variant_decoded_action,
+                    support_encoding=str(
+                        telemetry.get("support_encoding")
+                        or f"{codec}_support"
+                    ),
+                    action_encoding="exact_rgb_u8_receiver_payload_variant",
+                    encoded_payload_bytes=len(payload),
+                    support_encoded_bytes=_first_int(telemetry, "support_encoded_bytes"),
+                    action_payload_bytes=logical_rgb_bytes,
+                    metadata_bytes=_first_int(archive_record, "meta_json_action_delta_bytes"),
+                    byte_authority="exact_rebuilt_minimal_archive_zip_variant_not_inflated",
+                    old_bytes=old_bytes if same_action else None,
+                    new_bytes=(
+                        _first_int(archive_record, "archive_zip_bytes")
+                        if same_action
+                        else None
+                    ),
+                    sidecar_admission=sidecar_admission if same_action else {},
+                    survival_receipt={},
+                    first_failed_surface=first_failed,
+                    blockers=blockers,
+                    exact_payload_equivalent=same_action,
+                    receiver_bound=False,
+                )
+            )
+        except Exception as exc:
+            rows.append(
+                {
+                    "schema": HI_NERV_TARGET_REGION_ACTION_COMPARISON_ROW_SCHEMA,
+                    "candidate_id": f"receiver_payload_variant_{codec}",
+                    "candidate_kind": "sidecar_receiver_payload_variant",
+                    "action_id": action_id,
+                    "support_sha256": support_sha256,
+                    "payload_sha256": payload_sha,
+                    "byte_authority": "payload_variant_decode_failed",
+                    "first_failed_surface": "target_region_action_payload_variant_decode_failed",
+                    "blockers": [
+                        f"target_region_action_payload_variant_decode_failed:{type(exc).__name__}"
+                    ],
+                    "promotion_eligible": False,
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            )
+    return rows
 
 
 def _candidate_lowering_target(*, support_encoding: str, action_encoding: str) -> str:
@@ -898,6 +1033,68 @@ def _action_free_archive_bytes(program: _ActionProgram) -> dict[str, Any]:
         "zip_method_without_target_region_actions": method_without,
         "payload_without_target_region_actions_sha256": hashlib.sha256(rebuilt).hexdigest(),
         "header_size": HIV1_HEADER_SIZE,
+    }
+
+
+def _archive_bytes_with_target_region_payload(
+    program: _ActionProgram,
+    target_region_payload: bytes,
+) -> dict[str, Any]:
+    sections = split_archive_sections(program.payload)
+    meta_without = dict(sections.meta)
+    meta_without.pop(TARGET_REGION_ACTION_META_KEY, None)
+    meta_with = dict(meta_without)
+    program_base64 = base64.b64encode(bytes(target_region_payload)).decode("ascii")
+    meta_with[TARGET_REGION_ACTION_META_KEY] = program_base64
+    meta_with_bytes = json.dumps(meta_with, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+    meta_without_bytes = json.dumps(
+        meta_without,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    rebuilt = (
+        struct.pack(
+            HIV1_HEADER_FMT,
+            HIV1_MAGIC,
+            int(sections.schema_version),
+            int(sections.latent_dim_coarse),
+            int(sections.latent_dim_mid),
+            int(sections.latent_dim_fine),
+            int(sections.num_pairs),
+            len(sections.decoder_blob),
+            len(sections.latents_coarse_blob),
+            len(sections.latents_mid_blob),
+            len(sections.latents_fine_blob),
+            len(meta_with_bytes),
+        )
+        + sections.decoder_blob
+        + sections.latents_coarse_blob
+        + sections.latents_mid_blob
+        + sections.latents_fine_blob
+        + meta_with_bytes
+    )
+    archive_bytes, method = build_minimal_single_member_archive_bytes(
+        rebuilt,
+        member_name=MINIMAL_SINGLE_MEMBER_NAME,
+    )
+    return {
+        "schema": "hi_nerv_target_region_action_variant_archive_bytes.v1",
+        "payload_codec": target_region_action_payload_codec(bytes(target_region_payload)),
+        "target_region_payload_bytes": len(target_region_payload),
+        "target_region_payload_sha256": hashlib.sha256(bytes(target_region_payload)).hexdigest(),
+        "program_base64_sha256": hashlib.sha256(program_base64.encode("ascii")).hexdigest(),
+        "hiv1_payload_bytes": len(rebuilt),
+        "hiv1_payload_sha256": hashlib.sha256(rebuilt).hexdigest(),
+        "archive_zip_bytes": len(archive_bytes),
+        "archive_zip_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "zip_method": method,
+        "meta_json_bytes_with_action": len(meta_with_bytes),
+        "meta_json_bytes_without_action": len(meta_without_bytes),
+        "meta_json_action_delta_bytes": len(meta_with_bytes) - len(meta_without_bytes),
+        "archive_zip_materialized_on_disk": False,
+        "archive_zip_bytes_are_rebuilt_minimal": True,
     }
 
 
