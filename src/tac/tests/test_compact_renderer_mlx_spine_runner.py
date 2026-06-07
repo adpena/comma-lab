@@ -1242,6 +1242,7 @@ def test_hinerv_action_program_selection_rejects_missing_direct_support() -> Non
     assert program is None
     assert selection is not None
     assert selection["selected_for_export"] is False
+    assert selection["best_candidate_action_id"] == "e" * 64
     assert selection["best_candidate_same_support_as_direct_teacher"] is False
     assert selection["best_candidate_direct_teacher_support_sha256"] is None
     assert (

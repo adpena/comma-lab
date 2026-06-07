@@ -288,6 +288,7 @@ def _select_target_region_action_program_from_birth_payload(
             "best_candidate_exact_accepted": _candidate_exact_accepted(best),
             "best_candidate_support_moved": _candidate_support_moved(best),
             "best_candidate_same_support_as_direct_teacher": _candidate_same_support_as_direct_teacher(best),
+            "best_candidate_action_id": best.get("action_id"),
             "best_candidate_action_support_sha256": _candidate_action_support_sha256(best),
             "best_candidate_direct_teacher_support_sha256": _candidate_direct_teacher_support_sha256(best),
             "best_candidate_exact_delta_score_nonrate": _candidate_delta_nonrate(best),
