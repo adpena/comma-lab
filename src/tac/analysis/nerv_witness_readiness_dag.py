@@ -66,6 +66,7 @@ def build_nerv_witness_readiness_dag(
     source_boundary_audit_report: str | Path | None = None,
     hinerv_smoke_report: str | Path | None = None,
     snerv_authority_gate_report: str | Path | None = None,
+    snerv_long_run_launch_gate_verdict: str | Path | None = None,
     pair_local_servo_report: str | Path | None = None,
     pair_local_servo_receipt: str | Path | None = None,
     partner_source_refs: Sequence[str | Path] = (),
@@ -90,8 +91,9 @@ def build_nerv_witness_readiness_dag(
         repo_root=repo,
         output_root=out_root,
     )
-    snerv_evidence = _snerv_authority_gate_evidence(
-        snerv_authority_gate_report,
+    snerv_evidence = _snerv_long_run_launch_gate_evidence(
+        snerv_long_run_launch_gate_verdict,
+        legacy_authority_gate_report=snerv_authority_gate_report,
         evidence_roots=_default_evidence_roots(out_root),
     )
     parseback = _parseback_contract_evidence(repo)
@@ -219,6 +221,7 @@ def check_witness_gate_status(
     source_boundary_audit_report: str | Path | None = None,
     hinerv_smoke_report: str | Path | None = None,
     snerv_authority_gate_report: str | Path | None = None,
+    snerv_long_run_launch_gate_verdict: str | Path | None = None,
     pair_local_servo_report: str | Path | None = None,
     pair_local_servo_receipt: str | Path | None = None,
     repo_root: str | Path = ".",
@@ -233,6 +236,7 @@ def check_witness_gate_status(
         source_boundary_audit_report=source_boundary_audit_report,
         hinerv_smoke_report=hinerv_smoke_report,
         snerv_authority_gate_report=snerv_authority_gate_report,
+        snerv_long_run_launch_gate_verdict=snerv_long_run_launch_gate_verdict,
         pair_local_servo_report=pair_local_servo_report,
         pair_local_servo_receipt=pair_local_servo_receipt,
         max_nodes=1,
@@ -642,25 +646,34 @@ def _hinerv_smoke_evidence(
     }
 
 
-def _snerv_authority_gate_evidence(
-    report_path: str | Path | None,
+def _snerv_long_run_launch_gate_evidence(
+    verdict_path: str | Path | None,
     *,
+    legacy_authority_gate_report: str | Path | None = None,
     evidence_roots: Sequence[Path] = (),
 ) -> dict[str, Any]:
-    if report_path is None:
-        discovered = _discover_latest_snerv_authority_gate(evidence_roots)
+    legacy_evidence = _snerv_authority_gate_evidence(legacy_authority_gate_report)
+    if verdict_path is None:
+        discovered = _discover_latest_snerv_long_run_launch_gate(evidence_roots)
         if discovered is not None:
-            return _snerv_authority_gate_evidence(discovered, evidence_roots=evidence_roots)
+            return _snerv_long_run_launch_gate_evidence(
+                discovered,
+                legacy_authority_gate_report=legacy_authority_gate_report,
+                evidence_roots=evidence_roots,
+            )
         return {
             "schema": "snerv_official_source_forward_gate_evidence.v1",
             "report_path": None,
             "report_loaded": False,
             "status": "missing",
-            "blockers": ["snerv_official_mfu_hfr_tub_authority_gate_missing"],
+            "snerv_long_run_launch_gate_approved": False,
+            "source_forward_action_effect_present": False,
+            "blockers": ["snerv_long_run_launch_gate_verdict_missing"],
             "auto_discovery_roots": [path.as_posix() for path in evidence_roots],
+            "legacy_authority_gate_evidence": legacy_evidence,
             **PROXY_FALSE_AUTHORITY_FIELDS,
         }
-    path = Path(report_path).expanduser().resolve(strict=False)
+    path = Path(verdict_path).expanduser().resolve(strict=False)
     payload = _read_json_or_none(path)
     if payload is None:
         return {
@@ -668,23 +681,80 @@ def _snerv_authority_gate_evidence(
             "report_path": path.as_posix(),
             "report_loaded": False,
             "status": "missing_or_invalid_json",
-            "blockers": ["snerv_official_mfu_hfr_tub_authority_gate_invalid"],
+            "snerv_long_run_launch_gate_approved": False,
+            "source_forward_action_effect_present": False,
+            "blockers": ["snerv_long_run_launch_gate_verdict_invalid"],
+            "legacy_authority_gate_evidence": legacy_evidence,
             **PROXY_FALSE_AUTHORITY_FIELDS,
         }
-    require_no_truthy_authority_fields(payload, context="snerv_authority_gate_report")
-    ready = bool(payload.get("official_tub_lf_hf_decoder_replacement_ready"))
-    raw_blockers = payload.get("queue_blockers") if "queue_blockers" in payload else payload.get("blockers")
-    blockers = [str(item) for item in raw_blockers or []]
-    if not ready and not blockers:
-        blockers.append("snerv_official_tub_lf_hf_decoder_replacement_not_ready")
+    require_no_truthy_authority_fields(
+        payload,
+        context="snerv_long_run_launch_gate_verdict",
+    )
+    evidence_index = payload.get("evidence_index")
+    evidence_index = evidence_index if isinstance(evidence_index, Mapping) else {}
+    source_rows = evidence_index.get("snerv_source_forward_proof_action_effect.v1")
+    source_rows_present = isinstance(source_rows, Sequence) and bool(source_rows)
+    blocking = payload.get("blocking_evidence")
+    blocking = blocking if isinstance(blocking, Sequence) and not isinstance(blocking, str | bytes) else ()
+    blockers = [str(item) for item in blocking]
+    if payload.get("schema") != "nerv_long_run_launch_gate.v1":
+        blockers.append("snerv_long_run_launch_gate_verdict_schema_mismatch")
+    if payload.get("family") != "snerv":
+        blockers.append("snerv_long_run_launch_gate_verdict_family_mismatch")
+    if payload.get("approved") is not True:
+        blockers.append("snerv_long_run_launch_gate_not_approved")
+    if payload.get("highest_level") != "L4":
+        blockers.append("snerv_long_run_launch_gate_not_l4")
+    if not source_rows_present:
+        blockers.append("snerv_long_run_launch_gate_source_forward_action_effect_missing")
+    ready = not blockers
     return {
         "schema": "snerv_official_source_forward_gate_evidence.v1",
         "report_path": path.as_posix(),
         "report_loaded": True,
         "auto_discovered": any(path.is_relative_to(root) for root in evidence_roots if root.exists()),
         "status": "succeeded" if ready else "blocked",
+        "official_tub_lf_hf_decoder_replacement_ready": False,
+        "snerv_long_run_launch_gate_approved": ready,
+        "source_forward_action_effect_present": source_rows_present,
+        "blockers": _ordered_unique(blockers),
+        "legacy_authority_gate_evidence": legacy_evidence,
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def _snerv_authority_gate_evidence(report_path: str | Path | None) -> dict[str, Any]:
+    if report_path is None:
+        return {
+            "schema": "snerv_legacy_authority_gate_evidence.v1",
+            "report_path": None,
+            "report_loaded": False,
+            "status": "missing",
+            "blockers": ["snerv_legacy_authority_gate_missing"],
+            **PROXY_FALSE_AUTHORITY_FIELDS,
+        }
+    path = Path(report_path).expanduser().resolve(strict=False)
+    payload = _read_json_or_none(path)
+    if payload is None:
+        return {
+            "schema": "snerv_legacy_authority_gate_evidence.v1",
+            "report_path": path.as_posix(),
+            "report_loaded": False,
+            "status": "missing_or_invalid_json",
+            "blockers": ["snerv_legacy_authority_gate_invalid"],
+            **PROXY_FALSE_AUTHORITY_FIELDS,
+        }
+    require_no_truthy_authority_fields(payload, context="snerv_legacy_authority_gate_report")
+    ready = bool(payload.get("official_tub_lf_hf_decoder_replacement_ready"))
+    raw_blockers = payload.get("queue_blockers") if "queue_blockers" in payload else payload.get("blockers")
+    return {
+        "schema": "snerv_legacy_authority_gate_evidence.v1",
+        "report_path": path.as_posix(),
+        "report_loaded": True,
+        "status": "succeeded" if ready else "blocked",
         "official_tub_lf_hf_decoder_replacement_ready": ready,
-        "blockers": blockers,
+        "blockers": [str(item) for item in raw_blockers or []],
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
 
@@ -814,18 +884,26 @@ def _default_evidence_roots(output_root: Path) -> tuple[Path, ...]:
     return tuple(dict.fromkeys(path.resolve(strict=False) for path in roots))
 
 
-def _discover_latest_snerv_authority_gate(evidence_roots: Sequence[Path]) -> Path | None:
+def _discover_latest_snerv_long_run_launch_gate(evidence_roots: Sequence[Path]) -> Path | None:
     candidates: list[tuple[bool, float, Path]] = []
     for root in evidence_roots:
         if not root.is_dir():
             continue
-        for path in root.glob("*/snerv_official_tub_lf_hf_replacement_authority_gate.json"):
+        for path in root.rglob("nerv_long_run_launch_gate*.json"):
             payload = _read_json_or_none(path)
             if payload is None:
                 continue
-            if payload.get("schema") != "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1":
+            if payload.get("schema") != "nerv_long_run_launch_gate.v1":
                 continue
-            ready = bool(payload.get("official_tub_lf_hf_decoder_replacement_ready"))
+            if payload.get("family") != "snerv":
+                continue
+            evidence_index = payload.get("evidence_index")
+            evidence_index = evidence_index if isinstance(evidence_index, Mapping) else {}
+            ready = bool(
+                payload.get("approved") is True
+                and payload.get("highest_level") == "L4"
+                and evidence_index.get("snerv_source_forward_proof_action_effect.v1")
+            )
             try:
                 mtime = path.stat().st_mtime
             except OSError:
@@ -872,7 +950,7 @@ def _node_specs(
     hinerv_projection_ok = not hinerv_evidence.get("blockers") and hinerv_smoke_loaded
     birth_stage_evidence = _distortion_birth_stage_evidence(hinerv_evidence)
     birth_stage_ok = bool(birth_stage_evidence.get("distortion_birth_before_rate_pressure_satisfied"))
-    snerv_source_ok = bool(snerv_evidence.get("official_tub_lf_hf_decoder_replacement_ready"))
+    snerv_source_ok = bool(snerv_evidence.get("snerv_long_run_launch_gate_approved"))
     nodes = [
         _node(
             node_id="shared.source_boundary_compliance_audit",

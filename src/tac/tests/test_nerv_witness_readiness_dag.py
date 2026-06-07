@@ -131,25 +131,25 @@ def test_witness_dag_keeps_snerv_source_forward_gate_blocked_without_report(
     nodes = {row["node_id"]: row for row in payload["gate_nodes"]}
     assert nodes["snerv.official_mfu_hfr_tub_source_forward"]["status"] == "blocked"
     assert (
-        "snerv_official_mfu_hfr_tub_authority_gate_missing"
+        "snerv_long_run_launch_gate_verdict_missing"
         in nodes["snerv.official_mfu_hfr_tub_source_forward"]["blockers"]
     )
     assert payload["snerv_long_training_approved"] is False
 
 
-def test_witness_dag_auto_discovers_newest_ready_snerv_authority_gate(
+def test_witness_dag_auto_discovers_newest_ready_snerv_launch_gate(
     tmp_path: Path,
 ) -> None:
-    blocked = _write_snerv_authority_gate(
+    blocked = _write_snerv_long_run_launch_gate(
         tmp_path,
-        subdir="snerv_gate_old_blocked",
-        ready=False,
-        blockers=["snerv_official_tub_lf_hf_decoder_replacement_not_ready"],
+        subdir="snerv_launch_gate_old_blocked",
+        approved=False,
+        blockers=["snerv_full_source_forward_parity_missing"],
     )
-    ready = _write_snerv_authority_gate(
+    ready = _write_snerv_long_run_launch_gate(
         tmp_path,
-        subdir="snerv_gate_new_ready",
-        ready=True,
+        subdir="snerv_launch_gate_new_ready",
+        approved=True,
         blockers=[],
     )
     blocked.touch()
@@ -166,7 +166,37 @@ def test_witness_dag_auto_discovers_newest_ready_snerv_authority_gate(
     assert snerv["blockers"] == []
     assert snerv["evidence"]["report_path"] == ready.as_posix()
     assert snerv["evidence"]["auto_discovered"] is True
+    assert snerv["evidence"]["snerv_long_run_launch_gate_approved"] is True
+    assert snerv["evidence"]["source_forward_action_effect_present"] is True
     assert payload["snerv_authority_gate_evidence"]["report_path"] == ready.as_posix()
+
+
+def test_witness_dag_does_not_treat_legacy_snerv_authority_gate_as_launch_gate(
+    tmp_path: Path,
+) -> None:
+    legacy = _write_snerv_authority_gate(
+        tmp_path,
+        subdir="snerv_legacy_ready",
+        ready=True,
+        blockers=[],
+    )
+
+    payload = build_nerv_witness_readiness_dag(
+        repo_root=REPO_ROOT,
+        output_root=tmp_path / "dag_out",
+        snerv_authority_gate_report=legacy,
+    )
+
+    nodes = {row["node_id"]: row for row in payload["gate_nodes"]}
+    snerv = nodes["snerv.official_mfu_hfr_tub_source_forward"]
+    assert snerv["status"] == "blocked"
+    assert "snerv_long_run_launch_gate_verdict_missing" in snerv["blockers"]
+    assert (
+        snerv["evidence"]["legacy_authority_gate_evidence"][
+            "official_tub_lf_hf_decoder_replacement_ready"
+        ]
+        is True
+    )
 
 
 def test_check_witness_gate_status_reports_selected_node_blockers(
@@ -634,6 +664,48 @@ def _write_snerv_authority_gate(
                 "official_tub_lf_hf_decoder_replacement_ready": ready,
                 "queue_blockers": blockers,
                 "blockers": ["snerv_official_tub_lf_hf_decoder_replacement_false_authority", *blockers],
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "gpu_launched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_snerv_long_run_launch_gate(
+    tmp_path: Path,
+    *,
+    subdir: str,
+    approved: bool,
+    blockers: list[str],
+) -> Path:
+    path = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / subdir
+        / "nerv_long_run_launch_gate.json"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_long_run_launch_gate.v1",
+                "family": "snerv",
+                "approved": approved,
+                "highest_level": "L4" if approved else "L3",
+                "blocking_evidence": blockers,
+                "evidence_index": (
+                    {"snerv_source_forward_proof_action_effect.v1": ["proof.json"]}
+                    if approved
+                    else {}
+                ),
                 "score_claim": False,
                 "score_claim_valid": False,
                 "promotion_eligible": False,
