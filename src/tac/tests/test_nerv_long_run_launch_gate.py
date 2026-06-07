@@ -20,6 +20,7 @@ from tac.analysis.hinerv_hard_region_miner import (
     OUTCOME_BIRTH_ACCEPTED,
     build_representative_coverage_row,
 )
+from tac.analysis.inverse_scorer_actions import TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA
 from tac.analysis.nerv_long_run_launch_gate import (
     ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
     BIRTH_HYSTERESIS_SCHEMA,
@@ -342,6 +343,59 @@ def _hi_nerv_action_effect(
     ).as_dict()
 
 
+def _wall_normal_lift(
+    *,
+    action_id: str = ACTION,
+    selected_next_operator: str = "backend_fit_live",
+    direct_crossed: bool = True,
+    direct_exact_score_decision: str | None = None,
+    backend_realized: bool = True,
+    backend_wrong_to_target: int = 2048,
+    exact_score_decision: str = "accept",
+    blockers: list[str] | None = None,
+) -> dict:
+    return {
+        "schema": TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
+        "fixture_not_real": True,
+        "operator": "TargetRegionWallNormalLift",
+        "action_id": action_id,
+        "authority": "batch_local_live_mlx",
+        "pair_id": 0,
+        "target_class": 2,
+        "region_id": "b0/c2/r1",
+        "direct_teacher": {
+            "available": True,
+            "crossed_target_wall": direct_crossed,
+            "wrong_to_target_count": 4096 if direct_crossed else 0,
+            "target_to_wrong_count": 0,
+            "exact_score_decision": (
+                direct_exact_score_decision
+                if direct_exact_score_decision is not None
+                else ("accept" if direct_crossed else "reject")
+            ),
+        },
+        "backend_fit": {
+            "attempted": True,
+            "realized_target_wall": backend_realized,
+            "wrong_to_target_count": backend_wrong_to_target,
+            "target_to_wrong_count": 0,
+            "exact_score_decision": exact_score_decision,
+        },
+        "sidecar_fallback": {"available": False, "payload_bytes": 0},
+        "selected_next_operator": selected_next_operator,
+        "next_required_surface": (
+            "fakequant_archive_parseback_survival"
+            if selected_next_operator == "backend_fit_live"
+            else "archive_materialize_parseback_inflate"
+        ),
+        "promotion_eligible": False,
+        "score_claim": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": [] if blockers is None else list(blockers),
+    }
+
+
 def _hi_nerv_four_arm_action_effects(*, omit_arm: str | None = None) -> list[dict]:
     rows = [
         _hi_nerv_action_effect(arm="A", action_kind="birth_only"),
@@ -444,6 +498,7 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
             ],
         },
     )
+    _write(root / "wall_normal_lift.json", _wall_normal_lift())
     _write(root / "parseback_contract.json", _parseback_selection_contract())
     _write(root / "source_metrics.json", _source_qualified_metrics())
     _write(
@@ -791,6 +846,87 @@ def test_full_ladder_with_fresh_pointer_approves(tmp_path: Path) -> None:
     assert verdict["blocking_evidence"] == []
     assert verdict["highest_level"] == "L5"
     assert verdict["approved"] is True
+
+
+def test_hinerv_gate_requires_wall_normal_lift_receipt(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    (root / "wall_normal_lift.json").unlink()
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_lift_missing" in verdict["blocking_evidence"]
+    assert f"target_region_wall_normal_lift_missing:{ACTION}" in verdict["blocking_evidence"]
+
+
+def test_hinerv_gate_blocks_nonrealized_wall_normal_lift(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "wall_normal_lift.json",
+        _wall_normal_lift(
+            selected_next_operator="byte_priced_action_fallback",
+            backend_realized=False,
+            backend_wrong_to_target=0,
+            exact_score_decision="reject",
+            blockers=[
+                "target_region_wall_normal_backend_not_realized",
+                "target_region_wall_normal_sidecar_archive_unclosed",
+            ],
+        ),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    blocking = verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_lift_not_backend_realized" in blocking
+    assert (
+        f"target_region_wall_normal_lift_selected_next_operator:{ACTION}:byte_priced_action_fallback"
+        in blocking
+    )
+    assert f"target_region_wall_normal_lift_backend_not_realized:{ACTION}" in blocking
+    assert (
+        f"target_region_wall_normal_lift_wrong_to_target_missing_or_nonpositive:{ACTION}"
+        in blocking
+    )
+    assert (
+        "target_region_wall_normal_lift_blocker:target_region_wall_normal_backend_not_realized"
+        in blocking
+    )
+
+
+def test_hinerv_gate_rejects_wall_normal_without_direct_exact_score(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "wall_normal_lift.json",
+        _wall_normal_lift(direct_exact_score_decision="reject"),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "target_region_wall_normal_lift_not_backend_realized" in (
+        verdict["blocking_evidence"]
+    )
+    assert (
+        f"target_region_wall_normal_lift_direct_teacher_exact_score_not_accepted:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
 
 
 def test_legacy_readiness_report_can_supply_source_qualified_metrics(

@@ -41,6 +41,7 @@ from tac.analysis.action_effect import (
     NormalizationScope,
     validate_action_effect_payload,
 )
+from tac.analysis.inverse_scorer_actions import TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA
 from tac.analysis.receiver_surface_metrics import receiver_surface_target_support_breakdown
 from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
@@ -543,6 +544,70 @@ def _require_hi_nerv_action_effect_evidence(
             blockers.append(f"value_per_byte_ledger_missing:{action_id}")
 
 
+def _require_hi_nerv_wall_normal_lift_evidence(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    blockers: list[str],
+) -> None:
+    matches = [row for row in rows if str(row.get("action_id") or "") == action_id]
+    if not matches:
+        blockers.append("target_region_wall_normal_lift_missing")
+        blockers.append(f"target_region_wall_normal_lift_missing:{action_id}")
+        return
+
+    successful = False
+    candidate_blockers: list[str] = []
+    for row in matches:
+        direct = row.get("direct_teacher")
+        backend = row.get("backend_fit")
+        direct = direct if isinstance(direct, Mapping) else {}
+        backend = backend if isinstance(backend, Mapping) else {}
+        selected = str(row.get("selected_next_operator") or "").strip()
+        row_id = str(row.get("action_id") or action_id)
+        if selected != "backend_fit_live":
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_selected_next_operator:{row_id}:{selected or 'missing'}"
+            )
+        if direct.get("crossed_target_wall") is not True:
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_direct_teacher_not_crossed:{row_id}"
+            )
+        direct_decision = str(direct.get("exact_score_decision") or "").strip()
+        if direct_decision not in {"accept", "accepted"}:
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_direct_teacher_exact_score_not_accepted:{row_id}"
+            )
+        if backend.get("realized_target_wall") is not True:
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_backend_not_realized:{row_id}"
+            )
+        if not _positive_number(backend.get("wrong_to_target_count")):
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_wrong_to_target_missing_or_nonpositive:{row_id}"
+            )
+        decision = str(backend.get("exact_score_decision") or "").strip()
+        if decision not in {"accept", "accepted"}:
+            candidate_blockers.append(
+                f"target_region_wall_normal_lift_exact_score_not_accepted:{row_id}"
+            )
+        for blocker in row.get("blockers") or ():
+            candidate_blockers.append(f"target_region_wall_normal_lift_blocker:{blocker}")
+        if (
+            selected == "backend_fit_live"
+            and direct.get("crossed_target_wall") is True
+            and direct_decision in {"accept", "accepted"}
+            and backend.get("realized_target_wall") is True
+            and _positive_number(backend.get("wrong_to_target_count"))
+            and decision in {"accept", "accepted"}
+            and not row.get("blockers")
+        ):
+            successful = True
+    if not successful:
+        blockers.append("target_region_wall_normal_lift_not_backend_realized")
+        blockers.extend(_dedupe(candidate_blockers))
+
+
 def _require_hi_nerv_four_arm_action_effect_evidence(
     rows: list[dict[str, Any]],
     *,
@@ -888,6 +953,12 @@ def evaluate_nerv_long_run_launch_gate(
             blockers=blockers,
         )
         action_effect_rows = _collect_schema_rows(root, ACTION_EFFECT_V1_SCHEMA, index=evidence_index, blockers=blockers)
+        wall_normal_lift_rows = _collect_schema_rows(
+            root,
+            TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
         parseback_contract_rows = _collect_schema_rows(
             root,
             ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
@@ -947,6 +1018,11 @@ def evaluate_nerv_long_run_launch_gate(
             else:
                 blockers.append("pose_trusted_birth_receipt_missing")
             _require_hi_nerv_action_effect_evidence(action_effect_rows, action_id=action_id, blockers=blockers)
+            _require_hi_nerv_wall_normal_lift_evidence(
+                wall_normal_lift_rows,
+                action_id=action_id,
+                blockers=blockers,
+            )
             _require_hi_nerv_four_arm_action_effect_evidence(
                 action_effect_rows,
                 action_id=action_id,

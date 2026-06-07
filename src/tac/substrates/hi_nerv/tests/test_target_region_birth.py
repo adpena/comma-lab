@@ -1239,6 +1239,31 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert direct_wall["support_cardinality"] == synthesis["target_region_action_pixel_count"]
     assert len(direct_wall["support_sha256"]) == 64
     assert direct_wall["action_effect"]["family"] == "direct_seg_wall_oracle"
+    wall_lift = payload["target_region_wall_normal_lift"]
+    assert wall_lift["schema"] == "tac.target_region_wall_normal_lift.v1"
+    assert wall_lift["operator"] == "TargetRegionWallNormalLift"
+    assert wall_lift["action_id"] == payload["action_id"]
+    assert wall_lift["stage_order"] == [
+        "ReceiverQuantumLineSearch",
+        "SegNetWallNormalLift",
+        "PoseYUV6TrustProjection",
+        "BackendRealization",
+        "BytePricedActionFallback",
+        "ExactReplayAdmission",
+    ]
+    assert wall_lift["direct_teacher"]["action_effect"]["family"] == "direct_seg_wall_oracle"
+    assert wall_lift["direct_teacher"]["support_sha256"] == direct_wall["support_sha256"]
+    assert wall_lift["backend_fit"]["action_effect"]["family"] == "hinerv"
+    assert wall_lift["backend_fit"]["wrong_to_target_count"] == payload["argmax_transitions"][
+        "wrong_to_target_count"
+    ]
+    assert wall_lift["sidecar_fallback"]["payload_bytes"] == synthesis[
+        "target_region_action_payload_bytes"
+    ]
+    assert wall_lift["parseback_required_before_promotion"] is True
+    assert wall_lift["promotion_eligible"] is False
+    assert payload["candidate_frontier_telemetry"]["target_region_wall_normal_lift"] == wall_lift
+    assert payload["receipt"]["target_region_wall_normal_lift"] == wall_lift
     assert bool(model.decoder_fake_quant_forward_enabled) is fq_enabled_before
     assert bool(model.decoder_fake_quant_forward_configured_enabled) is fq_configured_before
     assert telemetry["fakequant_survival_candidate_count"] >= payload["accepted_step_count"]

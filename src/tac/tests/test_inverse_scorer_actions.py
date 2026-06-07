@@ -23,10 +23,18 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_SCORE_PROGRAM_INFLATE_MISSING,
     BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING,
     BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING,
+    BLOCKER_WALL_NORMAL_BACKEND_FIT_MISSING,
+    BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED,
+    BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED,
+    BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING,
+    BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED,
+    BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED,
     DIRECT_SEG_WALL_ORACLE_SCHEMA,
     SCORE_PROGRAM_WORD_SCHEMA,
+    TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
     build_direct_seg_wall_oracle_receipt,
     build_score_program_word,
+    build_target_region_wall_normal_lift_receipt,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (
@@ -238,6 +246,227 @@ def test_direct_seg_wall_oracle_labels_uint8_motion_without_wall_crossing() -> N
     effect = ActionEffect.from_dict(receipt["action_effect"])
     assert effect.exact_score_decision == "reject"
     assert effect.wrong_to_target == 0
+
+
+def _direct_wall_candidate(*, wrong_to_target: int = 4) -> dict:
+    support = np.zeros((1, 4, 4), dtype=bool)
+    support[0, 1:3, 1:3] = True
+    before_argmax = np.zeros((1, 4, 4), dtype=np.int64)
+    after_argmax = before_argmax.copy()
+    if wrong_to_target > 0:
+        after_argmax[support] = 2
+    before_u8 = np.zeros((1, 4, 4, 3), dtype=np.uint8)
+    after_u8 = before_u8.copy()
+    after_u8[support] = np.array([255, 0, 0], dtype=np.uint8)
+    receipt = build_direct_seg_wall_oracle_receipt(
+        action_id="wall-normal-direct",
+        authority="batch_local_live_mlx",
+        pair_id=0,
+        target_class=2,
+        support_mask=support,
+        before_argmax=before_argmax,
+        after_argmax=after_argmax,
+        before_uint8=before_u8,
+        after_uint8=after_u8,
+        old_d_seg=0.50,
+        new_d_seg=0.49 if wrong_to_target > 0 else 0.50,
+        old_d_pose=0.20,
+        new_d_pose=0.20,
+        region_id="b0/c2/r1",
+        support_encoded_bytes=16,
+    )
+    return {
+        "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+        "oracle_kind": "scorer_wall_normal_basis",
+        "direct_seg_wall_oracle": receipt,
+        "exact_delta_score_nonrate": -1.0 if wrong_to_target > 0 else 0.0,
+        "target_region_action_payload_bytes": 23,
+        "target_region_action_value_per_payload_byte_nonrate": 1.0 / 23.0,
+        "target_region_action_section_telemetry": {
+            "support_sha256": receipt["support_sha256"],
+            "support_encoded_bytes": 16,
+        },
+        "charged_byte_sections_missing": [
+            "target_region_action_archive_meta_not_materialized",
+            "target_region_action_parseback_survival_missing",
+            "target_region_action_inflate_survival_missing",
+        ],
+    }
+
+
+def _backend_birth_receipt(*, wrong_to_target: int, accepted: bool = True) -> dict:
+    return {
+        "schema": "hi_nerv_target_region_birth_receipt.v1",
+        "action_id": "wall-normal-action",
+        "surface": "live_mlx",
+        "worst_region": {
+            "schema": "hi_nerv_target_region_debt.v1",
+            "batch_index": 0,
+            "class_index": 2,
+            "region_label": 1,
+            "region_pixel_count": 4,
+            "region_unsolved_pixel_count": 4,
+            "score_debt_units": 25.0,
+        },
+        "accepted_step_count": 1 if accepted else 0,
+        "updated_parameter_names": ["head_rgb_1.weight"] if accepted else [],
+        "trained_groups": ["head_rgb_1"] if accepted else [],
+        "exact_nonrate": {
+            "old_d_seg_batch": 0.50,
+            "new_d_seg_batch": 0.49 if wrong_to_target > 0 else 0.50,
+            "old_d_pose_batch": 0.20,
+            "new_d_pose_batch": 0.20,
+            "delta_score_nonrate": -1.0 if wrong_to_target > 0 else 0.0,
+            "pose_term_available": True,
+        },
+        "admission_decision": {
+            "exact_score_decision": "accepted" if wrong_to_target > 0 else "rejected",
+            "catastrophic_guard_decision": "satisfied",
+            "raw_cap_decision": "satisfied",
+        },
+        "argmax_transitions": {
+            "wrong_to_target_count": int(wrong_to_target),
+            "target_to_wrong_count": 0,
+            "wrong_to_wrong_count": 0,
+            "net_target_support_delta": int(wrong_to_target),
+        },
+        "receiver_surface_uint8_changed_pixels": 4 if wrong_to_target > 0 else 0,
+        "receiver_surface_uint8_delta_abs_max": 1.0 if wrong_to_target > 0 else 0.0,
+        "receiver_surface_float_rgb_delta_linf": 1.0 / 255.0 if wrong_to_target > 0 else 0.0,
+        "runtime_sidecar_bytes": 0,
+        "blockers": [] if accepted else ["hinerv_target_region_birth_no_accepted_step"],
+    }
+
+
+def test_target_region_wall_normal_lift_selects_backend_when_realized() -> None:
+    direct = _direct_wall_candidate()
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(wrong_to_target=4),
+        sidecar_candidate=direct,
+    )
+
+    assert receipt["schema"] == TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA
+    assert receipt["operator"] == "TargetRegionWallNormalLift"
+    assert receipt["stage_order"][1:4] == [
+        "SegNetWallNormalLift",
+        "PoseYUV6TrustProjection",
+        "BackendRealization",
+    ]
+    assert receipt["direct_teacher"]["crossed_target_wall"] is True
+    assert receipt["backend_fit"]["realized_target_wall"] is True
+    assert receipt["backend_fit"]["realization_gap_wrong_to_target_count"] == 0
+    assert receipt["selected_next_operator"] == "backend_fit_live"
+    assert receipt["next_required_surface"] == "fakequant_archive_parseback_survival"
+    assert receipt["backend_realization_required_before_long_run"] is False
+    assert receipt["promotion_eligible"] is False
+
+
+def test_target_region_wall_normal_lift_names_backend_gap_and_sidecar_fallback() -> None:
+    direct = _direct_wall_candidate()
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+
+    assert receipt["direct_teacher"]["crossed_target_wall"] is True
+    assert receipt["backend_fit"]["realized_target_wall"] is False
+    assert receipt["backend_fit"]["realization_gap_wrong_to_target_count"] == 4
+    assert receipt["sidecar_fallback"]["available"] is True
+    assert receipt["sidecar_fallback"]["payload_bytes"] == 23
+    assert receipt["selected_next_operator"] == "byte_priced_action_fallback"
+    assert receipt["next_required_surface"] == "archive_materialize_parseback_inflate"
+    assert BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED in receipt["blockers"]
+    assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in receipt["blockers"]
+    assert receipt["score_claim"] is False
+
+
+def test_target_region_wall_normal_lift_blocks_when_direct_teacher_missing() -> None:
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=None,
+        backend_birth_receipt=None,
+    )
+
+    assert receipt["direct_teacher"]["available"] is False
+    assert receipt["backend_fit"]["attempted"] is False
+    assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
+    assert receipt["next_required_surface"] == "inverse_scorer_candidate_generation"
+    assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING in receipt["blockers"]
+    assert BLOCKER_WALL_NORMAL_BACKEND_FIT_MISSING in receipt["blockers"]
+    assert receipt["backend_realization_required_before_long_run"] is True
+    assert receipt["promotion_eligible"] is False
+
+
+def test_target_region_wall_normal_lift_keeps_non_crossing_teacher_out_of_backend_gap() -> None:
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=_direct_wall_candidate(wrong_to_target=0),
+        backend_birth_receipt=_backend_birth_receipt(wrong_to_target=0),
+        sidecar_candidate=_direct_wall_candidate(wrong_to_target=0),
+    )
+
+    assert receipt["direct_teacher"]["available"] is True
+    assert receipt["direct_teacher"]["crossed_target_wall"] is False
+    assert receipt["backend_fit"]["realized_target_wall"] is False
+    assert receipt["sidecar_fallback"]["available"] is False
+    assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
+    assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED in receipt["blockers"]
+    assert BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED not in receipt["blockers"]
+    assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED not in receipt["blockers"]
+
+
+def test_target_region_wall_normal_lift_rejects_crossing_teacher_without_exact_score() -> None:
+    direct = _direct_wall_candidate(wrong_to_target=4)
+    direct_wall = direct["direct_seg_wall_oracle"]
+    direct_wall["blockers"] = [
+        *direct_wall["blockers"],
+        "direct_seg_wall_oracle_exact_score_not_improved",
+    ]
+    direct_wall["action_effect"]["exact_score_decision"] = "reject"
+    direct_wall["action_effect"]["blockers"] = [
+        *direct_wall["action_effect"]["blockers"],
+        "direct_seg_wall_oracle_exact_score_not_improved",
+    ]
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+
+    assert receipt["direct_teacher"]["crossed_target_wall"] is True
+    assert receipt["direct_teacher"]["exact_score_decision"] == "reject"
+    assert receipt["sidecar_fallback"]["available"] is False
+    assert receipt["selected_next_operator"] == "direct_wall_teacher_gap"
+    assert BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED in (
+        receipt["blockers"]
+    )
+    assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED not in receipt["blockers"]
 
 
 def _pr110_k1_replay_effect() -> ActionEffect:

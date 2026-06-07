@@ -34,6 +34,7 @@ SCORE_PROGRAM_WORD_SCHEMA = "tac.score_program_word.v1"
 SCORE_PROGRAM_OPERATION_SCHEMA = "tac.score_program_operation.v1"
 SCORE_PROGRAM_INTERPRETER = "inflate_action_word_v1"
 DIRECT_SEG_WALL_ORACLE_SCHEMA = "tac.direct_seg_wall_oracle_receipt.v1"
+TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA = "tac.target_region_wall_normal_lift.v1"
 
 BLOCKER_NO_FRAME0_POSE = "inverse_scorer_frame0_pose_action_missing"
 BLOCKER_NO_FRAME1_SEG = "inverse_scorer_frame1_seg_margin_action_missing"
@@ -51,6 +52,20 @@ BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING = (
 BLOCKER_DIRECT_SEG_WALL_EXACT_SCORE_NOT_IMPROVED = (
     "direct_seg_wall_oracle_exact_score_not_improved"
 )
+BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING = "target_region_wall_normal_direct_teacher_missing"
+BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED = "target_region_wall_normal_direct_teacher_not_crossed"
+BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED = (
+    "target_region_wall_normal_direct_teacher_exact_score_not_accepted"
+)
+BLOCKER_WALL_NORMAL_BACKEND_FIT_MISSING = "target_region_wall_normal_backend_fit_missing"
+BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED = "target_region_wall_normal_backend_not_realized"
+BLOCKER_WALL_NORMAL_BACKEND_EXACT_SCORE_NOT_ACCEPTED = (
+    "target_region_wall_normal_backend_exact_score_not_accepted"
+)
+BLOCKER_WALL_NORMAL_BACKEND_ACTION_EFFECT_INVALID = (
+    "target_region_wall_normal_backend_action_effect_invalid"
+)
+BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED = "target_region_wall_normal_sidecar_archive_unclosed"
 
 
 @dataclass(frozen=True)
@@ -217,6 +232,243 @@ def build_direct_seg_wall_oracle_receipt(
         "crossed_target_wall": bool(wrong_to_target > 0),
         "blockers": list(effect.blockers),
         "action_effect": effect.as_dict(),
+        **PROXY_FALSE_AUTHORITY_FIELDS,
+    }
+
+
+def build_target_region_wall_normal_lift_receipt(
+    *,
+    action_id: str,
+    pair_id: int,
+    target_class: int,
+    region_id: str,
+    direct_teacher_candidate: Mapping[str, Any] | None,
+    backend_birth_receipt: Mapping[str, Any] | None,
+    sidecar_candidate: Mapping[str, Any] | None = None,
+    authority: str = "batch_local_live_mlx",
+) -> dict[str, Any]:
+    """Summarize the PR95-grade wall-normal servo DAG for one region.
+
+    The receiver-quantum line search proves that a backend can touch the uint8
+    lattice.  This receipt answers the next question without promoting a proxy:
+    did a direct scorer-space teacher cross the target SegNet wall, did the
+    HiNeRV backend realize that same wall crossing under exact Seg/Pose score,
+    and, if not, is the measured byte-priced sidecar/action atom the correct
+    fallback to close next?
+    """
+
+    direct = dict(direct_teacher_candidate or {})
+    backend = dict(backend_birth_receipt or {})
+    sidecar = dict(sidecar_candidate or direct)
+    direct_wall = _mapping(direct.get("direct_seg_wall_oracle"))
+    direct_effect_payload = _mapping(direct_wall.get("action_effect"))
+    direct_effect: ActionEffect | None = None
+    if direct_effect_payload:
+        try:
+            direct_effect = ActionEffect.from_dict(direct_effect_payload)
+        except Exception:
+            direct_effect = None
+
+    backend_effect: ActionEffect | None = None
+    if backend:
+        try:
+            backend_effect = ActionEffect.from_hinerv_birth_receipt(
+                backend,
+                consumer="target_region_wall_normal_lift",
+            )
+        except Exception:
+            backend_effect = None
+
+    direct_wrong_to_target = _first_int(
+        direct_wall,
+        "wrong_to_target_count",
+        default=_first_int(direct, "wrong_to_target_count", default=0),
+    )
+    direct_target_to_wrong = _first_int(
+        direct_wall,
+        "target_to_wrong_count",
+        default=_first_int(direct, "target_to_wrong_count", default=0),
+    )
+    direct_delta_nonrate = _first_float(
+        direct,
+        "exact_delta_score_nonrate",
+        default=(
+            direct_effect.delta_score_nonrate
+            if direct_effect is not None
+            else None
+        ),
+    )
+    direct_crossed = bool(direct_wrong_to_target > 0)
+    direct_exact_accept = bool(
+        direct_wall.get("crossed_target_wall") is True
+        and not _contains_any(
+            direct_wall.get("blockers"),
+            (
+                BLOCKER_DIRECT_SEG_WALL_EXACT_SCORE_NOT_IMPROVED,
+                BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING,
+                BLOCKER_DIRECT_SEG_WALL_NO_UINT8_MOTION,
+            ),
+        )
+    )
+
+    backend_transitions = _mapping(backend.get("argmax_transitions"))
+    backend_wrong_to_target = _first_int(
+        backend_transitions,
+        "wrong_to_target_count",
+        default=_first_int(backend, "wrong_to_target_count", default=0),
+    )
+    backend_target_to_wrong = _first_int(
+        backend_transitions,
+        "target_to_wrong_count",
+        default=_first_int(backend, "target_to_wrong_count", default=0),
+    )
+    backend_delta_nonrate = (
+        backend_effect.delta_score_nonrate
+        if backend_effect is not None
+        else _first_float(_mapping(backend.get("exact_nonrate")), "delta_score_nonrate")
+    )
+    backend_exact_decision = (
+        backend_effect.exact_score_decision
+        if backend_effect is not None
+        else str(_mapping(backend.get("exact_nonrate")).get("exact_score_decision") or "")
+    )
+    backend_accepted = bool(
+        _first_int(backend, "accepted_step_count", default=0) > 0
+        or backend.get("accepted") is True
+    )
+    backend_realized_wall = bool(
+        backend_accepted
+        and backend_wrong_to_target > 0
+        and (backend_target_to_wrong <= backend_wrong_to_target)
+    )
+    backend_exact_accept = bool(backend_exact_decision in {"accept", "accepted"})
+    sidecar_payload_bytes = _first_int(
+        sidecar,
+        "target_region_action_payload_bytes",
+        default=0,
+    )
+    sidecar_exact_delta = _first_float(sidecar, "exact_delta_score_nonrate")
+    sidecar_available = bool(sidecar_payload_bytes > 0 and direct_crossed and direct_exact_accept)
+
+    blockers: list[str] = []
+    if not direct:
+        blockers.append(BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING)
+    if direct and not direct_crossed:
+        blockers.append(BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED)
+    if direct_crossed and not direct_exact_accept:
+        blockers.append(BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED)
+    if not backend:
+        blockers.append(BLOCKER_WALL_NORMAL_BACKEND_FIT_MISSING)
+    if backend and backend_effect is None:
+        blockers.append(BLOCKER_WALL_NORMAL_BACKEND_ACTION_EFFECT_INVALID)
+    if direct_crossed and backend and not backend_realized_wall:
+        blockers.append(BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED)
+    if backend_realized_wall and not backend_exact_accept:
+        blockers.append(BLOCKER_WALL_NORMAL_BACKEND_EXACT_SCORE_NOT_ACCEPTED)
+    if sidecar_available and not backend_realized_wall:
+        blockers.append(BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED)
+    blockers.extend(str(item) for item in direct_wall.get("blockers") or ())
+    blockers.extend(str(item) for item in backend.get("blockers") or ())
+
+    if direct_crossed and direct_exact_accept and backend_realized_wall and backend_exact_accept:
+        selected = "backend_fit_live"
+        next_surface = "fakequant_archive_parseback_survival"
+    elif direct_crossed and direct_exact_accept and sidecar_available:
+        selected = "byte_priced_action_fallback"
+        next_surface = "archive_materialize_parseback_inflate"
+    elif direct_crossed and direct_exact_accept:
+        selected = "backend_actuator_basis_gap"
+        next_surface = "progressive_backend_actuator_ladder"
+    else:
+        selected = "direct_wall_teacher_gap"
+        next_surface = "inverse_scorer_candidate_generation"
+
+    direct_summary = {
+        "available": bool(direct),
+        "source": str(direct.get("oracle_kind") or "unknown"),
+        "crossed_target_wall": bool(direct_crossed),
+        "exact_score_decision": "accept" if direct_exact_accept else "reject",
+        "wrong_to_target_count": int(direct_wrong_to_target),
+        "target_to_wrong_count": int(direct_target_to_wrong),
+        "exact_delta_score_nonrate": direct_delta_nonrate,
+        "support_sha256": direct_wall.get("support_sha256"),
+        "support_cardinality": direct_wall.get("support_cardinality"),
+        "action_effect": (
+            direct_effect.as_dict()
+            if direct_effect is not None
+            else direct_effect_payload
+        ),
+    }
+    backend_summary = {
+        "attempted": bool(backend),
+        "realized_target_wall": bool(backend_realized_wall),
+        "accepted_step_count": _first_int(backend, "accepted_step_count", default=0),
+        "wrong_to_target_count": int(backend_wrong_to_target),
+        "target_to_wrong_count": int(backend_target_to_wrong),
+        "realization_gap_wrong_to_target_count": int(
+            max(0, direct_wrong_to_target - backend_wrong_to_target)
+        ),
+        "realization_gap_delta_score_nonrate": (
+            None
+            if direct_delta_nonrate is None or backend_delta_nonrate is None
+            else float(backend_delta_nonrate - direct_delta_nonrate)
+        ),
+        "exact_score_decision": backend_exact_decision or "not_applicable",
+        "exact_delta_score_nonrate": backend_delta_nonrate,
+        "trained_groups": list(backend.get("trained_groups") or ()),
+        "updated_parameter_names": list(backend.get("updated_parameter_names") or ()),
+        "action_effect": (
+            backend_effect.as_dict()
+            if backend_effect is not None
+            else None
+        ),
+    }
+    sidecar_summary = {
+        "available": bool(sidecar_available),
+        "compiled": False,
+        "payload_bytes": int(sidecar_payload_bytes),
+        "exact_delta_score_nonrate": sidecar_exact_delta,
+        "value_per_payload_byte_nonrate": _first_float(
+            sidecar,
+            "target_region_action_value_per_payload_byte_nonrate",
+        ),
+        "archive_closed": bool(sidecar.get("archive_closed") is True),
+        "support_sha256": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
+            "support_sha256"
+        ),
+        "blockers": list(sidecar.get("charged_byte_sections_missing") or ()),
+    }
+
+    return {
+        "schema": TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
+        "operator": "TargetRegionWallNormalLift",
+        "action_id": str(action_id),
+        "authority": str(authority),
+        "pair_id": int(pair_id),
+        "target_class": int(target_class),
+        "region_id": str(region_id),
+        "stage_order": [
+            "ReceiverQuantumLineSearch",
+            "SegNetWallNormalLift",
+            "PoseYUV6TrustProjection",
+            "BackendRealization",
+            "BytePricedActionFallback",
+            "ExactReplayAdmission",
+        ],
+        "direct_teacher": direct_summary,
+        "backend_fit": backend_summary,
+        "sidecar_fallback": sidecar_summary,
+        "selected_next_operator": selected,
+        "next_required_surface": next_surface,
+        "backend_realization_required_before_long_run": bool(
+            selected != "backend_fit_live"
+        ),
+        "parseback_required_before_promotion": True,
+        "promotion_eligible": False,
+        "score_claim": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": _dedupe(blockers),
         **PROXY_FALSE_AUTHORITY_FIELDS,
     }
 
@@ -790,6 +1042,48 @@ def _score_ev(effect: ActionEffect) -> float | None:
     return value if math.isfinite(value) else None
 
 
+def _mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _first_int(
+    payload: Mapping[str, Any],
+    *keys: str,
+    default: int | None = None,
+) -> int | None:
+    for key in keys:
+        if key not in payload:
+            continue
+        parsed = _int_or_none(payload.get(key))
+        if parsed is not None:
+            return parsed
+    return default
+
+
+def _first_float(
+    payload: Mapping[str, Any],
+    *keys: str,
+    default: float | None = None,
+) -> float | None:
+    for key in keys:
+        if key not in payload:
+            continue
+        parsed = _finite_or_none(payload.get(key))
+        if parsed is not None:
+            return parsed
+    return default
+
+
+def _contains_any(values: Any, needles: Sequence[str]) -> bool:
+    if isinstance(values, str):
+        value_set = {values}
+    elif isinstance(values, Sequence):
+        value_set = {str(item) for item in values}
+    else:
+        value_set = set()
+    return any(needle in value_set for needle in needles)
+
+
 def _support_mask_sha256(mask: np.ndarray) -> str:
     mask_bool = np.ascontiguousarray(np.asarray(mask, dtype=bool))
     h = hashlib.sha256()
@@ -853,6 +1147,9 @@ def _int_or_none(value: Any) -> int | None:
 
 
 __all__ = [
+    "BLOCKER_DIRECT_SEG_WALL_EMPTY_SUPPORT",
+    "BLOCKER_DIRECT_SEG_WALL_EXACT_SCORE_NOT_IMPROVED",
+    "BLOCKER_DIRECT_SEG_WALL_NO_UINT8_MOTION",
     "BLOCKER_NO_COMPOSITE",
     "BLOCKER_NO_FRAME0_POSE",
     "BLOCKER_NO_FRAME1_SEG",
@@ -861,14 +1158,25 @@ __all__ = [
     "BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING",
     "BLOCKER_SCORE_PROGRAM_INFLATE_MISSING",
     "BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING",
+    "BLOCKER_UINT8_MOTION_WITHOUT_SEGNET_WALL_CROSSING",
+    "BLOCKER_WALL_NORMAL_BACKEND_EXACT_SCORE_NOT_ACCEPTED",
+    "BLOCKER_WALL_NORMAL_BACKEND_FIT_MISSING",
+    "BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED",
+    "BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING",
+    "BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED",
+    "BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED",
+    "DIRECT_SEG_WALL_ORACLE_SCHEMA",
     "INVERSE_SCORER_GENERATION_SCHEMA",
     "INVERSE_SCORER_QUEUE_ROW_SCHEMA",
     "SCORE_PROGRAM_INTERPRETER",
     "SCORE_PROGRAM_OPERATION_SCHEMA",
     "SCORE_PROGRAM_WORD_SCHEMA",
+    "TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA",
     "InverseCandidate",
     "build_candidate_queue",
+    "build_direct_seg_wall_oracle_receipt",
     "build_score_program_word",
+    "build_target_region_wall_normal_lift_receipt",
     "candidate_queue_jsonl",
     "generate_inverse_scorer_candidates",
 ]

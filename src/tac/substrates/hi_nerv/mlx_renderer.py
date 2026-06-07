@@ -6455,6 +6455,38 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
         receipt["trained_groups"] = sorted(trained_groups_for_action_id)
         receipt["worst_region"] = dict(worst_region_payload)
+        from tac.analysis.inverse_scorer_actions import (
+            build_target_region_wall_normal_lift_receipt,
+        )
+
+        region_id = (
+            f"b{int(worst.batch_index)}/"
+            f"c{int(worst.class_index)}/"
+            f"r{int(worst.region_label)}"
+        )
+        target_region_wall_normal_lift = build_target_region_wall_normal_lift_receipt(
+            action_id=action_identity,
+            pair_id=int(np.asarray(pair_indices, dtype=np.int64).reshape(-1)[0]),
+            target_class=int(birth_class),
+            region_id=region_id,
+            direct_teacher_candidate=(
+                masked_residual_oracle.get("best_candidate")
+                if isinstance(masked_residual_oracle, Mapping)
+                else None
+            ),
+            backend_birth_receipt=receipt,
+            sidecar_candidate=(
+                masked_residual_oracle.get("best_candidate")
+                if isinstance(masked_residual_oracle, Mapping)
+                else None
+            ),
+            authority="batch_local_live_mlx",
+        )
+        candidate_frontier_telemetry["target_region_wall_normal_lift"] = (
+            target_region_wall_normal_lift
+        )
+        receipt["candidate_frontier_telemetry"] = dict(candidate_frontier_telemetry)
+        receipt["target_region_wall_normal_lift"] = target_region_wall_normal_lift
         archive_charged_decoder_tensors = ["latents_fine"]
         if resolved_birth_update_scope in {"spatial_carriers", "late_all"}:
             archive_charged_decoder_tensors.extend(["feature_grids.*", "fine_injector.*"])
@@ -6506,6 +6538,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 fakequant_survival_rejected_step_count
             ),
             "candidate_frontier_telemetry": candidate_frontier_telemetry,
+            "target_region_wall_normal_lift": target_region_wall_normal_lift,
             "post_acceptance_terminal_events": list(post_acceptance_terminal_events),
             "argmax_transitions": argmax_transitions,
             "exact_nonrate": exact_nonrate_payload,
