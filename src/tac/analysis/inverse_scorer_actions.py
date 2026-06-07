@@ -1340,8 +1340,6 @@ def _wall_normal_branch_kind(effect: ActionEffect) -> str:
 
 
 def _effect_has_executable_wall_support(effect: ActionEffect) -> bool:
-    if "direct_teacher_and_survived_sidecar_support_hashes_diverge" in effect.blockers:
-        return False
     return _has_executable_region_support(effect)
 
 

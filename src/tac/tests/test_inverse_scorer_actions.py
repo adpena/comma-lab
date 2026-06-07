@@ -41,7 +41,6 @@ from tac.analysis.inverse_scorer_actions import (
     DIRECT_TEACHER_NO_WALL_CROSS,
     SCORE_PROGRAM_WORD_SCHEMA,
     SIDECAR_FALLBACK_ACCEPTED,
-    SUPPORT_NOT_ARCHIVE_EXECUTABLE,
     TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
     WALL_NORMAL_BRANCH_RECEIPT_SCHEMA,
     WALL_NORMAL_FIRST_FAILING_SURFACES,
@@ -710,7 +709,7 @@ def test_wall_normal_branch_receipt_names_one_strict_first_failure() -> None:
     assert backend["first_failing_surface"] == BACKEND_REALIZATION_FAILED
 
 
-def test_wall_normal_branch_receipt_prioritizes_support_mismatch_before_survival() -> None:
+def test_wall_normal_branch_receipt_keeps_divergence_separate_from_executable_support() -> None:
     sidecar = ActionEffect.build(
         action_id="same-action",
         family="hinerv",
@@ -749,14 +748,15 @@ def test_wall_normal_branch_receipt_prioritizes_support_mismatch_before_survival
 
     receipt = build_wall_normal_branch_receipt([sidecar])
 
-    assert receipt["first_failing_surface"] == SUPPORT_NOT_ARCHIVE_EXECUTABLE
-    assert receipt["support_executable_count"] == 0
-    assert receipt["same_support_sha256"] is False
+    assert receipt["first_failing_surface"] == SIDECAR_FALLBACK_ACCEPTED
+    assert receipt["support_executable_count"] == 1
+    assert receipt["same_support_sha256"] is True
     assert (
         "direct_teacher_and_survived_sidecar_support_hashes_diverge"
         in receipt["blockers"]
     )
-    assert receipt["branches"][0]["first_failing_surface"] == SUPPORT_NOT_ARCHIVE_EXECUTABLE
+    assert receipt["branches"][0]["support_executable"] is True
+    assert receipt["branches"][0]["first_failing_surface"] == SIDECAR_FALLBACK_ACCEPTED
 
 
 def test_wall_normal_branch_receipt_accepts_survived_sidecar_fallback() -> None:
