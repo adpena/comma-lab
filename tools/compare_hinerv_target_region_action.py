@@ -67,6 +67,9 @@ def main() -> int:
         **written,
         "action_id": report.get("action_id"),
         "support_sha256": report.get("support_sha256"),
+        "decoded_support_sha256": report.get("decoded_support_sha256"),
+        "decoded_action_sha256": report.get("decoded_action_sha256"),
+        "encoded_program_sha256": report.get("encoded_program_sha256"),
         "best_lowering": (
             comparison.get("best_lowering")
             or verdict.get("best_lowering")

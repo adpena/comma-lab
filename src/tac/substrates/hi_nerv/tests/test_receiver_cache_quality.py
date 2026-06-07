@@ -211,6 +211,12 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_receiver_consump
     assert proof["target_region_action_program_sha256"] == hashlib.sha256(
         program.encode("ascii")
     ).hexdigest()
+    assert proof["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [action]
+    )
+    assert proof["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [action]
+    )
     assert proof["target_region_actions"]["decoded_support_sha256"] == (
         target_region_action_decoded_support_sha256([action])
     )
@@ -255,6 +261,12 @@ def test_hi_nerv_target_region_action_parseback_survival_proves_inflated_raw(
     assert proof["inflated_raw_matches_action_receiver"] is True
     assert proof["inflated_raw_action_changed_pixels"] > 0
     assert proof["inflated_raw_max_abs_error_vs_action_receiver"] == 0
+    assert proof["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [action]
+    )
+    assert proof["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [action]
+    )
     assert proof["target_region_actions"]["decoded_support_sha256"] == (
         target_region_action_decoded_support_sha256([action])
     )
@@ -312,6 +324,7 @@ def test_hi_nerv_target_region_tile_brotli_survives_inflate_interpreter(
         "brotli_tile_bitmap_little_endian"
     )
     assert proof["target_region_actions"]["payload_bytes"] == len(stored_payload)
+    assert proof["encoded_program_sha256"] == hashlib.sha256(stored_payload).hexdigest()
     assert proof["target_region_actions"]["encoded_program_sha256"] == hashlib.sha256(
         stored_payload
     ).hexdigest()

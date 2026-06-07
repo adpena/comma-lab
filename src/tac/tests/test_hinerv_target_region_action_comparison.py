@@ -191,9 +191,22 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
         survival_receipt=survival_path,
         runner_report=runner_path,
     )
+    payload = encode_target_region_actions_payload([action])
+    program_b64 = encode_target_region_actions_meta([action])
 
     assert report["action_id"] == "hinerv-test-action"
     assert report["support_cardinality"] == action.pixel_count
+    assert report["payload_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert report["encoded_program_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert report["target_region_action_program_sha256"] == hashlib.sha256(
+        program_b64.encode("ascii")
+    ).hexdigest()
+    assert report["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [action]
+    )
+    assert report["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [action]
+    )
     assert report["byte_decomposition"]["support_coord_u16_bytes"] == action.yx.nbytes
     assert report["byte_decomposition"]["rgb_u8_bytes"] == action.rgb_u8.nbytes
     assert report["comparison"]["sidecar_current_inflate_survived"] is True
@@ -220,8 +233,6 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert report["comparison"]["best_sidecar_value_per_byte"] is not None
 
     current = report["sidecar_encoding_candidates"][0]
-    payload = encode_target_region_actions_payload([action])
-    program_b64 = encode_target_region_actions_meta([action])
     section_telemetry = report["byte_decomposition"]["target_region_action_section_telemetry"]
     assert current["candidate_id"] == "current_hiv1_target_region_action_brotli"
     assert current["archive_sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -702,6 +713,15 @@ def test_compare_hinerv_action_cli_surfaces_report_blocker(
 
     assert summary["action_id"] == "hinerv-test-action"
     assert summary["support_sha256"] == target_region_action_support_sha256([action])
+    assert summary["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [action]
+    )
+    assert summary["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [action]
+    )
+    assert summary["encoded_program_sha256"] == hashlib.sha256(
+        encode_target_region_actions_payload([action])
+    ).hexdigest()
     assert summary["best_lowering"] == "none"
     assert summary["first_failing_surface"] == "support_identity_mismatch"
     assert summary["next_blocker"] == "direct_teacher_and_survived_sidecar_support_hashes_diverge"
