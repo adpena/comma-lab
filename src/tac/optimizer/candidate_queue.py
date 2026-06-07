@@ -173,8 +173,14 @@ def _as_int(value: Any) -> int | None:
         return value
     if isinstance(value, float) and value.is_integer():
         return int(value)
-    if isinstance(value, str) and value.strip().isdigit():
-        return int(value.strip())
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            return int(text)
+        except ValueError:
+            return None
     return None
 
 
@@ -545,6 +551,7 @@ def _evaluator_action_lowering_race_candidates(
         "sidecar_lowering_complete",
         verdict.get("sidecar_lowering_complete"),
     )
+    selected_identity = _selected_lowering_identity(selected_candidate)
     blockers = _evaluator_action_lowering_race_candidate_blockers(
         payload,
         best_lowering=best_lowering,
@@ -552,6 +559,9 @@ def _evaluator_action_lowering_race_candidates(
         delta_total=delta_total,
         backend_complete=backend_complete,
         sidecar_complete=sidecar_complete,
+        selected_candidate=selected_candidate,
+        expected_action_id=action_id,
+        expected_support_sha256=support_sha256,
     )
     row = _base_candidate(
         f"evaluator_action_lowering_race:{row_id}:{best_lowering or 'none'}",
@@ -583,6 +593,7 @@ def _evaluator_action_lowering_race_candidates(
                 "support_sha256": support_sha256,
                 "backend_realization_complete": backend_complete,
                 "sidecar_lowering_complete": sidecar_complete,
+                **selected_identity,
             },
             "consumer_payload": {
                 "source_schema": payload.get("schema"),
@@ -598,6 +609,7 @@ def _evaluator_action_lowering_race_candidates(
             "authority": authority or "none",
             "authority_surface": authority or "none",
             "support_sha256": support_sha256,
+            **selected_identity,
             "backend_realization_complete": backend_complete,
             "sidecar_lowering_complete": sidecar_complete,
             "expected_delta_score": delta_total,
@@ -649,6 +661,35 @@ def _selected_lowering_candidate(
     return {}
 
 
+def _selected_lowering_identity(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    """Return interpreter-boundary identity fields for the selected lowering.
+
+    These hashes intentionally travel with the queue row. ``encoded`` identifies
+    the charged byte-program, while ``decoded`` identifies the evaluator action
+    that ``inflate.py`` interpreted from that program.
+    """
+
+    out: dict[str, Any] = {}
+    for key in (
+        "encoded_program_sha256",
+        "decoded_support_sha256",
+        "decoded_action_sha256",
+        "archive_sha256",
+        "support_encoding",
+        "support_encoded_bytes",
+        "action_payload_bytes",
+        "metadata_bytes",
+        "parseback_survived",
+        "inflate_survived",
+        "fakequant_survived",
+        "first_failing_surface",
+        "viable",
+    ):
+        if key in candidate:
+            out[key] = candidate.get(key)
+    return out
+
+
 def _evaluator_action_lowering_race_candidate_blockers(
     payload: Mapping[str, Any],
     *,
@@ -657,6 +698,9 @@ def _evaluator_action_lowering_race_candidate_blockers(
     delta_total: float | None,
     backend_complete: Any,
     sidecar_complete: Any,
+    selected_candidate: Mapping[str, Any],
+    expected_action_id: str,
+    expected_support_sha256: str | None,
 ) -> list[str]:
     blockers = [
         "evaluator_action_lowering_race_queue_row_is_planning_only",
@@ -665,6 +709,28 @@ def _evaluator_action_lowering_race_candidate_blockers(
     ]
     if best_lowering in {"", "none", "discard"}:
         blockers.append("evaluator_action_lowering_race_no_viable_lowering")
+    elif not selected_candidate:
+        blockers.append("evaluator_action_lowering_race_selected_candidate_missing")
+    elif selected_candidate.get("viable") is not True:
+        blockers.append("evaluator_action_lowering_race_selected_candidate_not_viable")
+    if selected_candidate:
+        selected_action_id = str(selected_candidate.get("action_id") or "").strip()
+        if expected_action_id and selected_action_id and selected_action_id != expected_action_id:
+            blockers.append("evaluator_action_lowering_race_action_id_mismatch")
+        selected_support = str(selected_candidate.get("support_sha256") or "").strip()
+        if expected_support_sha256 and selected_support and selected_support != expected_support_sha256:
+            blockers.append("evaluator_action_lowering_race_support_mismatch")
+        if selected_candidate.get("parseback_survived") is not True:
+            blockers.append("evaluator_action_lowering_race_parseback_missing")
+        if selected_candidate.get("inflate_survived") is not True:
+            blockers.append("evaluator_action_lowering_race_inflate_missing")
+        if (
+            selected_candidate.get("fakequant_survived") is not None
+            and selected_candidate.get("fakequant_survived") is not True
+        ):
+            blockers.append("evaluator_action_lowering_race_fakequant_missing")
+        if str(selected_candidate.get("first_failing_surface") or "none") != "none":
+            blockers.append("evaluator_action_lowering_race_selected_candidate_failed_surface")
     if not authority or authority == "none":
         blockers.append("evaluator_action_lowering_race_authority_missing")
     if delta_total is None or not math.isfinite(delta_total) or delta_total >= 0.0:

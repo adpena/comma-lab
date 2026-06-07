@@ -2526,7 +2526,32 @@ def _lowering_race_report(
     best_lowering: str,
     backend_realization_complete: bool,
     sidecar_lowering_complete: bool,
+    delta_bytes: int | str = 128,
+    selected_overrides: dict[str, object] | None = None,
+    support_identity_closed: bool = True,
 ) -> dict[str, object]:
+    selected_candidate = {
+        "schema": "tac.evaluator_action_lowering_candidate.v1",
+        "action_id": "hard-action-1",
+        "lowering_target": best_lowering,
+        "authority": "batch_local_live_mlx",
+        "support_sha256": "9" * 64,
+        "decoded_support_sha256": "8" * 64,
+        "decoded_action_sha256": "7" * 64,
+        "encoded_program_sha256": "6" * 64,
+        "archive_sha256": "5" * 64,
+        "support_encoding": "target_region_action_coordinates_v1",
+        "support_encoded_bytes": 4096,
+        "action_payload_bytes": 128,
+        "metadata_bytes": 32,
+        "parseback_survived": True,
+        "inflate_survived": True,
+        "fakequant_survived": True,
+        "viable": True,
+        "first_failing_surface": "none",
+    }
+    if selected_overrides:
+        selected_candidate.update(selected_overrides)
     return {
         "schema": "tac.evaluator_action_lowering_race.v1",
         "action_id": "hard-action-1",
@@ -2536,7 +2561,7 @@ def _lowering_race_report(
         "sidecar_lowering_complete": sidecar_lowering_complete,
         "support_identity": {
             "schema": "tac.evaluator_action_lowering_race.support_identity.v1",
-            "all_candidates_same_support": True,
+            "all_candidates_same_support": support_identity_closed,
             "support_sha256s": ["9" * 64],
         },
         "verdict": {
@@ -2549,24 +2574,10 @@ def _lowering_race_report(
             "sidecar_lowering_complete": sidecar_lowering_complete,
             "delta_score_nonrate": -0.031,
             "delta_score_total": -0.028,
-            "delta_bytes": 128,
+            "delta_bytes": delta_bytes,
             "value_per_byte": 0.00021875,
         },
-        "lowering_candidates": [
-            {
-                "schema": "tac.evaluator_action_lowering_candidate.v1",
-                "action_id": "hard-action-1",
-                "lowering_target": best_lowering,
-                "authority": "batch_local_live_mlx",
-                "support_sha256": "9" * 64,
-                "support_encoding": "target_region_action_coordinates_v1",
-                "support_encoded_bytes": 4096,
-                "action_payload_bytes": 128,
-                "metadata_bytes": 32,
-                "viable": True,
-                "first_failing_surface": "none",
-            }
-        ],
+        "lowering_candidates": [selected_candidate],
     }
 
 
@@ -2591,6 +2602,11 @@ def test_candidate_queue_consumes_sidecar_lowering_without_backend_authority(
     assert row["sidecar_lowering_complete"] is True
     assert row["backend_realization_complete"] is False
     assert row["delta_score_total"] == -0.028
+    assert row["parseback_survived"] is True
+    assert row["inflate_survived"] is True
+    assert row["encoded_program_sha256"] == "6" * 64
+    assert row["decoded_support_sha256"] == "8" * 64
+    assert row["decoded_action_sha256"] == "7" * 64
     assert row["source_artifact_sha256"] == hashlib.sha256(
         report_path.read_bytes()
     ).hexdigest()
@@ -2634,4 +2650,63 @@ def test_candidate_queue_keeps_backend_lowering_nonpromotional_until_exact_repla
     )
     assert row["score_claim"] is False
     assert row["promotable"] is False
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_preserves_signed_final_archive_delta_for_lowering_race(
+    tmp_path: Path,
+) -> None:
+    report_path = _write_json(
+        tmp_path / "reports/lowering_race.json",
+        _lowering_race_report(
+            best_lowering="byte_priced_sidecar",
+            backend_realization_complete=False,
+            sidecar_lowering_complete=True,
+            delta_bytes="-13273",
+        ),
+    )
+
+    queue = build_candidate_queue([report_path], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert row["predicted_delta_bytes"] == -13273
+    assert row["candidate_saved_bytes"] == 13273
+    assert validate_proxy_candidate(row) == []
+
+
+def test_candidate_queue_blocks_lowering_race_selected_candidate_identity_drift(
+    tmp_path: Path,
+) -> None:
+    report_path = _write_json(
+        tmp_path / "reports/lowering_race.json",
+        _lowering_race_report(
+            best_lowering="byte_priced_sidecar",
+            backend_realization_complete=False,
+            sidecar_lowering_complete=True,
+            selected_overrides={
+                "action_id": "different-action",
+                "support_sha256": "a" * 64,
+                "parseback_survived": False,
+                "inflate_survived": False,
+                "first_failing_surface": "parseback_failed",
+            },
+            support_identity_closed=False,
+        ),
+    )
+
+    queue = build_candidate_queue([report_path], repo_root=tmp_path)
+    row = queue["top_k"][0]
+
+    assert "evaluator_action_lowering_race_action_id_mismatch" in row["dispatch_blockers"]
+    assert "evaluator_action_lowering_race_support_mismatch" in row["dispatch_blockers"]
+    assert "evaluator_action_lowering_race_parseback_missing" in row["dispatch_blockers"]
+    assert "evaluator_action_lowering_race_inflate_missing" in row["dispatch_blockers"]
+    assert (
+        "evaluator_action_lowering_race_selected_candidate_failed_surface"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        "evaluator_action_lowering_race_support_identity_not_closed"
+        in row["dispatch_blockers"]
+    )
     assert validate_proxy_candidate(row) == []
