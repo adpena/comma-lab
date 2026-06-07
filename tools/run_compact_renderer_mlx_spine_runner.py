@@ -19885,7 +19885,15 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
             authority="parseback_mlx",
             producer="hi_nerv_runner_archive_selection_birth_parseback_survival",
             consumer="nerv_long_run_launch_gate",
-            parseback_survived=row.get("survived") is True,
+            parseback_survived=(
+                row.get("parseback_scorer_effect_survived", row.get("survived"))
+                is True
+            ),
+            wrong_to_target=_int_or_none(row.get("wrong_to_target_count")),
+            target_to_wrong=_int_or_none(row.get("target_to_wrong_count")),
+            wrong_to_wrong=_int_or_none(row.get("wrong_to_wrong_count")),
+            net_target_support_delta=_int_or_none(row.get("net_target_support_delta")),
+            blockers=[str(value) for value in row.get("blockers") or []],
         )
         append_action_effect(action_effect, action_effect_ledger_path)
         row["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
@@ -20210,10 +20218,11 @@ def _write_hi_nerv_target_region_action_parseback_survival(
         }
     )
     _write_json(path, row)
+    metadata_row = _strip_substrate_metadata_authority_fields(row)
     artifact_dict["target_region_action_parseback_survival"] = dict(row)
     metadata = artifact_dict.get("substrate_artifact_metadata")
     if isinstance(metadata, dict):
-        metadata["target_region_action_parseback_survival"] = dict(row)
+        metadata["target_region_action_parseback_survival"] = dict(metadata_row)
         score_training = metadata.get("score_aware_training")
         if isinstance(score_training, dict):
             score_training["target_region_action_parseback_survival"] = dict(summary)
@@ -20226,7 +20235,7 @@ def _write_hi_nerv_target_region_action_parseback_survival(
         if isinstance(artifact, dict):
             artifact["target_region_action_parseback_survival"] = dict(row)
             artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
-            artifact_metadata["target_region_action_parseback_survival"] = dict(row)
+            artifact_metadata["target_region_action_parseback_survival"] = dict(metadata_row)
             score_training = artifact_metadata.get("score_aware_training")
             if isinstance(score_training, dict):
                 score_training["target_region_action_parseback_survival"] = dict(summary)
@@ -20550,10 +20559,11 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
         _write_json(row_path, row)
 
     if artifact_dict is not None:
+        metadata_row = _strip_substrate_metadata_authority_fields(row)
         artifact_dict["birth_inflated_torch_cpu_survival"] = dict(row)
         metadata = artifact_dict.get("substrate_artifact_metadata")
         if isinstance(metadata, dict):
-            metadata["birth_inflated_torch_cpu_survival"] = dict(row)
+            metadata["birth_inflated_torch_cpu_survival"] = dict(metadata_row)
             score_training = metadata.get("score_aware_training")
             if isinstance(score_training, dict):
                 score_training["birth_inflated_torch_cpu_survival"] = _strip_substrate_metadata_authority_fields(
@@ -20582,7 +20592,7 @@ def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
             if isinstance(artifact, dict):
                 artifact["birth_inflated_torch_cpu_survival"] = dict(row)
                 artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
-                artifact_metadata["birth_inflated_torch_cpu_survival"] = dict(row)
+                artifact_metadata["birth_inflated_torch_cpu_survival"] = dict(metadata_row)
                 score_training = artifact_metadata.get("score_aware_training")
                 if isinstance(score_training, dict):
                     score_training["birth_inflated_torch_cpu_survival"] = _strip_substrate_metadata_authority_fields(
@@ -21245,6 +21255,13 @@ def _positive_int_or_none(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _sha256_text(value: Any) -> str | None:

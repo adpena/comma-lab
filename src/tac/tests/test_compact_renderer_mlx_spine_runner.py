@@ -671,6 +671,59 @@ def test_hinerv_archive_selection_birth_survival_candidate_row_is_not_gate_schem
     assert effect_rows[-1]["parseback_survived"] is True
 
 
+def test_hinerv_archive_selection_action_effect_uses_scorer_effect_survival(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = tmp_path / "ema" / "archive.zip"
+    archive.parent.mkdir()
+    archive.write_bytes(b"unit archive")
+
+    import tac.substrates.hi_nerv.birth_survival as survival_mod
+
+    def fake_measure_birth_parseback_survival_from_report(**_kwargs):
+        return {
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": "a" * 64,
+            "survived": True,
+            "parseback_payload_survived": True,
+            "parseback_scorer_effect_survived": False,
+            "wrong_to_target_count": 2,
+            "target_to_wrong_count": 0,
+            "wrong_to_wrong_count": 0,
+            "net_target_support_delta": 2,
+            "blockers": ["hinerv_birth_parseback_scorer_effect_collapse"],
+        }
+
+    monkeypatch.setattr(
+        survival_mod,
+        "measure_birth_parseback_survival_from_report",
+        fake_measure_birth_parseback_survival_from_report,
+    )
+
+    row = runner_mod._write_hi_nerv_runner_birth_parseback_survival_for_archive(
+        archive_path=archive,
+        output_dir=archive.parent,
+        live_birth_payload={"action_id": "a" * 64, "accepted": True},
+        scorer_teacher=object(),
+        target_labels=np.zeros((1, 2, 2), dtype=np.int32),
+        pair_indices=np.array([0], dtype=np.int64),
+        candidate_kind="ema",
+        canonical_for_launch_gate=False,
+    )
+
+    assert row is not None
+    assert row["survived"] is True
+    assert row["parseback_scorer_effect_survived"] is False
+    ledger = archive.parent / "hi_nerv_birth_action_effects.jsonl"
+    effect_rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+    assert effect_rows[-1]["schema"] == "tac.action_effect.v1"
+    assert effect_rows[-1]["parseback_survived"] is False
+    assert effect_rows[-1]["wrong_to_target"] == 2
+    assert "hinerv_birth_parseback_scorer_effect_collapse" in effect_rows[-1]["blockers"]
+
+
 def test_hinerv_selected_birth_parseback_survival_promotes_only_selected_candidate(
     tmp_path: Path,
 ) -> None:
@@ -824,6 +877,15 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
         "target_region_action_support_sha256": "support-sha",
         "substrate_artifact_metadata": {"score_aware_training": {}},
     }
+    (tmp_path / "training_artifact.json").write_text(
+        json.dumps(
+            {
+                "schema": "unit.training_artifact.v1",
+                "substrate_artifact_metadata": {"score_aware_training": {}},
+            }
+        ),
+        encoding="utf-8",
+    )
 
     row = runner_mod._write_hi_nerv_target_region_action_parseback_survival(
         archive_resolution={"archive_path": archive.as_posix()},
@@ -861,6 +923,20 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
     assert score_training["target_region_action_parseback_survival"]["action_id"] == (
         "c" * 64
     )
+    metadata_survival = artifact_dict["substrate_artifact_metadata"][
+        "target_region_action_parseback_survival"
+    ]
+    persisted_artifact = json.loads(
+        (tmp_path / "training_artifact.json").read_text(encoding="utf-8")
+    )
+    persisted_metadata_survival = persisted_artifact["substrate_artifact_metadata"][
+        "target_region_action_parseback_survival"
+    ]
+    for nested in (metadata_survival, persisted_metadata_survival):
+        assert nested["survived"] is True
+        assert "score_claim" not in nested
+        assert "promotion_eligible" not in nested
+        assert "ready_for_exact_eval_dispatch" not in nested
 
 
 def test_hinerv_action_parseback_survival_recovers_wall_normal_action_id(
@@ -14574,6 +14650,9 @@ def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
             "surface": "inflated_torch_cpu",
             "action_id": action_id,
             "survived": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
             "blockers": [],
             "region_hard_won_count": 3,
             "receiver_surface_target_hard_won_count": 3,
@@ -14586,6 +14665,15 @@ def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
         fake_measure,
     )
     artifact = {"substrate_artifact_metadata": {"score_aware_training": {}}}
+    (tmp_path / "training_artifact.json").write_text(
+        json.dumps(
+            {
+                "schema": "unit.training_artifact.v1",
+                "substrate_artifact_metadata": {"score_aware_training": {}},
+            }
+        ),
+        encoding="utf-8",
+    )
 
     row = runner_mod._write_hi_nerv_runner_birth_inflated_survival_from_local_replay(
         local_cpu_replay_summary=local_replay,
@@ -14611,10 +14699,21 @@ def test_hinerv_runner_writes_inflated_birth_survival_from_local_replay(
     embedded = artifact["substrate_artifact_metadata"]["score_aware_training"][
         "birth_inflated_torch_cpu_survival"
     ]
+    metadata_embedded = artifact["substrate_artifact_metadata"][
+        "birth_inflated_torch_cpu_survival"
+    ]
+    persisted_artifact = json.loads(
+        (tmp_path / "training_artifact.json").read_text(encoding="utf-8")
+    )
+    persisted_metadata_embedded = persisted_artifact["substrate_artifact_metadata"][
+        "birth_inflated_torch_cpu_survival"
+    ]
     assert embedded["surface"] == "inflated_torch_cpu"
     assert embedded["survived"] is True
-    assert "score_claim" not in embedded
-    assert "promotion_eligible" not in embedded
+    for nested in (embedded, metadata_embedded, persisted_metadata_embedded):
+        assert "score_claim" not in nested
+        assert "promotion_eligible" not in nested
+        assert "ready_for_exact_eval_dispatch" not in nested
 
 
 def test_hinerv_inflated_birth_survival_combined_action_effect_stays_batch_local(
