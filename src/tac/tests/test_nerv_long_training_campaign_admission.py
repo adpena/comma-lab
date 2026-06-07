@@ -25,6 +25,7 @@ from tac.analysis.pr95_distortion_practices_guard import (
     PRACTICE_DAG_SCHEMA,
     SCORER_ATOM_ACTUATOR_CONTRACT_SCHEMA,
     STAGE_DAG_SCHEMA,
+    build_pr95_scorer_atom_actuator_contract,
 )
 from tac.cathedral_consumers.nerv_long_training_campaign_consumer import consume_candidate
 
@@ -501,6 +502,9 @@ def _campaign_plan(
                     "pr95_scorer_atom_actuator_execution_evidence": (
                         _snerv_actuator_execution_evidence()
                     ),
+                    "pr95_scorer_atom_actuator_contract": (
+                        build_pr95_scorer_atom_actuator_contract("snerv")
+                    ),
                     "pr95_distortion_axis_trace_measurements": (
                         _pr95_axis_trace_measurements()
                     ),
@@ -590,11 +594,47 @@ def _snerv_actuator_execution_evidence() -> dict:
         "mfu_hfr_tub_source_forward_parity_proven": True,
         "tub_output2_source_forward_parity_proven": True,
         "source_forward_replay_proof": _snerv_source_forward_numerical_proof(),
+        "snerv_official_tub_lf_hf_decoder_replacement_authority_gate": (
+            _snerv_official_replacement_authority_gate()
+        ),
         "pair_local_distortion_servo_receipt": _pair_local_distortion_servo_receipt(
             "snerv"
         ),
         "score_claim": False,
         "promotion_eligible": False,
+    }
+
+
+def _snerv_official_replacement_authority_gate() -> dict:
+    return {
+        "schema": "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": (
+            "/Volumes/VertigoDataTier/pact/"
+            "snerv_official_replacement_authority_gate.json"
+        ),
+        "_source_sha256": "e" * 64,
+        "official_tub_lf_hf_decoder_replacement_ready": True,
+        "official_checkpoint_export_binding_ready": True,
+        "receiver_output2_frame_replay_ready": True,
+        "tub_source_fixture_replay_ready": True,
+        "trained_checkpoint_state_dict_mapping_ready": True,
+        "tub_temporal_output2_weight_mapping_ready": True,
+        "full_tub_source_forward_replay_ready": True,
+        "closed_campaign_blockers": [
+            "snerv_official_mfu_hfr_tub_export_not_bound",
+            "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
+            "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
+            "snerv_official_tub_output2_receiver_frame_decode_not_bound",
+        ],
+        "source_forward_authority_residual_blockers": [],
+        "queue_blockers": [],
+        "blockers": [
+            "snerv_official_tub_lf_hf_decoder_replacement_false_authority"
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

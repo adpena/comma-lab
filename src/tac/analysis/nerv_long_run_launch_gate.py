@@ -71,7 +71,6 @@ HINERV_REQUIRED_FOUR_ARM_ACTION_KINDS = {
     "B": "frame0_pose_target_only",
     "C": "independent_birth_plus_frame0_pose",
     "D": "joint_line_search_composite",
-    "E": "frame0_pose_then_birth_composite",
 }
 
 
@@ -193,6 +192,28 @@ def _accepted_live_birth(
         if not row.get("action_id"):
             continue
         return row
+    return None
+
+
+def _positive_unclosed_masked_oracle_birth(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Return a positive receiver-surface oracle that is still byte-unclosed."""
+
+    for row in rows:
+        telemetry = row.get("candidate_frontier_telemetry")
+        if not isinstance(telemetry, Mapping):
+            continue
+        oracle = telemetry.get("masked_residual_oracle")
+        if not isinstance(oracle, Mapping):
+            continue
+        if oracle.get("authority") != "receiver_surface_oracle_false_authority":
+            continue
+        if oracle.get("archive_closed") is True:
+            continue
+        if oracle.get("exact_accepted_before_archive_closure") is not True:
+            continue
+        if oracle.get("target_support_moved") is not True:
+            continue
+        return dict(oracle)
     return None
 
 
@@ -802,7 +823,12 @@ def evaluate_nerv_long_run_launch_gate(
             blockers.append("source_qualified_metrics_missing")
         live = _accepted_live_birth(birth_rows, blockers=blockers)
         if live is None:
-            blockers.append("real_video_birth_receipt_missing")
+            unclosed_oracle = _positive_unclosed_masked_oracle_birth(birth_rows)
+            if unclosed_oracle is None:
+                blockers.append("real_video_birth_receipt_missing")
+            else:
+                blockers.append("real_video_birth_receipt_archive_unclosed")
+                blockers.extend(str(blocker) for blocker in unclosed_oracle.get("blockers") or [])
         else:
             highest_level = "L2"
             action_id = str(live.get("action_id"))

@@ -208,6 +208,16 @@ def _snerv_surface_provenance(
             surfaces,
             provenance_authority,
         ),
+        extra_by_surface={
+            "official_torch": {
+                "trained_checkpoint_lineage": "official_trained_checkpoint_state_dict",
+                "checkpoint_sha256": "6" * 64,
+                "state_dict_sha256": "7" * 64,
+                "model_source_sha256": "8" * 64,
+                "source_scope": "official_trained_checkpoint",
+                "capture_origin": "official_upstream_trained_checkpoint",
+            }
+        },
     )
 
 
@@ -480,6 +490,50 @@ def test_empty_root_blocks_everything(tmp_path: Path) -> None:
     # The gate itself is planning-only and never a score authority.
     assert verdict["score_claim"] is False
     assert verdict["promotion_eligible"] is False
+
+
+def test_positive_masked_oracle_is_classified_as_archive_unclosed_birth(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_masked_residual_archive_grammar_missing",
+                "hinerv_target_region_masked_residual_parseback_missing",
+                "hinerv_target_region_masked_residual_value_per_byte_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["highest_level"] == "none"
+    assert "real_video_birth_receipt_missing" not in verdict["blocking_evidence"]
+    assert "real_video_birth_receipt_archive_unclosed" in verdict["blocking_evidence"]
+    assert (
+        "hinerv_target_region_masked_residual_archive_grammar_missing"
+        in verdict["blocking_evidence"]
+    )
+    assert (
+        "hinerv_target_region_masked_residual_value_per_byte_missing"
+        in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
 
 
 def test_live_birth_without_pose_trust_is_l2(tmp_path: Path) -> None:
@@ -775,7 +829,9 @@ def test_missing_hinerv_four_arm_action_effect_blocks_ladder(tmp_path: Path) -> 
     assert "action_effect_four_arm_missing:D" in verdict["blocking_evidence"]
 
 
-def test_missing_hinerv_reverse_order_action_effect_blocks_ladder(tmp_path: Path) -> None:
+def test_hinerv_reverse_order_action_effect_is_optional_for_four_arm_gate(
+    tmp_path: Path,
+) -> None:
     root = _full_hi_nerv_root(tmp_path)
     _write(
         root / "action_effect.json",
@@ -794,8 +850,8 @@ def test_missing_hinerv_reverse_order_action_effect_blocks_ladder(tmp_path: Path
         now_utc=NOW,
     )
 
-    assert verdict["approved"] is False
-    assert "action_effect_four_arm_missing:E" in verdict["blocking_evidence"]
+    assert verdict["approved"] is True
+    assert "action_effect_four_arm_missing:E" not in verdict["blocking_evidence"]
 
 
 def test_failed_representative_coverage_blocks_l5(tmp_path: Path) -> None:
