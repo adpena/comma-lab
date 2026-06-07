@@ -5302,10 +5302,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     new_d_pose=state["d_pose_batch"],
                     pose_output_l2_delta=pose_delta_l2,
                 )
-            exact_decision = str(decision_payload.get("exact_score_decision") or "not_applicable")
-            catastrophic_decision = str(
-                decision_payload.get("catastrophic_guard_decision") or "not_applicable"
-            )
+            if decision_payload.get("exact_score_decision") is None:
+                decision_payload["exact_score_decision"] = (
+                    "rejected" if row_blockers or state is None or decision == "blocked" else "not_applicable"
+                )
+            if decision_payload.get("raw_cap_decision") is None:
+                decision_payload["raw_cap_decision"] = "not_applicable"
+            if decision_payload.get("catastrophic_guard_decision") is None:
+                decision_payload["catastrophic_guard_decision"] = "not_applicable"
+            if decision_payload.get("would_accept_exact_score_if_raw_cap_disabled") is None:
+                decision_payload["would_accept_exact_score_if_raw_cap_disabled"] = False
+            exact_decision = str(decision_payload["exact_score_decision"])
+            catastrophic_decision = str(decision_payload["catastrophic_guard_decision"])
             accepted = bool(
                 decision in {"accepted", "accepted_with_frame0_pose_compensation"}
                 or (
@@ -5359,10 +5367,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "argmax_changed_count_region": int(argmax_changed),
                 "argmax_flipped_pixels_region": int(argmax_changed),
                 "pose_output_l2_delta": None if pose_delta_l2 is None else float(pose_delta_l2),
-                "raw_cap_decision": decision_payload.get("raw_cap_decision"),
-                "catastrophic_guard_decision": decision_payload.get("catastrophic_guard_decision"),
-                "would_accept_exact_score_if_raw_cap_disabled": decision_payload.get(
-                    "would_accept_exact_score_if_raw_cap_disabled"
+                "exact_score_decision": exact_decision,
+                "raw_cap_decision": str(decision_payload["raw_cap_decision"]),
+                "catastrophic_guard_decision": catastrophic_decision,
+                "would_accept_exact_score_if_raw_cap_disabled": bool(
+                    decision_payload["would_accept_exact_score_if_raw_cap_disabled"]
                 ),
                 "would_accept_without_catastrophic_guard": decision_payload.get(
                     "would_accept_without_catastrophic_guard"
