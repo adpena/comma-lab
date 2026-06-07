@@ -62,6 +62,8 @@ SNERV_SOURCE_FORWARD_SCHEMA = "snerv_official_tub_source_forward_replay.v1"
 ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA = "nerv_archive_parseback_selection_contract.v1"
 SOURCE_QUALIFIED_METRICS_SCHEMA = "nerv_source_qualified_metrics.v1"
 HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA = "hi_nerv_short_scorer_smoke_readiness.v1"
+HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA = "hi_nerv_target_region_action_lowering_race.v1"
+EVALUATOR_ACTION_LOWERING_RACE_SCHEMA = "tac.evaluator_action_lowering_race.v1"
 SUPPORTED_FAMILIES = ("hinerv", "hi_nerv", "snerv")
 SURVIVAL_SURFACES_L4 = ("fakequant_mlx", "parseback_mlx")
 SURVIVAL_SURFACE_L5 = "inflated_torch_cpu"
@@ -748,6 +750,83 @@ def _require_hi_nerv_four_arm_action_effect_evidence(
             blockers.append(f"action_effect_four_arm_rejected_by_catastrophic_guard_missing:{arm}")
 
 
+def _require_hi_nerv_lowering_race_evidence(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    blockers: list[str],
+) -> None:
+    """Require a same-action evaluator-action lowering race before long runs.
+
+    Four-arm ActionEffect rows prove the PR95-like ablation was measured.  The
+    lowering race is the admission layer that decides whether the measured atom
+    can actually survive as backend, sidecar, composite, or semantic primitive
+    under exact nonlinear score.  Missing or failed race evidence means the
+    smoke is still diagnostic, not a long-run launch proof.
+    """
+
+    matches = [row for row in rows if str(row.get("action_id") or "") == action_id]
+    if not matches:
+        blockers.append("evaluator_action_lowering_race_missing")
+        blockers.append(f"evaluator_action_lowering_race_missing:{action_id}")
+        return
+
+    candidate_blockers: list[str] = []
+    for row in matches:
+        verdict = row.get("verdict")
+        verdict = verdict if isinstance(verdict, Mapping) else {}
+        row_id = str(row.get("action_id") or verdict.get("action_id") or action_id)
+        if row.get("same_support_as_direct_teacher") is False:
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_support_mismatch:{row_id}"
+            )
+            continue
+        best_lowering = str(row.get("best_lowering") or verdict.get("best_lowering") or "none")
+        if best_lowering in {"", "none"}:
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_no_viable_lowering:{row_id}"
+            )
+            continue
+        first_failing = str(
+            row.get("first_failing_surface")
+            or verdict.get("first_failing_surface")
+            or ""
+        )
+        if first_failing not in {"", "none"}:
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_failed_surface:{row_id}:{first_failing}"
+            )
+            continue
+        authority = str(verdict.get("authority") or "").strip()
+        if not authority or authority == "none":
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_authority_missing:{row_id}"
+            )
+            continue
+        delta_total = verdict.get("delta_score_total")
+        if not _negative_number(delta_total):
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_exact_total_not_improved:{row_id}"
+            )
+            continue
+        delta_nonrate = verdict.get("delta_score_nonrate")
+        if delta_nonrate is not None and not _finite_number(delta_nonrate):
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_nonrate_delta_invalid:{row_id}"
+            )
+            continue
+        candidate_count = row.get("candidate_count")
+        if candidate_count is not None and (not _finite_number(candidate_count) or int(candidate_count) <= 0):
+            candidate_blockers.append(
+                f"evaluator_action_lowering_race_candidate_count_not_positive:{row_id}"
+            )
+            continue
+        return
+
+    blockers.append("evaluator_action_lowering_race_not_accepted")
+    blockers.extend(_dedupe(candidate_blockers))
+
+
 def _representative_coverage_ok(
     rows: list[dict[str, Any]],
     *,
@@ -1069,6 +1148,20 @@ def evaluate_nerv_long_run_launch_gate(
             index=evidence_index,
             blockers=blockers,
         )
+        lowering_race_rows = _collect_schema_rows(
+            root,
+            HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
+        lowering_race_rows.extend(
+            _collect_schema_rows(
+                root,
+                EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
+                index=evidence_index,
+                blockers=blockers,
+            )
+        )
         action_effect_rows = _validated_action_effect_rows(action_effect_rows, blockers=blockers)
         if not _parseback_selection_contract_ok(parseback_contract_rows):
             blockers.append("archive_parseback_selection_contract_missing")
@@ -1123,6 +1216,11 @@ def evaluate_nerv_long_run_launch_gate(
             )
             _require_hi_nerv_four_arm_action_effect_evidence(
                 action_effect_rows,
+                action_id=action_id,
+                blockers=blockers,
+            )
+            _require_hi_nerv_lowering_race_evidence(
+                lowering_race_rows,
                 action_id=action_id,
                 blockers=blockers,
             )

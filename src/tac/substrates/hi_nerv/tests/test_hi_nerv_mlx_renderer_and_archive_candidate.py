@@ -1827,6 +1827,13 @@ def test_runner_selects_nested_support_moving_target_region_action() -> None:
                         "exact_delta_score_nonrate": -0.25,
                         "target_region_action_payload_bytes": 128,
                         "target_region_action_pixel_count": 9,
+                        "target_region_action_section_telemetry": {
+                            "support_sha256": "same-support",
+                            "support_cardinality": 9,
+                            "support_encoding": "explicit_yx_u16_coordinates",
+                            "support_encoded_bytes": 36,
+                        },
+                        "direct_seg_wall_oracle": {"support_sha256": "same-support"},
                         "admission_decision": {"exact_score_decision": "accept"},
                     },
                 ],
@@ -1842,6 +1849,57 @@ def test_runner_selects_nested_support_moving_target_region_action() -> None:
     assert selection["exact_delta_score_nonrate"] == -0.25
     assert selection["target_region_action_payload_bytes"] == 128
     assert selection["target_region_action_pixel_count"] == 9
+    assert selection["target_region_action_support_sha256"] == "same-support"
+    assert selection["direct_teacher_support_sha256"] == "same-support"
+    assert selection["same_support_as_direct_teacher"] is True
+    assert selection["promotion_eligible"] is False
+    assert selection["ready_for_exact_eval_dispatch"] is False
+
+
+def test_runner_refuses_target_region_action_with_direct_teacher_support_mismatch() -> None:
+    from tools.run_compact_renderer_mlx_spine_runner import (
+        _select_target_region_action_program_from_birth_payload,
+    )
+
+    payload = {
+        "schema": "hi_nerv_target_region_birth_payload.v1",
+        "candidate_frontier_telemetry": {
+            "masked_residual_oracle": {
+                "candidates": [
+                    {
+                        "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                        "target_region_action_program_base64": "support-moving-but-wrong-support",
+                        "target_support_moved": True,
+                        "exact_delta_score_nonrate": -10.0,
+                        "target_region_action_payload_bytes": 128,
+                        "target_region_action_pixel_count": 9,
+                        "target_region_action_section_telemetry": {
+                            "support_sha256": "sidecar-support",
+                            "support_cardinality": 9,
+                            "support_encoding": "explicit_yx_u16_coordinates",
+                            "support_encoded_bytes": 36,
+                        },
+                        "direct_seg_wall_oracle": {"support_sha256": "direct-teacher-support"},
+                        "admission_decision": {"exact_score_decision": "accept"},
+                    },
+                ],
+            },
+        },
+    }
+
+    program, selection = _select_target_region_action_program_from_birth_payload(payload)
+
+    assert program is None
+    assert selection is not None
+    assert selection["selected_for_export"] is False
+    assert selection["blockers"] == [
+        "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
+    ]
+    assert selection["best_candidate_exact_accepted"] is True
+    assert selection["best_candidate_support_moved"] is True
+    assert selection["best_candidate_same_support_as_direct_teacher"] is False
+    assert selection["best_candidate_action_support_sha256"] == "sidecar-support"
+    assert selection["best_candidate_direct_teacher_support_sha256"] == "direct-teacher-support"
     assert selection["promotion_eligible"] is False
     assert selection["ready_for_exact_eval_dispatch"] is False
 
@@ -1875,7 +1933,7 @@ def test_runner_refuses_worsening_target_region_action_export() -> None:
     assert selection is not None
     assert selection["selected_for_export"] is False
     assert selection["blockers"] == [
-        "hi_nerv_target_region_action_no_total_score_improving_support_moving_candidate"
+        "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
     ]
     assert selection["best_candidate_estimated_delta_score_total"] > 0.0
     assert selection["promotion_eligible"] is False

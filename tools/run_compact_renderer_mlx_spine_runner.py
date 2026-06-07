@@ -127,9 +127,31 @@ def _select_target_region_action_program_from_birth_payload(
             or int(transitions.get("net_target_support_delta") or 0) > 0
         )
 
-    def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, float, int, float]:
+    def _candidate_action_support_sha256(row: Mapping[str, Any]) -> str | None:
+        telemetry = row.get("target_region_action_section_telemetry")
+        telemetry = telemetry if isinstance(telemetry, Mapping) else {}
+        value = telemetry.get("support_sha256") or row.get("target_region_action_support_sha256")
+        return str(value) if isinstance(value, str) and value else None
+
+    def _candidate_direct_teacher_support_sha256(row: Mapping[str, Any]) -> str | None:
+        direct = row.get("direct_seg_wall_oracle")
+        direct = direct if isinstance(direct, Mapping) else {}
+        value = direct.get("support_sha256")
+        if not value:
+            action_effect = direct.get("action_effect")
+            if isinstance(action_effect, Mapping):
+                value = action_effect.get("support_sha256")
+        return str(value) if isinstance(value, str) and value else None
+
+    def _candidate_same_support_as_direct_teacher(row: Mapping[str, Any]) -> bool:
+        action_support = _candidate_action_support_sha256(row)
+        direct_support = _candidate_direct_teacher_support_sha256(row)
+        return bool(action_support and direct_support and action_support == direct_support)
+
+    def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, int, float, int, float]:
         exact_accepted = _candidate_exact_accepted(row)
         support_moved = _candidate_support_moved(row)
+        same_support = _candidate_same_support_as_direct_teacher(row)
         delta = _candidate_delta_nonrate(row)
         payload_bytes = _candidate_payload_bytes(row)
         total_delta = (
@@ -139,6 +161,7 @@ def _select_target_region_action_program_from_birth_payload(
         return (
             0 if exact_accepted else 1,
             0 if support_moved else 1,
+            0 if same_support else 1,
             total_delta,
             payload_bytes,
             delta,
@@ -149,7 +172,8 @@ def _select_target_region_action_program_from_birth_payload(
         for row in candidates
         if _candidate_exact_accepted(row)
         and _candidate_support_moved(row)
-        and _candidate_key(row)[2] < 0.0
+        and _candidate_same_support_as_direct_teacher(row)
+        and _candidate_key(row)[3] < 0.0
     ]
     if not eligible_candidates:
         best = min(candidates, key=_candidate_key)
@@ -158,12 +182,15 @@ def _select_target_region_action_program_from_birth_payload(
             "candidate_count": len(candidates),
             "selected_for_export": False,
             "blockers": [
-                "hi_nerv_target_region_action_no_total_score_improving_support_moving_candidate"
+                "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
             ],
             "best_candidate_exact_accepted": _candidate_exact_accepted(best),
             "best_candidate_support_moved": _candidate_support_moved(best),
+            "best_candidate_same_support_as_direct_teacher": _candidate_same_support_as_direct_teacher(best),
+            "best_candidate_action_support_sha256": _candidate_action_support_sha256(best),
+            "best_candidate_direct_teacher_support_sha256": _candidate_direct_teacher_support_sha256(best),
             "best_candidate_exact_delta_score_nonrate": _candidate_delta_nonrate(best),
-            "best_candidate_estimated_delta_score_total": _candidate_key(best)[2],
+            "best_candidate_estimated_delta_score_total": _candidate_key(best)[3],
             "best_candidate_target_region_action_payload_bytes": _candidate_payload_bytes(best),
             "score_claim": False,
             "promotion_eligible": False,
@@ -191,8 +218,10 @@ def _select_target_region_action_program_from_birth_payload(
         "target_region_action_support_cardinality": telemetry.get("support_cardinality"),
         "target_region_action_support_encoding": telemetry.get("support_encoding"),
         "target_region_action_support_encoded_bytes": telemetry.get("support_encoded_bytes"),
+        "direct_teacher_support_sha256": _candidate_direct_teacher_support_sha256(selected),
+        "same_support_as_direct_teacher": _candidate_same_support_as_direct_teacher(selected),
         "exact_delta_score_nonrate": _candidate_delta_nonrate(selected),
-        "estimated_delta_score_total": _candidate_key(selected)[2],
+        "estimated_delta_score_total": _candidate_key(selected)[3],
         "estimated_rate_score_delta": (
             (RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES))
             * float(_candidate_payload_bytes(selected))

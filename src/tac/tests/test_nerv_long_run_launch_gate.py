@@ -27,6 +27,7 @@ from tac.analysis.nerv_long_run_launch_gate import (
     BIRTH_RECEIPT_SCHEMA,
     BIRTH_SURVIVAL_SCHEMA,
     HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
+    HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
     REPRESENTATIVE_COVERAGE_SCHEMA,
     SNERV_SOURCE_FORWARD_SCHEMA,
     SOURCE_QUALIFIED_METRICS_SCHEMA,
@@ -512,6 +513,43 @@ def _source_qualified_readiness_report(*, mock: bool = False) -> dict:
     }
 
 
+def _hi_nerv_lowering_race(
+    *,
+    action_id: str = ACTION,
+    best_lowering: str = "pose_compensated_composite",
+    first_failing_surface: str = "none",
+    same_support: bool = True,
+    delta_score_total: float | None = -0.01,
+    authority: str = "inflate_raw",
+) -> dict:
+    return {
+        "schema": HI_NERV_TARGET_REGION_ACTION_LOWERING_RACE_SCHEMA,
+        "fixture_not_real": True,
+        "action_id": action_id,
+        "support_sha256": "9" * 64,
+        "direct_teacher_support_sha256": "9" * 64 if same_support else "8" * 64,
+        "same_support_as_direct_teacher": same_support,
+        "best_lowering": best_lowering,
+        "first_failing_surface": first_failing_surface,
+        "verdict": {
+            "schema": "tac.evaluator_action_lowering_verdict.v1",
+            "action_id": action_id,
+            "best_lowering": best_lowering,
+            "first_failing_surface": first_failing_surface,
+            "authority": authority,
+            "delta_score_nonrate": -0.02,
+            "delta_score_total": delta_score_total,
+            "delta_bytes": 128,
+            "value_per_byte": 7.8125e-5,
+        },
+        "current_sidecar_candidate_id": "current_hiv1_target_region_action_brotli",
+        "candidate_count": 4,
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _full_hi_nerv_root(tmp_path: Path) -> Path:
     root = tmp_path / "run"
     _write(root / "birth.json", _live_birth_receipt())
@@ -530,6 +568,7 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
     _write(root / "wall_normal_lift.json", _wall_normal_lift())
     _write(root / "parseback_contract.json", _parseback_selection_contract())
     _write(root / "source_metrics.json", _source_qualified_metrics())
+    _write(root / "lowering_race.json", _hi_nerv_lowering_race())
     _write(
         root / "hysteresis.json",
         {
@@ -860,6 +899,50 @@ def test_pair_local_composite_action_effect_can_supply_pose_trust(tmp_path: Path
     assert "pose_trusted_birth_receipt_missing" not in verdict["blocking_evidence"]
     assert verdict["highest_level"] == "L5"
     assert verdict["approved"] is True
+
+
+def test_hinerv_gate_requires_evaluator_action_lowering_race(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    (root / "lowering_race.json").unlink()
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_missing" in verdict["blocking_evidence"]
+    assert f"evaluator_action_lowering_race_missing:{ACTION}" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
+def test_hinerv_gate_rejects_failed_evaluator_action_lowering_race(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "lowering_race.json",
+        _hi_nerv_lowering_race(
+            same_support=False,
+            best_lowering="none",
+            first_failing_surface="support_identity_mismatch",
+            delta_score_total=None,
+            authority="none",
+        ),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "evaluator_action_lowering_race_not_accepted" in verdict["blocking_evidence"]
+    assert (
+        f"evaluator_action_lowering_race_support_mismatch:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
 
 
 def test_pair_local_composite_without_pose_improvement_does_not_supply_pose_trust(
