@@ -33,6 +33,7 @@ from tac.analysis.action_effect import ActionEffect, append_action_effect, read_
 from tac.analysis.inverse_scorer_actions import (  # noqa: E402
     build_masked_residual_oracle_action_effect,
     build_score_program_word,
+    build_wall_normal_branch_action_effects,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (  # noqa: E402
@@ -83,6 +84,18 @@ def _read_training_artifacts(paths: Sequence[Path]) -> list[ActionEffect]:
                     consumer="inverse_evaluate_candidate_queue",
                 )
             )
+        for source in _find_hinerv_wall_normal_lifts(payload):
+            if id(source) in seen_payload_ids:
+                continue
+            seen_payload_ids.add(id(source))
+            effects.extend(
+                build_wall_normal_branch_action_effects(
+                    source,
+                    producer=f"hinerv_wall_normal_lift_artifact:{path.as_posix()}",
+                    consumer="inverse_evaluate_candidate_queue",
+                    artifact_ref=path.as_posix(),
+                )
+            )
         for source in _find_hinerv_masked_residual_candidates(payload):
             if id(source) in seen_payload_ids:
                 continue
@@ -100,6 +113,23 @@ def _find_hinerv_four_arm_sources(payload: Mapping[str, Any]) -> list[Mapping[st
                 isinstance(value.get("four_arm_ablation"), Mapping)
                 or str(value.get("schema") or "") == "hi_nerv_target_region_birth_four_arm_ablation.v1"
             ):
+                out.append(value)
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            for child in value:
+                walk(child)
+
+    walk(payload)
+    return out
+
+
+def _find_hinerv_wall_normal_lifts(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    out: list[Mapping[str, Any]] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, Mapping):
+            if str(value.get("schema") or "") == "tac.target_region_wall_normal_lift.v1":
                 out.append(value)
             for child in value.values():
                 walk(child)

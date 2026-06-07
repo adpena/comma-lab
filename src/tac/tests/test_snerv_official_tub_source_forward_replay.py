@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from tac.analysis.snerv_official_tub_source_forward_replay import (
+    CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER,
     CHECKPOINT_LOAD_MISSING_KEYS_BLOCKER,
     CHECKPOINT_LOAD_PATH_MISSING_BLOCKER,
     CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER,
@@ -189,6 +190,12 @@ def test_snerv_official_tub_source_forward_replay_persists_value_state_npz(
     )
     state_artifact = artifact["official_trained_checkpoint_state_dict_artifact"]
     assert state_artifact["path"] == state_path.as_posix()
+    assert Path(state_artifact["state_dict_lineage_manifest_path"]).is_file()
+    assert state_artifact["state_dict_lineage_manifest"]["fixture_state"] is True
+    assert (
+        state_artifact["state_dict_lineage_manifest"]["state_dict_kind"]
+        == "official_snerv_t_one_step_trained_source_smoke_state_dict"
+    )
     assert state_artifact["bytes"] == state_path.stat().st_size
     assert len(state_artifact["sha256"]) == 64
     assert state_artifact["member_count"] > 0
@@ -234,7 +241,7 @@ def test_snerv_official_tub_source_forward_replay_blocks_authority_without_value
     assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER in artifact["blockers"]
 
 
-def test_snerv_official_tub_source_forward_replay_loads_value_state_npz(
+def test_snerv_official_tub_source_forward_replay_rejects_fixture_value_state_npz_authority(
     tmp_path: Path,
 ) -> None:
     state_path = tmp_path / "official_state.npz"
@@ -256,18 +263,17 @@ def test_snerv_official_tub_source_forward_replay_loads_value_state_npz(
 
     load = loaded["official_trained_checkpoint_load"]
     assert load["requested"] is True
-    assert load["loaded"] is True
+    assert load["loaded"] is False
     assert load["state_dict_source"] == state_path.as_posix()
-    assert load["missing_keys"] == []
-    assert load["unexpected_keys"] == []
-    assert load["shape_mismatches"] == []
-    assert loaded["official_trained_checkpoint_loaded"] is True
-    assert loaded["official_trained_checkpoint_state_dict_mapping_verified"] is True
-    assert loaded["official_trained_checkpoint_state_dict_artifact"]["path"] == (
-        state_path.as_posix()
-    )
-    assert loaded["source_forward_replay_authority"] is True
-    assert TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER not in loaded["blockers"]
+    assert load["state_dict_path_lineage"]["fixture_lineage_detected"] is True
+    assert CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER in load["blockers"]
+    assert loaded["source_forward_replay_executed"] is False
+    assert loaded["official_trained_checkpoint_loaded"] is False
+    assert loaded["official_trained_checkpoint_state_dict_mapping_verified"] is False
+    assert loaded["source_forward_replay_authority"] is False
+    assert CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER in loaded["blockers"]
+    assert loaded["score_claim"] is False
+    assert loaded["ready_for_exact_eval_dispatch"] is False
 
 
 def test_snerv_official_tub_source_forward_replay_malformed_checkpoint_fails_closed(

@@ -275,6 +275,18 @@ def build_snerv_source_forward_proof_from_archive_packet(
     for surface, tensors in dict(scorer_tensors_by_surface or {}).items():
         if surface in tensors_by_surface:
             tensors_by_surface[surface].update(dict(tensors))
+    if official_torch_capture_manifest is not None and scorer_tensors_by_surface is not None:
+        official_torch_capture_manifest = _refresh_official_torch_manifest_tensor_set(
+            official_torch_capture_manifest,
+            tensor_names=tensors_by_surface["official_torch"].keys(),
+        )
+        official_torch_manifest_status = (
+            validate_snerv_official_torch_upstream_capture_manifest(
+                official_torch_capture_manifest,
+                pair_ids=pair_ids,
+                tensor_names=tensors_by_surface["official_torch"].keys(),
+            )
+        )
     scorer_capture_by_surface: dict[str, dict[str, Any]] = {}
     if capture_torch_scorer_from_rgb:
         if scorer_tensors_by_surface is not None:

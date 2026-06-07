@@ -109,6 +109,12 @@ CHECKPOINT_LOAD_PATH_MISSING_BLOCKER = (
 CHECKPOINT_LOAD_UNREADABLE_BLOCKER = (
     "snerv_official_trained_checkpoint_state_dict_unreadable"
 )
+CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_fixture_lineage_forbidden"
+)
+CHECKPOINT_LOAD_EXPLICIT_EXPORT_LINEAGE_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_requires_explicit_export_lineage"
+)
 
 
 class _OfficialTubCheckpointLoadFailed(RuntimeError):
@@ -865,9 +871,22 @@ def _load_checkpoint_into_official_tub_model(
         except _OfficialTubCheckpointLoadFailed:
             raise
         source = resolved.as_posix()
+        lineage_report = _checkpoint_state_path_lineage_report(
+            resolved,
+            requested_state_dict_kind=state_dict_kind,
+        )
     else:
         raw_state = _coerce_checkpoint_state_dict_mapping(state_dict)
         source = "in_memory_official_trained_checkpoint_state_dict"
+        lineage_report = {
+            "schema": "snerv_official_tub_checkpoint_state_path_lineage.v1",
+            "state_dict_path": None,
+            "lineage_manifest_path": None,
+            "lineage_manifest_present": False,
+            "lineage_manifest": None,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
 
     expected = dict(model.state_dict())
     supplied = _coerce_checkpoint_state_dict_mapping(raw_state)
@@ -901,6 +920,7 @@ def _load_checkpoint_into_official_tub_model(
         blockers.append(CHECKPOINT_LOAD_UNEXPECTED_KEYS_BLOCKER)
     if shape_mismatches:
         blockers.append(CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER)
+    blockers.extend(str(value) for value in lineage_report.get("blockers", ()))
     report = {
         "schema": CHECKPOINT_LOAD_SCHEMA,
         "requested": True,
@@ -914,6 +934,7 @@ def _load_checkpoint_into_official_tub_model(
         "missing_keys": missing_keys,
         "unexpected_keys": unexpected_keys,
         "shape_mismatches": shape_mismatches,
+        "state_dict_path_lineage": lineage_report,
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
     }
@@ -1018,6 +1039,10 @@ def _supplied_checkpoint_state_artifact(
     if not isinstance(state_dict, Mapping):
         return None
     state_dict_keys = sorted(str(key) for key in state_dict)
+    lineage_report = checkpoint_load.get("state_dict_path_lineage")
+    lineage_report = (
+        dict(lineage_report) if isinstance(lineage_report, Mapping) else None
+    )
     return {
         "schema": "snerv_official_tub_supplied_state_dict_file.v1",
         "path": path.as_posix(),
@@ -1027,6 +1052,7 @@ def _supplied_checkpoint_state_artifact(
         "member_names": state_dict_keys,
         "state_dict_keys": state_dict_keys,
         "state_dict_sha256": _hash_state_dict_exact(state_dict),
+        "state_dict_path_lineage": lineage_report,
         **FALSE_AUTHORITY,
     }
 
@@ -2193,6 +2219,25 @@ def _write_deterministic_state_npz(
             info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o600 << 16
             zf.writestr(info, buffer.getvalue())
+    lineage_path = _checkpoint_state_lineage_manifest_path(resolved)
+    lineage_manifest = {
+        "schema": "snerv_official_tub_state_dict_lineage_manifest.v1",
+        "state_dict_path": resolved.as_posix(),
+        "state_dict_kind": "official_snerv_t_one_step_trained_source_smoke_state_dict",
+        "source_scope": "official_source_fixture_state",
+        "source": "official_snerv_t_one_step_source_smoke",
+        "fixture_state": True,
+        "checkpoint_export_lineage": False,
+        "state_dict_sha256": _hash_state_dict_exact(state_dict),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    lineage_path.write_text(
+        json.dumps(lineage_manifest, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
     return {
         "schema": "snerv_official_tub_source_state_dict_npz.v1",
         "path": resolved.as_posix(),
@@ -2202,10 +2247,71 @@ def _write_deterministic_state_npz(
         "member_names": member_names,
         "state_dict_keys": state_dict_keys,
         "state_dict_sha256": _hash_state_dict_exact(state_dict),
+        "state_dict_lineage_manifest_path": lineage_path.as_posix(),
+        "state_dict_lineage_manifest": lineage_manifest,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _checkpoint_state_lineage_manifest_path(path: Path) -> Path:
+    return path.with_name(f"{path.name}.lineage.json")
+
+
+def _checkpoint_state_path_lineage_report(
+    path: Path,
+    *,
+    requested_state_dict_kind: str,
+) -> dict[str, Any]:
+    manifest_path = _checkpoint_state_lineage_manifest_path(path)
+    manifest: dict[str, Any] | None = None
+    blockers: list[str] = []
+    if manifest_path.is_file():
+        try:
+            loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, Mapping):
+                manifest = dict(loaded)
+            else:
+                blockers.append(CHECKPOINT_LOAD_UNREADABLE_BLOCKER)
+        except Exception:
+            blockers.append(CHECKPOINT_LOAD_UNREADABLE_BLOCKER)
+    requested_kind = str(requested_state_dict_kind or "").strip()
+    manifest_kind = "" if manifest is None else str(manifest.get("state_dict_kind") or "")
+    manifest_source_scope = "" if manifest is None else str(manifest.get("source_scope") or "")
+    fixture_lineage = bool(
+        manifest is not None
+        and (
+            manifest.get("fixture_state") is True
+            or manifest_kind.startswith("official_snerv_t_one_step")
+            or manifest_source_scope == "official_source_fixture_state"
+        )
+    )
+    if fixture_lineage and requested_kind in {
+        "official_trained_checkpoint_state_dict",
+        "checkpoint_export_official_trained_checkpoint_state_dict",
+        "checkpoint_export_native_mlx_receiver_state_dict",
+    }:
+        blockers.append(CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER)
+    if (
+        path.suffix.lower() == ".npz"
+        and requested_kind == "official_trained_checkpoint_state_dict"
+        and manifest is None
+    ):
+        blockers.append(CHECKPOINT_LOAD_EXPLICIT_EXPORT_LINEAGE_BLOCKER)
+    return {
+        "schema": "snerv_official_tub_checkpoint_state_path_lineage.v1",
+        "state_dict_path": path.as_posix(),
+        "lineage_manifest_path": manifest_path.as_posix(),
+        "lineage_manifest_present": manifest is not None,
+        "lineage_manifest": manifest,
+        "requested_state_dict_kind": requested_kind,
+        "manifest_state_dict_kind": manifest_kind or None,
+        "manifest_source_scope": manifest_source_scope or None,
+        "fixture_lineage_detected": fixture_lineage,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
     }
 
 
@@ -2318,6 +2424,8 @@ if __name__ == "__main__":  # pragma: no cover
 
 
 __all__ = [
+    "CHECKPOINT_LOAD_EXPLICIT_EXPORT_LINEAGE_BLOCKER",
+    "CHECKPOINT_LOAD_FIXTURE_LINEAGE_BLOCKER",
     "CHECKPOINT_LOAD_MISSING_KEYS_BLOCKER",
     "CHECKPOINT_LOAD_PATH_MISSING_BLOCKER",
     "CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER",

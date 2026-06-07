@@ -74,6 +74,9 @@ BLOCKER_WALL_NORMAL_BACKEND_ACTION_EFFECT_INVALID = (
     "target_region_wall_normal_backend_action_effect_invalid"
 )
 BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED = "target_region_wall_normal_sidecar_archive_unclosed"
+BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING = (
+    "target_region_wall_normal_sidecar_distortion_endpoints_missing"
+)
 
 TRUE_SEG_WALL_NORMAL_INVERSE_SOURCES = frozenset(
     {
@@ -657,6 +660,259 @@ def build_target_region_wall_normal_lift_receipt(
     }
 
 
+def build_wall_normal_branch_action_effects(
+    wall_normal_lift: Mapping[str, Any],
+    *,
+    producer: str = "target_region_wall_normal_lift",
+    consumer: str | None = "inverse_evaluate_candidate_queue",
+    artifact_ref: str | None = None,
+) -> tuple[ActionEffect, ...]:
+    """Convert one TargetRegionWallNormalLift receipt into branch ActionEffects.
+
+    The lift receipt is the branch point for the current HiNeRV burndown:
+    direct inverse teacher, backend realization, and sidecar fallback must all
+    refer to the same failed region and same action id.  Older materialization
+    code only found nested masked-residual candidates, which downgraded support
+    to a region id.  This converter preserves the receipt's explicit target
+    support identity and keeps weak branches visible with blockers instead of
+    silently dropping them.
+    """
+
+    if not isinstance(wall_normal_lift, Mapping):
+        raise TypeError("wall_normal_lift must be a mapping")
+    if wall_normal_lift.get("schema") != TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA:
+        raise ValueError(
+            f"wall_normal_lift schema must be {TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA!r}"
+        )
+    action_id = str(wall_normal_lift.get("action_id") or "").strip()
+    if not action_id:
+        raise ValueError("wall_normal_lift action_id is required")
+    pair_id = _first_int(wall_normal_lift, "pair_id", default=0)
+    target_class = _first_int(wall_normal_lift, "target_class", default=0)
+    region_id = str(wall_normal_lift.get("region_id") or f"p{pair_id}/c{target_class}")
+    authority = str(wall_normal_lift.get("authority") or "batch_local_live_mlx")
+    direct = _mapping(wall_normal_lift.get("direct_teacher"))
+    backend = _mapping(wall_normal_lift.get("backend_fit"))
+    sidecar = _mapping(wall_normal_lift.get("sidecar_fallback"))
+    support = _wall_normal_support_identity(direct)
+
+    effects: list[ActionEffect] = []
+    if direct:
+        effects.append(
+            _wall_normal_direct_branch_effect(
+                direct,
+                action_id=action_id,
+                pair_id=pair_id,
+                target_class=target_class,
+                region_id=region_id,
+                authority=authority,
+                producer=producer,
+                consumer=consumer,
+                artifact_ref=artifact_ref,
+                support=support,
+            )
+        )
+    if backend:
+        effects.append(
+            _wall_normal_backend_branch_effect(
+                backend,
+                action_id=action_id,
+                pair_id=pair_id,
+                target_class=target_class,
+                region_id=region_id,
+                authority=authority,
+                producer=producer,
+                consumer=consumer,
+                artifact_ref=artifact_ref,
+                support=support,
+            )
+        )
+    if sidecar:
+        effects.append(
+            _wall_normal_sidecar_branch_effect(
+                sidecar,
+                action_id=action_id,
+                pair_id=pair_id,
+                target_class=target_class,
+                region_id=region_id,
+                authority=authority,
+                producer=producer,
+                consumer=consumer,
+                artifact_ref=artifact_ref,
+                support=support,
+            )
+        )
+    return tuple(effects)
+
+
+def _wall_normal_support_identity(direct: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "support_source": direct.get("support_source"),
+        "support_cardinality": _first_int(direct, "support_cardinality"),
+        "support_sha256": (
+            None if direct.get("support_sha256") is None else str(direct["support_sha256"])
+        ),
+        "support_encoding": (
+            None if direct.get("support_encoding") is None else str(direct["support_encoding"])
+        ),
+        "support_encoded_bytes": _first_int(direct, "support_encoded_bytes"),
+        "support_research_only": _bool_or_none(direct.get("support_research_only")),
+    }
+
+
+def _wall_normal_direct_branch_effect(
+    direct: Mapping[str, Any],
+    *,
+    action_id: str,
+    pair_id: int,
+    target_class: int,
+    region_id: str,
+    authority: str,
+    producer: str,
+    consumer: str | None,
+    artifact_ref: str | None,
+    support: Mapping[str, Any],
+) -> ActionEffect:
+    payload = dict(_mapping(direct.get("action_effect")))
+    if not payload:
+        blockers = [BLOCKER_WALL_NORMAL_DIRECT_TEACHER_MISSING]
+        payload = {}
+    else:
+        blockers = list(payload.get("blockers") or ())
+    if direct.get("decision_state") == "DIRECT_TEACHER_NO_WALL_CROSS":
+        blockers.append(BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED)
+    if direct.get("decision_state") == "DIRECT_TEACHER_EXACT_REJECTED":
+        blockers.append(BLOCKER_WALL_NORMAL_DIRECT_TEACHER_EXACT_SCORE_NOT_ACCEPTED)
+    payload.update(
+        {
+            "schema": "tac.action_effect.v1",
+            "action_id": action_id,
+            "family": "hinerv",
+            "action_kind": "wall_normal_direct_teacher",
+            "inverse_source": "segnet_margin_gradient",
+            "frame_index": 1,
+            "frame_incidence": "seg_pose_joint",
+            "candidate_status": (
+                "measured" if _first_int(direct, "wrong_to_target_count", default=0) > 0 else "rejected"
+            ),
+            "authority": authority,
+            "producer": producer,
+            "consumer": consumer,
+            "pair_ids": [int(pair_id)],
+            "class_ids": [int(target_class)],
+            "region_ids": [region_id],
+            "payload_sections": ["direct_inverse_scorer_teacher"],
+            "arm": "A_direct_teacher",
+            "artifact_ref": artifact_ref,
+            "rejection_source": direct.get("decision_state"),
+            "blockers": _dedupe(blockers),
+            **support,
+        }
+    )
+    return ActionEffect.from_dict(payload)
+
+
+def _wall_normal_backend_branch_effect(
+    backend: Mapping[str, Any],
+    *,
+    action_id: str,
+    pair_id: int,
+    target_class: int,
+    region_id: str,
+    authority: str,
+    producer: str,
+    consumer: str | None,
+    artifact_ref: str | None,
+    support: Mapping[str, Any],
+) -> ActionEffect:
+    payload = dict(_mapping(backend.get("action_effect")))
+    blockers = list(payload.get("blockers") or ())
+    if backend.get("realized_target_wall") is not True:
+        blockers.append(BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED)
+    if backend.get("exact_score_decision") not in {"accept", "accepted"}:
+        blockers.append(BLOCKER_WALL_NORMAL_BACKEND_EXACT_SCORE_NOT_ACCEPTED)
+    payload.update(
+        {
+            "schema": "tac.action_effect.v1",
+            "action_id": action_id,
+            "family": "hinerv",
+            "action_kind": "wall_normal_backend_fit",
+            "inverse_source": "joint_seg_pose_projection",
+            "frame_index": 1,
+            "frame_incidence": "seg_pose_joint",
+            "candidate_status": (
+                "measured" if backend.get("realized_target_wall") is True else "rejected"
+            ),
+            "authority": authority,
+            "producer": producer,
+            "consumer": consumer,
+            "pair_ids": [int(pair_id)],
+            "class_ids": [int(target_class)],
+            "region_ids": [region_id],
+            "payload_sections": ["hinerv_backend_fit"],
+            "arm": "B_backend_fit",
+            "artifact_ref": artifact_ref,
+            "rejection_source": backend.get("decision_state") or "BACKEND_REALIZATION_FAILED",
+            "blockers": _dedupe(blockers),
+            **support,
+        }
+    )
+    return ActionEffect.from_dict(payload)
+
+
+def _wall_normal_sidecar_branch_effect(
+    sidecar: Mapping[str, Any],
+    *,
+    action_id: str,
+    pair_id: int,
+    target_class: int,
+    region_id: str,
+    authority: str,
+    producer: str,
+    consumer: str | None,
+    artifact_ref: str | None,
+    support: Mapping[str, Any],
+) -> ActionEffect:
+    blockers = list(sidecar.get("blockers") or ())
+    if sidecar.get("archive_closed") is not True:
+        blockers.append(BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED)
+    blockers.append(BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING)
+    if sidecar.get("support_sha256") and sidecar.get("support_sha256") != support.get("support_sha256"):
+        blockers.append("direct_teacher_and_sidecar_support_hashes_diverge")
+    payload_bytes = _first_int(sidecar, "payload_bytes")
+    return ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind="wall_normal_sidecar_fallback",
+        inverse_source="scorer_causal_pixel_synthesis",
+        frame_index=1,
+        frame_incidence="seg_pose_joint",
+        candidate_status="rejected",
+        authority=authority,
+        producer=producer,
+        consumer=consumer,
+        pair_ids=[int(pair_id)],
+        class_ids=[int(target_class)],
+        region_ids=[region_id],
+        payload_sections=["target_region_action_sidecar"],
+        receiver_surface={},
+        exact_score_decision="reject",
+        raw_cap_decision="not_applicable",
+        catastrophic_guard_decision="not_applicable",
+        artifact_ref=artifact_ref,
+        arm="C_sidecar_fallback",
+        rejection_source=sidecar.get("decision_state") or "SUPPORT_NOT_ARCHIVE_EXECUTABLE",
+        blockers=_dedupe(blockers),
+        support_source=support.get("support_source"),
+        support_cardinality=_first_int(support, "support_cardinality"),
+        support_sha256=support.get("support_sha256"),
+        support_encoding=support.get("support_encoding"),
+        support_encoded_bytes=_first_int(support, "support_encoded_bytes"),
+        support_research_only=_bool_or_none(support.get("support_research_only")),
+        trained_groups=[] if payload_bytes is None else [f"sidecar_payload_bytes:{payload_bytes}"],
+    )
+
+
 def build_masked_residual_oracle_action_effect(
     candidate: Mapping[str, Any],
     *,
@@ -820,23 +1076,29 @@ def generate_inverse_scorer_candidates(
     frame0 = _first_matching(effects, _is_frame0_pose_action)
     frame1 = _first_matching(effects, _is_frame1_seg_action)
     composites = _matching(effects, _is_composite_action)
-    wall_normal_branches = _matching(effects, _is_wall_normal_branch_action)
+    wall_normal_branches = sorted(
+        [effect for effect in effects if _is_wall_normal_branch_action(effect)],
+        key=_candidate_sort_key,
+        reverse=True,
+    )
 
     frame0_candidate: InverseCandidate | None = None
     frame1_candidate: InverseCandidate | None = None
-    if frame0 is None:
+    if frame0 is None and not wall_normal_branches:
         blockers.append(BLOCKER_NO_FRAME0_POSE)
     else:
-        frame0_candidate = _build_candidate(frame0, "frame0_pose", dependencies=(), conflicts=())
-        candidates.append(frame0_candidate)
+        if frame0 is not None:
+            frame0_candidate = _build_candidate(frame0, "frame0_pose", dependencies=(), conflicts=())
+            candidates.append(frame0_candidate)
 
-    if frame1 is None:
+    if frame1 is None and not wall_normal_branches:
         blockers.append(BLOCKER_NO_FRAME1_SEG)
     else:
-        frame1_candidate = _build_candidate(frame1, "frame1_seg", dependencies=(), conflicts=())
-        candidates.append(frame1_candidate)
+        if frame1 is not None:
+            frame1_candidate = _build_candidate(frame1, "frame1_seg", dependencies=(), conflicts=())
+            candidates.append(frame1_candidate)
 
-    if not composites:
+    if not composites and not wall_normal_branches:
         blockers.append(BLOCKER_NO_COMPOSITE)
     else:
         for composite in composites:
@@ -855,12 +1117,16 @@ def generate_inverse_scorer_candidates(
                 )
             )
     for branch in wall_normal_branches:
-        if any(candidate.effect.action_id == branch.action_id for candidate in candidates):
+        if any(
+            candidate.effect.action_id == branch.action_id
+            and candidate.effect.action_kind == branch.action_kind
+            for candidate in candidates
+        ):
             continue
         candidates.append(
             InverseCandidate(
                 effect=branch,
-                menu_cluster_hint="frame1_seg_margin",
+                menu_cluster_hint=_wall_normal_menu_cluster_hint(branch),
                 dependencies=(),
                 conflicts=(),
             )
@@ -923,6 +1189,8 @@ def build_candidate_queue(
             {
                 "schema": INVERSE_SCORER_QUEUE_ROW_SCHEMA,
                 "action_id": effect.action_id,
+                "action_kind": effect.action_kind,
+                "arm": effect.arm,
                 "family": effect.family,
                 "authority": effect.authority,
                 "normalization_scope": effect.normalization_scope,
@@ -1394,6 +1662,8 @@ def _is_frame0_pose_action(effect: ActionEffect) -> bool:
 def _is_frame1_seg_action(effect: ActionEffect) -> bool:
     text = " ".join([effect.action_kind, effect.arm or "", *effect.trained_groups, *effect.payload_sections]).lower()
     return (
+        not _is_wall_normal_branch_action(effect)
+        and
         ("birth" in text or "seg" in text or "head_rgb_1" in text)
         and "frame0_pose" not in text
         and "composite" not in text
@@ -1410,10 +1680,20 @@ def _is_composite_action(effect: ActionEffect) -> bool:
 def _is_wall_normal_branch_action(effect: ActionEffect) -> bool:
     text = " ".join([effect.action_kind, effect.inverse_source or "", *effect.payload_sections]).lower()
     return (
-        "sidecar_candidate" in text
+        effect.action_kind.startswith("wall_normal_")
+        or "sidecar_candidate" in text
         or "wall_normal_branch" in text
         or "target_region_action_sidecar" in text
     )
+
+
+def _wall_normal_menu_cluster_hint(effect: ActionEffect) -> str:
+    text = " ".join([effect.action_kind, effect.arm or "", *effect.payload_sections]).lower()
+    if "sidecar" in text:
+        return "target_region_sidecar_fallback"
+    if "backend" in text:
+        return "backend_realization"
+    return "frame1_seg_margin"
 
 
 def _composite_text(text: str) -> bool:
@@ -1633,6 +1913,7 @@ __all__ = [
     "BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED",
     "BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_TRUE_WALL_NORMAL",
     "BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED",
+    "BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING",
     "DIRECT_SEG_WALL_ORACLE_SCHEMA",
     "INVERSE_SCORER_GENERATION_SCHEMA",
     "INVERSE_SCORER_QUEUE_ROW_SCHEMA",
@@ -1647,6 +1928,7 @@ __all__ = [
     "build_masked_residual_oracle_action_effect",
     "build_score_program_word",
     "build_target_region_wall_normal_lift_receipt",
+    "build_wall_normal_branch_action_effects",
     "candidate_queue_jsonl",
     "generate_inverse_scorer_candidates",
 ]

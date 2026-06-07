@@ -7,6 +7,10 @@ from pathlib import Path
 import numpy as np
 
 import tac.analysis.snerv_source_forward_producer as source_forward_producer
+from tac.analysis.snerv_source_forward_proof import (
+    SOURCE_FORWARD_SURFACES,
+    SOURCE_FORWARD_TENSOR_NAMES,
+)
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
@@ -231,6 +235,68 @@ def test_source_forward_witness_upstream_fixture_scope_status_is_graph_unproven(
         "snerv_official_torch_trained_checkpoint_source_scope_missing"
         in status["blockers"]
     )
+
+
+def test_source_forward_producer_refreshes_manifest_after_supplied_scorer_tensors() -> None:
+    scorer_tensor_names = {
+        "segnet_input",
+        "posenet_input",
+        "segnet_logits",
+        "segnet_argmax",
+        "posenet_output",
+    }
+    official_tensors = {
+        name: np.zeros((1,), dtype=np.float32)
+        for name in SOURCE_FORWARD_TENSOR_NAMES
+        if name not in scorer_tensor_names
+    }
+    manifest = source_forward_producer.build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[0],
+        tensor_names=official_tensors.keys(),
+        model_source_sha256="8" * 64,
+        checkpoint_sha256="6" * 64,
+        state_dict_sha256="7" * 64,
+        decoder_len=7,
+        source_scope="official_trained_checkpoint",
+        trained_checkpoint_lineage="official_trained_checkpoint_state_dict",
+        capture_origin="official_upstream_trained_checkpoint",
+    )
+    scorer_tensors = {
+        "segnet_input": np.zeros((1, 3, 2, 2), dtype=np.float32),
+        "posenet_input": np.zeros((1, 6, 2, 2), dtype=np.float32),
+        "segnet_logits": np.zeros((1, 4, 2, 2), dtype=np.float32),
+        "segnet_argmax": np.zeros((1, 2, 2), dtype=np.int64),
+        "posenet_output": np.zeros((1, 6), dtype=np.float32),
+    }
+    scorer_deltas = {
+        "d_seg": 0.0,
+        "d_pose": 0.0,
+        "delta_score_nonrate": 0.0,
+        "by_surface": {
+            surface: {"d_seg": 0.0, "d_pose": 0.0}
+            for surface in SOURCE_FORWARD_SURFACES
+        },
+    }
+
+    row = source_forward_producer.build_snerv_source_forward_proof_from_archive_packet(
+        action_id="refresh_manifest",
+        archive_packet=_official_packet(),
+        pair_ids=[0],
+        official_torch_tensors=official_tensors,
+        official_torch_capture_manifest=manifest,
+        scorer_tensors_by_surface={"official_torch": scorer_tensors},
+        scorer_deltas=scorer_deltas,
+        generated_utc="2026-06-07T00:00:00Z",
+    )
+
+    refreshed = row["producer_status"]["official_torch_upstream_capture_manifest"]
+    status = row["producer_status"]["official_torch_upstream_capture_manifest_status"]
+    assert status["passed"] is True
+    assert refreshed["source_graph_unproven"] is False
+    assert refreshed["missing_required_tensor_names"] == []
+    assert row["surface_provenance"]["official_torch"][
+        "tensor_capture_authority"
+    ] == "upstream_snerv_t_forward_source_graph"
 
 
 def _legacy_packet() -> bytes:

@@ -23,6 +23,7 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_NO_COMPOSITE,
     BLOCKER_REGION_SUPPORT_IDENTITY_MISSING,
     BLOCKER_REGION_SUPPORT_RESEARCH_ONLY,
+    BLOCKER_SCORE_DELTA_MISSING,
     BLOCKER_SCORE_PROGRAM_ARCHIVE_HASH_MISSING,
     BLOCKER_SCORE_PROGRAM_INFLATE_MISSING,
     BLOCKER_SCORE_PROGRAM_PARSEBACK_MISSING,
@@ -34,12 +35,14 @@ from tac.analysis.inverse_scorer_actions import (
     BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_CROSSED,
     BLOCKER_WALL_NORMAL_DIRECT_TEACHER_NOT_TRUE_WALL_NORMAL,
     BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED,
+    BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING,
     DIRECT_SEG_WALL_ORACLE_SCHEMA,
     SCORE_PROGRAM_WORD_SCHEMA,
     TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
     build_direct_seg_wall_oracle_receipt,
     build_score_program_word,
     build_target_region_wall_normal_lift_receipt,
+    build_wall_normal_branch_action_effects,
     generate_inverse_scorer_candidates,
 )
 from tac.analysis.pr110_baseline_reproduction import (
@@ -444,6 +447,65 @@ def test_target_region_wall_normal_lift_names_backend_gap_and_sidecar_fallback()
     assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in receipt["blockers"]
     assert receipt["decision_state"] == "BACKEND_REALIZATION_FAILED"
     assert receipt["score_claim"] is False
+
+
+def test_wall_normal_lift_receipt_materializes_same_action_branch_effects() -> None:
+    direct = _direct_wall_candidate()
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+
+    effects = build_wall_normal_branch_action_effects(
+        receipt,
+        artifact_ref="/tmp/training_artifact.json",
+    )
+
+    assert [effect.action_kind for effect in effects] == [
+        "wall_normal_direct_teacher",
+        "wall_normal_backend_fit",
+        "wall_normal_sidecar_fallback",
+    ]
+    assert {effect.action_id for effect in effects} == {"wall-normal-action"}
+    assert {effect.support_sha256 for effect in effects} == {
+        receipt["direct_teacher"]["support_sha256"]
+    }
+    assert {effect.support_source for effect in effects} == {
+        receipt["direct_teacher"]["support_source"]
+    }
+    direct_effect, backend_effect, sidecar_effect = effects
+    assert direct_effect.exact_score_decision == "accept"
+    assert direct_effect.wrong_to_target == 4
+    assert direct_effect.delta_score_nonrate == pytest.approx(-1.0)
+    assert backend_effect.exact_score_decision == "reject"
+    assert backend_effect.wrong_to_target == 0
+    assert BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED in backend_effect.blockers
+    assert sidecar_effect.exact_score_decision == "reject"
+    assert sidecar_effect.delta_score_nonrate is None
+    assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in sidecar_effect.blockers
+    assert (
+        BLOCKER_WALL_NORMAL_SIDECAR_DISTORTION_ENDPOINTS_MISSING
+        in sidecar_effect.blockers
+    )
+
+    result = generate_inverse_scorer_candidates(list(effects))
+    rows = result["candidate_queue"]
+    assert {row["action_kind"] for row in rows} == {
+        "wall_normal_direct_teacher",
+        "wall_normal_backend_fit",
+        "wall_normal_sidecar_fallback",
+    }
+    assert {row["action_id"] for row in rows} == {"wall-normal-action"}
+    sidecar_row = next(row for row in rows if row["action_kind"] == "wall_normal_sidecar_fallback")
+    assert BLOCKER_SCORE_DELTA_MISSING in sidecar_row["blockers"]
 
 
 def test_target_region_wall_normal_lift_blocks_when_direct_teacher_missing() -> None:
@@ -975,6 +1037,77 @@ def test_generate_inverse_evaluate_actions_cli_reads_training_artifact_base_iden
     assert commutator["measured_commutator_count"] == 2
     assert commutator["needs_measurement_count"] == 0
     assert commutator["measurement_queue"] == []
+
+
+def test_generate_inverse_evaluate_actions_cli_reads_wall_normal_lift_branches(
+    tmp_path: Path,
+) -> None:
+    direct = _direct_wall_candidate()
+    receipt = build_target_region_wall_normal_lift_receipt(
+        action_id="wall-normal-action",
+        pair_id=0,
+        target_class=2,
+        region_id="b0/c2/r1",
+        direct_teacher_candidate=direct,
+        backend_birth_receipt=_backend_birth_receipt(
+            wrong_to_target=0,
+            accepted=False,
+        ),
+        sidecar_candidate=direct,
+    )
+    training_artifact = tmp_path / "training_artifact.json"
+    pr110_ledger = tmp_path / "pr110_action_effects.jsonl"
+    out_dir = tmp_path / "out"
+    training_artifact.write_text(
+        json.dumps({"target_region_wall_normal_lift": receipt}),
+        encoding="utf-8",
+    )
+    append_action_effect(_pr110_k1_replay_effect(), pr110_ledger)
+
+    repo_root = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools" / "generate_inverse_evaluate_actions.py"),
+            "--seed-training-artifact",
+            str(training_artifact),
+            "--pr110-action-effects",
+            str(pr110_ledger),
+            "--output-dir",
+            str(out_dir),
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    rows = read_action_effects(out_dir / "action_effect_rows.jsonl")
+    hinerv_rows = [row for row in rows if row.family == "hinerv"]
+    assert [row.action_kind for row in hinerv_rows] == [
+        "wall_normal_direct_teacher",
+        "wall_normal_backend_fit",
+        "wall_normal_sidecar_fallback",
+    ]
+    assert {row.action_id for row in hinerv_rows} == {"wall-normal-action"}
+    assert {row.support_sha256 for row in hinerv_rows} == {
+        receipt["direct_teacher"]["support_sha256"]
+    }
+
+    queue_rows = [
+        json.loads(line)
+        for line in (out_dir / "inverse_candidate_queue.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    hinerv_queue = [row for row in queue_rows if row["family"] == "hinerv"]
+    assert {row["action_kind"] for row in hinerv_queue} == {
+        "wall_normal_direct_teacher",
+        "wall_normal_backend_fit",
+        "wall_normal_sidecar_fallback",
+    }
+    sidecar_row = next(row for row in hinerv_queue if row["action_kind"] == "wall_normal_sidecar_fallback")
+    assert BLOCKER_SCORE_DELTA_MISSING in sidecar_row["blockers"]
+    assert BLOCKER_WALL_NORMAL_SIDECAR_ARCHIVE_UNCLOSED in sidecar_row["blockers"]
 
 
 def test_generate_inverse_evaluate_actions_cli_does_not_call_blocked_reverse_producer_missing(
