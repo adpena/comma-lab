@@ -436,8 +436,28 @@ def validate_snerv_output2_boundary_verdict(
         )
     if (row.get("passed") is True) != (verdict == SOURCE_IDENTICAL):
         blockers.append("snerv_output2_boundary_passed_flag_mismatch")
+    nested_blockers = [str(value) for value in row.get("blockers") or []]
+    if nested_blockers:
+        blockers.append("snerv_output2_boundary_nested_blockers_present")
+    has_output2 = dict(row.get("has_output2_by_surface") or {})
+    missing_surfaces = [
+        surface
+        for surface in SOURCE_FORWARD_SURFACES
+        if has_output2.get(surface) is not True
+    ]
+    if missing_surfaces:
+        blockers.extend(
+            f"snerv_output2_missing_source_forward_surface:{surface}"
+            for surface in missing_surfaces
+        )
     raw_storage = row.get("archive_tub_output2_storage")
     storage = raw_storage if isinstance(raw_storage, Mapping) else {}
+    if storage.get("receiver_frame_decode_consumes_output2") is not True:
+        blockers.append("snerv_output2_not_consumed_by_receiver_frame_decode")
+    if storage.get("receiver_output2_frame_shape_match") is not True:
+        blockers.append("snerv_output2_receiver_frame_shape_mismatch")
+    if storage.get("receiver_executes_output2_fusion_from_payload") is not True:
+        blockers.append("snerv_output2_receiver_fusion_not_payload_bound")
     shape_adapter_applied = any(
         bool(storage.get(key))
         for key in (
@@ -462,7 +482,7 @@ def validate_snerv_output2_boundary_verdict(
         "minimal_causal_basis_recommendation": list(
             row.get("minimal_causal_basis_recommendation") or []
         ),
-        "blockers": [str(value) for value in row.get("blockers") or []],
+        "blockers": nested_blockers,
         "required_next_step": row.get("required_next_step"),
         "score_claim": False,
         "promotion_eligible": False,
@@ -621,6 +641,10 @@ def _validate_official_torch_trained_checkpoint_lineage(
     *,
     blockers: list[str],
 ) -> None:
+    if str(surface_map.get("tensor_capture_authority") or "") != "upstream_snerv_t_forward_source_graph":
+        blockers.append(
+            "snerv_source_forward_official_torch_upstream_tensor_capture_authority_missing"
+        )
     lineage = str(surface_map.get("trained_checkpoint_lineage") or "")
     if lineage not in SOURCE_FORWARD_OFFICIAL_TORCH_ALLOWED_TRAINED_LINEAGES:
         blockers.append(
@@ -630,7 +654,11 @@ def _validate_official_torch_trained_checkpoint_lineage(
         blockers.append(
             "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
         )
-    for field in ("checkpoint_sha256", "state_dict_sha256"):
+    if str(surface_map.get("capture_origin") or "") != "official_upstream_trained_checkpoint":
+        blockers.append(
+            "snerv_source_forward_official_torch_capture_origin_missing"
+        )
+    for field in ("checkpoint_sha256", "state_dict_sha256", "model_source_sha256"):
         if not _looks_like_sha256(surface_map.get(field)):
             blockers.append(
                 f"snerv_source_forward_official_torch_{field}_invalid"

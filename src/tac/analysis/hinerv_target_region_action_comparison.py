@@ -1,0 +1,962 @@
+# SPDX-License-Identifier: MIT
+"""Compare receiver-survived HiNeRV target-region actions against backend fit.
+
+This module turns a proven target-region action sidecar into a fixed-object
+compiler comparison: same action id, same support hash, measured receiver
+survival, byte grammar alternatives, and whatever backend realization receipt
+is present.  It intentionally does not promote a candidate; non-current
+grammars are blocked until a receiver decoder actually consumes them.
+"""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+import math
+import struct
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import brotli  # type: ignore[import-not-found]
+import numpy as np
+
+from tac.analysis.action_effect import ActionEffect
+from tac.analysis.path_action_producer import path_tube_support_from_mask
+from tac.repo_io import sha256_file
+from tac.submission_archive import (
+    MINIMAL_SINGLE_MEMBER_NAME,
+    build_minimal_single_member_archive_bytes,
+)
+from tac.substrates.hi_nerv.archive import (
+    HIV1_HEADER_FMT,
+    HIV1_HEADER_SIZE,
+    HIV1_MAGIC,
+    split_archive_sections,
+)
+from tac.substrates.hi_nerv.archive_candidate import _read_hiv1_payload_from_archive_zip
+from tac.substrates.hi_nerv.target_region_actions import (
+    TARGET_REGION_ACTION_META_KEY,
+    TargetRegionPixelAction,
+    decode_target_region_actions,
+    encode_target_region_actions,
+    encode_target_region_actions_payload,
+    target_region_action_payload_codec,
+    target_region_action_section_telemetry,
+    target_region_action_support_sha256,
+)
+
+HI_NERV_TARGET_REGION_ACTION_COMPARISON_SCHEMA = (
+    "hi_nerv_target_region_action_sidecar_backend_comparison.v1"
+)
+HI_NERV_TARGET_REGION_ACTION_COMPARISON_ROW_SCHEMA = (
+    "hi_nerv_target_region_action_sidecar_backend_comparison_row.v1"
+)
+
+_BACKEND_LADDER_TIERS = (
+    ("latents_fine", ("latents_fine",)),
+    ("latents_fine+head_rgb_1", ("latents_fine", "head_rgb_1")),
+    (
+        "latents_fine+head_rgb_1+fine_injector",
+        ("latents_fine", "head_rgb_1", "fine_injector"),
+    ),
+    (
+        "latents_fine+head_rgb_1+fine_injector+feature_grids",
+        ("latents_fine", "head_rgb_1", "fine_injector", "feature_grids"),
+    ),
+    (
+        "latents_fine+head_rgb_1+fine_injector+feature_grids+pair_adapter_class_basis",
+        (
+            "latents_fine",
+            "head_rgb_1",
+            "fine_injector",
+            "feature_grids",
+            "pair_adapter_class_basis",
+        ),
+    ),
+)
+
+
+def build_hinerv_target_region_action_comparison_from_archive(
+    archive_zip_path: str | Path,
+    *,
+    survival_receipt: Mapping[str, Any] | str | Path,
+    runner_report: Mapping[str, Any] | str | Path | None = None,
+    action_id: str | None = None,
+) -> dict[str, Any]:
+    """Build a comparison report from a byte-closed HIV1 archive and receipts."""
+
+    archive_path = Path(archive_zip_path).expanduser().resolve(strict=True)
+    survival = _load_mapping(survival_receipt)
+    report = None if runner_report is None else _load_mapping(runner_report)
+    wall_normal = _find_first_wall_normal_lift(report) if report is not None else {}
+    sidecar_candidate = _find_first_sidecar_candidate(report) if report is not None else {}
+
+    payload = _read_hiv1_payload_from_archive_zip(archive_path)
+    sections = split_archive_sections(payload)
+    meta = dict(sections.meta)
+    raw_b64 = meta.get(TARGET_REGION_ACTION_META_KEY)
+    if not isinstance(raw_b64, str) or not raw_b64:
+        raise ValueError("archive does not contain a target-region action meta payload")
+    stored_payload = base64.b64decode(raw_b64.encode("ascii"), validate=True)
+    actions = decode_target_region_actions(stored_payload)
+    if not actions:
+        raise ValueError("target-region action payload decodes to no actions")
+    program = _ActionProgram(
+        actions=tuple(actions),
+        stored_payload=bytes(stored_payload),
+        payload=payload,
+        meta=meta,
+        archive_path=archive_path,
+        archive_bytes=int(archive_path.stat().st_size),
+        archive_sha256=sha256_file(archive_path),
+    )
+    return build_hinerv_target_region_action_comparison(
+        program=program,
+        survival_receipt=survival,
+        wall_normal_lift=wall_normal,
+        sidecar_candidate=sidecar_candidate,
+        action_id=action_id,
+    )
+
+
+def build_hinerv_target_region_action_comparison(
+    *,
+    program: _ActionProgram,
+    survival_receipt: Mapping[str, Any],
+    wall_normal_lift: Mapping[str, Any] | None = None,
+    sidecar_candidate: Mapping[str, Any] | None = None,
+    action_id: str | None = None,
+) -> dict[str, Any]:
+    """Build the fixed-action sidecar-vs-backend report."""
+
+    wall = dict(wall_normal_lift or {})
+    chosen_action_id = (
+        str(action_id)
+        if action_id
+        else str(wall.get("action_id") or _first_text(survival_receipt, "action_id") or "")
+    )
+    if not chosen_action_id:
+        chosen_action_id = _program_action_id(program)
+
+    sidecar_admission = _sidecar_admission_from_wall(wall, sidecar_candidate or {})
+    direct = _direct_teacher_from_wall(wall)
+    backend = _backend_fit_from_wall(wall)
+    support_sha256 = target_region_action_support_sha256(list(program.actions))
+    action_count = len(program.actions)
+    support_masks = [_action_mask(action) for action in program.actions]
+    support_rows = _support_encoding_rows(program.actions, support_masks)
+    action_rows = _action_encoding_rows(program.actions)
+    byte_decomposition = _byte_decomposition(program)
+
+    base_zip = _action_free_archive_bytes(program)
+    old_bytes = int(base_zip["archive_bytes_without_target_region_actions"])
+    current_row = _comparison_row(
+        candidate_id="current_hiv1_target_region_action_brotli",
+        action_id=chosen_action_id,
+        candidate_kind="sidecar_grammar",
+        support_sha256=support_sha256,
+        support_encoding="explicit_yx_u16_coordinates",
+        action_encoding="exact_rgb_u8",
+        encoded_payload_bytes=int(byte_decomposition["stored_payload_bytes"]),
+        support_encoded_bytes=int(byte_decomposition["support_coord_u16_bytes"]),
+        byte_authority="exact_archive_zip_delta",
+        old_bytes=old_bytes,
+        new_bytes=int(program.archive_bytes),
+        sidecar_admission=sidecar_admission,
+        survival_receipt=survival_receipt,
+        first_failed_surface=None,
+        blockers=[],
+        exact_payload_equivalent=True,
+        receiver_bound=True,
+    )
+    sidecar_rows = [current_row]
+    for support in support_rows:
+        for action in action_rows:
+            if support["encoding"] == "explicit_yx_u16_coordinates" and action["encoding"] == "exact_rgb_u8":
+                continue
+            exact_payload_equivalent = bool(
+                support["lossless"] is True and action["lossless"] is True
+            )
+            encoded_bytes = (
+                int(byte_decomposition["raw_fixed_header_bytes"])
+                + int(support["encoded_bytes"])
+                + int(action["encoded_bytes"])
+            )
+            blockers = ["target_region_action_runtime_decoder_not_bound"]
+            first_failed = "runtime_decoder_not_bound"
+            if not exact_payload_equivalent:
+                blockers.insert(0, "target_region_action_candidate_not_lossless")
+                first_failed = "action_or_support_not_lossless"
+            sidecar_rows.append(
+                _comparison_row(
+                    candidate_id=f"{support['encoding']}__{action['encoding']}",
+                    action_id=chosen_action_id,
+                    candidate_kind="sidecar_grammar_candidate",
+                    support_sha256=support_sha256,
+                    support_encoding=str(support["encoding"]),
+                    action_encoding=str(action["encoding"]),
+                    encoded_payload_bytes=encoded_bytes,
+                    support_encoded_bytes=(
+                        None if support["encoded_bytes"] is None else int(support["encoded_bytes"])
+                    ),
+                    byte_authority="exact_candidate_payload_bytes_not_receiver_bound",
+                    old_bytes=0 if exact_payload_equivalent else None,
+                    new_bytes=encoded_bytes if exact_payload_equivalent else None,
+                    sidecar_admission=sidecar_admission if exact_payload_equivalent else {},
+                    survival_receipt={},
+                    first_failed_surface=first_failed,
+                    blockers=blockers,
+                    exact_payload_equivalent=exact_payload_equivalent,
+                    receiver_bound=False,
+                )
+            )
+
+    backend_ladder = _backend_ladder_rows(
+        action_id=chosen_action_id,
+        backend_fit=backend,
+        support_sha256=support_sha256,
+    )
+    best_sidecar = min(
+        sidecar_rows,
+        key=lambda row: (
+            row["first_failed_surface"] is not None,
+            -float(row["action_effect"].get("value_per_byte") or -1.0e99),
+        ),
+    )
+    measured_backend = [row for row in backend_ladder if row["status"] == "measured"]
+    best_backend = max(
+        measured_backend,
+        key=lambda row: int(row.get("wrong_to_target") or 0),
+        default=None,
+    )
+    direct_support_sha = _nested_first_text(
+        direct,
+        ("support_sha256",),
+        ("action_effect", "support_sha256"),
+    )
+    sidecar_support_mismatch = bool(direct_support_sha and direct_support_sha != support_sha256)
+    next_blocker = (
+        "optimize_sidecar_grammar_current_receiver_survives_backend_does_not"
+        if bool(current_row["survival"]["inflate_survived"]) and not _backend_realized(backend)
+        else "rerun_receiver_surface_proof_or_backend_ladder"
+    )
+    if sidecar_support_mismatch:
+        next_blocker = "direct_teacher_and_survived_sidecar_support_hashes_diverge"
+
+    return {
+        "schema": HI_NERV_TARGET_REGION_ACTION_COMPARISON_SCHEMA,
+        "action_id": chosen_action_id,
+        "family": "hinerv",
+        "archive_path": program.archive_path.as_posix(),
+        "archive_sha256": program.archive_sha256,
+        "archive_bytes": int(program.archive_bytes),
+        "action_count": action_count,
+        "support_sha256": support_sha256,
+        "support_cardinality": int(sum(action.pixel_count for action in program.actions)),
+        "byte_decomposition": byte_decomposition,
+        "action_free_archive": base_zip,
+        "support_identity": {
+            "sidecar_support_sha256": support_sha256,
+            "direct_teacher_support_sha256": direct_support_sha,
+            "same_as_direct_teacher": not sidecar_support_mismatch,
+            "blockers": (
+                ["direct_teacher_and_survived_sidecar_support_hashes_diverge"]
+                if sidecar_support_mismatch
+                else []
+            ),
+        },
+        "sidecar_encoding_candidates": sidecar_rows,
+        "backend_ladder": backend_ladder,
+        "comparison": {
+            "best_receiver_bound_sidecar_candidate_id": current_row["candidate_id"],
+            "best_sidecar_candidate_id": best_sidecar["candidate_id"],
+            "best_backend_tier": None if best_backend is None else best_backend["tier"],
+            "backend_realized": _backend_realized(backend),
+            "sidecar_current_inflate_survived": bool(current_row["survival"]["inflate_survived"]),
+            "next_blocker": next_blocker,
+            "promotable": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "direct_teacher": direct,
+        "backend_fit": backend,
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+@dataclass(frozen=True)
+class TargetRegionActionProgram:
+    """Decoded target-region action payload plus archive custody."""
+
+    actions: tuple[TargetRegionPixelAction, ...]
+    stored_payload: bytes
+    payload: bytes
+    meta: dict[str, object]
+    archive_path: Path
+    archive_bytes: int
+    archive_sha256: str
+
+
+class _ActionProgram(TargetRegionActionProgram):
+    """Backward-compatible alias for tests and private callers."""
+
+    def __init__(
+        self,
+        *,
+        actions: tuple[TargetRegionPixelAction, ...],
+        stored_payload: bytes,
+        payload: bytes,
+        meta: Mapping[str, object],
+        archive_path: Path,
+        archive_bytes: int,
+        archive_sha256: str,
+    ) -> None:
+        super().__init__(
+            actions=tuple(actions),
+            stored_payload=bytes(stored_payload),
+            payload=bytes(payload),
+            meta=dict(meta),
+            archive_path=Path(archive_path),
+            archive_bytes=int(archive_bytes),
+            archive_sha256=str(archive_sha256),
+        )
+
+
+def _comparison_row(
+    *,
+    candidate_id: str,
+    action_id: str,
+    candidate_kind: str,
+    support_sha256: str,
+    support_encoding: str,
+    action_encoding: str,
+    encoded_payload_bytes: int,
+    support_encoded_bytes: int | None,
+    byte_authority: str,
+    old_bytes: int | None,
+    new_bytes: int | None,
+    sidecar_admission: Mapping[str, Any],
+    survival_receipt: Mapping[str, Any],
+    first_failed_surface: str | None,
+    blockers: Sequence[str],
+    exact_payload_equivalent: bool,
+    receiver_bound: bool,
+) -> dict[str, Any]:
+    old_d_seg = _first_float(sidecar_admission, "old_d_seg")
+    new_d_seg = _first_float(sidecar_admission, "new_d_seg")
+    old_d_pose = _first_float(sidecar_admission, "old_d_pose")
+    new_d_pose = _first_float(sidecar_admission, "new_d_pose")
+    transitions = _transition_counts(sidecar_admission)
+    parseback_survived = bool(survival_receipt.get("parseback_survived") is True)
+    inflate_survived = bool(survival_receipt.get("inflate_survived") is True)
+    fakequant_survived = bool(survival_receipt.get("fakequant_survived") is True)
+    row_blockers = list(dict.fromkeys(str(value) for value in blockers if str(value)))
+    if receiver_bound:
+        if not fakequant_survived:
+            row_blockers.append("target_region_action_fakequant_survival_missing")
+        if not parseback_survived:
+            row_blockers.append("target_region_action_parseback_survival_missing")
+        if not inflate_survived:
+            row_blockers.append("target_region_action_inflate_survival_missing")
+
+    effect = ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind=candidate_kind,
+        inverse_source="receiver_surface_masked_rgb_residual_on_support",
+        frame_index=1,
+        frame_incidence="seg_pose_joint",
+        candidate_status="measured" if receiver_bound and not row_blockers else "rejected",
+        authority="inflate_raw" if receiver_bound else "analysis_payload_model",
+        normalization_scope="batch_local",
+        producer="hinerv_target_region_action_comparison",
+        consumer="long_run_readiness_dag",
+        pair_ids=_int_tuple(survival_receipt.get("pair_indices")),
+        class_ids=_int_tuple(sidecar_admission.get("target_class")),
+        region_ids=_str_tuple(sidecar_admission.get("region_id")),
+        payload_sections=(support_encoding, action_encoding),
+        old_d_seg=old_d_seg,
+        new_d_seg=new_d_seg,
+        old_d_pose=old_d_pose,
+        new_d_pose=new_d_pose,
+        old_bytes=old_bytes,
+        new_bytes=new_bytes,
+        receiver_surface={
+            "uint8_changed_pixels": _first_int(survival_receipt, "inflated_raw_action_changed_pixels")
+            or _first_int(survival_receipt, "receiver_changed_action_pixels"),
+            "seg_argmax_changed_pixels": transitions.get("argmax_changed_count_region"),
+            "seg_wrong_to_target_count": transitions.get("wrong_to_target_count"),
+            "seg_target_hard_lost_count": transitions.get("target_to_wrong_count"),
+            "seg_wrong_to_wrong_count": transitions.get("wrong_to_wrong_count"),
+        },
+        exact_score_decision="accept" if receiver_bound and not row_blockers else "reject",
+        parseback_survived=parseback_survived if receiver_bound else False,
+        inflate_survived=inflate_survived if receiver_bound else False,
+        fakequant_survived=fakequant_survived if receiver_bound else None,
+        wrong_to_target=transitions.get("wrong_to_target_count"),
+        target_to_wrong=transitions.get("target_to_wrong_count"),
+        wrong_to_wrong=transitions.get("wrong_to_wrong_count"),
+        net_target_support_delta=transitions.get("net_target_support_delta"),
+        argmax_changed_count_region=transitions.get("argmax_changed_count_region"),
+        uint8_changed_count_region=_first_int(survival_receipt, "inflated_raw_action_changed_pixels")
+        or _first_int(survival_receipt, "receiver_changed_action_pixels"),
+        support_source="survived_target_region_action_sidecar",
+        support_cardinality=_first_int(survival_receipt, "total_action_pixels")
+        or _first_int(sidecar_admission, "target_region_action_pixel_count"),
+        support_sha256=support_sha256,
+        support_encoding=support_encoding,
+        support_encoded_bytes=support_encoded_bytes,
+        support_research_only=not receiver_bound,
+        seg_score_delta=_first_float(sidecar_admission, "seg_score_delta"),
+        pose_score_delta=_first_float(sidecar_admission, "pose_score_delta"),
+        blockers=row_blockers,
+    )
+    return {
+        "schema": HI_NERV_TARGET_REGION_ACTION_COMPARISON_ROW_SCHEMA,
+        "candidate_id": candidate_id,
+        "candidate_kind": candidate_kind,
+        "action_id": action_id,
+        "support_sha256": support_sha256,
+        "support_encoding": support_encoding,
+        "action_encoding": action_encoding,
+        "encoded_payload_bytes": int(encoded_payload_bytes),
+        "byte_authority": byte_authority,
+        "exact_payload_equivalent": bool(exact_payload_equivalent),
+        "receiver_bound": bool(receiver_bound),
+        "first_failed_surface": first_failed_surface,
+        "blockers": row_blockers,
+        "survival": {
+            "fakequant_survived": bool(fakequant_survived) if receiver_bound else None,
+            "parseback_survived": bool(parseback_survived) if receiver_bound else False,
+            "inflate_survived": bool(inflate_survived) if receiver_bound else False,
+        },
+        "action_effect": effect.as_dict(),
+        "promotion_eligible": False,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _byte_decomposition(program: _ActionProgram) -> dict[str, Any]:
+    raw_payload = encode_target_region_actions(list(program.actions))
+    selected_payload = encode_target_region_actions_payload(list(program.actions))
+    support_bytes = int(sum(action.yx.nbytes for action in program.actions))
+    rgb_bytes = int(sum(action.rgb_u8.nbytes for action in program.actions))
+    raw_fixed = int(len(raw_payload) - support_bytes - rgb_bytes)
+    meta_text_bytes = len(base64.b64encode(program.stored_payload))
+    meta_without = dict(program.meta)
+    meta_without.pop(TARGET_REGION_ACTION_META_KEY, None)
+    meta_with_bytes = len(json.dumps(program.meta, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    meta_without_bytes = len(
+        json.dumps(meta_without, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
+    return {
+        "schema": "hi_nerv_target_region_action_byte_decomposition.v1",
+        "raw_payload_bytes": len(raw_payload),
+        "stored_payload_bytes": len(program.stored_payload),
+        "selected_payload_reencoded_bytes": len(selected_payload),
+        "payload_codec": target_region_action_payload_codec(program.stored_payload),
+        "support_coord_u16_bytes": support_bytes,
+        "rgb_u8_bytes": rgb_bytes,
+        "raw_fixed_header_bytes": raw_fixed,
+        "payload_compression_savings_bytes": len(raw_payload) - len(program.stored_payload),
+        "base64_text_bytes": meta_text_bytes,
+        "meta_json_bytes_with_action": meta_with_bytes,
+        "meta_json_bytes_without_action": meta_without_bytes,
+        "meta_json_action_delta_bytes": meta_with_bytes - meta_without_bytes,
+        "action_count": len(program.actions),
+        "pixel_count": int(sum(action.pixel_count for action in program.actions)),
+        "target_region_action_section_telemetry": target_region_action_section_telemetry(
+            list(program.actions)
+        ),
+    }
+
+
+def _action_free_archive_bytes(program: _ActionProgram) -> dict[str, Any]:
+    sections = split_archive_sections(program.payload)
+    meta_without = dict(sections.meta)
+    meta_without.pop(TARGET_REGION_ACTION_META_KEY, None)
+    meta_bytes = json.dumps(meta_without, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    rebuilt = (
+        struct.pack(
+            HIV1_HEADER_FMT,
+            HIV1_MAGIC,
+            int(sections.schema_version),
+            int(sections.latent_dim_coarse),
+            int(sections.latent_dim_mid),
+            int(sections.latent_dim_fine),
+            int(sections.num_pairs),
+            len(sections.decoder_blob),
+            len(sections.latents_coarse_blob),
+            len(sections.latents_mid_blob),
+            len(sections.latents_fine_blob),
+            len(meta_bytes),
+        )
+        + sections.decoder_blob
+        + sections.latents_coarse_blob
+        + sections.latents_mid_blob
+        + sections.latents_fine_blob
+        + meta_bytes
+    )
+    archive_without, method_without = build_minimal_single_member_archive_bytes(
+        rebuilt,
+        member_name=MINIMAL_SINGLE_MEMBER_NAME,
+    )
+    archive_with, method_with = build_minimal_single_member_archive_bytes(
+        program.payload,
+        member_name=MINIMAL_SINGLE_MEMBER_NAME,
+    )
+    return {
+        "schema": "hi_nerv_target_region_action_free_archive_bytes.v1",
+        "archive_bytes_with_target_region_actions_actual": int(program.archive_bytes),
+        "archive_bytes_with_target_region_actions_rebuilt_minimal": len(archive_with),
+        "archive_bytes_without_target_region_actions": len(archive_without),
+        "archive_delta_bytes_actual_vs_without": int(program.archive_bytes) - len(archive_without),
+        "archive_delta_bytes_rebuilt_minimal_vs_without": len(archive_with) - len(archive_without),
+        "hiv1_payload_bytes_with_target_region_actions": len(program.payload),
+        "hiv1_payload_bytes_without_target_region_actions": len(rebuilt),
+        "hiv1_payload_delta_bytes": len(program.payload) - len(rebuilt),
+        "zip_method_with_target_region_actions": method_with,
+        "zip_method_without_target_region_actions": method_without,
+        "payload_without_target_region_actions_sha256": hashlib.sha256(rebuilt).hexdigest(),
+        "header_size": HIV1_HEADER_SIZE,
+    }
+
+
+def _support_encoding_rows(
+    actions: Sequence[TargetRegionPixelAction],
+    masks: Sequence[np.ndarray],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    coord_bytes = int(sum(action.yx.nbytes for action in actions))
+    rows.append({"encoding": "explicit_yx_u16_coordinates", "encoded_bytes": coord_bytes, "lossless": True})
+    rows.append({"encoding": "coordinate_list_brotli_q11", "encoded_bytes": _brotli_len(b"".join(action.yx.tobytes(order="C") for action in actions)), "lossless": True})
+    rows.append({"encoding": "bitmap_packbits", "encoded_bytes": sum(_bitmap_bytes(mask) for mask in masks), "lossless": True})
+    rows.append({"encoding": "rle_u32_start_len", "encoded_bytes": sum(_rle_start_len_bytes(mask) for mask in masks), "lossless": True})
+    for tile in (8, 16, 32):
+        rows.append(
+            {
+                "encoding": f"tile_set_{tile}x{tile}_bitmap",
+                "encoded_bytes": sum(_tile_set_bytes(mask, tile=tile) for mask in masks),
+                "lossless": True,
+            }
+        )
+    try:
+        path_total = 0
+        for action, mask in zip(actions, masks, strict=True):
+            support = path_tube_support_from_mask(
+                mask,
+                pair_index=int(action.pair_index),
+                frame_index=int(action.frame_index),
+                target_class=0,
+                epsilon=2.0,
+            )
+            path_total += int(support.as_dict()["support_encoded_bytes"])
+        rows.append({"encoding": "path_tube_zlib_rdp2", "encoded_bytes": path_total, "lossless": True})
+    except Exception as exc:
+        rows.append(
+            {
+                "encoding": "path_tube_zlib_rdp2",
+                "encoded_bytes": None,
+                "lossless": False,
+                "blockers": [f"path_tube_support_failed:{type(exc).__name__}"],
+            }
+        )
+    return rows
+
+
+def _action_encoding_rows(actions: Sequence[TargetRegionPixelAction]) -> list[dict[str, Any]]:
+    rgb = np.concatenate([np.asarray(action.rgb_u8, dtype=np.uint8) for action in actions], axis=0)
+    raw = rgb.tobytes(order="C")
+    rows: list[dict[str, Any]] = [
+        {"encoding": "exact_rgb_u8", "encoded_bytes": len(raw), "lossless": True},
+        {"encoding": "exact_rgb_u8_brotli", "encoded_bytes": _brotli_len(raw), "lossless": True},
+    ]
+    unique = np.unique(rgb, axis=0)
+    index_width = 1 if unique.shape[0] <= 256 else 2 if unique.shape[0] <= 65536 else 4
+    rows.append(
+        {
+            "encoding": "palette_rgb_u8_indices",
+            "encoded_bytes": int(unique.shape[0] * 3 + rgb.shape[0] * index_width),
+            "lossless": True,
+            "palette_size": int(unique.shape[0]),
+            "index_width_bytes": int(index_width),
+        }
+    )
+    constant = bool(unique.shape[0] == 1)
+    rows.append(
+        {
+            "encoding": "constant_class_attractor_rgb_u8",
+            "encoded_bytes": 3,
+            "lossless": constant,
+            "blockers": [] if constant else ["constant_rgb_not_lossless_for_this_action"],
+        }
+    )
+    rows.append(
+        {
+            "encoding": "per_channel_median_scalar_rgb_u8",
+            "encoded_bytes": 3,
+            "lossless": constant,
+            "blockers": [] if constant else ["median_rgb_not_lossless_without_scorer_replay"],
+        }
+    )
+    rows.append(
+        {
+            "encoding": "low_rank_rank1_rgb_float16",
+            "encoded_bytes": int((rgb.shape[0] + 3) * 2),
+            "lossless": False,
+            "blockers": ["low_rank_action_needs_scorer_replay"],
+        }
+    )
+    return rows
+
+
+def _backend_ladder_rows(
+    *,
+    action_id: str,
+    backend_fit: Mapping[str, Any],
+    support_sha256: str,
+) -> list[dict[str, Any]]:
+    measured_groups = {str(value) for value in backend_fit.get("trained_groups") or []}
+    measured = bool(backend_fit)
+    rows: list[dict[str, Any]] = []
+    for tier, groups in _BACKEND_LADDER_TIERS:
+        is_measured = measured and set(groups) == measured_groups
+        status = "not_run_current_artifact" if not is_measured else "measured"
+        blockers = []
+        if status != "measured":
+            blockers.append("hinerv_backend_fit_ladder_tier_not_run_current_artifact")
+        elif not _backend_realized(backend_fit):
+            blockers.extend(_backend_blockers(backend_fit))
+            blockers.append("hinerv_backend_fit_ladder_tier_not_realized")
+        rows.append(
+            {
+                "schema": "hi_nerv_target_region_backend_ladder_row.v1",
+                "action_id": action_id,
+                "support_sha256": support_sha256,
+                "tier": tier,
+                "trained_groups": list(groups),
+                "status": status,
+                "wrong_to_target": _first_int(backend_fit, "wrong_to_target_count") if status == "measured" else None,
+                "target_to_wrong": _first_int(backend_fit, "target_to_wrong_count") if status == "measured" else None,
+                "accepted_step_count": _first_int(backend_fit, "accepted_step_count") if status == "measured" else None,
+                "realized_target_wall": bool(backend_fit.get("realized_target_wall") is True) if status == "measured" else False,
+                "first_failed_surface": None if not blockers else "backend_realization",
+                "blockers": list(dict.fromkeys(blockers)),
+            }
+        )
+    if measured and (not measured_groups or all(set(groups) != measured_groups for _, groups in _BACKEND_LADDER_TIERS)):
+        rows.append(
+            {
+                "schema": "hi_nerv_target_region_backend_ladder_row.v1",
+                "action_id": action_id,
+                "support_sha256": support_sha256,
+                "tier": "observed_current_backend_attempt",
+                "trained_groups": sorted(measured_groups),
+                "status": "measured",
+                "wrong_to_target": _first_int(backend_fit, "wrong_to_target_count"),
+                "target_to_wrong": _first_int(backend_fit, "target_to_wrong_count"),
+                "accepted_step_count": _first_int(backend_fit, "accepted_step_count"),
+                "realized_target_wall": bool(backend_fit.get("realized_target_wall") is True),
+                "first_failed_surface": "backend_realization" if not _backend_realized(backend_fit) else None,
+                "blockers": _backend_blockers(backend_fit),
+            }
+        )
+    return rows
+
+
+def write_hinerv_target_region_action_comparison(
+    report: Mapping[str, Any],
+    output_dir: str | Path,
+) -> dict[str, Any]:
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    report_path = out / "hinerv_target_region_action_sidecar_backend_comparison.json"
+    rows_path = out / "hinerv_target_region_action_sidecar_backend_action_effects.jsonl"
+    report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    rows = list(report.get("sidecar_encoding_candidates") or [])
+    with open(rows_path, "w", encoding="utf-8") as handle:
+        for row in rows:
+            effect = row.get("action_effect") if isinstance(row, Mapping) else None
+            if isinstance(effect, Mapping):
+                handle.write(json.dumps(effect, sort_keys=True) + "\n")
+    return {
+        "report_path": report_path.as_posix(),
+        "action_effect_rows_path": rows_path.as_posix(),
+        "row_count": len(rows),
+        "report_sha256": sha256_file(report_path),
+    }
+
+
+def _action_mask(action: TargetRegionPixelAction) -> np.ndarray:
+    mask = np.zeros((int(action.height), int(action.width)), dtype=bool)
+    y = action.yx[:, 0].astype(np.int64, copy=False)
+    x = action.yx[:, 1].astype(np.int64, copy=False)
+    mask[y, x] = True
+    return mask
+
+
+def _bitmap_bytes(mask: np.ndarray) -> int:
+    packed = np.packbits(np.asarray(mask, dtype=np.uint8).reshape(-1), bitorder="little")
+    return int(len(packed) + 8)
+
+
+def _rle_start_len_bytes(mask: np.ndarray) -> int:
+    flat = np.asarray(mask, dtype=bool).reshape(-1)
+    starts: list[int] = []
+    lengths: list[int] = []
+    cursor = 0
+    while cursor < flat.size:
+        if not bool(flat[cursor]):
+            cursor += 1
+            continue
+        start = cursor
+        while cursor < flat.size and bool(flat[cursor]):
+            cursor += 1
+        starts.append(start)
+        lengths.append(cursor - start)
+    return int(8 + 8 * len(starts))
+
+
+def _tile_set_bytes(mask: np.ndarray, *, tile: int) -> int:
+    src = np.asarray(mask, dtype=bool)
+    total = 8
+    for y0 in range(0, src.shape[0], tile):
+        for x0 in range(0, src.shape[1], tile):
+            block = src[y0 : y0 + tile, x0 : x0 + tile]
+            if not np.any(block):
+                continue
+            total += 4
+            total += len(np.packbits(block.astype(np.uint8).reshape(-1), bitorder="little"))
+    return int(total)
+
+
+def _brotli_len(payload: bytes) -> int:
+    return len(brotli.compress(bytes(payload), quality=11))
+
+
+def _find_first_wall_normal_lift(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, Mapping):
+        if payload.get("schema") == "tac.target_region_wall_normal_lift.v1":
+            return dict(payload)
+        direct = payload.get("target_region_wall_normal_lift")
+        if isinstance(direct, Mapping):
+            return dict(direct)
+        for value in payload.values():
+            found = _find_first_wall_normal_lift(value)
+            if found:
+                return found
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        for value in payload:
+            found = _find_first_wall_normal_lift(value)
+            if found:
+                return found
+    return {}
+
+
+def _find_first_sidecar_candidate(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, Mapping):
+        masked = _nested_mapping(payload, ("candidate_frontier_telemetry", "masked_residual_oracle"))
+        if isinstance(masked.get("best_candidate"), Mapping):
+            return dict(masked["best_candidate"])
+        if payload.get("schema") == "hi_nerv_target_region_masked_residual_oracle_candidate.v1":
+            return dict(payload)
+        for value in payload.values():
+            found = _find_first_sidecar_candidate(value)
+            if found:
+                return found
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        for value in payload:
+            found = _find_first_sidecar_candidate(value)
+            if found:
+                return found
+    return {}
+
+
+def _sidecar_admission_from_wall(
+    wall: Mapping[str, Any],
+    sidecar_candidate: Mapping[str, Any],
+) -> dict[str, Any]:
+    candidate = dict(sidecar_candidate)
+    if not candidate:
+        candidate = _nested_mapping(
+            wall,
+            ("sidecar_fallback",),
+            ("candidate_frontier_telemetry", "masked_residual_oracle", "best_candidate"),
+        )
+    # Most reports keep the full best-candidate deeper in the runner report, so
+    # fall back to direct fields when only the compact wall record is available.
+    admission = _nested_mapping(candidate, ("admission_decision",))
+    out = dict(admission)
+    for key in (
+        "target_class",
+        "region_id",
+        "exact_delta_score_nonrate",
+        "target_region_action_payload_bytes",
+        "region_argmax_transitions",
+        "global_target_transitions",
+        "mask_name",
+    ):
+        if key in candidate and key not in out:
+            out[key] = candidate[key]
+        if key in wall and key not in out:
+            out[key] = wall[key]
+    fallback = _nested_mapping(wall, ("sidecar_fallback",))
+    if fallback:
+        out.setdefault("exact_delta_score_nonrate", fallback.get("exact_delta_score_nonrate"))
+        out.setdefault("target_region_action_payload_bytes", fallback.get("payload_bytes"))
+    return out
+
+
+def _direct_teacher_from_wall(wall: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(_nested_mapping(wall, ("direct_teacher",)))
+
+
+def _backend_fit_from_wall(wall: Mapping[str, Any]) -> dict[str, Any]:
+    return dict(_nested_mapping(wall, ("backend_fit",)))
+
+
+def _backend_realized(backend: Mapping[str, Any]) -> bool:
+    return bool(
+        backend.get("realized_target_wall") is True
+        and int(backend.get("wrong_to_target_count") or 0) > 0
+        and int(backend.get("accepted_step_count") or 0) > 0
+    )
+
+
+def _backend_blockers(backend: Mapping[str, Any]) -> list[str]:
+    blockers = [str(value) for value in backend.get("blockers") or []]
+    action_effect = _nested_mapping(backend, ("action_effect",))
+    blockers.extend(str(value) for value in action_effect.get("blockers") or [])
+    return list(dict.fromkeys(blockers))
+
+
+def _transition_counts(admission_or_candidate: Mapping[str, Any]) -> dict[str, int | None]:
+    transitions = _nested_mapping(admission_or_candidate, ("region_argmax_transitions",))
+    if not transitions:
+        transitions = _nested_mapping(admission_or_candidate, ("argmax_transitions",))
+    return {
+        "wrong_to_target_count": _first_int(transitions, "wrong_to_target_count", "target_hard_won_count"),
+        "target_to_wrong_count": _first_int(transitions, "target_to_wrong_count", "target_hard_lost_count"),
+        "wrong_to_wrong_count": _first_int(transitions, "wrong_to_wrong_count"),
+        "net_target_support_delta": _first_int(transitions, "net_target_support_delta"),
+        "argmax_changed_count_region": _first_int(transitions, "argmax_changed_count_region"),
+    }
+
+
+def _load_mapping(payload: Mapping[str, Any] | str | Path) -> dict[str, Any]:
+    if isinstance(payload, Mapping):
+        return dict(payload)
+    path = Path(payload).expanduser().resolve(strict=True)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _program_action_id(program: _ActionProgram) -> str:
+    digest = hashlib.sha256()
+    digest.update(program.stored_payload)
+    return f"hinerv_target_region_action:{digest.hexdigest()[:24]}"
+
+
+def _nested_mapping(payload: Mapping[str, Any], *paths: Sequence[str]) -> dict[str, Any]:
+    for path in paths:
+        cur: Any = payload
+        for part in path:
+            if not isinstance(cur, Mapping):
+                cur = None
+                break
+            cur = cur.get(part)
+        if isinstance(cur, Mapping):
+            return dict(cur)
+    return {}
+
+
+def _nested_first_text(payload: Mapping[str, Any], *paths: Sequence[str]) -> str | None:
+    for path in paths:
+        cur: Any = payload
+        for part in path:
+            if not isinstance(cur, Mapping):
+                cur = None
+                break
+            cur = cur.get(part)
+        if isinstance(cur, str) and cur:
+            return cur
+    return None
+
+
+def _first_text(payload: Mapping[str, Any], *keys: str) -> str | None:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _first_float(payload: Mapping[str, Any], *keys: str) -> float | None:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, bool) or value is None:
+            continue
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(val):
+            return val
+    return None
+
+
+def _first_int(payload: Mapping[str, Any], *keys: str) -> int | None:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, bool) or value is None:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _int_tuple(value: Any) -> tuple[int, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, int):
+        return (int(value),)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        out: list[int] = []
+        for item in value:
+            if item is None or isinstance(item, bool):
+                continue
+            try:
+                out.append(int(item))
+            except (TypeError, ValueError):
+                continue
+        return tuple(out)
+    try:
+        return (int(value),)
+    except (TypeError, ValueError):
+        return ()
+
+
+def _str_tuple(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,) if value else ()
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item) for item in value if str(item))
+    return (str(value),)
+
+
+__all__ = [
+    "HI_NERV_TARGET_REGION_ACTION_COMPARISON_SCHEMA",
+    "TargetRegionActionProgram",
+    "build_hinerv_target_region_action_comparison",
+    "build_hinerv_target_region_action_comparison_from_archive",
+    "write_hinerv_target_region_action_comparison",
+]

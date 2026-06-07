@@ -2861,6 +2861,9 @@ def _source_forward_action_effect_fixture() -> dict[str, object]:
         surface_provenance=build_snerv_source_forward_surface_provenance(
             pair_ids=[0],
             archive_sha256="1" * 64,
+            tensor_capture_authority_by_surface={
+                "official_torch": "upstream_snerv_t_forward_source_graph"
+            },
             extra_by_surface={
                 "official_torch": {
                     "trained_checkpoint_lineage": (

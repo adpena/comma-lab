@@ -51,6 +51,9 @@ def valid_snerv_source_forward_action_effect(
         surface_provenance=build_snerv_source_forward_surface_provenance(
             pair_ids=pair_ids,
             archive_sha256=archive_sha256,
+            tensor_capture_authority_by_surface={
+                "official_torch": "upstream_snerv_t_forward_source_graph"
+            },
             extra_by_surface={"official_torch": _official_torch_lineage()},
         ),
     )
@@ -116,6 +119,13 @@ def _source_identical_output2_verdict() -> dict[str, Any]:
             "section": "decoder_payload.output_2",
             "sha256": "5" * 64,
             "bytes": 64,
+            "stored": True,
+            "source_payload_present": True,
+            "receiver_executes_output2_fusion_from_payload": True,
+            "receiver_frame_decode_consumes_output2": True,
+            "receiver_output2_frame_shape_match": True,
+            "shape_adapter_forbidden": True,
+            "shape_adapter_applied": False,
         },
         "minimal_causal_basis_recommendation": [
             "keep_output2_source_forward_bound"

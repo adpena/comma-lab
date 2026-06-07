@@ -159,6 +159,13 @@ def _snerv_output2_boundary_verdict(*, verdict: str = SOURCE_IDENTICAL) -> dict:
             "section": "decoder_payload.output_2",
             "sha256": "5" * 64,
             "bytes": 64,
+            "stored": True,
+            "source_payload_present": True,
+            "receiver_executes_output2_fusion_from_payload": passed,
+            "receiver_frame_decode_consumes_output2": passed,
+            "receiver_output2_frame_shape_match": passed,
+            "shape_adapter_forbidden": True,
+            "shape_adapter_applied": False,
         },
         "minimal_causal_basis_recommendation": (
             ["keep_output2_source_forward_bound"]
@@ -195,16 +202,19 @@ def _snerv_surface_provenance(
         "archive_parseback",
         "numpy_receiver",
     )
+    tensor_authority = dict.fromkeys(
+        surfaces,
+        provenance_authority,
+    )
+    if provenance_authority == "real_surface_forward_capture":
+        tensor_authority["official_torch"] = "upstream_snerv_t_forward_source_graph"
     return build_snerv_source_forward_surface_provenance(
         pair_ids=[0],
         archive_sha256="1" * 64,
         producer_by_surface={
             surface: f"{surface}_producer" for surface in surfaces
         },
-        tensor_capture_authority_by_surface=dict.fromkeys(
-            surfaces,
-            provenance_authority,
-        ),
+        tensor_capture_authority_by_surface=tensor_authority,
         scorer_capture_authority_by_surface=dict.fromkeys(
             surfaces,
             provenance_authority,

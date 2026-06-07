@@ -127,6 +127,9 @@ def _surface_provenance(*, source_scope: str = "official_trained_checkpoint") ->
     return build_snerv_source_forward_surface_provenance(
         pair_ids=[0],
         archive_sha256=ARCHIVE_SHA,
+        tensor_capture_authority_by_surface={
+            "official_torch": "upstream_snerv_t_forward_source_graph"
+        },
         extra_by_surface={
             "official_torch": _official_torch_lineage(source_scope=source_scope)
         },
@@ -257,6 +260,28 @@ def test_output2_boundary_forbids_shape_adapter_even_when_values_match() -> None
     assert "snerv_output2_shape_adapter_forbidden" in status["blockers"]
 
 
+def test_output2_boundary_validator_rejects_forged_source_identical_without_receiver_consumption() -> None:
+    verdict = _source_identical_output2_verdict()
+    verdict["archive_tub_output2_storage"]["receiver_frame_decode_consumes_output2"] = False
+
+    status = validate_snerv_output2_boundary_verdict(verdict)
+
+    assert status["passed"] is False
+    assert "snerv_output2_not_consumed_by_receiver_frame_decode" in status["blockers"]
+
+
+def test_output2_boundary_validator_rejects_nested_blockers_and_missing_surface() -> None:
+    verdict = _source_identical_output2_verdict()
+    verdict["blockers"] = ["snerv_output2_tensor_present_but_not_receiver_consumed"]
+    verdict["has_output2_by_surface"]["numpy_receiver"] = False
+
+    status = validate_snerv_output2_boundary_verdict(verdict)
+
+    assert status["passed"] is False
+    assert "snerv_output2_boundary_nested_blockers_present" in status["blockers"]
+    assert "snerv_output2_missing_source_forward_surface:numpy_receiver" in status["blockers"]
+
+
 def test_source_forward_proof_row_requires_clearable_output2_boundary() -> None:
     blocked_boundary = build_snerv_output2_boundary_verdict(
         tensors_by_surface=_tensor_surfaces(output2_delta=1.0),
@@ -326,3 +351,52 @@ def test_source_forward_proof_rejects_fixture_scope_official_torch_authority() -
         "snerv_source_forward_official_torch_trained_checkpoint_source_scope_missing"
         in status["blockers"]
     )
+
+
+def test_source_forward_proof_rejects_official_torch_missing_upstream_capture_authority() -> None:
+    provenance = _surface_provenance()
+    provenance["official_torch"]["tensor_capture_authority"] = "real_surface_forward_capture"
+    row = build_snerv_source_forward_proof_action_effect(
+        action_id=ACTION_ID,
+        archive_sha256=ARCHIVE_SHA,
+        archive_bytes=123,
+        payload_section_hashes={"decoder_payload.output_2": "2" * 64},
+        pair_ids=[0],
+        tensors_by_surface=_tensor_surfaces(),
+        scorer_deltas=_scorer_deltas(),
+        destructive_payload_bit_flip=_bitflip(),
+        output2_boundary_verdict=_source_identical_output2_verdict(),
+        surface_provenance=provenance,
+    )
+
+    status = validate_snerv_source_forward_proof_action_effect(row)
+
+    assert row["passed"] is False
+    assert status["passed"] is False
+    assert (
+        "snerv_source_forward_official_torch_upstream_tensor_capture_authority_missing"
+        in status["blockers"]
+    )
+
+
+def test_source_forward_proof_rejects_official_torch_missing_model_source_sha() -> None:
+    provenance = _surface_provenance()
+    provenance["official_torch"].pop("model_source_sha256")
+    row = build_snerv_source_forward_proof_action_effect(
+        action_id=ACTION_ID,
+        archive_sha256=ARCHIVE_SHA,
+        archive_bytes=123,
+        payload_section_hashes={"decoder_payload.output_2": "2" * 64},
+        pair_ids=[0],
+        tensors_by_surface=_tensor_surfaces(),
+        scorer_deltas=_scorer_deltas(),
+        destructive_payload_bit_flip=_bitflip(),
+        output2_boundary_verdict=_source_identical_output2_verdict(),
+        surface_provenance=provenance,
+    )
+
+    status = validate_snerv_source_forward_proof_action_effect(row)
+
+    assert row["passed"] is False
+    assert status["passed"] is False
+    assert "snerv_source_forward_official_torch_model_source_sha256_invalid" in status["blockers"]
