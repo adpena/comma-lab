@@ -456,6 +456,12 @@ def build_snerv_source_forward_proof_from_archive_packet(
                 tensor_names=tensors_by_surface["official_torch"].keys(),
             )
         )
+        official_torch_upstream_capture_status = (
+            _refresh_official_torch_upstream_capture_status_from_manifest(
+                official_torch_upstream_capture_status,
+                official_torch_manifest_status,
+            )
+        )
     scorer_capture_by_surface: dict[str, dict[str, Any]] = {}
     if capture_torch_scorer_from_rgb:
         if scorer_tensors_by_surface is not None:
@@ -504,6 +510,12 @@ def build_snerv_source_forward_proof_from_archive_packet(
                         official_torch_capture_manifest,
                         pair_ids=pair_ids,
                         tensor_names=tensors_by_surface["official_torch"].keys(),
+                    )
+                )
+                official_torch_upstream_capture_status = (
+                    _refresh_official_torch_upstream_capture_status_from_manifest(
+                        official_torch_upstream_capture_status,
+                        official_torch_manifest_status,
                     )
                 )
 
@@ -1060,6 +1072,32 @@ def _refresh_official_torch_manifest_tensor_set(
             or "official_upstream_trained_checkpoint"
         ),
     )
+
+
+def _refresh_official_torch_upstream_capture_status_from_manifest(
+    status: Mapping[str, Any],
+    manifest_status: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Keep strict capture status aligned after scorer tensors are appended."""
+
+    if not isinstance(status, Mapping):
+        return {}
+    if str(status.get("verdict") or "") not in {
+        "SOURCE_GRAPH_CAPTURED",
+        SOURCE_GRAPH_UNPROVEN,
+        "",
+    }:
+        return dict(status)
+    manifest_blockers = [
+        str(value) for value in manifest_status.get("blockers", ()) if str(value)
+    ]
+    passed = manifest_status.get("passed") is True
+    return {
+        **dict(status),
+        "verdict": "SOURCE_GRAPH_CAPTURED" if passed else SOURCE_GRAPH_UNPROVEN,
+        "source_graph_unproven": not passed,
+        "blockers": [] if passed else manifest_blockers,
+    }
 
 
 def _official_torch_surface_provenance_extra(

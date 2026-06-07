@@ -18,6 +18,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_quant_payload,
     encode_official_mfu_hfr_tub_decoder_payload,
     pack_snerv_archive,
+    unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
@@ -511,6 +512,89 @@ def test_source_forward_witness_checkpoint_export_report_resolves_strict_inputs(
         payload["blockers"]
     )
     assert payload["score_claim"] is False
+
+
+def test_source_forward_producer_refreshes_strict_capture_status_after_scorer_tensors(
+    monkeypatch,
+) -> None:
+    packet = _official_packet()
+    archive_tensors = unpack_snerv_archive(packet).source_forward_receiver_tensor_surfaces(
+        [0]
+    )["surface_tensors"]["archive_parseback"]
+    scorer_tensors = {
+        "segnet_input": np.zeros((1, 3, 2, 2), dtype=np.float32),
+        "posenet_input": np.zeros((1, 6, 2, 2), dtype=np.float32),
+        "segnet_logits": np.zeros((1, 4, 2, 2), dtype=np.float32),
+        "segnet_argmax": np.zeros((1, 2, 2), dtype=np.int64),
+        "posenet_output": np.zeros((1, 12), dtype=np.float32),
+    }
+
+    def fake_upstream_source_graph_capture(**kwargs) -> dict[str, object]:
+        return {
+            "schema": "snerv_official_tub_strict_source_graph_capture.v1",
+            "pair_ids": [0],
+            "tensors": dict(archive_tensors),
+            "model_source_sha256": "8" * 64,
+            "checkpoint_sha256": "6" * 64,
+            "state_dict_sha256": "7" * 64,
+            "decoder_len": 7,
+            "source_scope": "official_trained_checkpoint",
+            "source_config_lineage": kwargs["official_trained_source_config_kind"],
+            "source_config_sha256": "9" * 64,
+            "source_config_kind": "official_snerv_t_train_config",
+            "source_config_source": kwargs["official_trained_source_config_path"],
+            "source_config_is_fixture": False,
+            "source_graph_unproven": False,
+        }
+
+    monkeypatch.setattr(
+        source_forward_producer,
+        "build_official_torch_upstream_source_graph_tensors",
+        fake_upstream_source_graph_capture,
+    )
+
+    row = source_forward_producer.build_snerv_source_forward_proof_from_archive_packet(
+        action_id="strict-capture-status-refresh",
+        archive_packet=packet,
+        pair_ids=[0],
+        capture_official_torch_from_upstream_source_graph=True,
+        official_torch_checkpoint_state_dict_path="state.npz",
+        official_torch_source_config_path="args.json",
+        official_torch_source_config_kind=(
+            "checkpoint_export_official_trained_run_config"
+        ),
+        official_torch_source_frame_triplets_nchw255=np.zeros(
+            (1, 3, 3, 4, 4),
+            dtype=np.float32,
+        ),
+        pact_mlx_tensors=dict(archive_tensors),
+        scorer_tensors_by_surface={
+            surface: dict(scorer_tensors) for surface in SOURCE_FORWARD_SURFACES
+        },
+        scorer_deltas={
+            "d_seg": 0.0,
+            "d_pose": 0.0,
+            "delta_score_nonrate": 0.0,
+            "by_surface": {
+                surface: {"d_seg": 0.0, "d_pose": 0.0}
+                for surface in SOURCE_FORWARD_SURFACES
+            },
+        },
+    )
+    status = row["producer_status"]["official_torch_upstream_capture_status"]
+
+    assert status["verdict"] == "SOURCE_GRAPH_CAPTURED"
+    assert status["source_graph_unproven"] is False
+    assert status["blockers"] == []
+    assert row["producer_status"]["official_torch_upstream_capture_manifest_passed"] is True
+    assert row["producer_status"]["official_torch_captured_from_upstream_source_graph"] is True
+    assert row["output2_boundary_verdict"]["verdict"] == "SOURCE_IDENTICAL"
+    assert not any(
+        blocker.startswith(
+            "snerv_official_torch_manifest_missing_required_tensors:"
+        )
+        for blocker in row["blockers"]
+    )
 
 
 def test_source_forward_witness_report_resolution_refuses_startup_as_config(
