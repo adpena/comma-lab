@@ -653,8 +653,21 @@ def build_target_region_wall_normal_lift_receipt(
         "support_sha256": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
             "support_sha256"
         ),
+        "support_source": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
+            "support_source"
+        ),
+        "support_cardinality": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
+            "support_cardinality"
+        ),
+        "support_encoding": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
+            "support_encoding"
+        ),
+        "support_encoded_bytes": _mapping(sidecar.get("target_region_action_section_telemetry")).get(
+            "support_encoded_bytes"
+        ),
         "blockers": list(sidecar.get("charged_byte_sections_missing") or ()),
     }
+    canonical_support = _wall_normal_support_identity(direct_summary)
 
     return {
         "schema": TARGET_REGION_WALL_NORMAL_LIFT_SCHEMA,
@@ -664,6 +677,17 @@ def build_target_region_wall_normal_lift_receipt(
         "pair_id": int(pair_id),
         "target_class": int(target_class),
         "region_id": str(region_id),
+        "support_source": canonical_support.get("support_source"),
+        "support_cardinality": canonical_support.get("support_cardinality"),
+        "support_sha256": canonical_support.get("support_sha256"),
+        "support_encoding": canonical_support.get("support_encoding"),
+        "support_encoded_bytes": canonical_support.get("support_encoded_bytes"),
+        "support_research_only": canonical_support.get("support_research_only"),
+        "support_identity_source": (
+            "archive_executable_support"
+            if direct_summary.get("archive_executable_support_sha256")
+            else "direct_teacher_support"
+        ),
         "stage_order": [
             "ReceiverQuantumLineSearch",
             "SegNetWallNormalLift",

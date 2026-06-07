@@ -545,6 +545,17 @@ def test_wall_normal_lift_prefers_archive_executable_support_for_branch_identity
     assert receipt["direct_teacher"]["archive_executable_support_encoding"] == (
         "target_region_action_coordinates_v1"
     )
+    assert receipt["support_identity_source"] == "archive_executable_support"
+    assert receipt["support_sha256"] == "b" * 64
+    assert receipt["support_source"] == "archive_executable_target_region_action_support"
+    assert receipt["support_encoding"] == "target_region_action_coordinates_v1"
+    assert receipt["support_cardinality"] == receipt["direct_teacher"][
+        "archive_executable_support_cardinality"
+    ]
+    assert receipt["support_encoded_bytes"] == receipt["direct_teacher"][
+        "archive_executable_support_encoded_bytes"
+    ]
+    assert receipt["support_research_only"] is False
 
     effects = build_wall_normal_branch_action_effects(receipt)
     assert {effect.action_id for effect in effects} == {"wall-normal-action"}

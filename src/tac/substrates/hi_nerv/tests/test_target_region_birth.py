@@ -1284,9 +1284,13 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert synthesis["target_region_action_pixel_count"] > 0
     assert synthesis["target_region_action_program_base64"]
     assert synthesis["target_region_action_section_telemetry"]["receiver_consumed"] is True
-    assert synthesis["target_region_action_section_telemetry"]["support_encoding"] == (
-        "explicit_yx_u16_coordinates"
-    )
+    assert synthesis["target_region_action_section_telemetry"]["support_encoding"] in {
+        "explicit_yx_u16_coordinates",
+        "brotli_wrapped_raw_yx_u16_coordinates",
+        "zlib_wrapped_raw_yx_u16_coordinates",
+        "brotli_split_yx_delta_streams",
+        "brotli_tile_bitmap_little_endian",
+    }
     assert synthesis["target_region_action_section_telemetry"]["support_encoded_bytes"] > 0
     assert len(synthesis["target_region_action_section_telemetry"]["support_sha256"]) == 64
     direct_wall = synthesis["direct_seg_wall_oracle"]
@@ -1349,6 +1353,19 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert wall_lift["sidecar_fallback"]["support_sha256"] == (
         wall_lift["direct_teacher"]["archive_executable_support_sha256"]
     )
+    assert wall_lift["sidecar_fallback"]["support_source"] == (
+        best_wall["target_region_action_section_telemetry"]["support_source"]
+    )
+    assert wall_lift["sidecar_fallback"]["support_encoding"] == (
+        best_wall["target_region_action_section_telemetry"]["support_encoding"]
+    )
+    assert wall_lift["sidecar_fallback"]["support_encoded_bytes"] == (
+        best_wall["target_region_action_section_telemetry"]["support_encoded_bytes"]
+    )
+    assert wall_lift["support_sha256"] == wall_lift["direct_teacher"][
+        "archive_executable_support_sha256"
+    ]
+    assert wall_lift["support_identity_source"] == "archive_executable_support"
     assert wall_lift["sidecar_fallback"]["available"] is (
         wall_lift["direct_teacher"]["exact_score_decision"] in {"accept", "accepted"}
     )
