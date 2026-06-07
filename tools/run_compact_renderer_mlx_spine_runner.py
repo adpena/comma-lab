@@ -17083,6 +17083,89 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         payload = train_time_section_byte_control.get("metrics_payload")
         return dict(payload) if isinstance(payload, Mapping) else None
 
+    def _target_region_action_program_from_birth_payload(
+        payload: Mapping[str, Any] | None,
+    ) -> tuple[str | None, dict[str, Any] | None]:
+        if not isinstance(payload, Mapping):
+            return None, None
+
+        candidates: list[dict[str, Any]] = []
+
+        def _visit(node: Any) -> None:
+            if isinstance(node, Mapping):
+                program = node.get("target_region_action_program_base64")
+                if isinstance(program, str) and program:
+                    candidates.append(dict(node))
+                for value in node.values():
+                    if isinstance(value, Mapping | list | tuple):
+                        _visit(value)
+            elif isinstance(node, list | tuple):
+                for value in node:
+                    if isinstance(value, Mapping | list | tuple):
+                        _visit(value)
+
+        _visit(payload)
+        if not candidates:
+            return None, None
+
+        def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, float, int]:
+            decision = row.get("admission_decision")
+            decision = decision if isinstance(decision, Mapping) else {}
+            exact_accepted = bool(
+                decision.get("accepted") is True
+                or str(decision.get("exact_score_decision") or "").lower() in {"accept", "accepted"}
+            )
+            transitions = row.get("region_argmax_transitions")
+            transitions = transitions if isinstance(transitions, Mapping) else {}
+            support_moved = bool(
+                row.get("target_support_moved") is True
+                or int(transitions.get("wrong_to_target_count") or 0) > 0
+                or int(transitions.get("net_target_support_delta") or 0) > 0
+            )
+            delta_raw = row.get("exact_delta_score_nonrate")
+            if delta_raw is None:
+                delta_raw = decision.get("exact_delta_score_nonrate")
+            try:
+                delta = float(delta_raw)
+            except (TypeError, ValueError):
+                delta = float("inf")
+            if not math.isfinite(delta):
+                delta = float("inf")
+            try:
+                payload_bytes = int(row.get("target_region_action_payload_bytes") or 0)
+            except (TypeError, ValueError):
+                payload_bytes = 0
+            return (
+                0 if exact_accepted else 1,
+                0 if support_moved else 1,
+                delta,
+                payload_bytes,
+            )
+
+        selected = min(candidates, key=_candidate_key)
+        program = selected.get("target_region_action_program_base64")
+        if not isinstance(program, str) or not program:
+            return None, None
+        selection = {
+            "schema": "hi_nerv_target_region_action_program_export_selection.v1",
+            "candidate_count": len(candidates),
+            "target_region_action_payload_bytes": selected.get("target_region_action_payload_bytes"),
+            "target_region_action_pixel_count": selected.get("target_region_action_pixel_count"),
+            "exact_delta_score_nonrate": selected.get("exact_delta_score_nonrate"),
+            "target_support_moved": selected.get("target_support_moved"),
+            "archive_closed_before_export": bool(selected.get("archive_closed") is True),
+            "source_schema": selected.get("schema"),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        return program, selection
+
+    (
+        target_region_action_program_base64,
+        target_region_action_export_selection,
+    ) = _target_region_action_program_from_birth_payload(target_region_birth_payload)
+
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         # Keep the byte cap coupled to the final archive, not only to train-time
         # duals; otherwise the optimizer can price a cap that export never enforces.
@@ -17100,6 +17183,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             decoder_codec=str(decoder_codec),
             latent_codec=str(hi_nerv_latent_codec),
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            target_region_action_program_base64=target_region_action_program_base64,
             hard_byte_ceiling=hard_byte_ceiling,
         )
 
@@ -17617,6 +17701,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "training_executed": True,
         "score_authority": "false_macos_mlx_research_signal",
     }
+    if target_region_action_export_selection is not None:
+        artifact_metadata["score_aware_training"][
+            "target_region_action_export_selection"
+        ] = _strip_substrate_metadata_authority_fields(target_region_action_export_selection)
+
     def _hi_nerv_archive_replay_components_with_birth_survival(
         archive_path: str | Path,
         batch: Any,

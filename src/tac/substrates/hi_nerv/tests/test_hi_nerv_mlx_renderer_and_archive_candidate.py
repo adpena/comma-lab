@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 import torch
 
@@ -1694,6 +1695,61 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert "canonical_npz_bridge_not_used_or_not_applicable" not in portability[
         "portability_blockers"
     ]
+
+
+def test_archive_export_charges_target_region_action_program(tmp_path: Path) -> None:
+    from tac.substrates.hi_nerv.archive import (
+        build_archive_section_telemetry,
+        parse_archive,
+    )
+    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+    from tac.substrates.hi_nerv.target_region_actions import (
+        TARGET_REGION_ACTION_META_KEY,
+        TargetRegionPixelAction,
+        encode_target_region_actions_meta,
+    )
+
+    model = _exportable_torch_model()
+    action_program = encode_target_region_actions_meta(
+        [
+            TargetRegionPixelAction(
+                pair_index=0,
+                frame_index=1,
+                height=model.cfg.output_height,
+                width=model.cfg.output_width,
+                yx=np.array([[0, 0], [0, 1]], dtype=np.uint16),
+                rgb_u8=np.array([[255, 0, 0], [0, 255, 0]], dtype=np.uint8),
+            )
+        ]
+    )
+
+    archive_path, _archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
+        model,
+        tmp_path / "hi_nerv_export_target_action",
+        repo_root=REPO_ROOT,
+        decoder_codec="int8_mixed",
+        retain_receiver_proof_output=False,
+        source_backend="pytorch_test_export",
+        target_region_action_program_base64=action_program,
+    )
+
+    inner = (tmp_path / "hi_nerv_export_target_action" / "0.bin").read_bytes()
+    parsed = parse_archive(inner)
+    telemetry = build_archive_section_telemetry(
+        inner,
+        archive_zip_bytes=archive_bytes,
+    )
+
+    assert archive_path.is_file()
+    assert parsed.meta[TARGET_REGION_ACTION_META_KEY] == action_program
+    assert telemetry["target_region_actions"]["meta_key"] == TARGET_REGION_ACTION_META_KEY
+    assert telemetry["target_region_actions"]["action_count"] == 1
+    assert telemetry["target_region_actions"]["pixel_count"] == 2
+    assert telemetry["target_region_actions"]["payload_bytes"] > 0
+    assert telemetry["target_region_actions"]["base64_text_bytes"] == len(
+        action_program.encode("ascii")
+    )
+    assert telemetry["target_region_actions"]["charged_as_hiv1_meta_blob"] is True
 
 
 def test_archive_portfolio_auto_selects_receiver_parity_surviving_codec(

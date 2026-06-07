@@ -4135,34 +4135,68 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 patch = mx.array(base_pred1, dtype=mx.float32)  # type: ignore[union-attr]
                 adam_m = mx.zeros_like(patch)  # type: ignore[union-attr]
                 adam_v = mx.zeros_like(patch)  # type: ignore[union-attr]
+                best_patch = patch
+                best_loss: float | None = None
+                best_step: int | None = None
                 loss_initial: float | None = None
                 loss_final: float | None = None
                 grad_l2_initial: float | None = None
                 grad_l2_final: float | None = None
+                accepted_backtracking_steps = 0
+                rejected_backtracking_steps = 0
+                total_backtracking_shrinks = 0
                 for synth_step in range(synth_steps):
                     loss_value, grad = loss_and_grad_patch(patch)
                     masked_grad = mx.where(synth_mask4 > 0.0, grad, mx.zeros_like(grad))  # type: ignore[union-attr]
                     grad_l2 = mx.sqrt(mx.sum(masked_grad * masked_grad))  # type: ignore[union-attr]
                     mx.eval(loss_value, grad_l2, masked_grad)  # type: ignore[union-attr]
+                    current_loss = float(loss_value.item())
                     if synth_step == 0:
-                        loss_initial = float(loss_value.item())
+                        loss_initial = current_loss
                         grad_l2_initial = float(grad_l2.item())
-                    loss_final = float(loss_value.item())
+                    if math.isfinite(current_loss) and (
+                        best_loss is None or current_loss < best_loss
+                    ):
+                        best_loss = current_loss
+                        best_step = int(synth_step)
+                        best_patch = patch
+                    loss_final = current_loss
                     grad_l2_final = float(grad_l2.item())
                     adam_m = 0.9 * adam_m + 0.1 * masked_grad
                     adam_v = 0.999 * adam_v + 0.001 * masked_grad * masked_grad
                     bias_m = 1.0 - 0.9 ** float(synth_step + 1)
                     bias_v = 1.0 - 0.999 ** float(synth_step + 1)
                     step = (adam_m / bias_m) / (mx.sqrt(adam_v / bias_v) + 1.0e-6)  # type: ignore[union-attr]
-                    patch = mx.where(  # type: ignore[union-attr]
-                        synth_mask4 > 0.0,
-                        mx.clip(patch - float(synth_lr) * step, 0.0, 1.0),
-                        synth_base,
-                    )
-                    mx.eval(patch)  # type: ignore[union-attr]
+                    accepted = False
+                    trial_lr = float(synth_lr)
+                    for shrink_count in range(8):
+                        candidate_patch = mx.where(  # type: ignore[union-attr]
+                            synth_mask4 > 0.0,
+                            mx.clip(patch - trial_lr * step, 0.0, 1.0),
+                            synth_base,
+                        )
+                        candidate_loss_value = _synthesis_loss(candidate_patch)
+                        mx.eval(candidate_patch, candidate_loss_value)  # type: ignore[union-attr]
+                        candidate_loss = float(candidate_loss_value.item())
+                        if math.isfinite(candidate_loss) and candidate_loss <= current_loss:
+                            patch = candidate_patch
+                            loss_final = candidate_loss
+                            accepted = True
+                            accepted_backtracking_steps += 1
+                            total_backtracking_shrinks += int(shrink_count)
+                            if best_loss is None or candidate_loss < best_loss:
+                                best_loss = candidate_loss
+                                best_step = int(synth_step + 1)
+                                best_patch = candidate_patch
+                            break
+                        trial_lr *= 0.5
+                    if not accepted:
+                        rejected_backtracking_steps += 1
+                        if synth_step > 0:
+                            break
                 synthesized_pred1 = mx.where(  # type: ignore[union-attr]
                     synth_mask4 > 0.0,
-                    mx.clip(patch, 0.0, 1.0),
+                    mx.clip(best_patch, 0.0, 1.0),
                     synth_base,
                 )
                 _append_oracle_record(
@@ -4176,6 +4210,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                             "synthesis_learning_rate": float(synth_lr),
                             "synthesis_loss_initial": loss_initial,
                             "synthesis_loss_final": loss_final,
+                            "synthesis_best_loss": best_loss,
+                            "synthesis_best_step": best_step,
+                            "synthesis_backtracking_accepted_step_count": int(
+                                accepted_backtracking_steps
+                            ),
+                            "synthesis_backtracking_rejected_step_count": int(
+                                rejected_backtracking_steps
+                            ),
+                            "synthesis_backtracking_shrink_count": int(
+                                total_backtracking_shrinks
+                            ),
                             "synthesis_grad_l2_initial": grad_l2_initial,
                             "synthesis_grad_l2_final": grad_l2_final,
                             "synthesis_preserves_already_won_pixels_by_construction": True,

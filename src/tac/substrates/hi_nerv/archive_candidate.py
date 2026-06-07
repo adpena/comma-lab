@@ -53,6 +53,8 @@ from tac.substrates.hi_nerv.bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
 )
 from tac.substrates.hi_nerv.target_region_actions import (
+    TARGET_REGION_ACTION_META_KEY,
+    decode_target_region_actions_from_meta,
     wrap_model_with_target_region_actions,
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
@@ -268,6 +270,24 @@ def hi_nerv_meta_from_config(cfg: HinervConfig) -> dict[str, object]:
         "convnext_kernel_size": int(cfg.convnext_kernel_size),
         "init_seed": int(getattr(cfg, "init_seed", 0)),
     }
+
+
+def _hi_nerv_meta_with_target_region_actions(
+    cfg: HinervConfig,
+    *,
+    target_region_action_program_base64: str | None = None,
+) -> dict[str, object]:
+    meta = hi_nerv_meta_from_config(cfg)
+    if target_region_action_program_base64 in (None, ""):
+        return meta
+    if not isinstance(target_region_action_program_base64, str):
+        raise TypeError(
+            "target_region_action_program_base64 must be base64 text when supplied"
+        )
+    meta[TARGET_REGION_ACTION_META_KEY] = target_region_action_program_base64
+    # Validate against the receiver grammar before bytes are packed.
+    decode_target_region_actions_from_meta(dict(meta))
+    return meta
 
 
 def _read_hiv1_payload_from_archive_zip(archive_zip_path: Path) -> bytes:
@@ -1002,6 +1022,7 @@ def pack_archive_from_exported_state_dict(
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     latent_codec: str = "int16_raw",
+    target_region_action_program_base64: str | None = None,
     return_bitstream_report: bool = False,
 ) -> bytes | tuple[bytes, dict[str, Any]]:
     """Pack PyTorch-layout exported MLX tensors into HIV1 ``0.bin`` bytes."""
@@ -1059,7 +1080,10 @@ def pack_archive_from_exported_state_dict(
         latents_coarse,
         latents_mid,
         latents_fine,
-        hi_nerv_meta_from_config(cfg),
+        _hi_nerv_meta_with_target_region_actions(
+            cfg,
+            target_region_action_program_base64=target_region_action_program_base64,
+        ),
         decoder_codec=decoder_codec,
         latent_codec=latent_codec,
     )
@@ -1183,6 +1207,7 @@ def _select_live_receiver_portfolio_archive(
     quant_noise_seed: int,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None,
     latent_codec: str,
+    target_region_action_program_base64: str | None,
     hard_byte_ceiling: int | None,
 ) -> tuple[bytes, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Pick the cheapest receiver-pixel-preserving codec for ``portfolio_auto``.
@@ -1211,6 +1236,7 @@ def _select_live_receiver_portfolio_archive(
                 quant_noise_seed=quant_noise_seed,
                 decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
                 latent_codec=latent_codec,
+                target_region_action_program_base64=target_region_action_program_base64,
                 return_bitstream_report=True,
             )
             archive_zip_bytes, archive_zip_build = (
@@ -1423,6 +1449,7 @@ def export_hi_nerv_mlx_archive(
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     latent_codec: str = "int16_raw",
+    target_region_action_program_base64: str | None = None,
     hard_byte_ceiling: int | None = None,
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
@@ -1469,6 +1496,7 @@ def export_hi_nerv_mlx_archive(
             quant_noise_seed=quant_noise_seed,
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
             latent_codec=latent_codec,
+            target_region_action_program_base64=target_region_action_program_base64,
             hard_byte_ceiling=hard_byte_ceiling,
         )
         effective_decoder_codec = str(
@@ -1485,6 +1513,7 @@ def export_hi_nerv_mlx_archive(
             quant_noise_seed=quant_noise_seed,
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
             latent_codec=latent_codec,
+            target_region_action_program_base64=target_region_action_program_base64,
             return_bitstream_report=True,
         )
         live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
@@ -1746,6 +1775,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     latent_codec: str = "int16_raw",
+    target_region_action_program_base64: str | None = None,
     hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
     """Export HiNeRV MLX bytes and emit the shared candidate package."""
@@ -1763,6 +1793,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         quant_noise_seed=quant_noise_seed,
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         latent_codec=latent_codec,
+        target_region_action_program_base64=target_region_action_program_base64,
         hard_byte_ceiling=hard_byte_ceiling,
     )
     root = (
