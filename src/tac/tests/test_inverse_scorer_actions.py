@@ -1509,6 +1509,119 @@ def test_generate_inverse_evaluate_actions_cli_scopes_wall_normal_receipt_to_fix
     assert lowering_race["support_identity"]["support_sha256s"] == [support_sha]
 
 
+def test_wall_normal_fixed_scope_keeps_selected_receiver_bound_sidecar() -> None:
+    support_sha = "a" * 64
+    action_id = "wall-normal-action"
+    direct = ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind="wall_normal_direct_teacher",
+        authority="batch_local_live_mlx",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        support_source="archive_executable_target_region_action_support",
+        support_sha256=support_sha,
+        support_cardinality=9,
+        support_encoding="target_region_action_coordinates_v1",
+        support_encoded_bytes=36,
+        support_research_only=False,
+        wrong_to_target=5,
+        target_to_wrong=0,
+        exact_score_decision="accept",
+    )
+    backend = ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind="wall_normal_backend_fit",
+        authority="batch_local_live_mlx",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        support_source="archive_executable_target_region_action_support",
+        support_sha256=support_sha,
+        support_cardinality=9,
+        support_encoding="target_region_action_coordinates_v1",
+        support_encoded_bytes=36,
+        support_research_only=False,
+        wrong_to_target=0,
+        target_to_wrong=0,
+        exact_score_decision="reject",
+        blockers=[BLOCKER_WALL_NORMAL_BACKEND_NOT_REALIZED],
+    )
+    unbound_sidecar = ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind="sidecar_grammar_candidate",
+        authority="analysis_payload_model",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        payload_sections=["support_codec=rle_u32_start_len"],
+        support_source="survived_target_region_action_sidecar",
+        support_sha256=support_sha,
+        support_cardinality=9,
+        support_encoding="rle_u32_start_len",
+        support_encoded_bytes=12,
+        support_research_only=True,
+        exact_score_decision="reject",
+        blockers=["target_region_action_runtime_decoder_not_bound"],
+    )
+    receiver_sidecar = ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind="sidecar_grammar",
+        authority="inflate_raw",
+        producer="fixture",
+        consumer="fixture",
+        pair_ids=[0],
+        class_ids=[4],
+        payload_sections=["support_codec=brotli_tile_bitmap_little_endian"],
+        support_source="survived_target_region_action_sidecar",
+        support_sha256=support_sha,
+        support_cardinality=9,
+        support_encoding="brotli_tile_bitmap_little_endian",
+        support_encoded_bytes=8,
+        support_research_only=False,
+        wrong_to_target=5,
+        target_to_wrong=0,
+        exact_score_decision="accept",
+        parseback_survived=True,
+        inflate_survived=True,
+    )
+
+    kept, selection = inverse_materializer._wall_normal_receipt_effects(
+        [direct, backend, unbound_sidecar, receiver_sidecar],
+        action_id=action_id,
+        support_sha256=support_sha,
+        receiver_bound_only=False,
+    )
+
+    assert [row.action_kind for row in kept] == [
+        "wall_normal_direct_teacher",
+        "wall_normal_backend_fit",
+        "sidecar_grammar",
+    ]
+    assert selection["branch_selection"]["selected_branch_kinds"] == [
+        "direct_teacher",
+        "backend_fit",
+        "sidecar_fallback",
+    ]
+    assert any(
+        item["action_kind"] == "sidecar_grammar_candidate"
+        and item["reasons"] == ["dominated_fixed_wall_normal_sidecar_fallback_row"]
+        for item in selection["branch_selection"]["dropped"]
+    )
+    receipt = build_wall_normal_branch_receipt(kept)
+    assert receipt["branch_count"] == 3
+    assert receipt["same_support_sha256"] is True
+    assert receipt["blockers"] == []
+    assert receipt["first_failing_surface"] == BACKEND_REALIZATION_FAILED
+
+
 def test_generate_inverse_evaluate_actions_cli_does_not_call_blocked_reverse_producer_missing(
     tmp_path: Path,
 ) -> None:

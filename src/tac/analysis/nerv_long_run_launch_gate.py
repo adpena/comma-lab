@@ -259,12 +259,13 @@ def _target_region_action_archive_closure_status(
     charged_meta_path: str | None = None
     selected_archive_path: str | None = None
     selected_archive_bytes: int | None = None
-    blockers: list[str] = []
+    candidate_blockers: list[str] = []
     for path, payload in _iter_evidence_payloads(run_root):
         stack = [payload]
         while stack:
             node = stack.pop()
             if isinstance(node, Mapping):
+                node_archive_bytes = _archive_zip_bytes_from_node(node)
                 target_actions = node.get("target_region_actions")
                 if isinstance(target_actions, Mapping):
                     try:
@@ -281,32 +282,27 @@ def _target_region_action_archive_closure_status(
                         and target_actions.get("receiver_consumed") is True
                         and payload_bytes > 0
                         and base64_bytes > 0
-                        and meta_bytes > 0
+                        and (meta_bytes > 0 or node_archive_bytes is not None)
                     ):
                         telemetry_blockers = _target_region_action_telemetry_blockers(
                             target_actions
                         )
                         if telemetry_blockers:
-                            blockers.extend(telemetry_blockers)
+                            candidate_blockers.extend(telemetry_blockers)
                         else:
                             charged_meta_path = path.as_posix()
                             index.setdefault(
                                 "hi_nerv_target_region_archive_actions.v1",
                                 [],
                             ).append(path.as_posix())
-                for key in ("selected_archive_bytes", "archive_bytes"):
-                    try:
-                        archive_bytes = int(node.get(key) or 0)
-                    except (TypeError, ValueError):
-                        archive_bytes = 0
-                    if archive_bytes > 0:
-                        selected_archive_bytes = archive_bytes
-                        raw_archive_path = node.get("selected_archive_path") or node.get(
-                            "archive_path"
-                        )
-                        selected_archive_path = (
-                            str(raw_archive_path) if raw_archive_path else path.as_posix()
-                        )
+                if node_archive_bytes is not None:
+                    selected_archive_bytes = node_archive_bytes
+                    raw_archive_path = node.get("selected_archive_path") or node.get(
+                        "archive_path"
+                    )
+                    selected_archive_path = (
+                        str(raw_archive_path) if raw_archive_path else path.as_posix()
+                    )
                 stack.extend(node.values())
             elif isinstance(node, (list, tuple)):
                 stack.extend(node)
@@ -316,8 +312,19 @@ def _target_region_action_archive_closure_status(
         "archive_zip_bytes_measured": selected_archive_bytes is not None,
         "selected_archive_path": selected_archive_path,
         "selected_archive_bytes": selected_archive_bytes,
-        "blockers": _dedupe(blockers),
+        "blockers": [] if charged_meta_path is not None else _dedupe(candidate_blockers),
     }
+
+
+def _archive_zip_bytes_from_node(node: Mapping[str, Any]) -> int | None:
+    for key in ("selected_archive_bytes", "archive_bytes"):
+        try:
+            archive_bytes = int(node.get(key) or 0)
+        except (TypeError, ValueError):
+            archive_bytes = 0
+        if archive_bytes > 0:
+            return archive_bytes
+    return None
 
 
 def _target_region_action_telemetry_blockers(

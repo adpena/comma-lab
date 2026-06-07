@@ -273,6 +273,16 @@ def _wall_normal_receipt_effects(
             continue
         kept.append(effect)
 
+    if action_id is not None or support_sha256 is not None:
+        kept, branch_selection = _select_fixed_wall_normal_branch_rows(kept)
+        dropped.extend(branch_selection["dropped"])
+    else:
+        branch_selection = {
+            "enabled": False,
+            "selected_branch_kinds": [],
+            "dropped_count": 0,
+        }
+
     blockers = [] if kept else [BLOCKER_WALL_NORMAL_RECEIPT_SCOPE_EMPTY]
     return kept, {
         **filters,
@@ -280,8 +290,105 @@ def _wall_normal_receipt_effects(
         "filtered_count": len(kept),
         "dropped_count": len(dropped),
         "dropped": dropped[:25],
+        "branch_selection": branch_selection,
         "blockers": blockers,
     }
+
+
+def _select_fixed_wall_normal_branch_rows(
+    effects: Sequence[ActionEffect],
+) -> tuple[list[ActionEffect], dict[str, Any]]:
+    """Keep one canonical branch row per fixed wall-normal action/support.
+
+    Sidecar comparison ledgers intentionally retain dominated codec candidates
+    for economics, but the wall-normal branch receipt is an interpreter receipt:
+    it should contain the direct teacher, backend realization attempt, and the
+    selected receiver-surviving sidecar, not every unbound grammar alternative.
+    """
+
+    grouped: dict[str, list[ActionEffect]] = {}
+    passthrough: list[ActionEffect] = []
+    for effect in effects:
+        branch = _wall_normal_receipt_branch_kind(effect)
+        if branch is None:
+            passthrough.append(effect)
+            continue
+        grouped.setdefault(branch, []).append(effect)
+
+    selected: list[ActionEffect] = []
+    dropped: list[dict[str, Any]] = []
+    for branch in ("direct_teacher", "backend_fit", "sidecar_fallback"):
+        candidates = grouped.pop(branch, [])
+        if not candidates:
+            continue
+        best = max(candidates, key=_wall_normal_receipt_branch_rank)
+        selected.append(best)
+        for effect in candidates:
+            if effect is best:
+                continue
+            dropped.append(
+                {
+                    "action_id": effect.action_id,
+                    "family": effect.family,
+                    "action_kind": effect.action_kind,
+                    "support_sha256": effect.support_sha256,
+                    "reasons": [f"dominated_fixed_wall_normal_{branch}_row"],
+                }
+            )
+
+    for branch, effects_for_branch in grouped.items():
+        for effect in effects_for_branch:
+            dropped.append(
+                {
+                    "action_id": effect.action_id,
+                    "family": effect.family,
+                    "action_kind": effect.action_kind,
+                    "support_sha256": effect.support_sha256,
+                    "reasons": [f"unsupported_fixed_wall_normal_branch:{branch}"],
+                }
+            )
+
+    kept = [*selected, *passthrough]
+    return kept, {
+        "enabled": True,
+        "selected_branch_kinds": [_wall_normal_receipt_branch_kind(effect) for effect in selected],
+        "dropped_count": len(dropped),
+        "dropped": dropped[:25],
+    }
+
+
+def _wall_normal_receipt_branch_kind(effect: ActionEffect) -> str | None:
+    text = " ".join(
+        [
+            effect.action_kind,
+            effect.arm or "",
+            effect.inverse_source or "",
+            *effect.payload_sections,
+            *effect.trained_groups,
+        ]
+    ).lower()
+    if "backend" in text or "fit" in text or "head_rgb_1" in text:
+        return "backend_fit"
+    if "sidecar" in text or "grammar" in text or "masked_residual" in text:
+        return "sidecar_fallback"
+    if "direct" in text or "seg_margin" in text or "segnet_margin" in text:
+        return "direct_teacher"
+    return None
+
+
+def _wall_normal_receipt_branch_rank(effect: ActionEffect) -> tuple[object, ...]:
+    receiver_bound = effect.parseback_survived is True and effect.inflate_survived is True
+    exact_accept = effect.exact_score_decision in {"accept", "accepted"}
+    wrong_to_target = effect.wrong_to_target or 0
+    value_per_byte = effect.value_per_byte
+    return (
+        receiver_bound,
+        exact_accept,
+        not effect.blockers,
+        int(wrong_to_target),
+        float(value_per_byte) if value_per_byte is not None else float("-inf"),
+        effect.action_kind,
+    )
 
 
 def _split_inverse_candidates(effects: Sequence[ActionEffect]) -> tuple[list[ActionEffect], list[ActionEffect]]:

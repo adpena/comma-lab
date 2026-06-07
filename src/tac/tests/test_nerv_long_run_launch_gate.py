@@ -1107,6 +1107,107 @@ def test_target_region_archive_evidence_rejects_stale_tile_support_encoding(
     assert verdict["approved"] is False
 
 
+def test_target_region_archive_evidence_uses_valid_receiver_tile_over_stale_rows(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _live_birth_receipt()
+    row["accepted_step_count"] = 0
+    row["candidate_frontier_telemetry"] = {
+        "masked_residual_oracle": {
+            "schema": "hi_nerv_target_region_masked_residual_oracle.v1",
+            "authority": "receiver_surface_oracle_false_authority",
+            "archive_closed": False,
+            "promotion_blocked": True,
+            "exact_accepted_before_archive_closure": True,
+            "target_support_moved": True,
+            "blockers": [
+                "hinerv_target_region_action_archive_meta_not_materialized",
+                "hinerv_target_region_action_archive_zip_byte_delta_missing",
+            ],
+        }
+    }
+    _write(root / "birth.json", row)
+    _write(
+        root / "stale_archive_telemetry.json",
+        {
+            "hi_nerv_archive_codec_custody": {
+                "archive_section_telemetry": {
+                    "target_region_actions": _charged_target_region_actions(
+                        payload_codec="brotli_wrapped_v1",
+                        support_encoding="explicit_yx_u16_coordinates",
+                        support_encoded_bytes=139_908,
+                    )
+                }
+            },
+            "receiver_replay_archive_selection": {
+                "selected_archive_path": "/ssd/stale.zip",
+                "selected_archive_bytes": 439003,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+    _write(
+        root / "tile_receiver_survival.json",
+        {
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "surface": "parseback_mlx",
+            "action_id": ACTION,
+            "archive_path": "/ssd/tile.zip",
+            "archive_bytes": 319575,
+            "survived": True,
+            "fakequant_survived": True,
+            "parseback_survived": True,
+            "inflate_survived": True,
+            "target_region_actions": _charged_target_region_actions(
+                payload_codec="tile_brotli_v1",
+                support_encoding="brotli_tile_bitmap_little_endian",
+                support_encoded_bytes=3413,
+            )
+            | {
+                "charged_meta_json_bytes": None,
+                "payload_bytes": 94633,
+                "base64_text_bytes": 126180,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "real_video_birth_receipt_archive_unclosed" in verdict["blocking_evidence"]
+    assert (
+        "hinerv_target_region_action_archive_meta_not_materialized"
+        not in verdict["blocking_evidence"]
+    )
+    assert (
+        "hinerv_target_region_action_archive_zip_byte_delta_missing"
+        not in verdict["blocking_evidence"]
+    )
+    assert "target_region_action_support_encoding_mismatch" not in verdict[
+        "blocking_evidence"
+    ]
+    assert "target_region_action_encoded_program_sha256_missing" not in verdict[
+        "blocking_evidence"
+    ]
+    assert "target_region_action_decoded_support_sha256_missing" not in verdict[
+        "blocking_evidence"
+    ]
+    assert "target_region_action_decoded_action_sha256_missing" not in verdict[
+        "blocking_evidence"
+    ]
+    assert verdict["approved"] is False
+
+
 def test_target_region_action_parseback_survival_retires_parseback_blocker(
     tmp_path: Path,
 ) -> None:
