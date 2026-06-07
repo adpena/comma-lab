@@ -1069,6 +1069,37 @@ def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> N
     assert selection["same_support_as_direct_teacher"] is True
 
 
+def test_hinerv_action_program_selection_rejects_missing_direct_support() -> None:
+    payload = {
+        "action_id": "e" * 64,
+        "target_region_action_program_base64": "score-improving-program",
+        "target_region_action_payload_bytes": 4,
+        "target_region_action_section_telemetry": {
+            "support_sha256": "sidecar-support",
+            "support_cardinality": 2,
+            "support_encoding": "packbits",
+            "support_encoded_bytes": 2,
+        },
+        "accepted": True,
+        "target_support_moved": True,
+        "exact_delta_score_nonrate": -0.1,
+    }
+
+    program, selection = runner_mod._select_target_region_action_program_from_birth_payload(
+        payload
+    )
+
+    assert program is None
+    assert selection is not None
+    assert selection["selected_for_export"] is False
+    assert selection["best_candidate_same_support_as_direct_teacher"] is False
+    assert selection["best_candidate_direct_teacher_support_sha256"] is None
+    assert (
+        "hi_nerv_target_region_action_no_total_score_improving_same_support_candidate"
+        in selection["blockers"]
+    )
+
+
 def test_hinerv_live_birth_survival_rows_fail_closed_on_missing_inputs(tmp_path: Path) -> None:
     row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
         model=object(),

@@ -143,11 +143,9 @@ def _select_target_region_action_program_from_birth_payload(
                 value = action_effect.get("support_sha256")
         return str(value) if isinstance(value, str) and value else None
 
-    def _candidate_same_support_as_direct_teacher(row: Mapping[str, Any]) -> bool | None:
+    def _candidate_same_support_as_direct_teacher(row: Mapping[str, Any]) -> bool:
         action_support = _candidate_action_support_sha256(row)
         direct_support = _candidate_direct_teacher_support_sha256(row)
-        if not direct_support:
-            return None
         return bool(action_support and action_support == direct_support)
 
     def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, int, float, int, float]:
@@ -163,7 +161,7 @@ def _select_target_region_action_program_from_birth_payload(
         return (
             0 if exact_accepted else 1,
             0 if support_moved else 1,
-            0 if same_support is True else 1 if same_support is None else 2,
+            0 if same_support else 1,
             total_delta,
             payload_bytes,
             delta,
@@ -174,7 +172,7 @@ def _select_target_region_action_program_from_birth_payload(
         for row in candidates
         if _candidate_exact_accepted(row)
         and _candidate_support_moved(row)
-        and _candidate_same_support_as_direct_teacher(row) is not False
+        and _candidate_same_support_as_direct_teacher(row)
         and _candidate_key(row)[3] < 0.0
     ]
     if not eligible_candidates:
