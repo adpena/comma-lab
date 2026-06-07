@@ -28,6 +28,8 @@ Path:
 - payload bytes: `94633`
 - payload delta vs split-brotli: `-28526`
 - archive delta vs split-brotli: `-13273`
+- support encoding: `brotli_tile_bitmap_little_endian`
+- support encoded bytes: `3413`
 - parseback survived: `true`
 - inflate survived: `true`
 - survival blockers: `[]`
