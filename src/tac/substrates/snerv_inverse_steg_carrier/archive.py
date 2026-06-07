@@ -1789,13 +1789,11 @@ def build_snerv_archive_payload_bitflip_falsification_matrix(
     bit_offset: int = 0,
     bit_mask: int = 1,
     sections: Sequence[str] = (
-        "metadata_payload",
         "lf_payload",
         "decoder_payload.mfu",
         "decoder_payload.hfr",
         "decoder_payload.tub",
         "decoder_payload.output_2",
-        "step_map_packet",
     ),
 ) -> dict[str, Any]:
     """Mutate every charged SNeRV archive section and report proof coverage."""

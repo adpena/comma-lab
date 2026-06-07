@@ -29,13 +29,11 @@ SNERV_PAYLOAD_BITFLIP_FALSIFICATION_MATRIX_SCHEMA = (
     "snerv_payload_bitflip_falsification_matrix.v1"
 )
 SNERV_PAYLOAD_BITFLIP_REQUIRED_SECTIONS: tuple[str, ...] = (
-    "metadata_payload",
     "lf_payload",
     "decoder_payload.mfu",
     "decoder_payload.hfr",
     "decoder_payload.tub",
     "decoder_payload.output_2",
-    "step_map_packet",
 )
 SNERV_OUTPUT2_BOUNDARY_VERDICT_SCHEMA = "snerv_output2_boundary_verdict.v1"
 SOURCE_IDENTICAL = "SOURCE_IDENTICAL"

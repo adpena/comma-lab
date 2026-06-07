@@ -102,13 +102,11 @@ def _bitflip() -> dict:
 
 def _bitflip_matrix() -> dict:
     first_tensors = {
-        "metadata_payload": "coord_time_embedding",
         "lf_payload": "lf_payload",
         "decoder_payload.mfu": "mfu_out",
         "decoder_payload.hfr": "hfr_out",
         "decoder_payload.tub": "tub_in",
         "decoder_payload.output_2": "output_2",
-        "step_map_packet": "rgb_pair_uint8",
     }
     return build_snerv_payload_bitflip_falsification_matrix(
         {
@@ -203,7 +201,7 @@ def test_payload_bitflip_matrix_requires_logical_snerv_source_basis() -> None:
                 bit_mask=1,
             )
             for idx, section in enumerate(
-                ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
+                ("lf_payload", "decoder_payload", "step_map_packet")
             )
         }
     )

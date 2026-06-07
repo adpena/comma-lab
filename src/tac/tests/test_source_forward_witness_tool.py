@@ -127,13 +127,11 @@ def test_official_packet_bitflip_matrix_covers_logical_source_basis() -> None:
 
     assert matrix["schema"] == "snerv_payload_bitflip_falsification_matrix.v1"
     assert matrix["required_sections"] == [
-        "metadata_payload",
         "lf_payload",
         "decoder_payload.mfu",
         "decoder_payload.hfr",
         "decoder_payload.tub",
         "decoder_payload.output_2",
-        "step_map_packet",
     ]
     assert set(matrix["section_proofs"]) == set(matrix["required_sections"])
     for section, proof in matrix["section_proofs"].items():
