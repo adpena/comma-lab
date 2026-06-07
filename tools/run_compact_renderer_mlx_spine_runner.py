@@ -11072,6 +11072,32 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         lowering_race = target_region_action_comparison.get("lowering_race")
         if isinstance(lowering_race, Mapping):
             artifact_dict["target_region_action_lowering_race"] = dict(lowering_race)
+    live_to_parseback_scorer_effect_delta_audit = (
+        _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
+            archive_resolution=archive_resolution,
+            output_dir=training_dir,
+            artifact_dict=artifact_dict,
+            target_region_action_export_selection=(
+                target_region_action_export_selection
+                if isinstance(target_region_action_export_selection, Mapping)
+                else None
+            ),
+            target_region_action_parseback_survival=(
+                target_region_action_parseback_survival
+                if isinstance(target_region_action_parseback_survival, Mapping)
+                else None
+            ),
+            selected_birth_parseback_survival=(
+                selected_birth_parseback_survival
+                if isinstance(selected_birth_parseback_survival, Mapping)
+                else None
+            ),
+        )
+    )
+    if isinstance(live_to_parseback_scorer_effect_delta_audit, Mapping):
+        artifact_dict["live_to_parseback_scorer_effect_delta_audit"] = dict(
+            live_to_parseback_scorer_effect_delta_audit
+        )
     _attach_hi_nerv_archive_codec_custody(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
@@ -20418,6 +20444,215 @@ def _write_hi_nerv_target_region_action_comparison_report(
                 encoding="utf-8",
             )
     return report
+
+
+def _load_optional_runner_mapping_json(path: str | Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    candidate = Path(path).expanduser().resolve(strict=False)
+    if not candidate.is_file():
+        return None
+    try:
+        payload = _load_json(candidate)
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
+    *,
+    archive_resolution: Mapping[str, Any],
+    output_dir: str | Path,
+    artifact_dict: dict[str, Any],
+    target_region_action_export_selection: Mapping[str, Any] | None,
+    target_region_action_parseback_survival: Mapping[str, Any] | None,
+    selected_birth_parseback_survival: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Write the exact-action audit for live/fakequant -> parse-back collapse."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    fakequant_survival = _load_optional_runner_mapping_json(
+        out / "hi_nerv_birth_fakequant_survival.json"
+    )
+    if fakequant_survival is None:
+        metadata = artifact_dict.get("substrate_artifact_metadata")
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        score_training = metadata.get("score_aware_training")
+        score_training = score_training if isinstance(score_training, Mapping) else {}
+        supplied_training = metadata.get("substrate_supplied_score_aware_training")
+        supplied_training = supplied_training if isinstance(supplied_training, Mapping) else {}
+        live_bundle = score_training.get("live_birth_survival") or supplied_training.get(
+            "live_birth_survival"
+        )
+        if isinstance(live_bundle, Mapping):
+            fakequant_survival = _load_optional_runner_mapping_json(
+                live_bundle.get("fakequant_survival_path")
+            )
+
+    archive_raw = (
+        (selected_birth_parseback_survival or {}).get("selected_archive_path")
+        or (selected_birth_parseback_survival or {}).get("parseback_archive_path")
+        or archive_resolution.get("archive_path")
+        or artifact_dict.get("archive_path")
+    )
+    archive = (
+        Path(str(archive_raw)).expanduser().resolve(strict=False)
+        if isinstance(archive_raw, str) and archive_raw
+        else None
+    )
+    live_receiver_export_parity = (
+        _load_optional_runner_mapping_json(
+            archive.parent / "hi_nerv_mlx_live_receiver_export_parity.json"
+        )
+        if archive is not None
+        else None
+    )
+    exported_state_manifest = (
+        _load_optional_runner_mapping_json(
+            archive.parent / "hi_nerv_mlx_exported_state_npz_manifest.json"
+        )
+        if archive is not None
+        else None
+    )
+    if not (
+        isinstance(fakequant_survival, Mapping)
+        or isinstance(selected_birth_parseback_survival, Mapping)
+        or isinstance(target_region_action_parseback_survival, Mapping)
+    ):
+        return None
+
+    try:
+        from tac.analysis.hinerv_live_to_parseback_delta_audit import (
+            build_hinerv_live_to_parseback_scorer_effect_delta_audit,
+        )
+
+        row = dict(
+            build_hinerv_live_to_parseback_scorer_effect_delta_audit(
+                fakequant_survival=(
+                    fakequant_survival if isinstance(fakequant_survival, Mapping) else None
+                ),
+                selected_birth_parseback_survival=(
+                    selected_birth_parseback_survival
+                    if isinstance(selected_birth_parseback_survival, Mapping)
+                    else None
+                ),
+                target_region_action_parseback_survival=(
+                    target_region_action_parseback_survival
+                    if isinstance(target_region_action_parseback_survival, Mapping)
+                    else None
+                ),
+                target_region_action_export_selection=(
+                    target_region_action_export_selection
+                    if isinstance(target_region_action_export_selection, Mapping)
+                    else None
+                ),
+                live_receiver_export_parity=(
+                    live_receiver_export_parity
+                    if isinstance(live_receiver_export_parity, Mapping)
+                    else None
+                ),
+                exported_state_manifest=(
+                    exported_state_manifest
+                    if isinstance(exported_state_manifest, Mapping)
+                    else None
+                ),
+                archive_resolution=archive_resolution,
+            )
+        )
+    except Exception as exc:
+        row = {
+            "schema": "hi_nerv_live_to_parseback_scorer_effect_delta_audit.v1",
+            "family": "hinerv",
+            "first_divergence": "tensor_not_exported",
+            "first_failed_surface": "tensor_not_exported",
+            "blockers": [
+                f"hi_nerv_live_to_parseback_delta_audit_write_failed:{type(exc).__name__}:{exc}"
+            ],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+    path = out / "hi_nerv_live_to_parseback_scorer_effect_delta_audit.json"
+    row["artifact_path"] = path.as_posix()
+    row["producer"] = "hi_nerv_runner_live_to_parseback_scorer_effect_delta_audit"
+    row.update(FALSE_AUTHORITY)
+    _write_json(path, row)
+
+    artifact_dict["live_to_parseback_scorer_effect_delta_audit"] = dict(row)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["live_to_parseback_scorer_effect_delta_audit"] = (
+            _strip_substrate_metadata_authority_fields(row)
+        )
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["live_to_parseback_scorer_effect_delta_audit"] = (
+                _strip_substrate_metadata_authority_fields(
+                    {
+                        "schema": row.get("schema"),
+                        "action_id": row.get("action_id"),
+                        "support_sha256": row.get("support_sha256"),
+                        "archive_sha256": row.get("archive_sha256"),
+                        "first_divergence": row.get("first_divergence"),
+                        "retention": row.get("retention"),
+                        "parseback_payload_survived": row.get("parseback_payload_survived"),
+                        "parseback_program_survived": row.get("parseback_program_survived"),
+                        "parseback_scorer_effect_survived": row.get(
+                            "parseback_scorer_effect_survived"
+                        ),
+                        "next_operator": row.get("next_operator"),
+                        "blockers": [str(value) for value in row.get("blockers") or []],
+                        "artifact_path": row.get("artifact_path"),
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                )
+            )
+    artifact_path = out / "training_artifact.json"
+    if artifact_path.is_file():
+        try:
+            artifact = _load_json(artifact_path)
+        except Exception:
+            artifact = None
+        if isinstance(artifact, dict):
+            artifact["live_to_parseback_scorer_effect_delta_audit"] = dict(row)
+            artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+            artifact_metadata["live_to_parseback_scorer_effect_delta_audit"] = (
+                _strip_substrate_metadata_authority_fields(row)
+            )
+            score_training = artifact_metadata.get("score_aware_training")
+            if isinstance(score_training, dict):
+                score_training["live_to_parseback_scorer_effect_delta_audit"] = (
+                    _strip_substrate_metadata_authority_fields(
+                        {
+                            "schema": row.get("schema"),
+                            "action_id": row.get("action_id"),
+                            "support_sha256": row.get("support_sha256"),
+                            "archive_sha256": row.get("archive_sha256"),
+                            "first_divergence": row.get("first_divergence"),
+                            "retention": row.get("retention"),
+                            "parseback_scorer_effect_survived": row.get(
+                                "parseback_scorer_effect_survived"
+                            ),
+                            "next_operator": row.get("next_operator"),
+                            "blockers": [
+                                str(value) for value in row.get("blockers") or []
+                            ],
+                            "artifact_path": row.get("artifact_path"),
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    )
+                )
+            artifact["substrate_artifact_metadata"] = artifact_metadata
+            artifact_path.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+    return row
 
 
 def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(

@@ -1134,6 +1134,124 @@ def test_hinerv_action_comparison_writer_attaches_lowering_race(
     )
 
 
+def test_hinerv_live_to_parseback_delta_audit_writer_attaches_false_authority(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "ema" / "archive.zip"
+    archive.parent.mkdir()
+    archive.write_bytes(b"unit archive")
+    archive_sha = runner_mod._sha256_file(archive)
+    (tmp_path / "hi_nerv_birth_fakequant_survival.json").write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_target_region_birth_survival.v1",
+                "action_id": "a" * 64,
+                "survived": True,
+                "live_wrong_to_target_count": 100,
+                "fakequant_wrong_to_target_count": 90,
+                "wrong_to_target_count": 90,
+                "target_to_wrong_count": 0,
+                "total_scored_pixels": 1000,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (archive.parent / "hi_nerv_mlx_live_receiver_export_parity.json").write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_mlx_live_receiver_export_parity_proof.v1",
+                "passed": False,
+                "receiver_decode_passed": True,
+                "max_abs_delta": 0.25,
+                "changed_element_count": 7,
+                "live_tensor_sha256": "b" * 64,
+                "receiver_tensor_sha256": "c" * 64,
+                "blockers": ["sampled_live_receiver_export_parity_not_full_video"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (archive.parent / "hi_nerv_mlx_exported_state_npz_manifest.json").write_text(
+        json.dumps({"schema": "framework_agnostic_npz_bridge_manifest.v1", "artifact_sha256": "d" * 64}),
+        encoding="utf-8",
+    )
+    artifact_path = tmp_path / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps({"substrate_artifact_metadata": {"score_aware_training": {}}}),
+        encoding="utf-8",
+    )
+    artifact_dict = {"substrate_artifact_metadata": {"score_aware_training": {}}}
+
+    row = runner_mod._write_hi_nerv_live_to_parseback_scorer_effect_delta_audit(
+        archive_resolution={"archive_path": archive.as_posix()},
+        output_dir=tmp_path,
+        artifact_dict=artifact_dict,
+        target_region_action_export_selection={
+            "selected_for_export": True,
+            "action_id": "a" * 64,
+            "target_region_action_support_sha256": "e" * 64,
+            "target_region_action_section_telemetry": {
+                "decoded_action_sha256": "f" * 64,
+            },
+        },
+        target_region_action_parseback_survival={
+            "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+            "action_id": "a" * 64,
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive.stat().st_size,
+            "support_sha256": "e" * 64,
+            "expected_support_sha256": "e" * 64,
+            "decoded_action_sha256": "f" * 64,
+            "parseback_payload_survived": True,
+            "parseback_program_survived": True,
+            "parseback_survived": True,
+            "blockers": [],
+            "score_claim": True,
+            "promotion_eligible": True,
+            "ready_for_exact_eval_dispatch": True,
+        },
+        selected_birth_parseback_survival={
+            "schema": "hi_nerv_target_region_birth_survival.v1",
+            "action_id": "a" * 64,
+            "selected_archive_path": archive.as_posix(),
+            "selected_archive_sha256": archive_sha,
+            "selected_archive_bytes": archive.stat().st_size,
+            "parseback_payload_survived": True,
+            "parseback_scorer_effect_survived": False,
+            "parseback_wrong_to_target_count": 1,
+            "wrong_to_target_count": 1,
+            "target_to_wrong_count": 0,
+            "total_scored_pixels": 1000,
+            "blockers": ["hinerv_birth_parseback_scorer_effect_collapse"],
+        },
+    )
+
+    assert row is not None
+    assert row["first_divergence"] == "quantization_mismatch"
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    persisted = json.loads(
+        (tmp_path / "hi_nerv_live_to_parseback_scorer_effect_delta_audit.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert persisted["checkpoint_identity"]["exported_state_npz_sha256"] == "d" * 64
+    assert artifact_dict["substrate_artifact_metadata"][
+        "score_aware_training"
+    ]["live_to_parseback_scorer_effect_delta_audit"]["first_divergence"] == (
+        "quantization_mismatch"
+    )
+    training_artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    nested = training_artifact["substrate_artifact_metadata"][
+        "live_to_parseback_scorer_effect_delta_audit"
+    ]
+    assert "score_claim" not in nested
+    assert "promotion_eligible" not in nested
+    assert "ready_for_exact_eval_dispatch" not in nested
+
+
 def test_hinerv_action_parseback_survival_blocks_archive_custody_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
