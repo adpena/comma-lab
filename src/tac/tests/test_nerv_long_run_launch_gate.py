@@ -16,6 +16,10 @@ from pathlib import Path
 import pytest
 
 from tac.analysis.action_effect import ActionEffect
+from tac.analysis.hinerv_hard_region_miner import (
+    OUTCOME_BIRTH_ACCEPTED,
+    build_representative_coverage_row,
+)
 from tac.analysis.nerv_long_run_launch_gate import (
     ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
     BIRTH_HYSTERESIS_SCHEMA,
@@ -230,6 +234,8 @@ def _hi_nerv_action_effect(
     rejected_by_raw_cap: bool = False,
     rejected_by_exact_score: bool = False,
     rejected_by_catastrophic_guard: bool = False,
+    target_to_wrong: int = 0,
+    wrong_to_wrong: int = 0,
 ) -> dict:
     return ActionEffect.build(
         action_id=ACTION,
@@ -260,9 +266,9 @@ def _hi_nerv_action_effect(
         fakequant_survived=True,
         hard_won_count=2048,
         wrong_to_target=2048,
-        target_to_wrong=0,
-        wrong_to_wrong=0,
-        net_target_support_delta=2048,
+        target_to_wrong=target_to_wrong,
+        wrong_to_wrong=wrong_to_wrong,
+        net_target_support_delta=2048 - target_to_wrong,
         uint8_changed_count_region=4096,
         seg_input_delta_linf_region=1.0 / 255.0,
         posenet_input_delta_linf_pair=1.0 / 255.0,
@@ -350,16 +356,13 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
     )
     _write(
         root / "coverage.json",
-        {
-            "schema": REPRESENTATIVE_COVERAGE_SCHEMA,
-            "fixture_not_real": True,
-            "passed": True,
-            "region_classes_covered": 3,
-            "distinct_classes_accepted": 2,
-            "accepted_count": 3,
-            "min_distinct_classes": 2,
-            "min_distinct_class_size_buckets": 3,
-        },
+        build_representative_coverage_row(
+            [
+                {"region": {"class_index": 1, "region_pixel_count": 9}, "outcome": OUTCOME_BIRTH_ACCEPTED},
+                {"region": {"class_index": 3, "region_pixel_count": 256}, "outcome": OUTCOME_BIRTH_ACCEPTED},
+                {"region": {"class_index": 2, "region_pixel_count": 5000}, "outcome": OUTCOME_BIRTH_ACCEPTED},
+            ]
+        ),
     )
     return root
 
@@ -518,6 +521,55 @@ def test_full_ladder_with_fresh_pointer_approves(tmp_path: Path) -> None:
     assert verdict["approved"] is True
 
 
+def test_wrong_to_wrong_churn_is_not_spill_when_exact_score_improves(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(wrong_to_wrong=1406),
+                *[
+                    dict(row, wrong_to_wrong=1406)
+                    for row in _hi_nerv_four_arm_action_effects()
+                ],
+            ],
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "action_effect_v1_spill_positive:wrong_to_wrong" not in verdict["blocking_evidence"]
+    assert verdict["approved"] is True
+
+
+def test_target_to_wrong_still_blocks_hinerv_action_effect(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "action_effect.json",
+        {
+            "rows": [
+                _hi_nerv_action_effect(target_to_wrong=1),
+                *_hi_nerv_four_arm_action_effects(),
+            ],
+        },
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "action_effect_v1_spill_positive:target_to_wrong" in verdict["blocking_evidence"]
+    assert verdict["approved"] is False
+
+
 def test_missing_hinerv_four_arm_action_effect_blocks_ladder(tmp_path: Path) -> None:
     root = _full_hi_nerv_root(tmp_path)
     _write(
@@ -593,6 +645,36 @@ def test_contradictory_representative_coverage_blocks_l5(tmp_path: Path) -> None
     blocking = verdict["blocking_evidence"]
     assert "representative_region_coverage_region_classes_below_threshold" in blocking
     assert "representative_region_coverage_distinct_classes_below_threshold" in blocking
+
+
+def test_scalar_only_representative_coverage_blocks_l5(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "coverage.json",
+        {
+            "schema": REPRESENTATIVE_COVERAGE_SCHEMA,
+            "fixture_not_real": True,
+            "passed": True,
+            "region_classes_covered": 3,
+            "distinct_classes_accepted": 2,
+            "distinct_size_classes_accepted": 3,
+            "accepted_count": 3,
+            "min_distinct_classes": 2,
+            "min_distinct_class_size_buckets": 3,
+        },
+    )
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+    assert verdict["approved"] is False
+    assert verdict["highest_level"] == "L4"
+    blocking = verdict["blocking_evidence"]
+    assert "representative_region_coverage_outcomes_missing" in blocking
+    assert "representative_region_coverage_accepted_buckets_missing" in blocking
+    assert "representative_region_coverage_all_buckets_missing" in blocking
 
 
 def test_hinerv_family_alias_is_canonicalized(tmp_path: Path) -> None:

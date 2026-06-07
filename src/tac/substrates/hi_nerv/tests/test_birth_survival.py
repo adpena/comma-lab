@@ -17,6 +17,7 @@ region-reconstruction math itself; they are unit fixtures, not empirical anchors
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import json
 import zipfile
@@ -79,6 +80,35 @@ def test_reconstruct_birth_region_mask_matches_named_region() -> None:
     ys, xs = np.nonzero(mask[0])
     assert ys.min() == 4 and ys.max() == 9
     assert xs.min() == 6 and xs.max() == 13
+
+
+def test_reconstruct_birth_region_mask_uses_packed_unsolved_region() -> None:
+    labels = np.ones((1, 4, 6), dtype=np.int64)
+    mask_bool = np.zeros_like(labels, dtype=bool)
+    mask_bool[0, :, 3:] = True
+    worst_region = {
+        "batch_index": 0,
+        "class_index": 1,
+        "region_label": 1,
+        "region_pixel_count": 12,
+        "region_unsolved_pixel_count": 12,
+        "region_mask_bhw_packbits": {
+            "schema": "hi_nerv_target_region_birth_mask_packbits.v1",
+            "encoding": "numpy.packbits:uint8:bitorder_big",
+            "shape": list(labels.shape),
+            "true_count": 12,
+            "data_b64": base64.b64encode(
+                np.packbits(mask_bool.reshape(-1).astype(np.uint8), bitorder="big").tobytes()
+            ).decode("ascii"),
+        },
+    }
+
+    mask, region_pixels = reconstruct_birth_region_mask(labels, worst_region)
+
+    assert region_pixels == 12
+    assert int(mask.sum()) == 12
+    assert np.count_nonzero(mask[0, :, :3]) == 0
+    assert np.count_nonzero(mask[0, :, 3:]) == 12
 
 
 def test_reconstruct_birth_region_mask_rejects_drifted_labels() -> None:

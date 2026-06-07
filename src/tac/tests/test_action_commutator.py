@@ -44,8 +44,11 @@ from tac.analysis.pr110_baseline_reproduction import (
     BLOCKER_AUTHORITY,
     BLOCKER_GLOBAL_K,
     BLOCKER_MISSING,
+    BLOCKER_REPLAY_ROW_MISSING,
+    BLOCKER_SELECTOR_PAIR_COUNT,
     MENU_ILP_BASELINE_BLOCKER,
     PR110_K16_BASELINE_REPRODUCTION_SCHEMA,
+    build_pr110_k16_baseline_reproduction_from_action_effects,
 )
 from tac.optimization.proxy_candidate_contract import PROXY_FALSE_AUTHORITY_FIELDS
 
@@ -263,6 +266,108 @@ def test_authority_matches_returns_that_authority():
     ab = _seg_effect("A__then__B", new_d_seg=0.05, authority="parseback_mlx")
     row = commutator_value(a, b, ab)
     assert row["authority"] == "parseback_mlx"
+
+
+def test_measured_commutator_rejects_normalization_scope_mismatch():
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="same_advisory_surface",
+        normalization_scope="batch_local",
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="same_advisory_surface",
+        normalization_scope="full_video_exact",
+    )
+    ab = _seg_effect(
+        "A__then__B",
+        new_d_seg=0.05,
+        authority="same_advisory_surface",
+        normalization_scope="batch_local",
+    )
+
+    with pytest.raises(ActionCommutatorError, match="normalization_scope mismatch"):
+        commutator_value(a, b, ab)
+
+
+def test_measured_commutator_rejects_mismatched_base_hashes():
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="contest_cpu",
+        archive_sha256="a" * 64,
+        payload_sha256="b" * 64,
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="contest_cpu",
+        archive_sha256="a" * 64,
+        payload_sha256="b" * 64,
+    )
+    ab = _seg_effect(
+        "A__then__B",
+        new_d_seg=0.05,
+        authority="contest_cpu",
+        archive_sha256="c" * 64,
+        payload_sha256="b" * 64,
+    )
+
+    with pytest.raises(ActionCommutatorError, match="archive_sha256 mismatch"):
+        commutator_value(a, b, ab)
+
+
+def test_measured_commutator_rejects_partially_missing_base_hashes():
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="contest_cpu",
+        archive_sha256="a" * 64,
+        payload_sha256="b" * 64,
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="contest_cpu",
+        archive_sha256="a" * 64,
+        payload_sha256="b" * 64,
+    )
+    ab = _seg_effect("A__then__B", new_d_seg=0.05, authority="contest_cpu")
+
+    with pytest.raises(ActionCommutatorError, match="archive_sha256 missing"):
+        commutator_value(a, b, ab)
+
+
+def test_measured_commutator_carries_shared_base_hashes_when_present():
+    archive_hash = "a" * 64
+    payload_hash = "b" * 64
+    a = _seg_effect(
+        "A",
+        new_d_seg=0.08,
+        authority="contest_cpu",
+        archive_sha256=archive_hash,
+        payload_sha256=payload_hash,
+    )
+    b = _seg_effect(
+        "B",
+        new_d_seg=0.09,
+        authority="contest_cpu",
+        archive_sha256=archive_hash,
+        payload_sha256=payload_hash,
+    )
+    ab = _seg_effect(
+        "A__then__B",
+        new_d_seg=0.05,
+        authority="contest_cpu",
+        archive_sha256=archive_hash,
+        payload_sha256=payload_hash,
+    )
+
+    row = commutator_value(a, b, ab)
+    assert row["base_archive_sha256"] == archive_hash
+    assert row["base_payload_sha256"] == payload_hash
 
 
 # ── 5. false-authority markers present (planning row, never a score claim) ───
@@ -685,6 +790,81 @@ def _write_pr110_k16_baseline(path: Path, **overrides: object) -> None:
     }
     payload.update(overrides)
     path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _pr110_selector_effect(
+    *,
+    action_id: str = "pr110-global-k16-selector",
+    action_kind: str = "selector_replay",
+    pair_count: int = 600,
+    payload_sections: tuple[str, ...] = ("selector_global_k16",),
+) -> ActionEffect:
+    return ActionEffect.build(
+        action_id=action_id,
+        family="pr110",
+        action_kind=action_kind,
+        authority="contest_cpu",
+        normalization_scope="full_video_exact",
+        producer="unit_test_pr110_replay",
+        pair_ids=range(pair_count),
+        payload_sections=payload_sections,
+        old_d_seg=0.001,
+        new_d_seg=0.0009,
+        old_d_pose=0.0001,
+        new_d_pose=0.00009,
+        old_bytes=178_517,
+        new_bytes=178_517,
+        archive_sha256="a" * 64,
+        payload_sha256="b" * 64,
+    )
+
+
+def test_pr110_k16_baseline_builder_accepts_full_selector_replay_action_effect() -> None:
+    proof = build_pr110_k16_baseline_reproduction_from_action_effects(
+        [_pr110_selector_effect()],
+        expected_global_k=16,
+        expected_pair_count=600,
+        byte_tolerance=0,
+        score_tolerance=0.0,
+        source="unit_test",
+    )
+
+    assert proof["schema"] == PR110_K16_BASELINE_REPRODUCTION_SCHEMA
+    assert proof["passed"] is True
+    assert proof["blockers"] == []
+    assert proof["global_k"] == 16
+    assert proof["pair_count"] == 600
+    assert proof["selector_bits"] == 2400
+    assert proof["score_claim"] is False
+
+
+def test_pr110_k16_baseline_builder_rejects_sparse_selector_mode() -> None:
+    proof = build_pr110_k16_baseline_reproduction_from_action_effects(
+        [
+            _pr110_selector_effect(
+                action_id="pr110-sparse-selector",
+                action_kind="selector_mode",
+                pair_count=1,
+                payload_sections=("selector_k1",),
+            )
+        ],
+        expected_global_k=16,
+        expected_pair_count=600,
+        source="unit_test",
+    )
+
+    assert proof["passed"] is False
+    assert BLOCKER_GLOBAL_K in proof["blockers"]
+    assert BLOCKER_SELECTOR_PAIR_COUNT in proof["blockers"]
+    assert proof["global_k"] == 1
+    assert proof["pair_count"] == 1
+
+
+def test_pr110_k16_baseline_builder_rejects_missing_replay_row() -> None:
+    proof = build_pr110_k16_baseline_reproduction_from_action_effects([], source="unit_test")
+
+    assert proof["passed"] is False
+    assert BLOCKER_REPLAY_ROW_MISSING in proof["blockers"]
 
 
 def test_cli_valid_k16_baseline_unblocks_menu_ilp(tmp_path: Path):

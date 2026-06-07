@@ -117,6 +117,46 @@ def _resolve_authority(
     return authorities[0]
 
 
+def _resolve_measurement_identity(
+    effect_a: ActionEffect,
+    effect_b: ActionEffect,
+    effect_ab: ActionEffect,
+) -> tuple[str | None, str | None]:
+    """Return shared archive/payload identities, or raise on custody mismatch.
+
+    Older synthetic analysis rows may omit archive/payload hashes entirely.  But
+    once a measured commutator row carries an identity field on any of the three
+    effects, all three rows must carry the same value for that field; otherwise
+    the subtraction mixes different base payloads.
+    """
+
+    scopes = tuple(str(e.normalization_scope).strip() for e in (effect_a, effect_b, effect_ab))
+    if any(not scope for scope in scopes) or len(set(scopes)) != 1:
+        raise ActionCommutatorError(
+            "normalization_scope mismatch across commutator rows: "
+            f"a={scopes[0]!r} b={scopes[1]!r} ab={scopes[2]!r}"
+        )
+
+    def shared_optional_hash(field: str) -> str | None:
+        values = tuple(getattr(e, field) for e in (effect_a, effect_b, effect_ab))
+        present = tuple(str(value).strip() for value in values if value is not None and str(value).strip())
+        if not present:
+            return None
+        if len(present) != 3:
+            raise ActionCommutatorError(
+                f"{field} missing on one or more commutator rows: "
+                f"a={values[0]!r} b={values[1]!r} ab={values[2]!r}"
+            )
+        if len(set(present)) != 1:
+            raise ActionCommutatorError(
+                f"{field} mismatch across commutator rows: "
+                f"a={values[0]!r} b={values[1]!r} ab={values[2]!r}"
+            )
+        return present[0]
+
+    return shared_optional_hash("archive_sha256"), shared_optional_hash("payload_sha256")
+
+
 def _resolve_triple(
     effect_a: ActionEffect,
     effect_b: ActionEffect,
@@ -199,6 +239,11 @@ def commutator_value(
             raise TypeError(f"{label} must be an ActionEffect; got {type(effect)!r}")
 
     authority = _resolve_authority(effect_a, effect_b, effect_ab)
+    base_archive_sha256, base_payload_sha256 = _resolve_measurement_identity(
+        effect_a,
+        effect_b,
+        effect_ab,
+    )
     triple = _resolve_triple(effect_a, effect_b, effect_ab)
     comm = triple.delta_ab - triple.delta_a - triple.delta_b
     classification = _classify(comm, eps)
@@ -217,9 +262,11 @@ def commutator_value(
         "first_archive_sha256": effect_a.archive_sha256,
         "second_archive_sha256": effect_b.archive_sha256,
         "composed_archive_sha256": effect_ab.archive_sha256,
+        "base_archive_sha256": base_archive_sha256,
         "first_payload_sha256": effect_a.payload_sha256,
         "second_payload_sha256": effect_b.payload_sha256,
         "composed_payload_sha256": effect_ab.payload_sha256,
+        "base_payload_sha256": base_payload_sha256,
         "basis": triple.basis,
         "delta_a": triple.delta_a,
         "delta_b": triple.delta_b,

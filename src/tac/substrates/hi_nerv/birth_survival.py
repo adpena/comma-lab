@@ -43,6 +43,7 @@ marker and NONE of ``score_claim`` / ``promotion_eligible`` /
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import zipfile
@@ -113,6 +114,44 @@ def reconstruct_birth_region_mask(
     """
 
     labels = _coerce_labels_bhw(target_labels)
+    packed_mask = worst_region.get("region_mask_bhw_packbits")
+    if isinstance(packed_mask, Mapping):
+        try:
+            shape = tuple(int(v) for v in packed_mask["shape"])
+            true_count = int(packed_mask["true_count"])
+            data_b64 = str(packed_mask["data_b64"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise BirthSurvivalError(
+                f"invalid region_mask_bhw_packbits payload: {packed_mask!r}"
+            ) from exc
+        if shape != tuple(int(v) for v in labels.shape):
+            raise BirthSurvivalError(
+                "packed birth region shape drifted from target_labels; "
+                f"mask={shape} labels={tuple(int(v) for v in labels.shape)}"
+            )
+        try:
+            packed = np.frombuffer(base64.b64decode(data_b64), dtype=np.uint8)
+        except Exception as exc:  # pragma: no cover - defensive bad-base64 path.
+            raise BirthSurvivalError("packed birth region mask is not valid base64") from exc
+        flat_count = int(np.prod(shape))
+        unpacked = np.unpackbits(packed, bitorder="big", count=flat_count).astype(bool)
+        mask = unpacked.reshape(shape).astype(np.float32)
+        region_pixels = int(np.count_nonzero(mask))
+        expected = worst_region.get("region_pixel_count")
+        if expected is not None and region_pixels != int(expected):
+            raise BirthSurvivalError(
+                "packed birth region drifted from the live receipt; "
+                f"mask={region_pixels} receipt={int(expected)}"
+            )
+        if region_pixels != true_count:
+            raise BirthSurvivalError(
+                "packed birth region true_count drifted from decoded mask; "
+                f"decoded={region_pixels} payload={true_count}"
+            )
+        if region_pixels == 0:
+            raise BirthSurvivalError("packed birth region selects zero pixels")
+        return mask, region_pixels
+
     try:
         batch = int(worst_region["batch_index"])
         cls = int(worst_region["class_index"])

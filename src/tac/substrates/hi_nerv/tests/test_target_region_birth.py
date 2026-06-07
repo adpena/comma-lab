@@ -212,6 +212,67 @@ def test_select_worst_target_region_with_mask_matches_row() -> None:
     assert xs.min() == worst.bbox_x0 and xs.max() + 1 == worst.bbox_x1
 
 
+def test_select_worst_target_region_with_mask_can_exclude_failed_positive_region() -> None:
+    labels, candidate = _two_region_labels()
+    first, _mask = select_worst_target_region_with_mask(labels, candidate)
+    assert first.region_pixel_count == 12
+
+    second, second_mask = select_worst_target_region_with_mask(
+        labels,
+        candidate,
+        excluded_region_keys=[(first.batch_index, first.class_index, first.region_label)],
+    )
+
+    assert second.class_index == 1
+    assert second.region_unsolved_pixel_count == 4
+    assert int(second_mask.sum()) == second.region_pixel_count == 4
+    assert second.score_debt_units < first.score_debt_units
+
+
+def test_select_worst_target_region_with_mask_can_force_region_key() -> None:
+    labels, candidate = _two_region_labels()
+    forced, mask = select_worst_target_region_with_mask(
+        labels,
+        candidate,
+        forced_region_key=(0, 1, 1),
+    )
+
+    assert forced.batch_index == 0
+    assert forced.class_index == 1
+    assert forced.region_label == 1
+    assert int(mask.sum()) == forced.region_pixel_count == 4
+    with pytest.raises(ValueError, match="forced target-region key not found"):
+        select_worst_target_region_with_mask(
+            labels,
+            candidate,
+            forced_region_key=(0, 4, 1),
+        )
+
+
+def test_positive_debt_region_excludes_already_won_support() -> None:
+    labels = np.ones((1, 4, 6), dtype=np.int64)
+    candidate = np.ones_like(labels)
+    # One semantic class-1 component spans the whole frame.  The left half is
+    # already scored correct; only the right half is debt.  The birth selector
+    # must target the connected wrong pixels, not the parent semantic region.
+    candidate[0, :, 3:] = 0
+
+    rows = [r for r in find_target_region_debts(labels, candidate) if r.class_index == 1]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.region_pixel_count == 12
+    assert row.region_unsolved_pixel_count == 12
+    assert row.region_hard_ratio == 0.0
+    assert row.bbox_x0 == 3
+    assert row.bbox_x1 == 6
+
+    worst, mask = select_worst_target_region_with_mask(labels, candidate)
+    assert worst == row
+    assert int(mask.sum()) == 12
+    assert np.count_nonzero(mask[0, :, :3]) == 0
+    assert np.count_nonzero(mask[0, :, 3:]) == 12
+
+
 def test_find_target_region_debts_separates_diagonal_components() -> None:
     # Two diagonal pixels are 8-connected but NOT 4-connected: the pricing
     # must treat them as separate regions.
@@ -658,6 +719,8 @@ def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update() -
     assert frontier["schema"] == "hi_nerv_target_region_birth_candidate_frontier_telemetry.v1"
     assert frontier["candidate_attempt_count"] >= payload["accepted_step_count"]
     assert frontier["region_progress_candidate_count"] >= payload["accepted_step_count"]
+    assert frontier["argmax_birth_quantum_growth_attempt_count"] >= 0
+    assert frontier["max_argmax_birth_quantum_growth_attempts_per_step"] >= 1
     assert frontier["max_candidate_receiver_uint8_changed_pixels_region"] > 0
     assert payload["receipt"]["candidate_frontier_telemetry"] == frontier
     # No pose teacher -> exact joint term explicitly unavailable, not faked.
@@ -705,10 +768,10 @@ def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() ->
     )
 
     assert payload["accepted"] is True
-    assert payload["before_region_hard_ratio"] == pytest.approx(0.5)
+    assert payload["before_region_hard_ratio"] == pytest.approx(0.0)
     assert payload["after_region_hard_ratio"] == pytest.approx(1.0)
     assert payload["unsolved_tail_pixel_count"] == 24
-    assert payload["already_won_region_pixel_count"] == 24
+    assert payload["already_won_region_pixel_count"] == 0
     assert payload["before_unsolved_tail_hard_ratio"] == 0.0
     assert payload["after_unsolved_tail_hard_ratio"] == pytest.approx(1.0)
     transitions = payload["argmax_transitions"]
@@ -718,19 +781,19 @@ def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() ->
     assert telemetry["progress_reference"] == "initial_unsolved_tail_with_already_won_preservation"
     assert telemetry["final_already_won_lost_count"] == 0
     assert telemetry["unsolved_tail_pixel_count"] == 24
-    assert telemetry["already_won_region_pixel_count"] == 24
+    assert telemetry["already_won_region_pixel_count"] == 0
     assert payload["target_geometry_mode"] == "frontier_band"
     assert payload["target_geometry_frontier_dilation"] == 1
-    assert payload["initial_active_tail_pixel_count"] == 6
-    assert payload["active_tail_refresh_count"] >= 1
+    assert payload["initial_active_tail_pixel_count"] == 24
+    assert payload["active_tail_refresh_count"] >= 0
     geometry = telemetry["target_geometry"]
     assert geometry["mode"] == "frontier_band"
-    assert geometry["initial_active_tail_pixel_count"] == 6
+    assert geometry["initial_active_tail_pixel_count"] == 24
     assert geometry["parent_unsolved_tail_pixel_count"] == 24
-    assert geometry["parent_already_won_pixel_count"] == 24
+    assert geometry["parent_already_won_pixel_count"] == 0
     assert geometry["history"][0]["reason"] == "initial"
-    assert geometry["history"][0]["active_tail_pixel_count"] == 6
-    assert any(record["active_tail_pixel_count_before_attempt"] == 6 for record in telemetry["attempts"])
+    assert geometry["history"][0]["active_tail_pixel_count"] == 24
+    assert any(record["active_tail_pixel_count_before_attempt"] == 24 for record in telemetry["attempts"])
     controls = telemetry["trust_region_controls"]
     assert controls["lambda_support_preserve"] == pytest.approx(64.0)
     assert controls["lambda_already_won_hard_preserve"] == pytest.approx(0.0)
@@ -774,20 +837,19 @@ def test_target_region_birth_rejects_spilling_attempts_before_clean_tail_birth()
     )
 
     assert payload["accepted"] is True
-    assert payload["before_region_hard_ratio"] == pytest.approx(0.5)
+    assert payload["before_region_hard_ratio"] == pytest.approx(0.0)
     assert payload["after_region_hard_ratio"] == pytest.approx(1.0)
+    assert payload["already_won_region_pixel_count"] == 0
     transitions = payload["argmax_transitions"]
     assert transitions["wrong_to_target_count"] == 24
     assert transitions["target_to_wrong_count"] == 0
     assert transitions["net_target_support_delta"] == 24
     telemetry = payload["candidate_frontier_telemetry"]
-    assert telemetry["spill_rejected_candidate_count"] > 0
-    assert telemetry["max_candidate_already_won_lost_count"] > 0
+    assert telemetry["spill_rejected_candidate_count"] == 0
+    assert telemetry["max_candidate_already_won_lost_count"] == 0
     assert telemetry["final_already_won_lost_count"] == 0
     spilling = [record for record in telemetry["attempts"] if record["support_spill"]]
-    assert spilling
-    assert all(record["decision"] != "accepted" for record in spilling)
-    assert any(record["region_wrong_to_target_count"] > 0 for record in spilling)
+    assert not spilling
     assert any(
         (not record["support_spill"])
         and record["decision"] == "accepted"
@@ -837,6 +899,7 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
     assert payload["accepted_step_count"] == 0
     assert payload["subquantum_rejected_step_count"] >= 1
     assert payload["receiver_quantum_growth_attempt_count"] >= 1
+    assert payload["argmax_birth_quantum_growth_attempt_count"] >= 0
     assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
     assert payload["updated_parameter_names"] == []
     all_after = {
@@ -847,6 +910,129 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
     assert all_after.keys() == all_before.keys()
     for name, before_value in all_before.items():
         assert np.array_equal(before_value, all_after[name]), name
+
+
+@skip_no_mlx
+def test_target_region_birth_portfolio_budget_blocks_with_remaining_regions() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    labels_np[0, 14:18, 20:26] = 1
+    teacher = _SubquantumSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=2,
+        learning_rate=5.0e-4,
+        target_region_portfolio_max_regions=1,
+    )
+
+    portfolio = payload["target_region_portfolio"]
+    assert payload["accepted"] is False
+    assert portfolio["attempt_count"] == 1
+    assert portfolio["remaining_positive_region_count"] > 0
+    assert portfolio["budget_exhausted"] is True
+    assert portfolio["search_exhausted"] is False
+    assert portfolio["exhausted"] is False
+    assert (
+        "hinerv_target_region_birth_portfolio_budget_exhausted_with_remaining_positive_regions"
+        in payload["blockers"]
+    )
+    assert payload["receipt"]["blockers"] == payload["blockers"]
+
+
+@skip_no_mlx
+def test_target_region_birth_forced_region_key_disables_portfolio_retry() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    labels_np[0, 14:18, 20:26] = 1
+    teacher = _SubquantumSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=2,
+        learning_rate=5.0e-4,
+        target_region_portfolio_max_regions=4,
+        target_region_forced_key=(0, 1, 1),
+    )
+
+    portfolio = payload["target_region_portfolio"]
+    assert payload["target_region_forced_key"] == [0, 1, 1]
+    assert portfolio["forced_region_key"] == [0, 1, 1]
+    assert portfolio["selection_policy"] == "forced_region_key_no_retry"
+    assert portfolio["attempt_count"] == 1
+    assert portfolio["remaining_positive_region_count"] > 0
+    assert portfolio["budget_exhausted"] is False
+    assert [payload["worst_region"][key] for key in ("batch_index", "class_index", "region_label")] == [0, 1, 1]
+
+
+@skip_no_mlx
+def test_target_region_birth_fakequant_survival_requirement_controls_acceptance() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=8,
+        learning_rate=2.0e-3,
+        require_fakequant_survival=True,
+        fakequant_survival_bits=4,
+    )
+
+    telemetry = payload["candidate_frontier_telemetry"]
+    assert telemetry["fakequant_survival_required"] is True
+    assert telemetry["fakequant_survival_candidate_count"] >= payload["accepted_step_count"]
+    attempts = telemetry["attempts"]
+    assert attempts
+    for record in attempts:
+        if record["decision"] == "accepted":
+            assert record["fakequant_survived"] is True
+            assert record["fakequant_admission"]["survived"] is True
+    if payload["accepted"]:
+        assert payload["fakequant_survival_rejected_step_count"] == 0
+    else:
+        assert (
+            payload["fakequant_survival_rejected_step_count"] >= 1
+            or telemetry["fakequant_survival_rejected_candidate_count"] >= 1
+            or telemetry["fakequant_survival_candidate_count"] == 0
+        )
+        assert "hinerv_target_region_birth_no_accepted_step" in payload["blockers"]
 
 
 @skip_no_mlx

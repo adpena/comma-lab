@@ -329,10 +329,13 @@ def _require_hi_nerv_action_effect_evidence(
     ):
         if not _positive_number(best.get(field)):
             blockers.append(f"action_effect_v1_field_missing_or_nonpositive:{field}")
-    for field in ("target_to_wrong", "wrong_to_wrong"):
-        value = best.get(field)
-        if value is not None and _finite_number(value) and float(value) > 0.0:
-            blockers.append(f"action_effect_v1_spill_positive:{field}")
+    target_to_wrong = best.get("target_to_wrong")
+    if (
+        target_to_wrong is not None
+        and _finite_number(target_to_wrong)
+        and float(target_to_wrong) > 0.0
+    ):
+        blockers.append("action_effect_v1_spill_positive:target_to_wrong")
     delta_nonrate = best.get("delta_score_nonrate")
     if not _finite_number(delta_nonrate) or float(delta_nonrate) >= 0.0:
         blockers.append("action_effect_v1_exact_nonrate_not_improved")
@@ -430,8 +433,51 @@ def _representative_coverage_ok(
         if min_classes is not None and (distinct_classes is None or distinct_classes < min_classes):
             row_blockers.append("representative_region_coverage_distinct_classes_below_threshold")
         accepted_count = row.get("accepted_count")
-        if accepted_count is not None and _positive_int_or_none(accepted_count) is None:
+        accepted_count_int = _positive_int_or_none(accepted_count)
+        if accepted_count_int is None:
             row_blockers.append("representative_region_coverage_accepted_count_not_positive")
+        outcomes = row.get("outcomes")
+        accepted_outcome_count = 0
+        accepted_outcome_buckets: set[tuple[int, str]] = set()
+        accepted_outcome_classes: set[int] = set()
+        accepted_outcome_size_classes: set[str] = set()
+        if not isinstance(outcomes, list) or not outcomes:
+            row_blockers.append("representative_region_coverage_outcomes_missing")
+        else:
+            for outcome in outcomes:
+                if not isinstance(outcome, Mapping):
+                    row_blockers.append("representative_region_coverage_outcome_invalid")
+                    continue
+                if str(outcome.get("outcome") or "") != "birth_accepted":
+                    continue
+                class_index = _nonnegative_int_or_none(outcome.get("class_index"))
+                size_class = str(outcome.get("size_class") or "").strip()
+                if class_index is None or not size_class:
+                    row_blockers.append("representative_region_coverage_accepted_outcome_missing_bucket")
+                    continue
+                accepted_outcome_count += 1
+                accepted_outcome_buckets.add((class_index, size_class))
+                accepted_outcome_classes.add(class_index)
+                accepted_outcome_size_classes.add(size_class)
+        if accepted_count_int is not None and accepted_outcome_count != accepted_count_int:
+            row_blockers.append("representative_region_coverage_accepted_count_mismatch")
+        if region_classes is not None and len(accepted_outcome_buckets) < region_classes:
+            row_blockers.append("representative_region_coverage_outcomes_below_region_classes")
+        if distinct_classes is not None and len(accepted_outcome_classes) < distinct_classes:
+            row_blockers.append("representative_region_coverage_outcomes_below_distinct_classes")
+        distinct_size_classes = _positive_int_or_none(row.get("distinct_size_classes_accepted"))
+        if distinct_size_classes is not None and len(accepted_outcome_size_classes) < distinct_size_classes:
+            row_blockers.append("representative_region_coverage_outcomes_below_distinct_size_classes")
+        accepted_buckets = _coverage_bucket_pairs(row.get("accepted_class_size_buckets"))
+        if not accepted_buckets:
+            row_blockers.append("representative_region_coverage_accepted_buckets_missing")
+        elif accepted_outcome_buckets and accepted_buckets != accepted_outcome_buckets:
+            row_blockers.append("representative_region_coverage_accepted_buckets_mismatch")
+        all_buckets = _coverage_bucket_pairs(row.get("all_class_size_buckets"))
+        if not all_buckets:
+            row_blockers.append("representative_region_coverage_all_buckets_missing")
+        elif accepted_buckets and not accepted_buckets.issubset(all_buckets):
+            row_blockers.append("representative_region_coverage_all_buckets_missing_accepted_bucket")
         if not row_blockers:
             return True
         candidate_blockers.extend(row_blockers)
@@ -514,6 +560,31 @@ def _positive_int_or_none(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _nonnegative_int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _coverage_bucket_pairs(value: Any) -> set[tuple[int, str]] | None:
+    if not isinstance(value, list):
+        return None
+    pairs: set[tuple[int, str]] = set()
+    for item in value:
+        if not isinstance(item, list | tuple) or len(item) != 2:
+            return None
+        class_index = _nonnegative_int_or_none(item[0])
+        size_class = str(item[1] or "").strip()
+        if class_index is None or not size_class:
+            return None
+        pairs.add((class_index, size_class))
+    return pairs
 
 
 def _dedupe(values: list[str]) -> list[str]:

@@ -145,12 +145,17 @@ def find_target_region_debts(
     *,
     min_region_pixels: int = 1,
 ) -> list[TargetRegionDebt]:
-    """Price every 4-connected target-class component in exact score units.
+    """Price every 4-connected target-class debt component in score units.
 
     ``score_debt_units = 100 * unsolved_pixels / total_scored_pixels`` where
     ``total_scored_pixels = B * H * W`` for the supplied batch.  The
     normalizer is batch-local and recorded on every row so a 4-pair smoke
     cannot silently masquerade as full-video score units.
+
+    Positive-debt regions are connected components of target pixels that the
+    current candidate argmax gets wrong.  Solved classes may still emit zero
+    debt rows for legacy no-unsolved checks, but birth actuators never receive
+    already-won support inside a positive-debt region.
     """
 
     if min_region_pixels < 1:
@@ -165,11 +170,16 @@ def find_target_region_debts(
         frame_candidate = candidate[batch_index]
         for class_index in np.unique(frame_target).tolist():
             class_mask = frame_target == class_index
+            unsolved_mask = class_mask & (frame_candidate != class_index)
+            # Positive-debt rows must be connected WRONG-pixel components. A
+            # full semantic component can contain already-solved support; using
+            # that as the actuator region lets birth updates destroy pixels
+            # that evaluate.py already scores as correct.
+            debt_mask = unsolved_mask if np.any(unsolved_mask) else class_mask
             # scipy default 2-D structure is the 4-connected cross.
-            labeled, component_count = ndimage.label(class_mask)
+            labeled, component_count = ndimage.label(debt_mask)
             if component_count == 0:
                 continue
-            unsolved_mask = class_mask & (frame_candidate != class_index)
             for region_label in range(1, component_count + 1):
                 region_mask = labeled == region_label
                 region_pixels = int(np.count_nonzero(region_mask))
@@ -228,18 +238,60 @@ def select_worst_target_region_with_mask(
     candidate_argmax: np.ndarray,
     *,
     min_region_pixels: int = 1,
+    excluded_region_keys: Sequence[Sequence[int]] | None = None,
+    forced_region_key: Sequence[int] | None = None,
 ) -> tuple[TargetRegionDebt, np.ndarray]:
     """Return the worst region row plus its full-batch BHW float32 mask."""
 
-    target, _ = _validate_label_pair(target_labels, candidate_argmax)
+    target, candidate = _validate_label_pair(target_labels, candidate_argmax)
     debts = find_target_region_debts(
         target_labels,
         candidate_argmax,
         min_region_pixels=min_region_pixels,
     )
+    forced: tuple[int, int, int] | None = None
+    if forced_region_key is not None:
+        forced_parts = tuple(int(part) for part in forced_region_key)
+        if len(forced_parts) != 3:
+            raise ValueError(
+                "forced_region_key must contain exactly batch,class,region; "
+                f"got {forced_region_key!r}"
+            )
+        forced = (forced_parts[0], forced_parts[1], forced_parts[2])
+    excluded = {
+        (int(parts[0]), int(parts[1]), int(parts[2]))
+        for parts in (tuple(key) for key in (excluded_region_keys or ()))
+        if len(parts) == 3
+    }
+    if forced is not None:
+        debts = [
+            row
+            for row in debts
+            if (row.batch_index, row.class_index, row.region_label) == forced
+        ]
+        if not debts:
+            raise ValueError(
+                "forced target-region key not found in current debt surface: "
+                f"batch={forced[0]} class={forced[1]} region={forced[2]}"
+            )
+    elif excluded:
+        filtered = [
+            row
+            for row in debts
+            if (row.batch_index, row.class_index, row.region_label) not in excluded
+        ]
+        positive = [row for row in filtered if row.region_unsolved_pixel_count > 0]
+        debts = positive or filtered
     worst = select_worst_target_region(debts)
     frame_target = target[worst.batch_index]
-    labeled, _count = ndimage.label(frame_target == worst.class_index)
+    frame_candidate = candidate[worst.batch_index]
+    if worst.region_unsolved_pixel_count > 0:
+        label_mask = (frame_target == worst.class_index) & (
+            frame_candidate != worst.class_index
+        )
+    else:
+        label_mask = frame_target == worst.class_index
+    labeled, _count = ndimage.label(label_mask)
     mask = np.zeros(target.shape, dtype=np.float32)
     mask[worst.batch_index] = (labeled == worst.region_label).astype(np.float32)
     if int(np.count_nonzero(mask)) != worst.region_pixel_count:

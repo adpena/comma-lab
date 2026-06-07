@@ -8927,6 +8927,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight: float = 0.0,
     scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode: str = "frontier_band",
     scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation: int = 1,
+    scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions: int = 4,
+    scorer_domain_bootstrap_segnet_hard_birth_forced_region_key: Sequence[int] | None = None,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = (
@@ -10072,6 +10074,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation=int(
                 scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions=int(
+                scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_forced_region_key=(
+                None
+                if scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
+                else tuple(
+                    int(part)
+                    for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
+                )
             ),
             allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
             scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
@@ -15354,6 +15367,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_domain_bootstrap_segnet_hard_birth_pose_target_weight: float = 0.0,
     scorer_domain_bootstrap_segnet_hard_birth_target_geometry_mode: str = "frontier_band",
     scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation: int = 1,
+    scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions: int = 4,
+    scorer_domain_bootstrap_segnet_hard_birth_forced_region_key: Sequence[int] | None = None,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -16526,6 +16541,19 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                             target_geometry_frontier_dilation=int(
                                 scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
                             ),
+                            target_region_portfolio_max_regions=int(
+                                scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions
+                            ),
+                            target_region_forced_key=(
+                                None
+                                if scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
+                                else tuple(
+                                    int(part)
+                                    for part in scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
+                                )
+                            ),
+                            require_fakequant_survival=bool(coder_aware_qat),
+                            fakequant_survival_bits=int(coder_qat_quant_bits),
                             grad_clip_max_norm=None,
                         )
                     )
@@ -22036,6 +22064,28 @@ def _parse_nonnegative_int_csv(value: str) -> tuple[int, ...]:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
 
 
+def _parse_target_region_key_csv(value: str) -> tuple[int, int, int]:
+    parts = [part.strip() for part in str(value).split(",")]
+    if len(parts) != 3 or any(not part for part in parts):
+        raise CompactRendererMlxSpineRunnerError(
+            "target-region key must be exactly batch,class,region"
+        )
+    parsed: list[int] = []
+    for part in parts:
+        try:
+            value_int = int(part)
+        except ValueError as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"invalid target-region key integer {part!r}"
+            ) from exc
+        if value_int < 0:
+            raise CompactRendererMlxSpineRunnerError(
+                f"invalid negative target-region key integer {part!r}"
+            )
+        parsed.append(value_int)
+    return (int(parsed[0]), int(parsed[1]), int(parsed[2]))
+
+
 def _normalize_gradient_multiplier_by_name(
     value: Mapping[str, Any] | None,
 ) -> dict[str, float]:
@@ -25371,6 +25421,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="4-connected dilation radius for frontier_band hard-birth geometry.",
     )
     parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-portfolio-max-regions",
+        default=4,
+        type=int,
+        help=(
+            "Maximum positive SegNet debt regions the HiNeRV hard-birth actuator "
+            "may try before reporting a portfolio budget blocker. Must be >=1."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-domain-bootstrap-segnet-hard-birth-forced-region-key",
+        default=None,
+        help=(
+            "Optional batch,class,region key that forces the HiNeRV hard-birth "
+            "actuator to replay one priced target-region debt row and disables "
+            "portfolio fallback."
+        ),
+    )
+    parser.add_argument(
         "--no-scorer-space-step-guard",
         action="store_false",
         dest="scorer_space_step_guard_enabled",
@@ -27616,6 +27684,16 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation=int(
                 args.scorer_domain_bootstrap_segnet_hard_birth_target_geometry_frontier_dilation
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions=int(
+                args.scorer_domain_bootstrap_segnet_hard_birth_portfolio_max_regions
+            ),
+            scorer_domain_bootstrap_segnet_hard_birth_forced_region_key=(
+                None
+                if args.scorer_domain_bootstrap_segnet_hard_birth_forced_region_key is None
+                else _parse_target_region_key_csv(
+                    args.scorer_domain_bootstrap_segnet_hard_birth_forced_region_key
+                )
             ),
             scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard_enabled),
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(

@@ -885,6 +885,9 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
             "pair_index": 0,
             "worst_region": {"batch_index": 0, "class_index": 2, "region_label": 1},
             "updated_parameter_names": ["head_rgb_1.weight"] if arm != "B" else ["head_rgb_0.weight"],
+            "trained_groups": (
+                ["head_rgb_1"] if arm != "B" else ["compensation_head_rgb_0"]
+            ),
             "exact_nonrate": {
                 "old_d_seg_batch": old_d_seg,
                 "new_d_seg_batch": new_d_seg,
@@ -917,6 +920,7 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
             },
             "blockers": blockers or [],
             "interaction_or_commutator": -0.25 if arm in {"C", "D"} else None,
+            "restore_state_pass": True,
         }
 
     row = runner_mod._write_hi_nerv_runner_live_birth_survival_rows(
@@ -959,6 +963,10 @@ def test_hinerv_live_birth_hysteresis_probe_restores_model_state(
     assert [entry["schema"] for entry in effect_rows] == ["tac.action_effect.v1"] * 5
     assert effect_rows[0]["fakequant_survived"] is True
     assert [entry["arm"] for entry in effect_rows[1:]] == ["A", "B", "C", "D"]
+    assert effect_rows[1]["class_ids"] == [2]
+    assert effect_rows[1]["trained_groups"] == ["head_rgb_1"]
+    assert effect_rows[2]["trained_groups"] == ["compensation_head_rgb_0"]
+    assert effect_rows[1]["restore_state_passed"] is True
     assert effect_rows[-1]["action_kind"] == "joint_line_search_composite"
     assert effect_rows[-1]["interaction_or_commutator"] == pytest.approx(-0.25)
 
@@ -7786,6 +7794,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
             lambda_pose_target,
             target_geometry_mode,
             target_geometry_frontier_dilation,
+            target_region_portfolio_max_regions,
+            require_fakequant_survival,
+            fakequant_survival_bits,
             grad_clip_max_norm,
         ):
             captured["target_region_birth_call"] = {
@@ -7808,6 +7819,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 "lambda_pose_target": float(lambda_pose_target),
                 "target_geometry_mode": str(target_geometry_mode),
                 "target_geometry_frontier_dilation": int(target_geometry_frontier_dilation),
+                "target_region_portfolio_max_regions": int(target_region_portfolio_max_regions),
+                "require_fakequant_survival": bool(require_fakequant_survival),
+                "fakequant_survival_bits": int(fakequant_survival_bits),
                 "grad_clip_max_norm": grad_clip_max_norm,
             }
             return {
@@ -8215,6 +8229,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert target_birth_call["lambda_pose_target"] == pytest.approx(41.0)
     assert target_birth_call["target_geometry_mode"] == "largest_unsolved_component"
     assert target_birth_call["target_geometry_frontier_dilation"] == 3
+    assert target_birth_call["target_region_portfolio_max_regions"] == 4
+    assert target_birth_call["require_fakequant_survival"] is False
+    assert target_birth_call["fakequant_survival_bits"] == 8
     assert (
         bootstrap_call["pair_local_smoke_artifact_dir"]
         == (tmp_path / "private_smoke_full_priority_hydration" / "hi_nerv_pair_local_actuator_smoke").as_posix()

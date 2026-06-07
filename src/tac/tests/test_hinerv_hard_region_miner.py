@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+from tac.analysis.action_effect import ActionEffect
 from tac.analysis.hinerv_hard_region_miner import (
     HARD_REGION_PLAN_SCHEMA,
     OUTCOME_BIRTH_ACCEPTED,
@@ -24,9 +25,11 @@ from tac.analysis.hinerv_hard_region_miner import (
     size_class_for_pixels,
 )
 from tac.analysis.nerv_long_run_launch_gate import (
+    ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
     BIRTH_HYSTERESIS_SCHEMA,
     BIRTH_RECEIPT_SCHEMA,
     BIRTH_SURVIVAL_SCHEMA,
+    SOURCE_QUALIFIED_METRICS_SCHEMA,
     evaluate_nerv_long_run_launch_gate,
 )
 from tac.optimization.proxy_candidate_contract import (
@@ -222,6 +225,60 @@ def _support_stats() -> dict[str, float]:
     }
 
 
+def _action_effect_row(
+    *,
+    action_id: str,
+    arm: str | None = None,
+    action_kind: str = "target_region_birth",
+) -> dict[str, Any]:
+    return ActionEffect.build(
+        action_id=action_id,
+        family="hinerv",
+        action_kind=action_kind,
+        authority="archive_parseback_planning_false_authority",
+        producer="hinerv_hard_region_miner_test",
+        consumer="nerv_long_run_launch_gate",
+        pair_ids=[0],
+        region_ids=["b0/c1/r0"],
+        payload_sections=["head_rgb_1.weight"],
+        old_d_seg=0.0010,
+        new_d_seg=0.0007,
+        old_d_pose=1.0e-4,
+        new_d_pose=8.0e-5,
+        old_bytes=178_258,
+        new_bytes=178_258,
+        exact_score_decision="accept",
+        raw_cap_decision="satisfied",
+        catastrophic_guard_decision="satisfied",
+        would_accept_exact_score_if_raw_cap_disabled=True,
+        would_accept_without_catastrophic_guard=True,
+        rejected_by_raw_cap=False,
+        rejected_by_exact_score=False,
+        rejected_by_catastrophic_guard=False,
+        fakequant_survived=True,
+        parseback_survived=True,
+        inflate_survived=True,
+        hard_won_count=5,
+        wrong_to_target=5,
+        target_to_wrong=0,
+        wrong_to_wrong=0,
+        net_target_support_delta=3,
+        uint8_changed_count_region=16,
+        seg_input_delta_linf_region=1.0 / 255.0,
+        posenet_input_delta_linf_pair=1.0 / 255.0,
+        arm=arm,
+    ).as_dict()
+
+
+def _four_arm_action_effect_rows(*, action_id: str) -> list[dict[str, Any]]:
+    return [
+        _action_effect_row(action_id=action_id, arm="A", action_kind="birth_only"),
+        _action_effect_row(action_id=action_id, arm="B", action_kind="frame0_pose_target_only"),
+        _action_effect_row(action_id=action_id, arm="C", action_kind="independent_birth_plus_frame0_pose"),
+        _action_effect_row(action_id=action_id, arm="D", action_kind="joint_line_search_composite"),
+    ]
+
+
 def _write_full_birth_ladder(run_root: Path, *, action_id: str, with_coverage: bool) -> None:
     """Write the complete L2->L5 fixture ladder the launch gate requires.
 
@@ -237,7 +294,12 @@ def _write_full_birth_ladder(run_root: Path, *, action_id: str, with_coverage: b
         "accepted_step_count": 3,
         "action_id": action_id,
         "runtime_sidecar_bytes": 0,
-        "pose_guard": {"available": True, "pose_input_contest_resolution": True},
+        "pose_guard": {
+            "available": True,
+            "pose_input_contest_resolution": True,
+            "max_accepted_pose_output_delta_l2": 0.025,
+            "max_pose_output_delta_l2": 0.05,
+        },
         "exact_nonrate": {"pose_term_available": True, "delta_score_nonrate": -0.01},
         **support,
     }
@@ -257,6 +319,43 @@ def _write_full_birth_ladder(run_root: Path, *, action_id: str, with_coverage: b
         (run_root / name).write_text(json.dumps(row), encoding="utf-8")
     (run_root / "hysteresis.json").write_text(
         json.dumps({"schema": BIRTH_HYSTERESIS_SCHEMA, "action_id": action_id, "passed": True}),
+        encoding="utf-8",
+    )
+    (run_root / "action_effect.json").write_text(
+        json.dumps(
+            {
+                "rows": [
+                    _action_effect_row(action_id=action_id),
+                    *_four_arm_action_effect_rows(action_id=action_id),
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_root / "parseback_contract.json").write_text(
+        json.dumps(
+            {
+                "schema": ARCHIVE_PARSEBACK_SELECTION_CONTRACT_SCHEMA,
+                "parseback_selection_required": True,
+                "archive_parseback_axis_required": True,
+                "live_only_improvement_is_false_authority": True,
+                "fail_closed_on_axis_divergence": True,
+                "selection_authority_order": ["archive_parseback", "live_mlx_advisory"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (run_root / "source_metrics.json").write_text(
+        json.dumps(
+            {
+                "schema": SOURCE_QUALIFIED_METRICS_SCHEMA,
+                "family": "hinerv",
+                "source_qualified": True,
+                "metric_source": "upstream_evaluate_geometry",
+                "seg_metric_source": "segnet_last_frame_argmax",
+                "pose_metric_source": "posenet_yuv6_pair",
+            }
+        ),
         encoding="utf-8",
     )
     if with_coverage:

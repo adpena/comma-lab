@@ -21,10 +21,11 @@ local PyTorch HiNeRV grammar so archive/export/runtime contracts remain ours.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -2714,6 +2715,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         target_geometry_frontier_dilation: int = 1,
         emit_four_arm_ablation: bool = True,
         four_arm_ablation_compensation_steps: int = 8,
+        target_region_portfolio_max_regions: int = 4,
+        target_region_forced_key: Sequence[int] | None = None,
+        require_fakequant_survival: bool = False,
+        fakequant_survival_bits: int = 4,
+        _target_region_portfolio_excluded: Sequence[Sequence[int]] = (),
+        _target_region_portfolio_attempts: Sequence[Mapping[str, Any]] = (),
     ) -> dict[str, Any]:
         """Run a scoped hard-birth prefit on the worst SegNet target region.
 
@@ -2742,6 +2749,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             allowed_pose_compensation_update_name,
             birth_action_id,
             build_target_region_birth_receipt,
+            find_target_region_debts,
             pose_trusted_birth_admission_decision,
             region_argmax_transition_counts,
             region_margin_stats,
@@ -2808,6 +2816,29 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "four_arm_ablation_compensation_steps must be >= 1; "
                 f"got {four_arm_ablation_compensation_steps}"
             )
+        portfolio_max_regions = int(target_region_portfolio_max_regions)
+        if portfolio_max_regions < 1:
+            raise ValueError(
+                "target_region_portfolio_max_regions must be >= 1; "
+                f"got {target_region_portfolio_max_regions}"
+            )
+        portfolio_excluded_keys: tuple[tuple[int, int, int], ...] = tuple(
+            (int(key[0]), int(key[1]), int(key[2]))
+            for key in _target_region_portfolio_excluded
+        )
+        portfolio_prior_attempts = [dict(record) for record in _target_region_portfolio_attempts]
+        forced_region_key: tuple[int, int, int] | None = None
+        if target_region_forced_key is not None:
+            forced_parts = tuple(int(part) for part in target_region_forced_key)
+            if len(forced_parts) != 3:
+                raise ValueError(
+                    "target_region_forced_key must contain exactly batch,class,region; "
+                    f"got {target_region_forced_key!r}"
+                )
+            forced_region_key = (forced_parts[0], forced_parts[1], forced_parts[2])
+        fakequant_bits = int(fakequant_survival_bits)
+        if fakequant_bits < 1 or fakequant_bits > 16:
+            raise ValueError(f"fakequant_survival_bits must be in [1, 16]; got {fakequant_survival_bits}")
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
             raise ValueError(f"grad_clip_max_norm must be None or finite and positive; got {grad_clip_max_norm}")
@@ -2953,6 +2984,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             labels_np,
             initial_argmax_np,
             min_region_pixels=int(min_region_pixels),
+            excluded_region_keys=portfolio_excluded_keys,
+            forced_region_key=forced_region_key,
         )
         if worst.region_unsolved_pixel_count == 0:
             return {
@@ -2962,6 +2995,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "worst_region": worst.as_dict(),
                 "accepted_step_count": 0,
                 "rejected_step_count": 0,
+                "target_region_portfolio": {
+                    "schema": "hi_nerv_target_region_birth_portfolio.v1",
+                    "max_regions": int(portfolio_max_regions),
+                    "forced_region_key": (
+                        None if forced_region_key is None else list(forced_region_key)
+                    ),
+                    "attempt_count": len(portfolio_prior_attempts),
+                    "attempts": list(portfolio_prior_attempts),
+                    "exhausted": True,
+                },
                 "blockers": [],
                 "runtime_sidecar_bytes": 0,
                 "human_visual_fidelity_objective": False,
@@ -3465,6 +3508,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             base_snapshot: list[tuple[Any, Any]],
             grads_tree: Any,
             step_lr: float,
+            *,
+            step_direction: float = -1.0,
         ) -> tuple[list[str], dict[str, float], dict[str, float]]:
             grad_by_name = dict(tree_flatten(grads_tree))  # type: ignore[operator]
             updated: list[tuple[Any, Any]] = []
@@ -3485,7 +3530,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     continue
                 param = mx.array(leaf)  # type: ignore[union-attr]
                 step = float(step_lr) * grad
-                update = param - step
+                update = param + float(step_direction) * step
                 updated.append((raw_name, update))
                 applied_names.append(flat)
                 group = _group_for_name(flat)
@@ -3550,6 +3595,97 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "d_seg_batch": _d_seg_batch(argmax_np),
                 "d_pose_batch": _d_pose_batch(pose),
                 "float_rgb_delta_linf": float(float_delta.item()),
+            }
+
+        def _fakequant_config_snapshot() -> dict[str, Any]:
+            return {
+                "configured_enabled": bool(
+                    getattr(self, "decoder_fake_quant_forward_configured_enabled", False)
+                ),
+                "stage_controlled": bool(
+                    getattr(self, "decoder_fake_quant_forward_stage_controlled", False)
+                ),
+                "stage_qat_active": bool(
+                    getattr(self, "decoder_fake_quant_forward_stage_qat_active", True)
+                ),
+                "bits": getattr(self, "decoder_fake_quant_bits", None),
+                "bits_by_name": dict(getattr(self, "decoder_fake_quant_bits_by_name", {}) or {}),
+                "forward_enabled": bool(getattr(self, "decoder_fake_quant_forward_enabled", False)),
+            }
+
+        def _restore_fakequant_config(snapshot: Mapping[str, Any]) -> None:
+            self.configure_decoder_fake_quant_forward(
+                enabled=bool(snapshot["configured_enabled"]),
+                quant_bits=snapshot["bits"],
+                per_tensor_bits=dict(snapshot["bits_by_name"]),
+                stage_controlled=bool(snapshot["stage_controlled"]),
+            )
+            self.decoder_fake_quant_forward_stage_qat_active = bool(snapshot["stage_qat_active"])
+            self.decoder_fake_quant_forward_enabled = bool(snapshot["forward_enabled"])
+
+        def _fakequant_survival_for_candidate() -> dict[str, Any]:
+            snapshot = _fakequant_config_snapshot()
+            try:
+                self.configure_decoder_fake_quant_forward(
+                    enabled=True,
+                    quant_bits=fakequant_bits,
+                    per_tensor_bits=None,
+                    stage_controlled=False,
+                )
+                fq_candidate = _region_candidate_state()
+            finally:
+                _restore_fakequant_config(snapshot)
+            fq_pose_delta = _pose_delta_l2(fq_candidate["pose"])
+            fq_decision = _target_birth_admission_decision(
+                new_d_seg=float(fq_candidate["d_seg_batch"]),
+                new_d_pose=fq_candidate["d_pose_batch"],
+                pose_output_l2_delta=fq_pose_delta,
+            )
+            fq_transitions = dict(fq_candidate["region_argmax_transitions"])
+            fq_nonrate = _nonrate_score(
+                fq_candidate["d_seg_batch"],
+                fq_candidate["d_pose_batch"],
+            )
+            fq_delta_nonrate = (
+                None
+                if fq_nonrate is None or initial_nonrate is None
+                else float(fq_nonrate - initial_nonrate)
+            )
+            fq_support_spill = bool(
+                int(fq_transitions["target_to_wrong_count"]) > 0
+                or int(fq_transitions["net_target_support_delta"]) <= 0
+            )
+            fq_exact_ok = fq_decision["exact_score_decision"] == "accepted"
+            fq_catastrophic_ok = fq_decision["catastrophic_guard_decision"] == "satisfied"
+            survived = bool(
+                not fq_support_spill
+                and int(fq_transitions["wrong_to_target_count"]) > 0
+                and fq_exact_ok
+                and fq_catastrophic_ok
+            )
+            return {
+                "schema": "hi_nerv_target_region_birth_fakequant_admission.v1",
+                "required": bool(require_fakequant_survival),
+                "fakequant_bits": int(fakequant_bits),
+                "survived": survived,
+                "wrong_to_target_count": int(fq_transitions["wrong_to_target_count"]),
+                "target_to_wrong_count": int(fq_transitions["target_to_wrong_count"]),
+                "wrong_to_wrong_count": int(fq_transitions["wrong_to_wrong_count"]),
+                "net_target_support_delta": int(fq_transitions["net_target_support_delta"]),
+                "support_spill": bool(fq_support_spill),
+                "d_seg_batch": float(fq_candidate["d_seg_batch"]),
+                "d_pose_batch": (
+                    None
+                    if fq_candidate["d_pose_batch"] is None
+                    else float(fq_candidate["d_pose_batch"])
+                ),
+                "delta_score_nonrate": fq_delta_nonrate,
+                "exact_score_decision": fq_decision["exact_score_decision"],
+                "catastrophic_guard_decision": fq_decision["catastrophic_guard_decision"],
+                "catastrophic_guard_reasons": list(fq_decision["catastrophic_guard_reasons"]),
+                "pose_output_delta_l2": (
+                    None if fq_pose_delta is None else float(fq_pose_delta)
+                ),
             }
 
         def _uint8_changed_in_region(before_u8: np.ndarray, after_u8: np.ndarray) -> int:
@@ -3765,6 +3901,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pose_guard_rejected_step_count = 0
         joint_score_rejected_step_count = 0
         no_progress_rejected_step_count = 0
+        fakequant_survival_rejected_step_count = 0
         best_nonrate = initial_nonrate
         receiver_quantum_growth_attempt_count = 0
         backtracking_attempt_count = 0
@@ -3782,6 +3919,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         pose_rejected_candidate_count = 0
         joint_rejected_candidate_count = 0
         no_progress_candidate_count = 0
+        fakequant_survival_candidate_count = 0
+        fakequant_survival_rejected_candidate_count = 0
+        argmax_birth_quantum_growth_attempt_count = 0
         max_candidate_receiver_uint8_changed_pixels_region = 0
         max_candidate_argmax_flipped_pixels_region = 0
         max_candidate_region_hard_won_delta = 0
@@ -3809,9 +3949,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         current_lr = lr
         consecutive_rejected_steps = 0
         max_quantum_growth_attempts = 20
+        max_argmax_birth_quantum_growth_attempts = max_quantum_growth_attempts
         max_backtracking_attempts = 8
         min_lr = lr * (0.5**max_backtracking_attempts)
         candidate_attempt_records: list[dict[str, Any]] = []
+        post_acceptance_terminal_events: list[str] = []
+        accepted_receipt_snapshot: list[tuple[Any, Any]] | None = None
         accepted_birth_only_snapshot: list[tuple[Any, Any]] | None = None
         accepted_birth_only_state: dict[str, Any] | None = None
         accepted_birth_only_updated_names: list[str] = []
@@ -3874,8 +4017,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.eval(loss)  # type: ignore[union-attr]
             loss_value = float(loss.item())
             if not math.isfinite(loss_value):
-                _restore_parameters(initial_snapshot)
-                blockers.append("hinerv_target_region_birth_loss_not_finite")
+                if accepted_receipt_snapshot is not None:
+                    _restore_parameters(accepted_receipt_snapshot)
+                    post_acceptance_terminal_events.append(
+                        "hinerv_target_region_birth_post_acceptance_loss_not_finite_restored_best_accepted_state"
+                    )
+                else:
+                    _restore_parameters(initial_snapshot)
+                    blockers.append("hinerv_target_region_birth_loss_not_finite")
                 break
             loss_history.append(loss_value)
             if clip is not None:
@@ -3914,6 +4063,138 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         subquantum_rejected_step_count += 1
                     rejected_step_count += 1
                     break
+                candidate_update_orientation = "gradient_descent"
+                bidirectional_probe: dict[str, Any] = {
+                    "attempted": False,
+                    "selected_orientation": candidate_update_orientation,
+                }
+                descent_transitions_probe = region_argmax_transition_counts(
+                    initial_argmax_np,
+                    candidate["argmax_np"],
+                    region_bool_np,
+                    birth_class,
+                )
+                descent_nonrate_probe = _nonrate_score(
+                    candidate["d_seg_batch"],
+                    candidate["d_pose_batch"],
+                )
+                descent_delta_probe = (
+                    None
+                    if descent_nonrate_probe is None or initial_nonrate is None
+                    else float(descent_nonrate_probe - initial_nonrate)
+                )
+                # Real scorer smokes can expose sign/pathology that synthetic
+                # teachers hide: a mathematically valid autograd direction can
+                # cross uint8 quanta but churn wrong->wrong classes and worsen
+                # the exact score.  Probe the mirrored signed step against the
+                # SAME receiver/evaluate.py surfaces before concluding the
+                # region is impossible.
+                if int(descent_transitions_probe["wrong_to_target_count"]) <= 0 and (
+                    descent_delta_probe is None or descent_delta_probe >= 0.0
+                ):
+                    _restore_parameters(base_snapshot)
+                    mirror_applied_names, mirror_grad_norms, mirror_update_norms = _apply_scoped_step(
+                        base_snapshot,
+                        grads,
+                        attempt_lr,
+                        step_direction=1.0,
+                    )
+                    mirror_candidate: dict[str, Any] | None = None
+                    mirror_changed_in_region = 0
+                    mirror_transitions_probe: dict[str, int] | None = None
+                    mirror_delta_probe: float | None = None
+                    if mirror_applied_names:
+                        mirror_candidate = _region_candidate_state()
+                        mirror_changed_in_region = _uint8_changed_in_region(
+                            step_base_uint8,
+                            mirror_candidate["uint8"],
+                        )
+                        if mirror_changed_in_region > 0:
+                            mirror_transitions_probe = region_argmax_transition_counts(
+                                initial_argmax_np,
+                                mirror_candidate["argmax_np"],
+                                region_bool_np,
+                                birth_class,
+                            )
+                            mirror_nonrate_probe = _nonrate_score(
+                                mirror_candidate["d_seg_batch"],
+                                mirror_candidate["d_pose_batch"],
+                            )
+                            mirror_delta_probe = (
+                                None
+                                if mirror_nonrate_probe is None or initial_nonrate is None
+                                else float(mirror_nonrate_probe - initial_nonrate)
+                            )
+                    descent_delta_sort = float("inf") if descent_delta_probe is None else float(descent_delta_probe)
+                    mirror_delta_sort = float("inf") if mirror_delta_probe is None else float(mirror_delta_probe)
+                    mirror_wrong_to_target = (
+                        0
+                        if mirror_transitions_probe is None
+                        else int(mirror_transitions_probe["wrong_to_target_count"])
+                    )
+                    descent_wrong_to_target = int(descent_transitions_probe["wrong_to_target_count"])
+                    choose_mirror = bool(
+                        mirror_candidate is not None
+                        and mirror_changed_in_region > 0
+                        and (
+                            mirror_wrong_to_target > descent_wrong_to_target
+                            or (
+                                mirror_wrong_to_target == descent_wrong_to_target
+                                and mirror_delta_sort < descent_delta_sort
+                            )
+                        )
+                    )
+                    bidirectional_probe = {
+                        "attempted": True,
+                        "descent_wrong_to_target_count": int(descent_wrong_to_target),
+                        "descent_exact_delta_score_nonrate": descent_delta_probe,
+                        "mirror_receiver_uint8_changed_pixels_region": int(
+                            mirror_changed_in_region
+                        ),
+                        "mirror_wrong_to_target_count": int(mirror_wrong_to_target),
+                        "mirror_exact_delta_score_nonrate": mirror_delta_probe,
+                        "selected_orientation": (
+                            "gradient_ascent_mirror" if choose_mirror else "gradient_descent"
+                        ),
+                    }
+                    if choose_mirror and mirror_candidate is not None:
+                        candidate = mirror_candidate
+                        changed_in_region = mirror_changed_in_region
+                        applied_names = mirror_applied_names
+                        grad_norms = mirror_grad_norms
+                        update_norms = mirror_update_norms
+                        candidate_update_orientation = "gradient_ascent_mirror"
+                    else:
+                        # Restore the original descent candidate for the
+                        # existing backtracking/rejection path.
+                        _restore_parameters(base_snapshot)
+                        applied_names, grad_norms, update_norms = _apply_scoped_step(
+                            base_snapshot,
+                            grads,
+                            attempt_lr,
+                            step_direction=-1.0,
+                        )
+                        candidate = _region_candidate_state()
+                        changed_in_region = _uint8_changed_in_region(
+                            step_base_uint8,
+                            candidate["uint8"],
+                        )
+                hard_birth_probe_transitions = region_argmax_transition_counts(
+                    initial_argmax_np,
+                    candidate["argmax_np"],
+                    region_bool_np,
+                    birth_class,
+                )
+                if (
+                    int(hard_birth_probe_transitions["wrong_to_target_count"]) <= 0
+                    and quantum_growth_attempts < max_argmax_birth_quantum_growth_attempts
+                ):
+                    _restore_parameters(base_snapshot)
+                    quantum_growth_attempts += 1
+                    receiver_quantum_growth_attempt_count += 1
+                    argmax_birth_quantum_growth_attempt_count += 1
+                    attempt_lr *= 2.0
+                    continue
                 # Region progress is computed up-front (it is needed both by
                 # the final acceptance rule and by the frame0-compensation
                 # eligibility test at the pose/joint gates below). The frame1
@@ -3978,6 +4259,30 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     and best_nonrate is not None
                     and candidate_nonrate >= best_nonrate - float(exact_score_epsilon_batch_local)
                 )
+                fakequant_admission: dict[str, Any] = {
+                    "schema": "hi_nerv_target_region_birth_fakequant_admission.v1",
+                    "required": bool(require_fakequant_survival),
+                    "fakequant_bits": int(fakequant_bits),
+                    "survived": None,
+                    "reason": (
+                        "not_required"
+                        if not bool(require_fakequant_survival)
+                        else "live_candidate_not_admissible"
+                    ),
+                }
+                fakequant_rejects = False
+                if (
+                    bool(require_fakequant_survival)
+                    and region_progress
+                    and not catastrophic_rejects
+                    and not exact_score_rejects
+                    and not joint_rejects
+                ):
+                    fakequant_survival_candidate_count += 1
+                    fakequant_admission = _fakequant_survival_for_candidate()
+                    fakequant_rejects = bool(fakequant_admission.get("survived") is not True)
+                    if fakequant_rejects:
+                        fakequant_survival_rejected_candidate_count += 1
                 candidate_attempt_count += 1
                 candidate_region_hard_won_delta = int(tail_hard_won_delta)
                 candidate_region_hard_ratio_delta = float(tail_hard_ratio_delta)
@@ -4117,8 +4422,30 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "best_nonrate_score_before_attempt": (
                         None if best_nonrate is None else float(best_nonrate)
                     ),
+                    "fakequant_admission": fakequant_admission,
+                    "fakequant_survival_required": bool(require_fakequant_survival),
+                    "fakequant_survived": fakequant_admission.get("survived"),
+                    "argmax_birth_quantum_growth_attempts_before_attempt": int(
+                        quantum_growth_attempts
+                    ),
                     "decision": "pending",
+                    "update_orientation": candidate_update_orientation,
+                    "bidirectional_probe": bidirectional_probe,
                 }
+
+                if fakequant_rejects:
+                    _restore_parameters(base_snapshot)
+                    if attempt_lr * 0.5 >= min_lr:
+                        backtracking_attempt_count += 1
+                        candidate_attempt_record["decision"] = "backtrack_fakequant_survival"
+                        candidate_attempt_records.append(candidate_attempt_record)
+                        attempt_lr *= 0.5
+                        continue
+                    fakequant_survival_rejected_step_count += 1
+                    rejected_step_count += 1
+                    candidate_attempt_record["decision"] = "rejected_fakequant_survival"
+                    candidate_attempt_records.append(candidate_attempt_record)
+                    break
 
                 if catastrophic_rejects or exact_score_rejects or joint_rejects:
                     # The frame1 birth step is receiver-visible but loses the
@@ -4168,6 +4495,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                             if composite_records
                             else {}
                         )
+                        accepted_receipt_snapshot = _snapshot_parameters()
                         candidate_attempt_record["decision"] = "accepted_with_frame0_pose_compensation"
                         candidate_attempt_records.append(candidate_attempt_record)
                         break
@@ -4215,6 +4543,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 accepted_step_count += 1
                 accepted_update_names.update(applied_names)
                 accepted_birth_only_snapshot = _snapshot_parameters()
+                accepted_receipt_snapshot = accepted_birth_only_snapshot
                 accepted_birth_only_state = candidate
                 accepted_birth_only_updated_names = sorted(applied_names)
                 accepted_birth_only_decision = dict(candidate_decision)
@@ -4241,6 +4570,26 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "hinerv_target_region_birth_no_scoped_gradient_signal" in blockers
                 or "hinerv_target_region_birth_loss_not_finite" in blockers
             ):
+                if accepted_receipt_snapshot is not None:
+                    if "hinerv_target_region_birth_no_scoped_gradient_signal" in blockers:
+                        blockers = [
+                            blocker
+                            for blocker in blockers
+                            if blocker != "hinerv_target_region_birth_no_scoped_gradient_signal"
+                        ]
+                        post_acceptance_terminal_events.append(
+                            "hinerv_target_region_birth_post_acceptance_no_scoped_gradient_signal_restored_best_accepted_state"
+                        )
+                    if "hinerv_target_region_birth_loss_not_finite" in blockers:
+                        blockers = [
+                            blocker
+                            for blocker in blockers
+                            if blocker != "hinerv_target_region_birth_loss_not_finite"
+                        ]
+                        post_acceptance_terminal_events.append(
+                            "hinerv_target_region_birth_post_acceptance_loss_not_finite_restored_best_accepted_state"
+                        )
+                    _restore_parameters(accepted_receipt_snapshot)
                 break
             if step_accepted:
                 consecutive_rejected_steps = 0
@@ -4256,6 +4605,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         if accepted_step_count == 0:
             _restore_parameters(initial_snapshot)
             blockers.append("hinerv_target_region_birth_no_accepted_step")
+        elif accepted_receipt_snapshot is not None:
+            # The optimizer may continue probing after an accepted receiver
+            # crossing and then hit a terminal condition (non-finite loss,
+            # exhausted scoped signal, etc.).  Long-run gating cares about the
+            # best accepted receiver surface, not a later failed probe.  Keep
+            # those terminal events as telemetry, but emit receipts from the
+            # accepted state so live -> uint8 -> scorer evidence is not erased.
+            _restore_parameters(accepted_receipt_snapshot)
+        else:
+            blockers.append("hinerv_target_region_birth_accepted_snapshot_missing")
 
         final_model_snapshot = _snapshot_parameters()
 
@@ -4339,6 +4698,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_rejected_candidate_count": int(pose_rejected_candidate_count),
             "joint_rejected_candidate_count": int(joint_rejected_candidate_count),
             "no_progress_candidate_count": int(no_progress_candidate_count),
+            "fakequant_survival_required": bool(require_fakequant_survival),
+            "fakequant_survival_bits": int(fakequant_bits),
+            "fakequant_survival_candidate_count": int(fakequant_survival_candidate_count),
+            "fakequant_survival_rejected_candidate_count": int(
+                fakequant_survival_rejected_candidate_count
+            ),
+            "argmax_birth_quantum_growth_attempt_count": int(
+                argmax_birth_quantum_growth_attempt_count
+            ),
+            "max_argmax_birth_quantum_growth_attempts_per_step": int(
+                max_argmax_birth_quantum_growth_attempts
+            ),
             "max_candidate_receiver_uint8_changed_pixels_region": int(
                 max_candidate_receiver_uint8_changed_pixels_region
             ),
@@ -4404,6 +4775,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 None if min_pose_rejected_pose_delta_l2 is None else float(min_pose_rejected_pose_delta_l2)
             ),
             "attempts": candidate_attempt_records,
+            "post_acceptance_terminal_events": list(post_acceptance_terminal_events),
             "reference_region_stats": "current_best_live_mlx",
             "human_visual_fidelity_objective": False,
         }
@@ -4485,6 +4857,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             initial_group_sha256=parameter_group_sha256_before,
             trained_groups=sorted(trained_groups_for_action_id),
         )
+        region_mask_bool_flat = np.ascontiguousarray(region_bool_np.reshape(-1).astype(np.uint8))
+        region_mask_packbits_payload = {
+            "schema": "hi_nerv_target_region_birth_mask_packbits.v1",
+            "encoding": "numpy.packbits:uint8:bitorder_big",
+            "shape": [int(v) for v in region_bool_np.shape],
+            "true_count": int(np.count_nonzero(region_bool_np)),
+            "data_b64": base64.b64encode(
+                np.packbits(region_mask_bool_flat, bitorder="big").tobytes()
+            ).decode("ascii"),
+        }
+        worst_region_payload = dict(worst.as_dict())
+        worst_region_payload["region_mask_bhw_packbits"] = region_mask_packbits_payload
 
         def _snapshot_delta_names(
             before_snapshot: list[tuple[Any, Any]],
@@ -4646,6 +5030,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "worst_region": worst.as_dict(),
                 "updated_parameter_names": sorted(str(name) for name in updated_names),
                 "payload_sections": sorted(str(name) for name in updated_names),
+                "trained_groups": sorted(
+                    {
+                        _group_for_name(str(name))
+                        for name in updated_names
+                        if _group_for_name(str(name)) != "out_of_scope"
+                    }
+                ),
                 "exact_nonrate": exact_nonrate,
                 "admission_decision": {
                     **decision_payload,
@@ -4924,6 +5315,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             action_id=action_identity,
             surface="live_mlx",
         )
+        receipt["trained_groups"] = sorted(trained_groups_for_action_id)
+        receipt["worst_region"] = dict(worst_region_payload)
         archive_charged_decoder_tensors = [
             "latents_fine",
             "feature_grids.*",
@@ -4932,13 +5325,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         ]
         if pose_compensation_payload is not None and pose_compensation_payload["composite_accepted"]:
             archive_charged_decoder_tensors.append("head_rgb_0.*")
-        return {
+        payload = {
             "schema": "hi_nerv_target_region_birth.v1",
             "enabled": True,
             "action_id": action_identity,
             "accepted": bool(accepted_step_count > 0),
             "birth_class_index": birth_class,
-            "worst_region": worst.as_dict(),
+            "target_region_forced_key": (
+                None if forced_region_key is None else list(forced_region_key)
+            ),
+            "worst_region": worst_region_payload,
             "before_region_margin_stats": dict(before_stats),
             "after_region_margin_stats": dict(after_stats),
             "before_unsolved_tail_margin_stats": dict(before_unsolved_tail_stats),
@@ -4963,7 +5359,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_guard_rejected_step_count": int(pose_guard_rejected_step_count),
             "joint_score_rejected_step_count": int(joint_score_rejected_step_count),
             "no_progress_rejected_step_count": int(no_progress_rejected_step_count),
+            "fakequant_survival_required": bool(require_fakequant_survival),
+            "fakequant_survival_bits": int(fakequant_bits),
+            "fakequant_survival_rejected_step_count": int(
+                fakequant_survival_rejected_step_count
+            ),
             "candidate_frontier_telemetry": candidate_frontier_telemetry,
+            "post_acceptance_terminal_events": list(post_acceptance_terminal_events),
             "argmax_transitions": argmax_transitions,
             "exact_nonrate": exact_nonrate_payload,
             # Frame0 composite-compensation summary (batch-local). Defaults are
@@ -4978,11 +5380,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "pose_compensation": pose_compensation_payload,
             "four_arm_ablation": four_arm_ablation_payload,
             "receiver_quantum_growth_attempt_count": int(receiver_quantum_growth_attempt_count),
+            "argmax_birth_quantum_growth_attempt_count": int(
+                argmax_birth_quantum_growth_attempt_count
+            ),
+            "max_argmax_birth_quantum_growth_attempts_per_step": int(
+                max_argmax_birth_quantum_growth_attempts
+            ),
             "backtracking_attempt_count": int(backtracking_attempt_count),
             "loss_history_first": (loss_history[0] if loss_history else None),
             "loss_history_last": (loss_history[-1] if loss_history else None),
             "final_learning_rate": float(current_lr),
             "updated_parameter_names": sorted(accepted_update_names),
+            "trained_groups": sorted(trained_groups_for_action_id),
             "grad_norm_by_group": dict(last_grad_norm_by_group),
             "update_norm_by_group": dict(last_update_norm_by_group),
             "parameter_group_sha256_before": parameter_group_sha256_before,
@@ -4997,6 +5406,134 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "target_surface": "segnet_last_frame_rgb_argmax_worst_connected_region",
             "human_visual_fidelity_objective": False,
         }
+        portfolio_current_attempt = {
+            "schema": "hi_nerv_target_region_birth_portfolio_attempt.v1",
+            "attempt_index": len(portfolio_prior_attempts),
+            "region_key": [int(worst.batch_index), int(worst.class_index), int(worst.region_label)],
+            "class_index": int(worst.class_index),
+            "region_pixel_count": int(worst.region_pixel_count),
+            "region_unsolved_pixel_count": int(worst.region_unsolved_pixel_count),
+            "score_debt_units": float(worst.score_debt_units),
+            "accepted": bool(payload["accepted"]),
+            "accepted_step_count": int(accepted_step_count),
+            "rejected_step_count": int(rejected_step_count),
+            "wrong_to_target_count": int(argmax_transitions["wrong_to_target_count"]),
+            "target_to_wrong_count": int(argmax_transitions["target_to_wrong_count"]),
+            "wrong_to_wrong_count": int(argmax_transitions["wrong_to_wrong_count"]),
+            "net_target_support_delta": int(argmax_transitions["net_target_support_delta"]),
+            "delta_score_nonrate": exact_nonrate_payload.get("delta_score_nonrate"),
+            "blockers": list(blockers),
+        }
+        portfolio_attempts = [*portfolio_prior_attempts, portfolio_current_attempt]
+        payload["target_region_portfolio"] = {
+            "schema": "hi_nerv_target_region_birth_portfolio.v1",
+            "max_regions": int(portfolio_max_regions),
+            "forced_region_key": (
+                None if forced_region_key is None else list(forced_region_key)
+            ),
+            "attempt_count": len(portfolio_attempts),
+            "attempts": portfolio_attempts,
+            "exhausted": bool(
+                payload["accepted"] or len(portfolio_attempts) >= int(portfolio_max_regions)
+            ),
+            "selection_policy": (
+                "forced_region_key_no_retry"
+                if forced_region_key is not None
+                else "score_debt_desc_then_next_positive_region_after_exact_admission_failure"
+            ),
+            "admission_authority": "exact_nonlinear_batch_local_seg_pose_nonrate",
+        }
+        excluded_next = (
+            *portfolio_excluded_keys,
+            (int(worst.batch_index), int(worst.class_index), int(worst.region_label)),
+        )
+        retry_positive_regions = [
+            row
+            for row in find_target_region_debts(
+                labels_np,
+                initial_argmax_np,
+                min_region_pixels=int(min_region_pixels),
+            )
+            if row.region_unsolved_pixel_count > 0
+            and (row.batch_index, row.class_index, row.region_label) not in excluded_next
+        ]
+        remaining_positive_region_count = len(retry_positive_regions)
+        portfolio_budget_exhausted = bool(
+            not payload["accepted"]
+            and len(portfolio_attempts) >= int(portfolio_max_regions)
+            and remaining_positive_region_count > 0
+        )
+        portfolio_search_exhausted = bool(not payload["accepted"] and remaining_positive_region_count == 0)
+        payload["target_region_portfolio"]["remaining_positive_region_count"] = remaining_positive_region_count
+        payload["target_region_portfolio"]["budget_exhausted"] = portfolio_budget_exhausted
+        payload["target_region_portfolio"]["search_exhausted"] = portfolio_search_exhausted
+        payload["target_region_portfolio"]["exhausted"] = bool(
+            payload["accepted"] or portfolio_search_exhausted
+        )
+        if portfolio_budget_exhausted:
+            budget_blocker = (
+                "hinerv_target_region_birth_portfolio_budget_exhausted_with_remaining_positive_regions"
+            )
+            if budget_blocker not in payload["blockers"]:
+                payload["blockers"].append(budget_blocker)
+            receipt_blockers = payload.get("receipt", {}).get("blockers")
+            if isinstance(receipt_blockers, list) and budget_blocker not in receipt_blockers:
+                receipt_blockers.append(budget_blocker)
+            payload["target_region_portfolio"]["budget_blocker"] = budget_blocker
+        if (
+            not payload["accepted"]
+            and forced_region_key is None
+            and len(portfolio_attempts) < int(portfolio_max_regions)
+            and retry_positive_regions
+        ):
+            excluded_next = (
+                *portfolio_excluded_keys,
+                (int(worst.batch_index), int(worst.class_index), int(worst.region_label)),
+            )
+            return self.fit_target_region_birth_from_segnet(
+                scorer_teacher=scorer_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                pair_indices=pair_indices,
+                target_segnet_argmax_1=target_segnet_argmax_1,
+                pose_teacher=pose_teacher,
+                require_pose_trust=require_pose_trust,
+                max_steps=max_steps,
+                learning_rate=learning_rate,
+                target_min_region_ratio=target_min_region_ratio,
+                margin_tau=margin_tau,
+                margin_floor=margin_floor,
+                prob_floor=prob_floor,
+                lambda_prob_floor=lambda_prob_floor,
+                lambda_seed=lambda_seed,
+                lambda_support_preserve=lambda_support_preserve,
+                lambda_outside_argmax_preserve=lambda_outside_argmax_preserve,
+                lambda_already_won_hard_preserve=lambda_already_won_hard_preserve,
+                lambda_already_won_rgb_preserve=lambda_already_won_rgb_preserve,
+                already_won_margin_floor=already_won_margin_floor,
+                lambda_pose_trust_preserve=lambda_pose_trust_preserve,
+                lambda_pose_target=lambda_pose_target,
+                seed_temperature=seed_temperature,
+                min_margin_mean_drop=min_margin_mean_drop,
+                max_pose_output_delta_l2=max_pose_output_delta_l2,
+                exact_score_epsilon_batch_local=exact_score_epsilon_batch_local,
+                catastrophic_pose_relative_cap=catastrophic_pose_relative_cap,
+                catastrophic_pose_score_regression_cap=catastrophic_pose_score_regression_cap,
+                catastrophic_pose_output_l2_hard_cap=catastrophic_pose_output_l2_hard_cap,
+                grad_clip_max_norm=grad_clip_max_norm,
+                min_region_pixels=min_region_pixels,
+                target_geometry_mode=target_geometry_mode,
+                target_geometry_frontier_dilation=target_geometry_frontier_dilation,
+                emit_four_arm_ablation=emit_four_arm_ablation,
+                four_arm_ablation_compensation_steps=four_arm_ablation_compensation_steps,
+                target_region_portfolio_max_regions=target_region_portfolio_max_regions,
+                target_region_forced_key=target_region_forced_key,
+                require_fakequant_survival=require_fakequant_survival,
+                fakequant_survival_bits=fakequant_survival_bits,
+                _target_region_portfolio_excluded=excluded_next,
+                _target_region_portfolio_attempts=tuple(portfolio_attempts),
+            )
+        return payload
 
     def __call__(self, pair_indices: Any) -> Any:
         z_c = mx.take(self.latents_coarse, pair_indices, axis=0)  # type: ignore[union-attr]
