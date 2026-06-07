@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover
@@ -66,6 +68,14 @@ def _parser() -> argparse.ArgumentParser:
         "--capture-official-torch-from-upstream-fixture",
         action="store_true",
     )
+    parser.add_argument(
+        "--capture-official-torch-from-upstream-source-graph",
+        action="store_true",
+        help=(
+            "Strict source authority path. Requires exact trained source config, "
+            "strict checkpoint state_dict, and real frame triplets."
+        ),
+    )
     parser.add_argument("--official-snerv-repo-dir", type=Path, default=None)
     parser.add_argument("--official-torch-train-one-step", action="store_true")
     parser.add_argument("--official-torch-checkpoint-state-dict", type=Path, default=None)
@@ -77,6 +87,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--official-torch-source-config-kind",
         default="official_trained_run_config",
+    )
+    parser.add_argument(
+        "--official-torch-source-frame-triplets-npy",
+        type=Path,
+        default=None,
+        help=(
+            "Numpy array with shape (pairs, 3, 3, H, W) in NCHW/0..255 order: "
+            "current, previous, next."
+        ),
     )
     parser.add_argument("--fail-on-blockers", action="store_true")
     parser.add_argument("--allow-overwrite", action="store_true")
@@ -114,6 +133,9 @@ def main(argv: list[str] | None = None) -> int:
         capture_official_torch_from_upstream_fixture=bool(
             args.capture_official_torch_from_upstream_fixture
         ),
+        capture_official_torch_from_upstream_source_graph=bool(
+            args.capture_official_torch_from_upstream_source_graph
+        ),
         official_snerv_repo_dir=(
             None if args.official_snerv_repo_dir is None else args.official_snerv_repo_dir
         ),
@@ -132,6 +154,11 @@ def main(argv: list[str] | None = None) -> int:
             else args.official_torch_source_config
         ),
         official_torch_source_config_kind=str(args.official_torch_source_config_kind),
+        official_torch_source_frame_triplets_npy=(
+            None
+            if args.official_torch_source_frame_triplets_npy is None
+            else args.official_torch_source_frame_triplets_npy
+        ),
     )
     result = write_json_artifact(
         out,
@@ -224,6 +251,7 @@ def build_source_forward_witness_payload(
     capture_pact_mlx_from_archive: bool = False,
     capture_official_torch_from_archive: bool = False,
     capture_official_torch_from_upstream_fixture: bool = False,
+    capture_official_torch_from_upstream_source_graph: bool = False,
     official_snerv_repo_dir: str | Path | None = None,
     official_torch_train_one_step: bool = False,
     official_torch_checkpoint_state_dict_path: str | Path | None = None,
@@ -232,6 +260,7 @@ def build_source_forward_witness_payload(
     ),
     official_torch_source_config_path: str | Path | None = None,
     official_torch_source_config_kind: str = "official_trained_run_config",
+    official_torch_source_frame_triplets_npy: str | Path | None = None,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     packet = Path(packet_path).expanduser().resolve(strict=False)
@@ -256,8 +285,14 @@ def build_source_forward_witness_payload(
             "official_torch_from_upstream_fixture": bool(
                 capture_official_torch_from_upstream_fixture
             ),
+            "official_torch_from_upstream_source_graph": bool(
+                capture_official_torch_from_upstream_source_graph
+            ),
             "official_torch_source_config_requested": (
                 official_torch_source_config_path is not None
+            ),
+            "official_torch_source_frame_triplets_requested": (
+                official_torch_source_frame_triplets_npy is not None
             ),
         },
         "source_forward_proof_action_effect": None,
@@ -270,6 +305,14 @@ def build_source_forward_witness_payload(
         **FALSE_AUTHORITY,
     }
     try:
+        source_frame_triplets = (
+            None
+            if official_torch_source_frame_triplets_npy is None
+            else np.load(
+                Path(official_torch_source_frame_triplets_npy).expanduser(),
+                allow_pickle=False,
+            )
+        )
         row = build_snerv_source_forward_proof_from_archive_packet(
             action_id=resolved_action_id,
             archive_packet=packet_bytes,
@@ -277,6 +320,9 @@ def build_source_forward_witness_payload(
             capture_official_torch_from_archive=capture_official_torch_from_archive,
             capture_official_torch_from_upstream_fixture=(
                 capture_official_torch_from_upstream_fixture
+            ),
+            capture_official_torch_from_upstream_source_graph=(
+                capture_official_torch_from_upstream_source_graph
             ),
             official_snerv_repo_dir=(
                 None
@@ -302,6 +348,7 @@ def build_source_forward_witness_payload(
                 .as_posix()
             ),
             official_torch_source_config_kind=official_torch_source_config_kind,
+            official_torch_source_frame_triplets_nchw255=source_frame_triplets,
             capture_pact_mlx_from_archive=capture_pact_mlx_from_archive,
             bitflip_section=bitflip_section,
             bitflip_offset=bitflip_offset,

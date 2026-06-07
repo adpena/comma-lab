@@ -312,6 +312,95 @@ def test_source_forward_witness_cli_threads_official_source_config(
     assert payload["score_claim"] is False
 
 
+def test_source_forward_witness_cli_threads_strict_source_graph_triplets(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    out = tmp_path / "witness.json"
+    source_config_path = tmp_path / "args.json"
+    triplets_path = tmp_path / "triplets.npy"
+    packet_path.write_bytes(_official_packet())
+    source_config_path.write_text('{"fc_dim": 1152}\n', encoding="utf-8")
+    np.save(triplets_path, np.zeros((1, 3, 3, 4, 4), dtype=np.float32))
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_upstream_source_graph_capture(**kwargs) -> dict[str, object]:
+        captured_kwargs.update(kwargs)
+        triplets = np.asarray(kwargs["source_frame_triplets_nchw255"])
+        return {
+            "schema": "snerv_official_tub_strict_source_graph_capture.v1",
+            "pair_ids": [0],
+            "tensors": {},
+            "model_source_sha256": "8" * 64,
+            "checkpoint_sha256": "6" * 64,
+            "state_dict_sha256": "7" * 64,
+            "decoder_len": 7,
+            "source_scope": "official_trained_checkpoint",
+            "source_config_lineage": kwargs["official_trained_source_config_kind"],
+            "source_config_sha256": "9" * 64,
+            "source_config_kind": "official_snerv_t_train_config",
+            "source_config_source": kwargs["official_trained_source_config_path"],
+            "source_config_is_fixture": False,
+            "source_graph_unproven": False,
+            "source_frame_triplets_shape": list(triplets.shape),
+        }
+
+    monkeypatch.setattr(
+        source_forward_producer,
+        "build_official_torch_upstream_source_graph_tensors",
+        fake_upstream_source_graph_capture,
+    )
+
+    assert (
+        main(
+            [
+                "--packet",
+                str(packet_path),
+                "--out",
+                str(out),
+                "--capture-official-torch-from-upstream-source-graph",
+                "--official-torch-checkpoint-state-dict",
+                str(tmp_path / "state.npz"),
+                "--official-torch-source-config",
+                str(source_config_path),
+                "--official-torch-source-frame-triplets-npy",
+                str(triplets_path),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    row = payload["source_forward_proof_action_effect"]
+    status = row["producer_status"]["official_torch_upstream_capture_status"]
+    assert captured_kwargs["official_trained_source_config_path"] == (
+        source_config_path.as_posix()
+    )
+    assert captured_kwargs["official_trained_checkpoint_state_dict_path"] == (
+        (tmp_path / "state.npz").as_posix()
+    )
+    assert np.asarray(captured_kwargs["source_frame_triplets_nchw255"]).shape == (
+        1,
+        3,
+        3,
+        4,
+        4,
+    )
+    assert (
+        payload["capture_modes"]["official_torch_from_upstream_source_graph"] is True
+    )
+    assert payload["capture_modes"]["official_torch_source_frame_triplets_requested"] is True
+    assert (
+        row["producer_status"]["official_torch_captured_from_upstream_source_graph"]
+        is True
+    )
+    assert status["source_graph_unproven"] is True
+    assert "snerv_official_torch_source_graph_unproven" in status["blockers"]
+    assert payload["launch_gate_clearable"] is False
+    assert payload["score_claim"] is False
+
+
 def test_source_forward_producer_refreshes_manifest_after_supplied_scorer_tensors() -> None:
     scorer_tensor_names = {
         "segnet_input",

@@ -57,6 +57,11 @@ TRAINED_CHECKPOINT_MAPPING_SCHEMA = (
     "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
 )
 CHECKPOINT_LOAD_SCHEMA = "snerv_official_tub_checkpoint_load.v1"
+STRICT_SOURCE_GRAPH_CAPTURE_SCHEMA = (
+    "snerv_official_tub_strict_source_graph_capture.v1"
+)
+STRICT_SOURCE_GRAPH_CAPTURED = "SOURCE_GRAPH_CAPTURED"
+SOURCE_GRAPH_UNPROVEN = "SOURCE_GRAPH_UNPROVEN"
 OFFICIAL_REPO_URL = "https://github.com/qwertja/SNeRV"
 DEFAULT_OFFICIAL_SNERV_REPO = Path(
     "/Volumes/VertigoDataTier/pact/experiments/results/"
@@ -141,6 +146,24 @@ SOURCE_CONFIG_ENC2_STRDS_UNRESOLVED_BLOCKER = (
 )
 SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER = (
     "snerv_official_trained_checkpoint_source_config_not_executed_by_fixture"
+)
+STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER = (
+    "snerv_official_source_graph_exact_source_config_required"
+)
+STRICT_SOURCE_GRAPH_CHECKPOINT_REQUIRED_BLOCKER = (
+    "snerv_official_source_graph_strict_checkpoint_required"
+)
+STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_REQUIRED_BLOCKER = (
+    "snerv_official_source_graph_frame_triplets_nchw255_required"
+)
+STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_SHAPE_BLOCKER = (
+    "snerv_official_source_graph_frame_triplets_nchw255_shape_invalid"
+)
+STRICT_SOURCE_GRAPH_PAIR_ID_MISMATCH_BLOCKER = (
+    "snerv_official_source_graph_pair_ids_triplets_count_mismatch"
+)
+STRICT_SOURCE_GRAPH_CONFIG_AMBIGUOUS_BLOCKER = (
+    "snerv_official_source_graph_source_config_ambiguous_inputs"
 )
 EXACT_SOURCE_CONFIG_LINEAGES = frozenset(
     {
@@ -1774,6 +1797,218 @@ def _run_source_fixture_for_receiver_archive(
     }
 
 
+def build_snerv_official_tub_strict_source_graph_tensor_bundle(
+    *,
+    official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
+    pair_ids: Sequence[int],
+    source_frame_triplets_nchw255: Any | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+    official_trained_source_config: Mapping[str, Any] | None = None,
+    official_trained_source_config_path: str | Path | None = None,
+    official_trained_source_config_kind: str = "official_trained_run_config",
+) -> dict[str, Any]:
+    """Capture real upstream ``SNeRV_T.forward`` tensors or fail closed.
+
+    This is intentionally not a fixture wrapper.  It requires the exact trained
+    model config, a strict state_dict load, and explicit real frame triplets in
+    NCHW/0..255 coordinates.  Missing inputs are blocker evidence, not an
+    invitation to infer shapes or insert adapters.
+    """
+
+    official_root = Path(official_repo_dir)
+    normalized_pair_ids = [int(value) for value in pair_ids]
+    source_config_lineage = _strict_source_graph_source_config_lineage(
+        source_config=official_trained_source_config,
+        source_config_path=official_trained_source_config_path,
+        source_config_kind=official_trained_source_config_kind,
+    )
+    source_pins = _source_pins(official_root)
+    base = {
+        "schema": STRICT_SOURCE_GRAPH_CAPTURE_SCHEMA,
+        "surface": "official_torch",
+        "producer": "pinned_upstream_snerv_t_forward_source_graph",
+        "verdict": SOURCE_GRAPH_UNPROVEN,
+        "source_graph_unproven": True,
+        "pair_ids": normalized_pair_ids,
+        "tensor_names": [],
+        "tensors": {},
+        "model_class": "SNeRV_T",
+        "model_source_path": "model/snerv_t.py",
+        "model_source_lines": "model/snerv_t.py:125-184",
+        "model_source_sha256": source_pins.get("snerv_t_py_sha256"),
+        "state_dict_sha256": None,
+        "checkpoint_sha256": None,
+        "source_config_lineage": str(
+            source_config_lineage.get("source_config_lineage") or ""
+        ),
+        "source_config_sha256": source_config_lineage.get("source_config_sha256"),
+        "source_config_kind": source_config_lineage.get("source_config_kind"),
+        "source_config_source": source_config_lineage.get("source_config_source"),
+        "source_config_is_fixture": bool(
+            source_config_lineage.get("source_config_is_fixture") is True
+        ),
+        "exact_source_config_verified": bool(
+            _source_config_lineage_is_exact(source_config_lineage)
+        ),
+        "source_config_lineage_report": source_config_lineage,
+        "strict_state_dict_load_required": True,
+        "strict_state_dict_loaded": False,
+        "source_frame_triplets_required": True,
+        "source_frame_triplets_shape": None,
+        "decoder_len": None,
+        "source_scope": "official_source_graph_unproven",
+        "upstream_forward_replay_verified": False,
+        "receiver_bound_capture": False,
+        "source_forward_replay_authority": False,
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+
+    blockers: list[str] = []
+    if not official_root.exists():
+        blockers.append("snerv_official_source_checkout_missing")
+    if not normalized_pair_ids:
+        blockers.append("snerv_official_source_graph_pair_ids_missing")
+    if official_trained_source_config is not None and official_trained_source_config_path is not None:
+        blockers.append(STRICT_SOURCE_GRAPH_CONFIG_AMBIGUOUS_BLOCKER)
+    if not _source_config_lineage_is_exact(source_config_lineage):
+        blockers.append(STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER)
+        blockers.extend(
+            str(value) for value in source_config_lineage.get("blockers", ()) if str(value)
+        )
+    if (
+        official_trained_checkpoint_state_dict is None
+        and official_trained_checkpoint_state_dict_path is None
+    ):
+        blockers.append(STRICT_SOURCE_GRAPH_CHECKPOINT_REQUIRED_BLOCKER)
+    if source_frame_triplets_nchw255 is None:
+        blockers.append(STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_REQUIRED_BLOCKER)
+
+    triplets: np.ndarray | None = None
+    if source_frame_triplets_nchw255 is not None:
+        try:
+            triplets = _coerce_source_graph_frame_triplets_nchw255(
+                source_frame_triplets_nchw255,
+                pair_ids=normalized_pair_ids,
+            )
+        except ValueError as exc:
+            blockers.extend([STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_SHAPE_BLOCKER, str(exc)])
+        else:
+            base["source_frame_triplets_shape"] = [int(value) for value in triplets.shape]
+
+    if blockers:
+        return {
+            **base,
+            "blockers": _ordered_unique(blockers),
+        }
+
+    assert triplets is not None
+    import torch
+
+    try:
+        with _official_tub_import_context(official_root):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                snerv_t = importlib.import_module("model.snerv_t")
+            cfg = SimpleNamespace(**dict(source_config_lineage["config"]))
+            model = snerv_t.SNeRV_T(cfg).double()
+            checkpoint_load = _load_checkpoint_into_official_tub_model(
+                model,
+                torch_module=torch,
+                state_dict=official_trained_checkpoint_state_dict,
+                state_dict_path=official_trained_checkpoint_state_dict_path,
+                state_dict_kind=official_trained_checkpoint_state_dict_kind,
+            )
+            checkpoint_state = checkpoint_load.get("_state_dict")
+            model.eval()
+            bundles: list[dict[str, Any]] = []
+            with torch.no_grad():
+                for pair_id, triplet in zip(normalized_pair_ids, triplets, strict=True):
+                    current = triplet[0:1].astype(np.float64, copy=False)
+                    previous = triplet[1:2].astype(np.float64, copy=False)
+                    next_frame = triplet[2:3].astype(np.float64, copy=False)
+                    current_t = torch.from_numpy(current)
+                    previous_t = torch.from_numpy(previous)
+                    next_t = torch.from_numpy(next_frame)
+                    manual = _manual_tub_source_replay(
+                        model,
+                        current_t,
+                        previous_t,
+                        next_t,
+                    )
+                    img_out, _embed_list, _dec_time, _img_yl, _yh_out = model(
+                        current_t,
+                        previous_t,
+                        next_t,
+                    )
+                    bundles.append(
+                        _source_forward_tensor_bundle_from_manual(
+                            manual=manual,
+                            current=current,
+                            previous=previous,
+                            next_frame=next_frame,
+                            official_img_out=_tensor_array(img_out),
+                            pair_ids=[pair_id],
+                            model_source_sha256=source_pins.get("snerv_t_py_sha256"),
+                            state_dict_sha256=_hash_state_dict_exact(
+                                checkpoint_state
+                                if isinstance(checkpoint_state, Mapping)
+                                else model.state_dict()
+                            ),
+                            checkpoint_sha256=str(
+                                checkpoint_load.get("state_dict_sha256") or ""
+                            ),
+                            decoder_len=int(model.decoder_len),
+                            source_scope="official_trained_checkpoint",
+                            source_config_lineage=source_config_lineage,
+                        )
+                    )
+            merged = _merge_source_graph_tensor_bundles(
+                bundles,
+                pair_ids=normalized_pair_ids,
+            )
+    except _OfficialTubCheckpointLoadFailed as exc:
+        return {
+            **base,
+            "official_trained_checkpoint_load": exc.report,
+            "blockers": _ordered_unique(
+                [
+                    STRICT_SOURCE_GRAPH_CHECKPOINT_REQUIRED_BLOCKER,
+                    *(
+                        str(value)
+                        for value in exc.report.get("blockers", ())
+                        if str(value)
+                    ),
+                ]
+            ),
+        }
+    except Exception as exc:  # pragma: no cover - fail-closed source graph path.
+        return {
+            **base,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                "snerv_official_source_graph_forward_failed",
+                f"snerv_official_source_graph_forward_failed:{type(exc).__name__}",
+            ],
+        }
+
+    return {
+        **base,
+        **merged,
+        "verdict": STRICT_SOURCE_GRAPH_CAPTURED,
+        "source_graph_unproven": False,
+        "strict_state_dict_loaded": True,
+        "source_scope": "official_trained_checkpoint",
+        "source_forward_replay_authority": True,
+        "upstream_forward_replay_verified": True,
+        "blockers": [],
+    }
+
+
 def _source_forward_tensor_bundle_from_manual(
     *,
     manual: Mapping[str, Any],
@@ -1896,6 +2131,126 @@ def _source_forward_tensor_bundle_from_manual(
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _strict_source_graph_source_config_lineage(
+    *,
+    source_config: Mapping[str, Any] | None,
+    source_config_path: str | Path | None,
+    source_config_kind: str,
+) -> dict[str, Any]:
+    if source_config is not None and source_config_path is not None:
+        return {
+            "schema": "snerv_official_tub_source_config_lineage.v1",
+            "source_config_kind": "ambiguous_source_config_inputs",
+            "source_config_source": "ambiguous_in_memory_and_path",
+            "source_config_lineage": str(source_config_kind or "unknown_source_config"),
+            "source_config_sha256": None,
+            "source_config_is_fixture": False,
+            "source_fixture_not_training_config": False,
+            "exact_trained_config_loaded": False,
+            "config": {},
+            "blockers": [STRICT_SOURCE_GRAPH_CONFIG_AMBIGUOUS_BLOCKER],
+            **FALSE_AUTHORITY,
+        }
+    if source_config is not None:
+        return build_snerv_official_tub_source_config_lineage(
+            source_config,
+            source="in_memory_official_trained_source_config",
+            source_config_kind=source_config_kind,
+        )
+    if source_config_path is not None:
+        return build_snerv_official_tub_source_config_lineage_from_path(
+            source_config_path,
+            source_config_kind=source_config_kind,
+        )
+    return {
+        "schema": "snerv_official_tub_source_config_lineage.v1",
+        "source_config_kind": "not_requested",
+        "source_config_source": None,
+        "source_config_lineage": "not_requested",
+        "source_config_sha256": None,
+        "source_config_is_fixture": False,
+        "source_fixture_not_training_config": False,
+        "exact_trained_config_loaded": False,
+        "config": {},
+        "blockers": [STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _coerce_source_graph_frame_triplets_nchw255(
+    value: Any,
+    *,
+    pair_ids: Sequence[int],
+) -> np.ndarray:
+    arr = np.asarray(value, dtype=np.float64)
+    if arr.ndim == 4 and len(pair_ids) == 1:
+        arr = arr[None, ...]
+    if arr.ndim != 5:
+        raise ValueError("snerv_official_source_graph_frame_triplets_ndim_not_5")
+    if arr.shape[0] != len(pair_ids):
+        raise ValueError(STRICT_SOURCE_GRAPH_PAIR_ID_MISMATCH_BLOCKER)
+    if tuple(int(v) for v in arr.shape[1:3]) != (3, 3):
+        raise ValueError(
+            "snerv_official_source_graph_frame_triplets_expected_pairs_3x3"
+        )
+    height = int(arr.shape[-2])
+    width = int(arr.shape[-1])
+    if height <= 0 or width <= 0 or height % 2 != 0 or width % 2 != 0:
+        raise ValueError("snerv_official_source_graph_frame_triplets_hw_invalid")
+    if not np.isfinite(arr).all():
+        raise ValueError("snerv_official_source_graph_frame_triplets_nonfinite")
+    return np.ascontiguousarray(arr)
+
+
+def _merge_source_graph_tensor_bundles(
+    bundles: Sequence[Mapping[str, Any]],
+    *,
+    pair_ids: Sequence[int],
+) -> dict[str, Any]:
+    if not bundles:
+        return {"pair_ids": list(pair_ids), "tensor_names": [], "tensors": {}}
+    first = dict(bundles[0])
+    tensor_names = sorted(
+        set().union(
+            *[
+                set(dict(bundle.get("tensors") or {}).keys())
+                for bundle in bundles
+            ]
+        )
+    )
+    tensors: dict[str, np.ndarray] = {}
+    for name in tensor_names:
+        arrays = [
+            np.asarray(dict(bundle.get("tensors") or {})[name])
+            for bundle in bundles
+            if name in dict(bundle.get("tensors") or {})
+        ]
+        if len(arrays) != len(bundles):
+            continue
+        if len(arrays) == 1:
+            tensors[name] = np.asarray(arrays[0]).copy()
+            continue
+        if all(array.ndim > 0 and int(array.shape[0]) == 1 for array in arrays):
+            tensors[name] = np.concatenate(arrays, axis=0)
+        else:
+            tensors[name] = np.stack(arrays, axis=0)
+    return {
+        "pair_ids": [int(value) for value in pair_ids],
+        "tensor_names": sorted(tensors),
+        "tensors": tensors,
+        "model_source_sha256": first.get("model_source_sha256"),
+        "state_dict_sha256": first.get("state_dict_sha256"),
+        "checkpoint_sha256": first.get("checkpoint_sha256"),
+        "source_config_lineage": first.get("source_config_lineage"),
+        "source_config_sha256": first.get("source_config_sha256"),
+        "source_config_kind": first.get("source_config_kind"),
+        "source_config_source": first.get("source_config_source"),
+        "source_config_is_fixture": bool(first.get("source_config_is_fixture") is True),
+        "exact_source_config_verified": bool(first.get("exact_source_config_verified") is True),
+        "decoder_len": first.get("decoder_len"),
     }
 
 
@@ -2918,7 +3273,16 @@ __all__ = [
     "SOURCE_CONFIG_PATH_MISSING_BLOCKER",
     "SOURCE_CONFIG_UNREADABLE_BLOCKER",
     "SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER",
+    "SOURCE_GRAPH_UNPROVEN",
     "STATE_VALUE_ARTIFACT_BLOCKER",
+    "STRICT_SOURCE_GRAPH_CAPTURED",
+    "STRICT_SOURCE_GRAPH_CAPTURE_SCHEMA",
+    "STRICT_SOURCE_GRAPH_CHECKPOINT_REQUIRED_BLOCKER",
+    "STRICT_SOURCE_GRAPH_CONFIG_AMBIGUOUS_BLOCKER",
+    "STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_REQUIRED_BLOCKER",
+    "STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_SHAPE_BLOCKER",
+    "STRICT_SOURCE_GRAPH_PAIR_ID_MISMATCH_BLOCKER",
+    "STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER",
     "TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER",
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
     "TUB_PRESERVED_BLOCKERS",
@@ -2927,5 +3291,6 @@ __all__ = [
     "build_snerv_official_tub_source_forward_receiver_archive_packet",
     "build_snerv_official_tub_source_forward_replay_artifact",
     "build_snerv_official_tub_source_forward_tensor_bundle",
+    "build_snerv_official_tub_strict_source_graph_tensor_bundle",
     "main",
 ]

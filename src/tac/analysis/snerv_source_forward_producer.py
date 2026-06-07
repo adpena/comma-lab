@@ -50,6 +50,7 @@ def build_snerv_source_forward_proof_from_archive_packet(
     official_torch_capture_manifest: Mapping[str, Any] | None = None,
     capture_official_torch_from_archive: bool = False,
     capture_official_torch_from_upstream_fixture: bool = False,
+    capture_official_torch_from_upstream_source_graph: bool = False,
     official_snerv_repo_dir: str | None = None,
     official_torch_train_one_step: bool = False,
     official_torch_checkpoint_state_dict: Mapping[str, Any] | None = None,
@@ -59,6 +60,7 @@ def build_snerv_source_forward_proof_from_archive_packet(
     ),
     official_torch_source_config_path: str | None = None,
     official_torch_source_config_kind: str = "official_trained_run_config",
+    official_torch_source_frame_triplets_nchw255: Any | None = None,
     pact_mlx_tensors: Mapping[str, Any] | None = None,
     capture_pact_mlx_from_archive: bool = False,
     scorer_tensors_by_surface: Mapping[str, Mapping[str, Any]] | None = None,
@@ -142,6 +144,11 @@ def build_snerv_source_forward_proof_from_archive_packet(
             raise ValueError(
                 "capture_official_torch_from_archive and "
                 "capture_official_torch_from_upstream_fixture are mutually exclusive"
+            )
+        if capture_official_torch_from_upstream_source_graph:
+            raise ValueError(
+                "capture_official_torch_from_upstream_fixture and "
+                "capture_official_torch_from_upstream_source_graph are mutually exclusive"
             )
         try:
             official_torch_upstream_capture = (
@@ -243,6 +250,139 @@ def build_snerv_source_forward_proof_from_archive_packet(
                         ]
                     ),
                 }
+        except Exception as exc:
+            source_graph_blockers = [
+                "snerv_upstream_source_graph_unproven",
+                *list(getattr(exc, "blockers", ())),
+                f"snerv_upstream_source_capture_failed:{type(exc).__name__}",
+            ]
+            official_torch_upstream_capture = {
+                "schema": "snerv_official_torch_upstream_capture_failed.v1",
+                "verdict": SOURCE_GRAPH_UNPROVEN,
+                "source_graph_unproven": True,
+                "failure_type": type(exc).__name__,
+                "failure": str(exc),
+                "blockers": _ordered_unique(source_graph_blockers),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            official_torch_tensors = {}
+            official_torch_capture_manifest = None
+            official_torch_manifest_status = (
+                validate_snerv_official_torch_upstream_capture_manifest(
+                    None,
+                    pair_ids=pair_ids,
+                    tensor_names=(),
+                )
+            )
+            official_torch_upstream_capture_status = dict(official_torch_upstream_capture)
+    if capture_official_torch_from_upstream_source_graph:
+        if official_torch_tensors is not None:
+            raise ValueError(
+                "official_torch_tensors and "
+                "capture_official_torch_from_upstream_source_graph are mutually exclusive"
+            )
+        if capture_official_torch_from_archive:
+            raise ValueError(
+                "capture_official_torch_from_archive and "
+                "capture_official_torch_from_upstream_source_graph are mutually exclusive"
+            )
+        try:
+            official_torch_upstream_capture = (
+                build_official_torch_upstream_source_graph_tensors(
+                    official_repo_dir=official_snerv_repo_dir,
+                    pair_ids=pair_ids,
+                    source_frame_triplets_nchw255=(
+                        official_torch_source_frame_triplets_nchw255
+                    ),
+                    official_trained_checkpoint_state_dict=(
+                        official_torch_checkpoint_state_dict
+                    ),
+                    official_trained_checkpoint_state_dict_path=(
+                        official_torch_checkpoint_state_dict_path
+                    ),
+                    official_trained_checkpoint_state_dict_kind=(
+                        official_torch_checkpoint_state_dict_kind
+                    ),
+                    official_trained_source_config_path=(
+                        official_torch_source_config_path
+                    ),
+                    official_trained_source_config_kind=(
+                        official_torch_source_config_kind
+                    ),
+                )
+            )
+            _require_upstream_capture_pair_ids_match(
+                official_torch_upstream_capture,
+                pair_ids=pair_ids,
+            )
+            if official_torch_upstream_capture.get("source_graph_unproven") is True:
+                raise _SourceGraphUnprovenError(
+                    "official upstream SNeRV_T source graph capture is unproven",
+                    blockers=[
+                        str(value)
+                        for value in official_torch_upstream_capture.get("blockers", ())
+                        if str(value)
+                    ],
+                )
+            official_torch_tensors = official_torch_upstream_capture["tensors"]
+            official_torch_capture_manifest = (
+                build_snerv_official_torch_upstream_capture_manifest(
+                    pair_ids=pair_ids,
+                    tensor_names=official_torch_tensors.keys(),
+                    model_source_sha256=official_torch_upstream_capture.get(
+                        "model_source_sha256"
+                    ),
+                    checkpoint_sha256=official_torch_upstream_capture.get(
+                        "checkpoint_sha256"
+                    ),
+                    state_dict_sha256=official_torch_upstream_capture.get(
+                        "state_dict_sha256"
+                    ),
+                    source_config_lineage=official_torch_upstream_capture.get(
+                        "source_config_lineage"
+                    ),
+                    source_config_sha256=official_torch_upstream_capture.get(
+                        "source_config_sha256"
+                    ),
+                    source_config_kind=official_torch_upstream_capture.get(
+                        "source_config_kind"
+                    ),
+                    source_config_source=official_torch_upstream_capture.get(
+                        "source_config_source"
+                    ),
+                    source_config_is_fixture=official_torch_upstream_capture.get(
+                        "source_config_is_fixture"
+                    ),
+                    decoder_len=official_torch_upstream_capture.get("decoder_len"),
+                    source_scope=official_torch_upstream_capture.get("source_scope"),
+                    trained_checkpoint_lineage=(
+                        official_torch_checkpoint_state_dict_kind
+                    ),
+                    capture_origin="official_upstream_trained_checkpoint_source_graph",
+                )
+            )
+            official_torch_manifest_status = (
+                validate_snerv_official_torch_upstream_capture_manifest(
+                    official_torch_capture_manifest,
+                    pair_ids=pair_ids,
+                    tensor_names=official_torch_tensors.keys(),
+                )
+            )
+            official_torch_upstream_capture_status = {
+                **official_torch_upstream_capture_status,
+                "verdict": (
+                    "SOURCE_GRAPH_CAPTURED"
+                    if official_torch_manifest_status.get("passed") is True
+                    else SOURCE_GRAPH_UNPROVEN
+                ),
+                "source_graph_unproven": (
+                    official_torch_manifest_status.get("passed") is not True
+                ),
+                "blockers": list(official_torch_manifest_status.get("blockers", ())),
+            }
         except Exception as exc:
             source_graph_blockers = [
                 "snerv_upstream_source_graph_unproven",
@@ -470,6 +610,13 @@ def build_snerv_source_forward_proof_from_archive_packet(
         ),
         "official_torch_captured_from_upstream_fixture": bool(
             official_torch_upstream_capture is not None
+            and official_torch_upstream_capture.get("schema")
+            == "snerv_official_tub_source_forward_tensor_bundle.v1"
+        ),
+        "official_torch_captured_from_upstream_source_graph": bool(
+            official_torch_upstream_capture is not None
+            and official_torch_upstream_capture.get("schema")
+            == "snerv_official_tub_strict_source_graph_capture.v1"
         ),
         "official_torch_upstream_capture_schema": (
             official_torch_upstream_capture.get("schema")
@@ -1165,6 +1312,42 @@ def build_official_torch_upstream_fixture_tensors(
     )
 
 
+def build_official_torch_upstream_source_graph_tensors(
+    *,
+    official_repo_dir: str | None = None,
+    pair_ids: Sequence[int],
+    source_frame_triplets_nchw255: Any | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+    official_trained_source_config_path: str | None = None,
+    official_trained_source_config_kind: str = "official_trained_run_config",
+) -> dict[str, Any]:
+    """Capture official Torch tensors from a strict upstream trained source graph."""
+
+    from tac.analysis.snerv_official_tub_source_forward_replay import (
+        DEFAULT_OFFICIAL_SNERV_REPO,
+        build_snerv_official_tub_strict_source_graph_tensor_bundle,
+    )
+
+    return build_snerv_official_tub_strict_source_graph_tensor_bundle(
+        official_repo_dir=official_repo_dir or DEFAULT_OFFICIAL_SNERV_REPO,
+        pair_ids=pair_ids,
+        source_frame_triplets_nchw255=source_frame_triplets_nchw255,
+        official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+        official_trained_checkpoint_state_dict_path=(
+            official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            official_trained_checkpoint_state_dict_kind
+        ),
+        official_trained_source_config_path=official_trained_source_config_path,
+        official_trained_source_config_kind=official_trained_source_config_kind,
+    )
+
+
 def build_torch_scorer_source_forward_surface(
     *,
     candidate_pairs_nchw255: Any,
@@ -1570,6 +1753,7 @@ __all__ = [
     "SOURCE_IDENTICAL",
     "build_official_torch_primitive_tensors_from_archive_packet",
     "build_official_torch_upstream_fixture_tensors",
+    "build_official_torch_upstream_source_graph_tensors",
     "build_pact_mlx_primitive_tensors_from_archive_packet",
     "build_snerv_official_torch_upstream_capture_manifest",
     "build_snerv_output2_boundary_verdict",

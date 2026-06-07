@@ -25,7 +25,15 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     SOURCE_CONFIG_NOT_EXECUTED_BY_FIXTURE_BLOCKER,
     SOURCE_CONFIG_PATH_MISSING_BLOCKER,
     SOURCE_CONFIG_UNRESOLVED_FIELDS_BLOCKER,
+    SOURCE_GRAPH_UNPROVEN,
     STATE_VALUE_ARTIFACT_BLOCKER,
+    STRICT_SOURCE_GRAPH_CAPTURE_SCHEMA,
+    STRICT_SOURCE_GRAPH_CHECKPOINT_REQUIRED_BLOCKER,
+    STRICT_SOURCE_GRAPH_CONFIG_AMBIGUOUS_BLOCKER,
+    STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_REQUIRED_BLOCKER,
+    STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_SHAPE_BLOCKER,
+    STRICT_SOURCE_GRAPH_PAIR_ID_MISMATCH_BLOCKER,
+    STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER,
     TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER,
     TUB_CLOSED_BY_FIXTURE_REPLAY,
     TUB_PRESERVED_BLOCKERS,
@@ -33,6 +41,7 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     build_snerv_official_tub_source_config_lineage_from_path,
     build_snerv_official_tub_source_forward_replay_artifact,
     build_snerv_official_tub_source_forward_tensor_bundle,
+    build_snerv_official_tub_strict_source_graph_tensor_bundle,
     main,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
@@ -230,6 +239,50 @@ def test_snerv_official_tub_source_forward_tensor_bundle_names_proof_tensors() -
     assert tensors["rgb_pair_float"].shape == (1, 2, 3, 32, 32)
     assert tensors["rgb_pair_uint8"].dtype == np.uint8
     assert tensors["hfr_out"].shape == (1, 3, 3, 16, 16)
+
+
+def test_snerv_official_tub_strict_source_graph_requires_real_inputs(
+    tmp_path: Path,
+) -> None:
+    capture = build_snerv_official_tub_strict_source_graph_tensor_bundle(
+        official_repo_dir=tmp_path / "missing-snerv",
+        pair_ids=[0],
+    )
+
+    blockers = set(capture["blockers"])
+    assert capture["schema"] == STRICT_SOURCE_GRAPH_CAPTURE_SCHEMA
+    assert capture["verdict"] == SOURCE_GRAPH_UNPROVEN
+    assert capture["source_graph_unproven"] is True
+    assert capture["source_forward_replay_authority"] is False
+    assert capture["upstream_forward_replay_verified"] is False
+    assert "snerv_official_source_checkout_missing" in blockers
+    assert STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER in blockers
+    assert STRICT_SOURCE_GRAPH_CHECKPOINT_REQUIRED_BLOCKER in blockers
+    assert STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_REQUIRED_BLOCKER in blockers
+    assert capture["score_claim"] is False
+    assert capture["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_official_tub_strict_source_graph_rejects_fixture_or_ambiguous_config(
+    tmp_path: Path,
+) -> None:
+    triplets = np.zeros((2, 3, 3, 32, 32), dtype=np.float32)
+    capture = build_snerv_official_tub_strict_source_graph_tensor_bundle(
+        official_repo_dir=tmp_path / "missing-snerv",
+        pair_ids=[0],
+        source_frame_triplets_nchw255=triplets,
+        official_trained_source_config=_resolved_source_config(),
+        official_trained_source_config_path=tmp_path / "args.json",
+    )
+
+    blockers = set(capture["blockers"])
+    assert capture["verdict"] == SOURCE_GRAPH_UNPROVEN
+    assert STRICT_SOURCE_GRAPH_CONFIG_AMBIGUOUS_BLOCKER in blockers
+    assert STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER in blockers
+    assert STRICT_SOURCE_GRAPH_FRAME_TRIPLETS_SHAPE_BLOCKER in blockers
+    assert STRICT_SOURCE_GRAPH_PAIR_ID_MISMATCH_BLOCKER in blockers
+    assert capture["source_config_lineage_report"]["exact_trained_config_loaded"] is False
+    assert capture["source_forward_replay_authority"] is False
 
 
 def test_snerv_official_tub_replay_preserves_dependency_and_checkpoint_blockers() -> None:
