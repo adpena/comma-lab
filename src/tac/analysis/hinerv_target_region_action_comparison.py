@@ -187,6 +187,11 @@ def build_hinerv_target_region_action_comparison(
     current_decoded_action_sha256 = _optional_text(
         current_section_telemetry.get("decoded_action_sha256")
     )
+    current_interpretation_blockers = [
+        str(blocker)
+        for blocker in current_section_telemetry.get("interpretation_blockers", [])
+        if str(blocker)
+    ]
     survival_identity = _survival_identity_status(
         survival_receipt,
         action_id=chosen_action_id,
@@ -197,9 +202,11 @@ def build_hinerv_target_region_action_comparison(
         decoded_action_sha256=current_decoded_action_sha256,
     )
     survival_identity_blockers = list(survival_identity["blockers"])
-    current_receiver_bound = not survival_identity_blockers
+    current_receiver_bound = not survival_identity_blockers and not current_interpretation_blockers
     current_first_failed = (
-        _SURVIVAL_IDENTITY_MISMATCH
+        "target_region_action_interpreter_identity_mismatch"
+        if current_interpretation_blockers
+        else _SURVIVAL_IDENTITY_MISMATCH
         if survival_identity_blockers
         else (_SUPPORT_IDENTITY_MISMATCH if sidecar_support_mismatch else None)
     )
@@ -229,7 +236,11 @@ def build_hinerv_target_region_action_comparison(
         sidecar_admission=sidecar_admission,
         survival_receipt=survival_receipt if current_receiver_bound else {},
         first_failed_surface=current_first_failed,
-        blockers=[*survival_identity_blockers, *support_identity_blockers],
+        blockers=[
+            *current_interpretation_blockers,
+            *survival_identity_blockers,
+            *support_identity_blockers,
+        ],
         exact_payload_equivalent=True,
         receiver_bound=current_receiver_bound,
     )

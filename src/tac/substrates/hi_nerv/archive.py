@@ -545,6 +545,11 @@ def build_archive_section_telemetry(
                 )
                 target_region_actions["base64_text_bytes"] = None
             target_region_actions["charged_meta_json_bytes"] = len(meta_payload)
+            blockers.extend(
+                str(blocker)
+                for blocker in target_region_actions.get("interpretation_blockers", [])
+                if str(blocker)
+            )
         except ValueError as exc:
             blockers.append(f"target_region_action_meta_invalid:{exc}")
 

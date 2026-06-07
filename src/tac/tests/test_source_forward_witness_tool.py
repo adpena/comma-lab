@@ -16,6 +16,8 @@ from tac.analysis.snerv_source_forward_proof import (
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     build_snerv_archive_payload_bitflip_falsification_matrix,
+    build_snerv_official_tub_input_prune_report,
+    build_snerv_official_tub_input_pruned_packet,
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
@@ -137,6 +139,52 @@ def test_official_packet_bitflip_matrix_covers_logical_source_basis() -> None:
     for section, proof in matrix["section_proofs"].items():
         assert proof["bitflip_section"] == section
         assert proof["baseline_section_sha256"] != proof["mutated_section_sha256"]
+
+
+def test_official_packet_tub_prune_report_marks_noncausal_tub_dominated() -> None:
+    packet = _official_packet()
+    report = build_snerv_official_tub_input_prune_report(packet)
+
+    assert json.dumps(report, sort_keys=True)
+    assert report["schema"] == "snerv_official_tub_input_prune_report.v1"
+    assert report["passed"] is True
+    assert report["verdict"] == "DROP_OR_REIFY"
+    assert report["section"] == "decoder_payload.tub"
+    assert report["causality"] == "noncausal"
+    assert report["byte_value"] == 0
+    assert report["receiver_rgb_equal"] is True
+    assert report["max_abs_receiver_delta"] == 0.0
+    assert report["bytes_saved"] > 0
+    assert report["delta_bytes"] < 0
+    assert report["rate_delta_score"] < 0.0
+    assert report["raw_tub_input_bytes_saved"] > 0
+    assert report["source_tub_input_storage"]["codec"] == "full_float64"
+    assert (
+        report["candidate_tub_input_storage"]["codec"]
+        == "unused_synthetic_float64"
+    )
+    assert report["tub_bitflip_causality"]["noncausal"] is True
+    assert report["required_next_test"] == "tub_operator_reification_bitflip"
+    assert report["launch_gate_clearable"] is False
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+    pruned = build_snerv_official_tub_input_pruned_packet(packet)
+    assert pruned.total_bytes == report["candidate_packet_bytes"]
+    source_decoded = unpack_snerv_archive(packet)
+    assert pruned.section_bytes["decoder_payload"] < len(
+        source_decoded.sections["decoder_payload"]
+    )
+
+    source_frames = source_decoded.decode_frames(clip_to_uint8_range=True)
+    pruned_frames = unpack_snerv_archive(pruned.packet).decode_frames(
+        clip_to_uint8_range=True
+    )
+    assert np.array_equal(
+        np.rint(source_frames).astype(np.uint8),
+        np.rint(pruned_frames).astype(np.uint8),
+    )
 
 
 def test_source_forward_witness_build_failure_preserves_input_resolution_blockers(

@@ -743,16 +743,34 @@ def target_region_action_section_telemetry_for_payload(
     actions: list[TargetRegionPixelAction],
     payload: bytes,
 ) -> dict[str, Any]:
-    raw_payload = encode_target_region_actions(actions)
+    expected_actions = list(actions)
     stored_payload = bytes(payload)
+    decoded_actions = decode_target_region_actions(stored_payload)
+    raw_payload = encode_target_region_actions(decoded_actions)
     program_base64 = base64.b64encode(stored_payload).decode("ascii")
     encoded_program_sha256 = hashlib.sha256(stored_payload).hexdigest()
-    support_telemetry = _target_region_action_support_telemetry(stored_payload, actions)
+    support_telemetry = _target_region_action_support_telemetry(stored_payload, decoded_actions)
+    expected_support_sha256 = target_region_action_support_sha256(expected_actions)
+    expected_decoded_support_sha256 = target_region_action_decoded_support_sha256(expected_actions)
+    expected_decoded_action_sha256 = target_region_action_decoded_action_sha256(expected_actions)
+    decoded_support_sha256 = target_region_action_decoded_support_sha256(decoded_actions)
+    decoded_action_sha256 = target_region_action_decoded_action_sha256(decoded_actions)
+    interpretation_blockers: list[str] = []
+    if decoded_support_sha256 != expected_decoded_support_sha256:
+        interpretation_blockers.append(
+            "target_region_action_interpreted_decoded_support_sha256_mismatch"
+        )
+    if decoded_action_sha256 != expected_decoded_action_sha256:
+        interpretation_blockers.append(
+            "target_region_action_interpreted_decoded_action_sha256_mismatch"
+        )
     return {
         "schema": TARGET_REGION_ACTION_SCHEMA,
         "meta_key": TARGET_REGION_ACTION_META_KEY,
-        "action_count": len(actions),
-        "pixel_count": int(sum(action.pixel_count for action in actions)),
+        "action_count": len(decoded_actions),
+        "expected_action_count": len(expected_actions),
+        "pixel_count": int(sum(action.pixel_count for action in decoded_actions)),
+        "expected_pixel_count": int(sum(action.pixel_count for action in expected_actions)),
         "payload_bytes": len(stored_payload),
         "payload_sha256": encoded_program_sha256,
         "encoded_program_sha256": encoded_program_sha256,
@@ -760,10 +778,15 @@ def target_region_action_section_telemetry_for_payload(
         "raw_payload_bytes": len(raw_payload),
         "payload_codec": target_region_action_payload_codec(stored_payload),
         **support_telemetry,
-        "support_cardinality": int(sum(action.pixel_count for action in actions)),
-        "support_sha256": target_region_action_support_sha256(actions),
-        "decoded_support_sha256": target_region_action_decoded_support_sha256(actions),
-        "decoded_action_sha256": target_region_action_decoded_action_sha256(actions),
+        "support_cardinality": int(sum(action.pixel_count for action in decoded_actions)),
+        "support_sha256": target_region_action_support_sha256(decoded_actions),
+        "expected_support_sha256": expected_support_sha256,
+        "decoded_support_sha256": decoded_support_sha256,
+        "expected_decoded_support_sha256": expected_decoded_support_sha256,
+        "decoded_action_sha256": decoded_action_sha256,
+        "expected_decoded_action_sha256": expected_decoded_action_sha256,
+        "interpreter_payload_matches_expected_actions": not interpretation_blockers,
+        "interpretation_blockers": interpretation_blockers,
         "archive_executable_support": True,
         "charged_as_hiv1_meta_blob": True,
         "receiver_consumed": True,

@@ -61,6 +61,7 @@ from tac.substrates.hi_nerv.target_region_actions import (
     target_region_action_decoded_support_sha256,
     target_region_action_payload_codec,
     target_region_action_section_telemetry,
+    target_region_action_section_telemetry_for_payload,
     target_region_action_support_sha256,
 )
 
@@ -758,6 +759,45 @@ def test_target_region_action_decoded_hashes_are_coordinate_order_invariant():
     assert target_region_action_decoded_action_sha256(
         [action]
     ) != target_region_action_decoded_action_sha256([changed_values])
+
+
+def test_target_region_action_telemetry_hashes_interpreted_payload_not_intent():
+    yx = np.array([[1, 2], [4, 5], [2, 3]], dtype=np.uint16)
+    expected_rgb = np.array([[10, 20, 30], [40, 50, 60], [70, 80, 90]], dtype=np.uint8)
+    actual_rgb = np.array([[11, 20, 30], [40, 50, 60], [70, 80, 90]], dtype=np.uint8)
+    expected = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=yx,
+        rgb_u8=expected_rgb,
+    )
+    actual = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=8,
+        width=8,
+        yx=yx,
+        rgb_u8=actual_rgb,
+    )
+    payload = encode_target_region_actions_payload([actual])
+
+    telemetry = target_region_action_section_telemetry_for_payload([expected], payload)
+
+    assert telemetry["decoded_support_sha256"] == target_region_action_decoded_support_sha256(
+        [actual]
+    )
+    assert telemetry["decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [actual]
+    )
+    assert telemetry["expected_decoded_action_sha256"] == target_region_action_decoded_action_sha256(
+        [expected]
+    )
+    assert telemetry["interpreter_payload_matches_expected_actions"] is False
+    assert telemetry["interpretation_blockers"] == [
+        "target_region_action_interpreted_decoded_action_sha256_mismatch"
+    ]
 
 
 def test_target_region_action_rejects_duplicate_support_coordinates():

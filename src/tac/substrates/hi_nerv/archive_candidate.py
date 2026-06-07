@@ -300,6 +300,11 @@ def build_hi_nerv_target_region_action_parseback_survival(
     telemetry["payload_codec"] = target_region_action_payload_codec(stored_payload)
     telemetry["base64_text_bytes"] = len(raw_b64.encode("ascii"))
     blockers: list[str] = []
+    blockers.extend(
+        str(blocker)
+        for blocker in telemetry.get("interpretation_blockers", [])
+        if str(blocker)
+    )
     expected_payload_sha256: str | None = None
     if expected_program_base64:
         try:

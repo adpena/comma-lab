@@ -171,6 +171,9 @@ DECODER_PAYLOAD_EXHAUSTIVE_LZMA_PRESET = 9 | lzma.PRESET_EXTREME
 OFFICIAL_RECEIVER_PAYLOAD_RATE_CLASSIFICATION_SCHEMA = (
     "snerv_official_mfu_hfr_tub_receiver_payload_rate_classification.v1"
 )
+OFFICIAL_TUB_INPUT_PRUNE_REPORT_SCHEMA = "snerv_official_tub_input_prune_report.v1"
+CONTEST_EVALUATE_SAMPLE_COUNT = 37_545_489
+CONTEST_RATE_PRICE = 25.0
 OFFICIAL_MFU_INPUT_CODEC_FULL = "full_float64"
 OFFICIAL_MFU_INPUT_CODEC_ZERO_SYNTHETIC = "zero_synthetic_float64"
 OFFICIAL_SKIP_HIGH_CODEC_FULL = "full_float64"
@@ -1827,6 +1830,266 @@ def build_snerv_archive_payload_bitflip_falsification_matrix(
             )
         )
     return build_snerv_payload_bitflip_falsification_matrix(section_proofs)
+
+
+def build_snerv_official_tub_input_prune_report(packet: bytes) -> dict[str, Any]:
+    """Test whether paid official TUB input bytes are dominated in this packet.
+
+    The current official receiver path does not consume ``inputs.tub.*`` during
+    frame synthesis. This recodes those tensors with the existing
+    ``unused_synthetic`` grammar, compares receiver RGB, and reports the exact
+    packet-byte delta. If RGB is unchanged and bytes drop, the source-forward
+    verdict is not "TUB passed"; it is "drop or reify TUB before long runs."
+    """
+
+    source_packet = bytes(packet)
+    decoded = unpack_snerv_archive(source_packet)
+    if not is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        return {
+            "schema": OFFICIAL_TUB_INPUT_PRUNE_REPORT_SCHEMA,
+            "verdict": "NOT_OFFICIAL_MFU_HFR_TUB",
+            "passed": False,
+            "blockers": ["snerv_tub_prune_requires_official_mfu_hfr_tub_payload"],
+            **FALSE_AUTHORITY,
+        }
+    source_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    source_header = source_payload.header
+    source_tub_storage = dict(source_header.get("tub_input_storage") or {})
+    try:
+        source_frames = decoded.decode_frames(clip_to_uint8_range=True)
+    except Exception as exc:
+        return _blocked_snerv_official_tub_input_prune_report(
+            source_packet,
+            "snerv_tub_prune_source_receiver_render_failed",
+            source_tub_input_storage=source_tub_storage,
+            failure=f"{type(exc).__name__}:{exc}",
+        )
+    try:
+        candidate = build_snerv_official_tub_input_pruned_packet(source_packet)
+        candidate_decoded = unpack_snerv_archive(candidate.packet)
+        candidate_payload = decode_official_mfu_hfr_tub_decoder_payload(
+            candidate_decoded.sections["decoder_payload"]
+        )
+        candidate_frames = candidate_decoded.decode_frames(clip_to_uint8_range=True)
+    except Exception as exc:
+        return _blocked_snerv_official_tub_input_prune_report(
+            source_packet,
+            "snerv_tub_prune_candidate_receiver_render_failed",
+            source_tub_input_storage=source_tub_storage,
+            failure=f"{type(exc).__name__}:{exc}",
+        )
+    receiver_rgb_equal = bool(
+        tuple(source_frames.shape) == tuple(candidate_frames.shape)
+        and np.array_equal(
+            np.rint(source_frames).astype(np.uint8),
+            np.rint(candidate_frames).astype(np.uint8),
+        )
+    )
+    max_abs_receiver_delta = _max_abs_delta_np(source_frames, candidate_frames)
+    source_bytes = len(source_packet)
+    candidate_bytes = len(candidate.packet)
+    delta_bytes = int(candidate_bytes - source_bytes)
+    source_tub_raw = int(source_tub_storage.get("stored_raw_bytes") or 0)
+    candidate_tub_storage = dict(
+        candidate_payload.header.get("tub_input_storage") or {}
+    )
+    candidate_tub_raw = int(candidate_tub_storage.get("stored_raw_bytes") or 0)
+    raw_tub_saved = int(source_tub_raw - candidate_tub_raw)
+    bitflip_matrix = build_snerv_archive_payload_bitflip_falsification_matrix(
+        source_packet,
+        sections=("decoder_payload.tub",),
+    )
+    tub_proof = dict(bitflip_matrix.get("section_proofs", {})).get(
+        "decoder_payload.tub",
+        {},
+    )
+    tub_noncausal = bool(
+        "decoder_payload.tub" in bitflip_matrix.get("noncausal_sections", [])
+    )
+    blockers: list[str] = []
+    if source_tub_storage.get("codec") == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
+        blockers.append("snerv_tub_inputs_already_unused_synthetic")
+    if not tub_noncausal:
+        blockers.append("snerv_tub_input_bitflip_not_proven_noncausal")
+    if not receiver_rgb_equal:
+        blockers.append("snerv_tub_prune_receiver_rgb_changed")
+    if delta_bytes >= 0:
+        blockers.append("snerv_tub_prune_packet_bytes_not_reduced")
+    passed = not blockers
+    return {
+        "schema": OFFICIAL_TUB_INPUT_PRUNE_REPORT_SCHEMA,
+        "verdict": "DROP_OR_REIFY" if passed else "REIFY_REQUIRED_OR_KEEP",
+        "passed": passed,
+        "archive_sha256": _sha256(source_packet),
+        "candidate_archive_sha256": _sha256(candidate.packet),
+        "candidate_packet": {
+            "schema": candidate.schema,
+            "bytes": int(candidate.total_bytes),
+            "sha256": _sha256(candidate.packet),
+            "header_bytes": int(candidate.header_bytes),
+        },
+        "source_packet_bytes": int(source_bytes),
+        "candidate_packet_bytes": int(candidate_bytes),
+        "delta_bytes": int(delta_bytes),
+        "bytes_saved": int(max(0, -delta_bytes)),
+        "rate_delta_score": (
+            CONTEST_RATE_PRICE * float(delta_bytes) / float(CONTEST_EVALUATE_SAMPLE_COUNT)
+        ),
+        "contest_sample_count": CONTEST_EVALUATE_SAMPLE_COUNT,
+        "source_tub_input_storage": source_tub_storage,
+        "candidate_tub_input_storage": candidate_tub_storage,
+        "source_tub_input_stored_raw_bytes": int(source_tub_raw),
+        "candidate_tub_input_stored_raw_bytes": int(candidate_tub_raw),
+        "raw_tub_input_bytes_saved": int(max(0, raw_tub_saved)),
+        "receiver_rgb_equal": receiver_rgb_equal,
+        "max_abs_receiver_delta": max_abs_receiver_delta,
+        "tub_bitflip_causality": {
+            "noncausal": tub_noncausal,
+            "proof": tub_proof,
+            "matrix_blockers": list(bitflip_matrix.get("blockers") or []),
+        },
+        "section": "decoder_payload.tub",
+        "causality": "noncausal" if tub_noncausal else "unproven_or_causal",
+        "byte_value": 0 if tub_noncausal else None,
+        "required_next_test": "tub_operator_reification_bitflip",
+        "launch_gate_clearable": False,
+        "blockers": list(dict.fromkeys(blockers)),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _blocked_snerv_official_tub_input_prune_report(
+    packet: bytes,
+    blocker: str,
+    *,
+    source_tub_input_storage: Mapping[str, Any] | None = None,
+    failure: str | None = None,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "schema": OFFICIAL_TUB_INPUT_PRUNE_REPORT_SCHEMA,
+        "verdict": "REIFY_REQUIRED_OR_KEEP",
+        "passed": False,
+        "archive_sha256": _sha256(packet),
+        "source_packet_bytes": len(packet),
+        "candidate_packet_bytes": None,
+        "delta_bytes": None,
+        "bytes_saved": 0,
+        "rate_delta_score": None,
+        "contest_sample_count": CONTEST_EVALUATE_SAMPLE_COUNT,
+        "source_tub_input_storage": dict(source_tub_input_storage or {}),
+        "receiver_rgb_equal": False,
+        "max_abs_receiver_delta": None,
+        "section": "decoder_payload.tub",
+        "causality": "unproven_or_causal",
+        "byte_value": None,
+        "required_next_test": "tub_operator_reification_bitflip",
+        "launch_gate_clearable": False,
+        "blockers": [str(blocker)],
+        **FALSE_AUTHORITY,
+    }
+    if failure:
+        out["failure"] = str(failure)
+    return out
+
+
+def build_snerv_official_tub_input_pruned_packet(packet: bytes) -> SnervArchivePacket:
+    """Repack an official MFU/HFR/TUB archive with nonconsumed TUB inputs pruned."""
+
+    source_packet = bytes(packet)
+    decoded = unpack_snerv_archive(source_packet)
+    if not is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        raise SnervArchiveError(
+            "TUB input pruning requires an official MFU/HFR/TUB decoder payload"
+        )
+    source_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    mutated_sections = dict(decoded.sections)
+    mutated_sections["decoder_payload"] = (
+        _reencode_official_payload_with_tub_inputs_pruned(source_payload)
+    )
+    packer = (
+        pack_snerv_archive_snar2
+        if decoded.schema == SNERV_ARCHIVE_SCHEMA_V2
+        else pack_snerv_archive
+    )
+    return packer(
+        metadata_payload=mutated_sections["metadata_payload"],
+        lf_payload=mutated_sections["lf_payload"],
+        decoder_payload=mutated_sections["decoder_payload"],
+        step_map_packet=mutated_sections["step_map_packet"],
+        metadata=dict(decoded.metadata),
+    )
+
+
+def _reencode_official_payload_with_tub_inputs_pruned(
+    payload: OfficialMfuHfrTubReceiverPayload,
+) -> bytes:
+    header = payload.header
+    low, skip_mid, skip_high = payload.mfu_inputs()
+    tub_current, tub_previous, tub_next_frame = payload.tub_inputs()
+    output2_inputs = payload.tub_output2_inputs()
+    tub_config = dict(header.get("tub_config") or {})
+    output2_storage = dict(header.get("tub_output2_storage") or {})
+    mfu_storage = dict(header.get("mfu_input_storage") or {})
+    skip_high_storage = dict(header.get("skip_high_storage") or {})
+    return encode_official_mfu_hfr_tub_decoder_payload(
+        mfu=payload.build_mfu(),
+        hfr_heads=payload.build_hfr_heads(),
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=tub_current,
+        tub_previous=tub_previous,
+        tub_next_frame=tub_next_frame,
+        temporal_encoder_output_shape=_shape_tuple_or_none(
+            tub_config.get("temporal_encoder_output_shape")
+        ),
+        fc_hw=_shape_tuple_or_none(tub_config.get("fc_hw")),
+        output2_decoder_output_shape=_shape_tuple_or_none(
+            tub_config.get("output2_decoder_output_shape")
+        ),
+        tub_temporal_encoder_concat=(
+            output2_inputs[0] if output2_inputs is not None else None
+        ),
+        tub_output2_raw=output2_inputs[1] if output2_inputs is not None else None,
+        store_tub_output2_for_receiver_proof=bool(output2_storage.get("stored")),
+        mfu_input_codec=str(
+            mfu_storage.get("codec") or OFFICIAL_MFU_INPUT_CODEC_FULL
+        ),
+        skip_high_codec=str(
+            skip_high_storage.get("codec") or OFFICIAL_SKIP_HIGH_CODEC_FULL
+        ),
+        skip_high_source_shape=_shape_tuple_or_none(
+            skip_high_storage.get("source_shape")
+        ),
+        tub_input_codec=OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
+    )
+
+
+def _shape_tuple_or_none(value: Any) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        return None
+    try:
+        out = tuple(int(v) for v in value)
+    except (TypeError, ValueError):
+        return None
+    return out or None
+
+
+def _max_abs_delta_np(left: Any, right: Any) -> float | None:
+    left_arr = np.asarray(left, dtype=np.float64)
+    right_arr = np.asarray(right, dtype=np.float64)
+    if left_arr.shape != right_arr.shape:
+        return None
+    delta = np.abs(left_arr - right_arr)
+    if not np.all(np.isfinite(delta)):
+        return None
+    return float(np.max(delta)) if delta.size else 0.0
 
 
 def _canonical_official_decoder_logical_bitflip_section(section: str) -> str | None:

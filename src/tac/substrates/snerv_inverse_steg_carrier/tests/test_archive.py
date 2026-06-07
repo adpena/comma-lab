@@ -50,6 +50,8 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SnervArchiveError,
     build_snerv_archive_payload_bitflip_falsification,
     build_snerv_archive_payload_bitflip_falsification_matrix,
+    build_snerv_official_tub_input_prune_report,
+    build_snerv_official_tub_input_pruned_packet,
     decode_decoder_payload,
     decode_lf_metadata_payload,
     decode_lf_quant_payload,
@@ -2396,6 +2398,88 @@ def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority(
     assert proof["receiver_runtime_decode_proven"] is True
     assert proof["source_forward_replay_authority"] is False
     assert proof["score_claim"] is False
+
+
+def test_official_tub_input_pruned_packet_preserves_receiver_frames() -> None:
+    source = _official_output2_source_forward_archive_fixture()
+
+    candidate = build_snerv_official_tub_input_pruned_packet(source.packet)
+    source_decoded = unpack_snerv_archive(source.packet)
+    candidate_decoded = unpack_snerv_archive(candidate.packet)
+    source_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        source_decoded.sections["decoder_payload"]
+    )
+    candidate_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        candidate_decoded.sections["decoder_payload"]
+    )
+
+    assert candidate.total_bytes < source.total_bytes
+    assert source_payload.header["tub_input_storage"]["codec"] == "full_float64"
+    assert (
+        candidate_payload.header["tub_input_storage"]["codec"]
+        == "unused_synthetic_float64"
+    )
+    np.testing.assert_array_equal(
+        candidate_decoded.decode_frames(),
+        source_decoded.decode_frames(),
+    )
+
+
+def test_official_tub_input_prune_report_prices_noncausal_bytes() -> None:
+    source = _official_output2_source_forward_archive_fixture()
+
+    report = build_snerv_official_tub_input_prune_report(source.packet)
+
+    assert report["schema"] == "snerv_official_tub_input_prune_report.v1"
+    assert report["passed"] is True
+    assert report["verdict"] == "DROP_OR_REIFY"
+    assert report["receiver_rgb_equal"] is True
+    assert report["max_abs_receiver_delta"] == pytest.approx(0.0)
+    assert report["bytes_saved"] > 0
+    assert report["delta_bytes"] == -report["bytes_saved"]
+    assert report["rate_delta_score"] < 0.0
+    assert report["candidate_packet"]["bytes"] == report["candidate_packet_bytes"]
+    assert report["source_tub_input_storage"]["codec"] == "full_float64"
+    assert (
+        report["candidate_tub_input_storage"]["codec"]
+        == "unused_synthetic_float64"
+    )
+    assert report["tub_bitflip_causality"]["noncausal"] is True
+    assert report["blockers"] == []
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+
+
+def test_official_tub_input_prune_report_fails_closed_when_receiver_render_fails() -> None:
+    bundle = _official_payload_fixture()
+    payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    source = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=payload,
+        step_map_packet=encode_step_maps(
+            [np.ones((1, 1), dtype=np.float32)],
+            bins=4,
+        ).packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+
+    report = build_snerv_official_tub_input_prune_report(source.packet)
+
+    assert report["passed"] is False
+    assert report["verdict"] == "REIFY_REQUIRED_OR_KEEP"
+    assert report["candidate_packet_bytes"] is None
+    assert report["rate_delta_score"] is None
+    assert "snerv_tub_prune_source_receiver_render_failed" in report["blockers"]
+    assert "official tensor 'inputs.mfu.low' frame count" in report["failure"]
 
 
 def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
