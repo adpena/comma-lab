@@ -1336,6 +1336,9 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     )
     assert wall_lift["direct_teacher"]["action_effect"]["family"] == "direct_seg_wall_oracle"
     assert wall_lift["direct_teacher"]["support_sha256"] == direct_wall["support_sha256"]
+    assert wall_lift["direct_teacher"]["archive_executable_support_sha256"] == (
+        best_wall["target_region_action_section_telemetry"]["support_sha256"]
+    )
     assert wall_lift["backend_fit"]["action_effect"]["family"] == "hinerv"
     assert wall_lift["backend_fit"]["wrong_to_target_count"] == payload["argmax_transitions"][
         "wrong_to_target_count"
@@ -1343,6 +1346,9 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert wall_lift["sidecar_fallback"]["payload_bytes"] == synthesis[
         "target_region_action_payload_bytes"
     ]
+    assert wall_lift["sidecar_fallback"]["support_sha256"] == (
+        wall_lift["direct_teacher"]["archive_executable_support_sha256"]
+    )
     assert wall_lift["sidecar_fallback"]["available"] is (
         wall_lift["direct_teacher"]["exact_score_decision"] in {"accept", "accepted"}
     )

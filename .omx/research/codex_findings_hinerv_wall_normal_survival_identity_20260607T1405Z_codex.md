@@ -49,3 +49,25 @@ emits `archive_executable_support_sha256` from the same target-region action
 coordinates. If direct teacher support then matches the survived sidecar support,
 the next blocker should become backend realization or sidecar grammar economics
 instead of support identity.
+
+## Follow-Up Smoke On Current Main
+
+After wiring the wall-normal receipt to use the same wall-normal candidate for
+direct teacher and sidecar fallback, a fresh one-pair smoke produced:
+
+- Run root:
+  `/Volumes/VertigoDataTier/pact/experiments/results/hinerv_witness_readiness_short_smoke_current_main_20260607Tcodex_v2_support_unified`
+- `action_id`: `6e895812f120648a573c9b6c63af51c7af8783613e7d58de6b8dddbcc13c773e`
+- direct archive-executable support:
+  `51f3badbb313e231727054ef941fee13f4c2ee239c818f4e634816afd509fd60`
+- sidecar support:
+  `51f3badbb313e231727054ef941fee13f4c2ee239c818f4e634816afd509fd60`
+- direct wrong-to-target: `6323`
+- backend wrong-to-target: `0`
+- sidecar payload bytes: `121894`
+- first failing surface: `BACKEND_REALIZATION_FAILED`
+
+This burns down the direct-vs-sidecar support-domain mismatch for current-main
+smokes. The remaining blocker is not action/support identity; it is backend
+realization and/or materializing the same-support sidecar into archive
+parseback/inflate form.

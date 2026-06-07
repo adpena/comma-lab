@@ -6526,23 +6526,26 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             f"c{int(worst.class_index)}/"
             f"r{int(worst.region_label)}"
         )
+        wall_normal_candidate = None
+        sidecar_candidate = None
+        if isinstance(masked_residual_oracle, Mapping):
+            wall_normal_candidate = (
+                masked_residual_oracle.get("best_wall_normal_candidate")
+                or masked_residual_oracle.get("best_candidate")
+            )
+            sidecar_candidate = wall_normal_candidate
+            if not isinstance(sidecar_candidate, Mapping) or not sidecar_candidate.get(
+                "target_region_action_program_base64"
+            ):
+                sidecar_candidate = masked_residual_oracle.get("best_candidate")
         target_region_wall_normal_lift = build_target_region_wall_normal_lift_receipt(
             action_id=action_identity,
             pair_id=int(np.asarray(pair_indices, dtype=np.int64).reshape(-1)[0]),
             target_class=int(birth_class),
             region_id=region_id,
-            direct_teacher_candidate=(
-                masked_residual_oracle.get("best_wall_normal_candidate")
-                or masked_residual_oracle.get("best_candidate")
-                if isinstance(masked_residual_oracle, Mapping)
-                else None
-            ),
+            direct_teacher_candidate=wall_normal_candidate,
             backend_birth_receipt=receipt,
-            sidecar_candidate=(
-                masked_residual_oracle.get("best_candidate")
-                if isinstance(masked_residual_oracle, Mapping)
-                else None
-            ),
+            sidecar_candidate=sidecar_candidate,
             authority="batch_local_live_mlx",
         )
         candidate_frontier_telemetry["target_region_wall_normal_lift"] = (
