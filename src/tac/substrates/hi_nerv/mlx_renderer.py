@@ -61,6 +61,64 @@ HI_NERV_DECODER_FAKE_QUANT_ACTION_BITS: tuple[int, ...] = (
     16,
     32,
 )
+HINERV_TARGET_REGION_BIRTH_BACKEND_SCOPE_GROUPS: dict[str, tuple[str, ...]] = {
+    "pair_latents_fine": ("latents_fine",),
+    "latents_fine": ("latents_fine",),
+    "latents_fine_head_rgb_1": ("latents_fine", "head_rgb_1"),
+    "latents_fine_head_rgb_1_fine_injector": (
+        "latents_fine",
+        "head_rgb_1",
+        "fine_injector",
+    ),
+    "latents_fine_head_rgb_1_fine_injector_feature_grids": (
+        "latents_fine",
+        "head_rgb_1",
+        "fine_injector",
+        "feature_grids",
+    ),
+    "spatial_carriers": ("latents_fine", "feature_grids", "fine_injector"),
+    "late_all": ("latents_fine", "feature_grids", "fine_injector", "head_rgb_1"),
+}
+HINERV_TARGET_REGION_BIRTH_DEFAULT_BACKEND_LADDER: tuple[str, ...] = (
+    "pair_latents_fine",
+    "latents_fine_head_rgb_1",
+    "latents_fine_head_rgb_1_fine_injector",
+    "latents_fine_head_rgb_1_fine_injector_feature_grids",
+)
+HINERV_TARGET_REGION_BIRTH_UNAVAILABLE_BACKEND_TIERS: tuple[dict[str, str], ...] = (
+    {
+        "tier": "pair_adapter",
+        "blocker": "hinerv_target_region_birth_pair_adapter_basis_not_implemented",
+        "reason": "no archive-charged pair_adapter tensor exists in the current HiNeRV receiver grammar",
+    },
+    {
+        "tier": "temporary_class_logit_birth_basis",
+        "blocker": "hinerv_target_region_birth_temporary_logit_basis_not_implemented",
+        "reason": "no receiver-safe temporary class/logit basis exists; a sidecar action must be byte-priced instead",
+    },
+)
+
+
+def _hinerv_birth_scope_groups(scope: str) -> tuple[str, ...]:
+    try:
+        return HINERV_TARGET_REGION_BIRTH_BACKEND_SCOPE_GROUPS[str(scope)]
+    except KeyError as exc:
+        valid = sorted(HINERV_TARGET_REGION_BIRTH_BACKEND_SCOPE_GROUPS)
+        raise ValueError(f"birth_update_scope must be one of {valid}; got {scope!r}") from exc
+
+
+def _hinerv_birth_scope_charged_tensors(scope: str) -> list[str]:
+    groups = set(_hinerv_birth_scope_groups(scope))
+    charged: list[str] = []
+    if "latents_fine" in groups:
+        charged.append("latents_fine")
+    if "feature_grids" in groups:
+        charged.append("feature_grids.*")
+    if "fine_injector" in groups:
+        charged.append("fine_injector.*")
+    if "head_rgb_1" in groups:
+        charged.append("head_rgb_1.*")
+    return charged
 
 
 def _require_mlx() -> None:
@@ -3172,12 +3230,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             if birth_update_scope is None
             else str(birth_update_scope)
         )
-        valid_birth_update_scopes = {"late_all", "spatial_carriers", "pair_latents_fine"}
+        valid_birth_update_scopes = set(HINERV_TARGET_REGION_BIRTH_BACKEND_SCOPE_GROUPS)
         if resolved_birth_update_scope not in valid_birth_update_scopes:
             raise ValueError(
                 "birth_update_scope must be one of "
                 f"{sorted(valid_birth_update_scopes)}; got {birth_update_scope!r}"
             )
+        resolved_birth_update_groups = set(_hinerv_birth_scope_groups(resolved_birth_update_scope))
         clip = None if grad_clip_max_norm is None else float(grad_clip_max_norm)
         if clip is not None and (not math.isfinite(clip) or clip <= 0.0):
             raise ValueError(f"grad_clip_max_norm must be None or finite and positive; got {grad_clip_max_norm}")
@@ -3896,15 +3955,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         def _birth_update_allowed(flat_name: str) -> bool:
             if not allowed_birth_update_name(flat_name):
                 return False
-            if resolved_birth_update_scope == "pair_latents_fine":
-                return flat_name == "latents_fine" or flat_name.startswith("latents_fine.")
-            return not (
-                resolved_birth_update_scope == "spatial_carriers"
-                and (
-                    flat_name == "head_rgb_1"
-                    or flat_name.startswith("head_rgb_1.")
-                )
-            )
+            return _group_for_name(flat_name) in resolved_birth_update_groups
 
         def _parameter_group_sha256(snapshot: list[tuple[Any, Any]]) -> dict[str, str]:
             """Hash every parameter group so 'scoped' is a receipt, not a claim."""
@@ -5613,10 +5664,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     blockers.append("hinerv_target_region_birth_raw_hard_birth_destroyed_by_outside_spill")
                 if raw_hard_birth_pose_rejected_candidate_count > 0:
                     blockers.append("hinerv_target_region_birth_raw_hard_birth_pose_trust_failed")
-                if resolved_birth_update_scope == "pair_latents_fine":
-                    blockers.append("hinerv_target_region_birth_pair_latent_not_region_local")
-                elif resolved_birth_update_scope == "spatial_carriers":
-                    blockers.append("hinerv_target_region_birth_spatial_carriers_not_region_local")
+                blockers.append(
+                    "hinerv_target_region_birth_"
+                    f"{resolved_birth_update_scope}_not_region_local"
+                )
             elif max_candidate_receiver_uint8_changed_pixels_region > 0:
                 blockers.append("hinerv_target_region_birth_receiver_pixels_moved_without_argmax_birth")
             else:
@@ -5861,14 +5912,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     accepted_step_count == 0
                     and raw_hard_birth_pose_rejected_candidate_count > 0
                 ),
-                "pair_latent_not_region_local": bool(
-                    raw_hard_birth_unadmitted
-                    and resolved_birth_update_scope == "pair_latents_fine"
-                ),
-                "spatial_carriers_not_region_local": bool(
-                    raw_hard_birth_unadmitted
-                    and resolved_birth_update_scope == "spatial_carriers"
-                ),
+                "backend_scope_not_region_local": bool(raw_hard_birth_unadmitted),
                 "receiver_pixels_moved_without_argmax_birth": bool(
                     accepted_step_count == 0
                     and max_candidate_receiver_uint8_changed_pixels_region > 0
@@ -5928,7 +5972,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             elif causes["masked_residual_oracle_exact_score_not_accepted"]:
                 first_failed_surface = "masked_residual_oracle_exact_score"
                 next_operator = "joint_exact_score_admission_or_new_teacher_direction"
-            elif causes["pair_latent_not_region_local"] or causes["spatial_carriers_not_region_local"]:
+            elif causes["backend_scope_not_region_local"]:
                 first_failed_surface = "backend_actuator_region_locality"
                 next_operator = "backend_fit_ladder_next_scope_or_byte_priced_sidecar"
             else:
@@ -6700,11 +6744,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         )
         receipt["candidate_frontier_telemetry"] = dict(candidate_frontier_telemetry)
         receipt["target_region_wall_normal_lift"] = target_region_wall_normal_lift
-        archive_charged_decoder_tensors = ["latents_fine"]
-        if resolved_birth_update_scope in {"spatial_carriers", "late_all"}:
-            archive_charged_decoder_tensors.extend(["feature_grids.*", "fine_injector.*"])
-        if resolved_birth_update_scope == "late_all":
-            archive_charged_decoder_tensors.append("head_rgb_1.*")
+        archive_charged_decoder_tensors = _hinerv_birth_scope_charged_tensors(
+            resolved_birth_update_scope
+        )
         if pose_compensation_payload is not None and pose_compensation_payload["composite_accepted"]:
             archive_charged_decoder_tensors.append("head_rgb_0.*")
         payload = {
@@ -6932,6 +6974,269 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 _target_region_portfolio_attempts=tuple(portfolio_attempts),
             )
         return payload
+
+    def fit_target_region_birth_backend_ladder_from_segnet(
+        self,
+        *,
+        birth_update_ladder: Sequence[str] | None = None,
+        **fit_kwargs: Any,
+    ) -> dict[str, Any]:
+        """Escalate target-region birth through real backend scopes.
+
+        The PR95-grade hard-birth question is not "did one arbitrary HiNeRV
+        scope fail?"  It is "which archive-charged backend basis is sufficient
+        to move the exact receiver/scorer surface on the same failed region?"
+        This wrapper keeps that proof honest: each rejected scope is restored
+        before the next tier, the first selected debt region is forced across
+        later tiers, and unavailable dreamed tiers are reported as blockers
+        rather than silently mapped to unrelated tensors.
+        """
+
+        _require_mlx()
+        if "birth_update_scope" in fit_kwargs:
+            raise ValueError(
+                "fit_target_region_birth_backend_ladder_from_segnet owns "
+                "birth_update_scope; pass birth_update_ladder instead"
+            )
+        if isinstance(birth_update_ladder, (str, bytes)):
+            raise TypeError("birth_update_ladder must be a sequence of scope names, not a string")
+        ladder = tuple(
+            str(scope)
+            for scope in (
+                birth_update_ladder
+                if birth_update_ladder is not None
+                else HINERV_TARGET_REGION_BIRTH_DEFAULT_BACKEND_LADDER
+            )
+        )
+        if not ladder:
+            raise ValueError("birth_update_ladder must contain at least one scope")
+        for scope in ladder:
+            _hinerv_birth_scope_groups(scope)
+
+        def _snapshot_parameters() -> list[tuple[Any, Any]]:
+            return [
+                (raw_name, None if leaf is None else mx.array(leaf))  # type: ignore[union-attr]
+                for raw_name, leaf in tree_flatten(self.parameters())  # type: ignore[operator]
+            ]
+
+        def _restore_parameters(snapshot: list[tuple[Any, Any]]) -> None:
+            self.update(
+                tree_unflatten(
+                    [
+                        (raw_name, None if leaf is None else mx.array(leaf))  # type: ignore[union-attr]
+                        for raw_name, leaf in snapshot
+                    ]
+                )
+            )
+            mx.eval(self.parameters())  # type: ignore[union-attr]
+
+        def _as_mapping(value: Any) -> Mapping[str, Any]:
+            return value if isinstance(value, Mapping) else {}
+
+        def _region_key(payload: Mapping[str, Any]) -> tuple[int, int, int] | None:
+            region = payload.get("worst_region")
+            if not isinstance(region, Mapping):
+                return None
+            try:
+                return (
+                    int(region["batch_index"]),
+                    int(region["class_index"]),
+                    int(region["region_label"]),
+                )
+            except (KeyError, TypeError, ValueError):
+                return None
+
+        def _sidecar_exact_candidate(payload: Mapping[str, Any]) -> bool:
+            telemetry = _as_mapping(payload.get("candidate_frontier_telemetry"))
+            masked = _as_mapping(telemetry.get("masked_residual_oracle"))
+            if bool(masked.get("exact_accepted_before_archive_closure")):
+                return True
+            lift = _as_mapping(
+                payload.get("target_region_wall_normal_lift")
+                or telemetry.get("target_region_wall_normal_lift")
+            )
+            if bool(lift.get("sidecar_exact_score_accepted")):
+                return True
+            candidate = _as_mapping(
+                masked.get("best_wall_normal_candidate")
+                or masked.get("best_candidate")
+            )
+            return bool(candidate.get("exact_accepted_before_archive_closure"))
+
+        def _action_effect(
+            *,
+            attempt_index: int,
+            scope: str,
+            payload: Mapping[str, Any],
+        ) -> dict[str, Any]:
+            transitions = _as_mapping(payload.get("argmax_transitions"))
+            exact = _as_mapping(payload.get("exact_nonrate"))
+            receipt = _as_mapping(payload.get("receipt"))
+            breakdown = _as_mapping(payload.get("birth_rejection_breakdown"))
+            telemetry = _as_mapping(payload.get("candidate_frontier_telemetry"))
+            pose_guard = _as_mapping(payload.get("pose_guard"))
+            return {
+                "schema": "hi_nerv_target_region_birth_backend_ladder_action_effect.v1",
+                "family": "hi_nerv",
+                "producer": "hinerv_target_region_birth_backend_ladder",
+                "attempt_index": int(attempt_index),
+                "birth_update_scope": str(scope),
+                "scope_groups": list(_hinerv_birth_scope_groups(scope)),
+                "region_key": (
+                    None
+                    if _region_key(payload) is None
+                    else [int(v) for v in _region_key(payload) or ()]
+                ),
+                "action_id": payload.get("action_id"),
+                "accepted": bool(payload.get("accepted")),
+                "accepted_step_count": int(payload.get("accepted_step_count") or 0),
+                "rejected_step_count": int(payload.get("rejected_step_count") or 0),
+                "wrong_to_target_count": int(transitions.get("wrong_to_target_count") or 0),
+                "target_to_wrong_count": int(transitions.get("target_to_wrong_count") or 0),
+                "wrong_to_wrong_count": int(transitions.get("wrong_to_wrong_count") or 0),
+                "net_target_support_delta": int(transitions.get("net_target_support_delta") or 0),
+                "receiver_surface_uint8_changed_pixels": int(
+                    receipt.get("receiver_surface_uint8_changed_pixels")
+                    or telemetry.get("max_candidate_receiver_uint8_changed_pixels_region")
+                    or 0
+                ),
+                "receiver_surface_argmax_flipped_pixels": int(
+                    receipt.get("receiver_surface_argmax_flipped_pixels")
+                    or telemetry.get("max_candidate_argmax_flipped_pixels_region")
+                    or 0
+                ),
+                "old_d_seg_batch": exact.get("old_d_seg_batch"),
+                "new_d_seg_batch": exact.get("new_d_seg_batch"),
+                "old_d_pose_batch": exact.get("old_d_pose_batch"),
+                "new_d_pose_batch": exact.get("new_d_pose_batch"),
+                "exact_delta_score_nonrate": exact.get("delta_score_nonrate"),
+                "pose_term_available": bool(exact.get("pose_term_available")),
+                "pose_guard_raw_delta_l2": pose_guard.get("pose_output_l2_delta"),
+                "first_failed_surface": breakdown.get("first_failed_surface"),
+                "recommended_next_operator": breakdown.get("recommended_next_operator"),
+                "sidecar_exact_accepted_before_archive_closure": bool(
+                    _sidecar_exact_candidate(payload)
+                ),
+                "fakequant_survival_required": bool(payload.get("fakequant_survival_required")),
+                "archive_charged_decoder_tensors": list(
+                    payload.get("archive_charged_decoder_tensors")
+                    or _hinerv_birth_scope_charged_tensors(scope)
+                ),
+                "runtime_sidecar_bytes": int(payload.get("runtime_sidecar_bytes") or 0),
+                "blockers": [str(blocker) for blocker in payload.get("blockers") or []],
+                "authority": "batch_local_live_mlx",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        ladder_start_snapshot = _snapshot_parameters()
+        attempts: list[dict[str, Any]] = []
+        selected_payload: dict[str, Any] | None = None
+        selected_scope: str | None = None
+        forced_region_key = fit_kwargs.get("target_region_forced_key")
+        initial_region_key: tuple[int, int, int] | None = None
+        sidecar_exact_available = False
+        if "target_region_portfolio_max_regions" not in fit_kwargs:
+            fit_kwargs["target_region_portfolio_max_regions"] = 1
+
+        for attempt_index, scope in enumerate(ladder):
+            _restore_parameters(ladder_start_snapshot)
+            attempt_kwargs = dict(fit_kwargs)
+            attempt_kwargs["birth_update_scope"] = scope
+            if forced_region_key is not None:
+                attempt_kwargs["target_region_forced_key"] = forced_region_key
+                attempt_kwargs["target_region_portfolio_max_regions"] = 1
+            try:
+                payload = self.fit_target_region_birth_from_segnet(**attempt_kwargs)
+            except Exception:
+                _restore_parameters(ladder_start_snapshot)
+                raise
+            if initial_region_key is None:
+                initial_region_key = _region_key(payload)
+                if initial_region_key is not None and forced_region_key is None:
+                    forced_region_key = initial_region_key
+            sidecar_exact_available = sidecar_exact_available or _sidecar_exact_candidate(payload)
+            effect = _action_effect(
+                attempt_index=attempt_index,
+                scope=scope,
+                payload=payload,
+            )
+            attempts.append(effect)
+            if bool(payload.get("accepted")):
+                selected_payload = dict(payload)
+                selected_scope = scope
+                break
+
+        accepted = selected_payload is not None
+        if not accepted:
+            _restore_parameters(ladder_start_snapshot)
+        unavailable_tiers = [
+            {
+                **dict(row),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            for row in HINERV_TARGET_REGION_BIRTH_UNAVAILABLE_BACKEND_TIERS
+        ]
+        blockers: list[str] = []
+        if not attempts:
+            blockers.append("hinerv_target_region_birth_backend_ladder_no_attempts")
+        if not accepted:
+            blockers.append("hinerv_target_region_birth_backend_ladder_no_accepted_scope")
+            if sidecar_exact_available:
+                blockers.append("hinerv_target_region_birth_backend_realization_failed_sidecar_best")
+            blockers.extend(str(row["blocker"]) for row in unavailable_tiers)
+        last_effect = attempts[-1] if attempts else {}
+        verdict = (
+            "accepted_backend_birth"
+            if accepted
+            else "backend_realization_failed_sidecar_best"
+            if sidecar_exact_available
+            else "backend_ladder_exhausted_without_receiver_accepted_birth"
+        )
+        return {
+            "schema": "hi_nerv_target_region_birth_backend_ladder.v1",
+            "family": "hi_nerv",
+            "producer": "hinerv_target_region_birth_backend_ladder",
+            "enabled": True,
+            "accepted": bool(accepted),
+            "backend_realization_verdict": verdict,
+            "selected_scope": selected_scope,
+            "selected_attempt_index": (
+                None
+                if selected_scope is None
+                else next(
+                    int(row["attempt_index"])
+                    for row in attempts
+                    if row["birth_update_scope"] == selected_scope
+                )
+            ),
+            "selected_payload": selected_payload,
+            "birth_update_ladder": list(ladder),
+            "attempt_count": len(attempts),
+            "attempts": attempts,
+            "initial_region_key": (
+                None if initial_region_key is None else [int(v) for v in initial_region_key]
+            ),
+            "forced_region_key_after_first_attempt": (
+                None if forced_region_key is None else [int(v) for v in forced_region_key]
+            ),
+            "sidecar_exact_accepted_before_archive_closure": bool(sidecar_exact_available),
+            "unavailable_backend_tiers": unavailable_tiers,
+            "last_first_failed_surface": last_effect.get("first_failed_surface"),
+            "last_recommended_next_operator": last_effect.get("recommended_next_operator"),
+            "blockers": blockers,
+            "model_state_restored_to_ladder_start_on_failure": bool(not accepted),
+            "model_state_keeps_selected_scope_on_acceptance": bool(accepted),
+            "authority": "batch_local_live_mlx",
+            "admission_authority": "exact_nonlinear_batch_local_seg_pose_nonrate",
+            "human_visual_fidelity_objective": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
 
     def __call__(self, pair_indices: Any) -> Any:
         z_c = mx.take(self.latents_coarse, pair_indices, axis=0)  # type: ignore[union-attr]

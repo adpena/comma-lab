@@ -133,6 +133,41 @@ def test_allowed_birth_update_name_scopes_late_tensors_only() -> None:
     assert not allowed_birth_update_name("mid_injector.proj.weight")
 
 
+def test_hinerv_birth_backend_scope_registry_charges_exact_tensors() -> None:
+    from tac.substrates.hi_nerv import mlx_renderer
+
+    assert mlx_renderer._hinerv_birth_scope_groups("pair_latents_fine") == (
+        "latents_fine",
+    )
+    assert mlx_renderer._hinerv_birth_scope_groups(
+        "latents_fine_head_rgb_1_fine_injector_feature_grids"
+    ) == (
+        "latents_fine",
+        "head_rgb_1",
+        "fine_injector",
+        "feature_grids",
+    )
+    assert mlx_renderer._hinerv_birth_scope_charged_tensors(
+        "latents_fine_head_rgb_1_fine_injector_feature_grids"
+    ) == [
+        "latents_fine",
+        "feature_grids.*",
+        "fine_injector.*",
+        "head_rgb_1.*",
+    ]
+    assert {
+        row["tier"]: row["blocker"]
+        for row in mlx_renderer.HINERV_TARGET_REGION_BIRTH_UNAVAILABLE_BACKEND_TIERS
+    } == {
+        "pair_adapter": "hinerv_target_region_birth_pair_adapter_basis_not_implemented",
+        "temporary_class_logit_birth_basis": (
+            "hinerv_target_region_birth_temporary_logit_basis_not_implemented"
+        ),
+    }
+    with pytest.raises(ValueError, match="birth_update_scope must be one of"):
+        mlx_renderer._hinerv_birth_scope_groups("imaginary_backend_scope")
+
+
 def test_pose_trusted_birth_admission_accepts_exact_win_despite_raw_cap_counterfactual() -> None:
     decision = pose_trusted_birth_admission_decision(
         old_d_seg=0.49237060546875,
@@ -1132,6 +1167,111 @@ def test_target_region_birth_rejects_subquantum_updates_and_restores() -> None:
 
 
 @skip_no_mlx
+def test_target_region_birth_backend_ladder_replays_same_region_and_restores_failed_scopes() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _SubquantumSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    all_before = _all_tensor_snapshot(model, np)
+
+    payload = model.fit_target_region_birth_backend_ladder_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=1,
+        learning_rate=5.0e-4,
+        birth_update_ladder=("pair_latents_fine", "latents_fine_head_rgb_1"),
+    )
+
+    assert payload["schema"] == "hi_nerv_target_region_birth_backend_ladder.v1"
+    assert payload["accepted"] is False
+    assert payload["backend_realization_verdict"] == (
+        "backend_ladder_exhausted_without_receiver_accepted_birth"
+    )
+    assert payload["attempt_count"] == 2
+    assert payload["birth_update_ladder"] == [
+        "pair_latents_fine",
+        "latents_fine_head_rgb_1",
+    ]
+    assert payload["initial_region_key"] == [0, 1, 1]
+    assert payload["forced_region_key_after_first_attempt"] == [0, 1, 1]
+    assert payload["model_state_restored_to_ladder_start_on_failure"] is True
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "hinerv_target_region_birth_backend_ladder_no_accepted_scope" in payload["blockers"]
+    unavailable_blockers = {row["blocker"] for row in payload["unavailable_backend_tiers"]}
+    assert "hinerv_target_region_birth_pair_adapter_basis_not_implemented" in unavailable_blockers
+    assert "hinerv_target_region_birth_temporary_logit_basis_not_implemented" in unavailable_blockers
+
+    attempts = payload["attempts"]
+    assert [row["birth_update_scope"] for row in attempts] == [
+        "pair_latents_fine",
+        "latents_fine_head_rgb_1",
+    ]
+    assert all(row["schema"] == "hi_nerv_target_region_birth_backend_ladder_action_effect.v1" for row in attempts)
+    assert all(row["region_key"] == [0, 1, 1] for row in attempts)
+    assert attempts[0]["scope_groups"] == ["latents_fine"]
+    assert attempts[1]["scope_groups"] == ["latents_fine", "head_rgb_1"]
+    assert all(row["accepted"] is False for row in attempts)
+    assert all(row["authority"] == "batch_local_live_mlx" for row in attempts)
+    assert all(row["score_claim"] is False for row in attempts)
+
+    all_after = _all_tensor_snapshot(model, np)
+    assert all_after.keys() == all_before.keys()
+    for name, before_value in all_before.items():
+        assert np.array_equal(before_value, all_after[name]), name
+
+
+@skip_no_mlx
+def test_target_region_birth_backend_ladder_keeps_selected_accepted_scope() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _BehavioralSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    payload = model.fit_target_region_birth_backend_ladder_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        max_steps=16,
+        learning_rate=2.0e-3,
+        target_min_region_ratio=0.02,
+        birth_update_ladder=("late_all",),
+    )
+
+    assert payload["accepted"] is True
+    assert payload["backend_realization_verdict"] == "accepted_backend_birth"
+    assert payload["selected_scope"] == "late_all"
+    assert payload["selected_attempt_index"] == 0
+    assert payload["model_state_keeps_selected_scope_on_acceptance"] is True
+    selected = payload["selected_payload"]
+    assert selected["schema"] == "hi_nerv_target_region_birth.v1"
+    assert selected["accepted"] is True
+    assert payload["attempts"][0]["accepted"] is True
+    assert payload["attempts"][0]["wrong_to_target_count"] > 0
+    assert "head_rgb_1.*" in payload["attempts"][0]["archive_charged_decoder_tensors"]
+
+
+@skip_no_mlx
 def test_target_region_birth_portfolio_budget_blocks_with_remaining_regions() -> None:
     import mlx.core as mx
 
@@ -1461,6 +1601,67 @@ def test_birth_rejection_restores_full_state_and_replays_identically() -> None:
         "blockers",
     ):
         assert first[key] == second[key], key
+
+
+@skip_no_mlx
+def test_target_region_birth_backend_ladder_restores_and_names_unavailable_tiers() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(7)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0, target1 = _green_dominant_targets(cfg, mx)
+    labels_np = _block_labels(cfg, np)
+    teacher = _SubquantumSegNetTeacher(mx, mx.array(labels_np))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+
+    report = model.fit_target_region_birth_backend_ladder_from_segnet(
+        scorer_teacher=teacher,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        target_segnet_argmax_1=mx.array(labels_np),
+        birth_update_ladder=(
+            "pair_latents_fine",
+            "latents_fine_head_rgb_1",
+        ),
+        max_steps=2,
+        learning_rate=5.0e-4,
+    )
+
+    assert report["schema"] == "hi_nerv_target_region_birth_backend_ladder.v1"
+    assert report["accepted"] is False
+    assert report["backend_realization_verdict"] in {
+        "backend_realization_failed_sidecar_best",
+        "backend_ladder_exhausted_without_receiver_accepted_birth",
+    }
+    assert report["model_state_restored_to_ladder_start_on_failure"] is True
+    assert report["birth_update_ladder"] == [
+        "pair_latents_fine",
+        "latents_fine_head_rgb_1",
+    ]
+    assert len(report["attempts"]) == 2
+    assert report["attempts"][0]["scope_groups"] == ["latents_fine"]
+    assert report["attempts"][1]["scope_groups"] == ["latents_fine", "head_rgb_1"]
+    assert report["attempts"][1]["archive_charged_decoder_tensors"] == [
+        "latents_fine",
+        "head_rgb_1.*",
+    ]
+    assert report["initial_region_key"] == report["forced_region_key_after_first_attempt"]
+    assert "hinerv_target_region_birth_backend_ladder_no_accepted_scope" in report[
+        "blockers"
+    ]
+    assert "hinerv_target_region_birth_pair_adapter_basis_not_implemented" in report[
+        "blockers"
+    ]
+    assert (
+        "hinerv_target_region_birth_temporary_logit_basis_not_implemented"
+        in report["blockers"]
+    )
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
 
 
 @skip_no_mlx
