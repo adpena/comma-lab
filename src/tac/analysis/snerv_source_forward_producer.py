@@ -189,12 +189,31 @@ def build_snerv_source_forward_proof_from_archive_packet(
                     tensor_names=official_torch_tensors.keys(),
                 )
             )
-            official_torch_upstream_capture_status = {
-                **official_torch_upstream_capture_status,
-                "verdict": "SOURCE_GRAPH_CAPTURED",
-                "source_graph_unproven": False,
-                "blockers": [],
-            }
+            if official_torch_manifest_status.get("passed") is True:
+                official_torch_upstream_capture_status = {
+                    **official_torch_upstream_capture_status,
+                    "verdict": "SOURCE_GRAPH_CAPTURED",
+                    "source_graph_unproven": False,
+                    "blockers": [],
+                }
+            else:
+                official_torch_upstream_capture_status = {
+                    **official_torch_upstream_capture_status,
+                    "verdict": SOURCE_GRAPH_UNPROVEN,
+                    "source_graph_unproven": True,
+                    "blockers": _ordered_unique(
+                        [
+                            "snerv_upstream_source_graph_unproven",
+                            *[
+                                str(value)
+                                for value in official_torch_manifest_status.get(
+                                    "blockers",
+                                    (),
+                                )
+                            ],
+                        ]
+                    ),
+                }
         except Exception as exc:
             source_graph_blockers = [
                 "snerv_upstream_source_graph_unproven",
