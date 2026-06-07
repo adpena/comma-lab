@@ -55,6 +55,14 @@ def test_preflight_hook_timeout_env_is_bounded(monkeypatch) -> None:
     assert preflight_hook._preflight_timeout_seconds() == 30
 
 
+def test_preflight_hook_detects_pre_push_invocation(monkeypatch) -> None:
+    monkeypatch.setattr(preflight_hook.sys, "argv", [".git/hooks/pre-push"])
+    assert preflight_hook._is_pre_push_invocation() is True
+
+    monkeypatch.setattr(preflight_hook.sys, "argv", [".git/hooks/pre-commit"])
+    assert preflight_hook._is_pre_push_invocation() is False
+
+
 def test_run_preflight_reports_timeout(monkeypatch, capsys) -> None:
     def fake_run(*args, **kwargs):
         raise subprocess.TimeoutExpired(

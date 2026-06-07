@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 # no-argparse-OK: git hook entrypoint — controlled via env vars (REVIEW_GATE_ENABLED/REVIEW_GATE_OVERRIDE)
-"""Pre-commit hook: policy-enforced review gate.
+"""Git hook: policy-enforced review gate.
 
-Checks staged .py files against the review policy (review_policy.json):
+Pre-commit checks staged .py files against the review policy
+(review_policy.json).  Pre-push checks the pushed commit range.  It must not
+read unrelated dirty working-tree files, because doing so makes a clean commit
+unpushable when a sister lane has local WIP.
+
+Checks selected .py files against the review policy:
 - Consecutive clean passes (greenup protocol)
 - Minimum approver level (capability-based, L1-L4)
 - Distinct approver count
@@ -74,6 +79,7 @@ TRACKED_PREFIXES = (
     "tools/",
     "scripts/",
 )
+ZERO_SHA = "0" * 40
 
 
 def _tracked_review_gate_files(staged_files: list[str]) -> list[str]:
@@ -89,6 +95,75 @@ def get_staged_py_files() -> list[str]:
     if result.returncode != 0:
         return []
     return [f for f in result.stdout.strip().split("\n") if f.endswith(".py") and f.strip()]
+
+
+def _git_changed_py_files(*args: str) -> list[str]:
+    """Return reviewable changed Python files for a git diff-ish command."""
+
+    result = subprocess.run(
+        ["git", *args],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+    )
+    if result.returncode != 0:
+        return []
+    return [
+        f
+        for f in result.stdout.strip().split("\n")
+        if f.endswith(".py") and f.strip()
+    ]
+
+
+def _pushed_py_files_from_ref_update(old_sha: str, new_sha: str) -> list[str]:
+    """Return Python files introduced/changed by one pre-push ref update."""
+
+    old_sha = str(old_sha or "").strip()
+    new_sha = str(new_sha or "").strip()
+    if not new_sha or new_sha == ZERO_SHA:
+        return []
+    if old_sha and old_sha != ZERO_SHA:
+        return _git_changed_py_files(
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            f"{old_sha}..{new_sha}",
+        )
+    return _git_changed_py_files(
+        "diff-tree",
+        "--root",
+        "--name-only",
+        "--diff-filter=ACMR",
+        "-r",
+        new_sha,
+    )
+
+
+def get_pushed_py_files(stdin_text: str | None = None) -> list[str]:
+    """Get .py files in the pre-push ref update range.
+
+    Git feeds pre-push ref updates on stdin as:
+    ``local_ref local_sha remote_ref remote_sha``.
+    """
+
+    text = sys.stdin.read() if stdin_text is None else stdin_text
+    paths: list[str] = []
+    for line in text.splitlines():
+        parts = line.strip().split()
+        if len(parts) < 4:
+            continue
+        _local_ref, local_sha, _remote_ref, remote_sha = parts[:4]
+        paths.extend(_pushed_py_files_from_ref_update(remote_sha, local_sha))
+    return sorted(dict.fromkeys(paths))
+
+
+def _hook_mode() -> str:
+    """Return ``pre-commit`` or ``pre-push`` for this invocation."""
+
+    raw = os.environ.get("REVIEW_GATE_MODE", "").strip().lower()
+    if raw in {"pre-commit", "pre-push"}:
+        return raw
+    return "pre-commit"
 
 
 def load_policy() -> dict:
@@ -422,11 +497,12 @@ def main() -> int:
     # with unreviewed code. Override: REVIEW_GATE_WARN_ONLY=1 git commit ...
     warn_only = os.environ.get("REVIEW_GATE_WARN_ONLY", "0") == "1"
 
-    staged = get_staged_py_files()
-    if not staged:
+    mode = _hook_mode()
+    candidate_files = get_pushed_py_files() if mode == "pre-push" else get_staged_py_files()
+    if not candidate_files:
         return 0
 
-    tracked = _tracked_review_gate_files(staged)
+    tracked = _tracked_review_gate_files(candidate_files)
     if not tracked:
         return 0
 
@@ -449,6 +525,7 @@ def main() -> int:
 
     has_blocking = bool(blocking) and not warn_only
     action = "BLOCKED" if has_blocking else "WARNING"
+    operation = "Push" if mode == "pre-push" else "Commit"
     color = RED if has_blocking else YELLOW
 
     print(f"\n{color}{BOLD}[review-gate] {action}{RST}")
@@ -467,11 +544,11 @@ def main() -> int:
         print()
 
     if has_blocking:
-        print(f"{RED}{BOLD}Commit blocked by review policy.{RST}")
+        print(f"{RED}{BOLD}{operation} blocked by review policy.{RST}")
         print("  Fix issues:    python tools/review_tracker.py mark-file <file> --status reviewed")
         print("  Check policy:  python tools/review_tracker.py policy-check <file>")
-        print("  Override:      REVIEW_GATE_OVERRIDE=1 git commit ...")
-        print("  Disable:       REVIEW_GATE_ENABLED=0 git commit ...")
+        print(f"  Override:      REVIEW_GATE_OVERRIDE=1 git {operation.lower()} ...")
+        print(f"  Disable:       REVIEW_GATE_ENABLED=0 git {operation.lower()} ...")
         print()
         return 1
 

@@ -654,6 +654,42 @@ class HookCheckStagedFilesFallbackTests(unittest.TestCase):
         self.assertEqual(stats.get("source"), "json")
         self.assertEqual(stats.get("total"), 0)
 
+    def test_pre_push_ref_update_files_are_commit_range_scoped(self):
+        """Pre-push file selection reads the pushed range, not dirty worktree files."""
+        with mock.patch.object(
+            self.hook,
+            "_pushed_py_files_from_ref_update",
+            return_value=["src/tac/committed.py"],
+        ) as changed:
+            files = self.hook.get_pushed_py_files(
+                "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "
+                "refs/heads/main bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+            )
+
+        self.assertEqual(files, ["src/tac/committed.py"])
+        changed.assert_called_once_with(
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        )
+
+    def test_pre_push_ref_update_keeps_inflate_interpreter_in_scope(self):
+        """A committed runtime interpreter remains review-gated on pre-push."""
+        with mock.patch.object(
+            self.hook,
+            "_pushed_py_files_from_ref_update",
+            return_value=["submissions/robust_current/inflate.py"],
+        ):
+            files = self.hook.get_pushed_py_files(
+                "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "
+                "refs/heads/main bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"
+            )
+
+        self.assertEqual(files, ["submissions/robust_current/inflate.py"])
+        self.assertEqual(
+            self.hook._tracked_review_gate_files(files),
+            ["submissions/robust_current/inflate.py"],
+        )
+
 
 class ResolveHookRetrySecondsTests(unittest.TestCase):
     """Test the env-var override for the hook's retry budget."""

@@ -197,14 +197,30 @@ def run_review_gate() -> int:
     hook = REPO_ROOT / "tools" / "review_gate_hook.py"
     if not hook.exists():
         return 0
+    env = os.environ.copy()
+    if _is_pre_push_invocation():
+        env.setdefault("REVIEW_GATE_MODE", "pre-push")
+    else:
+        env.setdefault("REVIEW_GATE_MODE", "pre-commit")
     try:
         result = subprocess.run(
             [".venv/bin/python", str(hook)],
             cwd=REPO_ROOT,
+            env=env,
         )
     except FileNotFoundError:
         return 0
     return result.returncode
+
+
+def _is_pre_push_invocation() -> bool:
+    """Return true when this shared hook script was invoked by pre-push."""
+
+    try:
+        hook_path = Path(sys.argv[0])
+        return hook_path.name == "pre-push"
+    except Exception:
+        return False
 
 
 def main() -> int:
