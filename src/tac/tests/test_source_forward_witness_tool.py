@@ -31,7 +31,11 @@ from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
     OfficialSnervMfu,
     OfficialSnervMfuSpec,
 )
-from tools.source_forward_witness import build_source_forward_witness_payload, main
+from tools.source_forward_witness import (
+    build_source_forward_witness_payload,
+    main,
+    resolve_checkpoint_export_report_witness_inputs,
+)
 
 
 def test_source_forward_witness_cli_writes_fail_closed_artifact(
@@ -399,6 +403,157 @@ def test_source_forward_witness_cli_threads_strict_source_graph_triplets(
     assert "snerv_official_torch_source_graph_unproven" in status["blockers"]
     assert payload["launch_gate_clearable"] is False
     assert payload["score_claim"] is False
+
+
+def test_source_forward_witness_checkpoint_export_report_resolves_strict_inputs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    state_slice_path = tmp_path / "official_state_slice.npz"
+    source_config_path = tmp_path / "args.json"
+    triplets_path = tmp_path / "triplets.npy"
+    report_path = tmp_path / "snerv_checkpoint_archive_export.json"
+    out = tmp_path / "witness.json"
+    packet_path.write_bytes(_official_packet())
+    state_slice_path.write_bytes(b"state slice placeholder")
+    source_config_path.write_text('{"fc_dim": 1152}\n', encoding="utf-8")
+    np.save(triplets_path, np.zeros((1, 3, 3, 4, 4), dtype=np.float32))
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "packet_path": packet_path.name,
+                "startup_json_path": "startup_marker_is_not_source_config.json",
+                "official_checkpoint_export_binding": {
+                    "official_trained_checkpoint_state_dict_slice_path": (
+                        state_slice_path.name
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured_kwargs: dict[str, object] = {}
+
+    def fake_upstream_source_graph_capture(**kwargs) -> dict[str, object]:
+        captured_kwargs.update(kwargs)
+        return {
+            "schema": "snerv_official_tub_strict_source_graph_capture.v1",
+            "pair_ids": [0],
+            "tensors": {},
+            "model_source_sha256": "8" * 64,
+            "checkpoint_sha256": "6" * 64,
+            "state_dict_sha256": "7" * 64,
+            "decoder_len": 7,
+            "source_scope": "official_trained_checkpoint",
+            "source_config_lineage": kwargs["official_trained_source_config_kind"],
+            "source_config_sha256": "9" * 64,
+            "source_config_kind": "official_snerv_t_train_config",
+            "source_config_source": kwargs["official_trained_source_config_path"],
+            "source_config_is_fixture": False,
+            "source_graph_unproven": False,
+        }
+
+    monkeypatch.setattr(
+        source_forward_producer,
+        "build_official_torch_upstream_source_graph_tensors",
+        fake_upstream_source_graph_capture,
+    )
+
+    assert (
+        main(
+            [
+                "--checkpoint-export-report",
+                str(report_path),
+                "--out",
+                str(out),
+                "--capture-official-torch-from-upstream-source-graph",
+                "--official-torch-source-config",
+                str(source_config_path),
+                "--official-torch-source-config-kind",
+                "checkpoint_export_official_trained_run_config",
+                "--official-torch-source-frame-triplets-npy",
+                str(triplets_path),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    resolution = payload["checkpoint_export_report_resolution"]
+    assert payload["packet_path"] == packet_path.resolve(strict=False).as_posix()
+    assert payload["capture_modes"]["checkpoint_export_report_requested"] is True
+    assert resolution["official_torch_checkpoint_state_dict_source"] == (
+        "checkpoint_export_official_state_dict_slice"
+    )
+    assert resolution["startup_json_path_not_source_authority"] == (
+        "startup_marker_is_not_source_config.json"
+    )
+    assert captured_kwargs["official_trained_checkpoint_state_dict_path"] == (
+        state_slice_path.resolve(strict=False).as_posix()
+    )
+    assert captured_kwargs["official_trained_source_config_path"] == (
+        source_config_path.resolve(strict=False).as_posix()
+    )
+    assert np.asarray(captured_kwargs["source_frame_triplets_nchw255"]).shape == (
+        1,
+        3,
+        3,
+        4,
+        4,
+    )
+    assert "snerv_source_forward_witness_report_source_config_path_missing" not in (
+        payload["blockers"]
+    )
+    assert "snerv_source_forward_witness_report_source_frame_triplets_missing" not in (
+        payload["blockers"]
+    )
+    assert payload["score_claim"] is False
+
+
+def test_source_forward_witness_report_resolution_refuses_startup_as_config(
+    tmp_path: Path,
+) -> None:
+    packet_path = tmp_path / "official.snar"
+    state_slice_path = tmp_path / "official_state_slice.npz"
+    report_path = tmp_path / "snerv_checkpoint_archive_export.json"
+    packet_path.write_bytes(_official_packet())
+    state_slice_path.write_bytes(b"state slice placeholder")
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "packet_path": packet_path.name,
+                "startup_json_path": "startup_marker_is_not_source_config.json",
+                "official_checkpoint_export_binding": {
+                    "official_trained_checkpoint_state_dict_slice_path": (
+                        state_slice_path.name
+                    ),
+                    "official_trained_checkpoint_state_dict_slice_present": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    resolution = resolve_checkpoint_export_report_witness_inputs(report_path)
+
+    assert resolution["packet_path"] == packet_path.resolve(strict=False).as_posix()
+    assert resolution["official_torch_checkpoint_state_dict_path"] == (
+        state_slice_path.resolve(strict=False).as_posix()
+    )
+    assert resolution["official_torch_source_config_path"] is None
+    assert resolution["startup_json_path_not_source_authority"] == (
+        "startup_marker_is_not_source_config.json"
+    )
+    assert "snerv_source_forward_witness_report_source_config_path_missing" in (
+        resolution["blockers"]
+    )
+    assert "snerv_source_forward_witness_report_source_frame_triplets_missing" in (
+        resolution["blockers"]
+    )
 
 
 def test_source_forward_producer_refreshes_manifest_after_supplied_scorer_tensors() -> None:

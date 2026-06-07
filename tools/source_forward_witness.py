@@ -48,7 +48,27 @@ def _default_output() -> Path:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--packet", required=True, type=Path)
+    parser.add_argument(
+        "--packet",
+        type=Path,
+        default=None,
+        help=(
+            "Receiver packet bytes. Optional only when "
+            "--checkpoint-export-report contains packet_path."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-export-report",
+        type=Path,
+        default=None,
+        help=(
+            "SNeRV checkpoint archive export report. Resolves packet_path and "
+            "the exported trained checkpoint state_dict slice for the strict "
+            "source-forward witness; exact official source config and real "
+            "frame triplets remain explicit unless the report already carries "
+            "source-config/triplet paths."
+        ),
+    )
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--pair-ids", default="0")
     parser.add_argument("--action-id", default=None)
@@ -119,8 +139,28 @@ def main(argv: list[str] | None = None) -> int:
     out = args.out or _default_output()
     if not out.is_absolute():
         out = REPO_ROOT / out
-    payload = build_source_forward_witness_payload(
+    report_resolution = resolve_checkpoint_export_report_witness_inputs(
+        args.checkpoint_export_report,
         packet_path=args.packet,
+        official_torch_checkpoint_state_dict_path=(
+            args.official_torch_checkpoint_state_dict
+        ),
+        official_torch_checkpoint_state_dict_kind=(
+            args.official_torch_checkpoint_state_dict_kind
+        ),
+        official_torch_source_config_path=args.official_torch_source_config,
+        official_torch_source_config_kind=args.official_torch_source_config_kind,
+        official_torch_source_frame_triplets_npy=(
+            args.official_torch_source_frame_triplets_npy
+        ),
+    )
+    resolved_packet_path = report_resolution.get("packet_path")
+    if resolved_packet_path is None:
+        raise SystemExit(
+            "pass --packet or a --checkpoint-export-report with packet_path"
+        )
+    payload = build_source_forward_witness_payload(
+        packet_path=resolved_packet_path,
         pair_ids=_parse_pair_ids(args.pair_ids),
         action_id=args.action_id,
         bitflip_section=args.bitflip_section,
@@ -142,23 +182,30 @@ def main(argv: list[str] | None = None) -> int:
         official_torch_train_one_step=bool(args.official_torch_train_one_step),
         official_torch_checkpoint_state_dict_path=(
             None
-            if args.official_torch_checkpoint_state_dict is None
-            else args.official_torch_checkpoint_state_dict
+            if report_resolution.get("official_torch_checkpoint_state_dict_path")
+            is None
+            else report_resolution["official_torch_checkpoint_state_dict_path"]
         ),
         official_torch_checkpoint_state_dict_kind=str(
-            args.official_torch_checkpoint_state_dict_kind
+            report_resolution.get("official_torch_checkpoint_state_dict_kind")
+            or args.official_torch_checkpoint_state_dict_kind
         ),
         official_torch_source_config_path=(
             None
-            if args.official_torch_source_config is None
-            else args.official_torch_source_config
+            if report_resolution.get("official_torch_source_config_path") is None
+            else report_resolution["official_torch_source_config_path"]
         ),
-        official_torch_source_config_kind=str(args.official_torch_source_config_kind),
+        official_torch_source_config_kind=str(
+            report_resolution.get("official_torch_source_config_kind")
+            or args.official_torch_source_config_kind
+        ),
         official_torch_source_frame_triplets_npy=(
             None
-            if args.official_torch_source_frame_triplets_npy is None
-            else args.official_torch_source_frame_triplets_npy
+            if report_resolution.get("official_torch_source_frame_triplets_npy")
+            is None
+            else report_resolution["official_torch_source_frame_triplets_npy"]
         ),
+        checkpoint_export_report_resolution=report_resolution,
     )
     result = write_json_artifact(
         out,
@@ -240,6 +287,150 @@ def write_proof_row_jsonl(
     }
 
 
+def resolve_checkpoint_export_report_witness_inputs(
+    checkpoint_export_report: str | Path | None,
+    *,
+    packet_path: str | Path | None = None,
+    official_torch_checkpoint_state_dict_path: str | Path | None = None,
+    official_torch_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+    official_torch_source_config_path: str | Path | None = None,
+    official_torch_source_config_kind: str = "official_trained_run_config",
+    official_torch_source_frame_triplets_npy: str | Path | None = None,
+) -> dict[str, Any]:
+    """Resolve strict witness inputs without turning export metadata into proof."""
+
+    blockers: list[str] = []
+    report_path = (
+        None
+        if checkpoint_export_report is None
+        else Path(checkpoint_export_report).expanduser().resolve(strict=False)
+    )
+    report: Mapping[str, Any] = {}
+    if report_path is not None:
+        try:
+            loaded = json.loads(report_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            loaded = {}
+            blockers.append(
+                "snerv_source_forward_witness_checkpoint_export_report_unreadable:"
+                f"{type(exc).__name__}"
+            )
+        if isinstance(loaded, Mapping):
+            report = loaded
+        else:
+            blockers.append(
+                "snerv_source_forward_witness_checkpoint_export_report_not_mapping"
+            )
+        if report.get("schema") not in {None, "snerv_checkpoint_archive_export.v1"}:
+            blockers.append(
+                "snerv_source_forward_witness_checkpoint_export_report_schema_mismatch"
+            )
+    base_dir = report_path.parent if report_path is not None else Path.cwd()
+    binding = report.get("official_checkpoint_export_binding")
+    binding = binding if isinstance(binding, Mapping) else {}
+    resolved_packet = _resolve_first_path(
+        base_dir,
+        packet_path,
+        report.get("packet_path"),
+    )
+    checkpoint_source = "explicit_cli"
+    resolved_state_dict = _resolve_first_path(
+        base_dir,
+        official_torch_checkpoint_state_dict_path,
+    )
+    resolved_state_kind = str(official_torch_checkpoint_state_dict_kind)
+    if resolved_state_dict is None:
+        resolved_state_dict = _resolve_first_path(
+            base_dir,
+            binding.get("official_trained_checkpoint_state_dict_slice_path"),
+            report.get("official_trained_checkpoint_state_dict_slice_path"),
+        )
+        if resolved_state_dict is not None:
+            checkpoint_source = "checkpoint_export_official_state_dict_slice"
+            resolved_state_kind = "checkpoint_export_official_trained_checkpoint_state_dict"
+    if resolved_state_dict is None:
+        resolved_state_dict = _resolve_first_path(base_dir, report.get("checkpoint_state_path"))
+        if resolved_state_dict is not None:
+            checkpoint_source = "checkpoint_export_native_mlx_checkpoint_state"
+            resolved_state_kind = "checkpoint_export_native_mlx_receiver_state_dict"
+
+    source_config_source = "explicit_cli"
+    resolved_config = _resolve_first_path(base_dir, official_torch_source_config_path)
+    resolved_config_kind = str(official_torch_source_config_kind)
+    if resolved_config is None:
+        resolved_config = _resolve_first_path(
+            base_dir,
+            report.get("official_torch_source_config_path"),
+            report.get("official_trained_source_config_path"),
+            report.get("official_source_config_path"),
+            report.get("source_config_path"),
+        )
+        if resolved_config is not None:
+            source_config_source = "checkpoint_export_report_source_config"
+            resolved_config_kind = str(
+                report.get("official_torch_source_config_kind")
+                or report.get("official_trained_source_config_kind")
+                or report.get("source_config_kind")
+                or "checkpoint_export_official_trained_run_config"
+            )
+
+    triplets_source = "explicit_cli"
+    resolved_triplets = _resolve_first_path(base_dir, official_torch_source_frame_triplets_npy)
+    if resolved_triplets is None:
+        resolved_triplets = _resolve_first_path(
+            base_dir,
+            report.get("official_torch_source_frame_triplets_npy"),
+            report.get("official_torch_source_frame_triplets_path"),
+            report.get("source_frame_triplets_npy"),
+            report.get("source_frame_triplets_path"),
+        )
+        if resolved_triplets is not None:
+            triplets_source = "checkpoint_export_report_source_frame_triplets"
+
+    if report_path is not None:
+        if resolved_packet is None:
+            blockers.append("snerv_source_forward_witness_report_packet_path_missing")
+        if resolved_state_dict is None:
+            blockers.append(
+                "snerv_source_forward_witness_report_checkpoint_state_dict_path_missing"
+            )
+        if resolved_config is None:
+            blockers.append(
+                "snerv_source_forward_witness_report_source_config_path_missing"
+            )
+        if resolved_triplets is None:
+            blockers.append(
+                "snerv_source_forward_witness_report_source_frame_triplets_missing"
+            )
+    return {
+        "schema": "snerv_source_forward_witness_input_resolution.v1",
+        "checkpoint_export_report_path": (
+            None if report_path is None else report_path.as_posix()
+        ),
+        "checkpoint_export_report_requested": report_path is not None,
+        "packet_path": None if resolved_packet is None else resolved_packet.as_posix(),
+        "official_torch_checkpoint_state_dict_path": (
+            None if resolved_state_dict is None else resolved_state_dict.as_posix()
+        ),
+        "official_torch_checkpoint_state_dict_kind": resolved_state_kind,
+        "official_torch_checkpoint_state_dict_source": checkpoint_source,
+        "official_torch_source_config_path": (
+            None if resolved_config is None else resolved_config.as_posix()
+        ),
+        "official_torch_source_config_kind": resolved_config_kind,
+        "official_torch_source_config_source": source_config_source,
+        "official_torch_source_frame_triplets_npy": (
+            None if resolved_triplets is None else resolved_triplets.as_posix()
+        ),
+        "official_torch_source_frame_triplets_source": triplets_source,
+        "startup_json_path_not_source_authority": report.get("startup_json_path"),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_source_forward_witness_payload(
     *,
     packet_path: str | Path,
@@ -261,6 +452,7 @@ def build_source_forward_witness_payload(
     official_torch_source_config_path: str | Path | None = None,
     official_torch_source_config_kind: str = "official_trained_run_config",
     official_torch_source_frame_triplets_npy: str | Path | None = None,
+    checkpoint_export_report_resolution: Mapping[str, Any] | None = None,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
     packet = Path(packet_path).expanduser().resolve(strict=False)
@@ -278,6 +470,11 @@ def build_source_forward_witness_payload(
         "pair_ids": list(pair_ids),
         "action_id": resolved_action_id,
         "capture_modes": {
+            "checkpoint_export_report_requested": bool(
+                (checkpoint_export_report_resolution or {}).get(
+                    "checkpoint_export_report_requested"
+                )
+            ),
             "pact_mlx_from_archive": bool(capture_pact_mlx_from_archive),
             "official_torch_from_archive_diagnostic": bool(
                 capture_official_torch_from_archive
@@ -295,6 +492,11 @@ def build_source_forward_witness_payload(
                 official_torch_source_frame_triplets_npy is not None
             ),
         },
+        "checkpoint_export_report_resolution": (
+            dict(checkpoint_export_report_resolution)
+            if isinstance(checkpoint_export_report_resolution, Mapping)
+            else None
+        ),
         "source_forward_proof_action_effect": None,
         "validation_status": {"passed": False, "blockers": []},
         "passed": False,
@@ -369,6 +571,15 @@ def build_source_forward_witness_payload(
     output2 = row.get("output2_boundary_verdict")
     blockers = _ordered_unique(
         [
+            *[
+                str(value)
+                for value in (
+                    (checkpoint_export_report_resolution or {}).get("blockers")
+                    if isinstance(checkpoint_export_report_resolution, Mapping)
+                    else []
+                )
+                or []
+            ],
             *[str(value) for value in row.get("blockers") or []],
             *[
                 f"snerv_source_forward_proof_invalid:{value}"
@@ -403,6 +614,20 @@ def _parse_pair_ids(raw: str) -> list[int]:
 def _default_action_id(packet_sha256: str, pair_ids: list[int]) -> str:
     material = f"snerv-source-forward-witness:{packet_sha256}:{pair_ids}".encode()
     return hashlib.sha256(material).hexdigest()
+
+
+def _resolve_first_path(base_dir: Path, *values: Any) -> Path | None:
+    for value in values:
+        if value is None:
+            continue
+        raw = str(value).strip()
+        if not raw:
+            continue
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            path = base_dir / path
+        return path.resolve(strict=False)
+    return None
 
 
 def _ordered_unique(values: list[str]) -> list[str]:
