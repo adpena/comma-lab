@@ -32,6 +32,18 @@ import numpy as np
 from tac.analysis.source_forward_bit_flip_falsification import (
     build_named_arrays_bit_flip_falsification,
 )
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
+    OfficialConvTranspose2dNchw,
+    OfficialResidualBlockNoBN,
+    OfficialResidualBlocksWithInputConv,
+    OfficialSnervMfu,
+    OfficialSnervMfuSpec,
+)
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
     official_output2_fusion_numpy,
@@ -1486,6 +1498,139 @@ def build_snerv_official_tub_source_forward_tensor_bundle(
     return dict(payload["source_forward_tensor_bundle"])
 
 
+def build_snerv_official_tub_source_forward_receiver_archive_packet(
+    *,
+    official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
+    train_one_step: bool = False,
+    output_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None = None,
+    official_trained_checkpoint_state_dict_path: str | Path | None = None,
+    official_trained_checkpoint_state_dict_kind: str = (
+        "official_trained_checkpoint_state_dict"
+    ),
+) -> dict[str, Any]:
+    """Build a byte-real receiver archive from upstream ``SNeRV_T`` fixture tensors.
+
+    The archive starts at the post-temporal-decoder MFU/HFR boundary, so it
+    proves source-derived MFU/HFR/RGB payload behavior and intentionally leaves
+    feature-space ``output_2`` as a separate source-forward blocker.
+    """
+
+    payload = _run_source_fixture_for_receiver_archive(
+        Path(official_repo_dir),
+        train_one_step=train_one_step,
+        output_state_dict_path=output_state_dict_path,
+        official_trained_checkpoint_state_dict=official_trained_checkpoint_state_dict,
+        official_trained_checkpoint_state_dict_path=(
+            official_trained_checkpoint_state_dict_path
+        ),
+        official_trained_checkpoint_state_dict_kind=(
+            official_trained_checkpoint_state_dict_kind
+        ),
+    )
+    return payload
+
+
+def _run_source_fixture_for_receiver_archive(
+    official_root: Path,
+    *,
+    train_one_step: bool,
+    output_state_dict_path: str | Path | None,
+    official_trained_checkpoint_state_dict: Mapping[str, Any] | None,
+    official_trained_checkpoint_state_dict_path: str | Path | None,
+    official_trained_checkpoint_state_dict_kind: str,
+) -> dict[str, Any]:
+    import torch
+
+    cfg = TubFixtureConfig()
+    torch.manual_seed(20260604)
+    with _official_tub_import_context(official_root):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            snerv_t = importlib.import_module("model.snerv_t")
+        model = snerv_t.SNeRV_T(cfg.to_namespace()).double()
+        checkpoint_load = _load_checkpoint_into_official_tub_model(
+            model,
+            torch_module=torch,
+            state_dict=official_trained_checkpoint_state_dict,
+            state_dict_path=official_trained_checkpoint_state_dict_path,
+            state_dict_kind=official_trained_checkpoint_state_dict_kind,
+        )
+        current = _positive_fixture((1, 3, 32, 32), modulo=17)
+        previous = current + 1.0 / 64.0
+        next_frame = current + 1.0 / 32.0
+        current_t = torch.from_numpy(current)
+        previous_t = torch.from_numpy(previous)
+        next_t = torch.from_numpy(next_frame)
+        _run_one_step_training_smoke(
+            model,
+            current_t,
+            previous_t,
+            next_t,
+            enabled=train_one_step,
+        )
+        model.eval()
+        with torch.no_grad():
+            manual = _manual_tub_source_replay(model, current_t, previous_t, next_t)
+        state_dict = model.state_dict()
+    checkpoint_loaded = checkpoint_load.get("loaded") is True
+    checkpoint_state_dict = (
+        checkpoint_load.get("_state_dict")
+        if isinstance(checkpoint_load.get("_state_dict"), Mapping)
+        else None
+    )
+    source_pins = _source_pins(official_root)
+    source_tensor_bundle = _source_forward_tensor_bundle_from_manual(
+        manual=manual,
+        current=current,
+        previous=previous,
+        next_frame=next_frame,
+        official_img_out=manual["frame_reconstruction"],
+        pair_ids=[0],
+        model_source_sha256=source_pins.get("snerv_t_py_sha256"),
+        state_dict_sha256=_hash_state_dict_exact(
+            checkpoint_state_dict
+            if checkpoint_loaded and checkpoint_state_dict is not None
+            else state_dict
+        ),
+        checkpoint_sha256=(
+            str(checkpoint_load.get("state_dict_sha256"))
+            if checkpoint_loaded and checkpoint_load.get("state_dict_sha256")
+            else _hash_state_dict_exact(state_dict)
+        ),
+        decoder_len=int(model.decoder_len),
+        source_scope=(
+            "official_trained_checkpoint"
+            if checkpoint_loaded
+            else "official_source_fixture_state"
+        ),
+        repeat_mfu_batch=2,
+        include_output2=False,
+    )
+    archive_packet = _receiver_archive_packet_from_source_fixture(
+        model_state_dict=state_dict,
+        decoder_len=int(model.decoder_len),
+        cfg=cfg,
+        manual=manual,
+        current=current,
+        previous=previous,
+        next_frame=next_frame,
+    )
+    return {
+        "schema": "snerv_official_tub_source_forward_receiver_archive_packet.v1",
+        "archive_packet": archive_packet,
+        "source_forward_tensor_bundle": source_tensor_bundle,
+        "source_forward_output2_blocker": (
+            "snerv_official_tub_output2_feature_space_not_receiver_frame_residual"
+        ),
+        "source_scope": source_tensor_bundle["source_scope"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _source_forward_tensor_bundle_from_manual(
     *,
     manual: Mapping[str, Any],
@@ -1499,7 +1644,20 @@ def _source_forward_tensor_bundle_from_manual(
     checkpoint_sha256: str,
     decoder_len: int,
     source_scope: str,
+    repeat_mfu_batch: int = 1,
+    include_output2: bool = True,
 ) -> dict[str, Any]:
+    repeat = max(1, int(repeat_mfu_batch))
+    mfu_low = _repeat_first_axis(manual["mfu_low"], repeat)
+    mfu_skip_mid = _repeat_first_axis(manual["mfu_skip_mid"], repeat)
+    mfu_skip_high = _repeat_first_axis(manual["mfu_skip_high"], repeat)
+    mfu_up1 = _repeat_first_axis(manual["mfu_up1"], repeat)
+    mfu_cat_mid = _repeat_first_axis(manual["mfu_cat_mid"], repeat)
+    mfu_unet1 = _repeat_first_axis(manual["mfu_unet1"], repeat)
+    mfu_unet1_up = _repeat_first_axis(manual["mfu_unet1_up"], repeat)
+    mfu_cat_high = _repeat_first_axis(manual["mfu_cat_high"], repeat)
+    mfu_pyr_out = _repeat_first_axis(manual["mfu_pyr_out"], repeat)
+    yh_out = _repeat_first_axis(manual["yh_out"], repeat)
     frame = np.asarray(manual["frame_reconstruction"], dtype=np.float32)
     official_frame = np.asarray(official_img_out, dtype=np.float32)
     if frame.ndim == 4:
@@ -1508,30 +1666,40 @@ def _source_forward_tensor_bundle_from_manual(
         official_frame = official_frame[0]
     rgb_pair_float = np.stack((frame, official_frame), axis=0)[None]
     rgb_pair_uint8 = np.clip(np.rint(rgb_pair_float), 0, 255).astype(np.uint8)
+    coord_time_items: list[tuple[str, Any]] = []
+    if include_output2:
+        coord_time_items.append(
+            ("temporal_encoder_concat", manual["temporal_encoder_concat"])
+        )
+    coord_time_items.append(
+        (
+            "yl_norm",
+            np.asarray(
+                [
+                    np.asarray(manual["lf_triplet"]).min(),
+                    np.asarray(manual["lf_triplet"]).max(),
+                ],
+                dtype=np.float64,
+            ),
+        )
+    )
     tensors = {
-        "coord_time_embedding": _pack_source_forward_group(
-            ("embed_curr", manual["embed_curr"]),
-            ("temporal_encoder_concat", manual["temporal_encoder_concat"]),
-            ("yl_norm", np.asarray([
-                np.asarray(manual["lf_triplet"]).min(),
-                np.asarray(manual["lf_triplet"]).max(),
-            ], dtype=np.float64)),
-        ),
+        "coord_time_embedding": _pack_source_forward_group(*coord_time_items),
         "mfu_in": _pack_source_forward_group(
-            ("low", manual["mfu_low"]),
-            ("skip_mid", manual["mfu_skip_mid"]),
-            ("skip_high", manual["mfu_skip_high"]),
+            ("low", mfu_low),
+            ("skip_mid", mfu_skip_mid),
+            ("skip_high", mfu_skip_high),
         ),
         "mfu_out": _pack_source_forward_group(
-            ("up1", manual["mfu_up1"]),
-            ("cat_mid", manual["mfu_cat_mid"]),
-            ("unet1", manual["mfu_unet1"]),
-            ("unet1_up", manual["mfu_unet1_up"]),
-            ("cat_high", manual["mfu_cat_high"]),
-            ("pyr_out", manual["mfu_pyr_out"]),
+            ("up1", mfu_up1),
+            ("cat_mid", mfu_cat_mid),
+            ("unet1", mfu_unet1),
+            ("unet1_up", mfu_unet1_up),
+            ("cat_high", mfu_cat_high),
+            ("pyr_out", mfu_pyr_out),
         ),
-        "hfr_in": np.asarray(manual["mfu_pyr_out"], dtype=np.float32),
-        "hfr_out": np.asarray(manual["yh_out"], dtype=np.float32),
+        "hfr_in": np.asarray(mfu_pyr_out, dtype=np.float32),
+        "hfr_out": np.asarray(yh_out, dtype=np.float32),
         "tub_in": _pack_source_forward_group(
             ("current", current),
             ("previous", previous),
@@ -1542,10 +1710,11 @@ def _source_forward_tensor_bundle_from_manual(
             ("prev_lowpass_over_2", manual["prev_lowpass_over_2"]),
             ("next_lowpass_over_2", manual["next_lowpass_over_2"]),
         ),
-        "output_2": np.asarray(manual["output2_shuffled"], dtype=np.float32),
         "rgb_pair_float": rgb_pair_float,
         "rgb_pair_uint8": rgb_pair_uint8,
     }
+    if include_output2:
+        tensors["output_2"] = np.asarray(manual["output2_shuffled"], dtype=np.float32)
     return {
         "schema": "snerv_official_tub_source_forward_tensor_bundle.v1",
         "surface": "official_torch",
@@ -1571,13 +1740,205 @@ def _source_forward_tensor_bundle_from_manual(
     }
 
 
+def _receiver_archive_packet_from_source_fixture(
+    *,
+    model_state_dict: Mapping[str, Any],
+    decoder_len: int,
+    cfg: TubFixtureConfig,
+    manual: Mapping[str, Any],
+    current: np.ndarray,
+    previous: np.ndarray,
+    next_frame: np.ndarray,
+) -> bytes:
+    from tac.analysis.snerv_step_map_coder import encode_step_maps
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        encode_lf_metadata_payload,
+        encode_lf_quant_payload,
+        encode_official_mfu_hfr_tub_decoder_payload,
+        pack_snerv_archive,
+    )
+
+    low = _repeat_first_axis(manual["mfu_low"], 2)
+    skip_mid = _repeat_first_axis(manual["mfu_skip_mid"], 2)
+    skip_high = _repeat_first_axis(manual["mfu_skip_high"], 2)
+    decoder_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        mfu=_portable_mfu_from_model_state(
+            model_state_dict,
+            decoder_len=decoder_len,
+            num_blocks=int(cfg.num_blocks),
+            low=low,
+            skip_mid=skip_mid,
+            skip_high=skip_high,
+        ),
+        hfr_heads=_portable_hfr_from_model_state(
+            model_state_dict,
+            decoder_len=decoder_len,
+        ),
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=current,
+        tub_previous=previous,
+        tub_next_frame=next_frame,
+        temporal_encoder_output_shape=tuple(
+            int(value) for value in np.asarray(manual["temporal_encoder_concat"]).shape
+        ),
+        fc_hw=(1, 1),
+        output2_decoder_output_shape=tuple(
+            int(value) for value in np.asarray(manual["output2_raw"]).shape
+        ),
+        store_tub_output2_for_receiver_proof=False,
+    )
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((1, 1), dtype=np.int64)]),
+        decoder_payload=decoder_payload,
+        step_map_packet=encode_step_maps(
+            [np.ones((1, 1), dtype=np.float32)],
+            bins=4,
+        ).packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [32, 32],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "receiver_lf_section_role": (
+                "source_fixture_placeholder_official_mfu_hfr_renders_frames"
+            ),
+        },
+    )
+    return archive.packet
+
+
+def _portable_mfu_from_model_state(
+    state_dict: Mapping[str, Any],
+    *,
+    decoder_len: int,
+    num_blocks: int,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+) -> OfficialSnervMfu:
+    spec = OfficialSnervMfuSpec(
+        low_channels=int(np.asarray(low).shape[1]),
+        mid_channels=int(np.asarray(skip_mid).shape[1]),
+        high_channels=int(np.asarray(skip_high).shape[1]),
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=int(num_blocks),
+    )
+    return OfficialSnervMfu(
+        spec=spec,
+        upsample_mid=OfficialConvTranspose2dNchw(
+            _state_value_array(state_dict[f"decoder.{decoder_len + 3}.weight"]),
+            _state_value_array(state_dict[f"decoder.{decoder_len + 3}.bias"]),
+            stride=spec.mid_stride,
+        ),
+        rb_mid=_portable_rb_from_model_state(
+            state_dict,
+            f"decoder.{decoder_len + 4}",
+            num_blocks=int(num_blocks),
+        ),
+        upsample_high=OfficialConvTranspose2dNchw(
+            _state_value_array(state_dict[f"decoder.{decoder_len + 5}.weight"]),
+            _state_value_array(state_dict[f"decoder.{decoder_len + 5}.bias"]),
+            stride=spec.high_stride,
+        ),
+        rb_high=_portable_rb_from_model_state(
+            state_dict,
+            f"decoder.{decoder_len + 6}",
+            num_blocks=int(num_blocks),
+        ),
+    )
+
+
+def _portable_hfr_from_model_state(
+    state_dict: Mapping[str, Any],
+    *,
+    decoder_len: int,
+) -> OfficialHfrHeads:
+    return OfficialHfrHeads(
+        lh_head=_portable_hfr_head_from_model_state(state_dict, f"decoder.{decoder_len}"),
+        hl_head=_portable_hfr_head_from_model_state(
+            state_dict,
+            f"decoder.{decoder_len + 1}",
+        ),
+        hh_head=_portable_hfr_head_from_model_state(
+            state_dict,
+            f"decoder.{decoder_len + 2}",
+        ),
+    )
+
+
+def _portable_rb_from_model_state(
+    state_dict: Mapping[str, Any],
+    prefix: str,
+    *,
+    num_blocks: int,
+) -> OfficialResidualBlocksWithInputConv:
+    blocks = []
+    for idx in range(int(num_blocks)):
+        base = f"{prefix}.main.1.{idx}"
+        blocks.append(
+            OfficialResidualBlockNoBN(
+                conv1=OfficialConv2dNchw(
+                    _state_value_array(state_dict[f"{base}.conv1.weight"]),
+                    _state_value_array(state_dict[f"{base}.conv1.bias"]),
+                    padding=1,
+                ),
+                conv2=OfficialConv2dNchw(
+                    _state_value_array(state_dict[f"{base}.conv2.weight"]),
+                    _state_value_array(state_dict[f"{base}.conv2.bias"]),
+                    padding=1,
+                ),
+            )
+        )
+    return OfficialResidualBlocksWithInputConv(
+        input_conv=OfficialConv2dNchw(
+            _state_value_array(state_dict[f"{prefix}.main.0.weight"]),
+            _state_value_array(state_dict[f"{prefix}.main.0.bias"]),
+            padding=1,
+        ),
+        residual_blocks=tuple(blocks),
+    )
+
+
+def _portable_hfr_head_from_model_state(
+    state_dict: Mapping[str, Any],
+    prefix: str,
+) -> OfficialHfrConvBlock:
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(
+            _state_value_array(state_dict[f"{prefix}.conv1.weight"]),
+            _state_value_array(state_dict[f"{prefix}.conv1.bias"]),
+        ),
+        conv2=OfficialConv2dNchw(
+            _state_value_array(state_dict[f"{prefix}.conv2.weight"]),
+            _state_value_array(state_dict[f"{prefix}.conv2.bias"]),
+            padding=1,
+        ),
+    )
+
+
+def _repeat_first_axis(value: Any, repeat: int) -> np.ndarray:
+    arr = np.asarray(value)
+    if int(repeat) <= 1:
+        return np.asarray(arr).copy()
+    return np.concatenate([arr.copy() for _ in range(int(repeat))], axis=0)
+
+
 def _pack_source_forward_group(*items: tuple[str, Any]) -> np.ndarray:
     arrays: list[np.ndarray] = []
-    for name, value in items:
+    for _name, value in items:
         arr = np.asarray(value, dtype=np.float32)
-        header = np.asarray([len(name), arr.ndim, *arr.shape], dtype=np.float32)
+        header = np.asarray(
+            [float(arr.ndim), *[float(dim) for dim in arr.shape], float(arr.size)],
+            dtype=np.float32,
+        )
         arrays.append(header.reshape(-1))
-        arrays.append(np.frombuffer(name.encode("utf-8"), dtype=np.uint8).astype(np.float32))
         arrays.append(arr.reshape(-1))
     if not arrays:
         return np.zeros((0,), dtype=np.float32)
@@ -1966,6 +2327,7 @@ __all__ = [
     "TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER",
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
     "TUB_PRESERVED_BLOCKERS",
+    "build_snerv_official_tub_source_forward_receiver_archive_packet",
     "build_snerv_official_tub_source_forward_replay_artifact",
     "build_snerv_official_tub_source_forward_tensor_bundle",
     "main",

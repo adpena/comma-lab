@@ -13,6 +13,7 @@ import pytest
 
 from tac.analysis.snerv_official_tub_source_forward_replay import (
     DEFAULT_OFFICIAL_SNERV_REPO,
+    build_snerv_official_tub_source_forward_receiver_archive_packet,
 )
 from tac.analysis.snerv_source_forward_producer import (
     build_official_torch_primitive_tensors_from_archive_packet,
@@ -808,7 +809,7 @@ def test_official_mfu_hfr_tub_archive_payload_bitflip_falsifies_receiver_replay(
     assert proof["bitflip_section"] == "decoder_payload"
     assert proof["baseline_section_sha256"] != proof["mutated_section_sha256"]
     assert proof["proof_passed"] is False
-    assert proof["first_failed_tensor"] in {"output_2", "rgb_pair_uint8"}
+    assert proof["first_failed_tensor"] == "mfu_in"
     assert proof["first_failed_surface"] in {"archive_parseback", "numpy_receiver"}
     assert proof["passed"] is True
     assert proof["blockers"] == []
@@ -1085,9 +1086,10 @@ def test_official_payload_exposes_source_forward_primitive_tensor_bundle() -> No
     assert tensors["rgb_pair_float"].shape == (1, 2, 3, 16, 16)
     assert tensors["rgb_pair_uint8"].shape == (1, 2, 3, 16, 16)
     assert tensors["output_2"].shape == (2, 3, 16, 16)
+    assert tensors["coord_time_embedding"].ndim == 1
     assert tensors["mfu_in"].ndim == 1
     assert tensors["tub_out"].ndim == 1
-    assert "coord_time_embedding" in trace["missing_action_effect_tensor_names"]
+    assert "coord_time_embedding" not in trace["missing_action_effect_tensor_names"]
     assert "segnet_logits" in trace["missing_action_effect_tensor_names"]
     assert "output_2" not in trace["missing_action_effect_tensor_names"]
 
@@ -1605,6 +1607,87 @@ def test_source_forward_producer_can_capture_upstream_official_torch_fixture() -
     assert "source_forward_tensor_shape_mismatch:archive_parseback:mfu_in" in row[
         "blockers"
     ]
+
+
+def test_upstream_snerv_fixture_archive_proof_reaches_only_output2_boundary() -> None:
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("mlx.core")
+    if not DEFAULT_OFFICIAL_SNERV_REPO.exists():
+        pytest.skip(f"official SNeRV checkout is absent: {DEFAULT_OFFICIAL_SNERV_REPO}")
+    packet = build_snerv_official_tub_source_forward_receiver_archive_packet(
+        official_repo_dir=DEFAULT_OFFICIAL_SNERV_REPO,
+    )
+    source_bundle = packet["source_forward_tensor_bundle"]
+    source_tensors = source_bundle["tensors"]
+    manifest = build_snerv_official_torch_upstream_capture_manifest(
+        pair_ids=[0],
+        tensor_names=source_tensors.keys(),
+        model_source_sha256=source_bundle["model_source_sha256"],
+        checkpoint_sha256=source_bundle["checkpoint_sha256"],
+        state_dict_sha256=source_bundle["state_dict_sha256"],
+        decoder_len=source_bundle["decoder_len"],
+    )
+    reference = unpack_snerv_archive(
+        packet["archive_packet"]
+    ).source_forward_receiver_tensor_surfaces([0])["surface_tensors"][
+        "archive_parseback"
+    ]["rgb_pair_uint8"]
+
+    row = build_snerv_source_forward_proof_from_archive_packet(
+        action_id="8" * 64,
+        archive_packet=packet["archive_packet"],
+        pair_ids=[0],
+        official_torch_tensors=source_tensors,
+        official_torch_capture_manifest=manifest,
+        capture_pact_mlx_from_archive=True,
+        capture_torch_scorer_from_rgb=True,
+        reference_pairs_nchw255=reference,
+        posenet=_TinyPoseNet(torch),
+        segnet=_TinySegNet(torch),
+        tolerance_by_tensor={
+            "coord_time_embedding": 1.0e-6,
+            "mfu_in": 1.0e-5,
+            "mfu_out": 1.0e-5,
+            "hfr_in": 1.0e-5,
+            "hfr_out": 1.0e-4,
+            "tub_in": 1.0e-6,
+            "tub_out": 1.0e-6,
+            "rgb_pair_float": 1.0,
+            "rgb_pair_uint8": 0.0,
+            "segnet_input": 0.0,
+            "posenet_input": 0.0,
+            "segnet_logits": 0.0,
+            "segnet_argmax": 0.0,
+            "posenet_output": 0.0,
+        },
+    )
+
+    assert packet["source_forward_output2_blocker"] == (
+        "snerv_official_tub_output2_feature_space_not_receiver_frame_residual"
+    )
+    assert row["producer_status"]["official_torch_upstream_capture_manifest_passed"] is True
+    assert row["producer_status"]["pact_mlx_captured_from_archive"] is True
+    assert row["producer_status"]["torch_scorer_capture_surface_count"] == 4
+    assert row["producer_status"]["parseback_receiver_rgb_uint8_equal"] is True
+    assert row["rgb_uint8_and_scorer_compared"] is True
+    assert row["parseback_receiver_surface_compared"] is False
+    assert row["scorer_deltas"]["delta_score_nonrate"] == 0.0
+    assert row["first_failed_tensor"] == "output_2"
+    assert row["destructive_payload_bit_flip"]["first_failed_tensor"] == "mfu_in"
+    assert {
+        "source_forward_tensor_missing:official_torch:output_2",
+        "source_forward_tensor_missing:pact_mlx:output_2",
+        "source_forward_tensor_missing:archive_parseback:output_2",
+        "source_forward_tensor_missing:numpy_receiver:output_2",
+    }.issubset(row["blockers"])
+    assert not any(
+        blocker.startswith("source_forward_tensor_shape_mismatch:")
+        for blocker in row["blockers"]
+    )
+    assert not any(
+        blocker.startswith("source_forward_tensor_delta_exceeds_tolerance:")
+        for blocker in row["blockers"]
+    )
 
 
 def test_official_torch_receiver_bound_capture_is_real_but_not_authority() -> None:

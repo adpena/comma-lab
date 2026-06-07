@@ -815,7 +815,14 @@ class OfficialMfuHfrTubReceiverPayload:
                 f"available range [0,{int(pair_frames.shape[0])})"
             )
         selected = np.asarray(pair_frames[selected_pair_ids], dtype=np.float32)
+        coord_time_items: list[tuple[str, np.ndarray]] = []
+        if output2_inputs is not None:
+            coord_time_items.append(("temporal_encoder_concat", output2_inputs[0]))
+        coord_time_items.append(("yl_norm", np.asarray(tub_out.yl_norm, dtype=np.float64)))
         tensors: dict[str, np.ndarray] = {
+            "coord_time_embedding": _source_forward_trace_pack_tensor_group(
+                *coord_time_items
+            ),
             "mfu_in": _source_forward_trace_pack_tensor_group(
                 ("low", low),
                 ("skip_mid", skip_mid),
@@ -1661,6 +1668,10 @@ def build_snerv_archive_payload_bitflip_falsification(
     decoded = unpack_snerv_archive(packet)
     if bitflip_section not in decoded.sections:
         raise SnervArchiveError(f"unknown SNeRV bitflip section {bitflip_section!r}")
+    first_tensor_hint = _bitflip_section_first_tensor(
+        bitflip_section,
+        decoded=decoded,
+    )
     section = bytearray(decoded.sections[bitflip_section])
     if not section:
         raise SnervArchiveError(f"SNeRV bitflip section {bitflip_section!r} is empty")
@@ -1713,7 +1724,7 @@ def build_snerv_archive_payload_bitflip_falsification(
         mutated_frames = decode_snerv_archive_frames(mutated_packet)
     except Exception as exc:
         proof_passed_after_bitflip = False
-        first_failed_tensor = _bitflip_section_first_tensor(bitflip_section)
+        first_failed_tensor = first_tensor_hint
         first_failed_surface = "archive_parseback"
         failure = f"{type(exc).__name__}: {exc}"
     else:
@@ -4998,8 +5009,26 @@ def _metadata_hw_value(name: str, value: Any) -> tuple[int, int]:
     return h, w
 
 
-def _bitflip_section_first_tensor(section: str) -> str:
+def _bitflip_section_first_tensor(
+    section: str,
+    *,
+    decoded: DecodedSnervArchive | None = None,
+) -> str:
     if section == "decoder_payload":
+        if decoded is not None and is_official_mfu_hfr_tub_decoder_payload(
+            decoded.sections["decoder_payload"]
+        ):
+            try:
+                storage = inspect_decoder_payload_header(
+                    decoded.sections["decoder_payload"]
+                ).get("tub_output2_storage")
+            except SnervArchiveError:
+                storage = None
+            if isinstance(storage, Mapping) and bool(
+                storage.get("receiver_frame_decode_consumes_output2")
+            ):
+                return "output_2"
+            return "mfu_in"
         return "output_2"
     if section == "lf_payload":
         return "lf_payload"

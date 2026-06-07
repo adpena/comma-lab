@@ -953,7 +953,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         if output2_fused is not None:
             tensors["output_2"] = _as_numpy_float32(output2_fused)
         supplied_portable = dict(portable_tub_tensors or {})
-        for name in ("tub_in", "tub_out"):
+        for name in ("coord_time_embedding", "tub_in", "tub_out"):
             if name in supplied_portable:
                 tensors[name] = np.asarray(supplied_portable[name], dtype=np.float32)
         missing = [
@@ -1241,7 +1241,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             low,
             skip_mid,
             skip_high,
-            accumulation_mode="optimized",
+            accumulation_mode="fixed_fp32",
         )
         lh = self._hfr_head_forward("lh", mfu_out.pyr_out)
         hl = self._hfr_head_forward("hl", mfu_out.pyr_out)
@@ -1345,14 +1345,13 @@ def _source_forward_trace_pack_tensor_group_local(
     *items: tuple[str, np.ndarray],
 ) -> np.ndarray:
     arrays: list[np.ndarray] = []
-    for name, value in items:
+    for _name, value in items:
         arr = np.asarray(value, dtype=np.float32)
         header = np.asarray(
-            [len(name), arr.ndim, *arr.shape],
+            [float(arr.ndim), *[float(dim) for dim in arr.shape], float(arr.size)],
             dtype=np.float32,
         )
         arrays.append(header.reshape(-1))
-        arrays.append(np.frombuffer(name.encode("utf-8"), dtype=np.uint8).astype(np.float32))
         arrays.append(arr.reshape(-1))
     if not arrays:
         return np.zeros((0,), dtype=np.float32)
@@ -1369,6 +1368,10 @@ def _official_tub_frame_or_default(
         arr = np.asarray(value, dtype=np.float32)
     else:
         arr = np.asarray(skip_high[int(frame_index)], dtype=np.float32)
+    if arr.ndim == 4:
+        if int(arr.shape[0]) <= 0:
+            raise SnervMlxRendererError("official TUB frame batch is empty")
+        arr = arr[min(int(frame_index), int(arr.shape[0]) - 1)]
     if arr.ndim != 3:
         raise SnervMlxRendererError(f"official TUB frame must be CHW, got {arr.shape}")
     if not np.isfinite(arr).all():

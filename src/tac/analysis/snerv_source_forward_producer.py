@@ -164,7 +164,7 @@ def build_snerv_source_forward_proof_from_archive_packet(
                 for key, value in receiver_surfaces["surface_tensors"][
                     "archive_parseback"
                 ].items()
-                if key in {"tub_in", "tub_out"}
+                if key in {"coord_time_embedding", "tub_in", "tub_out"}
             },
         )
         pact_mlx_tensors = pact_mlx_capture["tensors"]
@@ -519,7 +519,7 @@ def build_pact_mlx_primitive_tensors_from_archive_packet(
         portable_tub_tensors={
             key: value
             for key, value in dict(portable_tub_tensors or {}).items()
-            if key in {"tub_in", "tub_out"}
+            if key in {"coord_time_embedding", "tub_in", "tub_out"}
         },
     )
 
@@ -954,11 +954,13 @@ def _torch_bias(value: Any) -> Any:
 
 def _pack_tensor_group(*items: tuple[str, Any]) -> np.ndarray:
     arrays: list[np.ndarray] = []
-    for name, value in items:
+    for _name, value in items:
         arr = np.asarray(value, dtype=np.float32)
-        header = np.asarray([len(name), arr.ndim, *arr.shape], dtype=np.float32)
+        header = np.asarray(
+            [float(arr.ndim), *[float(dim) for dim in arr.shape], float(arr.size)],
+            dtype=np.float32,
+        )
         arrays.append(header.reshape(-1))
-        arrays.append(np.frombuffer(name.encode("utf-8"), dtype=np.uint8).astype(np.float32))
         arrays.append(arr.reshape(-1))
     if not arrays:
         return np.zeros((0,), dtype=np.float32)
