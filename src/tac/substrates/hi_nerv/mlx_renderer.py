@@ -706,6 +706,52 @@ def _write_hard_region_miner_input_bundle(
     return manifest
 
 
+def _target_region_portfolio_coverage_row(
+    attempts: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    from tac.analysis.hinerv_hard_region_miner import (
+        OUTCOME_BIRTH_ACCEPTED,
+        OUTCOME_BIRTH_REJECTED,
+        build_representative_coverage_row,
+    )
+
+    outcomes: list[dict[str, Any]] = []
+    for attempt in attempts:
+        if not isinstance(attempt, Mapping):
+            continue
+        region_key = attempt.get("region_key")
+        key_parts: tuple[int, ...] = ()
+        if isinstance(region_key, Sequence) and not isinstance(region_key, (str, bytes)):
+            key_parts = tuple(int(value) for value in region_key)
+        region = {
+            "batch_index": key_parts[0] if len(key_parts) >= 1 else int(attempt.get("batch_index") or 0),
+            "class_index": int(attempt.get("class_index") or 0),
+            "region_label": key_parts[2] if len(key_parts) >= 3 else int(attempt.get("region_label") or 1),
+            "region_pixel_count": int(attempt.get("region_pixel_count") or 0),
+        }
+        accepted = bool(attempt.get("accepted")) and int(attempt.get("wrong_to_target_count") or 0) > 0
+        if accepted:
+            outcomes.append(
+                {
+                    "region": region,
+                    "outcome": OUTCOME_BIRTH_ACCEPTED,
+                    "first_failing_surface": None,
+                }
+            )
+        else:
+            blockers = [str(value) for value in attempt.get("blockers") or [] if str(value)]
+            outcomes.append(
+                {
+                    "region": region,
+                    "outcome": OUTCOME_BIRTH_REJECTED,
+                    "first_failing_surface": blockers[0] if blockers else "birth_not_accepted",
+                }
+            )
+    if not outcomes:
+        return build_representative_coverage_row([])
+    return build_representative_coverage_row(outcomes)
+
+
 class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
     """MLX-native mirror of :class:`HinervSubstrate`.
 
@@ -3407,6 +3453,13 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         initial_argmax_one_hot = mx.stop_gradient(  # type: ignore[union-attr]
             mx.array(initial_argmax_one_hot_np, dtype=mx.float32)
         )
+        target_label_one_hot_np = np.eye(class_count, dtype=np.float32)[labels_np]
+        target_label_one_hot = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(target_label_one_hot_np, dtype=mx.float32)
+        )
+        initial_target_margin_reference = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(target_margin_np, dtype=mx.float32)
+        )
         initial_argmax_logit_np = np.sum(initial_logits_np * initial_argmax_one_hot_np, axis=-1)
         initial_argmax_impostor_np = np.array(initial_logits_np, copy=True)
         np.put_along_axis(
@@ -3423,11 +3476,34 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             mx.array(outside_region_mask_np, dtype=mx.float32)
         )
         outside_region_pixels = float(np.count_nonzero(outside_region_mask_np))
+        global_already_won_bool_np = (initial_argmax_np == labels_np) & (~region_bool_np)
+        global_already_won_mask_np = global_already_won_bool_np.astype(np.float32)
+        global_already_won_mask = mx.stop_gradient(  # type: ignore[union-attr]
+            mx.array(global_already_won_mask_np, dtype=mx.float32)
+        )
+        global_already_won_pixels = float(np.count_nonzero(global_already_won_bool_np))
+        global_already_won_preserve_active = bool(
+            global_already_won_pixels > 0.0
+            and (bool(require_pose_trust) or bool(require_fakequant_survival))
+        )
         initial_pose_reference = (
             mx.stop_gradient(mx.array(initial_pose, dtype=mx.float32))  # type: ignore[union-attr]
             if initial_pose is not None
             else None
         )
+
+        def _global_target_transition_counts(argmax_np: np.ndarray) -> dict[str, int]:
+            after_correct = np.asarray(argmax_np) == labels_np
+            before_correct = initial_argmax_np == labels_np
+            outside = ~region_bool_np
+            return {
+                "outside_correct_to_wrong_count": int(np.count_nonzero(outside & before_correct & ~after_correct)),
+                "outside_wrong_to_correct_count": int(np.count_nonzero(outside & ~before_correct & after_correct)),
+                "global_correct_to_wrong_count": int(np.count_nonzero(before_correct & ~after_correct)),
+                "global_wrong_to_correct_count": int(np.count_nonzero(~before_correct & after_correct)),
+                "global_net_correct_delta": int(np.count_nonzero(~before_correct & after_correct))
+                - int(np.count_nonzero(before_correct & ~after_correct)),
+            }
 
         def _loss_fn(model_obj: Any) -> Any:
             pred0, pred1 = _predict_pair01(model_obj)
@@ -3464,6 +3540,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             loss_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             loss_already_won_hard_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             loss_already_won_rgb_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
+            loss_global_already_won_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             if already_won_pixel_count > 0:
                 # Preserve already-won target support as a trust-region
                 # constraint, not only after it has crossed the argmax boundary.
@@ -3498,6 +3575,24 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     float(lambda_already_won_rgb_preserve)
                     * mx.sum(rgb_preserve_delta * rgb_preserve_delta)
                     / max(already_won_pixels * 3.0, 1.0)
+                )
+            if global_already_won_preserve_active and float(lambda_support_preserve) > 0.0:
+                target_label_logit = mx.sum(logits * target_label_one_hot, axis=-1)  # type: ignore[union-attr]
+                target_competitor_logits = mx.where(  # type: ignore[union-attr]
+                    target_label_one_hot > 0.0,
+                    mx.array(-1.0e30, dtype=logits.dtype),
+                    logits,
+                )
+                target_impostor = mx.max(target_competitor_logits, axis=-1)  # type: ignore[union-attr]
+                target_margin = target_impostor - target_label_logit
+                global_margin_erosion = mx.maximum(  # type: ignore[union-attr]
+                    target_margin - initial_target_margin_reference,
+                    0.0,
+                )
+                loss_global_already_won_preserve = (  # type: ignore[assignment]
+                    float(lambda_support_preserve)
+                    * mx.sum(global_margin_erosion * global_margin_erosion * global_already_won_mask)
+                    / global_already_won_pixels
                 )
             loss_outside_preserve = mx.sum(margin_raw * 0.0)  # type: ignore[union-attr]
             if outside_region_pixels > 0.0 and float(lambda_outside_argmax_preserve) > 0.0:
@@ -3567,6 +3662,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 + loss_preserve
                 + loss_already_won_hard_preserve
                 + loss_already_won_rgb_preserve
+                + loss_global_already_won_preserve
                 + loss_outside_preserve
                 + loss_pose_preserve
                 + loss_pose_target
@@ -3707,6 +3803,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 unsolved_tail_bool_np,
                 birth_class,
             )
+            global_target_transitions = _global_target_transition_counts(argmax_np)
             already_won_lost_count = int(np.count_nonzero(already_won_bool_np & (argmax_np != birth_class)))
             return {
                 "stats": stats,
@@ -3714,6 +3811,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "already_won_stats": already_won_stats,
                 "region_argmax_transitions": region_transitions,
                 "unsolved_tail_argmax_transitions": unsolved_tail_transitions,
+                "global_target_transitions": global_target_transitions,
                 "already_won_lost_count": already_won_lost_count,
                 "uint8": uint8,
                 "pose": pose,
@@ -4086,6 +4184,8 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         max_candidate_region_hard_won_delta = 0
         max_candidate_region_hard_ratio_delta = 0.0
         max_candidate_already_won_lost_count = 0
+        max_candidate_outside_correct_to_wrong_count = 0
+        max_candidate_global_correct_to_wrong_count = 0
         max_candidate_margin_mean_improvement = 0.0
         max_candidate_margin_p50_improvement = 0.0
         max_candidate_nonrate_improvement = 0.0
@@ -4379,7 +4479,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 )
                 net_target_support_delta = int(region_transitions["net_target_support_delta"])
                 already_won_lost_count = int(candidate["already_won_lost_count"])
-                support_spill = bool(already_won_lost_count > 0 or net_target_support_delta < 0)
+                global_transitions = dict(candidate["global_target_transitions"])
+                outside_correct_to_wrong_count = int(
+                    global_transitions["outside_correct_to_wrong_count"]
+                )
+                global_correct_to_wrong_count = int(
+                    global_transitions["global_correct_to_wrong_count"]
+                )
+                support_spill = bool(
+                    already_won_lost_count > 0
+                    or (global_already_won_preserve_active and outside_correct_to_wrong_count > 0)
+                    or net_target_support_delta < 0
+                )
                 ratio_progress = bool(net_target_support_delta > 0 and not support_spill)
                 # Mean margin registers single-pixel receiver motion; the
                 # median stays pure telemetry because one flipped pixel cannot
@@ -4470,6 +4581,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     max_candidate_already_won_lost_count,
                     int(already_won_lost_count),
                 )
+                max_candidate_outside_correct_to_wrong_count = max(
+                    max_candidate_outside_correct_to_wrong_count,
+                    int(outside_correct_to_wrong_count),
+                )
+                max_candidate_global_correct_to_wrong_count = max(
+                    max_candidate_global_correct_to_wrong_count,
+                    int(global_correct_to_wrong_count),
+                )
                 max_candidate_margin_mean_improvement = max(
                     max_candidate_margin_mean_improvement,
                     candidate_margin_mean_improvement,
@@ -4546,6 +4665,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     "region_target_to_wrong_count": int(region_transitions["target_to_wrong_count"]),
                     "region_net_target_support_delta": int(net_target_support_delta),
                     "already_won_lost_count": int(already_won_lost_count),
+                    "outside_correct_to_wrong_count": int(outside_correct_to_wrong_count),
+                    "outside_wrong_to_correct_count": int(
+                        global_transitions["outside_wrong_to_correct_count"]
+                    ),
+                    "global_correct_to_wrong_count": int(global_correct_to_wrong_count),
+                    "global_wrong_to_correct_count": int(
+                        global_transitions["global_wrong_to_correct_count"]
+                    ),
+                    "global_net_correct_delta": int(
+                        global_transitions["global_net_correct_delta"]
+                    ),
                     "unsolved_tail_hard_won_delta": float(tail_hard_won_delta),
                     "unsolved_tail_hard_ratio_delta": float(tail_hard_ratio_delta),
                     "unsolved_tail_margin_mean_improvement": float(tail_margin_mean_improvement),
@@ -4879,6 +5009,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "max_candidate_region_hard_won_delta": int(max_candidate_region_hard_won_delta),
             "max_candidate_region_hard_ratio_delta": float(max_candidate_region_hard_ratio_delta),
             "max_candidate_already_won_lost_count": int(max_candidate_already_won_lost_count),
+            "max_candidate_outside_correct_to_wrong_count": int(
+                max_candidate_outside_correct_to_wrong_count
+            ),
+            "max_candidate_global_correct_to_wrong_count": int(
+                max_candidate_global_correct_to_wrong_count
+            ),
             "max_candidate_margin_mean_improvement": float(max_candidate_margin_mean_improvement),
             "max_candidate_margin_p50_improvement": float(max_candidate_margin_p50_improvement),
             "progress_reference": "initial_unsolved_tail_with_already_won_preservation",
@@ -4891,6 +5027,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "lambda_pose_trust_preserve": float(lambda_pose_trust_preserve),
                 "lambda_pose_target": float(lambda_pose_target),
                 "outside_region_pixel_count": int(outside_region_pixels),
+                "global_already_won_outside_region_pixel_count": int(
+                    global_already_won_pixels
+                ),
+                "global_already_won_preserve_active": bool(
+                    global_already_won_preserve_active
+                ),
                 "pose_trust_cap_l2": float(max_pose_output_delta_l2),
             },
             "target_geometry": {
@@ -5590,6 +5732,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             "blockers": list(blockers),
         }
         portfolio_attempts = [*portfolio_prior_attempts, portfolio_current_attempt]
+        representative_region_coverage = _target_region_portfolio_coverage_row(
+            portfolio_attempts
+        )
         payload["target_region_portfolio"] = {
             "schema": "hi_nerv_target_region_birth_portfolio.v1",
             "max_regions": int(portfolio_max_regions),
@@ -5607,7 +5752,9 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 else "score_debt_desc_then_next_positive_region_after_exact_admission_failure"
             ),
             "admission_authority": "exact_nonlinear_batch_local_seg_pose_nonrate",
+            "representative_region_coverage": representative_region_coverage,
         }
+        payload["representative_region_coverage"] = representative_region_coverage
         excluded_next = (
             *portfolio_excluded_keys,
             (int(worst.batch_index), int(worst.class_index), int(worst.region_label)),

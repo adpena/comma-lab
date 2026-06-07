@@ -810,6 +810,54 @@ def test_target_region_birth_persists_hard_region_miner_inputs(tmp_path) -> None
         assert arrays["pair_indices"].tolist() == list(range(cfg.num_pairs))
 
 
+def test_target_region_portfolio_builds_representative_coverage_row() -> None:
+    from tac.substrates.hi_nerv.mlx_renderer import _target_region_portfolio_coverage_row
+
+    row = _target_region_portfolio_coverage_row(
+        [
+            {
+                "region_key": [0, 1, 1],
+                "class_index": 1,
+                "region_pixel_count": 9,
+                "accepted": True,
+                "wrong_to_target_count": 4,
+                "blockers": [],
+            },
+            {
+                "region_key": [0, 2, 1],
+                "class_index": 2,
+                "region_pixel_count": 128,
+                "accepted": True,
+                "wrong_to_target_count": 8,
+                "blockers": [],
+            },
+            {
+                "region_key": [0, 3, 1],
+                "class_index": 3,
+                "region_pixel_count": 5000,
+                "accepted": True,
+                "wrong_to_target_count": 16,
+                "blockers": [],
+            },
+            {
+                "region_key": [0, 4, 1],
+                "class_index": 4,
+                "region_pixel_count": 16,
+                "accepted": False,
+                "wrong_to_target_count": 0,
+                "blockers": ["fakequant_survival_failed"],
+            },
+        ]
+    )
+
+    assert row["schema"] == "hi_nerv_representative_region_coverage.v1"
+    assert row["passed"] is True
+    assert row["region_classes_covered"] == 3
+    assert row["distinct_classes_accepted"] == 3
+    assert row["accepted_class_size_buckets"] == [[1, "small"], [2, "medium"], [3, "large"]]
+    assert row["first_failing_surfaces"] == ["fakequant_survival_failed"]
+
+
 @skip_no_mlx
 def test_target_region_birth_targets_unsolved_tail_and_preserves_won_pixels() -> None:
     import mlx.core as mx
@@ -1015,6 +1063,12 @@ def test_target_region_birth_portfolio_budget_blocks_with_remaining_regions() ->
     assert portfolio["budget_exhausted"] is True
     assert portfolio["search_exhausted"] is False
     assert portfolio["exhausted"] is False
+    coverage = portfolio["representative_region_coverage"]
+    assert coverage == payload["representative_region_coverage"]
+    assert coverage["schema"] == "hi_nerv_representative_region_coverage.v1"
+    assert coverage["passed"] is False
+    assert coverage["rejected_count"] == 1
+    assert coverage["first_failing_surfaces"]
     assert (
         "hinerv_target_region_birth_portfolio_budget_exhausted_with_remaining_positive_regions"
         in payload["blockers"]
