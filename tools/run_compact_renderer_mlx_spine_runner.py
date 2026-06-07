@@ -136,17 +136,19 @@ def _select_target_region_action_program_from_birth_payload(
     def _candidate_direct_teacher_support_sha256(row: Mapping[str, Any]) -> str | None:
         direct = row.get("direct_seg_wall_oracle")
         direct = direct if isinstance(direct, Mapping) else {}
-        value = direct.get("support_sha256")
+        value = direct.get("archive_executable_support_sha256") or direct.get("support_sha256")
         if not value:
             action_effect = direct.get("action_effect")
             if isinstance(action_effect, Mapping):
                 value = action_effect.get("support_sha256")
         return str(value) if isinstance(value, str) and value else None
 
-    def _candidate_same_support_as_direct_teacher(row: Mapping[str, Any]) -> bool:
+    def _candidate_same_support_as_direct_teacher(row: Mapping[str, Any]) -> bool | None:
         action_support = _candidate_action_support_sha256(row)
         direct_support = _candidate_direct_teacher_support_sha256(row)
-        return bool(action_support and direct_support and action_support == direct_support)
+        if not direct_support:
+            return None
+        return bool(action_support and action_support == direct_support)
 
     def _candidate_key(row: Mapping[str, Any]) -> tuple[int, int, int, float, int, float]:
         exact_accepted = _candidate_exact_accepted(row)
@@ -161,7 +163,7 @@ def _select_target_region_action_program_from_birth_payload(
         return (
             0 if exact_accepted else 1,
             0 if support_moved else 1,
-            0 if same_support else 1,
+            0 if same_support is True else 1 if same_support is None else 2,
             total_delta,
             payload_bytes,
             delta,
@@ -172,7 +174,7 @@ def _select_target_region_action_program_from_birth_payload(
         for row in candidates
         if _candidate_exact_accepted(row)
         and _candidate_support_moved(row)
-        and _candidate_same_support_as_direct_teacher(row)
+        and _candidate_same_support_as_direct_teacher(row) is not False
         and _candidate_key(row)[3] < 0.0
     ]
     if not eligible_candidates:
@@ -10696,6 +10698,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         artifact_dict["target_region_action_parseback_survival"] = dict(
             target_region_action_parseback_survival
         )
+    target_region_action_comparison = _write_hi_nerv_target_region_action_comparison_report(
+        archive_resolution=archive_resolution,
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        parseback_survival=(
+            target_region_action_parseback_survival
+            if isinstance(target_region_action_parseback_survival, Mapping)
+            else None
+        ),
+    )
+    if isinstance(target_region_action_comparison, Mapping):
+        artifact_dict["target_region_action_comparison"] = dict(
+            target_region_action_comparison
+        )
+        lowering_race = target_region_action_comparison.get("lowering_race")
+        if isinstance(lowering_race, Mapping):
+            artifact_dict["target_region_action_lowering_race"] = dict(lowering_race)
     _attach_hi_nerv_archive_codec_custody(
         artifact_dict=artifact_dict,
         output_dir=training_dir,
@@ -19793,6 +19812,146 @@ def _write_hi_nerv_target_region_action_parseback_survival(
                 encoding="utf-8",
             )
     return row
+
+
+def _write_hi_nerv_target_region_action_comparison_report(
+    *,
+    archive_resolution: Mapping[str, Any],
+    output_dir: str | Path,
+    artifact_dict: dict[str, Any],
+    parseback_survival: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Write the target-action sidecar/backend lowering race for launch gate."""
+
+    if not isinstance(parseback_survival, Mapping):
+        return None
+    action_id = str(parseback_survival.get("action_id") or artifact_dict.get("action_id") or "")
+    archive_raw = archive_resolution.get("archive_path") or artifact_dict.get("archive_path")
+    if not archive_raw:
+        return None
+    archive = Path(str(archive_raw)).expanduser().resolve(strict=False)
+    if not archive.is_file():
+        return None
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    fallback_path = out / "hinerv_target_region_action_sidecar_backend_comparison.json"
+
+    def _blocked(blocker: str, *, reason: str | None = None) -> dict[str, Any]:
+        race = {
+            "schema": "hi_nerv_target_region_action_lowering_race.v1",
+            "action_id": action_id or None,
+            "support_sha256": parseback_survival.get("expected_support_sha256")
+            or parseback_survival.get("support_sha256"),
+            "direct_teacher_support_sha256": None,
+            "same_support_as_direct_teacher": None,
+            "best_lowering": "none",
+            "first_failing_surface": blocker,
+            "verdict": {
+                "schema": "tac.evaluator_action_lowering_verdict.v1",
+                "action_id": action_id or None,
+                "best_lowering": "none",
+                "first_failing_surface": blocker,
+                "authority": "none",
+                "delta_score_nonrate": None,
+                "delta_score_total": None,
+                "delta_bytes": None,
+                "value_per_byte": None,
+            },
+            "candidate_count": 0,
+            "blockers": [blocker],
+            "reason": reason or blocker,
+            "promotion_eligible": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        report = {
+            "schema": "hi_nerv_target_region_action_sidecar_backend_comparison.v1",
+            "action_id": action_id or None,
+            "archive_path": archive.as_posix(),
+            "archive_sha256": _sha256_file(archive),
+            "archive_bytes": int(archive.stat().st_size),
+            "lowering_race": race,
+            "comparison": {
+                "best_lowering": "none",
+                "first_failing_surface": blocker,
+                "next_blocker": blocker,
+                "promotable": False,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "blockers": [blocker],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
+        }
+        _write_json(fallback_path, report)
+        artifact_dict["target_region_action_lowering_race"] = dict(race)
+        artifact_dict["target_region_action_comparison_path"] = fallback_path.as_posix()
+        return report
+
+    try:
+        from tac.analysis.hinerv_target_region_action_comparison import (
+            build_hinerv_target_region_action_comparison_from_archive,
+            write_hinerv_target_region_action_comparison,
+        )
+
+        report = dict(
+            build_hinerv_target_region_action_comparison_from_archive(
+                archive,
+                survival_receipt=parseback_survival,
+                runner_report=artifact_dict,
+                action_id=action_id or None,
+            )
+        )
+        written = write_hinerv_target_region_action_comparison(report, out)
+    except Exception as exc:
+        return _blocked(
+            "target_region_action_comparison_write_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+
+    report["comparison_artifacts"] = dict(written)
+    report_path = written.get("report_path")
+    action_rows_path = written.get("action_effect_rows_path")
+    artifact_dict["target_region_action_comparison_path"] = report_path
+    artifact_dict["target_region_action_comparison_action_effect_rows_path"] = action_rows_path
+    lowering_race = report.get("lowering_race")
+    if isinstance(lowering_race, Mapping):
+        artifact_dict["target_region_action_lowering_race"] = dict(lowering_race)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["target_region_action_lowering_race"] = (
+                dict(lowering_race) if isinstance(lowering_race, Mapping) else None
+            )
+            score_training["target_region_action_comparison_path"] = report_path
+    artifact_path = out / "training_artifact.json"
+    if artifact_path.is_file():
+        try:
+            artifact = _load_json(artifact_path)
+        except Exception:
+            artifact = None
+        if isinstance(artifact, dict):
+            artifact["target_region_action_comparison"] = dict(report)
+            if isinstance(lowering_race, Mapping):
+                artifact["target_region_action_lowering_race"] = dict(lowering_race)
+            artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+            score_training = artifact_metadata.get("score_aware_training")
+            if isinstance(score_training, dict):
+                score_training["target_region_action_lowering_race"] = (
+                    dict(lowering_race) if isinstance(lowering_race, Mapping) else None
+                )
+                score_training["target_region_action_comparison_path"] = report_path
+            artifact["substrate_artifact_metadata"] = artifact_metadata
+            artifact_path.write_text(
+                json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+    return report
 
 
 def _write_hi_nerv_runner_birth_inflated_survival_from_local_replay(

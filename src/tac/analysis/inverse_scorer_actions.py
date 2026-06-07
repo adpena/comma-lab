@@ -123,6 +123,10 @@ def build_direct_seg_wall_oracle_receipt(
     support_source: str = "direct_seg_wall_oracle_support_mask",
     support_encoding: str = "bool_packbits_not_archive_priced",
     support_encoded_bytes: int | None = None,
+    archive_executable_support_sha256: str | None = None,
+    archive_executable_support_encoding: str | None = None,
+    archive_executable_support_cardinality: int | None = None,
+    archive_executable_support_encoded_bytes: int | None = None,
     inverse_source: str = "segnet_margin_vjp",
     inverse_basis: str | None = None,
     uses_official_seg_preprocess: bool | None = None,
@@ -264,6 +268,11 @@ def build_direct_seg_wall_oracle_receipt(
     effect_payload["exact_score_decision"] = "accept" if not exact_blockers else "reject"
     effect_payload["blockers"] = exact_blockers
     effect = ActionEffect.from_dict(effect_payload)
+    archive_support_hash = (
+        str(archive_executable_support_sha256)
+        if archive_executable_support_sha256 is not None
+        else None
+    )
     return {
         "schema": DIRECT_SEG_WALL_ORACLE_SCHEMA,
         "action_id": effect.action_id,
@@ -284,8 +293,20 @@ def build_direct_seg_wall_oracle_receipt(
         "frontier_pixel_policy": frontier_pixel_policy,
         "support_cardinality": int(support_cardinality),
         "support_sha256": support_hash,
+        "support_hash_domain": "bool_mask_bhw",
         "support_encoding": str(support_encoding),
         "support_encoded_bytes": support_encoded_bytes,
+        "archive_executable_support_sha256": archive_support_hash,
+        "archive_executable_support_hash_domain": (
+            "target_region_action_coordinates_v1" if archive_support_hash else None
+        ),
+        "archive_executable_support_encoding": (
+            None
+            if archive_executable_support_encoding is None
+            else str(archive_executable_support_encoding)
+        ),
+        "archive_executable_support_cardinality": archive_executable_support_cardinality,
+        "archive_executable_support_encoded_bytes": archive_executable_support_encoded_bytes,
         "archive_executable": bool(
             support_encoded_bytes is not None and int(support_encoded_bytes) > 0
         ),

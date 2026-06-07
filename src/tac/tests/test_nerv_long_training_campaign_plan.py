@@ -118,8 +118,20 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["source_parity_nonblocking_gaps"]
     assert report["pr95_distortion_source_ready"] is True
     assert report["pr95_distortion_practices_consumed_by_rows"] is True
-    assert report["pr95_distortion_practices_blockers"] == []
-    assert all(row["pr95_distortion_practices_guard"]["launch_allowed"] is True for row in report["campaign_rows"])
+    assert set(report["pr95_distortion_practices_blockers"]) == {
+        "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing",
+        "snerv_pact_nerv_receiver_compiler_receiver_surface_integer_search_missing",
+    }
+    assert all(
+        row["pr95_distortion_practices_guard"]["launch_allowed"] is True
+        for row in report["campaign_rows"]
+        if row["family"] == "hi_nerv"
+    )
+    assert all(
+        row["pr95_distortion_practices_guard"]["launch_allowed"] is False
+        for row in report["campaign_rows"]
+        if row["family"] == "snerv"
+    )
     assert all(
         row["experiment_queue_entry"]["launch_authority_contract"]["pr95_distortion_practices_consumed"] is True
         for row in report["campaign_rows"]
@@ -229,7 +241,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all(row["command_argv"][row["command_argv"].index("--distillation-device") + 1] == "gpu" for row in hi_rows)
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv["optimizer_kind"] == "pact_muon_adamw"
-    assert snerv["pr95_distortion_practices_guard"]["launch_allowed"] is True
+    assert snerv["pr95_distortion_practices_guard"]["launch_allowed"] is False
+    assert "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing" in snerv[
+        "pr95_distortion_practices_guard"
+    ]["blockers"]
     assert qat_flags.issubset(set(snerv["command_argv"]))
     assert snerv["coder_qat_control"]["quant_bits"] == snerv["quant_bits"]
     assert snerv["coder_qat_control"]["c1a_entropy_weight"] == pytest.approx(1.0e-4)
@@ -521,7 +536,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
+    assert snerv_row["implementation_status"] == "source_bound_capacity_controls_incomplete"
     assert snerv_row["hard_byte_ceiling_satisfied_for_long_training"] is False
     assert snerv_row["score_lowering_gate"]["command_materialized"] is False
     assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
@@ -1563,6 +1578,47 @@ def test_campaign_cli_rejects_empty_or_multirow_source_forward_jsonl(
         cli._load_with_source_identity(multi)
 
 
+def test_snerv_source_forward_numerical_proof_rejects_legacy_metadata_only() -> None:
+    legacy_proof = {
+        "official_torch_frame_hash": "1" * 64,
+        "mlx_frame_hash": "2" * 64,
+        "numpy_receiver_frame_hash": "3" * 64,
+        "parseback_frame_hash": "4" * 64,
+        "tub_output_2_hash": "5" * 64,
+        "max_abs_frame_delta_official_mlx": 0.0,
+        "max_abs_yuv6_delta_official_numpy": 0.0,
+        "seg_logit_linf_official_parseback": 0.0,
+        "pose_linf_official_parseback": 0.0,
+        "mfu_tensor_hashes": {"mfu_in": "6" * 64},
+        "hfr_tensor_hashes": {"hfr_out": "7" * 64},
+    }
+    evidence = {
+        "schema": "snerv_lf_hf_source_forward_evidence.v1",
+        "artifact_count": 1,
+        "source_forward_replay_authority": True,
+        "source_forward_replay_proof": legacy_proof,
+    }
+
+    assert plan_module._snerv_source_forward_numerical_proof_complete(evidence) is False
+
+    evidence["source_forward_replay_proof_status"] = {
+        "schema": "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_proof_status.v1",
+        "source_forward_replay_proof_present": True,
+        "source_forward_replay_required_fields_missing": [],
+        "source_forward_replay_invalid_fields": [],
+        "source_forward_replay_numerical_proof_complete": True,
+        "source_forward_replay_proof_status": (
+            "complete_numerical_source_forward_proof_present"
+        ),
+    }
+    assert plan_module._snerv_source_forward_numerical_proof_complete(evidence) is False
+
+    evidence["source_forward_replay_proof_status"][
+        "source_forward_replay_action_effect_valid"
+    ] = True
+    assert plan_module._snerv_source_forward_numerical_proof_complete(evidence) is True
+
+
 def test_campaign_plan_source_forward_authority_supersedes_stale_feedback_blockers(
     tmp_path: Path,
 ) -> None:
@@ -2232,8 +2288,9 @@ def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> 
     assert queue_command == snerv_row["command_argv"]
     assert queue_command[queue_command.index("--snerv-temporal-mode") + 1] == "official_haar_dwt1d_lowpass"
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
+    assert snerv_row["implementation_status"] == "source_bound_capacity_controls_incomplete"
     assert snerv_row["hard_byte_ceiling_satisfied_for_long_training"] is False
+    assert "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing" in snerv_row["blockers"]
     assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
     assert "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in snerv_row["blockers"]
@@ -2492,8 +2549,9 @@ def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["candidate_id"] == plausible["candidate_id"]
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
+    assert snerv_row["implementation_status"] == "source_bound_capacity_controls_incomplete"
     assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" not in snerv_row["blockers"]
+    assert "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing" in snerv_row["blockers"]
     assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
 
@@ -2578,7 +2636,8 @@ def test_long_training_campaign_plan_requires_and_accepts_snerv_nondegenerate_pr
     assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert snerv["snerv_renderer_nondegenerate_gate"]["passed"] is True
     assert snerv["local_mlx_launch_command_ready"] is False
-    assert snerv["implementation_status"] == "native_rate_aware_long_training_evidence_gate_blocked"
+    assert snerv["implementation_status"] == "source_bound_capacity_controls_incomplete"
+    assert "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing" in snerv["blockers"]
     assert snerv["snerv_pre_long_run_evidence_gate"]["passed"] is False
     assert "snerv_pre_long_run_full_video_mlx_scorer_response_missing" in snerv["blockers"]
     assert "snerv_scorer_loop_qat_pose_guard_not_ready" in snerv["blockers"]
@@ -3056,7 +3115,8 @@ def test_long_training_campaign_plan_refuses_far_over_ceiling_snerv_long_run() -
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
+    assert snerv_row["implementation_status"] == "source_bound_capacity_controls_incomplete"
+    assert "snerv_pr95_distortion_family_local_scorer_atom_actuator_contract_missing" in snerv_row["blockers"]
     assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
     assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" in snerv_row["blockers"]
@@ -8550,6 +8610,11 @@ def _snerv_source_forward_artifact(
             "source_forward_replay_proof_present": True,
             "source_forward_replay_required_fields_missing": [],
             "source_forward_replay_invalid_fields": [],
+            "source_forward_replay_action_effect_schema": (
+                "snerv_source_forward_proof_action_effect.v1"
+            ),
+            "source_forward_replay_action_effect_valid": True,
+            "source_forward_replay_action_effect_blockers": [],
             "source_forward_replay_numerical_proof_complete": True,
             "source_forward_replay_proof_status": (
                 "complete_numerical_source_forward_proof_present"

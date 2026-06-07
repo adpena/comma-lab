@@ -863,6 +863,99 @@ def test_hinerv_action_parseback_survival_runs_with_program_without_selection(
     )
 
 
+def test_hinerv_action_comparison_writer_attaches_lowering_race(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.analysis import hinerv_target_region_action_comparison as comparison_mod
+
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive")
+    action_id = "e" * 64
+    parseback = {
+        "schema": "hi_nerv_target_region_action_parseback_survival.v1",
+        "action_id": action_id,
+        "archive_path": archive.as_posix(),
+        "archive_sha256": runner_mod._sha256_file(archive),
+        "archive_bytes": archive.stat().st_size,
+        "survived": True,
+        "parseback_survived": True,
+        "inflate_survived": True,
+        "expected_support_sha256": "same-support",
+        "blockers": [],
+    }
+    artifact_dict = {
+        "archive_path": archive.as_posix(),
+        "action_id": action_id,
+        "target_region_wall_normal_lift": {"action_id": action_id},
+        "substrate_artifact_metadata": {"score_aware_training": {}},
+    }
+
+    def fake_build_comparison(
+        archive_path,
+        *,
+        survival_receipt,
+        runner_report=None,
+        action_id=None,
+    ):
+        assert Path(archive_path) == archive
+        assert survival_receipt is parseback
+        assert runner_report is artifact_dict
+        assert action_id == "e" * 64
+        return {
+            "schema": "hi_nerv_target_region_action_sidecar_backend_comparison.v1",
+            "action_id": action_id,
+            "archive_path": archive.as_posix(),
+            "lowering_race": {
+                "schema": "hi_nerv_target_region_action_lowering_race.v1",
+                "action_id": action_id,
+                "same_support_as_direct_teacher": True,
+                "best_lowering": "pose_compensated_composite",
+                "first_failing_surface": "none",
+                "verdict": {
+                    "schema": "tac.evaluator_action_lowering_verdict.v1",
+                    "action_id": action_id,
+                    "best_lowering": "pose_compensated_composite",
+                    "first_failing_surface": "none",
+                    "authority": "inflate_raw",
+                    "delta_score_total": -0.01,
+                },
+                "candidate_count": 2,
+                "promotion_eligible": False,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "sidecar_encoding_candidates": [],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        comparison_mod,
+        "build_hinerv_target_region_action_comparison_from_archive",
+        fake_build_comparison,
+    )
+
+    report = runner_mod._write_hi_nerv_target_region_action_comparison_report(
+        archive_resolution={"archive_path": archive.as_posix()},
+        output_dir=tmp_path,
+        artifact_dict=artifact_dict,
+        parseback_survival=parseback,
+    )
+
+    assert report is not None
+    assert report["lowering_race"]["best_lowering"] == "pose_compensated_composite"
+    assert artifact_dict["target_region_action_lowering_race"]["action_id"] == action_id
+    assert Path(artifact_dict["target_region_action_comparison_path"]).is_file()
+    assert (
+        artifact_dict["substrate_artifact_metadata"]["score_aware_training"][
+            "target_region_action_lowering_race"
+        ]["best_lowering"]
+        == "pose_compensated_composite"
+    )
+
+
 def test_hinerv_action_parseback_survival_blocks_archive_custody_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -937,6 +1030,14 @@ def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> N
             "support_encoding": "packbits",
             "support_encoded_bytes": 2,
         },
+        "direct_seg_wall_oracle": {
+            "support_sha256": "mask-support",
+            "support_hash_domain": "bool_mask_bhw",
+            "archive_executable_support_sha256": "valid-support",
+            "archive_executable_support_hash_domain": (
+                "target_region_action_coordinates_v1"
+            ),
+        },
         "accepted": True,
         "target_support_moved": True,
         "exact_delta_score_nonrate": -0.1,
@@ -964,6 +1065,8 @@ def test_hinerv_action_program_selection_ignores_unrelated_artifact_decoy() -> N
     assert selection is not None
     assert selection["action_id"] == "e" * 64
     assert selection["target_region_action_support_sha256"] == "valid-support"
+    assert selection["direct_teacher_support_sha256"] == "valid-support"
+    assert selection["same_support_as_direct_teacher"] is True
 
 
 def test_hinerv_live_birth_survival_rows_fail_closed_on_missing_inputs(tmp_path: Path) -> None:

@@ -220,6 +220,49 @@ def test_hinerv_action_comparison_decomposes_receiver_survived_sidecar(tmp_path:
     assert any(row["status"] == "measured" for row in report["backend_ladder"])
 
 
+def test_hinerv_action_comparison_uses_archive_executable_direct_support(
+    tmp_path: Path,
+) -> None:
+    archive, action = _tiny_archive_with_action(tmp_path)
+    survival_path, runner_path = _receipts(tmp_path, archive, action)
+    runner = json.loads(runner_path.read_text(encoding="utf-8"))
+    support_sha = target_region_action_support_sha256([action])
+    direct = runner["target_region_wall_normal_lift"]["direct_teacher"]
+    direct["support_sha256"] = "b" * 64
+    direct["support_hash_domain"] = "bool_mask_bhw"
+    direct["archive_executable_support_sha256"] = support_sha
+    direct["archive_executable_support_hash_domain"] = (
+        "target_region_action_coordinates_v1"
+    )
+    direct["archive_executable_support_encoding"] = (
+        "target_region_action_coordinates_v1"
+    )
+    direct["archive_executable_support_cardinality"] = action.pixel_count
+    direct["archive_executable_support_encoded_bytes"] = action.yx.nbytes
+    runner_path.write_text(json.dumps(runner), encoding="utf-8")
+
+    report = build_hinerv_target_region_action_comparison_from_archive(
+        archive,
+        survival_receipt=survival_path,
+        runner_report=runner_path,
+    )
+
+    assert report["support_identity"]["same_as_direct_teacher"] is True
+    assert report["support_identity"]["direct_teacher_support_sha256"] == support_sha
+    assert report["support_identity"]["direct_teacher_mask_support_sha256"] == "b" * 64
+    assert report["support_identity"]["direct_teacher_comparison_hash_domain"] == (
+        "target_region_action_coordinates_v1"
+    )
+    current = report["sidecar_encoding_candidates"][0]
+    assert current["first_failed_surface"] is None
+    assert "direct_teacher_and_survived_sidecar_support_hashes_diverge" not in current[
+        "blockers"
+    ]
+    assert report["comparison"]["next_blocker"] == (
+        "optimize_sidecar_grammar_current_receiver_survives_backend_does_not"
+    )
+
+
 def test_hinerv_action_comparison_writes_report_and_action_effect_rows(tmp_path: Path) -> None:
     archive, action = _tiny_archive_with_action(tmp_path)
     survival_path, runner_path = _receipts(tmp_path, archive, action)

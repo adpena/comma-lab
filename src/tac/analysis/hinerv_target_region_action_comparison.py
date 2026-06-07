@@ -153,11 +153,8 @@ def build_hinerv_target_region_action_comparison(
     support_rows = _support_encoding_rows(program.actions, support_masks)
     action_rows = _action_encoding_rows(program.actions)
     byte_decomposition = _byte_decomposition(program)
-    direct_support_sha = _nested_first_text(
-        direct,
-        ("support_sha256",),
-        ("action_effect", "support_sha256"),
-    )
+    direct_support_identity = _direct_teacher_support_identity(direct)
+    direct_support_sha = direct_support_identity["comparison_support_sha256"]
     sidecar_support_mismatch = bool(direct_support_sha and direct_support_sha != support_sha256)
     support_identity_blockers = (
         ["direct_teacher_and_survived_sidecar_support_hashes_diverge"]
@@ -294,6 +291,15 @@ def build_hinerv_target_region_action_comparison(
         "support_identity": {
             "sidecar_support_sha256": support_sha256,
             "direct_teacher_support_sha256": direct_support_sha,
+            "direct_teacher_mask_support_sha256": direct_support_identity[
+                "mask_support_sha256"
+            ],
+            "direct_teacher_archive_executable_support_sha256": (
+                direct_support_identity["archive_executable_support_sha256"]
+            ),
+            "direct_teacher_comparison_hash_domain": direct_support_identity[
+                "comparison_hash_domain"
+            ],
             "same_as_direct_teacher": not sidecar_support_mismatch,
             "blockers": (
                 ["direct_teacher_and_survived_sidecar_support_hashes_diverge"]
@@ -769,11 +775,9 @@ def _lowering_race_verdict(
         "schema": EVALUATOR_ACTION_LOWERING_RACE_SCHEMA,
         "action_id": action_id,
         "support_sha256": support_sha256,
-        "direct_teacher_support_sha256": _nested_first_text(
-            direct_teacher,
-            ("support_sha256",),
-            ("action_effect", "support_sha256"),
-        ),
+        "direct_teacher_support_sha256": _direct_teacher_support_identity(direct_teacher)[
+            "comparison_support_sha256"
+        ],
         "same_support_as_direct_teacher": not sidecar_support_mismatch,
         "best_lowering": verdict["best_lowering"],
         "first_failing_surface": verdict["first_failing_surface"],
@@ -936,6 +940,30 @@ def _direct_teacher_from_wall(wall: Mapping[str, Any]) -> dict[str, Any]:
 
 def _backend_fit_from_wall(wall: Mapping[str, Any]) -> dict[str, Any]:
     return dict(_nested_mapping(wall, ("backend_fit",)))
+
+
+def _direct_teacher_support_identity(direct: Mapping[str, Any]) -> dict[str, str | None]:
+    archive_sha = _nested_first_text(
+        direct,
+        ("archive_executable_support_sha256",),
+        ("action_effect", "archive_executable_support_sha256"),
+    )
+    mask_sha = _nested_first_text(
+        direct,
+        ("support_sha256",),
+        ("action_effect", "support_sha256"),
+    )
+    comparison_sha = archive_sha or mask_sha
+    return {
+        "comparison_support_sha256": comparison_sha,
+        "comparison_hash_domain": (
+            "target_region_action_coordinates_v1"
+            if archive_sha
+            else ("bool_mask_bhw" if mask_sha else None)
+        ),
+        "archive_executable_support_sha256": archive_sha,
+        "mask_support_sha256": mask_sha,
+    }
 
 
 def _backend_realized(backend: Mapping[str, Any]) -> bool:

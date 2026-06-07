@@ -82,6 +82,7 @@ from tac.analysis.snerv_lf_payload_archive_recode import (
 )
 from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    validate_snerv_source_forward_proof_action_effect,
 )
 from tac.contest_eval_contract import build_score_allocation_contract
 from tac.optimization.recon_pixel_weight_surface import (
@@ -3813,13 +3814,20 @@ def _nonnegative_finite_float(value: Any) -> bool:
 def _snerv_source_forward_numerical_proof_complete(
     source_forward_evidence: Mapping[str, Any] | None,
 ) -> bool:
-    """Require actual official/MLX/receiver/parse-back proof, not booleans only."""
+    """Require typed source-forward action-effect proof, not legacy metadata."""
 
     if not _snerv_source_forward_evidence_active(source_forward_evidence):
         return False
     assert source_forward_evidence is not None
     status = source_forward_evidence.get("source_forward_replay_proof_status")
     if isinstance(status, Mapping):
+        action_effect = status.get("source_forward_proof_action_effect")
+        if isinstance(action_effect, Mapping):
+            validation = validate_snerv_source_forward_proof_action_effect(action_effect)
+            if validation.get("passed") is not True:
+                return False
+        elif status.get("source_forward_replay_action_effect_valid") is not True:
+            return False
         if status.get("source_forward_replay_numerical_proof_complete") is True:
             return True
         if status.get("source_forward_replay_required_fields_missing"):
@@ -3827,33 +3835,10 @@ def _snerv_source_forward_numerical_proof_complete(
         if status.get("source_forward_replay_invalid_fields"):
             return False
     proof = source_forward_evidence.get("source_forward_replay_proof")
-    if not isinstance(proof, Mapping):
-        return False
-    hash_fields = (
-        "official_torch_frame_hash",
-        "mlx_frame_hash",
-        "numpy_receiver_frame_hash",
-        "parseback_frame_hash",
-        "tub_output_2_hash",
-    )
-    numeric_fields = (
-        "max_abs_frame_delta_official_mlx",
-        "max_abs_yuv6_delta_official_numpy",
-        "seg_logit_linf_official_parseback",
-        "pose_linf_official_parseback",
-    )
-    tensor_group_fields = ("mfu_tensor_hashes", "hfr_tensor_hashes")
-    if any(not _looks_like_sha256(proof.get(field)) for field in hash_fields):
-        return False
-    if any(not _nonnegative_finite_float(proof.get(field)) for field in numeric_fields):
-        return False
-    for field in tensor_group_fields:
-        group = proof.get(field)
-        if not isinstance(group, Mapping) or not group:
-            return False
-        if any(not str(name) or not _looks_like_sha256(value) for name, value in group.items()):
-            return False
-    return True
+    if isinstance(proof, Mapping) and proof.get("schema") == SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA:
+        validation = validate_snerv_source_forward_proof_action_effect(proof)
+        return bool(validation.get("passed") is True)
+    return False
 
 
 def _hinerv_pr95_actuator_execution_evidence_from_feedback(

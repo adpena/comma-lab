@@ -4041,6 +4041,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 encode_target_region_actions_meta,
                 encode_target_region_actions_payload,
                 target_region_action_section_telemetry,
+                target_region_action_support_sha256,
             )
 
             oracle_pair_indices_np = np.asarray(idx, dtype=np.int64).reshape(-1)
@@ -4114,6 +4115,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     and "support_encoded_bytes" in action_section_telemetry
                     else None
                 )
+                action_support_sha256 = (
+                    target_region_action_support_sha256(action_records)
+                    if action_records
+                    else None
+                )
                 scorer_synthesis_teacher = optimizer_trace is not None
                 inverse_source = (
                     "support_projected_segnet_margin_vjp"
@@ -4167,6 +4173,16 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                         else "research_only_empty_action_mask"
                     ),
                     support_encoded_bytes=action_support_encoded_bytes,
+                    archive_executable_support_sha256=action_support_sha256,
+                    archive_executable_support_encoding=(
+                        "target_region_action_coordinates_v1"
+                        if action_records
+                        else None
+                    ),
+                    archive_executable_support_cardinality=(
+                        int(action_pixel_count) if action_records else None
+                    ),
+                    archive_executable_support_encoded_bytes=action_support_encoded_bytes,
                     inverse_source=inverse_source,
                     inverse_basis=inverse_basis,
                     uses_official_seg_preprocess=True,

@@ -1293,6 +1293,19 @@ def test_target_region_birth_fakequant_survival_requirement_controls_acceptance(
     assert direct_wall["schema"] == "tac.direct_seg_wall_oracle_receipt.v1"
     assert direct_wall["support_cardinality"] == synthesis["target_region_action_pixel_count"]
     assert len(direct_wall["support_sha256"]) == 64
+    assert direct_wall["support_hash_domain"] == "bool_mask_bhw"
+    assert direct_wall["archive_executable_support_sha256"] == (
+        synthesis["target_region_action_section_telemetry"]["support_sha256"]
+    )
+    assert direct_wall["archive_executable_support_hash_domain"] == (
+        "target_region_action_coordinates_v1"
+    )
+    assert direct_wall["archive_executable_support_cardinality"] == synthesis[
+        "target_region_action_pixel_count"
+    ]
+    assert direct_wall["archive_executable_support_encoded_bytes"] == synthesis[
+        "target_region_action_section_telemetry"
+    ]["support_encoded_bytes"]
     assert direct_wall["inverse_source"] == "support_projected_segnet_margin_vjp"
     assert direct_wall["inverse_basis"] == "support_projected_receiver_pixel_adam_ste"
     assert direct_wall["uses_official_seg_preprocess"] is True
