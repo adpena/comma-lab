@@ -2657,6 +2657,27 @@ def test_snerv_source_forward_rejects_nonidentical_output2_basis(
     )
 
     assert "snerv_full_source_forward_parity_missing" in verdict["blocking_evidence"]
+    assert (
+        "snerv_native_export_output2_source_identical_missing"
+        in verdict["blocking_evidence"]
+    )
+    assert (
+        "snerv_native_export_output2_boundary_not_source_identical:"
+        "DROP_OUTPUT2_USE_MFU_HFR_TUB_BASIS"
+        in verdict["blocking_evidence"]
+    )
+    assert (
+        "snerv_native_export_output2_fusion_not_payload_bound"
+        in verdict["blocking_evidence"]
+    )
+    assert (
+        "snerv_native_export_output2_not_consumed_by_receiver"
+        in verdict["blocking_evidence"]
+    )
+    assert (
+        "snerv_native_export_output2_frame_shape_mismatch"
+        in verdict["blocking_evidence"]
+    )
     assert any(
         item.endswith(
             "snerv_output2_boundary_not_source_identical:"
@@ -2666,6 +2687,35 @@ def test_snerv_source_forward_rejects_nonidentical_output2_basis(
     )
     assert any(
         item.endswith("snerv_source_forward_launch_gate_clearable_false")
+        for item in verdict["blocking_evidence"]
+    )
+    assert verdict["approved"] is False
+
+
+def test_snerv_native_export_requires_output2_boundary_row(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run"
+    row = _snerv_source_forward_action_row()
+    row.pop("output2_boundary_verdict")
+    row["launch_gate_clearable"] = False
+    row["passed"] = False
+    row["source_forward_replay_authority"] = False
+    _write(root / "proof.json", row)
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="snerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert "snerv_full_source_forward_parity_missing" in verdict["blocking_evidence"]
+    assert (
+        "snerv_native_export_output2_boundary_missing"
+        in verdict["blocking_evidence"]
+    )
+    assert any(
+        item.endswith("snerv_output2_boundary_verdict_missing")
         for item in verdict["blocking_evidence"]
     )
     assert verdict["approved"] is False

@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -49,6 +49,7 @@ from tac.analysis.inverse_scorer_actions import (
 from tac.analysis.receiver_surface_metrics import receiver_surface_target_support_breakdown
 from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
+    SOURCE_IDENTICAL,
     find_snerv_source_forward_proof_rows,
     validate_snerv_source_forward_proof_action_effect,
 )
@@ -253,6 +254,42 @@ def _rejected_live_birth_receipt_blockers(rows: list[dict[str, Any]]) -> list[st
                 for cause, active in sorted(causes.items()):
                     if active is True:
                         blockers.append(f"live_birth_rejection_cause:{cause}")
+    return _dedupe(blockers)
+
+
+def _snerv_native_export_output2_boundary_blockers(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    for row in rows:
+        boundary = row.get("output2_boundary_verdict")
+        if not isinstance(boundary, Mapping):
+            blockers.append("snerv_native_export_output2_boundary_missing")
+            continue
+        verdict = str(boundary.get("verdict") or "").strip()
+        if verdict != SOURCE_IDENTICAL:
+            blockers.append("snerv_native_export_output2_source_identical_missing")
+            blockers.append(
+                "snerv_native_export_output2_boundary_not_source_identical:"
+                f"{verdict or 'missing'}"
+            )
+        storage = boundary.get("archive_tub_output2_storage")
+        storage_map = storage if isinstance(storage, Mapping) else {}
+        if storage_map.get("receiver_executes_output2_fusion_from_payload") is not True:
+            blockers.append("snerv_native_export_output2_fusion_not_payload_bound")
+        if storage_map.get("receiver_frame_decode_consumes_output2") is not True:
+            blockers.append("snerv_native_export_output2_not_consumed_by_receiver")
+        if storage_map.get("receiver_output2_frame_shape_match") is not True:
+            blockers.append("snerv_native_export_output2_frame_shape_mismatch")
+        if any(
+            bool(storage_map.get(key))
+            for key in (
+                "shape_adapter_applied",
+                "output2_shape_adapter",
+                "receiver_output2_shape_adapter_applied",
+            )
+        ):
+            blockers.append("snerv_native_export_output2_shape_adapter_forbidden")
     return _dedupe(blockers)
 
 
@@ -1817,6 +1854,7 @@ def evaluate_nerv_long_run_launch_gate(
                     f"snerv_source_forward_proof_invalid:{blocker}"
                     for blocker in status["blockers"]
                 )
+        blockers.extend(_snerv_native_export_output2_boundary_blockers(proof_rows))
         if not valid_rows:
             blockers.append("snerv_full_source_forward_parity_missing")
             if proof_rows:
