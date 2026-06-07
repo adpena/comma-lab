@@ -1752,6 +1752,49 @@ def test_archive_export_charges_target_region_action_program(tmp_path: Path) -> 
     assert telemetry["target_region_actions"]["charged_as_hiv1_meta_blob"] is True
 
 
+def test_runner_selects_nested_support_moving_target_region_action() -> None:
+    from tools.run_compact_renderer_mlx_spine_runner import (
+        _select_target_region_action_program_from_birth_payload,
+    )
+
+    payload = {
+        "schema": "hi_nerv_target_region_birth_payload.v1",
+        "candidate_frontier_telemetry": {
+            "masked_residual_oracle": {
+                "candidates": [
+                    {
+                        "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                        "target_region_action_program_base64": "unsupported-but-cheap",
+                        "target_support_moved": False,
+                        "exact_delta_score_nonrate": -10.0,
+                        "target_region_action_payload_bytes": 1,
+                    },
+                    {
+                        "schema": "hi_nerv_target_region_masked_residual_oracle_candidate.v1",
+                        "target_region_action_program_base64": "support-moving",
+                        "target_support_moved": True,
+                        "exact_delta_score_nonrate": -0.25,
+                        "target_region_action_payload_bytes": 128,
+                        "target_region_action_pixel_count": 9,
+                        "admission_decision": {"exact_score_decision": "accept"},
+                    },
+                ],
+            },
+        },
+    }
+
+    program, selection = _select_target_region_action_program_from_birth_payload(payload)
+
+    assert program == "support-moving"
+    assert selection is not None
+    assert selection["candidate_count"] == 2
+    assert selection["exact_delta_score_nonrate"] == -0.25
+    assert selection["target_region_action_payload_bytes"] == 128
+    assert selection["target_region_action_pixel_count"] == 9
+    assert selection["promotion_eligible"] is False
+    assert selection["ready_for_exact_eval_dispatch"] is False
+
+
 def test_archive_portfolio_auto_selects_receiver_parity_surviving_codec(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
