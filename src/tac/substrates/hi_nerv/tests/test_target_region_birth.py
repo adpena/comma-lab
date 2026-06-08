@@ -2396,7 +2396,7 @@ def test_lset_certificate_causal_split_strong_lost_margin_blames_quantization() 
     )
     assert cert["lost_count"] == 3
     assert cert["lost_pixels_had_strong_fakequant_margin"] is True
-    assert cert["causal_hint"] == "export_quantization_or_selection_moved_won_pixels"
+    assert cert["causal_hint"] == "likely_quantization_or_export"
 
 
 def test_lset_certificate_causal_split_near_zero_lost_margin_blames_margin_safety() -> None:
@@ -2414,7 +2414,7 @@ def test_lset_certificate_causal_split_near_zero_lost_margin_blames_margin_safet
     )
     assert cert["lost_count"] == 3
     assert cert["lost_pixels_had_strong_fakequant_margin"] is False
-    assert cert["causal_hint"] == "margin_safety_pixels_were_near_zero_at_fakequant"
+    assert cert["causal_hint"] == "likely_margin_safety"
 
 
 def test_lset_certificate_empty_lset_when_parseback_loses_nothing() -> None:
@@ -2453,3 +2453,84 @@ def test_lset_certificate_reproduces_artifact_collapse_shape() -> None:
     assert cert["lost_count"] == 100
     # fakequant margin on lost was strong (+1.5) -> quantization/export, not safety.
     assert cert["lost_pixels_had_strong_fakequant_margin"] is True
+
+
+def test_lset_certificate_v2_hardening_fields_present_and_correct() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 5), dtype=np.float32)
+    # fakequant won pixels 0..3 (margin +2), pixel 4 lost (-1).
+    fq = _logits_for(np.array([[2.0, 2.0, 2.0, 2.0, -1.0]], dtype=np.float32))
+    # parseback retains 0,1 (+2); loses 2,3 (-1); 4 stays lost.
+    pb = _logits_for(np.array([[2.0, 2.0, -1.0, -1.0, -1.0]], dtype=np.float32))
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+        strong_margin_floor=0.1,
+    )
+    assert cert["schema"] == "hi_nerv_lset_subset_margin_certificate.v2"
+    # Hardening 2: floor recorded.
+    assert cert["strong_margin_floor"] == 0.1
+    # Hardening 3: parseback_won + fakequant_retained subsets.
+    assert cert["fakequant_won_count"] == 4
+    assert cert["parseback_won_count"] == 2
+    assert cert["fakequant_retained_count"] == 2  # pixels 0,1
+    assert cert["lost_count"] == 2  # pixels 2,3 (won at fq, lost at pb)
+    assert "fakequant_retained" in cert["evaluated_margins_by_subset"]
+    assert "parseback_won" in cert["evaluated_margins_by_subset"]
+    # Hardening 4: argmax-won counts present (here equal to margin-won, no ties).
+    assert cert["fakequant_argmax_won_count"] == 4
+    assert cert["parseback_argmax_won_count"] == 2
+    # Hardening 6: full lost-margin distribution.
+    dist = cert["lost_pixels_fakequant_margin_distribution"]
+    assert dist["count"] == 2
+    assert dist["fraction_ge_strong_floor"] == pytest.approx(1.0)  # lost were +2
+    assert dist["p50"] == pytest.approx(2.0)
+    # Hardening 5: advisory wording.
+    assert cert["causal_hint"] == "likely_quantization_or_export"
+    assert cert["causal_hint_is_advisory"] is True
+    assert cert["region_semantics"] == "region_mask_assumed_target_debt_component"
+
+
+def test_lset_certificate_originally_wrong_mask_restricts_win_sets() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 4), dtype=np.float32)
+    fq = _logits_for(np.array([[2.0, 2.0, 2.0, 2.0]], dtype=np.float32))  # all won
+    pb = _logits_for(np.array([[2.0, -1.0, -1.0, -1.0]], dtype=np.float32))
+    # Only pixels 1,2 were originally wrong; 0,3 excluded from win sets.
+    wrong = np.zeros((1, 1, 4), dtype=np.float32)
+    wrong[0, 0, 1] = 1.0
+    wrong[0, 0, 2] = 1.0
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+        originally_wrong_mask_bhw=wrong,
+    )
+    assert cert["region_semantics"] == "explicit_originally_wrong_component"
+    assert cert["base_pixel_count"] == 2
+    assert cert["fakequant_won_count"] == 2  # only 1,2 counted
+    assert cert["lost_count"] == 2  # 1,2 won at fq, lost at pb
+
+
+def test_lset_certificate_argmax_tie_differs_from_positive_margin() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 2), dtype=np.float32)
+    # Pixel 0: exact tie (class1 == class0 == 0) -> argmax picks class 0 (lower
+    # index) so NOT argmax-won, and margin == 0 so NOT positive-margin-won.
+    # Pixel 1: clear win (+1).
+    tie = _logits_for(np.array([[0.0, 1.0]], dtype=np.float32))
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=tie, fakequant_logits_bhwc=tie, parseback_logits_bhwc=tie,
+    )
+    # Both metrics agree here (1 won), but the fields are independently present.
+    assert cert["fakequant_won_count"] == 1
+    assert cert["fakequant_argmax_won_count"] == 1

@@ -461,6 +461,55 @@ def _target_won_mask(logits_bhwc: np.ndarray, class_index: int) -> np.ndarray:
     return (class_logit - impostor.max(axis=1)) > 0.0
 
 
+def _target_argmax_won_mask(logits_bhwc: np.ndarray, class_index: int) -> np.ndarray:
+    """Flat boolean mask where the target class wins by ARGMAX (scorer authority).
+
+    Distinct from ``_target_won_mask`` (strict positive margin): the official
+    SegNet distortion is argmax-based, so ties (``class_logit == max_other``)
+    count as argmax-won here but NOT as positive-margin-won.  Both are reported
+    so a certificate cannot conflate scorer authority with margin slack.
+    """
+
+    logits = np.asarray(logits_bhwc, dtype=np.float64)
+    class_count = int(logits.shape[-1])
+    flat = logits.reshape(-1, class_count)
+    return np.argmax(flat, axis=1) == int(class_index)
+
+
+def _lost_margin_distribution(
+    margins_over_lost: np.ndarray, *, strong_margin_floor: float
+) -> dict[str, Any]:
+    """Full margin distribution on the lost set (not a single percentile)."""
+
+    if margins_over_lost.size == 0:
+        return {
+            "count": 0,
+            "fraction_ge_0": None,
+            "fraction_ge_0p05": None,
+            "fraction_ge_strong_floor": None,
+            "fraction_ge_0p25": None,
+            "fraction_ge_0p5": None,
+            "p01": None,
+            "p05": None,
+            "p50": None,
+        }
+    m = np.asarray(margins_over_lost, dtype=np.float64)
+    n = float(m.size)
+    return {
+        "count": int(m.size),
+        "fraction_ge_0": float(np.count_nonzero(m >= 0.0) / n),
+        "fraction_ge_0p05": float(np.count_nonzero(m >= 0.05) / n),
+        "fraction_ge_strong_floor": float(
+            np.count_nonzero(m >= float(strong_margin_floor)) / n
+        ),
+        "fraction_ge_0p25": float(np.count_nonzero(m >= 0.25) / n),
+        "fraction_ge_0p5": float(np.count_nonzero(m >= 0.5) / n),
+        "p01": float(np.percentile(m, 1.0)),
+        "p05": float(np.percentile(m, 5.0)),
+        "p50": float(np.median(m)),
+    }
+
+
 def _margins_over_subset(
     evaluated_logits_bhwc: np.ndarray,
     class_index: int,
@@ -495,6 +544,7 @@ def lset_subset_conditioned_margin_certificate(
     fakequant_logits_bhwc: np.ndarray,
     parseback_logits_bhwc: np.ndarray,
     live_logits_bhwc: np.ndarray | None = None,
+    originally_wrong_mask_bhw: np.ndarray | None = None,
     strong_margin_floor: float = 0.1,
 ) -> dict[str, Any]:
     """Subset-conditioned target-margin certificate (the L-set money metric).
@@ -503,15 +553,22 @@ def lset_subset_conditioned_margin_certificate(
     a negative p10 is expected when many region pixels remain unsolved, even if
     thousands were won.  The decisive subset is ``L = W_fake \\ W_pb`` — pixels
     the FAKEQUANT surface won but the PARSE-BACK surface lost.  Reporting the
-    EVALUATED surface's margins over L answers GPT's causal split:
+    EVALUATED surface's margins over L answers the causal split:
 
     * if the lost pixels had STRONG positive fakequant margin and then died,
-      the cause is export/quantization/selection (a section moved them);
-    * if they were already near zero at fakequant, the cause is margin safety.
+      the cause is LIKELY export/quantization/selection (a section moved them);
+    * if they were already near zero at fakequant, the cause is LIKELY margin
+      safety.
 
-    All masks are intersected with the region.  Subsets with zero pixels return
-    ``None`` margins (e.g. an empty L means parse-back lost nothing — itself a
-    meaningful, non-error outcome).
+    ``causal_hint`` is ADVISORY ONLY — the causal verdict must come from the
+    section-shadow ablation or sidecar-scorer rows, because a section commutator
+    can make every single-surface hint misleading.
+
+    ``originally_wrong_mask_bhw`` restricts the win sets to the target-debt
+    component (``target==class & candidate!=class``); pass it when the region
+    mask is not guaranteed debt-only.  All masks are intersected with the
+    region.  Subsets with zero pixels return ``None`` margins (an empty L means
+    parse-back lost nothing — a meaningful, non-error outcome).
     """
 
     region = np.asarray(region_mask_bhw) > 0.0
@@ -527,46 +584,93 @@ def lset_subset_conditioned_margin_certificate(
                 f"{name}_logits BHW must match region mask; got "
                 f"{np.asarray(logits).shape[:3]} vs {region.shape}"
             )
-    w_fake = _target_won_mask(fakequant_logits_bhwc, cls) & region_flat
-    w_pb = _target_won_mask(parseback_logits_bhwc, cls) & region_flat
+    # Optional debt-only restriction (won-pixel sets are over originally-wrong).
+    if originally_wrong_mask_bhw is not None:
+        wrong = np.asarray(originally_wrong_mask_bhw) > 0.0
+        if wrong.shape != region.shape:
+            raise ValueError("originally_wrong_mask BHW must match region mask")
+        base_flat = region_flat & wrong.reshape(-1)
+        region_semantics = "explicit_originally_wrong_component"
+    else:
+        base_flat = region_flat
+        region_semantics = "region_mask_assumed_target_debt_component"
+
+    w_fake = _target_won_mask(fakequant_logits_bhwc, cls) & base_flat
+    w_pb = _target_won_mask(parseback_logits_bhwc, cls) & base_flat
     l_set = w_fake & ~w_pb  # fakequant-won AND parse-back-lost
+    fakequant_retained = w_fake & w_pb
     subsets: dict[str, np.ndarray] = {
         "all_target_region": region_flat,
         "fakequant_won": w_fake,
+        "parseback_won": w_pb,
+        "fakequant_retained": fakequant_retained,
         "fakequant_won_but_parseback_lost": l_set,
     }
     if live_logits_bhwc is not None:
         if np.asarray(live_logits_bhwc).shape[:3] != region.shape:
             raise ValueError("live_logits BHW must match region mask")
-        subsets["live_won"] = _target_won_mask(live_logits_bhwc, cls) & region_flat
+        subsets["live_won"] = _target_won_mask(live_logits_bhwc, cls) & base_flat
     margins = {
         subset: _margins_over_subset(evaluated_logits_bhwc, cls, mask)
         for subset, mask in subsets.items()
     }
     # The fakequant margin of the LOST pixels is the causal disambiguator.
     fakequant_margin_on_lost = _margins_over_subset(fakequant_logits_bhwc, cls, l_set)
-    # "Strong" means meaningfully above the wall, not merely positive: a lost
-    # pixel that sat at +0.01 at fakequant was a margin-safety casualty, not a
-    # pixel that quantization/export actively moved.
+    fakequant_margin_on_retained = _margins_over_subset(
+        fakequant_logits_bhwc, cls, fakequant_retained
+    )
+    # Full distribution of the LOST pixels' fakequant margins (not one p50).
+    fq_flat = np.asarray(fakequant_logits_bhwc, dtype=np.float64).reshape(
+        -1, int(np.asarray(fakequant_logits_bhwc).shape[-1])
+    )
+    if int(np.count_nonzero(l_set)) > 0:
+        lost_chosen = fq_flat[l_set]
+        lost_class = lost_chosen[:, cls]
+        lost_imp = np.copy(lost_chosen)
+        lost_imp[:, cls] = -np.inf
+        lost_margins = lost_class - lost_imp.max(axis=1)
+    else:
+        lost_margins = np.empty((0,), dtype=np.float64)
+    lost_distribution = _lost_margin_distribution(
+        lost_margins, strong_margin_floor=float(strong_margin_floor)
+    )
+    # "Strong" means meaningfully above the wall, not merely positive.
     lost_were_strong = (
         fakequant_margin_on_lost["p50"] is not None
         and float(fakequant_margin_on_lost["p50"]) >= float(strong_margin_floor)
     )
+    # Argmax-won counts (scorer authority) alongside positive-margin-won counts.
+    fq_argmax_won = int(
+        np.count_nonzero(_target_argmax_won_mask(fakequant_logits_bhwc, cls) & base_flat)
+    )
+    pb_argmax_won = int(
+        np.count_nonzero(_target_argmax_won_mask(parseback_logits_bhwc, cls) & base_flat)
+    )
     return {
-        "schema": "hi_nerv_lset_subset_margin_certificate.v1",
+        "schema": "hi_nerv_lset_subset_margin_certificate.v2",
         "birth_class": cls,
+        "region_semantics": region_semantics,
+        "strong_margin_floor": float(strong_margin_floor),
         "region_pixel_count": int(np.count_nonzero(region_flat)),
+        "base_pixel_count": int(np.count_nonzero(base_flat)),
         "fakequant_won_count": int(np.count_nonzero(w_fake)),
         "parseback_won_count": int(np.count_nonzero(w_pb)),
+        "fakequant_retained_count": int(np.count_nonzero(fakequant_retained)),
         "lost_count": int(np.count_nonzero(l_set)),
+        "fakequant_argmax_won_count": fq_argmax_won,
+        "parseback_argmax_won_count": pb_argmax_won,
         "evaluated_margins_by_subset": margins,
         "fakequant_margin_on_lost_pixels": fakequant_margin_on_lost,
+        "fakequant_margin_on_retained_pixels": fakequant_margin_on_retained,
+        "lost_pixels_fakequant_margin_distribution": lost_distribution,
         "lost_pixels_had_strong_fakequant_margin": bool(lost_were_strong),
+        # ADVISORY ONLY (see docstring): not a causal verdict.
         "causal_hint": (
-            "export_quantization_or_selection_moved_won_pixels"
+            "likely_quantization_or_export"
             if lost_were_strong
-            else "margin_safety_pixels_were_near_zero_at_fakequant"
+            else "likely_margin_safety"
         ),
+        "causal_hint_is_advisory": True,
     }
 
 
