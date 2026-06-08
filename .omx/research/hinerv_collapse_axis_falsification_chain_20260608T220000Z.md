@@ -56,6 +56,32 @@ File/function: `tac.substrates.hi_nerv.inflate.build_model_from_archive` (wraps 
 `wrap_model_with_target_region_actions`); `tac.substrates.hi_nerv.archive_candidate.pack_archive_from_exported_state_dict`
 (my counterfactual pack) vs the runner's export/selection pack.
 
+## DECISIVE RESOLUTION (backend-vs-sidecar separation; GPT Case B confirmed)
+The runner emits TWO parseback rows per candidate; reading both resolves the "2":
+- `hi_nerv_birth_parseback_survival_{ema,live}.json`: `parseback_wrong_to_target = 2`,
+  margin p50 = -1.15 — this is the **BACKEND** HiNeRV decoder render with **NO sidecar**.
+  The backend birth is DEAD at parse-back (both ema AND live, int8 bytes). EMA-vs-live FALSIFIED.
+- `hi_nerv_target_region_action_parseback_survival.json`: the sidecar overwrites
+  **2286** pixels (`parseback_program_survived: true`, `total_action_pixels: 2286`,
+  `base64_text_bytes: 8128`) BUT `scorer_effect_survival_measured: false` /
+  `parseback_scorer_effect_survived: null` — **Rule #8: the sidecar overwrite's SegNet
+  effect over L is UNMEASURED.**
+
+So: my counterfactual int8 pack surviving at 10781 is on a DIFFERENT build path (sidecar-less +
+possibly different export snapshot), NOT the shipped program. The shipped program is
+{dead backend (2) + 2286-pixel sidecar rescue whose scorer effect is unmeasured}.
+
+### Reframed lowering race (the two operative unknowns, in priority order)
+1. **SIDECAR-SCORER ROW (top priority).** Does the 2286-pixel sidecar overwrite, after
+   parse-back + SegNet over L, win the region? If yes → the sidecar IS the shipped working
+   rescue (price its 8128 bytes by exact ΔS). If no → Rule #8 failure; the action does not
+   survive as a sidecar either. Spec: `.omx/research/hinerv_sidecar_scorer_effect_row_blocker_spec_20260608T210000Z.md`.
+2. **BUILD-PATH CODEC-UPGRADE CANDIDATE (secondary).** Why does the counterfactual int8
+   backend survive (10781) while the shipped int8 backend dies (2)? Suspects: H5b
+   coder-aware-qat export transform (nominal int8 but effective-aggressive), H5c the export
+   selection snapshot differs from the in-loop `model.export_state_dict()`. If a realizable
+   shipped backend can be made to survive, it competes with the sidecar by exact ΔS.
+
 ## DO NOT
 - name a guilty decoder section (H1 superseded; the selected codec is int8, faithful in the grid).
 - implement section QAT or decoder-codec QAT (int8 is faithful; int4 isn't what ships; the gap is build-path).
