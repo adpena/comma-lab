@@ -2534,3 +2534,110 @@ def test_lset_certificate_argmax_tie_differs_from_positive_margin() -> None:
     # Both metrics agree here (1 won), but the fields are independently present.
     assert cert["fakequant_won_count"] == 1
     assert cert["fakequant_argmax_won_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# MLX<->Torch state round-trip identity gate (precondition for section shadow)
+# ---------------------------------------------------------------------------
+
+
+@skip_no_mlx
+def test_mlx_torch_state_roundtrip_identity_byte_exact_and_render_parity() -> None:
+    """export -> import(fresh model) -> export must be byte-exact AND render-equal.
+
+    This is the GATE that must pass before any decoder-section shadow row is
+    trusted: it proves import_torch_state_dict is the EXACT inverse of
+    export_state_dict (per-section transposes correct), so a section swapped to
+    its archive-decoded value differs from live ONLY by the archive decode, not
+    by a mapping bug.  Render parity is required because tensor identity is
+    necessary but not sufficient (catches wrong attachment point / dead buffer).
+    """
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    for cfg_fn in (_smoke_cfg, _official_smoke_cfg_or_none):
+        cfg = cfg_fn()
+        if cfg is None:
+            continue
+        mx.random.seed(11)
+        src = HinervSubstrateMLX(cfg)
+        # Perturb a bit so we are not round-tripping a trivial init.
+        t0, t1 = _green_dominant_targets(cfg, mx)
+        src.initialize_output_head_bias_from_targets(t0, t1)
+        src_state = src.export_state_dict()
+
+        mx.random.seed(999)  # DIFFERENT init so import must actually overwrite
+        dst = HinervSubstrateMLX(cfg)
+        applied = dst.import_torch_state_dict(src_state, strict=True)
+        assert len(applied) == len(src_state)  # every key consumed
+        dst_state = dst.export_state_dict()
+
+        # Byte/numeric identity over every exported key.
+        assert set(dst_state) == set(src_state)
+        for k in src_state:
+            assert np.array_equal(np.asarray(src_state[k]), np.asarray(dst_state[k])), k
+
+        # Render parity: same frames out of both models.
+        idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+        a = np.asarray(src(idx), dtype=np.float32)
+        b = np.asarray(dst(idx), dtype=np.float32)
+        assert a.shape == b.shape
+        assert float(np.max(np.abs(a - b))) == 0.0
+
+
+@skip_no_mlx
+def test_import_torch_state_dict_section_scoped_only_touches_named_section() -> None:
+    """A one-section import must change ONLY that section's exported tensors."""
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _smoke_cfg()
+    mx.random.seed(11)
+    src = HinervSubstrateMLX(cfg)
+    src_state = src.export_state_dict()
+
+    mx.random.seed(999)
+    dst = HinervSubstrateMLX(cfg)
+    before = dst.export_state_dict()
+    applied = dst.import_torch_state_dict(src_state, sections=("head_rgb_1",), strict=False)
+    after = dst.export_state_dict()
+
+    assert applied == sorted(k for k in src_state if k.startswith("head_rgb_1"))
+    for k in after:
+        if k.startswith("head_rgb_1"):
+            assert np.array_equal(np.asarray(after[k]), np.asarray(src_state[k])), k
+        else:
+            # untouched sections stay at dst's own (different) values
+            assert np.array_equal(np.asarray(after[k]), np.asarray(before[k])), k
+
+
+def _official_smoke_cfg_or_none():
+    # A config that DOES exercise feature grids + convnext sections, so the
+    # round-trip identity is proven on the conv/proj/transpose-bearing modules
+    # the decoder-section ablation will actually shadow (NOT swallowed/skipped).
+    from tac.substrates.hi_nerv.architecture import HinervConfig
+
+    return HinervConfig(
+        latent_dim_coarse=3,
+        latent_dim_mid=4,
+        latent_dim_fine=5,
+        embed_dim=8,
+        initial_grid_h=2,
+        initial_grid_w=3,
+        decoder_channels=(7, 6),
+        sin_frequency=10.0,
+        num_upsample_blocks=2,
+        mid_injection_block_index=0,
+        fine_injection_block_index=1,
+        num_pairs=3,
+        output_height=8,
+        output_width=12,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=3,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )

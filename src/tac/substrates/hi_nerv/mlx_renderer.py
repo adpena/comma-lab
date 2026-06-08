@@ -7441,6 +7441,105 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             out[f"{head_name}.bias"] = np.asarray(head.bias, dtype=np.float32).copy()
         return out
 
+    def import_torch_state_dict(
+        self,
+        state: Mapping[str, Any],
+        *,
+        sections: Sequence[str] | None = None,
+        strict: bool = True,
+    ) -> list[str]:
+        """Load a PyTorch-layout state_dict back into the MLX modules.
+
+        EXACT structural inverse of :meth:`export_state_dict`: conv/proj/head
+        weights are ``transpose(0, 2, 3, 1)`` (the inverse of export's
+        ``(0, 3, 1, 2)``); latents / Linear / norm / gamma are identity.  This
+        is the mapping the decoder-section shadow ablation depends on; it MUST
+        round-trip byte-exact (see the round-trip identity test) before any
+        section-shadow row is trusted, because a wrong inverse transpose would
+        silently fabricate or absolve a "guilty section".
+
+        ``sections`` optionally restricts the load to a set of top-level
+        section prefixes (e.g. ``("head_rgb_1",)`` for a one-section shadow);
+        ``None`` loads every key present.  Returns the sorted list of applied
+        torch keys.  With ``strict`` (default) a key whose target module does
+        not exist raises; otherwise it is skipped.
+        """
+
+        _require_mlx()
+
+        def _want(key: str) -> bool:
+            if sections is None:
+                return True
+            return any(key == s or key.startswith(f"{s}.") for s in sections)
+
+        applied: list[str] = []
+
+        def _set_array(attr_name: str, key: str) -> None:
+            if key in state and _want(key):
+                setattr(self, attr_name, mx.array(np.asarray(state[key], dtype=np.float32)))  # type: ignore[union-attr]
+                applied.append(key)
+
+        def _update_linear(module: Any, prefix: str) -> None:
+            wk, bk = f"{prefix}.weight", f"{prefix}.bias"
+            if wk in state and _want(wk):
+                module.update({"weight": mx.array(np.asarray(state[wk], dtype=np.float32))})  # type: ignore[union-attr]
+                applied.append(wk)
+            if bk in state and _want(bk):
+                module.update({"bias": mx.array(np.asarray(state[bk], dtype=np.float32))})  # type: ignore[union-attr]
+                applied.append(bk)
+
+        def _update_conv_oihw(module: Any, prefix: str) -> None:
+            # torch (O, I, H, W) -> MLX (O, H, W, I): inverse of export (0,3,1,2).
+            wk, bk = f"{prefix}.weight", f"{prefix}.bias"
+            if wk in state and _want(wk):
+                w = np.transpose(np.asarray(state[wk], dtype=np.float32), (0, 2, 3, 1)).copy()
+                module.update({"weight": mx.array(w)})  # type: ignore[union-attr]
+                applied.append(wk)
+            if bk in state and _want(bk):
+                module.update({"bias": mx.array(np.asarray(state[bk], dtype=np.float32))})  # type: ignore[union-attr]
+                applied.append(bk)
+
+        _set_array("latents_coarse", "latents_coarse")
+        _set_array("latents_mid", "latents_mid")
+        _set_array("latents_fine", "latents_fine")
+        _update_linear(self.latent_embed, "latent_embed")
+        for i, block in enumerate(self.blocks):
+            _update_conv_oihw(block.conv, f"blocks.{i}.conv")
+        if bool(self.cfg.use_hierarchical_feature_grid):
+            for i, grid_module in enumerate(self.feature_grids):
+                for level in range(len(grid_module.grids)):
+                    key = f"feature_grids.{i}.grids.{level}"
+                    if key in state and _want(key):
+                        grid_module.grids[level] = mx.array(  # type: ignore[union-attr]
+                            np.asarray(state[key], dtype=np.float32)
+                        )
+                        applied.append(key)
+                _update_conv_oihw(grid_module.proj, f"feature_grids.{i}.proj")
+        if bool(self.cfg.use_convnext_blocks):
+            for i, block in enumerate(self.convnext_blocks):
+                _update_conv_oihw(block.dwconv, f"convnext_blocks.{i}.dwconv")
+                _update_linear(block.norm, f"convnext_blocks.{i}.norm")
+                _update_conv_oihw(block.pwconv1, f"convnext_blocks.{i}.pwconv1")
+                _update_conv_oihw(block.pwconv2, f"convnext_blocks.{i}.pwconv2")
+                gk = f"convnext_blocks.{i}.gamma"
+                if gk in state and _want(gk):
+                    block.update({"gamma": mx.array(np.asarray(state[gk], dtype=np.float32))})  # type: ignore[union-attr]
+                    applied.append(gk)
+        _update_linear(self.mid_injector.proj, "mid_injector.proj")
+        _update_linear(self.fine_injector.proj, "fine_injector.proj")
+        _update_conv_oihw(self.head_rgb_0, "head_rgb_0")
+        _update_conv_oihw(self.head_rgb_1, "head_rgb_1")
+        mx.eval(self.parameters())  # type: ignore[union-attr]
+
+        if strict and sections is None:
+            missing = sorted(set(state) - set(applied))
+            if missing:
+                raise ValueError(
+                    f"import_torch_state_dict (strict): {len(missing)} state keys "
+                    f"had no MLX target: {missing[:8]}"
+                )
+        return sorted(applied)
+
 
 __all__ = [
     "MLX_EVIDENCE_GRADE",
