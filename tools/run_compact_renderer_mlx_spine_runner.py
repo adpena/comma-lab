@@ -19622,6 +19622,46 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     summary["fakequant_survival_path"] = fake_path.as_posix()
     summary["fakequant_survived"] = fake_row.get("survived")
     summary["fakequant_blockers"] = [str(value) for value in fake_row.get("blockers") or []]
+
+    # ArchiveRoundtripMarginQAT shadow: the LATENT-quantizer-isolation surface
+    # MUST be emitted here, in-loop with the LIVE birth model present, because
+    # the live model state is not checkpointed (auto-cleaned).  It routes the
+    # latent sections through the exact HIV1 int16 archive decode while keeping
+    # decoder weights live, so the row sits faithfully between fakequant (live
+    # decoder-weight quant) and parse-back (full EMA archive).  Reuses the exact
+    # in-scope live-model variables so the surface is faithful by construction.
+    shadow_path = out / "hi_nerv_birth_archive_roundtrip_shadow_survival.json"
+    try:
+        shadow_row = dict(
+            measure_birth_survival(
+                model,
+                scorer_teacher=scorer_teacher,
+                pose_teacher=pose_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                surface="archive_roundtrip_shadow",
+                pair_indices=pair_indices,
+            )
+        )
+    except Exception as exc:
+        shadow_row = _blocked(
+            "hi_nerv_target_region_birth_survival_blocked.v1",
+            shadow_path,
+            "birth_survival_archive_roundtrip_shadow_remeasurement_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+    else:
+        shadow_row["artifact_path"] = shadow_path.as_posix()
+        shadow_row["producer"] = "hi_nerv_runner_live_birth_survival"
+        _write_json(shadow_path, shadow_row)
+    summary["archive_roundtrip_shadow_survival_path"] = shadow_path.as_posix()
+    summary["archive_roundtrip_shadow_survived"] = shadow_row.get("survived")
+    summary["archive_roundtrip_shadow_blockers"] = [
+        str(value) for value in shadow_row.get("blockers") or []
+    ]
+
     summary["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
     try:
         from tac.analysis.action_effect import ActionEffect, append_action_effect
