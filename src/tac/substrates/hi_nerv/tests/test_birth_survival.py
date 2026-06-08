@@ -1101,3 +1101,119 @@ def test_launch_gate_still_blocks_when_action_id_mismatches(tmp_path) -> None:
     blocking = verdict["blocking_evidence"]
     assert "l4_survival_action_id_mismatch:fakequant_mlx" in blocking
     assert "birth_survival_receipt_missing:fakequant_mlx" in blocking
+
+
+# ---------------------------------------------------------------------------
+# archive_roundtrip_shadow surface (latent-quantizer isolation)
+# ---------------------------------------------------------------------------
+
+
+@skip_no_mlx
+def test_archive_roundtrip_shadow_is_faithful_surface_not_blocked() -> None:
+    from tac.substrates.hi_nerv.birth_survival import FAITHFUL_SURVIVAL_SURFACES
+
+    # The shadow must be a FAITHFUL (measured) surface, never a BLOCKED stub.
+    assert "archive_roundtrip_shadow" in FAITHFUL_SURVIVAL_SURFACES
+    assert "archive_roundtrip_shadow" not in BLOCKED_SURVIVAL_SURFACES
+
+
+@skip_no_mlx
+def test_archive_roundtrip_shadow_routes_latents_fine_through_hiv1_and_restores() -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    assert payload["accepted"] is True
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    # NO-FAKE restore proof: snapshot latents_fine BEFORE the shadow call.
+    latents_before = np.asarray(model.latents_fine, dtype=np.float32).copy()
+
+    row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="archive_roundtrip_shadow",
+        pair_indices=idx,
+    )
+
+    assert row["schema"] == BIRTH_SURVIVAL_SCHEMA
+    assert row["surface"] == "archive_roundtrip_shadow"
+    # action_id COPIED from the live receipt (same-action proof), never recomputed.
+    assert row["action_id"] == payload["action_id"]
+    assert isinstance(row["survived"], bool)
+    # The shadow is a real re-measurement: a target-support count exists.
+    assert isinstance(row["region_hard_won_count"], int)
+    # surface_meta records exactly which latent sections were HIV1-routed + codec.
+    meta = row["surface_meta"]
+    assert meta["surface_kind"] == "hiv1_latent_archive_roundtrip_shadow"
+    assert meta["latent_sections"] == ["latents_fine"]
+    assert meta["latent_codec"] == "int16_raw"
+    assert meta["decoder_weights_live"] is True
+    assert "latents_fine" in meta["section_hiv1_roundtrip_max_abs_delta"]
+    # The HIV1 int16 decode delta is a real, finite, non-negative number.
+    delta = float(meta["section_hiv1_roundtrip_max_abs_delta"]["latents_fine"])
+    assert delta >= 0.0 and np.isfinite(delta)
+
+    # NO-FAKE restore proof: latents_fine is bit-identical after the shadow call
+    # (the shadow only replaces the FORWARD value, then restores the original).
+    latents_after = np.asarray(model.latents_fine, dtype=np.float32)
+    assert np.array_equal(latents_before, latents_after)
+
+    # Custody: no nested authority/readiness keys anywhere in the row.
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & set(row))
+
+
+@skip_no_mlx
+def test_archive_roundtrip_shadow_is_retention_gated_with_named_collapse() -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="archive_roundtrip_shadow",
+        pair_indices=idx,
+    )
+    # The shadow is retention-required: when scorer effect collapses under the
+    # HIV1 latent quantizer, the row must FAIL CLOSED naming this exact surface,
+    # never silently pass. When it survives, no collapse blocker may appear.
+    if not row["survived"]:
+        assert (
+            "hinerv_birth_archive_roundtrip_shadow_scorer_effect_collapse"
+            in row["blockers"]
+            or row["first_failed_surface"] is not None
+        )
+    else:
+        assert (
+            "hinerv_birth_archive_roundtrip_shadow_scorer_effect_collapse"
+            not in row.get("blockers", [])
+        )
+    # A target-margin certificate (p10) is always emitted for the gated surface.
+    assert "target_margin_p10" in row or "target_margin_certificate" in row
+
+
+@skip_no_mlx
+def test_archive_roundtrip_shadow_rejects_missing_latent_section() -> None:
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    with pytest.raises(BirthSurvivalError, match="no latent section"):
+        measure_birth_survival(
+            model,
+            scorer_teacher=teacher,
+            target_labels=labels_np,
+            live_birth_payload=payload,
+            surface="archive_roundtrip_shadow",
+            pair_indices=idx,
+            latent_sections=("latents_does_not_exist",),
+        )

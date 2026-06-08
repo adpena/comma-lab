@@ -56,6 +56,7 @@ from scipy import ndimage
 
 from tac.contest_eval_contract import CAMERA_SIZE_WH, RGB_CHANNELS, SEQ_LEN
 from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
+from tac.substrates.hi_nerv.archive import hiv1_quantize_dequantize_for_training
 from tac.substrates.hi_nerv.target_region_birth import region_margin_stats
 
 # Mirror the gate's canonical schema strings exactly (the gate is the contract).
@@ -69,8 +70,15 @@ TARGET_MARGIN_SAFETY_FLOOR = 0.0
 # Surfaces this producer can re-measure faithfully without an archive/inflate
 # runtime.  ``fakequant_mlx`` is the only L4 surface a scoped MLX producer can
 # stand up honestly; the other two need real packet bytes / a torch inflate.
-FAITHFUL_SURVIVAL_SURFACES = ("fakequant_mlx",)
+FAITHFUL_SURVIVAL_SURFACES = ("fakequant_mlx", "archive_roundtrip_shadow")
 BLOCKED_SURVIVAL_SURFACES = ("parseback_mlx", "inflated_torch_cpu")
+# The HIV1 latent quantizer mirror only supports latent sections (decoder-weight
+# sections are covered by the fakequant surface).  ``archive_roundtrip_shadow``
+# routes these named latent attributes through the exact int16 archive
+# encode/decode forward, keeping decoder weights live, so a collapse here
+# attributes the parse-back scorer-effect loss to the LATENT quantizer.
+DEFAULT_ARCHIVE_ROUNDTRIP_LATENT_SECTIONS = ("latents_fine",)
+DEFAULT_ARCHIVE_ROUNDTRIP_LATENT_CODEC = "int16_raw"
 _SURVIVAL_SURFACE_BLOCKER = {
     "parseback_mlx": "birth_survival_parseback_requires_archive_parse_back_runtime",
     "inflated_torch_cpu": "birth_survival_inflate_requires_torch_inflate_runtime",
@@ -344,6 +352,85 @@ def _region_support_on_surface(
         region_mask_np=region_mask_np,
         birth_class=birth_class,
     )
+
+
+def _archive_roundtrip_shadow_support(
+    model: Any,
+    *,
+    scorer_teacher: Any,
+    pair_indices: Any,
+    region_mask_np: np.ndarray,
+    birth_class: int,
+    latent_sections: Sequence[str],
+    latent_codec: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Measure the named region with latent sections routed through HIV1 decode.
+
+    Each named latent attribute is replaced (forward value only) by its exact
+    ``hiv1_quantize_dequantize_for_training`` archive-decoded value, the SAME
+    pairs are forwarded through the live decoder weights, and the region's
+    target support is recomputed.  This isolates the latent-quantizer
+    contribution to parse-back scorer-effect collapse from the decoder-weight
+    quantizer (which the ``fakequant_mlx`` surface covers).  MLX arrays are
+    immutable, so holding the original reference is a faithful snapshot; the
+    originals are restored before returning.
+    """
+
+    sections = tuple(str(name) for name in latent_sections)
+    if not sections:
+        raise BirthSurvivalError("archive_roundtrip_shadow requires at least one latent section")
+    snapshot: dict[str, Any] = {}
+    applied: list[str] = []
+    section_deltas: dict[str, float] = {}
+    try:
+        for name in sections:
+            original = getattr(model, name, None)
+            if original is None:
+                raise BirthSurvivalError(
+                    f"model has no latent section {name!r} for archive_roundtrip_shadow"
+                )
+            snapshot[name] = original
+            decoded = hiv1_quantize_dequantize_for_training(
+                original,
+                section_config={"section_id": name, "latent_codec": str(latent_codec)},
+            )
+            section_deltas[name] = _max_abs_delta(original, decoded)
+            setattr(model, name, decoded)
+            applied.append(name)
+        support = _region_support_on_surface(
+            model,
+            scorer_teacher=scorer_teacher,
+            pair_indices=pair_indices,
+            region_mask_np=region_mask_np,
+            birth_class=birth_class,
+        )
+    finally:
+        for name, original in snapshot.items():
+            setattr(model, name, original)
+    meta = {
+        "surface_kind": "hiv1_latent_archive_roundtrip_shadow",
+        "latent_sections": list(applied),
+        "latent_codec": str(latent_codec),
+        "section_hiv1_roundtrip_max_abs_delta": section_deltas,
+        "decoder_weights_live": True,
+        "contract": "latent_forward_routed_through_hiv1_archive_decode",
+    }
+    return support, meta
+
+
+def _max_abs_delta(original: Any, decoded: Any) -> float:
+    try:
+        import mlx.core as mx
+
+        delta = mx.max(mx.abs(decoded - original))  # type: ignore[union-attr]
+        mx.eval(delta)  # type: ignore[union-attr]
+        return float(np.asarray(delta, dtype=np.float32).reshape(-1)[0])
+    except Exception:
+        return float(
+            np.abs(
+                np.asarray(decoded, dtype=np.float32) - np.asarray(original, dtype=np.float32)
+            ).max()
+        )
 
 
 def _region_debt_units(region_unsolved: int, total_scored_pixels: int) -> float:
@@ -970,6 +1057,8 @@ def measure_birth_survival(
     surface: str,
     pair_indices: Any,
     fakequant_bits: int = 8,
+    latent_sections: Sequence[str] = DEFAULT_ARCHIVE_ROUNDTRIP_LATENT_SECTIONS,
+    latent_codec: str = DEFAULT_ARCHIVE_ROUNDTRIP_LATENT_CODEC,
     pose_d_pose_tolerance_abs: float = 1.0e-8,
     pose_d_pose_tolerance_rel: float = 5.0e-2,
 ) -> dict[str, Any]:
@@ -1015,35 +1104,55 @@ def measure_birth_survival(
     if idx.ndim != 1 or int(idx.shape[0]) <= 0:
         raise BirthSurvivalError("pair_indices must be a non-empty rank-1 tensor")
 
-    fq_snapshot = _fake_quant_config_snapshot(model)
-    try:
-        model.configure_decoder_fake_quant_forward(
-            enabled=True,
-            quant_bits=bits,
-            per_tensor_bits=None,
-            stage_controlled=False,
-        )
-        if not bool(getattr(model, "decoder_fake_quant_forward_enabled", False)):
-            raise BirthSurvivalError("fake-quant forward did not enable; survival surface would be unfaithful")
-        support = _region_support_on_surface(
+    surface_meta: dict[str, Any] | None = None
+    if surface_name == "archive_roundtrip_shadow":
+        # Latent-quantizer isolation: route the named latent sections through the
+        # exact HIV1 int16 archive decode, keep decoder weights live.  Pose
+        # compensation is the fakequant surface's responsibility; the shadow row
+        # records pose as not-exercised so its survived boolean is pure
+        # target-margin/scorer-effect on the latent quantizer.
+        support, surface_meta = _archive_roundtrip_shadow_support(
             model,
             scorer_teacher=scorer_teacher,
             pair_indices=idx,
             region_mask_np=region_mask_np,
             birth_class=birth_class,
+            latent_sections=latent_sections,
+            latent_codec=latent_codec,
         )
-        pose_compensation_survival = _pose_compensation_survival_on_surface(
-            model,
-            pose_teacher=pose_teacher,
-            target_rgb_0=target_rgb_0,
-            target_rgb_1=target_rgb_1,
-            pair_indices=idx,
-            live_pose_compensation=live_pose_compensation,
-            d_pose_tolerance_abs=float(pose_d_pose_tolerance_abs),
-            d_pose_tolerance_rel=float(pose_d_pose_tolerance_rel),
-        )
-    finally:
-        _restore_fake_quant_config(model, fq_snapshot)
+        pose_compensation_survival = {"required": False, "surface": surface_name}
+        bits_for_row: int | None = None
+    else:
+        fq_snapshot = _fake_quant_config_snapshot(model)
+        try:
+            model.configure_decoder_fake_quant_forward(
+                enabled=True,
+                quant_bits=bits,
+                per_tensor_bits=None,
+                stage_controlled=False,
+            )
+            if not bool(getattr(model, "decoder_fake_quant_forward_enabled", False)):
+                raise BirthSurvivalError("fake-quant forward did not enable; survival surface would be unfaithful")
+            support = _region_support_on_surface(
+                model,
+                scorer_teacher=scorer_teacher,
+                pair_indices=idx,
+                region_mask_np=region_mask_np,
+                birth_class=birth_class,
+            )
+            pose_compensation_survival = _pose_compensation_survival_on_surface(
+                model,
+                pose_teacher=pose_teacher,
+                target_rgb_0=target_rgb_0,
+                target_rgb_1=target_rgb_1,
+                pair_indices=idx,
+                live_pose_compensation=live_pose_compensation,
+                d_pose_tolerance_abs=float(pose_d_pose_tolerance_abs),
+                d_pose_tolerance_rel=float(pose_d_pose_tolerance_rel),
+            )
+        finally:
+            _restore_fake_quant_config(model, fq_snapshot)
+        bits_for_row = bits
 
     region_hard_won = int(support["region_hard_won"])
     net_target_support_delta = int(region_hard_won - initial_in_region_target)
@@ -1071,10 +1180,11 @@ def measure_birth_survival(
         region_unsolved=int(support["region_unsolved"]),
         region_debt_units=region_debt_units,
         margin_stats=support["stats"],
-        fakequant_bits=bits,
+        fakequant_bits=bits_for_row,
         total_scored_pixels=int(support["total_scored_pixels"]),
         worst_region=worst_region,
         pose_compensation_survival=pose_compensation_survival,
+        surface_meta=surface_meta,
     )
 
 
@@ -1590,7 +1700,7 @@ def _survival_row(
     )
     retention_floor = float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL)
     retention_required = bool(
-        surface_name in {"fakequant_mlx", "parseback_mlx", "inflated_torch_cpu"}
+        surface_name in {"fakequant_mlx", "archive_roundtrip_shadow", "parseback_mlx", "inflated_torch_cpu"}
     )
     scorer_effect_survived = bool(survived)
     first_failed_surface = None
@@ -1727,10 +1837,18 @@ def _survival_row(
         row["inflate_wrong_to_target"] = surface_wrong_to_target
         row["inflate_wrong_to_target_count"] = surface_wrong_to_target
         row["inflate_wrong_to_target_retention_ratio"] = retention_ratio
+    elif surface_name == "archive_roundtrip_shadow":
+        row["archive_roundtrip_shadow_scorer_effect_survived"] = bool(scorer_effect_survived)
+        row["archive_roundtrip_shadow_target_margin_certificate"] = margin_certificate
+        row["archive_roundtrip_shadow_wrong_to_target"] = surface_wrong_to_target
+        row["archive_roundtrip_shadow_wrong_to_target_count"] = surface_wrong_to_target
+        row["archive_roundtrip_shadow_wrong_to_target_retention_ratio"] = retention_ratio
     if fakequant_bits is not None:
         row["fakequant_bits"] = int(fakequant_bits)
     if surface_meta:
-        row.update(dict(surface_meta))
+        # Nested (not spread) so consumers read a single typed block and the
+        # row top-level schema stays stable across surfaces.
+        row["surface_meta"] = dict(surface_meta)
     return row
 
 
