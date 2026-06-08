@@ -1283,6 +1283,18 @@ def test_decoder_section_shadow_swaps_section_records_provenance_and_restores() 
     assert row["section_import_roundtrip_identity_verified"] is True
     # GPT hardening 2: per-row, real-artifact round-trip equality must hold.
     assert row["section_archive_decode_applied_exact"] is True
+    # Guilt split (GPT): the two distinct conditions are exposed separately.
+    assert "section_retention_collapses_l" in row
+    assert "section_margin_kills_l" in row
+    assert isinstance(row["section_collapses_l"], bool)
+    # Top-level L-set margin summaries are present (no nested-cert spelunking).
+    for key in (
+        "lset_shadow_margin_p10",
+        "lset_shadow_margin_p50",
+        "lset_fakequant_margin_p10",
+        "lset_fakequant_margin_p50",
+    ):
+        assert key in row
     # GPT hardening 3: the decision-forcing top-level fields are present and the
     # vs-fakequant retention is the one tied to the surface that DID win L.
     assert "shadow_retention_vs_live" in row
@@ -1370,6 +1382,41 @@ def test_decoder_section_shadow_zero_key_guard_fails_loud() -> None:
 
 
 @skip_no_mlx
+def test_decoder_section_shadow_rejects_duplicate_and_overlapping_sections() -> None:
+    """Pairwise/section-set shadows must reject duplicate or overlapping prefixes
+    (both would double-count or make the applied-key set ambiguous)."""
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        BirthSurvivalError,
+        measure_birth_decoder_section_shadow,
+    )
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    fakequant_logits = _teacher_logits_np(model, teacher, idx)
+    archive_decoded = {
+        k: np.asarray(v, dtype=np.float32).copy() for k, v in model.export_state_dict().items()
+    }
+
+    with pytest.raises(BirthSurvivalError, match="duplicate sections"):
+        measure_birth_decoder_section_shadow(
+            model, scorer_teacher=teacher, archive_decoded_state=archive_decoded,
+            section=("head_rgb_1", "head_rgb_1"), target_labels=labels_np,
+            live_birth_payload=payload, pair_indices=idx,
+            fakequant_logits_bhwc=fakequant_logits, parseback_logits_bhwc=fakequant_logits,
+        )
+    with pytest.raises(BirthSurvivalError, match="overlapping section prefixes"):
+        measure_birth_decoder_section_shadow(
+            model, scorer_teacher=teacher, archive_decoded_state=archive_decoded,
+            section=("head_rgb_1", "head_rgb_1.weight"), target_labels=labels_np,
+            live_birth_payload=payload, pair_indices=idx,
+            fakequant_logits_bhwc=fakequant_logits, parseback_logits_bhwc=fakequant_logits,
+        )
+
+
+@skip_no_mlx
 def test_decoder_section_shadow_applied_keys_must_equal_expected(monkeypatch) -> None:
     """GPT hardening 1: if the import applies a DIFFERENT key set than the live
     section's keys (the bug class of a future export/import key-set divergence),
@@ -1449,32 +1496,45 @@ def test_decoder_section_shadow_applied_must_roundtrip_equal_archive(monkeypatch
         )
 
 
-def test_section_shadow_collapses_l_requires_retention_AND_nonpositive_p10() -> None:
+def test_section_shadow_collapses_l_requires_retention_AND_nonpositive_L_margin() -> None:
     """The guilt decision-rule (GPT spec): a section collapses L iff BOTH its
     vs-fakequant retention drops below the survival floor AND the evaluated
-    target-margin p10 over the fakequant-won pixels is nonpositive.  Classifying
-    on either condition alone is the bug class this test extincts."""
-    from tac.substrates.hi_nerv.birth_survival import _section_shadow_collapses_l
+    target-margin MEDIAN over L = fakequant_won_but_parseback_lost is
+    nonpositive.  Classifying on either condition alone is the bug class this
+    test extincts."""
+    from tac.substrates.hi_nerv.birth_survival import (
+        _classify_section_guilt,
+        _section_shadow_collapses_l,
+    )
 
-    def _row(ret, p10):
+    def _row(ret, p50):
         return {
             "shadow_retention_vs_fakequant": ret,
             "lset_certificate": {
-                "evaluated_margins_by_subset": {"fakequant_won": {"p10": p10}}
+                "evaluated_margins_by_subset": {
+                    "fakequant_won_but_parseback_lost": {"p50": p50}
+                }
             },
         }
 
-    # Guilty: low retention AND nonpositive p10 (the parse-back collapse signature).
+    # Guilty: low retention AND nonpositive L-margin (the parse-back signature).
     assert _section_shadow_collapses_l(_row(0.004, -0.5)) is True
     assert _section_shadow_collapses_l(_row(0.0, 0.0)) is True
-    # Innocent: high retention (the section SURVIVES L) regardless of p10 sign.
+    # Innocent: high retention (the section SURVIVES L) regardless of margin sign.
     assert _section_shadow_collapses_l(_row(0.95, -0.5)) is False
-    # Innocent: low retention but POSITIVE p10 — margin over L is still safe, so
-    # the count drop is region-noise, not a wall crossing.  NOT a collapse.
+    # Innocent: low retention but POSITIVE L-margin — the lost pixels are still
+    # above the wall under this section alone, so the count drop is region-noise.
     assert _section_shadow_collapses_l(_row(0.10, 0.30)) is False
     # Fail-safe: missing evidence cannot be claimed as collapse.
     assert _section_shadow_collapses_l({"shadow_retention_vs_fakequant": None}) is False
     assert _section_shadow_collapses_l(_row(0.10, None)) is False
+
+    # The shared classifier returns the two DISTINCT conditions plus their AND.
+    assert _classify_section_guilt(0.004, -0.5) == (True, True, True)
+    assert _classify_section_guilt(0.004, 0.30) == (True, False, False)  # retention only
+    assert _classify_section_guilt(0.95, -0.5) == (False, True, False)  # margin only
+    # bool must not be mistaken for a numeric retention/margin.
+    assert _classify_section_guilt(True, True) == (False, False, False)
 
 
 def test_section_max_abs_delta_ranks_most_perturbed_section() -> None:

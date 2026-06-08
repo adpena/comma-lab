@@ -19662,6 +19662,51 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
         str(value) for value in shadow_row.get("blockers") or []
     ]
 
+    # Decoder-section guilt sweep: name the decoder section (or pairwise
+    # quantization commutator) whose EXACT archive decode maps the L-set
+    # L = W_fake \ W_parseback from positive fakequant target margin to
+    # nonpositive archive-decode margin.  In-loop because it needs the LIVE MLX
+    # model AND builds the birth's exact HIV1 archive from the live export
+    # (``model.cfg`` is the torch ``HinervConfig`` the MLX model was built from,
+    # so the packed archive geometry is faithful by construction).  This is the
+    # decision-grade row the lowering race consumes: backend section QAT vs joint
+    # QAT vs byte-priced sidecar vs discard.
+    guilt_path = out / "hi_nerv_birth_decoder_section_guilt_sweep.json"
+    try:
+        from tac.substrates.hi_nerv.birth_survival import (
+            measure_birth_decoder_section_guilt_sweep,
+        )
+
+        sweep_cfg = getattr(model, "cfg", None)
+        if sweep_cfg is None:
+            raise RuntimeError("live MLX model exposes no cfg for HIV1 archive pack")
+        guilt_row = dict(
+            measure_birth_decoder_section_guilt_sweep(
+                model,
+                cfg=sweep_cfg,
+                scorer_teacher=scorer_teacher,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                pair_indices=pair_indices,
+            )
+        )
+    except Exception as exc:
+        guilt_row = _blocked(
+            "hi_nerv_target_region_birth_survival_blocked.v1",
+            guilt_path,
+            "birth_survival_decoder_section_guilt_sweep_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+    else:
+        guilt_row["artifact_path"] = guilt_path.as_posix()
+        guilt_row["producer"] = "hi_nerv_runner_live_birth_survival"
+        _write_json(guilt_path, guilt_row)
+    summary["decoder_section_guilt_sweep_path"] = guilt_path.as_posix()
+    summary["decoder_section_guilt_verdict"] = guilt_row.get("section_guilt_verdict")
+    summary["decoder_section_guilty_singles"] = guilt_row.get("guilty_singles")
+    summary["decoder_section_guilty_commutators"] = guilt_row.get("guilty_commutators")
+    summary["decoder_section_guilt_next_operator"] = guilt_row.get("next_operator")
+
     summary["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
     try:
         from tac.analysis.action_effect import ActionEffect, append_action_effect

@@ -1609,6 +1609,19 @@ def measure_birth_decoder_section_shadow(
     )
     if not section_list:
         raise BirthSurvivalError("decoder-section shadow requires at least one section")
+    # Reject duplicate / overlapping prefixes — both would double-count or make
+    # the applied-key set ambiguous (e.g. "feature_grids" ⊃ "feature_grids.0").
+    if len(set(section_list)) != len(section_list):
+        raise BirthSurvivalError(
+            f"duplicate sections in decoder-section shadow: {section_list!r}"
+        )
+    for a in section_list:
+        for b in section_list:
+            if a != b and str(b).startswith(f"{a}."):
+                raise BirthSurvivalError(
+                    f"overlapping section prefixes in decoder-section shadow: "
+                    f"{a!r} is a prefix of {b!r}"
+                )
     section_label = "+".join(section_list)
     action_id = _live_action_id(live_birth_payload)
     worst_region = _live_worst_region(live_birth_payload)
@@ -1730,9 +1743,28 @@ def measure_birth_decoder_section_shadow(
             for k in sorted(applied_keys)
         ).encode("utf-8")
     ).hexdigest()
-    collapsed = (
-        retention is not None and retention < float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL)
-    )
+    # Top-level L-set margin summaries (GPT row hardening 6) so downstream sweep
+    # / queue logic does not spelunk nested certs.  The decisive subset is L =
+    # fakequant_won_but_parseback_lost: the EVALUATED (shadow) margin over L
+    # answers "does THIS section reproduce the parse-back collapse on exactly the
+    # pixels parse-back lost?"; the FAKEQUANT margin over L is the pre-collapse
+    # baseline (the height these pixels fell from).
+    by_subset = cert.get("evaluated_margins_by_subset") or {}
+    l_subset = by_subset.get("fakequant_won_but_parseback_lost") or {}
+    lset_shadow_margin_p10 = l_subset.get("p10")
+    lset_shadow_margin_p50 = l_subset.get("p50")
+    fq_on_lost = cert.get("fakequant_margin_on_lost_pixels") or {}
+    lset_fakequant_margin_p10 = fq_on_lost.get("p10")
+    lset_fakequant_margin_p50 = fq_on_lost.get("p50")
+    # GPT guilt split: retention-collapse (count over region) and margin-kill
+    # (severity over L) are DISTINCT failure modes.  A section is GUILTY only
+    # when BOTH fire — retention alone can be region-noise; a nonpositive L
+    # margin alone may be a near-wall section that still survives by count.
+    (
+        section_retention_collapses_l,
+        section_margin_kills_l,
+        collapsed,
+    ) = _classify_section_guilt(shadow_retention_vs_fakequant, lset_shadow_margin_p50)
     row = {
         "schema": DECODER_SECTION_SHADOW_ABLATION_SCHEMA,
         "family": "hinerv",
@@ -1755,12 +1787,18 @@ def measure_birth_decoder_section_shadow(
         "fakequant_wrong_to_target": fakequant_won,
         "parseback_wrong_to_target": parseback_won,
         "live_wrong_to_target": live_wrong,
+        "lset_shadow_margin_p10": lset_shadow_margin_p10,
+        "lset_shadow_margin_p50": lset_shadow_margin_p50,
+        "lset_fakequant_margin_p10": lset_fakequant_margin_p10,
+        "lset_fakequant_margin_p50": lset_fakequant_margin_p50,
         "region_score_debt_units": _region_debt_units(
             int(support["region_unsolved"]), int(support["total_scored_pixels"])
         ),
         "lset_certificate": cert,
         "causal_hint": cert["causal_hint"],
         "causal_hint_is_advisory": True,
+        "section_retention_collapses_l": bool(section_retention_collapses_l),
+        "section_margin_kills_l": bool(section_margin_kills_l),
         "section_collapses_l": bool(collapsed),
         "first_failed_surface": (
             f"{section_label}_archive_decode_shadow" if collapsed else None
@@ -1799,20 +1837,52 @@ def _section_max_abs_delta(
     return worst
 
 
+def _classify_section_guilt(
+    retention_vs_fakequant: Any,
+    lset_shadow_margin_p50: Any,
+) -> tuple[bool, bool, bool]:
+    """The guilt decision-rule, as two DISTINCT conditions plus their AND.
+
+    Returns ``(retention_collapses, margin_kills, collapses)``:
+
+    * ``retention_collapses`` — of the pixels fakequant won, the section retains
+      fewer than the survival floor (count failure over the region);
+    * ``margin_kills`` — the section's evaluated target margin over the L-set
+      ``L = W_fake \\ W_parseback`` has nonpositive median (severity failure: the
+      section reproduces the parse-back collapse on the exact lost pixels);
+    * ``collapses`` — BOTH fire.  Requiring both prevents region-noise count
+      drops, and near-wall sections that still survive by count, from being
+      mis-named as the guilty section.
+    """
+
+    retention_collapses = (
+        isinstance(retention_vs_fakequant, (int, float))
+        and not isinstance(retention_vs_fakequant, bool)
+        and float(retention_vs_fakequant) < float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL)
+    )
+    margin_kills = (
+        isinstance(lset_shadow_margin_p50, (int, float))
+        and not isinstance(lset_shadow_margin_p50, bool)
+        and float(lset_shadow_margin_p50) <= 0.0
+    )
+    return retention_collapses, margin_kills, (retention_collapses and margin_kills)
+
+
 def _section_shadow_collapses_l(row: Mapping[str, Any]) -> bool:
     """Guilt rule: an archive-decoded section COLLAPSES the L-set iff it both
-    drops vs-fakequant retention below the survival floor AND drives the 10th
-    percentile of the EVALUATED target margin over the fakequant-won pixels to
-    nonpositive.  Both conditions are required so a low-count noisy region does
-    not masquerade as a guilty section."""
+    drops vs-fakequant retention below the survival floor AND drives the median
+    EVALUATED target margin over L = ``fakequant_won_but_parseback_lost`` to
+    nonpositive.  Reads the shared ``_classify_section_guilt`` so the standalone
+    classifier and the primitive's row field can never diverge."""
 
     ret = row.get("shadow_retention_vs_fakequant")
-    if not isinstance(ret, (int, float)) or ret >= float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL):
-        return False
     cert = row.get("lset_certificate") or {}
-    fq_won = (cert.get("evaluated_margins_by_subset") or {}).get("fakequant_won") or {}
-    p10 = fq_won.get("p10")
-    return isinstance(p10, (int, float)) and float(p10) <= 0.0
+    l_subset = (
+        (cert.get("evaluated_margins_by_subset") or {}).get("fakequant_won_but_parseback_lost")
+        or {}
+    )
+    _, _, collapses = _classify_section_guilt(ret, l_subset.get("p50"))
+    return collapses
 
 
 def measure_birth_decoder_section_guilt_sweep(
@@ -1959,9 +2029,14 @@ def measure_birth_decoder_section_guilt_sweep(
                     live_logits_bhwc=live_logits,
                     strong_margin_floor=float(strong_margin_floor),
                 )
+                # A pair row is NOT a bigger single shadow — it is a commutator
+                # measurement.  It must carry the single-section baselines and the
+                # interaction term so a reader can see whether the pair collapsed
+                # L MORE than the two singles predict.
                 # retention_comm = ret(s,t) - ret(s) - ret(t) + ret(live);
                 # ret(live)=1.0 (won-surface vs itself).  Strongly negative =>
-                # the pair collapses far more than the sum of singles.
+                # the pair collapses far more than the sum of singles
+                # (joint-quantization collapse the singles each survive).
                 ret_st = pair_row.get("shadow_retention_vs_fakequant")
                 ret_s = next(
                     (r.get("shadow_retention_vs_fakequant") for r in section_rows if r["section"] == pair[0]),
@@ -1971,21 +2046,42 @@ def measure_birth_decoder_section_guilt_sweep(
                     (r.get("shadow_retention_vs_fakequant") for r in section_rows if r["section"] == pair[1]),
                     None,
                 )
+                pair_row["component_sections"] = list(pair)
+                pair_row["single_section_retention"] = {pair[0]: ret_s, pair[1]: ret_t}
+                pair_row["joint_retention_vs_fakequant"] = ret_st
                 if None not in (ret_st, ret_s, ret_t):
-                    pair_row["retention_commutator"] = (
-                        float(ret_st) - float(ret_s) - float(ret_t) + 1.0
-                    )
+                    comm = float(ret_st) - float(ret_s) - float(ret_t) + 1.0
+                    pair_row["retention_commutator"] = comm
+                    if comm <= -0.25:
+                        interp = "joint_quantization_collapse"
+                    elif comm >= 0.25:
+                        interp = "compensating_pair_one_section_offsets_other"
+                    else:
+                        interp = "approximately_additive_in_retention"
+                    pair_row["commutator_interpretation"] = interp
                 else:
                     pair_row["retention_commutator"] = None
+                    pair_row["commutator_interpretation"] = "indeterminate_missing_baseline"
                 commutator_rows.append(pair_row)
 
     guilty_commutators = [
         r["section"] for r in commutator_rows if _section_shadow_collapses_l(r)
     ]
 
-    fakequant_won = int((section_rows[0]["lset_certificate"] or {}).get("fakequant_won_count") or 0)
-    parseback_won = int((section_rows[0]["lset_certificate"] or {}).get("parseback_won_count") or 0)
-    l_set_size = int((section_rows[0]["lset_certificate"] or {}).get("lost_count") or 0)
+    cert0 = section_rows[0]["lset_certificate"] or {}
+    fakequant_won = int(cert0.get("fakequant_won_count") or 0)
+    parseback_won = int(cert0.get("parseback_won_count") or 0)
+    l_set_size = int(cert0.get("lost_count") or 0)
+    live_wrong = _live_wrong_to_target_count(live_birth_payload)
+    worst_region = _live_worst_region(live_birth_payload)
+    birth_class = int(worst_region["class_index"])
+    support_sha256 = (
+        str(live_birth_payload.get("support_sha256"))
+        if isinstance(live_birth_payload.get("support_sha256"), str)
+        else None
+    )
+    first_guilty_section = guilty_singles[0] if guilty_singles else None
+    first_guilty_pair = guilty_commutators[0] if guilty_commutators else None
 
     if guilty_singles:
         verdict = "single_section_collapses_l"
@@ -2016,18 +2112,32 @@ def measure_birth_decoder_section_guilt_sweep(
         "schema": DECODER_SECTION_GUILT_SWEEP_SCHEMA,
         "family": "hinerv",
         "action_id": str(action_id),
+        "support_sha256": support_sha256,
+        "birth_class": birth_class,
         "archive_sha256": archive_sha256,
         "archive_bytes": len(blob),
         "decoder_codec": str(decoder_codec),
         "latent_codec": str(latent_codec),
         "sections_swept": list(present),
+        "baseline": {
+            "live_wrong_to_target": live_wrong,
+            "fakequant_wrong_to_target": fakequant_won,
+            "parseback_wrong_to_target": parseback_won,
+        },
         "fakequant_won_count": fakequant_won,
         "parseback_won_count": parseback_won,
         "l_set_size": l_set_size,
         "guilty_singles": list(guilty_singles),
         "guilty_commutators": list(guilty_commutators),
+        "first_guilty_section": first_guilty_section,
+        "first_guilty_pair": first_guilty_pair,
         "section_guilt_verdict": verdict,
         "next_operator": next_operator,
+        "recommended_next_operator": next_operator,
+        # The backend section/commutator fix is only HALF the lowering race: the
+        # sidecar scorer-effect row may preserve L at lower exact byte-priced ΔS.
+        # The race cannot be decided until that row exists.
+        "sidecar_comparison_required": True,
         "section_rows": section_rows,
         "commutator_rows": commutator_rows,
         "human_visual_fidelity_objective": False,
