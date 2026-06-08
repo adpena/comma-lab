@@ -68,7 +68,23 @@ BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 BIRTH_SURVIVAL_BLOCKED_SCHEMA = "hi_nerv_target_region_birth_survival_blocked.v1"
 DECODER_SECTION_SHADOW_ABLATION_SCHEMA = "hi_nerv_decoder_section_shadow_ablation.v1"
 DECODER_SECTION_GUILT_SWEEP_SCHEMA = "hi_nerv_decoder_section_guilt_sweep.v1"
+ARCHIVE_CODEC_COUNTERFACTUAL_ABLATION_SCHEMA = "hi_nerv_archive_codec_counterfactual_ablation.v1"
 TARGET_MARGIN_CERTIFICATE_SCHEMA = "tac.target_margin_certificate.v1"
+# Exact contest score constants for codec economics (the only authority terms).
+# score = 100*d_seg + sqrt(10*d_pose) + 25*archive_bytes / CONTEST_ARCHIVE_RATE_DENOM.
+CONTEST_ARCHIVE_RATE_DENOM = 37_545_489
+CONTEST_NUM_EVAL_SAMPLES = 600
+# Default codec grid for the counterfactual ablation — a 2x2 that isolates the
+# DECODER axis (int8_mixed vs int4_mixed) from the LATENT axis (int16_raw vs
+# int8_brotli_q11).  The (int8_mixed, int8_brotli_q11) cell matches the real
+# selected archive's effective codec, so its parse-back reproduces the selected
+# collapse without the EMA-vs-live confound of parsing the EMA archive directly.
+DEFAULT_CODEC_COUNTERFACTUAL_GRID: tuple[tuple[str, str], ...] = (
+    ("int8_mixed", "int16_raw"),
+    ("int8_mixed", "int8_brotli_q11"),
+    ("int4_mixed", "int16_raw"),
+    ("int4_mixed", "int8_brotli_q11"),
+)
 MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL = 0.5
 TARGET_MARGIN_SAFETY_FLOOR = 0.0
 # Decoder-weight sections the shadow ablation can swap to their archive-decoded
@@ -2140,6 +2156,272 @@ def measure_birth_decoder_section_guilt_sweep(
         "sidecar_comparison_required": True,
         "section_rows": section_rows,
         "commutator_rows": commutator_rows,
+        "human_visual_fidelity_objective": False,
+        "authority": _NON_AUTHORITY_MARKER,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+
+
+def _estimate_seg_score_units_from_won_pixels(
+    won_pixels: int,
+    *,
+    num_eval_samples: int = CONTEST_NUM_EVAL_SAMPLES,
+    height: int = 384,
+    width: int = 512,
+) -> float:
+    """ESTIMATE the 100*d_seg score contribution of ``won_pixels`` SegNet pixels.
+
+    d_seg is the mean per-pixel argmax-disagreement over the scored frames, so a
+    pixel that crosses from wrong-to-target removes 1 / (num_eval_samples*H*W)
+    from d_seg, i.e. 100 / (num_eval_samples*H*W) score units.  This is an
+    ORDER-OF-MAGNITUDE estimate (a per-pair birth extrapolated to the full eval
+    sample count, ignoring Pose); the exact value needs a full paired eval.
+    """
+
+    denom = float(num_eval_samples) * float(height) * float(width)
+    if denom <= 0.0:
+        return 0.0
+    return 100.0 * float(won_pixels) / denom
+
+
+def _archive_rate_score_units(delta_bytes: int) -> float:
+    """Exact 25*Δbytes / CONTEST_ARCHIVE_RATE_DENOM rate-term score units."""
+
+    return 25.0 * float(delta_bytes) / float(CONTEST_ARCHIVE_RATE_DENOM)
+
+
+def _codec_parseback_region_logits(
+    blob: bytes,
+    *,
+    scorer_teacher: Any,
+    pair_indices_np: np.ndarray,
+) -> np.ndarray:
+    """Render a packed HIV1 blob through the exact torch receiver and return the
+    SegNet logits for the requested pairs (the parse-back authority surface)."""
+
+    import mlx.core as mx
+    import torch
+
+    from tac.substrates.hi_nerv.inflate import build_model_from_archive
+
+    _arc, _cfg, receiver = build_model_from_archive(blob, device="cpu")
+    idx_t = torch.tensor(pair_indices_np.tolist(), dtype=torch.long)
+    with torch.no_grad():
+        _rgb0, rgb1 = receiver(idx_t)
+    frame1_nhwc01 = np.transpose(np.asarray(rgb1.detach().cpu(), dtype=np.float32), (0, 2, 3, 1))
+    return _candidate_logits_np(
+        scorer_teacher, mx.array(frame1_nhwc01, dtype=mx.float32)  # type: ignore[union-attr]
+    )
+
+
+def measure_birth_archive_codec_counterfactual_ablation(
+    model: Any,
+    *,
+    cfg: Any,
+    scorer_teacher: Any,
+    target_labels: Any,
+    live_birth_payload: Mapping[str, Any],
+    pair_indices: Any,
+    codec_grid: Sequence[tuple[str, str]] = DEFAULT_CODEC_COUNTERFACTUAL_GRID,
+    selected_decoder_codec: str | None = None,
+    selected_latent_codec: str | None = None,
+    strong_margin_floor: float = 0.1,
+) -> dict[str, Any]:
+    """Price the archive CODEC choice at the hard-action level (the lowering race).
+
+    Packs the SAME live export across a (decoder_codec x latent_codec) grid,
+    renders each packed archive through the exact torch parse-back receiver, and
+    measures how many of the won birth pixels each codec preserves AND its archive
+    byte cost.  This isolates whether the parse-back collapse is driven by the
+    DECODER-weight codec or the LATENT codec, and prices the trade by the exact
+    contest terms: a codec that preserves ``P`` more wall-crossing pixels at
+    ``Δbytes`` more cost is worth it iff
+    ``100*ΔP/(samples*H*W) > 25*Δbytes/37_545_489``.
+
+    Every row is bound to its codec identity and tagged
+    ``section_decode_source="counterfactual_repack"`` — these are COUNTERFACTUAL
+    codec candidates packed from the LIVE export, NOT the selected-archive
+    section verdict.  Packing from the live export (rather than parsing the EMA
+    archive) removes the EMA-vs-live confound so the codec axis is isolated.
+
+    The won-surface reference is the LIVE render (the surface that wins all of L);
+    per codec the cert's ``parseback_won_count`` is that codec's preserved wins
+    and ``lost_count`` is the codec-specific L = W_live \\ W_codec.  Planning
+    control evidence only — no score claim (the score conversion is an estimate;
+    exact ΔS needs a full paired eval).
+    """
+
+    _require_mlx()
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    idx_np = np.asarray(pair_indices, dtype=np.int64).reshape(-1)
+    if idx_np.size <= 0:
+        raise BirthSurvivalError("pair_indices must be non-empty for codec ablation")
+    idx_mx = mx.array(idx_np.astype(np.int32))  # type: ignore[union-attr]
+    action_id = _live_action_id(live_birth_payload)
+    worst_region = _live_worst_region(live_birth_payload)
+    birth_class = int(worst_region["class_index"])
+    region_mask_np, _region_pixels = reconstruct_birth_region_mask(target_labels, worst_region)
+
+    live_export = {
+        k: np.asarray(v, dtype=np.float32) for k, v in model.export_state_dict().items()
+    }
+    live_logits = _candidate_logits_np(scorer_teacher, _predict_frame1_nhwc01(model, idx_mx))
+
+    rows: list[dict[str, Any]] = []
+    for decoder_codec, latent_codec in codec_grid:
+        try:
+            blob = pack_archive_from_exported_state_dict(
+                exported_state_dict=dict(live_export),
+                cfg=cfg,
+                decoder_codec=str(decoder_codec),
+                latent_codec=str(latent_codec),
+            )
+            if isinstance(blob, tuple):
+                blob = blob[0]
+            codec_logits = _codec_parseback_region_logits(
+                blob, scorer_teacher=scorer_teacher, pair_indices_np=idx_np
+            )
+        except Exception as exc:  # one unsupported codec must not sink the grid
+            rows.append(
+                {
+                    "decoder_codec": str(decoder_codec),
+                    "latent_codec": str(latent_codec),
+                    "section_decode_source": "counterfactual_repack",
+                    "blocked": True,
+                    "blocker": f"{type(exc).__name__}:{exc}",
+                }
+            )
+            continue
+        cert = lset_subset_conditioned_margin_certificate(
+            region_mask_bhw=region_mask_np,
+            birth_class=birth_class,
+            evaluated_logits_bhwc=codec_logits,
+            fakequant_logits_bhwc=live_logits,
+            parseback_logits_bhwc=codec_logits,
+            live_logits_bhwc=live_logits,
+            strong_margin_floor=float(strong_margin_floor),
+        )
+        won = int(cert.get("parseback_won_count") or 0)
+        live_won = int(cert.get("fakequant_won_count") or 0)
+        retention = None if live_won <= 0 else float(won) / float(live_won)
+        is_selected_equiv = (
+            selected_decoder_codec is not None
+            and selected_latent_codec is not None
+            and str(decoder_codec) == str(selected_decoder_codec)
+            and str(latent_codec) == str(selected_latent_codec)
+        )
+        rows.append(
+            {
+                "decoder_codec": str(decoder_codec),
+                "latent_codec": str(latent_codec),
+                "section_decode_source": "counterfactual_repack",
+                "is_selected_codec_equivalent": bool(is_selected_equiv),
+                "counterfactual_archive_sha256": hashlib.sha256(blob).hexdigest(),
+                "counterfactual_archive_bytes": len(blob),
+                "parseback_wrong_to_target": won,
+                "live_wrong_to_target": live_won,
+                "retention_vs_live": retention,
+                "lset_size": int(cert.get("lost_count") or 0),
+                "blocked": False,
+            }
+        )
+
+    ok_rows = [r for r in rows if not r.get("blocked")]
+    if not ok_rows:
+        raise BirthSurvivalError("codec ablation: every grid cell failed to pack/parse")
+
+    # Baseline = the most-aggressive cell that matches the selected codec if given,
+    # else the lowest-byte cell (the codec the system would pick on bytes alone).
+    selected_row = next((r for r in ok_rows if r.get("is_selected_codec_equivalent")), None)
+    baseline_row = selected_row or min(ok_rows, key=lambda r: r["counterfactual_archive_bytes"])
+    # Best-preserving cell.
+    best_row = max(ok_rows, key=lambda r: (r["parseback_wrong_to_target"], -r["counterfactual_archive_bytes"]))
+
+    # Exact byte delta + estimated seg-score economics of upgrading baseline->best.
+    delta_pixels = int(best_row["parseback_wrong_to_target"]) - int(
+        baseline_row["parseback_wrong_to_target"]
+    )
+    delta_bytes = int(best_row["counterfactual_archive_bytes"]) - int(
+        baseline_row["counterfactual_archive_bytes"]
+    )
+    est_seg_gain = _estimate_seg_score_units_from_won_pixels(delta_pixels)
+    rate_cost = _archive_rate_score_units(delta_bytes)
+    est_delta_score_total = rate_cost - est_seg_gain  # negative => upgrade lowers score
+    # Decode-axis attribution: hold decoder, vary latent (and vice versa).
+    def _win(dec: str, lat: str) -> int | None:
+        for r in ok_rows:
+            if r["decoder_codec"] == dec and r["latent_codec"] == lat:
+                return int(r["parseback_wrong_to_target"])
+        return None
+
+    latent_axis_drop = None
+    decoder_axis_drop = None
+    base_dec, base_lat = "int8_mixed", "int16_raw"
+    faithful = _win(base_dec, base_lat)
+    if faithful is not None:
+        lat_aggr = _win(base_dec, "int8_brotli_q11")
+        dec_aggr = _win("int4_mixed", base_lat)
+        if lat_aggr is not None:
+            latent_axis_drop = faithful - lat_aggr
+        if dec_aggr is not None:
+            decoder_axis_drop = faithful - dec_aggr
+
+    if est_delta_score_total < 0.0 and delta_pixels > 0:
+        decision = "codec_upgrade_preserves_birth_and_is_byte_cheaper_than_seg_gain"
+        next_operator = (
+            f"select margin-safe codec ({best_row['decoder_codec']},{best_row['latent_codec']}); "
+            "confirm with exact paired eval before promotion"
+        )
+    elif delta_pixels > 0:
+        decision = "codec_upgrade_preserves_birth_but_bytes_outweigh_seg_gain"
+        next_operator = (
+            "backend codec upgrade is NOT byte-justified; compare sidecar "
+            "scorer-effect row (cheaper L preservation) vs discard"
+        )
+    else:
+        decision = "no_codec_in_grid_preserves_more_birth"
+        next_operator = "escalate: sidecar scorer-effect lowering or discard the hard atom"
+
+    return {
+        "schema": ARCHIVE_CODEC_COUNTERFACTUAL_ABLATION_SCHEMA,
+        "family": "hinerv",
+        "action_id": str(action_id),
+        "birth_class": birth_class,
+        "section_decode_source": "counterfactual_repack",
+        "selected_decoder_codec": selected_decoder_codec,
+        "selected_latent_codec": selected_latent_codec,
+        "live_wrong_to_target": _live_wrong_to_target_count(live_birth_payload),
+        "codec_rows": rows,
+        "baseline_codec": [baseline_row["decoder_codec"], baseline_row["latent_codec"]],
+        "best_codec": [best_row["decoder_codec"], best_row["latent_codec"]],
+        "best_preserves_wins": int(best_row["parseback_wrong_to_target"]),
+        "baseline_preserves_wins": int(baseline_row["parseback_wrong_to_target"]),
+        "delta_pixels_best_vs_baseline": delta_pixels,
+        "delta_bytes_best_vs_baseline": delta_bytes,
+        "estimated_seg_score_gain_units": est_seg_gain,
+        "archive_rate_cost_units": rate_cost,
+        "estimated_delta_score_total_units": est_delta_score_total,
+        "estimated_economics_is_advisory": True,
+        "latent_axis_win_drop": latent_axis_drop,
+        "decoder_axis_win_drop": decoder_axis_drop,
+        "collapse_axis": (
+            "latent_codec"
+            if (latent_axis_drop or 0) > (decoder_axis_drop or 0)
+            else ("decoder_codec" if (decoder_axis_drop or 0) > 0 else "neither_in_grid")
+        ),
+        "decision": decision,
+        "next_operator": next_operator,
+        "recommended_next_operator": next_operator,
+        "sidecar_comparison_required": True,
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
         "score_claim": False,

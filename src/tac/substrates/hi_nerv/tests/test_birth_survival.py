@@ -1537,6 +1537,34 @@ def test_section_shadow_collapses_l_requires_retention_AND_nonpositive_L_margin(
     assert _classify_section_guilt(True, True) == (False, False, False)
 
 
+def test_codec_economics_seg_vs_rate_crossover() -> None:
+    """The codec-ablation economics: preserving P wall-crossing pixels is worth
+    Δbytes iff 100*P/(samples*H*W) > 25*Δbytes/37_545_489.  This is the exact
+    trade the lowering race turns on; an off-by-constant here mis-prices codecs."""
+    from tac.substrates.hi_nerv.birth_survival import (
+        CONTEST_ARCHIVE_RATE_DENOM,
+        _archive_rate_score_units,
+        _estimate_seg_score_units_from_won_pixels,
+    )
+
+    # GPT order-of-magnitude anchor: ~12,155 pixels ≈ 0.0103 seg score units.
+    seg = _estimate_seg_score_units_from_won_pixels(12155)
+    assert abs(seg - 0.0103) < 5e-4, seg
+    # ... worth ≈ 15.5 KB of archive budget at the official rate term.
+    bytes_worth = seg / (25.0 / CONTEST_ARCHIVE_RATE_DENOM)
+    assert 14_000 < bytes_worth < 17_000, bytes_worth
+    # Rate term is exact + linear in bytes.
+    assert _archive_rate_score_units(0) == 0.0
+    assert _archive_rate_score_units(CONTEST_ARCHIVE_RATE_DENOM) == 25.0
+    # Crossover: upgrade is worth it iff seg_gain > rate_cost.
+    # Preserve 12155 px for 5 KB -> worth it (seg 0.0103 > rate ~0.0033).
+    assert _estimate_seg_score_units_from_won_pixels(12155) > _archive_rate_score_units(5_000)
+    # Preserve 12155 px for 50 KB -> NOT worth it (rate ~0.0333 > seg 0.0103).
+    assert _estimate_seg_score_units_from_won_pixels(12155) < _archive_rate_score_units(50_000)
+    # Zero pixels preserved is never worth any positive byte cost.
+    assert _estimate_seg_score_units_from_won_pixels(0) == 0.0
+
+
 def test_section_max_abs_delta_ranks_most_perturbed_section() -> None:
     """Commutator ranking: the top-k sections by max-abs archive-decode delta are
     the candidates most likely to carry a synergistic collapse."""

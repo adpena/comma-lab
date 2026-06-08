@@ -19707,6 +19707,53 @@ def _write_hi_nerv_runner_live_birth_survival_rows(
     summary["decoder_section_guilty_commutators"] = guilt_row.get("guilty_commutators")
     summary["decoder_section_guilt_next_operator"] = guilt_row.get("next_operator")
 
+    # Archive-codec counterfactual ablation: prices the CODEC choice at the
+    # hard-action level (the lowering race).  The v8 smoke proved the parse-back
+    # collapse is NOT decoder-weight-driven (int8_mixed decoder is faithful) but
+    # tracks the LATENT codec (int16_raw faithful vs int8_brotli_q11 collapsing).
+    # This packs the SAME live export across a (decoder x latent) codec grid
+    # through ONE builder so the byte comparison is same-scope, isolating which
+    # codec axis drives the collapse and pricing the margin-safe codec by exact
+    # bytes vs estimated SegNet gain.  Bound to section_decode_source=
+    # counterfactual_repack — NOT a selected-archive section verdict.
+    codec_path = out / "hi_nerv_birth_archive_codec_counterfactual_ablation.json"
+    try:
+        from tac.substrates.hi_nerv.birth_survival import (
+            measure_birth_archive_codec_counterfactual_ablation,
+        )
+
+        sweep_cfg = getattr(model, "cfg", None)
+        if sweep_cfg is None:
+            raise RuntimeError("live MLX model exposes no cfg for HIV1 archive pack")
+        codec_row = dict(
+            measure_birth_archive_codec_counterfactual_ablation(
+                model,
+                cfg=sweep_cfg,
+                scorer_teacher=scorer_teacher,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                pair_indices=pair_indices,
+                selected_decoder_codec="int8_mixed",
+                selected_latent_codec="int8_brotli_q11",
+            )
+        )
+    except Exception as exc:
+        codec_row = _blocked(
+            "hi_nerv_target_region_birth_survival_blocked.v1",
+            codec_path,
+            "birth_survival_archive_codec_counterfactual_ablation_failed",
+            reason=f"{type(exc).__name__}:{exc}",
+        )
+    else:
+        codec_row["artifact_path"] = codec_path.as_posix()
+        codec_row["producer"] = "hi_nerv_runner_live_birth_survival"
+        _write_json(codec_path, codec_row)
+    summary["archive_codec_counterfactual_ablation_path"] = codec_path.as_posix()
+    summary["archive_codec_collapse_axis"] = codec_row.get("collapse_axis")
+    summary["archive_codec_decision"] = codec_row.get("decision")
+    summary["archive_codec_best_codec"] = codec_row.get("best_codec")
+    summary["archive_codec_next_operator"] = codec_row.get("next_operator")
+
     summary["action_effect_ledger_path"] = action_effect_ledger_path.as_posix()
     try:
         from tac.analysis.action_effect import ActionEffect, append_action_effect
