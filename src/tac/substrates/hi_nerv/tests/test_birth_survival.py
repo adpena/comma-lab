@@ -1281,6 +1281,16 @@ def test_decoder_section_shadow_swaps_section_records_provenance_and_restores() 
     assert row["applied_key_count"] == 2
     assert isinstance(row["applied_keys_sha256"], str) and len(row["applied_keys_sha256"]) == 64
     assert row["section_import_roundtrip_identity_verified"] is True
+    # GPT hardening 2: per-row, real-artifact round-trip equality must hold.
+    assert row["section_archive_decode_applied_exact"] is True
+    # GPT hardening 3: the decision-forcing top-level fields are present and the
+    # vs-fakequant retention is the one tied to the surface that DID win L.
+    assert "shadow_retention_vs_live" in row
+    assert "shadow_retention_vs_fakequant" in row
+    assert "fakequant_wrong_to_target" in row
+    assert "parseback_wrong_to_target" in row
+    assert row["fakequant_wrong_to_target"] == row["lset_certificate"]["fakequant_won_count"]
+    assert row["parseback_wrong_to_target"] == row["lset_certificate"]["parseback_won_count"]
     assert "lset_certificate" in row and row["causal_hint_is_advisory"] is True
     # Custody: no nested authority/readiness truthy keys.
     assert not (_FORBIDDEN_AUTHORITY_KEYS & {k for k, v in row.items() if v is True})
@@ -1354,6 +1364,86 @@ def test_decoder_section_shadow_zero_key_guard_fails_loud() -> None:
         measure_birth_decoder_section_shadow(
             model, scorer_teacher=teacher, archive_decoded_state=archive_decoded,
             section="head_rgb1_typo", target_labels=labels_np, live_birth_payload=payload,
+            pair_indices=idx, fakequant_logits_bhwc=fakequant_logits,
+            parseback_logits_bhwc=fakequant_logits,
+        )
+
+
+@skip_no_mlx
+def test_decoder_section_shadow_applied_keys_must_equal_expected(monkeypatch) -> None:
+    """GPT hardening 1: if the import applies a DIFFERENT key set than the live
+    section's keys (the bug class of a future export/import key-set divergence),
+    the row must fail closed rather than emit a partial, misleading shadow."""
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        BirthSurvivalError,
+        measure_birth_decoder_section_shadow,
+    )
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    fakequant_logits = _teacher_logits_np(model, teacher, idx)
+    archive_decoded = {
+        k: np.asarray(v, dtype=np.float32).copy() for k, v in model.export_state_dict().items()
+    }
+
+    # Simulate a future divergence: import APPLIES both head_rgb_1 keys but
+    # REPORTS only one.  expected_keys (from live export) has two; the guard
+    # must catch the mismatch.
+    real_import = model.import_torch_state_dict
+
+    def _under_reporting_import(state, *, sections=None, strict=True):
+        applied = real_import(state, sections=sections, strict=strict)
+        return applied[:-1] if len(applied) > 1 else applied
+
+    monkeypatch.setattr(model, "import_torch_state_dict", _under_reporting_import)
+    with pytest.raises(BirthSurvivalError, match="applied_keys"):
+        measure_birth_decoder_section_shadow(
+            model, scorer_teacher=teacher, archive_decoded_state=archive_decoded,
+            section="head_rgb_1", target_labels=labels_np, live_birth_payload=payload,
+            pair_indices=idx, fakequant_logits_bhwc=fakequant_logits,
+            parseback_logits_bhwc=fakequant_logits,
+        )
+
+
+@skip_no_mlx
+def test_decoder_section_shadow_applied_must_roundtrip_equal_archive(monkeypatch) -> None:
+    """GPT hardening 2: if a section's exported value does NOT round-trip-equal
+    the archive-decoded value it was imported from (the bug class of a wrong
+    inverse transpose), the row must fail closed.  Simulated by tampering the
+    export so the in-section value diverges from the archive value."""
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        BirthSurvivalError,
+        measure_birth_decoder_section_shadow,
+    )
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    fakequant_logits = _teacher_logits_np(model, teacher, idx)
+    archive_decoded = {
+        k: np.asarray(v, dtype=np.float32).copy() for k, v in model.export_state_dict().items()
+    }
+
+    # Tamper EVERY export's in-section bias by a constant.  full_snapshot and
+    # shadow_export are both shifted, so the out-of-section equality still holds,
+    # but shadow_export[bias] (archive+999) no longer equals archive[bias].
+    real_export = model.export_state_dict
+
+    def _tampered_export():
+        out = dict(real_export())
+        out["head_rgb_1.bias"] = np.asarray(out["head_rgb_1.bias"], dtype=np.float32) + 999.0
+        return out
+
+    monkeypatch.setattr(model, "export_state_dict", _tampered_export)
+    with pytest.raises(BirthSurvivalError, match="round-trip-equal"):
+        measure_birth_decoder_section_shadow(
+            model, scorer_teacher=teacher, archive_decoded_state=archive_decoded,
+            section="head_rgb_1", target_labels=labels_np, live_birth_payload=payload,
             pair_indices=idx, fakequant_logits_bhwc=fakequant_logits,
             parseback_logits_bhwc=fakequant_logits,
         )

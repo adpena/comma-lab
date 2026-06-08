@@ -1627,6 +1627,17 @@ def measure_birth_decoder_section_shadow(
         # export(section) -> import(section) -> export(section) must be byte-equal.
         identity_state = {k: full_snapshot[k] for k in snapshot_subset}
         applied_keys = list(import_fn(archive_decoded_state, sections=(section,), strict=False))
+        # HARDENING 1 (applied-key exactness): the import must apply EXACTLY the
+        # live section keys.  A prefix typo, or a key present in the archive but
+        # absent in the live model (or vice versa), would otherwise produce a
+        # partial, misleading shadow row.  Fail closed.
+        expected_keys = sorted(snapshot_subset)
+        if sorted(applied_keys) != expected_keys:
+            raise BirthSurvivalError(
+                f"decoder-section shadow for {section!r}: applied_keys "
+                f"{sorted(applied_keys)!r} != expected section keys "
+                f"{expected_keys!r}"
+            )
         shadow_export = export_fn()
         # Confirm the swap actually moved the named keys and nothing else.
         for k in full_snapshot:
@@ -1635,6 +1646,20 @@ def measure_birth_decoder_section_shadow(
             if not np.array_equal(np.asarray(full_snapshot[k]), np.asarray(shadow_export[k])):
                 raise BirthSurvivalError(
                     f"decoder-section shadow for {section!r} perturbed out-of-section key {k!r}"
+                )
+        # HARDENING 2 (per-row round-trip equality): every applied key's exported
+        # (torch-layout) value must round-trip-equal the archive-decoded value it
+        # was imported from.  This is the per-row, real-artifact confirmation of
+        # the export/import section-transpose identity (the synthetic round-trip
+        # identity test proves the code path; this proves it on THESE values).
+        for k in applied_keys:
+            if not np.array_equal(
+                np.asarray(shadow_export[k]), np.asarray(archive_decoded_state[k])
+            ):
+                raise BirthSurvivalError(
+                    f"decoder-section shadow for {section!r}: applied key {k!r} "
+                    "export does not round-trip-equal archive_decoded_state "
+                    "(export/import section transpose mismatch)"
                 )
         # Round-trip identity check on the section itself (restore->reimport equal).
         import_fn(identity_state, sections=(section,), strict=False)
@@ -1671,10 +1696,21 @@ def measure_birth_decoder_section_shadow(
     retention = (
         None if live_wrong is None or live_wrong <= 0 else float(region_hard_won) / float(live_wrong)
     )
+    # GPT row hardening 3: retention measured against the fakequant surface (the
+    # surface that DID win the L-set) is the directly decision-forcing number —
+    # it answers "of the pixels fakequant won, how many survive THIS section's
+    # exact archive decode?".  vs-live mixes in pixels live never won.
+    fakequant_won = cert.get("fakequant_won_count")
+    parseback_won = cert.get("parseback_won_count")
+    shadow_retention_vs_fakequant = (
+        None
+        if not isinstance(fakequant_won, (int, float)) or fakequant_won <= 0
+        else float(region_hard_won) / float(fakequant_won)
+    )
     applied_sha = hashlib.sha256(
         "|".join(
             f"{k}={hashlib.sha256(np.ascontiguousarray(np.asarray(archive_decoded_state[k])).tobytes()).hexdigest()}"
-            for k in section_keys
+            for k in sorted(applied_keys)
         ).encode("utf-8")
     ).hexdigest()
     collapsed = (
@@ -1691,9 +1727,14 @@ def measure_birth_decoder_section_shadow(
         "applied_key_count": len(applied_keys),
         "applied_keys_sha256": applied_sha,
         "section_import_roundtrip_identity_verified": bool(roundtrip_verified),
+        "section_archive_decode_applied_exact": True,
         "birth_class_index": birth_class,
         "shadow_wrong_to_target": region_hard_won,
         "shadow_wrong_to_target_retention": retention,
+        "shadow_retention_vs_live": retention,
+        "shadow_retention_vs_fakequant": shadow_retention_vs_fakequant,
+        "fakequant_wrong_to_target": fakequant_won,
+        "parseback_wrong_to_target": parseback_won,
         "live_wrong_to_target": live_wrong,
         "region_score_debt_units": _region_debt_units(
             int(support["region_unsolved"]), int(support["total_scored_pixels"])
