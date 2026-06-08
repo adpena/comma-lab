@@ -1449,6 +1449,55 @@ def test_decoder_section_shadow_applied_must_roundtrip_equal_archive(monkeypatch
         )
 
 
+def test_section_shadow_collapses_l_requires_retention_AND_nonpositive_p10() -> None:
+    """The guilt decision-rule (GPT spec): a section collapses L iff BOTH its
+    vs-fakequant retention drops below the survival floor AND the evaluated
+    target-margin p10 over the fakequant-won pixels is nonpositive.  Classifying
+    on either condition alone is the bug class this test extincts."""
+    from tac.substrates.hi_nerv.birth_survival import _section_shadow_collapses_l
+
+    def _row(ret, p10):
+        return {
+            "shadow_retention_vs_fakequant": ret,
+            "lset_certificate": {
+                "evaluated_margins_by_subset": {"fakequant_won": {"p10": p10}}
+            },
+        }
+
+    # Guilty: low retention AND nonpositive p10 (the parse-back collapse signature).
+    assert _section_shadow_collapses_l(_row(0.004, -0.5)) is True
+    assert _section_shadow_collapses_l(_row(0.0, 0.0)) is True
+    # Innocent: high retention (the section SURVIVES L) regardless of p10 sign.
+    assert _section_shadow_collapses_l(_row(0.95, -0.5)) is False
+    # Innocent: low retention but POSITIVE p10 — margin over L is still safe, so
+    # the count drop is region-noise, not a wall crossing.  NOT a collapse.
+    assert _section_shadow_collapses_l(_row(0.10, 0.30)) is False
+    # Fail-safe: missing evidence cannot be claimed as collapse.
+    assert _section_shadow_collapses_l({"shadow_retention_vs_fakequant": None}) is False
+    assert _section_shadow_collapses_l(_row(0.10, None)) is False
+
+
+def test_section_max_abs_delta_ranks_most_perturbed_section() -> None:
+    """Commutator ranking: the top-k sections by max-abs archive-decode delta are
+    the candidates most likely to carry a synergistic collapse."""
+    from tac.substrates.hi_nerv.birth_survival import _section_max_abs_delta
+
+    live = {
+        "head_rgb_1.weight": np.zeros((2, 2), np.float32),
+        "head_rgb_1.bias": np.zeros((2,), np.float32),
+        "fine_injector.proj.weight": np.zeros((3,), np.float32),
+    }
+    arch = {
+        "head_rgb_1.weight": np.zeros((2, 2), np.float32),
+        "head_rgb_1.bias": np.array([0.0, 5.0], np.float32),
+        "fine_injector.proj.weight": np.array([0.1, 0.0, -0.2], np.float32),
+    }
+    assert _section_max_abs_delta(arch, live, "head_rgb_1") == 5.0
+    assert abs(_section_max_abs_delta(arch, live, "fine_injector") - 0.2) < 1e-6
+    # A section absent from the archive contributes zero delta (not an error).
+    assert _section_max_abs_delta(arch, live, "blocks") == 0.0
+
+
 @skip_no_mlx
 def test_import_torch_state_dict_section_typo_raises() -> None:
     import mlx.core as mx

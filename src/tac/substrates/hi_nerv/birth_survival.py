@@ -67,6 +67,7 @@ BIRTH_SURVIVAL_SCHEMA = "hi_nerv_target_region_birth_survival.v1"
 BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 BIRTH_SURVIVAL_BLOCKED_SCHEMA = "hi_nerv_target_region_birth_survival_blocked.v1"
 DECODER_SECTION_SHADOW_ABLATION_SCHEMA = "hi_nerv_decoder_section_shadow_ablation.v1"
+DECODER_SECTION_GUILT_SWEEP_SCHEMA = "hi_nerv_decoder_section_guilt_sweep.v1"
 TARGET_MARGIN_CERTIFICATE_SCHEMA = "tac.target_margin_certificate.v1"
 MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL = 0.5
 TARGET_MARGIN_SAFETY_FLOOR = 0.0
@@ -1560,7 +1561,7 @@ def measure_birth_decoder_section_shadow(
     *,
     scorer_teacher: Any,
     archive_decoded_state: Mapping[str, Any],
-    section: str,
+    section: str | Sequence[str],
     target_labels: Any,
     live_birth_payload: Mapping[str, Any],
     pair_indices: Any,
@@ -1569,7 +1570,7 @@ def measure_birth_decoder_section_shadow(
     live_logits_bhwc: np.ndarray | None = None,
     strong_margin_floor: float = 0.1,
 ) -> dict[str, Any]:
-    """Shadow ONE decoder section with its exact archive-decoded weights.
+    """Shadow ONE decoder section (or a section-SET) with archive-decoded weights.
 
     Imports only ``section``'s archive-decoded weights into the LIVE MLX model
     (via the round-trip-identity-proven ``import_torch_state_dict``), keeps
@@ -1577,6 +1578,13 @@ def measure_birth_decoder_section_shadow(
     birth region with the v2 L-set certificate.  This isolates whether the
     EXACT archive quantization of ``section`` (not 8-bit symmetric fakequant)
     is what moves the won pixels across the SegNet wall at parse-back.
+
+    ``section`` may be a single top-level prefix (``"head_rgb_1"``) OR a tuple
+    of prefixes (``("head_rgb_1", "fine_injector")``) for the pairwise
+    quantization-commutator surface.  When a tuple, ALL named sections are
+    imported together; the row's ``sections`` field lists them and ``section``
+    carries the ``+``-joined label.  The exactness/round-trip hardenings apply
+    to the union of the named sections' keys.
 
     The original section weights are snapshotted via ``export_state_dict`` and
     restored after, so the model is unchanged on return.  ``causal_hint`` from
@@ -1595,6 +1603,13 @@ def measure_birth_decoder_section_shadow(
             "model must expose import_torch_state_dict + export_state_dict "
             "(round-trip identity gate) for the decoder-section shadow"
         )
+    # Normalize to a tuple of section prefixes; preserve a stable display label.
+    section_list: tuple[str, ...] = (
+        (str(section),) if isinstance(section, str) else tuple(str(s) for s in section)
+    )
+    if not section_list:
+        raise BirthSurvivalError("decoder-section shadow requires at least one section")
+    section_label = "+".join(section_list)
     action_id = _live_action_id(live_birth_payload)
     worst_region = _live_worst_region(live_birth_payload)
     birth_class = int(worst_region["class_index"])
@@ -1603,19 +1618,21 @@ def measure_birth_decoder_section_shadow(
     if idx.ndim != 1 or int(idx.shape[0]) <= 0:
         raise BirthSurvivalError("pair_indices must be a non-empty rank-1 tensor")
 
-    # Snapshot ONLY this section's current values (full export; restore subset).
+    # Snapshot ONLY these section(s)' current values (full export; restore subset).
     full_snapshot = export_fn()
     section_keys = sorted(
-        k for k in archive_decoded_state if k == section or str(k).startswith(f"{section}.")
+        k
+        for k in archive_decoded_state
+        if any(k == s or str(k).startswith(f"{s}.") for s in section_list)
     )
     if not section_keys:
         raise BirthSurvivalError(
-            f"archive_decoded_state has no keys for section {section!r}"
+            f"archive_decoded_state has no keys for section {section_label!r}"
         )
     snapshot_subset = {k: full_snapshot[k] for k in section_keys if k in full_snapshot}
     if not snapshot_subset:
         raise BirthSurvivalError(
-            f"section {section!r} not present in live model export; cannot shadow"
+            f"section {section_label!r} not present in live model export; cannot shadow"
         )
 
     import hashlib
@@ -1626,7 +1643,7 @@ def measure_birth_decoder_section_shadow(
         # Verify the section import is identity-safe on THIS live model first:
         # export(section) -> import(section) -> export(section) must be byte-equal.
         identity_state = {k: full_snapshot[k] for k in snapshot_subset}
-        applied_keys = list(import_fn(archive_decoded_state, sections=(section,), strict=False))
+        applied_keys = list(import_fn(archive_decoded_state, sections=section_list, strict=False))
         # HARDENING 1 (applied-key exactness): the import must apply EXACTLY the
         # live section keys.  A prefix typo, or a key present in the archive but
         # absent in the live model (or vice versa), would otherwise produce a
@@ -1634,7 +1651,7 @@ def measure_birth_decoder_section_shadow(
         expected_keys = sorted(snapshot_subset)
         if sorted(applied_keys) != expected_keys:
             raise BirthSurvivalError(
-                f"decoder-section shadow for {section!r}: applied_keys "
+                f"decoder-section shadow for {section_label!r}: applied_keys "
                 f"{sorted(applied_keys)!r} != expected section keys "
                 f"{expected_keys!r}"
             )
@@ -1645,7 +1662,7 @@ def measure_birth_decoder_section_shadow(
                 continue
             if not np.array_equal(np.asarray(full_snapshot[k]), np.asarray(shadow_export[k])):
                 raise BirthSurvivalError(
-                    f"decoder-section shadow for {section!r} perturbed out-of-section key {k!r}"
+                    f"decoder-section shadow for {section_label!r} perturbed out-of-section key {k!r}"
                 )
         # HARDENING 2 (per-row round-trip equality): every applied key's exported
         # (torch-layout) value must round-trip-equal the archive-decoded value it
@@ -1657,19 +1674,19 @@ def measure_birth_decoder_section_shadow(
                 np.asarray(shadow_export[k]), np.asarray(archive_decoded_state[k])
             ):
                 raise BirthSurvivalError(
-                    f"decoder-section shadow for {section!r}: applied key {k!r} "
+                    f"decoder-section shadow for {section_label!r}: applied key {k!r} "
                     "export does not round-trip-equal archive_decoded_state "
                     "(export/import section transpose mismatch)"
                 )
         # Round-trip identity check on the section itself (restore->reimport equal).
-        import_fn(identity_state, sections=(section,), strict=False)
+        import_fn(identity_state, sections=section_list, strict=False)
         reverted = export_fn()
         roundtrip_verified = all(
             np.array_equal(np.asarray(identity_state[k]), np.asarray(reverted[k]))
             for k in identity_state
         )
         # Re-apply the archive-decoded section for the actual measurement.
-        import_fn(archive_decoded_state, sections=(section,), strict=False)
+        import_fn(archive_decoded_state, sections=section_list, strict=False)
         support = _region_support_on_surface(
             model,
             scorer_teacher=scorer_teacher,
@@ -1679,7 +1696,7 @@ def measure_birth_decoder_section_shadow(
         )
         shadow_logits = _candidate_logits_np(scorer_teacher, _predict_frame1_nhwc01(model, idx))
     finally:
-        import_fn(snapshot_subset, sections=(section,), strict=False)
+        import_fn(snapshot_subset, sections=section_list, strict=False)
         mx.eval(model.parameters())  # type: ignore[union-attr]
 
     cert = lset_subset_conditioned_margin_certificate(
@@ -1720,9 +1737,11 @@ def measure_birth_decoder_section_shadow(
         "schema": DECODER_SECTION_SHADOW_ABLATION_SCHEMA,
         "family": "hinerv",
         "action_id": str(action_id),
-        "surface": f"{section}_archive_decode_shadow",
-        "section": str(section),
-        "requested_section": str(section),
+        "surface": f"{section_label}_archive_decode_shadow",
+        "section": section_label,
+        "sections": list(section_list),
+        "is_commutator_surface": len(section_list) > 1,
+        "requested_section": section_label,
         "applied_keys": list(applied_keys),
         "applied_key_count": len(applied_keys),
         "applied_keys_sha256": applied_sha,
@@ -1744,7 +1763,7 @@ def measure_birth_decoder_section_shadow(
         "causal_hint_is_advisory": True,
         "section_collapses_l": bool(collapsed),
         "first_failed_surface": (
-            f"{section}_archive_decode_shadow" if collapsed else None
+            f"{section_label}_archive_decode_shadow" if collapsed else None
         ),
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
@@ -1755,6 +1774,270 @@ def measure_birth_decoder_section_shadow(
         "promotable": False,
     }
     return row
+
+
+def _section_max_abs_delta(
+    archive_decoded_state: Mapping[str, Any],
+    live_export: Mapping[str, Any],
+    section: str,
+) -> float:
+    """Max |archive_decoded - live| over a section's keys (commutator ranking)."""
+
+    worst = 0.0
+    for k in archive_decoded_state:
+        if not (k == section or str(k).startswith(f"{section}.")):
+            continue
+        if k not in live_export:
+            continue
+        d = float(
+            np.abs(
+                np.asarray(archive_decoded_state[k], dtype=np.float64)
+                - np.asarray(live_export[k], dtype=np.float64)
+            ).max()
+        )
+        worst = max(worst, d)
+    return worst
+
+
+def _section_shadow_collapses_l(row: Mapping[str, Any]) -> bool:
+    """Guilt rule: an archive-decoded section COLLAPSES the L-set iff it both
+    drops vs-fakequant retention below the survival floor AND drives the 10th
+    percentile of the EVALUATED target margin over the fakequant-won pixels to
+    nonpositive.  Both conditions are required so a low-count noisy region does
+    not masquerade as a guilty section."""
+
+    ret = row.get("shadow_retention_vs_fakequant")
+    if not isinstance(ret, (int, float)) or ret >= float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL):
+        return False
+    cert = row.get("lset_certificate") or {}
+    fq_won = (cert.get("evaluated_margins_by_subset") or {}).get("fakequant_won") or {}
+    p10 = fq_won.get("p10")
+    return isinstance(p10, (int, float)) and float(p10) <= 0.0
+
+
+def measure_birth_decoder_section_guilt_sweep(
+    model: Any,
+    *,
+    cfg: Any,
+    scorer_teacher: Any,
+    target_labels: Any,
+    live_birth_payload: Mapping[str, Any],
+    pair_indices: Any,
+    sections: Sequence[str] = DECODER_SHADOW_SECTIONS,
+    decoder_codec: str = "int8_mixed",
+    latent_codec: str = "int16_raw",
+    commutator_top_k: int = 2,
+    strong_margin_floor: float = 0.1,
+) -> dict[str, Any]:
+    """One-shot decoder-section guilt sweep on a LIVE accepted birth.
+
+    Builds the birth's EXACT HIV1 archive from the live MLX export
+    (``pack_archive_from_exported_state_dict``), parses the archive-decoded
+    torch decoder state, computes the WON (live) and PARSE-BACK (full archive)
+    L-set reference logits ONCE, then for each decoder section imports ONLY that
+    section's archive-decoded weights into the live model and prices the named
+    birth region with the v2 L-set certificate.  Names the guilty section (or, if
+    no single section collapses L, the top pairwise quantization commutator) that
+    maps ``L = W_fake \\ W_parseback`` from positive fakequant target margin to
+    nonpositive archive-decode margin.
+
+    The decision rule (GPT spec): the guilty surface is the first row whose
+    vs-fakequant retention collapses below the survival floor AND whose evaluated
+    target-margin p10 over the fakequant-won pixels is nonpositive.  Returns a
+    sweep row carrying every per-section row, any commutator rows, and the
+    section-guilt verdict.  Planning-control evidence only (no score claim).
+    """
+
+    _require_mlx()
+    import mlx.core as mx
+    import torch
+
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+    from tac.substrates.hi_nerv.inflate import build_model_from_archive
+
+    idx_np = np.asarray(pair_indices, dtype=np.int64).reshape(-1)
+    if idx_np.size <= 0:
+        raise BirthSurvivalError("pair_indices must be non-empty for the guilt sweep")
+    idx_mx = mx.array(idx_np.astype(np.int32))  # type: ignore[union-attr]
+    action_id = _live_action_id(live_birth_payload)
+
+    # 1. Build the live birth's EXACT HIV1 archive from the live export.
+    live_export = {
+        k: np.asarray(v, dtype=np.float32) for k, v in model.export_state_dict().items()
+    }
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=dict(live_export),
+        cfg=cfg,
+        decoder_codec=str(decoder_codec),
+        latent_codec=str(latent_codec),
+    )
+    if isinstance(blob, tuple):  # return_bitstream_report defaults False, be defensive
+        blob = blob[0]
+    archive_sha256 = hashlib.sha256(blob).hexdigest()
+    arc = parse_archive(blob)
+    archive_decoded_state = {
+        k: np.asarray(v.detach().cpu(), dtype=np.float32)
+        for k, v in arc.decoder_state_dict.items()
+    }
+
+    # 2. WON-surface (live) logits — the surface that wins ~all of L.
+    live_logits = _candidate_logits_np(scorer_teacher, _predict_frame1_nhwc01(model, idx_mx))
+
+    # 3. PARSE-BACK (full archive) logits — the collapsed surface.
+    _arc2, _cfg2, receiver = build_model_from_archive(blob, device="cpu")
+    idx_t = torch.tensor(idx_np.tolist(), dtype=torch.long)
+    with torch.no_grad():
+        _rgb0, rgb1 = receiver(idx_t)
+    frame1_nhwc01 = np.transpose(np.asarray(rgb1.detach().cpu(), dtype=np.float32), (0, 2, 3, 1))
+    parseback_logits = _candidate_logits_np(
+        scorer_teacher, mx.array(frame1_nhwc01, dtype=mx.float32)  # type: ignore[union-attr]
+    )
+
+    # 4. Per-section single shadows.
+    present = [
+        s
+        for s in sections
+        if any(k == s or str(k).startswith(f"{s}.") for k in archive_decoded_state)
+        and any(k == s or str(k).startswith(f"{s}.") for k in live_export)
+    ]
+    if not present:
+        raise BirthSurvivalError(
+            "guilt sweep found no decoder sections present in BOTH the archive "
+            "decode and the live export"
+        )
+    section_rows: list[dict[str, Any]] = []
+    for s in present:
+        section_rows.append(
+            measure_birth_decoder_section_shadow(
+                model,
+                scorer_teacher=scorer_teacher,
+                archive_decoded_state=archive_decoded_state,
+                section=s,
+                target_labels=target_labels,
+                live_birth_payload=live_birth_payload,
+                pair_indices=idx_np,
+                fakequant_logits_bhwc=live_logits,
+                parseback_logits_bhwc=parseback_logits,
+                live_logits_bhwc=live_logits,
+                strong_margin_floor=float(strong_margin_floor),
+            )
+        )
+
+    guilty_singles = [r["section"] for r in section_rows if _section_shadow_collapses_l(r)]
+
+    # 5. If NO single section collapses L, run pairwise commutators on the top-k
+    #    sections by max-abs archive-decode delta (the most-perturbed sections,
+    #    most likely to carry a synergistic collapse the singles each survive).
+    commutator_rows: list[dict[str, Any]] = []
+    if not guilty_singles and len(present) >= 2:
+        ranked = sorted(
+            present,
+            key=lambda s: _section_max_abs_delta(archive_decoded_state, live_export, s),
+            reverse=True,
+        )
+        top = ranked[: max(2, int(commutator_top_k))]
+        seen: set[tuple[str, str]] = set()
+        for i in range(len(top)):
+            for j in range(i + 1, len(top)):
+                pair = (top[i], top[j])
+                if pair in seen:
+                    continue
+                seen.add(pair)
+                pair_row = measure_birth_decoder_section_shadow(
+                    model,
+                    scorer_teacher=scorer_teacher,
+                    archive_decoded_state=archive_decoded_state,
+                    section=pair,
+                    target_labels=target_labels,
+                    live_birth_payload=live_birth_payload,
+                    pair_indices=idx_np,
+                    fakequant_logits_bhwc=live_logits,
+                    parseback_logits_bhwc=parseback_logits,
+                    live_logits_bhwc=live_logits,
+                    strong_margin_floor=float(strong_margin_floor),
+                )
+                # retention_comm = ret(s,t) - ret(s) - ret(t) + ret(live);
+                # ret(live)=1.0 (won-surface vs itself).  Strongly negative =>
+                # the pair collapses far more than the sum of singles.
+                ret_st = pair_row.get("shadow_retention_vs_fakequant")
+                ret_s = next(
+                    (r.get("shadow_retention_vs_fakequant") for r in section_rows if r["section"] == pair[0]),
+                    None,
+                )
+                ret_t = next(
+                    (r.get("shadow_retention_vs_fakequant") for r in section_rows if r["section"] == pair[1]),
+                    None,
+                )
+                if None not in (ret_st, ret_s, ret_t):
+                    pair_row["retention_commutator"] = (
+                        float(ret_st) - float(ret_s) - float(ret_t) + 1.0
+                    )
+                else:
+                    pair_row["retention_commutator"] = None
+                commutator_rows.append(pair_row)
+
+    guilty_commutators = [
+        r["section"] for r in commutator_rows if _section_shadow_collapses_l(r)
+    ]
+
+    fakequant_won = int((section_rows[0]["lset_certificate"] or {}).get("fakequant_won_count") or 0)
+    parseback_won = int((section_rows[0]["lset_certificate"] or {}).get("parseback_won_count") or 0)
+    l_set_size = int((section_rows[0]["lset_certificate"] or {}).get("lost_count") or 0)
+
+    if guilty_singles:
+        verdict = "single_section_collapses_l"
+        next_operator = (
+            f"section_qat[{guilty_singles[0]}]: ArchiveRoundtripMarginQAT on the "
+            "named section, then compare exact ΔS vs byte-priced sidecar"
+        )
+    elif guilty_commutators:
+        verdict = "pairwise_commutator_collapses_l"
+        next_operator = (
+            f"joint_qat[{guilty_commutators[0]}]: output-adjacent joint QAT, OR "
+            "sidecar if joint QAT exceeds the byte budget"
+        )
+    elif fakequant_won > 0 and parseback_won >= fakequant_won:
+        verdict = "no_parseback_collapse_in_this_birth"
+        next_operator = (
+            "smoke birth did not reproduce the parse-back L-set collapse; replay "
+            "a real collapsing birth (longer fit / real teacher) before naming guilt"
+        )
+    else:
+        verdict = "no_single_or_pairwise_section_collapses_l"
+        next_operator = (
+            "escalate to triple commutator OR sidecar scorer-effect lowering "
+            "(no backend section/pair names the collapse)"
+        )
+
+    return {
+        "schema": DECODER_SECTION_GUILT_SWEEP_SCHEMA,
+        "family": "hinerv",
+        "action_id": str(action_id),
+        "archive_sha256": archive_sha256,
+        "archive_bytes": len(blob),
+        "decoder_codec": str(decoder_codec),
+        "latent_codec": str(latent_codec),
+        "sections_swept": list(present),
+        "fakequant_won_count": fakequant_won,
+        "parseback_won_count": parseback_won,
+        "l_set_size": l_set_size,
+        "guilty_singles": list(guilty_singles),
+        "guilty_commutators": list(guilty_commutators),
+        "section_guilt_verdict": verdict,
+        "next_operator": next_operator,
+        "section_rows": section_rows,
+        "commutator_rows": commutator_rows,
+        "human_visual_fidelity_objective": False,
+        "authority": _NON_AUTHORITY_MARKER,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
 
 
 def measure_birth_hysteresis(
