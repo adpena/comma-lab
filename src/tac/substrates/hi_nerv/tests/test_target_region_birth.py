@@ -2337,3 +2337,119 @@ def test_frame0_compensation_optimizes_receiver_surface_pose_cap() -> None:
         assert record["composite_catastrophic_guard_decision"] == "satisfied"
         assert record["would_accept_exact_score_if_raw_cap_disabled"] is True
         assert record["composite_delta_score_nonrate"] < 0.0
+
+
+# ---------------------------------------------------------------------------
+# L-set subset-conditioned margin certificate (the money metric)
+# ---------------------------------------------------------------------------
+
+
+def _logits_for(target_margins: np.ndarray) -> np.ndarray:
+    """Build BHWC=(1,H,W,2) logits whose class-1 target_margin equals input.
+
+    class1 - class0 = target_margin, with class0 = 0 -> class1 = target_margin.
+    """
+    h, w = target_margins.shape
+    logits = np.zeros((1, h, w, 2), dtype=np.float32)
+    logits[0, :, :, 1] = target_margins  # class 1 logit
+    # class 0 stays 0; target_margin for class 1 = class1 - class0 = target_margins
+    return logits
+
+
+def test_lset_certificate_selects_fakequant_won_but_parseback_lost() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 4), dtype=np.float32)
+    # 4 region pixels. fakequant target_margin: [+2, +2, +2, -1] -> 3 won.
+    fq = _logits_for(np.array([[2.0, 2.0, 2.0, -1.0]], dtype=np.float32))
+    # parseback target_margin: [+2, -1, -1, -1] -> only pixel 0 won.
+    pb = _logits_for(np.array([[2.0, -1.0, -1.0, -1.0]], dtype=np.float32))
+    # L = fakequant_won (0,1,2) minus parseback_won (0) = {1,2}.
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+    )
+    assert cert["fakequant_won_count"] == 3
+    assert cert["parseback_won_count"] == 1
+    assert cert["lost_count"] == 2
+    # Evaluated (parseback) margin over L = {pixels 1,2} = both -1.
+    lost = cert["evaluated_margins_by_subset"]["fakequant_won_but_parseback_lost"]
+    assert lost["pixel_count"] == 2
+    assert lost["p50"] == pytest.approx(-1.0)
+
+
+def test_lset_certificate_causal_split_strong_lost_margin_blames_quantization() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 4), dtype=np.float32)
+    # The lost pixels had STRONG positive fakequant margin (+5) -> something
+    # MOVED them (export/quantization), not margin safety.
+    fq = _logits_for(np.array([[5.0, 5.0, 5.0, 5.0]], dtype=np.float32))
+    pb = _logits_for(np.array([[5.0, -3.0, -3.0, -3.0]], dtype=np.float32))
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+    )
+    assert cert["lost_count"] == 3
+    assert cert["lost_pixels_had_strong_fakequant_margin"] is True
+    assert cert["causal_hint"] == "export_quantization_or_selection_moved_won_pixels"
+
+
+def test_lset_certificate_causal_split_near_zero_lost_margin_blames_margin_safety() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 4), dtype=np.float32)
+    # The lost pixels were near zero at fakequant (+0.01) -> margin safety.
+    fq = _logits_for(np.array([[3.0, 0.01, 0.01, 0.01]], dtype=np.float32))
+    pb = _logits_for(np.array([[3.0, -0.5, -0.5, -0.5]], dtype=np.float32))
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+    )
+    assert cert["lost_count"] == 3
+    assert cert["lost_pixels_had_strong_fakequant_margin"] is False
+    assert cert["causal_hint"] == "margin_safety_pixels_were_near_zero_at_fakequant"
+
+
+def test_lset_certificate_empty_lset_when_parseback_loses_nothing() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    region = np.ones((1, 1, 3), dtype=np.float32)
+    fq = _logits_for(np.array([[2.0, 2.0, -1.0]], dtype=np.float32))
+    pb = _logits_for(np.array([[2.0, 2.0, -1.0]], dtype=np.float32))  # identical
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+    )
+    assert cert["lost_count"] == 0
+    lost = cert["evaluated_margins_by_subset"]["fakequant_won_but_parseback_lost"]
+    assert lost["pixel_count"] == 0
+    assert lost["p50"] is None  # empty L is a meaningful non-error outcome
+
+
+def test_lset_certificate_reproduces_artifact_collapse_shape() -> None:
+    from tac.substrates.hi_nerv.target_region_birth import (
+        lset_subset_conditioned_margin_certificate,
+    )
+
+    # Shape of the real artifact: fakequant wins ~all, parseback wins ~none.
+    region = np.ones((1, 1, 100), dtype=np.float32)
+    fq = _logits_for(np.full((1, 100), 1.5, dtype=np.float32))      # 100 won
+    pb = _logits_for(np.full((1, 100), -0.55, dtype=np.float32))    # 0 won
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region, birth_class=1,
+        evaluated_logits_bhwc=pb, fakequant_logits_bhwc=fq, parseback_logits_bhwc=pb,
+    )
+    assert cert["fakequant_won_count"] == 100
+    assert cert["parseback_won_count"] == 0
+    assert cert["lost_count"] == 100
+    # fakequant margin on lost was strong (+1.5) -> quantization/export, not safety.
+    assert cert["lost_pixels_had_strong_fakequant_margin"] is True

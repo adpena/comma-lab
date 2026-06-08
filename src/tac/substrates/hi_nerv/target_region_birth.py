@@ -441,6 +441,135 @@ def region_margin_stats(
     }
 
 
+def _target_won_mask(logits_bhwc: np.ndarray, class_index: int) -> np.ndarray:
+    """Return the flat boolean mask of pixels where the target class wins argmax.
+
+    Consistent with ``region_margin_stats``: a pixel is won iff
+    ``target_margin = class_logit - max_other_logit > 0``.
+    """
+
+    logits = np.asarray(logits_bhwc, dtype=np.float64)
+    if logits.ndim != 4:
+        raise ValueError(f"logits must be BHWC; got shape {logits.shape}")
+    class_count = int(logits.shape[-1])
+    if not 0 <= int(class_index) < class_count:
+        raise ValueError(f"class_index {class_index} outside logits classes {class_count}")
+    flat = logits.reshape(-1, class_count)
+    class_logit = flat[:, int(class_index)]
+    impostor = np.copy(flat)
+    impostor[:, int(class_index)] = -np.inf
+    return (class_logit - impostor.max(axis=1)) > 0.0
+
+
+def _margins_over_subset(
+    evaluated_logits_bhwc: np.ndarray,
+    class_index: int,
+    subset_mask_flat: np.ndarray,
+) -> dict[str, float | int | None]:
+    logits = np.asarray(evaluated_logits_bhwc, dtype=np.float64)
+    class_count = int(logits.shape[-1])
+    flat = logits.reshape(-1, class_count)
+    sel = np.asarray(subset_mask_flat, dtype=bool)
+    n = int(np.count_nonzero(sel))
+    if n == 0:
+        return {"pixel_count": 0, "min": None, "p10": None, "p50": None, "mean": None}
+    chosen = flat[sel]
+    class_logit = chosen[:, int(class_index)]
+    impostor = np.copy(chosen)
+    impostor[:, int(class_index)] = -np.inf
+    target_margin = class_logit - impostor.max(axis=1)
+    return {
+        "pixel_count": n,
+        "min": float(np.min(target_margin)),
+        "p10": float(np.percentile(target_margin, 10.0)),
+        "p50": float(np.median(target_margin)),
+        "mean": float(np.mean(target_margin)),
+    }
+
+
+def lset_subset_conditioned_margin_certificate(
+    *,
+    region_mask_bhw: np.ndarray,
+    birth_class: int,
+    evaluated_logits_bhwc: np.ndarray,
+    fakequant_logits_bhwc: np.ndarray,
+    parseback_logits_bhwc: np.ndarray,
+    live_logits_bhwc: np.ndarray | None = None,
+    strong_margin_floor: float = 0.1,
+) -> dict[str, Any]:
+    """Subset-conditioned target-margin certificate (the L-set money metric).
+
+    A single ``target_margin_p10`` over the whole target region is misleading:
+    a negative p10 is expected when many region pixels remain unsolved, even if
+    thousands were won.  The decisive subset is ``L = W_fake \\ W_pb`` — pixels
+    the FAKEQUANT surface won but the PARSE-BACK surface lost.  Reporting the
+    EVALUATED surface's margins over L answers GPT's causal split:
+
+    * if the lost pixels had STRONG positive fakequant margin and then died,
+      the cause is export/quantization/selection (a section moved them);
+    * if they were already near zero at fakequant, the cause is margin safety.
+
+    All masks are intersected with the region.  Subsets with zero pixels return
+    ``None`` margins (e.g. an empty L means parse-back lost nothing — itself a
+    meaningful, non-error outcome).
+    """
+
+    region = np.asarray(region_mask_bhw) > 0.0
+    region_flat = region.reshape(-1)
+    cls = int(birth_class)
+    for name, logits in (
+        ("evaluated", evaluated_logits_bhwc),
+        ("fakequant", fakequant_logits_bhwc),
+        ("parseback", parseback_logits_bhwc),
+    ):
+        if np.asarray(logits).shape[:3] != region.shape:
+            raise ValueError(
+                f"{name}_logits BHW must match region mask; got "
+                f"{np.asarray(logits).shape[:3]} vs {region.shape}"
+            )
+    w_fake = _target_won_mask(fakequant_logits_bhwc, cls) & region_flat
+    w_pb = _target_won_mask(parseback_logits_bhwc, cls) & region_flat
+    l_set = w_fake & ~w_pb  # fakequant-won AND parse-back-lost
+    subsets: dict[str, np.ndarray] = {
+        "all_target_region": region_flat,
+        "fakequant_won": w_fake,
+        "fakequant_won_but_parseback_lost": l_set,
+    }
+    if live_logits_bhwc is not None:
+        if np.asarray(live_logits_bhwc).shape[:3] != region.shape:
+            raise ValueError("live_logits BHW must match region mask")
+        subsets["live_won"] = _target_won_mask(live_logits_bhwc, cls) & region_flat
+    margins = {
+        subset: _margins_over_subset(evaluated_logits_bhwc, cls, mask)
+        for subset, mask in subsets.items()
+    }
+    # The fakequant margin of the LOST pixels is the causal disambiguator.
+    fakequant_margin_on_lost = _margins_over_subset(fakequant_logits_bhwc, cls, l_set)
+    # "Strong" means meaningfully above the wall, not merely positive: a lost
+    # pixel that sat at +0.01 at fakequant was a margin-safety casualty, not a
+    # pixel that quantization/export actively moved.
+    lost_were_strong = (
+        fakequant_margin_on_lost["p50"] is not None
+        and float(fakequant_margin_on_lost["p50"]) >= float(strong_margin_floor)
+    )
+    return {
+        "schema": "hi_nerv_lset_subset_margin_certificate.v1",
+        "birth_class": cls,
+        "region_pixel_count": int(np.count_nonzero(region_flat)),
+        "fakequant_won_count": int(np.count_nonzero(w_fake)),
+        "parseback_won_count": int(np.count_nonzero(w_pb)),
+        "lost_count": int(np.count_nonzero(l_set)),
+        "evaluated_margins_by_subset": margins,
+        "fakequant_margin_on_lost_pixels": fakequant_margin_on_lost,
+        "lost_pixels_had_strong_fakequant_margin": bool(lost_were_strong),
+        "causal_hint": (
+            "export_quantization_or_selection_moved_won_pixels"
+            if lost_were_strong
+            else "margin_safety_pixels_were_near_zero_at_fakequant"
+        ),
+    }
+
+
 def region_argmax_transition_counts(
     initial_argmax: np.ndarray,
     final_argmax: np.ndarray,
