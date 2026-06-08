@@ -7538,6 +7538,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     f"import_torch_state_dict (strict): {len(missing)} state keys "
                     f"had no MLX target: {missing[:8]}"
                 )
+        if sections is not None and not applied:
+            # A section-scoped import that applied ZERO keys is almost always a
+            # prefix typo (e.g. "head_rgb1" vs "head_rgb_1"); silently no-op'ing
+            # would make a section-shadow row meaningless.  Fail loud.
+            raise ValueError(
+                f"import_torch_state_dict: section selector {tuple(sections)!r} "
+                "matched no state keys (prefix typo or absent in this config?)"
+            )
         return sorted(applied)
 
 

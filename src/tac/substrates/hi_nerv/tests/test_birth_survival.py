@@ -1217,3 +1217,157 @@ def test_archive_roundtrip_shadow_rejects_missing_latent_section() -> None:
             pair_indices=idx,
             latent_sections=("latents_does_not_exist",),
         )
+
+
+# ---------------------------------------------------------------------------
+# decoder-section shadow ablation (gated on round-trip identity)
+# ---------------------------------------------------------------------------
+
+
+def _teacher_logits_np(model, teacher, idx):
+    import numpy as _np
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        _candidate_logits_np,
+        _predict_frame1_nhwc01,
+    )
+
+    return _np.asarray(
+        _candidate_logits_np(teacher, _predict_frame1_nhwc01(model, idx)), dtype=_np.float32
+    )
+
+
+@skip_no_mlx
+def test_decoder_section_shadow_swaps_section_records_provenance_and_restores() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        DECODER_SECTION_SHADOW_ABLATION_SCHEMA,
+        measure_birth_decoder_section_shadow,
+    )
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    assert payload["accepted"] is True
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    # Build an "archive-decoded state" = live export with head_rgb_1 STRONGLY
+    # perturbed (simulating archive quantization that moves that section).
+    live_state = model.export_state_dict()
+    archive_decoded = {k: np.asarray(v, dtype=np.float32).copy() for k, v in live_state.items()}
+    archive_decoded["head_rgb_1.weight"] = archive_decoded["head_rgb_1.weight"] + 5.0
+    archive_decoded["head_rgb_1.bias"] = archive_decoded["head_rgb_1.bias"] - 5.0
+
+    fakequant_logits = _teacher_logits_np(model, teacher, idx)  # live = won state
+    pre_call_export = model.export_state_dict()
+
+    row = measure_birth_decoder_section_shadow(
+        model,
+        scorer_teacher=teacher,
+        archive_decoded_state=archive_decoded,
+        section="head_rgb_1",
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        pair_indices=idx,
+        fakequant_logits_bhwc=fakequant_logits,
+        parseback_logits_bhwc=fakequant_logits,  # not the focus of this test
+    )
+
+    assert row["schema"] == DECODER_SECTION_SHADOW_ABLATION_SCHEMA
+    assert row["action_id"] == payload["action_id"]
+    assert row["section"] == "head_rgb_1"
+    # Provenance: exactly the two head_rgb_1 keys swapped, nothing else.
+    assert row["applied_keys"] == ["head_rgb_1.bias", "head_rgb_1.weight"]
+    assert row["applied_key_count"] == 2
+    assert isinstance(row["applied_keys_sha256"], str) and len(row["applied_keys_sha256"]) == 64
+    assert row["section_import_roundtrip_identity_verified"] is True
+    assert "lset_certificate" in row and row["causal_hint_is_advisory"] is True
+    # Custody: no nested authority/readiness truthy keys.
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & {k for k, v in row.items() if v is True})
+
+    # RESTORE proof: the model is bit-identical after the shadow call.
+    post_call_export = model.export_state_dict()
+    assert set(pre_call_export) == set(post_call_export)
+    for k in pre_call_export:
+        assert np.array_equal(np.asarray(pre_call_export[k]), np.asarray(post_call_export[k])), k
+
+
+@skip_no_mlx
+def test_decoder_section_shadow_perturbed_section_changes_render_vs_control() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        measure_birth_decoder_section_shadow,
+    )
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    fakequant_logits = _teacher_logits_np(model, teacher, idx)
+
+    live_state = model.export_state_dict()
+    perturbed = {k: np.asarray(v, dtype=np.float32).copy() for k, v in live_state.items()}
+    # The behavioral teacher wins class 1 iff red > green; push red DOWN and
+    # green UP via the frame-1 head bias so the class-1 region loses argmax.
+    bias = perturbed["head_rgb_1.bias"].copy()
+    bias[0] -= 10.0  # red channel
+    bias[1] += 10.0  # green channel
+    perturbed["head_rgb_1.bias"] = bias
+    control = {k: np.asarray(v, dtype=np.float32).copy() for k, v in live_state.items()}  # identity
+
+    perturbed_row = measure_birth_decoder_section_shadow(
+        model, scorer_teacher=teacher, archive_decoded_state=perturbed, section="head_rgb_1",
+        target_labels=labels_np, live_birth_payload=payload, pair_indices=idx,
+        fakequant_logits_bhwc=fakequant_logits, parseback_logits_bhwc=fakequant_logits,
+    )
+    control_row = measure_birth_decoder_section_shadow(
+        model, scorer_teacher=teacher, archive_decoded_state=control, section="head_rgb_1",
+        target_labels=labels_np, live_birth_payload=payload, pair_indices=idx,
+        fakequant_logits_bhwc=fakequant_logits, parseback_logits_bhwc=fakequant_logits,
+    )
+    # NO-FAKE 1: the two imports applied genuinely different weights (a stub
+    # returning constants would give identical content hashes).
+    assert perturbed_row["applied_keys_sha256"] != control_row["applied_keys_sha256"]
+    # NO-FAKE 2: the perturbed frame-1 head actually moved class-1 wins DOWN;
+    # the identity-control reproduces the larger live won count.
+    assert perturbed_row["shadow_wrong_to_target"] < control_row["shadow_wrong_to_target"]
+
+
+@skip_no_mlx
+def test_decoder_section_shadow_zero_key_guard_fails_loud() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.birth_survival import (
+        BirthSurvivalError,
+        measure_birth_decoder_section_shadow,
+    )
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    fakequant_logits = _teacher_logits_np(model, teacher, idx)
+    archive_decoded = {
+        k: np.asarray(v, dtype=np.float32).copy() for k, v in model.export_state_dict().items()
+    }
+    # A section-prefix typo must fail loud, not silently no-op.
+    with pytest.raises(BirthSurvivalError, match="no keys for section"):
+        measure_birth_decoder_section_shadow(
+            model, scorer_teacher=teacher, archive_decoded_state=archive_decoded,
+            section="head_rgb1_typo", target_labels=labels_np, live_birth_payload=payload,
+            pair_indices=idx, fakequant_logits_bhwc=fakequant_logits,
+            parseback_logits_bhwc=fakequant_logits,
+        )
+
+
+@skip_no_mlx
+def test_import_torch_state_dict_section_typo_raises() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    mx.random.seed(3)
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    state = model.export_state_dict()
+    with pytest.raises(ValueError, match="matched no state keys"):
+        model.import_torch_state_dict(state, sections=("head_rgb1_typo",), strict=False)

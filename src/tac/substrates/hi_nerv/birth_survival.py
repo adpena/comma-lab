@@ -57,15 +57,33 @@ from scipy import ndimage
 from tac.contest_eval_contract import CAMERA_SIZE_WH, RGB_CHANNELS, SEQ_LEN
 from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.archive import hiv1_quantize_dequantize_for_training
-from tac.substrates.hi_nerv.target_region_birth import region_margin_stats
+from tac.substrates.hi_nerv.target_region_birth import (
+    lset_subset_conditioned_margin_certificate,
+    region_margin_stats,
+)
 
 # Mirror the gate's canonical schema strings exactly (the gate is the contract).
 BIRTH_SURVIVAL_SCHEMA = "hi_nerv_target_region_birth_survival.v1"
 BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 BIRTH_SURVIVAL_BLOCKED_SCHEMA = "hi_nerv_target_region_birth_survival_blocked.v1"
+DECODER_SECTION_SHADOW_ABLATION_SCHEMA = "hi_nerv_decoder_section_shadow_ablation.v1"
 TARGET_MARGIN_CERTIFICATE_SCHEMA = "tac.target_margin_certificate.v1"
 MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL = 0.5
 TARGET_MARGIN_SAFETY_FLOOR = 0.0
+# Decoder-weight sections the shadow ablation can swap to their archive-decoded
+# value (via the round-trip-identity-proven import_torch_state_dict).  Latent
+# sections are covered by archive_roundtrip_shadow; these are the conv/proj/head
+# modules nearest the SegNet decision surface.
+DECODER_SHADOW_SECTIONS = (
+    "head_rgb_1",
+    "head_rgb_0",
+    "fine_injector",
+    "mid_injector",
+    "feature_grids",
+    "convnext_blocks",
+    "blocks",
+    "latent_embed",
+)
 
 # Surfaces this producer can re-measure faithfully without an archive/inflate
 # runtime.  ``fakequant_mlx`` is the only L4 surface a scoped MLX producer can
@@ -1535,6 +1553,167 @@ def measure_birth_inflated_torch_cpu_survival_from_local_replay(
             "inflated_torch_cpu_memmap_full_video_materialized": False,
         },
     )
+
+
+def measure_birth_decoder_section_shadow(
+    model: Any,
+    *,
+    scorer_teacher: Any,
+    archive_decoded_state: Mapping[str, Any],
+    section: str,
+    target_labels: Any,
+    live_birth_payload: Mapping[str, Any],
+    pair_indices: Any,
+    fakequant_logits_bhwc: np.ndarray,
+    parseback_logits_bhwc: np.ndarray,
+    live_logits_bhwc: np.ndarray | None = None,
+    strong_margin_floor: float = 0.1,
+) -> dict[str, Any]:
+    """Shadow ONE decoder section with its exact archive-decoded weights.
+
+    Imports only ``section``'s archive-decoded weights into the LIVE MLX model
+    (via the round-trip-identity-proven ``import_torch_state_dict``), keeps
+    every other section live, renders the same pairs, and prices the named
+    birth region with the v2 L-set certificate.  This isolates whether the
+    EXACT archive quantization of ``section`` (not 8-bit symmetric fakequant)
+    is what moves the won pixels across the SegNet wall at parse-back.
+
+    The original section weights are snapshotted via ``export_state_dict`` and
+    restored after, so the model is unchanged on return.  ``causal_hint`` from
+    the certificate is ADVISORY; the row reports exactly which keys were
+    swapped (``applied_keys``/``applied_key_count``/``applied_keys_sha256``) so
+    a prefix typo cannot masquerade as a measurement.
+    """
+
+    _require_mlx()
+    import mlx.core as mx
+
+    import_fn = getattr(model, "import_torch_state_dict", None)
+    export_fn = getattr(model, "export_state_dict", None)
+    if not callable(import_fn) or not callable(export_fn):
+        raise BirthSurvivalError(
+            "model must expose import_torch_state_dict + export_state_dict "
+            "(round-trip identity gate) for the decoder-section shadow"
+        )
+    action_id = _live_action_id(live_birth_payload)
+    worst_region = _live_worst_region(live_birth_payload)
+    birth_class = int(worst_region["class_index"])
+    region_mask_np, _region_pixels = reconstruct_birth_region_mask(target_labels, worst_region)
+    idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+    if idx.ndim != 1 or int(idx.shape[0]) <= 0:
+        raise BirthSurvivalError("pair_indices must be a non-empty rank-1 tensor")
+
+    # Snapshot ONLY this section's current values (full export; restore subset).
+    full_snapshot = export_fn()
+    section_keys = sorted(
+        k for k in archive_decoded_state if k == section or str(k).startswith(f"{section}.")
+    )
+    if not section_keys:
+        raise BirthSurvivalError(
+            f"archive_decoded_state has no keys for section {section!r}"
+        )
+    snapshot_subset = {k: full_snapshot[k] for k in section_keys if k in full_snapshot}
+    if not snapshot_subset:
+        raise BirthSurvivalError(
+            f"section {section!r} not present in live model export; cannot shadow"
+        )
+
+    import hashlib
+
+    applied_keys: list[str] = []
+    roundtrip_verified = False
+    try:
+        # Verify the section import is identity-safe on THIS live model first:
+        # export(section) -> import(section) -> export(section) must be byte-equal.
+        identity_state = {k: full_snapshot[k] for k in snapshot_subset}
+        applied_keys = list(import_fn(archive_decoded_state, sections=(section,), strict=False))
+        shadow_export = export_fn()
+        # Confirm the swap actually moved the named keys and nothing else.
+        for k in full_snapshot:
+            if k in snapshot_subset:
+                continue
+            if not np.array_equal(np.asarray(full_snapshot[k]), np.asarray(shadow_export[k])):
+                raise BirthSurvivalError(
+                    f"decoder-section shadow for {section!r} perturbed out-of-section key {k!r}"
+                )
+        # Round-trip identity check on the section itself (restore->reimport equal).
+        import_fn(identity_state, sections=(section,), strict=False)
+        reverted = export_fn()
+        roundtrip_verified = all(
+            np.array_equal(np.asarray(identity_state[k]), np.asarray(reverted[k]))
+            for k in identity_state
+        )
+        # Re-apply the archive-decoded section for the actual measurement.
+        import_fn(archive_decoded_state, sections=(section,), strict=False)
+        support = _region_support_on_surface(
+            model,
+            scorer_teacher=scorer_teacher,
+            pair_indices=idx,
+            region_mask_np=region_mask_np,
+            birth_class=birth_class,
+        )
+        shadow_logits = _candidate_logits_np(scorer_teacher, _predict_frame1_nhwc01(model, idx))
+    finally:
+        import_fn(snapshot_subset, sections=(section,), strict=False)
+        mx.eval(model.parameters())  # type: ignore[union-attr]
+
+    cert = lset_subset_conditioned_margin_certificate(
+        region_mask_bhw=region_mask_np,
+        birth_class=birth_class,
+        evaluated_logits_bhwc=shadow_logits,
+        fakequant_logits_bhwc=fakequant_logits_bhwc,
+        parseback_logits_bhwc=parseback_logits_bhwc,
+        live_logits_bhwc=live_logits_bhwc,
+        strong_margin_floor=float(strong_margin_floor),
+    )
+    region_hard_won = int(support["region_hard_won"])
+    live_wrong = _live_wrong_to_target_count(live_birth_payload)
+    retention = (
+        None if live_wrong is None or live_wrong <= 0 else float(region_hard_won) / float(live_wrong)
+    )
+    applied_sha = hashlib.sha256(
+        "|".join(
+            f"{k}={hashlib.sha256(np.ascontiguousarray(np.asarray(archive_decoded_state[k])).tobytes()).hexdigest()}"
+            for k in section_keys
+        ).encode("utf-8")
+    ).hexdigest()
+    collapsed = (
+        retention is not None and retention < float(MIN_SCORER_EFFECT_RETENTION_FOR_SURVIVAL)
+    )
+    row = {
+        "schema": DECODER_SECTION_SHADOW_ABLATION_SCHEMA,
+        "family": "hinerv",
+        "action_id": str(action_id),
+        "surface": f"{section}_archive_decode_shadow",
+        "section": str(section),
+        "requested_section": str(section),
+        "applied_keys": list(applied_keys),
+        "applied_key_count": len(applied_keys),
+        "applied_keys_sha256": applied_sha,
+        "section_import_roundtrip_identity_verified": bool(roundtrip_verified),
+        "birth_class_index": birth_class,
+        "shadow_wrong_to_target": region_hard_won,
+        "shadow_wrong_to_target_retention": retention,
+        "live_wrong_to_target": live_wrong,
+        "region_score_debt_units": _region_debt_units(
+            int(support["region_unsolved"]), int(support["total_scored_pixels"])
+        ),
+        "lset_certificate": cert,
+        "causal_hint": cert["causal_hint"],
+        "causal_hint_is_advisory": True,
+        "section_collapses_l": bool(collapsed),
+        "first_failed_surface": (
+            f"{section}_archive_decode_shadow" if collapsed else None
+        ),
+        "human_visual_fidelity_objective": False,
+        "authority": _NON_AUTHORITY_MARKER,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "promotable": False,
+    }
+    return row
 
 
 def measure_birth_hysteresis(
