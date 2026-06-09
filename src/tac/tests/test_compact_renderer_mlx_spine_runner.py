@@ -21844,3 +21844,46 @@ def test_selector_v4_execute_arm_threads_render_quality_blocker(
     assert "selector_v4_render_segnet_last_frame_std_too_low" in out["blockers"]
     assert "pact_nerv_selector_v4_render_quality_gate_failed" in out["blockers"]
     assert "pact_nerv_selector_v4_archive_export_missing" in out["blockers"]
+
+
+def test_hinerv_action_program_pays_rent_gate_drops_harmful_sidecar() -> None:
+    """PAYS-RENT GATE (2026-06-08): a birth payload whose sidecar is proven
+    net-harmful (it collapses a surviving backend, e.g. 11306 -> 3, while adding
+    bytes) must be DROPPED at action selection so the archive ships backend-only.
+    The gate consumes the de-conflated survival verdict."""
+    sel = runner_mod._select_target_region_action_program_from_birth_payload
+
+    # Explicit sidecar_harmful flag -> drop.
+    harmful = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "a" * 64,
+        "target_region_action_program_base64": "harmful-program",
+        "sidecar_harmful": True,
+    }
+    program, selection = sel(harmful)
+    assert program is None
+    assert isinstance(selection, dict)
+    assert selection["target_region_action_dropped_by_pays_rent_gate"] is True
+    assert selection["recommended_action"] == "ship_backend_only"
+
+    # pays_rent verdict with admit=False -> also drop.
+    rejected = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "a" * 64,
+        "target_region_action_program_base64": "harmful-program",
+        "sidecar_pays_rent_verdict": {"admit": False, "verdict": "sidecar_harmful_reject"},
+    }
+    assert sel(rejected)[0] is None
+
+    # admit=True must NOT be dropped by the rent gate (no over-rejection).
+    ok = {
+        "schema": "hi_nerv_target_region_birth.v1",
+        "action_id": "b" * 64,
+        "target_region_action_program_base64": "good-program",
+        "sidecar_pays_rent_verdict": {"admit": True, "verdict": "sidecar_pays_rent"},
+    }
+    _prog_ok, sel_ok = sel(ok)
+    assert not (
+        isinstance(sel_ok, dict)
+        and sel_ok.get("target_region_action_dropped_by_pays_rent_gate")
+    )

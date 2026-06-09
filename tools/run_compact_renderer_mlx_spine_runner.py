@@ -59,6 +59,26 @@ def _select_target_region_action_program_from_birth_payload(
     if not isinstance(payload, Mapping):
         return None, None
 
+    # PAYS-RENT GATE (2026-06-08): NEVER bundle a target-region action proven
+    # net-harmful.  The canonical proof (hi_nerv_backend_only_vs_with_sidecar_
+    # survival.v1) showed a sidecar can collapse a SURVIVING backend (11306 -> 3)
+    # while adding ~8 KB -- pure score loss on BOTH the distortion and rate terms.
+    # An interpreter atom is admitted ONLY if S(backend + atom) >= S(backend);
+    # this consumes the de-conflated survival verdict
+    # (target_region_action_pays_rent / sidecar_harmful) when present so a harmful
+    # action is dropped at selection -> the archive ships backend-only (restores
+    # the wins AND saves the bytes).
+    rent = payload.get("sidecar_pays_rent_verdict")
+    if (isinstance(rent, Mapping) and rent.get("admit") is False) or (
+        payload.get("sidecar_harmful") is True
+    ):
+        return None, {
+            "target_region_action_dropped_by_pays_rent_gate": True,
+            "reason": "sidecar_failed_pays_rent_gate_S_backend_plus_atom_lt_S_backend",
+            "recommended_action": "ship_backend_only",
+            "sidecar_pays_rent_verdict": dict(rent) if isinstance(rent, Mapping) else None,
+        }
+
     candidates: list[dict[str, Any]] = []
 
     def _string(value: Any) -> str | None:
