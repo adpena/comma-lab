@@ -79,6 +79,32 @@ def _authority_tier(axis_tag: str) -> str:
     return "telemetry_proxy"
 
 
+def _metric_family(schema: str, *, has_d_seg: bool, has_d_pose: bool,
+                   has_bytes: bool, ran_evaluate_py: bool) -> str:
+    """Classify the METRIC FAMILY (operator anti-'metric-laundering' discipline 2026-06-09).
+
+    authority_tier alone is insufficient: a 21.74 dB PSNR row and an evaluate.py score row
+    can share schema shape. metric_family makes the KIND of number explicit so a capacity/
+    proxy row can never be structurally mistaken for an exact-score row:
+
+      exact_evaluate    : upstream evaluate.py on the full archive (d_seg/d_pose/bytes + report)
+      exact_pair_scorer : the repo's own scorer over inflated frames, per-pair (diagnosis, advisory)
+      psnr_capacity     : RGB/Y reconstruction PSNR (carrier capacity, NOT score)
+      scorer_proxy      : MLX/training scorer surrogate (e.g. boundary-hinge; NOT official d_seg)
+      telemetry_loss    : raw training loss
+    """
+    s = str(schema).lower()
+    if ran_evaluate_py and has_d_seg and has_d_pose and has_bytes and "exact_eval" in s:
+        return "exact_evaluate"
+    if "per_pair" in s or "pair_scorer" in s:
+        return "exact_pair_scorer"
+    if "psnr" in s or "recon_fit" in s or "capacity" in s:
+        return "psnr_capacity"
+    if "scorer" in s or "proxy" in s:
+        return "scorer_proxy"
+    return "telemetry_loss"
+
+
 def _read_frontier(pointer_path: Path, axis: str) -> tuple[float, str, str]:
     """Read the canonical frontier (score, grade, archive_sha) for an axis.
 
@@ -257,10 +283,21 @@ def ingest_exact_eval(
         base_archive_sha256 is not None
         and base_archive_sha256 != candidate_eval["base_archive_sha256"]
     )
-    # Explicit AUTHORITY TIER (operator discipline): the roadmap updates ONLY on
-    # exact eval, never proxy/advisory. contest_cuda/contest_cpu are promotion-grade;
-    # exact_cpu_advisory (local macOS/MLX) is a real number but NON-promotable.
+    # Explicit AUTHORITY TIER + METRIC FAMILY (operator anti-metric-laundering discipline):
+    # authority_tier = WHERE the number was produced; metric_family = WHAT KIND of number.
+    # A capacity/proxy row can never be structurally mistaken for an exact-score row.
     candidate_eval["authority_tier"] = _authority_tier(axis_tag)
+    candidate_eval["metric_family"] = _metric_family(
+        str(ev.get("schema", "")),
+        has_d_seg=True,  # _extract_distortions raised if absent
+        has_d_pose=True,
+        has_bytes=archive_bytes is not None,
+        ran_evaluate_py=bridge_ok,
+    )
+    candidate_eval["has_d_seg"] = True
+    candidate_eval["has_d_pose"] = True
+    candidate_eval["has_archive_bytes"] = archive_bytes is not None
+    candidate_eval["has_evaluate_py_report"] = bool(bridge_ok)
 
     decision = apply_campaign_decision(
         receipt=receipt,
@@ -278,11 +315,32 @@ def ingest_exact_eval(
         eval_bridge_ok=bridge_ok,
     )
     decision["next_action"] = next_action
-    decision["authority_tier"] = _authority_tier(axis_tag)
-    decision["roadmap_update_eligible"] = _authority_tier(axis_tag) in (
-        "contest_cpu",
-        "contest_cuda",
+    _authority = _authority_tier(axis_tag)
+    _mf = candidate_eval["metric_family"]
+    _has_full = bool(archive_bytes is not None and bridge_ok)  # d_seg/d_pose always present here
+    decision["authority_tier"] = _authority
+    decision["metric_family"] = _mf
+    # SCORE-roadmap update requires ALL of: contest axis + exact_evaluate metric + full fields.
+    # This is the firewall: a 21.74 dB psnr_capacity row (exact_cpu_advisory) is structurally
+    # barred from changing the score roadmap even though it is a real measurement.
+    decision["score_roadmap_update_eligible"] = bool(
+        _authority in ("contest_cpu", "contest_cuda")
+        and _mf == "exact_evaluate"
+        and _has_full
     )
+    # MECHANISM update (which experiment to run next) is allowed from any real measurement
+    # (advisory exact eval, per-pair scorer, capacity PSNR, scorer proxy) -- never promotion.
+    decision["mechanism_update_eligible"] = bool(
+        _mf in ("exact_evaluate", "exact_pair_scorer", "psnr_capacity", "scorer_proxy")
+    )
+    # PROMOTION requires the PAIRED dual-axis (contest_cpu AND contest_cuda on the SAME archive
+    # sha256); a single-axis ingest row can never establish it.
+    decision["promotion_update_eligible"] = False
+    decision["promotion_requires"] = (
+        "paired contest_cpu AND contest_cuda exact_evaluate on the same archive sha256"
+    )
+    # Back-compat alias (older consumers read roadmap_update_eligible).
+    decision["roadmap_update_eligible"] = decision["score_roadmap_update_eligible"]
     decision["proxy_divergence"] = divergence
     decision["frontier"] = {
         "axis": frontier_axis,

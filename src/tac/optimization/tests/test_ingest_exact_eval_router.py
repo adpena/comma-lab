@@ -183,11 +183,45 @@ def test_ingest_emits_typed_rows_and_rejects_garbage_base(tmp_path: Path) -> Non
     assert Path(out["campaign_decision_path"]).is_file()
     # Frontier read from the pointer, not hardcoded.
     assert dec["frontier"]["score"] == pytest.approx(0.19199)
-    # AUTHORITY TIER: a macOS advisory eval is NOT promotion-grade and must NOT be
-    # roadmap-update-eligible (operator discipline: only contest_cpu/cuda update the plan).
+    # AUTHORITY TIER + METRIC FAMILY firewall: a macOS advisory evaluate.py row is a real
+    # exact_evaluate metric, but exact_cpu_advisory is NOT a contest axis -> it can inform the
+    # next experiment (mechanism) but is structurally barred from the SCORE roadmap.
     assert cae["authority_tier"] == "exact_cpu_advisory"
+    assert cae["metric_family"] == "exact_evaluate"  # ran evaluate.py + has d_seg/d_pose/bytes
     assert dec["authority_tier"] == "exact_cpu_advisory"
-    assert dec["roadmap_update_eligible"] is False
+    assert dec["metric_family"] == "exact_evaluate"
+    assert dec["score_roadmap_update_eligible"] is False  # not a contest axis
+    assert dec["mechanism_update_eligible"] is True  # real measurement -> may direct next experiment
+    assert dec["promotion_update_eligible"] is False  # requires paired CPU+CUDA
+    assert dec["roadmap_update_eligible"] is False  # back-compat alias == score_roadmap
+
+
+def test_ingest_contest_cpu_exact_is_score_roadmap_eligible(tmp_path: Path) -> None:
+    # The firewall must PASS the right rows: a contest_cpu exact_evaluate row with full
+    # fields IS score-roadmap-eligible (else the gate is uselessly strict).
+    mod = _load_tool()
+    pointer = _write_frontier_pointer(tmp_path, 0.19199)
+    p = tmp_path / "exact_eval.json"
+    p.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_backend_only_exact_eval.v1",
+                "avg_segnet_dist": 0.0012,
+                "avg_posenet_dist": 0.00004,
+                "axis_tag": "[contest-CPU]",  # the public-leaderboard authority axis
+                "pipeline_works": True,
+                "export": {"archive_bytes": 178000, "archive_sha256": "z"},
+                "checkpoint": {"global_epoch": 3000},
+                "b2": {"b2_returncode": 0, "b2_result": {"avg_segnet_dist": 0.0012, "avg_posenet_dist": 0.00004}},
+            }
+        )
+    )
+    out = mod.ingest_exact_eval(exact_eval_json=p, tag="t", output_dir=tmp_path, frontier_pointer=pointer)
+    dec = out["campaign_decision"]
+    assert dec["authority_tier"] == "contest_cpu"
+    assert dec["metric_family"] == "exact_evaluate"
+    assert dec["score_roadmap_update_eligible"] is True  # contest axis + exact metric + full fields
+    assert dec["promotion_update_eligible"] is False  # still needs the PAIRED cuda axis too
 
 
 def test_ingest_stale_base_mismatch_flagged(tmp_path: Path) -> None:
