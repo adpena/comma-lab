@@ -123,6 +123,49 @@ _SURVIVAL_SURFACE_BLOCKER = {
 # control evidence, never a score claim.
 _NON_AUTHORITY_MARKER = "planning_control_false_authority"
 
+SIDECAR_PAYS_RENT_SCHEMA = "hi_nerv_sidecar_pays_rent_verdict.v1"
+
+
+def target_region_action_pays_rent(
+    *,
+    backend_region_hard_won: int,
+    with_sidecar_region_hard_won: int,
+    sidecar_archive_bytes: int = 0,
+) -> dict[str, Any]:
+    """The "every interpreter atom pays rent" admission gate.
+
+    A target-region action sidecar is admissible ONLY if it does not REDUCE the
+    region's hard-won target support: it must satisfy ``S(backend + sidecar) >=
+    S(backend)`` at the SegNet-argmax level (region_hard_won).  The 2026-06-08
+    incident proved a sidecar can collapse a SURVIVING backend (11306 -> 3) while
+    adding ~8 KB -- pure score loss on both the distortion AND rate terms.  When
+    ``admit`` is False the sidecar MUST be rejected from the archive: dropping it
+    saves the sidecar bytes AND restores the destroyed wins (a double win).
+
+    Region wins are the strong proxy; the exact admission for promotion still
+    needs paired ``d_seg``/``d_pose``/bytes from upstream ``evaluate.py``.
+    """
+
+    backend = int(backend_region_hard_won)
+    wrapped = int(with_sidecar_region_hard_won)
+    delta = wrapped - backend
+    admit = delta >= 0
+    return {
+        "schema": SIDECAR_PAYS_RENT_SCHEMA,
+        "backend_region_hard_won": backend,
+        "with_sidecar_region_hard_won": wrapped,
+        "region_hard_won_delta": delta,
+        "sidecar_archive_bytes": int(sidecar_archive_bytes),
+        "admit": bool(admit),
+        "verdict": "sidecar_pays_rent" if admit else "sidecar_harmful_reject",
+        "recommended_action": (
+            "keep_sidecar" if admit else "remove_sidecar_ship_backend_only"
+        ),
+        "exact_dS_required_for_promotion": True,
+        "authority": _NON_AUTHORITY_MARKER,
+        "promotable": False,
+    }
+
 
 class BirthSurvivalError(ValueError):
     """Raised when survival-producer inputs are structurally invalid."""
@@ -735,8 +778,17 @@ def _render_parseback_pair01_nhwc01(
     *,
     archive_path: Path,
     pair_indices: np.ndarray,
+    apply_target_region_actions: bool = True,
 ) -> tuple[tuple[Any, Any], dict[str, Any]]:
-    """Render requested pairs from parsed HIV1 archive bytes through receiver."""
+    """Render requested pairs from parsed HIV1 archive bytes through receiver.
+
+    ``apply_target_region_actions`` selects the render surface:
+    ``True`` renders the WRAPPED receiver (backend + sidecar overlay = the
+    shipped program); ``False`` renders the BACKEND-only model (the unwrapped
+    ``TargetRegionActionReceiver.base_model``).  The two surfaces MUST be scored
+    separately — bundling them conflates a surviving backend with a possibly
+    destructive sidecar (the 2026-06-08 11306->3 incident).
+    """
 
     _require_mlx()
     import mlx.core as mx
@@ -746,6 +798,12 @@ def _render_parseback_pair01_nhwc01(
 
     member, payload = _read_hiv1_payload_from_archive_zip(archive_path)
     arc, cfg, receiver_model = build_model_from_archive(payload, device="cpu")
+    # Unwrap to the backend-only model when the sidecar overlay is excluded.
+    render_model = (
+        receiver_model
+        if apply_target_region_actions
+        else getattr(receiver_model, "base_model", receiver_model)
+    )
     max_pair = int(pair_indices.max())
     if max_pair >= int(cfg.num_pairs):
         raise BirthSurvivalError(
@@ -754,7 +812,7 @@ def _render_parseback_pair01_nhwc01(
         )
     idx_t = torch.tensor(pair_indices.tolist(), dtype=torch.long)
     with torch.no_grad():
-        rgb0, rgb1 = receiver_model(idx_t)
+        rgb0, rgb1 = render_model(idx_t)
     frame0 = np.transpose(np.asarray(rgb0.detach().cpu(), dtype=np.float32), (0, 2, 3, 1))
     frame1 = np.transpose(np.asarray(rgb1.detach().cpu(), dtype=np.float32), (0, 2, 3, 1))
     archive_bytes = archive_path.read_bytes()
@@ -772,6 +830,7 @@ def _render_parseback_pair01_nhwc01(
             "parseback_payload_bytes": len(payload),
             "parseback_archive_schema_version": int(arc.schema_version),
             "parseback_receiver_model": "hiv1_build_model_from_archive_torch_cpu",
+            "parseback_target_region_actions_applied": bool(apply_target_region_actions),
             "parseback_pair_indices": [int(value) for value in pair_indices.tolist()],
         },
     )
@@ -1327,6 +1386,39 @@ def measure_birth_parseback_survival_from_report(
         region_mask_np=region_mask_np,
         birth_class=birth_class,
     )
+    # DE-CONFLATION (2026-06-08): the render above is the WRAPPED (backend +
+    # sidecar overlay) surface = the shipped program.  A harmful sidecar can
+    # collapse a SURVIVING backend (11306 -> 3); reporting only the wrapped
+    # surface mislabels the surviving backend as collapsed.  Render + score the
+    # BACKEND-ONLY surface separately and emit the "pays rent" gate so the export
+    # selection / launch gate can drop a net-harmful sidecar.
+    backend_only_support: dict[str, Any] | None = None
+    sidecar_pays_rent: dict[str, Any] | None = None
+    try:
+        backend_pair_frames, _backend_meta = _render_parseback_pair01_nhwc01(
+            archive_path=archive_path,
+            pair_indices=birth_pair_np,
+            apply_target_region_actions=False,
+        )
+        backend_only_support = _region_support_from_frame1_nhwc01(
+            scorer_teacher=scorer_teacher,
+            frame1_nhwc01=backend_pair_frames[1],
+            region_mask_np=region_mask_np,
+            birth_class=birth_class,
+        )
+        sidecar_pays_rent = target_region_action_pays_rent(
+            backend_region_hard_won=int(backend_only_support["region_hard_won"]),
+            with_sidecar_region_hard_won=int(support["region_hard_won"]),
+            sidecar_archive_bytes=int(surface_meta.get("parseback_payload_bytes") or 0),
+        )
+    except Exception as exc:  # backend-only de-conflation is additive; never sink the row
+        sidecar_pays_rent = {
+            "schema": SIDECAR_PAYS_RENT_SCHEMA,
+            "blocked": True,
+            "blocker": f"backend_only_deconflation_failed:{type(exc).__name__}:{exc}",
+            "authority": _NON_AUTHORITY_MARKER,
+            "promotable": False,
+        }
     target_rgb_0_birth = _target_rgb_birth_row(target_rgb_0, batch_index=birth_batch, name="target_rgb_0")
     target_rgb_1_birth = _target_rgb_birth_row(target_rgb_1, batch_index=birth_batch, name="target_rgb_1")
     pose_compensation_survival = _pose_compensation_survival_on_surface(
@@ -1353,7 +1445,7 @@ def measure_birth_parseback_survival_from_report(
     survived = bool(target_support_survived and compensation_survived)
     region_debt_units = _region_debt_units(int(support["region_unsolved"]), int(support["total_scored_pixels"]))
 
-    return _survival_row(
+    row = _survival_row(
         action_id=action_id,
         surface="parseback_mlx",
         survived=survived,
@@ -1379,6 +1471,22 @@ def measure_birth_parseback_survival_from_report(
             ),
         },
     )
+    # DE-CONFLATION fields: the row's primary region_hard_won is the WRAPPED
+    # (shipped, backend+sidecar) surface — honest about what the bytes score.
+    # These fields expose the BACKEND-only counterfactual + the pays-rent gate so
+    # a harmful sidecar is dropped rather than mislabeling the backend collapsed.
+    row["with_sidecar_region_hard_won"] = region_hard_won
+    if backend_only_support is not None:
+        backend_hw = int(backend_only_support["region_hard_won"])
+        row["backend_only_region_hard_won"] = backend_hw
+        row["backend_only_target_support_survived"] = bool(
+            backend_hw >= 1 and (backend_hw - initial_in_region_target) > 0
+        )
+    row["sidecar_pays_rent_verdict"] = sidecar_pays_rent
+    if isinstance(sidecar_pays_rent, Mapping) and sidecar_pays_rent.get("admit") is False:
+        row["sidecar_harmful"] = True
+        row["recommended_action"] = "remove_sidecar_ship_backend_only"
+    return row
 
 
 def measure_birth_inflated_torch_cpu_survival_from_local_replay(

@@ -1537,6 +1537,41 @@ def test_section_shadow_collapses_l_requires_retention_AND_nonpositive_L_margin(
     assert _classify_section_guilt(True, True) == (False, False, False)
 
 
+def test_target_region_action_pays_rent_gate() -> None:
+    """The 'every interpreter atom pays rent' gate: a sidecar is admissible ONLY
+    if it does not REDUCE region_hard_won. The 2026-06-08 incident (11306->3) is
+    the canonical reject; an improving action is the canonical admit."""
+    from tac.substrates.hi_nerv.birth_survival import (
+        SIDECAR_PAYS_RENT_SCHEMA,
+        target_region_action_pays_rent,
+    )
+
+    # Canonical harmful sidecar (the real incident): collapses 11306 -> 3.
+    harmful = target_region_action_pays_rent(
+        backend_region_hard_won=11306, with_sidecar_region_hard_won=3, sidecar_archive_bytes=8128
+    )
+    assert harmful["schema"] == SIDECAR_PAYS_RENT_SCHEMA
+    assert harmful["admit"] is False
+    assert harmful["verdict"] == "sidecar_harmful_reject"
+    assert harmful["recommended_action"] == "remove_sidecar_ship_backend_only"
+    assert harmful["region_hard_won_delta"] == 3 - 11306
+    # An action that adds wins pays its rent.
+    good = target_region_action_pays_rent(
+        backend_region_hard_won=100, with_sidecar_region_hard_won=140
+    )
+    assert good["admit"] is True
+    assert good["verdict"] == "sidecar_pays_rent"
+    assert good["recommended_action"] == "keep_sidecar"
+    # Exactly break-even (no reduction) is admissible — it does not destroy wins.
+    breakeven = target_region_action_pays_rent(
+        backend_region_hard_won=500, with_sidecar_region_hard_won=500
+    )
+    assert breakeven["admit"] is True
+    # Non-promotable: region wins are a proxy; exact dS still required.
+    assert harmful["promotable"] is False
+    assert harmful["exact_dS_required_for_promotion"] is True
+
+
 def test_codec_economics_seg_vs_rate_crossover() -> None:
     """The codec-ablation economics: preserving P wall-crossing pixels is worth
     Δbytes iff 100*P/(samples*H*W) > 25*Δbytes/37_545_489.  This is the exact
