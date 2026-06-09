@@ -816,6 +816,90 @@ def cmd_evaluator_cell_tolerance(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_segnet_margin_field(args: argparse.Namespace) -> int:
+    """The SegNet curve across ALL pixel dimensions on the contest video = the deforestation map.
+
+    For each of the 600 SCORED last-frames (frame1 of each pair), compute the source's own per-pixel
+    margin m_p = logit_argmax(p) - max_{c != argmax} logit_c(p) >= 0. m_p ≈ 0 => fragile class boundary
+    (must keep fidelity); m_p large => robust interior (FREE to cheapen). The histogram + fragile
+    fraction = exactly how many bytes the SegNet term forces vs releases. Order-1 input to the
+    score-domain waterfilling solve (.omx/research/evaluator_response_surface_solve_plan...).
+    """
+    import torch
+    from frame_utils import seq_len
+    from modules import (
+        DistortionNet,
+        posenet_sd_path,
+        segnet_model_input_size,
+        segnet_sd_path,
+    )
+
+    H, W, C = _frame_dims()
+    frames = _decode_first_k_frames(UPSTREAM / "videos" / "0.mkv", args.num_pairs * seq_len)
+    last_frames = frames[seq_len - 1 :: seq_len]  # the frames SegNet scores (frame1 of each pair)
+    n = last_frames.shape[0]
+
+    net = DistortionNet().eval().to(args.device)
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, args.device)
+    seg_h, seg_w = segnet_model_input_size[1], segnet_model_input_size[0]  # 384, 512
+
+    # Fragility thresholds in logit units (small margin => easily flipped by a perturbation).
+    thresholds = [0.5, 1.0, 2.0, 4.0, 8.0]
+    frag_counts = dict.fromkeys(thresholds, 0)
+    total_pixels = 0
+    hist_bins = np.array([0, 0.5, 1, 2, 4, 8, 16, 32, 1e9], dtype=np.float64)
+    hist = np.zeros(len(hist_bins) - 1, dtype=np.int64)
+    per_frame_frag: list[float] = []
+
+    bs = int(args.batch_size)
+    with torch.inference_mode():
+        for i in range(0, n, bs):
+            batch = last_frames[i : i + bs]
+            x = torch.from_numpy(np.ascontiguousarray(batch.transpose(0, 3, 1, 2))).float()  # (b,3,H,W) [0,255]
+            seg_in = torch.nn.functional.interpolate(x, size=(seg_h, seg_w), mode="bilinear", align_corners=False).to(args.device)
+            logits = net.segnet(seg_in)  # (b,5,seg_h,seg_w)
+            top2 = torch.topk(logits, 2, dim=1).values  # (b,2,h,w)
+            margin = (top2[:, 0] - top2[:, 1]).cpu().numpy().reshape(-1)  # (b*h*w,) >= 0
+            total_pixels += margin.size
+            hist += np.histogram(margin, bins=hist_bins)[0]
+            for t in thresholds:
+                frag_counts[t] += int((margin < t).sum())
+            # per-frame fragile fraction at the canonical 2.0-logit threshold
+            mb = (top2[:, 0] - top2[:, 1]).cpu().numpy().reshape(batch.shape[0], -1)
+            per_frame_frag.extend([float((row < 2.0).mean()) for row in mb])
+
+    frag_frac = {str(t): frag_counts[t] / max(1, total_pixels) for t in thresholds}
+    hist_frac = (hist / max(1, total_pixels)).tolist()
+    pf = np.array(per_frame_frag)
+    artifact = {
+        "schema": "segnet_margin_field.v1",
+        "purpose": "per-pixel SegNet source margin over all scored last-frames = SegNet curve across all dimensions + deforestation map",
+        "utc": _utc(),
+        "n_scored_frames": int(n),
+        "segnet_input_size_hw": [seg_h, seg_w],
+        "total_pixels": int(total_pixels),
+        "margin_histogram_bins_logit": hist_bins.tolist(),
+        "margin_histogram_fraction": hist_frac,
+        "fragile_fraction_by_logit_threshold": frag_frac,
+        "interpretation": {
+            "fragile_pixels_must_keep_fidelity": "m_p below threshold = near class boundary = SegNet bytes go here",
+            "robust_pixels_free_to_cheapen": "m_p large = dominant class = release bytes (the rate headroom)",
+        },
+        "per_frame_fragile_fraction_thr2logit": {
+            "min": float(pf.min()), "p50": float(np.median(pf)), "mean": float(pf.mean()), "max": float(pf.max()),
+        },
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    print(f"scored {n} last-frames @ {seg_h}x{seg_w}; total_pixels={total_pixels:,}")
+    print("fragile fraction (m_p < threshold) — the SegNet byte budget:")
+    for t in thresholds:
+        print(f"   m_p < {t:>4} logit : {frag_frac[str(t)]:.4f}  ({frag_counts[t]:,} px)  => robust/free = {1-frag_frac[str(t)]:.4f}")
+    print(f"per-frame fragile@2logit: min={pf.min():.4f} p50={np.median(pf):.4f} mean={pf.mean():.4f} max={pf.max():.4f}")
+    print(f"artifact -> {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -823,6 +907,13 @@ def main(argv: list[str] | None = None) -> int:
     ct = sub.add_parser("evaluator-cell-tolerance", help="cheapen source -> measure d_seg/d_pose headroom (the rate budget)")
     ct.add_argument("--out", required=True, help="artifact JSON path")
     ct.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+
+    mf = sub.add_parser("segnet-margin-field", help="per-pixel SegNet margin over all scored frames = deforestation map")
+    mf.add_argument("--out", required=True, help="artifact JSON path")
+    mf.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    mf.add_argument("--num-pairs", type=int, default=600, help="scored pairs (default 600 = full contest video)")
+    mf.add_argument("--batch-size", type=int, default=32, help="SegNet batch (saturate cores/RAM)")
+    mf.set_defaults(func=cmd_segnet_margin_field)
     ct.set_defaults(func=cmd_evaluator_cell_tolerance)
 
     op = sub.add_parser("one-pair-overfit", help="Phase 0A: pure-RGB-L2 overfit of one pair")
