@@ -1335,6 +1335,129 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert contract["ready_for_exact_eval_dispatch"] is False
 
 
+# ---------------------------------------------------------------------------
+# B1 CLEAN-RELAUNCH: the kitchen-sink + source-weight amplification the operator
+# FORBADE ("B1 = clean PR95 baseline, zero novelty") are RELAXED under the
+# research-launch opt-out (acknowledged, not dropped) so the clean baseline can
+# launch; OUTSIDE research_launch they remain HARD production blockers; the
+# canonical PR95 controls stay HARD-enforced in BOTH modes.
+# ---------------------------------------------------------------------------
+
+# The clean PR95 baseline flag set (mirrors scripts/launch_b1_clean_stabilized_pr95.sh):
+# canonical PR95 controls KEPT, kitchen-sink + amplification DROPPED.
+_CLEAN_BASELINE_ARGS: list[str] = [
+    "--full",
+    "--allow-direct-research-full-launch",
+    "--research-curriculum-total-epochs",
+    "3000",
+    "--epochs",
+    "3000",
+    "--pr95-faithful-curriculum",
+    "--pr95-muon-policy",
+    "faithful_stage8_only",
+    "--pr95-curriculum-total-epochs",
+    "3000",
+    "--distillation-weight",
+    "1.0",
+    "--segnet-distillation-objective",
+    "boundary_argmax_hinge",
+    "--pose-distillation-weight",
+    "1.0",
+    "--eval-roundtrip-ste",
+    "--coder-qat",
+    "--coder-qat-c1a-entropy-weight",
+    "1.0e-4",
+    "--hard-byte-ceiling",
+    "300000",
+    "--ema-archive-selection",
+    "--checkpoint-selection-metric-key",
+    "total",
+    "--checkpoint-selection-metric-required",
+    "--post-export-receiver-cache-quality-gate",
+    # NOTE: NO --pr95-stage-source-weight-amplification, NO scorer-space step
+    # guard, NO scorer-input guard/contrast/shape, NO posenet tether/floor, NO
+    # direct-live class/pose weights — the dropped kitchen-sink.
+]
+
+_CLEAN_BASELINE_RELAXABLE = frozenset(
+    {
+        "hinerv_full_missing_pr95_source_weight_amplification",
+        "hinerv_full_missing_direct_live_segnet_distillation",
+        "hinerv_full_missing_direct_live_class_escape_pressure",
+        "hinerv_full_missing_direct_live_posenet_distillation",
+        "hinerv_full_missing_scorer_space_step_guard",
+        "hinerv_full_missing_scorer_input_distribution_guard",
+        "hinerv_full_missing_scorer_input_contrast_floor",
+        "hinerv_full_missing_scorer_input_shape_tether",
+        "hinerv_full_missing_posenet_yuv6_geometry_tether",
+        "hinerv_full_missing_posenet_temporal_signal_floor",
+    }
+)
+
+
+def test_clean_baseline_relaxes_kitchen_sink_under_research_launch() -> None:
+    """Clean PR95 baseline (research_launch) clears HARD blockers; kitchen-sink
+    is acknowledged-relaxed; canonical PR95 controls stay enforced."""
+    args = _build_parser().parse_args(_CLEAN_BASELINE_ARGS)
+    contract = _pr95_full_control_contract(args)
+
+    # The clean baseline has NO HARD blockers -> the launch gate allows it.
+    assert contract["blockers"] == [], (
+        f"clean baseline must have no HARD blockers; got {contract['blockers']}"
+    )
+    assert contract["production_full_control_ready"] is True
+    # The clean-baseline relaxation fired (distinct from the epoch-only relax).
+    assert contract["research_launch_clean_baseline_relaxation_active"] is True
+    # The dropped kitchen-sink is recorded as acknowledged-relaxed (NOT dropped).
+    relaxed = set(contract["research_relaxed_blockers"])
+    assert _CLEAN_BASELINE_RELAXABLE.issubset(relaxed), (
+        "kitchen-sink blockers must be acknowledged in research_relaxed_blockers; "
+        f"missing {_CLEAN_BASELINE_RELAXABLE - relaxed}"
+    )
+    # The epoch-floor relaxation is ALSO present (3000 < 29650).
+    assert "hinerv_full_pr95_curriculum_total_epochs_not_canonical_29650" in relaxed
+    # NO-FAKE: the canonical PR95 controls the clean script DOES set are active.
+    controls = contract["controls"]
+    assert controls["real_segnet_distillation_loss"] is True
+    assert controls["real_posenet_distillation_loss"] is True
+    assert controls["segnet_distillation_objective"] == "boundary_argmax_hinge"
+    assert controls["eval_roundtrip_ste_enabled"] is True
+    assert controls["pr95_faithful_curriculum_enabled"] is True
+    assert controls["coder_qat_enabled"] is True
+    assert controls["ema_archive_selection_enabled"] is True
+    # And the kitchen-sink is genuinely OFF (the divergence cause is absent).
+    assert controls["pr95_stage_source_weight_amplification_enabled"] is False
+    assert controls["scorer_space_step_guard_enabled"] is False
+
+
+def test_clean_baseline_kitchen_sink_stays_HARD_outside_research_launch() -> None:
+    """NO-FAKE guard: dropping --allow-direct-research-full-launch makes the
+    kitchen-sink HARD blockers again — the relaxation is research-launch-ONLY."""
+    production_args = [a for a in _CLEAN_BASELINE_ARGS if a != "--allow-direct-research-full-launch"]
+    args = _build_parser().parse_args(production_args)
+    contract = _pr95_full_control_contract(args)
+
+    # Without research_launch, the kitchen-sink are HARD blockers -> gate FAILS.
+    assert contract["production_full_control_ready"] is False
+    hard = set(contract["blockers"])
+    assert _CLEAN_BASELINE_RELAXABLE.issubset(hard), (
+        "outside research_launch the kitchen-sink MUST be HARD blockers; "
+        f"missing {_CLEAN_BASELINE_RELAXABLE - hard}"
+    )
+    assert contract["research_launch_clean_baseline_relaxation_active"] is False
+
+
+def test_clean_baseline_keeps_canonical_pr95_controls_hard_in_both_modes() -> None:
+    """NO-FAKE: a canonical PR95 control (eval-roundtrip) is HARD even under
+    research_launch — the relaxation is scoped to the kitchen-sink ONLY."""
+    no_roundtrip = [a for a in _CLEAN_BASELINE_ARGS if a != "--eval-roundtrip-ste"]
+    args = _build_parser().parse_args(no_roundtrip)
+    contract = _pr95_full_control_contract(args)
+    # Dropping a CANONICAL control fails the gate even under research_launch.
+    assert "hinerv_full_missing_eval_roundtrip_ste" in set(contract["blockers"])
+    assert contract["production_full_control_ready"] is False
+
+
 def test_hinerv_full_control_contract_blocks_disabled_output_head_contrast_init() -> None:
     args = _build_parser().parse_args(
         [

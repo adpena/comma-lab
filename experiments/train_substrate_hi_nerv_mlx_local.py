@@ -5223,6 +5223,33 @@ def _pr95_full_control_contract(
     research_launch = bool(
         getattr(args, "allow_direct_research_full_launch", False)
     )
+
+    def _append_clean_baseline_relaxable(blocker: str) -> None:
+        """Route a NON-canonical-PR95 internal-addition blocker.
+
+        Under the operator-authorized research-launch opt-out
+        (``--allow-direct-research-full-launch``), the "clean PR95 baseline"
+        per the operator binding directive 2026-06-09 ("B1 = clean PR95
+        baseline, zero novelty") explicitly DROPS the kitchen-sink internal
+        additions that are NOT part of the canonical PR95 8-stage curriculum
+        (``_PR95_SOURCE_STAGE_GROUND_TRUTH`` carries none of them): the PR95
+        source-weight amplification + the direct-live class-escape / pose
+        distillation pressure + the 4 scorer-input guard/tether/floor losses +
+        the scorer-space step guard. The diverging off-spec pilot ENABLED
+        these and diverged in stage 1 (CE 18 -> ~400). So under research_launch
+        they are recorded as ``research_relaxed_blockers`` (acknowledged, NOT
+        silently dropped) exactly like the epoch-budget floor; outside
+        research_launch they remain HARD production blockers. The canonical
+        PR95 controls (segnet/pose distillation, boundary-argmax-hinge,
+        eval-roundtrip, pr95_yuv6, faithful curriculum, coder-QAT/C1a,
+        dual-ascent, hard-byte-ceiling, EMA/parse-back selection, telemetry,
+        checkpoint selection, output-head init, scorer-domain bootstrap)
+        stay HARD-enforced for both launch modes.
+        """
+        if research_launch:
+            research_relaxed_blockers.append(blocker)
+        else:
+            blockers.append(blocker)
     research_epochs_floor = getattr(args, "research_curriculum_total_epochs", None)
     distillation_weight = float(getattr(args, "distillation_weight", 0.0))
     segnet_live_calibration_weight = float(
@@ -5347,13 +5374,19 @@ def _pr95_full_control_contract(
     if str(train_time_controls.segnet_distillation_objective) != "boundary_argmax_hinge":
         blockers.append("hinerv_full_missing_boundary_argmax_hinge_segnet_objective")
     if segnet_direct_live_weight <= 0.0:
-        blockers.append("hinerv_full_missing_direct_live_segnet_distillation")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_direct_live_segnet_distillation"
+        )
     if segnet_class_escape_weight <= 0.0:
-        blockers.append("hinerv_full_missing_direct_live_class_escape_pressure")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_direct_live_class_escape_pressure"
+        )
     if pose_distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_posenet_distillation_loss")
     if pose_direct_live_weight <= 0.0:
-        blockers.append("hinerv_full_missing_direct_live_posenet_distillation")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_direct_live_posenet_distillation"
+        )
     if bool(getattr(args, "allow_mock_scorer_teacher", False)):
         blockers.append("hinerv_full_real_scorer_teacher_blocked_by_mock_flag")
     if bool(getattr(args, "allow_segnet_only_research", False)):
@@ -5365,7 +5398,9 @@ def _pr95_full_control_contract(
     if not pr95_curriculum:
         blockers.append("hinerv_full_missing_pr95_faithful_curriculum")
     if pr95_curriculum and not pr95_source_weight_amplification:
-        blockers.append("hinerv_full_missing_pr95_source_weight_amplification")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_pr95_source_weight_amplification"
+        )
     # Research-launch opt-out relaxes the epoch-budget floor to the explicit
     # reduced research budget (MVP-first pilot). The floor blockers are then
     # recorded as acknowledged-not-dropped so the contract stays honest.
@@ -5412,21 +5447,33 @@ def _pr95_full_control_contract(
     if telemetry_flush_interval <= 0:
         blockers.append("hinerv_full_missing_training_telemetry_flush")
     if not scorer_space_step_guard:
-        blockers.append("hinerv_full_missing_scorer_space_step_guard")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_scorer_space_step_guard"
+        )
     if not checkpoint_selection_metric_key.strip():
         blockers.append("hinerv_full_missing_checkpoint_selection_metric")
     if not checkpoint_selection_metric_required:
         blockers.append("hinerv_full_missing_strict_checkpoint_selection")
     if scorer_input_guard_weight <= 0.0:
-        blockers.append("hinerv_full_missing_scorer_input_distribution_guard")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_scorer_input_distribution_guard"
+        )
     if float(train_time_controls.scorer_input_contrast_floor_weight) <= 0.0:
-        blockers.append("hinerv_full_missing_scorer_input_contrast_floor")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_scorer_input_contrast_floor"
+        )
     if float(train_time_controls.scorer_input_shape_tether_weight) <= 0.0:
-        blockers.append("hinerv_full_missing_scorer_input_shape_tether")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_scorer_input_shape_tether"
+        )
     if float(train_time_controls.posenet_yuv6_geometry_tether_weight) <= 0.0:
-        blockers.append("hinerv_full_missing_posenet_yuv6_geometry_tether")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_posenet_yuv6_geometry_tether"
+        )
     if float(train_time_controls.posenet_temporal_signal_floor_weight) <= 0.0:
-        blockers.append("hinerv_full_missing_posenet_temporal_signal_floor")
+        _append_clean_baseline_relaxable(
+            "hinerv_full_missing_posenet_temporal_signal_floor"
+        )
     if not bool(output_head_bias_metadata["enabled"]):
         blockers.append("hinerv_full_missing_output_head_target_bias_init")
     if not bool(output_head_contrast_metadata["enabled"]):
@@ -5445,6 +5492,22 @@ def _pr95_full_control_contract(
         "production_full_control_ready": not blockers,
         "research_launch_epoch_relaxation_active": bool(
             research_epoch_relaxation_active
+        ),
+        # The operator's clean-PR95-baseline directive 2026-06-09 drops the
+        # NON-canonical-PR95 kitchen-sink internal additions; under
+        # research_launch those blockers are acknowledged-relaxed (NOT silently
+        # dropped). True iff any clean-baseline relaxation fired.
+        "research_launch_clean_baseline_relaxation_active": bool(
+            research_launch
+            and any(
+                b
+                for b in research_relaxed_blockers
+                if b
+                not in (
+                    "hinerv_full_pr95_epoch_budget_below_29650",
+                    "hinerv_full_pr95_curriculum_total_epochs_not_canonical_29650",
+                )
+            )
         ),
         "research_relaxed_blockers": list(dict.fromkeys(research_relaxed_blockers)),
         "controls": {
