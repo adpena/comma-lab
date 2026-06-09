@@ -1344,6 +1344,122 @@ def cmd_evaluator_gradient_atlas(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_latent_drive_probe(args: argparse.Namespace) -> int:
+    """MECHANISM test (operator adversarial review): did the pair-local latents WAKE?
+
+    R2's failure was '2 fixed latent-independent frames' (dead latents). The decisive, cheapest test
+    of R3 is whether the trained per-pair latents are ALIVE + cross-pair DIVERSE — read straight from
+    the checkpoint's latent tensors (no scorer). If cross-pair variance ~0 + adjacent-pair L2 ~0, the
+    latents collapsed (R2 repeat). Plus a render-diversity check (do spread pairs render DIFFERENT
+    frames, vs the 2-fixed-frames signature). This distinguishes 'amplification false' from
+    'amplification worked' BEFORE the exact eval finishes.
+    """
+    import sys as _sys
+
+    import numpy as _np
+
+    if str(REPO_ROOT / "tools") not in _sys.path:
+        _sys.path.insert(0, str(REPO_ROOT / "tools"))
+    import watch_and_harvest_b1_checkpoint as wh  # self-bootstraps its own sys.path
+
+    run_dir = Path(args.run_dir).resolve()
+    cks = wh.list_checkpoints(run_dir / "checkpoints")
+    target = wh.select_target_checkpoint(cks, target_epoch=args.target_epoch, allow_final_fallback=True)
+    if target is None:
+        print(f"NO checkpoint >= ep{args.target_epoch} yet in {run_dir}/checkpoints")
+        return 3
+    from tac.substrates._shared.numpy_portable_inflate import unpack_state_dict_numpy
+
+    state = unpack_state_dict_numpy(wh._resolve_state_file(target.ema_state_path).read_bytes())
+
+    def _latent_stats(name: str) -> dict[str, Any]:
+        if name not in state:
+            return {"present": False}
+        arr = _np.asarray(state[name], dtype=_np.float64)  # (num_pairs, dim)
+        if arr.ndim != 2 or arr.shape[0] < 2:
+            return {"present": True, "shape": list(arr.shape), "note": "not (num_pairs,dim)"}
+        cross_pair_var = float(arr.var(axis=0).mean())  # mean per-dim variance ACROSS pairs
+        adj = _np.linalg.norm(_np.diff(arr, axis=0), axis=1)  # L2 between adjacent pairs
+        per_pair_norm = _np.linalg.norm(arr, axis=1)
+        return {
+            "present": True, "shape": list(arr.shape),
+            "cross_pair_variance": cross_pair_var,
+            "adjacent_pair_l2_mean": float(adj.mean()),
+            "adjacent_pair_l2_p10": float(_np.percentile(adj, 10)),
+            "per_pair_norm_mean": float(per_pair_norm.mean()),
+            # alive iff pairs are distinguishable: variance + adjacent motion both nonzero
+            "alive": bool(cross_pair_var > 1e-6 and adj.mean() > 1e-4),
+        }
+
+    latents = {n: _latent_stats(n) for n in ("latents_coarse", "latents_mid", "latents_fine")}
+    latents_alive = any(v.get("alive") for v in latents.values())
+
+    render = {"attempted": False}
+    if not args.no_render:
+        try:
+            import mlx.core as mx
+
+            import experiments.train_substrate_hi_nerv_mlx_local as trainer
+            from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+            arch = dict(ARCH_DEFAULTS)
+            arch["num_pairs"] = int(latents["latents_fine"]["shape"][0]) if latents["latents_fine"].get("shape") else 600
+            ns = argparse.Namespace(**arch)
+            model = HinervSubstrateMLX(trainer._config_from_args(ns))
+            wh._load_npsd_state_into_model(model, target.ema_state_path)
+            n_pairs = arch["num_pairs"]
+            idxs = sorted({0, n_pairs // 4, n_pairs // 2, (3 * n_pairs) // 4, n_pairs - 1})
+            r0s, r1s = [], []
+            for pi in idxs:
+                rgb0, rgb1 = model.reconstruct_pair(mx.array([pi]))
+                r0s.append(_np.asarray(rgb0[0]).reshape(-1))
+                r1s.append(_np.asarray(rgb1[0]).reshape(-1))
+            r0s = _np.stack(r0s)
+            r1s = _np.stack(r1s)
+            # cross-pair render std: if ~0, all pairs render the SAME frame (the 2-fixed signature)
+            render = {
+                "attempted": True,
+                "sampled_pairs": idxs,
+                "frame0_cross_pair_std": float(r0s.std(axis=0).mean()),
+                "frame1_cross_pair_std": float(r1s.std(axis=0).mean()),
+                "frame0_vs_frame1_distinct": float(_np.abs(r0s - r1s).mean()),
+                "renders_non_fixed": bool(r0s.std(axis=0).mean() > 1e-3 and r1s.std(axis=0).mean() > 1e-3),
+            }
+        except Exception as exc:  # pragma: no cover
+            render = {"attempted": True, "error": f"{type(exc).__name__}: {exc}"}
+
+    if latents_alive and render.get("renders_non_fixed", True):
+        verdict = "LATENTS_WOKE — pair-local carrier alive + cross-pair diverse (amplification worked)"
+    elif latents_alive:
+        verdict = "LATENTS_VARY_BUT_RENDERS_FIXED — latents distinguishable but decoder collapses them (topology/decoder bug)"
+    else:
+        verdict = "LATENTS_DEAD — cross-pair variance ~0 (R2 repeat: amplification did NOT wake the carrier)"
+
+    artifact = {
+        "schema": "latent_drive_probe.v1",
+        "purpose": "did R3's amplified-but-clipped objective wake the pair-local latents? (mechanism test)",
+        "utc": _utc(),
+        "run_dir": str(run_dir),
+        "checkpoint_epoch": target.global_epoch,
+        "checkpoint_meta": str(target.meta_path),
+        "latents": latents,
+        "latents_alive": latents_alive,
+        "render_diversity": render,
+        "verdict": verdict,
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    print(f"checkpoint ep{target.global_epoch}")
+    for n, v in latents.items():
+        if v.get("present") and "cross_pair_variance" in v:
+            print(f"  {n}: cross_pair_var={v['cross_pair_variance']:.3e} adj_l2={v['adjacent_pair_l2_mean']:.3e} alive={v['alive']}")
+    if render.get("attempted") and "frame0_cross_pair_std" in render:
+        print(f"  render: f0_cross_pair_std={render['frame0_cross_pair_std']:.4f} f1={render['frame1_cross_pair_std']:.4f} non_fixed={render['renders_non_fixed']}")
+    print(f"VERDICT: {verdict}")
+    print(f"artifact -> {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1358,6 +1474,13 @@ def main(argv: list[str] | None = None) -> int:
     ga = sub.add_parser("evaluator-gradient-atlas", help="B2: PoseNet JtJ subspace spectrum (intrinsic pose dim) + SegNet margin VJP")
     ga.add_argument("--out", required=True, help="artifact JSON path")
     ga.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    lp = sub.add_parser("latent-drive-probe", help="MECHANISM: did the pair-local latents wake? (cross-pair variance + render diversity)")
+    lp.add_argument("--run-dir", required=True, help="R3 run dir (SSD)")
+    lp.add_argument("--out", required=True, help="artifact JSON path")
+    lp.add_argument("--target-epoch", type=int, default=250)
+    lp.add_argument("--no-render", action="store_true", help="latent-variance only (skip rendering)")
+    lp.set_defaults(func=cmd_latent_drive_probe)
+
     ga.add_argument("--num-pairs", type=int, default=32, help="pairs to sample (spread across --decode-pairs)")
     ga.add_argument("--decode-pairs", type=int, default=600, help="pairs to decode + spread the sample across")
     ga.add_argument("--gamma", type=float, default=2.0, help="softplus margin target (logit)")

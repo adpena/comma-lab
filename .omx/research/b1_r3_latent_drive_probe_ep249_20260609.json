@@ -1,0 +1,68 @@
+{
+  "checkpoint_epoch": 249,
+  "checkpoint_meta": "/Volumes/VertigoDataTier/pact/b1_r3_descent_smoke_20260609T152706Z/checkpoints/epoch000249_20260609T153309Z.meta.json",
+  "evidence_grade": "[macOS-CPU advisory]",
+  "latents": {
+    "latents_coarse": {
+      "adjacent_pair_l2_mean": 0.29437396430805607,
+      "adjacent_pair_l2_p10": 0.21226648787177554,
+      "alive": true,
+      "cross_pair_variance": 0.002839492621661795,
+      "per_pair_norm_mean": 0.20758168912955896,
+      "present": true,
+      "shape": [
+        600,
+        16
+      ]
+    },
+    "latents_fine": {
+      "adjacent_pair_l2_mean": 0.25198146756380085,
+      "adjacent_pair_l2_p10": 0.18399326694749077,
+      "alive": true,
+      "cross_pair_variance": 0.00142047598324251,
+      "per_pair_norm_mean": 0.18075467951770469,
+      "present": true,
+      "shape": [
+        600,
+        24
+      ]
+    },
+    "latents_mid": {
+      "adjacent_pair_l2_mean": 0.272965054970534,
+      "adjacent_pair_l2_p10": 0.18966077446007787,
+      "alive": true,
+      "cross_pair_variance": 0.0019663841370002903,
+      "per_pair_norm_mean": 0.19205298684214753,
+      "present": true,
+      "shape": [
+        600,
+        20
+      ]
+    }
+  },
+  "latents_alive": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "did R3's amplified-but-clipped objective wake the pair-local latents? (mechanism test)",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "render_diversity": {
+    "attempted": true,
+    "frame0_cross_pair_std": 0.3971763849258423,
+    "frame0_vs_frame1_distinct": 0.5140403509140015,
+    "frame1_cross_pair_std": 0.41451168060302734,
+    "renders_non_fixed": true,
+    "sampled_pairs": [
+      0,
+      150,
+      300,
+      450,
+      599
+    ]
+  },
+  "run_dir": "/Volumes/VertigoDataTier/pact/b1_r3_descent_smoke_20260609T152706Z",
+  "schema": "latent_drive_probe.v1",
+  "score_claim": false,
+  "utc": "2026-06-09T15:37:05Z",
+  "verdict": "LATENTS_WOKE \u2014 pair-local carrier alive + cross-pair diverse (amplification worked)"
+}
