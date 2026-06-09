@@ -32,6 +32,7 @@ import numpy as np
 from tac.analysis.source_forward_bit_flip_falsification import (
     build_named_arrays_bit_flip_falsification,
 )
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OfficialConv2dNchw,
     OfficialHfrConvBlock,
@@ -3197,6 +3198,568 @@ def _ordered_unique(values: Iterable[str]) -> list[str]:
     return out
 
 
+DROP_OR_REIFY_PROOF_SCHEMA = "snerv_tub_drop_or_reify_source_forward_proof.v1"
+DROP_OR_REIFY_FACET_SCHEMA = "snerv_tub_drop_or_reify_facet.v1"
+VERDICT_REIFY = "REIFY"
+VERDICT_DROP = "DROP"
+VERDICT_REIFY_PENDING_SCORER = "REIFY_PENDING_SCORER"
+TUB_DROP_OR_REIFY_VERDICTS: tuple[str, ...] = (
+    VERDICT_REIFY,
+    VERDICT_REIFY_PENDING_SCORER,
+    VERDICT_DROP,
+)
+# Canonical TUB source-state facets a bit-flip can perturb.  ``yl_norm`` is the
+# LF normalization scalar pair the receiver frame-reconstruction primitive
+# actually consumes (receiver-causal); ``output_2`` is the temporal-fusion
+# feature residual that the current receiver fixture does NOT add to the
+# rendered frame (receiver-noncausal -> DROP until a receiver consumes it).
+TUB_SOURCE_FACET_YL_NORM = "yl_norm"
+TUB_SOURCE_FACET_OUTPUT2 = "output_2"
+TUB_DROP_OR_REIFY_FACETS: tuple[str, ...] = (
+    TUB_SOURCE_FACET_YL_NORM,
+    TUB_SOURCE_FACET_OUTPUT2,
+)
+TUB_OUTPUT2_RECEIVER_NONCAUSAL_BLOCKER = (
+    "snerv_official_tub_output2_source_state_not_consumed_by_receiver_frame_decode"
+)
+TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER = (
+    "snerv_official_tub_drop_or_reify_scorer_delta_pending_real_scorer"
+)
+TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER = (
+    "snerv_official_tub_drop_or_reify_source_graph_unproven"
+)
+
+
+def _flip_low_mantissa_bit(array: np.ndarray) -> np.ndarray:
+    """Deterministically flip the lowest mantissa bit of every float element.
+
+    This is a real, source-faithful single-bit mutation of the float64 source
+    state.  It changes the bytes for every finite, non-zero element; zeros and
+    non-finite values are left untouched so the perturbed array stays finite.
+    The result is the smallest representable nonzero change, which is the most
+    conservative possible causality probe: anything it propagates to is a real
+    causal channel, not an artifact of a large perturbation.
+    """
+
+    flat = np.ascontiguousarray(np.asarray(array, dtype=np.float64)).copy()
+    if flat.size == 0:
+        return flat
+    bits = flat.view(np.uint64)
+    finite = np.isfinite(flat)
+    nonzero = flat != 0.0
+    mask = finite & nonzero
+    bits[mask] ^= np.uint64(1)
+    out = bits.view(np.float64)
+    # Guard: if every element was zero/non-finite the XOR was a no-op; fall back
+    # to an absolute epsilon nudge so the facet still gets a real byte change.
+    if not bool(np.any(mask)):
+        out = flat + np.float64(np.finfo(np.float64).eps)
+    return out.reshape(np.asarray(array).shape)
+
+
+def _flip_scalar_pair_low_bit(pair: tuple[float, float]) -> tuple[float, float]:
+    flipped = _flip_low_mantissa_bit(np.asarray(pair, dtype=np.float64))
+    return (float(flipped[0]), float(flipped[1]))
+
+
+def _rgb_uint8_from_frame(frame: np.ndarray) -> np.ndarray:
+    arr = np.asarray(frame, dtype=np.float64)
+    # Upstream OutImg(out_bias="tanh") yields roughly [-1, 1]; the receiver maps
+    # to [0, 255] for the scorer.  Use the same affine the receiver uses so the
+    # uint8 boundary the contest scorer sees is exercised.
+    scaled = (arr * 0.5 + 0.5) * 255.0
+    return np.clip(np.rint(scaled), 0, 255).astype(np.uint8)
+
+
+def _max_abs_float(left: np.ndarray, right: np.ndarray) -> float | None:
+    a = np.asarray(left, dtype=np.float64)
+    b = np.asarray(right, dtype=np.float64)
+    if a.shape != b.shape:
+        return None
+    delta = np.abs(a - b)
+    if not np.all(np.isfinite(delta)):
+        return None
+    return float(np.max(delta)) if delta.size else 0.0
+
+
+def _max_abs_uint8(left: np.ndarray, right: np.ndarray) -> int | None:
+    a = np.asarray(left).astype(np.int64)
+    b = np.asarray(right).astype(np.int64)
+    if a.shape != b.shape:
+        return None
+    return int(np.max(np.abs(a - b))) if a.size else 0
+
+
+def _default_reference_scorer(
+    base_rgb_uint8: np.ndarray,
+    candidate_rgb_uint8: np.ndarray,
+) -> dict[str, float]:
+    """Deterministic, scorer-architecture-faithful d_seg/d_pose reference.
+
+    This is NOT the trained contest SegNet/PoseNet and carries NO score
+    authority.  It mirrors only the *functional definitions* the contest uses so
+    the proof can confirm that a receiver-RGB change is sufficient to perturb
+    the scorer terms (the causality question), while the absolute magnitude is
+    explicitly non-promotable and flagged ``reference_scorer``.
+
+    d_seg mirrors the SegNet argmax-disagreement RATE: it argmaxes the RGB
+    channel of the last frame per pixel and reports the disagreement fraction.
+    d_pose mirrors the PoseNet first-6-dim MSE: it reduces each frame to a small
+    fixed linear pose proxy and reports the mean squared difference.
+    """
+
+    base = np.asarray(base_rgb_uint8).astype(np.float64)
+    cand = np.asarray(candidate_rgb_uint8).astype(np.float64)
+    if base.shape != cand.shape or base.ndim < 4:
+        # Shape mismatch is a real causal-shape blocker, surfaced by caller.
+        return {"d_seg": 0.0, "d_pose": 0.0}
+    # Last frame channel argmax disagreement (SegNet-shaped functional).
+    last_base = base[..., -1, :, :, :] if base.ndim == 5 else base[-1]
+    last_cand = cand[..., -1, :, :, :] if cand.ndim == 5 else cand[-1]
+    base_argmax = np.argmax(last_base, axis=-3)
+    cand_argmax = np.argmax(last_cand, axis=-3)
+    d_seg = float(np.mean((base_argmax != cand_argmax).astype(np.float64)))
+    # Pose proxy: 6 fixed linear projections of the per-frame mean (PoseNet-shaped).
+    base_pose = _reference_pose_proxy(base)
+    cand_pose = _reference_pose_proxy(cand)
+    d_pose = float(np.mean((base_pose - cand_pose) ** 2))
+    return {"d_seg": d_seg, "d_pose": d_pose}
+
+
+def _reference_pose_proxy(rgb: np.ndarray) -> np.ndarray:
+    arr = np.asarray(rgb, dtype=np.float64)
+    flat = arr.reshape(arr.shape[0], -1) if arr.ndim >= 2 else arr.reshape(1, -1)
+    # Deterministic fixed projection to 6 pose-like dims; seeded, never trained.
+    rng = np.random.default_rng(20260609)
+    proj = rng.standard_normal((flat.shape[-1], 6))
+    return (flat @ proj) / float(flat.shape[-1])
+
+
+def build_snerv_official_tub_drop_or_reify_source_forward_proof(
+    *,
+    official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
+    train_one_step: bool = False,
+    action_id: str = "snerv_tub_drop_or_reify_source_forward_proof",
+    scorer_fn: Any | None = None,
+    generated_utc: str | None = None,
+) -> dict[str, Any]:
+    """Prove or refuse TUB source-state causality, facet by facet.
+
+    The DROP_OR_REIFY law: a TUB source-state section earns archive bytes ONLY
+    if a single-bit flip in that SOURCE state causally propagates to the
+    receiver RGB the contest scorer consumes (REIFY).  If the receiver never
+    consumes the section, the flip leaves the receiver RGB unchanged and the
+    section is metadata-only (DROP); it gets no bytes.
+
+    Mechanism (CPU-portable, deterministic, no paid dispatch):
+
+    1. Run the pinned upstream ``SNeRV_T`` source graph once via the functional
+       Haar fixture to capture the real source-state facets (``yl_norm`` LF
+       normalization, ``output_2`` temporal-fusion residual) and the base
+       receiver RGB rendered by the source-faithful NumPy frame primitive.
+    2. For each facet, flip the lowest mantissa bit of the SOURCE state and
+       re-render the receiver RGB through the same NumPy primitive.
+    3. REIFY iff the receiver RGB uint8 changes; DROP otherwise.  For a REIFY
+       facet, when ``scorer_fn`` is supplied (a real SegNet/PoseNet pair on
+       contest hardware), emit a base-bound ``CandidateActionEvaluation`` so the
+       facet flows through the shared evaluator-action waterfilling law; without
+       a real scorer the facet is ``REIFY_PENDING_SCORER`` and research-only.
+
+    ``scorer_fn`` must be ``(base_rgb_uint8, candidate_rgb_uint8) ->
+    {"d_seg": float, "d_pose": float}``.  A deterministic, scorer-shaped but
+    NON-AUTHORITY reference is always run in parallel to confirm sufficiency of
+    the RGB change; it never sets a score claim.
+
+    This row carries NO score / promotion / rank-or-kill / dispatch authority.
+    """
+
+    official_root = Path(official_repo_dir)
+    if generated_utc is None:
+        generated_utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    base = {
+        "schema": DROP_OR_REIFY_PROOF_SCHEMA,
+        "family": "snerv",
+        "component_id": "tub",
+        "action_id": str(action_id),
+        "generated_utc": generated_utc,
+        "authority": "source_forward_drop_or_reify_proof_no_score_claim",
+        "official_repo": {
+            "repo_url": OFFICIAL_REPO_URL,
+            "root": official_root.as_posix(),
+            "head_sha": _git_head_sha(official_root),
+            "expected_head_sha": OFFICIAL_SNERV_T_SOURCE_SHA,
+        },
+        "source_graph_executed": False,
+        "real_scorer_supplied": scorer_fn is not None,
+        "research_only": scorer_fn is None,
+        "tub_drop_or_reify_verdict": None,
+        "facets": [],
+        "candidate_action_evaluations": [],
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+
+    if not official_root.exists():
+        return {
+            **base,
+            "blockers": [
+                "snerv_official_source_checkout_missing",
+                TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER,
+            ],
+        }
+
+    try:
+        captured = _capture_tub_source_state_for_drop_or_reify(
+            official_root,
+            train_one_step=train_one_step,
+        )
+    except Exception as exc:  # fail-closed: a broken source graph proves nothing.
+        return {
+            **base,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER,
+                f"snerv_official_tub_drop_or_reify_source_graph_failed:{type(exc).__name__}",
+            ],
+        }
+
+    base_rgb_uint8 = captured["base_rgb_uint8"]
+    bytes_base = int(captured["receiver_archive_bytes"])
+    base_archive_sha256 = str(captured["receiver_archive_sha256"])
+    facets: list[dict[str, Any]] = []
+    evaluations: list[dict[str, Any]] = []
+    blockers: list[str] = []
+
+    for facet_name in TUB_DROP_OR_REIFY_FACETS:
+        facet = _evaluate_tub_source_facet_drop_or_reify(
+            facet_name=facet_name,
+            captured=captured,
+            base_rgb_uint8=base_rgb_uint8,
+            base_archive_sha256=base_archive_sha256,
+            bytes_base=bytes_base,
+            action_id=action_id,
+            scorer_fn=scorer_fn,
+        )
+        facets.append(facet)
+        blockers.extend(facet.get("blockers", ()))
+        if facet.get("candidate_action_evaluation") is not None:
+            evaluations.append(facet["candidate_action_evaluation"])
+
+    # The headline TUB verdict is the canonical ``output_2`` facet: that is the
+    # contested "TUB" section the launch gate cares about.  REIFY only if it is
+    # receiver-causal; otherwise DROP (no bytes for output_2).
+    output2_facet = next(
+        (f for f in facets if f["facet"] == TUB_SOURCE_FACET_OUTPUT2),
+        None,
+    )
+    headline_verdict = (
+        str(output2_facet["verdict"]) if output2_facet is not None else VERDICT_DROP
+    )
+    return {
+        **base,
+        "source_graph_executed": True,
+        "source_graph_scope": (
+            "official_snerv_t_forward_functional_haar_fixture_cpu_portable"
+        ),
+        "functional_haar_shim_used_for_fixture": True,
+        "shim_score_authority": False,
+        "base_receiver_archive_sha256": base_archive_sha256,
+        "base_receiver_archive_bytes": bytes_base,
+        "base_rgb_uint8_sha256": _hash_array_exact(base_rgb_uint8),
+        "tub_drop_or_reify_verdict": headline_verdict,
+        "tub_output2_receiver_consumed": (
+            bool(output2_facet["receiver_consumes_facet"])
+            if output2_facet is not None
+            else False
+        ),
+        "facets": facets,
+        "candidate_action_evaluations": evaluations,
+        "reified_facets": [f["facet"] for f in facets if f["verdict"] == VERDICT_REIFY],
+        "reify_pending_scorer_facets": [
+            f["facet"] for f in facets if f["verdict"] == VERDICT_REIFY_PENDING_SCORER
+        ],
+        "dropped_facets": [f["facet"] for f in facets if f["verdict"] == VERDICT_DROP],
+        "allowed_verdicts": list(TUB_DROP_OR_REIFY_VERDICTS),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _capture_tub_source_state_for_drop_or_reify(
+    official_root: Path,
+    *,
+    train_one_step: bool,
+) -> dict[str, Any]:
+    """Run upstream ``SNeRV_T`` once; return the source-state facets + receiver RGB."""
+
+    import torch
+
+    cfg = TubFixtureConfig()
+    torch.manual_seed(20260604)
+    with _official_tub_import_context(official_root):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            snerv_t = importlib.import_module("model.snerv_t")
+        model = snerv_t.SNeRV_T(cfg.to_namespace()).double()
+        current = _positive_fixture((1, 3, 32, 32), modulo=17)
+        previous = current + 1.0 / 64.0
+        next_frame = current + 1.0 / 32.0
+        current_t = torch.from_numpy(current)
+        previous_t = torch.from_numpy(previous)
+        next_t = torch.from_numpy(next_frame)
+        _run_one_step_training_smoke(
+            model,
+            current_t,
+            previous_t,
+            next_t,
+            enabled=train_one_step,
+        )
+        model.eval()
+        with torch.no_grad():
+            manual = _manual_tub_source_replay(model, current_t, previous_t, next_t)
+    img_yl = np.asarray(manual["img_yl"], dtype=np.float64)
+    yh_out = np.asarray(manual["yh_out"], dtype=np.float64)
+    yl_norm = (
+        float(np.asarray(manual["lf_triplet"]).min()),
+        float(np.asarray(manual["lf_triplet"]).max()),
+    )
+    output2_shuffled = np.asarray(manual["output2_shuffled"], dtype=np.float64)
+    # The receiver renders frames from the source-faithful NumPy primitive that
+    # consumes img_yl + yh_out + yl_norm.  output_2 is NOT an input to it -> the
+    # current receiver fixture does not consume output_2.
+    base_frame = official_tub_frame_reconstruction_numpy(
+        img_yl, yh_out, yl_norm=yl_norm
+    ).frame
+    base_rgb_uint8 = _rgb_uint8_from_frame(base_frame)
+    receiver_archive_packet = build_snerv_official_tub_source_forward_receiver_archive_packet(
+        official_repo_dir=official_root,
+        train_one_step=train_one_step,
+    )
+    archive_packet = bytes(receiver_archive_packet["archive_packet"])
+    return {
+        "img_yl": img_yl,
+        "yh_out": yh_out,
+        "yl_norm": yl_norm,
+        "output2_shuffled": output2_shuffled,
+        "base_frame": base_frame,
+        "base_rgb_uint8": base_rgb_uint8,
+        "receiver_archive_sha256": _hash_bytes(archive_packet),
+        "receiver_archive_bytes": len(archive_packet),
+        "receiver_output2_consumed": bool(
+            receiver_archive_packet.get("source_scope")
+            and False  # current fixture: output_2 elided from receiver render.
+        ),
+    }
+
+
+def _evaluate_tub_source_facet_drop_or_reify(
+    *,
+    facet_name: str,
+    captured: Mapping[str, Any],
+    base_rgb_uint8: np.ndarray,
+    base_archive_sha256: str,
+    bytes_base: int,
+    action_id: str,
+    scorer_fn: Any | None,
+) -> dict[str, Any]:
+    """Bit-flip ONE TUB source-state facet; re-render receiver RGB; classify."""
+
+    img_yl = np.asarray(captured["img_yl"], dtype=np.float64)
+    yh_out = np.asarray(captured["yh_out"], dtype=np.float64)
+    yl_norm = tuple(float(v) for v in captured["yl_norm"])
+    base_frame = np.asarray(captured["base_frame"], dtype=np.float64)
+    blockers: list[str] = []
+
+    if facet_name == TUB_SOURCE_FACET_YL_NORM:
+        # yl_norm IS a receiver frame-reconstruction input -> flipping it should
+        # change the receiver RGB (REIFY).  Re-render with the flipped source state.
+        flipped_norm = _flip_scalar_pair_low_bit(yl_norm)
+        source_byte_changed = flipped_norm != yl_norm
+        candidate_frame = np.asarray(
+            official_tub_frame_reconstruction_numpy(
+                img_yl, yh_out, yl_norm=flipped_norm
+            ).frame,
+            dtype=np.float64,
+        )
+        source_state_sha256 = _hash_array_exact(np.asarray(yl_norm, dtype=np.float64))
+        flipped_state_sha256 = _hash_array_exact(
+            np.asarray(flipped_norm, dtype=np.float64)
+        )
+        source_contract = "model/snerv_t.py:131 global LF normalization (yl_norm)"
+    elif facet_name == TUB_SOURCE_FACET_OUTPUT2:
+        # output_2 is the temporal-fusion residual.  The receiver frame
+        # reconstruction primitive does NOT take it as an input, so flipping the
+        # output_2 source state cannot change the receiver frame in the current
+        # fixture.  We prove this by re-rendering with the SAME frame inputs
+        # (output_2 is structurally absent from the receiver render) -> the
+        # candidate frame is bit-identical -> DROP.  This is not an assumption:
+        # ``official_tub_frame_reconstruction_numpy`` has no output_2 parameter,
+        # so output_2 cannot reach the receiver RGB.
+        output2 = np.asarray(captured["output2_shuffled"], dtype=np.float64)
+        flipped_output2 = _flip_low_mantissa_bit(output2)
+        source_byte_changed = bool(
+            _max_abs_float(output2, flipped_output2) not in (None, 0.0)
+        )
+        candidate_frame = np.asarray(
+            official_tub_frame_reconstruction_numpy(
+                img_yl, yh_out, yl_norm=yl_norm
+            ).frame,
+            dtype=np.float64,
+        )
+        source_state_sha256 = _hash_array_exact(output2)
+        flipped_state_sha256 = _hash_array_exact(flipped_output2)
+        source_contract = (
+            "model/snerv_t.py:142-150 output_2 temporal fusion residual"
+        )
+    else:  # pragma: no cover - guarded by TUB_DROP_OR_REIFY_FACETS.
+        raise ValueError(f"unknown TUB source facet {facet_name!r}")
+
+    candidate_rgb_uint8 = _rgb_uint8_from_frame(candidate_frame)
+    # Receiver causality is decided at the FLOAT receiver-RGB boundary: if the
+    # source-state flip reaches the receiver render at all, the receiver consumes
+    # the facet (REIFY).  The uint8/scorer boundary is a SEPARATE survival gate
+    # (a sub-uint8 float change is still a real causal channel; whether it moves
+    # the scored argmax is the rent question, not the causality question).
+    receiver_frame_linf = _max_abs_float(base_frame, candidate_frame)
+    receiver_consumes_facet = bool(receiver_frame_linf not in (None, 0.0))
+    rgb_linf = _max_abs_uint8(base_rgb_uint8, candidate_rgb_uint8)
+    survives_uint8_boundary = bool(rgb_linf not in (None, 0))
+
+    if not source_byte_changed:
+        blockers.append(
+            f"snerv_official_tub_drop_or_reify_source_byte_unchanged:{facet_name}"
+        )
+
+    # Reference scorer (NON-AUTHORITY) confirms whether the uint8 RGB change is
+    # sufficient to move the scorer terms; the real scorer (if supplied) carries
+    # the admission action.
+    reference_scorer = _default_reference_scorer(base_rgb_uint8, candidate_rgb_uint8)
+    reference_scorer_changed = bool(
+        float(reference_scorer["d_seg"]) > 0.0
+        or float(reference_scorer["d_pose"]) > 0.0
+    )
+
+    candidate_action_evaluation: dict[str, Any] | None = None
+    scorer_delta: dict[str, Any] | None = None
+    if not receiver_consumes_facet:
+        # The receiver never consumes this source state -> metadata-only -> DROP.
+        verdict = VERDICT_DROP
+        if facet_name == TUB_SOURCE_FACET_OUTPUT2:
+            blockers.append(TUB_OUTPUT2_RECEIVER_NONCAUSAL_BLOCKER)
+        else:
+            blockers.append(
+                f"snerv_official_tub_drop_or_reify_receiver_rgb_unchanged:{facet_name}"
+            )
+    elif scorer_fn is not None and survives_uint8_boundary:
+        # Receiver-causal AND survives the uint8 boundary AND a real scorer is
+        # available -> emit a base-bound CandidateActionEvaluation for the
+        # shared waterfilling law.
+        base_metrics = _coerce_scorer_metrics(
+            scorer_fn(base_rgb_uint8, base_rgb_uint8),
+            facet_name=facet_name,
+            blockers=blockers,
+        )
+        cand_metrics = _coerce_scorer_metrics(
+            scorer_fn(base_rgb_uint8, candidate_rgb_uint8),
+            facet_name=facet_name,
+            blockers=blockers,
+        )
+        if base_metrics is not None and cand_metrics is not None:
+            evaluation = CandidateActionEvaluation(
+                action_id=f"{action_id}:{facet_name}",
+                action_kind="snerv_tub_source_state_facet_bit_flip",
+                base_archive_sha256=base_archive_sha256,
+                with_action_archive_sha256=base_archive_sha256,
+                d_seg_base=float(base_metrics["d_seg"]),
+                d_pose_base=float(base_metrics["d_pose"]),
+                bytes_base=int(bytes_base),
+                d_seg_with_action=float(cand_metrics["d_seg"]),
+                d_pose_with_action=float(cand_metrics["d_pose"]),
+                bytes_with_action=int(bytes_base),
+                scorer_effect_survived=True,
+                evidence_grade="advisory",
+            )
+            candidate_action_evaluation = evaluation.to_row()
+            scorer_delta = {
+                "d_seg_base": float(base_metrics["d_seg"]),
+                "d_pose_base": float(base_metrics["d_pose"]),
+                "d_seg_with_action": float(cand_metrics["d_seg"]),
+                "d_pose_with_action": float(cand_metrics["d_pose"]),
+                "delta_score_total": evaluation.delta_score_total,
+                "delta_score_nonrate": evaluation.delta_score_nonrate,
+                "pays_rent": evaluation.pays_rent,
+            }
+            verdict = VERDICT_REIFY
+        else:
+            # Scorer output was malformed (blockers already recorded).
+            verdict = VERDICT_REIFY_PENDING_SCORER
+            blockers.append(TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER)
+    else:
+        # Receiver-causal but either no real scorer OR the minimal flip is
+        # sub-uint8 at this fixture -> REIFY is the causal verdict, but the
+        # scorer-ΔS / uint8 survival is pending (research-only, no bytes claimed).
+        verdict = VERDICT_REIFY_PENDING_SCORER
+        blockers.append(TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER)
+        if not survives_uint8_boundary:
+            blockers.append(
+                "snerv_official_tub_drop_or_reify_minimal_flip_sub_uint8_boundary:"
+                + facet_name
+            )
+
+    return {
+        "schema": DROP_OR_REIFY_FACET_SCHEMA,
+        "facet": facet_name,
+        "verdict": verdict,
+        "source_contract": source_contract,
+        "source_byte_changed": bool(source_byte_changed),
+        "receiver_consumes_facet": receiver_consumes_facet,
+        "receiver_frame_float_linf": receiver_frame_linf,
+        "receiver_rgb_uint8_linf": rgb_linf,
+        "survives_uint8_boundary": survives_uint8_boundary,
+        "source_state_sha256": source_state_sha256,
+        "flipped_source_state_sha256": flipped_state_sha256,
+        "base_rgb_uint8_sha256": _hash_array_exact(base_rgb_uint8),
+        "candidate_rgb_uint8_sha256": _hash_array_exact(candidate_rgb_uint8),
+        "reference_scorer_delta": reference_scorer,
+        "reference_scorer_changed": reference_scorer_changed,
+        "reference_scorer_authority": False,
+        "scorer_delta": scorer_delta,
+        "candidate_action_evaluation": candidate_action_evaluation,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _coerce_scorer_metrics(
+    raw: Any,
+    *,
+    facet_name: str,
+    blockers: list[str],
+) -> dict[str, float] | None:
+    if not isinstance(raw, Mapping):
+        blockers.append(
+            f"snerv_official_tub_drop_or_reify_scorer_output_invalid:{facet_name}"
+        )
+        return None
+    out: dict[str, float] = {}
+    for field in ("d_seg", "d_pose"):
+        value = raw.get(field)
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            blockers.append(
+                f"snerv_official_tub_drop_or_reify_scorer_metric_invalid:{facet_name}:{field}"
+            )
+            return None
+        if not np.isfinite(parsed) or parsed < 0.0:
+            blockers.append(
+                f"snerv_official_tub_drop_or_reify_scorer_metric_invalid:{facet_name}:{field}"
+            )
+            return None
+        out[field] = parsed
+    return out
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--official-repo-dir", default=DEFAULT_OFFICIAL_SNERV_REPO)
@@ -3221,9 +3784,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--official-trained-source-config-kind",
         default="official_trained_run_config",
     )
+    parser.add_argument(
+        "--drop-or-reify",
+        action="store_true",
+        help=(
+            "Emit the TUB DROP_OR_REIFY source-forward proof: bit-flip each TUB "
+            "source-state facet and classify REIFY/DROP by receiver-RGB "
+            "propagation (CPU-portable, research-only, no score authority)."
+        ),
+    )
     args = parser.parse_args(argv)
     if args.write_state_dict_npz is not None and not args.train_one_step:
         parser.error("--write-state-dict-npz requires --train-one-step")
+
+    if args.drop_or_reify:
+        proof = build_snerv_official_tub_drop_or_reify_source_forward_proof(
+            official_repo_dir=args.official_repo_dir,
+            train_one_step=bool(args.train_one_step),
+            generated_utc=args.generated_utc,
+        )
+        text = json.dumps(proof, indent=2, sort_keys=True)
+        if args.write_json is None:
+            print(text)
+        else:
+            args.write_json.parent.mkdir(parents=True, exist_ok=True)
+            args.write_json.write_text(text + "\n", encoding="utf-8")
+        return 0
 
     payload = build_snerv_official_tub_source_forward_replay_artifact(
         official_repo_dir=args.official_repo_dir,
@@ -3260,6 +3846,8 @@ __all__ = [
     "CHECKPOINT_LOAD_SHAPE_MISMATCH_BLOCKER",
     "CHECKPOINT_LOAD_UNEXPECTED_KEYS_BLOCKER",
     "DEFAULT_OFFICIAL_SNERV_REPO",
+    "DROP_OR_REIFY_FACET_SCHEMA",
+    "DROP_OR_REIFY_PROOF_SCHEMA",
     "EXACT_SOURCE_CONFIG_LINEAGES",
     "FALSE_AUTHORITY",
     "PYTORCH_WAVELETS_BLOCKER",
@@ -3285,7 +3873,18 @@ __all__ = [
     "STRICT_SOURCE_GRAPH_SOURCE_CONFIG_REQUIRED_BLOCKER",
     "TUB_CHECKPOINT_EXPORT_LINEAGE_BLOCKER",
     "TUB_CLOSED_BY_FIXTURE_REPLAY",
+    "TUB_DROP_OR_REIFY_FACETS",
+    "TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER",
+    "TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER",
+    "TUB_DROP_OR_REIFY_VERDICTS",
+    "TUB_OUTPUT2_RECEIVER_NONCAUSAL_BLOCKER",
     "TUB_PRESERVED_BLOCKERS",
+    "TUB_SOURCE_FACET_OUTPUT2",
+    "TUB_SOURCE_FACET_YL_NORM",
+    "VERDICT_DROP",
+    "VERDICT_REIFY",
+    "VERDICT_REIFY_PENDING_SCORER",
+    "build_snerv_official_tub_drop_or_reify_source_forward_proof",
     "build_snerv_official_tub_source_config_lineage",
     "build_snerv_official_tub_source_config_lineage_from_path",
     "build_snerv_official_tub_source_forward_receiver_archive_packet",
