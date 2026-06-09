@@ -1,0 +1,52 @@
+{
+  "authority": "planning_control_false_authority",
+  "backend_only_candidate_archive": {
+    "bytes": 9064,
+    "path": "/Volumes/VertigoDataTier/pact/hinerv_backend_only_candidate_20260608/archive_backend_only.zip",
+    "rebuild_tool": "tools/build_hi_nerv_backend_only_archive.py",
+    "sha256": "40dad432e990412fe72b554e0f6208b35f5f3f30bc647893abe6c733737a5fd3",
+    "ssd_tier": true
+  },
+  "backend_only_exact_replay": {
+    "backend_only_archive_sha256": "40dad432e990412fe72b554e0f6208b35f5f3f30bc647893abe6c733737a5fd3",
+    "estimated_delta_score_total_advisory": -0.014417139538319737,
+    "exact_eval_command": "inflate.sh /Volumes/VertigoDataTier/pact/hinerv_backend_only_candidate_20260608/archive_backend_only.zip <outdir> <file_list> && upstream/evaluate.py --device cpu  (and --device cuda) for exact d_seg/d_pose",
+    "exact_rate_delta_score": -0.004835467717573209,
+    "region_win_backend_only": 11306,
+    "region_win_delta": 11303,
+    "region_win_original": 3,
+    "verdict": "backend_only_double_win_strip_sidecar",
+    "zip_bytes_backend_only": 9064,
+    "zip_bytes_delta": -7262,
+    "zip_bytes_original": 16326
+  },
+  "canonical_proof": {
+    "archive_sha256": "ddd88b6c113d88797f239913970ec4dcbfb34936257c7a211686c7c21fbc613c",
+    "backend_excludes_sidecar": true,
+    "backend_only": {
+      "wrong_to_target_mlx": 11306,
+      "wrong_to_target_torch": 11297
+    },
+    "region_pixel_count": 50568,
+    "sidecar_changed_pixels_in_render": 2286,
+    "verdict": "sidecar_harmful_backend_survives",
+    "with_sidecar": {
+      "sidecar_bytes": 8128,
+      "wrong_to_target_mlx": 3,
+      "wrong_to_target_torch": 3
+    }
+  },
+  "mlx_segnet_fidelity": {
+    "full_frame_argmax_disagreement_px": 18,
+    "mlx_port_is_argmax_exact": false,
+    "mlx_port_segnet_wins": 11306,
+    "region_argmax_disagreement_px": 17,
+    "torch_upstream_segnet_wins": 11297,
+    "verdict": "mlx_port_drift_18px_to_harden_to_zero"
+  },
+  "note": "Durable git capture of SSD-tier result rows (no signal loss). All [macOS-MLX/CPU advisory]; exact frontier score needs full-size 600-pair run + paired upstream eval.",
+  "promotable": false,
+  "schema": "hi_nerv_sidecar_fix_evidence_capture.v1",
+  "score_claim": false,
+  "utc": "2026-06-09"
+}
