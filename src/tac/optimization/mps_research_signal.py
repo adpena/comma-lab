@@ -187,8 +187,24 @@ def _normalize_observation(
         raise MPSResearchSignalError(f"row {index}: device must be mps, got {device!r}")
     archive_bytes = _required_positive_int(row, "archive_bytes", index=index)
     proxy_loss = _optional_float(row.get("proxy_loss"))
-    d_seg = _optional_float(row.get("d_seg_proxy", row.get("proxy_d_seg")))
-    d_pose = _optional_float(row.get("d_pose_proxy", row.get("proxy_d_pose")))
+    # NOTE: ``*_train_loss_proxy`` is a TRAINING-LOSS proxy (a boundary hinge for
+    # the seg axis under hinge configs), NOT official argmax-disagreement d_seg.
+    # MPS research-signal rows are non-authoritative by construction. Read order:
+    # explicit ``d_seg_proxy`` -> renamed ``seg_axis_train_loss_proxy`` (new
+    # emitter per the 2026-06-09 ontology fix) -> legacy ``proxy_d_seg``
+    # (historical JSONL rows written before the rename; back-compat only).
+    d_seg = _optional_float(
+        row.get(
+            "d_seg_proxy",
+            row.get("seg_axis_train_loss_proxy", row.get("proxy_d_seg")),
+        )
+    )
+    d_pose = _optional_float(
+        row.get(
+            "d_pose_proxy",
+            row.get("pose_axis_train_loss_proxy", row.get("proxy_d_pose")),
+        )
+    )
     if proxy_loss is None and d_seg is None and d_pose is None:
         raise MPSResearchSignalError(
             f"row {index}: supply proxy_loss or at least one proxy distortion component"

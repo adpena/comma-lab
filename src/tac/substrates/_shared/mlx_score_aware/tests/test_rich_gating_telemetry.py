@@ -105,7 +105,7 @@ def test_per_epoch_metrics_gating_flattens_to_top_level() -> None:
         "loss_seg": 12.0,
         "loss_pose": 5.0,
         "loss_rate": 1.0,
-        "proxy_score": 1234.5,
+        "proxy_score_from_train_losses": 1234.5,
         "checkpoint_path": None,
     }
     row = PerEpochMetrics(
@@ -121,7 +121,7 @@ def test_per_epoch_metrics_gating_flattens_to_top_level() -> None:
     assert row["nan_inf_count"] == 0
     assert row["sidecar_exported"] is False
     assert row["pay_rent_gate_active"] is True
-    assert row["proxy_score"] == pytest.approx(1234.5)
+    assert row["proxy_score_from_train_losses"] == pytest.approx(1234.5)
     assert row["checkpoint_path"] is None
 
 
@@ -194,14 +194,24 @@ def test_assemble_gating_row_per_axis_sum_is_arithmetic() -> None:
     # Independent recomputation of the literal sum (the sum-check).
     expected_sum = 1.25 + 2.75 + 0.0 + 0.03 + 0.0 + 0.0
     assert gating["per_axis_sum"] == pytest.approx(expected_sum)
-    # Proxy axes mirror the per-axis decomposition.
-    assert gating["proxy_d_seg"] == pytest.approx(1.25)
-    assert gating["proxy_d_pose"] == pytest.approx(2.75)
-    assert gating["proxy_rate"] == pytest.approx(0.0)
-    # Proxy score independently recomputed from the canonical contest formula.
+    # Per-axis TRAINING-LOSS proxies mirror the per-axis decomposition. These
+    # are TRAINING losses (the seg axis is a boundary hinge under hinge configs),
+    # NOT official argmax-disagreement d_seg — hence the ``_train_loss_proxy``
+    # names (operator ontology-bug fix 2026-06-09; the old ``proxy_d_seg`` etc.
+    # were retired so a hinge loss can never masquerade as official d_seg).
+    assert gating["seg_axis_train_loss_proxy"] == pytest.approx(1.25)
+    assert gating["pose_axis_train_loss_proxy"] == pytest.approx(2.75)
+    assert gating["rate_axis_train_loss_proxy"] == pytest.approx(0.0)
+    # The misleading old keys MUST be gone (never emit a hinge loss as ``*_d_seg``).
+    assert "proxy_d_seg" not in gating
+    assert "proxy_d_pose" not in gating
+    assert "proxy_rate" not in gating
+    assert "proxy_score" not in gating
+    # Trend-only score-shaped scalar recomputed from the canonical contest formula
+    # applied to the TRAINING LOSSES (NOT official-like; never compared to frontier).
     expected_score = 100.0 * 1.25 + math.sqrt(10.0 * 2.75) + 25.0 * 0.0 / 37_545_489.0
-    assert gating["proxy_score"] == pytest.approx(expected_score)
-    assert gating["proxy_score"] == pytest.approx(
+    assert gating["proxy_score_from_train_losses"] == pytest.approx(expected_score)
+    assert gating["proxy_score_from_train_losses"] == pytest.approx(
         _contest_score_from_axes(seg=1.25, pose=2.75, archive_bytes=0.0)
     )
 
@@ -375,9 +385,9 @@ def test_run_long_training_emits_gating_fields_to_jsonl(omx_tmp_dir: Path) -> No
             "loss_seg",
             "loss_pose",
             "loss_rate",
-            "proxy_d_seg",
-            "proxy_d_pose",
-            "proxy_score",
+            "seg_axis_train_loss_proxy",
+            "pose_axis_train_loss_proxy",
+            "proxy_score_from_train_losses",
             "checkpoint_path",
         ):
             assert required in row, f"{required} missing from row epoch={row['epoch']}"

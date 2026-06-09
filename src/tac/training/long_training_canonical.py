@@ -1149,11 +1149,26 @@ def _assemble_gating_row(
     # forced equality to the weighted total).
     gating["per_axis_sum"] = seg + pose + rate + recon_aux + margin + c1a
 
-    # Proxy axis values + proxy contest score (research-signal only).
-    gating["proxy_d_seg"] = seg
-    gating["proxy_d_pose"] = pose
-    gating["proxy_rate"] = rate
-    gating["proxy_score"] = _contest_score_from_axes(
+    # Per-axis TRAINING-LOSS proxies (research-signal only). RENAMED 2026-06-09
+    # (operator ontology-bug fix): the old keys ``proxy_d_seg`` / ``proxy_d_pose``
+    # / ``proxy_rate`` named the UNWEIGHTED per-axis TRAINING losses as if they
+    # were the official distortions. They are NOT. Under
+    # ``--segnet-distillation-objective boundary_argmax_hinge`` the seg axis is a
+    # BOUNDARY HINGE loss, not the official argmax-disagreement d_seg
+    # (upstream SegNet.compute_distortion = mean over ``argmax(out1) !=
+    # argmax(out2)``). A ``*_d_seg``-named hinge loss made the dashboard look like
+    # official d_seg was descending when only the surrogate moved. The honest
+    # names below carry ``_train_loss_proxy``; the sibling top-level ``loss_form``
+    # field disambiguates hinge vs KL. Official d_seg / d_pose come ONLY from
+    # upstream/evaluate.py (the B2 bridge), never from this telemetry.
+    gating["seg_axis_train_loss_proxy"] = seg
+    gating["pose_axis_train_loss_proxy"] = pose
+    gating["rate_axis_train_loss_proxy"] = rate
+    # NOTE: this plugs TRAINING LOSSES (not official d_seg/d_pose) into the
+    # contest-score formula. It is a training-loss-shaped scalar for TREND
+    # watching ONLY — it is NOT an official-like score and MUST NOT be compared
+    # to the frontier. The exact score comes from the B2 bridge / evaluate.py.
+    gating["proxy_score_from_train_losses"] = _contest_score_from_axes(
         seg=seg, pose=pose, archive_bytes=rate
     )
     # ``checkpoint_path`` records the LAST durably-written checkpoint meta path
@@ -1263,10 +1278,10 @@ class PerEpochMetrics:
                 "loss_rate",
                 "loss_margin",
                 "loss_c1a",
-                "proxy_d_seg",
-                "proxy_d_pose",
-                "proxy_rate",
-                "proxy_score",
+                "seg_axis_train_loss_proxy",
+                "pose_axis_train_loss_proxy",
+                "rate_axis_train_loss_proxy",
+                "proxy_score_from_train_losses",
                 "checkpoint_path",
             ):
                 if _top_key in gating:
