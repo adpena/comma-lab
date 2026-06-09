@@ -679,3 +679,226 @@ def test_real_export_from_checkpoint_emits_single_member_x_hiv1(tmp_path: Path):
     assert result.member_magic == "HIV1"
     assert result.archive_bytes > 0
     assert result.load_info["param_tensors_restored"] > 0
+
+
+# ---------------------------------------------------------------------------
+# 10. Trajectory harvest (the TREND actuator): sequential multi-target.
+#
+# The operator's burning question — "does the ep-250 exact-eval TREND justify
+# continuing to ep-3000?" — needs >= 2 exact points. watch_trajectory harvests
+# them ONE EVAL AT A TIME (never concurrent 600-pair evals). These tests verify
+# ACTUAL behavior: ascending order, stop-on-fail-closed, continue-past-exception,
+# the wait-for-prereq serialization, and a REAL sequential 2-target harvest.
+# ---------------------------------------------------------------------------
+
+
+def test_watch_trajectory_processes_targets_ascending_and_deduped(run_dir: Path):
+    seen: list[int] = []
+
+    def fake_loop(paths, *, target_epoch, **kw):
+        seen.append(target_epoch)
+        return 0
+
+    summary = WH.watch_trajectory(
+        run_dir,
+        [1000, 250, 500, 250],  # unsorted + duplicate
+        heartbeat_path=run_dir / "hb.log",
+        watch_loop_fn=fake_loop,
+        sleep_fn=lambda s: None,
+    )
+    assert seen == [250, 500, 1000]  # ascending, deduped — proves the for-loop order
+    assert summary["targets"] == [250, 500, 1000]
+    assert summary["stopped_early"] is False
+    assert summary["schema"] == WH.TRAJECTORY_SUMMARY_SCHEMA
+    assert summary["promotion_eligible"] is False
+
+
+def test_watch_trajectory_stops_on_fail_closed_target(run_dir: Path):
+    seen: list[int] = []
+
+    def fake_loop(paths, *, target_epoch, **kw):
+        seen.append(target_epoch)
+        return 3 if target_epoch == 500 else 0  # 500 fail-closes (run dead)
+
+    summary = WH.watch_trajectory(
+        run_dir,
+        [250, 500, 750],
+        heartbeat_path=run_dir / "hb.log",
+        watch_loop_fn=fake_loop,
+        sleep_fn=lambda s: None,
+    )
+    assert seen == [250, 500]  # 750 NOT processed (later target unreachable)
+    assert summary["stopped_early"] is True
+    assert "target_500_fail_closed" in summary["stop_reason"]
+
+
+def test_watch_trajectory_continues_past_per_target_exception(run_dir: Path):
+    seen: list[int] = []
+
+    def fake_loop(paths, *, target_epoch, **kw):
+        seen.append(target_epoch)
+        return 4 if target_epoch == 500 else 0  # 500 errors (transient bridge)
+
+    summary = WH.watch_trajectory(
+        run_dir,
+        [250, 500, 750],
+        heartbeat_path=run_dir / "hb.log",
+        watch_loop_fn=fake_loop,
+        sleep_fn=lambda s: None,
+    )
+    assert seen == [250, 500, 750]  # rc=4 does NOT stop the trajectory
+    assert summary["stopped_early"] is False
+
+
+def test_wait_for_result_file_true_when_present(run_dir: Path):
+    r = run_dir / "r.json"
+    r.write_text("{}")
+    hb = run_dir / "hb.log"
+    _write_heartbeat(hb, age_seconds=5)
+    assert WH.wait_for_result_file(r, hb, sleep_fn=lambda s: None) is True
+
+
+def test_wait_for_result_file_fail_closed_on_stale_heartbeat(run_dir: Path):
+    r = run_dir / "missing.json"
+    hb = run_dir / "hb.log"
+    _write_heartbeat(hb, age_seconds=10 * 60)  # stale
+    assert (
+        WH.wait_for_result_file(
+            r, hb, heartbeat_stale_seconds=7 * 60, sleep_fn=lambda s: None
+        )
+        is False
+    )
+
+
+def test_watch_trajectory_waits_for_prereq_then_proceeds(run_dir: Path):
+    hb = run_dir / "hb.log"
+    _write_heartbeat(hb, age_seconds=5)
+    prereq = run_dir / "ep250_result.json"
+    polls = {"n": 0}
+
+    def sleep_fn(_s):
+        polls["n"] += 1
+        if polls["n"] == 2:  # the running ep250 harvest "finishes" on the 2nd poll
+            prereq.write_text('{"first_exact_score_advisory": 0.21}')
+
+    seen: list[int] = []
+
+    def fake_loop(paths, *, target_epoch, **kw):
+        seen.append(target_epoch)
+        return 0
+
+    summary = WH.watch_trajectory(
+        run_dir,
+        [500],
+        heartbeat_path=hb,
+        wait_for_result_path=prereq,
+        watch_loop_fn=fake_loop,
+        sleep_fn=sleep_fn,
+    )
+    assert seen == [500]  # proceeded ONLY after the prereq result appeared
+    prereq_row = summary["per_target"][0]
+    assert prereq_row["prereq_appeared"] is True
+    assert prereq_row["prereq_score"] == 0.21
+
+
+def test_watch_trajectory_stops_when_prereq_never_appears(run_dir: Path):
+    hb = run_dir / "hb.log"
+    _write_heartbeat(hb, age_seconds=10 * 60)  # stale -> prereq fail-closes
+    prereq = run_dir / "never.json"
+
+    def fake_loop(paths, *, target_epoch, **kw):
+        pytest.fail("must NOT start any target when the prereq fail-closes")
+
+    summary = WH.watch_trajectory(
+        run_dir,
+        [500, 750],
+        heartbeat_path=hb,
+        wait_for_result_path=prereq,
+        heartbeat_stale_seconds=7 * 60,
+        watch_loop_fn=fake_loop,
+        sleep_fn=lambda s: None,
+    )
+    assert summary["stopped_early"] is True
+    assert summary["stop_reason"] == "prereq_result_not_seen_run_dead_or_stale"
+
+
+def test_watch_trajectory_writes_summary_json(run_dir: Path):
+    summary_path = run_dir / "traj_summary.json"
+
+    def fake_loop(paths, *, target_epoch, **kw):
+        return 0
+
+    WH.watch_trajectory(
+        run_dir,
+        [250, 500],
+        heartbeat_path=run_dir / "hb.log",
+        watch_loop_fn=fake_loop,
+        sleep_fn=lambda s: None,
+        summary_path=summary_path,
+    )
+    assert summary_path.is_file()
+    on_disk = json.loads(summary_path.read_text())
+    assert on_disk["schema"] == WH.TRAJECTORY_SUMMARY_SCHEMA
+    assert on_disk["targets"] == [250, 500]
+    assert [r["target_epoch"] for r in on_disk["per_target"]] == [250, 500]
+
+
+def test_watch_trajectory_real_sequential_harvest_two_targets(run_dir: Path):
+    """NO-FAKE: REAL watch_loop drives two targets to two distinct result JSONs.
+
+    Uses real checkpoint selection + real harvest_once (export/B2 mocked for
+    hermeticity). ep249 -> target 250; ep499 -> target 500. Proves the
+    trajectory actually harvests each target's OWN checkpoint sequentially and
+    writes per-target result files — it would fail if watch_trajectory returned
+    a stub or harvested only the first/last.
+    """
+    ckdir = run_dir / "checkpoints"
+    _write_checkpoint(ckdir, epoch=249)  # the 250th-epoch boundary
+    _write_checkpoint(ckdir, epoch=499)  # the 500th-epoch boundary
+    hb = run_dir / "hb.log"
+    _write_heartbeat(hb, age_seconds=5)
+
+    exported_epochs: list[int] = []
+
+    def fake_export(checkpoint, out_dir, **kwargs):
+        exported_epochs.append(checkpoint.global_epoch)
+        return WH.ExportResult(
+            archive_path=out_dir / "archive.zip",
+            archive_sha256="sha" + str(checkpoint.global_epoch),
+            archive_bytes=256072,
+            param_count=WH.EXPECTED_PARAM_COUNT,
+            zip_members=["x"],
+            member_magic="HIV1",
+            load_info={"param_tensors_restored": 27},
+        )
+
+    def fake_b2(cmd):
+        out_row = Path(cmd[cmd.index("--out-row") + 1])
+        out_row.parent.mkdir(parents=True, exist_ok=True)
+        out_row.write_text(json.dumps({"final_score": 0.205, "verdict": "full"}))
+        return 0
+
+    summary = WH.watch_trajectory(
+        run_dir,
+        [250, 500],
+        heartbeat_path=hb,
+        free_memory_fn=lambda: 60.0,
+        export_fn=fake_export,
+        b2_runner=fake_b2,
+        sleep_fn=lambda s: None,
+    )
+    assert summary["stopped_early"] is False
+    assert exported_epochs == [249, 499]  # each target harvested its OWN checkpoint
+    assert (run_dir / "hi_nerv_backend_only_ep250_exact_eval.json").is_file()
+    assert (run_dir / "hi_nerv_backend_only_ep500_exact_eval.json").is_file()
+    assert [r["target_epoch"] for r in summary["per_target"]] == [250, 500]
+    assert all(r["rc"] == 0 for r in summary["per_target"])
+    assert all(r["first_exact_score_advisory"] == 0.205 for r in summary["per_target"])
+
+
+def test_parse_target_epochs_sorts_dedupes_and_rejects_garbage():
+    assert WH._parse_target_epochs("750,250,500,250") == [250, 500, 750]
+    assert WH._parse_target_epochs("") == []
+    assert WH._parse_target_epochs(None) == []
+    with pytest.raises(SystemExit):
+        WH._parse_target_epochs("250,abc,500")

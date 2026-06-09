@@ -978,6 +978,200 @@ def watch_loop(
 
 
 # ---------------------------------------------------------------------------
+# Trajectory harvest: a SEQUENCE of checkpoints, one eval at a time.
+# ---------------------------------------------------------------------------
+
+TRAJECTORY_SUMMARY_SCHEMA = "b1_trajectory_harvest_summary.v1"
+
+
+def wait_for_result_file(
+    result_path: Path,
+    heartbeat_path: Path,
+    *,
+    poll_seconds: float = DEFAULT_POLL_SECONDS,
+    heartbeat_stale_seconds: float = DEFAULT_HEARTBEAT_STALE_SECONDS,
+    max_wait_seconds: float = DEFAULT_MAX_WAIT_SECONDS,
+    sleep_fn: Callable[[float], None] | None = None,
+    now_fn: Callable[[], float] | None = None,
+) -> bool:
+    """Block until ``result_path`` exists, then return True (or False on fail-close).
+
+    Used to serialize a trajectory harvester BEHIND an in-flight single-target
+    harvest (e.g. the ep250 watcher): two concurrent 600-pair CPU evals would
+    contend on cores + ~3.6 GB inflated-frame RAM each, so the trajectory waits
+    for the running harvest's result JSON before starting its first target.
+
+    Fail-closed (returns False) if the pilot heartbeat goes stale before the
+    result appears (the sibling harvest's run likely died) OR ``max_wait_seconds``
+    elapses. A ``TRAIN_EXIT`` heartbeat does NOT count as stale (the run finished
+    cleanly; its final harvest may still be writing the result).
+    """
+    sleeper = sleep_fn or time.sleep
+    clock = now_fn or time.monotonic
+    if result_path.is_file():
+        return True
+    deadline = clock() + max_wait_seconds
+    while True:
+        if result_path.is_file():
+            return True
+        age = heartbeat_age_seconds(heartbeat_path, now=time.time())
+        train_exited = heartbeat_reports_train_exit(heartbeat_path)
+        if age is not None and age > heartbeat_stale_seconds and not train_exited:
+            return False
+        if clock() >= deadline:
+            return False
+        sleeper(poll_seconds)
+
+
+def _result_score(result_json: Path) -> float | None:
+    if not result_json.is_file():
+        return None
+    try:
+        payload = json.loads(result_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, Mapping):
+        val = payload.get("first_exact_score_advisory")
+        if isinstance(val, (int, float)):
+            return float(val)
+    return None
+
+
+def watch_trajectory(
+    run_dir: Path,
+    targets: Sequence[int],
+    *,
+    heartbeat_path: Path | None = None,
+    wait_for_result_path: Path | None = None,
+    poll_seconds: float = DEFAULT_POLL_SECONDS,
+    heartbeat_stale_seconds: float = DEFAULT_HEARTBEAT_STALE_SECONDS,
+    max_wait_seconds: float = DEFAULT_MAX_WAIT_SECONDS,
+    min_free_gb: float = DEFAULT_MIN_FREE_GB,
+    device: str = DEFAULT_DEVICE,
+    arch: Mapping[str, Any] | None = None,
+    sleep_fn: Callable[[float], None] | None = None,
+    now_fn: Callable[[], float] | None = None,
+    b2_runner: Callable[[list[str]], int] | None = None,
+    export_fn: Callable[..., ExportResult] | None = None,
+    free_memory_fn: Callable[[], float | None] | None = None,
+    watch_loop_fn: Callable[..., int] | None = None,
+    summary_path: Path | None = None,
+) -> dict[str, Any]:
+    """Harvest a TRAJECTORY of checkpoints (ep N1 < N2 < ...) ONE EVAL AT A TIME.
+
+    The operator's burning question — "does the ep-250 exact-eval TREND justify
+    continuing to ep-3000?" — needs >= 2 exact points. This harvests them
+    sequentially so the trend is built without ever running concurrent 600-pair
+    evals (a single process looping ``watch_loop`` per target physically cannot
+    overlap evals).
+
+    Per-target semantics:
+      * reuses the single-target ``watch_loop`` (idempotent, memory-gated,
+        fail-closed) for each target in ASCENDING order;
+      * ``allow_final_fallback=False`` per target so each harvests its OWN
+        checkpoint (no duplicate-final across targets);
+      * STOPS early on a fail-closed target (rc=3 => run dead/stale => later
+        targets unreachable);
+      * CONTINUES past a per-target harvest exception (rc=4 => transient bridge
+        error for that checkpoint; the next checkpoint may export fine).
+
+    If ``wait_for_result_path`` is given, blocks until that result appears (an
+    in-flight single-target harvest, e.g. ep250) BEFORE the first target, so the
+    trajectory serializes behind the running harvest (no contention).
+    """
+    run_dir = run_dir.resolve()
+    _refuse_tmp_path(run_dir, "run_dir")
+    run_id = run_dir.name
+    if heartbeat_path is None:
+        heartbeat_path = REPO_ROOT / ".omx" / "tmp" / f"heartbeat_b1_{run_id}.log"
+    looper = watch_loop_fn or watch_loop
+    targets_sorted = sorted({int(t) for t in targets})
+    per_target: list[dict[str, Any]] = []
+    stopped_early = False
+    stop_reason: str | None = None
+
+    def _finalize() -> dict[str, Any]:
+        summary: dict[str, Any] = {
+            "schema": TRAJECTORY_SUMMARY_SCHEMA,
+            "run_dir": str(run_dir),
+            "targets": targets_sorted,
+            "stopped_early": stopped_early,
+            "stop_reason": stop_reason,
+            "per_target": per_target,
+            "updated_utc": _utc_now(),
+            "evidence_grade": "[macOS-CPU advisory]",
+            "authoritative": False,
+            **FALSE_AUTHORITY,
+        }
+        if summary_path is not None:
+            _refuse_tmp_path(summary_path, "trajectory summary_path")
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = summary_path.with_suffix(summary_path.suffix + ".tmp")
+            tmp.write_text(
+                json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+            os.replace(tmp, summary_path)
+        return summary
+
+    if wait_for_result_path is not None:
+        appeared = wait_for_result_file(
+            wait_for_result_path,
+            heartbeat_path,
+            poll_seconds=poll_seconds,
+            heartbeat_stale_seconds=heartbeat_stale_seconds,
+            max_wait_seconds=max_wait_seconds,
+            sleep_fn=sleep_fn,
+            now_fn=now_fn,
+        )
+        per_target.append(
+            {
+                "prereq_result_path": str(wait_for_result_path),
+                "prereq_appeared": appeared,
+                "prereq_score": _result_score(wait_for_result_path),
+            }
+        )
+        if not appeared:
+            stopped_early = True
+            stop_reason = "prereq_result_not_seen_run_dead_or_stale"
+            return _finalize()
+
+    for target in targets_sorted:
+        paths_t = resolve_paths(
+            run_dir, target_epoch=target, heartbeat_path=heartbeat_path
+        )
+        rc = looper(
+            paths_t,
+            target_epoch=target,
+            poll_seconds=poll_seconds,
+            heartbeat_stale_seconds=heartbeat_stale_seconds,
+            max_wait_seconds=max_wait_seconds,
+            min_free_gb=min_free_gb,
+            device=device,
+            allow_final_fallback=False,
+            arch=arch,
+            sleep_fn=sleep_fn,
+            now_fn=now_fn,
+            b2_runner=b2_runner,
+            export_fn=export_fn,
+            free_memory_fn=free_memory_fn,
+        )
+        per_target.append(
+            {
+                "target_epoch": target,
+                "rc": int(rc),
+                "result_json": str(paths_t.result_json),
+                "first_exact_score_advisory": _result_score(paths_t.result_json),
+            }
+        )
+        if rc == 3:
+            stopped_early = True
+            stop_reason = f"target_{target}_fail_closed_run_dead_or_stale"
+            break
+
+    return _finalize()
+
+
+# ---------------------------------------------------------------------------
 # Detached self-launch (canonical CLAUDE.md nohup pattern).
 # ---------------------------------------------------------------------------
 
@@ -1036,6 +1230,24 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--run-dir", required=True, help="B1 pilot run directory (SSD).")
     ap.add_argument("--target-epoch", type=int, default=DEFAULT_TARGET_EPOCH)
+    ap.add_argument(
+        "--target-epochs",
+        default=None,
+        help=(
+            "Comma-list of checkpoint epochs to harvest as a TREND, sequentially "
+            "(e.g. --target-epochs 500,750,1000,1250,1500). One eval at a time "
+            "(no concurrent 600-pair evals). Overrides --target-epoch when given."
+        ),
+    )
+    ap.add_argument(
+        "--wait-for-result",
+        default=None,
+        help=(
+            "Path to a result JSON to wait for BEFORE starting the trajectory "
+            "(serializes behind an in-flight single-target harvest, e.g. the "
+            "ep250 result, so the two never contend). Trajectory mode only."
+        ),
+    )
     ap.add_argument("--device", default=DEFAULT_DEVICE, choices=["cpu", "cuda"])
     ap.add_argument("--poll-seconds", type=float, default=DEFAULT_POLL_SECONDS)
     ap.add_argument(
@@ -1077,6 +1289,22 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return ap.parse_args(argv)
 
 
+def _parse_target_epochs(raw: str | None) -> list[int]:
+    """Parse ``--target-epochs`` comma-list into a sorted, de-duped int list."""
+    if not raw:
+        return []
+    out: set[int] = set()
+    for tok in raw.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            out.add(int(tok))
+        except ValueError as exc:
+            raise SystemExit(f"--target-epochs entry not an int: {tok!r}") from exc
+    return sorted(out)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     run_dir = Path(args.run_dir).expanduser()
@@ -1086,12 +1314,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if k in arch:
             arch[k] = int(arch[k])
 
-    paths = resolve_paths(
-        run_dir,
-        target_epoch=args.target_epoch,
-        heartbeat_path=(Path(args.heartbeat_path) if args.heartbeat_path else None),
-        work_root=(Path(args.work_root) if args.work_root else None),
-    )
+    trajectory_targets = _parse_target_epochs(args.target_epochs)
+    heartbeat_path = Path(args.heartbeat_path) if args.heartbeat_path else None
+    wait_for_result = Path(args.wait_for_result) if args.wait_for_result else None
 
     # Build the child argv (same as this invocation, minus the launch flags).
     child_argv = [
@@ -1099,8 +1324,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         str(Path(__file__).resolve()),
         "--run-dir",
         str(run_dir),
-        "--target-epoch",
-        str(args.target_epoch),
         "--device",
         args.device,
         "--poll-seconds",
@@ -1112,6 +1335,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--min-free-gb",
         str(args.min_free_gb),
     ]
+    if trajectory_targets:
+        child_argv += ["--target-epochs", ",".join(str(t) for t in trajectory_targets)]
+        if wait_for_result is not None:
+            child_argv += ["--wait-for-result", str(wait_for_result)]
+    else:
+        child_argv += ["--target-epoch", str(args.target_epoch)]
     if args.no_final_fallback:
         child_argv.append("--no-final-fallback")
     if args.heartbeat_path:
@@ -1121,15 +1350,50 @@ def main(argv: Sequence[str] | None = None) -> int:
     for item in args.arch_override or ():
         child_argv += ["--arch-override", item]
 
+    # The detached log: per-target for single mode, trajectory-wide otherwise.
+    if trajectory_targets:
+        detached_log = run_dir.resolve() / "harvest_trajectory.log"
+    else:
+        detached_log = resolve_paths(
+            run_dir, target_epoch=args.target_epoch, heartbeat_path=heartbeat_path
+        ).harvester_log
+
     if args.print_launch_command:
-        print(build_detached_launch_command(child_argv, paths.harvester_log))
+        print(build_detached_launch_command(child_argv, detached_log))
         return 0
 
     if args.launch_detached:
-        info = launch_detached(child_argv, paths.harvester_log)
+        info = launch_detached(child_argv, detached_log)
         print(json.dumps(info, indent=2, sort_keys=True))
         return 0
 
+    if trajectory_targets:
+        summary = watch_trajectory(
+            run_dir,
+            trajectory_targets,
+            heartbeat_path=heartbeat_path,
+            wait_for_result_path=wait_for_result,
+            poll_seconds=args.poll_seconds,
+            heartbeat_stale_seconds=args.heartbeat_stale_seconds,
+            max_wait_seconds=args.max_wait_seconds,
+            min_free_gb=args.min_free_gb,
+            device=args.device,
+            arch=arch or None,
+            summary_path=run_dir.resolve() / "harvest_trajectory_summary.json",
+        )
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        # rc=0 unless the trajectory stopped early without harvesting anything.
+        harvested = any(
+            row.get("rc") == 0 for row in summary["per_target"] if "rc" in row
+        )
+        return 0 if harvested or not summary["stopped_early"] else 3
+
+    paths = resolve_paths(
+        run_dir,
+        target_epoch=args.target_epoch,
+        heartbeat_path=heartbeat_path,
+        work_root=(Path(args.work_root) if args.work_root else None),
+    )
     return watch_loop(
         paths,
         target_epoch=args.target_epoch,
