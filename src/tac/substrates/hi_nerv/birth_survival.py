@@ -47,7 +47,7 @@ import base64
 import hashlib
 import json
 import zipfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +55,10 @@ import numpy as np
 from scipy import ndimage
 
 from tac.contest_eval_contract import CAMERA_SIZE_WH, RGB_CHANNELS, SEQ_LEN
+from tac.local_acceleration.mlx_scorer_adapters import (
+    SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
+    deterministic_tie_resolved_segnet_argmax,
+)
 from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.archive import hiv1_quantize_dequantize_for_training
 from tac.substrates.hi_nerv.target_region_birth import (
@@ -302,6 +306,54 @@ def _live_worst_region(live_birth_payload: Mapping[str, Any]) -> Mapping[str, An
     return worst
 
 
+def _live_support_sha256(live_birth_payload: Mapping[str, Any]) -> str | None:
+    """Return the live birth's target-region SUPPORT sha256 (same-birth trace).
+
+    The launch gate derives an ``expected_support_sha256`` for an accepted birth
+    (from the live receipt / nested wall-normal-lift / action-effect rows) and
+    requires every L4/L5 survival row to carry the SAME ``support_sha256`` so a
+    re-measurement on a different birth's support cannot satisfy the gate.  This
+    walks the canonical locations where the live actuator records the support
+    identity and returns it verbatim (never recomputed) so the survival row's
+    ``support_sha256`` is a pure copy — exactly like ``action_id``.  Returns
+    ``None`` only when the payload genuinely carries no support identity (e.g. a
+    minimal synthetic fixture), in which case the row simply omits the field and
+    the gate's check is a no-op (it only fires when an expected hash exists).
+    """
+
+    receipt = live_birth_payload.get("receipt")
+    receipt = receipt if isinstance(receipt, Mapping) else {}
+    direct_keys = (
+        "support_sha256",
+        "archive_executable_support_sha256",
+        "decoded_support_sha256",
+        "expected_support_sha256",
+    )
+    nested_keys = (
+        "target_region_wall_normal_lift",
+        "target_region_actions",
+        "target_region_action_section_telemetry",
+        "receiver_surface",
+        "target_surface",
+    )
+    for node in (live_birth_payload, receipt):
+        if not isinstance(node, Mapping):
+            continue
+        for key in direct_keys:
+            value = node.get(key)
+            if isinstance(value, str) and value:
+                return value
+        for nested_name in nested_keys:
+            nested = node.get(nested_name)
+            if not isinstance(nested, Mapping):
+                continue
+            for key in direct_keys:
+                value = nested.get(key)
+                if isinstance(value, str) and value:
+                    return value
+    return None
+
+
 def _first_int_from_mappings(*nodes: Mapping[str, Any], keys: tuple[str, ...]) -> int | None:
     for node in nodes:
         if not isinstance(node, Mapping):
@@ -366,6 +418,25 @@ def _predict_frame1_nhwc01(model: Any, pair_indices: Any) -> Any:
     return pred1
 
 
+def _receiver_frame1_nhwc01_np(frame1_nhwc01: Any) -> np.ndarray:
+    """The receiver-faithful (uint8-roundtripped) frame-1 the teacher actually saw.
+
+    The torch SegNet authority MUST be evaluated on the SAME bytes the MLX port
+    logits were computed from, otherwise the tie-resolution would compare two
+    different inputs.  This returns that exact receiver image as NHWC float32 so a
+    supplied torch argmax callable can reproduce the contest-authority argmax on
+    the identical surface.
+    """
+
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import _receiver_uint8_roundtrip_ste_nhwc01
+
+    receiver = _receiver_uint8_roundtrip_ste_nhwc01(frame1_nhwc01)
+    mx.eval(receiver)  # type: ignore[union-attr]
+    return np.asarray(receiver, dtype=np.float32)
+
+
 def _candidate_logits_np(scorer_teacher: Any, frame1_nhwc01: Any) -> np.ndarray:
     """Receiver-faithful SegNet logits: clamp/round uint8 roundtrip then teacher."""
 
@@ -386,14 +457,120 @@ def _candidate_logits_np(scorer_teacher: Any, frame1_nhwc01: Any) -> np.ndarray:
     return out
 
 
+def _torch_exact_region_hard_won(
+    *,
+    logits_np: np.ndarray,
+    region_mask_np: np.ndarray,
+    birth_class: int,
+    receiver_frame1_nhwc01_np: np.ndarray,
+    torch_segnet_argmax_fn: Callable[[np.ndarray], np.ndarray],
+    tie_epsilon: float = SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
+) -> tuple[int, dict[str, Any]]:
+    """Torch-exact ``region_hard_won`` for the AUTHORITY argmax over the region.
+
+    The official SegNet distortion is per-pixel ARGMAX disagreement, so the
+    authority count of region pixels won by ``birth_class`` is argmax-based.  The
+    MLX port can flip the argmax ONLY at near-ties (top-2 margin < the measured
+    logit drift); ``deterministic_tie_resolved_segnet_argmax`` resolves exactly
+    those pixels with the torch authority and leaves the rest MLX-identical, so
+    the corrected argmax is PROVABLY torch-exact when ``tie_epsilon >= drift``.
+
+    Torch is invoked per-frame ONLY when a tie pixel falls inside the decision
+    region (tie identification is MLX-only), so tie-free frames pay zero torch
+    cost.  Returns ``(region_hard_won, receipt)`` where ``region_hard_won`` counts
+    region pixels whose torch-exact argmax == ``birth_class`` and ``receipt`` is a
+    ``segnet_port_drift_receipt``-style attestation (non-promotable).
+    """
+
+    logits = np.asarray(logits_np, dtype=np.float32)
+    mask = np.asarray(region_mask_np)
+    receiver = np.asarray(receiver_frame1_nhwc01_np, dtype=np.float32)
+    if logits.ndim != 4:
+        raise BirthSurvivalError(f"logits must be BHWC for tie-correction; got {logits.shape}")
+    if mask.shape != logits.shape[:3]:
+        raise BirthSurvivalError(
+            f"region mask BHW must match logits BHW; got mask={mask.shape} logits={logits.shape[:3]}"
+        )
+    if receiver.ndim != 4 or receiver.shape[:3] != logits.shape[:3]:
+        raise BirthSurvivalError(
+            "receiver frame BHWC must match logits BHW for tie-correction; "
+            f"got receiver={receiver.shape} logits={logits.shape[:3]}"
+        )
+    batch = int(logits.shape[0])
+    region_hard_won = 0
+    total_tie_pixels = 0
+    region_tie_pixels = 0
+    frames_torch_invoked = 0
+    torch_exact_guarantee = float(tie_epsilon) >= float(SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND)
+    for b in range(batch):
+        region_b = np.asarray(mask[b]) > 0.0
+        # The torch authority is only needed for THIS frame's region pixels.  Lazy
+        # callable: compute torch argmax for the frame only when a region tie
+        # exists.  Bind ``b`` via default arg so the closure captures this frame.
+        def _frame_torch_argmax(_b: int = b) -> np.ndarray:
+            nonlocal frames_torch_invoked
+            frames_torch_invoked += 1
+            arg = np.asarray(
+                torch_segnet_argmax_fn(receiver[_b : _b + 1]), dtype=np.int64
+            )
+            return arg.reshape(int(logits.shape[1]), int(logits.shape[2]))
+
+        resolved = deterministic_tie_resolved_segnet_argmax(
+            logits[b],
+            torch_argmax_fn=_frame_torch_argmax,
+            tie_epsilon=float(tie_epsilon),
+        )
+        corrected = np.asarray(resolved["corrected_argmax_hw"], dtype=np.int64)
+        total_tie_pixels += int(resolved["tie_pixel_count"])
+        # Region-restricted tie count (only ties that fall in the decision region
+        # actually change the authority count).
+        tie_mask_frame = _top2_margin_bhwc_frame(logits[b]) < float(tie_epsilon)
+        region_tie_pixels += int(np.count_nonzero(tie_mask_frame & region_b))
+        region_hard_won += int(np.count_nonzero(region_b & (corrected == int(birth_class))))
+    receipt = {
+        "schema": "hi_nerv_segnet_port_drift_receipt.v1",
+        "tie_resolution": "deterministic_tie_resolved_segnet_argmax",
+        "tie_epsilon": float(tie_epsilon),
+        "logit_drift_bound": float(SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND),
+        "frame_tie_pixel_count": int(total_tie_pixels),
+        "region_tie_pixel_count": int(region_tie_pixels),
+        "torch_authority_frames_invoked": int(frames_torch_invoked),
+        "torch_exact_guarantee": bool(torch_exact_guarantee),
+        "authority": "torch_resolved_at_ties_mlx_elsewhere",
+        "deterministic": True,
+        "promotable": False,
+    }
+    return region_hard_won, receipt
+
+
+def _top2_margin_bhwc_frame(logits_hwc: np.ndarray) -> np.ndarray:
+    """Per-pixel top-2 class margin for one HWC logits frame (>=0)."""
+
+    s = np.sort(np.asarray(logits_hwc, dtype=np.float64), axis=-1)
+    return s[..., -1] - s[..., -2]
+
+
 def _region_support_from_frame1_nhwc01(
     *,
     scorer_teacher: Any,
     frame1_nhwc01: Any,
     region_mask_np: np.ndarray,
     birth_class: int,
+    torch_segnet_argmax_fn: Callable[[np.ndarray], np.ndarray] | None = None,
+    tie_epsilon: float = SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
 ) -> dict[str, Any]:
-    """Measure the named birth region on a supplied receiver frame-1 surface."""
+    """Measure the named birth region on a supplied receiver frame-1 surface.
+
+    By default (``torch_segnet_argmax_fn=None``) the region's hard-won target
+    support is the MLX margin-based count (backward-compatible).  When a torch
+    SegNet argmax callable is supplied, the AUTHORITY ``region_hard_won`` is the
+    torch-EXACT argmax-won count: the MLX port differs from the upstream torch
+    SegNet only by float-order noise that flips the argmax at near-ties, and the
+    deterministic tie corrector resolves exactly those pixels with the torch
+    authority (invoking torch only on frames with a region tie).  The margin
+    diagnostics (``stats``) are always MLX-derived; only the score-bearing
+    authority count is made torch-exact.
+    """
 
     logits_np = _candidate_logits_np(scorer_teacher, frame1_nhwc01)
     class_count = int(logits_np.shape[-1])
@@ -402,7 +579,7 @@ def _region_support_from_frame1_nhwc01(
     stats = region_margin_stats(logits_np, region_mask_np, int(birth_class))
     region_pixels = int(stats["region_pixel_count"])
     region_hard_won = int(stats["region_hard_won_pixels"])
-    return {
+    support: dict[str, Any] = {
         "stats": stats,
         "region_pixel_count": region_pixels,
         "region_hard_won": region_hard_won,
@@ -411,6 +588,24 @@ def _region_support_from_frame1_nhwc01(
         # 100 * unsolved / total_scored_pixels (batch-local normalizer).
         "total_scored_pixels": int(logits_np.size // class_count),
     }
+    if torch_segnet_argmax_fn is not None:
+        receiver_np = _receiver_frame1_nhwc01_np(frame1_nhwc01)
+        torch_hard_won, drift_receipt = _torch_exact_region_hard_won(
+            logits_np=logits_np,
+            region_mask_np=region_mask_np,
+            birth_class=int(birth_class),
+            receiver_frame1_nhwc01_np=receiver_np,
+            torch_segnet_argmax_fn=torch_segnet_argmax_fn,
+            tie_epsilon=float(tie_epsilon),
+        )
+        # The torch-exact argmax-won count is the AUTHORITY: it replaces the
+        # MLX margin-based count for the score-bearing fields.  The MLX
+        # margin-based count is preserved for diagnostics/provenance.
+        support["mlx_margin_region_hard_won"] = region_hard_won
+        support["region_hard_won"] = int(torch_hard_won)
+        support["region_unsolved"] = int(region_pixels - int(torch_hard_won))
+        support["segnet_port_drift_receipt"] = drift_receipt
+    return support
 
 
 def _region_support_on_surface(
@@ -420,8 +615,15 @@ def _region_support_on_surface(
     pair_indices: Any,
     region_mask_np: np.ndarray,
     birth_class: int,
+    torch_segnet_argmax_fn: Callable[[np.ndarray], np.ndarray] | None = None,
+    tie_epsilon: float = SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
 ) -> dict[str, Any]:
-    """Forward the model and measure the region's target support on this surface."""
+    """Forward the model and measure the region's target support on this surface.
+
+    When ``torch_segnet_argmax_fn`` is supplied the region's authority hard-won
+    count is made torch-EXACT via the deterministic tie corrector; otherwise the
+    MLX margin-based count is used (backward-compatible default).
+    """
 
     frame1 = _predict_frame1_nhwc01(model, pair_indices)
     return _region_support_from_frame1_nhwc01(
@@ -429,6 +631,8 @@ def _region_support_on_surface(
         frame1_nhwc01=frame1,
         region_mask_np=region_mask_np,
         birth_class=birth_class,
+        torch_segnet_argmax_fn=torch_segnet_argmax_fn,
+        tie_epsilon=float(tie_epsilon),
     )
 
 
@@ -1155,6 +1359,8 @@ def measure_birth_survival(
     latent_codec: str = DEFAULT_ARCHIVE_ROUNDTRIP_LATENT_CODEC,
     pose_d_pose_tolerance_abs: float = 1.0e-8,
     pose_d_pose_tolerance_rel: float = 5.0e-2,
+    torch_segnet_argmax_fn: Callable[[np.ndarray], np.ndarray] | None = None,
+    tie_epsilon: float = SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
 ) -> dict[str, Any]:
     """Re-measure one accepted live birth on ``surface`` and emit a typed row.
 
@@ -1166,6 +1372,13 @@ def measure_birth_survival(
     support (won-under-fakequant minus the live before-count) is still positive.
     The fake-quant config is restored before returning.  ``action_id`` is COPIED
     from the live payload (never recomputed).
+
+    ``torch_segnet_argmax_fn`` (optional) makes the region's AUTHORITY hard-won
+    count torch-EXACT: the MLX SegNet port flips the argmax only at near-ties, and
+    the deterministic tie corrector resolves exactly those pixels with the torch
+    authority (invoking torch only on frames with a region tie).  When omitted the
+    MLX margin-based count is used (backward-compatible).  The torch-exact
+    ``segnet_port_drift_receipt`` attestation is recorded in ``surface_meta``.
 
     For ``parseback_mlx`` / ``inflated_torch_cpu`` a faithful cheap path is not
     achievable in this scoped producer, so a typed BLOCKED row is returned with
@@ -1233,6 +1446,8 @@ def measure_birth_survival(
                 pair_indices=idx,
                 region_mask_np=region_mask_np,
                 birth_class=birth_class,
+                torch_segnet_argmax_fn=torch_segnet_argmax_fn,
+                tie_epsilon=float(tie_epsilon),
             )
             pose_compensation_survival = _pose_compensation_survival_on_surface(
                 model,
@@ -1260,8 +1475,13 @@ def measure_birth_survival(
     survived = bool(target_support_survived and compensation_survived)
     region_debt_units = _region_debt_units(int(support["region_unsolved"]), int(support["total_scored_pixels"]))
 
+    drift_receipt = support.get("segnet_port_drift_receipt")
+    if drift_receipt is not None:
+        surface_meta = {**(surface_meta or {}), "segnet_port_drift_receipt": drift_receipt}
+
     return _survival_row(
         action_id=action_id,
+        support_sha256=_live_support_sha256(live_birth_payload),
         surface=surface_name,
         survived=survived,
         live_wrong_to_target_count=_live_wrong_to_target_count(live_birth_payload),
@@ -1294,6 +1514,8 @@ def measure_birth_parseback_survival_from_report(
     pair_indices: Any,
     pose_d_pose_tolerance_abs: float = 1.0e-8,
     pose_d_pose_tolerance_rel: float = 5.0e-2,
+    torch_segnet_argmax_fn: Callable[[np.ndarray], np.ndarray] | None = None,
+    tie_epsilon: float = SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
 ) -> dict[str, Any]:
     """Re-measure an accepted birth on parsed archive receiver bytes.
 
@@ -1385,6 +1607,8 @@ def measure_birth_parseback_survival_from_report(
         frame1_nhwc01=pair_frames[1],
         region_mask_np=region_mask_np,
         birth_class=birth_class,
+        torch_segnet_argmax_fn=torch_segnet_argmax_fn,
+        tie_epsilon=float(tie_epsilon),
     )
     # DE-CONFLATION (2026-06-08): the render above is the WRAPPED (backend +
     # sidecar overlay) surface = the shipped program.  A harmful sidecar can
@@ -1405,6 +1629,8 @@ def measure_birth_parseback_survival_from_report(
             frame1_nhwc01=backend_pair_frames[1],
             region_mask_np=region_mask_np,
             birth_class=birth_class,
+            torch_segnet_argmax_fn=torch_segnet_argmax_fn,
+            tie_epsilon=float(tie_epsilon),
         )
         sidecar_pays_rent = target_region_action_pays_rent(
             backend_region_hard_won=int(backend_only_support["region_hard_won"]),
@@ -1447,6 +1673,7 @@ def measure_birth_parseback_survival_from_report(
 
     row = _survival_row(
         action_id=action_id,
+        support_sha256=_live_support_sha256(live_birth_payload),
         surface="parseback_mlx",
         survived=survived,
         live_wrong_to_target_count=_live_wrong_to_target_count(live_birth_payload),
@@ -1468,6 +1695,11 @@ def measure_birth_parseback_survival_from_report(
             "parseback_report_schema": str(report.get("schema") or ""),
             "parseback_direct_report_schema": str(
                 _direct_receiver_report(report).get("schema") or ""
+            ),
+            **(
+                {"segnet_port_drift_receipt": support["segnet_port_drift_receipt"]}
+                if support.get("segnet_port_drift_receipt") is not None
+                else {}
             ),
         },
     )
@@ -1502,6 +1734,8 @@ def measure_birth_inflated_torch_cpu_survival_from_local_replay(
     pose_d_pose_tolerance_abs: float = 1.0e-8,
     pose_d_pose_tolerance_rel: float = 5.0e-2,
     camera_size_wh: tuple[int, int] = CAMERA_SIZE_WH,
+    torch_segnet_argmax_fn: Callable[[np.ndarray], np.ndarray] | None = None,
+    tie_epsilon: float = SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
 ) -> dict[str, Any]:
     """Re-measure an accepted birth on retained upstream CPU-inflated bytes.
 
@@ -1606,6 +1840,8 @@ def measure_birth_inflated_torch_cpu_survival_from_local_replay(
         frame1_nhwc01=pair_frames[1],
         region_mask_np=region_mask_np,
         birth_class=birth_class,
+        torch_segnet_argmax_fn=torch_segnet_argmax_fn,
+        tie_epsilon=float(tie_epsilon),
     )
     target_rgb_0_birth = _target_rgb_birth_row(target_rgb_0, batch_index=birth_batch, name="target_rgb_0")
     target_rgb_1_birth = _target_rgb_birth_row(target_rgb_1, batch_index=birth_batch, name="target_rgb_1")
@@ -1637,6 +1873,7 @@ def measure_birth_inflated_torch_cpu_survival_from_local_replay(
 
     return _survival_row(
         action_id=action_id,
+        support_sha256=_live_support_sha256(live_birth_payload),
         surface="inflated_torch_cpu",
         survived=survived,
         live_wrong_to_target_count=_live_wrong_to_target_count(live_birth_payload),
@@ -1676,6 +1913,11 @@ def measure_birth_inflated_torch_cpu_survival_from_local_replay(
                 RGB_CHANNELS,
             ],
             "inflated_torch_cpu_memmap_full_video_materialized": False,
+            **(
+                {"segnet_port_drift_receipt": support["segnet_port_drift_receipt"]}
+                if support.get("segnet_port_drift_receipt") is not None
+                else {}
+            ),
         },
     )
 
@@ -2655,6 +2897,7 @@ def _survival_row(
     action_id: str,
     surface: str,
     survived: bool,
+    support_sha256: str | None = None,
     birth_class: int,
     region_pixels: int,
     region_hard_won: int,
@@ -2819,6 +3062,13 @@ def _survival_row(
         "human_visual_fidelity_objective": False,
         "authority": _NON_AUTHORITY_MARKER,
     }
+    # Same-birth support trace (copied verbatim from the live receipt): the launch
+    # gate derives an expected_support_sha256 for the accepted birth and requires
+    # every L4/L5 survival row to carry the SAME support_sha256.  Omitted entirely
+    # when the live payload has no support identity (the gate's check is then a
+    # no-op), so a minimal fixture is not forced to fabricate one.
+    if support_sha256:
+        row["support_sha256"] = str(support_sha256)
     if surface_name == "fakequant_mlx":
         row["fakequant_scorer_effect_survived"] = bool(scorer_effect_survived)
         row["fakequant_target_margin_certificate"] = margin_certificate
@@ -2833,6 +3083,27 @@ def _survival_row(
         row["parseback_wrong_to_target"] = surface_wrong_to_target
         row["parseback_wrong_to_target_count"] = surface_wrong_to_target
         row["parseback_wrong_to_target_retention_ratio"] = retention_ratio
+        # Promote the load-bearing parse-back custody fields to the row top level
+        # (they also remain inside ``surface_meta``).  These trace WHICH archive
+        # bytes / ZIP member / receiver model / pairs the re-measurement scored, so
+        # a downstream auditor can verify the parse-back surface custody without
+        # spelunking the nested block.  (A prior surface_meta-nesting change had
+        # regressed these to nested-only.)
+        if isinstance(surface_meta, Mapping):
+            for custody_key in (
+                "parseback_archive_path",
+                "parseback_archive_sha256",
+                "parseback_archive_bytes",
+                "parseback_zip_member",
+                "parseback_payload_sha256",
+                "parseback_payload_bytes",
+                "parseback_archive_schema_version",
+                "parseback_receiver_model",
+                "parseback_target_region_actions_applied",
+                "parseback_pair_indices",
+            ):
+                if custody_key in surface_meta:
+                    row[custody_key] = surface_meta[custody_key]
     elif surface_name == "inflated_torch_cpu":
         row["inflate_payload_survived"] = True
         row["inflate_scorer_effect_survived"] = bool(scorer_effect_survived)
@@ -2840,6 +3111,30 @@ def _survival_row(
         row["inflate_wrong_to_target"] = surface_wrong_to_target
         row["inflate_wrong_to_target_count"] = surface_wrong_to_target
         row["inflate_wrong_to_target_retention_ratio"] = retention_ratio
+        # Promote the load-bearing inflated-replay custody fields to the row top
+        # level (they also remain inside ``surface_meta``): WHICH retained raw
+        # pair / replay summary / axis tag the L5 re-measurement read.  (A prior
+        # surface_meta-nesting change had regressed these to nested-only.)
+        if isinstance(surface_meta, Mapping):
+            for custody_key in (
+                "local_replay_summary_schema",
+                "local_replay_report_path",
+                "local_replay_axis_tag",
+                "local_replay_device",
+                "local_replay_archive_zip_path",
+                "local_replay_archive_zip_sha256",
+                "local_replay_archive_bytes",
+                "local_replay_inflated_dir",
+                "inflated_raw_path",
+                "inflated_raw_sha256",
+                "inflated_raw_pair_read_mode",
+                "inflated_raw_frame_shape_nhwc",
+                "inflated_raw_frame_indices",
+                "inflated_torch_cpu_source",
+                "inflated_torch_cpu_memmap_full_video_materialized",
+            ):
+                if custody_key in surface_meta:
+                    row[custody_key] = surface_meta[custody_key]
     elif surface_name == "archive_roundtrip_shadow":
         row["archive_roundtrip_shadow_scorer_effect_survived"] = bool(scorer_effect_survived)
         row["archive_roundtrip_shadow_target_margin_certificate"] = margin_certificate

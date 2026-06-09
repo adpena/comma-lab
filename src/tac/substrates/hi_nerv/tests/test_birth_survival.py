@@ -215,6 +215,129 @@ def test_region_support_counts_only_forward_measured_target_wins(
     assert support["region_unsolved"] == 4
 
 
+def test_tie_corrected_authority_uses_torch_at_region_ties_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The AUTHORITY region_hard_won is torch-EXACT at near-ties, MLX elsewhere.
+
+    NO-FAKE: a stub corrector that ignored torch (returned the MLX argmax always)
+    would FAIL this — the torch authority deliberately flips a region tie pixel
+    to the birth class, so the torch-corrected hard-won count (1) differs from the
+    MLX margin-based count (0).  The control proves torch is invoked ONLY when a
+    tie falls inside the region, and that omitting the torch fn keeps the legacy
+    MLX margin-based count (backward-compatible).
+    """
+
+    # 1x2x1 region of two pixels:
+    #   pixel (0,0): NEAR-TIE  class0=0.50, class1=0.49 (margin 0.01 < eps=0.05).
+    #     MLX argmax -> class0 (NOT the birth class); MLX strict-margin won -> 0.
+    #   pixel (0,1): CLEAR     class0=-2.0, class1=2.0 (birth class wins clearly).
+    logits = np.zeros((1, 1, 2, 2), dtype=np.float32)
+    logits[0, 0, 0, 0] = 0.50
+    logits[0, 0, 0, 1] = 0.49
+    logits[0, 0, 1, 0] = -2.0
+    logits[0, 0, 1, 1] = 2.0
+    region_mask = np.ones((1, 1, 2), dtype=np.float32)
+
+    monkeypatch.setattr(
+        birth_survival_mod,
+        "_candidate_logits_np",
+        lambda _teacher, _frame: logits,
+    )
+    # The receiver-frame fetch is mlx-bound; stub it (a torch authority would read
+    # this exact surface).  Shape only needs to match logits BHW.
+    monkeypatch.setattr(
+        birth_survival_mod,
+        "_receiver_frame1_nhwc01_np",
+        lambda _frame: np.zeros((1, 1, 2, 3), dtype=np.float32),
+    )
+
+    invocations: list[tuple] = []
+
+    def _torch_argmax(receiver_frame_nhwc01: np.ndarray) -> np.ndarray:
+        # The torch authority resolves BOTH pixels to the birth class (class 1).
+        invocations.append(tuple(np.asarray(receiver_frame_nhwc01).shape))
+        return np.array([[1, 1]], dtype=np.int64)
+
+    # ---- Default (no torch fn): legacy MLX margin-based count (pixel 1 only). ----
+    support_default = birth_survival_mod._region_support_from_frame1_nhwc01(
+        scorer_teacher=object(),
+        frame1_nhwc01=object(),
+        region_mask_np=region_mask,
+        birth_class=1,
+    )
+    assert support_default["region_hard_won"] == 1
+    assert "segnet_port_drift_receipt" not in support_default
+    assert "mlx_margin_region_hard_won" not in support_default
+    assert not invocations  # torch never touched on the default path
+
+    # ---- Torch-exact authority: the tie pixel is resolved to the birth class. ----
+    support_torch = birth_survival_mod._region_support_from_frame1_nhwc01(
+        scorer_teacher=object(),
+        frame1_nhwc01=object(),
+        region_mask_np=region_mask,
+        birth_class=1,
+        torch_segnet_argmax_fn=_torch_argmax,
+    )
+    # MLX margin-based count is preserved for provenance (still 1)...
+    assert support_torch["mlx_margin_region_hard_won"] == 1
+    # ...but the AUTHORITY count is torch-exact: BOTH pixels now won (the tie
+    # pixel was flipped to the birth class by the torch authority).
+    assert support_torch["region_hard_won"] == 2
+    assert support_torch["region_unsolved"] == 0
+    # Torch WAS invoked (a region tie existed) — exactly once for the one frame.
+    assert len(invocations) == 1
+    receipt = support_torch["segnet_port_drift_receipt"]
+    assert receipt["schema"] == "hi_nerv_segnet_port_drift_receipt.v1"
+    assert receipt["region_tie_pixel_count"] == 1
+    assert receipt["torch_authority_frames_invoked"] == 1
+    assert receipt["torch_exact_guarantee"] is True
+    assert receipt["promotable"] is False
+
+
+def test_tie_corrected_authority_skips_torch_when_no_region_tie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tie-free frames pay ZERO torch cost (tie identification is MLX-only)."""
+
+    # Both region pixels have a large top-2 margin -> no tie -> torch must NOT run.
+    logits = np.zeros((1, 1, 2, 2), dtype=np.float32)
+    logits[0, 0, :, 0] = -3.0
+    logits[0, 0, :, 1] = 3.0
+    region_mask = np.ones((1, 1, 2), dtype=np.float32)
+
+    monkeypatch.setattr(
+        birth_survival_mod,
+        "_candidate_logits_np",
+        lambda _teacher, _frame: logits,
+    )
+    monkeypatch.setattr(
+        birth_survival_mod,
+        "_receiver_frame1_nhwc01_np",
+        lambda _frame: np.zeros((1, 1, 2, 3), dtype=np.float32),
+    )
+
+    torch_calls: list[int] = []
+
+    def _torch_argmax(_receiver: np.ndarray) -> np.ndarray:
+        torch_calls.append(1)
+        return np.array([[1, 1]], dtype=np.int64)
+
+    support = birth_survival_mod._region_support_from_frame1_nhwc01(
+        scorer_teacher=object(),
+        frame1_nhwc01=object(),
+        region_mask_np=region_mask,
+        birth_class=1,
+        torch_segnet_argmax_fn=_torch_argmax,
+    )
+    # No tie -> torch skipped entirely; corrected count == MLX argmax-won count.
+    assert torch_calls == []
+    assert support["region_hard_won"] == 2
+    receipt = support["segnet_port_drift_receipt"]
+    assert receipt["region_tie_pixel_count"] == 0
+    assert receipt["torch_authority_frames_invoked"] == 0
+
+
 def test_blocked_surfaces_return_typed_blocker_without_survived() -> None:
     # Blocked surfaces short-circuit before any MLX usage: honesty over coverage.
     labels = np.zeros((1, 8, 10), dtype=np.int64)
@@ -513,6 +636,12 @@ def _synthetic_birth_payload_for_inflated_surface() -> dict:
         "region_unsolved_pixel_count": 48,
         "total_scored_pixels": 874 * 1164,
     }
+    # A genuinely-surviving birth: the 48-pixel region was fully unsolved at the
+    # before-state and the live actuator won all 48 (wrong_to_target=48).  The
+    # retention gate (hardened to refuse a survival row that cannot prove its
+    # scorer-effect retention against the live before-count) reads this live
+    # wrong_to_target count to compute the surface retention ratio; a real
+    # surviving MLX birth receipt always carries it, so the fixture must too.
     return {
         "schema": "hi_nerv_target_region_birth_payload.v1",
         "accepted": True,
@@ -523,6 +652,15 @@ def _synthetic_birth_payload_for_inflated_surface() -> dict:
             "action_id": action_id,
             "surface": "live_mlx",
             "worst_region": worst_region,
+            "wrong_to_target_count": 48,
+            "target_hard_won_count": 48,
+            "argmax_transitions": {
+                "wrong_to_target_count": 48,
+                "target_hard_won_count": 48,
+                "net_target_support_delta": 48,
+                "target_hard_lost_count": 0,
+                "target_to_wrong_count": 0,
+            },
         },
     }
 
@@ -578,6 +716,128 @@ def test_fakequant_survival_row_carries_live_action_id_and_real_survived() -> No
     assert row["target_hard_won_count"] == row["region_hard_won_count"]
     assert row["receiver_surface_target_hard_won_count"] == row["region_hard_won_count"]
     assert row["argmax_transitions"]["net_target_support_delta"] == row["net_target_support_delta"]
+
+
+@skip_no_mlx
+def test_fakequant_survival_row_carries_live_support_sha256_trace() -> None:
+    """The L4 survival row copies the live birth's support_sha256 (gate trace).
+
+    The launch gate derives an ``expected_support_sha256`` from the accepted
+    birth and refuses any survival row that does not carry the SAME hash, so a
+    re-measurement of a DIFFERENT birth's support cannot satisfy the gate.  This
+    proves the producer threads the live support identity onto the row (a pure
+    copy, like ``action_id``).
+    """
+
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+
+    expected_support = birth_survival_mod._live_support_sha256(payload)
+    assert isinstance(expected_support, str) and len(expected_support) == 64
+
+    row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="fakequant_mlx",
+        pair_indices=idx,
+    )
+    assert row["support_sha256"] == expected_support
+    assert not (_FORBIDDEN_AUTHORITY_KEYS & row.keys())
+
+
+@skip_no_mlx
+def test_fakequant_survival_torch_exact_authority_is_load_bearing() -> None:
+    """``measure_birth_survival`` threads the deterministic tie corrector E2E.
+
+    NO-FAKE: the corrector is proven load-bearing by an adversarial torch
+    authority that resolves the WHOLE region to a non-birth class — the
+    torch-corrected authority count collapses to 0 and ``survived`` flips to
+    False, distinct from the MLX-only default (survived True).  A faithful torch
+    authority (the teacher's own argmax) leaves the survival unchanged AND emits
+    the ``segnet_port_drift_receipt`` attestation in ``surface_meta``.
+    """
+
+    import mlx.core as mx
+
+    cfg, model, teacher, target0, target1, labels_np = _setup(mx)
+    payload = _accepted_live_birth(mx, model, teacher, target0, target1, labels_np, cfg)
+    idx = mx.arange(cfg.num_pairs, dtype=mx.int32)
+    h, w = cfg.output_height, cfg.output_width
+
+    # Default (MLX-only) survival: the birth holds under 8-bit fake-quant.
+    default_row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="fakequant_mlx",
+        pair_indices=idx,
+    )
+    assert default_row["survived"] is True
+    assert "segnet_port_drift_receipt" not in (default_row.get("surface_meta") or {})
+
+    # Faithful torch authority: argmax of the teacher's own logits on the exact
+    # receiver frame (forces tie_epsilon high enough to flag every pixel a tie so
+    # torch authority is exercised on the region; the result must still match the
+    # teacher, so survival is unchanged) + the drift receipt is recorded.
+    def _faithful_torch_argmax(receiver_frame_nhwc01: np.ndarray) -> np.ndarray:
+        logits = teacher.teacher_logits_for_frames_nhwc01(
+            mx.array(receiver_frame_nhwc01, dtype=mx.float32)
+        )
+        mx.eval(logits)
+        return np.asarray(logits, dtype=np.float32).argmax(-1).reshape(h, w)
+
+    faithful_row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="fakequant_mlx",
+        pair_indices=idx,
+        torch_segnet_argmax_fn=_faithful_torch_argmax,
+        tie_epsilon=1.0e9,  # flag every region pixel a tie -> torch decides all
+    )
+    assert faithful_row["survived"] is True
+    receipt = (faithful_row.get("surface_meta") or {})["segnet_port_drift_receipt"]
+    assert receipt["schema"] == "hi_nerv_segnet_port_drift_receipt.v1"
+    assert receipt["torch_authority_frames_invoked"] >= 1
+    assert receipt["region_tie_pixel_count"] >= 1
+    assert receipt["promotable"] is False
+
+    # Adversarial torch authority: resolve EVERY region pixel to a non-birth
+    # class.  The torch-corrected authority count must collapse, flipping the
+    # survival verdict — proof the corrector drives the score-bearing field.
+    birth_class = int(payload["worst_region"]["class_index"])
+    non_birth = 0 if birth_class != 0 else 1
+
+    def _adversarial_torch_argmax(
+        receiver_frame_nhwc01: np.ndarray,
+    ) -> np.ndarray:
+        return np.full((h, w), non_birth, dtype=np.int64)
+
+    adversarial_row = measure_birth_survival(
+        model,
+        scorer_teacher=teacher,
+        target_labels=labels_np,
+        live_birth_payload=payload,
+        surface="fakequant_mlx",
+        pair_indices=idx,
+        torch_segnet_argmax_fn=_adversarial_torch_argmax,
+        tie_epsilon=1.0e9,  # every region pixel is a tie -> torch decides all
+    )
+    assert adversarial_row["region_hard_won_count"] == 0
+    assert adversarial_row["survived"] is False
+    assert (
+        adversarial_row["surface_meta"]["segnet_port_drift_receipt"][
+            "torch_authority_frames_invoked"
+        ]
+        >= 1
+    )
 
 
 @skip_no_mlx
