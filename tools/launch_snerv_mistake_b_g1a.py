@@ -143,6 +143,10 @@ def _build_spine_argv(args: argparse.Namespace, output_dir: Path) -> list[str]:
         # Mechanism check: do NOT attempt the byte-closed archive (that is G1b).
         "--skip-snerv-native-mlx-archive-export",
         "--snerv-native-mlx-receiver-proof-timeout", "1800",
+        # The driver writes the manifest into output_dir before launch, so the
+        # runner sees a non-empty dir; --overwrite lets it proceed (no prior RUN
+        # artifacts are present, only this driver's manifest).
+        "--overwrite",
         "--output-dir", output_dir.as_posix(),
     ]
 
