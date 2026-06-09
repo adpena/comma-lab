@@ -82,6 +82,40 @@ possibly different export snapshot), NOT the shipped program. The shipped progra
    selection snapshot differs from the in-loop `model.export_state_dict()`. If a realizable
    shipped backend can be made to survive, it competes with the sidecar by exact ΔS.
 
+## P0 SIDECAR-SCORER PROBE OUTCOME — BLOCKED (GPT Case C) + runner-"2" now suspect
+Built `tools/probe_hinerv_sidecar_scorer_effect.py` (renders the live archive backend
+unwrapped + with-sidecar wrapped, scores both with the torch SegNet over the birth region).
+Confirmed structurally: the receiver IS wrapped (`TargetRegionActionReceiver`, 1 action),
+the model emits RGB in **[0,1]** (not [0,255]), and the sidecar **correctly applies 2286
+pixels** (max_abs_diff 0.875, n_changed=2286). Scale-bug in the probe fixed (×255 before SegNet).
+
+**BUT the probe's NO-FAKE validation gate FAILS:** its independently-scored backend =
+**11297** region wins, while the runner's authoritative parseback backend = **2**, on the
+SAME archive (sha ddd88b6c). `--expected-backend-wins 2` → `verdict:
+UNVALIDATED_backend_scoring_path_mismatch`, `scorer_effect_survival_measured:false`,
+`parseback_scorer_effect_survived:null`. No sidecar verdict is trusted.
+
+**Meta-finding (the runner's "2" is now itself suspect):** TWO independent re-measurements
+of the same archive both say ~11k wins —
+- v9 codec grid (uint8 eval-roundtrip, MLX in-loop path): int8 cells = 10781–12157;
+- this probe (float, torch archive backend, extract_gt_masks): 11297 —
+while ONLY the runner's authoritative parseback says 2. When two independent paths agree
+and the "authority" disagrees by ~11k, the authority is the outlier. Candidate causes of the
+runner's "2": a different win definition (transitions vs absolute argmax), a different region
+alignment, a different frame index, the eval uint8 roundtrip applied differently, or a
+genuine scorer-path bug in `measure_birth_parseback_survival_from_report`.
+
+### The reconciliation that unblocks P0 (exact, file/function/line)
+Align ONE scoring path end-to-end and find where 11k → 2:
+- runner authoritative: `tac.substrates.hi_nerv.birth_survival.measure_birth_parseback_survival_from_report`
+  → its win definition + `_candidate_logits_np` (uint8 roundtrip via
+  `_receiver_uint8_roundtrip_ste_nhwc01`) + region reconstruction (`reconstruct_birth_region_mask`).
+- my probe: `tools/probe_hinerv_sidecar_scorer_effect.py` uses `tac.scorer.extract_gt_masks`
+  (float, no uint8 roundtrip, absolute argmax==cls over GT==cls).
+Make the probe call the SAME `_candidate_logits_np` + cert win definition + region mask the
+runner uses, gate on reproducing backend=2, THEN the sidecar number over L is trustworthy.
+Until then P0 is BLOCKED on scoring-path identity (not on artifacts — both are persisted).
+
 ## DO NOT
 - name a guilty decoder section (H1 superseded; the selected codec is int8, faithful in the grid).
 - implement section QAT or decoder-codec QAT (int8 is faithful; int4 isn't what ships; the gap is build-path).
