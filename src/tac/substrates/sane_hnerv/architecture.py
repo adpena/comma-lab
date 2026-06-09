@@ -1,10 +1,17 @@
 # SPDX-License-Identifier: MIT
 """sane_hnerv architecture — Score-Aware NeRV Extended substrate.
 
-Frame-conditional implicit renderer mirroring the leaderboard PR101 / PR100
-HNeRV-LC-v2 design (canonical HNeRV with per-pair latent + bilinear-skip +
-sin activation + PixelShuffle decoder), explicitly held to ~229K params per
-the Quantizr empirical anchor.
+Frame-conditional implicit renderer INSPIRED BY the leaderboard PR101 / PR100
+HNeRV-LC-v2 design, explicitly held to ~229K params per the Quantizr empirical
+anchor. NOTE (2026-06-09 fidelity correction): this carrier is a SKIP-FREE
+per-pair-latent + sin + PixelShuffle decoder. The PR-family bilinear-skip is
+NOT implemented here (the `_UpBlock` forward is bare `shuffle(act(conv(x)))`).
+Prior docstrings claimed a bilinear-skip the forward never had — that
+mechanism-name-laundering is corrected here. The canonical skip primitive lives
+at `tac.framework_agnostic.canonical_kernels.bilinear_skip_residual_canonical`
+if ever wired; but the F1 recon-ablation (`b1_f1_recon_ablation_verdict_*`)
+showed the skip is recon-inert under pure MSE, so it is intentionally NOT added
+without a scorer-objective effect proof.
 
 Architecture (council-approved 2026-05-12; Hotz Carmack-style):
 
@@ -24,7 +31,7 @@ Architecture (council-approved 2026-05-12; Hotz Carmack-style):
     Block 4: Conv -> sin -> PixelShuffle(2)    # 64x96 grid
     Block 5: Conv -> sin -> PixelShuffle(2)    # 128x192 grid
     Block 6: Conv -> sin -> PixelShuffle(2)    # 256x384 grid  (NOT 384x512 yet)
-       |  (with bilinear-skip from each prior block)
+       |  (SKIP-FREE: NO bilinear-skip between blocks — see fidelity note above)
        v
     Head rgb_0 / rgb_1: Conv 3 channels each   # 2 frames per pair
 
@@ -52,7 +59,6 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 _CONTEST_H = 384
 _CONTEST_W = 512
@@ -114,12 +120,15 @@ class _SinAct(nn.Module):
         super().__init__()
         self.w = float(w)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # noqa: D401
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.sin(self.w * x)
 
 
 class _UpBlock(nn.Module):
-    """One Conv -> sin -> PixelShuffle(2) block, with optional bilinear-skip."""
+    """One Conv -> sin -> PixelShuffle(2) block. SKIP-FREE: no bilinear-skip is
+    implemented (no skip conv, no skip flag) — the forward is bare
+    `shuffle(act(conv(x)))`. (2026-06-09: corrected a docstring that falsely
+    claimed an 'optional bilinear-skip' the block never had.)"""
 
     def __init__(
         self,
@@ -135,7 +144,7 @@ class _UpBlock(nn.Module):
         self.act = _SinAct(sin_freq)
         self.shuffle = nn.PixelShuffle(2)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # noqa: D401
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.shuffle(self.act(self.conv(x)))
 
 
@@ -168,7 +177,7 @@ class SaneHnervSubstrate(nn.Module):
 
         # Decoder up-blocks
         # channels[0] = embed_dim, channels[i+1] is the post-block-i channel count
-        channels = [cfg.embed_dim] + list(cfg.decoder_channels)
+        channels = [cfg.embed_dim, *cfg.decoder_channels]
         if len(channels) <= cfg.num_upsample_blocks:
             raise ValueError(
                 f"decoder_channels ({len(cfg.decoder_channels)}) must have at least "
