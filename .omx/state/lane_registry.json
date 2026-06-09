@@ -71346,6 +71346,416 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_swarm_v3_deforest_read_surface_atoms_20260609",
+      "name": "Deforestation read-surface atom proposers (D1 primitives)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/scorer_read_surface_atoms.py 3 atom proposers + 24 NO-FAKE tests pass [commit ab7e8187d]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/deforestation_read_surface_atoms_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_swarm_v1_b0_timing_smoke_20260609",
+      "name": "Swarm V1-B0 PR95-family MLX timing smoke",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/timing_smoke_hinerv_pr95_family.py + .omx/research/timing_smoke_hinerv_pr95_family_20260609T031845Z.json [macOS-MLX research-signal] both surfaces functional"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/swarm_v1_b0_pr95_family_timing_smoke_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_swarm_v2_snerv_c2_mfu_hfr_lfhf_20260609",
+      "name": "SNeRV C2 MFU/HFR/TUB DROP_OR_REIFY + C3 LF/HF byte pressure",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "de283d924 C2 proof + C3 curve + gate wiring; [empirical:.omx/research/snerv_c2_mfu_hfr_tub_drop_or_reify_plus_c3_lf_hf_byte_pressure_20260609.md]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/snerv_c2_mfu_hfr_tub_drop_or_reify_plus_c3_lf_hf_byte_pressure_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_b1_hinerv_pr95_229k_full_curriculum_20260609",
+      "name": "B1 HiNeRV PR95 229K full curriculum MLX",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_throughput_fix_mlx_score_aware_20260609",
+      "name": "MLX score-aware train_step throughput fix",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "diagnostics cadence gate + vectorized flood-fill landed in adapter.py commit 32f40b144; all CLI/kwarg wired; no NotImplementedError"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "20 NO-FAKE tests pass (loss-parity 0.0 + guard-on safety + bit-exact flood-fill); 0 new sister regressions; 2 review_tracker clean passes; ruff clean"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/throughput_fix_mlx_score_aware_diagnostics_cadence_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tilde_opt_aurora_20260609",
+      "name": "Tilde Research optimizer survey + Aurora MLX build",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/aurora_mlx.py + 26 NO-FAKE tests src/tac/tests/test_aurora_mlx.py all pass; ruff clean"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "review_tracker 2-pass policy compliant: 6+28 entities, 0 violations; ruff clean; 26 tests pass"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/tilde_research_optimizers_survey_and_aurora_build_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_b2_bridge_20260609",
+      "name": "B2 HiNeRV backend-only exact-eval bridge",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_hi_nerv_backend_only_b2_exact_eval.py commit c2a863465"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "review_tracker 2 clean passes + 18 NO-FAKE tests pass; commit c2a863465"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/b2_hi_nerv_backend_only_exact_eval_bridge_runbook.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "docs/b2_hi_nerv_backend_only_exact_eval_bridge_runbook.md + --print-dual-axis-recipe"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_b1_baseline_229k_pilot_20260609",
+      "name": "B1 baseline 229K PR95-family HiNeRV pilot launch",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/b1_launch_supplement_b1_229k_pilot_20260609T055851Z.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/b1_launch_supplement_b1_229k_pilot_20260609T055851Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_vehicle_fidelity_manifest_and_objective_starvation_gate_20260609",
+      "name": "Vehicle fidelity manifest + objective-starvation gate",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/_shared/vehicle_fidelity_manifest.py + src/tac/preflight.py check_score_aware_run_has_nonzero_scorer_objective_weights (Catalog #384)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #384 check_score_aware_run_has_nonzero_scorer_objective_weights (WARN-ONLY; live count 3)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_vehicle_fidelity_manifest_plus_objective_starvation_gate_landed_20260609.md (pending)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_scorer_spectral_atlas_v2_20260609",
+      "name": "Scorer spectral-sensitivity atlas v2 + constants provenance gate",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -71355,5 +71765,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-09T02:53:15Z"
+  "updated_at": "2026-06-09T20:25:01Z"
 }

@@ -28,11 +28,33 @@ fact that directs the frequency-basis design); it is NOT a candidate score. NOT
 promotable; does NOT update the score roadmap. Cross-ref
 `.omx/research/principled_frequency_basis_synthesis_20260609.md`.
 
-Run (fast; a few min for N~24 x B~8 on the frozen scorer):
-  .venv/bin/python tools/measure_scorer_spectral_sensitivity.py \\
+Two subcommands:
+  * ``v1`` — the original isotropic-radial argmax-d_seg curve (one amplitude, no
+    coordinate conversion). PRESERVED for backward compatibility but risks
+    manufacturing a misleading single "peak band".
+  * ``v2`` — the hardened transfer-function ATLAS (Deliverable 1, operator
+    2026-06-09): amplitude sweep, three response levels (logit-margin /
+    argmax / exact), frame-incidence, RGB+YUV channel basis, orientation +
+    random-phase CI, energy audit, and full coordinate conversion (camera
+    cyc/px, scorer cyc/px, normalized omega, SIREN-w-equivalent). The reusable
+    physics lives in ``tac.analysis.scorer_spectral_sensitivity_v2``.
+
+Run v1 (fast; a few min for N~24 x B~8 on the frozen scorer):
+  .venv/bin/python tools/measure_scorer_spectral_sensitivity.py v1 \\
     --n-pairs 24 --n-bands 8 --rel-energy 0.05 \\
     --work-dir /Volumes/VertigoDataTier/pact/scorer_spectral_sensitivity_<utc> \\
     --out <work>/scorer_spectral_sensitivity.v1.json
+
+Run v2 atlas (the full grid is large; configure the grid to bound wall-clock —
+default grid is 5760 cells x 6 pairs x 2 phases = ~69k scorer-forward groups on
+CPU. Trim orientations/channels/amplitudes for a fast pass):
+  .venv/bin/python tools/measure_scorer_spectral_sensitivity.py v2 \\
+    --n-pairs 6 --n-bands 8 --band-spacing log \\
+    --amplitudes-lsb 0.5,2,8 --orientations isotropic,horizontal,vertical \\
+    --channel-bases rgb,yuv --rgb-channels all --yuv-channels y,all \\
+    --frame-incidences frame1_only,both_opposite --n-phase-samples 2 \\
+    --work-dir /Volumes/VertigoDataTier/pact/scorer_spectral_atlas_<utc> \\
+    --out <work>/scorer_spectral_sensitivity.v2.json
 """
 from __future__ import annotations
 
@@ -81,22 +103,7 @@ def _band_limited_perturbation(
     return out
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--n-pairs", type=int, default=24, help="pairs to average per band")
-    ap.add_argument("--n-bands", type=int, default=8, help="radial frequency bands DC->Nyquist")
-    ap.add_argument(
-        "--rel-energy",
-        type=float,
-        default=0.05,
-        help="perturbation std as a fraction of each frame's std (equal per band)",
-    )
-    ap.add_argument("--device", default="cpu")
-    ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--work-dir", required=True, type=Path)
-    ap.add_argument("--out", required=True, type=Path)
-    args = ap.parse_args(argv)
-
+def _run_v1(args: argparse.Namespace) -> int:
     import hi_nerv_renderer_sanity_ladder as ladder
     import numpy as np
 
@@ -201,6 +208,176 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  POSE peak band {pose_peak['band_index']} r~{0.5*(pose_peak['r_lo']+pose_peak['r_hi']):.3f}  H_pose={pose_peak['H_pose']:+.4f}")
     print(f"  wrote {args.out}")
     return 0
+
+
+def _csv_floats(s: str) -> tuple[float, ...]:
+    return tuple(float(x) for x in s.split(",") if x.strip())
+
+
+def _csv_strs(s: str) -> tuple[str, ...]:
+    return tuple(x.strip() for x in s.split(",") if x.strip())
+
+
+def _run_v2(args: argparse.Namespace) -> int:
+    """The hardened transfer-function ATLAS (Deliverable 1).
+
+    Builds the configurable v2 grid {pair, band, orientation, amplitude, basis,
+    channel, frame_incidence} and measures three response levels through the
+    EXACT frozen scorer, with full coordinate conversion + energy audit + CI.
+    """
+    import hi_nerv_renderer_sanity_ladder as ladder
+    import numpy as np
+
+    from tac.analysis import scorer_spectral_sensitivity_v2 as v2
+
+    work = args.work_dir.resolve()
+    if "/tmp" in str(work):
+        raise SystemExit("work-dir must not be under /tmp (durable SSD only)")
+    work.mkdir(parents=True, exist_ok=True)
+    H, W, C = ladder._frame_dims()
+
+    # Decode the source pairs (camera-res GT) once.
+    src_raw = work / "source.raw"
+    ladder.decode_source_to_raw(
+        _REPO / "upstream" / "videos" / "0.mkv",
+        src_raw,
+        max_frames=2 * int(args.n_pairs),
+    )
+    frames = np.memmap(src_raw, dtype=np.uint8, mode="r").reshape(-1, H, W, C)
+    n_avail = frames.shape[0] // 2
+    n_pairs = min(int(args.n_pairs), n_avail)
+    pairs = np.array(frames[: 2 * n_pairs]).reshape(n_pairs, 2, H, W, C)
+
+    grid = v2.AtlasGrid(
+        n_pairs=n_pairs,
+        n_bands=int(args.n_bands),
+        band_spacing=args.band_spacing,
+        amplitudes_lsb=tuple(args.amplitudes_lsb),
+        orientations=tuple(args.orientations),
+        frame_incidences=tuple(args.frame_incidences),
+        channel_bases=tuple(args.channel_bases),
+        rgb_channels=tuple(args.rgb_channels),
+        yuv_channels=tuple(args.yuv_channels),
+        n_phase_samples=int(args.n_phase_samples),
+        seed=int(args.seed),
+    )
+    print(
+        f"[spectral.v2] grid: {grid.total_cells()} cells x {n_pairs} pairs x "
+        f"{grid.n_phase_samples} phases = {grid.total_scorer_forwards()} scorer-forward "
+        f"groups (each = source + perturbed). device={args.device}",
+        flush=True,
+    )
+
+    artifact = v2.measure_atlas(pairs, grid, device=args.device, progress=True)
+    artifact["utc"] = _utc()
+    artifact["source_raw"] = {
+        "path": str(src_raw),
+        "n_pairs": n_pairs,
+        "camera_hw": [H, W],
+    }
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+
+    hl = artifact["headline"]
+    print("=== scorer spectral-sensitivity ATLAS (v2) ===")
+    print(
+        f"  baseline d_seg={artifact['baseline']['d_seg']:.5f} "
+        f"d_pose={artifact['baseline']['d_pose']:.4f} (source-vs-source)"
+    )
+    for name, key in (("SEG", "seg_peak"), ("POSE", "pose_peak"), ("MARGIN", "logit_margin_peak")):
+        p = hl[key]
+        if not p:
+            continue
+        print(
+            f"  {name:6s} peak: H={p['H']:+.5f} @ band{p['band_index']} {p['orientation']} "
+            f"a={p['amplitude_lsb']}LSB {p['channel_basis']}:{p['channel']} {p['frame_incidence']} "
+            f"| w_equiv={p['siren_w_equivalent']:.1f} "
+            f"scorer_cyc/px={p['scorer_cycles_per_pixel']:.3f} alias={p['aliases_at_scorer']}"
+        )
+    print(f"  W-VERDICT: {hl['w_verdict_note']}")
+    print(f"  wrote {args.out}")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    sub = ap.add_subparsers(dest="cmd")
+
+    # v1 (the original isotropic-radial argmax-d_seg transfer function; preserved).
+    v1 = sub.add_parser("v1", help="original v1 isotropic-radial argmax-d_seg curve")
+    v1.add_argument("--n-pairs", type=int, default=24, help="pairs to average per band")
+    v1.add_argument("--n-bands", type=int, default=8, help="radial frequency bands DC->Nyquist")
+    v1.add_argument(
+        "--rel-energy",
+        type=float,
+        default=0.05,
+        help="perturbation std as a fraction of each frame's std (equal per band)",
+    )
+    v1.add_argument("--device", default="cpu")
+    v1.add_argument("--seed", type=int, default=0)
+    v1.add_argument("--work-dir", required=True, type=Path)
+    v1.add_argument("--out", required=True, type=Path)
+    v1.set_defaults(_fn=_run_v1)
+
+    # v2 (the hardened atlas; Deliverable 1).
+    v2p = sub.add_parser("v2", help="hardened transfer-function ATLAS (3 levels, amp/orient/channel sweep)")
+    v2p.add_argument("--n-pairs", type=int, default=6, help="source pairs to average per cell")
+    v2p.add_argument("--n-bands", type=int, default=6, help="radial frequency bands")
+    v2p.add_argument(
+        "--band-spacing",
+        default="linear",
+        choices=("linear", "log"),
+        help="linear=uniform spectrum; log=denser low-freq (resolves the w=1..30 regime)",
+    )
+    v2p.add_argument(
+        "--amplitudes-lsb",
+        type=_csv_floats,
+        default=(0.25, 0.5, 1.0, 2.0, 4.0, 8.0),
+        help="comma-separated perturbation amplitudes in LSB (1 LSB = 1/255)",
+    )
+    v2p.add_argument(
+        "--orientations",
+        type=_csv_strs,
+        default=("isotropic", "horizontal", "vertical", "diag_plus", "diag_minus"),
+        help="comma-separated subset of isotropic,horizontal,vertical,diag_plus,diag_minus",
+    )
+    v2p.add_argument(
+        "--frame-incidences",
+        type=_csv_strs,
+        default=("frame0_only", "frame1_only", "both_same", "both_opposite"),
+        help="comma-separated subset of frame0_only,frame1_only,both_same,both_opposite",
+    )
+    v2p.add_argument(
+        "--channel-bases",
+        type=_csv_strs,
+        default=("rgb", "yuv"),
+        help="comma-separated subset of rgb,yuv",
+    )
+    v2p.add_argument(
+        "--rgb-channels",
+        type=_csv_strs,
+        default=("all", "r", "g", "b"),
+        help="comma-separated subset of all,r,g,b (perturbed when channel_basis=rgb)",
+    )
+    v2p.add_argument(
+        "--yuv-channels",
+        type=_csv_strs,
+        default=("all", "y", "u", "v"),
+        help="comma-separated subset of all,y,u,v (perturbed when channel_basis=yuv)",
+    )
+    v2p.add_argument("--n-phase-samples", type=int, default=2, help="random-phase draws per cell (CI)")
+    v2p.add_argument("--device", default="cpu")
+    v2p.add_argument("--seed", type=int, default=0)
+    v2p.add_argument("--work-dir", required=True, type=Path)
+    v2p.add_argument("--out", required=True, type=Path)
+    v2p.set_defaults(_fn=_run_v2)
+
+    args = ap.parse_args(argv)
+    if not getattr(args, "_fn", None):
+        ap.print_help()
+        return 2
+    return int(args._fn(args))
 
 
 if __name__ == "__main__":
