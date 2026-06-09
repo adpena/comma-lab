@@ -844,12 +844,17 @@ def cmd_segnet_margin_field(args: argparse.Namespace) -> int:
     seg_h, seg_w = segnet_model_input_size[1], segnet_model_input_size[0]  # 384, 512
 
     # Fragility thresholds in logit units (small margin => easily flipped by a perturbation).
-    thresholds = [0.5, 1.0, 2.0, 4.0, 8.0]
+    thresholds = [0.1, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
+    frag_thr = 2.0  # canonical "fragile" cutoff for class/boundary/per-frame stats
+    n_classes = 5
     frag_counts = dict.fromkeys(thresholds, 0)
     total_pixels = 0
-    hist_bins = np.array([0, 0.5, 1, 2, 4, 8, 16, 32, 1e9], dtype=np.float64)
+    hist_bins = np.array([0, 0.1, 0.25, 0.5, 1, 2, 4, 8, 16, 1e9], dtype=np.float64)
     hist = np.zeros(len(hist_bins) - 1, dtype=np.int64)
     per_frame_frag: list[float] = []
+    cls_total = np.zeros(n_classes, dtype=np.int64)
+    cls_fragile = np.zeros(n_classes, dtype=np.int64)
+    boundary_total = boundary_fragile = interior_total = interior_fragile = 0
 
     bs = int(args.batch_size)
     with torch.inference_mode():
@@ -859,34 +864,71 @@ def cmd_segnet_margin_field(args: argparse.Namespace) -> int:
             seg_in = torch.nn.functional.interpolate(x, size=(seg_h, seg_w), mode="bilinear", align_corners=False).to(args.device)
             logits = net.segnet(seg_in)  # (b,5,seg_h,seg_w)
             top2 = torch.topk(logits, 2, dim=1).values  # (b,2,h,w)
-            margin = (top2[:, 0] - top2[:, 1]).cpu().numpy().reshape(-1)  # (b*h*w,) >= 0
+            m2d = (top2[:, 0] - top2[:, 1]).cpu().numpy()  # (b,h,w) >= 0
+            cls = logits.argmax(dim=1).cpu().numpy()  # (b,h,w) source class
+            margin = m2d.reshape(-1)
             total_pixels += margin.size
             hist += np.histogram(margin, bins=hist_bins)[0]
             for t in thresholds:
                 frag_counts[t] += int((margin < t).sum())
-            # per-frame fragile fraction at the canonical 2.0-logit threshold
-            mb = (top2[:, 0] - top2[:, 1]).cpu().numpy().reshape(batch.shape[0], -1)
-            per_frame_frag.extend([float((row < 2.0).mean()) for row in mb])
+            frag_mask = m2d < frag_thr  # (b,h,w)
+            # class-wise fragility (which SegNet classes carry the boundary budget)
+            for c in range(n_classes):
+                cmask = cls == c
+                cls_total[c] += int(cmask.sum())
+                cls_fragile[c] += int((cmask & frag_mask).sum())
+            # boundary vs interior: a pixel is a boundary if any 4-neighbor has a different argmax
+            bnd = np.zeros_like(cls, dtype=bool)
+            ne = cls[:, :-1, :] != cls[:, 1:, :]
+            bnd[:, :-1, :] |= ne
+            bnd[:, 1:, :] |= ne
+            ew = cls[:, :, :-1] != cls[:, :, 1:]
+            bnd[:, :, :-1] |= ew
+            bnd[:, :, 1:] |= ew
+            boundary_total += int(bnd.sum())
+            boundary_fragile += int((bnd & frag_mask).sum())
+            interior_total += int((~bnd).sum())
+            interior_fragile += int((~bnd & frag_mask).sum())
+            per_frame_frag.extend([float(fr.mean()) for fr in frag_mask.reshape(batch.shape[0], -1)])
 
     frag_frac = {str(t): frag_counts[t] / max(1, total_pixels) for t in thresholds}
     hist_frac = (hist / max(1, total_pixels)).tolist()
     pf = np.array(per_frame_frag)
+    total_frag = int(np.array(frag_counts[frag_thr]))
+    class_wise = {
+        str(c): {
+            "population_fraction": float(cls_total[c] / max(1, total_pixels)),
+            "fragile_fraction_within_class": float(cls_fragile[c] / max(1, cls_total[c])),
+            "share_of_all_fragile": float(cls_fragile[c] / max(1, total_frag)),
+        }
+        for c in range(n_classes)
+    }
     artifact = {
-        "schema": "segnet_margin_field.v1",
-        "purpose": "per-pixel SegNet source margin over all scored last-frames = SegNet curve across all dimensions + deforestation map",
+        "schema": "segnet_margin_field.v2",
+        "purpose": "per-pixel SegNet source margin over all scored last-frames = deforestation map + waterfilling byte budget",
         "utc": _utc(),
         "n_scored_frames": int(n),
         "segnet_input_size_hw": [seg_h, seg_w],
         "total_pixels": int(total_pixels),
+        "frag_threshold_logit": frag_thr,
         "margin_histogram_bins_logit": hist_bins.tolist(),
         "margin_histogram_fraction": hist_frac,
         "fragile_fraction_by_logit_threshold": frag_frac,
+        "per_frame_fragile_fraction_thr2logit": {
+            "p10": float(np.percentile(pf, 10)), "p50": float(np.median(pf)),
+            "p90": float(np.percentile(pf, 90)), "min": float(pf.min()),
+            "mean": float(pf.mean()), "max": float(pf.max()),
+        },
+        "class_wise_fragility_thr2logit": class_wise,
+        "boundary_vs_interior_thr2logit": {
+            "boundary_pixel_fraction": float(boundary_total / max(1, total_pixels)),
+            "fragile_fraction_among_boundary": float(boundary_fragile / max(1, boundary_total)),
+            "fragile_fraction_among_interior": float(interior_fragile / max(1, interior_total)),
+            "share_of_fragile_that_are_boundary": float(boundary_fragile / max(1, total_frag)),
+        },
         "interpretation": {
             "fragile_pixels_must_keep_fidelity": "m_p below threshold = near class boundary = SegNet bytes go here",
             "robust_pixels_free_to_cheapen": "m_p large = dominant class = release bytes (the rate headroom)",
-        },
-        "per_frame_fragile_fraction_thr2logit": {
-            "min": float(pf.min()), "p50": float(np.median(pf)), "mean": float(pf.mean()), "max": float(pf.max()),
         },
         **FALSE_AUTHORITY,
     }
@@ -894,8 +936,14 @@ def cmd_segnet_margin_field(args: argparse.Namespace) -> int:
     print(f"scored {n} last-frames @ {seg_h}x{seg_w}; total_pixels={total_pixels:,}")
     print("fragile fraction (m_p < threshold) — the SegNet byte budget:")
     for t in thresholds:
-        print(f"   m_p < {t:>4} logit : {frag_frac[str(t)]:.4f}  ({frag_counts[t]:,} px)  => robust/free = {1-frag_frac[str(t)]:.4f}")
-    print(f"per-frame fragile@2logit: min={pf.min():.4f} p50={np.median(pf):.4f} mean={pf.mean():.4f} max={pf.max():.4f}")
+        print(f"   m_p < {t:>5} logit : {frag_frac[str(t)]:.4f}  => robust/free = {1-frag_frac[str(t)]:.4f}")
+    print(f"per-frame fragile@2logit: p10={np.percentile(pf,10):.4f} p50={np.median(pf):.4f} p90={np.percentile(pf,90):.4f}")
+    print("class-wise (pop_frac / fragile_within / share_of_fragile):")
+    for c in range(n_classes):
+        cw = class_wise[str(c)]
+        print(f"   class {c}: pop={cw['population_fraction']:.3f}  fragile_within={cw['fragile_fraction_within_class']:.3f}  share={cw['share_of_all_fragile']:.3f}")
+    bvi = artifact["boundary_vs_interior_thr2logit"]
+    print(f"boundary: pixel_frac={bvi['boundary_pixel_fraction']:.4f}  fragile_among_boundary={bvi['fragile_fraction_among_boundary']:.4f}  fragile_among_interior={bvi['fragile_fraction_among_interior']:.4f}  share_of_fragile_that_are_boundary={bvi['share_of_fragile_that_are_boundary']:.4f}")
     print(f"artifact -> {args.out}")
     return 0
 
