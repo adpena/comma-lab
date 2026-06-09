@@ -257,11 +257,80 @@ def manifest_status(run_dir: Path) -> dict[str, Any]:
         "muon_param_count",
         "adamw_param_count",
     ]
+    total = (
+        d.get("total_curriculum_epochs")
+        or d.get("pr95_curriculum_total_epochs")
+        or d.get("research_curriculum_total_epochs")
+    )
     return {
         "launch_manifest": str(path),
         **{k: d.get(k) for k in keys if k in d},
-        "total_research_curriculum_epochs": d.get("total_curriculum_epochs"),
+        "total_research_curriculum_epochs": total,
     }
+
+
+def scaled_curriculum_status(
+    total_epochs: int | None, current_epoch: Any
+) -> dict[str, Any]:
+    """ACTUAL scaled PR95 stage for ``current_epoch`` — the SOURCE OF TRUTH.
+
+    Closes the manifest fidelity gap: the launch manifest prints CANONICAL stage
+    boundaries (ep0..3000..29650), but the trainer proportionally SCALES the 8 stages
+    to the total budget (PR95FaithfulCurriculumFactory).  This recomputes the scaled
+    boundaries so 'what stage / on track for Muon' is one command, never a manual
+    derivation (the false-alarm that cost a 6-step investigation).
+    """
+
+    if not total_epochs or current_epoch is None:
+        return {"scaled_curriculum_available": False, "reason": "missing total_epochs or epoch"}
+    try:
+        from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
+            PR95FaithfulCurriculumFactory,
+        )
+
+        factory = PR95FaithfulCurriculumFactory(total_epoch_budget=int(total_epochs))
+        ep = int(current_epoch)
+        boundaries = [list(b) for b in factory.stage_epoch_boundaries]
+        cur = factory.current_stage_index(ep)
+        verdict = factory.current_stage_verdict(ep)
+        muon_start = next((s for (idx, s, _e) in boundaries if idx == 8), None)
+        return {
+            "scaled_curriculum_available": True,
+            "total_epochs": int(total_epochs),
+            "current_stage_index": cur,
+            "current_loss_family": getattr(verdict, "loss_family", None)
+            or getattr(verdict, "stage_module", None),
+            "muon_active_now": cur == 8,
+            "muon_starts_epoch": muon_start,
+            "epochs_to_muon": (
+                muon_start - ep if (muon_start is not None and ep < muon_start) else 0
+            ),
+            "stage_boundaries_scaled": boundaries,
+        }
+    except Exception as exc:
+        return {"scaled_curriculum_available": False, "reason": repr(exc)}
+
+
+def _research_total_from_launch_script(run_dir: Path) -> int | None:
+    """Parse the ACTUAL research-curriculum total from the launch script (ground truth).
+
+    The manifest records the CANONICAL 29650; the launch command carries the real
+    reduced total (--research-curriculum-total-epochs N). Returns N, or None."""
+
+    import re
+
+    for name in ("launch_b1_pilot.sh", "launch.sh"):
+        p = run_dir / name
+        if not p.exists():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        m = re.search(r"--research-curriculum-total-epochs[=\s]+(\d+)", text)
+        if m:
+            return int(m.group(1))
+    return None
 
 
 def harvest_status(run_dir: Path) -> dict[str, Any]:
@@ -312,6 +381,12 @@ def build_status(
     ckpt = checkpoint_status(run_dir / "checkpoints")
     manifest = manifest_status(run_dir)
     harv = harvest_status(run_dir)
+    # The manifest records the CANONICAL total (29650); the ACTUAL research total comes
+    # from the launch command (--research-curriculum-total-epochs). Prefer the ground truth.
+    actual_total = _research_total_from_launch_script(run_dir) or manifest.get(
+        "total_research_curriculum_epochs"
+    )
+    scaled = scaled_curriculum_status(actual_total, tele.get("latest_epoch"))
 
     # ETA computations.
     sec_per_epoch = tele.get("seconds_per_epoch_estimate")
@@ -335,6 +410,7 @@ def build_status(
         "telemetry": tele,
         "checkpoints": ckpt,
         "manifest": manifest,
+        "scaled_curriculum": scaled,
         "eta": eta,
         "harvest": harv,
     }
@@ -390,6 +466,20 @@ def render_human(status: Mapping[str, Any]) -> str:
         f"pay_rent_gate={man.get('pay_rent_gate_active')}  "
         f"stage8_muon={man.get('stage8_muon_status')}  axis={man.get('measurement_axis')}"
     )
+    sc = status.get("scaled_curriculum", {})
+    if sc.get("scaled_curriculum_available"):
+        if sc.get("muon_active_now"):
+            muon_phase = "MUON ACTIVE"
+        else:
+            muon_phase = (
+                f"pre-muon; muon@ep{sc.get('muon_starts_epoch')} "
+                f"(in {sc.get('epochs_to_muon')}ep)"
+            )
+        lines.append(
+            f"SCALED curriculum (source-of-truth, not manifest canonical): "
+            f"stage {sc.get('current_stage_index')}/8 ({sc.get('current_loss_family')})  "
+            f"{muon_phase}"
+        )
     res_files = harv.get("harvest_result_files") or []
     stat_files = harv.get("harvest_status_files") or []
     if res_files:

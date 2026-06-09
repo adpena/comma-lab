@@ -198,3 +198,30 @@ def test_render_human_includes_key_signals(tmp_path: Path):
     assert "epoch=165" in text
     assert "228903" in text
     assert "pay_rent_gate=True" in text
+
+
+def test_scaled_curriculum_status_reaches_muon_at_reduced_total():
+    """At total=3000 the scaled curriculum must reach stage-8 Muon (~ep2494), NOT ep24650."""
+    from tools.read_b1_pilot_status import scaled_curriculum_status
+
+    s_early = scaled_curriculum_status(3000, 250)
+    s_qat = scaled_curriculum_status(3000, 1050)
+    s_muon = scaled_curriculum_status(3000, 2600)
+    assert s_early["scaled_curriculum_available"] is True
+    assert s_early["current_stage_index"] == 1 and s_early["muon_active_now"] is False
+    assert s_qat["current_stage_index"] == 4  # QAT stage in the scaled schedule
+    assert s_muon["current_stage_index"] == 8 and s_muon["muon_active_now"] is True
+    assert s_early["muon_starts_epoch"] < 3000  # scaled, not canonical 24650
+
+
+def test_research_total_from_launch_script_parses_reduced_total(tmp_path):
+    """The reader must read the ACTUAL research total from the launch script, not the
+    manifest's canonical 29650."""
+    from tools.read_b1_pilot_status import _research_total_from_launch_script
+
+    run = tmp_path
+    (run / "launch_b1_pilot.sh").write_text(
+        "#!/bin/bash\n.venv/bin/python x.py --full \\\n  --research-curriculum-total-epochs 3000 \\\n  --foo\n"
+    )
+    assert _research_total_from_launch_script(run) == 3000
+    assert _research_total_from_launch_script(tmp_path / "nope") is None
