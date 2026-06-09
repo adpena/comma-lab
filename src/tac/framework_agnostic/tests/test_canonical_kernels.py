@@ -23,9 +23,11 @@ from tac.framework_agnostic.canonical_kernels import (
     CANONICAL_UNIMIX_ALPHA,
     assert_cross_backend_parity,
     bilinear_resize_nhwc,
+    bilinear_skip_residual_canonical,
     gumbel_softmax_sample,
     pixel_shuffle_2x_nhwc,
     rgb_to_yuv6,
+    terminal_hf_refine_canonical,
 )
 
 # -----------------------------------------------------------------------------
@@ -327,12 +329,101 @@ class TestAssertCrossBackendParity:
 # -----------------------------------------------------------------------------
 
 
+# -----------------------------------------------------------------------------
+# PR95-family HF-residual composition kernels (the cross-vehicle primitives:
+# deep_hinerv_snerv_fidelity_review H1 — the residual path that escapes the
+# diverse-but-blurry mean-field; routed canonically so no carrier copy-pastes).
+# -----------------------------------------------------------------------------
+
+
+class TestHFResidualCanonical:
+    """numpy-reference contract for bilinear_skip_residual + terminal_hf_refine."""
+
+    def test_bilinear_skip_residual_numpy_math(self):
+        rng = np.random.RandomState(0)
+        a = rng.standard_normal((1, 4, 4, 3)).astype(np.float32)
+        b = rng.standard_normal((1, 4, 4, 3)).astype(np.float32)
+        got = bilinear_skip_residual_canonical(a, b, sin_frequency=1.5, backend=Backend.NUMPY)
+        np.testing.assert_allclose(got, np.sin(1.5 * (a + b)), atol=1e-6)
+
+    def test_bilinear_skip_residual_w1_is_pr95_implicit(self):
+        # PR95's per-block sin is implicit w=1 on the summed residual.
+        rng = np.random.RandomState(1)
+        a = rng.standard_normal((2, 6, 8, 5)).astype(np.float32)
+        b = rng.standard_normal((2, 6, 8, 5)).astype(np.float32)
+        got = bilinear_skip_residual_canonical(a, b, sin_frequency=1.0, backend=Backend.NUMPY)
+        np.testing.assert_allclose(got, np.sin(a + b), atol=1e-6)
+
+    def test_terminal_hf_refine_numpy_math(self):
+        rng = np.random.RandomState(2)
+        h = rng.standard_normal((1, 4, 4, 3)).astype(np.float32)
+        r = rng.standard_normal((1, 4, 4, 3)).astype(np.float32)
+        got = terminal_hf_refine_canonical(h, r, scale=0.1, backend=Backend.NUMPY)
+        np.testing.assert_allclose(got, h + 0.1 * np.sin(r), atol=1e-6)
+
+    def test_terminal_hf_refine_zero_scale_is_identity(self):
+        rng = np.random.RandomState(3)
+        h = rng.standard_normal((1, 4, 4, 3)).astype(np.float32)
+        r = rng.standard_normal((1, 4, 4, 3)).astype(np.float32)
+        got = terminal_hf_refine_canonical(h, r, scale=0.0, backend=Backend.NUMPY)
+        np.testing.assert_allclose(got, h, atol=1e-7)
+
+    def test_bilinear_skip_residual_fails_closed_on_channel_mismatch(self):
+        a = np.zeros((1, 4, 4, 3), dtype=np.float32)
+        b = np.zeros((1, 4, 4, 2), dtype=np.float32)  # carrier forgot the 1x1 channel-match
+        with pytest.raises(ValueError):
+            bilinear_skip_residual_canonical(a, b, backend=Backend.NUMPY)
+
+    def test_terminal_hf_refine_fails_closed_on_shape_mismatch(self):
+        h = np.zeros((1, 4, 4, 3), dtype=np.float32)
+        r = np.zeros((1, 8, 8, 3), dtype=np.float32)
+        with pytest.raises(ValueError):
+            terminal_hf_refine_canonical(h, r, backend=Backend.NUMPY)
+
+
 @pytest.mark.skipif(
     "mlx.core" not in __import__("sys").modules and not pytest.importorskip("mlx", reason="mlx not installed"),
     reason="MLX not installed",
 )
 class TestCrossBackendParityMLX:
     """Cross-backend parity (numpy reference ↔ MLX) per Catalog #383."""
+
+    def test_bilinear_skip_residual_numpy_vs_mlx_parity(self):
+        import mlx.core as mx
+
+        rng = np.random.RandomState(7)
+        a = rng.standard_normal((1, 6, 8, 4)).astype(np.float32)
+        b = rng.standard_normal((1, 6, 8, 4)).astype(np.float32)
+        ref = bilinear_skip_residual_canonical(a, b, sin_frequency=1.0, backend=Backend.NUMPY)
+        got = bilinear_skip_residual_canonical(mx.array(a), mx.array(b), sin_frequency=1.0, backend=Backend.MLX)
+        assert_cross_backend_parity(ref, got, atol=CANONICAL_CROSS_BACKEND_FP32_ATOL, name="bilinear_skip_residual_mlx")
+
+    def test_terminal_hf_refine_numpy_vs_mlx_parity(self):
+        import mlx.core as mx
+
+        rng = np.random.RandomState(8)
+        h = rng.standard_normal((1, 6, 8, 4)).astype(np.float32)
+        r = rng.standard_normal((1, 6, 8, 4)).astype(np.float32)
+        ref = terminal_hf_refine_canonical(h, r, scale=0.1, backend=Backend.NUMPY)
+        got = terminal_hf_refine_canonical(mx.array(h), mx.array(r), scale=0.1, backend=Backend.MLX)
+        assert_cross_backend_parity(ref, got, atol=CANONICAL_CROSS_BACKEND_FP32_ATOL, name="terminal_hf_refine_mlx")
+
+    def test_hf_residual_kernels_are_mlx_gradient_reachable(self):
+        # The carrier trains THROUGH these compositions; gradients must flow to
+        # both the conv-branch (shuffled) and the skip-branch (identity).
+        import mlx.core as mx
+
+        a = mx.zeros((1, 4, 4, 3))
+        b = mx.zeros((1, 4, 4, 3))
+
+        def loss(shuffled, identity):
+            return bilinear_skip_residual_canonical(shuffled, identity, sin_frequency=2.0, backend=Backend.MLX).sum()
+
+        g = mx.grad(loss, argnums=(0, 1))(a, b)
+        mx.eval(g)
+        # d/dx sin(w*(x+y)) = w*cos(w*(x+y)); at x=y=0 -> w*cos(0)=2.0 for BOTH branches.
+        assert np.allclose(np.asarray(g[0]), 2.0, atol=1e-5)
+        assert np.allclose(np.asarray(g[1]), 2.0, atol=1e-5)
 
     def test_gumbel_softmax_numpy_vs_mlx_parity(self):
         logits = np.array([[1.0, 2.0, 3.0]], dtype=np.float32)

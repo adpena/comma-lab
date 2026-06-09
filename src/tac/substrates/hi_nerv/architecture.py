@@ -151,6 +151,22 @@ class HinervConfig:
     convnext_kernel_size: int = 7
     """Depthwise kernel size for the ConvNeXt-style block."""
 
+    use_bilinear_skip: bool = False
+    """PR95 HF-residual paths (F1; deep_hinerv_snerv_fidelity_review_20260609 H1).
+
+    When True each ``_UpBlock`` becomes ``sin(w*(PixelShuffle(conv(x)) +
+    skip(bilinear_2x(x))))`` (the per-block bilinear residual that carries the
+    coarse signal forward so the conv branch only learns the HF correction) AND
+    the renderer applies a terminal ``h += refine_residual_scale*sin(refine(h))``
+    HF residual before the RGB heads. Default OFF preserves the historical
+    skip-free NeRV carrier byte-for-byte (no new params when False). The PR95
+    reference (model.py:46-51) is the canonical source; verified MISSING in our
+    carrier (mlx_renderer.py:561-577) and the direct mechanical cause of the
+    diverse-but-blurry mean-field that collapses SegNet argmax to d_seg~0.50."""
+
+    refine_residual_scale: float = 0.1
+    """Scale on the terminal ``sin(refine(h))`` HF residual (PR95 uses 0.1)."""
+
     init_seed: int = 0
     """Deterministic MLX/Torch initialization seed for train-time reproducibility."""
 

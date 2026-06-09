@@ -2710,3 +2710,77 @@ def test_pack_gate_row_is_false_authority_non_promotable() -> None:
     assert (
         "hi_nerv_candidate_action_evaluation_is_planning_control_false_authority" in row["blockers"]
     )
+
+
+# -----------------------------------------------------------------------------
+# F1: PR95 bilinear-skip + terminal refine HF-residual gate (gated default-OFF).
+# deep_hinerv_snerv_fidelity_review H1 — the missing residual path that the
+# whole NeRV fleet shares; routed through the canonical cross-backend primitive.
+# -----------------------------------------------------------------------------
+
+
+@skip_no_mlx
+def test_bilinear_skip_off_is_byte_identical_no_new_params() -> None:
+    """Default cfg (use_bilinear_skip=False) creates NO skip/refine modules — the
+    historical skip-free carrier is preserved byte-for-byte (zero regression)."""
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _smoke_cfg()
+    assert cfg.use_bilinear_skip is False
+    model = HinervSubstrateMLX(cfg)
+    assert not hasattr(model.blocks[0], "skip"), "OFF block must not create a skip conv"
+    assert not hasattr(model, "refine"), "OFF renderer must not create a refine conv"
+    # export works on the default carrier.
+    sd = model.export_state_dict()
+    assert not any(".skip." in k or k.startswith("refine") for k in sd), "OFF export must not emit skip/refine keys"
+    mx.eval(model.parameters())
+
+
+@skip_no_mlx
+def test_bilinear_skip_on_forwards_adds_params_and_variance() -> None:
+    """With use_bilinear_skip=True the block gains a skip conv + the renderer a
+    refine conv; the forward runs at the SAME output shape, adds parameters, and
+    injects spatial variance the skip-free carrier lacks (the mean-field escape)."""
+    from dataclasses import replace
+
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    base = _smoke_cfg()
+    off = HinervSubstrateMLX(base)
+    on = HinervSubstrateMLX(replace(base, use_bilinear_skip=True))
+    mx.eval(off.parameters(), on.parameters())
+
+    def nparams(m):
+        return int(sum(int(np.asarray(v).size) for _, v in tree_flatten(m.parameters())))
+
+    assert hasattr(on.blocks[0], "skip") and hasattr(on, "refine")
+    assert nparams(on) > nparams(off), "skip + refine must add parameters"
+
+    r0_off, _ = off.reconstruct_pair(mx.array([0]))
+    r0_on, _ = on.reconstruct_pair(mx.array([0]))
+    mx.eval(r0_off, r0_on)
+    assert tuple(r0_on.shape) == tuple(r0_off.shape), "skip must not change output shape"
+    # At init the skip-free decoder is ~constant (one-class flat); the skip path
+    # injects markedly more spatial variance (the d_seg~0.50 mean-field escape).
+    std_off = float(np.asarray(r0_off).std())
+    std_on = float(np.asarray(r0_on).std())
+    assert std_on > std_off, f"skip-on init variance {std_on} must exceed skip-off {std_off}"
+
+
+@skip_no_mlx
+def test_bilinear_skip_on_export_is_fail_closed_research_only() -> None:
+    """Archive export of the skip/refine weights is a gated F1 follow-up (needs
+    export layout + PyTorch-oracle parity). Until then it MUST fail closed — no
+    silent incomplete archive (NO FAKE IMPLEMENTATIONS)."""
+    from dataclasses import replace
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    on = HinervSubstrateMLX(replace(_smoke_cfg(), use_bilinear_skip=True))
+    with pytest.raises(NotImplementedError):
+        on.export_state_dict()

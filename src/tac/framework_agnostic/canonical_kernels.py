@@ -635,6 +635,146 @@ def bilinear_resize_nhwc_canonical(
     raise BackendUnavailableError(f"bilinear_resize_nhwc_canonical: backend {resolved!r} unsupported.")
 
 
+# -----------------------------------------------------------------------------
+# Canonical primitive: PR95-family HF-residual composition
+# -----------------------------------------------------------------------------
+# The PR95/HNeRV decoder escapes the diverse-but-blurry mean-field
+# (SegNet argmax collapse -> d_seg~0.50) via two HF-residual compositions that a
+# skip-free NeRV lacks (model.py:46-51, deep_hinerv_snerv_fidelity_review H1).
+# These are the CROSS-VEHICLE primitives: any NeRV-family carrier (HiNeRV /
+# SNeRV / pact_nerv_vq / ds_nerv / ...) composes the SAME math on top of its OWN
+# quant-aware conv forward (the conv/quant policy stays fractal-per-carrier;
+# the residual COMPOSITION is canonical here so there is ONE definition + numpy
+# reference + cross-backend parity, never copy-pasted per carrier). Gating is
+# the carrier's responsibility (carrier owns the on/off config flag).
+
+
+def bilinear_skip_residual_canonical(
+    shuffled: Any,
+    identity: Any,
+    *,
+    sin_frequency: float = 1.0,
+    backend: Backend | None = None,
+) -> Any:
+    """Canonical PR95 per-block bilinear-skip residual: ``sin(w*(shuffled + identity))``.
+
+    ``shuffled`` is the block's ``PixelShuffle(conv(x))`` output; ``identity`` is
+    the channel-matched bilinear-upsampled input ``skip(bilinear_2x(x))``. Both
+    are NHWC tensors of identical shape (the carrier is responsible for the 1x1
+    channel-match; a shape mismatch is the canonical channel-match bug class and
+    fails closed here). The carrier supplies its own ``sin_frequency`` (PR95 uses
+    an implicit ~1.0 on the summed residual; the skip-free SIREN convention used
+    a per-block w=30 — see deep_hinerv_snerv_fidelity_review H4 for why w=30 on a
+    skip-free feature map is a spectral-bias trap)."""
+    resolved = _resolve_backend(backend)
+    w = float(sin_frequency)
+    if resolved is Backend.NUMPY:
+        a = np.asarray(shuffled, dtype=np.float32)
+        b = np.asarray(identity, dtype=np.float32)
+        if a.shape != b.shape:
+            raise ValueError(
+                f"bilinear_skip_residual: shuffled {a.shape} vs identity {b.shape} "
+                "shape mismatch (carrier must 1x1 channel-match the skip)."
+            )
+        return np.sin(w * (a + b)).astype(np.float32)
+    if resolved is Backend.MLX:
+        try:
+            import mlx.core as mx
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"bilinear_skip_residual MLX backend: mlx.core not installed ({exc})."
+            ) from exc
+        if tuple(shuffled.shape) != tuple(identity.shape):
+            raise ValueError(
+                f"bilinear_skip_residual: shuffled {tuple(shuffled.shape)} vs identity "
+                f"{tuple(identity.shape)} shape mismatch (carrier must 1x1 channel-match)."
+            )
+        return mx.sin(w * (shuffled + identity))
+    if resolved is Backend.PYTORCH:
+        try:
+            import torch
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"bilinear_skip_residual PyTorch backend: torch not installed ({exc})."
+            ) from exc
+        st = torch.from_numpy(shuffled.astype(np.float32)) if isinstance(shuffled, np.ndarray) else shuffled
+        it = torch.from_numpy(identity.astype(np.float32)) if isinstance(identity, np.ndarray) else identity
+        if tuple(st.shape) != tuple(it.shape):
+            raise ValueError(
+                f"bilinear_skip_residual: shuffled {tuple(st.shape)} vs identity {tuple(it.shape)} mismatch."
+            )
+        return torch.sin(w * (st + it))
+    if resolved is Backend.TINYGRAD:
+        try:
+            from tinygrad.tensor import Tensor
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"bilinear_skip_residual tinygrad backend unavailable ({exc})."
+            ) from exc
+        a = shuffled.numpy() if hasattr(shuffled, "numpy") else np.asarray(shuffled)
+        b = identity.numpy() if hasattr(identity, "numpy") else np.asarray(identity)
+        return Tensor(bilinear_skip_residual_canonical(a, b, sin_frequency=w, backend=Backend.NUMPY))
+    raise BackendUnavailableError(f"bilinear_skip_residual_canonical: backend {resolved!r} unsupported.")
+
+
+def terminal_hf_refine_canonical(
+    h: Any,
+    refine_activation: Any,
+    *,
+    scale: float = 0.1,
+    backend: Backend | None = None,
+) -> Any:
+    """Canonical PR95 terminal HF refine residual: ``h + scale*sin(refine_activation)``.
+
+    ``refine_activation`` is the carrier's ``refine(h)`` conv output (PR95 uses a
+    dilated conv for a larger receptive field on thin boundaries; the carrier
+    owns the conv). ``scale`` is PR95's 0.1. NHWC; ``h`` and ``refine_activation``
+    must share shape (fails closed otherwise)."""
+    resolved = _resolve_backend(backend)
+    s = float(scale)
+    if resolved is Backend.NUMPY:
+        hh = np.asarray(h, dtype=np.float32)
+        ra = np.asarray(refine_activation, dtype=np.float32)
+        if hh.shape != ra.shape:
+            raise ValueError(f"terminal_hf_refine: h {hh.shape} vs refine {ra.shape} shape mismatch.")
+        return (hh + s * np.sin(ra)).astype(np.float32)
+    if resolved is Backend.MLX:
+        try:
+            import mlx.core as mx
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"terminal_hf_refine MLX backend: mlx.core not installed ({exc})."
+            ) from exc
+        if tuple(h.shape) != tuple(refine_activation.shape):
+            raise ValueError(
+                f"terminal_hf_refine: h {tuple(h.shape)} vs refine {tuple(refine_activation.shape)} mismatch."
+            )
+        return h + s * mx.sin(refine_activation)
+    if resolved is Backend.PYTORCH:
+        try:
+            import torch
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"terminal_hf_refine PyTorch backend: torch not installed ({exc})."
+            ) from exc
+        ht = torch.from_numpy(h.astype(np.float32)) if isinstance(h, np.ndarray) else h
+        rt = torch.from_numpy(refine_activation.astype(np.float32)) if isinstance(refine_activation, np.ndarray) else refine_activation
+        if tuple(ht.shape) != tuple(rt.shape):
+            raise ValueError(f"terminal_hf_refine: h {tuple(ht.shape)} vs refine {tuple(rt.shape)} mismatch.")
+        return ht + s * torch.sin(rt)
+    if resolved is Backend.TINYGRAD:
+        try:
+            from tinygrad.tensor import Tensor
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                f"terminal_hf_refine tinygrad backend unavailable ({exc})."
+            ) from exc
+        hh = h.numpy() if hasattr(h, "numpy") else np.asarray(h)
+        ra = refine_activation.numpy() if hasattr(refine_activation, "numpy") else np.asarray(refine_activation)
+        return Tensor(terminal_hf_refine_canonical(hh, ra, scale=s, backend=Backend.NUMPY))
+    raise BackendUnavailableError(f"terminal_hf_refine_canonical: backend {resolved!r} unsupported.")
+
+
 pixel_shuffle_2x_nhwc = pixel_shuffle_2x_nhwc_canonical
 bilinear_resize_nhwc = bilinear_resize_nhwc_canonical
 
@@ -700,8 +840,10 @@ __all__ = [
     "assert_cross_backend_parity",
     "bilinear_resize_nhwc",
     "bilinear_resize_nhwc_canonical",
+    "bilinear_skip_residual_canonical",
     "gumbel_softmax_sample",
     "pixel_shuffle_2x_nhwc",
     "pixel_shuffle_2x_nhwc_canonical",
     "rgb_to_yuv6",
+    "terminal_hf_refine_canonical",
 ]

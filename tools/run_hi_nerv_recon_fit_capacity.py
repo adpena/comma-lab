@@ -81,18 +81,30 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--eval-every-epochs", type=int, default=50)
     ap.add_argument("--work-dir", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
+    # F1/F4 architecture ablation levers (deep_hinerv_snerv_fidelity_review H1/H4).
+    ap.add_argument(
+        "--use-bilinear-skip",
+        action="store_true",
+        help="F1: PR95 per-block bilinear-skip + terminal refine HF residual (gated config).",
+    )
+    ap.add_argument(
+        "--sin-frequency",
+        type=float,
+        default=None,
+        help="F4: override sin_frequency (PR95-implicit ~1.0 vs SIREN w=30); None keeps arch default.",
+    )
     args = ap.parse_args(argv)
 
-    import numpy as np
+    # Reuse the sanity-ladder primitives (decode, dims, arch, grad table).
+    import hi_nerv_renderer_sanity_ladder as ladder
     import mlx.core as mx
     import mlx.nn as nn
     import mlx.optimizers as optim
+    import numpy as np
     from mlx.utils import tree_flatten
 
     import experiments.train_substrate_hi_nerv_mlx_local as trainer
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
-    # Reuse the sanity-ladder primitives (decode, dims, arch, grad table).
-    import hi_nerv_renderer_sanity_ladder as ladder
 
     work = Path(args.work_dir).resolve()
     _refuse_tmp(work, "work_dir")
@@ -118,6 +130,15 @@ def main(argv: list[str] | None = None) -> int:
     arch = dict(ladder.ARCH_DEFAULTS)
     arch["num_pairs"] = N
     cfg = trainer._config_from_args(argparse.Namespace(**arch))
+    import dataclasses as _dc
+
+    _overrides: dict[str, Any] = {}
+    if bool(args.use_bilinear_skip):
+        _overrides["use_bilinear_skip"] = True
+    if args.sin_frequency is not None:
+        _overrides["sin_frequency"] = float(args.sin_frequency)
+    if _overrides:
+        cfg = _dc.replace(cfg, **_overrides)
     model = HinervSubstrateMLX(cfg)
     mx.eval(model.parameters())
     n_params = int(sum(int(np.asarray(v).size) for _, v in tree_flatten(model.parameters())))
@@ -210,6 +231,12 @@ def main(argv: list[str] | None = None) -> int:
         "optimizer": args.optimizer,
         "optimizer_note": muon_note,
         "lr": args.lr,
+        "use_bilinear_skip": bool(args.use_bilinear_skip),
+        "sin_frequency": float(cfg.sin_frequency),
+        "arch_ablation_arm": (
+            f"skip={'on' if args.use_bilinear_skip else 'off'}"
+            f"_w={float(cfg.sin_frequency):g}"
+        ),
         "n_params": n_params,
         "n_source_frames_decoded": int(dec.get("n_frames_written", 2 * N)),
         "best_mean_psnr_db": best_mean_psnr,

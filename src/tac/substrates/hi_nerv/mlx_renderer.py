@@ -157,6 +157,30 @@ def _bilinear_resize_nhwc(x: Any, target_h: int, target_w: int) -> Any:
     )
 
 
+def _bilinear_skip_residual(shuffled: Any, identity: Any, sin_freq: float) -> Any:
+    """Route the PR95 per-block bilinear-skip residual through the canonical
+    cross-backend primitive (no per-carrier duplication; Catalog #383)."""
+    _require_mlx()
+    from tac.framework_agnostic.backend import Backend
+    from tac.framework_agnostic.canonical_kernels import bilinear_skip_residual_canonical
+
+    return bilinear_skip_residual_canonical(
+        shuffled, identity, sin_frequency=float(sin_freq), backend=Backend.MLX
+    )
+
+
+def _terminal_hf_refine(h: Any, refine_activation: Any, scale: float) -> Any:
+    """Route the PR95 terminal HF refine residual through the canonical
+    cross-backend primitive (no per-carrier duplication; Catalog #383)."""
+    _require_mlx()
+    from tac.framework_agnostic.backend import Backend
+    from tac.framework_agnostic.canonical_kernels import terminal_hf_refine_canonical
+
+    return terminal_hf_refine_canonical(
+        h, refine_activation, scale=float(scale), backend=Backend.MLX
+    )
+
+
 def _siren_uniform_bound(fan_in: int, w: float) -> float:
     return math.sqrt(6.0 / max(int(fan_in), 1)) / max(float(w), 1.0)
 
@@ -543,20 +567,38 @@ class ConvNeXtBlockMLX(nn.Module if nn is not None else object):  # type: ignore
 
 
 class _UpBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
-    """MLX Conv2d -> sin -> PixelShuffle(2), matching PyTorch ``_UpBlock``."""
+    """MLX Conv2d -> sin -> PixelShuffle(2), matching PyTorch ``_UpBlock``.
 
-    def __init__(self, in_ch: int, out_ch: int, sin_freq: float) -> None:
+    When ``use_skip`` is True the block adds the PR95 bilinear-skip residual
+    (model.py:46-50): ``sin(w*(PixelShuffle(conv(x)) + skip(bilinear_2x(x))))``.
+    The skip is a 1x1 conv that channel-matches the upsampled input ``x``
+    (``in_ch``) to the block output (``out_ch``). Default OFF keeps the
+    historical skip-free form byte-for-byte (no ``self.skip`` param created).
+    """
+
+    def __init__(
+        self, in_ch: int, out_ch: int, sin_freq: float, *, use_skip: bool = False
+    ) -> None:
         _require_mlx()
         super().__init__()
         self.in_ch = int(in_ch)
         self.out_ch = int(out_ch)
         self.w = float(sin_freq)
+        self.use_skip = bool(use_skip)
         self.conv: Any = nn.Conv2d(  # type: ignore[union-attr]
             in_channels=int(in_ch),
             out_channels=int(out_ch) * 4,
             kernel_size=3,
             padding=1,
         )
+        # 1x1 channel-match skip; created ONLY when enabled so the default
+        # carrier has zero new parameters (byte-identical when use_skip=False).
+        if self.use_skip:
+            self.skip: Any = nn.Conv2d(  # type: ignore[union-attr]
+                in_channels=int(in_ch),
+                out_channels=int(out_ch),
+                kernel_size=1,
+            )
 
     def __call__(
         self,
@@ -574,7 +616,23 @@ class _UpBlockMLX(nn.Module if nn is not None else object):  # type: ignore[misc
             weight_name=f"{name_prefix}.conv.weight",
             bias_name=f"{name_prefix}.conv.bias",
         )
-        return _pixel_shuffle_2x_nhwc(mx.sin(self.w * conv))  # type: ignore[union-attr]
+        if not self.use_skip:
+            return _pixel_shuffle_2x_nhwc(mx.sin(self.w * conv))  # type: ignore[union-attr]
+        # PR95 bilinear-skip residual (model.py:46-50):
+        #   sin(w*(PixelShuffle(conv(x)) + skip(bilinear_2x(x)))).
+        # The quant-aware convs stay carrier-local; the residual COMPOSITION
+        # routes through the canonical cross-backend primitive (no duplication).
+        shuffled = _pixel_shuffle_2x_nhwc(conv)  # (B, 2H, 2W, out_ch)
+        identity = _bilinear_resize_nhwc(x, int(x.shape[1]) * 2, int(x.shape[2]) * 2)
+        identity = _conv2d_with_params(
+            self.skip,
+            identity,
+            fake_quant_bits=fake_quant_bits,
+            fake_quant_bits_by_name=fake_quant_bits_by_name,
+            weight_name=f"{name_prefix}.skip.weight",
+            bias_name=f"{name_prefix}.skip.bias",
+        )
+        return _bilinear_skip_residual(shuffled, identity, self.w)
 
 
 class _LatentInjectorMLX(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -859,7 +917,12 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 f"least num_upsample_blocks ({cfg.num_upsample_blocks}) entries"
             )
         self.blocks: list[Any] = [
-            _UpBlockMLX(channels[i], channels[i + 1], float(cfg.sin_frequency))
+            _UpBlockMLX(
+                channels[i],
+                channels[i + 1],
+                float(cfg.sin_frequency),
+                use_skip=bool(cfg.use_bilinear_skip),
+            )
             for i in range(int(cfg.num_upsample_blocks))
         ]
         self.feature_grids: list[Any] = []
@@ -904,6 +967,15 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         self.head_rgb_1: Any = nn.Conv2d(  # type: ignore[union-attr]
             in_channels=final_ch, out_channels=3, kernel_size=3, padding=1
         )
+        # PR95 terminal HF refine residual (model.py:35-38,51), gated; created
+        # ONLY when enabled so the default carrier has zero new parameters.
+        if bool(cfg.use_bilinear_skip):
+            self.refine: Any = nn.Conv2d(  # type: ignore[union-attr]
+                in_channels=final_ch,
+                out_channels=final_ch,
+                kernel_size=3,
+                padding=1,
+            )
         self.decoder_fake_quant_forward_enabled = False
         self.decoder_fake_quant_forward_configured_enabled = False
         self.decoder_fake_quant_forward_stage_controlled = False
@@ -7311,6 +7383,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     name_prefix="fine_injector.proj",
                 )
 
+        # PR95 terminal HF refine residual (model.py:51): h += scale*sin(refine(h)).
+        # Applied on the post-block feature map (final_ch); gated default-OFF.
+        if bool(self.cfg.use_bilinear_skip):
+            refine_out = _conv2d_with_params(
+                self.refine,
+                h,
+                fake_quant_bits=fake_quant_bits,
+                fake_quant_bits_by_name=fake_quant_bits_by_name,
+                weight_name="refine.weight",
+                bias_name="refine.bias",
+            )
+            h = _terminal_hf_refine(h, refine_out, float(self.cfg.refine_residual_scale))
+
         h = _bilinear_resize_nhwc(
             h,
             int(self.cfg.output_height),
@@ -7362,6 +7447,19 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         """Export tensors using the PyTorch HiNeRV state_dict layout."""
 
         _require_mlx()
+        # F1 bilinear-skip + refine are a RESEARCH-ONLY recon-fit probe surface
+        # for now: the per-block skip + terminal refine weights are NOT yet wired
+        # into this export layout NOR the PyTorch oracle parity. Fail closed (no
+        # silent incomplete archive) until the recon-fit probe pays rent and the
+        # export + oracle-parity follow-up lands. Default cfg.use_bilinear_skip
+        # is False, so the contest/export path is unaffected.
+        if bool(self.cfg.use_bilinear_skip):
+            raise NotImplementedError(
+                "use_bilinear_skip=True is a research-only recon-fit probe; archive "
+                "export of the skip/refine HF-residual weights is a gated F1 follow-up "
+                "(needs export layout + PyTorch-oracle parity). Train/score it via the "
+                "contract-free recon-fit probe, not the archive/export path."
+            )
         out: dict[str, np.ndarray] = {
             "latents_coarse": np.asarray(self.latents_coarse, dtype=np.float32).copy(),
             "latents_mid": np.asarray(self.latents_mid, dtype=np.float32).copy(),
