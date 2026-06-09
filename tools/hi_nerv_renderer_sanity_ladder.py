@@ -1192,6 +1192,158 @@ def cmd_region_cheapen_seg_vs_pose(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_evaluator_gradient_atlas(args: argparse.Namespace) -> int:
+    """B2: the gradient atlas — the DECIDER for whether the pose carrier can be cheap.
+
+    PoseNet outputs only 6 scored dims, so per pair the pose-sensitive subspace is rank<=6
+    (the 6 gradients d pose[k]/d yuv6). The KILLER measurement: the eigenspectrum of the Gram
+    matrix over the 6*N pose-gradient maps across pairs = the GLOBAL pose intrinsic dimension.
+    Low-rank (recurring ego-motion modes) => a compact pose carrier replaces the neural bulk =>
+    floor drops below PR95. Dense => HNeRV-class decoder is the bulk and the win is entropy/rate.
+    Also: SegNet margin VJP (softplus(gamma - m_p) gradient) = the seg correction-atom directions.
+    Faithful: autograd through the EXACT torch DistortionNet (pose grad in YUV6 space — PoseNet's
+    native input; the YUV6 map is full-rank-ish so the intrinsic dim transfers to RGB).
+    """
+    import torch
+    from frame_utils import seq_len
+    from modules import (
+        DistortionNet,
+        posenet_sd_path,
+        segnet_model_input_size,
+        segnet_sd_path,
+    )
+
+    H, W, C = _frame_dims()
+    # Decode a WIDE range so the sampled pairs spread across the video (different driving
+    # segments) — then sample --num-pairs spread across the decoded --decode-pairs.
+    frames = _decode_first_k_frames(UPSTREAM / "videos" / "0.mkv", int(args.decode_pairs) * seq_len)
+    n_pairs = frames.shape[0] // seq_len
+    net = DistortionNet().eval().to(args.device)
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, args.device)
+    seg_h, seg_w = segnet_model_input_size[1], segnet_model_input_size[0]
+    gamma = float(args.gamma)
+
+    pose_grads: list[np.ndarray] = []  # each (12*seg_h*seg_w,) — a YUV6-space pose-dim saliency
+    pose_dim_meta: list[dict[str, Any]] = []
+    seg_sal_boundary = seg_sal_interior = 0.0
+    seg_sal_total = 0.0
+    pose_frame0_energy = pose_frame1_energy = 0.0
+    pose_y_energy = pose_chroma_energy = 0.0
+
+    def _boundary(cls: np.ndarray) -> np.ndarray:
+        bnd = np.zeros_like(cls, dtype=bool)
+        ne = cls[:-1, :] != cls[1:, :]
+        bnd[:-1, :] |= ne
+        bnd[1:, :] |= ne
+        ew = cls[:, :-1] != cls[:, 1:]
+        bnd[:, :-1] |= ew
+        bnd[:, 1:] |= ew
+        return bnd
+
+    # Spread sampled pairs ACROSS the whole video (different driving segments) so the global
+    # pose-subspace rank is not under-estimated by temporally-adjacent near-identical motion.
+    stride = max(1, n_pairs // max(1, args.num_pairs))
+    pair_ids = list(range(0, n_pairs, stride))[: args.num_pairs]
+    for pi in pair_ids:
+        pair = frames[pi * seq_len : pi * seq_len + seq_len]  # (2,H,W,3)
+        x = torch.from_numpy(np.ascontiguousarray(pair[None].transpose(0, 1, 4, 2, 3))).float().to(args.device)  # (1,2,3,H,W)
+        # --- PoseNet: 6 gradient maps in YUV6 space ---
+        yuv6 = net.posenet.preprocess_input(x).detach().requires_grad_(True)  # (1,12,seg_h,seg_w)
+        out = net.posenet(yuv6)["pose"]  # (1,12)
+        for k in range(6):
+            g = torch.autograd.grad(out[0, k], yuv6, retain_graph=True)[0][0]  # (12,seg_h,seg_w)
+            # float64 + sanitize non-finite, then PRE-SCALE by max-abs so sum(x^2) in the norm cannot
+            # overflow (PoseNet grads can be finite-but-enormous >1e154). Direction is preserved (we
+            # only measure the subspace rank), and energy stats below use scale-invariant fractions.
+            gn = np.nan_to_num(g.detach().cpu().numpy().astype(np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+            gmax = float(np.abs(gn).max())
+            if gmax > 0:
+                gn = gn / gmax
+            pose_grads.append(gn.reshape(-1))
+            e = float((gn**2).sum())
+            f0 = float((gn[:6] ** 2).sum())
+            yE = float((gn[[0, 1, 2, 3, 6, 7, 8, 9]] ** 2).sum())
+            pose_frame0_energy += f0
+            pose_frame1_energy += e - f0
+            pose_y_energy += yE
+            pose_chroma_energy += e - yE
+            pose_dim_meta.append({"pair": pi, "pose_dim": k, "grad_energy": e,
+                                   "frame0_frac": f0 / max(1e-12, e), "y_frac": yE / max(1e-12, e)})
+        # --- SegNet: margin softplus VJP on frame1 ---
+        seg_in = net.segnet.preprocess_input(x).detach().requires_grad_(True)  # (1,3,seg_h,seg_w)
+        logits = net.segnet(seg_in)
+        top2 = torch.topk(logits, 2, dim=1).values
+        margin = top2[:, 0] - top2[:, 1]  # (1,seg_h,seg_w)
+        loss = torch.nn.functional.softplus(gamma - margin).sum()
+        g_seg = torch.autograd.grad(loss, seg_in)[0][0]  # (3,seg_h,seg_w)
+        sal = (g_seg.detach().cpu().numpy() ** 2).sum(axis=0)  # (seg_h,seg_w) per-pixel seg saliency
+        cls = logits.argmax(dim=1)[0].cpu().numpy()
+        bnd = _boundary(cls)
+        seg_sal_total += float(sal.sum())
+        seg_sal_boundary += float(sal[bnd].sum())
+        seg_sal_interior += float(sal[~bnd].sum())
+
+    # --- the killer measurement: pose intrinsic dimension via Gram eigenspectrum ---
+    # float64 + L2-normalize each gradient vector (avoids float32 overflow in M@M.T and gives the
+    # DIRECTION rank — the geometric subspace dimension, robust to per-pose-dim magnitude scale).
+    M = np.stack(pose_grads).astype(np.float64)  # (6N, D)
+    norms = np.linalg.norm(M, axis=1, keepdims=True)
+    Mn = M / np.clip(norms, 1e-12, None)
+    Mn = np.nan_to_num(Mn, nan=0.0, posinf=0.0, neginf=0.0)  # drop any residual sick vector to 0
+    gram = Mn @ Mn.T  # (6N, 6N) cosine-similarity matrix
+    gram = np.nan_to_num(gram, nan=0.0, posinf=0.0, neginf=0.0)
+    eig = np.linalg.eigvalsh(gram)[::-1]
+    eig = np.clip(eig, 0, None)
+    total_e = float(eig.sum())
+    cum = np.cumsum(eig) / max(1e-12, total_e)
+    def _dim_at(p: float) -> int:
+        return int(np.searchsorted(cum, p) + 1)
+    participation_ratio = float((total_e**2) / max(1e-12, float((eig**2).sum())))
+
+    artifact = {
+        "schema": "evaluator_gradient_atlas.v1",
+        "purpose": "pose intrinsic carrier dimension (JtJ spectrum) + SegNet margin VJP directions",
+        "utc": _utc(),
+        "n_pairs": len(pair_ids),
+        "n_pose_grad_vectors": int(M.shape[0]),
+        "gamma": gamma,
+        "segnet_input_size_hw": [seg_h, seg_w],
+        "pose_intrinsic_dimension": {
+            "dim_90pct": _dim_at(0.90), "dim_95pct": _dim_at(0.95), "dim_99pct": _dim_at(0.99),
+            "participation_ratio": participation_ratio,
+            "total_grad_vectors": int(M.shape[0]),
+            "top10_eigenvalue_fraction": (eig[:10] / max(1e-12, total_e)).tolist(),
+        },
+        "pose_energy_decomposition": {
+            "frame0_fraction": pose_frame0_energy / max(1e-12, pose_frame0_energy + pose_frame1_energy),
+            "frame1_fraction": pose_frame1_energy / max(1e-12, pose_frame0_energy + pose_frame1_energy),
+            "y_luma_fraction": pose_y_energy / max(1e-12, pose_y_energy + pose_chroma_energy),
+            "chroma_fraction": pose_chroma_energy / max(1e-12, pose_y_energy + pose_chroma_energy),
+        },
+        "segnet_margin_vjp": {
+            "boundary_saliency_fraction": seg_sal_boundary / max(1e-12, seg_sal_total),
+            "interior_saliency_fraction": seg_sal_interior / max(1e-12, seg_sal_total),
+        },
+        "decision_note": (
+            "pose_intrinsic_dimension small (e.g. dim_95pct << 6N) => recurring ego-motion modes => "
+            "compact low-rank pose carrier viable (floor drops below PR95). large/near-6N => dense "
+            "neural decoder is the bulk; win is entropy/rate."
+        ),
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    pid = artifact["pose_intrinsic_dimension"]
+    print(f"pose gradient vectors = {M.shape[0]} (6 dims x {len(pair_ids)} pairs, spread stride={stride})")
+    print(f"POSE INTRINSIC DIM: 90%={pid['dim_90pct']}  95%={pid['dim_95pct']}  99%={pid['dim_99pct']}  participation_ratio={pid['participation_ratio']:.1f}")
+    print(f"  (if << {M.shape[0]} => low-rank pose carrier viable => floor below PR95; if ~{M.shape[0]} => dense decoder is the bulk)")
+    ped = artifact["pose_energy_decomposition"]
+    print(f"pose energy: frame0={ped['frame0_fraction']:.3f} frame1={ped['frame1_fraction']:.3f} | Y={ped['y_luma_fraction']:.3f} chroma={ped['chroma_fraction']:.3f}")
+    smv = artifact["segnet_margin_vjp"]
+    print(f"SegNet margin VJP saliency: boundary={smv['boundary_saliency_fraction']:.3f} interior={smv['interior_saliency_fraction']:.3f}")
+    print(f"artifact -> {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1202,6 +1354,14 @@ def main(argv: list[str] | None = None) -> int:
     rc.add_argument("--num-pairs", type=int, default=16)
     rc.add_argument("--dilate", type=int, default=2, help="dilate the fragile band by N pixels")
     rc.set_defaults(func=cmd_region_cheapen_seg_vs_pose)
+
+    ga = sub.add_parser("evaluator-gradient-atlas", help="B2: PoseNet JtJ subspace spectrum (intrinsic pose dim) + SegNet margin VJP")
+    ga.add_argument("--out", required=True, help="artifact JSON path")
+    ga.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    ga.add_argument("--num-pairs", type=int, default=32, help="pairs to sample (spread across --decode-pairs)")
+    ga.add_argument("--decode-pairs", type=int, default=600, help="pairs to decode + spread the sample across")
+    ga.add_argument("--gamma", type=float, default=2.0, help="softplus margin target (logit)")
+    ga.set_defaults(func=cmd_evaluator_gradient_atlas)
 
     fb = sub.add_parser("segnet-fragile-support-codec-budget", help="B0.5: margin value map -> byte-priced action atoms (rate term)")
     fb.add_argument("--out", required=True, help="artifact JSON path")
