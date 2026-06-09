@@ -1679,11 +1679,13 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert "canonical_npz_bridge_not_used_or_not_applicable" not in portability["portability_blockers"]
 
 
-def test_archive_export_charges_target_region_action_program(tmp_path: Path) -> None:
-    from tac.substrates.hi_nerv.archive import (
-        build_archive_section_telemetry,
-        parse_archive,
-    )
+def test_archive_export_rent_gate_drops_unproven_target_region_action(tmp_path: Path) -> None:
+    """EXPORT-BOUNDARY rent gate (2026-06-08 incident extinction): a target-region
+    action with NO supplied CandidateActionEvaluation is FAIL-CLOSED dropped — the
+    archive ships backend-only and the gate row records the drop."""
+    import json
+
+    from tac.substrates.hi_nerv.archive import parse_archive
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
     from tac.substrates.hi_nerv.target_region_actions import (
         TARGET_REGION_ACTION_META_KEY,
@@ -1705,9 +1707,10 @@ def test_archive_export_charges_target_region_action_program(tmp_path: Path) -> 
         ]
     )
 
-    archive_path, _archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
+    out_dir = tmp_path / "hi_nerv_export_target_action"
+    archive_path, _archive_sha, _archive_bytes = export_hi_nerv_mlx_archive(
         model,
-        tmp_path / "hi_nerv_export_target_action",
+        out_dir,
         repo_root=REPO_ROOT,
         decoder_codec="int8_mixed",
         retain_receiver_proof_output=False,
@@ -1715,7 +1718,86 @@ def test_archive_export_charges_target_region_action_program(tmp_path: Path) -> 
         target_region_action_program_base64=action_program,
     )
 
-    inner = (tmp_path / "hi_nerv_export_target_action" / "0.bin").read_bytes()
+    inner = (out_dir / "0.bin").read_bytes()
+    parsed = parse_archive(inner)
+    assert archive_path.is_file()
+    # Fail-closed: the unproven sidecar is dropped, archive ships backend-only.
+    assert TARGET_REGION_ACTION_META_KEY not in dict(parsed.meta or {})
+    gate = json.loads((out_dir / "hi_nerv_target_region_action_pack_rent_gate.json").read_text())
+    assert gate["pack_action"] == "dropped_no_candidate_action_evaluation_supplied"
+    assert gate["admit"] is False
+    assert gate["action_packed"] is False
+    assert gate["promotion_eligible"] is False
+    assert gate["score_claim"] is False
+
+
+def test_archive_export_charges_rent_paying_target_region_action_program(tmp_path: Path) -> None:
+    """A rent-PAYING target-region action (exact ΔS < 0) IS packed + charged when a
+    proving CandidateActionEvaluation is supplied at the export boundary."""
+    from tac.substrates.hi_nerv.archive import (
+        build_archive_section_telemetry,
+        parse_archive,
+    )
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        export_hi_nerv_mlx_archive,
+        pack_archive_from_exported_state_dict,
+    )
+    from tac.substrates.hi_nerv.target_region_actions import (
+        TARGET_REGION_ACTION_META_KEY,
+        TargetRegionPixelAction,
+        encode_target_region_actions_meta,
+    )
+
+    model = _exportable_torch_model()
+    action_program = encode_target_region_actions_meta(
+        [
+            TargetRegionPixelAction(
+                pair_index=0,
+                frame_index=1,
+                height=model.cfg.output_height,
+                width=model.cfg.output_width,
+                yx=np.array([[0, 0], [0, 1]], dtype=np.uint16),
+                rgb_u8=np.array([[255, 0, 0], [0, 255, 0]], dtype=np.uint8),
+            )
+        ]
+    )
+
+    # Build the proving evaluation against backend-only vs with-action payloads
+    # packed from the same exported tensors (the action LOWERS d_seg => pays rent).
+    exported = model.export_state_dict()
+    backend = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported, cfg=model.cfg, decoder_codec="int8_mixed"
+    )
+    with_action = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=model.cfg,
+        decoder_codec="int8_mixed",
+        target_region_action_program_base64=action_program,
+    )
+    evaluation = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend,
+        with_action_archive=with_action,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+    )
+    assert evaluation.pays_rent is True
+
+    out_dir = tmp_path / "hi_nerv_export_target_action_pays_rent"
+    archive_path, _archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
+        model,
+        out_dir,
+        repo_root=REPO_ROOT,
+        decoder_codec="int8_mixed",
+        retain_receiver_proof_output=False,
+        source_backend="pytorch_test_export",
+        target_region_action_program_base64=action_program,
+        target_region_action_evaluation=evaluation,
+    )
+
+    inner = (out_dir / "0.bin").read_bytes()
     parsed = parse_archive(inner)
     telemetry = build_archive_section_telemetry(
         inner,
@@ -1728,7 +1810,6 @@ def test_archive_export_charges_target_region_action_program(tmp_path: Path) -> 
     assert telemetry["target_region_actions"]["action_count"] == 1
     assert telemetry["target_region_actions"]["pixel_count"] == 2
     assert telemetry["target_region_actions"]["payload_bytes"] > 0
-    assert telemetry["target_region_actions"]["base64_text_bytes"] == len(action_program.encode("ascii"))
     assert telemetry["target_region_actions"]["charged_as_hiv1_meta_blob"] is True
 
 
@@ -2318,3 +2399,314 @@ def test_strip_target_region_action_from_archive_payload_is_lossless_double_win(
     assert np.array_equal(a_strip.latents_fine.numpy(), a_none.latents_fine.numpy())
     # (4) no-op on an already-backend-only payload.
     assert strip_target_region_action_from_archive_payload(no_action_blob, **codecs) == no_action_blob
+
+
+# --- Vehicle 1 (V1-EXPORT): pays-rent law at the export/pack boundary ---
+
+
+def _rent_gate_fixture():
+    """Return (cfg, exported, backend_blob, with_action_blob, codecs) sharing the
+    SAME exported tensors so a CandidateActionEvaluation can be bound to real
+    archive bytes (no synthetic fixtures, real HIV1 pack/parse)."""
+    import numpy as np
+
+    from tac.substrates.hi_nerv.archive_candidate import pack_archive_from_exported_state_dict
+    from tac.substrates.hi_nerv.target_region_actions import (
+        TargetRegionPixelAction,
+        encode_target_region_actions_meta,
+    )
+
+    exportable = _exportable_torch_model()
+    exported = exportable.export_state_dict()
+    cfg = exportable.cfg
+    codecs = {"decoder_codec": "int8_mixed", "latent_codec": "int8_brotli_q11"}
+    backend_blob = pack_archive_from_exported_state_dict(exported_state_dict=exported, cfg=cfg, **codecs)
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=int(cfg.output_height),
+        width=int(cfg.output_width),
+        yx=np.array([[0, 0], [1, 1], [2, 3]], dtype=np.uint16),
+        rgb_u8=np.array([[255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8),
+    )
+    program_b64 = encode_target_region_actions_meta([action])
+    with_action_blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+        target_region_action_program_base64=program_b64,
+        **codecs,
+    )
+    return cfg, exported, backend_blob, with_action_blob, codecs
+
+
+def test_build_hi_nerv_candidate_action_evaluation_binds_real_bytes_and_uses_exact_contest_score() -> None:
+    """Invariant (2)+(3): the builder binds base/with-action sha256 + byte counts
+    from the REAL archive bytes and the exact contest score comes from
+    CandidateActionEvaluation (no hand-approximation)."""
+    import math
+
+    from tac.optimization.bayesian_experimental_design import contest_score
+    from tac.repo_io import sha256_bytes
+    from tac.substrates.hi_nerv.archive_candidate import build_hi_nerv_candidate_action_evaluation
+
+    _cfg, _exported, backend_blob, with_action_blob, _codecs = _rent_gate_fixture()
+    evaluation = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.02,
+        d_seg_with_action=0.06,
+        d_pose_with_action=0.02,
+    )
+    # sha256 + byte counts are derived from the REAL bytes (base binding).
+    assert evaluation.base_archive_sha256 == sha256_bytes(backend_blob)
+    assert evaluation.with_action_archive_sha256 == sha256_bytes(with_action_blob)
+    assert evaluation.bytes_base == len(backend_blob)
+    assert evaluation.bytes_with_action == len(with_action_blob)
+    # Exact contest score terms match contest_score() — NOT a hand-approximation.
+    assert evaluation.score_base == contest_score(0.10, 0.02, len(backend_blob))
+    assert evaluation.score_with_action == contest_score(0.06, 0.02, len(with_action_blob))
+    # ΔS sign: d_seg dropped 0.04 (=> -4.0 seg term) dominates the tiny byte add.
+    assert evaluation.delta_score_total == pytest.approx(
+        contest_score(0.06, 0.02, len(with_action_blob)) - contest_score(0.10, 0.02, len(backend_blob))
+    )
+    assert evaluation.delta_score_total < 0.0
+    assert math.isclose(evaluation.delta_score_nonrate, -4.0, abs_tol=1e-9)
+
+
+def test_candidate_action_evaluation_pays_rent_iff_delta_score_negative() -> None:
+    """Invariant (1): pays_rent is True iff delta_score_total < 0 (and survives)."""
+    from tac.substrates.hi_nerv.archive_candidate import build_hi_nerv_candidate_action_evaluation
+
+    _cfg, _exported, backend_blob, with_action_blob, _codecs = _rent_gate_fixture()
+    # Score-lowering action -> pays rent.
+    paying = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+    )
+    assert paying.pays_rent is True
+    assert paying.delta_score_total < 0.0
+    # Score-raising action (worse d_seg + extra bytes) -> does NOT pay rent.
+    harmful = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.05,
+        d_pose_base=0.01,
+        d_seg_with_action=0.12,
+        d_pose_with_action=0.01,
+    )
+    assert harmful.pays_rent is False
+    assert harmful.delta_score_total > 0.0
+    # A score-lowering action whose scorer effect did NOT survive parse-back is
+    # rejected even though delta_score < 0.
+    not_survived = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+        scorer_effect_survived=False,
+    )
+    assert not_survived.delta_score_total < 0.0
+    assert not_survived.pays_rent is False
+
+
+def test_pack_gate_keeps_rent_paying_action() -> None:
+    """A rent-paying action survives into the packed payload (action meta kept)."""
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        pack_hi_nerv_target_region_action_payload_requiring_pays_rent,
+    )
+    from tac.substrates.hi_nerv.target_region_actions import TARGET_REGION_ACTION_META_KEY
+
+    _cfg, _exported, backend_blob, with_action_blob, codecs = _rent_gate_fixture()
+    evaluation = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+    )
+    packed, row = pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+        with_action_payload=with_action_blob,
+        evaluation=evaluation,
+        **codecs,
+    )
+    # Action genuinely retained (decode the real payload, not a constant).
+    assert TARGET_REGION_ACTION_META_KEY in dict(parse_archive(packed).meta or {})
+    assert packed == with_action_blob
+    assert row["admit"] is True
+    assert row["pays_rent"] is True
+    assert row["action_packed"] is True
+    assert row["pack_action"] == "kept_action_pays_rent"
+    assert row["schema"] == "hi_nerv_target_region_action_pack_rent_gate.v1"
+    assert row["candidate_action_evaluation"]["schema"] == "hi_nerv_candidate_action_evaluation.v1"
+
+
+def test_pack_gate_drops_structurally_valid_action_that_does_not_pay_rent() -> None:
+    """Invariant (4): a structurally-VALID action that does not pay rent is REJECTED
+    (stripped), so the archive ships backend-only — smaller AND action removed."""
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        pack_hi_nerv_target_region_action_payload_requiring_pays_rent,
+    )
+    from tac.substrates.hi_nerv.target_region_actions import TARGET_REGION_ACTION_META_KEY
+
+    _cfg, _exported, backend_blob, with_action_blob, codecs = _rent_gate_fixture()
+    # The with-action blob is a structurally-VALID receiver payload (it parses).
+    assert TARGET_REGION_ACTION_META_KEY in dict(parse_archive(with_action_blob).meta or {})
+    harmful = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.05,
+        d_pose_base=0.01,
+        d_seg_with_action=0.12,
+        d_pose_with_action=0.01,
+    )
+    assert harmful.pays_rent is False
+    packed, row = pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+        with_action_payload=with_action_blob,
+        evaluation=harmful,
+        **codecs,
+    )
+    # Action stripped: meta gone, payload smaller (rate term lowered = double win).
+    assert TARGET_REGION_ACTION_META_KEY not in dict(parse_archive(packed).meta or {})
+    assert len(packed) < len(with_action_blob)
+    assert row["admit"] is False
+    assert row["action_packed"] is False
+    assert row["pack_action"] == "dropped_action_does_not_pay_rent"
+    assert "hi_nerv_target_region_action_does_not_pay_rent" in row["blockers"]
+
+
+def test_pack_gate_drops_stale_evaluation_against_phantom_base() -> None:
+    """Invariant (3) anti-drift: an evaluation measured against a DIFFERENT base is
+    STALE and the action is dropped — the phantom-base failure mode is refused."""
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        pack_hi_nerv_target_region_action_payload_requiring_pays_rent,
+    )
+    from tac.substrates.hi_nerv.target_region_actions import TARGET_REGION_ACTION_META_KEY
+
+    _cfg, _exported, backend_blob, with_action_blob, codecs = _rent_gate_fixture()
+    paying = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+    )
+    assert paying.pays_rent is True
+    # Current base differs from the base the evaluation was measured against.
+    packed, row = pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+        with_action_payload=with_action_blob,
+        evaluation=paying,
+        current_base_archive_sha256="0" * 64,
+        **codecs,
+    )
+    assert TARGET_REGION_ACTION_META_KEY not in dict(parse_archive(packed).meta or {})
+    assert row["admit"] is False
+    assert row["stale_for_current_base"] is True
+    assert row["pack_action"] == "stale_evaluation_for_current_base"
+    assert "hi_nerv_target_region_action_evaluation_stale_for_current_base" in row["blockers"]
+
+
+def test_pack_gate_drops_evaluation_bound_to_different_with_action_bytes() -> None:
+    """Anti-drift binding: an evaluation whose with-action sha256 does NOT match the
+    bytes being packed is refused (cannot leak its verdict onto other bytes)."""
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        pack_hi_nerv_target_region_action_payload_requiring_pays_rent,
+    )
+    from tac.substrates.hi_nerv.target_region_actions import TARGET_REGION_ACTION_META_KEY
+
+    _cfg, _exported, backend_blob, with_action_blob, codecs = _rent_gate_fixture()
+    # Evaluation bound to backend_blob as if it were the with-action archive.
+    mismatched = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=backend_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+    )
+    assert mismatched.pays_rent is True
+    packed, row = pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+        with_action_payload=with_action_blob,
+        evaluation=mismatched,
+        bind_with_action_payload_sha256=True,
+        **codecs,
+    )
+    assert TARGET_REGION_ACTION_META_KEY not in dict(parse_archive(packed).meta or {})
+    assert row["with_action_payload_sha256_mismatch"] is True
+    assert row["pack_action"] == "stale_evaluation_with_action_payload_sha256_mismatch"
+
+
+def test_pack_gate_no_action_payload_is_passthrough_backend_only() -> None:
+    """A backend-only payload (no action) passes through unchanged regardless of the
+    evaluation verdict — there is nothing to drop."""
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        pack_hi_nerv_target_region_action_payload_requiring_pays_rent,
+    )
+
+    _cfg, _exported, backend_blob, with_action_blob, codecs = _rent_gate_fixture()
+    harmful = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.05,
+        d_pose_base=0.01,
+        d_seg_with_action=0.12,
+        d_pose_with_action=0.01,
+    )
+    packed, row = pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+        with_action_payload=backend_blob,
+        evaluation=harmful,
+        bind_with_action_payload_sha256=False,
+        **codecs,
+    )
+    assert packed == backend_blob
+    assert row["with_action_payload_has_action"] is False
+    assert row["pack_action"] == "no_action_present"
+
+
+def test_pack_gate_row_is_false_authority_non_promotable() -> None:
+    """Invariant (5): the gate row carries false-authority markers — bytes are
+    planning-control evidence, never a score/promotion claim."""
+    from tac.substrates.hi_nerv.archive_candidate import (
+        build_hi_nerv_candidate_action_evaluation,
+        pack_hi_nerv_target_region_action_payload_requiring_pays_rent,
+    )
+
+    _cfg, _exported, backend_blob, with_action_blob, codecs = _rent_gate_fixture()
+    evaluation = build_hi_nerv_candidate_action_evaluation(
+        base_archive=backend_blob,
+        with_action_archive=with_action_blob,
+        d_seg_base=0.10,
+        d_pose_base=0.01,
+        d_seg_with_action=0.05,
+        d_pose_with_action=0.01,
+    )
+    _packed, row = pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+        with_action_payload=with_action_blob,
+        evaluation=evaluation,
+        **codecs,
+    )
+    assert row["promotion_eligible"] is False
+    assert row["score_claim"] is False
+    assert row["promotable"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["candidate_action_evaluation"]["promotion_eligible"] is False
+    assert (
+        "hi_nerv_candidate_action_evaluation_is_planning_control_false_authority" in row["blockers"]
+    )

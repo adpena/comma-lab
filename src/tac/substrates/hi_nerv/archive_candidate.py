@@ -33,7 +33,8 @@ from tac.local_acceleration.mlx_numpy_portability_contract import (
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
-from tac.repo_io import sha256_file
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
+from tac.repo_io import sha256_bytes, sha256_file
 from tac.submission_archive import (
     MINIMAL_SINGLE_MEMBER_NAME,
     build_minimal_single_member_archive_bytes,
@@ -76,6 +77,8 @@ HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA = "hi_nerv_decoder_preparation_rende
 HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA = "hi_nerv_mlx_live_receiver_export_parity_proof.v1"
 HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA = "hi_nerv_target_region_action_parseback_survival.v1"
 HI_NERV_ARCHIVE_QUANTIZER_PARITY_RECEIPT_SCHEMA = "hi_nerv_archive_quantizer_parity_receipt.v1"
+HI_NERV_CANDIDATE_ACTION_EVALUATION_SCHEMA = "hi_nerv_candidate_action_evaluation.v1"
+HI_NERV_TARGET_REGION_ACTION_PACK_RENT_GATE_SCHEMA = "hi_nerv_target_region_action_pack_rent_gate.v1"
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
 _STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
@@ -84,6 +87,7 @@ _BITSTREAM_PREPARATION_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
 _ARCHIVE_SECTION_TELEMETRY_NAME = "hi_nerv_archive_section_telemetry.json"
 _ARCHIVE_QUANTIZER_PARITY_RECEIPT_NAME = "hi_nerv_archive_quantizer_parity_receipt.json"
 _LIVE_RECEIVER_EXPORT_PARITY_NAME = "hi_nerv_mlx_live_receiver_export_parity.json"
+_TARGET_REGION_ACTION_PACK_RENT_GATE_NAME = "hi_nerv_target_region_action_pack_rent_gate.json"
 _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_NAME = "hi_nerv_live_receiver_codec_portfolio_selection.json"
 _LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA = "hi_nerv_live_receiver_codec_portfolio_selection.v1"
 _PORTFOLIO_AUTO_CODEC_ALIASES = frozenset({"auto", "portfolio_auto", "int8_auto"})
@@ -1994,6 +1998,205 @@ def strip_target_region_action_from_archive_payload(
     return blob
 
 
+def _archive_bytes_and_sha256(
+    archive: bytes | str | Path,
+) -> tuple[int, str]:
+    """Return ``(byte_count, sha256_hex)`` for a HIV1 ``0.bin`` payload OR a
+    contest ``archive.zip`` file/path.  Bytes are hashed directly; a filesystem
+    path is hashed via :func:`sha256_file` and its ZIP stat size is used so the
+    rate term is bound to exactly what ships."""
+
+    if isinstance(archive, (bytes, bytearray, memoryview)):
+        raw = bytes(archive)
+        return len(raw), sha256_bytes(raw)
+    path = Path(archive).expanduser().resolve(strict=False)
+    if not path.is_file():
+        raise FileNotFoundError(f"archive path missing: {path}")
+    return int(path.stat().st_size), sha256_file(path)
+
+
+def build_hi_nerv_candidate_action_evaluation(
+    *,
+    base_archive: bytes | str | Path,
+    with_action_archive: bytes | str | Path,
+    d_seg_base: float,
+    d_pose_base: float,
+    d_seg_with_action: float,
+    d_pose_with_action: float,
+    action_id: str = "hi_nerv_target_region_action",
+    action_kind: str = "target_region_pixel_action_sidecar",
+    bytes_base: int | None = None,
+    bytes_with_action: int | None = None,
+    base_archive_sha256: str | None = None,
+    with_action_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
+    scorer_effect_survived: bool = True,
+    backend_wrong_to_target: int | None = None,
+    with_action_wrong_to_target: int | None = None,
+    evidence_grade: str = "advisory",
+) -> CandidateActionEvaluation:
+    """Construct the canonical :class:`CandidateActionEvaluation` for one
+    HiNeRV target-region action against a base archive.
+
+    The exact contest score ``S = 100*d_seg + sqrt(10*d_pose) + 25*bytes/N`` is
+    computed by ``CandidateActionEvaluation`` itself — this builder only binds
+    the two archives (sha256 + byte counts) to the supplied measured d_seg/d_pose
+    terms.  Bytes default to the actual ZIP/payload size of each archive so the
+    rate term cannot drift from what ships, and the sha256 of each archive is
+    computed from the real bytes (binding ``base_archive_sha256`` per the
+    anti-drift invariant) unless an explicit override is supplied.
+
+    The d_seg/d_pose terms remain caller-supplied (measured upstream
+    ``evaluate.py`` components or receiver-replay estimates); this builder never
+    fabricates a distortion number.  ``pays_rent`` on the result is the exact
+    admission law: ``delta_score_total < 0`` AND ``scorer_effect_survived``.
+    """
+
+    measured_base_bytes, computed_base_sha = _archive_bytes_and_sha256(base_archive)
+    measured_action_bytes, computed_action_sha = _archive_bytes_and_sha256(with_action_archive)
+    resolved_bytes_base = int(bytes_base) if bytes_base is not None else measured_base_bytes
+    resolved_bytes_action = int(bytes_with_action) if bytes_with_action is not None else measured_action_bytes
+    resolved_base_sha = str(base_archive_sha256) if base_archive_sha256 else computed_base_sha
+    resolved_action_sha = str(with_action_archive_sha256) if with_action_archive_sha256 else computed_action_sha
+    return CandidateActionEvaluation(
+        action_id=str(action_id),
+        action_kind=str(action_kind),
+        base_archive_sha256=resolved_base_sha,
+        with_action_archive_sha256=resolved_action_sha,
+        d_seg_base=float(d_seg_base),
+        d_pose_base=float(d_pose_base),
+        bytes_base=resolved_bytes_base,
+        d_seg_with_action=float(d_seg_with_action),
+        d_pose_with_action=float(d_pose_with_action),
+        bytes_with_action=resolved_bytes_action,
+        scorer_effect_survived=bool(scorer_effect_survived),
+        base_scorer_state_hash=(str(base_scorer_state_hash) if base_scorer_state_hash else None),
+        backend_wrong_to_target=(None if backend_wrong_to_target is None else int(backend_wrong_to_target)),
+        with_action_wrong_to_target=(None if with_action_wrong_to_target is None else int(with_action_wrong_to_target)),
+        evidence_grade=str(evidence_grade),
+    )
+
+
+def hi_nerv_candidate_action_evaluation_row(
+    evaluation: CandidateActionEvaluation,
+) -> dict[str, Any]:
+    """Return the canonical ``hi_nerv_candidate_action_evaluation`` ledger row."""
+
+    return evaluation.to_row()
+
+
+def pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+    *,
+    with_action_payload: bytes,
+    evaluation: CandidateActionEvaluation,
+    current_base_archive_sha256: str | None = None,
+    current_base_scorer_state_hash: str | None = None,
+    bind_with_action_payload_sha256: bool = True,
+    decoder_codec: str = "int8_mixed",
+    latent_codec: str = "int8_brotli_q11",
+) -> tuple[bytes, dict[str, Any]]:
+    """EXPORT/PACK-BOUNDARY rent gate for a HiNeRV target-region action.
+
+    ``with_action_payload`` is the HIV1 ``0.bin`` bytes that carry the charged
+    target-region action sidecar.  This is the law that the 2026-06-08 sidecar
+    incident lacked: the sidecar is packed (kept) ONLY when ``evaluation`` proves
+    it ``pays_rent`` (lowers the EXACT contest score AND its scorer effect
+    survives parse-back) against the CURRENT base.  Otherwise the sidecar is
+    dropped via :func:`strip_target_region_action_from_archive_payload`, so the
+    archive ships backend-only — restoring the destroyed backend wins AND lowering
+    the rate term (the double win).
+
+    Anti-drift (the phantom-base failure mode) is enforced on TWO bindings:
+
+    * ``current_base_archive_sha256`` — if supplied and the evaluation's
+      ``base_archive_sha256`` differs, the evaluation is STALE and the action is
+      dropped (a candidate computed against a phantom/old base must NEVER be
+      admitted).
+    * ``bind_with_action_payload_sha256`` (default True) — the evaluation's
+      ``with_action_archive_sha256`` MUST equal the sha256 of the exact
+      ``with_action_payload`` bytes being packed.  This binds the rent verdict to
+      THIS archive's bytes, so an evaluation measured on a different with-action
+      archive cannot leak its verdict onto these bytes (the strongest export-time
+      binding because the caller can reproduce these exact bytes).
+
+    Returns ``(payload_bytes, decision_row)``.  ``decision_row`` is the canonical
+    ``hi_nerv_target_region_action_pack_rent_gate`` audit record carrying the full
+    :class:`CandidateActionEvaluation` row, the verdict, and false-authority
+    markers — the bytes are planning-control evidence, never a score claim.
+    """
+
+    raw = bytes(with_action_payload)
+    has_action = TARGET_REGION_ACTION_META_KEY in dict(parse_archive(raw).meta or {})
+    _, with_action_payload_sha256 = _archive_bytes_and_sha256(raw)
+    base_stale = bool(
+        current_base_archive_sha256 is not None
+        and evaluation.is_stale_for_base(
+            str(current_base_archive_sha256),
+            current_base_scorer_state_hash,
+        )
+    )
+    with_action_mismatch = bool(
+        bind_with_action_payload_sha256
+        and str(evaluation.with_action_archive_sha256) != str(with_action_payload_sha256)
+    )
+    is_stale = bool(base_stale or with_action_mismatch)
+    pays_rent = bool(evaluation.pays_rent)
+    admit = bool(pays_rent and not is_stale)
+
+    if admit or not has_action:
+        packed_payload = raw
+        action_packed = bool(has_action)
+        pack_action = "kept_action_pays_rent" if admit and has_action else "no_action_present"
+    else:
+        packed_payload = strip_target_region_action_from_archive_payload(
+            raw,
+            decoder_codec=str(decoder_codec),
+            latent_codec=str(latent_codec),
+        )
+        action_packed = False
+        if with_action_mismatch:
+            pack_action = "stale_evaluation_with_action_payload_sha256_mismatch"
+        elif base_stale:
+            pack_action = "stale_evaluation_for_current_base"
+        else:
+            pack_action = "dropped_action_does_not_pay_rent"
+
+    packed_bytes, packed_sha256 = _archive_bytes_and_sha256(packed_payload)
+    blockers: list[str] = [
+        "hi_nerv_candidate_action_evaluation_is_planning_control_false_authority",
+        "contest_cpu_cuda_exact_eval_provides_d_seg_d_pose_terms",
+    ]
+    if base_stale:
+        blockers.append("hi_nerv_target_region_action_evaluation_stale_for_current_base")
+    if with_action_mismatch:
+        blockers.append("hi_nerv_target_region_action_evaluation_with_action_payload_sha256_mismatch")
+    if has_action and not pays_rent:
+        blockers.append("hi_nerv_target_region_action_does_not_pay_rent")
+    decision_row = {
+        "schema": HI_NERV_TARGET_REGION_ACTION_PACK_RENT_GATE_SCHEMA,
+        "with_action_payload_has_action": has_action,
+        "action_packed": action_packed,
+        "pack_action": pack_action,
+        "admit": admit,
+        "pays_rent": pays_rent,
+        "stale_for_current_base": base_stale,
+        "with_action_payload_sha256_mismatch": with_action_mismatch,
+        "stale": is_stale,
+        "current_base_archive_sha256": (None if current_base_archive_sha256 is None else str(current_base_archive_sha256)),
+        "with_action_payload_sha256": with_action_payload_sha256,
+        "packed_payload_bytes": int(packed_bytes),
+        "packed_payload_sha256": packed_sha256,
+        "with_action_payload_bytes": len(raw),
+        "candidate_action_evaluation": evaluation.to_row(),
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        **FALSE_AUTHORITY,
+    }
+    return packed_payload, decision_row
+
+
 def project_hi_nerv_hiv1_receiver_state(
     *,
     exported_state_dict: Mapping[str, np.ndarray],
@@ -2338,9 +2541,19 @@ def export_hi_nerv_mlx_archive(
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     latent_codec: str = "int16_raw",
     target_region_action_program_base64: str | None = None,
+    target_region_action_evaluation: CandidateActionEvaluation | None = None,
     hard_byte_ceiling: int | None = None,
 ) -> tuple[Path, str, int]:
-    """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
+    """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``.
+
+    When a ``target_region_action_program_base64`` sidecar is requested, it is
+    packed (kept) ONLY if ``target_region_action_evaluation`` proves the action
+    ``pays_rent`` (lowers the EXACT contest score AND survives parse-back) against
+    this archive's own backend-only base.  Otherwise the sidecar is dropped at the
+    export boundary so the archive ships backend-only — the canonical extinction
+    of the 2026-06-08 harmful-sidecar incident.  A sidecar with NO supplied
+    evaluation is treated as not-yet-proven and is dropped (fail-closed).
+    """
 
     root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[4]
     out_dir = Path(output_dir)
@@ -2418,6 +2631,102 @@ def export_hi_nerv_mlx_archive(
             live_receiver_export_parity=live_receiver_export_parity,
             hard_byte_ceiling=hard_byte_ceiling,
         )
+
+    # EXPORT/PACK-BOUNDARY rent gate: a target-region action sidecar survives into
+    # the shipped payload ONLY if the supplied CandidateActionEvaluation proves it
+    # pays rent (exact ΔS < 0 AND scorer effect survives) against THIS archive's
+    # own backend-only base.  Otherwise it is dropped here so the archive ships
+    # backend-only (the 2026-06-08 incident extinction).
+    target_region_action_pack_rent_gate: dict[str, Any] | None = None
+    if target_region_action_program_base64 not in (None, "") and (
+        TARGET_REGION_ACTION_META_KEY in dict(parse_archive(bin_bytes).meta or {})
+    ):
+        backend_only_payload = strip_target_region_action_from_archive_payload(
+            bin_bytes,
+            decoder_codec=effective_decoder_codec,
+            latent_codec=latent_codec,
+        )
+        _, backend_only_sha256 = _archive_bytes_and_sha256(backend_only_payload)
+        if target_region_action_evaluation is None:
+            # Fail-closed: an unproven sidecar is never admitted at the boundary.
+            bin_bytes = backend_only_payload
+            target_region_action_pack_rent_gate = {
+                "schema": HI_NERV_TARGET_REGION_ACTION_PACK_RENT_GATE_SCHEMA,
+                "with_action_payload_has_action": True,
+                "action_packed": False,
+                "pack_action": "dropped_no_candidate_action_evaluation_supplied",
+                "admit": False,
+                "pays_rent": False,
+                "stale_for_current_base": False,
+                "current_base_archive_sha256": backend_only_sha256,
+                "packed_payload_bytes": len(backend_only_payload),
+                "packed_payload_sha256": backend_only_sha256,
+                "with_action_payload_bytes": None,
+                "candidate_action_evaluation": None,
+                "blockers": [
+                    "hi_nerv_target_region_action_no_candidate_action_evaluation_supplied",
+                    "hi_nerv_candidate_action_evaluation_is_planning_control_false_authority",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+        else:
+            # The evaluation carries the measured distortion semantics
+            # (d_seg/d_pose) of the action; the contest pays_rent law is the gate.
+            # The exact export-internal ``bin_bytes`` are produced AFTER an NPZ
+            # bridge round-trip, so they are NOT byte-reproducible by an external
+            # caller — therefore the strict with-action-payload SHA binding is
+            # DISABLED here (rebind to the export bytes) and BOTH the evaluation's
+            # bound with-action SHA and the export bytes SHA are recorded so any
+            # divergence is auditable.  Direct callers of the standalone gate keep
+            # the strict SHA binding (default True).
+            _, export_with_action_sha256 = _archive_bytes_and_sha256(bin_bytes)
+            gated_payload, target_region_action_pack_rent_gate = (
+                pack_hi_nerv_target_region_action_payload_requiring_pays_rent(
+                    with_action_payload=bin_bytes,
+                    evaluation=target_region_action_evaluation,
+                    bind_with_action_payload_sha256=False,
+                    decoder_codec=effective_decoder_codec,
+                    latent_codec=latent_codec,
+                )
+            )
+            target_region_action_pack_rent_gate["export_backend_only_base_sha256"] = backend_only_sha256
+            target_region_action_pack_rent_gate["export_with_action_payload_sha256"] = export_with_action_sha256
+            target_region_action_pack_rent_gate["evaluation_with_action_archive_sha256"] = str(
+                target_region_action_evaluation.with_action_archive_sha256
+            )
+            target_region_action_pack_rent_gate["export_rebound_with_action_sha256"] = bool(
+                str(target_region_action_evaluation.with_action_archive_sha256) != str(export_with_action_sha256)
+            )
+            bin_bytes = gated_payload
+        # Re-derive byte-bound artifacts after a possible strip so the rate term,
+        # codec telemetry, and portfolio selection match the shipped payload.
+        archive_zip_bytes, archive_zip_build = build_minimal_single_member_archive_bytes(bin_bytes)
+        archive_section_probe = build_archive_section_telemetry(
+            bin_bytes,
+            archive_zip_bytes=len(archive_zip_bytes),
+        )
+        effective_decoder_codec = str(archive_section_probe.get("decoder_codec") or effective_decoder_codec)
+        live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
+            model=model,
+            archive_bytes=bin_bytes,
+            cfg=cfg,
+            source_backend=source_backend,
+            latent_codec=latent_codec,
+        )
+        live_receiver_codec_portfolio_selection = _build_single_codec_portfolio_selection_report(
+            requested_decoder_codec=requested_decoder_codec,
+            selected_decoder_codec=effective_decoder_codec,
+            latent_codec=latent_codec,
+            archive_bytes=len(archive_zip_bytes),
+            payload_bytes=len(bin_bytes),
+            archive_zip_build=archive_zip_build,
+            live_receiver_export_parity=live_receiver_export_parity,
+            hard_byte_ceiling=hard_byte_ceiling,
+        )
+
     bitstream_report = {
         **dict(bitstream_report),
         "decoder_codec": effective_decoder_codec,
@@ -2427,9 +2736,15 @@ def export_hi_nerv_mlx_archive(
         "decoder_codec_selected_by_export": effective_decoder_codec,
         "live_receiver_codec_portfolio_selection": (live_receiver_codec_portfolio_selection),
         "live_receiver_codec_portfolio_selection_schema": (_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA),
+        "target_region_action_pack_rent_gate": target_region_action_pack_rent_gate,
     }
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
+    if target_region_action_pack_rent_gate is not None:
+        (out_dir / _TARGET_REGION_ACTION_PACK_RENT_GATE_NAME).write_text(
+            json.dumps(target_region_action_pack_rent_gate, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
     bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
     bitstream_report_path.write_text(
         json.dumps(bitstream_report, indent=2, sort_keys=True),
@@ -2632,9 +2947,16 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     latent_codec: str = "int16_raw",
     target_region_action_program_base64: str | None = None,
+    target_region_action_evaluation: CandidateActionEvaluation | None = None,
     hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
-    """Export HiNeRV MLX bytes and emit the shared candidate package."""
+    """Export HiNeRV MLX bytes and emit the shared candidate package.
+
+    A requested ``target_region_action_program_base64`` sidecar is admitted into
+    the shipped archive only when ``target_region_action_evaluation`` proves it
+    pays rent (exact ΔS < 0 AND survives parse-back); otherwise it is dropped at
+    the export boundary so the package ships backend-only.
+    """
 
     archive_zip_path, archive_sha256, archive_bytes = export_hi_nerv_mlx_archive(
         model,
@@ -2650,6 +2972,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         latent_codec=latent_codec,
         target_region_action_program_base64=target_region_action_program_base64,
+        target_region_action_evaluation=target_region_action_evaluation,
         hard_byte_ceiling=hard_byte_ceiling,
     )
     root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[4]
@@ -2736,17 +3059,22 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
 
 __all__ = [
     "HI_NERV_ARCHIVE_QUANTIZER_PARITY_RECEIPT_SCHEMA",
+    "HI_NERV_CANDIDATE_ACTION_EVALUATION_SCHEMA",
     "HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID",
     "HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY",
     "HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND",
+    "HI_NERV_TARGET_REGION_ACTION_PACK_RENT_GATE_SCHEMA",
     "HI_NERV_TARGET_REGION_ACTION_PARSEBACK_SURVIVAL_SCHEMA",
     "build_hi_nerv_archive_quantizer_parity_receipt",
+    "build_hi_nerv_candidate_action_evaluation",
     "build_hi_nerv_target_region_action_parseback_survival",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
+    "hi_nerv_candidate_action_evaluation_row",
     "hi_nerv_meta_from_config",
     "hi_nerv_mlx_numpy_portability_contract",
     "pack_archive_from_exported_state_dict",
+    "pack_hi_nerv_target_region_action_payload_requiring_pays_rent",
     "project_hi_nerv_hiv1_receiver_state",
 ]
