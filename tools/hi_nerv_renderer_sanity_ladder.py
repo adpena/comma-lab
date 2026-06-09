@@ -680,9 +680,150 @@ def cmd_one_pair_overfit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _score_pair_with_margin(net: Any, comp_pair: Any, gt_pair: Any, device: str) -> dict[str, Any]:
+    """EXACT scorer d_seg/d_pose + the per-pixel SegNet cell margin on the LAST frame.
+
+    margin m_p = logit_comp[source_argmax_class] - max_{k != source_argmax} logit_comp[k].
+    m_p > 0  <=>  comp argmax matches source argmax at pixel p  (so frac(m_p>0) = 1 - d_seg).
+    The margin DISTRIBUTION is the cell-headroom: how far inside/outside the source chamber.
+    """
+    import torch
+
+    with torch.inference_mode():
+        d_pose, d_seg = net.compute_distortion(gt_pair.to(device), comp_pair.to(device))
+        _, seg_in_cmp = net.preprocess_input(comp_pair.float().to(device))
+        _, seg_in_gt = net.preprocess_input(gt_pair.float().to(device))
+        logits_cmp = net.segnet(seg_in_cmp)  # (1,5,384,512)
+        logits_gt = net.segnet(seg_in_gt)
+        src_class = logits_gt.argmax(dim=1, keepdim=True)  # (1,1,384,512)
+        true_logit = torch.gather(logits_cmp, 1, src_class).squeeze(1)
+        masked = logits_cmp.clone()
+        masked.scatter_(1, src_class, float("-inf"))
+        max_wrong = masked.max(dim=1).values
+        margin = (true_logit - max_wrong).flatten()
+        frac_pos = float((margin > 0).float().mean().item())
+        q = torch.quantile(margin, torch.tensor([0.1, 0.5, 0.9], device=margin.device))
+        comp_hist = [int((logits_cmp.argmax(1) == k).sum()) for k in range(5)]
+        gt_hist = [int((logits_gt.argmax(1) == k).sum()) for k in range(5)]
+    return {
+        "d_seg": float(d_seg.item()),
+        "d_pose": float(d_pose.item()),
+        "margin_frac_positive": frac_pos,  # == 1 - d_seg (sanity)
+        "margin_p10": float(q[0].item()),
+        "margin_p50": float(q[1].item()),
+        "margin_p90": float(q[2].item()),
+        "segnet_comp_class_hist": comp_hist,
+        "segnet_gt_class_hist": gt_hist,
+    }
+
+
+def cmd_evaluator_cell_tolerance(args: argparse.Namespace) -> int:
+    """Measure the evaluator-equivalence-class SIZE on the contest video: start from the
+    SOURCE (d_seg=0, d_pose=0) and CHEAPEN it (downsample / blur / quantize), measuring how
+    much d_seg/d_pose stay near zero. The headroom = the rate budget for a low-score witness
+    (V3 direct grammar). RGB fidelity is NOT the objective — only d_seg/d_pose/rate are.
+    """
+    import torch
+    from frame_utils import seq_len
+    from modules import DistortionNet, posenet_sd_path, segnet_sd_path
+    from PIL import Image, ImageFilter
+
+    H, W, C = _frame_dims()
+    src = _decode_first_k_frames(UPSTREAM / "videos" / "0.mkv", seq_len)  # (2,H,W,3) uint8
+    gt_pair = torch.from_numpy(src[None].astype(np.uint8))  # (1,2,H,W,3)
+
+    net = DistortionNet().eval().to(args.device)
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, args.device)
+
+    def _score(pert: np.ndarray) -> dict[str, Any]:
+        comp = torch.from_numpy(pert[None].astype(np.uint8))
+        return _score_pair_with_margin(net, comp, gt_pair, args.device)
+
+    def _downsample(arr: np.ndarray, k: int) -> np.ndarray:
+        if k <= 1:
+            return arr.copy()
+        x = torch.from_numpy(arr.transpose(0, 3, 1, 2).astype(np.float32))  # (2,3,H,W)
+        small = torch.nn.functional.interpolate(x, size=(H // k, W // k), mode="bilinear", align_corners=False)
+        up = torch.nn.functional.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+        return up.clamp(0, 255).round().numpy().transpose(0, 2, 3, 1).astype(np.uint8)
+
+    def _blur(arr: np.ndarray, radius: float) -> np.ndarray:
+        if radius <= 0:
+            return arr.copy()
+        return np.stack([np.asarray(Image.fromarray(f).filter(ImageFilter.GaussianBlur(radius))) for f in arr]).astype(np.uint8)
+
+    def _quantize(arr: np.ndarray, bits: int) -> np.ndarray:
+        if bits >= 8:
+            return arr.copy()
+        shift = 8 - bits
+        return (((arr >> shift) << shift) | (1 << (shift - 1))).astype(np.uint8)
+
+    sweeps: dict[str, list[dict[str, Any]]] = {"downsample": [], "blur": [], "quantize": []}
+    baseline = _score(src)  # source vs source -> d_seg=0
+    for k in (2, 3, 4, 6, 8, 12, 16):
+        r = _score(_downsample(src, k))
+        r["factor"] = k
+        r["approx_spatial_dof_ratio"] = round(1.0 / (k * k), 5)
+        sweeps["downsample"].append(r)
+    for radius in (1.0, 2.0, 4.0, 8.0, 16.0):
+        r = _score(_blur(src, radius))
+        r["radius"] = radius
+        sweeps["blur"].append(r)
+    for bits in (6, 4, 3, 2, 1):
+        r = _score(_quantize(src, bits))
+        r["bits"] = bits
+        sweeps["quantize"].append(r)
+
+    # The contest-score seg/pose contributions at each level (rate is a separate axis).
+    def _seg_pose_terms(row: dict[str, Any]) -> dict[str, float]:
+        return {
+            "seg_term_100x": round(100.0 * row["d_seg"], 4),
+            "pose_term_sqrt10x": round(float(np.sqrt(10.0 * row["d_pose"])), 4),
+        }
+
+    for axis in sweeps.values():
+        for row in axis:
+            row.update(_seg_pose_terms(row))
+
+    # Headroom verdict: the cheapest level on each axis that keeps seg+pose terms small
+    # (d_seg < 0.02 AND d_pose small) — that's the evaluator-equivalence-class boundary.
+    def _last_in_cell(axis: list[dict[str, Any]], key: str) -> Any:
+        good = [r for r in axis if r["d_seg"] < 0.02]
+        return good[-1][key] if good else None
+
+    artifact = {
+        "schema": "evaluator_cell_tolerance.v1",
+        "purpose": "evaluator-equivalence-class size on the contest video = the rate budget for a low-score witness; RGB fidelity is NOT the objective",
+        "utc": _utc(),
+        "baseline_source_vs_source": {k: baseline[k] for k in ("d_seg", "d_pose", "margin_frac_positive")},
+        "sweeps": sweeps,
+        "cell_boundary": {
+            "max_downsample_factor_in_cell": _last_in_cell(sweeps["downsample"], "factor"),
+            "max_blur_radius_in_cell": _last_in_cell(sweeps["blur"], "radius"),
+            "min_bits_in_cell": _last_in_cell(sweeps["quantize"], "bits"),
+        },
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    print("baseline (source vs source):", json.dumps(artifact["baseline_source_vs_source"]))
+    for name, axis in sweeps.items():
+        print(f"\n=== {name} ===")
+        for r in axis:
+            lvl = r.get("factor") or r.get("radius") or r.get("bits")
+            print(f"  level={lvl:<5} d_seg={r['d_seg']:.4f} d_pose={r['d_pose']:.3f} seg_term={r['seg_term_100x']:.3f} pose_term={r['pose_term_sqrt10x']:.3f} margin_frac_pos={r['margin_frac_positive']:.4f}")
+    print("\ncell_boundary:", json.dumps(artifact["cell_boundary"]))
+    print(f"artifact -> {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    ct = sub.add_parser("evaluator-cell-tolerance", help="cheapen source -> measure d_seg/d_pose headroom (the rate budget)")
+    ct.add_argument("--out", required=True, help="artifact JSON path")
+    ct.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    ct.set_defaults(func=cmd_evaluator_cell_tolerance)
 
     op = sub.add_parser("one-pair-overfit", help="Phase 0A: pure-RGB-L2 overfit of one pair")
     op.add_argument("--work-dir", required=True, help="SSD work dir (NEVER /tmp)")
