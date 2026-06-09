@@ -41,10 +41,16 @@ from tac.analysis.source_forward_bit_flip_falsification import (
     build_array_bit_flip_falsification,
     build_named_arrays_bit_flip_falsification,
 )
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    OfficialMfuHfrTubReceiverPayload,
+    _decode_official_mfu_hfr_tub_payload_tensor_manifest,
     decode_official_mfu_hfr_tub_decoder_payload,
     encode_official_mfu_hfr_tub_decoder_payload,
     execute_official_mfu_hfr_tub_decoder_payload,
+)
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    _sha256 as _archive_sha256,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OfficialConv2dNchw,
@@ -2344,6 +2350,684 @@ def _official_source_import_context(official_root: Path) -> Iterable[None]:
                 sys.modules[name] = value
 
 
+# ---------------------------------------------------------------------------
+# C2 — MFU/HFR/TUB source-state DROP_OR_REIFY proof
+#
+# This reuses the C1 causality criterion (see
+# ``snerv_official_tub_source_forward_replay.build_snerv_official_tub_drop_or_reify_source_forward_proof``)
+# but applied to the official MFU/HFR/TUB receiver-RGB primitive
+# ``OfficialMfuHfrTubReceiverPayload.decode_frames`` instead of the bare TUB
+# frame reconstruction.  The receiver render is real: it re-runs the portable
+# MFU forward (low/skip_mid/skip_high -> pyr_out), the portable HFR heads
+# (pyr_out -> yh_out), and (when stored) the official output_2 temporal-fusion
+# frame residual.  A source-state facet is RECEIVER-CAUSAL iff flipping it
+# changes the FLOAT receiver RGB (re-run the real primitive); the uint8/scorer
+# survival is reported SEPARATELY (a sub-uint8 float change is still a real
+# causal channel — that is the rent question, not the causality question).
+# ---------------------------------------------------------------------------
+
+MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA = (
+    "snerv_mfu_hfr_tub_drop_or_reify_source_forward_proof.v1"
+)
+MFU_HFR_TUB_DROP_OR_REIFY_FACET_SCHEMA = "snerv_mfu_hfr_tub_drop_or_reify_facet.v1"
+
+MFU_HFR_TUB_VERDICT_REIFY = "REIFY"
+MFU_HFR_TUB_VERDICT_DROP = "DROP"
+MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER = "REIFY_PENDING_SCORER"
+MFU_HFR_TUB_DROP_OR_REIFY_VERDICTS: tuple[str, ...] = (
+    MFU_HFR_TUB_VERDICT_REIFY,
+    MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER,
+    MFU_HFR_TUB_VERDICT_DROP,
+)
+
+MFU_HFR_TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER = (
+    "snerv_official_mfu_hfr_tub_drop_or_reify_source_graph_unproven"
+)
+MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER = (
+    "snerv_official_mfu_hfr_tub_drop_or_reify_scorer_delta_pending_real_scorer"
+)
+
+# Canonical MFU/HFR/TUB source-state facets a bit-flip can perturb.  Each entry
+# is (facet_id, family, receiver_tensor_key, source_contract).  The receiver
+# tensor key is the exact key in the receiver payload manifest the facet maps
+# to; flipping it and re-rendering the receiver RGB is the causality probe.
+_MFU_HFR_TUB_FACETS: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "mfu_low",
+        "mfu",
+        "inputs.mfu.low",
+        "SNeRV/model/snerv.py:104-109 MFU low-resolution latent feed (decoder[dl+3] input)",
+    ),
+    (
+        "mfu_skip_mid",
+        "mfu",
+        "inputs.mfu.skip_mid",
+        "SNeRV/model/snerv.py:104-109 MFU mid-resolution skip feed (decoder[dl+4] concat)",
+    ),
+    (
+        "mfu_skip_high",
+        "mfu",
+        "inputs.mfu.skip_high",
+        "SNeRV/model/snerv.py:104-109 MFU high-resolution skip feed (decoder[dl+6] concat)",
+    ),
+    (
+        "mfu_rb_high_residual",
+        "mfu",
+        "mfu.rb_high.input_conv.weight",
+        "SNeRV/model/snerv.py:104-109 MFU high-resolution residual block weights (decoder[dl+6])",
+    ),
+    (
+        "hfr_lh_head",
+        "hfr",
+        "hfr.lh.conv1.weight",
+        "SNeRV/model/snerv.py:68-71 HFR LH high-frequency residual head (decoder[dl])",
+    ),
+    (
+        "hfr_hh_head",
+        "hfr",
+        "hfr.hh.conv2.weight",
+        "SNeRV/model/snerv.py:68-71 HFR HH high-frequency residual head (decoder[dl+2])",
+    ),
+    (
+        "tub_output_2",
+        "tub",
+        "tub.output2_raw",
+        "SNeRV/model/snerv_t.py:142-150 TUB output_2 temporal-fusion frame residual",
+    ),
+    (
+        "tub_temporal_encoder",
+        "tub",
+        "tub.temporal_encoder_concat",
+        "SNeRV/model/snerv_t.py:125-136 TUB temporal-encoder concat (output_2 decoder input)",
+    ),
+)
+
+# Minimal representable dyadic step used to establish STRUCTURAL receiver
+# causality when the lowest-mantissa-bit flip is annihilated by the float64
+# conv/upsample arithmetic (the conservative minimal flip can be sub-arithmetic
+# resolution through the decoder stack; a representable 2**-6 nudge is the
+# smallest source-faithful step that survives the dyadic-fixture arithmetic and
+# answers "does this facet reach the receiver RGB at all").
+_MFU_HFR_TUB_STRUCTURAL_STEP = float(2.0**-6)
+
+
+def _flip_low_mantissa_bit_array(array: np.ndarray) -> np.ndarray:
+    """Flip the lowest mantissa bit of every finite, non-zero float64 element.
+
+    Identical conservative single-bit source mutation to the C1 reference: it is
+    the smallest representable nonzero change, so anything it propagates to is a
+    real causal channel (not a large-perturbation artifact).
+    """
+
+    flat = np.ascontiguousarray(np.asarray(array, dtype=np.float64)).copy()
+    if flat.size == 0:
+        return flat
+    bits = flat.view(np.uint64)
+    mask = np.isfinite(flat) & (flat != 0.0)
+    bits[mask] ^= np.uint64(1)
+    out = bits.view(np.float64)
+    if not bool(np.any(mask)):
+        out = flat + np.float64(np.finfo(np.float64).eps)
+    return out.reshape(np.asarray(array).shape)
+
+
+def _representable_dyadic_nudge(array: np.ndarray, *, step: float) -> np.ndarray:
+    """Add a representable dyadic ``step`` to every finite element of ``array``.
+
+    A dyadic step added to a dyadic-fixture value is exactly representable in
+    float64, so the perturbed array is a real, source-faithful alternative state
+    (not a rounding artifact).  Used only to answer structural causality when the
+    minimal mantissa flip is annihilated by the decoder arithmetic.
+    """
+
+    flat = np.ascontiguousarray(np.asarray(array, dtype=np.float64)).copy()
+    finite = np.isfinite(flat)
+    flat[finite] = flat[finite] + np.float64(step)
+    return flat.reshape(np.asarray(array).shape)
+
+
+def _rgb_uint8_from_receiver_frame(frame: np.ndarray) -> np.ndarray:
+    """Map a float receiver frame to uint8 the way the scorer boundary sees it."""
+
+    arr = np.asarray(frame, dtype=np.float64)
+    scaled = (arr * 0.5 + 0.5) * 255.0
+    return np.clip(np.rint(scaled), 0, 255).astype(np.uint8)
+
+
+def _max_abs_float_delta(left: np.ndarray, right: np.ndarray) -> float | None:
+    a = np.asarray(left, dtype=np.float64)
+    b = np.asarray(right, dtype=np.float64)
+    if a.shape != b.shape:
+        return None
+    delta = np.abs(a - b)
+    if not np.all(np.isfinite(delta)):
+        return None
+    return float(np.max(delta)) if delta.size else 0.0
+
+
+def _max_abs_uint8_delta(left: np.ndarray, right: np.ndarray) -> int | None:
+    a = np.asarray(left).astype(np.int64)
+    b = np.asarray(right).astype(np.int64)
+    if a.shape != b.shape:
+        return None
+    return int(np.max(np.abs(a - b))) if a.size else 0
+
+
+def _reference_mfu_hfr_pose_proxy(rgb: np.ndarray) -> np.ndarray:
+    # Non-authority pose proxy.  Normalize uint8 RGB to [0, 1] BEFORE projection
+    # so the deterministic random projection cannot overflow on tiny frames; the
+    # absolute scale carries no score authority, only the difference matters.
+    arr = np.asarray(rgb, dtype=np.float64) / 255.0
+    flat = arr.reshape(arr.shape[0], -1) if arr.ndim >= 2 else arr.reshape(1, -1)
+    n_features = int(flat.shape[-1]) if flat.shape[-1] > 0 else 1
+    rng = np.random.default_rng(20260609)
+    proj = rng.standard_normal((n_features, 6)) / np.sqrt(float(n_features))
+    # The inputs are [0, 1] and the result is finite; some BLAS matmul backends
+    # emit a spurious "divide by zero" RuntimeWarning here, so silence it locally.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        return np.ascontiguousarray(flat) @ proj
+
+
+def _default_mfu_hfr_reference_scorer(
+    base_rgb_uint8: np.ndarray,
+    candidate_rgb_uint8: np.ndarray,
+) -> dict[str, float]:
+    """Deterministic, scorer-SHAPED but NON-AUTHORITY d_seg/d_pose reference.
+
+    NOT the trained contest SegNet/PoseNet — it mirrors only the functional
+    definitions (SegNet argmax-disagreement RATE; PoseNet first-6-dim MSE) so the
+    proof can confirm that a receiver-RGB change is sufficient to perturb the
+    scorer terms.  The absolute magnitude carries no score authority.
+    """
+
+    base = np.asarray(base_rgb_uint8).astype(np.float64)
+    cand = np.asarray(candidate_rgb_uint8).astype(np.float64)
+    if base.shape != cand.shape or base.ndim < 4:
+        return {"d_seg": 0.0, "d_pose": 0.0}
+    last_base = base[..., -1, :, :, :] if base.ndim == 5 else base[-1]
+    last_cand = cand[..., -1, :, :, :] if cand.ndim == 5 else cand[-1]
+    base_argmax = np.argmax(last_base, axis=-3)
+    cand_argmax = np.argmax(last_cand, axis=-3)
+    d_seg = float(np.mean((base_argmax != cand_argmax).astype(np.float64)))
+    base_pose = _reference_mfu_hfr_pose_proxy(base)
+    cand_pose = _reference_mfu_hfr_pose_proxy(cand)
+    d_pose = float(np.mean((base_pose - cand_pose) ** 2))
+    return {"d_seg": d_seg, "d_pose": d_pose}
+
+
+def _coerce_mfu_hfr_scorer_metrics(
+    raw: Any,
+    *,
+    facet_id: str,
+    blockers: list[str],
+) -> dict[str, float] | None:
+    if not isinstance(raw, Mapping):
+        blockers.append(
+            f"snerv_official_mfu_hfr_tub_drop_or_reify_scorer_output_invalid:{facet_id}"
+        )
+        return None
+    out: dict[str, float] = {}
+    for field in ("d_seg", "d_pose"):
+        value = raw.get(field)
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_drop_or_reify_scorer_metric_invalid:"
+                f"{facet_id}:{field}"
+            )
+            return None
+        if not np.isfinite(parsed) or parsed < 0.0:
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_drop_or_reify_scorer_metric_invalid:"
+                f"{facet_id}:{field}"
+            )
+            return None
+        out[field] = parsed
+    return out
+
+
+def _build_mfu_hfr_tub_receiver_capture(official_root: Path) -> dict[str, Any]:
+    """Run the official MFU/HFR/TUB graph once; capture receiver state + base RGB.
+
+    Returns the receiver payload header + the expanded receiver tensor manifest
+    (the source-state the receiver actually consumes) plus the base receiver RGB
+    rendered by the real ``OfficialMfuHfrTubReceiverPayload.decode_frames``.
+    """
+
+    fixture = _build_official_fixture(official_root)
+    mfu = _portable_mfu_from_state_dict(fixture)
+    heads = _portable_hfr_from_state_dict(fixture)
+    low = _positive_fixture((2, fixture.spec.low_channels, 2, 3), modulo=7)
+    skip_mid = _positive_fixture((2, fixture.spec.mid_channels, 4, 6), modulo=11)
+    skip_high = _positive_fixture((2, fixture.spec.high_channels, 8, 12), modulo=13)
+    hfr_out = heads.forward(mfu.forward(low, skip_mid, skip_high).pyr_out)
+    tub_current = _positive_fixture((3, 8, 12), modulo=19)
+    tub_previous = tub_current + 0.125
+    tub_next_frame = tub_current + 0.25
+    fc_hw = (2, 3)
+    frame_channels = int(hfr_out.yh_out.shape[1])
+    frame_h = int(hfr_out.yh_out.shape[-2]) * 2
+    frame_w = int(hfr_out.yh_out.shape[-1]) * 2
+    output2_h = max(1, frame_h // fc_hw[0])
+    output2_w = max(1, frame_w // fc_hw[1])
+    temporal_encoder_concat = _positive_fixture(
+        (1, frame_channels * 2, output2_h, output2_w), modulo=23
+    )
+    output2_raw = _positive_fixture(
+        (2, frame_channels * fc_hw[0] * fc_hw[1], output2_h, output2_w), modulo=29
+    )
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        mfu=mfu,
+        hfr_heads=heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=tub_current,
+        tub_previous=tub_previous,
+        tub_next_frame=tub_next_frame,
+        temporal_encoder_output_shape=tuple(int(v) for v in temporal_encoder_concat.shape),
+        fc_hw=fc_hw,
+        output2_decoder_output_shape=tuple(int(v) for v in output2_raw.shape),
+        tub_temporal_encoder_concat=temporal_encoder_concat,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(
+        payload, expand_mfu_inputs=True
+    )
+    base_frames = _render_mfu_hfr_tub_receiver_frames(header, tensors, payload)
+    base_rgb_uint8 = _rgb_uint8_from_receiver_frame(base_frames)
+    return {
+        "header": dict(header),
+        "tensors": {k: np.asarray(v, dtype=np.float64) for k, v in tensors.items()},
+        "payload": bytes(payload),
+        "payload_sha256": _archive_sha256(bytes(payload)),
+        "payload_bytes": len(bytes(payload)),
+        "base_frames": np.asarray(base_frames, dtype=np.float64),
+        "base_rgb_uint8": base_rgb_uint8,
+        "decoder_len": int(fixture.decoder_len),
+    }
+
+
+def _render_mfu_hfr_tub_receiver_frames(
+    header: Mapping[str, Any],
+    tensors: Mapping[str, np.ndarray],
+    payload: bytes,
+) -> np.ndarray:
+    """Render receiver frames via the REAL official receiver-RGB primitive."""
+
+    obj = OfficialMfuHfrTubReceiverPayload(
+        header=dict(header),
+        tensors={k: np.asarray(v, dtype=np.float64) for k, v in tensors.items()},
+        payload_sha256=_archive_sha256(bytes(payload)),
+        payload_bytes=len(bytes(payload)),
+    )
+    return np.asarray(obj.decode_frames(clip_to_uint8_range=False), dtype=np.float64)
+
+
+def _evaluate_mfu_hfr_tub_facet_drop_or_reify(
+    *,
+    facet_id: str,
+    family: str,
+    receiver_key: str,
+    source_contract: str,
+    capture: Mapping[str, Any],
+    action_id: str,
+    scorer_fn: Any | None,
+) -> dict[str, Any]:
+    """Flip ONE MFU/HFR/TUB source facet; re-render receiver RGB; classify."""
+
+    header = capture["header"]
+    payload = capture["payload"]
+    tensors = capture["tensors"]
+    base_frames = np.asarray(capture["base_frames"], dtype=np.float64)
+    base_rgb_uint8 = np.asarray(capture["base_rgb_uint8"])
+    base_archive_sha256 = str(capture["payload_sha256"])
+    bytes_base = int(capture["payload_bytes"])
+    blockers: list[str] = []
+
+    if receiver_key not in tensors:
+        return {
+            "schema": MFU_HFR_TUB_DROP_OR_REIFY_FACET_SCHEMA,
+            "facet": facet_id,
+            "family": family,
+            "verdict": MFU_HFR_TUB_VERDICT_DROP,
+            "receiver_key": receiver_key,
+            "source_contract": source_contract,
+            "receiver_key_present": False,
+            "source_byte_changed": False,
+            "receiver_consumes_facet": False,
+            "blockers": _ordered_unique(
+                [
+                    "snerv_official_mfu_hfr_tub_drop_or_reify_receiver_key_absent:"
+                    + facet_id
+                ]
+            ),
+            **FALSE_AUTHORITY,
+        }
+
+    source_state = np.asarray(tensors[receiver_key], dtype=np.float64)
+
+    # Probe 1 (canonical, conservative): lowest mantissa bit flip.
+    flipped_min = _flip_low_mantissa_bit_array(source_state)
+    min_source_byte_changed = bool(
+        _max_abs_float_delta(source_state, flipped_min) not in (None, 0.0)
+    )
+    min_tensors = dict(tensors)
+    min_tensors[receiver_key] = flipped_min
+    cand_frames_min = _render_mfu_hfr_tub_receiver_frames(header, min_tensors, payload)
+    min_frame_linf = _max_abs_float_delta(base_frames, cand_frames_min)
+    min_flip_receiver_causal = bool(min_frame_linf not in (None, 0.0))
+
+    # Probe 2 (structural fallback): minimal representable dyadic step. Only used
+    # to decide DROP-vs-REIFY when the minimal flip is annihilated by the decoder
+    # arithmetic. The flipped frame is rendered by the SAME real primitive.
+    nudged = _representable_dyadic_nudge(
+        source_state, step=_MFU_HFR_TUB_STRUCTURAL_STEP
+    )
+    structural_source_byte_changed = bool(
+        _max_abs_float_delta(source_state, nudged) not in (None, 0.0)
+    )
+    struct_tensors = dict(tensors)
+    struct_tensors[receiver_key] = nudged
+    cand_frames_struct = _render_mfu_hfr_tub_receiver_frames(
+        header, struct_tensors, payload
+    )
+    struct_frame_linf = _max_abs_float_delta(base_frames, cand_frames_struct)
+    structural_receiver_causal = bool(struct_frame_linf not in (None, 0.0))
+
+    receiver_consumes_facet = bool(
+        min_flip_receiver_causal or structural_receiver_causal
+    )
+
+    # The candidate RGB used for the scorer / uint8-survival gate is the one from
+    # whichever probe established causality (prefer the conservative minimal flip
+    # when it is itself causal, else the structural probe).
+    if min_flip_receiver_causal:
+        causal_candidate_frames = cand_frames_min
+        causal_probe = "min_mantissa_flip"
+    elif structural_receiver_causal:
+        causal_candidate_frames = cand_frames_struct
+        causal_probe = "representable_dyadic_step"
+    else:
+        causal_candidate_frames = cand_frames_min
+        causal_probe = None
+    candidate_rgb_uint8 = _rgb_uint8_from_receiver_frame(causal_candidate_frames)
+    rgb_uint8_linf = _max_abs_uint8_delta(base_rgb_uint8, candidate_rgb_uint8)
+    survives_uint8_boundary = bool(rgb_uint8_linf not in (None, 0))
+
+    if not min_source_byte_changed:
+        blockers.append(
+            "snerv_official_mfu_hfr_tub_drop_or_reify_source_byte_unchanged:" + facet_id
+        )
+
+    reference_scorer = _default_mfu_hfr_reference_scorer(
+        base_rgb_uint8, candidate_rgb_uint8
+    )
+    reference_scorer_changed = bool(
+        float(reference_scorer["d_seg"]) > 0.0
+        or float(reference_scorer["d_pose"]) > 0.0
+    )
+
+    candidate_action_evaluation: dict[str, Any] | None = None
+    scorer_delta: dict[str, Any] | None = None
+
+    if not receiver_consumes_facet:
+        verdict = MFU_HFR_TUB_VERDICT_DROP
+        blockers.append(
+            "snerv_official_mfu_hfr_tub_drop_or_reify_receiver_rgb_unchanged:" + facet_id
+        )
+    elif scorer_fn is not None and survives_uint8_boundary:
+        base_metrics = _coerce_mfu_hfr_scorer_metrics(
+            scorer_fn(base_rgb_uint8, base_rgb_uint8),
+            facet_id=facet_id,
+            blockers=blockers,
+        )
+        cand_metrics = _coerce_mfu_hfr_scorer_metrics(
+            scorer_fn(base_rgb_uint8, candidate_rgb_uint8),
+            facet_id=facet_id,
+            blockers=blockers,
+        )
+        if base_metrics is not None and cand_metrics is not None:
+            evaluation = CandidateActionEvaluation(
+                action_id=f"{action_id}:{facet_id}",
+                action_kind="snerv_mfu_hfr_tub_source_state_facet_flip",
+                base_archive_sha256=base_archive_sha256,
+                # A source-state flip adds 0 bytes -> with-action bytes == base.
+                with_action_archive_sha256=base_archive_sha256,
+                d_seg_base=float(base_metrics["d_seg"]),
+                d_pose_base=float(base_metrics["d_pose"]),
+                bytes_base=int(bytes_base),
+                d_seg_with_action=float(cand_metrics["d_seg"]),
+                d_pose_with_action=float(cand_metrics["d_pose"]),
+                bytes_with_action=int(bytes_base),
+                scorer_effect_survived=True,
+                evidence_grade="advisory",
+            )
+            candidate_action_evaluation = evaluation.to_row()
+            scorer_delta = {
+                "d_seg_base": float(base_metrics["d_seg"]),
+                "d_pose_base": float(base_metrics["d_pose"]),
+                "d_seg_with_action": float(cand_metrics["d_seg"]),
+                "d_pose_with_action": float(cand_metrics["d_pose"]),
+                "delta_score_total": evaluation.delta_score_total,
+                "delta_score_nonrate": evaluation.delta_score_nonrate,
+                "delta_bytes": evaluation.delta_bytes,
+                "pays_rent": evaluation.pays_rent,
+            }
+            verdict = MFU_HFR_TUB_VERDICT_REIFY
+        else:
+            verdict = MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+            blockers.append(MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER)
+    else:
+        verdict = MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+        blockers.append(MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER)
+        if not survives_uint8_boundary:
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_drop_or_reify_minimal_flip_sub_uint8_boundary:"
+                + facet_id
+            )
+        if not min_flip_receiver_causal and structural_receiver_causal:
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_drop_or_reify_min_flip_arithmetic_annihilated:"
+                + facet_id
+            )
+
+    return {
+        "schema": MFU_HFR_TUB_DROP_OR_REIFY_FACET_SCHEMA,
+        "facet": facet_id,
+        "family": family,
+        "verdict": verdict,
+        "receiver_key": receiver_key,
+        "source_contract": source_contract,
+        "receiver_key_present": True,
+        "source_byte_changed": bool(min_source_byte_changed),
+        "structural_source_byte_changed": bool(structural_source_byte_changed),
+        "receiver_consumes_facet": receiver_consumes_facet,
+        "min_flip_receiver_causal": min_flip_receiver_causal,
+        "structural_receiver_causal": structural_receiver_causal,
+        "causality_probe_used": causal_probe,
+        "structural_step": _MFU_HFR_TUB_STRUCTURAL_STEP,
+        "receiver_frame_float_linf_min_flip": min_frame_linf,
+        "receiver_frame_float_linf_structural": struct_frame_linf,
+        "receiver_rgb_uint8_linf": rgb_uint8_linf,
+        "survives_uint8_boundary": survives_uint8_boundary,
+        "source_state_sha256": _hash_array_exact(source_state),
+        "min_flipped_state_sha256": _hash_array_exact(flipped_min),
+        "structural_nudged_state_sha256": _hash_array_exact(nudged),
+        "base_rgb_uint8_sha256": _hash_array_exact(base_rgb_uint8),
+        "candidate_rgb_uint8_sha256": _hash_array_exact(candidate_rgb_uint8),
+        "reference_scorer_delta": reference_scorer,
+        "reference_scorer_changed": reference_scorer_changed,
+        "reference_scorer_authority": False,
+        "scorer_delta": scorer_delta,
+        "candidate_action_evaluation": candidate_action_evaluation,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof(
+    *,
+    official_repo_dir: str | Path = DEFAULT_OFFICIAL_SNERV_REPO,
+    action_id: str = "snerv_mfu_hfr_tub_drop_or_reify_source_forward_proof",
+    scorer_fn: Any | None = None,
+    generated_utc: str | None = None,
+) -> dict[str, Any]:
+    """Prove or refuse MFU/HFR/TUB source-state causality, facet by facet.
+
+    The DROP_OR_REIFY law (the C1 criterion applied to the MFU/HFR/TUB receiver):
+    a source-state facet earns archive bytes ONLY if a flip in that SOURCE state
+    causally propagates to the receiver RGB the contest scorer consumes (REIFY).
+    If the receiver never consumes the facet, the flip leaves the receiver RGB
+    unchanged and the facet is metadata-only (DROP); it gets no bytes.
+
+    Mechanism (CPU-portable, deterministic, NO paid dispatch):
+
+    1. Run the pinned upstream ``model.snerv.SNeRV`` source graph once via the
+       sparse-dyadic fixture to capture the receiver-consumed source state
+       (the MFU low/skip feeds + high-res residual weights, the HFR head weights,
+       and the TUB output_2 temporal residual) plus the base receiver RGB rendered
+       by the REAL ``OfficialMfuHfrTubReceiverPayload.decode_frames`` primitive.
+    2. For each facet, flip the lowest mantissa bit of the SOURCE state and
+       re-render the receiver RGB through the same real primitive.  When the
+       minimal flip is annihilated by the float64 decoder arithmetic, a minimal
+       representable dyadic step probe answers whether the facet reaches the
+       receiver RGB at all (structural causality).
+    3. REIFY iff the receiver RGB changes AND it survives the uint8 boundary AND a
+       real ``scorer_fn`` is supplied -> emit a base-bound
+       ``CandidateActionEvaluation`` (0 added bytes -> admission is pure
+       distortion-ΔS) for the shared evaluator-action waterfilling law.  DROP iff
+       the receiver never consumes the facet.  Otherwise REIFY_PENDING_SCORER
+       (receiver-causal but no real scorer OR sub-uint8 minimal flip).
+
+    ``scorer_fn`` must be ``(base_rgb_uint8, candidate_rgb_uint8) ->
+    {"d_seg": float, "d_pose": float}`` on contest hardware.  A deterministic,
+    scorer-shaped but NON-AUTHORITY reference is always run in parallel to confirm
+    sufficiency of the RGB change; it never sets a score claim.
+
+    This row carries NO score / promotion / rank-or-kill / dispatch authority.
+    """
+
+    official_root = Path(official_repo_dir)
+    if generated_utc is None:
+        generated_utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    base = {
+        "schema": MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA,
+        "family": "snerv",
+        "component_id": "mfu_hfr_tub",
+        "action_id": str(action_id),
+        "generated_utc": generated_utc,
+        "authority": "source_forward_drop_or_reify_proof_no_score_claim",
+        "official_repo": {
+            "repo_url": OFFICIAL_REPO_URL,
+            "root": official_root.as_posix(),
+            "head_sha": _git_head_sha(official_root),
+            "expected_head_sha": OFFICIAL_SNERV_SHA,
+        },
+        "source_graph_executed": False,
+        "real_scorer_supplied": scorer_fn is not None,
+        "research_only": scorer_fn is None,
+        "drop_or_reify_verdict": None,
+        "facets": [],
+        "candidate_action_evaluations": [],
+        "allowed_verdicts": list(MFU_HFR_TUB_DROP_OR_REIFY_VERDICTS),
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+
+    if not official_root.exists():
+        return {
+            **base,
+            "blockers": [
+                "snerv_official_source_checkout_missing",
+                MFU_HFR_TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER,
+            ],
+        }
+
+    try:
+        capture = _build_mfu_hfr_tub_receiver_capture(official_root)
+    except Exception as exc:  # fail-closed: a broken source graph proves nothing.
+        return {
+            **base,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                MFU_HFR_TUB_DROP_OR_REIFY_SOURCE_GRAPH_BLOCKER,
+                "snerv_official_mfu_hfr_tub_drop_or_reify_source_graph_failed:"
+                + type(exc).__name__,
+            ],
+        }
+
+    facets: list[dict[str, Any]] = []
+    evaluations: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for facet_id, family, receiver_key, source_contract in _MFU_HFR_TUB_FACETS:
+        facet = _evaluate_mfu_hfr_tub_facet_drop_or_reify(
+            facet_id=facet_id,
+            family=family,
+            receiver_key=receiver_key,
+            source_contract=source_contract,
+            capture=capture,
+            action_id=action_id,
+            scorer_fn=scorer_fn,
+        )
+        facets.append(facet)
+        blockers.extend(facet.get("blockers", ()))
+        if facet.get("candidate_action_evaluation") is not None:
+            evaluations.append(facet["candidate_action_evaluation"])
+
+    reified = [f["facet"] for f in facets if f["verdict"] == MFU_HFR_TUB_VERDICT_REIFY]
+    reify_pending = [
+        f["facet"]
+        for f in facets
+        if f["verdict"] == MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+    ]
+    dropped = [f["facet"] for f in facets if f["verdict"] == MFU_HFR_TUB_VERDICT_DROP]
+    # Headline verdict: REIFY if any facet reified with a real scorer; else
+    # REIFY_PENDING_SCORER if any facet is receiver-causal; else DROP.
+    if reified:
+        headline = MFU_HFR_TUB_VERDICT_REIFY
+    elif reify_pending:
+        headline = MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+    else:
+        headline = MFU_HFR_TUB_VERDICT_DROP
+
+    family_verdicts: dict[str, str] = {}
+    for fam in ("mfu", "hfr", "tub"):
+        fam_facets = [f for f in facets if f["family"] == fam]
+        if any(f["verdict"] == MFU_HFR_TUB_VERDICT_REIFY for f in fam_facets):
+            family_verdicts[fam] = MFU_HFR_TUB_VERDICT_REIFY
+        elif any(
+            f["verdict"] == MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+            for f in fam_facets
+        ):
+            family_verdicts[fam] = MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+        else:
+            family_verdicts[fam] = MFU_HFR_TUB_VERDICT_DROP
+
+    return {
+        **base,
+        "source_graph_executed": True,
+        "source_graph_scope": (
+            "official_snerv_mfu_hfr_tub_receiver_decode_frames_cpu_portable"
+        ),
+        "base_receiver_payload_sha256": str(capture["payload_sha256"]),
+        "base_receiver_payload_bytes": int(capture["payload_bytes"]),
+        "base_rgb_uint8_sha256": _hash_array_exact(capture["base_rgb_uint8"]),
+        "decoder_len": int(capture["decoder_len"]),
+        "drop_or_reify_verdict": headline,
+        "family_verdicts": family_verdicts,
+        "facets": facets,
+        "candidate_action_evaluations": evaluations,
+        "reified_facets": reified,
+        "reify_pending_scorer_facets": reify_pending,
+        "dropped_facets": dropped,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _positive_fixture(shape: Sequence[int], *, modulo: int) -> np.ndarray:
     values = (np.arange(int(np.prod(shape)), dtype=np.float64).reshape(tuple(shape)) % modulo) + 1
     return (values / 64.0).astype(np.float64)
@@ -2460,10 +3144,17 @@ __all__ = [
     "BIT_FLIP_FALSIFICATION_SCHEMA",
     "DEFAULT_OFFICIAL_SNERV_REPO",
     "FALSE_AUTHORITY",
+    "MFU_HFR_TUB_DROP_OR_REIFY_FACET_SCHEMA",
+    "MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA",
+    "MFU_HFR_TUB_DROP_OR_REIFY_VERDICTS",
+    "MFU_HFR_TUB_VERDICT_DROP",
+    "MFU_HFR_TUB_VERDICT_REIFY",
+    "MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER",
     "OFFICIAL_SNERV_SHA",
     "SCHEMA",
     "SOURCE_REPLAY_SCHEMA",
     "TRAINED_CHECKPOINT_MAPPING_SCHEMA",
+    "build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof",
     "build_snerv_official_source_forward_harness_artifact",
     "build_snerv_official_trained_checkpoint_mapping_manifest",
 ]

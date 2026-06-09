@@ -100,6 +100,24 @@ CHECKPOINT_REPORT_MISSING_BLOCKER = (
 AUTHORITY_GATE_MISSING_BLOCKER = (
     "snerv_official_tub_lf_hf_decoder_replacement_authority_gate_missing"
 )
+# C2 — MFU/HFR/TUB source-state DROP_OR_REIFY binding.  The gate consumes the
+# proof from
+# ``snerv_official_source_forward_harness.build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof``
+# so the launch authority reflects which MFU/HFR/TUB source-state facets the
+# receiver RGB actually consumes (REIFY/REIFY_PENDING_SCORER) vs which are
+# metadata-only (DROP).
+MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA = (
+    "snerv_mfu_hfr_tub_drop_or_reify_source_forward_proof.v1"
+)
+MFU_HFR_TUB_DROP_OR_REIFY_MISSING_BLOCKER = (
+    "snerv_official_mfu_hfr_tub_drop_or_reify_proof_missing"
+)
+MFU_HFR_TUB_DROP_OR_REIFY_NO_CAUSAL_FACET_BLOCKER = (
+    "snerv_official_mfu_hfr_tub_drop_or_reify_no_receiver_causal_facet"
+)
+MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER = (
+    "snerv_official_mfu_hfr_tub_drop_or_reify_scorer_delta_pending_real_scorer"
+)
 SOURCE_FORWARD_AUTHORITY_RESIDUAL_BLOCKERS: frozenset[str] = frozenset(
     {
         "official_weight_tensor_mapping_not_loaded",
@@ -124,13 +142,22 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
     source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
     checkpoint_export_reports: Sequence[Mapping[str, Any]] = (),
     tub_source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
+    mfu_hfr_tub_drop_or_reify_proofs: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     lane_id: str = DEFAULT_LANE_ID,
     generated_utc: str | None = None,
     min_free_bytes: int = DEFAULT_MIN_FREE_BYTES,
     allow_local_output: bool = False,
 ) -> dict[str, Any]:
-    """Build a queue-consumable proof/blocker report for the official TUB lane."""
+    """Build a queue-consumable proof/blocker report for the official TUB lane.
+
+    ``mfu_hfr_tub_drop_or_reify_proofs`` (optional) are C2 facet-causality proofs
+    from
+    ``snerv_official_source_forward_harness.build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof``.
+    When supplied, the gate adds a ``mfu_hfr_tub_drop_or_reify_binding`` row so the
+    launch authority reflects which MFU/HFR/TUB source-state facets the receiver
+    RGB consumes.  Omitting it preserves the prior gate DAG unchanged.
+    """
 
     if not str(lane_id).strip():
         raise SnervOfficialTubLfHfReplacementAuthorityGateError(
@@ -150,6 +177,9 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
     source_state = _source_state(source)
     checkpoint_state = _checkpoint_state(checkpoint, source_state)
     tub_state = _tub_state(tub, source_state)
+    drop_or_reify_state = _mfu_hfr_tub_drop_or_reify_state(
+        mfu_hfr_tub_drop_or_reify_proofs
+    )
     tub_fixture_replay_ready = bool(
         source_state["tub_source_fixture_replay_ready"]
         or tub_state["fixture_source_replay_passed"]
@@ -207,6 +237,16 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
             ],
         ),
     ]
+    # C2 binding gate (only when proofs are supplied — preserves the prior DAG).
+    if drop_or_reify_state["proof_supplied"]:
+        gates.append(
+            _gate(
+                "mfu_hfr_tub_drop_or_reify_binding",
+                ["full_tub_source_forward_replay"],
+                drop_or_reify_state["binding_ready"],
+                drop_or_reify_state["blockers"],
+            )
+        )
     replacement_ready = all(not gate["blocked"] for gate in gates)
     replacement_blockers = _dedupe(
         [blocker for gate in gates for blocker in gate["blockers"]]
@@ -296,6 +336,7 @@ def build_snerv_official_tub_lf_hf_replacement_authority_gate(
         "source_forward_evidence": source_state,
         "checkpoint_export_evidence": checkpoint_state,
         "tub_source_forward_evidence": tub_state,
+        "mfu_hfr_tub_drop_or_reify_evidence": drop_or_reify_state,
         "gate_rows": gates,
         "gate_row_count": len(gates),
         "blocked_gate_row_count": sum(1 for gate in gates if gate["blocked"]),
@@ -1185,6 +1226,97 @@ def _tub_state(
         "full_tub_source_forward_parity_proven": full_tub,
         "closed_campaign_blockers": list(tub.get("closed_blockers") or ()),
         "blockers": [],
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _mfu_hfr_tub_drop_or_reify_state(
+    proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Classify the C2 MFU/HFR/TUB DROP_OR_REIFY proof for the launch gate.
+
+    The binding question this gate answers: has the harness PROVEN which
+    MFU/HFR/TUB source-state facets the receiver RGB consumes?  ``binding_ready``
+    is True when the proof executed the real source graph AND at least one facet
+    is receiver-causal (REIFY or REIFY_PENDING_SCORER) — i.e. the source-forward
+    binding is established and the launch authority can route those facets into
+    the rate/distortion law.  A REIFY_PENDING_SCORER-only proof still carries the
+    scorer-pending blocker (no real SegNet/PoseNet ΔS yet), so the binding is
+    proven but the SCORE authority remains pending C4.  No proof -> the binding is
+    unproven (blocked); the prior DAG behaviour is preserved when this is empty.
+    """
+
+    valid = [
+        proof
+        for proof in proofs
+        if isinstance(proof, Mapping)
+        and proof.get("schema") == MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA
+    ]
+    if not valid:
+        return {
+            "schema": "snerv_official_tub_lf_hf_mfu_hfr_tub_drop_or_reify_state.v1",
+            "proof_supplied": False,
+            "proof_count": 0,
+            "binding_ready": False,
+            "source_graph_executed": False,
+            "headline_verdict": None,
+            "family_verdicts": {},
+            "reified_facets": [],
+            "reify_pending_scorer_facets": [],
+            "dropped_facets": [],
+            "real_scorer_supplied": False,
+            "blockers": [MFU_HFR_TUB_DROP_OR_REIFY_MISSING_BLOCKER],
+            **QUEUE_FALSE_AUTHORITY,
+        }
+
+    # Prefer the most recently generated proof that executed the source graph.
+    selected = max(
+        valid,
+        key=lambda proof: (
+            1 if proof.get("source_graph_executed") is True else 0,
+            str(proof.get("generated_utc") or ""),
+        ),
+    )
+    source_graph_executed = selected.get("source_graph_executed") is True
+    reified = list(selected.get("reified_facets") or ())
+    reify_pending = list(selected.get("reify_pending_scorer_facets") or ())
+    dropped = list(selected.get("dropped_facets") or ())
+    headline = selected.get("drop_or_reify_verdict")
+    real_scorer = selected.get("real_scorer_supplied") is True
+    has_causal_facet = bool(reified) or bool(reify_pending)
+
+    blockers: list[str] = []
+    if not source_graph_executed:
+        blockers.append(MFU_HFR_TUB_DROP_OR_REIFY_MISSING_BLOCKER)
+    if not has_causal_facet:
+        blockers.append(MFU_HFR_TUB_DROP_OR_REIFY_NO_CAUSAL_FACET_BLOCKER)
+    # REIFY_PENDING_SCORER-only (no real-scorer REIFY) keeps the scorer-pending
+    # blocker: the binding is proven but the score-authority ΔS is still C4.
+    if not reified and reify_pending:
+        blockers.append(MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER)
+
+    # binding_ready: the source graph ran AND at least one facet is receiver-causal
+    # (the binding question is answered). It does NOT require a real scorer — the
+    # scorer ΔS is a separate, explicitly-surfaced blocker.
+    binding_ready = bool(source_graph_executed and has_causal_facet)
+
+    return {
+        "schema": "snerv_official_tub_lf_hf_mfu_hfr_tub_drop_or_reify_state.v1",
+        "proof_supplied": True,
+        "proof_count": len(valid),
+        "binding_ready": binding_ready,
+        "source_graph_executed": source_graph_executed,
+        "headline_verdict": headline,
+        "family_verdicts": dict(selected.get("family_verdicts") or {}),
+        "reified_facets": reified,
+        "reify_pending_scorer_facets": reify_pending,
+        "dropped_facets": dropped,
+        "real_scorer_supplied": real_scorer,
+        "selected_proof_generated_utc": selected.get("generated_utc"),
+        "candidate_action_evaluation_count": len(
+            selected.get("candidate_action_evaluations") or ()
+        ),
+        "blockers": _dedupe(blockers),
         **QUEUE_FALSE_AUTHORITY,
     }
 

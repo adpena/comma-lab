@@ -18,6 +18,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from tac.analysis.snerv_lf_hf_runtime_binding import (
     SCHEMA as SNERV_LF_HF_RUNTIME_BINDING_PROOF_SCHEMA,
 )
@@ -33,6 +35,7 @@ from tac.analysis.snerv_source_forward_proof import (
     SNERV_SOURCE_FORWARD_PROOF_ACTION_EFFECT_SCHEMA,
     validate_snerv_source_forward_proof_action_effect,
 )
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_PROOF_STATUS_SCHEMA,
@@ -40,6 +43,16 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_NUMERIC_FIELDS,
     OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_REQUIRED_PROOF_FIELDS,
     OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_TENSOR_HASH_GROUP_FIELDS,
+)
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SnervFrameCode,
+    decode_frame,
+    encode_frame_lf,
+    fit_hf_decoder_least_squares,
+    quantize_lf,
+)
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    encode_lf_quant_payload_v2_with_report,
 )
 
 SCHEMA = "snerv_lf_hf_replacement_queue.v1"
@@ -610,6 +623,359 @@ def _zero_float(value: Any) -> bool:
     except (TypeError, ValueError):
         return False
     return math.isfinite(parsed) and parsed == 0.0
+
+
+# ---------------------------------------------------------------------------
+# C3 — LF/HF carrier byte-pressure ↔ receiver-RGB-collapse curve
+#
+# The SNeRV hard blocker (per AGENTS.md / CLAUDE.md) is "LF/HF representation
+# collapse under real byte pressure".  The existing lf_payload_codec_sweep is a
+# RATE-ONLY surface (bytes, no visual metric, no scorer replay).  This C3 surface
+# adds the missing DISTORTION axis: it drives the REAL LF/HF carrier (encode_frame_lf
+# wavelet pyramid -> quantize_lf at a sweep of quantization granularities ->
+# entropy-code -> dequantize_lf -> decode_frame inverse-DWT + HF restorer) and
+# measures the receiver-RGB collapse (frame float linf, uint8 linf, and the
+# argmax-disagreement RATE that the SegNet term is defined over) at each byte
+# operating point.  No real SegNet/PoseNet is run here, so the row is
+# research_only=true with a concrete pending blocker: the real scorer terms at
+# the real operating point must be measured on contest hardware (C4).
+# ---------------------------------------------------------------------------
+
+LF_HF_BYTE_PRESSURE_CURVE_SCHEMA = "snerv_lf_hf_byte_pressure_curve.v1"
+LF_HF_BYTE_PRESSURE_POINT_SCHEMA = "snerv_lf_hf_byte_pressure_point.v1"
+
+# Canonical byte-pressure sweep: quantization granularity (n_levels) is the LF
+# carrier's rate knob — fewer levels => coarser LF => fewer entropy-coded bytes.
+DEFAULT_LF_HF_BYTE_PRESSURE_N_LEVELS: tuple[int, ...] = (256, 128, 64, 32, 16, 8, 4, 2)
+
+# The byte operating point where the receiver RGB "collapses": argmax-disagreement
+# fraction (the SegNet-term functional) crossing this threshold means a majority
+# of last-frame pixels flip class vs the finest-quant baseline.  Non-authority
+# threshold; the real SegNet d_seg at the operating point is the C4 question.
+LF_HF_COLLAPSE_ARGMAX_DISAGREE_THRESHOLD = 0.5
+
+LF_HF_BYTE_PRESSURE_SCORER_PENDING_BLOCKER = (
+    "snerv_lf_hf_byte_pressure_real_scorer_terms_pending_contest_hardware"
+)
+
+
+def _lf_hf_byte_pressure_reference_frame(
+    height: int, width: int, *, hf_amplitude: float = 0.0
+) -> np.ndarray:
+    """Deterministic gray test frame: smooth LF gradient + optional HF texture.
+
+    The LF gradient exercises the LF carrier (the rate knob).  ``hf_amplitude``
+    adds high-frequency texture; EMPIRICALLY the single-frame least-squares HF
+    restorer (``fit_hf_decoder_least_squares``) DIVERGES on any nonzero HF content
+    (the receiver frame blows far outside [0, 255] even at the finest quant), so
+    the default is smooth-only (``hf_amplitude=0``) which keeps the finest-quant
+    baseline faithful and isolates the LF-coarsening collapse.  Passing nonzero
+    ``hf_amplitude`` is how the caller probes the HF-restorer-instability regime;
+    the curve flags it via ``baseline_faithful=False``.  Values are in [0, 255].
+    """
+
+    yy, xx = np.meshgrid(
+        np.arange(int(height)), np.arange(int(width)), indexing="ij"
+    )
+    lf = 128.0 + 60.0 * np.sin(xx / 4.0) + 40.0 * np.cos(yy / 3.0)
+    frame = lf + float(hf_amplitude) * np.sin(xx / 1.3) * np.cos(yy / 1.1)
+    return np.clip(frame, 0.0, 255.0).astype(np.float64)
+
+
+def _lf_hf_argmax_disagree_fraction(
+    base_uint8: np.ndarray, candidate_uint8: np.ndarray
+) -> float:
+    """Per-pixel disagreement RATE — the functional the SegNet d_seg term uses.
+
+    For a single gray plane this is the fraction of pixels whose rounded uint8
+    value differs; it is the receiver-RGB-collapse proxy, NON-AUTHORITY (the real
+    SegNet argmaxes 5-class logits, not gray pixels)."""
+
+    a = np.asarray(base_uint8)
+    b = np.asarray(candidate_uint8)
+    if a.shape != b.shape or a.size == 0:
+        return 0.0
+    return float(np.mean((a != b).astype(np.float64)))
+
+
+def build_snerv_lf_hf_byte_pressure_curve(
+    *,
+    frame_height: int = 32,
+    frame_width: int = 48,
+    levels: int = 3,
+    wavelet: str = "db2",
+    hf_amplitude: float = 0.0,
+    n_levels_sweep: Sequence[int] = DEFAULT_LF_HF_BYTE_PRESSURE_N_LEVELS,
+    scorer_fn: Any | None = None,
+    generated_utc: str | None = None,
+) -> dict[str, Any]:
+    """Measure the LF/HF carrier receiver-RGB collapse under byte pressure.
+
+    Drives the REAL SNeRV LF/HF carrier and reports, per byte operating point:
+
+    * ``lf_payload_bytes`` — entropy-coded LF carrier bytes (the rate axis);
+    * ``receiver_frame_float_linf`` / ``receiver_rgb_uint8_linf`` — receiver-RGB
+      distortion vs the finest-quantization baseline (the distortion axis);
+    * ``argmax_disagree_fraction`` — the per-pixel disagreement RATE the SegNet
+      term is defined over (the collapse metric);
+    * ``reference_scorer_delta`` — a NON-AUTHORITY scorer-shaped d_seg/d_pose pair.
+
+    When a real ``scorer_fn`` ``(base_rgb_uint8, candidate_rgb_uint8) ->
+    {"d_seg": float, "d_pose": float}`` is supplied (contest hardware), each point
+    also emits a base-bound ``CandidateActionEvaluation``: a byte-pressure step
+    REMOVES bytes (``delta_bytes < 0``) so any score reduction is unconditionally
+    rent-paying — the curve doubles as the LF-carrier rate-distortion frontier the
+    waterfilling law selects an operating point from.
+
+    Without a real scorer this row is ``research_only=true`` and carries
+    ``LF_HF_BYTE_PRESSURE_SCORER_PENDING_BLOCKER`` (the real SegNet/PoseNet terms
+    at the operating point are the C4 question).  NO score / promotion authority.
+    """
+
+    if generated_utc is None:
+        generated_utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    sweep = tuple(int(v) for v in n_levels_sweep)
+    base = {
+        "schema": LF_HF_BYTE_PRESSURE_CURVE_SCHEMA,
+        "family": "snerv",
+        "component_id": "lf_hf_carrier",
+        "generated_utc": generated_utc,
+        "axis_tag": AXIS_TAG,
+        "authority": "lf_hf_byte_pressure_distortion_curve_no_score_claim",
+        "real_scorer_supplied": scorer_fn is not None,
+        "research_only": scorer_fn is None,
+        "frame_shape": [int(frame_height), int(frame_width)],
+        "levels": int(levels),
+        "wavelet": str(wavelet),
+        "hf_amplitude": float(hf_amplitude),
+        "n_levels_sweep": list(sweep),
+        "collapse_argmax_disagree_threshold": LF_HF_COLLAPSE_ARGMAX_DISAGREE_THRESHOLD,
+        "points": [],
+        "candidate_action_evaluations": [],
+        "blockers": [],
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+    if not sweep:
+        return {**base, "blockers": ["snerv_lf_hf_byte_pressure_empty_sweep"]}
+    if any(v < 2 for v in sweep):
+        return {**base, "blockers": ["snerv_lf_hf_byte_pressure_n_levels_below_2"]}
+
+    try:
+        frame = _lf_hf_byte_pressure_reference_frame(
+            frame_height, frame_width, hf_amplitude=float(hf_amplitude)
+        )
+        pyramid = encode_frame_lf(frame, levels=int(levels), wavelet=str(wavelet))
+        decoder = fit_hf_decoder_least_squares([pyramid], int(levels))
+    except Exception as exc:  # fail-closed: a broken carrier proves nothing.
+        return {
+            **base,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                "snerv_lf_hf_byte_pressure_carrier_failed:" + type(exc).__name__
+            ],
+        }
+
+    def _reconstruct(n_levels: int) -> tuple[int, np.ndarray]:
+        quant, scale, zero = quantize_lf(pyramid.lf, n_levels=int(n_levels))
+        payload, _report = encode_lf_quant_payload_v2_with_report([quant])
+        code = SnervFrameCode(
+            lf_quant=quant,
+            lf_scale=scale,
+            lf_zero=zero,
+            lf_shape=tuple(int(v) for v in quant.shape),
+            levels=int(levels),
+            wavelet=str(wavelet),
+            orig_hw=(int(frame_height), int(frame_width)),
+            per_element_steps=None,
+        )
+        frame_recon = np.asarray(decode_frame(code, decoder), dtype=np.float64)
+        return len(bytes(payload)), frame_recon
+
+    def _rgb_uint8(gray: np.ndarray) -> np.ndarray:
+        return np.clip(np.rint(np.asarray(gray, dtype=np.float64)), 0, 255).astype(
+            np.uint8
+        )
+
+    # Finest quantization is the baseline the collapse is measured against.
+    finest_levels = max(sweep)
+    finest_bytes, base_frame = _reconstruct(finest_levels)
+    base_rgb_uint8 = _rgb_uint8(base_frame)
+    # HF-restorer instability detector: the least-squares HF decoder diverges on
+    # HF content even at the finest quant (the receiver frame leaves [0, 255]).
+    # When the baseline is itself unfaithful, the byte-pressure curve below is
+    # measuring divergence, not graceful LF coarsening — flag it honestly.
+    base_min = float(np.min(base_frame))
+    base_max = float(np.max(base_frame))
+    baseline_faithful = bool(base_min >= -1.0 and base_max <= 256.0)
+
+    points: list[dict[str, Any]] = []
+    evaluations: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    collapse_n_levels: int | None = None
+    collapse_bytes: int | None = None
+    if not baseline_faithful:
+        blockers.append(
+            "snerv_lf_hf_byte_pressure_hf_restorer_diverges_finest_baseline_unfaithful"
+        )
+
+    for n_levels in sweep:
+        payload_bytes, frame_recon = _reconstruct(n_levels)
+        cand_rgb_uint8 = _rgb_uint8(frame_recon)
+        frame_float_linf = float(np.max(np.abs(base_frame - frame_recon)))
+        rgb_uint8_linf = int(
+            np.max(np.abs(base_rgb_uint8.astype(np.int64) - cand_rgb_uint8.astype(np.int64)))
+        )
+        argmax_disagree = _lf_hf_argmax_disagree_fraction(base_rgb_uint8, cand_rgb_uint8)
+        collapsed = bool(argmax_disagree >= LF_HF_COLLAPSE_ARGMAX_DISAGREE_THRESHOLD)
+        if collapsed and collapse_n_levels is None:
+            collapse_n_levels = int(n_levels)
+            collapse_bytes = int(payload_bytes)
+
+        reference_scorer = _lf_hf_byte_pressure_reference_scorer(
+            base_rgb_uint8, cand_rgb_uint8
+        )
+
+        candidate_action_evaluation: dict[str, Any] | None = None
+        scorer_delta: dict[str, Any] | None = None
+        if scorer_fn is not None:
+            point_blockers: list[str] = []
+            base_metrics = _coerce_lf_hf_scorer_metrics(
+                scorer_fn(base_rgb_uint8, base_rgb_uint8),
+                n_levels=n_levels,
+                blockers=point_blockers,
+            )
+            cand_metrics = _coerce_lf_hf_scorer_metrics(
+                scorer_fn(base_rgb_uint8, cand_rgb_uint8),
+                n_levels=n_levels,
+                blockers=point_blockers,
+            )
+            blockers.extend(point_blockers)
+            if base_metrics is not None and cand_metrics is not None:
+                evaluation = CandidateActionEvaluation(
+                    action_id=f"snerv_lf_hf_byte_pressure:n_levels_{int(n_levels)}",
+                    action_kind="snerv_lf_hf_carrier_quantization_byte_pressure",
+                    base_archive_sha256=_lf_hf_payload_sha(finest_bytes, finest_levels),
+                    with_action_archive_sha256=_lf_hf_payload_sha(
+                        payload_bytes, n_levels
+                    ),
+                    d_seg_base=float(base_metrics["d_seg"]),
+                    d_pose_base=float(base_metrics["d_pose"]),
+                    bytes_base=int(finest_bytes),
+                    d_seg_with_action=float(cand_metrics["d_seg"]),
+                    d_pose_with_action=float(cand_metrics["d_pose"]),
+                    bytes_with_action=int(payload_bytes),
+                    scorer_effect_survived=bool(rgb_uint8_linf > 0),
+                    evidence_grade="advisory",
+                )
+                candidate_action_evaluation = evaluation.to_row()
+                scorer_delta = {
+                    "delta_score_total": evaluation.delta_score_total,
+                    "delta_score_nonrate": evaluation.delta_score_nonrate,
+                    "delta_bytes": evaluation.delta_bytes,
+                    "value_per_byte": evaluation.value_per_byte,
+                    "pays_rent": evaluation.pays_rent,
+                }
+                evaluations.append(candidate_action_evaluation)
+        else:
+            blockers.append(LF_HF_BYTE_PRESSURE_SCORER_PENDING_BLOCKER)
+
+        points.append(
+            {
+                "schema": LF_HF_BYTE_PRESSURE_POINT_SCHEMA,
+                "n_levels": int(n_levels),
+                "lf_payload_bytes": int(payload_bytes),
+                "delta_bytes_vs_finest": int(payload_bytes) - int(finest_bytes),
+                "receiver_frame_float_linf": frame_float_linf,
+                "receiver_rgb_uint8_linf": rgb_uint8_linf,
+                "argmax_disagree_fraction": argmax_disagree,
+                "receiver_rgb_collapsed": collapsed,
+                "is_finest_baseline": bool(int(n_levels) == int(finest_levels)),
+                "reference_scorer_delta": reference_scorer,
+                "reference_scorer_authority": False,
+                "scorer_delta": scorer_delta,
+                "candidate_action_evaluation": candidate_action_evaluation,
+                **QUEUE_FALSE_AUTHORITY,
+            }
+        )
+
+    return {
+        **base,
+        "carrier_executed": True,
+        "carrier_scope": "snerv_real_lf_hf_wavelet_carrier_encode_quantize_decode_cpu_portable",
+        "finest_n_levels": int(finest_levels),
+        "finest_lf_payload_bytes": int(finest_bytes),
+        "finest_baseline_frame_min": base_min,
+        "finest_baseline_frame_max": base_max,
+        "finest_baseline_faithful": baseline_faithful,
+        "hf_restorer_diverges": not baseline_faithful,
+        "base_rgb_uint8_sha256": hashlib.sha256(
+            np.ascontiguousarray(base_rgb_uint8).tobytes()
+        ).hexdigest(),
+        "collapse_onset_n_levels": collapse_n_levels,
+        "collapse_onset_lf_payload_bytes": collapse_bytes,
+        "receiver_rgb_collapses_under_byte_pressure": bool(
+            collapse_n_levels is not None
+        ),
+        "points": points,
+        "candidate_action_evaluations": evaluations,
+        "blockers": _dedupe(blockers),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _lf_hf_payload_sha(payload_bytes: int, n_levels: int) -> str:
+    return hashlib.sha256(
+        f"snerv_lf_hf_byte_pressure:{int(payload_bytes)}:{int(n_levels)}".encode()
+    ).hexdigest()
+
+
+def _lf_hf_byte_pressure_reference_scorer(
+    base_rgb_uint8: np.ndarray, candidate_rgb_uint8: np.ndarray
+) -> dict[str, float]:
+    """NON-AUTHORITY scorer-shaped d_seg/d_pose for the byte-pressure point.
+
+    d_seg mirrors the argmax-disagreement RATE; d_pose mirrors a first-6-dim MSE
+    on a fixed linear pose proxy.  Magnitudes carry no score authority."""
+
+    base = np.asarray(base_rgb_uint8, dtype=np.float64) / 255.0
+    cand = np.asarray(candidate_rgb_uint8, dtype=np.float64) / 255.0
+    if base.shape != cand.shape or base.size == 0:
+        return {"d_seg": 0.0, "d_pose": 0.0}
+    d_seg = _lf_hf_argmax_disagree_fraction(base_rgb_uint8, candidate_rgb_uint8)
+    n_features = int(base.size)
+    rng = np.random.default_rng(20260609)
+    proj = rng.standard_normal((n_features, 6)) / np.sqrt(float(n_features))
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        base_pose = np.ascontiguousarray(base.reshape(1, -1)) @ proj
+        cand_pose = np.ascontiguousarray(cand.reshape(1, -1)) @ proj
+    d_pose = float(np.mean((base_pose - cand_pose) ** 2))
+    return {"d_seg": float(d_seg), "d_pose": d_pose}
+
+
+def _coerce_lf_hf_scorer_metrics(
+    raw: Any, *, n_levels: int, blockers: list[str]
+) -> dict[str, float] | None:
+    if not isinstance(raw, Mapping):
+        blockers.append(f"snerv_lf_hf_byte_pressure_scorer_output_invalid:{int(n_levels)}")
+        return None
+    out: dict[str, float] = {}
+    for field in ("d_seg", "d_pose"):
+        value = raw.get(field)
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            blockers.append(
+                f"snerv_lf_hf_byte_pressure_scorer_metric_invalid:{int(n_levels)}:{field}"
+            )
+            return None
+        if not math.isfinite(parsed) or parsed < 0.0:
+            blockers.append(
+                f"snerv_lf_hf_byte_pressure_scorer_metric_invalid:{int(n_levels)}:{field}"
+            )
+            return None
+        out[field] = parsed
+    return out
 
 
 def render_snerv_lf_hf_replacement_queue_markdown(report: Mapping[str, Any]) -> str:

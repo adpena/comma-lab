@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 from pathlib import Path
 
@@ -3622,3 +3623,118 @@ def _lf_hf_runtime_binding_proof(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+# ---------------------------------------------------------------------------
+# C3 — LF/HF carrier byte-pressure ↔ receiver-RGB-collapse curve (NO-FAKE: real
+# wavelet carrier encode/quantize/decode, behavioral collapse assertions).
+# ---------------------------------------------------------------------------
+
+from tac.analysis.snerv_lf_hf_replacement_queue import (  # noqa: E402
+    LF_HF_BYTE_PRESSURE_CURVE_SCHEMA,
+    LF_HF_COLLAPSE_ARGMAX_DISAGREE_THRESHOLD,
+    build_snerv_lf_hf_byte_pressure_curve,
+)
+
+
+def test_lf_hf_byte_pressure_curve_runs_real_carrier() -> None:
+    curve = build_snerv_lf_hf_byte_pressure_curve(generated_utc="20260609T000000Z")
+    assert curve["schema"] == LF_HF_BYTE_PRESSURE_CURVE_SCHEMA
+    assert curve["carrier_executed"] is True
+    assert curve["research_only"] is True
+    assert curve["score_claim"] is False
+    assert curve["promotable"] is False
+    assert curve["ready_for_exact_eval_dispatch"] is False
+    # The smooth-only default keeps the finest-quant baseline faithful (the HF
+    # restorer does not diverge), so the curve measures real LF coarsening.
+    assert curve["finest_baseline_faithful"] is True
+    assert curve["hf_restorer_diverges"] is False
+    # One point per sweep entry; the finest point is the baseline (zero collapse).
+    points = curve["points"]
+    assert len(points) == len(curve["n_levels_sweep"])
+    finest = next(p for p in points if p["is_finest_baseline"])
+    assert finest["receiver_rgb_uint8_linf"] == 0
+    assert finest["argmax_disagree_fraction"] == 0.0
+    assert finest["receiver_rgb_collapsed"] is False
+
+
+def test_lf_hf_byte_pressure_curve_collapse_is_monotone_in_pressure() -> None:
+    curve = build_snerv_lf_hf_byte_pressure_curve(generated_utc="20260609T000000Z")
+    # BEHAVIORAL: coarser quantization (fewer n_levels) => larger receiver-RGB
+    # distortion.  Walk the sweep from finest to coarsest and assert the uint8
+    # linf is non-decreasing (the collapse is real, not a constant).
+    by_levels = sorted(curve["points"], key=lambda p: -int(p["n_levels"]))
+    linfs = [int(p["receiver_rgb_uint8_linf"]) for p in by_levels]
+    assert linfs[0] == 0  # finest baseline
+    assert linfs[-1] > linfs[0]  # coarsest collapses
+    for prev, nxt in itertools.pairwise(linfs):
+        assert nxt >= prev
+    # The collapse actually crosses the argmax-disagreement threshold at some
+    # byte operating point (the SegNet-term functional collapses under pressure).
+    assert curve["receiver_rgb_collapses_under_byte_pressure"] is True
+    assert curve["collapse_onset_n_levels"] is not None
+    onset = next(
+        p for p in curve["points"]
+        if int(p["n_levels"]) == int(curve["collapse_onset_n_levels"])
+    )
+    assert (
+        onset["argmax_disagree_fraction"]
+        >= LF_HF_COLLAPSE_ARGMAX_DISAGREE_THRESHOLD
+    )
+
+
+def test_lf_hf_byte_pressure_curve_flags_hf_restorer_divergence() -> None:
+    # With HF content the single-frame least-squares HF restorer diverges even at
+    # the finest quant; the curve must flag baseline unfaithfulness (honest C3).
+    curve = build_snerv_lf_hf_byte_pressure_curve(
+        hf_amplitude=12.0, generated_utc="20260609T000000Z"
+    )
+    assert curve["finest_baseline_faithful"] is False
+    assert curve["hf_restorer_diverges"] is True
+    assert (
+        "snerv_lf_hf_byte_pressure_hf_restorer_diverges_finest_baseline_unfaithful"
+        in curve["blockers"]
+    )
+    # The baseline frame really left the uint8 range (real divergence, not a flag
+    # set by fiat): min < -1 or max > 256.
+    assert (
+        float(curve["finest_baseline_frame_min"]) < -1.0
+        or float(curve["finest_baseline_frame_max"]) > 256.0
+    )
+
+
+def test_lf_hf_byte_pressure_curve_emits_rate_distortion_candidate_actions() -> None:
+    # With a real-shaped scorer, each byte-pressure step that REMOVES bytes and
+    # LOWERS distortion is rent-paying; verify the currency wiring (a coarser
+    # carrier that does not raise the scorer terms frees bytes => pays rent).
+    def cheap_scorer(base_rgb, cand_rgb):
+        # Scorer that is INDIFFERENT to the pixel change (d_seg/d_pose constant):
+        # then a byte-removing step has delta_score_total == delta_rate < 0.
+        return {"d_seg": 0.0, "d_pose": 0.0}
+
+    curve = build_snerv_lf_hf_byte_pressure_curve(
+        generated_utc="20260609T000000Z", scorer_fn=cheap_scorer
+    )
+    assert curve["research_only"] is False
+    evals = curve["candidate_action_evaluations"]
+    assert len(evals) == len(curve["n_levels_sweep"])
+    # Points that remove bytes (delta_bytes < 0) under an indifferent scorer pay
+    # rent (the rate term drops, distortion unchanged).
+    byte_removing = [ev for ev in evals if ev["delta_bytes"] < 0]
+    assert byte_removing, "expected at least one byte-removing operating point"
+    for ev in byte_removing:
+        assert ev["delta_score_total"] < 0.0
+        assert ev["pays_rent"] is True
+        assert ev["score_claim"] is False
+
+
+def test_lf_hf_byte_pressure_curve_rejects_empty_and_invalid_sweep() -> None:
+    empty = build_snerv_lf_hf_byte_pressure_curve(
+        n_levels_sweep=(), generated_utc="20260609T000000Z"
+    )
+    assert "snerv_lf_hf_byte_pressure_empty_sweep" in empty["blockers"]
+    assert empty.get("carrier_executed") is not True
+    bad = build_snerv_lf_hf_byte_pressure_curve(
+        n_levels_sweep=(256, 1), generated_utc="20260609T000000Z"
+    )
+    assert "snerv_lf_hf_byte_pressure_n_levels_below_2" in bad["blockers"]

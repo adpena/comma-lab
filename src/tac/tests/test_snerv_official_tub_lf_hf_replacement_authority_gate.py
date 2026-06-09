@@ -641,3 +641,109 @@ def _checkpoint_export_report(*, trained_mapping: bool) -> dict[str, object]:
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+# ---------------------------------------------------------------------------
+# C2 binding — the authority gate consumes the MFU/HFR/TUB DROP_OR_REIFY proof
+# (NO-FAKE: real proof object drives the binding gate; behavioral assertions).
+# ---------------------------------------------------------------------------
+
+import pytest  # noqa: E402
+
+from tac.analysis.snerv_official_source_forward_harness import (  # noqa: E402
+    DEFAULT_OFFICIAL_SNERV_REPO,
+    build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof,
+)
+from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (  # noqa: E402
+    MFU_HFR_TUB_DROP_OR_REIFY_MISSING_BLOCKER,
+    MFU_HFR_TUB_DROP_OR_REIFY_NO_CAUSAL_FACET_BLOCKER,
+    MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA,
+    MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER,
+)
+
+
+def test_authority_gate_omits_binding_row_without_proof(tmp_path: Path) -> None:
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        output_root=tmp_path,
+        allow_local_output=True,
+    )
+    gate_ids = [row["gate_id"] for row in report["gate_rows"]]
+    # The prior DAG is preserved unchanged when no proof is supplied.
+    assert "mfu_hfr_tub_drop_or_reify_binding" not in gate_ids
+    evidence = report["mfu_hfr_tub_drop_or_reify_evidence"]
+    assert evidence["proof_supplied"] is False
+    assert evidence["binding_ready"] is False
+    assert MFU_HFR_TUB_DROP_OR_REIFY_MISSING_BLOCKER in evidence["blockers"]
+
+
+def test_authority_gate_binds_real_drop_or_reify_proof(tmp_path: Path) -> None:
+    if not DEFAULT_OFFICIAL_SNERV_REPO.exists():
+        pytest.skip(f"official SNeRV checkout is absent: {DEFAULT_OFFICIAL_SNERV_REPO}")
+    proof = build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof(
+        official_repo_dir=DEFAULT_OFFICIAL_SNERV_REPO,
+        generated_utc="20260609T000000Z",
+    )
+    report = build_snerv_official_tub_lf_hf_replacement_authority_gate(
+        output_root=tmp_path,
+        allow_local_output=True,
+        mfu_hfr_tub_drop_or_reify_proofs=[proof],
+    )
+    gate_ids = [row["gate_id"] for row in report["gate_rows"]]
+    assert "mfu_hfr_tub_drop_or_reify_binding" in gate_ids
+    evidence = report["mfu_hfr_tub_drop_or_reify_evidence"]
+    # The binding question is answered: the source graph ran and >=1 facet is
+    # receiver-causal (REIFY/REIFY_PENDING_SCORER), so binding_ready is True.
+    assert evidence["proof_supplied"] is True
+    assert evidence["source_graph_executed"] is True
+    assert evidence["binding_ready"] is True
+    assert evidence["reify_pending_scorer_facets"], "expected causal facets"
+    assert evidence["dropped_facets"], "expected metadata-only DROP facets"
+    # Research-only proof => scorer ΔS still pending (the C4 blocker is surfaced).
+    assert (
+        MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER in evidence["blockers"]
+    )
+    # The binding gate row is correctly BLOCKED on the pending scorer (binding
+    # proven, score authority pending) — never falsely "ready".
+    row = next(
+        r for r in report["gate_rows"]
+        if r["gate_id"] == "mfu_hfr_tub_drop_or_reify_binding"
+    )
+    assert row["blocked"] is True
+    assert MFU_HFR_TUB_DROP_OR_REIFY_SCORER_PENDING_BLOCKER in row["blockers"]
+    assert report["score_claim"] is False
+    assert report["promotable"] is False
+
+
+def test_authority_gate_binding_blocks_on_no_causal_facet() -> None:
+    # A synthetic proof with NO receiver-causal facet must block the binding gate
+    # with the no-causal-facet blocker (the receiver consumes nothing -> no bytes).
+    synthetic = {
+        "schema": MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA,
+        "source_graph_executed": True,
+        "real_scorer_supplied": False,
+        "drop_or_reify_verdict": "DROP",
+        "family_verdicts": {"mfu": "DROP", "hfr": "DROP", "tub": "DROP"},
+        "reified_facets": [],
+        "reify_pending_scorer_facets": [],
+        "dropped_facets": ["mfu_low", "mfu_skip_mid"],
+        "candidate_action_evaluations": [],
+        "generated_utc": "20260609T000000Z",
+    }
+    from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
+        _mfu_hfr_tub_drop_or_reify_state,
+    )
+
+    state = _mfu_hfr_tub_drop_or_reify_state([synthetic])
+    assert state["proof_supplied"] is True
+    assert state["binding_ready"] is False
+    assert MFU_HFR_TUB_DROP_OR_REIFY_NO_CAUSAL_FACET_BLOCKER in state["blockers"]
+
+
+def test_authority_gate_binding_ignores_wrong_schema_proofs() -> None:
+    from tac.analysis.snerv_official_tub_lf_hf_replacement_authority_gate import (
+        _mfu_hfr_tub_drop_or_reify_state,
+    )
+
+    state = _mfu_hfr_tub_drop_or_reify_state([{"schema": "not_the_proof", "x": 1}])
+    assert state["proof_supplied"] is False
+    assert MFU_HFR_TUB_DROP_OR_REIFY_MISSING_BLOCKER in state["blockers"]

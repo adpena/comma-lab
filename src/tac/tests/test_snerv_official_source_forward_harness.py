@@ -728,3 +728,171 @@ def _proven_component_row(component_id: str, sha: str) -> dict[str, object]:
         "official_output_sha256": sha,
         "portable_output_sha256": sha,
     }
+
+
+# ---------------------------------------------------------------------------
+# C2 — MFU/HFR/TUB source-state DROP_OR_REIFY proof (NO-FAKE: real source graph,
+# real receiver-RGB causality, behavioral assertions — never constants).
+# ---------------------------------------------------------------------------
+
+from tac.analysis.snerv_official_source_forward_harness import (  # noqa: E402
+    MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA,
+    MFU_HFR_TUB_VERDICT_DROP,
+    MFU_HFR_TUB_VERDICT_REIFY,
+    MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER,
+    build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof,
+)
+
+
+def _mfu_hfr_tub_proof(scorer_fn=None) -> dict:
+    return build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof(
+        official_repo_dir=_official_repo(),
+        scorer_fn=scorer_fn,
+        generated_utc="20260609T000000Z",
+    )
+
+
+def test_mfu_hfr_tub_drop_or_reify_runs_real_source_graph() -> None:
+    proof = _mfu_hfr_tub_proof()
+    assert proof["schema"] == MFU_HFR_TUB_DROP_OR_REIFY_PROOF_SCHEMA
+    # Real source graph executed; research-only (no scorer); false authority.
+    assert proof["source_graph_executed"] is True
+    assert proof["research_only"] is True
+    assert proof["real_scorer_supplied"] is False
+    assert proof["score_claim"] is False
+    assert proof["promotion_eligible"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+    # A real receiver payload was rendered (non-empty sha + positive bytes).
+    assert len(str(proof["base_receiver_payload_sha256"])) == 64
+    assert int(proof["base_receiver_payload_bytes"]) > 0
+
+
+def test_mfu_hfr_tub_drop_or_reify_facets_classified_by_receiver_causality() -> None:
+    proof = _mfu_hfr_tub_proof()
+    facets = {f["facet"]: f for f in proof["facets"]}
+    # All 8 canonical facets are evaluated.
+    assert set(facets) == {
+        "mfu_low",
+        "mfu_skip_mid",
+        "mfu_skip_high",
+        "mfu_rb_high_residual",
+        "hfr_lh_head",
+        "hfr_hh_head",
+        "tub_output_2",
+        "tub_temporal_encoder",
+    }
+    # Every verdict is one of the canonical three.
+    for facet in facets.values():
+        assert facet["verdict"] in {
+            MFU_HFR_TUB_VERDICT_REIFY,
+            MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER,
+            MFU_HFR_TUB_VERDICT_DROP,
+        }
+    # BEHAVIORAL: a DROP facet must have receiver_consumes_facet False AND zero
+    # receiver-RGB change for BOTH probes (it really does not reach the receiver).
+    for facet in facets.values():
+        if facet["verdict"] == MFU_HFR_TUB_VERDICT_DROP:
+            assert facet["receiver_consumes_facet"] is False
+            assert facet["receiver_frame_float_linf_min_flip"] == 0.0
+            assert facet["receiver_frame_float_linf_structural"] == 0.0
+        else:
+            # REIFY / REIFY_PENDING_SCORER => receiver consumes the facet AND the
+            # receiver RGB actually changes under at least one probe.
+            assert facet["receiver_consumes_facet"] is True
+            assert (
+                (facet["receiver_frame_float_linf_min_flip"] or 0.0) > 0.0
+                or (facet["receiver_frame_float_linf_structural"] or 0.0) > 0.0
+            )
+
+
+def test_mfu_hfr_tub_drop_or_reify_known_causal_and_noncausal_facets() -> None:
+    # These verdicts are EMPIRICALLY established by the receiver-RGB primitive on
+    # the real source fixture; the test pins the causal map (behavior, not const).
+    proof = _mfu_hfr_tub_proof()
+    facets = {f["facet"]: f for f in proof["facets"]}
+    # skip_high + high-res residual + HFR heads + output_2 reach the receiver RGB.
+    for causal in (
+        "mfu_skip_high",
+        "mfu_rb_high_residual",
+        "hfr_lh_head",
+        "hfr_hh_head",
+        "tub_output_2",
+    ):
+        assert facets[causal]["receiver_consumes_facet"] is True, causal
+        assert facets[causal]["verdict"] == MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+    # low + skip_mid + temporal_encoder do NOT reach the receiver RGB -> DROP.
+    for dropped in ("mfu_low", "mfu_skip_mid", "tub_temporal_encoder"):
+        assert facets[dropped]["receiver_consumes_facet"] is False, dropped
+        assert facets[dropped]["verdict"] == MFU_HFR_TUB_VERDICT_DROP
+
+
+def test_mfu_hfr_tub_drop_or_reify_research_only_has_no_evaluations() -> None:
+    proof = _mfu_hfr_tub_proof()
+    # No real scorer -> no CandidateActionEvaluation rows, headline pending.
+    assert proof["candidate_action_evaluations"] == []
+    assert proof["drop_or_reify_verdict"] == MFU_HFR_TUB_VERDICT_REIFY_PENDING_SCORER
+    pending_blocker = (
+        "snerv_official_mfu_hfr_tub_drop_or_reify_scorer_delta_pending_real_scorer"
+    )
+    assert pending_blocker in proof["blockers"]
+
+
+def test_mfu_hfr_tub_drop_or_reify_scorer_emits_zero_byte_candidate_actions() -> None:
+    # A source-state flip adds 0 bytes; verify the CandidateActionEvaluation
+    # currency reflects delta_bytes == 0 (admission is pure distortion-ΔS).
+    def scorer(base_rgb, cand_rgb):
+        base = np.asarray(base_rgb, dtype=np.float64)
+        cand = np.asarray(cand_rgb, dtype=np.float64)
+        if base.shape != cand.shape:
+            return {"d_seg": 0.0, "d_pose": 0.0}
+        return {
+            "d_seg": 0.0,
+            "d_pose": float(np.mean((base - cand) ** 2)) / (255.0**2),
+        }
+
+    proof = _mfu_hfr_tub_proof(scorer_fn=scorer)
+    assert proof["real_scorer_supplied"] is True
+    assert proof["research_only"] is False
+    assert proof["drop_or_reify_verdict"] == MFU_HFR_TUB_VERDICT_REIFY
+    evals = proof["candidate_action_evaluations"]
+    # One CAE per receiver-causal facet that survives uint8 (5 known causal).
+    assert len(evals) == 5
+    for ev in evals:
+        assert ev["delta_bytes"] == 0
+        # A perturbation that INCREASES distortion raises score -> reject.
+        assert ev["delta_score_total"] > 0.0
+        assert ev["pays_rent"] is False
+        assert ev["verdict"] == "reject"
+        assert ev["score_claim"] is False
+        assert ev["promotable"] is False
+
+
+def test_mfu_hfr_tub_drop_or_reify_rent_paid_when_scorer_lowers_distortion() -> None:
+    # The currency must admit when the candidate LOWERS the score. A scorer where
+    # base has distortion and the flipped candidate fixes it -> delta_score < 0.
+    def rent_paying_scorer(base_rgb, cand_rgb):
+        base = np.asarray(base_rgb)
+        cand = np.asarray(cand_rgb)
+        if np.array_equal(base, cand):
+            return {"d_seg": 0.02, "d_pose": 0.02}
+        return {"d_seg": 0.0, "d_pose": 0.0}
+
+    proof = _mfu_hfr_tub_proof(scorer_fn=rent_paying_scorer)
+    evals = proof["candidate_action_evaluations"]
+    assert evals, "expected CandidateActionEvaluation rows for causal facets"
+    for ev in evals:
+        assert ev["delta_bytes"] == 0
+        assert ev["delta_score_total"] < 0.0
+        assert ev["pays_rent"] is True
+        assert ev["verdict"] == "admit"
+
+
+def test_mfu_hfr_tub_drop_or_reify_missing_checkout_fails_closed() -> None:
+    proof = build_snerv_official_mfu_hfr_tub_drop_or_reify_source_forward_proof(
+        official_repo_dir=Path("/nonexistent/snerv/checkout"),
+        generated_utc="20260609T000000Z",
+    )
+    assert proof["source_graph_executed"] is False
+    assert "snerv_official_source_checkout_missing" in proof["blockers"]
+    assert proof["drop_or_reify_verdict"] is None
+    assert proof["score_claim"] is False
