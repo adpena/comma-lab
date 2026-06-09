@@ -59,9 +59,36 @@ the scorer is even resolvable on the radial grid (w=30 ≈ 9.5 cyc/image vs band
 honest reading: `sin_frequency` should be a **per-scale Nyquist-capped + LEARNED ω** initialized from
 the MEASURED scorer peak (the atlas's `headline.seg_peak.siren_w_equivalent` / `pose_peak`), not a
 global scalar. The atlas (run via the CLI; `log` spacing) places bands across the low-frequency regime
-so the measured peak's w-equivalent is the DERIVED replacement value. [Full-grid + fast-grid atlas
-JSONs under `/Volumes/VertigoDataTier/pact/scorer_spectral_atlas*_20260609/` — `[macOS-CPU advisory]`,
-mechanism_update_eligible only.]
+so the measured peak's w-equivalent is the DERIVED replacement value.
+
+### Empirical measured peak (minimal-grid run, the concrete answer)
+
+A minimal v2 atlas (1 pair, 3 log-bands, a=4 LSB, {isotropic,vertical} × {frame1_only,both_opposite}
+× {rgb:all, yuv:y}, exact frozen DistortionNet, `[macOS-CPU advisory]`) measured:
+
+| Peak | H | band | orient | channel | incidence | **w_equiv** | scorer cyc/px | alias |
+|---|---:|---|---|---|---|---:|---:|---|
+| SEG | +0.00569 | 0 | **vertical** | **yuv:y (luma)** | frame1_only | **294** | 0.244 | no |
+| POSE | +0.27627 | 0 | **vertical** | **yuv:y (luma)** | **both_opposite** | **294** | 0.244 | no |
+| MARGIN | +0.929 | 0 | vertical | yuv:y | both_opposite | 294 | 0.244 | no |
+
+All three peaks land at the **lowest log-band, vertical orientation, luma channel**, with
+**w_equiv ≈ 294 ≈ 30.8× the carrier's w=30** (w=30 ≈ 9.5 cyc/image). Two more findings the v2
+hardenings surfaced that v1 could not: (1) **POSE is luma + inter-frame**: at the peak cell H_pose is
+**+0.2763 (both_opposite) vs +0.0064 (frame1_only)** — a 43× difference confirming PoseNet keys on the
+inter-frame motion structure (design-memo §6); (2) **vertical orientation beats isotropic** for both
+axes (vertical FFT structure = horizontal-axis edges = lane-lines/horizon), which a v1 isotropic
+radial shell smears away. Boundary-vs-interior flip split used a MEASURED p25 source-margin threshold
+of 5.22 (not a hand-set constant).
+
+Caveat (honest scope): this minimal grid has band0 spanning r∈[0, 0.303] (w_equiv at its center ≈ 294);
+the true peak likely sits even lower in frequency (more low-bands would resolve it), but it is already
+~31× above w=30 — the qualitative w-verdict is robust. The full/fast grids
+(`/Volumes/VertigoDataTier/pact/scorer_spectral_atlas*_20260609/`) were SIGURG-killed mid-run (the
+tool-background-process reaper per MEMORY.md "durable detached daemons"); the minimal grid was run
+synchronously to completion. A complete high-resolution sweep should be launched as a true nohup
+daemon (not a tool-bg process) per that MEMORY lesson. The atlas artifact carries
+`mechanism_update_eligible=True` / `promotable=False`.
 
 This MEASURED peak is exactly the `replacement_path` the hi_nerv constants-provenance manifest cites
 for `sin_frequency` — closing the loop: D1 measures the value, D2 records that `sin_frequency=30` is
