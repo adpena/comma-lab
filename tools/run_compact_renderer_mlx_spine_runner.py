@@ -19982,6 +19982,39 @@ def _write_hi_nerv_runner_birth_parseback_survival_for_archive(
         row["canonical_launch_gate_schema"] = False
     row["artifact_path"] = row_path.as_posix()
     row["producer"] = "hi_nerv_runner_archive_selection_birth_parseback_survival"
+    # AUTONOMOUS BACKEND-ONLY RE-EXPORT (2026-06-08): when the de-conflated
+    # survival proves the bundled target-region sidecar is net-harmful (it
+    # collapses a SURVIVING backend AND adds bytes), losslessly strip it so the
+    # archive ships backend-only.  Dropping the harmful interpreter atom is a
+    # DOUBLE WIN (restores the SegNet wins AND lowers the rate term).  Codecs
+    # match the current HiNeRV export pipeline (int8_mixed / int8_brotli_q11); if
+    # the pipeline codec changes, thread it here so the strip stays lossless.
+    if row.get("sidecar_harmful") is True:
+        try:
+            import zipfile as _zipfile
+
+            from tac.substrates.hi_nerv.archive_candidate import (
+                strip_target_region_action_from_archive_payload,
+            )
+
+            with _zipfile.ZipFile(archive) as _zin:
+                _names = [n for n in _zin.namelist() if not n.endswith("/")]
+                _pmem = ([n for n in _names if n in {"0.bin", "x"}] or _names)[0]
+                _payload = _zin.read(_pmem)
+                _extra = {n: _zin.read(n) for n in _names if n != _pmem}
+            _bo_payload = strip_target_region_action_from_archive_payload(_payload)
+            _bo_path = archive.with_name("archive_backend_only.zip")
+            with _zipfile.ZipFile(_bo_path, "w", compression=_zipfile.ZIP_DEFLATED) as _zout:
+                _zout.writestr(_pmem, _bo_payload)
+                for _name, _data in _extra.items():
+                    _zout.writestr(_name, _data)
+            row["sidecar_auto_stripped_to_backend_only"] = True
+            row["backend_only_archive_path"] = _bo_path.as_posix()
+            row["backend_only_archive_sha256"] = _sha256_file(_bo_path)
+            row["backend_only_archive_bytes"] = int(_bo_path.stat().st_size)
+            row["recommended_promotion_archive"] = _bo_path.as_posix()
+        except Exception as _exc:
+            row["sidecar_auto_strip_failed"] = f"{type(_exc).__name__}:{_exc}"
     action_effect_ledger_path = row_path.with_name("hi_nerv_birth_action_effects.jsonl")
     try:
         from tac.analysis.action_effect import ActionEffect, append_action_effect

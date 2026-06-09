@@ -1940,6 +1940,60 @@ def pack_archive_from_exported_state_dict(
     return blob
 
 
+def strip_target_region_action_from_archive_payload(
+    payload: bytes,
+    *,
+    decoder_codec: str = "int8_mixed",
+    latent_codec: str = "int8_brotli_q11",
+) -> bytes:
+    """Losslessly strip the target-region action sidecar from HIV1 payload bytes.
+
+    Re-packs the SAME decoder/latent tensors (the re-quant is IDEMPOTENT — values
+    already on the codec grid round-trip exactly when ``decoder_codec`` /
+    ``latent_codec`` match the original pack) with NO action program, so the
+    backend render is unchanged while the harmful sidecar overlay AND its bytes
+    are removed.  Canonical remediation for the 2026-06-08 sidecar incident (a
+    sidecar that collapses a SURVIVING backend 11306 -> 3 while adding ~8 KB);
+    dropping it is a DOUBLE WIN (restores the wins AND lowers the rate term).
+    The caller must have established via the pays-rent gate
+    (``tac.substrates.hi_nerv.birth_survival.target_region_action_pays_rent``)
+    that the action is net-harmful.  Returns the payload unchanged when there is
+    no action to strip (already backend-only).
+    """
+
+    arc = parse_archive(payload)
+    if TARGET_REGION_ACTION_META_KEY not in dict(arc.meta or {}):
+        return payload
+    cfg = _hinerv_config_from_archive_meta(arc)
+
+    def _np(value: Any) -> np.ndarray:
+        return np.asarray(
+            value.detach().cpu() if hasattr(value, "detach") else value, dtype=np.float32
+        )
+
+    exported: dict[str, np.ndarray] = {
+        key: _np(value) for key, value in arc.decoder_state_dict.items()
+    }
+    exported["latents_coarse"] = _np(arc.latents_coarse)
+    exported["latents_mid"] = _np(arc.latents_mid)
+    exported["latents_fine"] = _np(arc.latents_fine)
+    blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+        decoder_codec=str(decoder_codec),
+        latent_codec=str(latent_codec),
+        target_region_action_program_base64=None,
+    )
+    if isinstance(blob, tuple):
+        blob = blob[0]
+    if TARGET_REGION_ACTION_META_KEY in dict(parse_archive(blob).meta or {}):
+        raise ValueError(
+            "strip_target_region_action_from_archive_payload: re-pack still carries "
+            "the action meta — strip failed"
+        )
+    return blob
+
+
 def project_hi_nerv_hiv1_receiver_state(
     *,
     exported_state_dict: Mapping[str, np.ndarray],

@@ -2256,3 +2256,65 @@ def test_archive_bound_package_wrapper_preserves_high_byte_latent_codec(
     assert runtime_manifest["archive_section_telemetry"]["latent_codec"] == ("int16_hi_ac_brotli_q11")
     portability = runtime_manifest["mlx_numpy_portability_contract"]
     assert "constriction" in portability["non_numpy_receiver_dependencies"]
+
+
+def test_strip_target_region_action_from_archive_payload_is_lossless_double_win() -> None:
+    """Canonical remediation for the 2026-06-08 harmful-sidecar incident: stripping
+    the target-region action losslessly recovers the backend-only archive (action
+    meta removed, decoder/latent tensors byte-identical, bytes reduced)."""
+    import numpy as np
+
+    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+        strip_target_region_action_from_archive_payload,
+    )
+    from tac.substrates.hi_nerv.target_region_actions import (
+        TARGET_REGION_ACTION_META_KEY,
+        TargetRegionPixelAction,
+        encode_target_region_actions_meta,
+    )
+
+    exportable = _exportable_torch_model()
+    exported = exportable.export_state_dict()
+    cfg = exportable.cfg
+    codecs = {"decoder_codec": "int8_mixed", "latent_codec": "int8_brotli_q11"}
+
+    no_action_blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported, cfg=cfg, **codecs
+    )
+
+    action = TargetRegionPixelAction(
+        pair_index=0,
+        frame_index=1,
+        height=int(cfg.output_height),
+        width=int(cfg.output_width),
+        yx=np.array([[0, 0], [1, 1], [2, 3]], dtype=np.uint16),
+        rgb_u8=np.array([[255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8),
+    )
+    program_b64 = encode_target_region_actions_meta([action])
+    with_action_blob = pack_archive_from_exported_state_dict(
+        exported_state_dict=exported,
+        cfg=cfg,
+        target_region_action_program_base64=program_b64,
+        **codecs,
+    )
+    assert TARGET_REGION_ACTION_META_KEY in dict(parse_archive(with_action_blob).meta or {})
+
+    stripped = strip_target_region_action_from_archive_payload(with_action_blob, **codecs)
+
+    # (1) action meta removed.
+    assert TARGET_REGION_ACTION_META_KEY not in dict(parse_archive(stripped).meta or {})
+    # (2) byte DOUBLE-WIN: stripped is smaller than with-action (rate term lowered).
+    assert len(stripped) < len(with_action_blob)
+    # (3) lossless backend: decoder + latent tensors byte-identical to the
+    #     no-action pack (the re-quant is idempotent).
+    a_strip = parse_archive(stripped)
+    a_none = parse_archive(no_action_blob)
+    assert np.array_equal(
+        a_strip.decoder_state_dict["head_rgb_1.weight"].numpy(),
+        a_none.decoder_state_dict["head_rgb_1.weight"].numpy(),
+    )
+    assert np.array_equal(a_strip.latents_fine.numpy(), a_none.latents_fine.numpy())
+    # (4) no-op on an already-backend-only payload.
+    assert strip_target_region_action_from_archive_payload(no_action_blob, **codecs) == no_action_blob
