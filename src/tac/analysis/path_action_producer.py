@@ -23,6 +23,7 @@ import numpy as np
 
 from tac.analysis.action_effect import ActionEffect
 from tac.analysis.inverse_scorer_actions import build_candidate_queue
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
 
 PATH_ACTION_PRODUCER_SCHEMA = "tac.path_action_producer.v1"
 PATH_SUPPORT_SCHEMA = "tac.path_tube_support.v1"
@@ -41,6 +42,83 @@ BLOCKER_PATH_ACTION_INFLATE_MISSING = "path_action_inflate_survival_missing"
 BLOCKER_PATH_POSE_TRAJECTORY_EMPTY = "path_action_pose_trajectory_empty"
 BLOCKER_PATH_SELECTOR_TRAJECTORY_EMPTY = "path_action_selector_trajectory_empty"
 BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF = "path_action_trajectory_receiver_proof_missing"
+
+RENT_EVALUATION_SCHEMA = "tac.path_action_rent_evaluation.v1"
+RENT_BLOCKER_BASE_ARCHIVE_SHA_MISSING = "rent_evaluation_base_archive_sha256_missing"
+RENT_BLOCKER_SCORE_ENDPOINTS_MISSING = "rent_evaluation_exact_score_endpoints_missing"
+
+
+def _finite(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
+def candidate_action_evaluation_row(
+    effect: ActionEffect,
+    *,
+    base_archive_sha256: str | None,
+    base_scorer_state_hash: str | None = None,
+) -> dict[str, Any]:
+    """Emit the base-bound rent-law row for one produced ``ActionEffect``.
+
+    Every produced atom must PAY RENT: it is admissible only when ``S(base +
+    action) < S(base)`` (lower-is-better) AND its scorer effect survives
+    parse-back, measured against the base it was scored against.  When the
+    score endpoints or the base sha are missing the row is a typed blocker (the
+    atom is NOT yet evaluable), never a fabricated ``pays_rent=True``.
+    """
+
+    base_sha = str(base_archive_sha256 or "").strip()
+    blockers: list[str] = []
+    if not base_sha:
+        blockers.append(RENT_BLOCKER_BASE_ARCHIVE_SHA_MISSING)
+    score_endpoints = all(
+        _finite(getattr(effect, name))
+        for name in ("old_d_seg", "new_d_seg", "old_d_pose", "new_d_pose")
+    )
+    if not score_endpoints or not (_finite(effect.old_bytes) and _finite(effect.new_bytes)):
+        blockers.append(RENT_BLOCKER_SCORE_ENDPOINTS_MISSING)
+    if blockers:
+        return {
+            "schema": RENT_EVALUATION_SCHEMA,
+            "action_id": effect.action_id,
+            "action_kind": effect.action_kind,
+            "base_archive_sha256": base_sha or None,
+            "evaluable": False,
+            "pays_rent": False,
+            "blockers": list(dict.fromkeys(blockers)),
+            "promotion_eligible": False,
+            "score_claim": False,
+            "promotable": False,
+        }
+    evaluation = CandidateActionEvaluation(
+        action_id=effect.action_id,
+        action_kind=str(effect.action_kind),
+        base_archive_sha256=base_sha,
+        with_action_archive_sha256=str(
+            effect.archive_sha256 or effect.payload_sha256 or base_sha
+        ),
+        d_seg_base=float(effect.old_d_seg),
+        d_pose_base=float(effect.old_d_pose),
+        bytes_base=int(effect.old_bytes),
+        d_seg_with_action=float(effect.new_d_seg),
+        d_pose_with_action=float(effect.new_d_pose),
+        bytes_with_action=int(effect.new_bytes),
+        scorer_effect_survived=(
+            effect.parseback_survived is True
+            and effect.inflate_survived is True
+            and effect.fakequant_survived is not False
+        ),
+        base_scorer_state_hash=base_scorer_state_hash or effect.base_state_sha256,
+        backend_wrong_to_target=(
+            int(effect.wrong_to_target) if _finite(effect.wrong_to_target) else None
+        ),
+    )
+    return evaluation.to_row()
 
 
 @dataclass(frozen=True)
@@ -198,6 +276,8 @@ def build_path_action_candidates_from_arrays(
     frame_index: int = 1,
     rdp_epsilon: float = 2.0,
     base_archive_bytes: int = 0,
+    base_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
     old_d_seg: float = 0.0,
     old_d_pose: float = 0.0,
     authority: str = "batch_local_path_support",
@@ -300,6 +380,11 @@ def build_path_action_candidates_from_arrays(
         ],
     )
     queue = build_candidate_queue([effect])
+    rent_evaluation = candidate_action_evaluation_row(
+        effect,
+        base_archive_sha256=base_archive_sha256,
+        base_scorer_state_hash=base_scorer_state_hash,
+    )
     candidate = {
         "schema": PATH_ACTION_CANDIDATE_SCHEMA,
         "action_id": effect.action_id,
@@ -307,6 +392,7 @@ def build_path_action_candidates_from_arrays(
         "action_kind": effect.action_kind,
         "support": support_dict,
         "comparison": comparison,
+        "candidate_action_evaluation": rent_evaluation,
         "blockers": list(effect.blockers),
         "promotion_eligible": False,
         "score_claim": False,
@@ -319,12 +405,14 @@ def build_path_action_candidates_from_arrays(
         "action_effects": [effect],
         "candidate_queue": queue,
         "path_action_candidates": [candidate],
+        "candidate_action_evaluations": [rent_evaluation],
         "comparison": comparison,
         "policy": {
             "path_actions_do_not_clear_launch_gate": True,
             "support_decode_hash_required": True,
             "wrong_to_target_required_for_birth": True,
             "rate_term_included_in_action_effect": True,
+            "every_action_must_pay_rent": True,
         },
     }
 
@@ -336,6 +424,8 @@ def build_pose_temporal_path_candidates_from_arrays(
     pose_action_profile: Sequence[float] | np.ndarray | None = None,
     rdp_epsilon: float = 0.25,
     base_archive_bytes: int = 0,
+    base_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
     old_d_seg: float | None = None,
     new_d_seg: float | None = None,
     old_d_pose: float | None = None,
@@ -402,7 +492,13 @@ def build_pose_temporal_path_candidates_from_arrays(
             BLOCKER_PATH_ACTION_INFLATE_MISSING,
         ],
     )
-    return _temporal_result(effect=effect, payload=payload, encoded=encoded)
+    return _temporal_result(
+        effect=effect,
+        payload=payload,
+        encoded=encoded,
+        base_archive_sha256=base_archive_sha256,
+        base_scorer_state_hash=base_scorer_state_hash,
+    )
 
 
 def build_selector_temporal_path_candidates_from_rows(
@@ -410,6 +506,8 @@ def build_selector_temporal_path_candidates_from_rows(
     *,
     rdp_epsilon: float = 0.0,
     base_archive_bytes: int = 0,
+    base_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
     old_d_seg: float | None = None,
     new_d_seg: float | None = None,
     old_d_pose: float | None = None,
@@ -477,7 +575,13 @@ def build_selector_temporal_path_candidates_from_rows(
             BLOCKER_PATH_ACTION_INFLATE_MISSING,
         ],
     )
-    return _temporal_result(effect=effect, payload=payload, encoded=encoded)
+    return _temporal_result(
+        effect=effect,
+        payload=payload,
+        encoded=encoded,
+        base_archive_sha256=base_archive_sha256,
+        base_scorer_state_hash=base_scorer_state_hash,
+    )
 
 
 def path_tube_support_from_mask(
@@ -614,7 +718,19 @@ def selector_sequence_encoding_comparison(sequence: Sequence[int] | np.ndarray, 
     }
 
 
-def _temporal_result(*, effect: ActionEffect, payload: dict[str, Any], encoded: bytes) -> dict[str, Any]:
+def _temporal_result(
+    *,
+    effect: ActionEffect,
+    payload: dict[str, Any],
+    encoded: bytes,
+    base_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
+) -> dict[str, Any]:
+    rent_evaluation = candidate_action_evaluation_row(
+        effect,
+        base_archive_sha256=base_archive_sha256,
+        base_scorer_state_hash=base_scorer_state_hash,
+    )
     candidate = {
         "schema": PATH_ACTION_CANDIDATE_SCHEMA,
         "action_id": effect.action_id,
@@ -623,6 +739,7 @@ def _temporal_result(*, effect: ActionEffect, payload: dict[str, Any], encoded: 
         "temporal_path": payload,
         "temporal_payload_bytes": len(encoded),
         "temporal_payload_sha256": hashlib.sha256(encoded).hexdigest(),
+        "candidate_action_evaluation": rent_evaluation,
         "blockers": list(effect.blockers),
         "promotion_eligible": False,
         "score_claim": False,
@@ -635,11 +752,13 @@ def _temporal_result(*, effect: ActionEffect, payload: dict[str, Any], encoded: 
         "action_effects": [effect],
         "candidate_queue": build_candidate_queue([effect]),
         "path_action_candidates": [candidate],
+        "candidate_action_evaluations": [rent_evaluation],
         "comparison": payload.get("selector_comparison", payload.get("comparison", {})),
         "policy": {
             "path_actions_do_not_clear_launch_gate": True,
             "receiver_proof_required": True,
             "rate_term_included_in_action_effect": True,
+            "every_action_must_pay_rent": True,
         },
     }
 
@@ -980,11 +1099,15 @@ __all__ = [
     "PATH_ACTION_CANDIDATE_SCHEMA",
     "PATH_ACTION_PRODUCER_SCHEMA",
     "PATH_SUPPORT_SCHEMA",
+    "RENT_BLOCKER_BASE_ARCHIVE_SHA_MISSING",
+    "RENT_BLOCKER_SCORE_ENDPOINTS_MISSING",
+    "RENT_EVALUATION_SCHEMA",
     "TEMPORAL_PATH_SCHEMA",
     "PathTubeSupport",
     "build_path_action_candidates_from_arrays",
     "build_pose_temporal_path_candidates_from_arrays",
     "build_selector_temporal_path_candidates_from_rows",
+    "candidate_action_evaluation_row",
     "decode_path_tube_payload",
     "largest_connected_component",
     "path_tube_support_from_mask",

@@ -12,10 +12,24 @@ from typing import Any
 
 from tac.analysis.action_commutator import build_commutator_ledger
 from tac.analysis.action_effect import ActionEffect
+from tac.optimization.evaluator_action_waterfill import (
+    CandidateActionEvaluation,
+    action_commutator,
+    waterfill_select_actions,
+)
 
 LOWERING_RACE_SCHEMA = "tac.evaluator_action_lowering_race.v1"
 LOWERING_VERDICT_SCHEMA = "tac.evaluator_action_lowering_verdict.v1"
 LOWERING_CANDIDATE_SCHEMA = "tac.evaluator_action_lowering_candidate.v1"
+RENT_LAW_RANKING_SCHEMA = "tac.evaluator_action_rent_law_ranking.v1"
+RENT_LAW_BRIDGE_SCHEMA = "tac.evaluator_action_rent_law_bridge.v1"
+
+# Blockers emitted when an ActionEffect cannot be turned into a base-bound
+# CandidateActionEvaluation (the only currency the rent law admits).
+RENT_BRIDGE_BASE_ARCHIVE_SHA_MISSING = "rent_bridge_base_archive_sha256_missing"
+RENT_BRIDGE_SCORE_ENDPOINTS_MISSING = "rent_bridge_exact_score_endpoints_missing"
+RENT_BRIDGE_BYTE_ENDPOINTS_MISSING = "rent_bridge_byte_endpoints_missing"
+RENT_BRIDGE_ACTION_KIND_MISSING = "rent_bridge_action_kind_missing"
 
 LOWERING_TARGETS = (
     "backend_realization",
@@ -194,6 +208,196 @@ def write_lowering_race_report(report: Mapping[str, Any], output_dir: str | Path
     return {
         "report_path": report_path.as_posix(),
         "verdict_path": verdict_path.as_posix(),
+    }
+
+
+def _scorer_effect_survived_from_effect(effect: ActionEffect) -> bool:
+    """The rent law's ``scorer_effect_survived`` predicate for an ActionEffect.
+
+    The scorer effect "survives" only when the action's pixels actually reach
+    the inflated archive on every receiver surface: parse-back AND inflate must
+    survive, and the quantized surface must not have been falsified
+    (``fakequant_survived`` may be ``None`` when the surface is not measured,
+    but a measured ``False`` is fatal — the exact failure mode of a sidecar that
+    parses but is quantized away).
+    """
+
+    return (
+        effect.parseback_survived is True
+        and effect.inflate_survived is True
+        and effect.fakequant_survived is not False
+    )
+
+
+def candidate_action_evaluation_from_action_effect(
+    effect: ActionEffect | Mapping[str, Any],
+    *,
+    base_archive_sha256: str,
+    base_scorer_state_hash: str | None = None,
+    with_action_archive_sha256: str | None = None,
+    evidence_grade: str = "advisory",
+) -> CandidateActionEvaluation | dict[str, Any]:
+    """Bridge one ``ActionEffect`` into the canonical base-bound rent-law row.
+
+    Returns a :class:`CandidateActionEvaluation` when the effect carries the
+    exact score endpoints (d_seg/d_pose/bytes for base and with-action) and a
+    base archive sha; otherwise returns a typed blocker mapping (NOT a
+    fabricated evaluation — the phantom-base / missing-measurement failure
+    modes are refused rather than papered over).
+    """
+
+    effect = effect if isinstance(effect, ActionEffect) else ActionEffect.from_dict(effect)
+    blockers: list[str] = []
+    base_sha = str(base_archive_sha256 or "").strip()
+    if not base_sha:
+        blockers.append(RENT_BRIDGE_BASE_ARCHIVE_SHA_MISSING)
+    if not str(effect.action_kind or "").strip():
+        blockers.append(RENT_BRIDGE_ACTION_KIND_MISSING)
+    score_endpoints = all(
+        _finite_number(getattr(effect, name))
+        for name in ("old_d_seg", "new_d_seg", "old_d_pose", "new_d_pose")
+    )
+    if not score_endpoints:
+        blockers.append(RENT_BRIDGE_SCORE_ENDPOINTS_MISSING)
+    byte_endpoints = _finite_number(effect.old_bytes) and _finite_number(effect.new_bytes)
+    if not byte_endpoints:
+        blockers.append(RENT_BRIDGE_BYTE_ENDPOINTS_MISSING)
+    if blockers:
+        return {
+            "schema": RENT_LAW_BRIDGE_SCHEMA,
+            "action_id": effect.action_id,
+            "action_kind": effect.action_kind,
+            "base_archive_sha256": base_sha or None,
+            "evaluable": False,
+            "blockers": _dedupe([*blockers, *(str(b) for b in effect.blockers)]),
+            "promotion_eligible": False,
+            "score_claim": False,
+            "promotable": False,
+        }
+    with_sha = str(
+        with_action_archive_sha256
+        or effect.archive_sha256
+        or effect.payload_sha256
+        or base_sha
+    ).strip()
+    return CandidateActionEvaluation(
+        action_id=effect.action_id,
+        action_kind=str(effect.action_kind),
+        base_archive_sha256=base_sha,
+        with_action_archive_sha256=with_sha,
+        d_seg_base=float(effect.old_d_seg),
+        d_pose_base=float(effect.old_d_pose),
+        bytes_base=int(effect.old_bytes),
+        d_seg_with_action=float(effect.new_d_seg),
+        d_pose_with_action=float(effect.new_d_pose),
+        bytes_with_action=int(effect.new_bytes),
+        scorer_effect_survived=_scorer_effect_survived_from_effect(effect),
+        base_scorer_state_hash=base_scorer_state_hash or effect.base_state_sha256,
+        backend_wrong_to_target=(
+            int(effect.wrong_to_target) if _finite_number(effect.wrong_to_target) else None
+        ),
+        evidence_grade=evidence_grade,
+    )
+
+
+def rank_candidate_actions_by_rent(
+    evaluations: Sequence[CandidateActionEvaluation],
+    *,
+    current_base_archive_sha256: str,
+    current_base_scorer_state_hash: str | None = None,
+    top_k: int = 8,
+    commutator_evaluations: Mapping[tuple[str, str], CandidateActionEvaluation] | None = None,
+) -> dict[str, Any]:
+    """Rank candidate actions by the EXACT waterfilling rent law.
+
+    This is the queue/gate admission path: it delegates the static
+    drop-stale + drop-non-rent + sort-by-``value_per_byte`` pass to
+    :func:`waterfill_select_actions`, then expresses the noncommutative
+    recompute-after-accept discipline as a commutator-aware TOP-K plan (NOT an
+    exhaustive search): only the ``top_k`` highest value-per-byte survivors are
+    proposed for sequential acceptance, and — when a measured pair evaluation
+    is supplied — the interaction term against the current best is reported so a
+    caller never assumes atoms add.
+
+    A structurally-valid action that does not lower the exact score is REJECTED
+    (it appears under ``rejected``); staleness against the current base is fatal
+    (``stale_for_base``).  Nothing here promotes: the rows carry
+    ``promotion_eligible=False`` (paired CPU+CUDA authority is still required).
+    """
+
+    base_sha = str(current_base_archive_sha256 or "").strip()
+    waterfill = waterfill_select_actions(
+        list(evaluations),
+        current_base_archive_sha256=base_sha or None,
+    )
+    admissible: list[CandidateActionEvaluation] = [
+        ev
+        for ev in evaluations
+        if not (base_sha and ev.is_stale_for_base(base_sha, current_base_scorer_state_hash))
+        and ev.pays_rent
+    ]
+
+    def _key(ev: CandidateActionEvaluation) -> float:
+        vpb = ev.value_per_byte
+        return -(vpb if vpb is not None and vpb != math.inf else 1e18)
+
+    admissible.sort(key=_key)
+    limit = max(0, int(top_k))
+    top = admissible[:limit]
+    best = top[0] if top else None
+
+    commutator_rows: list[dict[str, Any]] = []
+    if best is not None and commutator_evaluations:
+        for other in top[1:]:
+            pair_key = (best.action_id, other.action_id)
+            composite = commutator_evaluations.get(pair_key) or commutator_evaluations.get(
+                (other.action_id, best.action_id)
+            )
+            if composite is None:
+                commutator_rows.append(
+                    {
+                        "pair": [best.action_id, other.action_id],
+                        "interaction_measured": False,
+                        "next_action": "measure_composite_before_assuming_additivity",
+                    }
+                )
+                continue
+            comm = action_commutator(
+                best.delta_score_total,
+                other.delta_score_total,
+                composite.delta_score_total,
+            )
+            commutator_rows.append(
+                {
+                    "pair": [best.action_id, other.action_id],
+                    "interaction_measured": True,
+                    "commutator_delta_score_total": comm,
+                    "synergistic": comm < 0.0,
+                    "interfering": comm > 0.0,
+                    "composite_pays_rent": composite.pays_rent,
+                }
+            )
+
+    return {
+        "schema": RENT_LAW_RANKING_SCHEMA,
+        "current_base_archive_sha256": base_sha or None,
+        "current_base_scorer_state_hash": current_base_scorer_state_hash,
+        "top_k": limit,
+        "ranked_top_k": [ev.to_row() for ev in top],
+        "best_action_id": best.action_id if best is not None else None,
+        "best_delta_score_total": best.delta_score_total if best is not None else None,
+        "best_value_per_byte": best.value_per_byte if best is not None else None,
+        "n_admissible": len(admissible),
+        "n_rejected": waterfill["n_rejected"],
+        "n_stale": waterfill["n_stale"],
+        "rejected": waterfill["rejected"],
+        "stale_for_base": waterfill["stale_for_base"],
+        "commutator_rows": commutator_rows,
+        "requires_recompute_after_accept": True,
+        "authority": "planning_control_false_authority",
+        "promotion_eligible": False,
+        "score_claim": False,
+        "promotable": False,
     }
 
 
@@ -638,6 +842,15 @@ def _first_support_sha256(effects: Sequence[ActionEffect]) -> str | None:
     return None
 
 
+def _finite_number(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
 def _float_or_none(value: Any) -> float | None:
     if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)):
         return float(value)
@@ -682,6 +895,12 @@ __all__ = [
     "LOWERING_VERDICT_SCHEMA",
     "PAIR_LOCAL_LATENT_NOT_MEASURED",
     "PARSEBACK_FAILED",
+    "RENT_BRIDGE_ACTION_KIND_MISSING",
+    "RENT_BRIDGE_BASE_ARCHIVE_SHA_MISSING",
+    "RENT_BRIDGE_BYTE_ENDPOINTS_MISSING",
+    "RENT_BRIDGE_SCORE_ENDPOINTS_MISSING",
+    "RENT_LAW_BRIDGE_SCHEMA",
+    "RENT_LAW_RANKING_SCHEMA",
     "SEMANTIC_PRIMITIVE_MISSING",
     "SIDECAR_TOO_EXPENSIVE",
     "SNERV_SOURCE_STATE_NOT_MEASURED",
@@ -689,5 +908,7 @@ __all__ = [
     "SUPPORT_IDENTITY_MISSING",
     "LoweringVerdict",
     "build_lowering_race_report",
+    "candidate_action_evaluation_from_action_effect",
+    "rank_candidate_actions_by_rent",
     "write_lowering_race_report",
 ]

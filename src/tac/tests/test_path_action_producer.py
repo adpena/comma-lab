@@ -15,6 +15,8 @@ from tac.analysis.path_action_producer import (
     BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
     BLOCKER_PATH_SUPPORT_NOT_BIRTH,
     BLOCKER_PATH_TRAJECTORY_NO_RECEIVER_PROOF,
+    RENT_BLOCKER_BASE_ARCHIVE_SHA_MISSING,
+    RENT_EVALUATION_SCHEMA,
     build_path_action_candidates_from_arrays,
     build_pose_temporal_path_candidates_from_arrays,
     build_selector_temporal_path_candidates_from_rows,
@@ -24,6 +26,8 @@ from tac.analysis.path_action_producer import (
     selector_sequence_encoding_comparison,
     support_mask_sha256,
 )
+
+_BASE_SHA = "9" * 64
 
 
 def _hard_region_arrays() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -282,3 +286,89 @@ def test_generate_path_action_candidates_cli_writes_valid_action_effect_rows(tmp
     assert validate.returncode == 0, validate.stderr
     validation_summary = json.loads(validate.stdout)
     assert validation_summary["failed_count"] == 0
+
+
+# --- every produced atom must emit a base-bound rent-law row ---
+
+
+def test_path_birth_candidate_emits_base_bound_rent_evaluation() -> None:
+    target, argmax, margin, pair_indices = _hard_region_arrays()
+    out = build_path_action_candidates_from_arrays(
+        target_labels_bhw=target,
+        candidate_argmax_bhw=argmax,
+        target_margin_bhw=margin,
+        pair_indices=pair_indices,
+        base_archive_sha256=_BASE_SHA,
+        old_d_seg=0.2,
+        old_d_pose=0.3,
+    )
+
+    assert out["candidate_action_evaluations"]
+    row = out["candidate_action_evaluations"][0]
+    assert row["schema"] == "hi_nerv_candidate_action_evaluation.v1"
+    assert row["base_archive_sha256"] == _BASE_SHA
+    # A generated (not-yet-survived) path birth raises bytes with no measured
+    # score drop => it does NOT pay rent yet.
+    assert row["pays_rent"] is False
+    assert row["promotion_eligible"] is False
+    assert out["candidate_action_evaluations"][0] == out["path_action_candidates"][0][
+        "candidate_action_evaluation"
+    ]
+    assert out["policy"]["every_action_must_pay_rent"] is True
+
+
+def test_path_birth_candidate_rent_row_fails_closed_without_base_sha() -> None:
+    target, argmax, margin, pair_indices = _hard_region_arrays()
+    out = build_path_action_candidates_from_arrays(
+        target_labels_bhw=target,
+        candidate_argmax_bhw=argmax,
+        target_margin_bhw=margin,
+        pair_indices=pair_indices,
+        old_d_seg=0.2,
+        old_d_pose=0.3,
+    )
+
+    row = out["candidate_action_evaluations"][0]
+    assert row["schema"] == RENT_EVALUATION_SCHEMA
+    assert row["evaluable"] is False
+    assert RENT_BLOCKER_BASE_ARCHIVE_SHA_MISSING in row["blockers"]
+    assert row["pays_rent"] is False
+
+
+def test_pose_temporal_candidate_emits_rent_evaluation() -> None:
+    out = build_pose_temporal_path_candidates_from_arrays(
+        pair_indices=[0, 1, 2, 3],
+        pose_action_profile=[0.0, 0.1, 0.2, 0.0],
+        base_archive_sha256=_BASE_SHA,
+        old_d_seg=0.2,
+        new_d_seg=0.2,
+        old_d_pose=0.3,
+        new_d_pose=0.29,
+    )
+
+    assert out["candidate_action_evaluations"]
+    row = out["candidate_action_evaluations"][0]
+    assert row["base_archive_sha256"] == _BASE_SHA
+    assert row["schema"] == "hi_nerv_candidate_action_evaluation.v1"
+    assert row["promotion_eligible"] is False
+
+
+def test_selector_temporal_candidate_emits_rent_evaluation() -> None:
+    rows = [
+        {"pair_index": 0, "selector_id": 1},
+        {"pair_index": 1, "selector_id": 2},
+        {"pair_index": 2, "selector_id": 1},
+    ]
+    out = build_selector_temporal_path_candidates_from_rows(
+        rows,
+        base_archive_sha256=_BASE_SHA,
+        old_d_seg=0.2,
+        new_d_seg=0.2,
+        old_d_pose=0.3,
+        new_d_pose=0.3,
+    )
+
+    assert out["candidate_action_evaluations"]
+    row = out["candidate_action_evaluations"][0]
+    assert row["base_archive_sha256"] == _BASE_SHA
+    assert row["promotion_eligible"] is False

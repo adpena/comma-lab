@@ -52,9 +52,44 @@ from tac.analysis.snerv_source_forward_proof import (
     build_snerv_source_forward_proof_action_effect,
     build_snerv_source_forward_surface_provenance,
 )
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
 
 NOW = datetime(2026, 6, 6, 21, 0, 0, tzinfo=UTC)
 ACTION = "a" * 64
+BASE_ARCHIVE_SHA = "9" * 64
+
+
+def _rent_paying_candidate_action_evaluation(
+    *,
+    action_id: str = ACTION,
+    base_archive_sha256: str = BASE_ARCHIVE_SHA,
+    pays_rent: bool = True,
+) -> dict:
+    """A real CandidateActionEvaluation row (NOT a hand-stubbed dict).
+
+    The action births target-region support, lowers exact d_seg, and survives
+    parse-back, so ``S(base + action) < S(base)`` — it PAYS RENT.  ``pays_rent``
+    can be flipped to ``False`` (action no longer lowers the score) to exercise
+    the launch-gate blocker.
+    """
+
+    # Rent-paying: the seg drop (0.20 -> 0.19) outweighs the +64-byte rate cost,
+    # so S(base + action) < S(base).  Non-rent: seg RISES (0.20 -> 0.21), so the
+    # action raises the exact score and must be rejected.
+    return CandidateActionEvaluation(
+        action_id=action_id,
+        action_kind="independent_birth_plus_frame0_pose",
+        base_archive_sha256=base_archive_sha256,
+        with_action_archive_sha256="b" * 64,
+        d_seg_base=0.20,
+        d_pose_base=0.30,
+        bytes_base=178_493,
+        d_seg_with_action=0.19 if pays_rent else 0.21,
+        d_pose_with_action=0.30,
+        bytes_with_action=178_493 + 64,
+        scorer_effect_survived=True,
+        backend_wrong_to_target=12,
+    ).to_row()
 
 
 def _write(path: Path, payload: dict) -> None:
@@ -914,6 +949,10 @@ def _full_hi_nerv_root(tmp_path: Path) -> Path:
     _write(
         root / "lowering_race.json",
         _hi_nerv_lowering_race(best_lowering="backend_realization"),
+    )
+    _write(
+        root / "candidate_action_evaluation.json",
+        _rent_paying_candidate_action_evaluation(),
     )
     _write(
         root / "hysteresis.json",
@@ -2083,6 +2122,86 @@ def test_full_ladder_with_fresh_pointer_approves(tmp_path: Path) -> None:
     assert verdict["blocking_evidence"] == []
     assert verdict["highest_level"] == "L5"
     assert verdict["approved"] is True
+
+
+def test_hinerv_gate_blocks_when_candidate_action_evaluation_missing(tmp_path: Path) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    (root / "candidate_action_evaluation.json").unlink()
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "candidate_action_evaluation_missing" in verdict["blocking_evidence"]
+    assert f"candidate_action_evaluation_missing:{ACTION}" in verdict["blocking_evidence"]
+
+
+def test_hinerv_gate_blocks_when_action_parses_but_does_not_pay_rent(tmp_path: Path) -> None:
+    # The 2026-06-08 sidecar incident: the action PARSES + APPLIES (full ladder
+    # otherwise green) but RAISES the exact score => it must NOT clear the gate.
+    root = _full_hi_nerv_root(tmp_path)
+    _write(
+        root / "candidate_action_evaluation.json",
+        _rent_paying_candidate_action_evaluation(pays_rent=False),
+    )
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert "candidate_action_evaluation_does_not_pay_rent" in verdict["blocking_evidence"]
+    assert (
+        f"candidate_action_evaluation_exact_total_not_improved:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+
+
+def test_hinerv_gate_blocks_candidate_action_evaluation_without_base_archive(
+    tmp_path: Path,
+) -> None:
+    root = _full_hi_nerv_root(tmp_path)
+    row = _rent_paying_candidate_action_evaluation()
+    row["base_archive_sha256"] = ""
+    _write(root / "candidate_action_evaluation.json", row)
+
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is False
+    assert (
+        f"candidate_action_evaluation_base_archive_sha256_missing:{ACTION}"
+        in verdict["blocking_evidence"]
+    )
+
+
+def test_hinerv_gate_rent_paying_evaluation_clears_the_new_blocker(tmp_path: Path) -> None:
+    # The rent-paying row present in the full root means NONE of the new
+    # candidate-action-evaluation blockers appear; the gate still approves.
+    root = _full_hi_nerv_root(tmp_path)
+    verdict = evaluate_nerv_long_run_launch_gate(
+        family="hi_nerv",
+        run_root=root,
+        frontier_pointer=_pointer(tmp_path),
+        now_utc=NOW,
+    )
+
+    assert verdict["approved"] is True
+    assert not any(
+        str(blocker).startswith("candidate_action_evaluation")
+        for blocker in verdict["blocking_evidence"]
+    )
 
 
 def test_hinerv_gate_requires_wall_normal_lift_receipt(tmp_path: Path) -> None:

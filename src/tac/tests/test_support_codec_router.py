@@ -294,3 +294,125 @@ def test_route_path_action_support_codecs_cli_writes_selected_only_queue(tmp_pat
     assert report["reports"][0]["selected_support_encoding"] == "rle"
     assert report["reports"][0]["selected_action_effect"]["parseback_survived"] is True
     assert report["reports"][0]["selected_action_effect"]["inflate_survived"] is True
+
+
+# --- every routed atom emits a base-bound rent-law row ---
+
+_BASE_SHA = "9" * 64
+
+
+def _scoring_source_effect(candidate: dict) -> ActionEffect:
+    """A source effect that DROPS d_seg (0.20 -> 0.19) so the routed atom can
+    pay rent once parse-back/inflate survival is proven."""
+
+    support = candidate["support"]
+    return ActionEffect.build(
+        action_id=candidate["action_id"],
+        family="hinerv",
+        action_kind="frame1_seg_margin_frontier_path",
+        inverse_source="path_tube_segnet_margin_frontier",
+        frame_index=1,
+        frame_incidence="seg_pose_joint",
+        candidate_status="rejected",
+        authority="batch_local_path_support",
+        normalization_scope="batch_local",
+        producer="fixture",
+        consumer="inverse_evaluate_candidate_queue",
+        pair_ids=[0],
+        class_ids=[4],
+        region_ids=["fixture"],
+        old_d_seg=0.20,
+        new_d_seg=0.19,
+        old_d_pose=0.30,
+        new_d_pose=0.30,
+        old_bytes=1000,
+        new_bytes=1000 + int(support["support_encoded_bytes"]),
+        receiver_surface={"uint8_changed_pixels": 1, "seg_argmax_changed_pixels": 1},
+        exact_score_decision="reject",
+        parseback_survived=False,
+        inflate_survived=False,
+        wrong_to_target=1,
+        support_source="fixture",
+        support_cardinality=int(support["support_cardinality"]),
+        support_sha256=str(support["support_sha256"]),
+        support_encoding="path_tube",
+        support_encoded_bytes=int(support["support_encoded_bytes"]),
+        support_research_only=False,
+        blockers=["path_action_support_without_wrong_to_target_is_not_birth"],
+    )
+
+
+def test_router_emits_base_bound_rent_evaluation_for_selected_effect() -> None:
+    mask = np.zeros((64, 96), dtype=bool)
+    mask[8:10, 5:91] = True
+    mask[42:44, 5:91] = True
+    candidate = _candidate_from_mask(mask)
+
+    report = route_support_codecs_for_path_candidate(
+        candidate,
+        source_effect=_source_effect(candidate),
+        base_archive_sha256=_BASE_SHA,
+    )
+
+    row = report["selected_action_candidate_evaluation"]
+    assert row is not None
+    assert row["schema"] == "hi_nerv_candidate_action_evaluation.v1"
+    assert row["base_archive_sha256"] == _BASE_SHA
+    assert row["action_id"] == candidate["action_id"]
+    # Selected effect has not yet survived parse-back/inflate => not rent-paying.
+    assert row["scorer_effect_survived"] is False
+    assert row["pays_rent"] is False
+    assert row["promotion_eligible"] is False
+    assert report["every_action_must_pay_rent"] is True
+
+
+def test_router_rent_evaluation_pays_rent_when_seg_drops_and_survives() -> None:
+    mask = np.zeros((64, 96), dtype=bool)
+    mask[8:10, 5:91] = True
+    mask[42:44, 5:91] = True
+    candidate = _candidate_from_mask(mask)
+    effect = _scoring_source_effect(candidate)
+    receipt = {
+        "schema": "tac.support_codec_survival_receipt.v1",
+        "receipt_id": "rle-survival-fixture",
+        "action_id": candidate["action_id"],
+        "support_sha256": candidate["support"]["support_sha256"],
+        "support_encoding": "rle",
+        "decoded_support_sha256": candidate["support"]["support_sha256"],
+        "decoded_action_sha256": "2" * 64,
+        "archive_sha256": "3" * 64,
+        "parseback_survived": True,
+        "inflate_survived": True,
+        "authority": "archive_parseback_inflate_same_action",
+    }
+
+    report = route_support_codecs_for_path_candidate(
+        candidate,
+        source_effect=effect,
+        survival_receipts=[receipt],
+        base_archive_sha256=_BASE_SHA,
+    )
+
+    row = report["selected_action_candidate_evaluation"]
+    assert row["base_archive_sha256"] == _BASE_SHA
+    assert row["scorer_effect_survived"] is True
+    # seg 0.20 -> 0.19 outweighs the small rate cost => the routed atom pays rent.
+    assert row["pays_rent"] is True
+    assert row["delta_score_total"] < 0.0
+    assert row["promotion_eligible"] is False
+
+
+def test_router_emits_no_rent_evaluation_when_nothing_selected() -> None:
+    mask = np.zeros((16, 16), dtype=bool)
+    mask[3:5, 4:8] = True
+    candidate = _candidate_from_mask(mask)
+    candidate["support"]["support_sha256"] = "f" * 64  # forces all codecs blocked
+
+    report = route_support_codecs_for_path_candidate(
+        candidate,
+        source_effect=_source_effect(_candidate_from_mask(mask)),
+        base_archive_sha256=_BASE_SHA,
+    )
+
+    assert report["selected_support_encoding"] is None
+    assert report["selected_action_candidate_evaluation"] is None

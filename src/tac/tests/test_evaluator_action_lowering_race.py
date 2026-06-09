@@ -17,11 +17,18 @@ from tac.analysis.evaluator_action_lowering_race import (
     INVALID_LOWERING_TARGET,
     LOWERING_TARGETS,
     PARSEBACK_FAILED,
+    RENT_BRIDGE_BASE_ARCHIVE_SHA_MISSING,
+    RENT_BRIDGE_SCORE_ENDPOINTS_MISSING,
+    RENT_LAW_BRIDGE_SCHEMA,
+    RENT_LAW_RANKING_SCHEMA,
     SEMANTIC_PRIMITIVE_MISSING,
     SUPPORT_IDENTITY_MISMATCH,
     SUPPORT_IDENTITY_MISSING,
     build_lowering_race_report,
+    candidate_action_evaluation_from_action_effect,
+    rank_candidate_actions_by_rent,
 )
+from tac.optimization.evaluator_action_waterfill import CandidateActionEvaluation
 
 
 def _effect(
@@ -354,3 +361,180 @@ def test_lowering_race_missing_support_branch_does_not_poison_supported_sidecar(
     assert candidates["byte_priced_sidecar"]["first_failing_surface"] == "none"
     assert candidates["backend_realization"]["viable"] is False
     assert candidates["backend_realization"]["first_failing_surface"] == SUPPORT_IDENTITY_MISSING
+
+
+# --- rent-law bridge + ranker wire-in (the admission law) ---
+
+_BASE_SHA = "9" * 64
+
+
+def _evaluation(
+    *,
+    action_id: str = "act",
+    base_archive_sha256: str = _BASE_SHA,
+    d_seg_with_action: float = 0.19,
+    delta_bytes: int = 100,
+    scorer_effect_survived: bool = True,
+) -> CandidateActionEvaluation:
+    return CandidateActionEvaluation(
+        action_id=action_id,
+        action_kind="byte_priced_sidecar",
+        base_archive_sha256=base_archive_sha256,
+        with_action_archive_sha256="c" * 64,
+        d_seg_base=0.20,
+        d_pose_base=0.30,
+        bytes_base=1000,
+        d_seg_with_action=d_seg_with_action,
+        d_pose_with_action=0.30,
+        bytes_with_action=1000 + delta_bytes,
+        scorer_effect_survived=scorer_effect_survived,
+    )
+
+
+def test_bridge_builds_rent_paying_evaluation_from_action_effect() -> None:
+    effect = _effect(delta_good=True, parseback=True, inflate=True, fakequant=True)
+    evaluation = candidate_action_evaluation_from_action_effect(
+        effect, base_archive_sha256=_BASE_SHA
+    )
+
+    assert isinstance(evaluation, CandidateActionEvaluation)
+    assert evaluation.base_archive_sha256 == _BASE_SHA
+    # delta_good drops d_seg 0.20 -> 0.19 (and bytes +100) => pays rent.
+    assert evaluation.pays_rent is True
+    assert evaluation.scorer_effect_survived is True
+    assert evaluation.to_row()["promotion_eligible"] is False
+
+
+def test_bridge_scorer_effect_does_not_survive_when_parseback_missing() -> None:
+    # Parses but never reaches inflate => scorer effect did NOT survive parse-back.
+    effect = _effect(delta_good=True, parseback=False, inflate=False, fakequant=True)
+    evaluation = candidate_action_evaluation_from_action_effect(
+        effect, base_archive_sha256=_BASE_SHA
+    )
+
+    assert isinstance(evaluation, CandidateActionEvaluation)
+    assert evaluation.scorer_effect_survived is False
+    assert evaluation.pays_rent is False
+
+
+def test_bridge_fails_closed_without_base_archive_sha() -> None:
+    effect = _effect(delta_good=True, parseback=True, inflate=True)
+    result = candidate_action_evaluation_from_action_effect(effect, base_archive_sha256="")
+
+    assert isinstance(result, dict)
+    assert result["schema"] == RENT_LAW_BRIDGE_SCHEMA
+    assert result["evaluable"] is False
+    assert RENT_BRIDGE_BASE_ARCHIVE_SHA_MISSING in result["blockers"]
+
+
+def test_bridge_fails_closed_without_score_endpoints() -> None:
+    effect = ActionEffect.build(
+        action_id="no-endpoints",
+        family="hinerv",
+        action_kind="frame1_seg_margin_frontier_path",
+        authority="batch_local_path_support",
+        normalization_scope="batch_local",
+        producer="fixture",
+        consumer="inverse_evaluate_candidate_queue",
+        old_d_seg=None,
+        new_d_seg=None,
+        old_d_pose=None,
+        new_d_pose=None,
+        old_bytes=None,
+        new_bytes=None,
+    )
+    result = candidate_action_evaluation_from_action_effect(
+        effect, base_archive_sha256=_BASE_SHA
+    )
+
+    assert isinstance(result, dict)
+    assert result["evaluable"] is False
+    assert RENT_BRIDGE_SCORE_ENDPOINTS_MISSING in result["blockers"]
+
+
+def test_ranker_rejects_structurally_valid_non_rent_payer() -> None:
+    rent = _evaluation(action_id="pays")
+    no_rent = _evaluation(action_id="no_pays", d_seg_with_action=0.21)  # seg rises
+
+    report = rank_candidate_actions_by_rent(
+        [rent, no_rent], current_base_archive_sha256=_BASE_SHA
+    )
+
+    assert report["schema"] == RENT_LAW_RANKING_SCHEMA
+    assert report["best_action_id"] == "pays"
+    assert report["n_admissible"] == 1
+    assert {row["action_id"] for row in report["rejected"]} == {"no_pays"}
+    assert report["promotion_eligible"] is False
+
+
+def test_ranker_drops_stale_candidate_measured_against_phantom_base() -> None:
+    fresh = _evaluation(action_id="fresh", base_archive_sha256=_BASE_SHA)
+    phantom = _evaluation(action_id="phantom", base_archive_sha256="0" * 64)
+
+    report = rank_candidate_actions_by_rent(
+        [fresh, phantom], current_base_archive_sha256=_BASE_SHA
+    )
+
+    assert report["best_action_id"] == "fresh"
+    assert report["n_stale"] == 1
+    assert {row["action_id"] for row in report["stale_for_base"]} == {"phantom"}
+
+
+def test_ranker_orders_by_exact_value_per_byte_and_honors_top_k() -> None:
+    # Same score drop, fewer bytes => higher value-per-byte => ranked first.
+    cheap = _evaluation(action_id="cheap", delta_bytes=50)
+    pricey = _evaluation(action_id="pricey", delta_bytes=500)
+
+    report = rank_candidate_actions_by_rent(
+        [pricey, cheap], current_base_archive_sha256=_BASE_SHA, top_k=1
+    )
+
+    assert report["best_action_id"] == "cheap"
+    assert len(report["ranked_top_k"]) == 1
+    assert report["ranked_top_k"][0]["action_id"] == "cheap"
+    # top_k truncates the queue but n_admissible counts every rent-payer.
+    assert report["n_admissible"] == 2
+
+
+def test_ranker_reports_measured_commutator_against_best() -> None:
+    best = _evaluation(action_id="best", delta_bytes=50)
+    other = _evaluation(action_id="other", delta_bytes=80)
+    composite = CandidateActionEvaluation(
+        action_id="best+other",
+        action_kind="pose_compensated_composite",
+        base_archive_sha256=_BASE_SHA,
+        with_action_archive_sha256="d" * 64,
+        d_seg_base=0.20,
+        d_pose_base=0.30,
+        bytes_base=1000,
+        d_seg_with_action=0.17,
+        d_pose_with_action=0.30,
+        bytes_with_action=1000 + 130,
+        scorer_effect_survived=True,
+    )
+
+    report = rank_candidate_actions_by_rent(
+        [best, other],
+        current_base_archive_sha256=_BASE_SHA,
+        top_k=8,
+        commutator_evaluations={("best", "other"): composite},
+    )
+
+    assert report["commutator_rows"]
+    row = report["commutator_rows"][0]
+    assert row["interaction_measured"] is True
+    assert "commutator_delta_score_total" in row
+    assert isinstance(row["synergistic"], bool)
+
+
+def test_ranker_flags_unmeasured_pair_instead_of_assuming_additivity() -> None:
+    best = _evaluation(action_id="best", delta_bytes=50)
+    other = _evaluation(action_id="other", delta_bytes=80)
+
+    report = rank_candidate_actions_by_rent(
+        [best, other], current_base_archive_sha256=_BASE_SHA, commutator_evaluations={}
+    )
+
+    # No commutator dict entry => the pair is flagged for measurement, never
+    # assumed additive.
+    assert report["requires_recompute_after_accept"] is True

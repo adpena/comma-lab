@@ -17,6 +17,7 @@ from tac.analysis.path_action_producer import (
     BLOCKER_PATH_ACTION_INFLATE_MISSING,
     BLOCKER_PATH_ACTION_PARSEBACK_MISSING,
     PathTubeSupport,
+    candidate_action_evaluation_row,
     support_mask_sha256,
 )
 
@@ -87,6 +88,8 @@ def route_support_codecs_for_path_candidate(
     action_payload_bytes: int = 0,
     metadata_bytes: int = 0,
     tile_sizes: Sequence[int] = (8, 16),
+    base_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
 ) -> dict[str, Any]:
     """Route one PathActionProducer support to its cheapest valid codec."""
 
@@ -170,6 +173,15 @@ def route_support_codecs_for_path_candidate(
         )
     )
     queue_rows = [] if effect is None else build_candidate_queue([effect])
+    rent_evaluation = (
+        None
+        if effect is None
+        else candidate_action_evaluation_row(
+            effect,
+            base_archive_sha256=base_archive_sha256,
+            base_scorer_state_hash=base_scorer_state_hash,
+        )
+    )
     return {
         "schema": SUPPORT_CODEC_REPORT_SCHEMA,
         "action_id": action_id,
@@ -180,10 +192,12 @@ def route_support_codecs_for_path_candidate(
         "selected_total_cost_bytes": None if selected is None else selected.total_cost_bytes,
         "support_codec_candidates": [row.as_dict() for row in selected_rows],
         "selected_action_effect": None if effect is None else effect.as_dict(),
+        "selected_action_candidate_evaluation": rent_evaluation,
         "candidate_queue": queue_rows,
         "promotion_eligible": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
+        "every_action_must_pay_rent": True,
         "blockers": base_blockers,
     }
 
@@ -193,6 +207,8 @@ def route_support_codecs_for_path_candidates(
     *,
     source_effects: Iterable[ActionEffect | Mapping[str, Any]] = (),
     survival_receipts: Iterable[Mapping[str, Any]] = (),
+    base_archive_sha256: str | None = None,
+    base_scorer_state_hash: str | None = None,
 ) -> dict[str, Any]:
     """Route multiple path candidates and emit a selected-only queue."""
 
@@ -206,6 +222,8 @@ def route_support_codecs_for_path_candidates(
             row,
             source_effect=effects_by_id.get(str(row.get("action_id") or "")),
             survival_receipts=survival_rows,
+            base_archive_sha256=base_archive_sha256,
+            base_scorer_state_hash=base_scorer_state_hash,
         )
         for row in candidates
         if _mapping(row.get("support"))

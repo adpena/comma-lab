@@ -60,6 +60,7 @@ from tac.optimization.proxy_candidate_contract import (
 
 NERV_LONG_RUN_LAUNCH_GATE_SCHEMA = "nerv_long_run_launch_gate.v1"
 BIRTH_RECEIPT_SCHEMA = "hi_nerv_target_region_birth_receipt.v1"
+CANDIDATE_ACTION_EVALUATION_SCHEMA = "hi_nerv_candidate_action_evaluation.v1"
 BIRTH_SURVIVAL_SCHEMA = "hi_nerv_target_region_birth_survival.v1"
 BIRTH_HYSTERESIS_SCHEMA = "hi_nerv_target_region_birth_hysteresis.v1"
 REPRESENTATIVE_COVERAGE_SCHEMA = "hi_nerv_representative_region_coverage.v1"
@@ -1123,6 +1124,68 @@ def _require_hi_nerv_four_arm_action_effect_evidence(
             blockers.append(f"action_effect_four_arm_rejected_by_catastrophic_guard_missing:{arm}")
 
 
+def _require_rent_paying_candidate_action_evaluation(
+    rows: list[dict[str, Any]],
+    *,
+    action_id: str,
+    expected_base_archive_sha256: str | None = None,
+    blockers: list[str],
+) -> None:
+    """Require a base-bound rent-paying CandidateActionEvaluation per the law.
+
+    The 2026-06-08 sidecar incident proved that a target-region action that
+    PARSES + APPLIES is NOT a valid archive word: it must lower the EXACT
+    contest score against the current base.  ``CandidateActionEvaluation``
+    (``hi_nerv_candidate_action_evaluation.v1``) is the only currency that
+    encodes that admission law (``pays_rent`` iff ``delta_score_total < 0`` AND
+    the scorer effect survives parse-back).  Long-run launch is BLOCKED unless a
+    same-action row exists with ``pays_rent: True`` bound to a non-empty base
+    archive sha (and, when the current frontier base is known, the SAME base —
+    a candidate measured against a phantom/old base must never admit).
+    """
+
+    matches = [row for row in rows if str(row.get("action_id") or "") == action_id]
+    if not matches:
+        blockers.append("candidate_action_evaluation_missing")
+        blockers.append(f"candidate_action_evaluation_missing:{action_id}")
+        return
+
+    expected_base = str(expected_base_archive_sha256 or "").strip()
+    candidate_blockers: list[str] = []
+    for row in matches:
+        base_sha = str(row.get("base_archive_sha256") or "").strip()
+        if not base_sha:
+            candidate_blockers.append(
+                f"candidate_action_evaluation_base_archive_sha256_missing:{action_id}"
+            )
+            continue
+        if expected_base and base_sha != expected_base:
+            candidate_blockers.append(
+                f"candidate_action_evaluation_base_archive_sha256_mismatch:{action_id}"
+            )
+            continue
+        delta_total = row.get("delta_score_total")
+        if not _negative_number(delta_total):
+            candidate_blockers.append(
+                f"candidate_action_evaluation_exact_total_not_improved:{action_id}"
+            )
+            continue
+        if row.get("scorer_effect_survived") is not True:
+            candidate_blockers.append(
+                f"candidate_action_evaluation_scorer_effect_not_survived:{action_id}"
+            )
+            continue
+        if row.get("pays_rent") is not True:
+            candidate_blockers.append(
+                f"candidate_action_evaluation_does_not_pay_rent:{action_id}"
+            )
+            continue
+        return
+
+    blockers.append("candidate_action_evaluation_does_not_pay_rent")
+    blockers.extend(_dedupe(candidate_blockers))
+
+
 def _require_hi_nerv_lowering_race_evidence(
     rows: list[dict[str, Any]],
     *,
@@ -1722,6 +1785,12 @@ def evaluate_nerv_long_run_launch_gate(
                 blockers=blockers,
             )
         )
+        candidate_action_evaluation_rows = _collect_schema_rows(
+            root,
+            CANDIDATE_ACTION_EVALUATION_SCHEMA,
+            index=evidence_index,
+            blockers=blockers,
+        )
         action_effect_rows = _validated_action_effect_rows(action_effect_rows, blockers=blockers)
         if not _parseback_selection_contract_ok(parseback_contract_rows):
             blockers.append("archive_parseback_selection_contract_missing")
@@ -1803,6 +1872,11 @@ def evaluate_nerv_long_run_launch_gate(
             )
             _require_hi_nerv_lowering_race_evidence(
                 lowering_race_rows,
+                action_id=action_id,
+                blockers=blockers,
+            )
+            _require_rent_paying_candidate_action_evaluation(
+                candidate_action_evaluation_rows,
                 action_id=action_id,
                 blockers=blockers,
             )
