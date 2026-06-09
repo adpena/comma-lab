@@ -6,13 +6,34 @@ temporal)." This is the synthesis of the measured evaluator atlas into the optim
 North star: lowest `S = 100·d_seg + √(10·d_pose) + 25·B/N` on 0.mkv (N=37,545,489). All numbers
 [macOS-CPU advisory], exact torch scorer.
 
-## One-line answer
-The optimal witness is **a score-aware NEURAL DECODER (the dense pose+base carrier) + a SPARSE SegNet
-boundary-correction sidecar (the seg term) + entropy-coded weights (the rate term), with training
-WEIGHTED by the evaluator atlas (margin field + pose Jacobian)** — because the atlas proves seg is
-sparse/spatial/frame1-only while pose is dense/temporal/both-frames, and only a learned decoder can
-make the dense pose carrier cheap by amortizing 600 pairs. The naive evaluator-inverse skeleton wins
-the seg sidecar, NOT the bulk.
+## PRECISION EDITS (operator 2026-06-09 — these SUPERSEDE the over-claims in the body below)
+The body below was written one certainty-level too high. The rigorous statements are:
+1. **NOT "neural decoder is necessary."** Say: **"a dense amortized carrier is necessary UNLESS B2
+   proves PoseNet has a cheap low-dimensional YUV6/motion carrier."** PoseNet outputs only 6 scored
+   dims ⇒ per-pair pose-sensitive subspace is rank ≤ 6; the GLOBAL rank across 600 pairs is unmeasured.
+   If low-rank (recurring ego-motion modes) → a compact pose carrier replaces the neural bulk and the
+   floor drops below PR95. B2 (the JᵀJ spectrum) decides this. Do NOT treat the decoder as a theorem.
+2. **NOT "semantic skeleton loses."** Say: **"naive PER-FRAME SegNet target storage loses (424,722 B,
+   rate 0.283); TEMPORALLY-CODED boundary/thin-class grammar remains OPEN and must be priced."** The
+   424 KB falsifies per-frame argmax/mask storage, NOT motion-compensated/predictive boundary coding.
+3. **NOT "sidecar."** Say **"sparse SegNet correction atoms"** — every row CandidateActionEvaluation-
+   gated, measured against the CURRENT base, admitted only if exact ΔS<0. (The old sidecar was harmful
+   because it was admitted without paying rent against the right base; the new object is ΔS-gated.)
+
+## NOT YET PROVEN (guard against over-confidence)
+- The pose carrier must be neural rather than low-rank YUV6/flow. (B2 JᵀJ spectrum decides.)
+- A temporally-coded semantic boundary grammar is too expensive. (needs the temporal codec budget; the
+  B0.5 mod-5 bug showed only that per-frame storage loses.)
+- HiNeRV specifically is the best dense carrier vs HNeRV/SNeRV/low-rank pose field.
+- The sparse SegNet correction atom is rent-positive AFTER bytes (only proven value/byte in principle).
+- That B0.5 priced temporal prediction (it priced per-frame geometry only — temporal codec is a TODO).
+
+## One-line answer (read WITH the precision edits above)
+The optimal witness is **a score-aware DENSE AMORTIZED CARRIER (pose+base) + SPARSE ΔS-gated SegNet
+correction atoms (the seg term) + entropy-coded rate, with training WEIGHTED by the evaluator atlas** —
+because seg is sparse/spatial/frame1-only while pose is dense/temporal/both-frames. Whether the dense
+carrier is an HNeRV-class neural decoder or a cheaper low-rank YUV6/motion carrier is THE open question
+B2 resolves; naive per-frame skeleton storage is ruled out, temporally-coded grammar is open.
 
 ## The full evaluator structure (measured, all dimensions)
 
