@@ -5602,6 +5602,30 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #385: vehicles claiming L2+ must not carry an unresolved ARBITRARY
+        # score-relevant/stability-critical constant (the ARBITRARINESS bug class)
+        # 2026-06-09 per operator hardening packet. Empirical anchor: the carrier's
+        # SIREN sin_frequency=30.0 (one scalar standing in for a whole spectral
+        # geometry; the empirical w=30 alias trap) + the Mistake-B distill_weight=0.0
+        # objective-starvation default. A vehicle cannot be "intrinsically
+        # optimized" (L2 per docs/vehicle_operating_system.md) while a constant that
+        # moves 100*d_seg + sqrt(10*d_pose) + bytes was set by convention. Delegates
+        # to tac.substrates._shared.constants_provenance_audit which scans
+        # .omx/state/constants_provenance/*.json and refuses any manifest whose
+        # blocking_findings() is non-empty (declared maturity >= the constant's
+        # blocking level AND the constant is score_relevant/stability_critical AND
+        # ARBITRARY AND has no real replacement_path). GUARDRAIL: only
+        # score_relevant OR stability_critical constants block (harmless engineering
+        # constants exempt). Sister of Catalog #384 (objective-starvation) + the
+        # vehicle_fidelity_manifest (name-laundering). WARN-ONLY at landing per
+        # CLAUDE.md "Strict-flip atomicity rule": the seeded hi_nerv manifest
+        # declares L1 so its L2 blockers are recorded but not firing (live count 0).
+        # Memory:
+        # feedback_scorer_spectral_atlas_v2_plus_constants_provenance_gate_landed_20260609.md
+        check_no_arbitrary_score_relevant_constant_at_l2(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -84022,6 +84046,96 @@ def check_score_aware_run_has_nonzero_scorer_objective_weights(
     if strict and violations:
         raise PreflightError(
             "check_score_aware_run_has_nonzero_scorer_objective_weights "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+def check_no_arbitrary_score_relevant_constant_at_l2(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse vehicles claiming L2+ with an unresolved ARBITRARY score-relevant constant.
+
+    Catalog #385 — the ARBITRARINESS bug class 2026-06-09 per operator hardening
+    packet. The lab discovered the ARBITRARINESS CLASS: score-relevant magic
+    constants set by CONVENTION, not derived/measured/learned. The worked symptom
+    is the carrier's SIREN ``sin_frequency = 30.0`` (one scalar standing in for a
+    whole spectral geometry; the empirical w=30 alias trap); the class also
+    includes the Mistake-B ``distill_weight = 0.0`` objective-starvation default,
+    grad-clip norm, EMA decay 0.997, stage epoch counts, latent dims, the channel
+    taper, and the injection block indices.
+
+    A vehicle cannot honestly be L2 ("intrinsically optimized" per
+    ``docs/vehicle_operating_system.md``) while a SCORE-RELEVANT constant is a
+    guess — a constant that directly moves ``100*d_seg + sqrt(10*d_pose) + bytes``
+    but was set by convention means the vehicle is intrinsically un-tuned, not
+    intrinsically optimized.
+
+    Delegates detection to the canonical helper
+    ``tac.substrates._shared.constants_provenance_audit.audit_constants_provenance_manifests``,
+    which scans ``.omx/state/constants_provenance/*.json``. A manifest VIOLATES
+    when its ``blocking_findings()`` is non-empty: the vehicle declares maturity
+    >= a constant's ``blocking_maturity_level`` (default L2) while that constant is
+    (``score_relevant`` OR ``stability_critical``) AND tagged ``ARBITRARY`` AND has
+    NO real ``replacement_path`` (placeholder literals rejected per Catalog #287).
+
+    GUARDRAIL (operator-explicit): only ``score_relevant`` OR ``stability_critical``
+    constants block — harmless engineering constants (log cadence, buffer sizes)
+    are EXEMPT by construction. The gate must not bureaucratize them; this is the
+    difference between the arbitrariness cure and arbitrariness theater.
+
+    Sister of the vehicle fidelity manifest gate (Catalog #384
+    ``check_score_aware_run_has_nonzero_scorer_objective_weights`` extincts the
+    OBJECTIVE-STARVATION bug at the trained-objective surface; the
+    ``vehicle_fidelity_manifest`` extincts NAME-LAUNDERING at the docstring
+    surface). This gate extincts the ARBITRARINESS bug at the
+    constant-provenance surface — the third leg of the "names/objectives/constants
+    outrunning their justification" triad.
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule": the only
+    seeded manifest (``hi_nerv``) declares L1 (mechanism-present per the 2026-06-09
+    audits) so its L2 blockers are RECORDED but NOT firing (live count 0). The gate
+    fires structurally the moment a vehicle's manifest declares L2+ with an
+    unresolved ARBITRARY score-relevant/stability-critical constant. Strict-flip
+    planned once vehicles routinely carry resolved (DERIVED/MEASURED/LEARNED or
+    replacement-pathed) constants before claiming L2.
+
+    **6-hook wire-in declaration** per Catalog #125:
+      * #1 sensitivity-map = N/A (defensive validator gate).
+      * #2 Pareto constraint = N/A.
+      * #3 bit-allocator = N/A.
+      * #4 cathedral autopilot dispatch = ACTIVE (prevents future vehicles from
+        claiming intrinsic optimization while score-relevant constants are guesses;
+        the constants-provenance manifest is the durable consumed surface).
+      * #5 continual-learning posterior = N/A (the design memo
+        ``.omx/research/principled_frequency_basis_synthesis_20260609.md`` is the
+        anchor; the MEASURED replacement values feed the manifest, not a new
+        canonical equation).
+      * #6 probe-disambiguator = ACTIVE (the provenance tag DERIVED/MEASURED/
+        LEARNED vs ARBITRARY IS the disambiguator between an intrinsically-tuned
+        constant and a cargo-culted one; the v2 scorer transfer function is the
+        measurement that resolves the SIREN-w instance).
+    """
+    from tac.substrates._shared.constants_provenance_audit import (
+        audit_constants_provenance_manifests,
+    )
+
+    repo = Path(repo_root or REPO_ROOT)
+    findings = audit_constants_provenance_manifests(repo)
+    violations = [f.message() for f in findings]
+
+    if verbose and violations:
+        print(f"  [catalog-385] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_no_arbitrary_score_relevant_constant_at_l2 "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )
