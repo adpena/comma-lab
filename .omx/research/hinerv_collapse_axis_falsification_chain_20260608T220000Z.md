@@ -137,6 +137,42 @@ teacher vs `extract_gt_masks`; if the teacher gives ~2 and extract_gt_masks give
 the SAME render, the runner's scorer path is a different SegNet (port drift or a different
 preprocess) and one of the two is unfaithful to upstream `modules.py` DistortionNet.SegNet.
 
+## DECISIVE HIGH-SIGNAL FINDING — the backend does NOT collapse; the "2" is a different quantity
+Same-render two-scorer test (`tools/probe_mlx_segnet_fidelity_vs_torch.py`) on the v9 live
+archive backend render (region 50568 px, class 4):
+```
+torch upstream SegNet wins (evaluate.py authority): 11297
+MLX-ported SegNet wins (runner harness path):       11306
+region argmax agreement torch-vs-MLX:               0.99966 (17 px disagree)
+full-frame argmax agreement torch-vs-MLX:           0.99991 (18 px / 196608)
+backend_collapses: FALSE
+```
+**The backend birth SURVIVES parse-back at ~11,300 region wins under BOTH the authoritative
+torch SegNet AND the MLX port.** This is consistent with the runner's OWN margin distribution
+(target_margin p50 = -1.15 ⇒ ~22% of 50568 = ~11k win), but CONTRADICTS the runner's
+`wrong_to_target_count = 2`. Therefore the runner's "2" measures a DIFFERENT quantity than
+absolute region wins — almost certainly a TRANSITION against an initial/reference render
+(`initial_in_region_target_count: 0` → wrong_to_target counts pixels CREATED relative to that
+reference), OR the sidecar net effect, NOT a backend collapse. **The "parse-back collapse to 2"
+premise that drove this whole diagnosis is, at the backend-absolute-win level, an artifact of
+the runner's win-DEFINITION, not a real birth collapse.**
+
+ALL prior collapse hypotheses (H1 section / H2 latent / H3 int4 / H4 EMA / H5 build-path /
+H5a sidecar / uint8 / win-def / region / MLX-port) are now subordinate to this: there may be
+no backend collapse to explain. The runner's `measure_birth_parseback_survival_from_report`
+win-definition must be read line-by-line and reconciled against absolute SegNet d_seg.
+
+## OPERATOR DIRECTIVE (2026-06-08) — MLX-port drift hardening is TOP PRIORITY
+"hardening and fixing and engineering all drift away possible of MLX port is a top priority" +
+"getting this as high signal and fidelity as possible is extremely important". Measured drift:
+**18 px / 196608 (0.0092%)** full-frame argmax disagreement between the MLX port and the
+upstream torch SegNet on this render. The MLX port is NEAR-faithful but NOT argmax-exact.
+Hardening lane: `tac.local_acceleration.mlx_scorer_adapters.MLXSegNetAdapter` → drive
+`full_frame_argmax_disagreement_px` to 0 (and per-class logit max-abs delta below a tight
+band) via `tools/probe_mlx_segnet_fidelity_vs_torch.py` as the gate; wire the gate into a
+STRICT preflight so any MLX-scored birth carries a torch-parity attestation (false-authority
+risk: a birth the MLX port calls won/lost may differ from the contest torch SegNet).
+
 ## DO NOT
 - name a guilty decoder section (H1 superseded; the selected codec is int8, faithful in the grid).
 - implement section QAT or decoder-codec QAT (int8 is faithful; int4 isn't what ships; the gap is build-path).
