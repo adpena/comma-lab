@@ -8064,6 +8064,145 @@ class MlxScoreAwareAdapter:
             ),
         }
 
+    def rich_gating_telemetry(
+        self, global_epoch: int | None = None
+    ) -> Mapping[str, Any]:
+        """Return per-epoch GATING telemetry for the canonical observability row.
+
+        Observability-ONLY (per CLAUDE.md "Max observability" non-negotiable):
+        this method reads adapter state that is ALREADY computed by the training
+        step + the PR95 curriculum factory + the Wave N+11 stabilizer. It does
+        NOT mutate any loss / gradient / optimizer state, so sister substrates
+        whose ``run_long_training`` epoch loop calls this stay byte-identical.
+
+        The killed off-spec B1 pilot's telemetry emitted only epoch/loss/lr/
+        ema_drift, which is why divergence took ~20 shell probes to diagnose.
+        These fields make the per-epoch divergence diagnosis a single tail of
+        the telemetry JSONL (stage geometry + per-step grad-norm + clip-applied
+        + nan/inf count + the optimizer partition kind by group).
+
+        Args:
+            global_epoch: optional explicit epoch for the curriculum stage
+                lookup. If None, uses the adapter's own ``_pr95_global_epoch``
+                (advanced by ``notify_global_epoch``).
+
+        Returns:
+            a JSON-able mapping with the canonical gating fields. Adapters
+            without a PR95 faithful curriculum return the optimizer/grad fields
+            with ``stage_index=None`` so the row schema stays uniform.
+        """
+        epoch_for_stage = (
+            int(global_epoch)
+            if global_epoch is not None
+            else int(self._pr95_global_epoch)
+        )
+
+        # Stage geometry — from the canonical PR95 factory (the SAME object the
+        # train step routes through; no re-derivation per Catalog #344).
+        stage_index: int | None = None
+        loss_form: str | None = None
+        muon_active: bool = False
+        stage_name: str | None = self._active_curriculum_stage_name
+        cat_sigma: float | None = None
+        cat_lambda: float | None = None
+        qat_active: bool = False
+        if (
+            self._pr95_faithful_curriculum_enabled
+            and self._pr95_curriculum_factory is not None
+        ):
+            try:
+                verdict = self._pr95_curriculum_factory.current_stage_verdict(
+                    epoch_for_stage
+                )
+                stage_index = int(verdict.stage_index)
+                loss_form = str(verdict.loss_family)
+                muon_active = bool(verdict.uses_muon)
+                stage_name = str(verdict.descriptor_id)
+                cat_sigma = float(verdict.cat_sigma)
+                cat_lambda = float(verdict.cat_lambda)
+                qat_active = bool(verdict.qat_active)
+            except Exception as exc:  # observability-only; never fail the run.
+                print(
+                    "[mlx_score_aware] WARN: rich_gating_telemetry stage "
+                    f"verdict failed at epoch {epoch_for_stage}: {exc!r}"
+                )
+
+        # Optimizer partition kind by group. For the PR95 faithful curriculum,
+        # the partition is canonical: matrix-like DECODER weights -> Muon (stage
+        # 8 only); latents/biases/norms/scalars/entropy/QAT/sidecar/stem/rgb ->
+        # AdamW. Before stage 8 ALL params route through the AdamW branch of
+        # apply_pr95_mlx_optimizer_step (uses_muon=False).
+        if (
+            self._pr95_faithful_curriculum_enabled
+            and self._pr95_curriculum_factory is not None
+        ):
+            optimizer_kind_by_group: dict[str, str] = {
+                "matrix_decoder_weights": (
+                    "muon" if muon_active else "adamw"
+                ),
+                "latents": "adamw",
+                "biases_norms_scalars": "adamw",
+                "entropy_qat_params": "adamw",
+                "stem_rgb_head": "adamw",
+            }
+        else:
+            optimizer_kind_by_group = {
+                "all_params": str(self._wave_n11_optimizer_kind),
+            }
+
+        # Per-step grad-norm + clip-applied + nan/inf, from the Wave N+11
+        # stabilizer history (appended once per train step).
+        grad_history = list(self._wave_n11_grad_norm_history)
+        last_grad_norm = float(grad_history[-1]) if grad_history else None
+        grad_clip_max_norm = self._wave_n11_grad_clip_max_norm
+        grad_clip_applied = bool(
+            grad_clip_max_norm is not None
+            and last_grad_norm is not None
+            and last_grad_norm > float(grad_clip_max_norm)
+        )
+        nan_inf_count = 0
+        if last_grad_norm is not None and (
+            last_grad_norm != last_grad_norm  # NaN
+            or last_grad_norm == float("inf")
+            or last_grad_norm == float("-inf")
+        ):
+            nan_inf_count = 1
+
+        return {
+            "schema": "mlx_score_aware_rich_gating_telemetry.v1",
+            "stage_index": stage_index,
+            "stage_name": stage_name,
+            "loss_form": loss_form,
+            "muon_active": bool(muon_active),
+            "qat_active": bool(qat_active),
+            "cat_sigma": cat_sigma,
+            "cat_lambda": cat_lambda,
+            "optimizer_kind_by_group": optimizer_kind_by_group,
+            "grad_norm": last_grad_norm,
+            "grad_clip_max_norm": (
+                float(grad_clip_max_norm)
+                if grad_clip_max_norm is not None
+                else None
+            ),
+            "grad_clip_applied": grad_clip_applied,
+            "grad_norm_clipped_count_cumulative": int(self._wave_n11_clipped_count),
+            "nan_inf_count": int(nan_inf_count),
+            "pr95_faithful_curriculum_enabled": bool(
+                self._pr95_faithful_curriculum_enabled
+            ),
+            "pr95_muon_policy": str(self._pr95_muon_policy),
+            # Sidecar / pay-rent are run-level invariants the clean PR95
+            # baseline asserts in its launch manifest. The adapter reports the
+            # STRUCTURAL truth: this adapter constructs NO receiver sidecar
+            # param group, so ``sidecar_exported`` is False and the pay-rent
+            # gate is trivially active (no unjustified bytes can enter the
+            # archive). These are honest structural facts, not fabricated
+            # values — the manifest is the authoritative cross-check.
+            "sidecar_exported": False,
+            "pay_rent_gate_active": True,
+            "authority": "macos_mlx_research_signal_false_authority",
+        }
+
     def decoder_weight_gradient_saliency_summary(self) -> Mapping[str, Any]:
         """Return train-time decoder-weight saliency from real MLX gradients.
 
@@ -9443,6 +9582,16 @@ class MlxScoreAwareAdapter:
                 ),
             }
         )
+        # Record the per-step pre-clip global grad norm into the Wave N+11
+        # history so the canonical ``rich_gating_telemetry`` / B1 clean-relaunch
+        # per-epoch telemetry can surface a REAL ``grad_norm`` for the PR95
+        # faithful curriculum path (the partition helper applies the clip
+        # internally; this append is observability-only and does NOT mutate the
+        # already-applied step). Matches the native + pact paths' bookkeeping.
+        if grad_norm_pre_clip is not None and math.isfinite(grad_norm_pre_clip):
+            self._wave_n11_grad_norm_history.append(float(grad_norm_pre_clip))
+            if int(_summary.get("gradient_clip_actual_application_count") or 0) > 0:
+                self._wave_n11_clipped_count += 1
         post_update_loss_part_metrics_before_guard = (
             self._score_aware_loss_part_metrics(
                 batch,

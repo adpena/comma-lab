@@ -1071,6 +1071,103 @@ class LongTrainingConfig:
         return self.curriculum_stages[-1]
 
 
+def _contest_score_from_axes(
+    *, seg: float, pose: float, archive_bytes: float
+) -> float:
+    """The canonical contest score for the per-epoch proxy decomposition.
+
+    ``100*d_seg + sqrt(10*d_pose) + 25*archive_bytes/37_545_489``. Inlined here
+    (rather than imported from ``tac.substrates.hi_nerv.launch_manifest``) to
+    keep ``long_training_canonical`` substrate-agnostic with no import cycle.
+    Proxy / [macOS-MLX research-signal] only — exact CPU/CUDA eval is authority.
+    """
+    pose_term = math.sqrt(10.0 * max(0.0, float(pose)))
+    return (
+        100.0 * float(seg)
+        + pose_term
+        + 25.0 * float(archive_bytes) / 37_545_489.0
+    )
+
+
+def _assemble_gating_row(
+    *,
+    adapter: Any,
+    epoch: int,
+    total_loss: float,
+    per_axis: Mapping[str, float] | None,
+    last_checkpoint_path: Path | None = None,
+    checkpoint_save_scheduled: bool = False,
+) -> dict[str, Any] | None:
+    """Assemble the canonical RICH GATING telemetry row for one epoch.
+
+    Observability-ONLY per CLAUDE.md "Max observability" + the B1 clean-relaunch
+    BLOCKER 1 directive. The adapter's ``rich_gating_telemetry(epoch)`` supplies
+    the stage geometry + optimizer-partition kind + per-step grad-norm / clip /
+    nan-inf; this helper augments it with the per-axis proxy loss decomposition
+    (seg / pose / rate / recon) + the canonical proxy contest score so a
+    diverging run is diagnosable from a single telemetry tail.
+
+    Returns ``None`` if the adapter does not expose ``rich_gating_telemetry``
+    (sister substrates stay byte-identical: their rows omit the gating fields).
+
+    The per-axis values are the UNWEIGHTED proxy axis losses. ``loss_total`` is
+    the WEIGHTED training total. They are NOT expected to be equal; the row
+    reports both plus an arithmetically-consistent ``per_axis_sum`` (the literal
+    sum of the per-axis components emitted) so a NO-FAKE sum-check verifies the
+    arithmetic without forcing a fabricated equality.
+    """
+    rich_fn = getattr(adapter, "rich_gating_telemetry", None)
+    if not callable(rich_fn):
+        return None
+    try:
+        gating: dict[str, Any] = dict(rich_fn(epoch))
+    except Exception as exc:  # observability-only; never fail the run.
+        print(
+            f"[long_training_canonical] WARN: rich_gating_telemetry failed "
+            f"at epoch {epoch}: {exc!r}"
+        )
+        return None
+
+    gating["loss_total"] = float(total_loss)
+
+    axes = dict(per_axis or {})
+    seg = float(axes.get("seg", 0.0))
+    pose = float(axes.get("pose", 0.0))
+    rate = float(axes.get("archive_bytes", axes.get("rate", 0.0)))
+    recon_aux = float(axes.get("recon_aux", 0.0))
+    margin = float(axes.get("margin", axes.get("seg_margin", 0.0)))
+    c1a = float(axes.get("c1a", axes.get("c1a_entropy", 0.0)))
+
+    gating["loss_seg"] = seg
+    gating["loss_pose"] = pose
+    gating["loss_rate"] = rate
+    gating["loss_recon_aux"] = recon_aux
+    gating["loss_margin"] = margin
+    gating["loss_c1a"] = c1a
+    # Literal arithmetic sum of the per-axis components emitted above (the
+    # NO-FAKE sum-check target — verifies the emitted numbers add up, NOT a
+    # forced equality to the weighted total).
+    gating["per_axis_sum"] = seg + pose + rate + recon_aux + margin + c1a
+
+    # Proxy axis values + proxy contest score (research-signal only).
+    gating["proxy_d_seg"] = seg
+    gating["proxy_d_pose"] = pose
+    gating["proxy_rate"] = rate
+    gating["proxy_score"] = _contest_score_from_axes(
+        seg=seg, pose=pose, archive_bytes=rate
+    )
+    # ``checkpoint_path`` records the LAST durably-written checkpoint meta path
+    # (the periodic write happens after this row is recorded, so this is the
+    # most-recent saved checkpoint — an honest record, never a predicted path).
+    # ``checkpoint_save_scheduled`` is the honest pre-write fact that THIS epoch
+    # is a checkpoint-cadence boundary.
+    gating["checkpoint_path"] = (
+        str(last_checkpoint_path) if last_checkpoint_path is not None else None
+    )
+    gating["checkpoint_save_scheduled"] = bool(checkpoint_save_scheduled)
+    return gating
+
+
 @dataclass(frozen=True)
 class PerEpochMetrics:
     """Canonical per-epoch metrics row per Catalog #305 observability surface.
@@ -1104,6 +1201,14 @@ class PerEpochMetrics:
     ema_drift_l2: float = 0.0
     learning_rate: float = 0.0
     captured_at_utc: str = ""
+    # Optional RICH GATING telemetry per CLAUDE.md "Max observability" +
+    # the B1 clean-relaunch directive: the adapter may expose
+    # ``rich_gating_telemetry(epoch)`` returning stage geometry +
+    # optimizer-partition kind + per-step grad-norm/clip + nan/inf so a
+    # diverging run is diagnosable from a single telemetry tail. ``None``
+    # for adapters that do NOT expose the accessor (byte-stable — these
+    # fields are absent from such adapters' rows by default).
+    gating: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.epoch, int) or self.epoch < 0:
@@ -1114,7 +1219,7 @@ class PerEpochMetrics:
             raise ValueError(f"loss is NaN at epoch {self.epoch}; OOM-safe runner should detect")
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        row: dict[str, Any] = {
             "epoch": int(self.epoch),
             "stage_name": self.stage_name,
             "loss": float(self.loss),
@@ -1134,6 +1239,39 @@ class PerEpochMetrics:
             "learning_rate": float(self.learning_rate),
             "captured_at_utc": self.captured_at_utc,
         }
+        if self.gating is not None:
+            gating = _jsonable_mapping(self.gating)
+            # Preserve the full nested gating block AND surface the canonical
+            # gating fields at the row top-level so operator diagnosis can tail
+            # the JSONL and read stage_index / loss_form / muon_active /
+            # grad_norm / grad_clip_applied / nan_inf_count / sidecar_exported
+            # directly (the B1 clean-relaunch BLOCKER 1 contract).
+            row["gating"] = gating
+            for _top_key in (
+                "stage_index",
+                "loss_form",
+                "muon_active",
+                "optimizer_kind_by_group",
+                "grad_norm",
+                "grad_clip_applied",
+                "nan_inf_count",
+                "sidecar_exported",
+                "pay_rent_gate_active",
+                "loss_total",
+                "loss_seg",
+                "loss_pose",
+                "loss_rate",
+                "loss_margin",
+                "loss_c1a",
+                "proxy_d_seg",
+                "proxy_d_pose",
+                "proxy_rate",
+                "proxy_score",
+                "checkpoint_path",
+            ):
+                if _top_key in gating:
+                    row[_top_key] = gating[_top_key]
+        return row
 
 
 class LongTrainingStopRequested(RuntimeError):
@@ -3535,6 +3673,11 @@ def run_long_training(
     early_stop_reason = ""
     t_start = time.time()
     final_epoch = resume_global_epoch
+    # Most-recent durably-written checkpoint meta path; surfaced into the next
+    # epoch's gating telemetry ``checkpoint_path`` (the canonical checkpoint
+    # write happens AFTER the per-epoch telemetry record, so the row carries
+    # the LAST saved checkpoint — an honest record, never a predicted path).
+    last_checkpoint_meta_path: Path | None = None
 
     for epoch in range(resume_global_epoch, config.epochs):
         final_epoch = epoch
@@ -3649,12 +3792,28 @@ def run_long_training(
             checkpoint_selection_metric_blockers.append(
                 f"checkpoint_selection_tie_break_{tie_break_metric_blocker}"
             )
+        # RICH GATING telemetry per CLAUDE.md "Max observability" + the B1
+        # clean-relaunch BLOCKER 1 directive. Observability-ONLY: querying the
+        # adapter's ``rich_gating_telemetry`` does not mutate loss/grad/optimizer
+        # state, so sister substrates without the accessor stay byte-identical
+        # (gating stays None -> the new fields are absent from their rows).
+        gating_row = _assemble_gating_row(
+            adapter=adapter,
+            epoch=epoch,
+            total_loss=total_loss,
+            per_axis=per_axis,
+            last_checkpoint_path=last_checkpoint_meta_path,
+            checkpoint_save_scheduled=bool(
+                (epoch + 1) % config.checkpoint_interval_epochs == 0
+            ),
+        )
         metrics = PerEpochMetrics(
             epoch=epoch,
             stage_name=stage.name,
             loss=total_loss,
             loss_components=loss_components,
             per_axis_decomposition=per_axis,
+            gating=gating_row,
             batch_observability={
                 "schema": "long_training_batch_observability.v1",
                 "train_batch": train_batch_observability,
@@ -3750,6 +3909,10 @@ def run_long_training(
                     config,
                     trigger_meta_path=periodic_meta_path,
                 )
+                # Surface this durable checkpoint path into the NEXT epoch's
+                # gating telemetry ``checkpoint_path`` (honest most-recent
+                # record; the write succeeded above).
+                last_checkpoint_meta_path = periodic_meta_path
             except Exception as exc:
                 if config.ema_accumulation == "kahan":
                     raise
