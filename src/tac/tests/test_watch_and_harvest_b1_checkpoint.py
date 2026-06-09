@@ -23,6 +23,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -256,6 +258,54 @@ def test_select_checkpoint_target_epoch_one_clamps_threshold_floor(paths):
     cks = WH.list_checkpoints(paths.checkpoint_dir)
     target = WH.select_target_checkpoint(cks, target_epoch=1)
     assert target is not None and target.global_epoch == 0
+
+
+# ---------------------------------------------------------------------------
+# 1c. SELF-BOOTSTRAP (2026-06-09): the diverging pilot's detached harvester
+# failed with ``ModuleNotFoundError: No module named 'experiments'`` because it
+# ran without PYTHONPATH and did not insert REPO_ROOT on sys.path. The export
+# path does an in-process ``import experiments.train_substrate_hi_nerv_mlx_local``,
+# so the harvest NEVER produced an archive. The module now self-bootstraps.
+# ---------------------------------------------------------------------------
+
+
+def test_harvester_inserts_repo_root_on_sys_path() -> None:
+    """REGRESSION: loading the harvester puts REPO_ROOT + src on sys.path so the
+    in-process ``import experiments...`` export path resolves without PYTHONPATH."""
+    assert str(REPO_ROOT) in sys.path, (
+        "harvester must insert REPO_ROOT on sys.path so import experiments works "
+        "(the diverging pilot's harvest died on ModuleNotFoundError: experiments)"
+    )
+    assert str(REPO_ROOT / "src") in sys.path
+
+
+def test_harvester_export_path_imports_experiments_in_subprocess() -> None:
+    """NO-FAKE: a fresh python (no PYTHONPATH, neutral cwd) that loads the
+    harvester module can then ``import experiments...`` — proving the bootstrap
+    fixes the killed-run failure end-to-end, not just in this test process."""
+    code = (
+        "import importlib.util, sys\n"
+        f"spec = importlib.util.spec_from_file_location('wh', {str(_TOOL_PATH)!r})\n"
+        "m = importlib.util.module_from_spec(spec); sys.modules['wh']=m\n"
+        "spec.loader.exec_module(m)\n"
+        "import experiments.train_substrate_hi_nerv_mlx_local\n"
+        "print('OK')\n"
+    )
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)  # reproduce the killed-run no-PYTHONPATH context
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(Path(os.sep)),  # neutral cwd (root), not the repo
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert proc.returncode == 0, (
+        f"harvester self-bootstrap failed: rc={proc.returncode}\n"
+        f"stdout={proc.stdout}\nstderr={proc.stderr}"
+    )
+    assert "OK" in proc.stdout
 
 
 # ---------------------------------------------------------------------------

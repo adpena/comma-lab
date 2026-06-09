@@ -91,6 +91,19 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+# Ensure the in-process ``import experiments.train_substrate_hi_nerv_mlx_local``
+# (the standalone export path) + ``import tac.*`` + ``import upstream.*`` resolve
+# regardless of cwd / PYTHONPATH. ROOT-CAUSE FIX (2026-06-09): the diverging
+# pilot's detached harvester (call_id pid 14354) failed with
+# ``ModuleNotFoundError: No module named 'experiments'`` (harvest_status_ep249
+# ``state=failed_harvest_exception``) because it ran without PYTHONPATH and this
+# bootstrap did not exist — so the harvest NEVER produced an archive. Inserting
+# REPO_ROOT + src + upstream here makes the detached harvest self-sufficient.
+for _path_entry in (REPO_ROOT, REPO_ROOT / "src", REPO_ROOT / "upstream"):
+    _entry_str = str(_path_entry)
+    if _entry_str not in sys.path:
+        sys.path.insert(0, _entry_str)
+
 # ---------------------------------------------------------------------------
 # Constants / canonical defaults (re-derived from the pilot launch contract).
 # ---------------------------------------------------------------------------
