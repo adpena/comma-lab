@@ -515,3 +515,74 @@ def test_floodfill_method_returns_none_on_bad_shapes():
         )
         is None
     )
+
+
+# -----------------------------------------------------------------------------
+# HARNESS -> ADAPTER FORWARDING (the long-training path reachability fix)
+# -----------------------------------------------------------------------------
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+# the throughput-fix cadence lived on the adapter but was NOT threaded through
+# `run_mlx_score_aware_full_main`, so the ~1.65-1.78x speedup was unreachable
+# from the canonical long-training path that every MLX-first substrate trainer
+# (incl. the B1 229K HiNeRV pilot) routes through. These tests prove the
+# harness FORWARDS the kwarg to the adapter (behavior, not a constant), so the
+# regression cannot silently return.
+
+
+class _AdapterConstructionCaptured(Exception):
+    """Sentinel raised by the spy to short-circuit harness execution."""
+
+    def __init__(self, captured_kwargs: dict) -> None:
+        super().__init__("adapter construction captured")
+        self.captured_kwargs = captured_kwargs
+
+
+def _run_harness_capturing_adapter_kwargs(monkeypatch, bundle, **harness_overrides):
+    """Call the harness with a spy adapter that captures ctor kwargs then stops."""
+    import tac.substrates._shared.mlx_score_aware.harness as harness_mod
+
+    captured: dict = {}
+
+    def _spy_adapter(_bundle, **kwargs):
+        captured.update(kwargs)
+        raise _AdapterConstructionCaptured(dict(kwargs))
+
+    monkeypatch.setattr(harness_mod, "MlxScoreAwareAdapter", _spy_adapter)
+
+    base_kwargs = {
+        "bundle": bundle,
+        "substrate_id": "test_diag_cadence_harness",
+        "lane_id": "lane_test_diag_cadence_harness",
+        "output_dir": "/Volumes/__never_written__/diag_cadence_test",
+        "epochs": 1,
+        "batch_pair_indices_per_step": 1,
+    }
+    base_kwargs.update(harness_overrides)
+    try:
+        harness_mod.run_mlx_score_aware_full_main(**base_kwargs)
+    except _AdapterConstructionCaptured:
+        pass
+    return captured
+
+
+def test_harness_forwards_diagnostics_every_n_steps_to_adapter(
+    tiny_recon_bundle, monkeypatch
+):
+    """The harness MUST pass an explicit cadence through to the adapter ctor."""
+    pytest.importorskip("mlx.core")
+    captured = _run_harness_capturing_adapter_kwargs(
+        monkeypatch, tiny_recon_bundle, diagnostics_every_n_steps=50
+    )
+    assert "diagnostics_every_n_steps" in captured, (
+        "run_mlx_score_aware_full_main did not forward diagnostics_every_n_steps "
+        "to MlxScoreAwareAdapter; the long-training-path throughput fix is "
+        "unreachable (regression)."
+    )
+    assert int(captured["diagnostics_every_n_steps"]) == 50
+
+
+def test_harness_diagnostics_cadence_defaults_to_1(tiny_recon_bundle, monkeypatch):
+    """Default (omitted) cadence forwards as 1 == byte-stable every-step path."""
+    pytest.importorskip("mlx.core")
+    captured = _run_harness_capturing_adapter_kwargs(monkeypatch, tiny_recon_bundle)
+    assert int(captured.get("diagnostics_every_n_steps", -1)) == 1

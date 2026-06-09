@@ -90,6 +90,15 @@ def run_mlx_score_aware_full_main(
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
     bias_gradient_multiplier: float | None = None,
     output_head_bias_gradient_multiplier: float = 1.0,
+    # Throughput-fix diagnostics cadence (math-preserving; see
+    # `.omx/research/throughput_fix_mlx_score_aware_diagnostics_cadence_20260609.md`
+    # + `MlxScoreAwareAdapter.__init__`). Default 1 is byte-identical to the
+    # pre-fix every-step diagnostics; >1 SAMPLES observability-only telemetry on
+    # a cadence (the gated diagnostics do NOT feed the gradient, optimizer
+    # update, or returned loss; guard-feeding diagnostics still run every step
+    # when the scorer-space step guard is on). The ~1.65-1.78x speedup is
+    # reachable from the long-training path only when this is threaded.
+    diagnostics_every_n_steps: int = 1,
     scorer_space_step_guard_enabled: bool = False,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -344,6 +353,7 @@ def run_mlx_score_aware_full_main(
         gradient_multiplier_by_name=gradient_multiplier_by_name,
         bias_gradient_multiplier=bias_gradient_multiplier,
         output_head_bias_gradient_multiplier=output_head_bias_gradient_multiplier,
+        diagnostics_every_n_steps=diagnostics_every_n_steps,
         scorer_space_step_guard_enabled=scorer_space_step_guard_enabled,
         scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(
             scorer_space_step_guard_min_pre_segnet_occupied_class_fraction

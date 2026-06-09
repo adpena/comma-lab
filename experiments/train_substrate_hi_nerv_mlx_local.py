@@ -930,6 +930,9 @@ def _full_main(args: argparse.Namespace) -> int:
     canonicalization = _direct_trainer_canonicalization_contract(
         mode="full",
         modelsize_candidate_consumption=modelsize_candidate_consumption,
+        allow_direct_research_full_launch=bool(
+            getattr(args, "allow_direct_research_full_launch", False)
+        ),
     )
     launch_refusal = _direct_trainer_launch_refusal_payload(
         canonicalization,
@@ -1535,6 +1538,11 @@ def _full_main(args: argparse.Namespace) -> int:
         batch_pair_indices_per_step=min(int(args.batch_pairs), int(effective_training_num_pairs)),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
+        # Canonical EMA shadow decay per CLAUDE.md "EMA -- NON-NEGOTIABLE" +
+        # operator directive 2026-06-09. A negative value defers to the
+        # harness default (0.999 PR95-source when faithful curriculum, else
+        # 0.997); the explicit 0.997 default OVERRIDES the PR95-source 0.999.
+        ema_decay=(float(args.ema_decay) if float(args.ema_decay) >= 0.0 else None),
         checkpoint_interval_epochs=int(args.checkpoint_interval_epochs),
         checkpoint_retention_keep_last_n=(
             _checkpoint_retention_keep_last_n_from_args(args)
@@ -1586,6 +1594,7 @@ def _full_main(args: argparse.Namespace) -> int:
         output_head_bias_gradient_multiplier=float(
             optimizer_control["output_head_bias_gradient_multiplier"]
         ),
+        diagnostics_every_n_steps=int(args.diagnostics_every_n_steps),
         scorer_space_step_guard_enabled=bool(args.scorer_space_step_guard),
         scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
             args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
@@ -2071,6 +2080,24 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--full-lr", type=float, default=1.0e-3)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--ema-decay",
+        type=float,
+        default=0.997,
+        help=(
+            "EMA shadow decay for the inference checkpoint. Default is the "
+            "canonical 0.997 per CLAUDE.md 'EMA -- NON-NEGOTIABLE' (all weight "
+            "EMAs default to decay=0.997; the EMA shadow is saved as the "
+            "inference checkpoint). This is passed through to "
+            "run_mlx_score_aware_full_main(ema_decay=...) and OVERRIDES the "
+            "harness's PR95-faithful-source default of 0.999. The operator "
+            "directive 2026-06-09 ('save EMA shadow decay 0.997 as inference "
+            "ckpt') is binding here: PR95 sets the rigor baseline but each "
+            "vehicle differs; V1 uses the canonical 0.997 EMA, not PR95's "
+            "0.999. Set to a negative value to defer to the harness default "
+            "(0.999 when --pr95-faithful-curriculum, else 0.997)."
+        ),
+    )
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=25)
     parser.add_argument(
         "--telemetry-flush-interval-epochs",
@@ -2080,6 +2107,20 @@ def _build_parser() -> argparse.ArgumentParser:
             "Flush shared score-aware training telemetry this often. Direct "
             "HiNeRV uses the compact-runner default of 1 so long runs expose "
             "distortion, byte-dual, and guard movement from step zero."
+        ),
+    )
+    parser.add_argument(
+        "--diagnostics-every-n-steps",
+        type=int,
+        default=1,
+        help=(
+            "Throughput-fix diagnostics cadence (math-preserving). Default 1 is "
+            "byte-identical to every-step diagnostics. Set >1 (e.g. 50) to SAMPLE "
+            "observability-only telemetry on a cadence for the ~1.65-1.78x MLX "
+            "speedup; the gated diagnostics never feed the gradient/optimizer/loss "
+            "and guard-feeding diagnostics still run every step when the "
+            "scorer-space step guard is active. See "
+            ".omx/research/throughput_fix_mlx_score_aware_diagnostics_cadence_20260609.md."
         ),
     )
     parser.add_argument("--decoder-codec", default=DEFAULT_DECODER_CODEC)
@@ -2245,6 +2286,39 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--segnet-hinge-margin", type=float, default=1.0)
     parser.add_argument("--allow-mock-scorer-teacher", action="store_true")
     parser.add_argument("--allow-segnet-only-research", action="store_true")
+    parser.add_argument(
+        "--allow-direct-research-full-launch",
+        action="store_true",
+        help=(
+            "Operator-authorized direct --full research launch (B1 baseline "
+            "campaign 2026-06-09 'Full send now: 229K full curriculum'). The "
+            "canonicalization contract normally routes --full through the "
+            "compact runner for QUEUE-OWNED launch custody, but the compact "
+            "runner's hi_nerv family can only express a UNIFORM decoder taper "
+            "(decoder_channels=[c]*7), so it cannot build the 229K-parity "
+            "asymmetric taper (36,30,23,17,14,11,8). This flag permits a "
+            "direct research-signal launch of that exact config. The run is "
+            "tagged [macOS-MLX research-signal] (score_claim=false, "
+            "promotable=false); it is NOT queue-owned authority and makes NO "
+            "contest-score claim. The PR95 production control contract is STILL "
+            "enforced (all scorer/QAT/rate controls required); only the "
+            "compact-runner-ownership and (with --research-curriculum-total-epochs "
+            "below the canonical 29650) the epoch-budget floor are relaxed, and "
+            "the relaxed blockers are recorded as acknowledged-not-dropped."
+        ),
+    )
+    parser.add_argument(
+        "--research-curriculum-total-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Under --allow-direct-research-full-launch ONLY: the explicit "
+            "reduced PR95 curriculum epoch budget for a compressed MVP-first "
+            "pilot (e.g. 3000) that still exercises all 8 stages incl. stage-8 "
+            "Muon. Without this flag the canonical 29650 floor applies. This "
+            "value is also passed as --pr95-curriculum-total-epochs / --epochs."
+        ),
+    )
     parser.add_argument("--eval-roundtrip-ste", action="store_true")
     parser.add_argument("--pose-student-input-preprocess", choices=("rgb", "pr95_yuv6"), default="pr95_yuv6")
     parser.add_argument("--pr95-faithful-curriculum", action="store_true")
@@ -5048,6 +5122,7 @@ def _direct_trainer_canonicalization_contract(
     *,
     mode: str,
     modelsize_candidate_consumption: Mapping[str, Any] | None = None,
+    allow_direct_research_full_launch: bool = False,
 ) -> dict[str, Any]:
     """Describe why this script is not the production launch authority.
 
@@ -5056,6 +5131,17 @@ def _direct_trainer_canonicalization_contract(
     remains useful as the subprocess implementation behind that runner and for
     explicitly local research smokes, but direct artifacts must never look like
     queue-owned launch authority.
+
+    ``allow_direct_research_full_launch`` is the operator-authorized B1
+    research-launch opt-out (2026-06-09 "Full send now: 229K full curriculum").
+    The compact runner's hi_nerv family can only build a UNIFORM decoder taper
+    (``decoder_channels=[c]*7``), so it structurally cannot express the
+    229K-parity asymmetric taper ``(36,30,23,17,14,11,8)``. When the opt-out is
+    set this contract flips ``trainer_launch_allowed`` True and tags the role as
+    an explicit research-signal launch, while RECORDING (not dropping) the
+    queue-ownership blockers under ``research_launch_acknowledged_blockers`` so
+    the artifact remains honest: it is ``[macOS-MLX research-signal]`` and makes
+    no contest-score / promotion / queue-authority claim.
     """
 
     modelsize_consumed = bool(
@@ -5075,10 +5161,15 @@ def _direct_trainer_canonicalization_contract(
         if not modelsize_consumed
         or blocker != "hinerv_direct_modelsize_row_not_budget_candidate_contract"
     ]
-    return {
+    research_launch = bool(allow_direct_research_full_launch) and str(mode) == "full"
+    contract = {
         "schema": DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
         "canonical_runner_entrypoint": DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT,
-        "direct_trainer_role": "runner_subprocess_or_research_smoke_only",
+        "direct_trainer_role": (
+            "explicit_operator_research_launch_macos_mlx_research_signal"
+            if research_launch
+            else "runner_subprocess_or_research_smoke_only"
+        ),
         "mode": str(mode),
         "planner_row_required": True,
         "planner_row_id": None,
@@ -5092,10 +5183,19 @@ def _direct_trainer_canonicalization_contract(
         "compact_runner_startup_marker_present": False,
         "full_video_mlx_prefilter_bound": False,
         "local_cpu_replay_gate_bound": False,
-        "trainer_launch_allowed": False,
-        "blockers": blockers,
+        "research_launch_opt_out_consumed": research_launch,
+        "research_launch_rationale": (
+            "compact_runner_hi_nerv_family_uniform_taper_cannot_express_229k_"
+            "asymmetric_taper_operator_authorized_macos_mlx_research_signal"
+            if research_launch
+            else None
+        ),
+        "trainer_launch_allowed": bool(research_launch),
+        "blockers": [] if research_launch else blockers,
+        "research_launch_acknowledged_blockers": blockers if research_launch else [],
         **FALSE_AUTHORITY,
     }
+    return contract
 
 
 def _pr95_full_control_contract(
@@ -5105,11 +5205,25 @@ def _pr95_full_control_contract(
     train_time_section_byte_control: Mapping[str, Any] | None = None,
     require_measured_section_byte_control: bool = False,
 ) -> dict[str, Any]:
-    """Fail-closed production-full control audit for PR95-critical HiNeRV runs."""
+    """Fail-closed production-full control audit for PR95-critical HiNeRV runs.
+
+    Under the operator-authorized B1 research-launch opt-out
+    (``--allow-direct-research-full-launch`` + ``--research-curriculum-total-epochs``)
+    the epoch-budget floor (29650) is relaxed to the explicit reduced research
+    budget for an MVP-first compressed pilot; the relaxed epoch blockers are
+    recorded under ``research_relaxed_blockers`` (acknowledged, not dropped) so
+    the artifact stays honest. ALL other PR95 production controls remain
+    enforced.
+    """
 
     if train_time_controls is None:
         train_time_controls = _train_time_control_config_from_args(args)
     blockers: list[str] = []
+    research_relaxed_blockers: list[str] = []
+    research_launch = bool(
+        getattr(args, "allow_direct_research_full_launch", False)
+    )
+    research_epochs_floor = getattr(args, "research_curriculum_total_epochs", None)
     distillation_weight = float(getattr(args, "distillation_weight", 0.0))
     segnet_live_calibration_weight = float(
         train_time_controls.segnet_student_live_calibration_weight
@@ -5252,10 +5366,24 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_pr95_faithful_curriculum")
     if pr95_curriculum and not pr95_source_weight_amplification:
         blockers.append("hinerv_full_missing_pr95_source_weight_amplification")
+    # Research-launch opt-out relaxes the epoch-budget floor to the explicit
+    # reduced research budget (MVP-first pilot). The floor blockers are then
+    # recorded as acknowledged-not-dropped so the contract stays honest.
+    research_epoch_relaxation_active = bool(
+        research_launch and research_epochs_floor is not None and int(research_epochs_floor) > 0
+    )
     if epochs < CANONICAL_PR95_FULL_EPOCHS:
-        blockers.append("hinerv_full_pr95_epoch_budget_below_29650")
+        if research_epoch_relaxation_active and epochs >= int(research_epochs_floor):
+            research_relaxed_blockers.append("hinerv_full_pr95_epoch_budget_below_29650")
+        else:
+            blockers.append("hinerv_full_pr95_epoch_budget_below_29650")
     if pr95_total_epochs is not None and int(pr95_total_epochs) != CANONICAL_PR95_FULL_EPOCHS:
-        blockers.append("hinerv_full_pr95_curriculum_total_epochs_not_canonical_29650")
+        if research_epoch_relaxation_active and int(pr95_total_epochs) == int(research_epochs_floor):
+            research_relaxed_blockers.append(
+                "hinerv_full_pr95_curriculum_total_epochs_not_canonical_29650"
+            )
+        else:
+            blockers.append("hinerv_full_pr95_curriculum_total_epochs_not_canonical_29650")
     if not coder_qat:
         blockers.append("hinerv_full_missing_coder_aware_qat")
     if c1a_entropy_weight <= 0.0:
@@ -5315,6 +5443,10 @@ def _pr95_full_control_contract(
         "family": "hi_nerv",
         "control_surface": "production_full_pr95_critical_controls",
         "production_full_control_ready": not blockers,
+        "research_launch_epoch_relaxation_active": bool(
+            research_epoch_relaxation_active
+        ),
+        "research_relaxed_blockers": list(dict.fromkeys(research_relaxed_blockers)),
         "controls": {
             "stage_loss_schedule": train_time_controls.stage_loss_schedule,
             "optimizer_kind": train_time_controls.optimizer_kind,
@@ -6089,6 +6221,21 @@ def _receiver_cache_quality_manifest_summary(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    # Research-launch opt-out: when an explicit reduced research curriculum
+    # budget is supplied, bind it to BOTH --epochs and
+    # --pr95-curriculum-total-epochs so the contract's epoch-floor relaxation
+    # matches the actual training clock (no drift). Requires the opt-out flag.
+    research_epochs = getattr(args, "research_curriculum_total_epochs", None)
+    if research_epochs is not None:
+        if not bool(getattr(args, "allow_direct_research_full_launch", False)):
+            raise ValueError(
+                "--research-curriculum-total-epochs requires "
+                "--allow-direct-research-full-launch"
+            )
+        if int(research_epochs) <= 0:
+            raise ValueError("--research-curriculum-total-epochs must be positive")
+        args.epochs = int(research_epochs)
+        args.pr95_curriculum_total_epochs = int(research_epochs)
     _validate_shared_harness_train_time_actuator_args(args)
     if args.full:
         return _full_main(args)
