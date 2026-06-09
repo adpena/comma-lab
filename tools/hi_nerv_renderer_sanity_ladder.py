@@ -58,6 +58,24 @@ for p in (REPO_ROOT, REPO_ROOT / "src", UPSTREAM):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
+# The B1-R2 architecture (verified from scripts/launch_b1_clean_stabilized_pr95.sh +
+# the harvester's PILOT_ARCH_DEFAULTS): the SAME 229K config that produced d_seg=0.50,
+# so the overfit tests the actual failing renderer (num_pairs overridden to 1).
+ARCH_DEFAULTS: dict[str, Any] = {
+    "modelsize_row": "hi_nerv_local_tiny",
+    "modelsize_candidate_json": None,
+    "num_pairs": 600,
+    "output_height": 874,
+    "output_width": 1164,
+    "seed": 0,
+    "latent_dim_coarse": 16,
+    "latent_dim_mid": 20,
+    "latent_dim_fine": 24,
+    "embed_dim": 64,
+    "sin_frequency": None,
+    "decoder_channels": "36,30,23,17,14,11,8",
+}
+
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -98,7 +116,6 @@ def decode_source_to_raw(video_path: Path, out_raw: Path, max_frames: int | None
     memmap (N, H, W, 3). Returns shape/stat metadata.
     """
     import av
-
     from frame_utils import seq_len, yuv420_to_rgb
 
     _refuse_tmp(out_raw, "out_raw")
@@ -191,7 +208,6 @@ def score_pairs(
     return per-pair d_seg/d_pose + the SegNet dominant-class breakdown (so we can
     see whether the renderer's frames collapse to one class)."""
     import torch
-
     from modules import DistortionNet, posenet_sd_path, segnet_sd_path
 
     H, W, C = _frame_dims()
@@ -199,7 +215,6 @@ def score_pairs(
 
     comp = np.memmap(comp_raw, dtype=np.uint8, mode="r")
     gt = np.memmap(gt_raw, dtype=np.uint8, mode="r")
-    frame_n = H * W * C
     comp = comp.reshape(-1, H, W, C)
     gt = gt.reshape(-1, H, W, C)
     n_pairs = min(comp.shape[0], gt.shape[0]) // seq_len
@@ -395,9 +410,9 @@ def cmd_inspect_renderer_frames(args: argparse.Namespace) -> int:
     n = min(inf["n_frames"], dec["n_frames_written"])
     # Sample frames spread across the video + always include a last-of-pair frame
     # (index 1,3,5,... are the frames SegNet actually scores).
-    sample_frames = sorted(set([0, 1, n // 4, n // 2, (n // 2) + 1, n - 2, n - 1]))
+    sample_frames = sorted({0, 1, n // 4, n // 2, (n // 2) + 1, n - 2, n - 1})
     sample_frames = [f for f in sample_frames if 0 <= f < n]
-    sample_pairs = sorted(set([0, (n // seq_len) // 4, (n // seq_len) // 2, (n // seq_len) - 1]))
+    sample_pairs = sorted({0, (n // seq_len) // 4, (n // seq_len) // 2, (n // seq_len) - 1})
     sample_pairs = [p for p in sample_pairs if 0 <= p < n // seq_len]
 
     frame_cmp = compare_frames(comp_raw, gt_raw, sample_frames)
@@ -451,9 +466,230 @@ def cmd_inspect_renderer_frames(args: argparse.Namespace) -> int:
     return 0
 
 
+def _decode_first_k_frames(video_path: Path, k: int) -> np.ndarray:
+    """Decode the first ``k`` frames of ``video_path`` (uint8 HWC, exact upstream path)."""
+    import av
+    from frame_utils import yuv420_to_rgb
+
+    H, W, C = _frame_dims()
+    out = np.empty((k, H, W, C), dtype=np.uint8)
+    container = av.open(str(video_path))
+    stream = container.streams.video[0]
+    i = 0
+    for frame in container.decode(stream):
+        out[i] = yuv420_to_rgb(frame).cpu().numpy().astype(np.uint8)
+        i += 1
+        if i >= k:
+            break
+    container.close()
+    if i < k:
+        raise ValueError(f"decoded only {i} frames; need {k}")
+    return out
+
+
+def _grad_norm_table(grads: Any) -> dict[str, float]:
+    """Per-top-level-group L2 grad norm from an MLX grad tree (latent-deadness probe)."""
+    from mlx.utils import tree_flatten
+
+    groups: dict[str, float] = {}
+    for name, arr in tree_flatten(grads):
+        if arr is None:
+            continue
+        # group by leading non-numeric component (latents_fine, blocks, head_rgb_1, ...)
+        parts = str(name).split(".")
+        key = parts[0]
+        if len(parts) > 1 and parts[1].isdigit():
+            key = f"{parts[0]}.{parts[1]}"
+        g = np.asarray(arr, dtype=np.float64)
+        groups[key] = groups.get(key, 0.0) + float((g * g).sum())
+    return {k: float(np.sqrt(v)) for k, v in sorted(groups.items())}
+
+
+def cmd_one_pair_overfit(args: argparse.Namespace) -> int:
+    """Phase 0A: pure-RGB-L2 overfit of ONE pair (no scorer/rate/QAT/sidecar/Muon).
+
+    Answers: can the SAME 229K HiNeRV architecture + per-pair latents even memorize 2
+    frames? Emits PSNR trajectory + per-group gradient table (latent-deadness) + the
+    final-checkpoint official scorer d_seg/d_pose + naive baselines + a visual frame pack.
+    """
+    import mlx.core as mx
+    import mlx.nn as nn
+    import mlx.optimizers as optim
+
+    import experiments.train_substrate_hi_nerv_mlx_local as trainer
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    work = Path(args.work_dir).resolve()
+    _refuse_tmp(work, "work_dir")
+    work.mkdir(parents=True, exist_ok=True)
+    H, W, C = _frame_dims()
+    from frame_utils import seq_len
+
+    # --- target: source pair 0 (2 frames). reconstruct_pair returns NCHW [0,1], so the
+    # target must be CHW [0,1] (transpose HWC->CHW). ---
+    src = _decode_first_k_frames(UPSTREAM / "videos" / "0.mkv", seq_len)  # (2,H,W,3) uint8
+    t0 = mx.array(np.ascontiguousarray(src[0].astype(np.float32).transpose(2, 0, 1)) / 255.0)
+    t1 = mx.array(np.ascontiguousarray(src[1].astype(np.float32).transpose(2, 0, 1)) / 255.0)
+
+    # --- model: SAME B1 arch, num_pairs=1, NO QAT (pure fidelity test) ---
+    from mlx.utils import tree_flatten
+
+    arch = dict(ARCH_DEFAULTS)
+    arch["num_pairs"] = 1
+    ns = argparse.Namespace(**arch)
+    cfg = trainer._config_from_args(ns)
+    model = HinervSubstrateMLX(cfg)
+    mx.eval(model.parameters())
+    n_params = int(sum(int(np.asarray(v).size) for _, v in tree_flatten(model.parameters())))
+
+    pair_idx = mx.array([0])
+
+    def loss_fn(m: Any) -> Any:
+        rgb0, rgb1 = m.reconstruct_pair(pair_idx)
+        return (((rgb0[0] - t0) ** 2).mean() + ((rgb1[0] - t1) ** 2).mean()) * 0.5
+
+    loss_and_grad = nn.value_and_grad(model, loss_fn)
+    opt = optim.AdamW(learning_rate=args.lr)
+
+    traj: list[dict[str, Any]] = []
+    grad_table_final: dict[str, float] = {}
+    for ep in range(args.epochs):
+        loss, grads = loss_and_grad(model)
+        opt.update(model, grads)
+        mx.eval(model.parameters(), opt.state, loss)
+        if ep % max(1, args.epochs // 12) == 0 or ep == args.epochs - 1:
+            # recompute per-frame for honest PSNR
+            rgb0, rgb1 = model.reconstruct_pair(pair_idx)
+            l0 = float(((rgb0[0] - t0) ** 2).mean().item())
+            l1 = float(((rgb1[0] - t1) ** 2).mean().item())
+            psnr0 = float(-10 * np.log10(l0)) if l0 > 0 else float("inf")
+            psnr1 = float(-10 * np.log10(l1)) if l1 > 0 else float("inf")
+            grad_table_final = _grad_norm_table(grads)
+            traj.append(
+                {
+                    "epoch": ep,
+                    "loss": float(loss.item()),
+                    "frame0_mse_01": l0,
+                    "frame1_mse_01": l1,
+                    "frame0_psnr_db": psnr0,
+                    "frame1_psnr_db": psnr1,
+                    "grad_norm_by_group": grad_table_final,
+                }
+            )
+
+    # --- final renderer frames (uint8 [0,255]) for scorer + frame pack.
+    # reconstruct_pair is NCHW [0,1] -> transpose CHW->HWC + scale to uint8. ---
+    rgb0, rgb1 = model.reconstruct_pair(pair_idx)
+    r0 = np.clip(np.asarray(rgb0[0]).transpose(1, 2, 0) * 255.0, 0, 255).round().astype(np.uint8)  # (H,W,3)
+    r1 = np.clip(np.asarray(rgb1[0]).transpose(1, 2, 0) * 255.0, 0, 255).round().astype(np.uint8)
+
+    # --- official scorer on the overfit pair (renderer vs source) ---
+    import torch
+    from modules import DistortionNet, posenet_sd_path, segnet_sd_path
+
+    net = DistortionNet().eval().to("cpu")
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, "cpu")
+
+    def _score(comp0: np.ndarray, comp1: np.ndarray) -> tuple[float, float, list[int]]:
+        comp = torch.from_numpy(np.stack([comp0, comp1])[None].astype(np.uint8))  # (1,2,H,W,3)
+        gt = torch.from_numpy(src[None].astype(np.uint8))
+        with torch.inference_mode():
+            dp, ds = net.compute_distortion(gt.to("cpu"), comp.to("cpu"))
+            _, seg_in = net.preprocess_input(comp.float())
+            hist = [int((net.segnet(seg_in).argmax(1) == k).sum()) for k in range(5)]
+        return float(ds.item()), float(dp.item()), hist
+
+    d_seg, d_pose, comp_hist = _score(r0, r1)
+    # naive baselines (scale context)
+    black = np.zeros((H, W, C), np.uint8)
+    mean_frame = np.broadcast_to(src.reshape(-1, C).mean(0).round().astype(np.uint8), (H, W, C))
+    base_black = _score(black, black)
+    base_mean = _score(mean_frame, mean_frame)
+    base_copy = _score(src[0], src[0])  # frame0 used as both (last-frame = source frame0)
+    base_identity = _score(src[0], src[1])  # source itself -> must be ~0
+    # frame-index ablation: SegNet scores the LAST frame; test render f0-as-last vs f1-as-last
+    ablate_f0_as_last = _score(r0, r0)[0]
+    ablate_f1_as_last = _score(r1, r1)[0]
+
+    # --- visual frame pack ---
+    pack = work / "frame_pack"
+    pack.mkdir(exist_ok=True)
+    try:
+        from PIL import Image
+
+        for nm, arr in (
+            ("source_frame0", src[0]), ("source_frame1", src[1]),
+            ("render_frame0", r0), ("render_frame1", r1),
+        ):
+            Image.fromarray(arr).save(pack / f"{nm}.png")
+        diff = np.abs(r1.astype(np.int16) - src[1].astype(np.int16)).astype(np.uint8)
+        Image.fromarray(diff).save(pack / "diff_frame1.png")
+        frame_pack_written = True
+    except Exception as exc:  # pragma: no cover
+        frame_pack_written = f"PIL unavailable: {exc}"
+
+    best_psnr = max((r["frame1_psnr_db"] for r in traj), default=0.0)
+    learned = best_psnr > 18.0  # 18 dB on a single pair overfit is a clear "can learn"
+    latents_fine_grad = grad_table_final.get("latents_fine", 0.0)
+    head_grad = sum(v for k, v in grad_table_final.items() if k.startswith("head_rgb"))
+    if learned:
+        verdict = "RENDERER_CAN_LEARN_RGB → B1 failure was the MISSING RGB ANCHOR (fix: RGB-recon base then PR95 fine-tune)"
+    elif latents_fine_grad < 1e-8 or head_grad < 1e-8:
+        verdict = "GRADIENT_DEAD (latents_fine or head_rgb grad ~0) → renderer wiring/injection bug"
+    else:
+        verdict = "RENDERER_CANNOT_OVERFIT_ONE_PAIR despite live gradient → architecture/capacity/optimizer bug"
+
+    artifact = {
+        "schema": "hi_nerv_renderer_sanity_ladder.v1",
+        "rung": "phase_0a_one_pair_rgb_overfit",
+        "utc": _utc(),
+        "n_params": n_params,
+        "epochs": args.epochs,
+        "lr": args.lr,
+        "trajectory": traj,
+        "final_grad_norm_by_group": grad_table_final,
+        "final_frame1_psnr_db": traj[-1]["frame1_psnr_db"] if traj else None,
+        "best_frame1_psnr_db": best_psnr,
+        "overfit_scorer": {"d_seg": d_seg, "d_pose": d_pose, "segnet_comp_class_hist": comp_hist},
+        "naive_baselines_d_seg": {
+            "black": base_black[0], "mean_frame": base_mean[0],
+            "frame0_copy": base_copy[0], "source_identity": base_identity[0],
+        },
+        "frame_index_ablation_d_seg": {
+            "render_frame0_as_last": ablate_f0_as_last,
+            "render_frame1_as_last": ablate_f1_as_last,
+        },
+        "frame_pack_dir": str(pack),
+        "frame_pack_written": frame_pack_written,
+        "latents_fine_grad_norm": latents_fine_grad,
+        "head_rgb_grad_norm": head_grad,
+        "renderer_learned_one_pair": learned,
+        "verdict": verdict,
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    print(json.dumps({
+        "verdict": verdict,
+        "best_frame1_psnr_db": round(best_psnr, 2),
+        "overfit_d_seg": round(d_seg, 4),
+        "source_identity_d_seg": round(base_identity[0], 6),
+        "latents_fine_grad_norm": latents_fine_grad,
+        "head_rgb_grad_norm": head_grad,
+    }, indent=2))
+    print(f"artifact -> {args.out}  |  frame pack -> {pack}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    op = sub.add_parser("one-pair-overfit", help="Phase 0A: pure-RGB-L2 overfit of one pair")
+    op.add_argument("--work-dir", required=True, help="SSD work dir (NEVER /tmp)")
+    op.add_argument("--out", required=True, help="artifact JSON path")
+    op.add_argument("--epochs", type=int, default=400)
+    op.add_argument("--lr", type=float, default=1e-2)
+    op.set_defaults(func=cmd_one_pair_overfit)
 
     ib = sub.add_parser("identity-baseline", help="Phase -1: source -> .raw -> evaluate.py (expect d_seg≈0)")
     ib.add_argument("--work-dir", required=True, help="SSD work dir (NEVER /tmp)")
