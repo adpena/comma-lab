@@ -630,6 +630,164 @@ def _gradient_clip_metrics_from_norm(
     }
 
 
+def _worst_connected_region_margin_p50_reference_from_numpy(
+    logits_np: Any,
+    target_np: Any,
+) -> tuple[float, int, int] | None:
+    """Pure-Python 4-connected worst-component p50 margin (reference oracle).
+
+    Preserved verbatim from the pre-throughput-fix flood-fill so the vectorized
+    scipy path can be proven bit-identical. Components are scanned in row-major
+    order; the strictly-lowest p50 margin wins (first-encountered on ties).
+    """
+
+    class_count = int(logits_np.shape[-1])
+    best: tuple[float, int, int] | None = None
+    for batch_index in range(int(target_np.shape[0])):
+        labels = target_np[batch_index].astype(np.int32, copy=False)
+        visited = np.zeros(labels.shape, dtype=bool)
+        height, width = labels.shape
+        for row in range(height):
+            for col in range(width):
+                if visited[row, col]:
+                    continue
+                class_index = int(labels[row, col])
+                visited[row, col] = True
+                if class_index < 0 or class_index >= class_count:
+                    continue
+                stack = [(row, col)]
+                coords: list[tuple[int, int]] = []
+                while stack:
+                    cur_row, cur_col = stack.pop()
+                    coords.append((cur_row, cur_col))
+                    for next_row, next_col in (
+                        (cur_row - 1, cur_col),
+                        (cur_row + 1, cur_col),
+                        (cur_row, cur_col - 1),
+                        (cur_row, cur_col + 1),
+                    ):
+                        if (
+                            next_row < 0
+                            or next_row >= height
+                            or next_col < 0
+                            or next_col >= width
+                            or visited[next_row, next_col]
+                            or int(labels[next_row, next_col]) != class_index
+                        ):
+                            continue
+                        visited[next_row, next_col] = True
+                        stack.append((next_row, next_col))
+                component_logits = logits_np[
+                    batch_index,
+                    [item[0] for item in coords],
+                    [item[1] for item in coords],
+                    :,
+                ]
+                class_logits = component_logits[:, class_index]
+                other_logits = component_logits.copy()
+                other_logits[:, class_index] = -np.inf
+                margins = class_logits - np.max(other_logits, axis=-1)
+                margin_p50 = float(np.percentile(margins, 50.0))
+                component_size = len(coords)
+                if best is None or margin_p50 < best[0]:
+                    best = (margin_p50, class_index, component_size)
+    return best
+
+
+def _worst_connected_region_margin_p50_from_numpy(
+    logits_np: Any,
+    target_np: Any,
+) -> tuple[float, int, int] | None:
+    """Vectorized 4-connected worst-component p50 margin (scipy.ndimage.label).
+
+    Numerically identical to ``_worst_connected_region_margin_p50_reference_from_numpy``:
+    connected components are found per class with a 4-connectivity structuring
+    element (the same neighborhood the reference flood-fill uses); the per-pixel
+    margin (target-class logit minus max other-class logit) and its ``np.percentile``
+    median are computed on the SAME pixel sets. Candidate components are ordered
+    by the raster index of their first (top-left) pixel and the strictly-lowest
+    p50 margin wins (first-encountered on ties), matching the reference's
+    row-major scan-order tie-break EXACTLY.
+    """
+
+    from scipy import ndimage
+
+    class_count = int(logits_np.shape[-1])
+    # 4-connectivity (von Neumann neighborhood), matching the reference's
+    # up/down/left/right flood-fill exactly (NOT 8-connectivity).
+    structure = np.array(
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=bool
+    )
+    best: tuple[float, int, int] | None = None
+    best_first_index: int | None = None
+    for batch_index in range(int(target_np.shape[0])):
+        labels = target_np[batch_index].astype(np.int32, copy=False)
+        height, width = labels.shape
+        batch_logits = logits_np[batch_index]
+        present_classes = [
+            int(c)
+            for c in np.unique(labels)
+            if 0 <= int(c) < class_count
+        ]
+        for class_index in present_classes:
+            class_mask = labels == class_index
+            labeled, num = ndimage.label(class_mask, structure=structure)
+            if num <= 0:
+                continue
+            class_logits_plane = batch_logits[:, :, class_index]
+            other = batch_logits.copy()
+            other[:, :, class_index] = -np.inf
+            max_other_plane = np.max(other, axis=-1)
+            margin_plane = class_logits_plane - max_other_plane
+            index = np.arange(1, num + 1)
+            # Per-component median via labeled_comprehension applying the EXACT
+            # ``np.percentile(v, 50.0)`` the reference uses, on the same float32
+            # margin values per component. This is bit-identical to the
+            # reference (NOT scipy.ndimage.median, which promotes to float64 and
+            # can differ at ~1e-8 for even-count components). scipy drives the
+            # per-label dispatch in C; no Python per-pixel flood-fill remains.
+            medians = ndimage.labeled_comprehension(
+                margin_plane,
+                labeled,
+                index,
+                lambda values: float(np.percentile(values, 50.0)),
+                np.float64,
+                np.nan,
+                pass_positions=False,
+            )
+            medians = np.atleast_1d(np.asarray(medians, dtype=np.float64))
+            flat_labeled = labeled.reshape(-1)
+            sizes = np.bincount(flat_labeled.ravel(), minlength=num + 1)[1:]
+            first_index = np.full(num + 1, flat_labeled.size, dtype=np.int64)
+            np.minimum.at(
+                first_index,
+                flat_labeled,
+                np.arange(flat_labeled.size, dtype=np.int64),
+            )
+            first_index = first_index[1:]
+            for offset in range(num):
+                margin_p50 = float(medians[offset])
+                component_size = int(sizes[offset])
+                comp_first = int(first_index[offset])
+                # A component beats the incumbent iff it has a strictly lower
+                # p50 margin, OR an equal p50 margin but an earlier raster
+                # position (lower first-pixel flat index). This single rule
+                # reproduces the reference flood-fill's row-major scan-order
+                # strict-`<` minimum (first-encountered wins on ties) EXACTLY.
+                beats_incumbent = best is None or (
+                    margin_p50 < best[0]
+                    or (
+                        margin_p50 == best[0]
+                        and best_first_index is not None
+                        and comp_first < best_first_index
+                    )
+                )
+                if beats_incumbent:
+                    best = (margin_p50, class_index, component_size)
+                    best_first_index = comp_first
+    return best
+
+
 def _build_aurora_like_mlx_optimizer(
     *,
     learning_rate: Any,
@@ -865,6 +1023,7 @@ class MlxScoreAwareAdapter:
         gradient_multiplier_by_name: Mapping[str, float] | None = None,
         bias_gradient_multiplier: float | None = None,
         output_head_bias_gradient_multiplier: float = 1.0,
+        diagnostics_every_n_steps: int = 1,
         scorer_space_step_guard_enabled: bool = False,
         scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
         scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
@@ -1407,6 +1566,33 @@ class MlxScoreAwareAdapter:
         self._train_time_dual_ascent = TrainTimeDualAscentController.from_config(
             train_time_dual_ascent_config
         )
+        # Per-step diagnostics cadence (throughput-fix lane
+        # lane_throughput_fix_mlx_score_aware_20260609). The per-step
+        # observability block (parameter-trace clone, the score-aware
+        # loss-part RECOMPUTES, group-norm/delta/weight traces, decoder-weight
+        # gradient-saliency accumulation) does NOT feed the renderer gradient,
+        # the optimizer.update, OR the loss value returned in "total" — it is
+        # observability-only on the default path. When
+        # ``diagnostics_every_n_steps > 1`` these sampled diagnostics run only
+        # on a cadence (always on the FIRST and a flushed boundary step), so a
+        # tiny ~229K renderer no longer pays ~3 extra full score-aware forward
+        # recomputes + a full param clone + a forced grad-tree sync EVERY step.
+        # Default value 1 == every step == byte-IDENTICAL to the pre-fix
+        # adapter so sister substrates (z7/z8/dreamer/etc.) are unaffected.
+        # SAFETY: when ``scorer_space_step_guard_enabled`` is True, the
+        # guard-feeding diagnostics (pre/post loss-part metrics + receiver
+        # surface snapshot) are load-bearing for the reject/restore decision
+        # and therefore ALWAYS run every step regardless of cadence; only the
+        # non-guard-feeding telemetry is sampled. The gate cannot change the
+        # training math; it only samples observability less often.
+        self._diagnostics_every_n_steps: int = max(
+            1, int(diagnostics_every_n_steps)
+        )
+        self._diagnostics_step_index: int = 0
+        self._diagnostics_sampled_step_count: int = 0
+        self._diagnostics_skipped_step_count: int = 0
+        self._diagnostics_flush_requested: bool = False
+
         # Wave N+11 telemetry (consumed by tests + landing memo for the
         # canonical Provenance bind step).
         self._wave_n11_grad_norm_history: list[float] = []
@@ -2617,7 +2803,17 @@ class MlxScoreAwareAdapter:
         logits: Any,
         target_argmax: Any,
     ) -> tuple[float, int, int] | None:
-        """Return worst 4-connected target-component p50 margin, class id, and size."""
+        """Return worst 4-connected target-component p50 margin, class id, and size.
+
+        Throughput-fix lane: this replaces a pure-Python per-pixel double-loop
+        flood-fill (~H*W=196,608 Python iterations per call at 384x512) with a
+        vectorized ``scipy.ndimage.label`` 4-connected-components pass. The
+        numerical result is PROVEN bit-identical to the prior implementation by
+        ``_receiver_surface_worst_connected_region_margin_p50_reference`` (the
+        preserved reference oracle) + a dedicated parity test on REAL logits.
+        Only the cadence-gated scorer-space-step-guard path calls this; it does
+        not feed the renderer gradient.
+        """
 
         if logits is None or target_argmax is None:
             return None
@@ -2629,57 +2825,34 @@ class MlxScoreAwareAdapter:
             return None
         if tuple(logits_np.shape[:-1]) != tuple(target_np.shape):
             return None
-        class_count = int(logits_np.shape[-1])
-        best: tuple[float, int, int] | None = None
-        for batch_index in range(int(target_np.shape[0])):
-            labels = target_np[batch_index].astype(np.int32, copy=False)
-            visited = np.zeros(labels.shape, dtype=bool)
-            height, width = labels.shape
-            for row in range(height):
-                for col in range(width):
-                    if visited[row, col]:
-                        continue
-                    class_index = int(labels[row, col])
-                    visited[row, col] = True
-                    if class_index < 0 or class_index >= class_count:
-                        continue
-                    stack = [(row, col)]
-                    coords: list[tuple[int, int]] = []
-                    while stack:
-                        cur_row, cur_col = stack.pop()
-                        coords.append((cur_row, cur_col))
-                        for next_row, next_col in (
-                            (cur_row - 1, cur_col),
-                            (cur_row + 1, cur_col),
-                            (cur_row, cur_col - 1),
-                            (cur_row, cur_col + 1),
-                        ):
-                            if (
-                                next_row < 0
-                                or next_row >= height
-                                or next_col < 0
-                                or next_col >= width
-                                or visited[next_row, next_col]
-                                or int(labels[next_row, next_col]) != class_index
-                            ):
-                                continue
-                            visited[next_row, next_col] = True
-                            stack.append((next_row, next_col))
-                    component_logits = logits_np[
-                        batch_index,
-                        [item[0] for item in coords],
-                        [item[1] for item in coords],
-                        :,
-                    ]
-                    class_logits = component_logits[:, class_index]
-                    other_logits = component_logits.copy()
-                    other_logits[:, class_index] = -np.inf
-                    margins = class_logits - np.max(other_logits, axis=-1)
-                    margin_p50 = float(np.percentile(margins, 50.0))
-                    component_size = len(coords)
-                    if best is None or margin_p50 < best[0]:
-                        best = (margin_p50, class_index, component_size)
-        return best
+        return _worst_connected_region_margin_p50_from_numpy(logits_np, target_np)
+
+    def _receiver_surface_worst_connected_region_margin_p50_reference(
+        self,
+        *,
+        logits: Any,
+        target_argmax: Any,
+    ) -> tuple[float, int, int] | None:
+        """Pure-Python reference oracle for the vectorized flood-fill.
+
+        Preserved verbatim from the pre-throughput-fix implementation so the
+        dedicated parity test can prove the vectorized scipy path is
+        numerically identical. NOT called on the hot path.
+        """
+
+        if logits is None or target_argmax is None:
+            return None
+        mx = self._mx
+        mx.eval(logits, target_argmax)
+        logits_np = np.asarray(logits)
+        target_np = np.asarray(target_argmax)
+        if logits_np.ndim != 4 or target_np.ndim != 3:
+            return None
+        if tuple(logits_np.shape[:-1]) != tuple(target_np.shape):
+            return None
+        return _worst_connected_region_margin_p50_reference_from_numpy(
+            logits_np, target_np
+        )
 
     def _apply_scorer_space_step_guard(
         self,
@@ -8488,6 +8661,59 @@ class MlxScoreAwareAdapter:
             "optimizer_step is a Protocol-conformance stub only."
         )
 
+    def request_diagnostics_flush(self) -> None:
+        """Force the NEXT ``train_step`` to run full sampled diagnostics.
+
+        Trainers call this at stage boundaries / checkpoints / final epoch so
+        observability is always captured at the points operators inspect, even
+        when ``diagnostics_every_n_steps > 1`` would otherwise skip that step.
+        It only affects observability cadence; it cannot change training math.
+        """
+
+        self._diagnostics_flush_requested = True
+
+    def _diagnostics_active_this_step(self) -> bool:
+        """Whether the sampled (observability-only) diagnostics run this step.
+
+        Returns True on: the very first step (index 0), any explicitly
+        requested flush (``request_diagnostics_flush``), or every Nth step per
+        ``diagnostics_every_n_steps``. When the cadence is 1 (the default) this
+        is True every step, so the returned-metrics dict is byte-identical to
+        the pre-fix adapter. The skipped diagnostics are observability-only on
+        the non-guard path; gating them cannot alter the gradient, the
+        optimizer update, or the ``total`` loss value.
+        """
+
+        index = self._diagnostics_step_index
+        self._diagnostics_step_index = index + 1
+        flush = bool(getattr(self, "_diagnostics_flush_requested", False))
+        self._diagnostics_flush_requested = False
+        cadence = self._diagnostics_every_n_steps
+        active = (
+            cadence <= 1
+            or index == 0
+            or flush
+            or (index % cadence == 0)
+        )
+        if active:
+            self._diagnostics_sampled_step_count += 1
+        else:
+            self._diagnostics_skipped_step_count += 1
+        return active
+
+    def diagnostics_cadence_metrics(self) -> dict[str, float]:
+        """Observability for the diagnostics-cadence sampler itself."""
+
+        return {
+            "diagnostics_every_n_steps": float(self._diagnostics_every_n_steps),
+            "diagnostics_sampled_step_count": float(
+                self._diagnostics_sampled_step_count
+            ),
+            "diagnostics_skipped_step_count": float(
+                self._diagnostics_skipped_step_count
+            ),
+        }
+
     def train_step(
         self,
         batch: Any,
@@ -8569,25 +8795,45 @@ class MlxScoreAwareAdapter:
             context=f"{self.substrate_id}_mlx_score_aware_train_step",
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
-        pre_update_param_trace = self._capture_parameter_trace_leaves()
-        pre_update_loss_part_metrics = self._prefixed_score_aware_loss_part_metrics(
-            batch,
-            loss_weights=effective_loss_weights,
-            prefix="dynamics_pre_update",
+        # Diagnostics cadence (throughput-fix): the sampled observability block
+        # below does NOT feed grads/optimizer/total. When the scorer-space step
+        # guard is ON, the guard-FEEDING diagnostics (pre/post loss-part +
+        # receiver snapshot + the pre-update param trace the guard restores
+        # from) are load-bearing and MUST run every step; cadence only samples
+        # the non-guard-feeding telemetry. When cadence == 1 (default) all run
+        # every step == byte-identical to the pre-fix adapter.
+        diag_active = self._diagnostics_active_this_step()
+        guard_on = self._scorer_space_step_guard_enabled
+        need_guard_inputs = diag_active or guard_on
+        pre_update_param_trace = (
+            self._capture_parameter_trace_leaves() if need_guard_inputs else {}
+        )
+        pre_update_loss_part_metrics = (
+            self._prefixed_score_aware_loss_part_metrics(
+                batch,
+                loss_weights=effective_loss_weights,
+                prefix="dynamics_pre_update",
+            )
+            if need_guard_inputs
+            else {}
         )
         pre_update_receiver_surface_snapshot = (
-            self._receiver_surface_snapshot(batch)
-            if self._scorer_space_step_guard_enabled
-            else None
+            self._receiver_surface_snapshot(batch) if guard_on else None
         )
-        dynamics_gradient_metrics = self._group_norm_trace_metrics(
-            self._flatten_trace_leaves(grads),
-            prefix="dynamics_gradient",
-        )
-        dynamics_weight_metrics = self._direct_live_effective_weight_trace_metrics(
-            effective_loss_weights
-        )
-        self._accumulate_decoder_weight_gradient_saliency(grads)
+        if diag_active:
+            dynamics_gradient_metrics = self._group_norm_trace_metrics(
+                self._flatten_trace_leaves(grads),
+                prefix="dynamics_gradient",
+            )
+            dynamics_weight_metrics = (
+                self._direct_live_effective_weight_trace_metrics(
+                    effective_loss_weights
+                )
+            )
+            self._accumulate_decoder_weight_gradient_saliency(grads)
+        else:
+            dynamics_gradient_metrics = {}
+            dynamics_weight_metrics = {}
         # Wave N+11 stabilizer: apply mlx.optimizers.clip_grad_norm BEFORE
         # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
         # cannot propagate into the AdamW second-moment buffers (which then
@@ -8616,6 +8862,8 @@ class MlxScoreAwareAdapter:
                 batch=batch,
                 loss_weights=effective_loss_weights,
             )
+            if need_guard_inputs
+            else {}
         )
         scorer_space_step_guard_metrics = self._apply_scorer_space_step_guard(
             batch=batch,
@@ -8628,8 +8876,10 @@ class MlxScoreAwareAdapter:
         guard_rejected = bool(
             scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
         )
-        dynamics_delta_metrics = self._parameter_delta_trace_metrics(
-            pre_update_param_trace
+        dynamics_delta_metrics = (
+            self._parameter_delta_trace_metrics(pre_update_param_trace)
+            if diag_active
+            else {}
         )
         if guard_rejected:
             post_update_eval_targets = []
@@ -8646,12 +8896,13 @@ class MlxScoreAwareAdapter:
                 loss_weights=effective_loss_weights,
             )
         )
-        post_update_metrics.update(
-            self._score_aware_loss_part_metrics(
-                batch=batch,
-                loss_weights=effective_loss_weights,
+        if diag_active:
+            post_update_metrics.update(
+                self._score_aware_loss_part_metrics(
+                    batch=batch,
+                    loss_weights=effective_loss_weights,
+                )
             )
-        )
         post_update_metrics.update(scorer_space_step_guard_metrics)
 
         # Accumulate the MLX arrays the single trailing mx.eval must realize.
@@ -8761,6 +9012,14 @@ class MlxScoreAwareAdapter:
                 **dynamics_weight_metrics,
                 **native_optimizer_metrics,
                 **post_update_metrics,
+                # Cadence telemetry is added ONLY when the sampler is engaged
+                # (cadence > 1) so the default (cadence == 1) returned key set
+                # is byte-identical to the pre-fix adapter for sister tests.
+                **(
+                    self.diagnostics_cadence_metrics()
+                    if self._diagnostics_every_n_steps > 1
+                    else {}
+                ),
             }
         )
 
@@ -8808,25 +9067,40 @@ class MlxScoreAwareAdapter:
             context=f"{self.substrate_id}_pact_muon_adamw_train_step",
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
-        pre_update_param_trace = self._capture_parameter_trace_leaves()
-        pre_update_loss_part_metrics = self._prefixed_score_aware_loss_part_metrics(
-            batch,
-            loss_weights=loss_weights,
-            prefix="dynamics_pre_update",
+        # Diagnostics cadence (throughput-fix): see canonical train_step. The
+        # sampled telemetry below is observability-only; the guard-feeding
+        # diagnostics run every step when the guard is on. cadence == 1
+        # (default) == byte-identical to the pre-fix adapter.
+        diag_active = self._diagnostics_active_this_step()
+        guard_on = self._scorer_space_step_guard_enabled
+        need_guard_inputs = diag_active or guard_on
+        pre_update_param_trace = (
+            self._capture_parameter_trace_leaves() if need_guard_inputs else {}
+        )
+        pre_update_loss_part_metrics = (
+            self._prefixed_score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+                prefix="dynamics_pre_update",
+            )
+            if need_guard_inputs
+            else {}
         )
         pre_update_receiver_surface_snapshot = (
-            self._receiver_surface_snapshot(batch)
-            if self._scorer_space_step_guard_enabled
-            else None
+            self._receiver_surface_snapshot(batch) if guard_on else None
         )
-        dynamics_gradient_metrics = self._group_norm_trace_metrics(
-            self._flatten_trace_leaves(grads),
-            prefix="dynamics_gradient",
-        )
-        dynamics_weight_metrics = self._direct_live_effective_weight_trace_metrics(
-            loss_weights
-        )
-        self._accumulate_decoder_weight_gradient_saliency(grads)
+        if diag_active:
+            dynamics_gradient_metrics = self._group_norm_trace_metrics(
+                self._flatten_trace_leaves(grads),
+                prefix="dynamics_gradient",
+            )
+            dynamics_weight_metrics = (
+                self._direct_live_effective_weight_trace_metrics(loss_weights)
+            )
+            self._accumulate_decoder_weight_gradient_saliency(grads)
+        else:
+            dynamics_gradient_metrics = {}
+            dynamics_weight_metrics = {}
         grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
         if self._wave_n11_grad_clip_max_norm is not None:
             grads, grad_norm_pre_clip = _mlx_clip_gradient_tree(
@@ -8882,6 +9156,8 @@ class MlxScoreAwareAdapter:
                 batch,
                 loss_weights=loss_weights,
             )
+            if need_guard_inputs
+            else {}
         )
         scorer_space_step_guard_metrics = self._apply_scorer_space_step_guard(
             batch=batch,
@@ -8894,8 +9170,10 @@ class MlxScoreAwareAdapter:
         guard_rejected = bool(
             scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
         )
-        dynamics_delta_metrics = self._parameter_delta_trace_metrics(
-            pre_update_param_trace
+        dynamics_delta_metrics = (
+            self._parameter_delta_trace_metrics(pre_update_param_trace)
+            if diag_active
+            else {}
         )
         self._pact_muon_adamw_last_step_summary = dict(step_summary)
         self._wave_n11_step_count += 1
@@ -8914,12 +9192,13 @@ class MlxScoreAwareAdapter:
                 loss_weights=loss_weights,
             )
         )
-        post_update_metrics.update(
-            self._score_aware_loss_part_metrics(
-                batch,
-                loss_weights=loss_weights,
+        if diag_active:
+            post_update_metrics.update(
+                self._score_aware_loss_part_metrics(
+                    batch,
+                    loss_weights=loss_weights,
+                )
             )
-        )
         post_update_metrics.update(scorer_space_step_guard_metrics)
         if not guard_rejected:
             post_update_metrics.setdefault(
@@ -8984,6 +9263,11 @@ class MlxScoreAwareAdapter:
             **dynamics_delta_metrics,
             **dynamics_weight_metrics,
             **post_update_metrics,
+            **(
+                self.diagnostics_cadence_metrics()
+                if self._diagnostics_every_n_steps > 1
+                else {}
+            ),
         }
 
     def _train_step_pr95_faithful_curriculum(
@@ -9075,26 +9359,42 @@ class MlxScoreAwareAdapter:
             context=f"{self.substrate_id}_pr95_curriculum_train_step",
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
-        self._accumulate_decoder_weight_gradient_saliency(grads)
+        # Diagnostics cadence (throughput-fix): see canonical train_step. The
+        # sampled telemetry is observability-only; guard-feeding diagnostics run
+        # every step when the guard is on. cadence == 1 (default) ==
+        # byte-identical to the pre-fix adapter.
+        diag_active = self._diagnostics_active_this_step()
+        guard_on = self._scorer_space_step_guard_enabled
+        need_guard_inputs = diag_active or guard_on
+        if diag_active:
+            self._accumulate_decoder_weight_gradient_saliency(grads)
         grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
-        pre_update_param_trace = self._capture_parameter_trace_leaves()
-        pre_update_loss_part_metrics = self._prefixed_score_aware_loss_part_metrics(
-            batch,
-            loss_weights=loss_weights,
-            prefix="dynamics_pre_update",
+        pre_update_param_trace = (
+            self._capture_parameter_trace_leaves() if need_guard_inputs else {}
+        )
+        pre_update_loss_part_metrics = (
+            self._prefixed_score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+                prefix="dynamics_pre_update",
+            )
+            if need_guard_inputs
+            else {}
         )
         pre_update_receiver_surface_snapshot = (
-            self._receiver_surface_snapshot(batch)
-            if self._scorer_space_step_guard_enabled
-            else None
+            self._receiver_surface_snapshot(batch) if guard_on else None
         )
-        dynamics_gradient_metrics = self._group_norm_trace_metrics(
-            self._flatten_trace_leaves(grads),
-            prefix="dynamics_gradient",
-        )
-        dynamics_weight_metrics = self._direct_live_effective_weight_trace_metrics(
-            loss_weights
-        )
+        if diag_active:
+            dynamics_gradient_metrics = self._group_norm_trace_metrics(
+                self._flatten_trace_leaves(grads),
+                prefix="dynamics_gradient",
+            )
+            dynamics_weight_metrics = (
+                self._direct_live_effective_weight_trace_metrics(loss_weights)
+            )
+        else:
+            dynamics_gradient_metrics = {}
+            dynamics_weight_metrics = {}
 
         # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
         # helper handles Muon NS iteration + Muon/AdamW partition + per-name
@@ -9148,6 +9448,8 @@ class MlxScoreAwareAdapter:
                 batch,
                 loss_weights=loss_weights,
             )
+            if need_guard_inputs
+            else {}
         )
         scorer_space_step_guard_metrics = self._apply_scorer_space_step_guard(
             batch=batch,
@@ -9160,8 +9462,10 @@ class MlxScoreAwareAdapter:
         guard_rejected = bool(
             scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
         )
-        dynamics_delta_metrics = self._parameter_delta_trace_metrics(
-            pre_update_param_trace
+        dynamics_delta_metrics = (
+            self._parameter_delta_trace_metrics(pre_update_param_trace)
+            if diag_active
+            else {}
         )
         if guard_rejected:
             post_update_eval_targets = []
@@ -9178,19 +9482,20 @@ class MlxScoreAwareAdapter:
                 loss_weights=loss_weights,
             )
         )
-        post_update_metrics.update(
-            self._score_aware_loss_part_metrics(
-                batch,
-                loss_weights=loss_weights,
+        if diag_active:
+            post_update_metrics.update(
+                self._score_aware_loss_part_metrics(
+                    batch,
+                    loss_weights=loss_weights,
+                )
             )
-        )
-        post_update_metrics.update(
-            self._pr95_stage_loss_part_metrics(
-                batch,
-                stage_verdict=stage_verdict,
-                loss_weights=loss_weights,
+            post_update_metrics.update(
+                self._pr95_stage_loss_part_metrics(
+                    batch,
+                    stage_verdict=stage_verdict,
+                    loss_weights=loss_weights,
+                )
             )
-        )
         post_update_metrics.update(scorer_space_step_guard_metrics)
         if not guard_rejected:
             post_update_metrics.setdefault(
@@ -9269,6 +9574,11 @@ class MlxScoreAwareAdapter:
             **dynamics_delta_metrics,
             **dynamics_weight_metrics,
             **post_update_metrics,
+            **(
+                self.diagnostics_cadence_metrics()
+                if self._diagnostics_every_n_steps > 1
+                else {}
+            ),
         }
 
     def _notify_renderer_pr95_stage_verdict(self, stage_verdict: Any) -> None:

@@ -41,6 +41,13 @@ writes only a small JSON manifest under ``.omx/research/`` (durable, small
 metadata). It creates NO bulk artifacts (no checkpoints, no inflated frames,
 no caches persisted) and uses no ``/tmp`` paths.
 
+Companion tool: ``tools/b1_large_batch_timing_sweep.py`` measures the SAME
+score-aware ``MlxScoreAwareAdapter.train_step`` seconds/epoch BEFORE vs AFTER
+the per-step diagnostics cadence gate (``diagnostics_every_n_steps``) across
+batch operating points, with a math-parity proof (loss trajectory identical)
+and a SPEED x PROXY-SCORE-MOVEMENT recommended batch schedule. See
+``.omx/research/throughput_fix_mlx_score_aware_diagnostics_cadence_20260609.md``.
+
 Usage:
     .venv/bin/python tools/timing_smoke_hinerv_pr95_family.py
     .venv/bin/python tools/timing_smoke_hinerv_pr95_family.py \
