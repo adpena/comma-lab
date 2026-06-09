@@ -65,6 +65,7 @@ __all__ = [
     "B1_CANONICAL_DECODER_CHANNELS",
     "B1_PARAM_COUNT_EXACT",
     "B1_PARITY_PARAM_TARGET",
+    "CLEAN_BASELINE_LAUNCH_MANIFEST_SCHEMA_VERSION",
     "LAUNCH_MANIFEST_SCHEMA_VERSION",
     "MLX_RESEARCH_SIGNAL_AXIS",
     "PR95_SOURCE_ADAMW_PARTITION_PARAMS",
@@ -72,13 +73,23 @@ __all__ = [
     "PR95_SOURCE_TOTAL_PARAMS",
     "PR95_STAGE8_MUON_WIRED",
     "PR95_STAGE8_STOP_BEFORE_FAILCLOSED",
+    "B1CleanBaselineLaunchManifest",
     "B1LaunchManifest",
     "B1StageRecord",
+    "build_clean_pr95_baseline_launch_manifest",
     "build_launch_manifest",
     "count_taper_params_and_partition",
 ]
 
 LAUNCH_MANIFEST_SCHEMA_VERSION: str = "b1_hinerv_launch_manifest.v1"
+# The B1 clean-relaunch manifest schema (BLOCKER 2). Distinct from the v1
+# launch manifest so the clean-baseline gate fields + the SCALED stage
+# boundaries are first-class (the diverging run's v1 manifest emitted the
+# canonical 29,650-epoch boundaries while training only 3,000 epochs — the
+# manifest-fidelity bug this schema fixes).
+CLEAN_BASELINE_LAUNCH_MANIFEST_SCHEMA_VERSION: str = (
+    "b1_clean_pr95_baseline_launch_manifest.v1"
+)
 MLX_RESEARCH_SIGNAL_AXIS: str = "[macOS-MLX research-signal]"
 
 # The canonical 229K-parity taper. EXACTLY 228,903 params (verified by building
@@ -676,4 +687,240 @@ def compute_contest_score(seg: float, pose: float, archive_bytes: int) -> float:
         100.0 * float(seg)
         + math.sqrt(10.0 * float(pose))
         + 25.0 * int(archive_bytes) / 37_545_489
+    )
+
+
+# ---------------------------------------------------------------------------
+# B1 CLEAN-RELAUNCH manifest (BLOCKER 2) — clean PR95 baseline, zero novelty
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class B1CleanBaselineLaunchManifest:
+    """The B1 clean-relaunch launch manifest (the pre-launch GATE).
+
+    Supersedes the diverging off-spec pilot (``b1_229k_pilot_20260609T055851Z``)
+    which diverged within stage-1 because it was OFF-SPEC (kitchen-sink loss
+    terms + ``--pr95-stage-source-weight-amplification`` + NO grad-clip). This
+    manifest PROVES the relaunch is the ACTUALLY-clean PR95 baseline:
+
+    * SCALED stage boundaries from ``PR95FaithfulCurriculumFactory(
+      total_epoch_budget=research_total_epochs)`` — fixes the v1 manifest
+      fidelity bug (it emitted the canonical 29,650-epoch boundaries while the
+      run trained only 3,000 epochs);
+    * ``source_weight_amplification == False`` + ``extra_guard_tether_floor_
+      losses == False`` (the kitchen-sink is DROPPED);
+    * ``grad_clip_active == True`` + the canonical stabilizer string;
+    * ``sidecar_exported == False`` + ``pay_rent_gate_active == True``.
+
+    ``manifest_complete_and_self_consistent`` is ``False`` => do NOT launch.
+    [macOS-MLX research-signal] — NOT a contest score. Exact eval = B2 bridge.
+    """
+
+    inner: B1LaunchManifest
+    reason_for_relaunch: str
+    stage_policy: str
+    source_weight_amplification: bool
+    extra_guard_tether_floor_losses: bool
+    grad_clip_active: bool
+    stabilizer: str
+    research_total_epochs: int
+    superseded_run_id: str = ""
+
+    @property
+    def manifest_complete_and_self_consistent(self) -> bool:
+        """The clean-baseline pre-launch gate. ALL must hold:
+
+        - the inner v1 manifest is itself self-consistent (param count == exact;
+          partition sums; all 8 stages validated; stage-8 Muon wired; sidecar
+          off unless pays rent; ema in (0,1); resume + exact-eval stubs);
+        - the kitchen-sink is dropped (no source-weight amplification, no extra
+          guard/tether/floor losses);
+        - grad-clip is active (the diverging run had none);
+        - the SCALED stage boundaries sum to the research total (NOT 29,650).
+        """
+        if not self.inner.manifest_complete_and_self_consistent:
+            return False
+        if self.source_weight_amplification:
+            return False
+        if self.extra_guard_tether_floor_losses:
+            return False
+        if not self.grad_clip_active:
+            return False
+        if not str(self.stabilizer).strip():
+            return False
+        # The SCALED boundaries MUST sum to the research total (the fidelity
+        # fix); a manifest whose stages sum to 29,650 while training 3,000
+        # epochs is the bug this schema extincts.
+        total_stage_epochs = sum(
+            s.epochs_in_stage for s in self.inner.stage_list
+        )
+        return total_stage_epochs == int(self.research_total_epochs)
+
+    def as_dict(self) -> dict[str, Any]:
+        inner = self.inner.as_dict()
+        total_stage_epochs = sum(
+            s.epochs_in_stage for s in self.inner.stage_list
+        )
+        payload: dict[str, Any] = {
+            "schema": CLEAN_BASELINE_LAUNCH_MANIFEST_SCHEMA_VERSION,
+            "commit_sha": self.inner.commit_sha,
+            "run_id": self.inner.run_id,
+            "superseded_run_id": self.superseded_run_id,
+            "reason_for_relaunch": self.reason_for_relaunch,
+            # Param identity (built from the REAL model; fail-closed).
+            "param_count": int(self.inner.param_count),
+            "param_count_confirmed": bool(self.inner.param_count_confirmed),
+            "param_count_exact_required": B1_PARAM_COUNT_EXACT,
+            "decoder_channels": [int(c) for c in self.inner.decoder_channels],
+            # Clean-baseline invariants (the relaunch discipline).
+            "sidecar_exported": bool(self.inner.sidecar_export_enabled),
+            "pay_rent_gate_active": bool(self.inner.pay_rent_gate_active),
+            "stage_policy": self.stage_policy,
+            "source_weight_amplification": bool(self.source_weight_amplification),
+            "extra_guard_tether_floor_losses": bool(
+                self.extra_guard_tether_floor_losses
+            ),
+            "grad_clip_active": bool(self.grad_clip_active),
+            "stabilizer": self.stabilizer,
+            # SCALED curriculum (the fidelity fix).
+            "research_total_epochs": int(self.research_total_epochs),
+            "total_curriculum_epochs": int(total_stage_epochs),
+            "stage_boundaries_are_scaled_not_canonical_29650": bool(
+                total_stage_epochs == int(self.research_total_epochs)
+                and total_stage_epochs != PR95_TOTAL_EPOCH_BUDGET
+            ),
+            "stages": [s.as_dict() for s in self.inner.stage_list],
+            "stages_all_validated": bool(self.inner.stages_all_validated),
+            "stage8_muon_status": self.inner.stage8_muon_status,
+            "stage8_use_muon_flag": bool(self.inner.stage8_use_muon_flag),
+            "muon_partition_rule": self.inner.muon_partition_rule,
+            "muon_param_count": int(self.inner.muon_param_count),
+            "adamw_param_count": int(self.inner.adamw_param_count),
+            "muon_partition_sums_to_total": bool(
+                self.inner.muon_partition_sums_to_total
+            ),
+            "ema_decay": float(self.inner.ema_decay),
+            "checkpoint_cadence_epochs": int(self.inner.checkpoint_cadence_epochs),
+            "telemetry_path": self.inner.telemetry_path,
+            "stop_thresholds": dict(self.inner.stop_thresholds),
+            "resume_command": self.inner.resume_command,
+            "exact_eval_command_stub": self.inner.exact_eval_command_stub,
+            "manifest_complete_and_self_consistent": (
+                self.manifest_complete_and_self_consistent
+            ),
+            # The full inner v1 manifest is embedded for the complete audit
+            # surface (stage validation details, hallucination audit, etc.).
+            "inner_v1_manifest": inner,
+        }
+        payload.update(_NON_PROMOTABLE_MARKERS)
+        return payload
+
+
+def build_clean_pr95_baseline_launch_manifest(
+    *,
+    commit_sha: str,
+    run_id: str,
+    telemetry_path: str,
+    best_checkpoint_manifest_path: str,
+    resume_command: str,
+    exact_eval_command_stub: str,
+    research_total_epochs: int = 3000,
+    decoder_channels: tuple[int, ...] = B1_CANONICAL_DECODER_CHANNELS,
+    num_pairs: int = 600,
+    muon_policy: str = "faithful_stage8_only",
+    ema_decay: float = 0.997,
+    checkpoint_cadence_epochs: int = 250,
+    grad_clip_max_norm: float = 1.0,
+    cosine_decay_enabled: bool = True,
+    warmup_epochs: int = 10,
+    reason_for_relaunch: str = "previous_run_diverging_and_off_spec",
+    superseded_run_id: str = "",
+    notes: str = "",
+) -> B1CleanBaselineLaunchManifest:
+    """Build the B1 clean-relaunch launch manifest (the pre-launch GATE).
+
+    Routes through ``build_launch_manifest`` with ``total_epoch_budget=
+    research_total_epochs`` so the inner v1 manifest carries the SCALED stage
+    boundaries (the fidelity fix). Adds the clean-baseline gate fields proving
+    the relaunch is the ACTUALLY-clean PR95 baseline (no amplification, no
+    kitchen-sink tether/floor losses, grad-clip active, sidecar off).
+
+    Args:
+        commit_sha / run_id: provenance.
+        telemetry_path / best_checkpoint_manifest_path / resume_command /
+            exact_eval_command_stub: run paths + operator-runnable commands.
+        research_total_epochs: the reduced pilot budget (default 3000). The
+            inner factory SCALES the canonical 8-stage ratio to this budget.
+        grad_clip_max_norm: the Wave N+11 canonical max_norm (default 1.0). MUST
+            be > 0 (the diverging run had no grad-clip).
+        reason_for_relaunch: the relaunch rationale string.
+        superseded_run_id: the KILLED off-spec run this supersedes.
+
+    Returns:
+        a :class:`B1CleanBaselineLaunchManifest`.
+
+    Raises:
+        ValueError: ``grad_clip_max_norm <= 0`` (a clean relaunch REQUIRES the
+            stabilizer the diverging run lacked) or ``research_total_epochs <
+            8`` (cannot fit the 8-stage curriculum).
+    """
+    if float(grad_clip_max_norm) <= 0.0:
+        raise ValueError(
+            "build_clean_pr95_baseline_launch_manifest requires grad_clip_max_norm "
+            f"> 0 (the clean relaunch's stabilizer); got {grad_clip_max_norm}. The "
+            "diverging off-spec pilot had NO grad-clip and diverged in stage 1."
+        )
+    if int(research_total_epochs) < 8:
+        raise ValueError(
+            "research_total_epochs must be >= 8 to fit the PR95 8-stage "
+            f"curriculum; got {research_total_epochs}."
+        )
+
+    inner = build_launch_manifest(
+        commit_sha=commit_sha,
+        run_id=run_id,
+        telemetry_path=telemetry_path,
+        best_checkpoint_manifest_path=best_checkpoint_manifest_path,
+        resume_command=resume_command,
+        exact_eval_command_stub=exact_eval_command_stub,
+        decoder_channels=decoder_channels,
+        num_pairs=num_pairs,
+        muon_policy=muon_policy,
+        # The fidelity fix: SCALED boundaries from the research total, NOT the
+        # canonical 29,650.
+        total_epoch_budget=int(research_total_epochs),
+        ema_decay=ema_decay,
+        checkpoint_cadence_epochs=checkpoint_cadence_epochs,
+        sidecar_export_enabled=False,
+        pay_rent_gate_active=True,
+        candidate_action_evaluation_active=True,
+        notes=notes or (
+            "B1 clean-relaunch: stabilized PR95 baseline (grad-clip + cosine + "
+            "warmup); kitchen-sink + source-weight amplification DROPPED."
+        ),
+        extra={
+            "clean_relaunch": True,
+            "superseded_run_id": superseded_run_id,
+            "warmup_epochs": int(warmup_epochs),
+            "cosine_decay_enabled": bool(cosine_decay_enabled),
+        },
+    )
+
+    stabilizer = (
+        f"grad-clip max_norm={float(grad_clip_max_norm):g}"
+        + (" + cosine" if cosine_decay_enabled else "")
+        + (f" + warmup({int(warmup_epochs)})" if int(warmup_epochs) > 0 else "")
+    )
+
+    return B1CleanBaselineLaunchManifest(
+        inner=inner,
+        reason_for_relaunch=str(reason_for_relaunch),
+        stage_policy="scaled_pr95_8_stage_curriculum",
+        source_weight_amplification=False,
+        extra_guard_tether_floor_losses=False,
+        grad_clip_active=True,
+        stabilizer=stabilizer,
+        research_total_epochs=int(research_total_epochs),
+        superseded_run_id=str(superseded_run_id),
     )

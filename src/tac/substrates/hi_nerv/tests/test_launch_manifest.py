@@ -21,10 +21,13 @@ from tac.substrates.hi_nerv.launch_manifest import (  # noqa: E402
     B1_CANONICAL_DECODER_CHANNELS,
     B1_PARAM_COUNT_EXACT,
     B1_PARITY_PARAM_TARGET,
+    CLEAN_BASELINE_LAUNCH_MANIFEST_SCHEMA_VERSION,
     PR95_STAGE8_MUON_WIRED,
     PR95_STAGE8_STOP_BEFORE_FAILCLOSED,
     PR95_TOTAL_EPOCH_BUDGET,
+    B1CleanBaselineLaunchManifest,
     B1LaunchManifest,
+    build_clean_pr95_baseline_launch_manifest,
     build_launch_manifest,
     compute_contest_score,
     count_taper_params_and_partition,
@@ -236,3 +239,144 @@ def test_manifest_dataclass_is_frozen():
     assert isinstance(m, B1LaunchManifest)
     with pytest.raises((AttributeError, Exception)):
         m.param_count = 1  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# B1 CLEAN-RELAUNCH manifest (BLOCKER 2) — NO-FAKE Class 2
+# ---------------------------------------------------------------------------
+
+
+def _clean_manifest(**overrides):
+    kwargs = {
+        "commit_sha": "deadbeef",
+        "run_id": "b1_229k_clean_test",
+        "telemetry_path": "/ssd/run/telemetry.jsonl",
+        "best_checkpoint_manifest_path": "/repo/.omx/research/best.json",
+        "resume_command": "nohup bash scripts/launch_b1_clean_stabilized_pr95.sh ...",
+        "exact_eval_command_stub": "python upstream/evaluate.py --device cpu ...",
+        "research_total_epochs": 3000,
+        "superseded_run_id": "b1_229k_pilot_20260609T055851Z",
+    }
+    kwargs.update(overrides)
+    return build_clean_pr95_baseline_launch_manifest(**kwargs)
+
+
+def test_clean_manifest_gate_passes_for_canonical_clean_baseline():
+    m = _clean_manifest()
+    assert isinstance(m, B1CleanBaselineLaunchManifest)
+    assert m.manifest_complete_and_self_consistent is True
+
+
+def test_clean_manifest_param_count_is_exact_from_real_model():
+    """Built from the REAL MLX model; fail-closed if != 228,903."""
+    d = _clean_manifest().as_dict()
+    assert d["param_count"] == B1_PARAM_COUNT_EXACT == 228903
+    assert d["param_count_confirmed"] is True
+    assert d["decoder_channels"] == [36, 30, 23, 17, 14, 11, 8]
+
+
+def test_clean_manifest_uses_scaled_boundaries_not_canonical_29650():
+    """The fidelity fix: SCALED stage boundaries sum to 3000, NOT 29,650."""
+    d = _clean_manifest(research_total_epochs=3000).as_dict()
+    total = sum(s["epochs_in_stage"] for s in d["stages"])
+    assert total == 3000
+    assert total != PR95_TOTAL_EPOCH_BUDGET  # the v1 manifest's bug value
+    assert d["total_curriculum_epochs"] == 3000
+    assert d["research_total_epochs"] == 3000
+    assert d["stage_boundaries_are_scaled_not_canonical_29650"] is True
+    # NO-FAKE: the scaled stage-1 boundary is ~303 (3000/29650 ratio), NOT 3000.
+    stage1 = next(s for s in d["stages"] if s["stage_index"] == 1)
+    assert stage1["epochs_in_stage"] < 3000
+    assert stage1["start_epoch"] == 0
+    # Stage 8 (Muon) starts late in the 3000-ep budget, not at 24650.
+    stage8 = next(s for s in d["stages"] if s["stage_index"] == 8)
+    assert stage8["start_epoch"] < 3000
+    assert stage8["end_epoch"] == 3000
+
+
+def test_clean_manifest_declares_clean_baseline_discipline_fields():
+    d = _clean_manifest().as_dict()
+    assert d["schema"] == CLEAN_BASELINE_LAUNCH_MANIFEST_SCHEMA_VERSION
+    assert d["reason_for_relaunch"] == "previous_run_diverging_and_off_spec"
+    assert d["stage_policy"] == "scaled_pr95_8_stage_curriculum"
+    assert d["source_weight_amplification"] is False
+    assert d["extra_guard_tether_floor_losses"] is False
+    assert d["grad_clip_active"] is True
+    assert "grad-clip" in d["stabilizer"]
+    assert "max_norm" in d["stabilizer"]
+    assert d["sidecar_exported"] is False
+    assert d["pay_rent_gate_active"] is True
+    assert d["superseded_run_id"] == "b1_229k_pilot_20260609T055851Z"
+
+
+def test_clean_manifest_stages_validated_and_muon_only_stage8():
+    d = _clean_manifest().as_dict()
+    assert len(d["stages"]) == 8
+    assert d["stages_all_validated"] is True
+    assert d["stage8_muon_status"] == PR95_STAGE8_MUON_WIRED
+    for s in d["stages"][:7]:
+        assert s["uses_muon"] is False, f"stage {s['stage_index']} must be AdamW"
+    assert d["stages"][7]["uses_muon"] is True
+
+
+def test_clean_manifest_requires_grad_clip():
+    """A clean relaunch REQUIRES grad-clip > 0 (the diverging run had none)."""
+    with pytest.raises(ValueError):
+        build_clean_pr95_baseline_launch_manifest(
+            commit_sha="x",
+            run_id="x",
+            telemetry_path="/ssd/t.jsonl",
+            best_checkpoint_manifest_path="/repo/.omx/research/b.json",
+            resume_command="r",
+            exact_eval_command_stub="e",
+            grad_clip_max_norm=0.0,
+        )
+
+
+def test_clean_manifest_gate_fails_if_amplification_or_kitchen_sink():
+    """NO-FAKE: flipping the clean-baseline invariants fails the gate."""
+    import dataclasses
+
+    m = _clean_manifest()
+    assert m.manifest_complete_and_self_consistent is True
+    # Source-weight amplification ON -> gate FAILS.
+    amplified = dataclasses.replace(m, source_weight_amplification=True)
+    assert amplified.manifest_complete_and_self_consistent is False
+    # Kitchen-sink tether/floor losses ON -> gate FAILS.
+    tethered = dataclasses.replace(m, extra_guard_tether_floor_losses=True)
+    assert tethered.manifest_complete_and_self_consistent is False
+    # grad-clip OFF -> gate FAILS.
+    no_clip = dataclasses.replace(m, grad_clip_active=False)
+    assert no_clip.manifest_complete_and_self_consistent is False
+
+
+def test_clean_manifest_gate_fails_if_stages_sum_to_29650():
+    """NO-FAKE: a manifest whose research_total mismatches the stage sum fails.
+
+    Forces the fidelity-bug condition (claim 29,650 while stages sum to 3,000)
+    and proves the gate refuses it.
+    """
+    import dataclasses
+
+    m = _clean_manifest(research_total_epochs=3000)
+    # Lie about the research total -> stage sum (3000) != claimed (29650) -> FAIL.
+    lied = dataclasses.replace(m, research_total_epochs=PR95_TOTAL_EPOCH_BUDGET)
+    assert lied.manifest_complete_and_self_consistent is False
+
+
+def test_clean_manifest_as_dict_is_json_serializable_and_non_promotable():
+    d = _clean_manifest().as_dict()
+    json.dumps(d)  # must not raise
+    assert d["score_claim"] is False
+    assert d["promotable"] is False
+    assert d["ready_for_exact_eval_dispatch"] is False
+    assert d["measurement_axis"] == "[macOS-MLX research-signal]"
+    # The full inner v1 manifest is embedded for the complete audit surface.
+    assert "inner_v1_manifest" in d
+    assert d["inner_v1_manifest"]["param_count"] == B1_PARAM_COUNT_EXACT
+
+
+def test_clean_manifest_dataclass_is_frozen():
+    m = _clean_manifest()
+    with pytest.raises((AttributeError, Exception)):
+        m.grad_clip_active = False  # type: ignore[misc]

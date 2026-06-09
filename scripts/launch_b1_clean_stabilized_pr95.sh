@@ -36,6 +36,33 @@ mkdir -p .omx/tmp
 HB_PID=$!
 trap "kill ${HB_PID} 2>/dev/null" EXIT
 echo "CLEAN_B1_RUN_ID=${RUN_ID}" >> "${SSD_RUN}/run_id.txt"
+
+# === BLOCKER 2 PRE-LAUNCH GATE ============================================
+# Emit b1_clean_pr95_baseline_launch_manifest.v1 (SCALED PR95 boundaries +
+# clean-baseline gate fields, built from the REAL 228,903-param model). The
+# clean run does NOT launch unless manifest_complete_and_self_consistent.
+# rc=2 from the emitter => gate fail => abort (do NOT burn GPU hours).
+MANIFEST=".omx/research/b1_clean_pr95_baseline_launch_manifest_${RUN_ID}.json"
+.venv/bin/python tools/build_b1_launch_manifest.py \
+  --clean-baseline \
+  --run-id "${RUN_ID}" \
+  --research-total-epochs 3000 \
+  --grad-clip-max-norm 1.0 \
+  --warmup-epochs 10 \
+  --telemetry-path "${SSD_RUN}/telemetry.jsonl" \
+  --best-checkpoint-manifest-path "${MANIFEST%.json}_best_checkpoint.json" \
+  --superseded-run-id "b1_229k_pilot_20260609T055851Z" \
+  --output "${MANIFEST}"
+MANIFEST_RC=$?
+if [ "${MANIFEST_RC}" -ne 0 ]; then
+  printf '%s MANIFEST_GATE_FAILED rc=%s run=%s — ABORT, NOT launching\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${MANIFEST_RC}" "${RUN_ID}" >> "${HEARTBEAT}"
+  echo "ABORT: clean-baseline manifest gate failed (rc=${MANIFEST_RC}); not launching." >&2
+  exit 3
+fi
+echo "MANIFEST_GATE_PASS manifest=${MANIFEST}" >> "${SSD_RUN}/run_id.txt"
+# ==========================================================================
+
 .venv/bin/python experiments/train_substrate_hi_nerv_mlx_local.py \
   --full \
   --allow-direct-research-full-launch \
