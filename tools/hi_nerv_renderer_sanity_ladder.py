@@ -1093,9 +1093,115 @@ def cmd_segnet_fragile_support_codec_budget(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_region_cheapen_seg_vs_pose(args: argparse.Namespace) -> int:
+    """Decisive test of the SegNet/PoseNet skeleton conflict (operator caveat 2026-06-09):
+    keep the SegNet-FRAGILE boundary skeleton SHARP, cheapen the robust interior, and measure
+    BOTH d_seg AND d_pose. If d_seg stays low but d_pose explodes => PoseNet needs the robust-region
+    texture (motion cues) => a flat-fill skeleton is vetoed by pose; the witness needs a dense
+    low-frequency pose carrier in the 'robust' region. If both stay low => skeleton is viable.
+    """
+    import torch
+    from frame_utils import seq_len
+    from modules import (
+        DistortionNet,
+        posenet_sd_path,
+        segnet_model_input_size,
+        segnet_sd_path,
+    )
+
+    H, W, C = _frame_dims()
+    frames = _decode_first_k_frames(UPSTREAM / "videos" / "0.mkv", args.num_pairs * seq_len)
+    net = DistortionNet().eval().to(args.device)
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, args.device)
+    seg_h, seg_w = segnet_model_input_size[1], segnet_model_input_size[0]
+    frag_thr = 2.0
+    n_pairs = frames.shape[0] // seq_len
+
+    def _downsample(arr: np.ndarray, k: int) -> np.ndarray:
+        if k <= 1:
+            return arr.copy()
+        x = torch.from_numpy(arr.transpose(0, 3, 1, 2).astype(np.float32))
+        small = torch.nn.functional.interpolate(x, size=(max(1, H // k), max(1, W // k)), mode="bilinear", align_corners=False)
+        up = torch.nn.functional.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+        return up.clamp(0, 255).round().numpy().transpose(0, 2, 3, 1).astype(np.uint8)
+
+    def _fragile_cam_mask(f1: np.ndarray) -> np.ndarray:
+        # SegNet fragile mask of frame1 at seg-res, upsampled to camera-res + dilated to a band.
+        with torch.inference_mode():
+            x = torch.from_numpy(f1.transpose(2, 0, 1)[None].astype(np.float32))
+            seg_in = torch.nn.functional.interpolate(x, size=(seg_h, seg_w), mode="bilinear", align_corners=False).to(args.device)
+            top2 = torch.topk(net.segnet(seg_in), 2, dim=1).values
+            frag = ((top2[0, 0] - top2[0, 1]) < frag_thr).float()[None, None]  # (1,1,seg_h,seg_w)
+            frag_cam = torch.nn.functional.interpolate(frag, size=(H, W), mode="nearest")[0, 0].cpu().numpy() > 0.5
+        from scipy import ndimage
+
+        return ndimage.binary_dilation(frag_cam, iterations=int(args.dilate))
+
+    levels = [2, 4, 8, 16, 32]
+    pair_indices = list(range(0, n_pairs, max(1, n_pairs // args.num_pairs)))[: args.num_pairs]
+    acc: dict[str, dict[int, list[tuple[float, float]]]] = {"uniform": {}, "boundary_preserved": {}}
+    for mode in acc:
+        for k in levels:
+            acc[mode][k] = []
+
+    def _score(pair: np.ndarray) -> tuple[float, float]:
+        comp = torch.from_numpy(pair[None].astype(np.uint8))
+        gt = torch.from_numpy(src_pair[None].astype(np.uint8))
+        with torch.inference_mode():
+            dp, ds = net.compute_distortion(gt.to(args.device), comp.to(args.device))
+        return float(ds.item()), float(dp.item())
+
+    for pi in pair_indices:
+        src_pair = frames[pi * seq_len : pi * seq_len + seq_len]  # (2,H,W,3)
+        frag = _fragile_cam_mask(src_pair[seq_len - 1])  # (H,W) bool, frame1 fragile band
+        frag3 = frag[..., None]
+        for k in levels:
+            cheap = _downsample(src_pair, k)  # both frames cheapened
+            acc["uniform"][k].append(_score(cheap))
+            # boundary_preserved: restore frame1's fragile band to source (keep SegNet skeleton sharp)
+            bp = cheap.copy()
+            bp[seq_len - 1] = np.where(frag3, src_pair[seq_len - 1], cheap[seq_len - 1])
+            acc["boundary_preserved"][k].append(_score(bp))
+
+    def _agg(rows: list[tuple[float, float]]) -> dict[str, float]:
+        a = np.array(rows)
+        return {"d_seg": float(a[:, 0].mean()), "d_pose": float(a[:, 1].mean()),
+                "seg_term": float(100 * a[:, 0].mean()), "pose_term": float(np.sqrt(10 * a[:, 1].mean()))}
+
+    curves = {mode: {str(k): _agg(acc[mode][k]) for k in levels} for mode in acc}
+    artifact = {
+        "schema": "region_cheapen_seg_vs_pose.v1",
+        "purpose": "does keeping the SegNet boundary skeleton sharp while cheapening the robust interior preserve d_seg WITHOUT destroying d_pose? (the skeleton-viability crux)",
+        "utc": _utc(),
+        "n_pairs_scored": len(pair_indices),
+        "dilate_iterations": int(args.dilate),
+        "downsample_levels": levels,
+        "curves": curves,
+        "verdict_note": "compare boundary_preserved d_seg (should be << uniform) vs its d_pose (the pose veto test)",
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    print(f"scored {len(pair_indices)} pairs; dilate={args.dilate}")
+    print(f"{'level':>6} | {'uniform d_seg/d_pose':>26} | {'bndry-preserved d_seg/d_pose':>30}")
+    for k in levels:
+        u = curves["uniform"][str(k)]
+        b = curves["boundary_preserved"][str(k)]
+        print(f"  k={k:<3} | d_seg={u['d_seg']:.4f} d_pose={u['d_pose']:8.3f} | d_seg={b['d_seg']:.4f} d_pose={b['d_pose']:8.3f}")
+    print("READ: if boundary_preserved d_seg << uniform but d_pose ~ uniform (high) => pose vetoes flat-fill (needs interior carrier)")
+    print(f"artifact -> {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    rc = sub.add_parser("region-cheapen-seg-vs-pose", help="keep SegNet skeleton sharp, cheapen interior, measure d_seg AND d_pose (pose-veto test)")
+    rc.add_argument("--out", required=True, help="artifact JSON path")
+    rc.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    rc.add_argument("--num-pairs", type=int, default=16)
+    rc.add_argument("--dilate", type=int, default=2, help="dilate the fragile band by N pixels")
+    rc.set_defaults(func=cmd_region_cheapen_seg_vs_pose)
 
     fb = sub.add_parser("segnet-fragile-support-codec-budget", help="B0.5: margin value map -> byte-priced action atoms (rate term)")
     fb.add_argument("--out", required=True, help="artifact JSON path")
