@@ -40,7 +40,9 @@ _VEHICLE_VNUM = {
     "pact_nerv_vq": ("V4", "PACT-NeRV-VQ composed-latent/codebook"),
     "pr110pp": ("V5", "PR110++ selector/menu frontier-direct"),
     "source_recode": ("V0", "fp11 source-recode (the CPU frontier anchor)"),
-    "atom": ("V6", "evaluator-atlas atoms (inverse-steg + cooperative-receiver miners)"),
+    # NB: canonical V6 designation RESERVED for the operator's incoming V6 design memo (2026-06-09);
+    # this atlas/atom lane is labeled Vatlas until V6 is defined, to avoid pre-empting it.
+    "atom": ("Vatlas", "evaluator-atlas atoms (inverse-steg + cooperative-receiver miners)"),
 }
 
 
