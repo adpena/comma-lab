@@ -265,16 +265,29 @@ def select_target_checkpoint(
     """Pick the harvest target.
 
     Preference order:
-      1. the earliest periodic/best checkpoint with ``global_epoch >= target_epoch``
-         whose EMA state file actually exists on disk;
+      1. the earliest periodic/best checkpoint with
+         ``global_epoch >= target_epoch - 1`` whose EMA state file actually
+         exists on disk;
       2. if ``allow_final_fallback``: the final checkpoint (export only works on
          the end-of-run archive in some configs; the final checkpoint is the
          honest fallback).
+
+    OFF-BY-ONE FIX (2026-06-09): the canonical ``run_long_training`` epoch loop
+    writes a periodic checkpoint when ``(epoch + 1) % checkpoint_interval == 0``
+    and stamps it with ``global_epoch == epoch`` (0-indexed). So the checkpoint
+    at the Nth-epoch cadence boundary (interval N) is named ``epoch{N-1:06d}``
+    and carries ``global_epoch = N - 1``. The diverging pilot's harvester
+    targeted ``--target-epoch 250`` with a strict ``>= 250`` match, so the
+    ``global_epoch=249`` checkpoint (the actual 250th-epoch interval boundary)
+    NEVER matched and the harvest never fired. Matching ``>= target_epoch - 1``
+    fires on the interval boundary as intended. ``target_epoch <= 0`` clamps the
+    threshold floor to 0 so it never goes negative.
     """
+    threshold = max(0, int(target_epoch) - 1)
     eligible = [
         c
         for c in checkpoints
-        if c.global_epoch >= target_epoch and _state_file_exists(c.ema_state_path)
+        if c.global_epoch >= threshold and _state_file_exists(c.ema_state_path)
     ]
     if eligible:
         return min(eligible, key=lambda c: c.global_epoch)

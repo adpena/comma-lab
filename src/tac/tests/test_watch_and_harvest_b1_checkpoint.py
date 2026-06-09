@@ -197,6 +197,68 @@ def test_list_checkpoints_ignores_non_canonical_meta(paths):
 
 
 # ---------------------------------------------------------------------------
+# 1b. OFF-BY-ONE FIX (2026-06-09): the 250th-epoch interval-boundary checkpoint
+# is saved as ``epoch000249`` with ``global_epoch=249`` (0-indexed). The
+# diverging pilot's harvester targeted ``--target-epoch 250`` with a strict
+# ``>= 250`` match and the harvest NEVER fired. The fix matches
+# ``>= target_epoch - 1``. These regression tests reproduce the EXACT killed-run
+# naming so the bug cannot return.
+# ---------------------------------------------------------------------------
+
+
+def test_select_checkpoint_matches_epoch000249_for_target_250(paths):
+    """REGRESSION: the killed run's epoch000249 (global_epoch=249) MUST match.
+
+    Reproduces the exact failure: the 250th-epoch checkpoint is named
+    ``epoch000249`` with ``global_epoch=249``; targeting 250 must select it
+    (>= target_epoch - 1 == 249), not return None.
+    """
+    meta_path = _write_checkpoint(paths.checkpoint_dir, epoch=249)
+    # Confirm the killed-run naming is reproduced exactly.
+    assert "epoch000249" in meta_path.name
+    cks = WH.list_checkpoints(paths.checkpoint_dir)
+    assert cks[0].global_epoch == 249
+    target = WH.select_target_checkpoint(cks, target_epoch=250)
+    assert target is not None, (
+        "epoch000249 (global_epoch=249) MUST be selected for target_epoch=250 "
+        "(the off-by-one bug returned None and the harvest never fired)"
+    )
+    assert target.global_epoch == 249
+
+
+def test_select_checkpoint_off_by_one_picks_boundary_not_next_interval(paths):
+    """The interval-boundary checkpoint (249) wins over the next one (499)."""
+    _write_checkpoint(paths.checkpoint_dir, epoch=249)  # 250th-epoch boundary
+    _write_checkpoint(paths.checkpoint_dir, epoch=499)  # 500th-epoch boundary
+    cks = WH.list_checkpoints(paths.checkpoint_dir)
+    target = WH.select_target_checkpoint(cks, target_epoch=250)
+    assert target is not None
+    assert target.global_epoch == 249  # earliest >= 249, not 499
+
+
+def test_select_checkpoint_still_excludes_genuinely_early_checkpoints(paths):
+    """A checkpoint well below the boundary (ep=200) is NOT matched for tgt 250.
+
+    Guards against the fix over-matching: -1 tolerance is for the 0-indexed
+    boundary only; a 200-epoch checkpoint (global_epoch=200 < 249) is excluded.
+    """
+    _write_checkpoint(paths.checkpoint_dir, epoch=200)
+    cks = WH.list_checkpoints(paths.checkpoint_dir)
+    assert (
+        WH.select_target_checkpoint(cks, target_epoch=250, allow_final_fallback=False)
+        is None
+    )
+
+
+def test_select_checkpoint_target_epoch_one_clamps_threshold_floor(paths):
+    """target_epoch<=1 clamps the threshold to 0 (never negative)."""
+    _write_checkpoint(paths.checkpoint_dir, epoch=0)
+    cks = WH.list_checkpoints(paths.checkpoint_dir)
+    target = WH.select_target_checkpoint(cks, target_epoch=1)
+    assert target is not None and target.global_epoch == 0
+
+
+# ---------------------------------------------------------------------------
 # 2. Heartbeat parsing.
 # ---------------------------------------------------------------------------
 
