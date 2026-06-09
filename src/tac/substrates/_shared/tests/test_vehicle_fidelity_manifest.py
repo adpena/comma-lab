@@ -176,6 +176,88 @@ def test_verify_fails_closed_on_laundering_claimed_but_silent() -> None:
         silent.verify()
 
 
+def test_docstring_mechanism_claim_requires_forward_evidence() -> None:
+    """D3 (operator 2026-06-09): the ``docstring_mechanism_claim_requires_forward_
+    evidence`` regression pattern, formalized against the ``sane_hnerv`` FAIL case.
+
+    A docstring that CLAIMS a mechanism MUST point to forward evidence — the
+    three-part contract {function name (file:line evidence), activation test
+    (test_id), export status} — or ``verify()`` fails. This test pins the contract:
+
+      (1) A docstring claim with NO forward evidence (the mechanism is absent from
+          ``actual_mechanisms_present``) -> ``verify()`` RAISES. This is the
+          ``sane_hnerv`` documentation-fake: the docstring advertises a
+          "bilinear-skip" the forward pass never implements. If ``verify()`` were
+          a stub (``pass``), this assertion would FAIL.
+
+      (2) A docstring claim WITH the function-name evidence but a still-pending
+          activation test (``test_id == AUDIT_PENDING``) -> NOT laundering (the
+          mechanism IS present) but a SOFT ``unproven_claims`` advisory fires:
+          the claim is true but its behavior is not yet regression-guarded. This
+          is the "activation test" leg of the three-part contract.
+
+      (3) The full contract satisfied (evidence file:line + a real activation
+          test) -> verifies clean with NO advisory.
+
+    This is the canonical anti-name-laundering pattern: a mechanism NAME / docstring
+    is not a mechanism proof (Vehicle OS claim rule #1-#3); forward evidence is.
+    """
+    # (1) claim with NO forward evidence -> verify() raises (the sane_hnerv fake)
+    no_evidence = VehicleFidelityManifest(
+        vehicle_id="sane_hnerv_like_fake",
+        claimed_family="HNeRV-LC-v2 (with bilinear-skip)",
+        actual_mechanisms_present=(),  # NO forward evidence for the claimed skip
+        mechanisms_absent=("bilinear_skip",),
+        docstring_claims=("canonical HNeRV with bilinear-skip + sin activation",),
+    )
+    with pytest.raises(VehicleFidelityVerifyError, match="bilinear_skip"):
+        no_evidence.verify()
+    # the function-name leg is the blocking one: a claimed mechanism with no
+    # file:line evidence is a documentation-fake.
+    assert no_evidence.claims_mechanism("bilinear_skip")  # the docstring DOES claim it
+    assert "bilinear_skip" not in no_evidence.present_mechanism_names()
+
+    # (2) claim WITH function-name evidence but pending activation test ->
+    #     not laundering, but the activation-test leg fires a soft advisory.
+    evidence_no_test = VehicleFidelityManifest(
+        vehicle_id="real_skip_pending_test",
+        claimed_family="HNeRV (bilinear-skip)",
+        actual_mechanisms_present=(
+            MechanismEvidence(
+                mechanism="bilinear_skip",
+                evidence="src/tac/substrates/hi_nerv/architecture.py:46-51",
+                test_id=AUDIT_PENDING,  # activation test not yet written
+            ),
+        ),
+        mechanisms_absent=(),
+        docstring_claims=("per-block bilinear-skip residual",),
+    )
+    evidence_no_test.verify()  # function-name present -> NOT laundering
+    advisories = evidence_no_test.unproven_claims()
+    assert len(advisories) == 1
+    assert "UNPROVEN-CLAIM" in advisories[0]
+    assert "bilinear_skip" in advisories[0]
+
+    # (3) full three-part contract (evidence + activation test) -> clean.
+    full_contract = VehicleFidelityManifest(
+        vehicle_id="real_skip_with_test",
+        claimed_family="HNeRV (bilinear-skip)",
+        actual_mechanisms_present=(
+            MechanismEvidence(
+                mechanism="bilinear_skip",
+                evidence="src/tac/substrates/hi_nerv/architecture.py:46-51",
+                test_id="tests/test_hi_nerv.py::test_bilinear_skip_active_in_forward",
+                notes="export status: opt-in flag, exercised in the forward when enabled",
+            ),
+        ),
+        mechanisms_absent=(),
+        docstring_claims=("per-block bilinear-skip residual",),
+    )
+    full_contract.verify()
+    assert full_contract.laundering_findings() == ()
+    assert full_contract.unproven_claims() == ()
+
+
 def test_verify_passes_on_faithful_manifest_with_test() -> None:
     """A carrier that genuinely implements its claimed mechanism verifies."""
     faithful = VehicleFidelityManifest(
