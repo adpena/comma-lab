@@ -71720,11 +71720,11 @@
       "id": "lane_scorer_spectral_atlas_v2_20260609",
       "name": "Scorer spectral-sensitivity atlas v2 + constants provenance gate",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/analysis/scorer_spectral_sensitivity_v2.py + tools/measure_scorer_spectral_sensitivity.py v2 (commit dc3cd5851) + src/tac/substrates/_shared/constants_provenance_manifest.py (commit bce596cc9)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -71739,16 +71739,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #385 check_no_arbitrary_score_relevant_constant_at_l2 (WARN-ONLY live count 0; commit bce596cc9)"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "v2 module + manifest stricter-policy 2-pass review-gated; 93 behavioral tests pass"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/feedback_scorer_spectral_atlas_v2_plus_constants_provenance_gate_landed_20260609.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -71765,5 +71765,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-09T20:25:01Z"
+  "updated_at": "2026-06-09T20:42:53Z"
 }
