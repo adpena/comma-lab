@@ -183,6 +183,11 @@ def test_ingest_emits_typed_rows_and_rejects_garbage_base(tmp_path: Path) -> Non
     assert Path(out["campaign_decision_path"]).is_file()
     # Frontier read from the pointer, not hardcoded.
     assert dec["frontier"]["score"] == pytest.approx(0.19199)
+    # AUTHORITY TIER: a macOS advisory eval is NOT promotion-grade and must NOT be
+    # roadmap-update-eligible (operator discipline: only contest_cpu/cuda update the plan).
+    assert cae["authority_tier"] == "exact_cpu_advisory"
+    assert dec["authority_tier"] == "exact_cpu_advisory"
+    assert dec["roadmap_update_eligible"] is False
 
 
 def test_ingest_stale_base_mismatch_flagged(tmp_path: Path) -> None:

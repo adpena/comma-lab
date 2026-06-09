@@ -57,6 +57,28 @@ from tac.optimization.harvest_evidence import (  # noqa: E402
 _DEFAULT_FRONTIER_POINTER = ".omx/state/canonical_frontier_pointer.json"
 
 
+def _authority_tier(axis_tag: str) -> str:
+    """Classify a result by AUTHORITY TIER (operator discipline 2026-06-09): the
+    roadmap only updates on exact eval, never on proxy/advisory. The tier makes the
+    authority explicit as a first-class field so a row can never be mistaken for
+    promotion-grade evidence it is not.
+
+      telemetry_proxy   : training-loss / PSNR / margin proxy (mechanism, NOT score)
+      exact_cpu_advisory: evaluate.py on local macOS CPU/MLX (real number, NON-promotable)
+      contest_cpu       : evaluate.py on Linux x86_64 (the public-leaderboard axis)
+      contest_cuda      : evaluate.py on NVIDIA T4/equivalent (the CUDA promotion axis)
+    Promotion grade requires BOTH contest_cpu AND contest_cuda on the same bytes.
+    """
+    tag = str(axis_tag).lower()
+    if "contest-cuda" in tag or "contest_cuda" in tag:
+        return "contest_cuda"
+    if "contest-cpu" in tag or "contest_cpu" in tag:
+        return "contest_cpu"
+    if "macos" in tag or "mlx" in tag or "advisory" in tag:
+        return "exact_cpu_advisory"
+    return "telemetry_proxy"
+
+
 def _read_frontier(pointer_path: Path, axis: str) -> tuple[float, str, str]:
     """Read the canonical frontier (score, grade, archive_sha) for an axis.
 
@@ -235,6 +257,10 @@ def ingest_exact_eval(
         base_archive_sha256 is not None
         and base_archive_sha256 != candidate_eval["base_archive_sha256"]
     )
+    # Explicit AUTHORITY TIER (operator discipline): the roadmap updates ONLY on
+    # exact eval, never proxy/advisory. contest_cuda/contest_cpu are promotion-grade;
+    # exact_cpu_advisory (local macOS/MLX) is a real number but NON-promotable.
+    candidate_eval["authority_tier"] = _authority_tier(axis_tag)
 
     decision = apply_campaign_decision(
         receipt=receipt,
@@ -252,6 +278,11 @@ def ingest_exact_eval(
         eval_bridge_ok=bridge_ok,
     )
     decision["next_action"] = next_action
+    decision["authority_tier"] = _authority_tier(axis_tag)
+    decision["roadmap_update_eligible"] = _authority_tier(axis_tag) in (
+        "contest_cpu",
+        "contest_cuda",
+    )
     decision["proxy_divergence"] = divergence
     decision["frontier"] = {
         "axis": frontier_axis,
