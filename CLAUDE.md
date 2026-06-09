@@ -76,6 +76,28 @@ You are operating inside a dual-track lab for the comma video compression challe
 
 Read `PROGRAM.md` before making changes.
 
+## Vehicle Operating System — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator binding directive 2026-06-09 (the fleet-wide-meta-bug crux). The repeating failure was
+NOT picking wrong ideas — it was letting **names, partial mechanisms, and bolt-ons stand in for complete
+vehicles** ("vehicle names outran vehicle implementations"). 2026-06-09 full-stack audits proved our
+"HiNeRV" is an L0 SKETCH (git `7a004e5bd`), SNeRV is a cross-wiring defect (`83479abfe`), pact_nerv_vq is a
+skip-free decoder with the right objective (`222099bc4`) — different labels, same missing HF carrier
+mechanism, same inactive scorer objective, same failure.
+
+**The canonical operating system is `docs/vehicle_operating_system.md` (read it before touching any
+vehicle).** Its 5 binding rules: (1) no named vehicle exists until its `vehicle_fidelity_manifest.v1`
+(`tac.substrates._shared.vehicle_fidelity_manifest`) `verify()` passes — a name/import/docstring is NOT
+proof; (2) no contextual optimization before intrinsic (L1/L2) — no long training run before the vehicle
+solves its own native sanity task; (3) no cross-vehicle bolt-on before the receiving vehicle's reference
+contract passes (compose only at L4+); (4) no "score-aware" run unless the SegNet/PoseNet objective weights
+are explicit + nonzero (else `scoreaware=false`) — enforced by
+`check_score_aware_run_has_nonzero_scorer_objective_weights`; (5) no row updates the score roadmap unless
+`authority_tier` + `metric_family` allow it (the metric-laundering firewall). The L0–L7 maturity ladder,
+the 10 non-negotiable claim rules, the objective-activation rules, the per-family fail-closed claim gates,
+the dashboard discipline, and the subagent-produces-manifest-not-prose contract all live in that doc. This
+section is the pointer; the doc is canonical.
+
 ## NO FAKE IMPLEMENTATIONS — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator binding directive 2026-05-30 verbatim *"add non negotiable instrucitons no fake implmenetations to claude.md"* + sister directive *"make sure that tasks marked as done are actually done and no fake implmenetations"*. Anchor memos: `feedback_15_item_audit_validate_fix_harden_test_blanket_approval_1to1_fidelity_with_documented_adaptations_standing_directive_20260529.md` + `feedback_optimize_iterate_highest_ev_boldest_individually_fractally_optimized_mlx_deployed_aggressive_frontier_breaking_no_fake_implementations_standing_directive_20260529.md` + Slot EEE fake-implementation audit `feedback_slot_eee_fake_implementation_audit_on_today_l0_scaffolds_per_operator_binding_must_review_for_fake_implementations_landed_20260529.md`. Empirical anchor: Slot EEE audit found 1-of-7 L0 scaffolds (Slot RR) was structurally FAKE (`apply_pose_axis_null_projection` returned Tier A markers + canonical menu size constants but applied ZERO perturbation; 64 tests verified menu-size constants not behavior) and 5-of-7 PARTIAL (real math primitives + documented adaptations or structural simplifications under explicit FALSIFIED-AT-IMPLEMENTATION-LEVEL classification per Catalog #307).
