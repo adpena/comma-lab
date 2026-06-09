@@ -1,0 +1,48 @@
+{
+  "decision_note": "pose_intrinsic_dimension small (e.g. dim_95pct << 6N) => recurring ego-motion modes => compact low-rank pose carrier viable (floor drops below PR95). large/near-6N => dense neural decoder is the bulk; win is entropy/rate.",
+  "evidence_grade": "[macOS-CPU advisory]",
+  "gamma": 2.0,
+  "n_pairs": 48,
+  "n_pose_grad_vectors": 288,
+  "pose_energy_decomposition": {
+    "chroma_fraction": 0.03600334737980144,
+    "frame0_fraction": 0.5232314513346914,
+    "frame1_fraction": 0.4767685486653085,
+    "y_luma_fraction": 0.9639966526201986
+  },
+  "pose_intrinsic_dimension": {
+    "dim_90pct": 211,
+    "dim_95pct": 243,
+    "dim_99pct": 276,
+    "participation_ratio": 170.38756052353762,
+    "top10_eigenvalue_fraction": [
+      0.02810398243120492,
+      0.017784537650282865,
+      0.016777390382731072,
+      0.014636019105416582,
+      0.013456856112309852,
+      0.011736254938883237,
+      0.010952660945510909,
+      0.01016992020799311,
+      0.009765460722691912,
+      0.009506793671181039
+    ],
+    "total_grad_vectors": 288
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "pose intrinsic carrier dimension (JtJ spectrum) + SegNet margin VJP directions",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "evaluator_gradient_atlas.v1",
+  "score_claim": false,
+  "segnet_input_size_hw": [
+    384,
+    512
+  ],
+  "segnet_margin_vjp": {
+    "boundary_saliency_fraction": 0.06332148373151246,
+    "interior_saliency_fraction": 0.9366785199553876
+  },
+  "utc": "2026-06-09T15:09:11Z"
+}
