@@ -250,3 +250,124 @@ def _decision(
     if binding is not None:
         row["binding_constraint"] = binding
     return row
+
+
+# ---------------------------------------------------------------------------
+# Substrate NEXT-ACTION router (the operator's 5+1 case decision tree).
+#
+# This sits ABOVE apply_campaign_decision: that function emits the UNIVERSAL
+# verdict (hard-fail / patch-bridge / prep-cuda / continue / inspect). This
+# router answers the substrate-specific follow-up question "what do we BUILD
+# next?" by classifying the (seg, pose) state into the operator's decision
+# tree. Like the universal verdict, it NEVER auto-kills (Forbidden premature
+# KILL): every case routes to a constructive next action.
+# ---------------------------------------------------------------------------
+ROUTE_LAUNCH_DENSE_CARRIER = "launch_atlas_weighted_dense_carrier"  # case A
+ROUTE_ADD_SEG_BOUNDARY_ATLAS = "add_segnet_fragile_boundary_atlas_weighting"  # B
+ROUTE_STRENGTHEN_POSE_CARRIER = "strengthen_yuv6_y_dominant_pose_carrier"  # C
+ROUTE_BUILD_AUTHORITY_TRACE = "build_authority_trace_localize_first_bad_surface"  # D/F
+ROUTE_PATCH_BRIDGE_NEXT = "patch_b2_bridge"  # case E
+# Downstream routes the AUTHORITY TRACE itself emits once the first-bad surface is
+# localized (live-bad -> fork carrier; archive-bad -> fix export; eval-bad -> bridge).
+ROUTE_INSPECT_TOPOLOGY = "inspect_renderer_topology"
+ROUTE_INSPECT_AND_FORK_CARRIER = "inspect_and_fork_carrier"
+
+_POSE_DELTA_MARGIN = 0.05  # +-5% band for "improved"/"worsened" vs a baseline.
+
+
+def route_substrate_next_action(
+    *,
+    d_seg: float,
+    d_pose: float,
+    seg_flat_reference: float = 0.50,
+    seg_descend_margin: float = 0.02,
+    pose_sane_ceiling: float = 1.0,
+    baseline_d_seg: float | None = None,
+    baseline_d_pose: float | None = None,
+    proxy_total_diverged: bool = False,
+    eval_bridge_ok: bool = True,
+) -> dict[str, Any]:
+    """Map a candidate's (d_seg, d_pose) to the operator's 5+1 case decision tree.
+
+    The reference for "seg descended" is ``baseline_d_seg`` if supplied, else the
+    collapse-floor ``seg_flat_reference`` (the flat-collapse value HiNeRV B1-R2 sat
+    at; descending below it by ``seg_descend_margin`` is the real-learning signal).
+    "pose sane" is an absolute ceiling (a wildly-unconverged renderer explodes
+    PoseNet MSE); when ``baseline_d_pose`` is supplied, pose is additionally
+    classified improved/worsened within a +-5% band.
+
+    Cases (and the build action each routes to):
+      A  seg descended  + pose good        -> launch atlas-weighted dense carrier
+      B  seg flat       + pose improved     -> add SegNet fragile-boundary atlas wt
+      C  seg descended  + pose worse/explode-> strengthen Y-dominant YUV6 pose carrier
+      D  seg flat       + pose flat         -> inspect renderer topology
+      E  eval bridge failed                 -> patch the B2 bridge (no model verdict)
+      F  seg flat       + pose worse/explode-> inspect + FORK CARRIER (degenerate;
+                                               the synthesis diverged, not descended)
+    """
+
+    if not eval_bridge_ok:
+        return {
+            "schema": "substrate_next_action.v1",
+            "case": "E",
+            "route": ROUTE_PATCH_BRIDGE_NEXT,
+            "reason": "exact_eval_bridge_failed_no_model_verdict",
+            "seg_state": "unknown",
+            "pose_state": "unknown",
+            "auto_kill": False,
+        }
+
+    seg_ref = float(baseline_d_seg) if baseline_d_seg is not None else float(seg_flat_reference)
+    seg_descended = float(d_seg) < seg_ref - float(seg_descend_margin)
+    seg_state = "descended" if seg_descended else "flat"
+
+    pose_exploded = float(d_pose) > float(pose_sane_ceiling)
+    if baseline_d_pose is not None:
+        bp = float(baseline_d_pose)
+        if float(d_pose) < bp * (1.0 - _POSE_DELTA_MARGIN):
+            pose_state = "improved"
+        elif float(d_pose) > bp * (1.0 + _POSE_DELTA_MARGIN):
+            pose_state = "worsened"
+        else:
+            pose_state = "flat"
+    else:
+        pose_state = "exploded" if pose_exploded else "sane"
+
+    pose_bad = pose_exploded or pose_state == "worsened"
+    pose_good = (not pose_exploded) and pose_state in ("sane", "improved")
+
+    if seg_descended and pose_good:
+        case, route, reason = "A", ROUTE_LAUNCH_DENSE_CARRIER, "seg_descended_pose_sane_carrier_works"
+    elif (not seg_descended) and pose_state == "improved":
+        case, route, reason = "B", ROUTE_ADD_SEG_BOUNDARY_ATLAS, "pose_improved_but_seg_not_entering_cells"
+    elif seg_descended and pose_bad:
+        case, route, reason = "C", ROUTE_STRENGTHEN_POSE_CARRIER, "seg_descended_but_yuv6_pose_carrier_wrong"
+    elif (not seg_descended) and pose_bad:
+        # Degenerate: seg flat AND pose diverged. The proxy may have shown pose
+        # "improving" while exact d_pose exploded -- that contradiction means we
+        # MUST localize the first-bad surface (model vs export vs inflate vs eval)
+        # BEFORE any carrier fork. Build the authority trace first; the trace's
+        # own verdict routes to fork-carrier (live bad) / fix-export / fix-bridge.
+        case = "F"
+        route = ROUTE_BUILD_AUTHORITY_TRACE
+        reason = (
+            "seg_flat_and_pose_diverged_trace_before_fork"
+            + ("_proxy_total_diverged" if proxy_total_diverged else "")
+        )
+    else:
+        # Both flat: same discipline -- localize first-bad surface before deciding
+        # carrier vs export vs bridge (a flat base is not necessarily a model fault).
+        case, route, reason = "D", ROUTE_BUILD_AUTHORITY_TRACE, "both_flat_trace_before_carrier_decision"
+
+    return {
+        "schema": "substrate_next_action.v1",
+        "case": case,
+        "route": route,
+        "reason": reason,
+        "seg_state": seg_state,
+        "pose_state": pose_state,
+        "seg_reference_used": seg_ref,
+        "pose_sane_ceiling": float(pose_sane_ceiling),
+        "proxy_total_diverged": bool(proxy_total_diverged),
+        "auto_kill": False,  # never auto-kill (Forbidden premature KILL).
+    }
