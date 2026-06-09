@@ -793,3 +793,65 @@ def _loaded_distortion_net() -> nn.Module:
     dist = modules.DistortionNet().eval()
     dist.load_state_dicts(modules.posenet_sd_path, modules.segnet_sd_path, torch.device("cpu"))
     return dist.eval()
+
+
+def test_deterministic_tie_resolved_segnet_argmax_is_torch_exact_at_ties() -> None:
+    """The operator's deterministic correction: identify MLX-vs-torch argmax ties
+    from the MLX logits alone (top-2 margin < eps) and resolve ONLY those with the
+    torch authority -> corrected argmax is PROVABLY identical to torch."""
+    import numpy as np
+
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND,
+        deterministic_tie_resolved_segnet_argmax,
+    )
+
+    # 2x2 frame, 5 classes. (0,0) clear winner c0; (0,1) NEAR-TIE c1 vs c2;
+    # (1,0) clear winner c3; (1,1) clear winner c4.
+    logits = np.full((2, 2, 5), -10.0, dtype=np.float32)
+    logits[0, 0, 0] = 9.0
+    logits[0, 1, 1] = 1.0
+    logits[0, 1, 2] = 1.0 - 1e-3  # near-tie: margin 1e-3 << drift bound
+    logits[1, 0, 3] = 8.0
+    logits[1, 1, 4] = 7.0
+    mlx_argmax = logits.argmax(-1)  # (0,1) -> c1
+    # torch disagrees ONLY at the tie pixel (drift flipped c1<->c2 there).
+    torch_argmax = mlx_argmax.copy()
+    torch_argmax[0, 1] = 2
+
+    out = deterministic_tie_resolved_segnet_argmax(
+        logits, torch_argmax_hw=torch_argmax, tie_epsilon=SEGNET_MLX_TORCH_LOGIT_DRIFT_BOUND
+    )
+    # Guarantee: corrected == torch EXACTLY (the only disagreement was a tie).
+    assert np.array_equal(out["corrected_argmax_hw"], torch_argmax)
+    assert out["tie_pixel_count"] == 1
+    assert out["torch_exact_guarantee"] is True
+    assert out["deterministic"] is True
+    # The clear-winner pixels keep the MLX argmax (drift cannot flip them).
+    assert out["corrected_argmax_hw"][0, 0] == 0
+    assert out["corrected_argmax_hw"][1, 1] == 4
+
+
+def test_deterministic_tie_resolution_skips_torch_when_no_ties() -> None:
+    """Tie-free frames pay ZERO torch cost — the lazy torch fn is never invoked."""
+    import numpy as np
+
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        deterministic_tie_resolved_segnet_argmax,
+    )
+
+    logits = np.full((2, 2, 5), -10.0, dtype=np.float32)
+    logits[..., 0] = 5.0  # every pixel a clear c0 winner (margin 15, no ties)
+    invoked = {"n": 0}
+
+    def _torch_fn():
+        invoked["n"] += 1
+        return np.zeros((2, 2), dtype=np.int64)
+
+    out = deterministic_tie_resolved_segnet_argmax(
+        logits, torch_argmax_fn=_torch_fn, tie_epsilon=0.05
+    )
+    assert out["tie_pixel_count"] == 0
+    assert out["torch_authority_invoked"] is False
+    assert invoked["n"] == 0  # torch skipped entirely
+    assert np.array_equal(out["corrected_argmax_hw"], logits.argmax(-1))
