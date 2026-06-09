@@ -71756,6 +71756,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_snerv_lf_rd_waterfill_20260609",
+      "name": "SNeRV LF payload rate-distortion waterfill planner",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/lf_payload_rate_distortion.py + tools/snerv_lf_payload_rate_distortion.py (commits b28a15fe1, 51d964cbb)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/snerv_lf_payload_rd_plan_v1_20260609.md (commit cf1aae043)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -71765,5 +71806,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-09T20:42:53Z"
+  "updated_at": "2026-06-09T22:37:54Z"
 }
