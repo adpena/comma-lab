@@ -1,0 +1,48 @@
+{
+  "channel_order_checked": "RGB (yuv420_to_rgb stacks r,g,b)",
+  "decode": {
+    "dtype": "uint8",
+    "n_frames_decoded": 1200,
+    "n_frames_written": 1200,
+    "raw_bytes": 3662409600,
+    "raw_path": "/Volumes/VertigoDataTier/pact/sanity_ladder_identity/inflated/0.raw",
+    "sample_max": 255.0,
+    "sample_mean": 26.20536127362707,
+    "sample_min": 0.0,
+    "shape": [
+      1200,
+      874,
+      1164,
+      3
+    ],
+    "video": "/Users/adpena/Projects/pact/upstream/videos/0.mkv"
+  },
+  "evaluate": {
+    "d_pose": 0.0,
+    "d_seg": 0.0,
+    "report_path": "/Volumes/VertigoDataTier/pact/sanity_ladder_identity/report.txt",
+    "returncode": 0,
+    "score": 0.0,
+    "stderr_tail": "\n0it [00:00, ?it/s]/Users/adpena/Projects/pact/upstream/frame_utils.py:232: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:219.)\n  frames = torch.from_numpy(mm)  # (N, H, W, C), shares mmap memory\n\n1it [00:10, 10.66s/it]\n2it [00:21, 10.63s/it]\n3it [00:31, 10.63s/it]\n4it [00:42, 10.70s/it]\n5it [00:53, 10.82s/it]\n6it [01:04, 10.76s/it]\n7it [01:15, 10.74s/it]\n8it [01:25, 10.78s/it]\n9it [01:37, 10.87s/it]\n10it [01:47, 10.83s/it]\n11it [01:59, 10.97s/it]\n12it [02:10, 10.99s/it]\n13it [02:21, 11.19s/it]\n14it [02:32, 11.18s/it]\n15it [02:44, 11.17s/it]\n16it [02:55, 11.15s/it]\n17it [03:06, 11.23s/it]\n18it [03:19, 11.60s/it]\n19it [03:31, 11.76s/it]\n20it [03:43, 11.87s/it]\n21it [03:55, 11.98s/it]\n22it [04:06, 11.73s/it]\n23it [04:17, 11.53s/it]\n24it [04:29, 11.46s/it]\n25it [04:39, 11.31s/it]\n26it [04:51, 11.25s/it]\n27it [05:03, 11.47s/it]\n28it [05:15, 11.82s/it]\n29it [05:28, 12.06s/it]\n30it [05:40, 12.17s/it]\n31it [05:52, 12.17s/it]\n32it [06:03, 11.83s/it]\n33it [06:15, 11.63s/it]\n34it [06:26, 11.40s/it]\n35it [06:37, 11.29s/it]\n36it [06:47, 11.19s/it]\n37it [06:58, 11.10s/it]\n38it [07:07, 10.42s/it]\n38it [07:07, 11.26s/it]\n",
+    "stdout_tail": "=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 2\n  prefetch_queue_depth: 4\n  report: /Volumes/VertigoDataTier/pact/sanity_ladder_identity/report.txt\n  seed: 1234\n  submission_dir: /Volumes/VertigoDataTier/pact/sanity_ladder_identity\n  uncompressed_dir: /Users/adpena/Projects/pact/upstream/videos\n  video_names_file: /Users/adpena/Projects/pact/upstream/public_test_video_names.txt\nAVVideoDataset on rank 0 with 1 files.\nTensorVideoDataset on rank 0 with 1 files.\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.00000000\n  Average SegNet Distortion: 0.00000000\n  Submission file size: 134 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 0.00000357\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.00\n"
+  },
+  "evidence_grade": "[macOS-CPU advisory]",
+  "frame_index_checked": "all (paired-truncated)",
+  "identity_d_pose_near_zero": true,
+  "identity_d_seg_near_zero": true,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "validate scorer/.raw path: source frames -> .raw -> evaluate.py should give d_seg\u22480, d_pose\u22480",
+  "rank_or_kill_eligible": false,
+  "raw_roundtrip_frame_count_ok": true,
+  "ready_for_exact_eval_dispatch": false,
+  "resolution_checked": [
+    874,
+    1164,
+    3
+  ],
+  "schema": "identity_inflate_evaluate_baseline.v1",
+  "score_claim": false,
+  "utc": "2026-06-09T13:49:39Z",
+  "verdict": "SCORER_PATH_SOUND"
+}

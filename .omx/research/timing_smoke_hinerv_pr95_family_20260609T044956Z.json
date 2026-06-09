@@ -1,0 +1,218 @@
+{
+  "axis_tag": "[macOS-MLX research-signal]",
+  "b1_recommendation": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "local_hours_tolerance": 12.0,
+    "rationale": "Full curriculum (~81.7h) exceeds the local tolerance (12h), but the reduced 3000-ep schedule projects to ~8.3h at $0. Run the reduced schedule locally as the B1 MVP; escalate to a paid full-curriculum campaign (lane-claim + Vast.ai RTX 4090 ~$2.27) only if the reduced run is promising on exact-eval at B2.",
+    "recommendation": "local_mlx_reduced_then_paid_full_if_promising"
+  },
+  "config": {
+    "decoder_channels": [
+      48,
+      40,
+      32,
+      24,
+      20,
+      16,
+      12
+    ],
+    "embed_dim": 64,
+    "latent_dims": [
+      16,
+      20,
+      24
+    ],
+    "num_pairs_full": 600,
+    "num_upsample_blocks": 7,
+    "output_hw": [
+      384,
+      512
+    ],
+    "sin_frequency": 30.0,
+    "use_convnext_blocks": false,
+    "use_hierarchical_feature_grid": false
+  },
+  "constants": {
+    "contest_full_pairs": 600,
+    "mlx_local_vs_t4_throughput_anchor": 0.5,
+    "pr95_full_curriculum_epochs": 29650,
+    "pr95_pragmatic_reduced_epochs": 3000
+  },
+  "finished_utc": "2026-06-09T04:49:56.522920+00:00",
+  "host": {
+    "machine": "arm64",
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "python": "3.13.12"
+  },
+  "param_count_note": "Default HinervConfig yields 340802 params, ABOVE the architecture docstring's '~240K target' \u2014 the (48,40,32,24,20,16,12) 7-block PixelShuffle decoder is larger than the SKETCH comment implies. Still PR95-family-class (CLAUDE.md L18/L19 structure), reviewable.",
+  "param_counts": {
+    "mlx_num_parameters": 340802,
+    "torch_mlx_match": true,
+    "torch_num_parameters": 340802
+  },
+  "phase": "B0_timing_smoke",
+  "primary_surface_for_projection": "score_aware_adapter_train_step",
+  "projection": {
+    "axis_tag": "[macOS-MLX research-signal]",
+    "label": "projection_from::score_aware_adapter_train_step",
+    "local_mlx_full_29650ep_hours": 81.65,
+    "local_mlx_full_29650ep_usd": 0.0,
+    "local_mlx_reduced_3000ep_hours": 8.26,
+    "local_mlx_reduced_3000ep_usd": 0.0,
+    "paid_bracket_caveat": "Paid estimates are a COARSE research-signal bracket derived from a published MLX<->T4 throughput anchor (0.5x) + the CLAUDE.md GPU rate table. The authoritative paid per-epoch cost is the B1 timing smoke on the actual GPU, NEVER this tool.",
+    "paid_gpu_bracket_advisory": {
+      "aws_t4": {
+        "est_full_29650ep_hours": 40.83,
+        "est_full_29650ep_usd": 8.98,
+        "est_reduced_3000ep_hours": 4.13,
+        "est_reduced_3000ep_usd": 0.91,
+        "est_seconds_per_epoch": 4.957,
+        "note": "scale-out / auth-eval fleet",
+        "speed_vs_t4": 1.0,
+        "usd_per_hr": 0.22
+      },
+      "modal_a100": {
+        "est_full_29650ep_hours": 6.8,
+        "est_full_29650ep_usd": 7.48,
+        "est_reduced_3000ep_hours": 0.69,
+        "est_reduced_3000ep_usd": 0.76,
+        "est_seconds_per_epoch": 0.8262,
+        "note": "approx; a100 80GB-class",
+        "speed_vs_t4": 6.0,
+        "usd_per_hr": 1.1
+      },
+      "modal_t4": {
+        "est_full_29650ep_hours": 40.83,
+        "est_full_29650ep_usd": 24.09,
+        "est_reduced_3000ep_hours": 4.13,
+        "est_reduced_3000ep_usd": 2.44,
+        "est_seconds_per_epoch": 4.957,
+        "note": "existing infra",
+        "speed_vs_t4": 1.0,
+        "usd_per_hr": 0.59
+      },
+      "vast_rtx_4090": {
+        "est_full_29650ep_hours": 9.07,
+        "est_full_29650ep_usd": 2.27,
+        "est_reduced_3000ep_hours": 0.92,
+        "est_reduced_3000ep_usd": 0.23,
+        "est_seconds_per_epoch": 1.1015,
+        "note": "primary new-experiment GPU",
+        "speed_vs_t4": 4.5,
+        "usd_per_hr": 0.25
+      }
+    },
+    "promotable": false,
+    "promotion_eligible": false,
+    "score_aware_included": true,
+    "score_claim": false,
+    "seconds_per_epoch_mlx_local": 9.9139
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "Measure seconds/epoch for the REAL PR95-family HiNeRV architecture on local MLX so the B1 600-pair 29650-epoch curriculum cost is MEASURED hours, not a guess (CLAUDE.md MVP-first + Long-burn campaign default). TIMING ONLY \u2014 never a score claim.",
+  "ready_for_exact_eval_dispatch": false,
+  "real_pairs": {
+    "decode_seconds": 12.3915,
+    "synthetic_data_used": false,
+    "timing_pairs_decoded": 600,
+    "video": "upstream/videos/0.mkv"
+  },
+  "schema": "timing_smoke_hinerv_pr95_family.v1",
+  "score_claim": false,
+  "smoke_params": {
+    "batch_pairs": 64,
+    "epochs": 3,
+    "first_epoch_dropped_as_warmup": true,
+    "score_aware_epochs": 2,
+    "warmup_steps": 2
+  },
+  "started_utc": "2026-06-09T04:48:07.009497+00:00",
+  "stop_after_timing": true,
+  "stop_rationale": "B0 deliverable is the timing that GATES the B1 decision. Per the mission, do NOT start B1 training; the recommendation field routes the B1 launch decision.",
+  "surface_b_diagnostics": {
+    "attempted": true,
+    "blocker": null,
+    "succeeded": true,
+    "teacher_setup_seconds": 66.7029
+  },
+  "timing_surface_a_renderer_fwd_bwd": {
+    "batch_pairs": 64,
+    "mean_step_seconds": 0.2928,
+    "median_step_seconds": 0.3057,
+    "notes": "REAL MLX HiNeRV renderer fwd+bwd through score-domain reconstruction MSE on REAL contest pairs; AdamW step; final loss=0.281726. Score-aware student-head/KL/MSE term EXCLUDED -> per-epoch projection is a tight LOWER bound (the renderer fwd+bwd is the dominant term).",
+    "per_step_seconds_samples": [
+      0.24726,
+      0.25382,
+      0.24914,
+      0.25496,
+      0.26697,
+      0.28129,
+      0.33487,
+      0.35074,
+      0.31401,
+      0.31892,
+      0.32404,
+      0.32704,
+      0.32694,
+      0.31987,
+      0.30673,
+      0.31365,
+      0.30628,
+      0.13676,
+      0.33445,
+      0.30514,
+      0.29854,
+      0.30512,
+      0.28815,
+      0.33689,
+      0.28158,
+      0.33374,
+      0.32427,
+      0.17112,
+      0.28858,
+      0.28355
+    ],
+    "score_aware_included": false,
+    "seconds_per_epoch_full_600pairs": 3.0571,
+    "steps_per_epoch_full_600pairs": 10.0,
+    "steps_timed": 30,
+    "surface": "renderer_fwd_bwd_recon_mse",
+    "warmup_steps": 2
+  },
+  "timing_surface_b_score_aware": {
+    "batch_pairs": 64,
+    "mean_step_seconds": 0.9315,
+    "median_step_seconds": 0.9914,
+    "notes": "Canonical MlxScoreAwareAdapter.train_step with REAL gradient-free MLX SegNet+PoseNet teacher caches (one-time setup amortized); renderer grad flows through learnable student heads distilled toward the caches. FAITHFUL score-aware per-epoch cost.",
+    "per_step_seconds_samples": [
+      0.99674,
+      1.02385,
+      1.03207,
+      0.99698,
+      0.95403,
+      0.9919,
+      1.03289,
+      0.39851,
+      1.01435,
+      0.98655,
+      0.98591,
+      0.97725,
+      1.00634,
+      1.00586,
+      0.99427,
+      0.99088,
+      0.97688,
+      0.37658,
+      0.95479,
+      0.934
+    ],
+    "score_aware_included": true,
+    "seconds_per_epoch_full_600pairs": 9.9139,
+    "steps_per_epoch_full_600pairs": 10.0,
+    "steps_timed": 20,
+    "surface": "score_aware_adapter_train_step",
+    "warmup_steps": 2
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "curves": {
+    "boundary_preserved": {
+      "16": {
+        "d_pose": 7.484061354751854,
+        "d_seg": 0.006426175435384114,
+        "pose_term": 8.65104696250798,
+        "seg_term": 0.6426175435384114
+      },
+      "2": {
+        "d_pose": 0.0026865294439630816,
+        "d_seg": 0.0004078547165894027,
+        "pose_term": 0.1639063587528892,
+        "seg_term": 0.04078547165894027
+      },
+      "32": {
+        "d_pose": 43.50215222438177,
+        "d_seg": 0.010159492502377057,
+        "pose_term": 20.85716956453626,
+        "seg_term": 1.0159492502377057
+      },
+      "4": {
+        "d_pose": 0.017995459978484025,
+        "d_seg": 0.0009071562017197721,
+        "pose_term": 0.4242105606710425,
+        "seg_term": 0.09071562017197721
+      },
+      "8": {
+        "d_pose": 0.20634770757260412,
+        "d_seg": 0.0026179419461792954,
+        "pose_term": 1.4364807954602252,
+        "seg_term": 0.2617941946179295
+      }
+    },
+    "uniform": {
+      "16": {
+        "d_pose": 56.70529541373253,
+        "d_seg": 0.028498225728981197,
+        "pose_term": 23.812873705987805,
+        "seg_term": 2.8498225728981197
+      },
+      "2": {
+        "d_pose": 0.0037292486150780255,
+        "d_seg": 0.0005760192865030452,
+        "pose_term": 0.19311262556026795,
+        "seg_term": 0.05760192865030452
+      },
+      "32": {
+        "d_pose": 136.64762846628824,
+        "d_seg": 0.35779730370268226,
+        "pose_term": 36.96588000660721,
+        "seg_term": 35.779730370268226
+      },
+      "4": {
+        "d_pose": 0.017830454410746672,
+        "d_seg": 0.0021049711358500645,
+        "pose_term": 0.422261227331455,
+        "seg_term": 0.21049711358500645
+      },
+      "8": {
+        "d_pose": 0.28267636349937675,
+        "d_seg": 0.009848382712031404,
+        "pose_term": 1.68129819930724,
+        "seg_term": 0.9848382712031404
+      }
+    }
+  },
+  "dilate_iterations": 2,
+  "downsample_levels": [
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "evidence_grade": "[macOS-CPU advisory]",
+  "n_pairs_scored": 48,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "does keeping the SegNet boundary skeleton sharp while cheapening the robust interior preserve d_seg WITHOUT destroying d_pose? (the skeleton-viability crux)",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "region_cheapen_seg_vs_pose.v1",
+  "score_claim": false,
+  "utc": "2026-06-09T15:05:23Z",
+  "verdict_note": "compare boundary_preserved d_seg (should be << uniform) vs its d_pose (the pose veto test)"
+}
