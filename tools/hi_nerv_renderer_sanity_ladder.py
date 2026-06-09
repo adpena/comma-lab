@@ -948,9 +948,161 @@ def cmd_segnet_margin_field(args: argparse.Namespace) -> int:
     return 0
 
 
+# Score value of one correct SegNet-scored pixel + rate cost of one archive byte (operator economics).
+_SEG_PIXEL_VALUE = 100.0 / (600 * 384 * 512)  # ≈ 8.48e-7 score per correct scored pixel
+_RATE_PER_BYTE = 25.0 / 37_545_489  # ≈ 6.66e-7 score per byte
+
+
+def cmd_segnet_fragile_support_codec_budget(args: argparse.Namespace) -> int:
+    """B0.5: turn the SegNet margin VALUE map into the RATE term — the byte cost of the
+    evaluator-active support — so each structure becomes a waterfillable action atom.
+
+    Computes, over all 600 scored last-frames: the seg-term RATE FLOOR = the bytes to specify the
+    full SegNet 5-class argmax target (temporal-delta + brotli q11), plus the codec cost (brotli /
+    packbits / RLE / connected-components) of the fragile / boundary / thin-class supports, and
+    value_per_byte vs the waterline 25/N. An atom pays rent iff value_per_byte > 1.
+    """
+    import brotli
+    import torch
+    from frame_utils import seq_len
+    from modules import (
+        DistortionNet,
+        posenet_sd_path,
+        segnet_model_input_size,
+        segnet_sd_path,
+    )
+    from scipy import ndimage
+
+    H, W, C = _frame_dims()
+    frames = _decode_first_k_frames(UPSTREAM / "videos" / "0.mkv", args.num_pairs * seq_len)
+    last_frames = frames[seq_len - 1 :: seq_len]
+    n = last_frames.shape[0]
+    net = DistortionNet().eval().to(args.device)
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, args.device)
+    seg_h, seg_w = segnet_model_input_size[1], segnet_model_input_size[0]
+    frag_thr = 2.0
+
+    argmax_stack = np.empty((n, seg_h, seg_w), dtype=np.uint8)
+    fragile_stack = np.empty((n, seg_h, seg_w), dtype=bool)
+    bs = int(args.batch_size)
+    with torch.inference_mode():
+        for i in range(0, n, bs):
+            batch = last_frames[i : i + bs]
+            x = torch.from_numpy(np.ascontiguousarray(batch.transpose(0, 3, 1, 2))).float()
+            seg_in = torch.nn.functional.interpolate(x, size=(seg_h, seg_w), mode="bilinear", align_corners=False).to(args.device)
+            logits = net.segnet(seg_in)
+            top2 = torch.topk(logits, 2, dim=1).values
+            argmax_stack[i : i + batch.shape[0]] = logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
+            fragile_stack[i : i + batch.shape[0]] = ((top2[:, 0] - top2[:, 1]) < frag_thr).cpu().numpy()
+
+    def _brotli_len(b: bytes) -> int:
+        return len(brotli.compress(b, quality=11))
+
+    def _rle_bytes(mask: np.ndarray) -> int:
+        # run-length over the flattened binary mask: 2 bytes per run (varint-ish upper bound).
+        flat = mask.reshape(-1).astype(np.uint8)
+        runs = 1 + int((flat[1:] != flat[:-1]).sum())
+        return 2 * runs
+
+    def _boundary(cls: np.ndarray) -> np.ndarray:
+        bnd = np.zeros_like(cls, dtype=bool)
+        ne = cls[:, :-1, :] != cls[:, 1:, :]
+        bnd[:, :-1, :] |= ne
+        bnd[:, 1:, :] |= ne
+        ew = cls[:, :, :-1] != cls[:, :, 1:]
+        bnd[:, :, :-1] |= ew
+        bnd[:, :, 1:] |= ew
+        return bnd
+
+    boundary_stack = _boundary(argmax_stack)
+    thin_stack = (argmax_stack == 1) | (argmax_stack == 3)
+
+    # --- seg-term RATE FLOOR: cost to specify the full argmax target ---
+    argmax_raw_brotli = _brotli_len(argmax_stack.tobytes())
+    delta = argmax_stack.copy()
+    delta[1:] = (argmax_stack[1:].astype(np.int16) - argmax_stack[:-1].astype(np.int16)) % 5
+    argmax_delta_brotli = _brotli_len(delta.astype(np.uint8).tobytes())
+    seg_rate_floor_bytes = min(argmax_raw_brotli, argmax_delta_brotli)
+
+    def _mask_budget(mask: np.ndarray, name: str) -> dict[str, Any]:
+        px = int(mask.sum())
+        packed = np.packbits(mask.reshape(-1))
+        brotli_b = _brotli_len(packed.tobytes())
+        rle_b = _rle_bytes(mask)
+        # connected components per frame (aggregate count + mean size)
+        ncomp = 0
+        sizes: list[int] = []
+        for f in range(mask.shape[0]):
+            lab, k = ndimage.label(mask[f])
+            ncomp += int(k)
+            if k:
+                sizes.extend(np.bincount(lab.reshape(-1))[1:].tolist())
+        best = min(brotli_b, rle_b)
+        value = px * _SEG_PIXEL_VALUE
+        return {
+            "name": name,
+            "pixel_count": px,
+            "pixel_fraction": float(px / argmax_stack.size),
+            "brotli_packbits_bytes": brotli_b,
+            "rle_bytes": rle_b,
+            "best_codec_bytes": best,
+            "connected_components": ncomp,
+            "mean_component_size_px": float(np.mean(sizes)) if sizes else 0.0,
+            "seg_score_value": value,
+            "rate_cost_at_best_codec": _RATE_PER_BYTE * best,
+            "value_per_byte_vs_waterline": float(value / max(1, best) / _RATE_PER_BYTE),
+            "amortized_bytes_per_pixel": float(best / max(1, px)),
+        }
+
+    supports = {
+        "fragile_m_lt_2": _mask_budget(fragile_stack, "fragile_m_lt_2"),
+        "class_boundary": _mask_budget(boundary_stack, "class_boundary"),
+        "thin_classes_1_3": _mask_budget(thin_stack, "thin_classes_1_3"),
+    }
+
+    artifact = {
+        "schema": "segnet_fragile_support_codec_budget.v1",
+        "purpose": "convert the SegNet margin value map into byte-priced action atoms (the rate term)",
+        "utc": _utc(),
+        "n_scored_frames": int(n),
+        "segnet_input_size_hw": [seg_h, seg_w],
+        "economics": {
+            "seg_score_per_correct_pixel": _SEG_PIXEL_VALUE,
+            "score_per_byte_waterline": _RATE_PER_BYTE,
+            "bytes_per_pixel_breakeven": _SEG_PIXEL_VALUE / _RATE_PER_BYTE,
+        },
+        "seg_term_rate_floor": {
+            "argmax_raw_brotli_bytes": argmax_raw_brotli,
+            "argmax_temporal_delta_brotli_bytes": argmax_delta_brotli,
+            "seg_rate_floor_bytes": seg_rate_floor_bytes,
+            "seg_rate_floor_score_contribution": _RATE_PER_BYTE * seg_rate_floor_bytes,
+            "note": "cheapest specification of the full SegNet argmax target = the seg-term rate floor; rate contribution vs frontier 0.192",
+        },
+        "supports": supports,
+        "interpretation": "value_per_byte_vs_waterline > 1 => the support pays rent if it can be reified into the witness at this byte cost",
+        **FALSE_AUTHORITY,
+    }
+    _write_artifact(Path(args.out), artifact)
+    bpb = _SEG_PIXEL_VALUE / _RATE_PER_BYTE
+    print(f"scored {n} frames @ {seg_h}x{seg_w}; breakeven = {bpb:.3f} bytes/correct-pixel")
+    print(f"SEG-TERM RATE FLOOR (full argmax target): raw_brotli={argmax_raw_brotli:,}B  delta_brotli={argmax_delta_brotli:,}B  -> floor={seg_rate_floor_bytes:,}B = {_RATE_PER_BYTE*seg_rate_floor_bytes:.5f} score (vs frontier 0.192)")
+    print("support codec budgets:")
+    for s in supports.values():
+        print(f"   {s['name']:>18}: px={s['pixel_count']:>9,} ({s['pixel_fraction']:.4f})  best_codec={s['best_codec_bytes']:>9,}B  amort={s['amortized_bytes_per_pixel']:.3f}B/px  value/byte={s['value_per_byte_vs_waterline']:.2f}  comps={s['connected_components']:,}")
+    print(f"artifact -> {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    fb = sub.add_parser("segnet-fragile-support-codec-budget", help="B0.5: margin value map -> byte-priced action atoms (rate term)")
+    fb.add_argument("--out", required=True, help="artifact JSON path")
+    fb.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    fb.add_argument("--num-pairs", type=int, default=600)
+    fb.add_argument("--batch-size", type=int, default=32)
+    fb.set_defaults(func=cmd_segnet_fragile_support_codec_budget)
 
     ct = sub.add_parser("evaluator-cell-tolerance", help="cheapen source -> measure d_seg/d_pose headroom (the rate budget)")
     ct.add_argument("--out", required=True, help="artifact JSON path")
