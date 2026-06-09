@@ -212,6 +212,31 @@ DESTROYING an otherwise-surviving birth.
 5. **MLX-port hardening (operator TOP priority)**: backend wins 11306 (MLX) vs 11297 (torch) = 9px
    region drift / 18px full-frame; drive to argmax-exact via the fidelity gate.
 
+## SIDECAR MECHANISM DIAGNOSED (task #24 root cause)
+Empirical (v9 live archive, backend vs wrapped render diff):
+```
+sidecar overwrites 2286 px (region band y282-383, x0-511) — CORRECT scale:
+  action.rgb_u8 in [0,255] mean 57.76; written as rgb_u8/255 in [0,1] mean 0.226 (matches wrapped mean)
+  -> the overwrite scale + yx indexing + frame_index(=1) are CORRECT (not a scale/index bug)
+SegNet argmax flips 11319 px (5x blast radius vs the 2286 support) -> backend 11306 -> wrapped 3 wins (-11303)
+```
+**Root cause is NOT a scale/index bug** — the sidecar writes sensible target colors at the right scale.
+The cause is SEMANTIC: the action was COMPUTED to rescue a backend the runner believed COLLAPSED
+(to ~2), but the backend actually SURVIVES (11306). Re-writing 2286 region pixels (that the backend
+already wins) with the action's colors, through SegNet's receptive field + resize, FLIPS ~11319
+region pixels AWAY from the target class. The "rescue" is counter-productive on a winning backend.
+
+### The fix = "every action pays rent" gate (GPT's permanent compiler rule)
+Do NOT bundle/apply a sidecar unless `S(backend + sidecar) >= S(backend)` measured by the canonical
+`tools/probe_hinerv_backend_only_vs_with_sidecar.py` (region_hard_won over the runner's exact region+
+win-def+scorer). Surfaces to gate (task #24/#25):
+1. `tac.substrates.hi_nerv.target_region_actions` export SELECTION — refuse to bundle a net-harmful
+   action (saves the 8128 sidecar bytes AND avoids the -11303 win loss).
+2. `measure_birth_parseback_survival_from_report` — report backend-only AND with-sidecar separately;
+   a surviving backend must not be labeled collapsed by a harmful sidecar (task #25).
+3. LoweringRace admission — an action enters only if exact ΔS(base+action) < ΔS(base).
+This is the structural correction: an interpreter atom is admitted by SCORE, not by structural parse.
+
 ## DO NOT
 - name a guilty decoder section (H1 superseded; the selected codec is int8, faithful in the grid).
 - implement section QAT or decoder-codec QAT (int8 is faithful; int4 isn't what ships; the gap is build-path).
