@@ -5573,6 +5573,35 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #384: score-aware-named runs must carry NONZERO scorer
+        # objective weights (the OBJECTIVE-STARVATION bug class) 2026-06-09 per
+        # operator NON-NEGOTIABLE. Empirical anchor: SNeRV's faithful
+        # official-MFU/HFR/TUB renderer at ep22399 scored avg_segnet_dist=0.711
+        # with observed_segnet_distillation_weight=None because the shared MLX
+        # harness (snerv_inverse_steg_carrier/mlx_native_train_export.py)
+        # declares segnet_distillation_weight: float = 0.0 +
+        # pose_distillation_weight: float = 0.0 — "score-aware in name,
+        # recon-MSE in gradient." Refuses any substrate trainer / score-aware
+        # loss config / shared MLX harness that CLAIMS score-aware / PR95-style
+        # / scorer-aware AND defaults a SegNet/PoseNet objective weight to
+        # 0.0/None WITHOUT (a) explicit nonzero SegNet AND PoseNet weights,
+        # (b) an explicit score_aware=false / scoreaware=false / research_only
+        # / dispatch_enabled=false opt-out, or (c) same-line
+        # # SCORE_AWARE_OBJECTIVE_WEIGHTS_OK:<rationale> waiver (placeholder
+        # rationale rejected per Catalog #287). Delegates detection to the
+        # canonical helper
+        # tac.substrates._shared.score_aware_objective_weight_audit. WARN-ONLY
+        # initial wire-in per CLAUDE.md "Strict-flip atomicity rule" because the
+        # live count is 3 (the SNeRV harness + the HiNeRV MLX-local trainer +
+        # the Z7-Mamba-2 MLX-local trainer — all empirically-confirmed
+        # objective-starvation carriers from the 20260609 fidelity audits).
+        # Strict-flip planned after the 3 backfill targets set explicit nonzero
+        # weights OR declare an opt-out. Memory:
+        # feedback_vehicle_fidelity_manifest_plus_objective_starvation_gate_landed_20260609.md
+        check_score_aware_run_has_nonzero_scorer_objective_weights(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -83904,6 +83933,95 @@ def check_mlx_primitives_route_through_canonical_helper(
     if strict and violations:
         raise PreflightError(
             "check_mlx_primitives_route_through_canonical_helper "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+def check_score_aware_run_has_nonzero_scorer_objective_weights(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse score-aware-named runs whose scorer objective weights are 0.0/None.
+
+    Catalog #384 — the OBJECTIVE-STARVATION bug class 2026-06-09 per operator
+    NON-NEGOTIABLE (after the two 20260609 fidelity audits discovered that the
+    shared MLX harness defaults SegNet/PoseNet distillation weights to 0.0 so
+    "score-aware" runs were secretly recon-MSE-only).
+
+    Empirical anchor: SNeRV's faithful official-MFU/HFR/TUB renderer at ep22399
+    scored ``avg_segnet_dist = 0.711`` with
+    ``observed_segnet_distillation_weight = None`` because
+    ``snerv_inverse_steg_carrier/mlx_native_train_export.py`` declares
+    ``segnet_distillation_weight: float = 0.0`` +
+    ``pose_distillation_weight: float = 0.0``. MSE's minimizer is the
+    conditional mean -> blur; with the scorer objective at 0.0 the run starves
+    the only authority that moves ``100*d_seg + sqrt(10*d_pose)``.
+
+    Sister of the vehicle fidelity manifest (Deliverable 1,
+    ``tac.substrates._shared.vehicle_fidelity_manifest``) which extincts the
+    orthogonal NAME-LAUNDERING bug class at the docstring surface; this gate
+    extincts the OBJECTIVE-STARVATION bug class at the trained-objective surface
+    (the ``scorer_objective_weights_nonzero`` mechanism in that manifest's
+    vocabulary).
+
+    Delegates detection to the canonical helper
+    ``tac.substrates._shared.score_aware_objective_weight_audit.audit_score_aware_objective_weights``.
+    The rule chain (falling-rule list): a file VIOLATES when it CLAIMS
+    score-aware / PR95-style / scorer-aware AND defaults a SegNet/PoseNet
+    objective weight to ``0.0`` / ``None`` AND provides NONE of:
+
+      * explicit NONZERO SegNet AND PoseNet objective weights;
+      * an explicit ``score_aware=false`` / ``scoreaware=false`` (or
+        ``research_only`` / ``dispatch_enabled=false``) opt-out — a run that
+        declares itself recon-only / research / non-dispatch makes no
+        score-aware-trained claim;
+      * a same-line ``# SCORE_AWARE_OBJECTIVE_WEIGHTS_OK:<rationale>`` waiver
+        (placeholder ``<rationale>`` / ``<reason>`` literals rejected per
+        Catalog #287 sister discipline so the gate's docstring example cannot
+        self-waive).
+
+    Scan surface: every ``experiments/train_substrate_*.py`` + every substrate
+    ``score_aware_loss.py`` + every substrate ``mlx_native_train_export.py``.
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule" because the
+    live count is 3 (the SNeRV harness + the HiNeRV MLX-local trainer + the
+    Z7-Mamba-2 MLX-local trainer — all empirically-confirmed objective-
+    starvation carriers). Strict-flip planned after those 3 set explicit
+    nonzero weights OR declare an opt-out.
+
+    **6-hook wire-in declaration** per Catalog #125:
+      * #1 sensitivity-map = N/A (defensive validator gate).
+      * #2 Pareto constraint = N/A.
+      * #3 bit-allocator = N/A.
+      * #4 cathedral autopilot dispatch = ACTIVE (prevents future
+        score-aware-named runs from silently optimizing recon-MSE-only).
+      * #5 continual-learning posterior = N/A (the audit memo
+        ``.omx/research/snerv_all_vehicles_fidelity_review_vs_evaluate_py_20260609.md``
+        is the empirical anchor; no new canonical equation).
+      * #6 probe-disambiguator = ACTIVE (the explicit nonzero weight vs the
+        ``score_aware=false`` opt-out IS the disambiguator between a genuine
+        score-aware run and a recon-only one).
+    """
+    from tac.substrates._shared.score_aware_objective_weight_audit import (
+        audit_score_aware_objective_weights,
+    )
+
+    repo = Path(repo_root or REPO_ROOT)
+    findings = audit_score_aware_objective_weights(repo)
+    violations = [f.message() for f in findings]
+
+    if verbose and violations:
+        print(f"  [catalog-384] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_score_aware_run_has_nonzero_scorer_objective_weights "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )
