@@ -1,0 +1,95 @@
+{
+  "boundary_vs_interior_thr2logit": {
+    "boundary_pixel_fraction": 0.02162833319769965,
+    "fragile_fraction_among_boundary": 0.9999270983333738,
+    "fragile_fraction_among_interior": 0.027295933649586566,
+    "share_of_fragile_that_are_boundary": 0.44745947259964153
+  },
+  "class_wise_fragility_thr2logit": {
+    "0": {
+      "fragile_fraction_within_class": 0.11114752510878317,
+      "population_fraction": 0.23233238220214844,
+      "share_of_all_fragile": 0.5342836191025084
+    },
+    "1": {
+      "fragile_fraction_within_class": 0.9345504670312565,
+      "population_fraction": 0.005854619344075521,
+      "share_of_all_fragile": 0.11320451255657928
+    },
+    "2": {
+      "fragile_fraction_within_class": 0.01593683778973419,
+      "population_fraction": 0.49517552693684896,
+      "share_of_all_fragile": 0.1632764846804699
+    },
+    "3": {
+      "fragile_fraction_within_class": 0.29538972489000737,
+      "population_fraction": 0.012379328409830729,
+      "share_of_all_fragile": 0.07565798762538996
+    },
+    "4": {
+      "fragile_fraction_within_class": 0.02159010327267121,
+      "population_fraction": 0.2542581431070964,
+      "share_of_all_fragile": 0.11357739603505244
+    }
+  },
+  "evidence_grade": "[macOS-CPU advisory]",
+  "frag_threshold_logit": 2.0,
+  "fragile_fraction_by_logit_threshold": {
+    "0.1": 0.0028235626220703123,
+    "0.25": 0.007010582817925347,
+    "0.5": 0.013824378119574652,
+    "1.0": 0.026701939900716145,
+    "2.0": 0.0483323245578342,
+    "4.0": 0.10301907009548611,
+    "8.0": 0.9823375193277994
+  },
+  "interpretation": {
+    "fragile_pixels_must_keep_fidelity": "m_p below threshold = near class boundary = SegNet bytes go here",
+    "robust_pixels_free_to_cheapen": "m_p large = dominant class = release bytes (the rate headroom)"
+  },
+  "margin_histogram_bins_logit": [
+    0.0,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.0,
+    4.0,
+    8.0,
+    16.0,
+    1000000000.0
+  ],
+  "margin_histogram_fraction": [
+    0.0028235626220703123,
+    0.004187020195855035,
+    0.0068137953016493055,
+    0.012877561781141493,
+    0.021630384657118057,
+    0.05468674553765191,
+    0.8793184492323134,
+    0.01766233656141493,
+    1.4411078559027778e-07
+  ],
+  "n_scored_frames": 600,
+  "per_frame_fragile_fraction_thr2logit": {
+    "max": 0.07449849446614583,
+    "mean": 0.0483323245578342,
+    "min": 0.036677042643229164,
+    "p10": 0.0423431396484375,
+    "p50": 0.04777272542317708,
+    "p90": 0.0548095703125
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "per-pixel SegNet source margin over all scored last-frames = deforestation map + waterfilling byte budget",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "segnet_margin_field.v2",
+  "score_claim": false,
+  "segnet_input_size_hw": [
+    384,
+    512
+  ],
+  "total_pixels": 117964800,
+  "utc": "2026-06-09T14:36:08Z"
+}

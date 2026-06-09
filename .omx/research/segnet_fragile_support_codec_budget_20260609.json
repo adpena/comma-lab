@@ -1,0 +1,73 @@
+{
+  "economics": {
+    "bytes_per_pixel_breakeven": 1.273108215332031,
+    "score_per_byte_waterline": 6.658589531221714e-07,
+    "seg_score_per_correct_pixel": 8.477105034722222e-07
+  },
+  "evidence_grade": "[macOS-CPU advisory]",
+  "interpretation": "value_per_byte_vs_waterline > 1 => the support pays rent if it can be reified into the witness at this byte cost",
+  "n_scored_frames": 600,
+  "promotable": false,
+  "promotion_eligible": false,
+  "purpose": "convert the SegNet margin value map into byte-priced action atoms (the rate term)",
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "segnet_fragile_support_codec_budget.v1",
+  "score_claim": false,
+  "seg_term_rate_floor": {
+    "argmax_raw_brotli_bytes": 424722,
+    "argmax_temporal_delta_brotli_bytes": 632420,
+    "note": "cheapest specification of the full SegNet argmax target = the seg-term rate floor; rate contribution vs frontier 0.192",
+    "seg_rate_floor_bytes": 424722,
+    "seg_rate_floor_score_contribution": 0.2828049462879549
+  },
+  "segnet_input_size_hw": [
+    384,
+    512
+  ],
+  "supports": {
+    "class_boundary": {
+      "amortized_bytes_per_pixel": 0.18587769295229017,
+      "best_codec_bytes": 474245,
+      "brotli_packbits_bytes": 474245,
+      "connected_components": 12122,
+      "mean_component_size_px": 210.47533410328327,
+      "name": "class_boundary",
+      "pixel_count": 2551382,
+      "pixel_fraction": 0.02162833319769965,
+      "rate_cost_at_best_codec": 0.31578027922342417,
+      "rle_bytes": 1210478,
+      "seg_score_value": 2.162833319769965,
+      "value_per_byte_vs_waterline": 6.849171598330543
+    },
+    "fragile_m_lt_2": {
+      "amortized_bytes_per_pixel": 0.09401960497152247,
+      "best_codec_bytes": 536054,
+      "brotli_packbits_bytes": 536054,
+      "connected_components": 6553,
+      "mean_component_size_px": 870.0614985502823,
+      "name": "fragile_m_lt_2",
+      "pixel_count": 5701513,
+      "pixel_fraction": 0.0483323245578342,
+      "rate_cost_at_best_codec": 0.35693635525695244,
+      "rle_bytes": 1177502,
+      "seg_score_value": 4.83323245578342,
+      "value_per_byte_vs_waterline": 13.540880284677241
+    },
+    "thin_classes_1_3": {
+      "amortized_bytes_per_pixel": 0.12016519104922257,
+      "best_codec_bytes": 258471,
+      "brotli_packbits_bytes": 258471,
+      "connected_components": 18193,
+      "mean_component_size_px": 118.23030836035838,
+      "name": "thin_classes_1_3",
+      "pixel_count": 2150964,
+      "pixel_fraction": 0.01823394775390625,
+      "rate_cost_at_best_codec": 0.17210522947244075,
+      "rle_bytes": 599298,
+      "seg_score_value": 1.823394775390625,
+      "value_per_byte_vs_waterline": 10.594650615672347
+    }
+  },
+  "utc": "2026-06-09T14:47:31Z"
+}
