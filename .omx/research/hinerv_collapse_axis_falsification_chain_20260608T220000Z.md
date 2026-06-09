@@ -116,6 +116,27 @@ Make the probe call the SAME `_candidate_logits_np` + cert win definition + regi
 runner uses, gate on reproducing backend=2, THEN the sidecar number over L is trustworthy.
 Until then P0 is BLOCKED on scoring-path identity (not on artifacts — both are persisted).
 
+## SCORING-PATH IDENTITY PROBE (P0) — two more axes FALSIFIED; scorer-path isolated
+`tools/probe_hinerv_scoring_path_identity.py` holds the render FIXED (torch archive
+backend) and varies only the scorer axes on the same v9 live archive:
+```
+float [0,255]  absolute argmax==4 over region:  11297
+uint8 camera-res roundtrip, absolute:           10762   (eval-roundtrip drops only 535)
+float, wrong->target transition:                11297   (== absolute; all region pre-wrong)
+runner authoritative backend:                        2
+```
+- **uint8 eval-roundtrip FALSIFIED** as the 11297->2 cause (drops 535, not ~11295).
+- **win-definition (transition vs absolute) FALSIFIED** (both 11297).
+- region size already matches the runner (50568), so region is not it.
+=> the 11297->2 divergence is isolated to the **SCORER PATH**: my `tac.scorer.extract_gt_masks`
+(upstream torch SegNet, interpolate+preprocess_input+argmax) vs the runner's
+`tac.substrates.hi_nerv.birth_survival._candidate_logits_np` ->
+`teacher_logits_for_frames_nhwc01` (the harness SegNet teacher, possibly the MLX port).
+Next sub-test (named): score the SAME torch backend render with `_candidate_logits_np`'s
+teacher vs `extract_gt_masks`; if the teacher gives ~2 and extract_gt_masks gives 11297 on
+the SAME render, the runner's scorer path is a different SegNet (port drift or a different
+preprocess) and one of the two is unfaithful to upstream `modules.py` DistortionNet.SegNet.
+
 ## DO NOT
 - name a guilty decoder section (H1 superseded; the selected codec is int8, faithful in the grid).
 - implement section QAT or decoder-codec QAT (int8 is faithful; int4 isn't what ships; the gap is build-path).
