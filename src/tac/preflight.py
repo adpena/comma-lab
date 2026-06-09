@@ -5626,6 +5626,48 @@ def preflight_all(
             strict=False, verbose=verbose
         )
 
+        # Catalog #386: score-aware vehicles must have an objective-reachability
+        # manifest proving the SegNet/PoseNet VJP REACHES the renderer (not just
+        # nonzero weights). 2026-06-09 per operator V6 NON-NEGOTIABLE (P1).
+        # Empirical anchor: SNeRV's pose VJP was severed at 3 layers (f5c66f43c
+        # uncrossed it) while the score-aware FLAG existed AND weights were
+        # nonzero — so Catalog #384 (objective-starvation) was passing yet the
+        # gradient never reached the renderer. Delegates to
+        # tac.substrates._shared.objective_reachability_manifest.audit_objective_reachability_manifests
+        # which scans .omx/state/objective_reachability/*.json and refuses any
+        # score-aware manifest with a severance / surrogate-absence /
+        # d_seg-mis-naming finding. The official argmax d_seg is gradient-zero
+        # a.e. (VERIFICATION metric only); J_seg reaches via a CE/margin/logit-KL/
+        # smooth-disagreement SURROGATE. Sister of Catalog #384 (objective-
+        # starvation) + the vehicle_fidelity_manifest (name-laundering). WARN-ONLY
+        # at landing per CLAUDE.md "Strict-flip atomicity rule": seeded live count
+        # is 2 (hi_nerv recon-only default + pact_nerv_vq MLX-route AUDIT_PENDING;
+        # snerv is the clean reaching carrier). Memory:
+        # feedback_objective_reachability_and_audit_provenance_gates_landed_20260609.md
+        check_score_aware_vehicle_has_objective_reachability_manifest(
+            strict=False, verbose=verbose
+        )
+
+        # Catalog #387: audit-provenance claim records must carry a mandatory
+        # surface + reproduce_command (the AUDIT-HALLUCINATION bug class).
+        # 2026-06-09 per operator V6 NON-NEGOTIABLE (P2). Empirical anchor: three
+        # lapses today — ep22399 0.7115 attributed to the WRONG candidate; pact
+        # phantom-gates claimed TRUE while the registry showed False; the
+        # 0.71-vs-0.0023 surface conflation (export/receiver vs live render).
+        # Delegates to tac.optimization.audit_provenance.audit_provenance_claim_records
+        # which scans .omx/state/audit_provenance/*.json and refuses any claim
+        # record missing surface OR reproduce_command (or self-flagging an
+        # observed/expected mismatch). The mandatory surface field IS the
+        # disambiguator the 0.71-vs-0.0023 conflation lacked. Sister of Catalog
+        # #386 (objective-reachability) + the Vehicle-OS metric-laundering
+        # firewall (rule 5). WARN-ONLY at landing per CLAUDE.md "Strict-flip
+        # atomicity rule": the durable surface has 0 violating emitted records at
+        # landing (the 3 lapse fixtures live in tests). Memory:
+        # feedback_objective_reachability_and_audit_provenance_gates_landed_20260609.md
+        check_audit_provenance_claim_has_surface_and_reproduce_command(
+            strict=False, verbose=verbose
+        )
+
         # Catalog #373: compound-stack proposals acknowledge registered anti-patterns.
         # CANONICAL-ANTI-PATTERNS REGISTRY 2026-05-28 Layer 3 self-protection per
         # operator NON-NEGOTIABLE verbatim ("learning anti-patterns is upser
@@ -84136,6 +84178,176 @@ def check_no_arbitrary_score_relevant_constant_at_l2(
     if strict and violations:
         raise PreflightError(
             "check_no_arbitrary_score_relevant_constant_at_l2 "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+def check_score_aware_vehicle_has_objective_reachability_manifest(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse score-aware vehicles whose objective VJP does not reach the renderer.
+
+    Catalog #386 — the OBJECTIVE-PATH-SEVERANCE bug class 2026-06-09 per operator
+    V6 NON-NEGOTIABLE (P1 of the ObjectiveReachability + AuditProvenance packet).
+
+    Empirical anchor: ``.omx/research/snerv_b_first_scorer_probe_verdict_20260609.md``
+    + the SNeRV cross-wiring defect — the pose VJP was severed at THREE layers
+    (``f5c66f43c`` uncrossed it) while the score-aware loss FLAG existed AND the
+    loss weights were nonzero. So Catalog #384's objective-STARVATION gate
+    (nonzero weights) was PASSING, yet the trained gradient never reached the
+    renderer. Nonzero weights are necessary but NOT sufficient: the objective
+    must REACH the parameters via an unbroken Jacobian-vector-product path.
+
+    This is the third leg of the "names/objectives/wiring outrunning their
+    justification" set:
+      * NAME-LAUNDERING (docstring claims a mechanism it lacks) — the
+        ``vehicle_fidelity_manifest`` (Catalog #384's sister Deliverable 1).
+      * OBJECTIVE-STARVATION (objective weight is 0.0/None) — Catalog #384
+        ``check_score_aware_run_has_nonzero_scorer_objective_weights``.
+      * OBJECTIVE-PATH-SEVERANCE (weight nonzero, loss named score-aware, but
+        the VJP is broken by a detach / stop_gradient / no-grad / mis-wiring) —
+        THIS gate.
+
+    CRITICAL math nuance (operator-explicit): the official ``d_seg`` (argmax
+    disagreement) is piecewise-constant, gradient-zero a.e., so J_seg reaches
+    the renderer ONLY through a SURROGATE row (CE / source-class margin /
+    logit-KL / smooth-disagreement). The manifest records that exact-argmax
+    ``d_seg`` is the VERIFICATION metric, never a training row; the gate fails
+    closed if a manifest claims argmax-d_seg as a training row OR names a
+    hinge/margin loss literally ``d_seg`` (the Vehicle-OS rule 5 / Mistake-B
+    firewall).
+
+    Delegates detection to the canonical helper
+    ``tac.substrates._shared.objective_reachability_manifest.audit_objective_reachability_manifests``,
+    which scans ``.omx/state/objective_reachability/*.json``. A manifest
+    VIOLATES when its vehicle claims score-aware AND its
+    ``reachability_findings()`` is non-empty (weight / VJP / grad-norm /
+    surrogate-absence / d_seg-mis-naming / declared-severance). A faithful
+    reaching vehicle (snerv post-``f5c66f43c``: both VJPs reach, weights
+    7.24/7.0) produces ZERO findings even with ``AUDIT_PENDING`` grad norms.
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule" because the
+    seeded live count is non-zero: 2 VIOLATING vehicles (``hi_nerv``
+    recon-only-default + ``pact_nerv_vq`` MLX-route AUDIT_PENDING — both
+    empirically-confirmed weight-severance carriers from the 20260609 audits;
+    ``snerv`` is the clean reaching carrier), yielding ~11 per-finding messages
+    (one per severance surface per vehicle). Strict-flip planned after the 2 set
+    explicit nonzero weights + wire a surrogate (or close the MLX-route audit) so
+    their VJP reaches the renderer.
+
+    **6-hook wire-in declaration** per Catalog #125:
+      * #1 sensitivity-map = N/A (defensive validator gate).
+      * #2 Pareto constraint = N/A.
+      * #3 bit-allocator = N/A.
+      * #4 cathedral autopilot dispatch = ACTIVE (prevents future score-aware
+        vehicles from dispatching a long run whose objective never reaches the
+        renderer — the objective_reachability manifest is the durable consumed
+        surface, sister of the Vehicle-OS L1/L2 no-long-run gate).
+      * #5 continual-learning posterior = N/A (the probe verdict memo
+        ``.omx/research/snerv_b_first_scorer_probe_verdict_20260609.md`` is the
+        empirical anchor; no new canonical equation).
+      * #6 probe-disambiguator = ACTIVE (the per-mechanism gradient norm
+        reaching>0 vs severed==0 vs AUDIT_PENDING IS the disambiguator between a
+        genuinely reaching objective and a severed one).
+    """
+    from tac.substrates._shared.objective_reachability_manifest import (
+        audit_objective_reachability_manifests,
+    )
+
+    repo = Path(repo_root or REPO_ROOT)
+    findings = audit_objective_reachability_manifests(repo)
+    violations = [f.message() for f in findings]
+
+    if verbose and violations:
+        print(f"  [catalog-386] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_score_aware_vehicle_has_objective_reachability_manifest "
+            f"found {len(violations)} violation(s):\n  "
+            + "\n  ".join(violations)
+        )
+    return violations
+
+
+def check_audit_provenance_claim_has_surface_and_reproduce_command(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: str | Path | None = None,
+) -> list[str]:
+    """Refuse audit-provenance claim records missing surface or reproduce command.
+
+    Catalog #387 — the AUDIT-HALLUCINATION bug class 2026-06-09 per operator V6
+    NON-NEGOTIABLE (P2 of the ObjectiveReachability + AuditProvenance packet).
+
+    Empirical anchor: three audit-provenance lapses on 2026-06-09:
+      * ep22399's ``avg_segnet_dist=0.7115`` was attributed to the WRONG
+        candidate (a Haar score renderer, not the SNeRV-B candidate).
+      * pact phantom-gates were claimed TRUE in prose while the registry showed
+        False.
+      * the ``0.71``-vs-``0.0023`` surface conflation (export/receiver surface
+        vs live in-memory render — the same class as PSNR != d_seg).
+
+    The fix is a typed claim record (``audit_provenance_manifest.v1``,
+    ``tac.optimization.audit_provenance``) whose ``surface`` field is MANDATORY
+    (today's 0.71-vs-0.0023 was a surface conflation) and whose
+    ``reproduce_command`` is MANDATORY (an unreproducible claim is a
+    hallucination). ``verify()`` fails closed on a missing surface OR missing
+    reproduce_command.
+
+    Delegates detection to the canonical helper
+    ``tac.optimization.audit_provenance.audit_provenance_claim_records`` which
+    scans ``.omx/state/audit_provenance/*.json``. A record VIOLATES when its
+    ``provenance_findings()`` is non-empty (missing/invalid surface OR missing
+    reproduce_command OR observed/expected mismatch the record itself flags).
+
+    WARN-ONLY at landing per CLAUDE.md "Strict-flip atomicity rule": the seeded
+    records are the three lapse regression fixtures, which DELIBERATELY carry the
+    bug (so a strict flip would fire on the fixtures). The gate scans only the
+    durable ``.omx/state/audit_provenance/`` surface; the fixtures live in tests,
+    so the live count against the durable surface is 0 at landing (no emitted
+    operator-facing claim record violates). Strict-flip planned once the
+    durable surface is in routine use.
+
+    **6-hook wire-in declaration** per Catalog #125:
+      * #1 sensitivity-map = N/A (defensive validator gate).
+      * #2 Pareto constraint = N/A.
+      * #3 bit-allocator = N/A.
+      * #4 cathedral autopilot dispatch = ACTIVE (prevents a hallucinated audit
+        claim — wrong candidate / phantom gate / surface conflation — from
+        influencing the score roadmap; the claim record is the durable consumed
+        surface, sister of the Vehicle-OS metric-laundering firewall rule 5).
+      * #5 continual-learning posterior = N/A (the three lapses are the
+        empirical anchor; no new canonical equation).
+      * #6 probe-disambiguator = ACTIVE (the mandatory ``surface`` field IS the
+        disambiguator between the live / receiver / export / exact_archive /
+        telemetry surfaces — the 0.71-vs-0.0023 conflation could not have stood
+        with the field populated).
+    """
+    from tac.optimization.audit_provenance import (
+        audit_provenance_claim_records,
+    )
+
+    repo = Path(repo_root or REPO_ROOT)
+    findings = audit_provenance_claim_records(repo)
+    violations = [f.message() for f in findings]
+
+    if verbose and violations:
+        print(f"  [catalog-387] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    {v}")
+
+    if strict and violations:
+        raise PreflightError(
+            "check_audit_provenance_claim_has_surface_and_reproduce_command "
             f"found {len(violations)} violation(s):\n  "
             + "\n  ".join(violations)
         )
