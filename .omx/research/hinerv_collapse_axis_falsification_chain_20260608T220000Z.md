@@ -173,6 +173,45 @@ band) via `tools/probe_mlx_segnet_fidelity_vs_torch.py` as the gate; wire the ga
 STRICT preflight so any MLX-scored birth carries a torch-parity attestation (false-authority
 risk: a birth the MLX port calls won/lost may differ from the contest torch SegNet).
 
+## *** DEFINITIVE RESOLUTION — the backend SURVIVES; the SIDECAR destroys it; the runner conflates them ***
+Reconciliation using the runner's EXACT win-def + region + scorer on the v9 live archive:
+```
+                                              scorer = MLX adapter (runner path); win-def = region_margin_stats.region_hard_won_pixels; region = reconstruct_birth_region_mask (50568 px, MATCHES runner)
+BACKEND (unwrapped HinervSubstrate):          region_hard_won = 11306   <- SURVIVES
+WRAPPED  (build_model_from_archive=runner):   region_hard_won =     3   <- collapses
+runner authoritative wrong_to_target:                                2
+```
+**The backend HiNeRV birth does NOT collapse — it wins ~11306 region pixels under the runner's
+OWN exact win-def + region + scorer.** The runner's authoritative "2" is the WITH-SIDECAR
+(wrapped) render: `measure_birth_parseback_survival_from_report` scores
+`build_model_from_archive`, which applies the target-region action sidecar via
+`wrap_model_with_target_region_actions`. So the entire "parse-back collapse to 2" premise that
+drove this whole session was the runner **conflating backend + sidecar** — a SURVIVING backend
+mislabeled as collapsed because the shipped "rescue" sidecar is CATASTROPHIC.
+
+### The sidecar is the bug (not the backend, not any codec/section/EMA)
+The sidecar overwrites 2286 px (`exact_uint8_action_pixels_applied: 2286`) yet collapses
+region_hard_won from 11306 -> 3 over the WHOLE 50568-px region — a blast radius ~22x its own
+support. That is not plausible from 2286 local overwrites through SegNet's receptive field; it
+points to a BUG in `tac.substrates.hi_nerv.target_region_actions.TargetRegionActionReceiver.forward`
+(the overwrite writes `rgb_u8/255.0` into the [0,1] frame; render range goes 0.98 -> 1.00 with
+the sidecar) corrupting the frame so SegNet's argmax flips region-wide. The "rescue" overlay is
+DESTROYING an otherwise-surviving birth.
+
+### Consequences (re-prioritized roadmap)
+1. **The collapse chase is OVER**: there is no backend collapse to explain. Sections/latents/
+   int4/EMA/build-path were all chasing a phantom created by the runner's backend+sidecar conflation.
+2. **Fix the survival measurement**: `measure_birth_parseback_survival_from_report` must score the
+   BACKEND (unwrapped) separately from the with-sidecar render, and report BOTH — a surviving
+   backend must not be labeled collapsed by a harmful sidecar.
+3. **Fix or disable the sidecar**: `TargetRegionActionReceiver.forward` overwrite collapses the
+   render; until fixed, the sidecar is net-harmful and must NOT be bundled (it adds 8128 bytes AND
+   destroys ~11k wins).
+4. **Then compute exact d_seg/d_pose/bytes for the BACKEND-only archive** and feed LoweringRace —
+   the backend may already be a strong frontier candidate (it preserves the birth).
+5. **MLX-port hardening (operator TOP priority)**: backend wins 11306 (MLX) vs 11297 (torch) = 9px
+   region drift / 18px full-frame; drive to argmax-exact via the fidelity gate.
+
 ## DO NOT
 - name a guilty decoder section (H1 superseded; the selected codec is int8, faithful in the grid).
 - implement section QAT or decoder-codec QAT (int8 is faithful; int4 isn't what ships; the gap is build-path).
