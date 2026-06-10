@@ -72340,6 +72340,54 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_t1_s12_lossless_stack_20260610",
+      "name": "T1 cross-pair latent dedup + S12 resize-null preimage lossless stack",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/t1_s12_lossless_stack_verdict_20260610.md (3 $0 falsifiable tests: T1 k-means net-LOSS, T8 per-code pixel \u0394\u22653.97, S12 no stored frame pixels)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "research_only=true; FALSIFIED verdict; reactivation pinned in verdict memo + 3 probe outcomes ledger rows"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/t1_s12_lossless_stack_verdict_20260610.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only; FALSIFIED-not-paradigm-killed per Catalog #307: T1 KILL (cross-pair MI=0, k-means net LOSS), T8 KILL (latents minimal, no sub-grain null), S12 DEFER (no stored frame pixels, class-scoped). $0 local; no dispatch; frontier b46897267ded unchanged.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "AFSR-1 retrained base (latents not decorrelated by construction)",
+        "multi-video test set (cross-pair MI>0)",
+        "frame-storing vehicle for S12 (SNeRV LF carrier / frontier-compose)",
+        "S12-as-AFSR-1-training-constraint (synergy #3)"
+      ]
     }
   ],
   "level_rules": {
@@ -72349,5 +72397,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T08:44:47Z"
+  "updated_at": "2026-06-10T09:01:27Z"
 }
