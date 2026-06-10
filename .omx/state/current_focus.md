@@ -6,8 +6,14 @@
 > rigorous negative); built `experiments/run_capstone_campaign.py` (the #65/#78 actuator) + validated
 > it (base_ch=16 int8 → 64,369 B archive = rate 0.043, sub-0.15-capable budget MEASURED); LAUNCHED the
 > decisive 100-pair viability daemon (pid in `.omx/tmp/capstone_daemon/`).
-> **RESUME:** harvest `experiments/results/capstone_daemon_b16_n100/capstone_result.json` (or tail the
-> daemon log for the eval_every=5 RD trajectory). Full doc:
+> **CRUX FIX (2026-06-10, commit `11f15a56d`):** the capstone pose-FiLM was a single SHARED FiLM on the
+> common feature — but PoseNet scores the frame0↔frame1 DIFFERENTIAL, so it had ~0 Jacobian in the pose
+> direction (d_pose bounced 0.437). Replaced with PER-FRAME film0/film1 (matching #84 that held 2.7e-4);
+> identity-init preserved, +0.2 KB, 22 tests pass + new shared-FiLM-regression guard. Killed the buggy
+> daemon, relaunched corrected (out-dir `…_perframe`).
+> **RESUME:** harvest `experiments/results/capstone_daemon_b16_n100_perframe/capstone_result.json` (or tail
+> the latest daemon log via `.omx/tmp/capstone_daemon/LATEST_LOG.txt`) — the decisive read is whether
+> d_pose now HOLDS (not bounces) at the 64 KB budget. Full doc:
 > `.omx/research/capstone_campaign_launch_and_session_state_20260610.md`. Gate ladder: clean 100-pair
 > descent+pose-hold → fund the 600-pair CUDA candidate → paired CPU+CUDA exact eval → pointer move.
 
