@@ -93,6 +93,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.optimization.frame1_joint_safe_cone import measure_pair_distortion
 from tac.optimization.frame1_seg_safe_pose_atoms import _resize_map
 
 FRAME1_SEG_REPAIR_ATOM_SCHEMA = "frame1_seg_repair_atom.v1"
@@ -570,15 +571,10 @@ def generate_seg_repair_atom(
 # ---------------------------------------------------------------------------
 # Exact CPU-torch screening: THE LAW admission (100*Δd_seg + Δpose + rate < 0)
 # ---------------------------------------------------------------------------
-def _measure_exact_distortion(dn: Any, gt_pair: Any, cand_pair: Any) -> tuple[float, float]:
-    """Return ``(d_seg, d_pose)`` of a candidate pair vs the GT pair via the real
-    upstream DistortionNet (exact CPU-torch, NEVER MPS)."""
-
-    import torch
-
-    with torch.inference_mode():
-        d_pose, d_seg = dn.compute_distortion(gt_pair.float(), cand_pair.float())
-    return float(d_seg.mean()), float(d_pose.mean())
+# Delegated to the canonical home in :mod:`tac.optimization.frame1_joint_safe_cone`
+# (dedup audit 2026-06-10): identical ``dn.compute_distortion`` wrapper. Alias
+# preserved for the in-module callsites.
+_measure_exact_distortion = measure_pair_distortion
 
 
 def screen_repair_atom_exact(

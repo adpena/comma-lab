@@ -32,19 +32,30 @@ pixel (small SegNet margin OR high pose Jacobian) — the binding-constraint set
 no frame1-touching byte may move.
 
 REUSE (no-duplicative-code; orphan inventory 2026-06-09): the two half-cones
-already exist separately and are reused, not rebuilt:
+share their measured math lineage with the existing z8 half-cones (dedup audit
+2026-06-10: the math is the SAME scorer forward; the OUTPUT differs because the
+cone needs frame1-specialized quantities the z8 surface does not emit, so this
+module derives them directly rather than wrapping the z8 functions):
 
-- **Seg-safe half** — :func:`segnet_boundary_pixel_saliency` from
-  ``tac.substrates.z8_hierarchical_predictive_coding.joint_p18_p19_deadzone_rate_attack``
-  (real SegNet forward, top-2 logit margin; verified non-constant 2026-06-09).
-  The boundary *margin* itself (``m_p = top1 - top2``) is the seg budget source.
-- **Pose-null half** — :func:`posenet_pixel_jacobian_norm` from the same z8
-  module (real differentiable PoseNet pixel-Jacobian). **CRITICAL**: this is
-  only gradient-reachable when ``rgb_to_yuv6`` is differentiable; the upstream
-  helper is ``@torch.no_grad()`` / in-place and SEVERS the pose gradient (the
-  CLAUDE.md "eval_roundtrip / differentiable YUV6" non-negotiable). This module
-  patches it via :func:`tac.differentiable_eval_roundtrip.patch_upstream_yuv6_globally`
-  and **fails closed** if the resulting Jacobian is identically zero (the
+- **Seg-safe half** — sister of
+  :func:`tac.substrates.z8_hierarchical_predictive_coding.joint_p18_p19_deadzone_rate_attack.segnet_boundary_pixel_saliency`
+  (same real SegNet forward + top-2 logit margin, verified non-constant
+  2026-06-09). z8 returns ``exp(-margin/tau)`` *saliency* on the wavelet-coeff
+  domain; the cone needs the **raw margin AND the argmax class id** per frame1
+  pixel (the distance-to-flip budget source + the behavioral-check reference), so
+  :func:`measure_segnet_frame1_margin` returns ``(margin, argmax_cls)`` directly.
+- **Pose-null half** — sister of z8's
+  :func:`...posenet_pixel_jacobian_norm` (same real differentiable PoseNet
+  pixel-Jacobian backward). z8 returns the ``(2, H, W)`` norm for BOTH frames on
+  the coeff grid; the cone needs the **frame1-channel-only** ``(H, W)`` norm
+  (``grad[0, 1]``) plus a fail-closed zero-energy guard, so
+  :func:`measure_posenet_frame1_jacobian` derives that variant.
+  **CRITICAL**: this is only gradient-reachable when ``rgb_to_yuv6`` is
+  differentiable; the upstream helper is ``@torch.no_grad()`` / in-place and
+  SEVERS the pose gradient (the CLAUDE.md "eval_roundtrip / differentiable YUV6"
+  non-negotiable). This module patches it via
+  :func:`tac.differentiable_eval_roundtrip.patch_upstream_yuv6_globally` and
+  **fails closed** if the resulting Jacobian is identically zero (the
   not-reachable signature) so a non-reachable gradient can never silently
   produce an all-permissive cone.
 - **Coupled weight** — the joint sensitivity coupling follows the canonical
@@ -538,15 +549,26 @@ def compute_frame1_joint_safe_cone(
 # ---------------------------------------------------------------------------
 
 
-def _measure_distortion(dn: Any, gt_pair: Any, cand_pair: Any) -> tuple[float, float]:
+def measure_pair_distortion(dn: Any, gt_pair: Any, cand_pair: Any) -> tuple[float, float]:
     """Return ``(d_seg, d_pose)`` of one candidate frame1 pair vs the GT pair
-    via the real upstream DistortionNet. Inputs are ``(1, 2, H, W, 3)`` [0, 255]."""
+    via the real upstream DistortionNet. Inputs are ``(1, 2, H, W, 3)`` [0, 255].
+
+    CANONICAL exact CPU-torch pair-distortion measurement (NEVER MPS). This is
+    the single home for the ``dn.compute_distortion`` wrapper that the #35 cone
+    behavioral validation AND the Class-2 / Class-3 frame1 atom screeners
+    (:mod:`tac.optimization.frame1_seg_safe_pose_atoms`,
+    :mod:`tac.optimization.frame1_seg_repair_atoms`) all share — they import this
+    rather than re-declaring an identical helper (dedup audit 2026-06-10)."""
 
     import torch
 
     with torch.inference_mode():
         d_pose, d_seg = dn.compute_distortion(gt_pair.float(), cand_pair.float())
     return float(d_seg.mean()), float(d_pose.mean())
+
+
+# Internal alias preserved for the cone's own callsites.
+_measure_distortion = measure_pair_distortion
 
 
 def validate_cone_behaviorally(
@@ -675,6 +697,7 @@ __all__ = [
     "Frame1JointSafeConeError",
     "assemble_joint_cone",
     "compute_frame1_joint_safe_cone",
+    "measure_pair_distortion",
     "measure_posenet_frame1_jacobian",
     "measure_segnet_frame1_boundary_slope",
     "measure_segnet_frame1_margin",

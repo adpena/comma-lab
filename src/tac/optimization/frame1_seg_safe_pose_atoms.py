@@ -90,6 +90,11 @@ from typing import Any
 
 import numpy as np
 
+# Canonical exact CPU-torch pair-distortion measurement lives in the #35 cone
+# module (the foundational surface this Class-2 generator consumes). Imported,
+# not re-declared (dedup audit 2026-06-10).
+from tac.optimization.frame1_joint_safe_cone import measure_pair_distortion
+
 FRAME1_SEG_SAFE_POSE_ATOM_SCHEMA = "frame1_seg_safe_pose_atom.v1"
 
 # Canonical Tier A non-promotable false-authority markers (Catalog #341/#323).
@@ -502,15 +507,11 @@ def generate_seg_safe_pose_atom(
 # ---------------------------------------------------------------------------
 # Exact CPU-torch screening: the falsifiable per-atom seg-unchanged check
 # ---------------------------------------------------------------------------
-def _measure_exact_distortion(dn: Any, gt_pair: Any, cand_pair: Any) -> tuple[float, float]:
-    """Return ``(d_seg, d_pose)`` of a candidate pair vs the GT pair via the real
-    upstream DistortionNet (exact CPU-torch, NEVER MPS)."""
-
-    import torch
-
-    with torch.inference_mode():
-        d_pose, d_seg = dn.compute_distortion(gt_pair.float(), cand_pair.float())
-    return float(d_seg.mean()), float(d_pose.mean())
+# Delegated to the canonical home in :mod:`tac.optimization.frame1_joint_safe_cone`
+# (dedup audit 2026-06-10): the screener's exact-distortion measurement is the
+# same ``dn.compute_distortion`` wrapper the cone uses. Alias preserved for the
+# in-module callsites.
+_measure_exact_distortion = measure_pair_distortion
 
 
 def screen_atom_exact(
