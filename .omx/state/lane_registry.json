@@ -71920,6 +71920,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr110pp_r3_onhost_mode_table_20260610",
+      "name": "PR110++ R3 on-host per-mode pose table + corrected selector",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_resize_null_preimage_compiler_20260609",
+      "name": "Resize-null preimage compiler (universal postprocessor, #49)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/resize_null_preimage.py + tools/resize_null_preimage_postprocess.py; tier1/2/3 residual==0.0; commits 829a973c6 94dc9af15"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "24 dedicated tests pass incl full-upstream-preprocess no-fake (SegNet+PoseNet bit-identical); review_tracker 2 clean passes"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/resize_null_preimage_compiler_landed_20260610.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -71929,5 +72011,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T01:22:30Z"
+  "updated_at": "2026-06-10T02:14:07Z"
 }
