@@ -6,19 +6,19 @@
   },
   "rows": [
     {
-      "size_label": "80kb",
-      "lever_id": "task74_distill_student_80kb",
-      "bytes_after": 103515,
-      "d_seg_after": 0.25170135498046875,
-      "d_pose_after": 192.0576629638672,
-      "score_after": 69.06344584946373,
+      "size_label": "40kb",
+      "lever_id": "task74_distill_student_40kb",
+      "bytes_after": 46248,
+      "d_seg_after": 0.003436406434047967,
+      "d_pose_after": 0.00242719395646418,
+      "score_after": 0.5302298310635942,
       "score_before": 0.19109982419209975,
-      "delta_score_total": 68.87234602527164,
+      "delta_score_total": 0.33913000687149447,
       "pointer_update_eligible": false,
       "authority_tier": "exact_cpu_advisory",
       "metric_family": "exact_pair_scorer"
     }
   ],
-  "best_advisory_delta_s": 68.87234602527164,
+  "best_advisory_delta_s": 0.33913000687149447,
   "schema": "scorer_quotient_candidate_row.v1"
 }

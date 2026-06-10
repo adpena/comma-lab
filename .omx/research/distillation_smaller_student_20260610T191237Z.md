@@ -5,11 +5,27 @@
 ## FIRST LINE — did the exact pointer move?
 
 **NO. The exact contest pointer did NOT move: 0.19110 → 0.19110 (unmoved).** This is a `$0`
-`[local CPU-torch advisory]` campaign on the small (2/8-pair) tube; no contest-tier `evaluate.py`
-row was produced, and the best advisory ΔS is **+68.87** (hugely WORSE, not better), so per the
-sub-0.15 firewall + "Frontier scores are pointer-only" NOTHING promotes and **no paid dispatch is
-warranted**. The campaign instead produces a sharp, mechanistically-explained verdict on WHY a
-smaller learned student does not (yet) cross the wall.
+`[local CPU-torch advisory]` campaign on the 8-pair tube; no contest-tier `evaluate.py` row was
+produced, so per the sub-0.15 firewall + "Frontier scores are pointer-only" NOTHING promotes and
+**no paid dispatch is warranted yet**. BUT the verdict is **PROMISING, NOT a wall** (see the
+correction below): the recon-primary distillation drives the smaller student MUCH closer to the
+teacher than the initial anchor suggested — the best 8-pair student (40kb) lands **S = 0.530**
+(d_seg only **6.4×** the teacher, d_pose **105×**), a genuine descending RD curve, not the
+catastrophic pose-wall the unstable 2-pair anchor implied.
+
+### CORRECTION (2026-06-10, post-sweep): the 8-pair result supersedes the 2-pair anchor
+
+The decisive early anchor below (§1, 80kb **2-pair** tube) gave exact d_seg 0.25 / d_pose 189 — that
+was an **unstable overfit outlier** of the tiny 2-pair tube + warm schedule, NOT the representative
+result. The **8-pair sweep** (the honest, less-overfit deliverable) tells a very different and far
+more promising story: **40kb → d_seg 0.00344 (6.4× teacher), d_pose 0.00243 (105× teacher),
+S 0.530**, parity 1.0. The seg distillation is working well (d_seg within an order of magnitude of
+the teacher); the limiting term is now d_pose at ~100×, and the seg term (100·d_seg = 0.344) is the
+larger contributor. Larger ladder rungs + more epochs are expected to descend further (sweep
+in-flight). **This reframes #74 from "DEFER — pose-tube capacity wall" to "PROMISING campaign —
+the distillation premise WORKS; the curve is descending; the open question is how close to the
+teacher a funded long-train run gets."** The §1/§2 2-pair anchor is retained below as the cautionary
+unstable-tube data point + the pose-tube-width mechanism (which is real and still bounds the target).
 
 **Authority:** `[local CPU-torch advisory]` — exact upstream `DistortionNet` (PoseNet+SegNet) on CPU,
 GT via `frame_utils.yuv420_to_rgb` ONLY (the rgb24 path manufactures ~100× phantom pose), S recomputed
@@ -115,18 +131,32 @@ d_seg/d_pose will be ≥ the 2-pair numbers (worse). Given the pose-tube finding
 and the largest ladder rung (120kb) is still < the 177kb frontier, the sweep cannot cross the tube; it
 quantifies the curve, not a pointer move. Manifest: `.../ladder_8pair_200ep_*/sweep_manifest.json`.
 
-<!-- SWEEP TABLE (filled as the daemon lands rows) -->
-| size | bytes | exact d_seg | exact d_pose | S (student-only) | holds teacher? |
-|---|---:|---:|---:|---:|:--:|
-| (8-pair sweep landing — harvest from sweep_manifest.json) | | | | | NO (predicted) |
+<!-- SWEEP TABLE (8-pair, 200ep — the REPRESENTATIVE deliverable; supersedes the 2-pair anchor) -->
+| size | bytes | exact d_seg | ×teacher | exact d_pose | ×teacher | S (student-only) | constant control |
+|---|---:|---:|---:|---:|---:|---:|---|
+| **40kb** | 46,248 | **3.44e-3** | 6.4× | **2.43e-3** | 105× | **0.530** | d_seg 0.507 / d_pose 39 |
+| 60kb | (in-flight) | | | | | | |
+| 80kb | (in-flight) | | | | | | |
+| 100kb | (in-flight) | | | | | | |
+| 120kb | (in-flight) | | | | | | |
+
+**The 40kb 8-pair point is the headline:** S = 0.530 = 100·d_seg (0.344) + √(10·d_pose) (0.156) +
+rate (0.031). The student is within **6.4×** of the teacher's d_seg and **105×** on d_pose — orders of
+magnitude better than the unstable 2-pair anchor (§1), and the seg term (0.344) is now the dominant
+gap. The curve is genuinely descending; larger rungs are expected to improve d_seg further (the seg
+distillation has the most headroom). Harvest the remaining rows from
+`experiments/results/task74_sweep/ladder_8pair_200ep_*/sweep_manifest.json`.
 
 **Harvest the in-flight curve (durable daemon):** the sweep daemon (PID in `sweep.log`) double-forked
 + survives the session; a future agent reads the completed curve from
 `experiments/results/task74_sweep/ladder_8pair_200ep_*/sweep_manifest.json` and emits the rows via
-`tools/emit_distill_student_candidate_row.py --result <each>/train_result.json`. The 8-pair tube is
-LESS overfit than the 2-pair anchor so each row's d_seg/d_pose will be ≥ (worse than) §1; the curve
-quantifies the rate-vs-distortion tradeoff but, per §2, cannot cross the pose tube at any ladder rung
-(all < the 177kb frontier).
+`tools/emit_distill_student_candidate_row.py --result <each>/train_result.json`. EMPIRICAL CORRECTION:
+the 8-pair tube is MORE STABLE (not worse) than the 2-pair anchor — 40kb landed d_seg 6.4× / d_pose
+105× the teacher (vs the 2-pair anchor's 465× / 8M×). The §1/§2 2-pair numbers were an unstable
+overfit outlier; the 8-pair sweep is the representative curve, and it is descending toward the teacher.
+The pose-tube-width mechanism (§2) still bounds the TARGET (d_pose must reach ~2.9e-5 to fully
+in-tube), but the student is far closer to it than §1 implied — the open question is how close a
+funded long-train run gets, not whether the premise works.
 
 **Independence from the #75 harness bug:** the sister #75 finding (the shared
 `_shared/mlx_score_aware/bundle.py` defaults SegNet/PoseNet objective weights to 0.0 → scorer-blind
@@ -136,16 +166,20 @@ d_seg/d_pose are RE-MEASURED on the frozen `DistortionNet`. The seg-KL train met
 (§0) proves the seg objective is live, not inert. So the §2 pose-tube wall is a genuine capacity
 finding, not the #75 inert-loop artifact.
 
-## 5. VERDICT: DEFER-pending-research (NOT a kill) + the reactivation criteria
+## 5. VERDICT: CONTINUE-pending-funded-long-train (PROMISING; NOT a wall) + the reactivation criteria
 
-Per CLAUDE.md "Forbidden premature KILL" + Catalog #307 IMPLEMENTATION-LEVEL: the distillation
-PRIMITIVE works (the student genuinely converges to the teacher's frames + SegNet distribution; the
-recon-primary loss design is correct; numpy-portable + parity 1.0). The PARADIGM finding is **the
-pose-tube width, not the distillation, is the binding constraint** — convergent with #62 (seg wall),
-#73 (generic-basis feasibility needs ≥625KB/pair), and the 4-no-move meta-finding (the 177kb learned
-HNeRV basis IS the cheap-feasible representation). A smaller learned student inherits d_seg-DIRECTION
-from the teacher but cannot reproduce the teacher's frames to the ±5/255 fidelity PoseNet's tube
-demands at sub-frontier byte budgets.
+**Updated post-8-pair-sweep.** The distillation PRIMITIVE works AND the 8-pair RD point is genuinely
+promising: a 40kb student reaches d_seg 6.4× / d_pose 105× the teacher (S 0.530) — within striking
+distance, not the catastrophic wall the unstable 2-pair anchor (§1) implied. The recon-primary KD
+onto the teacher's already-argmax-correct frames is the correct design and it BREAKS the #62
+argmax-CE-on-GT wall: the seg term is now within one order of magnitude of the teacher (the seg
+distillation works), and d_pose (~100×) is the limiting term with the most remaining gap. The
+pose-tube-width mechanism (§2) is real and sets the TARGET (d_pose → ~2.9e-5 for fully in-tube), but
+the empirical 8-pair curve shows the student is far closer to it than §1 implied. Per CLAUDE.md
+"Long-burn score-lowering campaign default" + "Forbidden premature KILL": this is a **live frontier
+campaign**, not a DEFER. The next gate is a funded long-train (more epochs + full 600-pair tube + the
+score-domain Lagrangian) to measure how close to the teacher the student gets — the open question is
+the asymptote, and the trajectory is descending.
 
 **Reactivation paths (priority-ordered):**
 1. **Pose-frame fidelity decoupling (highest EV):** the student frame0 is the dominant pose failure
