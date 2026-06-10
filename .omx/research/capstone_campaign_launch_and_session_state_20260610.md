@@ -73,7 +73,34 @@ local (torch-CPU scorer is the bottleneck; renderer is MLX-fast).
   next harvest; likely subsumed by the working loop + this runner.
 - #27 (HiNeRV B-lane) flagged in_progress — separate lane, not on the capstone critical path.
 
+## CRUX FIX (2026-06-10, commit `11f15a56d`) — pose-FiLM was SHARED, now PER-FRAME
+The capstone's `_decode_with_film` applied ONE shared FiLM to the common feature, then decoded both
+frames from it — but PoseNet scores the frame0↔frame1 DIFFERENTIAL (ego-motion), so the shared FiLM had
+~0 Jacobian in the rewarded pose direction (`J_scorer·J_renderer ≈ 0`) → d_pose bounced 0.437. Fixed:
+per-frame `film0`/`film1` modulate the feature DIFFERENTLY before each rgb head (matching #84 that held
+d_pose 2.7e-4). Identity-init preserved (smoke: max|Δ|=0.0), per-frame control verified (perturb film0 →
+frame0 Δ=5.58, frame1 Δ=0.000), FiLM rides in `decoder_weights` (+0.2 KB), 22 tests pass incl. the
+real-scorer pose-hold + a new shared-FiLM-regression guard. Buggy daemon killed; corrected daemon
+relaunched at `experiments/results/capstone_daemon_b16_n100_perframe/`.
+
+## v2 levers PRE-REGISTERED (queued for the harvest decision — keeps the next unit crisp)
+1. **Score-domain pose loss (sqrt, not MSE).** The score's pose term is `√(10·d_pose)`, whose gradient
+   carries a factor `5/√(10·d_pose)` that EXPLODES as d_pose→tube. The capstone minimizes MSE pose-loss
+   at fixed `pose_weight=1.0` → it OVER-weights pose early (where the score barely cares) and UNDER-weights
+   near the tube (where the score cares enormously). v2: pose loss = `√(10·d_pose)` directly (the goal's
+   `α·B+β·d_seg+γ·√d_pose`). NOTE: for a FiLM HANDED the answer, pose is a conditioning not a capacity
+   problem, so the crux fix is primary; sqrt-loss is the refinement if d_pose holds-but-not-tightly.
+2. **Factorized two-blob carrier (the redirect IF the single decoder can't do both at 64 KB).** Lever B
+   proved a 64 KB blob hits the SegNet 600-argmax partition (d_seg 0.008) but collapses pose; the crux fix
+   makes pose a controllable 6-scalar FiLM. So the sub-0.15 carrier may be the explicit factorization
+   `[seg-argmax blob] ⊕ [6-scalar pose-FiLM]` — each scored quantity in its OWN minimal representation —
+   rather than one shared RGB renderer. Build this if the 100-pair run holds pose but stalls d_seg at 64 KB.
+
 ## Harvest contract (next session / wakeup)
-Read `experiments/results/capstone_daemon_b16_n100/capstone_result.json` (final) OR
-`tail` the daemon log for the live eval_every=5 RD trajectory. Judge: d_seg descent slope + d_pose
-hold at the 64 KB budget. Then route per the reactivation ladder above.
+Read `experiments/results/capstone_daemon_b16_n100_perframe/capstone_result.json` (final) OR `tail` the
+latest daemon log (`.omx/tmp/capstone_daemon/LATEST_LOG.txt`) for the eval_every=5 RD trajectory.
+**Decisive read: does d_pose now HOLD/descend toward the tube (crux fixed) vs bounce ~0.4 (old shared
+FiLM)?** Route: (a) d_pose holds + d_seg descends → fund the 600-pair candidate (needs the MLX→torch port
+for CUDA, OR a multi-day local MLX run) → byte-close → paired CPU+CUDA exact eval → pointer move; (b)
+d_pose holds but d_seg stalls at 64 KB → v2 lever 1 (sqrt-loss) then lever 2 (factorized carrier); (c)
+d_pose still bounces → the crux fix is insufficient, escalate the pose-control mechanism.
