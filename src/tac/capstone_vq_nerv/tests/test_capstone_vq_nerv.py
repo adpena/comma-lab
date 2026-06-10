@@ -252,6 +252,35 @@ def test_vq_indices_in_range_and_excluded_from_grad_tree():
 
 
 @skip_no_mlx
+def test_pose_film_is_per_frame_not_shared():
+    """CRUX guard (2026-06-10): the pose-FiLM MUST modulate frame0 and frame1
+    INDEPENDENTLY. PoseNet measures the frame0<->frame1 DIFFERENTIAL (ego-motion),
+    so a single SHARED FiLM on the common feature has ~zero Jacobian in the
+    rewarded pose direction -> d_pose bounces (~0.4) and never reaches the tube.
+    Perturbing film0 ONLY must move frame0 and leave frame1 fixed; a regression
+    to a shared FiLM fails this test.
+    """
+    from tac.capstone_vq_nerv.vq_nerv_bundle import (
+        CapstoneVqNervBundle,
+        CapstoneVqNervConfig,
+    )
+
+    b = CapstoneVqNervBundle(CapstoneVqNervConfig(num_pairs=4, base_channels=16))
+    assert hasattr(b, "pose_film0") and hasattr(b, "pose_film1")
+    idx = mx.arange(4)
+    pose = mx.random.normal((4, 6))
+    base = np.asarray(b(idx, pose=pose))
+    bias = np.asarray(b.pose_film0.fc2.bias).copy()
+    bias[: b.feat_channels] += 0.5  # bump film0 gamma only
+    b.pose_film0.fc2.bias = mx.array(bias)
+    pert = np.asarray(b(idx, pose=pose))
+    d_f0 = float(np.abs(pert[:, 0] - base[:, 0]).max())
+    d_f1 = float(np.abs(pert[:, 1] - base[:, 1]).max())
+    assert d_f0 > 1.0, f"film0 must move frame0 (got {d_f0})"
+    assert d_f1 < 1e-4, f"film0 must NOT move frame1 — shared-FiLM regression (got {d_f1})"
+
+
+@skip_no_mlx
 def test_commitment_loss_nonzero_and_vq_ema_updates_codebook():
     """The VQ commitment loss is real (>0) and EMA actually mutates the codebook."""
     from tac.capstone_vq_nerv.vq_nerv_bundle import (

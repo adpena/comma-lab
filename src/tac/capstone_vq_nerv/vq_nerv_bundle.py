@@ -144,13 +144,27 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
             latent_dim=int(cfg.latent_dim),
             base_channels=int(cfg.base_channels),
         )
-        # FiLM-pose injection over the stem channels (channels[0]).
+        # PER-FRAME FiLM-pose injection over the FINAL feature channels
+        # (channels[-1], the rgb-head input). CRUX (2026-06-10): PoseNet measures
+        # ego-motion = the DIFFERENTIAL between frame0 and frame1, so a single
+        # FiLM on the SHARED feature (the prior design) has ~zero Jacobian in the
+        # rewarded pose direction (both frames modulated identically -> the pose
+        # cannot steer the frame0<->frame1 difference -> d_pose bounces ~0.4 and
+        # never reaches the tube). The fix (matching the #84 PoseFiLMDecoderMLX
+        # that held d_pose 2.7e-4) is SEPARATE film0/film1 modulating the feature
+        # DIFFERENTLY before each rgb head, giving direct control of the motion.
         self.stem_channels = int(self.decoder.channels[0])
+        self.feat_channels = int(self.decoder.channels[-1])
         self.film_enabled = bool(cfg.film_enabled)
         if self.film_enabled:
-            self.pose_film = _PoseFiLM(
+            self.pose_film0 = _PoseFiLM(
                 pose_dim=POSE_DIM,
-                channels=self.stem_channels,
+                channels=self.feat_channels,
+                hidden=int(cfg.film_hidden),
+            )
+            self.pose_film1 = _PoseFiLM(
+                pose_dim=POSE_DIM,
+                channels=self.feat_channels,
                 hidden=int(cfg.film_hidden),
             )
         # Pose standardization stats (set by the trainer from the stored pose).
@@ -197,18 +211,26 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         )
         x = mx.transpose(x, (0, 2, 3, 1))  # type: ignore[union-attr]  -> NHWC
         x = mx.sin(x)  # type: ignore[union-attr]
-        # FiLM-pose injection on the stem feature (NHWC, channels-last).
-        if self.film_enabled and pose is not None:
-            gamma, beta = self.pose_film(self._norm_pose(pose))  # (B, C) each
-            gamma = mx.reshape(gamma, (batch, 1, 1, self.stem_channels))  # type: ignore[union-attr]
-            beta = mx.reshape(beta, (batch, 1, 1, self.stem_channels))  # type: ignore[union-attr]
-            x = gamma * x + beta
         for block in dec.blocks:
             x = block(x)
         refined = dec.refine1(dec.refine0(x))
-        feat = x + 0.1 * mx.sin(refined)  # type: ignore[union-attr]
-        f0 = mx.sigmoid(dec.rgb_0(feat)) * 255.0  # type: ignore[union-attr]
-        f1 = mx.sigmoid(dec.rgb_1(feat)) * 255.0  # type: ignore[union-attr]
+        feat = x + 0.1 * mx.sin(refined)  # type: ignore[union-attr]  (B,H,W,feat_channels)
+        # PER-FRAME FiLM-pose injection: modulate the shared feature DIFFERENTLY
+        # for each frame head so the pose can steer the frame0<->frame1 motion
+        # (the rewarded PoseNet direction). Identity at init (zero-init fc2 ->
+        # gamma=1,beta=0) so the untrained render == the no-FiLM render.
+        if self.film_enabled and pose is not None:
+            pn = self._norm_pose(pose)
+            g0, b0 = self.pose_film0(pn)  # (B, feat_channels) each
+            g1, b1 = self.pose_film1(pn)
+            fc = self.feat_channels
+            feat0 = mx.reshape(g0, (batch, 1, 1, fc)) * feat + mx.reshape(b0, (batch, 1, 1, fc))  # type: ignore[union-attr]
+            feat1 = mx.reshape(g1, (batch, 1, 1, fc)) * feat + mx.reshape(b1, (batch, 1, 1, fc))  # type: ignore[union-attr]
+        else:
+            feat0 = feat
+            feat1 = feat
+        f0 = mx.sigmoid(dec.rgb_0(feat0)) * 255.0  # type: ignore[union-attr]
+        f1 = mx.sigmoid(dec.rgb_1(feat1)) * 255.0  # type: ignore[union-attr]
         pair = mx.stack([f0, f1], axis=1)  # type: ignore[union-attr]  (B,2,H,W,C)
         return mx.transpose(pair, (0, 1, 4, 2, 3))  # type: ignore[union-attr]  -> N2CHW
 
