@@ -72176,6 +72176,88 @@
       "reactivation_criteria": [
         "Frame-1 correction sidecar is info-theoretically incapable (1.525 B/flip position floor exceeds 1.27 LAW break-even). Reopen only via the decoder/latent axis (reduce the 819 systematic boundary-flip pixels paid in existing 91-percent decoder bytes) OR a flip class with per-fixed-flip value above 1.5e-6 (large pose co-gain) OR a vehicle whose seg errors are spatially dense enough that position entropy drops below 1 B/flip. See .omx/research/frontier_seg_repair_pool_verdict_20260610.md"
       ]
+    },
+    {
+      "id": "lane_pr110pp_r3_candidate_cuda_20260610",
+      "name": "PR110++ R3 CPU-frontier candidate \u2014 CUDA-axis transfer probe",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "0.22616377 [contest-CUDA] T4 fc-01KTQYSSV5PVR322RFBY771RK8 experiments/results/cuda_axis_frontier_eval_20260610/candidate_cuda_eval/contest_auth_eval.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cuda_axis_frontier_eval_verdict_20260610.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr106_format0d_cuda_frontier_control_20260610",
+      "name": "pr106 format0d CUDA frontier \u2014 same-session control re-eval",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "0.20533003 [contest-CUDA] T4 fc-01KTQYSVHNS2CWANF3CCZCANDG reproduces canonical pointer; experiments/results/cuda_axis_frontier_eval_20260610/control_cuda_eval/contest_auth_eval.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cuda_axis_frontier_eval_verdict_20260610.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72185,5 +72267,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T04:37:21Z"
+  "updated_at": "2026-06-10T05:11:13Z"
 }
