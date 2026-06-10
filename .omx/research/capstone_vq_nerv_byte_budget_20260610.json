@@ -1,0 +1,104 @@
+{
+  "schema": "capstone_byte_budget_measured.v1",
+  "axis_tag": "[exact byte measurement]",
+  "contest_source_bytes": 37545489,
+  "num_pairs": 600,
+  "rows": [
+    {
+      "base_channels": 36,
+      "decoder_params": 231559,
+      "decoder_dtype": "fp16",
+      "decoder_bytes": 389347,
+      "codebook_bytes": 12707,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 409118,
+      "rate_term": 0.27241,
+      "bytes_per_decoder_param": 1.681
+    },
+    {
+      "base_channels": 36,
+      "decoder_params": 231559,
+      "decoder_dtype": "int8",
+      "decoder_bytes": 228772,
+      "codebook_bytes": 6403,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 242239,
+      "rate_term": 0.1613,
+      "bytes_per_decoder_param": 0.988
+    },
+    {
+      "base_channels": 24,
+      "decoder_params": 114710,
+      "decoder_dtype": "fp16",
+      "decoder_bytes": 192445,
+      "codebook_bytes": 12718,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 212227,
+      "rate_term": 0.14131,
+      "bytes_per_decoder_param": 1.678
+    },
+    {
+      "base_channels": 24,
+      "decoder_params": 114710,
+      "decoder_dtype": "int8",
+      "decoder_bytes": 113001,
+      "codebook_bytes": 6345,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 126410,
+      "rate_term": 0.08417,
+      "bytes_per_decoder_param": 0.985
+    },
+    {
+      "base_channels": 20,
+      "decoder_params": 84901,
+      "decoder_dtype": "fp16",
+      "decoder_bytes": 142183,
+      "codebook_bytes": 12732,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 161979,
+      "rate_term": 0.10786,
+      "bytes_per_decoder_param": 1.675
+    },
+    {
+      "base_channels": 20,
+      "decoder_params": 84901,
+      "decoder_dtype": "int8",
+      "decoder_bytes": 83548,
+      "codebook_bytes": 6403,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 97015,
+      "rate_term": 0.0646,
+      "bytes_per_decoder_param": 0.984
+    },
+    {
+      "base_channels": 16,
+      "decoder_params": 59384,
+      "decoder_dtype": "fp16",
+      "decoder_bytes": 99364,
+      "codebook_bytes": 12742,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 119170,
+      "rate_term": 0.07935,
+      "bytes_per_decoder_param": 1.673
+    },
+    {
+      "base_channels": 16,
+      "decoder_params": 59384,
+      "decoder_dtype": "int8",
+      "decoder_bytes": 58381,
+      "codebook_bytes": 6523,
+      "index_bytes": 600,
+      "pose_bytes": 6448,
+      "total_bytes": 71968,
+      "rate_term": 0.04792,
+      "bytes_per_decoder_param": 0.983
+    }
+  ]
+}

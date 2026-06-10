@@ -532,3 +532,140 @@ def _make_small_bundle(num_pairs=8, K=256, latent_dim=28):
             num_pairs=num_pairs, latent_dim=latent_dim, codebook_size=K
         )
     )
+
+
+# ---------------------------------------------------------------------------
+# (6) REAL contest-scorer integration (skipped when the video/weights are absent)
+# ---------------------------------------------------------------------------
+
+import os  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+_HAVE_REAL_SCORER = (
+    Path("upstream/videos/0.mkv").exists()
+    and Path("upstream/modules.py").exists()
+)
+skip_no_real_scorer = pytest.mark.skipif(
+    not (_HAVE_REAL_SCORER and _HAVE_MLX),
+    reason="contest video / upstream scorer / mlx not available",
+)
+
+
+@skip_no_real_scorer
+@pytest.mark.slow
+def test_real_scorer_joint_loop_moves_seg_logits_and_holds_pose():
+    """REAL EfficientNet-B2 SegNet + FastViT PoseNet integration (the recipe-validation).
+
+    This is NOT a proto stand-in: it loads the actual frozen contest scorer +
+    caches GT SegNet-argmax/PoseNet targets from ``upstream/videos/0.mkv`` (via
+    ``frame_utils.yuv420_to_rgb`` only), then runs the joint score-aware loop
+    with the descent LRs for a few epochs on a tiny pair subset.
+
+    NO-FAKE assertions on the REAL scorer (not constants):
+      * the live SegNet CE seg-loss on the rendered frames strictly DECREASES
+        (the score gradient actually reaches the decoder through ``mx.vjp``);
+      * the re-measured PoseNet d_pose HOLDS (FiLM-pose injection does not blow
+        up the pose term);
+      * the descent is causal — a zeroed pixel-cotangent leaves the seg-loss
+        unchanged (the CONSTANT control on the REAL scorer).
+
+    It is ``@pytest.mark.slow`` + skipped when the upstream assets are absent
+    (CI / fresh-checkout safe). It is the reproducible form of the
+    ``capstone_recipe_validation`` driver behind the verdict memo.
+    """
+    import torch as _torch
+
+    from tac.capstone_vq_nerv.capstone_trainer import (
+        CapstoneTrainConfig,
+        CapstoneTrainer,
+    )
+    from tac.capstone_vq_nerv.vq_nerv_bundle import (
+        CapstoneVqNervBundle,
+        CapstoneVqNervConfig,
+    )
+    from tac.mlx_pr95_port.score_bridge import TorchScorerBridge
+    from tac.score_aware_loop.targets import (
+        build_gt_targets,
+        load_frozen_distortion_net,
+    )
+
+    n_pairs = int(os.environ.get("CAPSTONE_TEST_PAIRS", "4"))
+    epochs = int(os.environ.get("CAPSTONE_TEST_EPOCHS", "8"))
+
+    dnet = load_frozen_distortion_net(device="cpu")
+    seg_t, pose_t, n = build_gt_targets(dnet, max_pairs=n_pairs, device="cpu")
+    pose_store = pose_t.numpy().astype(np.float32)
+
+    bundle = CapstoneVqNervBundle(
+        CapstoneVqNervConfig(num_pairs=n, base_channels=36, seed=0)
+    )
+    bridge = TorchScorerBridge(
+        dnet, seg_t, pose_t, seg_loss_form="ce_seg_loss", eval_roundtrip=True
+    )
+    # The proto-test descent LRs (the config that descends off the wall); the
+    # PR95 defaults are tuned for the 600-pair/1000ep schedule, not a tiny probe.
+    cfg = CapstoneTrainConfig(
+        epochs=epochs, batch_size=min(8, n), eval_every=epochs, seed=0,
+        muon_lr=3e-2, adamw_lr=2e-2, grad_clip=50.0, grad_clip_muon=50.0,
+        ema_decay=0.95, commitment_weight=0.05, use_ema_for_eval=False,
+    )
+    trainer = CapstoneTrainer(bundle, bridge, pose_store, cfg)
+
+    idx = np.arange(n)
+    d_pose0 = trainer.mean_d_pose()
+    seg0 = bridge.loss_and_pixel_grad(
+        trainer._render(__mx_arr(idx), trainer._pose_mx(idx)),
+        _torch.from_numpy(idx.astype(np.int64)),
+    ).seg_loss_value
+    for _ in range(epochs):
+        trainer.step(idx)
+    seg1 = bridge.loss_and_pixel_grad(
+        trainer._render(__mx_arr(idx), trainer._pose_mx(idx)),
+        _torch.from_numpy(idx.astype(np.int64)),
+    ).seg_loss_value
+    d_pose1 = trainer.mean_d_pose()
+
+    # NO-FAKE: the REAL SegNet CE loss strictly decreases (gradient reaches decoder).
+    assert seg1 < seg0 - 1e-4, f"real-scorer seg-loss must move: {seg0} -> {seg1}"
+    # NO-FAKE: the re-measured REAL PoseNet d_pose holds (FiLM does not blow up pose).
+    assert d_pose1 <= d_pose0 + 1.0, f"real-scorer pose must hold: {d_pose0} -> {d_pose1}"
+
+    # CONSTANT control on the REAL scorer: a zeroed cotangent must NOT move seg-loss.
+    bundle_c = CapstoneVqNervBundle(
+        CapstoneVqNervConfig(num_pairs=n, base_channels=36, seed=0)
+    )
+    bundle_c.ema_update_from_last = lambda: None  # type: ignore[assignment]
+    cfg_c = CapstoneTrainConfig(
+        epochs=epochs, batch_size=min(8, n), eval_every=epochs, seed=0,
+        muon_lr=3e-2, adamw_lr=2e-2, grad_clip=50.0, grad_clip_muon=50.0,
+        commitment_weight=0.0, use_ema_for_eval=False,
+    )
+    trainer_c = CapstoneTrainer(bundle_c, bridge, pose_store, cfg_c)
+    real_lpg = bridge.loss_and_pixel_grad
+
+    def _zero_cot(render, i):
+        res = real_lpg(render, i)
+        res.pixel_cotangent = mx.zeros_like(res.pixel_cotangent)
+        return res
+
+    seg_c0 = real_lpg(
+        trainer_c._render(__mx_arr(idx), trainer_c._pose_mx(idx)),
+        _torch.from_numpy(idx.astype(np.int64)),
+    ).seg_loss_value
+    bridge.loss_and_pixel_grad = _zero_cot  # type: ignore[assignment]
+    try:
+        for _ in range(epochs):
+            trainer_c.step(idx)
+    finally:
+        bridge.loss_and_pixel_grad = real_lpg  # type: ignore[assignment]
+    seg_c1 = real_lpg(
+        trainer_c._render(__mx_arr(idx), trainer_c._pose_mx(idx)),
+        _torch.from_numpy(idx.astype(np.int64)),
+    ).seg_loss_value
+    assert abs(seg_c1 - seg_c0) < 1e-3, (
+        f"zero-cotangent control must NOT move real seg-loss: {seg_c0} -> {seg_c1}"
+    )
+
+
+def __mx_arr(idx_np):
+    return mx.array(idx_np.astype(np.int32))
