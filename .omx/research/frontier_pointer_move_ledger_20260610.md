@@ -21,7 +21,9 @@ with the latest pointer + whether it moved.
 | 2 | #72 lever-D margin-conditional residual | margin_residual | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | reusable rate-win | DEFER: RATE side WINS (0.856 B/flip < 1.27, overturns #51's 1.525 unconditional floor) but DISTORTION side DIES on receptive-field collateral (467 fixed / 2823 new-bad, net −2356; waterfill admits 0). True floor = collateral, not rate. Reactivate on contiguous-residual base (lever C / #73). |
 | 3 | #73 Dykstra legal-frame feasibility | dykstra_feasible_frame | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | sharp geometric finding | scorer_effect (holds BOTH terms at frontier: d_seg 0.00057, d_pose 2.40e-5 in-tube, 4/4) but cheap-feasible set EMPTY at low byte (≥625KB/pair generic basis; <400KB the pose tube breaks). PROVES feasibility≠generation + the 177KB learned HNeRV basis IS the cheap-feasible representation. Reactivation = Dykstra with C=learned manifold = subsumed by #71. |
 
-## Convergent meta-finding (3 no-moves)
+| 4 | #54 cross-pair pose corrector | cross_pair_corrector | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | paradigm proven, lever saturated | DEFER: cross-pair global-pool waterfilling PROVEN correct, but the frontier's FEC6 K=16 frame-0 selector is already per-pair POSE-OPTIMAL (0/42 improvable; constant-correction control +1.27e-3 worse → waterfiller load-bearing). Pose analog of #55. Region-allocator READY for a contiguous-residual lever-C base. |
+
+## Convergent meta-finding (4 no-moves)
 #64 (lossless exhausted) + #72 (residual codes cheap @0.856 B/flip but collateral kills application) + #73
 (generic-basis feasibility needs ≥625KB) all confirm from different directions: **the 177KB learned HNeRV
 nonlinear basis IS the cheap-feasible representation for holding pose+seg simultaneously.** The only
