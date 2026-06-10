@@ -223,6 +223,48 @@ class TorchScorerBridge:
         seg_out = self.dnet.segnet(segnet_in)
         return float(exact_d_seg_from_logits(seg_out, self.seg_targets_hard[idx]))
 
+    @torch.no_grad()
+    def exact_d_pose(self, render_n2chw: Any, idx: torch.Tensor) -> float:
+        """Return the EXACT live-render d_pose for a batch (the contest pose term).
+
+        The contest PoseNet term is ``MSE(pose_pred[:, :6], pose_target)`` — NOT the
+        ``sqrt(10*MSE)`` training surrogate. This returns the raw MSE d_pose so the
+        trainer/test can compare against the #74/#80 tube targets directly. Fails
+        closed if pose is not enabled (no PoseNet or no targets).
+        """
+        _require_mlx()
+        if not self.pose_enabled:
+            raise ValueError(
+                "exact_d_pose requires a PoseNet + pose_targets (pose not enabled)."
+            )
+        np_render = np.asarray(render_n2chw, dtype=np.float32)
+        leaf = torch.tensor(np_render, dtype=torch.float32)
+        b = leaf.shape[0]
+        flat = leaf.reshape(b * 2, 3, leaf.shape[-2], leaf.shape[-1])
+        if (int(flat.shape[-2]), int(flat.shape[-1])) != self.scorer_hw:
+            flat = F.interpolate(
+                flat, size=self.scorer_hw, mode="bilinear", align_corners=False
+            )
+        if self.eval_roundtrip:
+            cam_h = max(round(self.scorer_hw[0] * 874 / 384), self.scorer_hw[0] + 1)
+            cam_w = max(round(self.scorer_hw[1] * 1164 / 512), self.scorer_hw[1] + 1)
+            flat = apply_eval_roundtrip_during_training(
+                flat,
+                simulate_uint8=True,
+                simulate_resize=True,
+                ste_round=True,
+                target_h=cam_h,
+                target_w=cam_w,
+            )
+        else:
+            flat = flat.clamp(0.0, 255.0)
+        bchw = flat.reshape(b, 2, 3, self.scorer_hw[0], self.scorer_hw[1])
+        bhwc = bchw.permute(0, 1, 3, 4, 2).contiguous()
+        posenet_in, _ = self.dnet.preprocess_input(bhwc)
+        pose_out = self.dnet.posenet(posenet_in)
+        pose_pred = pose_out["pose"][:, :6]
+        return float(F.mse_loss(pose_pred, self.pose_targets[idx]).item())
+
 
 __all__ = [
     "CAMERA_HW",

@@ -44,6 +44,18 @@ from tac.mlx_pr95_port.mlx_trainer import (
     MlxScoreAwareConfig,
     MlxScoreAwareTrainer,
 )
+from tac.mlx_pr95_port.pose_film import (
+    POSE_DIM,
+    PoseFiLMDecoderMLX,
+    StoredPoseBundleMLX,
+    stored_pose_bytes,
+)
+from tac.mlx_pr95_port.pose_film_trainer import (
+    INSTABILITY_BLOWUP_FACTOR,
+    PoseFilmTrainer,
+    PoseFilmTrainerConfig,
+    StabilizedRecipe,
+)
 from tac.mlx_pr95_port.score_bridge import (
     CAMERA_HW,
     SCORER_HW,
@@ -53,16 +65,24 @@ from tac.mlx_pr95_port.score_bridge import (
 
 __all__ = [
     "CAMERA_HW",
+    "INSTABILITY_BLOWUP_FACTOR",
+    "POSE_DIM",
     "SCORER_HW",
     "STAGE_SEG_LOSS_FNS_MLX",
     "MlxScoreAwareConfig",
     "MlxScoreAwareTrainer",
+    "PoseFiLMDecoderMLX",
+    "PoseFilmTrainer",
+    "PoseFilmTrainerConfig",
     "ScoreBridgeResult",
+    "StabilizedRecipe",
+    "StoredPoseBundleMLX",
     "TorchScorerBridge",
     "ce_seg_loss_mlx",
     "exact_d_seg_from_logits_mlx",
     "l7_softplus_seg_loss_mlx",
     "pose_loss_mlx",
     "smooth_disagreement_seg_loss_mlx",
+    "stored_pose_bytes",
     "tau_softplus_seg_loss_mlx",
 ]
