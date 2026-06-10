@@ -1,0 +1,134 @@
+{
+  "subagent": "lever_b_score_native_argmax_smoke_20260610",
+  "utc": "2026-06-10T09:42:55Z",
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "config": {
+    "num_pairs": 16,
+    "epochs": 300,
+    "hinge_weight": 4.0,
+    "lr": 0.003,
+    "px_per_step": 8192,
+    "seed": 0,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 32,
+    "n_fourier": 16
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.46712,
+      "d_seg": 0.298586,
+      "wall_s": 0.2
+    },
+    {
+      "epoch": 25,
+      "train_loss": 0.08044,
+      "d_seg": 0.011805,
+      "wall_s": 1.0
+    },
+    {
+      "epoch": 50,
+      "train_loss": 0.0714,
+      "d_seg": 0.012243,
+      "wall_s": 1.8
+    },
+    {
+      "epoch": 75,
+      "train_loss": 0.06843,
+      "d_seg": 0.008723,
+      "wall_s": 2.6
+    },
+    {
+      "epoch": 100,
+      "train_loss": 0.0612,
+      "d_seg": 0.007611,
+      "wall_s": 3.4
+    },
+    {
+      "epoch": 125,
+      "train_loss": 0.05998,
+      "d_seg": 0.00709,
+      "wall_s": 4.1
+    },
+    {
+      "epoch": 150,
+      "train_loss": 0.05224,
+      "d_seg": 0.006449,
+      "wall_s": 4.9
+    },
+    {
+      "epoch": 175,
+      "train_loss": 0.05529,
+      "d_seg": 0.006326,
+      "wall_s": 5.7
+    },
+    {
+      "epoch": 200,
+      "train_loss": 0.05144,
+      "d_seg": 0.006156,
+      "wall_s": 6.5
+    },
+    {
+      "epoch": 225,
+      "train_loss": 0.05126,
+      "d_seg": 0.006203,
+      "wall_s": 7.3
+    },
+    {
+      "epoch": 250,
+      "train_loss": 0.04712,
+      "d_seg": 0.005574,
+      "wall_s": 8.1
+    },
+    {
+      "epoch": 275,
+      "train_loss": 0.04694,
+      "d_seg": 0.005751,
+      "wall_s": 8.9
+    },
+    {
+      "epoch": 300,
+      "train_loss": 0.05038,
+      "d_seg": 0.007249,
+      "wall_s": 9.7
+    }
+  ],
+  "final_d_seg": 0.007249,
+  "quantized_blob": {
+    "n_params": 66757,
+    "base_int8_raw_bytes": 66245,
+    "base_int8_brotli_bytes": 46564,
+    "mod_int8_raw_bytes": 512,
+    "mod_int8_brotli_bytes": 506,
+    "total_quantized_blob_bytes": 47070
+  },
+  "portability_parity": {
+    "max_abs_logit_diff": 1.337677001953125,
+    "max_rel_logit_diff": 0.005580448505733973,
+    "argmax_agreement": 1.0,
+    "parity_pass": true
+  },
+  "pose_carrier_bytes_from_targets": {
+    "shape": [
+      16,
+      6
+    ],
+    "raw_fp16_bytes": 192,
+    "fp16_brotli_q11_bytes": 196,
+    "delta_fp16_brotli_q11_bytes": 196,
+    "delta_fp16_lzma_xz_bytes": 252,
+    "best_pose_carrier_bytes": 196
+  },
+  "lever_g_interior_budget": {
+    "margin_positive_fraction": 1.0,
+    "frac_margin_gt_0.5": 0.9864282608032227,
+    "frac_margin_gt_1.0": 0.973841667175293,
+    "frac_margin_gt_2.0": 0.9522714614868164,
+    "frac_margin_gt_5.0": 0.8039569854736328,
+    "note": "lever G interior budget: fraction of px with large margin = free logit room"
+  }
+}

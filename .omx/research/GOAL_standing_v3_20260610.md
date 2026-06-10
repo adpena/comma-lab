@@ -102,5 +102,12 @@ both-axis paired, submission-blocked only on the `constriction`-allowlist operat
 DEFENSIVE bank, not the innovative submission). CUDA champion pr106 0.20533 (recode doesn't transfer).
 Frozen-byte rate axis EXHAUSTED at lossless (T1/T8/S12 negative; decoder 98.6% iid Shannon; latents
 per-dim marginal + cross-pair MI=0). Memorized-point retrain-continuation KILLED (degrades).
-LOWER: undirived — F (floor derivation) is itself a live lever. LIVE OFFENSIVE LEVERS toward
-T_1→T_3: A/B/C/D (class shifts), each $0-descent-smoked before campaign spend.
+LOWER: F floor derived (`information_theoretic_floor_T_floor`): T_3 is a DISTORTION threshold at
+constant bytes (0.135 at d_seg=d_pose=0); engineering ESTIMATE ~0.07-0.13, rate-binding. P6 (pose-output
+entropy) CLOSED by the lever-B smoke: full 600×6 pose trajectory = **6.65 KB** (advisory). LIVE OFFENSIVE
+LEVERS toward T_1→T_3: **B CONFIRMED + PROCEED-TO-CAMPAIGN** (2026-06-10
+`lever_b_score_native_argmax_smoke_verdict`: a tiny MLX label-map generator hits the frozen SegNet's
+600-argmax partition at d_seg=0.00826 in a 63,802-byte blob — 2.54× smaller than the frontier seg-share;
+score-native carrier seg+pose = 70,452 B vs frontier 177,169 B, −60% bytes, rate Δ −0.071; `[macOS-MLX
+research-signal]` advisory; NEXT = legal-frame variational bridge + paired CPU+CUDA exact eval). A/C/D
+remain class-shift levers; D/G/H/I stack on B's confirmed carrier.

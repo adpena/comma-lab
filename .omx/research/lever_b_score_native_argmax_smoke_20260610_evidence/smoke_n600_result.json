@@ -1,0 +1,98 @@
+{
+  "subagent": "lever_b_score_native_argmax_smoke_20260610",
+  "utc": "2026-06-10T10:01:17Z",
+  "evidence_grade": "[macOS-MLX research-signal]",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "config": {
+    "num_pairs": 600,
+    "epochs": 300,
+    "hinge_weight": 4.0,
+    "lr": 0.003,
+    "px_per_step": 8192,
+    "seed": 0,
+    "hidden_dim": 96,
+    "n_hidden": 4,
+    "mod_dim": 32,
+    "n_fourier": 16
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.23627,
+      "d_seg": 0.027675,
+      "wall_s": 5.8
+    },
+    {
+      "epoch": 50,
+      "train_loss": 0.07321,
+      "d_seg": 0.010747,
+      "wall_s": 83.7
+    },
+    {
+      "epoch": 100,
+      "train_loss": 0.06611,
+      "d_seg": 0.009191,
+      "wall_s": 167.1
+    },
+    {
+      "epoch": 150,
+      "train_loss": 0.06944,
+      "d_seg": 0.010406,
+      "wall_s": 251.9
+    },
+    {
+      "epoch": 200,
+      "train_loss": 0.06298,
+      "d_seg": 0.008187,
+      "wall_s": 333.8
+    },
+    {
+      "epoch": 250,
+      "train_loss": 0.06161,
+      "d_seg": 0.008506,
+      "wall_s": 417.4
+    },
+    {
+      "epoch": 300,
+      "train_loss": 0.06216,
+      "d_seg": 0.008257,
+      "wall_s": 498.9
+    }
+  ],
+  "final_d_seg": 0.008257,
+  "quantized_blob": {
+    "n_params": 85445,
+    "base_int8_raw_bytes": 66245,
+    "base_int8_brotli_bytes": 46914,
+    "mod_int8_raw_bytes": 19200,
+    "mod_int8_brotli_bytes": 16888,
+    "total_quantized_blob_bytes": 63802
+  },
+  "portability_parity": {
+    "max_abs_logit_diff": 297.33203125,
+    "max_rel_logit_diff": 0.006948511798693188,
+    "argmax_agreement": 1.0,
+    "parity_pass": true
+  },
+  "pose_carrier_bytes_from_targets": {
+    "shape": [
+      600,
+      6
+    ],
+    "raw_fp16_bytes": 7200,
+    "fp16_brotli_q11_bytes": 6650,
+    "delta_fp16_brotli_q11_bytes": 6824,
+    "delta_fp16_lzma_xz_bytes": 6944,
+    "best_pose_carrier_bytes": 6650
+  },
+  "lever_g_interior_budget": {
+    "margin_positive_fraction": 1.0,
+    "frac_margin_gt_0.5": 0.9861692470974392,
+    "frac_margin_gt_1.0": 0.97328611585829,
+    "frac_margin_gt_2.0": 0.9516470760769314,
+    "frac_margin_gt_5.0": 0.7962765757242839,
+    "note": "lever G interior budget: fraction of px with large margin = free logit room"
+  }
+}

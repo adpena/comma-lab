@@ -1,0 +1,49 @@
+{
+  "subagent": "lever_b_score_native_argmax_smoke_20260610",
+  "utc": "2026-06-10T09:52:19Z",
+  "evidence_grade": "[macOS-CPU advisory]",
+  "promotion_eligible": false,
+  "score_claim": false,
+  "video": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "num_pairs_requested": 600,
+  "num_pairs_built": 600,
+  "frames_decoded": 1200,
+  "seg_input_hw": [
+    384,
+    512
+  ],
+  "seg_argmax_px_per_map": 196608,
+  "decode_seconds": 8.46,
+  "score_seconds": 533.03,
+  "pose_trajectory": {
+    "shape": [
+      600,
+      6
+    ],
+    "raw_fp16_bytes": 7200,
+    "fp16_brotli_q11_bytes": 6650,
+    "delta_fp16_brotli_q11_bytes": 6824,
+    "delta_fp16_lzma_xz_bytes": 6944,
+    "best_pose_carrier_bytes": 6650
+  },
+  "segnet_margin": {
+    "margin_positive_fraction": 1.0,
+    "frac_margin_gt_0.5": 0.9861692470974392,
+    "frac_margin_gt_1.0": 0.97328611585829,
+    "frac_margin_gt_2.0": 0.9516470760769314,
+    "frac_margin_gt_5.0": 0.7962765757242839,
+    "note": "lever G interior budget: fraction of px with large margin = free logit room"
+  },
+  "argmax_class_histogram": {
+    "class_0_frac": 0.2323323991563585,
+    "class_1_frac": 0.005854619344075521,
+    "class_2_frac": 0.49517551845974395,
+    "class_3_frac": 0.012379328409830729,
+    "class_4_frac": 0.2542581346299913
+  },
+  "artifacts": {
+    "argmax_u8": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_argmax.u8",
+    "margin_f16": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_segnet_margin.f16",
+    "pose6_npy": "/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/targets_n600/gt_posenet_pose6.npy"
+  }
+}
