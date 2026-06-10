@@ -224,6 +224,55 @@ def test_ingest_contest_cpu_exact_is_score_roadmap_eligible(tmp_path: Path) -> N
     assert dec["promotion_update_eligible"] is False  # still needs the PAIRED cuda axis too
 
 
+def test_ingest_canonical_contest_auth_eval_json_schema(tmp_path: Path) -> None:
+    """REGRESSION (pr110pp_r1, 2026-06-10): the canonical contest_auth_eval.json
+    (the Modal CPU/CUDA auth-eval output) stores ``archive_size_bytes`` at TOP
+    LEVEL (not nested under ``b2`` and not as ``archive_bytes``) and the archive
+    sha under ``provenance.archive_sha256``. The ingest tool must read both so
+    direct contest_auth_eval.json ingest works — previously it raised
+    ``ValueError: ... archive_bytes (got ... bytes=None)``."""
+    mod = _load_tool()
+    pointer = _write_frontier_pointer(tmp_path, 0.19199)
+    p = tmp_path / "contest_auth_eval.json"
+    p.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "avg_segnet_dist": 0.00055979,
+                "avg_posenet_dist": 0.00015129,
+                "archive_size_bytes": 178520,  # top-level canonical field
+                "final_score": 0.21,
+                "score_recomputed_from_components": 0.2137441555314411,
+                "evidence_grade": "contest-CPU",
+                "score_axis": "contest_cpu",
+                "lane_tag": "[contest-CPU]",
+                # The REAL canonical contest_auth_eval.json has NO pipeline_works
+                # and NO b2 block; its success signal is score_claim_valid + a
+                # contest-axis evidence_grade.
+                "score_claim": True,
+                "score_claim_valid": True,
+                "n_samples": 600,
+                "provenance": {
+                    "archive_sha256": "6c8059a75929e34eeae700093481c73b9569d32e58e07c85b218b0b8cd2d49c1",
+                    "device": "cpu",
+                },
+            }
+        )
+    )
+    out = mod.ingest_exact_eval(
+        exact_eval_json=p, tag="contest_cpu_r1", output_dir=tmp_path, frontier_pointer=pointer
+    )
+    cae = out["candidate_action_evaluation"]
+    # bytes were read from top-level archive_size_bytes (no ValueError).
+    expected = 100.0 * 0.00055979 + math.sqrt(10.0 * 0.00015129) + 25.0 * 178520 / 37_545_489.0
+    assert cae["candidate_score"] == pytest.approx(expected, rel=1e-6)
+    # candidate sha read from provenance.archive_sha256.
+    assert cae["candidate_archive_sha256"].startswith("6c8059a7")
+    # contest-CPU exact metric is score-roadmap eligible (firewall passes the right row).
+    assert out["campaign_decision"]["authority_tier"] == "contest_cpu"
+    assert out["campaign_decision"]["metric_family"] == "exact_evaluate"
+
+
 def test_ingest_stale_base_mismatch_flagged(tmp_path: Path) -> None:
     mod = _load_tool()
     pointer = _write_frontier_pointer(tmp_path, 0.19199)

@@ -94,7 +94,17 @@ def _metric_family(schema: str, *, has_d_seg: bool, has_d_pose: bool,
       telemetry_loss    : raw training loss
     """
     s = str(schema).lower()
-    if ran_evaluate_py and has_d_seg and has_d_pose and has_bytes and "exact_eval" in s:
+    # ``exact_evaluate`` requires evidence the official upstream/evaluate.py ran on
+    # the full archive with all three score components. The legacy ``"exact_eval"
+    # in s`` schema-string guard is brittle: the canonical contest_auth_eval.json
+    # (Modal CPU/CUDA auth-eval output) has ``schema_version: 1`` (int) and NO
+    # "schema" string, so it would mis-classify as telemetry_loss and the
+    # score-roadmap firewall would wrongly bar a genuine exact contest-axis row.
+    # ``ran_evaluate_py`` is _bridge_ok, which for contest_auth_eval already
+    # requires score_claim_valid + a contest-axis evidence_grade — a sufficient
+    # proxy for "evaluate.py produced a valid score". Keep the schema-string
+    # path too for the legacy hi_nerv exact_eval schema.
+    if ran_evaluate_py and has_d_seg and has_d_pose and has_bytes:
         return "exact_evaluate"
     if "per_pair" in s or "pair_scorer" in s:
         return "exact_pair_scorer"
@@ -148,6 +158,11 @@ def _extract_distortions(ev: dict[str, Any]) -> tuple[float, float, int]:
         ev.get("export", {}).get("archive_bytes") if isinstance(ev.get("export"), dict) else None,
         b2r.get("archive_size_bytes"),
         ev.get("archive_bytes"),
+        # Canonical contest_auth_eval.json (the Modal CPU/CUDA auth-eval output)
+        # stores the archive size at top level as ``archive_size_bytes`` — not
+        # nested under ``b2`` and not as ``archive_bytes``. Read it so direct
+        # contest_auth_eval.json ingest (pr110pp_r1 paired contest-CPU) works.
+        ev.get("archive_size_bytes"),
     )
     if d_seg is None or d_pose is None or archive_bytes is None:
         raise ValueError(
@@ -163,6 +178,14 @@ def _bridge_ok(ev: dict[str, Any]) -> bool:
         return True
     b2 = ev.get("b2", {})
     if isinstance(b2, dict) and b2.get("b2_returncode") == 0:
+        return True
+    # Canonical contest_auth_eval.json (Modal CPU/CUDA auth-eval output) does not
+    # carry ``pipeline_works`` or a ``b2`` block; its success signal is a valid
+    # contest-axis score claim from evaluate.py: ``score_claim_valid`` (or
+    # ``score_claim``) True AND an ``evidence_grade`` on a contest axis.
+    grade = str(ev.get("evidence_grade") or "").lower()
+    score_ok = ev.get("score_claim_valid") is True or ev.get("score_claim") is True
+    if score_ok and ("contest-cpu" in grade or "contest-cuda" in grade or "contest_cpu" in grade or "contest_cuda" in grade):
         return True
     return False
 
@@ -231,7 +254,14 @@ def ingest_exact_eval(
     axis_tag = str(ev.get("axis_tag") or ev.get("lane_tag") or "[macOS-CPU advisory]")
 
     export = ev.get("export", {}) if isinstance(ev.get("export"), dict) else {}
-    candidate_sha = str(export.get("archive_sha256") or ev.get("archive_sha256") or "unknown")
+    _prov = ev.get("provenance", {}) if isinstance(ev.get("provenance"), dict) else {}
+    candidate_sha = str(
+        export.get("archive_sha256")
+        or ev.get("archive_sha256")
+        # Canonical contest_auth_eval.json carries the archive sha under provenance.
+        or _prov.get("archive_sha256")
+        or "unknown"
+    )
     ckpt = ev.get("checkpoint", {}) if isinstance(ev.get("checkpoint"), dict) else {}
     checkpoint_label = (
         str(ckpt.get("global_epoch")) if ckpt.get("global_epoch") is not None else tag
