@@ -72429,6 +72429,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_score_native_pose_carrier",
+      "name": "Score-native amortized pose carrier (#57)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/boundary_math/amortized_luma_carrier.py + 17 tests + byte-closed candidate (archive sha b971fe74, parity all_match=True)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/score_native_pose_carrier_20260610T125000Z.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true; DEFER-to-frame1-dual-fidelity. Carrier proven (d_pose 0.0036 frame0-only, 20x naive low-res) but full advisory S=11.65 (NOT beating frontier 0.191): palette frame1 pose-blind (12.14) + seg term 0.82. Reactivation: lever C joint seg+pose frame1 RGB carrier (converges to HNeRV-class). NO paired eval. [local CPU-torch advisory] non-promotable."
     }
   ],
   "level_rules": {
@@ -72438,5 +72479,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T09:19:10Z"
+  "updated_at": "2026-06-10T12:55:46Z"
 }
