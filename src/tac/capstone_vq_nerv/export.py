@@ -149,6 +149,79 @@ def _fp16_brotli(arrays: dict[str, np.ndarray]) -> bytes:
     return brotli.compress(bytes(parts), quality=11)
 
 
+def _zigzag_int8(arr_i8: np.ndarray) -> np.ndarray:
+    """Map signed int8 [-128,127] to unsigned uint8 via zigzag (PR95 L21).
+
+    Zigzag interleaves small-magnitude positive/negative values to small
+    unsigned codes, which brotli compresses far better than two's-complement
+    (the negative tail otherwise spans 0x80..0xFF).
+    """
+    x = arr_i8.astype(np.int16)
+    return ((x << 1) ^ (x >> 15)).astype(np.uint8)
+
+
+def _unzigzag_uint8(arr_u8: np.ndarray) -> np.ndarray:
+    """Inverse of :func:`_zigzag_int8` -> signed int8."""
+    u = arr_u8.astype(np.int16)
+    return ((u >> 1) ^ -(u & 1)).astype(np.int8)
+
+
+def _int8_brotli(arrays: dict[str, np.ndarray]) -> bytes:
+    """Serialize a name->array dict as per-tensor symmetric int8 + fp16 scale.
+
+    Each tensor is quantized ``q = round(w / scale)`` with
+    ``scale = max(|w|) / 127`` (PR95 L29 fp16-per-tensor-scale), zigzag-mapped
+    (L21), and the whole stream is brotli q11 (L32). This is the ~1-byte/param
+    entropy-coded path that the sub-0.15 byte budget requires (vs 2 bytes/param
+    fp16). The codec is exact-invertible (verified by the round-trip test).
+    """
+    _require_brotli()
+    parts = bytearray()
+    for name in sorted(arrays):
+        arr = np.asarray(arrays[name], dtype=np.float32)
+        amax = float(np.max(np.abs(arr))) if arr.size else 0.0
+        scale = (amax / 127.0) if amax > 0 else 1.0
+        q = np.round(arr / scale).astype(np.int32)
+        q = np.clip(q, -127, 127).astype(np.int8)
+        zz = _zigzag_int8(q)
+        name_b = name.encode("utf-8")
+        parts += struct.pack("<H", len(name_b)) + name_b
+        parts += struct.pack("<e", np.float16(scale))  # fp16 per-tensor scale
+        parts += struct.pack("<B", arr.ndim)
+        for d in arr.shape:
+            parts += struct.pack("<I", int(d))
+        parts += zz.tobytes()
+    return brotli.compress(bytes(parts), quality=11)
+
+
+def _decode_int8_brotli(blob: bytes) -> dict[str, np.ndarray]:
+    """Inverse of :func:`_int8_brotli` -> name->dequantized fp32 array (parity)."""
+    _require_brotli()
+    raw = brotli.decompress(blob)
+    out: dict[str, np.ndarray] = {}
+    off = 0
+    while off < len(raw):
+        (nlen,) = struct.unpack_from("<H", raw, off)
+        off += 2
+        name = raw[off : off + nlen].decode("utf-8")
+        off += nlen
+        (scale,) = struct.unpack_from("<e", raw, off)
+        off += 2
+        (ndim,) = struct.unpack_from("<B", raw, off)
+        off += 1
+        shape = []
+        for _ in range(ndim):
+            (d,) = struct.unpack_from("<I", raw, off)
+            off += 4
+            shape.append(int(d))
+        n = int(np.prod(shape)) if shape else 1
+        zz = np.frombuffer(raw[off : off + n], dtype=np.uint8)
+        off += n
+        q = _unzigzag_uint8(zz).astype(np.float32)
+        out[name] = (q * float(scale)).reshape(shape)
+    return out
+
+
 def build_capstone_archive_bytes(
     *,
     decoder_weights: dict[str, np.ndarray],
@@ -156,6 +229,7 @@ def build_capstone_archive_bytes(
     vq_indices: np.ndarray,
     pose_scalars: np.ndarray,
     codebook_size: int,
+    decoder_dtype: str = "fp16",
 ) -> tuple[bytes, CapstoneArchiveAccount]:
     """Byte-close the capstone archive and return ``(bytes, account)``.
 
@@ -165,12 +239,18 @@ def build_capstone_archive_bytes(
         vq_indices: ``(num_pairs,)`` per-pair codebook index (the bit-packed carrier).
         pose_scalars: ``(num_pairs, 6)`` stored GT pose (the FiLM carrier).
         codebook_size: K (determines the index bit width).
+        decoder_dtype: ``"fp16"`` (2 B/param, lossless baseline) or ``"int8"``
+            (per-tensor symmetric int8 + fp16 scale + zigzag + brotli, ~1 B/param
+            — the sub-0.15 byte-budget enabler; the PR95 L21/L29/L32 stack).
     """
     _require_brotli()
+    if decoder_dtype not in {"fp16", "int8"}:
+        raise ValueError(f"decoder_dtype must be 'fp16' or 'int8'; got {decoder_dtype!r}")
     num_pairs = int(np.asarray(vq_indices).shape[0])
 
-    dec_blob = _fp16_brotli(decoder_weights)
-    cb_blob = _fp16_brotli({"codebook": np.asarray(codebook)})
+    serialize = _int8_brotli if decoder_dtype == "int8" else _fp16_brotli
+    dec_blob = serialize(decoder_weights)
+    cb_blob = serialize({"codebook": np.asarray(codebook)})
     idx_blob = bit_pack_vq_indices(vq_indices, codebook_size)
     pose_blob = brotli.compress(
         np.asarray(pose_scalars, dtype=np.float16).tobytes(), quality=11
@@ -220,3 +300,8 @@ __all__ = [
     "build_capstone_archive_bytes",
     "parse_capstone_archive_bytes",
 ]
+
+
+# Re-exported for the round-trip parity test (NO-FAKE: the int8 codec is exact-
+# invertible up to the per-tensor quant step).
+_INT8_CODEC = (_int8_brotli, _decode_int8_brotli)

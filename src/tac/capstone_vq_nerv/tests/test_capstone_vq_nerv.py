@@ -465,6 +465,62 @@ def test_codebook_is_paid_once_not_per_pair():
     assert cb_small == cb_big  # codebook paid once, not per-pair
 
 
+def test_int8_codec_round_trip_is_exact_quant():
+    """The int8+brotli codec is exact-invertible up to the per-tensor quant step."""
+    from tac.capstone_vq_nerv.export import _INT8_CODEC
+
+    enc, dec = _INT8_CODEC
+    rng = np.random.default_rng(7)
+    arrays = {"a": rng.standard_normal((32, 8)).astype(np.float32) * 0.3,
+              "b": rng.standard_normal((5, 3)).astype(np.float32)}
+    blob = enc(arrays)
+    back = dec(blob)
+    for k, v in arrays.items():
+        amax = float(np.max(np.abs(v)))
+        scale = amax / 127.0
+        # NO-FAKE: dequant error is bounded by HALF the quant step PLUS the fp16
+        # scale-rounding term (scale stored as fp16 -> at most ~127*scale*2^-11
+        # extra). This is the exact analytic bound of a per-tensor int8 codec.
+        bound = scale * 0.5 + 127.0 * scale * (2.0**-10) + 1e-6
+        assert float(np.max(np.abs(back[k] - v))) <= bound
+
+
+@skip_no_mlx
+def test_int8_decoder_halves_bytes_vs_fp16():
+    """The int8 decoder path is ~2x smaller than fp16 (the sub-0.15 enabler)."""
+    bundle = _make_small_bundle(num_pairs=600, K=256, latent_dim=28)
+    decoder_weights = {
+        k: np.asarray(v) for k, v in tree_flatten(bundle.decoder.parameters())
+    }
+    cb = np.asarray(bundle.quantizer.codebook)
+    vq = bundle.all_vq_indices()
+    pose = np.zeros((600, 6), np.float32)
+    kw = {
+        "decoder_weights": decoder_weights, "codebook": cb, "vq_indices": vq,
+        "pose_scalars": pose, "codebook_size": 256,
+    }
+    _, acct_fp16 = build_capstone_archive_bytes(**kw, decoder_dtype="fp16")
+    _, acct_int8 = build_capstone_archive_bytes(**kw, decoder_dtype="int8")
+    # NO-FAKE: int8 decoder really is materially smaller (real entropy coding).
+    assert acct_int8.decoder_bytes < acct_fp16.decoder_bytes * 0.7
+    # the carriers (index/pose) are dtype-independent and stay tiny.
+    assert acct_int8.index_bytes == 600
+    assert acct_int8.total_bytes < acct_fp16.total_bytes
+
+
+def test_int8_archive_rejects_bad_dtype():
+    rng = np.random.default_rng(0)
+    with pytest.raises(ValueError):
+        build_capstone_archive_bytes(
+            decoder_weights={"w": rng.standard_normal((4, 4)).astype(np.float32)},
+            codebook=rng.standard_normal((16, 8)).astype(np.float32),
+            vq_indices=np.zeros(10, np.int32),
+            pose_scalars=np.zeros((10, 6), np.float32),
+            codebook_size=16,
+            decoder_dtype="bf8",
+        )
+
+
 def _make_small_bundle(num_pairs=8, K=256, latent_dim=28):
     from tac.capstone_vq_nerv.vq_nerv_bundle import (
         CapstoneVqNervBundle,
