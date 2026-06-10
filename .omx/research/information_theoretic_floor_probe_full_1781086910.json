@@ -1,0 +1,89 @@
+{
+  "schema": "information_theoretic_floor_seg_pose.v1",
+  "evidence_grade": "[macOS-CPU advisory]",
+  "promotable": false,
+  "score_claim": false,
+  "n_frames_sampled": 600,
+  "pair_stride": 1,
+  "segnet_argmax_hw": [
+    384,
+    512
+  ],
+  "n_pix_per_frame": 196608,
+  "rate_denominator_D": 37545489,
+  "seg": {
+    "total_boundary_steps_sampled": 1619917,
+    "total_regions_sampled": 21304,
+    "mean_boundary_steps_per_frame": 2699.8616666666667,
+    "mean_regions_per_frame": 35.50666666666667,
+    "mean_boundary_frac": 0.006866103278266059,
+    "contour_geometry_bits_sampled_log2_3": 2567507.6992807128,
+    "region_label_bits_sampled": 24027.31947387372,
+    "total_contour_bits_sampled": 2591535.0187545866,
+    "iid_argmax_bits_sampled": 190573054.37568474,
+    "spatial_context_bits_sampled": 2443249.308948657,
+    "temporal_context_bits_sampled": 2027307.7104023227,
+    "proj600_contour_bytes": 323941.8773443233,
+    "proj600_spatial_context_bytes": 305406.1636185821,
+    "proj600_temporal_context_bytes": 253413.46380029034,
+    "proj600_iid_bytes": 23821631.796960592,
+    "proj600_contour_rate": 0.21569959932092198,
+    "proj600_spatial_rate": 0.20335742838412765,
+    "proj600_temporal_rate": 0.1687376237131246
+  },
+  "pose": {
+    "traj_min": -0.13190977275371552,
+    "traj_max": 35.05402374267578,
+    "traj_std_per_dim": [
+      1.2563401460647583,
+      0.035748083144426346,
+      0.029887238517403603,
+      0.009566331282258034,
+      0.007394511252641678,
+      0.028622552752494812
+    ],
+    "results": {
+      "target_0.0172": {
+        "induced_d_pose": 2.958399999999999e-05,
+        "pose_term": 0.017199999999999997,
+        "delta": 0.007692073842599276,
+        "raw_quant_bits": 14424.316738668496,
+        "temporal_delta_bits": 12456.720764803633,
+        "bytes_temporal_delta": 1557.090095600454
+      },
+      "target_0.01": {
+        "induced_d_pose": 1e-05,
+        "pose_term": 0.01,
+        "delta": 0.00447213595499958,
+        "raw_quant_bits": 16792.600843244156,
+        "temporal_delta_bits": 14732.897810811297,
+        "bytes_temporal_delta": 1841.6122263514121
+      },
+      "target_0.005": {
+        "induced_d_pose": 2.5e-06,
+        "pose_term": 0.005,
+        "delta": 0.00223606797749979,
+        "raw_quant_bits": 19788.269472349388,
+        "temporal_delta_bits": 17755.654094926387,
+        "bytes_temporal_delta": 2219.4567618657984
+      },
+      "target_0.002": {
+        "induced_d_pose": 4.0000000000000003e-07,
+        "pose_term": 0.002,
+        "delta": 0.0008944271909999159,
+        "raw_quant_bits": 23490.940078181768,
+        "temporal_delta_bits": 21606.304600030166,
+        "bytes_temporal_delta": 2700.7880750037707
+      },
+      "target_0.001": {
+        "induced_d_pose": 1.0000000000000001e-07,
+        "pose_term": 0.001,
+        "delta": 0.00044721359549995795,
+        "raw_quant_bits": 26063.311335984356,
+        "temporal_delta_bits": 24297.323614176177,
+        "bytes_temporal_delta": 3037.165451772022
+      }
+    }
+  },
+  "elapsed_s": 567.5153112411499
+}

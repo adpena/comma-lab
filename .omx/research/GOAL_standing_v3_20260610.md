@@ -102,9 +102,17 @@ both-axis paired, submission-blocked only on the `constriction`-allowlist operat
 DEFENSIVE bank, not the innovative submission). CUDA champion pr106 0.20533 (recode doesn't transfer).
 Frozen-byte rate axis EXHAUSTED at lossless (T1/T8/S12 negative; decoder 98.6% iid Shannon; latents
 per-dim marginal + cross-pair MI=0). Memorized-point retrain-continuation KILLED (degrades).
-LOWER: F floor derived (`information_theoretic_floor_T_floor`): T_3 is a DISTORTION threshold at
-constant bytes (0.135 at d_seg=d_pose=0); engineering ESTIMATE ~0.07-0.13, rate-binding. P6 (pose-output
-entropy) CLOSED by the lever-B smoke: full 600×6 pose trajectory = **6.65 KB** (advisory). LIVE OFFENSIVE
+LOWER: **S_floor = 0.11797** [macOS-CPU advisory, MEASURED] (`information_theoretic_floor_report_v1`,
+2026-06-10: rate of the smallest MEASURED cell-landing achiever = frontier 177,169 B at d_seg=d_pose=0;
+headroom T_hold−S_floor = 0.07313, all recoverable seg+pose distortion; RATE-dominated, no nontrivial
+proven sub-floor: Kolmogorov-uncomputable). T_3 sub-0.15 is a DISTORTION threshold at constant bytes
+(frontier scores 0.11797 < 0.15 at zero distortion). MEASURED partition-direct seg floor = 253,413 B →
+rate 0.169 (optimal spatial+temporal context coder, the tightest achievable, subsumes contour) — this
+LOSES to the amortized decoder's 0.118, so the closed-spec "store the partition directly" premise is
+rate-FALSE; amortization wins. P6 RESOLVED: pose-output temporal-delta entropy = **1,557 B** at the
+frontier op-point (0.88% of S_floor; the 6.65 KB lever-B figure is raw-not-delta). Sub-0.118 needs a
+*smaller amortizer* (lever A/C) — direct-storage classes proven to lose. (Prior `T_floor` v1 framing
+[~0.07-0.13 ESTIMATE / 0.135] superseded by this measurement.) LIVE OFFENSIVE
 LEVERS toward T_1→T_3: **B CONFIRMED + PROCEED-TO-CAMPAIGN** (2026-06-10
 `lever_b_score_native_argmax_smoke_verdict`: a tiny MLX label-map generator hits the frozen SegNet's
 600-argmax partition at d_seg=0.00826 in a 63,802-byte blob — 2.54× smaller than the frontier seg-share;
