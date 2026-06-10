@@ -96,8 +96,23 @@ relaunched at `experiments/results/capstone_daemon_b16_n100_perframe/`.
    `[seg-argmax blob] ⊕ [6-scalar pose-FiLM]` — each scored quantity in its OWN minimal representation —
    rather than one shared RGB renderer. Build this if the 100-pair run holds pose but stalls d_seg at 64 KB.
 
+## CONFIG: the sub-0.15 capacity ladder (MEASURED byte budget, `capstone_byte_budget.py`)
+int8 600-pair archive rate by base_channels (sub-0.15 rate budget if d_seg→5.6e-4 + d_pose→tube is
+**< 0.077 = 115,640 B**):
+| base_ch | dec_params | total_B | rate | sub-0.15? |
+|---|---:|---:|---:|---|
+| 16 | 59,608 | 72,014 | 0.0479 | YES (conservative floor) |
+| **20** | **85,125** | **97,025** | **0.0646** | **YES — the sub-0.15 CAPACITY CEILING** |
+| 24 | 114,934 | 126,690 | 0.0844 | no (overshoots budget) |
+| 36 | 231,783 | 242,448 | 0.1614 | no |
+**Decision (evidence-driven):** the decisive viability test is the LARGEST sub-0.15-capable config —
+**base_ch=20** (+43% decoder capacity vs 16) — because the hard target d_seg→5.6e-4 came from a 162K-param
+decoder; if even base_ch=20 (85K) can't reach it, the architecture is the ceiling; if it does, sub-0.15 is
+PROVEN and we optimize *down* to 16 for lower rate. Switched the running daemon 16→20 (only ~8 min in;
+GT cache persists). base_ch≥24 overshoots the byte budget. This is the capacity refinement of v2 lever 1.
+
 ## Harvest contract (next session / wakeup)
-Read `experiments/results/capstone_daemon_b16_n100_perframe/capstone_result.json` (final) OR `tail` the
+Read `experiments/results/capstone_daemon_b20_n100_perframe/capstone_result.json` (final) OR `tail` the
 latest daemon log (`.omx/tmp/capstone_daemon/LATEST_LOG.txt`) for the eval_every=5 RD trajectory.
 **Decisive read: does d_pose now HOLD/descend toward the tube (crux fixed) vs bounce ~0.4 (old shared
 FiLM)?** Route: (a) d_pose holds + d_seg descends → fund the 600-pair candidate (needs the MLX→torch port
