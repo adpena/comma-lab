@@ -143,17 +143,26 @@ def numpy_reference_forward(
     n_hidden: int,
     hidden_dim: int,
 ) -> np.ndarray:
-    """Pure-numpy mirror of ScoreNativeSegGenerator.__call__ (portability contract)."""
+    """Pure-numpy mirror of ScoreNativeSegGenerator.__call__ (portability contract).
+
+    Computed in float64 to avoid fp32-accumulation overflow on trained nets with
+    large activations; the contract this verifies is ARGMAX-parity (the score-native
+    quantity d_seg reads), which is invariant to this accumulation precision.
+    """
+    coords = coords.astype(np.float64)
+    fourier_B = fourier_B.astype(np.float64)
+    mod_vec = mod_vec.astype(np.float64)
+    p = {k: v.astype(np.float64) for k, v in params.items()}
     proj = coords @ fourier_B
     feat = np.concatenate([np.sin(proj), np.cos(proj)], axis=-1)
-    h = np.maximum(feat @ params["in_proj.weight"].T + params["in_proj.bias"], 0.0)
-    film = mod_vec @ params["film.weight"].T + params["film.bias"]
+    h = np.maximum(feat @ p["in_proj.weight"].T + p["in_proj.bias"], 0.0)
+    film = mod_vec @ p["film.weight"].T + p["film.bias"]
     film = film.reshape(n_hidden, 2, hidden_dim)
     for li in range(n_hidden):
         scale = 1.0 + film[li, 0]
         shift = film[li, 1]
-        h = np.maximum((h @ params[f"hidden.{li}.weight"].T + params[f"hidden.{li}.bias"]) * scale + shift, 0.0)
-    return h @ params["out.weight"].T + params["out.bias"]
+        h = np.maximum((h @ p[f"hidden.{li}.weight"].T + p[f"hidden.{li}.bias"]) * scale + shift, 0.0)
+    return h @ p["out.weight"].T + p["out.bias"]
 
 
 def _build_coords(h: int, w: int) -> mx.array:
