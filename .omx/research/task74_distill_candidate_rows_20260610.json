@@ -1,0 +1,24 @@
+{
+  "frontier_baseline": {
+    "score": 0.19109982419209975,
+    "bytes": 177169,
+    "sha256": "b46897267ded1e73a581dad57143f6c1cd181b515479d4efce40e4536d50e73e"
+  },
+  "rows": [
+    {
+      "size_label": "80kb",
+      "lever_id": "task74_distill_student_80kb",
+      "bytes_after": 103515,
+      "d_seg_after": 0.25170135498046875,
+      "d_pose_after": 192.0576629638672,
+      "score_after": 69.06344584946373,
+      "score_before": 0.19109982419209975,
+      "delta_score_total": 68.87234602527164,
+      "pointer_update_eligible": false,
+      "authority_tier": "exact_cpu_advisory",
+      "metric_family": "exact_pair_scorer"
+    }
+  ],
+  "best_advisory_delta_s": 68.87234602527164,
+  "schema": "scorer_quotient_candidate_row.v1"
+}

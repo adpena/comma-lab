@@ -25,17 +25,26 @@ with the latest pointer + whether it moved.
 
 | 5 | #71 Q* structural compression | structural_compression | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | original method (exact codec-grammar byte re-encoder + per-tensor exact-scorer cost/kB ablation + 0.000666/kB feasibility threshold) | DEFER: RATE side is REAL+LARGE (magnitude prune keep0.7 −20,741 B = sub-0.18, keep0.3 −68,657 B = sub-0.15 by rate alone) but DISTORTION DIES at 70–370× the feasibility threshold. SVD/low-rank INCREASES bytes +9–14% (dense weights r95≈78% full rank; break-even rank > r95; re-quant breaks brotli structure). Per-tensor exact-scorer ablation: cheapest tensor (blocks.1) +0.0485 score/kB vs the 0.000666/kB net-negative threshold = 73× over. Score-aware Taylor prune (|g·w|, diff pose+seg-KL) is WORSE than magnitude (keep0.6 ΔS +1.423 vs +1.309) — the learned weights are JOINTLY ENTANGLED, no score-irrelevant sparse subset exists. PROVES the 162 KB learned basis is at its DISTORTION-HOLDING FLOOR (minimal for the SCORE, not just a memorized point). Reactivation = score-domain RETRAINED smaller renderer (funded KD/QAT campaign) — the only path that relocates the floor; post-hoc compression of frozen weights is closed. |
 
-## Convergent meta-finding (5 no-moves)
+| 6 | #74 distill to smaller learned student | structural_compression (distill) | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | original method (recon-primary KD onto the teacher's decoded frames + measured PoseNet pose-tube width curve) | DEFER: directly tests #71's reactivation (the "score-domain RETRAINED smaller renderer"). The teacher-frame KD BREAKS the #62 d_seg wall DIRECTIONALLY (80kb 2-pair student exact d_seg 0.2517 = HALF the constant floor 0.5069, where #62 argmax-CE-on-GT pinned AT the floor) — training on the teacher's already-argmax-correct frames gives the gradient #62 lacked. BUT exact d_pose = 189 (8M× the teacher's 2.3e-5, WORSE than the constant control 26): the proxy pose-MSE-to-teacher converged to 0.0005 yet the exact d_pose vs GT is catastrophic. ROOT CAUSE (measured pose-tube-width probe): to hold d_pose≈2.9e-5 the student must reproduce the teacher's frames to RMSE<3 (per-pixel error <±5/255); RMSE 5.8→11×, RMSE 23→780×. A small student decoding 384×512 reaches only RMSE~40-50 = far outside the tube = CAPACITY wall, not a training issue. Convergent with #62/#73/#71: the 177KB learned HNeRV basis is the cheap-tube-holding representation. Reactivation: (1) pose-frame decoupling — distill ONLY frame1 small + carry frame0 as a near-lossless residual (frame0 is SegNet-invisible, pure pose carrier, dominant failure: studF1+teachF0 d_pose 17 vs both 189); (2) PoseNet-FEATURE distill (match teacher FastViT activations, not pose-blind pixels); (3) #71 (compress the proven-tube-holding teacher) DOMINATES #74 (re-learn a basis that loses the tube) at this operating point. |
+
+## Convergent meta-finding (6 no-moves)
 #64 (lossless exhausted) + #72 (residual codes cheap @0.856 B/flip but collateral kills application) + #73
 (generic-basis feasibility needs ≥625KB) + #71 (the LEARNED basis itself cannot be pruned/factored ~73× cheaper
-than the rate it buys; SVD even costs bytes) all confirm from FIVE directions (incl #54 pose-selector
-saturation): **the 162 KB learned HNeRV nonlinear basis IS the cheap-feasible representation for holding
-pose+seg simultaneously, and it is at its DISTORTION-HOLDING FLOOR.** It is minimal for the SCORE — not an
+than the rate it buys; SVD even costs bytes) + #54 (pose-selector saturation) + #74 (a fresh SMALLER learned
+student distilled onto teacher frames breaks the #62 d_seg wall directionally but CANNOT hold the PoseNet tube —
+the tube needs frame-RMSE<3 / ±5-per-255, a near-frontier-capacity wall) all confirm from SIX directions:
+**the 162–177 KB learned HNeRV nonlinear basis IS the cheap-feasible representation for holding pose+seg
+simultaneously, and it is at its DISTORTION-HOLDING FLOOR.** It is minimal for the SCORE — not an
 over-parameterized memorized point. No post-hoc operation on the frozen frontier weights lowers the rate term
-without an equal-or-larger distortion penalty. The ONLY remaining sub-frontier path is a SMALLER LEARNED basis
-obtained by SCORE-DOMAIN RETRAINING (distill/QAT a renderer at a smaller architecture against
-`α·B + β·d_seg + γ·√d_pose`, NOT post-hoc), which relocates the floor itself. This is a funded long-training
-campaign, not a $0–$1 transform.
+without an equal-or-larger distortion penalty; AND a fresh smaller architecture trained to mimic the teacher
+loses the pose tube the teacher's full capacity holds. The remaining sub-frontier paths are: (a) SCORE-DOMAIN
+RETRAINING that relocates the floor (distill/QAT against `α·B + β·d_seg + γ·√d_pose` directly, NOT
+recon-to-teacher — see #75's harness-bug root cause below); (b) pose-frame decoupling (#74 reactivation: distill
+frame1 small + carry frame0 as a near-lossless pose residual); (c) PoseNet-FEATURE distill (not pose-blind
+pixels). All are funded long-training campaigns, not $0–$1 transforms. **#74 sharpens #71's reactivation: the
+binding constraint is not the distillation but the PoseNet tube width — even a perfectly-trained smaller mimic
+fails it; the score-domain Lagrangian (which spends capacity on the tube-relevant pixels) is the only retrain
+that can both shrink bytes and hold the tube.**
 
 ## ROOT CAUSE PINPOINTED (#75 elephant + #68 fleet audit, 2026-06-10)
 The whole d_seg≈0.50–0.71 plateau across ALL 30+ NeRV substrates (our killed/deferred fleet, the
