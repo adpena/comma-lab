@@ -72130,6 +72130,51 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_frontier_seg_repair_pool_20260610",
+      "name": "Frontier seg-repair pool flip-map + carrier verdict (#51)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/results/frontier_seg_repair_pool_20260610/build_flip_map.py + screen_repair_atoms.py + screen_gradient_repair.py + test_shared_carrier_composed.py + test_carrier_economics.py (4 NO-FAKE tests pass)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/frontier_seg_repair_pool_verdict_20260610.md (DEFER-pending-new-carrier; info-theoretic floor 1.525 B/flip > 1.27 break-even)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "[macOS-CPU advisory] DEFER-pending-new-carrier. Flip-map: 66039 flips, d_seg 5.598e-4 matches frontier 5.598e-4. 3 carriers falsified (appearance-gap increases d_seg; gradient-sign fails LAW value/cost 0.43; shared-field increases composed d_seg). NO dispatch (local kill-gate). Sister of pr110pp_r3 selector (pose axis).",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Frame-1 correction sidecar is info-theoretically incapable (1.525 B/flip position floor exceeds 1.27 LAW break-even). Reopen only via the decoder/latent axis (reduce the 819 systematic boundary-flip pixels paid in existing 91-percent decoder bytes) OR a flip class with per-fixed-flip value above 1.5e-6 (large pose co-gain) OR a vehicle whose seg errors are spatially dense enough that position entropy drops below 1 B/flip. See .omx/research/frontier_seg_repair_pool_verdict_20260610.md"
+      ]
     }
   ],
   "level_rules": {
@@ -72139,5 +72184,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T03:58:15Z"
+  "updated_at": "2026-06-10T04:25:26Z"
 }
