@@ -73,6 +73,19 @@ while the live render fell 84% — some past "no descent" verdicts may be EMA-sh
 Next: #81 (re-test the pose-capacity-wall #74 on the working loop) → #82 (1:1 MLX port, parity-gated, fixes
 the SegNet-NaN) → #78 (the capstone, on the working loop).
 
+## ★ POSE VERDICT (#80, 2026-06-10) — pose is REAL geometry (unlike d_seg), but sub-0.15 doesn't need the tube
+The pose-sensitive subspace is RANK-1 (eff dim ≈1.07; top singular = 99.97% energy; 6 dims read ~one
+scalar projection; pose-null = 99.999% of pixel space). BUT the linear pose-null is TANGENT-only — error
+confined to it caps d_pose at 1e-4–5e-2 (above the 2.9e-5 tube) and grows with RMSE via SECOND-ORDER
+curvature. So the pose-capacity-wall (#74) is REAL GEOMETRY, not an inert-loop artifact (d_seg dissolved on
+#76; pose does NOT). frame0 carries ~20× more pose debt than frame1. **RECONCILIATION (keeps sub-0.15 alive):
+sub-0.15 does NOT need the pose TUBE (2.9e-5).** S=100·d_seg+√(10·d_pose)+25·B/D at a retrained small basis:
+d_seg≈5.6e-4 (0.056, reachable via the #76 loop) + d_pose≈1e-4 (pose-term 0.0316, the GOOD end of the
+tangent-null band) + rate≈0.04-0.06 (~60KB) = ≈0.13 < 0.15. The pose wall blocks matching the FRONTIER tube
+cheaply; it does NOT block sub-0.15 (trade tube-precision for rate). OPEN ESCAPE (untested, highest-EV $0 pose
+probe): second-order Gauss-Newton curvature-aware protection (leading eigenvectors of JᵀJ, not the linear
+Jacobian rows) — the frontier's learned basis is the curvature-preserving rep.
+
 ## Pending movers (will append a row on landing, via the schema firewall)
 - #69 score-aware Q* re-quant (rate) · ~~#71 Q* structural compression~~ (CLOSED post-hoc; reopens only as score-domain RETRAINING)
 - #72 lever-D margin-conditional residual coder (d_seg) · #54 cross-pair waterfilled corrector (pose)
