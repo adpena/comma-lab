@@ -1,0 +1,12 @@
+{
+  "height": 32,
+  "n_classes": 5,
+  "n_regions": 12,
+  "note": "output = region_of (H,W) int32 LE raster; 4-connectivity, per-class then component",
+  "promotion_eligible": false,
+  "region_of_dtype": "int32_le",
+  "schema": "connected_components.v1",
+  "score_claim": false,
+  "sha256": "ab8cd4b51cf39712395bf44acb42006be9079b3603c90e8ae876255604247888",
+  "width": 48
+}

@@ -1,0 +1,13 @@
+{
+  "d_seg": 0.01904296875,
+  "flip_count": 117,
+  "height": 64,
+  "n_classes": 5,
+  "n_pixels": 6144,
+  "note": "output blob = flip_count(u64 LE) || d_seg(f64 LE)",
+  "promotion_eligible": false,
+  "schema": "dseg_popcount.v1",
+  "score_claim": false,
+  "sha256": "00608c5f0d4ac065bbfa765a5125bbfd670027c5c2c4beade7c2ccab855b34e2",
+  "width": 96
+}

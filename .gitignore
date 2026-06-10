@@ -546,3 +546,10 @@ submission_packets/
 # rules above ignore neighboring JSON/log files.
 !.omx/state/lane_registry.json
 !.omx/state/lane_maturity_audit.log
+
+# tac-boundary-decode golden-vector input fixtures (task #58) — tiny (~28K total),
+# deterministic, regenerable via generate_golden_vectors.py, and REQUIRED for the
+# Rust↔Python bit-identical parity gate. The broad `*.bin` rule above would
+# otherwise hide them; track them as committed conformance fixtures (sibling of
+# tac-packet-compiler's golden-vector fixture pattern).
+!runtime-rs/crates/tac-boundary-decode/golden_vectors/*.bin

@@ -8,6 +8,7 @@ members = [
   "crates/raw-writer",
   "crates/residual-codec",
   "crates/stbm1br-codec",
+  "crates/tac-boundary-decode",
   "crates/tac-packet-compiler",
   "crates/zipwire"
 ]

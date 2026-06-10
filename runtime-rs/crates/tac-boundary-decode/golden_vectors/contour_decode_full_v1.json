@@ -1,0 +1,16 @@
+{
+  "height": 384,
+  "lc": 0,
+  "lp": 0,
+  "lzma2_preset_extreme_level9": true,
+  "n_classes": 5,
+  "note": "decoded-raw sha; Rust liblzma RAW-LZMA2 decode must match byte-for-byte",
+  "payload_len": 174,
+  "pb": 0,
+  "promotion_eligible": false,
+  "raw_decoded_len": 196608,
+  "schema": "contour_decode.v1",
+  "score_claim": false,
+  "sha256": "0fb4d848bd334c3442fb371463833e235685f01b8457c2c08018e08b96907a9d",
+  "width": 512
+}

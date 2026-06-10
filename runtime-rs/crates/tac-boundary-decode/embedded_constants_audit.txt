@@ -1,0 +1,28 @@
+embedded_constants_audit.txt — tac-boundary-decode
+Generated 2026-06-10T12:37:50Z by task #58 native-runtime-lowering subagent.
+VERDICT: ZERO learned/video-derived constants embedded. Only structural codec/connectivity config.
+
+=== Every const/static in src/ (the complete embedded-constant set) ===
+crates/tac-boundary-decode/src/components.rs:70:    const NEIGH: [(isize, isize); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+crates/tac-boundary-decode/src/contour.rs:29:const LZMA_PRESET_LEVEL_9: u32 = 9;
+crates/tac-boundary-decode/src/contour.rs:30:const LZMA_LC: u32 = 0;
+crates/tac-boundary-decode/src/contour.rs:31:const LZMA_LP: u32 = 0;
+crates/tac-boundary-decode/src/contour.rs:32:const LZMA_PB: u32 = 0;
+
+Classification:
+  LZMA_PRESET_LEVEL_9 = 9   -> LZMA codec config (= contour_codec._LZMA_FILTERS preset). STRUCTURAL.
+  LZMA_LC/LP/PB       = 0   -> LZMA literal/position bits (= _LZMA_FILTERS). STRUCTURAL.
+  NEIGH [4 offsets]         -> 4-connectivity neighbours (= partition._CONN4). STRUCTURAL.
+
+=== Forbidden-payload grep (one allowed test-only hit, classified below) ===
+crates/tac-boundary-decode/src/conformance.rs:94:        let expected = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  -> NOT embedded payload: canonical SHA-256 of the EMPTY string, inside a
+     #[cfg(test)] unit test (asserts sha256_hex(b"") == e3b0c4...). Test-only,
+     compiled out of the shipping decode path. NOT video/learned data.
+
+=== rlib size (pure code, no data tables) ===
+-rw-r--r--@ 1 adpena  staff  230928 Jun 10 07:36 target/release/deps/libtac_boundary_decode-6289b9915eecedf2.rlib
+
+=== example binary segment sizes (no large __DATA weight blob) ===
+__TEXT	__DATA	__OBJC	others	dec	hex
+311296	16384	0	4295114752	4295442432	100074000

@@ -1,0 +1,14 @@
+{
+  "height": 16,
+  "lc": 0,
+  "lp": 0,
+  "n_classes": 5,
+  "payload_len": 53,
+  "pb": 0,
+  "promotion_eligible": false,
+  "raw_decoded_len": 384,
+  "schema": "contour_decode.v1",
+  "score_claim": false,
+  "sha256": "56f2b7292f6336e8b986669a2d43e08f9894a16f10f3d86d269198429b90928f",
+  "width": 24
+}

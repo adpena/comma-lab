@@ -1,0 +1,61 @@
+# `tac-boundary-decode` — Rust native port for the SETTLED score-native carrier
+# DECODE primitives in `src/tac/boundary_math/`.
+#
+# Status (2026-06-10, task #58): native eval-time DECODE-side primitives lowered
+# per CLAUDE.md "Native eval-time runtime discipline". The Python oracle in
+# `src/tac/boundary_math/` stays canonical; this crate matches it byte-for-byte
+# on the committed golden vectors (the *decoded raw output* SHA-256 must match
+# Python's, per `assert_sha256_parity`).
+#
+# Primitives lowered (PROVEN-hot / SETTLED only, grammar-first):
+#   1. contour codec DECODE  — `decode_partition` (RAW-LZMA2 bytes -> label map).
+#      The same liblzma C library Python's stdlib `lzma` wraps; RAW-LZMA2 with
+#      lc=0/lp=0/pb=0 bit-stream parity is the design target.
+#   2. d_seg popcount         — `flip_count` + `d_seg_reference` (popcount XOR of
+#      two integer label arrays). Eval-side kernel, reusable.
+#   3. connected components   — `connected_components` (4-connectivity region
+#      label map; raster-scan first-pixel id order matches scipy.ndimage.label).
+#
+# OUT OF SCOPE (NO FAKE — no settled Python oracle to match bit-for-bit):
+#   * generator-blob int8+brotli DECODE — Python only has a size *estimator*
+#     (`_quantize_blob_bytes`), NOT an inverse decode grammar. Deferred until the
+#     grammar is finalized (sister of task #57 luma carrier).
+#   * luma carrier decode (task #57) — grammar not yet final. Deferred.
+#
+# PAYLOAD CLEANLINESS (CLAUDE.md "Native eval-time runtime discipline"): this
+# crate's source is PURE DECODE LOGIC. ZERO learned / video-derived constants are
+# embedded in the binary. The only structural constants are tensor-shape /
+# connectivity / class-count literals. See `binary_source_audit.md` +
+# `embedded_constants_audit.txt`.
+#
+# Per CLAUDE.md "Rust/Zig is a speed layer, not a license to change semantics":
+# Python remains the oracle until native parity is proven on the golden vectors.
+
+[package]
+name = "tac-boundary-decode"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Rust native port for the settled score-native carrier DECODE primitives in tac.boundary_math; byte-for-byte parity GREEN against the Python oracle on committed golden vectors."
+homepage = "https://github.com/adpena/comma-lab"
+documentation = "https://github.com/adpena/comma-lab#readme"
+repository = "https://github.com/adpena/comma-lab"
+readme = "README.md"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+# liblzma — Rust bindings to the *same* liblzma C library that Python's stdlib
+# `lzma` module wraps. RAW-LZMA2 (FILTER_LZMA2) bit-stream parity is the design
+# target for the contour codec's `decode_partition`.
+liblzma = "0.4"
+
+# JSON for loading golden-vector manifests under tests + diagnostics.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# SHA-256 for byte-for-byte parity verification against committed vectors.
+sha2 = "0.10"
+
+# Hex encoding for human-readable SHA-256 diff diagnostics.
+hex = "0.4"

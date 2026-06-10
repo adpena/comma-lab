@@ -1367,6 +1367,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tac-boundary-decode"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "liblzma",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "tac-packet-compiler"
 version = "0.2.0-rc1"
 dependencies = [

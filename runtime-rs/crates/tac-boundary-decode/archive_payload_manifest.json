@@ -1,0 +1,64 @@
+{
+  "crate": "tac-boundary-decode",
+  "purpose": "Native DECODE-side port of the settled score-native carrier primitives in src/tac/boundary_math/. Payload-cleanliness manifest per CLAUDE.md 'Native eval-time runtime discipline': declares what bytes the ARCHIVE carries vs what the BINARY carries.",
+  "generated_utc": "2026-06-10",
+  "task": "#58 (operator: lower settled score-native carrier decode primitives into Rust)",
+  "what_the_archive_carries": {
+    "contour_payload": "The RAW-LZMA2-compressed per-pixel uint8 SegNet argmax label map (the partition L*). This is the score-relevant, video-derived data. It lives in archive.zip and is byte-charged in the rate term (25*B/D). The Rust decoder READS it; it does NOT embed it.",
+    "rate_charged": true,
+    "produced_by": "src/tac/boundary_math/contour_codec.py::encode_partition (the Python oracle / encoder)"
+  },
+  "what_the_binary_carries": {
+    "decode_logic": "FIXED, rate-free decode code: RAW-LZMA2 decompress + reshape (contour), popcount-XOR (d_seg), raster flood-fill 4-connectivity (connected components).",
+    "embedded_constants": [
+      {"name": "LZMA preset level 9 | EXTREME", "kind": "codec config", "source_of_truth": "contour_codec._LZMA_FILTERS", "learned_or_video_derived": false},
+      {"name": "lc=0, lp=0, pb=0", "kind": "LZMA literal/position bits", "source_of_truth": "contour_codec._LZMA_FILTERS", "learned_or_video_derived": false},
+      {"name": "4-connectivity neighbour offsets", "kind": "connectivity config", "source_of_truth": "partition._CONN4", "learned_or_video_derived": false}
+    ],
+    "learned_constants_embedded": 0,
+    "video_derived_constants_embedded": 0,
+    "rate_charged": false,
+    "rationale": "Per CLAUDE.md 'Native eval-time runtime discipline': native eval-time code is FORBIDDEN as a carrier for any learned or video-derived constant outside archive.zip. The binary is the decoder BODY; the data is the archive payload."
+  },
+  "primitives_lowered": [
+    {
+      "name": "contour codec decode",
+      "rust_fn": "contour::decode_partition_raw / decode_partition_hw",
+      "python_oracle": "tac.boundary_math.contour_codec.decode_partition",
+      "golden_vectors": ["contour_decode_full_v1", "contour_decode_small_v1"],
+      "parity": "bit-identical (decoded-raw SHA-256 == Python oracle)",
+      "settled": true
+    },
+    {
+      "name": "d_seg popcount",
+      "rust_fn": "dseg::flip_count / dseg::d_seg",
+      "python_oracle": "tac.boundary_math.bitmask_dseg.flip_count / d_seg_reference",
+      "golden_vectors": ["dseg_popcount_v1"],
+      "parity": "bit-identical (flip_count||d_seg blob SHA-256 == Python oracle)",
+      "settled": true
+    },
+    {
+      "name": "connected components (4-connectivity region map)",
+      "rust_fn": "components::connected_components",
+      "python_oracle": "tac.boundary_math.partition.connected_components",
+      "golden_vectors": ["connected_components_v1"],
+      "parity": "bit-identical (region_of int32 LE raster SHA-256 == Python oracle); verified scipy.ndimage.label component ids follow first-pixel raster-scan order == raster flood-fill",
+      "settled": true
+    }
+  ],
+  "primitives_deferred_out_of_scope": [
+    {
+      "name": "generator-blob int8+brotli decode",
+      "reason": "NO settled Python oracle: tools/lever_b_score_native_argmax_smoke.py::_quantize_blob_bytes is a byte-SIZE ESTIMATOR only (quantize+brotli to measure bytes), with NO inverse decode grammar. Lowering it would require inventing a grammar with no oracle to match bit-for-bit (NO FAKE violation). Deferred until the grammar is finalized.",
+      "handoff": "lower once the score-native generator archive grammar settles (sister of task #57)"
+    },
+    {
+      "name": "luma carrier decode (task #57)",
+      "reason": "grammar not yet final per the task #58 scope note",
+      "handoff": "lower once task #57 settles"
+    }
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "evidence_grade": "native-parity-verified (bit-identical to Python oracle on committed golden vectors); wall-clock speedup is [advisory], not a contest-score claim"
+}
