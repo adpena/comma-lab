@@ -43,6 +43,7 @@ here updates the score roadmap (per the metric-laundering firewall).
 
 from __future__ import annotations
 
+import itertools
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -87,11 +88,29 @@ only the free-set coefficients are coarsened, so the section's atlas distortion
 value is scaled by the FREE fraction (fragile pixels contribute ~0 to the
 given-up distortion because their coefficients are preserved)."""
 
+ACTION_QUANTIZE_TEMPORAL_SEGMENT = "quantize_delta_temporal_segment"
+"""Coarsen the section by a quantization step Δ ONLY on the pairs of a contiguous
+TEMPORAL SEGMENT (e.g. pairs 426-442) that the
+``tac.optimization.evaluator_response_atlas.EvaluatorResponseAtlas`` cross-video
+ranking flags as carrying the most joint-safe budget. This is the TEMPORAL (cross-
+video) refinement that the per-pixel cone cannot see: the cone says which frame1
+pixel inside ONE pair has budget; the atlas says which PAIRS across the 600-pair
+video carry the most budget. The Δbytes accounting charges the section bytes freed
+(proportional to the segment's pair-count share × the coarsen ratio) MINUS the
+per-pair coarsen-segment mask's OWN coding cost (which pairs are coarsened, bit-
+packed + brotli q=11) — the temporal mask pays rent exactly like the spatial cone
+mask: a mask whose coding cost exceeds the bytes it frees is rejected by THE LAW.
+The distortion given up is segment-budget-weighted: the high-budget segments are BY
+ATLAS CONSTRUCTION the low-sensitivity pairs (large usable cone budget), so the
+per-pair distortion they give up is scaled DOWN relative to a whole-video coarsen
+of the same pair-count fraction (the dispatch-order advantage)."""
+
 _ACTION_KINDS = (
     ACTION_DROP,
     ACTION_QUANTIZE,
     ACTION_RECODE,
     ACTION_QUANTIZE_CONE_MASKED,
+    ACTION_QUANTIZE_TEMPORAL_SEGMENT,
 )
 
 
@@ -530,6 +549,272 @@ def estimate_mask_coding_cost_bytes(free_mask: Any) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Evaluator response atlas DISPATCH ORDER input — the cross-video targeting
+# layer the per-pixel cone cannot reach (#36 -> #46).
+# ---------------------------------------------------------------------------
+# The atlas (tac.optimization.evaluator_response_atlas) ranks all 600 pairs by
+# integrated joint-safe budget (``pair_budget``) and by fragile fraction. That
+# cross-video ranking is the DISPATCH ORDER: coarsen the high-budget temporal
+# segments FIRST, protect the fragile clusters LAST. The cone says which frame1
+# pixel inside ONE pair is free; the atlas says which PAIRS across the video are
+# free. They compose (temporal segment selection × per-pixel cone mask).
+
+
+def temporal_mask_coding_cost_bytes(coarsen_pair_mask: Any) -> int:
+    """Real coding cost (bytes) of the per-pair keep/coarsen boolean mask.
+
+    The temporal mask MUST pay rent exactly like the spatial cone mask: it is a
+    sidecar the receiver needs to know WHICH PAIRS were coarsened. We MEASURE its
+    cost (not guess): bit-pack the per-pair boolean coarsen mask then brotli q=11
+    (CLAUDE.md L32). A contiguous temporal segment (a run of True) compresses
+    extremely well (run-length-friendly); a scattered per-pair selection does not
+    — and the cost correctly reflects that. The downstream exact re-measure refines
+    it, but the planner already charges the mask its measured rent so a temporal
+    mask whose cost exceeds the bytes it frees is rejected by THE LAW."""
+    import numpy as _np
+
+    m = _np.asarray(coarsen_pair_mask).astype(bool).ravel()
+    try:
+        import brotli  # type: ignore[import-not-found]
+    except ModuleNotFoundError:  # pragma: no cover - brotli is a runtime dep
+        # No brotli: a strictly LARGER (more conservative) bit-packed RAW size.
+        return int(_np.packbits(m).nbytes)
+    packed = _np.packbits(m).tobytes()
+    coded = brotli.compress(packed, quality=11)
+    return len(coded)
+
+
+@dataclass(frozen=True)
+class TemporalSegment:
+    """A contiguous run of pairs the atlas flags for targeted coarsening / protection.
+
+    ``pair_indices`` is the contiguous block (e.g. (426, 427, ..., 442)).
+    ``mean_pair_budget`` is the atlas integrated joint-safe budget averaged over
+    the segment (the rate-attack ranking key). ``is_protect`` marks a FRAGILE
+    cluster the rate attack must NOT touch (dispatched LAST + flagged)."""
+
+    pair_indices: tuple[int, ...]
+    mean_pair_budget: float
+    is_protect: bool = False
+    role: str = "high_budget"
+    """``high_budget`` (coarsen first) or ``fragile_protect`` (protect, last)."""
+
+    def __post_init__(self) -> None:
+        if not self.pair_indices:
+            raise LfPayloadRateDistortionError(
+                "TemporalSegment.pair_indices must be non-empty"
+            )
+        for p in self.pair_indices:
+            if int(p) < 0:
+                raise LfPayloadRateDistortionError(
+                    f"TemporalSegment pair index must be non-negative; got {p!r}"
+                )
+        # Must be a contiguous run (sorted, consecutive). The temporal mask's
+        # run-length compressibility (its rent advantage) DEPENDS on contiguity.
+        idxs = list(self.pair_indices)
+        if idxs != sorted(idxs):
+            raise LfPayloadRateDistortionError(
+                "TemporalSegment.pair_indices must be sorted ascending"
+            )
+        for a, b in itertools.pairwise(idxs):
+            if int(b) != int(a) + 1:
+                raise LfPayloadRateDistortionError(
+                    "TemporalSegment.pair_indices must be contiguous (a run of "
+                    f"consecutive pairs); got a gap between {a} and {b}"
+                )
+
+    @property
+    def length(self) -> int:
+        return len(self.pair_indices)
+
+    @property
+    def start(self) -> int:
+        return int(self.pair_indices[0])
+
+    @property
+    def end(self) -> int:
+        return int(self.pair_indices[-1])
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "pair_indices": list(self.pair_indices),
+            "start": self.start,
+            "end": self.end,
+            "length": self.length,
+            "mean_pair_budget": float(self.mean_pair_budget),
+            "is_protect": bool(self.is_protect),
+            "role": self.role,
+        }
+
+
+def _contiguous_runs(pair_indices: Sequence[int]) -> list[tuple[int, ...]]:
+    """Group a set of pair indices into contiguous runs (sorted)."""
+    s = sorted({int(p) for p in pair_indices})
+    if not s:
+        return []
+    runs: list[list[int]] = [[s[0]]]
+    for p in s[1:]:
+        if p == runs[-1][-1] + 1:
+            runs[-1].append(p)
+        else:
+            runs.append([p])
+    return [tuple(r) for r in runs]
+
+
+@dataclass(frozen=True)
+class EvaluatorAtlasDispatch:
+    """The cross-video DISPATCH ORDER derived from an evaluator response atlas.
+
+    Extracts the contiguous high-budget temporal segments (coarsen FIRST) and the
+    contiguous fragile clusters (protect, dispatch LAST) from the atlas's 600-pair
+    ranking. This is the targeting layer the per-pixel cone cannot reach: it tells
+    the waterfiller WHICH PAIRS across the video carry the most joint-safe budget so
+    the rate attack coarsens those segments first and never touches the fragile ones.
+
+    ``n_pairs`` is the total pair count (the temporal-mask denominator). The
+    per-pair budget map is the atlas's ``pair_budget`` per pair. ``source_path`` +
+    ``source_sha256`` cite the atlas JSONL (fail-closed provenance)."""
+
+    n_pairs: int
+    pair_budget: Mapping[int, float]
+    high_budget_segments: tuple[TemporalSegment, ...]
+    fragile_segments: tuple[TemporalSegment, ...]
+    source_path: str = ""
+    source_sha256: str = ""
+    axis_tag: str = "[macOS-CPU advisory]"
+
+    def __post_init__(self) -> None:
+        if int(self.n_pairs) <= 0:
+            raise LfPayloadRateDistortionError(
+                "EvaluatorAtlasDispatch.n_pairs must be positive"
+            )
+        if not self.pair_budget:
+            raise LfPayloadRateDistortionError(
+                "EvaluatorAtlasDispatch.pair_budget is empty — the atlas had no "
+                "per-pair budget rows (stale/missing index). Refusing to dispatch."
+            )
+        if self.source_path and str(self.source_path).startswith("/tmp"):
+            raise LfPayloadRateDistortionError(
+                "EvaluatorAtlasDispatch.source_path must be durable (not /tmp)"
+            )
+
+    @property
+    def max_pair_budget(self) -> float:
+        return max(float(v) for v in self.pair_budget.values())
+
+    @classmethod
+    def from_atlas(
+        cls,
+        atlas: Any,
+        *,
+        top_k_budget: int = 10,
+        top_k_fragile: int = 10,
+        source_path: str = "",
+        source_sha256: str = "",
+    ) -> EvaluatorAtlasDispatch:
+        """Build the dispatch order from an
+        :class:`tac.optimization.evaluator_response_atlas.EvaluatorResponseAtlas`.
+
+        The high-budget temporal segments are the contiguous runs among the top-k
+        highest-``pair_budget`` pairs (e.g. 426-442 + 577-579). The fragile
+        segments are the contiguous runs among the top-k most-fragile pairs (e.g.
+        510-522 + 133 + 177-178). The cone-vs-atlas advantage is that these
+        clusters are TEMPORALLY contiguous (the atlas headline confirmed this), so
+        the per-pair coarsen mask compresses to a few run-length bytes."""
+        rows = list(getattr(atlas, "rows", ()))
+        if not rows:
+            raise LfPayloadRateDistortionError(
+                "atlas has no rows — cannot derive a dispatch order (stale/empty index)"
+            )
+        n_pairs = len(rows)
+        pair_budget = {
+            int(r.pair_index): float(r.joint_cone_summary.pair_budget) for r in rows
+        }
+        top_budget = atlas.top_budget_pairs(min(int(top_k_budget), n_pairs))
+        top_fragile = atlas.most_fragile_pairs(min(int(top_k_fragile), n_pairs))
+        budget_pairs = [int(r.pair_index) for r in top_budget]
+        fragile_pairs = [int(r.pair_index) for r in top_fragile]
+
+        high_segments: list[TemporalSegment] = []
+        for run in _contiguous_runs(budget_pairs):
+            mb = sum(pair_budget.get(p, 0.0) for p in run) / float(len(run))
+            high_segments.append(
+                TemporalSegment(
+                    pair_indices=run,
+                    mean_pair_budget=mb,
+                    is_protect=False,
+                    role="high_budget",
+                )
+            )
+        # coarsen the highest-budget segment first.
+        high_segments.sort(key=lambda s: s.mean_pair_budget, reverse=True)
+
+        fragile_set = set(fragile_pairs)
+        frag_segments: list[TemporalSegment] = []
+        for run in _contiguous_runs(fragile_pairs):
+            mb = sum(pair_budget.get(p, 0.0) for p in run) / float(len(run))
+            frag_segments.append(
+                TemporalSegment(
+                    pair_indices=run,
+                    mean_pair_budget=mb,
+                    is_protect=True,
+                    role="fragile_protect",
+                )
+            )
+        # Drop any high-budget segment pair that is ALSO flagged fragile (never
+        # coarsen a protected pair). A whole high segment intersecting the fragile
+        # set is split to its non-fragile contiguous sub-runs.
+        cleaned_high: list[TemporalSegment] = []
+        for seg in high_segments:
+            keep = [p for p in seg.pair_indices if p not in fragile_set]
+            for run in _contiguous_runs(keep):
+                mb = sum(pair_budget.get(p, 0.0) for p in run) / float(len(run))
+                cleaned_high.append(
+                    TemporalSegment(
+                        pair_indices=run,
+                        mean_pair_budget=mb,
+                        is_protect=False,
+                        role="high_budget",
+                    )
+                )
+        cleaned_high.sort(key=lambda s: s.mean_pair_budget, reverse=True)
+
+        return cls(
+            n_pairs=n_pairs,
+            pair_budget=pair_budget,
+            high_budget_segments=tuple(cleaned_high),
+            fragile_segments=tuple(frag_segments),
+            source_path=str(source_path),
+            source_sha256=str(source_sha256),
+            axis_tag=str(getattr(atlas, "provenance", {}).get("axis_tag", "[macOS-CPU advisory]")),
+        )
+
+    def coarsen_pair_mask(self, segment: TemporalSegment) -> Any:
+        """Boolean ``(n_pairs,)`` per-pair coarsen mask for a temporal segment.
+
+        True at the segment's pairs (the receiver coarsens these pairs' frame1
+        payload), False elsewhere. This is the sidecar that pays temporal rent."""
+        import numpy as _np
+
+        mask = _np.zeros(int(self.n_pairs), dtype=bool)
+        for p in segment.pair_indices:
+            if 0 <= int(p) < int(self.n_pairs):
+                mask[int(p)] = True
+        return mask
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "n_pairs": int(self.n_pairs),
+            "source_path": self.source_path,
+            "source_sha256": self.source_sha256,
+            "axis_tag": self.axis_tag,
+            "max_pair_budget": self.max_pair_budget,
+            "high_budget_segments": [s.to_row() for s in self.high_budget_segments],
+            "fragile_segments": [s.to_row() for s in self.fragile_segments],
+        }
+
+
+# ---------------------------------------------------------------------------
 # The score-unit primitives (the LAW expressed exactly once).
 # ---------------------------------------------------------------------------
 def delta_pose_score(d_pose_base: float, d_pose_after: float) -> float:
@@ -793,6 +1078,17 @@ class CandidateActionEvaluation:
     atlas_scope_valid: bool
     scope_reason: str
     baseline: BaselineScoreTerms
+    dispatch_order: int | None = None
+    """Cross-video DISPATCH ORDER assigned by the evaluator response atlas: a rank
+    (0 = dispatch FIRST). High-budget temporal segments get LOW orders (coarsen
+    first); fragile-cluster actions get the HIGHEST orders (dispatch last). ``None``
+    when no atlas was supplied (the plan ranks by value_per_byte only)."""
+    protect_set: bool = False
+    """True when the action touches a FRAGILE cluster the atlas flagged for
+    protection (dispatched LAST). A protect-set action is never coarsened; it is
+    surfaced so the rate attack avoids it."""
+    segment: TemporalSegment | None = None
+    """The temporal segment this action coarsens (only for temporal-segment actions)."""
 
     def __post_init__(self) -> None:
         if self.action_kind not in _ACTION_KINDS:
@@ -904,6 +1200,10 @@ class CandidateActionEvaluation:
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
             "requires_exact_remeasure": True,
+            # Cross-video DISPATCH ORDER from the evaluator response atlas.
+            "dispatch_order": self.dispatch_order,
+            "protect_set": bool(self.protect_set),
+            "temporal_segment": self.segment.to_row() if self.segment is not None else None,
         }
 
 
@@ -1164,6 +1464,243 @@ def build_cone_masked_quantize_action(
     return action, accounting
 
 
+@dataclass(frozen=True)
+class TemporalSegmentActionAccounting:
+    """Byte + distortion accounting of a temporal-segment quantize action (audit surface).
+
+    Decomposable per signal (CLAUDE.md "Max observability"): a reviewer sees exactly
+    how the segment's pair-count share, the temporal-mask rent, and the budget-weighted
+    distortion produced the net bytes / distortion."""
+
+    segment_length: int
+    n_pairs: int
+    pair_fraction: float
+    """segment_length / n_pairs — the temporal share of the section's bytes coarsened."""
+    gross_bytes_freed: int
+    """Bytes freed by coarsening the segment pairs at step Δ (before temporal rent)."""
+    temporal_mask_coding_cost_bytes: int
+    """The per-pair coarsen mask's OWN coding cost (bit-pack + brotli q=11)."""
+    net_bytes_freed: int
+    """gross_bytes_freed - temporal_mask_coding_cost_bytes (the temporal mask pays rent)."""
+    value_kept_fraction: float
+    distortion_weight: float
+    """Weight on the section's atlas distortion value = pair_fraction × budget_discount.
+    The high-budget segments are BY ATLAS CONSTRUCTION the low-sensitivity pairs, so the
+    budget_discount (= mean segment budget / max pair budget, in (0, 1]) scales the
+    distortion DOWN relative to a whole-video coarsen of the same pair-count fraction —
+    the dispatch-order advantage. (A low-budget segment would have discount ~1: no
+    advantage, the honest fail-safe.)"""
+    budget_discount: float
+    quantize_step: float
+    mean_pair_budget: float
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "segment_length": int(self.segment_length),
+            "n_pairs": int(self.n_pairs),
+            "pair_fraction": self.pair_fraction,
+            "gross_bytes_freed": int(self.gross_bytes_freed),
+            "temporal_mask_coding_cost_bytes": int(self.temporal_mask_coding_cost_bytes),
+            "net_bytes_freed": int(self.net_bytes_freed),
+            "value_kept_fraction": self.value_kept_fraction,
+            "distortion_weight": self.distortion_weight,
+            "budget_discount": self.budget_discount,
+            "quantize_step": self.quantize_step,
+            "mean_pair_budget": self.mean_pair_budget,
+        }
+
+
+def build_temporal_segment_quantize_action(
+    section: PayloadSection,
+    estimate: SectionSensitivityEstimate,
+    baseline: BaselineScoreTerms,
+    dispatch: EvaluatorAtlasDispatch,
+    segment: TemporalSegment,
+    quantize_step: float,
+) -> tuple[CandidateActionEvaluation, TemporalSegmentActionAccounting] | None:
+    """TEMPORALLY-MASKED quantize: coarsen the section by Δ ONLY on a segment's pairs.
+
+    This is the #36 -> #46 wiring: instead of coarsening the whole video uniformly
+    (:func:`build_quantize_action`), coarsen only the pairs of a contiguous high-budget
+    TEMPORAL SEGMENT the atlas flagged (e.g. pairs 426-442). The atlas gives the
+    cross-video targeting the per-pixel cone cannot resolve.
+
+    Byte accounting (the temporal mask pays rent):
+      * pair_fraction = segment_length / n_pairs (the temporal share coarsened).
+      * gross_bytes_freed = section.bytes * pair_fraction * (Δ / (1 + Δ)).
+      * temporal_mask_coding_cost = real bit-packed + brotli q=11 of the per-pair mask.
+      * delta_bytes = -(gross_bytes_freed - temporal_mask_coding_cost) (NEGATIVE = frees).
+      A contiguous segment's per-pair mask is a single run -> compresses to a few bytes,
+      so a contiguous high-budget segment pays trivial temporal rent; a scattered
+      selection would pay much more (correctly reflected by the measured cost).
+
+    Distortion accounting (budget-weighted):
+      The distortion given up is the section's atlas value scaled by the pair-count
+      share AND the segment's budget discount (mean segment budget / max pair budget).
+      The high-budget segments are by atlas construction the LOW-sensitivity pairs, so
+      coarsening them gives up DISPROPORTIONATELY less distortion per byte than a whole-
+      video coarsen of the same pair-count fraction (the dispatch-order advantage). A
+      low-budget segment gets discount ~1 (no claimed advantage — the honest default).
+
+    Returns ``None`` when the section does not touch frame1 (no temporal constraint on a
+    frame0-only section), the section is scope-invalid (cannot estimate budget-weighted
+    distortion without extrapolating the atlas value), or the segment is a PROTECT
+    (fragile) cluster (a fragile cluster is NEVER coarsened; the planner surfaces it as a
+    protect-set marker, not a coarsen action)."""
+    if segment.is_protect:
+        # A fragile cluster is never coarsened. (The planner surfaces protect markers.)
+        return None
+    if not _section_touches_frame1(section.coefficient_group):
+        return None
+    if not estimate.atlas_scope_valid:
+        return None
+
+    step = max(float(quantize_step), 0.0)
+    n_pairs = int(dispatch.n_pairs)
+    seg_len = int(segment.length)
+    if n_pairs <= 0 or seg_len <= 0:
+        return None
+    pair_fraction = float(seg_len) / float(n_pairs)
+    bytes_kept, value_kept = _quantize_fraction(step)
+    coarsen_ratio = 1.0 - bytes_kept  # = Δ/(1+Δ)
+    gross_freed = round(int(section.bytes) * pair_fraction * coarsen_ratio)
+    mask = dispatch.coarsen_pair_mask(segment)
+    mask_cost = temporal_mask_coding_cost_bytes(mask)
+    net_freed = gross_freed - mask_cost
+
+    # budget discount in (0, 1]: high-budget segment -> small discount (low distortion
+    # given up); low-budget segment -> discount ~1 (no claimed advantage). Clamp to 1
+    # so a segment richer than max (impossible) never claims a discount > 1.
+    max_budget = float(dispatch.max_pair_budget)
+    budget_discount = (
+        min(float(segment.mean_pair_budget) / max_budget, 1.0)
+        if max_budget > 0.0
+        else 1.0
+    )
+    # Invert: the HIGHER the budget, the LOWER the distortion given up. We model the
+    # given-up distortion as the pair-count fraction × (1 - normalized_headroom), where
+    # normalized_headroom = budget_discount (a high-budget segment has more headroom, so
+    # gives up less). Concretely distortion_weight = pair_fraction × (1 - budget_discount
+    # × ADVANTAGE) is too aggressive; use the conservative monotone form:
+    #   distortion_weight = pair_fraction × (1 - budget_discount × (1 - MIN_RESIDUAL))
+    # with MIN_RESIDUAL keeping a high-budget segment from claiming ZERO distortion.
+    _MIN_RESIDUAL = 0.10
+    advantage = budget_discount * (1.0 - _MIN_RESIDUAL)
+    dist_weight = pair_fraction * (1.0 - advantage)
+    seg_value = float(estimate.est_d_seg_value or 0.0)
+    pose_value = float(estimate.est_d_pose_value or 0.0)
+    value_given_up = dist_weight * (1.0 - value_kept)
+    d_seg = seg_value * value_given_up
+    d_pose = pose_value * value_given_up
+
+    accounting = TemporalSegmentActionAccounting(
+        segment_length=seg_len,
+        n_pairs=n_pairs,
+        pair_fraction=pair_fraction,
+        gross_bytes_freed=gross_freed,
+        temporal_mask_coding_cost_bytes=mask_cost,
+        net_bytes_freed=net_freed,
+        value_kept_fraction=value_kept,
+        distortion_weight=dist_weight,
+        budget_discount=budget_discount,
+        quantize_step=step,
+        mean_pair_budget=float(segment.mean_pair_budget),
+    )
+    action = CandidateActionEvaluation(
+        action_id=(
+            f"{section.name}::quantize_temporal_segment_"
+            f"{segment.start}-{segment.end}_delta={step:g}"
+        ),
+        action_kind=ACTION_QUANTIZE_TEMPORAL_SEGMENT,
+        section_name=section.name,
+        est_delta_d_seg=d_seg,
+        est_delta_d_pose=d_pose,
+        delta_bytes=-net_freed,
+        atlas_scope_valid=True,
+        scope_reason=(
+            f"temporal-segment: coarsen Δ={step:g} on pairs {segment.start}-{segment.end} "
+            f"({pair_fraction:.4f} of {n_pairs}; mean budget {segment.mean_pair_budget:.0f}; "
+            f"temporal mask rent {mask_cost} B vs gross {gross_freed} B freed)"
+        ),
+        baseline=baseline,
+        protect_set=False,
+        segment=segment,
+    )
+    return action, accounting
+
+
+def _build_protect_marker(
+    section: PayloadSection,
+    baseline: BaselineScoreTerms,
+    fragile_segment: TemporalSegment,
+) -> CandidateActionEvaluation:
+    """A PROTECT marker for a fragile temporal cluster (surfaced, never coarsened).
+
+    A protect marker is a zero-byte, zero-distortion action that EXISTS only to tell
+    the rate attack "do NOT coarsen these pairs". It carries ``protect_set=True`` +
+    ``action_kind=ACTION_QUANTIZE_TEMPORAL_SEGMENT`` (a temporal segment) + the fragile
+    segment, but ``delta_bytes=0`` and ``est_delta_*=0`` so THE LAW never admits it as a
+    coarsen action; it is dispatched LAST (highest dispatch_order) and listed in
+    ``response_atlas_dispatch.protect_markers``."""
+    return CandidateActionEvaluation(
+        action_id=(
+            f"{section.name}::PROTECT_temporal_segment_"
+            f"{fragile_segment.start}-{fragile_segment.end}"
+        ),
+        action_kind=ACTION_QUANTIZE_TEMPORAL_SEGMENT,
+        section_name=section.name,
+        est_delta_d_seg=0.0,
+        est_delta_d_pose=0.0,
+        delta_bytes=0,  # NEVER coarsened: a protect marker frees no bytes.
+        atlas_scope_valid=True,
+        scope_reason=(
+            f"PROTECT: fragile cluster pairs {fragile_segment.start}-{fragile_segment.end} "
+            f"(thin seg-margins; NO frame1-touching byte may move here). Dispatched LAST."
+        ),
+        baseline=baseline,
+        protect_set=True,
+        segment=fragile_segment,
+    )
+
+
+def _assign_dispatch_order(
+    ranked: list[CandidateActionEvaluation],
+    dispatch: EvaluatorAtlasDispatch,
+) -> list[CandidateActionEvaluation]:
+    """Assign a cross-video ``dispatch_order`` to ranked actions per the atlas budget.
+
+    Temporal-segment actions are ordered FIRST, sorted by the segment's mean pair
+    budget (highest budget = order 0 = coarsen first). The remaining (non-temporal)
+    ranked actions follow, preserving their value-per-byte order. dispatch_order is a
+    contiguous 0-based rank. Returns a NEW list of frozen actions with the field set
+    (the frozen dataclass is rebuilt via ``dataclasses.replace``)."""
+    import dataclasses as _dc
+
+    def _seg_budget(p: CandidateActionEvaluation) -> float:
+        return p.segment.mean_pair_budget if p.segment is not None else -math.inf
+
+    temporal = [
+        p for p in ranked if p.action_kind == ACTION_QUANTIZE_TEMPORAL_SEGMENT
+    ]
+    other = [
+        p for p in ranked if p.action_kind != ACTION_QUANTIZE_TEMPORAL_SEGMENT
+    ]
+    # Highest-budget temporal segment first; ties broken by value_per_byte.
+    temporal.sort(
+        key=lambda p: (
+            _seg_budget(p),
+            p.value_per_byte if p.value_per_byte is not None else -math.inf,
+        ),
+        reverse=True,
+    )
+    # Non-temporal actions keep their value-per-byte order (already sorted).
+    ordered = temporal + other
+    out: list[CandidateActionEvaluation] = []
+    for i, p in enumerate(ordered):
+        out.append(_dc.replace(p, dispatch_order=i))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # The planner.
 # ---------------------------------------------------------------------------
@@ -1176,6 +1713,8 @@ def plan_lf_payload_actions(
     quantize_steps: Sequence[float] = (0.5, 1.0, 2.0),
     frame1_cone_map: Frame1ConeMap | None = None,
     cone_quantize_steps: Sequence[float] | None = None,
+    response_atlas: EvaluatorAtlasDispatch | None = None,
+    temporal_quantize_steps: Sequence[float] | None = None,
 ) -> dict[str, Any]:
     """Rank candidate actions over the payload by predicted value-per-byte (THE LAW).
 
@@ -1193,17 +1732,37 @@ def plan_lf_payload_actions(
     and charges the keep/coarsen mask its OWN coding rent (the mask must pay rent under
     THE LAW). The cone gives the spatial granularity the band×orientation atlas cannot
     resolve. When ``frame1_cone_map is None`` the plan is byte-identical to before
-    (backward-compatible)."""
+    (backward-compatible).
+
+    TEMPORAL / cross-video DISPATCH ORDER (#36 -> #46; gated, default-OFF): when
+    ``response_atlas`` is supplied (the :class:`EvaluatorAtlasDispatch` derived from the
+    600-pair :mod:`tac.optimization.evaluator_response_atlas`), ALSO propose a
+    TEMPORALLY-MASKED quantize per frame1-touching section per HIGH-BUDGET temporal
+    SEGMENT (e.g. coarsen the LF payload only on pairs 426-442) at each
+    ``temporal_quantize_steps`` step (defaults to ``quantize_steps``), AND assign every
+    ranked action a ``dispatch_order`` (the cross-video targeting the per-pixel cone
+    cannot reach): the high-budget temporal segments are coarsened FIRST (lowest order),
+    the fragile clusters are surfaced LAST as PROTECT markers (``protect_set=True``,
+    never coarsened). The temporal coarsen mask pays its own per-pair coding rent under
+    THE LAW. When ``response_atlas is None`` no dispatch order is assigned and the plan
+    is byte-identical to before (backward-compatible)."""
 
     cone_steps = (
         tuple(quantize_steps)
         if cone_quantize_steps is None
         else tuple(cone_quantize_steps)
     )
+    temporal_steps = (
+        tuple(quantize_steps)
+        if temporal_quantize_steps is None
+        else tuple(temporal_quantize_steps)
+    )
 
     estimates: dict[str, SectionSensitivityEstimate] = {}
     proposals: list[CandidateActionEvaluation] = []
     cone_accounting: dict[str, dict[str, Any]] = {}
+    temporal_accounting: dict[str, dict[str, Any]] = {}
+    protect_markers: list[CandidateActionEvaluation] = []
     for section in sections:
         est = estimate_section_sensitivity(section, sensitivities, scope)
         estimates[section.name] = est
@@ -1223,6 +1782,23 @@ def plan_lf_payload_actions(
                     action, accounting = masked
                     proposals.append(action)
                     cone_accounting[action.action_id] = accounting.to_row()
+        if response_atlas is not None:
+            for segment in response_atlas.high_budget_segments:
+                for step in temporal_steps:
+                    tmasked = build_temporal_segment_quantize_action(
+                        section, est, baseline, response_atlas, segment, step
+                    )
+                    if tmasked is not None:
+                        taction, taccounting = tmasked
+                        proposals.append(taction)
+                        temporal_accounting[taction.action_id] = taccounting.to_row()
+            # Surface a PROTECT marker per fragile cluster per frame1-touching section
+            # (never coarsened; the rate attack must avoid these pairs).
+            if est.atlas_scope_valid and _section_touches_frame1(section.coefficient_group):
+                for fseg in response_atlas.fragile_segments:
+                    protect_markers.append(
+                        _build_protect_marker(section, baseline, fseg)
+                    )
 
     ranked: list[CandidateActionEvaluation] = []
     not_paying: list[CandidateActionEvaluation] = []
@@ -1239,6 +1815,13 @@ def plan_lf_payload_actions(
         key=lambda p: (p.value_per_byte if p.value_per_byte is not None else -math.inf),
         reverse=True,
     )
+
+    # Assign the cross-video DISPATCH ORDER (#36): high-budget temporal segments first
+    # (sorted by the atlas budget ranking), then the remaining ranked actions, then the
+    # protect markers LAST. Without an atlas, dispatch_order stays None (pure
+    # value-per-byte ranking; backward-compatible).
+    if response_atlas is not None:
+        ranked = _assign_dispatch_order(ranked, response_atlas)
 
     total_predicted_freed = sum(-p.delta_bytes for p in ranked if p.delta_bytes < 0)
     total_predicted_delta_score = sum(
@@ -1301,6 +1884,35 @@ def plan_lf_payload_actions(
         }
     else:
         plan["frame1_cone"] = {"active": False}
+
+    # Cross-video DISPATCH ORDER provenance (only present when the atlas was supplied).
+    if response_atlas is not None:
+        plan["response_atlas_dispatch"] = {
+            "active": True,
+            "source_path": response_atlas.source_path,
+            "source_sha256": response_atlas.source_sha256,
+            "axis_tag": response_atlas.axis_tag,
+            "n_pairs": response_atlas.n_pairs,
+            "max_pair_budget": response_atlas.max_pair_budget,
+            "high_budget_segments": [
+                s.to_row() for s in response_atlas.high_budget_segments
+            ],
+            "fragile_segments": [s.to_row() for s in response_atlas.fragile_segments],
+            "temporal_quantize_steps": list(temporal_steps),
+            "n_temporal_segment_actions": len(temporal_accounting),
+            "temporal_segment_accounting": temporal_accounting,
+            "protect_markers": [p.to_row() for p in protect_markers],
+            "n_protect_markers": len(protect_markers),
+            "dispatch_order_assigned": True,
+            "dispatch_note": (
+                "ranked_actions carry a dispatch_order (0 = coarsen FIRST). High-budget "
+                "temporal segments are ordered first by the atlas pair_budget ranking; "
+                "fragile clusters are surfaced as protect_markers (protect_set=True; "
+                "NEVER coarsened). The temporal coarsen mask pays per-pair coding rent."
+            ),
+        }
+    else:
+        plan["response_atlas_dispatch"] = {"active": False}
     return plan
 
 
@@ -1308,6 +1920,7 @@ __all__ = [
     "ACTION_DROP",
     "ACTION_QUANTIZE",
     "ACTION_QUANTIZE_CONE_MASKED",
+    "ACTION_QUANTIZE_TEMPORAL_SEGMENT",
     "ACTION_RECODE",
     "CONTEST_BYTE_PRICE",
     "AtlasScope",
@@ -1316,16 +1929,20 @@ __all__ = [
     "CandidateActionEvaluation",
     "CoefficientGroup",
     "ConeMaskedActionAccounting",
+    "EvaluatorAtlasDispatch",
     "Frame1ConeMap",
     "LfPayloadRateDistortionError",
     "PayloadSection",
     "SectionSensitivityEstimate",
+    "TemporalSegment",
+    "TemporalSegmentActionAccounting",
     "atlas_scope_from_grid",
     "atlas_sensitivities_from_cells",
     "build_cone_masked_quantize_action",
     "build_drop_action",
     "build_quantize_action",
     "build_recode_action",
+    "build_temporal_segment_quantize_action",
     "delta_distortion_score",
     "delta_pose_score",
     "delta_rate_score",
@@ -1333,4 +1950,5 @@ __all__ = [
     "estimate_section_sensitivity",
     "keep_component",
     "plan_lf_payload_actions",
+    "temporal_mask_coding_cost_bytes",
 ]

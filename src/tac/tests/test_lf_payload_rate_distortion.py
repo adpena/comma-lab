@@ -17,21 +17,25 @@ import pytest
 from tac.optimization.lf_payload_rate_distortion import (
     ACTION_QUANTIZE,
     ACTION_QUANTIZE_CONE_MASKED,
+    ACTION_QUANTIZE_TEMPORAL_SEGMENT,
     ACTION_RECODE,
     CONTEST_BYTE_PRICE,
     AtlasScope,
     AtlasSensitivity,
     BaselineScoreTerms,
     CoefficientGroup,
+    EvaluatorAtlasDispatch,
     Frame1ConeMap,
     LfPayloadRateDistortionError,
     PayloadSection,
+    TemporalSegment,
     atlas_scope_from_grid,
     atlas_sensitivities_from_cells,
     build_cone_masked_quantize_action,
     build_drop_action,
     build_quantize_action,
     build_recode_action,
+    build_temporal_segment_quantize_action,
     delta_distortion_score,
     delta_pose_score,
     delta_rate_score,
@@ -39,6 +43,7 @@ from tac.optimization.lf_payload_rate_distortion import (
     estimate_section_sensitivity,
     keep_component,
     plan_lf_payload_actions,
+    temporal_mask_coding_cost_bytes,
 )
 
 CONTEST_N = 37_545_489
@@ -1110,3 +1115,458 @@ def test_cone_map_from_npz_rejects_wrong_schema(tmp_path):
 def test_cone_map_from_npz_rejects_tmp_path():
     with pytest.raises(LfPayloadRateDistortionError):
         Frame1ConeMap.from_npz("/tmp/cone_pair_00000.npz")
+
+
+# ===========================================================================
+# Evaluator response atlas DISPATCH ORDER (#36 -> #46): the cross-video
+# targeting layer the per-pixel cone cannot reach.
+#
+# These tests mirror the REAL 600-pair atlas clustering: a contiguous HIGH-BUDGET
+# temporal segment (the real atlas top-budget pairs cluster 437-440) coarsened
+# FIRST, and a contiguous FRAGILE cluster (the real atlas 517-519) protected LAST.
+# Every test would FAIL if the planner returned canonical constants instead of
+# computing the temporal-mask byte math + the budget-weighted distortion (Slot EEE
+# Class 2).
+# ===========================================================================
+def _real_response_atlas_jsonl() -> Path | None:
+    p = Path(
+        "/Volumes/VertigoDataTier/pact/evaluator_response_atlas_20260610T001515Z/"
+        "evaluator_response_atlas.jsonl"
+    )
+    return p if p.exists() else None
+
+
+def _dispatch_mirroring_real_clusters(
+    *,
+    n_pairs: int = 600,
+    high_run: tuple[int, ...] = (437, 438, 439, 440),
+    fragile_run: tuple[int, ...] = (517, 518, 519),
+    high_budget: float = 180_000.0,
+    max_budget: float = 196_569.0,
+) -> EvaluatorAtlasDispatch:
+    """A synthetic dispatch whose segments mirror the real 600-pair atlas clustering.
+
+    The high-budget segment (a contiguous run, like the real 437-440) carries near-max
+    budget; a separate FRAGILE contiguous cluster (like the real 517-519) is the protect
+    set. Per-pair budget map covers all pairs so the temporal mask denominator is real."""
+    pair_budget = dict.fromkeys(range(n_pairs), 70_000.0)
+    for p in high_run:
+        pair_budget[p] = high_budget
+    # one pair at the global max so the budget discount has a real ceiling.
+    pair_budget[442] = max_budget
+    high_seg = TemporalSegment(
+        pair_indices=high_run, mean_pair_budget=high_budget, is_protect=False,
+        role="high_budget",
+    )
+    frag_seg = TemporalSegment(
+        pair_indices=fragile_run, mean_pair_budget=72_000.0, is_protect=True,
+        role="fragile_protect",
+    )
+    return EvaluatorAtlasDispatch(
+        n_pairs=n_pairs,
+        pair_budget=pair_budget,
+        high_budget_segments=(high_seg,),
+        fragile_segments=(frag_seg,),
+        source_path="/Volumes/VertigoDataTier/pact/x/atlas.jsonl",
+        source_sha256="deadbeef",
+    )
+
+
+# --- TemporalSegment construction (fail-closed on non-contiguous) -----------
+def test_temporal_segment_rejects_non_contiguous():
+    with pytest.raises(LfPayloadRateDistortionError):
+        TemporalSegment(pair_indices=(426, 428), mean_pair_budget=1.0)
+
+
+def test_temporal_segment_rejects_unsorted():
+    with pytest.raises(LfPayloadRateDistortionError):
+        TemporalSegment(pair_indices=(440, 439), mean_pair_budget=1.0)
+
+
+def test_temporal_segment_accepts_contiguous_run():
+    seg = TemporalSegment(pair_indices=(437, 438, 439, 440), mean_pair_budget=180_000.0)
+    assert seg.length == 4
+    assert seg.start == 437 and seg.end == 440
+
+
+def test_temporal_segment_rejects_negative_pair():
+    with pytest.raises(LfPayloadRateDistortionError):
+        TemporalSegment(pair_indices=(-1, 0), mean_pair_budget=1.0)
+
+
+# --- EvaluatorAtlasDispatch fail-closed -------------------------------------
+def test_dispatch_rejects_empty_pair_budget():
+    with pytest.raises(LfPayloadRateDistortionError):
+        EvaluatorAtlasDispatch(
+            n_pairs=10, pair_budget={},
+            high_budget_segments=(), fragile_segments=(),
+        )
+
+
+def test_dispatch_rejects_tmp_source_path():
+    with pytest.raises(LfPayloadRateDistortionError):
+        EvaluatorAtlasDispatch(
+            n_pairs=10, pair_budget={0: 1.0},
+            high_budget_segments=(), fragile_segments=(),
+            source_path="/tmp/atlas.jsonl",
+        )
+
+
+def test_dispatch_rejects_nonpositive_n_pairs():
+    with pytest.raises(LfPayloadRateDistortionError):
+        EvaluatorAtlasDispatch(
+            n_pairs=0, pair_budget={0: 1.0},
+            high_budget_segments=(), fragile_segments=(),
+        )
+
+
+# --- temporal-mask coding cost: contiguous run is cheap, scattered is dear ----
+def test_temporal_mask_coding_cost_contiguous_run_is_cheap():
+    # A contiguous run-of-True over 600 pairs compresses to a handful of bytes.
+    mask = np.zeros(600, dtype=bool)
+    mask[437:441] = True
+    cost = temporal_mask_coding_cost_bytes(mask)
+    assert isinstance(cost, int)
+    assert 0 < cost < 80  # run-length-friendly => tiny
+
+
+def test_temporal_mask_coding_cost_scattered_is_more_expensive():
+    # A scattered per-pair selection does NOT compress as well as a contiguous run.
+    # Proves the cost MEASURES the mask (not a constant): contiguous vs scattered differ.
+    rng = np.random.default_rng(0)
+    contiguous = np.zeros(600, dtype=bool)
+    contiguous[200:260] = True  # 60 contiguous pairs
+    scattered = np.zeros(600, dtype=bool)
+    scattered[rng.choice(600, size=60, replace=False)] = True  # 60 scattered pairs
+    assert temporal_mask_coding_cost_bytes(scattered) > temporal_mask_coding_cost_bytes(
+        contiguous
+    )
+
+
+# --- The known-optimum: temporal-masked beats whole-video on the real clustering
+def test_temporal_segment_beats_whole_video_value_per_byte(cone_scope, cone_sensitivities):
+    # KNOWN-OPTIMUM: coarsening ONLY the high-budget temporal segment (437-440) gives up
+    # disproportionately LESS distortion per byte than coarsening the whole video at the
+    # same step, because the high-budget pairs are BY ATLAS CONSTRUCTION the low-
+    # sensitivity ones (budget discount scales the distortion DOWN). The whole-video
+    # quantize gives up the FULL section value over its bytes.
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    whole = build_quantize_action(sec, est, base, 1.0)
+    seg = dispatch.high_budget_segments[0]
+    tpair = build_temporal_segment_quantize_action(
+        sec, est, base, dispatch, seg, 1.0
+    )
+    assert tpair is not None
+    tmasked, acct = tpair
+    assert whole.value_per_byte is not None and tmasked.value_per_byte is not None
+    # The temporal action gives up less distortion per byte freed (the dispatch advantage).
+    assert tmasked.value_per_byte > whole.value_per_byte
+    # the budget discount actually reduced the distortion weight below the pair fraction.
+    assert acct.distortion_weight < acct.pair_fraction
+
+
+def test_temporal_segment_distortion_weight_uses_budget_discount(cone_scope, cone_sensitivities):
+    # The distortion weight = pair_fraction * (1 - budget_discount * 0.9). A HIGH-budget
+    # segment (discount near 1) gets a much smaller weight than a low-budget segment.
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+
+    high_disp = _dispatch_mirroring_real_clusters(high_budget=190_000.0)
+    low_disp = _dispatch_mirroring_real_clusters(high_budget=80_000.0)
+    _, hi_acct = build_temporal_segment_quantize_action(
+        sec, est, base, high_disp, high_disp.high_budget_segments[0], 1.0
+    )
+    _, lo_acct = build_temporal_segment_quantize_action(
+        sec, est, base, low_disp, low_disp.high_budget_segments[0], 1.0
+    )
+    # same pair fraction, but the high-budget segment gives up LESS distortion.
+    assert hi_acct.pair_fraction == pytest.approx(lo_acct.pair_fraction)
+    assert hi_acct.budget_discount > lo_acct.budget_discount
+    assert hi_acct.distortion_weight < lo_acct.distortion_weight
+
+
+# --- the temporal mask must pay rent ----------------------------------------
+def test_temporal_mask_rent_rejects_when_cost_exceeds_savings(cone_scope, cone_sensitivities):
+    # On a TINY section, the temporal mask's coding cost exceeds the few bytes a 1-pair
+    # segment frees => net_bytes_freed <= 0 => the action ADDS bytes => THE LAW rejects.
+    dispatch = _dispatch_mirroring_real_clusters(high_run=(442,))
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 100)  # 1/600 of 100 bytes * coarsen ~= 0 bytes freed
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    seg = dispatch.high_budget_segments[0]
+    tpair = build_temporal_segment_quantize_action(sec, est, base, dispatch, seg, 1.0)
+    assert tpair is not None
+    tmasked, acct = tpair
+    assert acct.net_bytes_freed <= 0
+    assert tmasked.delta_bytes >= 0  # adds bytes
+    assert tmasked.pays_rent_predicted is False
+
+
+def test_temporal_net_equals_gross_minus_rent(cone_scope, cone_sensitivities):
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    seg = dispatch.high_budget_segments[0]
+    _, acct = build_temporal_segment_quantize_action(sec, est, base, dispatch, seg, 1.0)
+    assert acct.net_bytes_freed == acct.gross_bytes_freed - acct.temporal_mask_coding_cost_bytes
+
+
+# --- the builder returns None for protect / frame0-only / scope-invalid ------
+def test_temporal_builder_returns_none_for_protect_segment(cone_scope, cone_sensitivities):
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    frag = dispatch.fragile_segments[0]
+    assert build_temporal_segment_quantize_action(sec, est, base, dispatch, frag, 1.0) is None
+
+
+def test_temporal_builder_returns_none_for_frame0_section(cone_scope, cone_sensitivities):
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = PayloadSection(
+        name="hdr", bytes=1_000_000,
+        coefficient_group=CoefficientGroup(
+            band_indices=(0,), channel_basis="yuv", channel="y",
+            orientation="vertical", frame_incidence="frame0_only", amplitude_lsb=4.0,
+        ),
+    )
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    seg = dispatch.high_budget_segments[0]
+    assert build_temporal_segment_quantize_action(sec, est, base, dispatch, seg, 1.0) is None
+
+
+# --- planner: emits temporal actions + assigns dispatch_order + protect markers
+def test_planner_emits_temporal_actions_and_dispatch_provenance(cone_scope, cone_sensitivities):
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, response_atlas=dispatch
+    )
+    assert plan["response_atlas_dispatch"]["active"] is True
+    assert plan["response_atlas_dispatch"]["dispatch_order_assigned"] is True
+    temporal_rows = [
+        r for r in plan["ranked_actions"]
+        if r["action_kind"] == ACTION_QUANTIZE_TEMPORAL_SEGMENT and not r["protect_set"]
+    ]
+    assert temporal_rows  # at least one temporal-segment action ranked
+    aid = temporal_rows[0]["action_id"]
+    assert aid in plan["response_atlas_dispatch"]["temporal_segment_accounting"]
+
+
+def test_planner_assigns_dispatch_order_temporal_first(cone_scope, cone_sensitivities):
+    # The high-budget temporal segment action is dispatched FIRST (dispatch_order 0).
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, response_atlas=dispatch
+    )
+    ranked = plan["ranked_actions"]
+    # every ranked action carries a contiguous 0-based dispatch_order.
+    orders = [r["dispatch_order"] for r in ranked]
+    assert orders == list(range(len(ranked)))
+    # the first-dispatched action is a temporal-segment action (the high-budget cluster).
+    assert ranked[0]["action_kind"] == ACTION_QUANTIZE_TEMPORAL_SEGMENT
+    assert ranked[0]["temporal_segment"]["start"] == 437
+
+
+def test_planner_surfaces_fragile_protect_markers_last(cone_scope, cone_sensitivities):
+    # Fragile clusters are surfaced as PROTECT markers (protect_set=True), NEVER ranked
+    # as coarsen actions (they free 0 bytes), and dispatched LAST.
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, response_atlas=dispatch
+    )
+    markers = plan["response_atlas_dispatch"]["protect_markers"]
+    assert markers  # a protect marker per fragile cluster
+    m = markers[0]
+    assert m["protect_set"] is True
+    assert m["delta_bytes"] == 0  # protect markers free no bytes
+    assert m["temporal_segment"]["start"] == 517
+    # protect markers are NOT in the ranked coarsen actions (they free 0 bytes).
+    ranked_ids = {r["action_id"] for r in plan["ranked_actions"]}
+    assert m["action_id"] not in ranked_ids
+
+
+def test_planner_backward_compatible_without_atlas(cone_scope, cone_sensitivities):
+    # Without an atlas: no dispatch order, no temporal actions; plan identical shape.
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    plan = plan_lf_payload_actions([sec], cone_sensitivities, cone_scope, base)
+    assert plan["response_atlas_dispatch"] == {"active": False}
+    for r in plan["ranked_actions"]:
+        assert r["dispatch_order"] is None
+        assert r["protect_set"] is False
+        assert r["action_kind"] != ACTION_QUANTIZE_TEMPORAL_SEGMENT
+
+
+def test_planner_temporal_rows_carry_false_authority(cone_scope, cone_sensitivities):
+    dispatch = _dispatch_mirroring_real_clusters()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 1_000_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, response_atlas=dispatch
+    )
+    for r in plan["ranked_actions"]:
+        if r["action_kind"] == ACTION_QUANTIZE_TEMPORAL_SEGMENT:
+            assert r["requires_exact_remeasure"] is True
+            assert r["promotable"] is False
+            assert r["score_claim"] is False
+
+
+# --- from_atlas against the REAL 600-pair atlas index -----------------------
+@pytest.mark.skipif(
+    _real_response_atlas_jsonl() is None, reason="real atlas JSONL unavailable"
+)
+def test_dispatch_from_real_atlas_extracts_real_clusters():
+    import hashlib
+
+    from tac.optimization.evaluator_response_atlas import EvaluatorResponseAtlas
+
+    p = _real_response_atlas_jsonl()
+    sha = hashlib.sha256(p.read_bytes()).hexdigest()
+    with p.open() as f:
+        atlas = EvaluatorResponseAtlas.from_jsonl_lines(f)
+    dispatch = EvaluatorAtlasDispatch.from_atlas(
+        atlas, source_path=str(p), source_sha256=sha
+    )
+    assert dispatch.n_pairs == 600
+    # The real top-budget pairs cluster into 437-440 (the big contiguous run) per the
+    # atlas memo headline; the highest-budget segment is coarsened first.
+    high_starts = {s.start for s in dispatch.high_budget_segments}
+    assert 437 in high_starts
+    # The real most-fragile pairs cluster into 517-519 (a contiguous protect run).
+    frag_runs = {(s.start, s.end) for s in dispatch.fragile_segments}
+    assert (517, 519) in frag_runs
+    # no high-budget segment may overlap a fragile (protected) pair.
+    fragile_pairs = {p for s in dispatch.fragile_segments for p in s.pair_indices}
+    for s in dispatch.high_budget_segments:
+        assert not (set(s.pair_indices) & fragile_pairs)
+
+
+# --- CLI end-to-end: --response-atlas wires the real index into the plan -----
+def _load_cli_module():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "snerv_lf_cli_atlas",
+        Path(__file__).resolve().parents[3] / "tools" / "snerv_lf_payload_rate_distortion.py",
+    )
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    return cli
+
+
+def _atlas_cli_g1b_and_atlas(tmp_path):
+    g1b = {
+        "schema": "snerv_g1b_export_binding_verdict.v1",
+        "axis_tag": "[macOS-CPU advisory]",
+        "path_a_advisory": {
+            "byte_decomposition": {
+                "archive_bytes_total_linf": 1_250_000,
+                "lf_payload_bytes": 1_000_000,
+            },
+            "archive_surface_distortion": {
+                "d_seg_mean_linf": 0.0023,
+                "d_pose_mean_linf": 0.0013,
+            },
+        },
+    }
+    atlas = {
+        "schema": "scorer_spectral_sensitivity.v2",
+        "authority_tier": "exact_cpu_advisory",
+        "grid": {
+            "n_bands": 3,
+            "channel_bases": ["yuv"],
+            "yuv_channels": ["y"],
+            "orientations": ["vertical"],
+            "frame_incidences": ["frame1_only"],
+            "amplitudes_lsb": [4.0],
+        },
+        "cells": [
+            {
+                "band_index": 0, "H_seg": 0.0022, "H_pose": 0.0,
+                "channel_basis": "yuv", "channel": "y", "orientation": "vertical",
+                "frame_incidence": "frame1_only", "amplitude_lsb": 4.0,
+            }
+        ],
+        "source_raw": {"path": str(tmp_path / "source.raw")},
+    }
+    # Place the LF payload as a frame1-touching, band-0 scope-valid section so the
+    # temporal-segment actions fire.
+    section_map = {
+        "lf_payload_bytes": {
+            "band_indices": [0], "channel_basis": "yuv", "channel": "y",
+            "orientation": "vertical", "frame_incidence": "frame1_only",
+            "amplitude_lsb": 4.0, "droppable": True,
+        }
+    }
+    g1b_path = tmp_path / "g1b.json"
+    atlas_path = tmp_path / "atlas.json"
+    map_path = tmp_path / "map.json"
+    g1b_path.write_text(json.dumps(g1b))
+    atlas_path.write_text(json.dumps(atlas))
+    map_path.write_text(json.dumps(section_map))
+    return str(g1b_path), str(atlas_path), str(map_path)
+
+
+@pytest.mark.skipif(
+    _real_response_atlas_jsonl() is None, reason="real atlas JSONL unavailable"
+)
+def test_cli_response_atlas_emits_dispatch_order(tmp_path):
+    cli = _load_cli_module()
+    g1b_path, atlas_path, map_path = _atlas_cli_g1b_and_atlas(tmp_path)
+    plan = cli.build_plan_from_files(
+        g1b_verdict_path=g1b_path,
+        atlas_path=atlas_path,
+        section_map_path=map_path,
+        response_atlas_path=str(_real_response_atlas_jsonl()),
+    )
+    disp = plan["response_atlas_dispatch"]
+    assert disp["active"] is True
+    assert disp["dispatch_order_assigned"] is True
+    assert disp["n_pairs"] == 600
+    # The CLI sha-cited the real atlas JSONL (fail-closed provenance).
+    assert plan["inputs"]["response_atlas_active"] is True
+    assert plan["inputs"]["response_atlas_sha256"]
+    # temporal-segment actions present + ranked actions carry a dispatch order.
+    assert disp["n_temporal_segment_actions"] >= 1
+    orders = [r["dispatch_order"] for r in plan["ranked_actions"]]
+    assert orders == list(range(len(orders)))
+    # protect markers surfaced for the real fragile clusters.
+    assert disp["n_protect_markers"] >= 1
+
+
+def test_cli_response_atlas_fail_closed_on_missing_path(tmp_path):
+    cli = _load_cli_module()
+    g1b_path, atlas_path, map_path = _atlas_cli_g1b_and_atlas(tmp_path)
+    with pytest.raises(LfPayloadRateDistortionError):
+        cli.build_plan_from_files(
+            g1b_verdict_path=g1b_path,
+            atlas_path=atlas_path,
+            section_map_path=map_path,
+            response_atlas_path=str(tmp_path / "does_not_exist.jsonl"),
+        )
+
+
+def test_cli_response_atlas_fail_closed_on_empty_index(tmp_path):
+    cli = _load_cli_module()
+    g1b_path, atlas_path, map_path = _atlas_cli_g1b_and_atlas(tmp_path)
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("")
+    with pytest.raises(LfPayloadRateDistortionError):
+        cli.build_plan_from_files(
+            g1b_verdict_path=g1b_path,
+            atlas_path=atlas_path,
+            section_map_path=map_path,
+            response_atlas_path=str(empty),
+        )

@@ -48,6 +48,7 @@ from tac.optimization.lf_payload_rate_distortion import (  # noqa: E402
     AtlasScope,
     BaselineScoreTerms,
     CoefficientGroup,
+    EvaluatorAtlasDispatch,
     Frame1ConeMap,
     LfPayloadRateDistortionError,
     PayloadSection,
@@ -236,6 +237,58 @@ def _load_frame1_cone_map(
     )
 
 
+def _load_response_atlas(
+    response_atlas_path: str,
+    *,
+    top_k_budget: int = 10,
+    top_k_fragile: int = 10,
+) -> EvaluatorAtlasDispatch:
+    """Load the 600-pair evaluator response atlas JSONL and derive the dispatch order.
+
+    Reads the ``evaluator_response_atlas.jsonl`` index (header + one row per pair) the
+    ``tools/build_evaluator_response_atlas.py`` CLI writes, sha-cites the file (fail-
+    closed provenance), and extracts the contiguous high-budget temporal segments
+    (coarsen first) + fragile clusters (protect, last). Never invents the schema —
+    delegates to ``EvaluatorResponseAtlas.from_jsonl_lines`` + ``from_atlas``."""
+    import hashlib
+
+    from tac.optimization.evaluator_response_atlas import (
+        EvaluatorResponseAtlas,
+        EvaluatorResponseAtlasError,
+    )
+
+    p = Path(response_atlas_path)
+    if str(p).startswith("/tmp"):
+        raise LfPayloadRateDistortionError(
+            "--response-atlas must be durable (not /tmp) per CLAUDE.md disk hygiene"
+        )
+    if not p.exists():
+        raise LfPayloadRateDistortionError(
+            f"--response-atlas {p!r} does not exist (stale/missing index)"
+        )
+    raw = p.read_bytes()
+    if not raw.strip():
+        raise LfPayloadRateDistortionError(
+            f"--response-atlas {p!r} is empty (stale/missing index)"
+        )
+    sha = hashlib.sha256(raw).hexdigest()
+    try:
+        atlas = EvaluatorResponseAtlas.from_jsonl_lines(
+            raw.decode("utf-8").splitlines()
+        )
+    except EvaluatorResponseAtlasError as exc:
+        raise LfPayloadRateDistortionError(
+            f"--response-atlas {p!r} is not a valid evaluator_response_atlas JSONL: {exc}"
+        ) from exc
+    return EvaluatorAtlasDispatch.from_atlas(
+        atlas,
+        top_k_budget=int(top_k_budget),
+        top_k_fragile=int(top_k_fragile),
+        source_path=str(p),
+        source_sha256=sha,
+    )
+
+
 def build_plan_from_files(
     *,
     g1b_verdict_path: str,
@@ -248,6 +301,10 @@ def build_plan_from_files(
     frame1_cone_map_path: str | None = None,
     cone_quantize_steps: tuple[float, ...] | None = None,
     cone_fragile_radius_threshold: float | None = None,
+    response_atlas_path: str | None = None,
+    temporal_quantize_steps: tuple[float, ...] | None = None,
+    atlas_top_k_budget: int = 10,
+    atlas_top_k_fragile: int = 10,
 ) -> dict[str, Any]:
     """Read the inputs, build typed inputs, and return the ranked plan dict.
 
@@ -305,6 +362,14 @@ def build_plan_from_files(
             axis_tag=str(g1b.get("axis_tag", "[macOS-CPU advisory]")),
         )
 
+    dispatch = None
+    if response_atlas_path is not None:
+        dispatch = _load_response_atlas(
+            response_atlas_path,
+            top_k_budget=int(atlas_top_k_budget),
+            top_k_fragile=int(atlas_top_k_fragile),
+        )
+
     plan = plan_lf_payload_actions(
         sections,
         sensitivities,
@@ -313,6 +378,8 @@ def build_plan_from_files(
         quantize_steps=quantize_steps,
         frame1_cone_map=cone_map,
         cone_quantize_steps=cone_quantize_steps,
+        response_atlas=dispatch,
+        temporal_quantize_steps=temporal_quantize_steps,
     )
     # Provenance + the unmapped sections (operator must supply a --section-map).
     mapped_names = {s.name for s in sections}
@@ -342,6 +409,9 @@ def build_plan_from_files(
         ),
         "frame1_cone_map_path": frame1_cone_map_path,
         "frame1_cone_active": cone_map is not None,
+        "response_atlas_path": response_atlas_path,
+        "response_atlas_active": dispatch is not None,
+        "response_atlas_sha256": dispatch.source_sha256 if dispatch is not None else None,
     }
     return plan
 
@@ -414,6 +484,46 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--response-atlas",
+        default=None,
+        help=(
+            "Optional path to the 600-pair evaluator_response_atlas.jsonl index "
+            "(tools/build_evaluator_response_atlas.py output). When supplied, the planner "
+            "ALSO proposes TEMPORALLY-MASKED quantize actions that coarsen the LF payload "
+            "only on the high-budget temporal segments (e.g. pairs 426-442) and assigns "
+            "every ranked action a cross-video DISPATCH ORDER: high-budget segments "
+            "coarsened FIRST, fragile clusters surfaced LAST as protect markers. The "
+            "per-pair temporal coarsen mask pays its own coding rent under THE LAW."
+        ),
+    )
+    parser.add_argument(
+        "--temporal-quantize-steps",
+        default=None,
+        help=(
+            "Comma-separated quantization steps for the temporal-segment actions "
+            "(defaults to --quantize-steps when omitted). Ignored unless "
+            "--response-atlas is supplied."
+        ),
+    )
+    parser.add_argument(
+        "--atlas-top-k-budget",
+        type=int,
+        default=10,
+        help=(
+            "How many top-budget pairs to cluster into high-budget temporal segments "
+            "(coarsen first). Default 10 (the atlas headline top-10)."
+        ),
+    )
+    parser.add_argument(
+        "--atlas-top-k-fragile",
+        type=int,
+        default=10,
+        help=(
+            "How many most-fragile pairs to cluster into protect segments (dispatched "
+            "last). Default 10 (the atlas headline top-10 fragile)."
+        ),
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Path to write the ranked plan JSON (durable, NEVER /tmp). "
@@ -425,6 +535,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--output must be durable (not /tmp) per CLAUDE.md disk hygiene")
     if args.frame1_cone_map is not None and str(args.frame1_cone_map).startswith("/tmp"):
         parser.error("--frame1-cone-map must be durable (not /tmp) per CLAUDE.md disk hygiene")
+    if args.response_atlas is not None and str(args.response_atlas).startswith("/tmp"):
+        parser.error("--response-atlas must be durable (not /tmp) per CLAUDE.md disk hygiene")
 
     steps = tuple(
         float(x) for x in str(args.quantize_steps).split(",") if x.strip() != ""
@@ -436,6 +548,15 @@ def main(argv: list[str] | None = None) -> int:
             if x.strip() != ""
         )
         if args.cone_quantize_steps is not None
+        else None
+    )
+    temporal_steps = (
+        tuple(
+            float(x)
+            for x in str(args.temporal_quantize_steps).split(",")
+            if x.strip() != ""
+        )
+        if args.temporal_quantize_steps is not None
         else None
     )
 
@@ -451,6 +572,10 @@ def main(argv: list[str] | None = None) -> int:
             frame1_cone_map_path=args.frame1_cone_map,
             cone_quantize_steps=cone_steps,
             cone_fragile_radius_threshold=args.cone_fragile_radius_threshold,
+            response_atlas_path=args.response_atlas,
+            temporal_quantize_steps=temporal_steps,
+            atlas_top_k_budget=args.atlas_top_k_budget,
+            atlas_top_k_fragile=args.atlas_top_k_fragile,
         )
     except (LfPayloadRateDistortionError, FileNotFoundError, json.JSONDecodeError) as exc:
         print(f"[snerv_lf_rd] FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
