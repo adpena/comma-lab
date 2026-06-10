@@ -55,7 +55,6 @@ from tac.distillation.smaller_student import (  # noqa: E402
     KL_TEMPERATURE,
     SEG_H,
     SEG_W,
-    StudentByteAccount,
     StudentDecoderConfig,
     measure_student_bytes,
     save_student_npz,
@@ -336,12 +335,20 @@ def train(
                 pose_pred = _pose_from_frames(posenet, f0, f1)
                 pose = kd_pose_mse(pose_pred, teacher["pose"][pi])
 
-                # warm schedule: recon-heavy early (basin), distill-heavy late (the objective).
+                # DISTILLATION LOSS DESIGN (the wall-breaker): teacher-frame recon is the PRIMARY,
+                # always-on signal — reproducing the teacher's frames (already d_seg-correct + pose-
+                # in-tube) inherits BOTH terms via the well-conditioned RGB objective. The KL-T2 seg
+                # distill + pose-MSE are LIGHT auxiliaries that prioritize the score-relevant pixels
+                # (the teacher's argmax boundaries / the in-tube pose); they ramp UP over training but
+                # NEVER overwhelm recon (the #62 antagonism only fires when the seg/pose terms try to
+                # SUBSTITUTE for recon). recon is normalized per-pixel (mean of 0..255^2 ~ O(1e4)) so
+                # the weights are interpretable on the same scale.
                 w_obj = min(1.0, ep / max(1, epochs // 3))
+                recon_norm = recon / 1.0e4  # per-pixel MSE scaled to O(1)
                 loss = (
-                    (w_recon * (1.0 - 0.3 * w_obj)) * recon
+                    w_recon * recon_norm
                     + (w_seg * w_obj) * seg
-                    + (w_pose * w_obj) * pose * 1e4
+                    + (w_pose * w_obj) * pose
                 )
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -418,7 +425,8 @@ def _verify_parity(model, weights, latents, cfg, pairs):
     for j in range(len(pairs)):
         with torch.inference_mode():
             pair = model(j)  # (2,3,fh,fw)
-            f0 = _to_camera(pair[0]); f1 = _to_camera(pair[1])
+            f0 = _to_camera(pair[0])
+            f1 = _to_camera(pair[1])
             tr0 = torch.clamp(torch.round(f0.permute(1, 2, 0)), 0, 255).numpy().astype(np.uint8)
             tr1 = torch.clamp(torch.round(f1.permute(1, 2, 0)), 0, 255).numpy().astype(np.uint8)
         npf = student_pair_frames(weights, cfg, latents, j, CAMERA_H, CAMERA_W)  # (2,H,W,3)
@@ -469,7 +477,7 @@ def _exact_measure(scorer, weights, latents, cfg, gt_pairs, pairs):
 
 def _parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--size", choices=list(size_ladder(1).keys()) + ["custom"], default="80kb")
+    ap.add_argument("--size", choices=[*list(size_ladder(1).keys()), "custom"], default="80kb")
     ap.add_argument("--latent-dim", type=int, default=None, help="override (custom size)")
     ap.add_argument("--seed-ch", type=int, default=None)
     ap.add_argument("--stage-channels", type=str, default=None, help="comma list, custom size")
@@ -478,8 +486,10 @@ def _parse_args(argv=None):
     ap.add_argument("--lr", type=float, default=3e-3)
     ap.add_argument("--seed", type=int, default=32)
     ap.add_argument("--eval-every", type=int, default=30)
-    ap.add_argument("--w-seg", type=float, default=20.0)
-    ap.add_argument("--w-pose", type=float, default=50.0)
+    # recon-PRIMARY distillation: teacher-frame recon dominates; seg/pose are light auxiliaries that
+    # prioritize the score-relevant pixels without substituting for recon (the #62 antagonism guard).
+    ap.add_argument("--w-seg", type=float, default=0.5)
+    ap.add_argument("--w-pose", type=float, default=0.1)
     ap.add_argument("--w-recon", type=float, default=1.0)
     ap.add_argument("--out-dir", type=Path, required=True)
     return ap.parse_args(argv)

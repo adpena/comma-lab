@@ -38,10 +38,10 @@ import torch.nn.functional as F  # noqa: E402
 from tac.distillation.smaller_student import (  # noqa: E402
     KL_TEMPERATURE,
     StudentDecoderConfig,
+    load_student_npz,
     measure_student_bytes,
     numpy_reference_forward,
     save_student_npz,
-    load_student_npz,
     size_ladder,
     student_pair_frames,
     student_param_count,

@@ -56,7 +56,8 @@ def main() -> int:
             entry = {"run_dir": run_dir, "rc": rc, "wall_s": round(time.time() - t0, 1),
                      "result_path": result_path if os.path.exists(result_path) else None}
             if os.path.exists(result_path):
-                r = json.loads(open(result_path).read())
+                with open(result_path) as rf:
+                    r = json.load(rf)
                 entry.update({
                     "total_bytes": r["byte_account"]["total_bytes"],
                     "exact_mean_d_seg": r["exact_mean_d_seg"],

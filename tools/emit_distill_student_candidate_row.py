@@ -31,7 +31,6 @@ for p in (REPO_ROOT, REPO_ROOT / "src"):
 from tac.optimization.scorer_quotient_candidate_row import (  # noqa: E402
     ScorerQuotientCandidateRow,
     rank_candidates,
-    recompute_score,
 )
 
 # The frontier baseline (the teacher) — read from the pointer, not hardcoded.
@@ -118,7 +117,7 @@ def main(argv=None) -> int:
         promote = row.pointer_update_eligible
         print(f"{result.get('size_label','NA'):>8} {row.bytes_after:>8} "
               f"{row.d_seg_after:>12.3e} {row.d_pose_after:>12.3e} "
-              f"{row.score_after:>12.6f} {row.delta_score_total:>+12.6f} {str(promote):>9}")
+              f"{row.score_after:>12.6f} {row.delta_score_total:>+12.6f} {promote!s:>9}")
         out_rows.append({
             "size_label": result.get("size_label"),
             "lever_id": row.lever_id,
