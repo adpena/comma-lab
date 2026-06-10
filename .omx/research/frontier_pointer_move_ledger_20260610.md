@@ -86,6 +86,20 @@ cheaply; it does NOT block sub-0.15 (trade tube-precision for rate). OPEN ESCAPE
 probe): second-order Gauss-Newton curvature-aware protection (leading eigenvectors of JᵀJ, not the linear
 Jacobian rows) — the frontier's learned basis is the curvature-preserving rep.
 
+## ★ FULL UNLOCK (#81 audit, 2026-06-10) — BOTH walls dissolve; decoder verified correct; Quantizr = the pose answer
+(1) DECODER CORRECT: `pixel_shuffle_2x_nhwc` BIT-EXACT (0.0 drift) vs torch.nn.PixelShuffle(2); full
+HNeRVDecoderMLX matches a from-scratch reference rel 2e-7. The decoder math was NOT the bug (now a regression
+guard). (2) POSE-CAPACITY-WALL is FALSE: Quantizr (PR #55, 88K params) held d_pose 0.00051 by STORING the
+6-dim GT pose explicitly (pose.npy.br) + FiLM-injecting it — he does NOT reconstruct pose from pixels. The
+binding constraint was the pose REPRESENTATION (store+FiLM vs reconstruct), not capacity. #74's wall = FALSE.
+(3) TRUST TABLE: SUSPECT (our inert loop) = #74/#62/B1/the d_seg≈0.50 fleet plateau; TRUST (frozen-frontier,
+#75-verified eval) = #64/#69/#71/#72/#73/#54. (4) 9 config defects C1-C9 source-cited; #75's "B1 ran the
+curriculum" CORRECTED (B1 ran 1 recon-MSE stage + a late-ramp dual-ascent seg weight under recon dominance +
+AdamW clip + skip-free = the inert quartet). (5) NEW BLOCKER C8: use_bilinear_skip=True raises
+NotImplementedError in archive export (mlx_renderer.py:7456) — a successful skip-on run CANNOT build a contest
+archive until export+oracle-parity lands. THE CAPSTONE RECIPE (proven-by-existence): #76 working loop (d_seg)
++ store-6-pose-scalars+FiLM (Quantizr, pose) + #67 VQ free-inflate + #82 clean stack; build the C8 export.
+
 ## Pending movers (will append a row on landing, via the schema firewall)
 - #69 score-aware Q* re-quant (rate) · ~~#71 Q* structural compression~~ (CLOSED post-hoc; reopens only as score-domain RETRAINING)
 - #72 lever-D margin-conditional residual coder (d_seg) · #54 cross-pair waterfilled corrector (pose)
