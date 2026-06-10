@@ -7447,19 +7447,18 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         """Export tensors using the PyTorch HiNeRV state_dict layout."""
 
         _require_mlx()
-        # F1 bilinear-skip + refine are a RESEARCH-ONLY recon-fit probe surface
-        # for now: the per-block skip + terminal refine weights are NOT yet wired
-        # into this export layout NOR the PyTorch oracle parity. Fail closed (no
-        # silent incomplete archive) until the recon-fit probe pays rent and the
-        # export + oracle-parity follow-up lands. Default cfg.use_bilinear_skip
-        # is False, so the contest/export path is unaffected.
-        if bool(self.cfg.use_bilinear_skip):
-            raise NotImplementedError(
-                "use_bilinear_skip=True is a research-only recon-fit probe; archive "
-                "export of the skip/refine HF-residual weights is a gated F1 follow-up "
-                "(needs export layout + PyTorch-oracle parity). Train/score it via the "
-                "contract-free recon-fit probe, not the archive/export path."
-            )
+        # C8 FIX (task #82): the PR95 M-arch bilinear-skip + terminal HF-refine
+        # weights ARE now exported (and round-tripped byte-exact by
+        # ``import_torch_state_dict``), so a ``use_bilinear_skip=True`` model can
+        # byte-close a contest archive with oracle-parity (decoded raw ==
+        # intended frames). The skip is a per-block 1x1 conv
+        # (``blocks.{i}.skip.{weight,bias}``); the refine is a terminal 3x3 conv
+        # (``refine.{weight,bias}``). Conv weights use the same MLX-OHWI ->
+        # torch-OIHW transpose ``(0, 3, 1, 2)`` as the main convs. Default
+        # ``cfg.use_bilinear_skip`` is False, so the skip-free contest path emits
+        # byte-identical output (no new keys when the skip/refine modules do not
+        # exist). See ``.omx/research/full_stack_audit_*.md`` (C8) +
+        # ``.omx/research/mlx_1to1_port_and_c8_export_*.md`` for the verdict.
         out: dict[str, np.ndarray] = {
             "latents_coarse": np.asarray(self.latents_coarse, dtype=np.float32).copy(),
             "latents_mid": np.asarray(self.latents_mid, dtype=np.float32).copy(),
@@ -7473,6 +7472,17 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 np.asarray(conv.weight, dtype=np.float32), (0, 3, 1, 2)
             ).copy()
             out[f"blocks.{i}.conv.bias"] = np.asarray(conv.bias, dtype=np.float32).copy()
+            # C8: the bilinear-skip 1x1 conv, present ONLY when the block has it
+            # (``use_bilinear_skip=True`` AND in_ch != out_ch). 1x1 conv weight is
+            # still 4D ``(O, H=1, W=1, I)`` in MLX -> transpose to torch OIHW.
+            skip_conv = getattr(block, "skip", None)
+            if skip_conv is not None:
+                out[f"blocks.{i}.skip.weight"] = np.transpose(
+                    np.asarray(skip_conv.weight, dtype=np.float32), (0, 3, 1, 2)
+                ).copy()
+                out[f"blocks.{i}.skip.bias"] = np.asarray(
+                    skip_conv.bias, dtype=np.float32
+                ).copy()
         if bool(self.cfg.use_hierarchical_feature_grid):
             for i, grid_module in enumerate(self.feature_grids):
                 for level, grid in enumerate(grid_module.grids):
@@ -7537,6 +7547,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             head = getattr(self, head_name)
             out[f"{head_name}.weight"] = np.transpose(np.asarray(head.weight, dtype=np.float32), (0, 3, 1, 2)).copy()
             out[f"{head_name}.bias"] = np.asarray(head.bias, dtype=np.float32).copy()
+        # C8: terminal HF-refine 3x3 conv, present ONLY when the renderer was
+        # built with ``use_bilinear_skip=True`` (the gate that creates self.refine).
+        refine = getattr(self, "refine", None)
+        if refine is not None:
+            out["refine.weight"] = np.transpose(
+                np.asarray(refine.weight, dtype=np.float32), (0, 3, 1, 2)
+            ).copy()
+            out["refine.bias"] = np.asarray(refine.bias, dtype=np.float32).copy()
         return out
 
     def import_torch_state_dict(
@@ -7603,6 +7621,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         _update_linear(self.latent_embed, "latent_embed")
         for i, block in enumerate(self.blocks):
             _update_conv_oihw(block.conv, f"blocks.{i}.conv")
+            # C8: the bilinear-skip 1x1 conv (inverse of export's skip transpose),
+            # present ONLY when the block carries it (use_bilinear_skip + in!=out).
+            skip_conv = getattr(block, "skip", None)
+            if skip_conv is not None:
+                _update_conv_oihw(skip_conv, f"blocks.{i}.skip")
         if bool(self.cfg.use_hierarchical_feature_grid):
             for i, grid_module in enumerate(self.feature_grids):
                 for level in range(len(grid_module.grids)):
@@ -7627,6 +7650,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         _update_linear(self.fine_injector.proj, "fine_injector.proj")
         _update_conv_oihw(self.head_rgb_0, "head_rgb_0")
         _update_conv_oihw(self.head_rgb_1, "head_rgb_1")
+        # C8: terminal HF-refine 3x3 conv (inverse of export's refine transpose),
+        # present ONLY when the renderer was built with use_bilinear_skip=True.
+        refine = getattr(self, "refine", None)
+        if refine is not None:
+            _update_conv_oihw(refine, "refine")
         mx.eval(self.parameters())  # type: ignore[union-attr]
 
         if strict and sections is None:

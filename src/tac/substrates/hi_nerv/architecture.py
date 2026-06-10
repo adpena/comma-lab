@@ -335,14 +335,45 @@ class _SinAct(nn.Module):
 
 
 class _UpBlock(nn.Module):
-    def __init__(self, in_ch: int, out_ch: int, sin_freq: float) -> None:
+    """Conv -> sin -> PixelShuffle(2). ``use_skip`` adds the PR95 bilinear-skip.
+
+    C8 (task #82): when ``use_skip`` is True AND ``in_ch != out_ch`` the block
+    adds the PR95 per-block bilinear-skip residual (model.py:46-50), the EXACT
+    torch oracle counterpart of ``_UpBlockMLX`` so a skip-on MLX model can
+    byte-close an archive whose inflate-time torch decoder reproduces the same
+    frames (oracle parity). The skip is a 1x1 channel-match conv on the
+    bilinear-2x-upsampled input; the residual is ``sin(w*(shuffle(conv(x)) +
+    skip(bilinear_2x(x))))``. Default ``use_skip=False`` is the historical
+    skip-free form ``shuffle(sin(w*conv(x)))`` (byte-identical; no skip param).
+    """
+
+    def __init__(
+        self, in_ch: int, out_ch: int, sin_freq: float, *, use_skip: bool = False
+    ) -> None:
         super().__init__()
+        self.in_ch = int(in_ch)
+        self.out_ch = int(out_ch)
+        self.w = float(sin_freq)
+        self.use_skip = bool(use_skip)
         self.conv = nn.Conv2d(in_ch, out_ch * 4, kernel_size=3, padding=1)
         self.act = _SinAct(sin_freq)
         self.shuffle = nn.PixelShuffle(2)
+        # 1x1 channel-match skip, created ONLY when enabled AND channels differ
+        # (matches ``_UpBlockMLX``: ``skip_conv = ... if in != out else None``).
+        if self.use_skip and in_ch != out_ch:
+            self.skip = nn.Conv2d(in_ch, out_ch, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.shuffle(self.act(self.conv(x)))
+        if not self.use_skip or getattr(self, "skip", None) is None:
+            return self.shuffle(self.act(self.conv(x)))
+        # PR95 bilinear-skip residual (model.py:46-50), the EXACT MLX counterpart:
+        #   sin(w * (PixelShuffle(conv(x)) + skip(bilinear_2x(x)))).
+        shuffled = self.shuffle(self.conv(x))  # NOTE: sin is applied AFTER the add
+        identity = F.interpolate(
+            x, scale_factor=2, mode="bilinear", align_corners=False
+        )
+        identity = self.skip(identity)
+        return torch.sin(self.w * (shuffled + identity))
 
 
 class _LatentInjector(nn.Module):
@@ -424,7 +455,14 @@ class HinervSubstrate(nn.Module):
             )
         blocks: list[nn.Module] = []
         for i in range(cfg.num_upsample_blocks):
-            blocks.append(_UpBlock(channels[i], channels[i + 1], cfg.sin_frequency))
+            blocks.append(
+                _UpBlock(
+                    channels[i],
+                    channels[i + 1],
+                    cfg.sin_frequency,
+                    use_skip=bool(cfg.use_bilinear_skip),
+                )
+            )
         self.blocks = nn.ModuleList(blocks)
         feature_grids: list[nn.Module] = []
         convnext_blocks: list[nn.Module] = []
@@ -463,6 +501,13 @@ class HinervSubstrate(nn.Module):
         self.fine_injector = _LatentInjector(cfg.latent_dim_fine, fine_inject_channels)
 
         final_ch = channels[cfg.num_upsample_blocks]
+        # C8 (task #82): PR95 terminal HF-refine residual (model.py:51), gated
+        # default-OFF so the skip-free carrier has zero new parameters. The MLX
+        # ``HinervSubstrateMLX`` creates ``self.refine`` under the same gate; this
+        # is its torch oracle counterpart (same 3x3 conv shape, same residual).
+        if cfg.use_bilinear_skip:
+            self.refine = nn.Conv2d(final_ch, final_ch, kernel_size=3, padding=1)
+
         self.head_rgb_0 = nn.Conv2d(final_ch, 3, kernel_size=3, padding=1)
         self.head_rgb_1 = nn.Conv2d(final_ch, 3, kernel_size=3, padding=1)
 
@@ -520,6 +565,12 @@ class HinervSubstrate(nn.Module):
                 h = h + self.mid_injector(z_m, (h.shape[-2], h.shape[-1]))
             if i == self.cfg.fine_injection_block_index:
                 h = h + self.fine_injector(z_f, (h.shape[-2], h.shape[-1]))
+
+        # C8: PR95 terminal HF-refine residual (model.py:51), applied on the
+        # post-block feature map BEFORE the final resize (matches the MLX
+        # renderer order): h += scale*sin(refine(h)). Gated default-OFF.
+        if self.cfg.use_bilinear_skip and getattr(self, "refine", None) is not None:
+            h = h + self.cfg.refine_residual_scale * torch.sin(self.refine(h))
 
         if h.shape[-2:] != (self.cfg.output_height, self.cfg.output_width):
             h = F.interpolate(
