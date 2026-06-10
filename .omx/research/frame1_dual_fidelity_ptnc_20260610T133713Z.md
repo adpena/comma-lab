@@ -22,24 +22,29 @@ total S below frontier 0.19110 — OR frame1 needs near-full-RGB fidelity, conve
 a byte cost preserving the rate advantage, DEFER to lever C and record: pose-relevant luma is NOT cheap
 enough; the score-native pose axis converges to HNeRV-class.
 
-**RESULT vs pre-registration:** PREDICTION **REFUTED** on both counts. (1) PTNC did NOT break the ceiling —
-it is WORSE than the #57 dense anchor at the quantized operating point (the IDSE "free to be wrong in the
-pose-null" assumption breaks under uint8 quantization, §1). (2) The frame1 dual constraint is now PROVEN
-ANTAGONISTIC at the coordinate-INR capacity (a pose-trained frame1 gets d_seg 0.733; a seg-trained frame1
-gets d_pose 12.14 — §3), and the cheapest frame1 holding BOTH terms costs >400 KB (§2), destroying the
-rate advantage. **The KILL/DEFER criterion FIRES → DEFER-to-lever-C** (not a kill; the carrier primitive
-works in isolation; the SPECIFIC composition is falsified — Catalog #307 IMPLEMENTATION-LEVEL).
+**RESULT vs pre-registration:** PREDICTION **REFUTED** on both counts. (1) PTNC did NOT break the 0.0036
+ceiling toward the tube — its best op-point (tiny capacity, d_pose 0.00331, 13.6 KB) is right AT the #57
+ceiling, NOT the predicted ≤1e-4. The Jacobian-saliency anchor is CAPACITY-DEPENDENT (it beats dense at
+tiny 13.6 KB but LOSES to dense at small 23.6 KB — the IDSE "free to be wrong in the pose-null" assumption
+helps when capacity is scarce but breaks under uint8 quantization once capacity is ample, §1). It moves the
+op-point, not the ceiling. (2) The frame1 dual constraint is now PROVEN ANTAGONISTIC at the coordinate-INR
+capacity (a pose-trained frame1 gets d_seg 0.733; a seg-trained frame1 gets d_pose 12.14 — §3), and the
+cheapest frame1 holding BOTH terms costs >400 KB (§2), destroying the rate advantage. **The KILL/DEFER
+criterion FIRES → DEFER-to-lever-C** (not a kill; the carrier primitive works in isolation; the SPECIFIC
+composition is falsified — Catalog #307 IMPLEMENTATION-LEVEL).
 
 ---
 
-## 1. PTNC vs dense vs identity — the Jacobian-saliency anchor is DOMINATED at the quantized op-point
+## 1. PTNC vs dense vs identity — the Jacobian-saliency anchor is CAPACITY-DEPENDENT, NOT ceiling-breaking
 
 The PTNC mechanism is genuine, not a rename: the exact 6-dim PoseNet pose-MSE objective is IDENTICAL
 across modes; only the input-domain RECON anchor differs (dense = uniform MSE; ptnc = per-pixel weight ∝
 measured PoseNet pixel-Jacobian norm; identity = uniform via the saliency code path). The measured
 Jacobian field is real + concentrated (median 1.6e-6 vs max 1.6e-3, a 1000× range; 77% of pixels nonzero;
-the weight map renormalises to mean 1.0 with max ~38 — strong redistribution). Head-to-head, frame0-only,
-matched capacity (h64/m24, 23–24 KB), 60 ep, exact CPU PoseNet on the QUANTIZED numpy-decoded frame:
+the weight map renormalises to mean 1.0 with max ~38 — strong redistribution). Two surfaces measured, both
+frame0-only, exact CPU PoseNet on the QUANTIZED numpy-decoded frame:
+
+**(a) Matched-capacity head-to-head, h64/m24 (~23.6 KB), 60 ep:**
 
 | anchor mode | seed | train pose-MSE (fp32) | **exact quantized d_pose** | bytes |
 |---|---|---:|---:|---:|
@@ -49,18 +54,28 @@ matched capacity (h64/m24, 23–24 KB), 60 ep, exact CPU PoseNet on the QUANTIZE
 | **ptnc** (floor 0.02) | 1 | — | **0.01783** | 23,555 |
 | ptnc (floor 0.40) | 0 | — | 0.03596 | 23,707 |
 
-**dense beats PTNC at every comparison** (seed 0: 0.0103 vs 0.0614; seed 1: 0.00305 vs 0.0178). The
-mechanism is precisely diagnosed: PTNC deliberately tolerates large carrier error in low-Jacobian
-("pose-null") pixels — but 8-bit quantization + uint8 roundtrip + the PoseNet resize+yuv6 mixing then
-perturb those large-error regions, and the perturbation RE-ENTERS the pose signal because the
-GT-operating-point Jacobian is NOT zero once the carrier output moves far off-GT (the Taylor-validity
-risk the spec §Risk flagged). Raising the floor 0.02→0.40 IMPROVES PTNC (0.0614→0.0360) — confirming the
-diagnosis — and as floor→1.0 PTNC → dense. So the Jacobian-saliency anchor is strictly dominated by plain
-dense MSE for this carrier+quantization regime. The genuine ceiling of the coordinate-INR pose family
-(frame0-only, 23 KB) is **~0.003–0.010** (seed-variable, dense), confirming the #57 0.0036 — NOT broken.
+**(b) RD sweep, tiny capacity h48/m16 (~13.6 KB), 80 ep:**
 
-(Train-time fp32 pose-MSE briefly favored PTNC at ep40, which is exactly the trap: the fp32 "win" does
-not survive quantization. The authority is the exact quantized d_pose, not the train proxy.)
+| anchor mode | **exact quantized d_pose** | bytes | d_pose/kb |
+|---|---:|---:|---:|
+| dense | 0.006413 | 13,658 | 0.000481 |
+| **ptnc** | **0.003307** | 13,584 | 0.000249 |
+
+**The picture is CAPACITY-DEPENDENT, not a clean dominance.** At SMALL capacity (23.6 KB, surface a) dense
+beats PTNC at both seeds (0.0103 vs 0.0614; 0.00305 vs 0.0178). At TINY capacity (13.6 KB, surface b) PTNC
+beats dense (0.00331 vs 0.00641). This is exactly the diagnosed mechanism: PTNC concentrates scarce
+capacity on pose-relevant pixels, which HELPS when capacity is tight (tiny) but the quantization-bleed
+HURTS once there is enough capacity to fit the pose-null too (small+). The bleed mechanism: PTNC tolerates
+large carrier error in low-Jacobian pixels — but uint8 quantization + the PoseNet resize+yuv6 mixing
+perturb those large-error regions, and the perturbation RE-ENTERS the pose signal because the
+GT-operating-point Jacobian is NOT zero once the carrier output moves far off-GT (the Taylor-validity risk
+the spec §Risk flagged). Raising floor 0.02→0.40 improves PTNC at small (0.0614→0.0360); floor→1.0 → dense.
+
+**The decisive point for the pre-registration: PTNC does NOT break the 0.0036 ceiling toward the tube.**
+Its best (tiny, 0.00331) is right AT the #57 ceiling (0.0036), 114× above the tube 2.9e-5 — NOT the
+predicted ≤1e-4. The coordinate-INR pose family ceiling is ~0.003 regardless of anchor; PTNC moves the
+op-point but not the ceiling. (Train-time fp32 pose-MSE briefly favored PTNC mid-train at small capacity —
+the trap: the fp32 "win" does not survive quantization; authority is the exact quantized d_pose.)
 
 ## 2. frame1 dual-fidelity RD — the actual wall (exact d_seg AND d_pose, 4 pairs, frame0=GT0)
 
@@ -115,8 +130,9 @@ non-improvement). `$0` spent.
 
 Per CLAUDE.md "Forbidden premature KILL" + Catalog #307 IMPLEMENTATION-LEVEL: the amortized carrier
 primitive is real + working in isolation (frame0 dense d_pose 0.003–0.010, 23 KB, numpy-portable,
-scorer-free inflate). The PTNC Jacobian-saliency ANCHOR is empirically FALSIFIED as a pose-RD improvement
-(dominated by dense MSE under quantization — a genuine, robust, pre-registered negative). The frame1
+scorer-free inflate). The PTNC Jacobian-saliency ANCHOR is empirically shown CAPACITY-DEPENDENT (beats
+dense at tiny 13.6 KB, loses at small 23.6 KB under quantization) and does NOT break the 0.0036 ceiling
+toward the tube — a genuine, pre-registered partial-negative (the predicted ≤1e-4 is REFUTED). The frame1
 dual-constraint composition is FALSIFIED on the full S (antagonistic objectives at coordinate-INR
 capacity; near-full-RGB byte floor destroys the rate win). **The honest conclusion the pre-registration
 named is confirmed: pose-relevant luma is NOT cheap enough; the score-native pose axis converges to
@@ -150,9 +166,11 @@ C because even a perfect frame0 carrier (d_pose→0) leaves the dominant frame1 
    quantization (dense dominates); the allocator should NOT route frame0 bytes via PTNC. §3 shows frame1
    bytes are mis-allocated to a coordinate-INR (cannot hold both terms).
 4. **cathedral-autopilot — gate NOT met:** advisory best S 0.86 ≫ frontier 0.191; no paired-eval dispatch.
-5. **continual-learning — ACTIVE:** reseeds the planner: (a) PTNC Jacobian-saliency anchor is FALSIFIED as
-   a pose-RD improvement (quantization breaks the free-pose-null assumption; floor→1 recovers dense); (b)
-   the coordinate-INR frame0 pose ceiling is ~0.003–0.010 at 23 KB (confirms #57, non-broken); (c) frame1's
+5. **continual-learning — ACTIVE:** reseeds the planner: (a) PTNC Jacobian-saliency anchor is
+   CAPACITY-DEPENDENT — it BEATS dense at tiny 13.6 KB (d_pose 0.0033 vs 0.0064) but LOSES at small 23.6 KB
+   (quantization breaks the free-pose-null assumption once capacity is ample; floor→1 recovers dense); it
+   moves the op-point but does NOT break the 0.0036 ceiling toward the tube; (b)
+   the coordinate-INR frame0 pose ceiling is ~0.003–0.010 at 13–23 KB (confirms #57, non-broken); (c) frame1's
    dual (seg+pose) constraint is ANTAGONISTIC at coordinate-INR capacity (pose-trained → d_seg 0.733;
    seg-trained → d_pose 12.14); (d) the cheapest frame1 holding both terms is >400 KB raw-low-res →
    score-native pose axis converges to HNeRV-class; (e) the next lever is a per-pair-latent CONV decoder
