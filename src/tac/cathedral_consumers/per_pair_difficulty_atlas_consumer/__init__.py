@@ -267,6 +267,94 @@ def build_predicted_difficulty_payload(
     }
 
 
+def consume_evaluator_response_atlas(atlas: Any) -> Mapping[str, Any]:
+    """Catalog #125 hook #1/#4 bridge: ingest a scorer-sensitivity atlas.
+
+    Complement to :func:`consume_candidate` (which ranks per-pair difficulty by
+    the BYTE-gradient norm ``||g_p||``). This bridge ranks per-pair difficulty by
+    the SCORER-SENSITIVITY structure from the
+    :class:`~tac.optimization.evaluator_response_atlas.EvaluatorResponseAtlas`
+    (the per-pair seg argmax-flip margin field + PoseNet frame1-channel Jacobian
+    over the 600-pair video). The two are orthogonal difficulty signals: bytes
+    that are gradient-heavy vs pairs whose frame1 is scorer-fragile.
+
+    The scorer-fragility difficulty per pair:
+        ``difficulty_p = fragile_fraction_p * (1 + pose_binds_fraction_p)``
+    (high when the seg margin is thin AND the pose budget binds — the protect
+    set; low ``pair_budget`` is where the rate attack should AVOID spending).
+
+    Returns the same ``[predicted]`` Tier-A non-promotable payload shape as
+    :func:`build_predicted_difficulty_payload` so the cathedral auto-discovery
+    path consumes both difficulty surfaces uniformly. This does NOT mutate any
+    posterior and makes NO score claim (the atlas is ``[macOS-CPU advisory]``).
+    """
+
+    # Duck-typed: accept either an EvaluatorResponseAtlas or its JSONL lines.
+    if hasattr(atlas, "rows"):
+        rows = list(atlas.rows)
+        headline = dict(getattr(atlas, "headline", {}))
+    else:
+        return _no_signal_verdict(
+            "consume_evaluator_response_atlas expects an EvaluatorResponseAtlas "
+            "(with .rows); got a non-atlas object"
+        )
+    if not rows:
+        return _no_signal_verdict("evaluator response atlas has zero pairs")
+
+    ranked: list[dict[str, Any]] = []
+    for r in rows:
+        frag = float(r.seg_margin_field_stats.fragile_fraction)
+        pose_binds = float(r.joint_cone_summary.pose_binds_fraction)
+        difficulty = frag * (1.0 + pose_binds)
+        ranked.append(
+            {
+                "pair_index": int(r.pair_index),
+                "scorer_fragility_difficulty": difficulty,
+                "fragile_fraction": frag,
+                "pose_binds_fraction": pose_binds,
+                "pair_budget": float(r.joint_cone_summary.pair_budget),
+                "pose_jacobian_l2": float(r.pose_jacobian_norm_stats.l2_norm),
+                "cone_map_path": r.sensitivity_refs.get("cone_map_path"),
+            }
+        )
+    ranked.sort(key=lambda d: (-d["scorer_fragility_difficulty"], d["pair_index"]))
+    for rank, row in enumerate(ranked):
+        row["difficulty_rank"] = int(rank)
+
+    hardest = ranked[0]
+    return {
+        "predicted_delta_adjustment": 0.0,
+        "rationale": (
+            f"evaluator response atlas: {len(ranked)} pairs ranked by "
+            f"scorer-fragility; hardest_pair={hardest['pair_index']} "
+            f"fragility={hardest['scorer_fragility_difficulty']:.6g}; "
+            f"video_pose_binds={headline.get('video_pose_binds_fraction', 0.0):.4g} "
+            f"[macOS-CPU advisory]"
+        ),
+        "axis_tag": "[macOS-CPU advisory]",
+        "promotable": False,
+        "confidence": 0.0,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "notes": {
+            "evaluator_response_atlas": {
+                "schema": "cathedral_evaluator_response_atlas_predicted_anchor_v1",
+                "consumer_id": CONSUMER_NAME,
+                "n_pairs": len(ranked),
+                "difficulty_formula": (
+                    "difficulty_p = fragile_fraction_p * (1 + pose_binds_fraction_p)"
+                ),
+                "headline": headline,
+                "top_pairs": ranked[:50],
+                "evidence_grade": "macOS-CPU advisory",
+                "empirical_anchor": False,
+                "posterior_mutation_performed": False,
+            }
+        },
+    }
+
+
 def posterior_wire_status() -> dict[str, Any]:
     """Return the current canonical-helper compatibility verdict.
 
