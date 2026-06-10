@@ -71797,6 +71797,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pr110pp_r2_nonmps_mode_table_20260609",
+      "name": "PR110++ R2 non-MPS per-mode table + alt-selector candidate",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "non-MPS per-mode table + byte-closed candidate experiments/results/pr110pp_r2_nonmps_candidate_20260609/ [macOS-CPU advisory]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/pr110pp_r2_nonmps_mode_table_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -71806,5 +71847,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-09T22:37:54Z"
+  "updated_at": "2026-06-10T00:02:33Z"
 }
