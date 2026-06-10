@@ -106,8 +106,11 @@ high-flip+low-flip sample; carrier position+value coded ONCE = 915 B total.)
 | 4.0 | 5.92e-4 → 6.13e-4 | +2.01e-5 | −1.5e-7 | 915 | +2.58e-3 (WORSE) |
 | 8.0 | 5.92e-4 → 6.41e-4 | +4.81e-5 | +4.1e-8 | 915 | +5.43e-3 (WORSE) |
 | 16.0 | 5.92e-4 → 7.13e-4 | +1.21e-4 | +1.4e-6 | 915 | +1.30e-2 (WORSE) |
+| 32.0 | 5.92e-4 → 9.18e-4 | +3.26e-4 | +7.9e-6 | 915 | +3.50e-2 (WORSE) |
 
-(monotonically worse with amplitude — the larger the shared correction, the more net new flips.)
+(monotonically worse with amplitude — the larger the shared correction, the more net new flips;
+`any_composed_better=false`, `best_dS=+2.58e-3` across all steps. The shared-carrier upper bound
+is empirically refuted on the real composed pool d_seg.)
 
 The shared correction at even the most-systematic flip pixels **INCREASES** the composed pool
 d_seg. The optimistic upper bound is violated by the receptive-field coupling (Finding A): a
