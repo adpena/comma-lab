@@ -292,6 +292,7 @@ def _build_recoded_member(
 def _byte_close_archive(member: bytes, out_dir: Path) -> tuple[int, str]:
     import hashlib
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     archive_path = out_dir / "archive.zip"
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("x", member)
@@ -452,7 +453,6 @@ def run(args: argparse.Namespace) -> int:
         # baseline full-pairs
         base = score_member(member, n_pairs, "baseline_full")
         base_size, base_sha = _byte_close_archive(member, out_dir / "baseline")
-        (out_dir / "baseline").mkdir(parents=True, exist_ok=True)
         base_sc = contest_score_from_components(
             d_seg=base["mean_d_seg"], d_pose=base["mean_d_pose"], archive_zip_size=base_size,
         )
