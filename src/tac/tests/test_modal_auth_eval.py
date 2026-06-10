@@ -77,6 +77,61 @@ def test_modal_source_mount_ignore_excludes_generated_bytecode(mod) -> None:
     assert not mod.ignore_generated_mount_path(Path("src/tac/tests/test_modal_auth_eval.py"))
 
 
+def test_mount_ignore_keeps_mount_relative_real_files_that_do_not_resolve_in_cwd() -> None:
+    """REGRESSION (pr110pp_r1 5th-bug, 2026-06-10): Modal passes the ignore
+    callable paths RELATIVE to the mount SOURCE root (e.g. ``evaluate.py`` for
+    ``add_local_dir("upstream", ...)``), resolved against CWD. The prior
+    fail-CLOSED-to-True on lstat OSError EXCLUDED every such file because it does
+    not exist as a CWD-relative path, so the ``upstream`` mount landed EMPTY and
+    contest_auth_eval.py crashed with ``missing evaluate.py``. These mount-root-
+    relative names of real upstream files MUST be KEPT (return False)."""
+    from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
+
+    for relname in (
+        "evaluate.py",
+        "modules.py",
+        "frame_utils.py",
+        "public_test_video_names.txt",
+        "videos",
+        "inflate.sh",
+        "inflate.py",
+    ):
+        assert ignore_generated_mount_path(Path(relname)) is False, relname
+
+
+def test_mount_ignore_still_excludes_git_tree_and_special_files() -> None:
+    """The socket-race extinction (``.git/fsmonitor--daemon.ipc``) MUST remain:
+    the ``.git`` dir-name exclusion catches it regardless of whether the path
+    resolves on disk. A resolvable socket/FIFO is still excluded; an
+    unresolvable non-.git path defaults to KEEP (Modal's enumeration decides)."""
+    import os
+    import socket
+    import tempfile
+
+    from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
+
+    # .git tree always excluded (mount-relative form, does not resolve in CWD).
+    assert ignore_generated_mount_path(Path(".git/fsmonitor--daemon.ipc")) is True
+    assert ignore_generated_mount_path(Path(".git/index")) is True
+    assert ignore_generated_mount_path(Path("upstream/.git/config")) is True
+
+    # A path that does NOT resolve and is NOT under an excluded dir defaults to
+    # KEEP (the bug-class fix) — Modal's own enumeration handles the real path.
+    assert ignore_generated_mount_path(Path("definitely_does_not_exist_xyz.bin")) is False
+
+    # A REAL socket that resolves on disk is still excluded.
+    with tempfile.TemporaryDirectory() as td:
+        sock_path = Path(td) / "live.sock"
+        srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            srv.bind(str(sock_path))
+            assert ignore_generated_mount_path(sock_path) is True
+        finally:
+            srv.close()
+            if os.path.exists(sock_path):
+                os.unlink(sock_path)
+
+
 def test_modal_auth_eval_requires_pair_group_or_single_axis_waiver(
     mod, tmp_path, monkeypatch
 ) -> None:

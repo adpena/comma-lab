@@ -46,18 +46,33 @@ GENERATED_MOUNT_SUFFIXES = frozenset({".pyc", ".pyo"})
 
 
 def _is_non_regular_special_file(path: Path) -> bool:
-    """Return True for sockets / FIFOs / device nodes that Modal cannot snapshot.
+    """Return True ONLY for sockets / FIFOs / device nodes that resolve on disk.
 
-    Uses ``lstat`` (does not follow symlinks) and fails closed: an unreadable /
-    vanished path is treated as a special file (excluded) so a racing deletion
-    cannot let a half-gone socket through. Regular files, directories, and
-    symlinks return False (symlink targets are evaluated by Modal separately).
+    Uses ``lstat`` (does not follow symlinks). REGRESSION FIX 2026-06-10
+    (pr110pp_r1 5th-bug root cause): Modal's ``add_local_dir(..., ignore=callable)``
+    contract passes paths RELATIVE to the mount SOURCE root (e.g. ``evaluate.py``
+    for ``add_local_dir("upstream", ...)``), resolved against the process CWD —
+    NOT absolute paths. The prior fail-CLOSED-to-``True`` on ``OSError`` therefore
+    EXCLUDED EVERY FILE in any mounted dir whose name does not also exist as a
+    CWD-relative path: ``upstream/evaluate.py`` was passed as ``evaluate.py``,
+    ``lstat("evaluate.py")`` raised ``FileNotFoundError`` (no such file in CWD),
+    and the helper returned ``True`` → the whole ``upstream`` mount landed empty
+    and the contest_auth_eval.py subprocess crashed with ``missing evaluate.py``.
+
+    The socket-race rationale (a half-deleted ``.git/fsmonitor--daemon.ipc``
+    socket) is ALREADY covered by the ``.git`` dir-name exclusion in
+    ``ignore_generated_mount_path`` (the only canonical offender lives under
+    ``.git``), so a path that does not resolve must default to ``False`` (KEEP —
+    let Modal's own enumeration, which has the real on-disk path, decide). Only a
+    path that resolves AND is a confirmed socket/FIFO/device node is excluded.
     """
 
     try:
         mode = path.lstat().st_mode
     except OSError:
-        return True
+        # Mount-relative or vanished path: cannot prove it is a special file, so
+        # do NOT exclude. Excluding-on-unresolvable was the empty-mount bug class.
+        return False
     if stat.S_ISLNK(mode) or stat.S_ISREG(mode) or stat.S_ISDIR(mode):
         return False
     # Anything else — S_ISSOCK / S_ISFIFO / S_ISCHR / S_ISBLK — is a special file.
