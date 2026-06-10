@@ -3383,7 +3383,7 @@
       "id": "lane_lossy_coarsening_analytical",
       "level": 2,
       "name": "Lossy coarsening analytical (per-tensor K-step search)",
-      "notes": "BREAKTHROUGH: 156,344 B archive (-21,800 B from baseline) at 3.86% rel_err. CONDITIONAL band; needs [contest-CUDA] dispatch to confirm score impact. NO learning required.",
+      "notes": "SUPERSEDED 2026-06-10 (orphan-harvest sweep 9490a81e9): the 'BREAKTHROUGH needs CUDA' note below is STALE \u2014 the CUDA dispatch DID happen and scored 0.3517 [contest-CUDA A-negative], lane retired (lossy_coarsening_T0312_retired_*). This is LOSSY coarsening = FALSIFIED-AT-IMPL per the exhaustion map; NOT a ready-made orphan. Lossless entropy recode (R1/R2/R3) is the orthogonal live axis, not this. [HISTORICAL note preserved:] BREAKTHROUGH: 156,344 B archive (-21,800 B from baseline) at 3.86% rel_err. CONDITIONAL band; needs [contest-CUDA] dispatch to confirm score impact. NO learning required.",
       "phase": 2.0
     },
     {
@@ -72258,6 +72258,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_afsr1_aimed_retrain_20260610",
+      "name": "AFSR-1 Aimed Frontier-Substrate Retraining",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr110_payload_entropy_recode_20260610",
+      "name": "PR110 payload entropy recode (absorb PR112)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72267,5 +72349,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T05:11:13Z"
+  "updated_at": "2026-06-10T08:15:50Z"
 }
