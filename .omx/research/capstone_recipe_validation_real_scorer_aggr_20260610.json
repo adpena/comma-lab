@@ -1,0 +1,100 @@
+{
+  "schema": "scorer_quotient_candidate_row.v1",
+  "substrate": "capstone_vq_nerv_film_pose",
+  "axis_tag": "[macOS-MLX research-signal]",
+  "promotable": false,
+  "score_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "n_pairs": 12,
+  "base_channels": 36,
+  "epochs": 80,
+  "muon_lr": 0.03,
+  "adamw_lr": 0.02,
+  "grad_clip": 50.0,
+  "commitment_weight": 0.05,
+  "total_trainable_params": 231895,
+  "decoder_params": 228958,
+  "d_seg_initial": 0.5072805682818095,
+  "d_seg_final": 0.021219041819373768,
+  "d_seg_best": 0.0103374058380723,
+  "d_pose_initial": 140.46421813964844,
+  "d_pose_final": 0.5610980788866679,
+  "seg_descended": true,
+  "pose_held": true,
+  "train_seconds": 1537.8,
+  "targets_seconds": 18.5,
+  "trajectory": [
+    {
+      "epoch": 10,
+      "exact_d_seg": 0.031058841695388157,
+      "mean_d_pose": 4.320194323857625,
+      "loss_mean": 23.500420570373535,
+      "seg_loss_mean": 0.14453454315662384,
+      "commit_mean": 0.3765919804573059,
+      "clip_would_fraction": 1.0
+    },
+    {
+      "epoch": 20,
+      "exact_d_seg": 0.013715107925236225,
+      "mean_d_pose": 0.3846016426881154,
+      "loss_mean": 6.042246103286743,
+      "seg_loss_mean": 0.05073106475174427,
+      "commit_mean": 0.37981028854846954,
+      "clip_would_fraction": 0.625
+    },
+    {
+      "epoch": 30,
+      "exact_d_seg": 0.011586083409686884,
+      "mean_d_pose": 0.2507684628168742,
+      "loss_mean": 5.067684173583984,
+      "seg_loss_mean": 0.03795013204216957,
+      "commit_mean": 0.3383905738592148,
+      "clip_would_fraction": 0.43333333333333335
+    },
+    {
+      "epoch": 40,
+      "exact_d_seg": 0.0103374058380723,
+      "mean_d_pose": 0.22913914422194162,
+      "loss_mean": 5.039382219314575,
+      "seg_loss_mean": 0.03318959288299084,
+      "commit_mean": 0.35885050892829895,
+      "clip_would_fraction": 0.325
+    },
+    {
+      "epoch": 50,
+      "exact_d_seg": 0.011257595382630825,
+      "mean_d_pose": 0.18976849814256033,
+      "loss_mean": 5.166972875595093,
+      "seg_loss_mean": 0.03597697429358959,
+      "commit_mean": 0.36779502034187317,
+      "clip_would_fraction": 0.26
+    },
+    {
+      "epoch": 60,
+      "exact_d_seg": 0.012837728175024191,
+      "mean_d_pose": 0.03468858699003855,
+      "loss_mean": 6.41676139831543,
+      "seg_loss_mean": 0.04977955110371113,
+      "commit_mean": 0.37726177275180817,
+      "clip_would_fraction": 0.24166666666666667
+    },
+    {
+      "epoch": 70,
+      "exact_d_seg": 0.022285460804899532,
+      "mean_d_pose": 0.18406807879606882,
+      "loss_mean": 11.25255823135376,
+      "seg_loss_mean": 0.1001407690346241,
+      "commit_mean": 0.5581519305706024,
+      "clip_would_fraction": 0.3
+    },
+    {
+      "epoch": 80,
+      "exact_d_seg": 0.021219041819373768,
+      "mean_d_pose": 0.5610980788866679,
+      "loss_mean": 12.564942121505737,
+      "seg_loss_mean": 0.07962393201887608,
+      "commit_mean": 0.6395338475704193,
+      "clip_would_fraction": 0.35625
+    }
+  ]
+}
