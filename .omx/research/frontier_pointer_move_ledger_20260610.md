@@ -37,6 +37,18 @@ obtained by SCORE-DOMAIN RETRAINING (distill/QAT a renderer at a smaller archite
 `α·B + β·d_seg + γ·√d_pose`, NOT post-hoc), which relocates the floor itself. This is a funded long-training
 campaign, not a $0–$1 transform.
 
+## ROOT CAUSE PINPOINTED (#75 elephant + #68 fleet audit, 2026-06-10)
+The whole d_seg≈0.50–0.71 plateau across ALL 30+ NeRV substrates (our killed/deferred fleet, the
+0.196-0.199 cluster) is **ONE shared two-part bug in the shared MLX harness, NOT 30+ paradigm walls**:
+(M-loss) `_shared/mlx_score_aware/bundle.py` defaults every SegNet/PoseNet objective weight to 0.0 →
+"score-aware" runs were silently recon-MSE-only / scorer-blind (the #75 inert loop, located); (M-arch)
+the default decoder is skip-free PixelShuffle+sin, missing PR95's bilinear-skip+HF-refine → mean-field
+blur → argmax collapse (proof: can't memorize even ONE pair; grad-norm 5.6e9→8e-5 ill-conditioned). Our
+eval is CORRECT (reproduced PR95's 0.19871 bit-exact). Per Catalog #307 these are IMPLEMENTATION
+falsifications → **the deferred fleet REACTIVATES once #76 lands the working loop (both fixes).** The
+capstone (#78) arch is specified: E-NeRV + bilinear-skip+HF-refine + FFNeRV-flow + fixed-codebook-VQ →
+~42-74KB → sub-0.15. Critical path: #76 (loop) + #77 (optimizer) → #78 (capstone). #68 deliverable: commit `89e8829c6`.
+
 ## Pending movers (will append a row on landing, via the schema firewall)
 - #69 score-aware Q* re-quant (rate) · ~~#71 Q* structural compression~~ (CLOSED post-hoc; reopens only as score-domain RETRAINING)
 - #72 lever-D margin-conditional residual coder (d_seg) · #54 cross-pair waterfilled corrector (pose)
