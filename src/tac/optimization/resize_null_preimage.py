@@ -92,7 +92,7 @@ Cross-references
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
@@ -375,10 +375,7 @@ def _apply_neighbor_mean_fill(plane: np.ndarray, mask: np.ndarray) -> np.ndarray
     DC fill that is maximally compressible when most of a plane is masked)."""
     out = plane.copy()
     keep = ~mask
-    if keep.any():
-        val = int(round(float(plane[keep].mean())))
-    else:
-        val = 0
+    val = round(float(plane[keep].mean())) if keep.any() else 0
     out[mask] = np.uint8(np.clip(val, 0, 255))
     return out
 
@@ -558,7 +555,6 @@ def apply_tier2_null_basis_descent(
     # full-frame compression while remaining measurement-driven: the marginal
     # lever over tier-1 is choosing the per-plane scheme that the FULL frame's
     # cross-channel structure does not see when tier-1 ranks on the frame.
-    keep = ~mask
     schemes = ("horizontal_predictor", "vertical_predictor",
                "neighbor_mean", "constant")
     out = x.copy()
@@ -682,7 +678,7 @@ def apply_tier3_blockwise_flat_preimage(
     keep = ~mask
     for ch in range(c):
         plane = x[:, :, ch]
-        plane_dc = int(round(float(plane[keep].mean()))) if keep.any() else 0
+        plane_dc = round(float(plane[keep].mean())) if keep.any() else 0
         cands = [0, plane_dc, 128]
         seen: set[int] = set()
         cands = [v for v in cands if not (v in seen or seen.add(v))]
@@ -735,21 +731,21 @@ def preimage_rate_score_delta(bytes_freed: int) -> float:
 
 
 __all__ = [
-    "RESIZE_NULL_PREIMAGE_SCHEMA",
-    "PROOF_EVIDENCE_GRADE",
     "BYTES_EVIDENCE_GRADE",
-    "EXACT_RESIDUAL_TOL",
-    "REPORT_BROTLI_QUALITY",
-    "SEARCH_BROTLI_QUALITY",
     "CONTEST_TOTAL_BYTES",
+    "EXACT_RESIDUAL_TOL",
+    "PROOF_EVIDENCE_GRADE",
+    "REPORT_BROTLI_QUALITY",
+    "RESIZE_NULL_PREIMAGE_SCHEMA",
+    "SEARCH_BROTLI_QUALITY",
+    "FrameProof",
     "ResizeNullPreimageError",
     "ResizeProjector",
-    "FrameProof",
-    "zero_weight_pixel_mask",
-    "coded_size_bytes",
-    "coded_size_both",
     "apply_tier1_zero_weight_fill",
     "apply_tier2_null_basis_descent",
     "apply_tier3_blockwise_flat_preimage",
+    "coded_size_both",
+    "coded_size_bytes",
     "preimage_rate_score_delta",
+    "zero_weight_pixel_mask",
 ]

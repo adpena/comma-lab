@@ -67,7 +67,7 @@ def small_mask(small_basis):
 def _make_frame(seed: int = 0) -> np.ndarray:
     rng = np.random.default_rng(seed)
     yy, xx = np.mgrid[0:CH, 0:CW]
-    base = ((xx / CW * 120 + yy / CH * 80 + 40)).astype(np.uint8)
+    base = (xx / CW * 120 + yy / CH * 80 + 40).astype(np.uint8)
     f = np.stack([base, np.roll(base, 3, 1), np.roll(base, 2, 0)], axis=2).astype(int)
     f = np.clip(f + rng.integers(-6, 6, f.shape), 0, 255).astype(np.uint8)
     return f
@@ -199,7 +199,9 @@ def test_preimage_survives_full_upstream_preprocess():
         pytest.skip("upstream modules unavailable")
 
     from tac.optimization.evaluator_invisibility_basis import (
-        CAMERA_H, CAMERA_W, derive_tier1_resize_null_space,
+        CAMERA_H,
+        CAMERA_W,
+        derive_tier1_resize_null_space,
     )
     basis = derive_tier1_resize_null_space()
     proj = ResizeProjector.build()

@@ -68,7 +68,6 @@ from tac.optimization.evaluator_invisibility_basis import (  # noqa: E402
     derive_tier1_resize_null_space,
 )
 from tac.optimization.resize_null_preimage import (  # noqa: E402
-    CONTEST_TOTAL_BYTES,
     FrameProof,
     ResizeProjector,
     apply_tier1_zero_weight_fill,
