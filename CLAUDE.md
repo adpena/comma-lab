@@ -216,12 +216,29 @@ plainly** and aim the next unit DIRECTLY at an exact-eval row that crosses the t
    frontier move, by how much, on which axis — then everything else. If it did not move, that is the
    headline.
 
+### 10-year horizon + long-term autonomous research (operator 2026-06-10)
+Sub-0.15 is the near-term MILESTONE, not the terminus. The GOAL is a **10-year autonomous research
+program**: build the proof-carrying evaluator-equivalent program compiler into a general system, and
+sustain autonomous research + engineering that COMPOUNDS over a decade — each session's VERIFIED
+artifacts, canonical equations, measured oracle geometry, and continual-learning posterior make the next
+session smarter (per "Results must become system intelligence"). **Think in decades:** prefer the durable
+class-shift and the reusable, self-improving system over the one-off hack; invest in autonomy (durable
+disk state, resumable-from-disk, detached daemons, marker-on-exit waiters, continual-learning loops) so
+the program runs across years and sessions without losing signal. Encourage long-horizon bets that a
+short sprint would reject. **BUT the long horizon is NOT a license for means-without-ends:** every unit
+still moves the exact score or HONESTLY reports it did not — the sub-0.15 / means-vs-ends firewall above
+is unchanged. Patience for the big class-shift AND per-unit exact-score honesty are BOTH binding;
+together they are how a decade of autonomous work compounds instead of drifting. **"Any score sub-0.19 is
+good progress on the way down" (operator 2026-06-10):** incremental lowering of the frontier IS progress
+— bank it (defensive lossless banks approved), then keep descending toward sub-0.15 and the decade vision.
+
 ### Cross-references
 The 🎯 banner at the top of `CLAUDE.md` (the TL;DR) · the NO-FAKE supreme rule (means-as-ends is a fake) ·
 `.omx/research/GOAL_standing_v3_20260610.md` (the operating-law threshold ladder + scoreboard this
 section binds) · "Frontier scores are pointer-only" (the SoT) · "Frontier target" · "Long-burn
 score-lowering campaign default" (how to convert a floor-breaking family into an exact-row campaign) ·
-"Submission auth eval — BOTH CPU AND CUDA" (what makes an exact row authoritative).
+"Submission auth eval — BOTH CPU AND CUDA" (what makes an exact row authoritative) · "Results must become
+system intelligence" (the decade-compounding mechanism).
 
 ## Race-mode rigor inversion + parallel-dispatch first — NON-NEGOTIABLE, HIGHEST EMPHASIS
 

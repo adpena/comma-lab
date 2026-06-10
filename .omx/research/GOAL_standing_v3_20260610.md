@@ -15,9 +15,22 @@ at minimum description length). Our edge is that we have MEASURED the oracle's g
 atlas — and no competitor has. The win we are after is not −0.00003; it is a **class shift** that makes
 the leaderboard cluster obsolete and is unquestionably original.
 
+**This is a 10-YEAR autonomous research program, not a sprint (operator 2026-06-10).** Sub-0.15 is the
+near-term milestone; the decade goal is the general proof-carrying compiler + sustained autonomous
+research that COMPOUNDS — each session's verified artifacts, canonical equations, measured geometry, and
+continual-learning posterior make the next smarter. Think in decades: durable, self-improving system over
+one-off hacks; invest in autonomy (durable disk state, resumable daemons, marker-on-exit waiters,
+continual learning) so the program runs across years without losing signal; take long-horizon bets a
+sprint would reject. The long horizon is NOT a license for means-without-ends — every unit still moves
+the exact score or honestly reports it did not (the threshold discipline below is unchanged). Patience for
+the class-shift AND per-unit exact-score honesty are BOTH binding. See CLAUDE.md "🎯 THE GOAL — SUB-0.15"
+non-negotiable (the binding mission) for the canonical statement.
+
 ## THE THRESHOLD LADDER (the goal is UNSATISFIED until crossed — letter AND spirit)
   T_hold  = current pointer (`.omx/state/canonical_frontier_pointer.json`; never hardcode)
-  T_1     = sub-0.19   REQUIRED near-gate
+  T_1     = sub-0.19   REQUIRED near-gate — ANY exact score below this is GOOD PROGRESS on the way down;
+                       bank every lower frontier (defensive lossless banks APPROVED, operator 2026-06-10),
+                       then keep descending. Incremental lowering counts; do not wait for one perfect shot.
   T_2     = sub-0.17   the real target
   T_3     = sub-0.15   the operator's bold stretch — pursue it as the default aim, not a maybe
   T_floor = the information-theoretic floor (derive it; the lower-bound ledger's best bound)
