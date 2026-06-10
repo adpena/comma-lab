@@ -57,6 +57,36 @@ atlas). Compose S5 with S1-S4 (frame-role-aware temporal prediction: frame0 plan
 PREDICTED from frame1 neighbors and stored only as pose-correcting residuals). Rung order suggestion:
 S5a frame0-hard-quant (cheap, immediate) → S1 temporal → S5b full per-(p,r,ch,k,x) waterfill.
 
+## OPERATOR AMENDMENTS (2026-06-10, binding — supersede the rung-order suggestion above)
+
+**Rung priority order (operator-set):** S5a frame0-hard-quant FIRST (cheap, proven asymmetry: frame0
+uint4/uint3/delta vs frame1 uint8-global; d_seg must stay ~unchanged, d_pose prices the exact frame0
+floor) → S2 YUV/channel split (Y protected; U/V coarser; frame0-chroma coarsest) → S1 temporal
+predictor (SIMPLE first: prev-same-role delta / linear / median / neighbor-frame1; NO heavy motion
+estimation until simple deltas underperform) → S3 spatial DCT/DWT + dead-zone per-band → S4 entropy
+coder comparison (brotli/zstd/LZMA/RLE+entropy/range-ANS; split streams by section/channel/band) →
+S6 video-codec-class LL BENCHMARK (a scale reference, NOT a goal) → S5b full per-(p,r,ch,k,x) waterfill.
+
+**Adversarial correction #1 (frame0 prediction):** PoseNet is a temporal model — predicting frame0
+from frame1 neighbors risks destroying the exact motion signal PoseNet reads. The rung is
+predict-frame0 + STORE-POSE-CORRECTING-RESIDUAL at varying precision + measure d_pose — NEVER
+replace-frame0-with-frame1-like-prediction. frame0 is SegNet-free, NOT pose-free.
+
+**Adversarial correction #2 (the absolute bar):** 0.05bpp/370KB is NOT success — its rate term alone
+is 25·370,000/37,545,489 ≈ 0.246 > the 0.19199 frontier before ANY distortion. The reference scale is
+PR95's 178,417-byte total archive. Structured LL coding must reach well under ~200KB total OR SNeRV
+becomes a base carrier for PR110++ atoms + further pruning — state which, honestly.
+
+**Hard requirements per rung:** (a) report gap_to_0.19199 + live_nonrate + archive_nonrate + rate_term
++ payload_section_bytes; (b) NO new uniform knobs — every rung must vary along a measured axis
+(per-role/pair/channel/band/cone), uniform settings are admissible ONLY where a measurement shows the
+response surface is uniform along that axis (the theorem: every uniform allocation is an implicit —
+and here measured-false — claim of surface uniformity); (c) every rung emits the full V3 row
+{schema, base_archive_sha256, payload_section, mutation, bytes_before/after, d_seg, d_pose, score,
+delta_score_total, authority_tier, metric_family, first_failed_surface, keep_or_reject} — no
+prose-only optimization; (d) atlas-measured values enter ONLY with measurement_scope (no new magic
+constants from one sweep).
+
 ## The strategic bar (record in the round-1/2 memos)
 
 skip_high is SOURCE-DERIVED state, so compressing it is a recursive instance of the contest itself —
