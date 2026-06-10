@@ -17,6 +17,19 @@
       "pointer_update_eligible": false,
       "authority_tier": "exact_cpu_advisory",
       "metric_family": "exact_pair_scorer"
+    },
+    {
+      "size_label": "60kb",
+      "lever_id": "task74_distill_student_60kb",
+      "bytes_after": 71278,
+      "d_seg_after": 0.008823394833598286,
+      "d_pose_after": 1.4408006370067596,
+      "score_after": 4.725588555311784,
+      "score_before": 0.19109982419209975,
+      "delta_score_total": 4.534488731119684,
+      "pointer_update_eligible": false,
+      "authority_tier": "exact_cpu_advisory",
+      "metric_family": "exact_pair_scorer"
     }
   ],
   "best_advisory_delta_s": 0.33913000687149447,

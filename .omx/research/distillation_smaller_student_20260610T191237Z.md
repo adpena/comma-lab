@@ -21,11 +21,15 @@ result. The **8-pair sweep** (the honest, less-overfit deliverable) tells a very
 more promising story: **40kb → d_seg 0.00344 (6.4× teacher), d_pose 0.00243 (105× teacher),
 S 0.530**, parity 1.0. The seg distillation is working well (d_seg within an order of magnitude of
 the teacher); the limiting term is now d_pose at ~100×, and the seg term (100·d_seg = 0.344) is the
-larger contributor. Larger ladder rungs + more epochs are expected to descend further (sweep
-in-flight). **This reframes #74 from "DEFER — pose-tube capacity wall" to "PROMISING campaign —
-the distillation premise WORKS; the curve is descending; the open question is how close to the
-teacher a funded long-train run gets."** The §1/§2 2-pair anchor is retained below as the cautionary
-unstable-tube data point + the pose-tube-width mechanism (which is real and still bounds the target).
+larger contributor. **BUT the curve is NON-MONOTONE**: the 60kb student got WORSE (d_pose 0.0024 →
+1.44, S 0.530 → 4.73) — the #57/#62 capacity-instability re-fires, so a fixed-LR/fixed-schedule
+distillation does NOT scale up cleanly; 40kb (smallest, most stable) is the best point. **This
+reframes #74 from "DEFER — pose-tube capacity wall" to "PROMISING but training-stability-limited
+campaign — the distillation premise WORKS at the stable small end (40kb, d_seg 6.4×); the open
+questions are (a) how close a STABILIZED + score-domain-Lagrangian long-train gets on d_pose, and
+(b) per-size LR/grad-clip/EMA tuning to keep bigger students in-basin."** The §1/§2 2-pair anchor is
+retained below as the cautionary unstable-tube data point + the pose-tube-width mechanism (real, still
+bounds the target).
 
 **Authority:** `[local CPU-torch advisory]` — exact upstream `DistortionNet` (PoseNet+SegNet) on CPU,
 GT via `frame_utils.yuv420_to_rgb` ONLY (the rgb24 path manufactures ~100× phantom pose), S recomputed
@@ -135,17 +139,22 @@ quantifies the curve, not a pointer move. Manifest: `.../ladder_8pair_200ep_*/sw
 | size | bytes | exact d_seg | ×teacher | exact d_pose | ×teacher | S (student-only) | constant control |
 |---|---:|---:|---:|---:|---:|---:|---|
 | **40kb** | 46,248 | **3.44e-3** | 6.4× | **2.43e-3** | 105× | **0.530** | d_seg 0.507 / d_pose 39 |
-| 60kb | (in-flight) | | | | | | |
-| 80kb | (in-flight) | | | | | | |
-| 100kb | (in-flight) | | | | | | |
-| 120kb | (in-flight) | | | | | | |
+| 60kb | ~67k | 8.82e-3 | 16× | **1.44** | 62,000× | **4.73** | — |
+| 80kb | (sweep died — harness killed detached daemon at epoch 1) | | | | | | |
+| 100kb / 120kb | (not run) | | | | | | |
 
-**The 40kb 8-pair point is the headline:** S = 0.530 = 100·d_seg (0.344) + √(10·d_pose) (0.156) +
-rate (0.031). The student is within **6.4×** of the teacher's d_seg and **105×** on d_pose — orders of
-magnitude better than the unstable 2-pair anchor (§1), and the seg term (0.344) is now the dominant
-gap. The curve is genuinely descending; larger rungs are expected to improve d_seg further (the seg
-distillation has the most headroom). Harvest the remaining rows from
-`experiments/results/task74_sweep/ladder_8pair_200ep_*/sweep_manifest.json`.
+**The 40kb 8-pair point is the headline AND the curve is NON-MONOTONE (a sharp finding):** S = 0.530
+at 40kb is the BEST; the 60kb student got WORSE, not better — d_pose jumped 0.0024 → **1.44** (600×),
+blowing S to 4.73. This reproduces the **#57/#62 non-monotone-capacity instability**: the larger
+decoder destabilizes training (the same trajectory divergence #62 saw — more capacity made the result
+WORSE). So the binding constraint at the larger end is **training stability, not capacity**. The
+implication for the campaign: a fixed-LR fixed-schedule distillation does NOT scale up cleanly; the
+funded long-train needs per-size LR/grad-clip/EMA-decay tuning + (ideally) the score-domain Lagrangian
+to keep the bigger students in-basin. The 40kb point (smallest, most stable, S 0.530) is the honest
+best, and it is genuinely close on d_seg (6.4×). Harvest any further rows from
+`experiments/results/task74_sweep/ladder_8pair_200ep_*/sweep_manifest*.json` (remainder daemon
+relaunched but the harness keeps killing the detached tree — the curve is best completed inside a
+funded long-train job, not the agent's session).
 
 **Harvest the in-flight curve (durable daemon):** the sweep daemon (PID in `sweep.log`) double-forked
 + survives the session; a future agent reads the completed curve from
