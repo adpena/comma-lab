@@ -461,30 +461,55 @@ def run(args: argparse.Namespace) -> int:
               f"bytes={base_size} score={base_sc['score']:.8f}", flush=True)
 
         curve = []
-        thresholds = [float(t) for t in args.thresholds.split(",")]
-        for thr in thresholds:
-            plans = allocate_bits_by_sensitivity(
-                sensitivities=sensitivities, numels=numels, names=names,
-                sensitivity_threshold=thr, protect_top_k=int(args.protect_top_k),
-            )
-            levels_by_sidx = {sidx: p.levels for sidx, p in plans.items()}
-            levels_by_sidx[DQS1_PROTECTED_STORAGE_INDEX] = 256  # protect DQS1 base
+        # Least-sensitive-first ordering of NON-protected, eligible tensors.
+        eligible = [
+            sidx for sidx in sorted(sensitivities, key=lambda k: sensitivities[k])
+            if sidx != DQS1_PROTECTED_STORAGE_INDEX and numels[sidx] >= args.min_numel
+        ]
+
+        def _build_plan_specs():
+            """Yield (label, levels_by_sidx). Two modes:
+            --plans 'n_crush:levels,...'  -> crush the n LEAST-sensitive eligible
+                                              tensors to `levels` (waterfill probe);
+            else fall back to the threshold allocator over score_sensitivity.
+            """
+            if args.plans:
+                for spec in args.plans.split(","):
+                    n_crush_s, lv_s = spec.split(":")
+                    n_crush, lv = int(n_crush_s), int(lv_s)
+                    lvls = {s: 256 for s in sensitivities}
+                    for sidx in eligible[:n_crush]:
+                        lvls[sidx] = lv
+                    lvls[DQS1_PROTECTED_STORAGE_INDEX] = 256
+                    yield f"crush{n_crush}_int{int(round(np.log2(lv)))}", lvls
+            else:
+                for thr in [float(t) for t in args.thresholds.split(",")]:
+                    plans = allocate_bits_by_sensitivity(
+                        sensitivities=sensitivities, numels=numels, names=names,
+                        sensitivity_threshold=thr, protect_top_k=int(args.protect_top_k),
+                    )
+                    lvls = {sidx: p.levels for sidx, p in plans.items()}
+                    lvls[DQS1_PROTECTED_STORAGE_INDEX] = 256
+                    yield f"thr_{thr:g}", lvls
+
+        for label, levels_by_sidx in _build_plan_specs():
             rj2 = _requant_raw_joined(raw_joined, layout, levels_by_sidx)
             m2, dec_sec_len = _build_recoded_member(
                 codec_ctx, source_payload, sel_payload, dqs1_tail, rj2, codec, layout
             )
-            cand_dir = out_dir / f"thr_{thr:g}"
+            cand_dir = out_dir / label
             cand_dir.mkdir(parents=True, exist_ok=True)
             size, sha = _byte_close_archive(m2, cand_dir)
-            r = score_member(m2, n_pairs, f"thr_{thr:g}")
+            r = score_member(m2, n_pairs, label)
             sc = contest_score_from_components(
                 d_seg=r["mean_d_seg"], d_pose=r["mean_d_pose"], archive_zip_size=size,
             )
             delta = score_delta_components(base=base_sc, cand=sc)
+            crushed_names = {names[s]: levels_by_sidx[s] for s in sorted(levels_by_sidx) if levels_by_sidx[s] < 256}
             point = {
-                "threshold": thr,
-                "levels_by_tensor": {names[s]: levels_by_sidx[s] for s in sorted(levels_by_sidx)},
-                "n_crushed": sum(1 for s, lv in levels_by_sidx.items() if lv < 256),
+                "label": label,
+                "crushed_tensors": crushed_names,
+                "n_crushed": len(crushed_names),
                 "archive_zip_size": size, "archive_sha256": sha,
                 "byte_delta_vs_baseline": size - base_size,
                 "mean_d_seg": r["mean_d_seg"], "mean_d_pose": r["mean_d_pose"],
@@ -493,7 +518,7 @@ def run(args: argparse.Namespace) -> int:
                 "seconds": r["seconds"],
             }
             curve.append(point)
-            print(f"[sweep] thr={thr:g} crushed={point['n_crushed']:2d} bytes={size} "
+            print(f"[sweep] {label:16s} crushed={point['n_crushed']:2d} bytes={size} "
                   f"(Δ{size-base_size:+d}) d_seg={r['mean_d_seg']:.8f} d_pose={r['mean_d_pose']:.8e} "
                   f"score={sc['score']:.8f} (Δ{delta['d_score']:+.8f})", flush=True)
         results["baseline_full"] = base
@@ -522,6 +547,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--probe-levels", type=int, default=4)
     ap.add_argument("--min-numel", type=int, default=5000)
     ap.add_argument("--thresholds", default="0.02,0.05,0.1,0.2,0.5")
+    ap.add_argument("--plans", default=None,
+                    help="direct waterfill sweep 'n_crush:levels,...' "
+                         "(crush the n LEAST-sensitive eligible tensors to `levels`)")
     ap.add_argument("--protect-top-k", type=int, default=3)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--threads", type=int, default=8)
