@@ -527,7 +527,7 @@ def run(args: argparse.Namespace) -> int:
         best = min(curve, key=lambda p: p["score"]) if curve else None
         results["best_candidate"] = best
         if best:
-            print(f"\n[sweep] BEST: thr={best['threshold']:g} score={best['score']:.8f} "
+            print(f"\n[sweep] BEST: {best['label']} score={best['score']:.8f} "
                   f"(frontier {_frontier_pointer_cpu():.8f}, Δ{best['score']-_frontier_pointer_cpu():+.8f})", flush=True)
 
     out_json = out_dir / f"{args.stage}_result.json"
