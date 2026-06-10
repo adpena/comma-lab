@@ -72686,6 +72686,47 @@
         }
       },
       "notes": "research_only=false; lane_class=substrate_engineering. Fix for the INERT score-aware loop (task #75 elephant): tac.score_aware_loop is the WORKING PR95-faithful surface (direct CE/margin through LIVE frozen SegNet + GT-argmax targets + eval-roundtrip STE + 100*seg+1*pose + AdamW + EMA-shadow). Root cause of inertness: learnable-student-head KL distill surrogate (not direct-live CE) + dual-ascent multi-term Lagrangian where pose=271 drowned seg=1.59 -> grad_norm 5e4-7e6 hard-clipped 1.0 every step (clip scale 1.87e-5). archive_grammar=N/A (loop surface, not a carrier); score_aware_loss=tac.score_aware_loop.ScoreAwareTrainer. Consumed by #74/#63/#65. [macOS-CPU advisory] proofs; NON-promotable. Memo .omx/research/inert_loop_fix_*.md."
+    },
+    {
+      "id": "lane_capstone_vq_nerv_film_pose_20260610",
+      "name": "Capstone original VQ-NeRV + FiLM-pose basis (Task #78)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/capstone_vq_nerv/ \u2014 VQ-NeRV+FiLM-pose bundle+trainer+export+18 tests; joint d_seg 0.806->0.0 + d_pose 3211->0.98 on frozen color-proto scorer [macOS-MLX research-signal]"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "MEASURED byte-budget [exact byte len(brotli)] .omx/research/capstone_vq_nerv_byte_budget_20260610.json: base_ch=16 int8=71968B rate 0.0479 (int8 0.983 B/param, 0.2-0.4% perturbation) + REAL-scorer recipe-validation [macOS-MLX research-signal] .omx/research/capstone_recipe_validation_real_scorer_aggr_20260610.json: d_seg 0.507->0.0103 best (49x on EXACT EfficientNet-B2), d_pose 140->0.03 (FiLM holds, 250x)"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/capstone_original_small_vq_basis_20260610T214151Z.md (session 2: real-scorer recipe-validation PASSED + measured byte-budget; verdict DEFERRED-pending-CUDA-full-train; NO pointer move)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72695,5 +72736,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T19:49:51Z"
+  "updated_at": "2026-06-10T21:59:00Z"
 }
