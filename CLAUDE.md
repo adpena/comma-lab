@@ -12,6 +12,25 @@
 > **`## NO FAKE IMPLEMENTATIONS`** section below. READ IT before writing, claiming, marking-done, or
 > submitting ANYTHING. A reuse/name/mechanism claim the code does not honor is a bug, not a shortcut.
 
+> # 🎯 THE GOAL — SUB-0.15 EXACT SCORE — NON-NEGOTIABLE, HIGHEST EMPHASIS 🎯
+> **The mission, second only to NO FAKE. The goal is to LOWER THE EXACT CONTEST SCORE below 0.15.**
+> Success has EXACTLY ONE definition: the canonical frontier pointer
+> (`.omx/state/canonical_frontier_pointer.json`) records a lower exact-eval `archive.zip` score from
+> `upstream/evaluate.py` (600-sample, contest-CPU AND/OR contest-CUDA on 1:1 hardware). Ladder:
+> **T_3 = sub-0.15 (THE target, the default aim) · T_1 = sub-0.19 (floor of acceptable).** Above T_1 = failing.
+> **What is NOT goal progress (the failure mode this extincts):** tools, harnesses, solvers, codecs,
+> runtimes, Rust crates; floor derivations, research/design memos, paper inventions; located cruxes,
+> honest negatives, DEFER verdicts, deferral ledgers; holding the existing frontier; a measurement
+> merely running; advisory/MLX/proxy rows. These are MEANS. The END is a LOWER EXACT SCORE. A unit (or
+> session) that ends with the exact pointer UNMOVED and S > T_1 has NOT achieved the goal — say so
+> plainly (narrating means as ends is a mission-level NO-FAKE violation) and aim the next unit DIRECTLY
+> at an exact-eval row that crosses the threshold. **Bias every decision toward the action most likely
+> to LAND A LOWER EXACT SCORE soonest** — not the most rigorous analysis or the most interesting crux.
+> When a path walls, PIVOT to the next path that can produce a lower exact score, not to more
+> characterization of the wall. Build infrastructure ONLY in service of an imminent exact row. The
+> Modal <$5 budget exists to BUY exact rows — spend it to measure real byte-closed candidates; do not
+> hoard it while the score sits unmoved. Canonical body: the **`## THE GOAL — SUB-0.15`** section below.
+
 ## Local Disk, SSD Spill, Auto-Cleanup, And Provenance — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 Local disk is for source, small manifests, and live metadata. Bulky rebuildable
@@ -146,6 +165,63 @@ rule wins. See the supreme-rule banner at the very top of `CLAUDE.md` — this s
 4. Sister-substrate audit: if the same FAKE pattern exists in sister substrates (per the META-meta finding from a8bc7e79 sweep — bug classes have 6-7× spread across the repo), enumerate + fix in the same commit batch.
 
 **Cross-references**: CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" (the runtime-effect surface that THIS rule generalizes) + "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" (the dispatch-discipline surface) + Catalog #220 (substrate L1+ scaffold operational mechanism) + Catalog #272 (distinguishing-feature integration contract) + Catalog #307 (paradigm-vs-implementation falsification classification) + Catalog #341 (Tier A canonical-routing markers — markers are observability NOT score-claim) + Catalog #287 (placeholder-rationale rejection at data-content layer) + Catalog #105/#139 (no-op detector + byte-mutation smoke discipline) + the Slot EEE audit memo above.
+
+## THE GOAL — SUB-0.15 EXACT SCORE — NON-NEGOTIABLE, HIGHEST EMPHASIS (mission, second only to NO FAKE)
+
+**This section is the canonical body of the 🎯 banner at the top of `CLAUDE.md`. It is the mission. Only
+the NO-FAKE supreme rule outranks it.**
+
+**Source:** operator binding directive 2026-06-10 verbatim *"you did not actually achieve the goal as the
+frontier score wasn't actually lowered, what is the new sub 0.15 goal non negotiable highest emphasis."*
+**Empirical anchor (the failure this extincts):** a full 2026-06-10 session produced the NO-FAKE supreme
+rule, the closed-spec/boundary-math/waterfilling architecture, the seg-core + boundary-solver + Rust
+runtime-less decoder + the MEASURED information-theoretic floor (S_floor=0.11797) + five honest
+score-native experiments + the deferral-recovery ledger + a running decisive d_seg-loss test — and the
+**exact frontier score did NOT move (0.19110 unchanged, still above even T_1).** A large, disciplined,
+honest body of work that did not lower the exact score is a MISS, not a success. This section makes that
+verdict structural.
+
+### The rule
+The goal is to LOWER THE EXACT CONTEST SCORE `S = 100·d_seg + sqrt(10·d_pose) + 25·|archive.zip|/37_545_489`
+below **0.15**. Success has EXACTLY ONE definition: `.omx/state/canonical_frontier_pointer.json` records a
+NEW, LOWER exact-eval score from `upstream/evaluate.py` over the 600 samples, on contest-CPU AND/OR
+contest-CUDA on 1:1 hardware, on the EXACT `archive.zip` bytes that would be submitted. The ladder:
+* **T_3 = sub-0.15** — THE target. The default aim of every campaign. Pursue it, not a maybe.
+* **T_1 = sub-0.19** — the floor of acceptable (a near-gate, NOT the goal). Above T_1 = failing.
+* T_floor — the information-theoretic lower bound (MEASURED S_floor=0.11797 rate-dominated; the
+  headroom proof, not the target).
+
+### What does NOT count as goal progress (binding taxonomy — the means/ends firewall)
+NONE of the following is goal progress, no matter how rigorous, original, or hard-won:
+* tools, harnesses, solvers, codecs, archive grammars, runtimes, Rust/native lowerings;
+* floor derivations, research/design memos, paper inventions, SOTA surveys;
+* located cruxes, honest negatives, DEFER verdicts, deferral/orphan ledgers, root-cause diagnoses;
+* holding the existing frontier; a measurement merely RUNNING; advisory / `[macOS-MLX]` / proxy / CPU-non-contest rows.
+These are **MEANS**. The **END** is a lower EXACT score. Narrating a means as if it were the end is a
+**mission-level NO-FAKE violation** (a "progress" claim the exact pointer does not honor). A unit or
+session that ends with the exact pointer UNMOVED and S > T_1 **has not achieved the goal — state that
+plainly** and aim the next unit DIRECTLY at an exact-eval row that crosses the threshold.
+
+### Binding consequences
+1. **Bias every decision toward the action most likely to LAND A LOWER EXACT SCORE soonest** — not the
+   most rigorous analysis, not the most interesting crux, not the cleanest abstraction.
+2. **When a path walls, PIVOT** to the next path that can produce a lower exact score — do NOT spend the
+   next unit further characterizing the wall (that is means-hoarding). One crisp wall-verdict, then pivot.
+3. **Infrastructure is built ONLY in service of an imminent exact-eval row.** If a build does not have a
+   named, near-term exact-eval row it feeds, it is premature.
+4. **Spend the Modal <$5 budget to BUY exact rows.** It exists to measure real byte-closed candidates on
+   contest hardware. Hoarding it while the score sits unmoved is the wrong default; a fail-closed paid
+   eval on a real candidate that beats the advisory bar is the RIGHT default (decide-don't-defer).
+5. **The session report leads with the exact pointer delta.** Every wrap-up states, first: did the exact
+   frontier move, by how much, on which axis — then everything else. If it did not move, that is the
+   headline.
+
+### Cross-references
+The 🎯 banner at the top of `CLAUDE.md` (the TL;DR) · the NO-FAKE supreme rule (means-as-ends is a fake) ·
+`.omx/research/GOAL_standing_v3_20260610.md` (the operating-law threshold ladder + scoreboard this
+section binds) · "Frontier scores are pointer-only" (the SoT) · "Frontier target" · "Long-burn
+score-lowering campaign default" (how to convert a floor-breaking family into an exact-row campaign) ·
+"Submission auth eval — BOTH CPU AND CUDA" (what makes an exact row authoritative).
 
 ## Race-mode rigor inversion + parallel-dispatch first — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
