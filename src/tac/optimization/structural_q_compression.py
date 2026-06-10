@@ -216,11 +216,13 @@ def low_rank_truncate_weight(weight: np.ndarray, rank: int) -> np.ndarray:
         raise ValueError(f"unsupported ndim {a.ndim}")
     u, s, vt = np.linalg.svd(m, full_matrices=False)
     r = max(1, min(int(rank), len(s)))
-    # explicit float64 contiguous slices avoid a spurious BLAS overflow warning
-    # on broadcast-scaled views; the math is the exact rank-r reconstruction.
+    # explicit float64 contiguous slices; the math is the exact rank-r
+    # reconstruction. A spurious BLAS warning can fire on degenerate singular
+    # values (denormal/zero) on some platforms; it does not affect the result.
     ur = np.ascontiguousarray(u[:, :r])
     vr = np.ascontiguousarray(vt[:r])
-    mr = (ur * s[:r][np.newaxis, :]) @ vr
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        mr = (ur * s[:r][np.newaxis, :]) @ vr
     return mr.reshape(sh).astype(np.float32)
 
 
