@@ -118,7 +118,23 @@ quantifies the curve, not a pointer move. Manifest: `.../ladder_8pair_200ep_*/sw
 <!-- SWEEP TABLE (filled as the daemon lands rows) -->
 | size | bytes | exact d_seg | exact d_pose | S (student-only) | holds teacher? |
 |---|---:|---:|---:|---:|:--:|
-| (8-pair sweep landing) | | | | | NO |
+| (8-pair sweep landing — harvest from sweep_manifest.json) | | | | | NO (predicted) |
+
+**Harvest the in-flight curve (durable daemon):** the sweep daemon (PID in `sweep.log`) double-forked
++ survives the session; a future agent reads the completed curve from
+`experiments/results/task74_sweep/ladder_8pair_200ep_*/sweep_manifest.json` and emits the rows via
+`tools/emit_distill_student_candidate_row.py --result <each>/train_result.json`. The 8-pair tube is
+LESS overfit than the 2-pair anchor so each row's d_seg/d_pose will be ≥ (worse than) §1; the curve
+quantifies the rate-vs-distortion tradeoff but, per §2, cannot cross the pose tube at any ladder rung
+(all < the 177kb frontier).
+
+**Independence from the #75 harness bug:** the sister #75 finding (the shared
+`_shared/mlx_score_aware/bundle.py` defaults SegNet/PoseNet objective weights to 0.0 → scorer-blind
+"score-aware" runs) does NOT apply here — this trainer wires the frozen SegNet (KL-T2) + PoseNet
+(pose-MSE) teachers DIRECTLY with explicit nonzero weights (w_seg 0.5, w_pose 0.1) and the exact
+d_seg/d_pose are RE-MEASURED on the frozen `DistortionNet`. The seg-KL train metric crushing 6.2→0.04
+(§0) proves the seg objective is live, not inert. So the §2 pose-tube wall is a genuine capacity
+finding, not the #75 inert-loop artifact.
 
 ## 5. VERDICT: DEFER-pending-research (NOT a kill) + the reactivation criteria
 
