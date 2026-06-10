@@ -72304,23 +72304,23 @@
       "id": "lane_pr110_payload_entropy_recode_20260610",
       "name": "PR110 payload entropy recode (absorb PR112)",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tac.packet_compiler.pr110_payload_entropy_recode + ctx_range_coder + tools/build_pr110_payload_entropy_recode_candidate.py + recoded submission_dir runtime; commit 0d941fb63"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[empirical:experiments/results/pr110_payload_entropy_recode_20260610/decode_parity_proof.json] recoded raw sha dacf6b33 == R3 raw sha (byte-identical, 3.66GB); recoded archive 177169B sha b46897"
         },
         "contest_cuda": {
           "status": false,
           "evidence": ""
         },
         "contest_cpu": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "0.19109982 [contest-CPU] full 600-sample Modal eval call_id fc-01KTRAYS68F3S0YWFT0CX35HDG; experiments/results/pr110_payload_entropy_recode_20260610/recoded_cpu_eval/contest_auth_eval.json; beats PR112 0.19112577 + frontier 0.19198275"
         },
         "strict_preflight": {
           "status": false,
@@ -72331,8 +72331,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/leapfrog_pr112_absorb_recode_verdict_20260610.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -72349,5 +72349,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T08:15:50Z"
+  "updated_at": "2026-06-10T08:44:47Z"
 }
