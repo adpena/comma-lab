@@ -122,6 +122,35 @@ Order: S8 first (cheapest to test — the frontier archive is on disk; a receive
 N=48 exact re-measure prices it immediately), then S7 (distill-the-mean-field), S9, S10, S11.
 Same guards: byte-closed, exact re-measure, V3 rows, runtime inside the 30-min budget.
 
+## S12 — RESIZE-NULL CANONICAL PREIMAGE (operator-elevated 2026-06-10; theorem-class, runs BESIDE S8)
+
+The #47 derivation (commits a0744896d+): both scorer heads' FIRST op is the same linear resize
+R: R^(874·1164) → R^(384·512); nullity 80.67%/channel; 22.7% of pixels have exactly zero weight.
+**The theorem: evaluate.py scores the PROJECTION y = Rx, not the camera frame x. Therefore every
+vehicle should emit the MINIMUM-DESCRIPTION PREIMAGE: x̃* = argmin bytes(x̃) s.t. Rx̃ = Rx,
+0 ≤ x̃ ≤ 255.** Not "drop invisible pixels" — choose the CHEAPEST legal high-res representative of
+the scorer-equivalence class (piecewise-constant / palette / RLE-friendly / null-basis-descended).
+Tiers: (1) zero-weight pixel fill (entropy-optimal constant/predictor — certified free); (2)
+integer-friendly null-basis vectors n_i with Rn_i=0 used to DESCEND the coded size of the output
+frames at fixed scorer input; (3) full canonical-preimage optimization (blockwise constrained
+least-entropy / greedy null-basis descent on compressed size / palette-aware construction).
+**This is a UNIVERSAL POSTPROCESSOR for every vehicle** (SNeRV render, frontier compose, PR110++
+modified frames, HiNeRV, PACT-VQ): it removes scorer-invisible degrees of freedom BEFORE any codec
+touches the bytes — stronger than codec work.
+OPERATOR CAVEATS (binding): (a) outputs must remain valid uint8/shape/range — the null space is
+real-valued, archive frames are integers, so use integer-friendly bases or approximate-then-PROVE
+(emit exact max|Rx̃−Rx| per frame; require 0 or a verified tolerance + exact d_seg/d_pose check);
+(b) equality must hold on the RGB tensor BEFORE PoseNet's YUV conversion (then YUV6 equality
+follows); (c) the preimage SOLVER runs at compress time — the decode of the chosen representation
+must stay cheap and inside the 30-min budget; (d) every application emits a V3 row.
+
+## NONRATE REALITY CHECK (operator, binding arithmetic for ALL SNeRV rungs)
+SNeRV's current d_seg≈0.002468 ⇒ seg term alone = 0.2468 > 0.19199. **Rate attack alone cannot make
+SNeRV a frontier carrier** — it must ALSO (a) lower d_seg on the exact surface, or (b) become the
+base for PR110++/boundary/pose atoms that lower nonrate. Every round-2+ memo must state both gaps:
+bytes-to-288KB (the zero-distortion byte bar) AND nonrate-to-0.19199. PR95's 178,517B archive
+(rate 0.119) leaves only ~0.073 of nonrate room at the frontier — that is the regime.
+
 ## The strategic bar (record in the round-1/2 memos)
 
 skip_high is SOURCE-DERIVED state, so compressing it is a recursive instance of the contest itself —
