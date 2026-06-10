@@ -27,7 +27,6 @@ from tac.optimization.evaluator_invisibility_basis import (
     EvaluatorInvisibilityBasis,
     EvaluatorInvisibilityBasisError,
     Frame0SegNetCorollary,
-    Tier1ResizeNullSpace,
     Tier2MeasuredLowSensitivity,
     _resize_1d_matrix,
     build_evaluator_invisibility_basis,
@@ -462,9 +461,11 @@ def test_tier1_invisible_through_full_upstream_preprocess_both_heads():
     # PoseNet frame1 input bit-identical (zero-weight pixels are resize-null,
     # and yuv6 is a fixed function of the resized input).
     assert (pose1_f1 - pose0_f1).abs().max().item() == 0.0
-    # PoseNet frame0 input bit-identical at the zero-weight pixels (the +255 on
-    # ch0 is NOT at zero-weight -> would change pose; we only certify the
-    # zero-weight subset, so restrict frame0 perturbation to zero-weight):
+    # Conversely: the +255 on frame0 ch0 (NOT at zero-weight) DOES change
+    # PoseNet's frame0 input — proving frame0 is SegNet-free but NOT PoseNet-free
+    # outside the resize zero-weight set (the corollary's exact boundary).
+    assert (pose1_f0 - pose0_f0).abs().max().item() > 0.0
+    # PoseNet frame0 input bit-identical at the zero-weight pixels:
     f0_zero_only = f0.clone()
     for ch in range(3):
         f0_zero_only[ch, rr, cc] = 255.0

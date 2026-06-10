@@ -74,8 +74,9 @@ Cross-references
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -538,7 +539,7 @@ class EvaluatorInvisibilityBasis:
         return lines
 
     @classmethod
-    def from_jsonl_lines(cls, lines: Iterable[str]) -> "EvaluatorInvisibilityBasis":
+    def from_jsonl_lines(cls, lines: Iterable[str]) -> EvaluatorInvisibilityBasis:
         """Rebuild from JSONL.  Tier-1 is re-DERIVED from the header's camera /
         scorer sizes (the certified basis is reproducible from sizes alone — the
         header summary is an audit echo, not the source of truth)."""
@@ -689,20 +690,20 @@ def tier2_rows_from_atlas(
 __all__ = [
     "CAMERA_H",
     "CAMERA_W",
-    "SCORER_INPUT_H",
-    "SCORER_INPUT_W",
     "CONTEST_TOTAL_BYTES",
     "EVALUATOR_INVISIBILITY_BASIS_SCHEMA",
+    "SCORER_INPUT_H",
+    "SCORER_INPUT_W",
     "TIER1_EVIDENCE_GRADE",
     "TIER2_EVIDENCE_GRADE",
-    "EvaluatorInvisibilityBasisError",
-    "ResizeKernelDerivation",
-    "derive_resize_kernel",
-    "Tier1ResizeNullSpace",
-    "derive_tier1_resize_null_space",
-    "Frame0SegNetCorollary",
-    "Tier2MeasuredLowSensitivity",
     "EvaluatorInvisibilityBasis",
+    "EvaluatorInvisibilityBasisError",
+    "Frame0SegNetCorollary",
+    "ResizeKernelDerivation",
+    "Tier1ResizeNullSpace",
+    "Tier2MeasuredLowSensitivity",
     "build_evaluator_invisibility_basis",
+    "derive_resize_kernel",
+    "derive_tier1_resize_null_space",
     "tier2_rows_from_atlas",
 ]
