@@ -72594,6 +72594,52 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_71_structural_q_compression_20260610",
+      "name": "Structural Q* compression of learned HNeRV decoder (#71)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/structural_q_compression.py (exact codec-grammar byte re-encoder + transforms; 26 tests pass; commit 3fbd8d953)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "26 NO-FAKE behavior tests (no-op detection, byte-grammar inverse, score-aware-beats-random); src/tac/tests/test_structural_q_compression.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/structural_q_compression_20260610T184324Z.md (DEFER verdict; 5-no-move convergence; learned basis at distortion floor)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "DEFER (5th convergent no-move). Post-hoc compression of frozen frontier weights CLOSED: SVD INCREASES bytes +9-14%; magnitude/score-aware pruning fail Q* by 70-370x the 0.000666/kB feasibility threshold; learned 162KB basis at distortion-holding floor. [macOS-CPU advisory]; no contest dispatch warranted.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "score-domain RETRAINED smaller renderer (funded KD/QAT campaign against alpha*B+beta*d_seg+gamma*sqrt(d_pose))",
+        "compose with #69 requant if it relaxes per-tensor distortion budget >=70x"
+      ]
     }
   ],
   "level_rules": {
@@ -72603,5 +72649,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T18:17:06Z"
+  "updated_at": "2026-06-10T18:47:53Z"
 }

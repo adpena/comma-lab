@@ -23,17 +23,25 @@ with the latest pointer + whether it moved.
 
 | 4 | #54 cross-pair pose corrector | cross_pair_corrector | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | paradigm proven, lever saturated | DEFER: cross-pair global-pool waterfilling PROVEN correct, but the frontier's FEC6 K=16 frame-0 selector is already per-pair POSE-OPTIMAL (0/42 improvable; constant-correction control +1.27e-3 worse → waterfiller load-bearing). Pose analog of #55. Region-allocator READY for a contiguous-residual lever-C base. |
 
-## Convergent meta-finding (4 no-moves)
+| 5 | #71 Q* structural compression | structural_compression | exact_cpu_advisory / exact_pair_scorer | **0.0** | unmoved | original method (exact codec-grammar byte re-encoder + per-tensor exact-scorer cost/kB ablation + 0.000666/kB feasibility threshold) | DEFER: RATE side is REAL+LARGE (magnitude prune keep0.7 −20,741 B = sub-0.18, keep0.3 −68,657 B = sub-0.15 by rate alone) but DISTORTION DIES at 70–370× the feasibility threshold. SVD/low-rank INCREASES bytes +9–14% (dense weights r95≈78% full rank; break-even rank > r95; re-quant breaks brotli structure). Per-tensor exact-scorer ablation: cheapest tensor (blocks.1) +0.0485 score/kB vs the 0.000666/kB net-negative threshold = 73× over. Score-aware Taylor prune (|g·w|, diff pose+seg-KL) is WORSE than magnitude (keep0.6 ΔS +1.423 vs +1.309) — the learned weights are JOINTLY ENTANGLED, no score-irrelevant sparse subset exists. PROVES the 162 KB learned basis is at its DISTORTION-HOLDING FLOOR (minimal for the SCORE, not just a memorized point). Reactivation = score-domain RETRAINED smaller renderer (funded KD/QAT campaign) — the only path that relocates the floor; post-hoc compression of frozen weights is closed. |
+
+## Convergent meta-finding (5 no-moves)
 #64 (lossless exhausted) + #72 (residual codes cheap @0.856 B/flip but collateral kills application) + #73
-(generic-basis feasibility needs ≥625KB) all confirm from different directions: **the 177KB learned HNeRV
-nonlinear basis IS the cheap-feasible representation for holding pose+seg simultaneously.** The only
-sub-frontier path that holds both is a SMALLER LEARNED basis → #71 (structural Q* compression) + lever-C.
-#71 is the singular most-likely pointer-mover; #69 (requant) relaxes its target.
+(generic-basis feasibility needs ≥625KB) + #71 (the LEARNED basis itself cannot be pruned/factored ~73× cheaper
+than the rate it buys; SVD even costs bytes) all confirm from FIVE directions (incl #54 pose-selector
+saturation): **the 162 KB learned HNeRV nonlinear basis IS the cheap-feasible representation for holding
+pose+seg simultaneously, and it is at its DISTORTION-HOLDING FLOOR.** It is minimal for the SCORE — not an
+over-parameterized memorized point. No post-hoc operation on the frozen frontier weights lowers the rate term
+without an equal-or-larger distortion penalty. The ONLY remaining sub-frontier path is a SMALLER LEARNED basis
+obtained by SCORE-DOMAIN RETRAINING (distill/QAT a renderer at a smaller architecture against
+`α·B + β·d_seg + γ·√d_pose`, NOT post-hoc), which relocates the floor itself. This is a funded long-training
+campaign, not a $0–$1 transform.
 
 ## Pending movers (will append a row on landing, via the schema firewall)
-- #69 score-aware Q* re-quant (rate) · #71 Q* structural compression (rate, possibly sub-0.15 alone)
+- #69 score-aware Q* re-quant (rate) · ~~#71 Q* structural compression~~ (CLOSED post-hoc; reopens only as score-domain RETRAINING)
 - #72 lever-D margin-conditional residual coder (d_seg) · #54 cross-pair waterfilled corrector (pose)
 - #73 legal-frame Dykstra feasibility (realization) · #63 d_seg-loss hinge (gates the lever-C campaign)
+- **NEW (the convergent next step): score-domain RETRAINED smaller renderer** — the only lever that moves the distortion floor #64/#71/#72/#73 all hit.
 
 ## Innovation-status note (per the Innovation Gate)
 The current 0.19109982 frontier is a **defensive bank** (`defensive_bank=true`, `class_shift=false`,
