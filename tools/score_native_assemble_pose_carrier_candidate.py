@@ -396,7 +396,7 @@ def main(archive_dir, output_dir):
     sfb = _fourier(SEG_FOURIER_SEED, int(seg_cfg["n_fourier"]), float(seg_cfg["fourier_sigma"]))
     lfb = _fourier(LUMA_FOURIER_SEED, int(luma_cfg["n_fourier"]), float(luma_cfg["fourier_sigma"]))
     out = __import__("pathlib").Path(output_dir); out.mkdir(parents=True, exist_ok=True)
-    npairs = int(seg_cfg["num_pairs"])
+    npairs = min(int(seg_cfg["num_pairs"]), int(luma_cfg["num_pairs"]))
     for pi in range(npairs):
         logit = _inr_forward(seg, sfb, cs, seg["mod"][pi], int(seg_cfg["n_hidden"]), int(seg_cfg["hidden_dim"]), "logit")
         ag = logit.argmax(-1).reshape(sh, sw)
