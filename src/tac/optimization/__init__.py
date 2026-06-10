@@ -16,6 +16,26 @@ from importlib import import_module
 from typing import Any
 
 _EXPORTS: dict[str, tuple[str, str]] = {
+    "CrossPairPoseWaterfiller": (
+        "tac.optimization.cross_pair_waterfilled_corrector",
+        "CrossPairPoseWaterfiller",
+    ),
+    "CrossPairPoseResult": (
+        "tac.optimization.cross_pair_waterfilled_corrector",
+        "CrossPairPoseResult",
+    ),
+    "allocate_seg_regions": (
+        "tac.optimization.cross_pair_waterfilled_corrector",
+        "allocate_seg_regions",
+    ),
+    "compose_water_level_allocation": (
+        "tac.optimization.cross_pair_waterfilled_corrector",
+        "compose_water_level_allocation",
+    ),
+    "WATER_LEVEL_LAMBDA_STAR": (
+        "tac.optimization.cross_pair_waterfilled_corrector",
+        "WATER_LEVEL_LAMBDA_STAR",
+    ),
     "InfoGeomLangevinConfig": (
         "tac.optimization.info_geom_langevin",
         "InfoGeomLangevinConfig",
