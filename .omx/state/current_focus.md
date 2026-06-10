@@ -1,3 +1,17 @@
+# Current Focus - 2026-06-10 (CAPSTONE viability daemon LIVE — first ORIGINAL basis)
+
+> **Pointer: 0.19109982 [contest-CPU] `b46897267` — UNMOVED.** The mission is the capstone (our own
+> small learned basis), NOT post-hoc compression of the frozen frontier (all such levers now CLOSED,
+> incl. #79 packaging). This session: fixed the null canonical pointer; closed #79 (packaging lever,
+> rigorous negative); built `experiments/run_capstone_campaign.py` (the #65/#78 actuator) + validated
+> it (base_ch=16 int8 → 64,369 B archive = rate 0.043, sub-0.15-capable budget MEASURED); LAUNCHED the
+> decisive 100-pair viability daemon (pid in `.omx/tmp/capstone_daemon/`).
+> **RESUME:** harvest `experiments/results/capstone_daemon_b16_n100/capstone_result.json` (or tail the
+> daemon log for the eval_every=5 RD trajectory). Full doc:
+> `.omx/research/capstone_campaign_launch_and_session_state_20260610.md`. Gate ladder: clean 100-pair
+> descent+pose-hold → fund the 600-pair CUDA candidate → paired CPU+CUDA exact eval → pointer move.
+
+<!-- prior focus (2026-06-07, NeRV launch-contract blocker closure) preserved below as history -->
 # Current Focus - 2026-06-07 (NeRV launch-contract blocker closure)
 
 <!--
