@@ -72,7 +72,27 @@ ACTION_RECODE = "recode"
 """Re-encode the section with a cheaper entropy coder; frees bytes at (ideally)
 ~zero distortion cost (lossless recode) — the free-bytes branch."""
 
-_ACTION_KINDS = (ACTION_DROP, ACTION_QUANTIZE, ACTION_RECODE)
+ACTION_QUANTIZE_CONE_MASKED = "quantize_delta_cone_masked"
+"""Coarsen the section's coefficients by a quantization step Δ ONLY at frame1
+pixels whose JOINT SAFE CONE radius (``tac.optimization.frame1_joint_safe_cone``)
+is >= a threshold (the spatially-free set); preserve full precision on the fragile
+set (radius < threshold). This is the SPATIAL refinement of :data:`ACTION_QUANTIZE`:
+the band×orientation atlas says *which section* is sensitive, but the cone says
+*which frame1 pixel inside that section* has free budget. The Δbytes accounting
+charges the section bytes freed (proportional to the free fraction × the coarsen
+ratio) MINUS the per-pixel keep/coarsen mask's OWN coding cost (bit-packed +
+brotli q=11) — the mask must pay rent: a mask whose coding cost exceeds the bytes
+it frees is rejected by THE LAW. The distortion given up is cone-radius-weighted:
+only the free-set coefficients are coarsened, so the section's atlas distortion
+value is scaled by the FREE fraction (fragile pixels contribute ~0 to the
+given-up distortion because their coefficients are preserved)."""
+
+_ACTION_KINDS = (
+    ACTION_DROP,
+    ACTION_QUANTIZE,
+    ACTION_RECODE,
+    ACTION_QUANTIZE_CONE_MASKED,
+)
 
 
 class LfPayloadRateDistortionError(ValueError):
@@ -253,6 +273,260 @@ class BaselineScoreTerms:
             raise LfPayloadRateDistortionError("baseline d_seg / d_pose must be >= 0")
         if int(self.archive_bytes) < 0:
             raise LfPayloadRateDistortionError("baseline archive_bytes must be >= 0")
+
+
+# ---------------------------------------------------------------------------
+# Frame1 JOINT SAFE CONE input — the per-pixel spatial budget surface (#35 -> #46).
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Frame1ConeMap:
+    """The per-pixel frame1 JOINT SAFE CONE budget surface (from #35).
+
+    This is the SPATIAL granularity the band×orientation atlas cannot resolve: for
+    every frame1 pixel on the SegNet grid (384x512) the cone declares a perturbation
+    budget (``joint_cone_radius``) such that coarsening a frame1-touching coefficient
+    AT that pixel by <= radius leaves both contest scorers' response within tolerance.
+    The ``fragile_cone_mask`` is the binding-constraint set (radius < half a uint8
+    step) where NO frame1-touching byte may move.
+
+    Built from the ``tac.optimization.frame1_joint_safe_cone.Frame1JointSafeCone``
+    arrays — either in-memory (tests) or loaded from a ``cone_pair_*.npz`` map written
+    by ``tools/build_frame1_joint_safe_cone.py --save-maps`` (the #35 CLI output;
+    the .npz carries ``joint_cone_radius`` + ``fragile_cone_mask`` + companions).
+
+    A section is refined by the cone ONLY when the section's content actually touches
+    frame1 (``frame_incidence`` includes ``frame1_only`` or ``both_*``); a frame0-only
+    section has no frame1 cone constraint and the masked action does not apply.
+    """
+
+    # (H, W) per-pixel joint cone radius in scorer input units [0, 255].
+    joint_cone_radius: Any
+    # (H, W) bool: True where the cone is fragile (radius < fragile threshold).
+    fragile_cone_mask: Any
+    # The cone's fragile-radius threshold (a pixel with radius >= this is "free").
+    fragile_radius_threshold: float = 0.5
+    # (H, W) OPTIONAL per-pixel joint P18/P19 sensitivity (from the cone's
+    # ``joint_sensitivity`` array). When present, the masked action's distortion cost
+    # is weighted by the fraction of the section's sensitivity that actually lives on
+    # the FREE pixels (not just their pixel count) — capturing the cone's core claim
+    # that the free pixels are the LOW-sensitivity ones. When absent, the masked
+    # action falls back to the conservative pixel-count free fraction.
+    joint_sensitivity: Any = None
+    # Provenance / scope (carried through to every masked action for audit).
+    source_path: str = ""
+    axis_tag: str = "[macOS-CPU advisory]"
+
+    def __post_init__(self) -> None:
+        import numpy as _np
+
+        radius = _np.asarray(self.joint_cone_radius, dtype=_np.float64)
+        fragile = _np.asarray(self.fragile_cone_mask)
+        if radius.ndim != 2:
+            raise LfPayloadRateDistortionError(
+                f"Frame1ConeMap.joint_cone_radius must be 2-D (H, W); got {radius.shape}"
+            )
+        if fragile.shape != radius.shape:
+            raise LfPayloadRateDistortionError(
+                "Frame1ConeMap.fragile_cone_mask shape must match joint_cone_radius"
+            )
+        if float(_np.nanmin(radius)) < 0.0:
+            raise LfPayloadRateDistortionError(
+                "Frame1ConeMap.joint_cone_radius must be non-negative"
+            )
+        if float(self.fragile_radius_threshold) < 0.0:
+            raise LfPayloadRateDistortionError(
+                "Frame1ConeMap.fragile_radius_threshold must be >= 0"
+            )
+        if self.joint_sensitivity is not None:
+            js = _np.asarray(self.joint_sensitivity, dtype=_np.float64)
+            if js.shape != radius.shape:
+                raise LfPayloadRateDistortionError(
+                    "Frame1ConeMap.joint_sensitivity shape must match joint_cone_radius"
+                )
+            if float(_np.nanmin(js)) < 0.0:
+                raise LfPayloadRateDistortionError(
+                    "Frame1ConeMap.joint_sensitivity must be non-negative"
+                )
+        if self.source_path and str(self.source_path).startswith("/tmp"):
+            raise LfPayloadRateDistortionError(
+                "Frame1ConeMap.source_path must be durable (not /tmp)"
+            )
+        # FAIL-CLOSED: an all-zero radius is the #35 "gradient not reachable" /
+        # empty-cone signature. Refusing it here means a non-reachable cone can
+        # never silently produce an all-permissive (everything-free) masked plan.
+        if float(_np.abs(radius).sum()) <= 0.0:
+            raise LfPayloadRateDistortionError(
+                "Frame1ConeMap.joint_cone_radius is identically zero — the cone has "
+                "NO free budget (or the upstream gradient was not reachable). Refusing "
+                "to emit an all-permissive cone-masked plan; re-measure the cone."
+            )
+
+    @property
+    def free_pixel_fraction(self) -> float:
+        """Fraction of frame1 pixels with usable joint budget (radius >= threshold).
+
+        This is the spatial fraction of a frame1-touching section's coefficients that
+        the masked action may coarsen for free; the complement (the fragile set) is
+        preserved at full precision."""
+        import numpy as _np
+
+        radius = _np.asarray(self.joint_cone_radius, dtype=_np.float64)
+        thr = float(self.fragile_radius_threshold)
+        return float((radius >= thr).mean())
+
+    @property
+    def fragile_pixel_fraction(self) -> float:
+        import numpy as _np
+
+        return float(_np.asarray(self.fragile_cone_mask).astype(bool).mean())
+
+    @property
+    def n_free_pixels(self) -> int:
+        import numpy as _np
+
+        radius = _np.asarray(self.joint_cone_radius, dtype=_np.float64)
+        return int((radius >= float(self.fragile_radius_threshold)).sum())
+
+    @property
+    def n_pixels(self) -> int:
+        import numpy as _np
+
+        return int(_np.asarray(self.joint_cone_radius).size)
+
+    @property
+    def free_set_sensitivity_share(self) -> float | None:
+        """Fraction of the cone's TOTAL joint sensitivity that lives on the FREE pixels.
+
+        This is the cone's core distortion claim made concrete: the free pixels (high
+        radius) are the LOW-sensitivity ones, so their share of the total sensitivity is
+        SMALLER than their share of the pixel count (``free_pixel_fraction``). The
+        masked action gives up only the distortion that lives on the free set, so the
+        distortion cost is weighted by THIS share, not the pixel count. ``None`` when no
+        ``joint_sensitivity`` map was supplied (fall back to the pixel-count fraction)."""
+        if self.joint_sensitivity is None:
+            return None
+        import numpy as _np
+
+        js = _np.asarray(self.joint_sensitivity, dtype=_np.float64)
+        total = float(js.sum())
+        if total <= 0.0:
+            return 0.0
+        free = self.free_mask()
+        return float(js[free].sum() / total)
+
+    def free_mask(self) -> Any:
+        """Boolean ``(H, W)`` keep-coarse mask: True where the pixel is free to coarsen."""
+        import numpy as _np
+
+        radius = _np.asarray(self.joint_cone_radius, dtype=_np.float64)
+        return radius >= float(self.fragile_radius_threshold)
+
+    @classmethod
+    def from_npz(
+        cls,
+        npz_path: str,
+        *,
+        fragile_radius_threshold: float | None = None,
+        axis_tag: str = "[macOS-CPU advisory]",
+    ) -> Frame1ConeMap:
+        """Load a cone map from a ``cone_pair_*.npz`` (the #35 CLI ``--save-maps`` output).
+
+        Reads the EXACT arrays the #35 CLI writes (``joint_cone_radius`` +
+        ``fragile_cone_mask``); never invents the schema. ``fragile_radius_threshold``
+        defaults to recovering the threshold from the fragile mask vs the radius when
+        not supplied (so a map written at a non-default threshold round-trips)."""
+        import numpy as _np
+
+        p = str(npz_path)
+        if p.startswith("/tmp"):
+            raise LfPayloadRateDistortionError(
+                "cone npz path must be durable (not /tmp)"
+            )
+        with _np.load(p) as z:
+            files = set(z.files)
+            if "joint_cone_radius" not in files:
+                raise LfPayloadRateDistortionError(
+                    f"cone npz {p!r} has no 'joint_cone_radius' array (got {sorted(files)}); "
+                    "is this a tools/build_frame1_joint_safe_cone.py --save-maps output?"
+                )
+            radius = _np.asarray(z["joint_cone_radius"], dtype=_np.float64)
+            if "fragile_cone_mask" in files:
+                fragile = _np.asarray(z["fragile_cone_mask"]).astype(bool)
+            else:
+                # Derive from the radius using the (supplied or default) threshold.
+                thr = float(
+                    fragile_radius_threshold
+                    if fragile_radius_threshold is not None
+                    else 0.5
+                )
+                fragile = radius < thr
+            # The #35 .npz also carries the per-pixel joint sensitivity; use it for the
+            # sensitivity-share-weighted distortion model when present.
+            joint_sens = (
+                _np.asarray(z["joint_sensitivity"], dtype=_np.float64)
+                if "joint_sensitivity" in files
+                else None
+            )
+        # Recover the threshold from the data when not supplied: the smallest radius
+        # not flagged fragile is the threshold floor; default to 0.5 (half a uint8 step).
+        if fragile_radius_threshold is not None:
+            thr = float(fragile_radius_threshold)
+        else:
+            free = radius[~fragile]
+            thr = float(free.min()) if free.size else 0.5
+        return cls(
+            joint_cone_radius=radius,
+            fragile_cone_mask=fragile,
+            fragile_radius_threshold=thr,
+            joint_sensitivity=joint_sens,
+            source_path=p,
+            axis_tag=str(axis_tag),
+        )
+
+
+def _section_touches_frame1(group: CoefficientGroup) -> bool:
+    """A section is cone-refinable iff its coefficients touch frame1.
+
+    SegNet reads ONLY frame1 and PoseNet reads frame1 through its frame1 channels,
+    so a section whose ``frame_incidence`` is ``frame1_only`` or any ``both_*`` (both
+    frames perturbed) touches frame1. An empty incidence (agnostic) is treated as
+    touching frame1 (the conservative, fail-closed choice — the cone constraint is
+    applied rather than skipped). A frame0-only section (``frame0_only``) has NO
+    frame1 constraint and the cone does not refine it."""
+    inc = str(group.frame_incidence)
+    if inc == "":
+        return True
+    if inc.startswith("frame0"):
+        return False
+    return inc.startswith("frame1") or inc.startswith("both")
+
+
+def estimate_mask_coding_cost_bytes(free_mask: Any) -> int:
+    """Real coding cost (bytes) of the per-pixel keep/coarsen boolean mask.
+
+    The mask MUST pay rent: it is a sidecar the receiver needs to know which pixels
+    were coarsened. We MEASURE its cost (not guess): bit-pack the boolean mask then
+    brotli quality=11 (CLAUDE.md L32 "brotli quality=11 max for sidecar"). This is an
+    HONEST upper-ish bound on the mask's archive footprint; the exact re-measure
+    refines it, but the planner already charges the mask its measured rent so a mask
+    whose cost exceeds the bytes it frees is rejected by THE LAW. A spatially-coherent
+    cone mask (large flat free regions) compresses well; a salt-and-pepper mask does
+    not — and the cost correctly reflects that."""
+    import numpy as _np
+
+    try:
+        import brotli  # type: ignore[import-not-found]
+    except ModuleNotFoundError:  # pragma: no cover - brotli is a runtime dep
+        # No brotli: fall back to a bit-packed RAW size (no entropy coding). This is a
+        # strictly LARGER (more conservative) cost, so the mask still pays rent; the
+        # ranking remains fail-closed (over-charging the mask never over-admits).
+        m = _np.asarray(free_mask).astype(bool).ravel()
+        return int(_np.packbits(m).nbytes)
+
+    m = _np.asarray(free_mask).astype(bool).ravel()
+    packed = _np.packbits(m).tobytes()
+    coded = brotli.compress(packed, quality=11)
+    return len(coded)
 
 
 # ---------------------------------------------------------------------------
@@ -736,6 +1010,160 @@ def build_recode_action(
     )
 
 
+@dataclass(frozen=True)
+class ConeMaskedActionAccounting:
+    """The byte + distortion accounting of a cone-masked quantize action (audit surface).
+
+    Exposed so a reviewer can see EXACTLY why a masked action's net bytes / distortion
+    came out as they did (CLAUDE.md "Max observability" — decomposable per signal)."""
+
+    free_pixel_fraction: float
+    """Spatial fraction of the section's coefficients on coarsenable (free) pixels."""
+    gross_bytes_freed: int
+    """Bytes freed by coarsening the free fraction at step Δ (before mask rent)."""
+    mask_coding_cost_bytes: int
+    """The per-pixel keep/coarsen mask's OWN coding cost (bit-pack + brotli q=11)."""
+    net_bytes_freed: int
+    """gross_bytes_freed - mask_coding_cost_bytes (the mask pays rent)."""
+    value_kept_fraction: float
+    """Fraction of the coarsened coefficients' distortion value retained at step Δ."""
+    distortion_weight: float
+    """The weight applied to the section's atlas distortion value = the free set's
+    SENSITIVITY share (when a joint_sensitivity map is supplied) or the pixel-count
+    free fraction (fallback). This is < free_pixel_fraction when sensitivity
+    concentrates on the preserved fragile set — the cone's structural advantage."""
+    used_sensitivity_share: bool
+    """True when distortion_weight came from the joint_sensitivity map (the cone's
+    spatial sensitivity weighting); False when it fell back to the pixel-count fraction."""
+    quantize_step: float
+    fragile_radius_threshold: float
+    n_free_pixels: int
+    n_pixels: int
+
+    def to_row(self) -> dict[str, Any]:
+        return {
+            "free_pixel_fraction": self.free_pixel_fraction,
+            "gross_bytes_freed": int(self.gross_bytes_freed),
+            "mask_coding_cost_bytes": int(self.mask_coding_cost_bytes),
+            "net_bytes_freed": int(self.net_bytes_freed),
+            "value_kept_fraction": self.value_kept_fraction,
+            "distortion_weight": self.distortion_weight,
+            "used_sensitivity_share": self.used_sensitivity_share,
+            "quantize_step": self.quantize_step,
+            "fragile_radius_threshold": self.fragile_radius_threshold,
+            "n_free_pixels": int(self.n_free_pixels),
+            "n_pixels": int(self.n_pixels),
+        }
+
+
+def build_cone_masked_quantize_action(
+    section: PayloadSection,
+    estimate: SectionSensitivityEstimate,
+    baseline: BaselineScoreTerms,
+    cone: Frame1ConeMap,
+    quantize_step: float,
+) -> tuple[CandidateActionEvaluation, ConeMaskedActionAccounting] | None:
+    """SPATIALLY-MASKED quantize: coarsen the section by Δ ONLY at the cone-FREE pixels.
+
+    This is the #35 -> #46 wiring: instead of coarsening the whole section uniformly
+    (:func:`build_quantize_action`), coarsen only at frame1 pixels whose joint cone
+    radius >= the fragile threshold (the spatially-free set), preserving full precision
+    on the fragile set. The cone gives the per-pixel granularity the band×orientation
+    atlas cannot resolve.
+
+    Byte accounting (the mask pays rent):
+      * gross_bytes_freed = section.bytes * f * (Δ / (1 + Δ))
+            where ``f`` = cone free-pixel fraction (the coarsenable spatial share).
+      * mask_coding_cost = real bit-packed + brotli q=11 size of the keep/coarsen mask.
+      * delta_bytes = -(gross_bytes_freed - mask_coding_cost)   (NEGATIVE = frees bytes)
+      A mask whose coding cost exceeds the bytes it frees yields net_bytes_freed <= 0;
+      the action then ADDS bytes (delta_bytes >= 0) and THE LAW rejects it — exactly
+      the prompt's "a mask whose bytes exceed its savings is rejected".
+
+    Distortion accounting (cone-radius-weighted):
+      The distortion given up is the section's atlas value scaled by the FREE fraction
+      and the coarsen ratio: ``est_delta = section_value * f * (1 - value_kept)``. Only
+      the free-set coefficients are coarsened, and the free set is BY CONSTRUCTION the
+      low-sensitivity (high-radius) pixels — so the fragile (high-sensitivity) pixels
+      contribute ~0 to the given-up distortion because they are preserved. This is the
+      structural advantage over the unmasked action: same coarsen ratio, but the
+      distortion cost is paid only on the spatially-free pixels.
+
+    Returns ``None`` when the section does not touch frame1 (no cone constraint), when
+    the cone has no free pixels for this section, or when the section is scope-invalid
+    AND we therefore cannot estimate the distortion (the masked action's whole point is
+    the cone-weighted distortion estimate; a scope-invalid section is segregated to the
+    needs_exact_remeasure path by the plain quantize/drop builders).
+    """
+    if not _section_touches_frame1(section.coefficient_group):
+        return None
+    if not estimate.atlas_scope_valid:
+        # Scope-invalid: the cone-weighted distortion estimate would extrapolate the
+        # atlas value. Refuse (fail-closed) — the plain drop/quantize builders already
+        # route this section to needs_exact_remeasure.
+        return None
+
+    step = max(float(quantize_step), 0.0)
+    f = float(cone.free_pixel_fraction)
+    if f <= 0.0:
+        # No coarsenable pixel: the cone is all-fragile for this section -> nothing to do.
+        return None
+    bytes_kept, value_kept = _quantize_fraction(step)
+    coarsen_ratio = 1.0 - bytes_kept  # = Δ/(1+Δ)
+    # Bytes freed are proportional to the FREE PIXEL COUNT fraction (the spatial share
+    # of coefficients coarsened).
+    gross_freed = round(int(section.bytes) * f * coarsen_ratio)
+    mask_cost = estimate_mask_coding_cost_bytes(cone.free_mask())
+    net_freed = gross_freed - mask_cost
+
+    # Distortion given up: the section's atlas value, scaled by the share of the
+    # section's sensitivity that lives on the FREE set (NOT the pixel count). The
+    # cone's core claim is that the free pixels are LOW-sensitivity, so their
+    # sensitivity share is < their pixel-count share — meaning the masked action
+    # gives up DISPROPORTIONATELY less distortion per byte freed than the unmasked
+    # action (which pays the full section value). When no joint_sensitivity map is
+    # supplied, fall back to the conservative pixel-count fraction ``f`` (no claimed
+    # advantage — the honest default that never over-admits).
+    sens_share = cone.free_set_sensitivity_share
+    dist_weight = float(sens_share) if sens_share is not None else f
+    seg_value = float(estimate.est_d_seg_value or 0.0)
+    pose_value = float(estimate.est_d_pose_value or 0.0)
+    value_given_up = dist_weight * (1.0 - value_kept)
+    d_seg = seg_value * value_given_up
+    d_pose = pose_value * value_given_up
+
+    accounting = ConeMaskedActionAccounting(
+        free_pixel_fraction=f,
+        gross_bytes_freed=gross_freed,
+        mask_coding_cost_bytes=mask_cost,
+        net_bytes_freed=net_freed,
+        value_kept_fraction=value_kept,
+        distortion_weight=dist_weight,
+        used_sensitivity_share=sens_share is not None,
+        quantize_step=step,
+        fragile_radius_threshold=float(cone.fragile_radius_threshold),
+        n_free_pixels=cone.n_free_pixels,
+        n_pixels=cone.n_pixels,
+    )
+    action = CandidateActionEvaluation(
+        action_id=f"{section.name}::quantize_cone_masked_delta={step:g}",
+        action_kind=ACTION_QUANTIZE_CONE_MASKED,
+        section_name=section.name,
+        est_delta_d_seg=d_seg,
+        est_delta_d_pose=d_pose,
+        # NEGATIVE frees bytes; when the mask costs more than it frees this is >= 0
+        # (the action ADDS bytes) and THE LAW rejects it (pays_rent_predicted=False).
+        delta_bytes=-net_freed,
+        atlas_scope_valid=True,
+        scope_reason=(
+            f"cone-masked: coarsen Δ={step:g} on {f:.3f} free frame1 pixels "
+            f"(mask rent {mask_cost} B vs gross {gross_freed} B freed)"
+        ),
+        baseline=baseline,
+    )
+    return action, accounting
+
+
 # ---------------------------------------------------------------------------
 # The planner.
 # ---------------------------------------------------------------------------
@@ -746,6 +1174,8 @@ def plan_lf_payload_actions(
     baseline: BaselineScoreTerms,
     *,
     quantize_steps: Sequence[float] = (0.5, 1.0, 2.0),
+    frame1_cone_map: Frame1ConeMap | None = None,
+    cone_quantize_steps: Sequence[float] | None = None,
 ) -> dict[str, Any]:
     """Rank candidate actions over the payload by predicted value-per-byte (THE LAW).
 
@@ -754,10 +1184,26 @@ def plan_lf_payload_actions(
     descending ``value_per_byte`` (most predicted score reduction per byte freed
     first). Scope-invalid actions are segregated into ``needs_exact_remeasure`` and
     NEVER ranked above scope-valid ones (fail-closed).
-    """
+
+    SPATIAL refinement (#35 -> #46; gated, default-OFF): when ``frame1_cone_map`` is
+    supplied (the per-pixel frame1 JOINT SAFE CONE budget from
+    ``tools/build_frame1_joint_safe_cone.py``), ALSO propose a SPATIALLY-MASKED
+    quantize per frame1-touching section at each ``cone_quantize_steps`` step (defaults
+    to ``quantize_steps``). The masked action coarsens ONLY the cone-free frame1 pixels
+    and charges the keep/coarsen mask its OWN coding rent (the mask must pay rent under
+    THE LAW). The cone gives the spatial granularity the band×orientation atlas cannot
+    resolve. When ``frame1_cone_map is None`` the plan is byte-identical to before
+    (backward-compatible)."""
+
+    cone_steps = (
+        tuple(quantize_steps)
+        if cone_quantize_steps is None
+        else tuple(cone_quantize_steps)
+    )
 
     estimates: dict[str, SectionSensitivityEstimate] = {}
     proposals: list[CandidateActionEvaluation] = []
+    cone_accounting: dict[str, dict[str, Any]] = {}
     for section in sections:
         est = estimate_section_sensitivity(section, sensitivities, scope)
         estimates[section.name] = est
@@ -768,6 +1214,15 @@ def plan_lf_payload_actions(
         recode = build_recode_action(section, est, baseline)
         if recode is not None:
             proposals.append(recode)
+        if frame1_cone_map is not None:
+            for step in cone_steps:
+                masked = build_cone_masked_quantize_action(
+                    section, est, baseline, frame1_cone_map, step
+                )
+                if masked is not None:
+                    action, accounting = masked
+                    proposals.append(action)
+                    cone_accounting[action.action_id] = accounting.to_row()
 
     ranked: list[CandidateActionEvaluation] = []
     not_paying: list[CandidateActionEvaluation] = []
@@ -792,7 +1247,7 @@ def plan_lf_payload_actions(
         if p.est_delta_score_total is not None
     )
 
-    return {
+    plan: dict[str, Any] = {
         "schema": "snerv_lf_payload_rd_plan.v1",
         "baseline": {
             "d_seg": baseline.d_seg,
@@ -829,11 +1284,30 @@ def plan_lf_payload_actions(
         "promotable": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    # Cone refinement provenance (only present when the cone was supplied).
+    if frame1_cone_map is not None:
+        plan["frame1_cone"] = {
+            "active": True,
+            "source_path": frame1_cone_map.source_path,
+            "free_pixel_fraction": frame1_cone_map.free_pixel_fraction,
+            "fragile_pixel_fraction": frame1_cone_map.fragile_pixel_fraction,
+            "fragile_radius_threshold": frame1_cone_map.fragile_radius_threshold,
+            "n_free_pixels": frame1_cone_map.n_free_pixels,
+            "n_pixels": frame1_cone_map.n_pixels,
+            "cone_quantize_steps": list(cone_steps),
+            "axis_tag": frame1_cone_map.axis_tag,
+            "n_cone_masked_actions": len(cone_accounting),
+            "cone_masked_accounting": cone_accounting,
+        }
+    else:
+        plan["frame1_cone"] = {"active": False}
+    return plan
 
 
 __all__ = [
     "ACTION_DROP",
     "ACTION_QUANTIZE",
+    "ACTION_QUANTIZE_CONE_MASKED",
     "ACTION_RECODE",
     "CONTEST_BYTE_PRICE",
     "AtlasScope",
@@ -841,17 +1315,21 @@ __all__ = [
     "BaselineScoreTerms",
     "CandidateActionEvaluation",
     "CoefficientGroup",
+    "ConeMaskedActionAccounting",
+    "Frame1ConeMap",
     "LfPayloadRateDistortionError",
     "PayloadSection",
     "SectionSensitivityEstimate",
     "atlas_scope_from_grid",
     "atlas_sensitivities_from_cells",
+    "build_cone_masked_quantize_action",
     "build_drop_action",
     "build_quantize_action",
     "build_recode_action",
     "delta_distortion_score",
     "delta_pose_score",
     "delta_rate_score",
+    "estimate_mask_coding_cost_bytes",
     "estimate_section_sensitivity",
     "keep_component",
     "plan_lf_payload_actions",

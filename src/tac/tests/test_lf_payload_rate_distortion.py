@@ -16,22 +16,26 @@ import pytest
 
 from tac.optimization.lf_payload_rate_distortion import (
     ACTION_QUANTIZE,
+    ACTION_QUANTIZE_CONE_MASKED,
     ACTION_RECODE,
     CONTEST_BYTE_PRICE,
     AtlasScope,
     AtlasSensitivity,
     BaselineScoreTerms,
     CoefficientGroup,
+    Frame1ConeMap,
     LfPayloadRateDistortionError,
     PayloadSection,
     atlas_scope_from_grid,
     atlas_sensitivities_from_cells,
+    build_cone_masked_quantize_action,
     build_drop_action,
     build_quantize_action,
     build_recode_action,
     delta_distortion_score,
     delta_pose_score,
     delta_rate_score,
+    estimate_mask_coding_cost_bytes,
     estimate_section_sensitivity,
     keep_component,
     plan_lf_payload_actions,
@@ -696,3 +700,413 @@ def test_cli_section_map_places_low_value_section_and_it_pays_rent(tmp_path):
     assert drop["pays_rent_predicted"] is True
     assert drop["keep_section_under_law"] is False
     assert plan["best_action_id"] == "linf_steps_payload_bytes::drop"
+
+
+# ===========================================================================
+# Frame1 JOINT SAFE CONE spatial refinement (#35 -> #46).
+#
+# These tests verify the cone-masked quantize action ACTUALLY computes the
+# spatial-mask accounting (NO FAKE; every test would FAIL if the builder returned
+# canonical constants instead of computing the byte+distortion math against a
+# hand-derived known optimum). The central known-optimum: a section whose
+# distortion sensitivity CONCENTRATES on a small fragile band -> the cone-masked
+# action preserves that band (cheap in bytes), gives up almost no distortion, and
+# pays rent where the uniform unmasked action does NOT.
+# ===========================================================================
+import numpy as np  # noqa: E402
+
+
+def _coherent_cone(
+    *,
+    h: int = 384,
+    w: int = 512,
+    fragile_rows: int = 39,
+    fragile_radius: float = 0.01,
+    free_radius: float = 5.0,
+    fragile_sensitivity: float = 1000.0,
+    free_sensitivity: float = 1.0,
+    threshold: float = 0.5,
+    with_sensitivity: bool = True,
+) -> Frame1ConeMap:
+    """A spatially-coherent cone: a small fragile band (top rows) where the joint
+    sensitivity concentrates, and a large free region. Coherent => the keep/coarsen
+    mask compresses to a few bytes (brotli), so the mask rent is small and the cone's
+    structural advantage is isolated."""
+    radius = np.full((h, w), free_radius, dtype=np.float64)
+    radius[:fragile_rows, :] = fragile_radius
+    fragile = radius < threshold
+    jsens = None
+    if with_sensitivity:
+        jsens = np.full((h, w), free_sensitivity, dtype=np.float64)
+        jsens[:fragile_rows, :] = fragile_sensitivity
+    return Frame1ConeMap(
+        joint_cone_radius=radius,
+        fragile_cone_mask=fragile,
+        fragile_radius_threshold=threshold,
+        joint_sensitivity=jsens,
+        source_path="/Volumes/VertigoDataTier/pact/x/cone.npz",
+    )
+
+
+@pytest.fixture
+def cone_scope() -> AtlasScope:
+    return AtlasScope(
+        band_indices=frozenset({0}),
+        channel_bases=frozenset({"yuv"}),
+        channels=frozenset({"y"}),
+        orientations=frozenset({"vertical"}),
+        frame_incidences=frozenset({"frame1_only"}),
+        amplitudes_lsb=(4.0,),
+    )
+
+
+@pytest.fixture
+def cone_sensitivities() -> tuple[AtlasSensitivity, ...]:
+    # h_seg tuned so the UNIFORM coarsen at the test byte counts does NOT pay rent
+    # but the cone-masked (which gives up only the free-set's tiny sensitivity share)
+    # DOES — the known-optimum crossover.
+    return (
+        AtlasSensitivity(
+            band_index=0, h_seg=0.0022, h_pose=0.0,
+            channel_basis="yuv", channel="y", orientation="vertical",
+            frame_incidence="frame1_only", amplitude_lsb=4.0,
+        ),
+    )
+
+
+def _f1_section(name: str, n_bytes: int) -> PayloadSection:
+    return PayloadSection(
+        name=name, bytes=n_bytes,
+        coefficient_group=CoefficientGroup(
+            band_indices=(0,), channel_basis="yuv", channel="y",
+            orientation="vertical", frame_incidence="frame1_only", amplitude_lsb=4.0,
+        ),
+    )
+
+
+# --- Frame1ConeMap construction + properties (real arrays, not constants) ----
+def test_cone_map_free_and_fragile_fractions_are_real():
+    cone = _coherent_cone(fragile_rows=39)  # ~10.16% fragile
+    assert cone.fragile_pixel_fraction == pytest.approx(39 / 384, abs=1e-6)
+    assert cone.free_pixel_fraction == pytest.approx(1.0 - 39 / 384, abs=1e-6)
+    assert cone.n_free_pixels == (384 - 39) * 512
+    assert cone.n_pixels == 384 * 512
+
+
+def test_cone_sensitivity_share_is_below_pixel_fraction_when_sensitivity_concentrates():
+    # The cone's CORE claim: free pixels are LOW-sensitivity, so their share of total
+    # sensitivity is FAR below their pixel-count share.
+    cone = _coherent_cone(fragile_rows=39, fragile_sensitivity=1000.0, free_sensitivity=1.0)
+    share = cone.free_set_sensitivity_share
+    assert share is not None
+    assert share < cone.free_pixel_fraction
+    assert share < 0.05  # ~0.0088 — the fragile band carries ~99% of sensitivity
+
+
+def test_cone_sensitivity_share_none_when_no_sensitivity_map():
+    cone = _coherent_cone(with_sensitivity=False)
+    assert cone.free_set_sensitivity_share is None
+
+
+def test_cone_map_fails_closed_on_all_zero_radius():
+    # An all-zero radius is the #35 "gradient not reachable" / empty-cone signature;
+    # the cone must refuse it (never an all-permissive everything-free plan).
+    z = np.zeros((8, 8), dtype=np.float64)
+    with pytest.raises(LfPayloadRateDistortionError):
+        Frame1ConeMap(joint_cone_radius=z, fragile_cone_mask=z.astype(bool))
+
+
+def test_cone_map_rejects_tmp_source_path():
+    radius = np.full((8, 8), 5.0)
+    with pytest.raises(LfPayloadRateDistortionError):
+        Frame1ConeMap(
+            joint_cone_radius=radius, fragile_cone_mask=radius < 0.5,
+            source_path="/tmp/cone.npz",
+        )
+
+
+def test_cone_map_rejects_mismatched_shapes():
+    radius = np.full((8, 8), 5.0)
+    with pytest.raises(LfPayloadRateDistortionError):
+        Frame1ConeMap(joint_cone_radius=radius, fragile_cone_mask=np.zeros((4, 4), bool))
+
+
+def test_cone_map_rejects_non_2d_radius():
+    with pytest.raises(LfPayloadRateDistortionError):
+        Frame1ConeMap(
+            joint_cone_radius=np.ones((2, 2, 2)), fragile_cone_mask=np.ones((2, 2, 2), bool)
+        )
+
+
+# --- Mask coding cost (the mask MUST pay rent) ------------------------------
+def test_mask_coding_cost_coherent_mask_is_cheap():
+    # A spatially-coherent mask (one solid band) compresses to a handful of bytes.
+    cone = _coherent_cone()
+    cost = estimate_mask_coding_cost_bytes(cone.free_mask())
+    assert isinstance(cost, int)
+    assert 0 < cost < 200  # coherent => brotli q=11 packs it tiny
+
+
+def test_mask_coding_cost_salt_and_pepper_mask_is_expensive():
+    # A random salt-and-pepper mask does NOT compress -> higher rent. This proves the
+    # cost actually MEASURES the mask (not a constant): coherent vs random differ.
+    rng = np.random.default_rng(0)
+    coherent = np.zeros((384, 512), dtype=bool)
+    coherent[100:, :] = True
+    noisy = rng.random((384, 512)) > 0.5
+    assert estimate_mask_coding_cost_bytes(noisy) > estimate_mask_coding_cost_bytes(coherent)
+
+
+# --- The known-optimum: masked beats unmasked when fragile set is small-but-expensive
+def test_cone_masked_pays_rent_where_unmasked_does_not(cone_scope, cone_sensitivities):
+    # KNOWN-OPTIMUM: at B=300k, uniform coarsen gives up the FULL section value =>
+    # distortion cost (+0.010) exceeds the rate it frees => does NOT pay rent.
+    # The cone-masked action gives up only the free set's ~0.88% sensitivity share =>
+    # near-zero distortion cost => PAYS rent. The cone unlocks an action the
+    # band-only planner could not.
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 300_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    unmasked = build_quantize_action(sec, est, base, 1.0)
+    masked_pair = build_cone_masked_quantize_action(sec, est, base, cone, 1.0)
+    assert masked_pair is not None
+    masked, acct = masked_pair
+    assert unmasked.pays_rent_predicted is False
+    assert masked.pays_rent_predicted is True
+    assert acct.used_sensitivity_share is True
+    assert acct.distortion_weight < cone.free_pixel_fraction
+
+
+def test_cone_masked_value_per_byte_beats_unmasked(cone_scope, cone_sensitivities):
+    # When both pay rent, the masked action's value_per_byte is strictly higher (more
+    # predicted score reduction per byte freed) because it gives up far less distortion.
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 400_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    unmasked = build_quantize_action(sec, est, base, 1.0)
+    masked, _ = build_cone_masked_quantize_action(sec, est, base, cone, 1.0)
+    assert unmasked.pays_rent_predicted is True and masked.pays_rent_predicted is True
+    assert masked.value_per_byte is not None and unmasked.value_per_byte is not None
+    assert masked.value_per_byte > unmasked.value_per_byte
+
+
+def test_cone_masked_distortion_weight_equals_sensitivity_share(cone_scope, cone_sensitivities):
+    # The masked action's distortion is scaled by the free set's SENSITIVITY share, not
+    # its pixel count. Verify the est_delta_d_seg equals section_value * share * (1-keep).
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 200_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    masked, acct = build_cone_masked_quantize_action(sec, est, base, cone, 1.0)
+    share = cone.free_set_sensitivity_share
+    # step=1 keeps value 1/(1+1)=0.5 => gives up 0.5; weighted by the sensitivity share.
+    expected_d_seg = 0.0022 * share * 0.5
+    assert masked.est_delta_d_seg == pytest.approx(expected_d_seg, rel=1e-9)
+
+
+# --- The mask must pay rent: a mask costing more than it frees is rejected ----
+def test_cone_masked_mask_rent_rejects_when_cost_exceeds_savings(cone_scope, cone_sensitivities):
+    # A salt-and-pepper cone (incoherent free set) has a LARGE mask coding cost. On a
+    # SMALL section the mask rent exceeds the bytes it frees => net_bytes_freed <= 0 =>
+    # the action ADDS bytes => THE LAW rejects it (does not pay rent). Exactly the
+    # prompt's "a mask whose bytes exceed its savings is rejected by THE LAW".
+    rng = np.random.default_rng(1)
+    radius = np.where(rng.random((384, 512)) > 0.5, 5.0, 0.01)
+    cone = Frame1ConeMap(
+        joint_cone_radius=radius, fragile_cone_mask=radius < 0.5,
+        joint_sensitivity=np.ones((384, 512)),
+        source_path="/Volumes/VertigoDataTier/pact/x/noisy.npz",
+    )
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=1_000_000)
+    # Tiny section: ~free_frac*0.5*bytes gross freed is small; the noisy mask costs ~thousands.
+    sec = _f1_section("tiny", 1_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    masked, acct = build_cone_masked_quantize_action(sec, est, base, cone, 1.0)
+    assert acct.mask_coding_cost_bytes > acct.gross_bytes_freed
+    assert acct.net_bytes_freed < 0
+    assert masked.delta_bytes > 0  # the action ADDS bytes
+    assert masked.pays_rent_predicted is False  # THE LAW rejects it
+
+
+def test_cone_masked_net_bytes_freed_subtracts_mask_rent(cone_scope, cone_sensitivities):
+    # The mask rent is SUBTRACTED from the gross bytes freed (the mask pays rent).
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 500_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    _, acct = build_cone_masked_quantize_action(sec, est, base, cone, 1.0)
+    assert acct.net_bytes_freed == acct.gross_bytes_freed - acct.mask_coding_cost_bytes
+    assert acct.mask_coding_cost_bytes > 0  # the mask is never free
+
+
+# --- Fail-closed: frame0-only, scope-invalid, no-free-pixel cases ------------
+def test_cone_masked_skips_frame0_only_section(cone_scope, cone_sensitivities):
+    # A frame0-only section has NO frame1 cone constraint -> the masked action does not
+    # apply (returns None). frame0 is SegNet-blind by construction (PR110 territory).
+    cone = _coherent_cone()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = PayloadSection(
+        name="f0", bytes=200_000,
+        coefficient_group=CoefficientGroup(band_indices=(0,), frame_incidence="frame0_only"),
+    )
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    assert build_cone_masked_quantize_action(sec, est, base, cone, 1.0) is None
+
+
+def test_cone_masked_fails_closed_on_scope_invalid_section(cone_scope, cone_sensitivities):
+    # A scope-invalid section cannot be cone-weighted (the atlas value would extrapolate)
+    # -> the masked action refuses (None); the plain builders route it to needs_remeasure.
+    cone = _coherent_cone()
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    oob = PayloadSection(
+        name="oob", bytes=200_000,
+        coefficient_group=CoefficientGroup(band_indices=(9,), frame_incidence="frame1_only"),
+    )
+    est = estimate_section_sensitivity(oob, cone_sensitivities, cone_scope)
+    assert est.atlas_scope_valid is False
+    assert build_cone_masked_quantize_action(oob, est, base, cone, 1.0) is None
+
+
+def test_cone_masked_returns_none_when_no_free_pixels(cone_scope, cone_sensitivities):
+    # An all-fragile cone (no pixel above threshold) -> nothing to coarsen -> None.
+    radius = np.full((64, 64), 0.01, dtype=np.float64)  # all below threshold 0.5
+    radius[0, 0] = 5.0  # one free pixel so the all-zero fail-closed does not trip
+    cone = Frame1ConeMap(
+        joint_cone_radius=radius, fragile_cone_mask=radius < 0.5,
+        fragile_radius_threshold=10.0,  # threshold above the lone free pixel => no free set
+        source_path="/Volumes/VertigoDataTier/pact/x/allfragile.npz",
+    )
+    assert cone.free_pixel_fraction == 0.0
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 200_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    assert build_cone_masked_quantize_action(sec, est, base, cone, 1.0) is None
+
+
+def test_cone_masked_fallback_to_pixel_fraction_without_sensitivity_map(
+    cone_scope, cone_sensitivities
+):
+    # WITHOUT a joint_sensitivity map, the distortion weight falls back to the
+    # conservative pixel-count free fraction (no claimed advantage; fail-safe default).
+    cone = _coherent_cone(with_sensitivity=False)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 200_000)
+    est = estimate_section_sensitivity(sec, cone_sensitivities, cone_scope)
+    masked, acct = build_cone_masked_quantize_action(sec, est, base, cone, 1.0)
+    assert acct.used_sensitivity_share is False
+    assert acct.distortion_weight == pytest.approx(cone.free_pixel_fraction)
+
+
+# --- The planner integration (gated, default-OFF, backward-compatible) -------
+def test_plan_without_cone_is_backward_compatible(scope, sensitivities, baseline):
+    sec = _f1_section_for(scope)  # uses the module's default scope
+    plan = plan_lf_payload_actions([sec], sensitivities, scope, baseline)
+    assert plan["frame1_cone"]["active"] is False
+    # No cone-masked action kind appears.
+    all_kinds = {
+        r["action_kind"]
+        for r in plan["ranked_actions"] + plan["not_paying_rent"] + plan["needs_exact_remeasure"]
+    }
+    assert ACTION_QUANTIZE_CONE_MASKED not in all_kinds
+
+
+def _f1_section_for(scope) -> PayloadSection:
+    # band 2 (low sensitivity) so dropping it pays rent in the module's default fixtures.
+    return PayloadSection(
+        name="lf", bytes=1_000_000,
+        coefficient_group=CoefficientGroup(
+            band_indices=(2,), channel_basis="yuv", channel="y",
+            orientation="vertical", frame_incidence="frame1_only", amplitude_lsb=4.0,
+        ),
+    )
+
+
+def test_plan_with_cone_emits_masked_actions_and_provenance(cone_scope, cone_sensitivities):
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 400_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, frame1_cone_map=cone
+    )
+    assert plan["frame1_cone"]["active"] is True
+    assert plan["frame1_cone"]["n_cone_masked_actions"] >= 1
+    masked_rows = [
+        r for r in plan["ranked_actions"]
+        if r["action_kind"] == ACTION_QUANTIZE_CONE_MASKED
+    ]
+    assert masked_rows  # at least one cone-masked action ranked
+    # The accounting is queryable per action (max observability).
+    aid = masked_rows[0]["action_id"]
+    assert aid in plan["frame1_cone"]["cone_masked_accounting"]
+
+
+def test_plan_cone_masked_can_outrank_unmasked_quantize(cone_scope, cone_sensitivities):
+    # The whole point: at the known-optimum the cone-masked action should be the BEST
+    # ranked action (higher value_per_byte than the uniform quantize on the same section).
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 400_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, frame1_cone_map=cone
+    )
+    assert plan["best_action_id"] is not None
+    best_row = plan["ranked_actions"][0]
+    assert best_row["action_id"] == plan["best_action_id"]
+    assert best_row["action_kind"] == ACTION_QUANTIZE_CONE_MASKED
+
+
+def test_plan_cone_masked_rows_carry_false_authority_contract(cone_scope, cone_sensitivities):
+    cone = _coherent_cone(fragile_rows=39)
+    base = BaselineScoreTerms(d_seg=0.0023, d_pose=0.0013, archive_bytes=10_000_000)
+    sec = _f1_section("lf", 400_000)
+    plan = plan_lf_payload_actions(
+        [sec], cone_sensitivities, cone_scope, base, frame1_cone_map=cone
+    )
+    for r in plan["ranked_actions"]:
+        if r["action_kind"] == ACTION_QUANTIZE_CONE_MASKED:
+            assert r["requires_exact_remeasure"] is True
+            assert r["promotable"] is False
+            assert r["score_claim"] is False
+
+
+# --- npz round-trip against the EXACT #35 CLI schema ------------------------
+def test_cone_map_from_npz_reads_real_schema(tmp_path):
+    # Build a .npz with the EXACT arrays tools/build_frame1_joint_safe_cone.py writes
+    # and confirm Frame1ConeMap.from_npz reads them (never invents the schema).
+    h, w = 64, 64
+    radius = np.full((h, w), 5.0, dtype=np.float32)
+    radius[:6, :] = 0.01
+    fragile = radius < 0.5
+    jsens = np.full((h, w), 1.0, dtype=np.float32)
+    jsens[:6, :] = 1000.0
+    npz = tmp_path / "cone_pair_00000.npz"
+    np.savez_compressed(
+        npz,
+        joint_cone_radius=radius,
+        seg_margin=radius,
+        seg_margin_budget=radius,
+        pose_jacobian_norm=radius,
+        pose_budget=radius,
+        joint_sensitivity=jsens,
+        fragile_cone_mask=fragile,
+        seg_argmax_class=np.zeros((h, w), dtype=np.int16),
+    )
+    cone = Frame1ConeMap.from_npz(str(npz))
+    assert cone.n_pixels == h * w
+    assert cone.free_set_sensitivity_share is not None
+    assert cone.free_set_sensitivity_share < cone.free_pixel_fraction
+
+
+def test_cone_map_from_npz_rejects_wrong_schema(tmp_path):
+    # A .npz without joint_cone_radius is NOT a cone map -> fail closed.
+    npz = tmp_path / "not_a_cone.npz"
+    np.savez_compressed(npz, foo=np.zeros((4, 4)))
+    with pytest.raises(LfPayloadRateDistortionError):
+        Frame1ConeMap.from_npz(str(npz))
+
+
+def test_cone_map_from_npz_rejects_tmp_path():
+    with pytest.raises(LfPayloadRateDistortionError):
+        Frame1ConeMap.from_npz("/tmp/cone_pair_00000.npz")

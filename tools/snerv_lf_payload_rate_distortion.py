@@ -48,6 +48,7 @@ from tac.optimization.lf_payload_rate_distortion import (  # noqa: E402
     AtlasScope,
     BaselineScoreTerms,
     CoefficientGroup,
+    Frame1ConeMap,
     LfPayloadRateDistortionError,
     PayloadSection,
     atlas_scope_from_grid,
@@ -188,6 +189,53 @@ def _baseline_from_g1b(
     )
 
 
+def _load_frame1_cone_map(
+    cone_map_path: str,
+    *,
+    fragile_radius_threshold: float | None = None,
+    axis_tag: str = "[macOS-CPU advisory]",
+) -> Frame1ConeMap:
+    """Load the #35 frame1 JOINT SAFE CONE map from its CLI output.
+
+    Accepts EITHER a per-pair ``cone_pair_*.npz`` (the
+    ``tools/build_frame1_joint_safe_cone.py --save-maps`` array dump) OR the
+    ``frame1_joint_safe_cone_summary.json`` (in which case the FIRST map in its
+    ``map_manifest`` is loaded). Never invents the schema — reads the exact arrays
+    the #35 CLI writes (``joint_cone_radius`` + ``fragile_cone_mask``)."""
+    p = Path(cone_map_path)
+    if str(p).startswith("/tmp"):
+        raise LfPayloadRateDistortionError(
+            "--frame1-cone-map must be durable (not /tmp) per CLAUDE.md disk hygiene"
+        )
+    if p.suffix == ".json":
+        summary = json.loads(p.read_text())
+        manifest = summary.get("map_manifest") or []
+        if not manifest:
+            raise LfPayloadRateDistortionError(
+                f"cone summary {p!r} has no map_manifest (rebuild with --save-maps)"
+            )
+        npz_path = manifest[0].get("path")
+        if not npz_path:
+            raise LfPayloadRateDistortionError(
+                "cone summary map_manifest[0] has no 'path'"
+            )
+        # Prefer the threshold the summary was built with (audit-faithful round-trip).
+        cfg = summary.get("config") or {}
+        thr = (
+            fragile_radius_threshold
+            if fragile_radius_threshold is not None
+            else cfg.get("fragile_radius_threshold")
+        )
+        return Frame1ConeMap.from_npz(
+            str(npz_path),
+            fragile_radius_threshold=(float(thr) if thr is not None else None),
+            axis_tag=str(summary.get("axis_tag", axis_tag)),
+        )
+    return Frame1ConeMap.from_npz(
+        str(p), fragile_radius_threshold=fragile_radius_threshold, axis_tag=axis_tag
+    )
+
+
 def build_plan_from_files(
     *,
     g1b_verdict_path: str,
@@ -197,8 +245,16 @@ def build_plan_from_files(
     baseline_d_pose: float | None = None,
     baseline_archive_bytes: int | None = None,
     quantize_steps: tuple[float, ...] = (0.5, 1.0, 2.0),
+    frame1_cone_map_path: str | None = None,
+    cone_quantize_steps: tuple[float, ...] | None = None,
+    cone_fragile_radius_threshold: float | None = None,
 ) -> dict[str, Any]:
-    """Read the three inputs, build typed inputs, and return the ranked plan dict."""
+    """Read the inputs, build typed inputs, and return the ranked plan dict.
+
+    When ``frame1_cone_map_path`` is supplied (the #35 per-pixel frame1 JOINT SAFE
+    CONE), the planner ALSO proposes spatially-masked quantize actions (coarsen only
+    the cone-free frame1 pixels; the keep/coarsen mask pays its own coding rent). When
+    omitted, the plan is identical to the band×orientation-only behavior."""
     g1b = json.loads(Path(g1b_verdict_path).read_text())
     atlas = json.loads(Path(atlas_path).read_text())
 
@@ -241,8 +297,22 @@ def build_plan_from_files(
     else:
         baseline = _baseline_from_g1b(g1b, byte_decomposition)
 
+    cone_map = None
+    if frame1_cone_map_path is not None:
+        cone_map = _load_frame1_cone_map(
+            frame1_cone_map_path,
+            fragile_radius_threshold=cone_fragile_radius_threshold,
+            axis_tag=str(g1b.get("axis_tag", "[macOS-CPU advisory]")),
+        )
+
     plan = plan_lf_payload_actions(
-        sections, sensitivities, scope, baseline, quantize_steps=quantize_steps
+        sections,
+        sensitivities,
+        scope,
+        baseline,
+        quantize_steps=quantize_steps,
+        frame1_cone_map=cone_map,
+        cone_quantize_steps=cone_quantize_steps,
     )
     # Provenance + the unmapped sections (operator must supply a --section-map).
     mapped_names = {s.name for s in sections}
@@ -270,6 +340,8 @@ def build_plan_from_files(
             "atlas grid. Supply --section-map to place them; the planner refuses to "
             "guess a spectral identity (fail-closed scope rule)."
         ),
+        "frame1_cone_map_path": frame1_cone_map_path,
+        "frame1_cone_active": cone_map is not None,
     }
     return plan
 
@@ -310,6 +382,38 @@ def main(argv: list[str] | None = None) -> int:
         help="Comma-separated quantization steps to propose per section.",
     )
     parser.add_argument(
+        "--frame1-cone-map",
+        default=None,
+        help=(
+            "Optional path to the #35 frame1 JOINT SAFE CONE map: either a per-pair "
+            "cone_pair_*.npz (tools/build_frame1_joint_safe_cone.py --save-maps output) "
+            "OR a frame1_joint_safe_cone_summary.json (first map_manifest entry is used). "
+            "When supplied, the planner ALSO proposes SPATIALLY-MASKED quantize actions "
+            "that coarsen only the cone-free frame1 pixels; the keep/coarsen mask pays "
+            "its own coding rent under THE LAW. The cone gives the per-pixel granularity "
+            "the band×orientation atlas cannot resolve."
+        ),
+    )
+    parser.add_argument(
+        "--cone-quantize-steps",
+        default=None,
+        help=(
+            "Comma-separated quantization steps for the cone-masked actions "
+            "(defaults to --quantize-steps when omitted). Ignored unless "
+            "--frame1-cone-map is supplied."
+        ),
+    )
+    parser.add_argument(
+        "--cone-fragile-radius-threshold",
+        type=float,
+        default=None,
+        help=(
+            "Override the cone fragile-radius threshold (the radius above which a "
+            "frame1 pixel is 'free' to coarsen). Defaults to the threshold the cone "
+            "map was built with."
+        ),
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Path to write the ranked plan JSON (durable, NEVER /tmp). "
@@ -319,9 +423,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.output is not None and str(args.output).startswith("/tmp"):
         parser.error("--output must be durable (not /tmp) per CLAUDE.md disk hygiene")
+    if args.frame1_cone_map is not None and str(args.frame1_cone_map).startswith("/tmp"):
+        parser.error("--frame1-cone-map must be durable (not /tmp) per CLAUDE.md disk hygiene")
 
     steps = tuple(
         float(x) for x in str(args.quantize_steps).split(",") if x.strip() != ""
+    )
+    cone_steps = (
+        tuple(
+            float(x)
+            for x in str(args.cone_quantize_steps).split(",")
+            if x.strip() != ""
+        )
+        if args.cone_quantize_steps is not None
+        else None
     )
 
     try:
@@ -333,6 +448,9 @@ def main(argv: list[str] | None = None) -> int:
             baseline_d_pose=args.baseline_d_pose,
             baseline_archive_bytes=args.baseline_archive_bytes,
             quantize_steps=steps,
+            frame1_cone_map_path=args.frame1_cone_map,
+            cone_quantize_steps=cone_steps,
+            cone_fragile_radius_threshold=args.cone_fragile_radius_threshold,
         )
     except (LfPayloadRateDistortionError, FileNotFoundError, json.JSONDecodeError) as exc:
         print(f"[snerv_lf_rd] FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
