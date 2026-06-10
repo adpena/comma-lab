@@ -1,0 +1,243 @@
+{
+  "schema": "pact_compiler_dashboard.v1",
+  "generated_at_utc": "2026-06-10T00:27:24.200675+00:00",
+  "from_repo_root": "/Users/adpena/Projects/pact",
+  "rows": [
+    {
+      "vehicle": "snerv",
+      "family": "SNeRV (Spectra-preserving NeRV, arXiv 2501.01681)",
+      "maturity_level": "L4",
+      "maturity_name": "Exact-scored",
+      "allowed_claim": "exact_scored_row_exists",
+      "maturity_evidence": "exact CandidateActionEvaluation: candidate_action_evaluation_g1b_pathb_ep273.v1.json: d_seg=0.0024678972016166276 d_pose=0.002033528243975032 bytes=581583207 pays_rent=False; fidelity clean (MFU/HFR/TUB+DWT), reachability clean (VJPs reach)",
+      "latest_artifact": "/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z/snerv_g1b_export_binding_verdict.v1.json",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "exact_cpu_advisory",
+      "metric_family": "exact_pair_scorer",
+      "current_blocker": "100% rate (581.6MB skip_high float64 LL=99.9996%); export bound but rate chasm -> route to LF entropy-coding front; NOT L5 (no contest-axis paired row, pays_rent=false)",
+      "next_command": ".venv/bin/python tools/... (LF entropy-coding rate attack; branch B ladder on snerv_branch_b_rate_attack)",
+      "owner": "snerv_branch_b_rate_attack",
+      "pass_route": "LF entropy-coding front lowers rate -> V3 judges first real program -> V5 atoms stack",
+      "fail_route": "store-LF rate chasm is the research front (entropy-code the LF; SNeRV store-LF/generate-HF)",
+      "is_vehicle": true
+    },
+    {
+      "vehicle": "hi_nerv",
+      "family": "HiNeRV (Hierarchical NeRV, arXiv 2306.09818)",
+      "maturity_level": "L1",
+      "maturity_name": "Mechanism-present",
+      "allowed_claim": "mechanism_present_unit_tested",
+      "maturity_evidence": "vehicle_fidelity present mechanisms ['bilinear_skip'] (file:line evidence); L1 mechanism-present",
+      "latest_artifact": "/Volumes/VertigoDataTier/pact/hinerv_codec_counterfactual_ablation_smoke_20260608T_v9/hi_nerv_receiver_closed_modelsize_ladder.json",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "AUDIT_PENDING",
+      "metric_family": "AUDIT_PENDING",
+      "current_blocker": "objective severance at weight surface",
+      "next_command": ".venv/bin/python -m pytest src/tac/substrates/hi_nerv/ (then vendor PR95-HNeRV port vs patch decision per #40)",
+      "owner": "hinerv_completion (task #40)",
+      "pass_route": "vendor-faithful PR95-HNeRV port OR patch (decided by #45 + atlas omega)",
+      "fail_route": "skip recon-inert under MSE; needs grid-PE/skip ON + reachable objective",
+      "is_vehicle": true
+    },
+    {
+      "vehicle": "pact_nerv_vq",
+      "family": "VQ-VAE NeRV (van den Oord 1711.00937 + HNeRV decoder)",
+      "maturity_level": "L1",
+      "maturity_name": "Mechanism-present",
+      "allowed_claim": "mechanism_present_unit_tested",
+      "maturity_evidence": "vehicle_fidelity present mechanisms ['codebook_vq'] (file:line evidence); L1 mechanism-present",
+      "latest_artifact": "/Users/adpena/Projects/pact/.omx/state/vehicle_fidelity/pact_nerv_vq.json",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "AUDIT_PENDING",
+      "metric_family": "AUDIT_PENDING",
+      "current_blocker": "objective severance at weight surface",
+      "next_command": "audit MLX-route scorer-objective VJP; set nonzero SegNet/PoseNet weights; skip+omega under scorer objective (NOT MSE)",
+      "owner": "pact_nerv_vq_completion (task #44)",
+      "pass_route": "skip + omega(measured) under scorer objective (NOT MSE); audit MLX-route VJP",
+      "fail_route": "skip-free decoder mean-fields regardless of VQ; architecture under scorer-objective untested",
+      "is_vehicle": true
+    },
+    {
+      "vehicle": "sane_hnerv",
+      "family": "HNeRV-LC-v2 (PR101/PR100 canonical HNeRV with bilinear-skip)",
+      "maturity_level": "L0",
+      "maturity_name": "Sketch",
+      "allowed_claim": "research_carrier_sketch",
+      "maturity_evidence": "NAME-LAUNDERING (documentation-fake): NAME-LAUNDERING: docstring claims 'bilinear_skip' (phrase(s): ['canonical HNeRV with per-pair latent + bilinear-skip + sin activation', '(with bilinear-skip from each prior block)', 'One Conv -> sin -> PixelShuffle(2) block, with optional bilinear-skip']) but it is in mechanisms_absent \u2014 the carrier advertises a mechanism it does NOT implement (Catalog #307 documentation-fake).",
+      "latest_artifact": "/Users/adpena/Projects/pact/.omx/state/vehicle_fidelity/sane_hnerv.json",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "AUDIT_PENDING",
+      "metric_family": "AUDIT_PENDING",
+      "current_blocker": "docstring claims a mechanism the forward never implements",
+      "next_command": "implement advertised bilinear-skip in forward OR correct the docstring (architecture.py:5,27,122)",
+      "owner": "laundering remediation",
+      "pass_route": "implement the advertised bilinear-skip OR correct the docstring",
+      "fail_route": "documentation-fake: docstring claims bilinear-skip the forward never implements",
+      "is_vehicle": true
+    },
+    {
+      "vehicle": "ff_nerv",
+      "family": "FFNeRV-style band-limited DCT-grid NeRV",
+      "maturity_level": "L0",
+      "maturity_name": "Sketch",
+      "allowed_claim": "research_carrier_sketch",
+      "maturity_evidence": "vehicle_fidelity manifest: zero present mechanisms (honest sketch)",
+      "latest_artifact": "/Users/adpena/Projects/pact/.omx/state/vehicle_fidelity/ff_nerv.json",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "AUDIT_PENDING",
+      "metric_family": "AUDIT_PENDING",
+      "current_blocker": "no HF residual path / objective mechanism present",
+      "next_command": "(dormant) add a genuine HF residual path before any training run",
+      "owner": "(dormant sketch)",
+      "pass_route": "add a genuine HF residual path; 64x64 DCT grid cannot represent boundary HF",
+      "fail_route": "skip-free + band-limited by construction -> strictly-worse mean-field variant",
+      "is_vehicle": true
+    },
+    {
+      "vehicle": "pr110pp",
+      "family": "PR110++ (selector/menu on a strong base carrier)",
+      "maturity_level": "L3",
+      "maturity_name": "Archive-real",
+      "allowed_claim": "archive_real_byte_closed_consumed",
+      "maturity_evidence": "byte_closure_proof.json + noop_detector.json(consumption_proven=true) at /Users/adpena/Projects/pact/experiments/results/pr110pp_r1plus_candidate_20260609/candidate_archive.zip",
+      "latest_artifact": "/Users/adpena/Projects/pact/experiments/results/pr110pp_r1plus_candidate_20260609/candidate_archive.zip",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "exact_cpu_advisory",
+      "metric_family": "advisory_pose_delta",
+      "current_blocker": "L4 exact row in flight (R1 paired contest-CPU Modal eval dispatched); advisory pose gain only",
+      "next_command": ".venv/bin/python tools/... harvest R1 paired contest-CPU Modal eval (strict_candidate_cpu/modal_call_id.txt) -> exact CandidateActionEvaluation",
+      "owner": "pr110pp_r1_paired_eval / pr110pp_r2_nonmps_mode_table",
+      "pass_route": "R1 paired contest-CPU eval confirms dS<=0 -> exact CandidateActionEvaluation row (L4)",
+      "fail_route": "macOS-CPU vs Linux-x86_64-CPU per-mode ordering unstable -> no exact gain",
+      "is_vehicle": true
+    },
+    {
+      "vehicle": "atlas_atoms_v3",
+      "family": "Spectral atlas + V3 compiler (infrastructure)",
+      "maturity_level": "n/a-vehicle",
+      "maturity_name": "infrastructure",
+      "allowed_claim": "infrastructure (not a candidate program generator)",
+      "maturity_evidence": "spectral atlas (evaluator_response_atlas.py) + V3 (frozen_evaluator_contract.py) are the measured-law + DeltaS-judge kernels every vehicle consumes; not on the L0-L7 ladder",
+      "latest_artifact": "AUDIT_PENDING",
+      "latest_artifact_sha256": "AUDIT_PENDING",
+      "authority_tier": "n/a",
+      "metric_family": "n/a",
+      "current_blocker": "n/a \u2014 infrastructure",
+      "next_command": "atlas v2 full sweep (running) -> learned-omega Nyquist-capped basis; V3 ingest of #45's row",
+      "owner": "atlas_engine_mlx_jacobian / frozen_evaluator_contract",
+      "pass_route": "measured law geometry + DeltaS-judge feed every vehicle's search/accept",
+      "fail_route": "n/a \u2014 infrastructure, not a candidate program generator",
+      "is_vehicle": false
+    }
+  ],
+  "live_work": [
+    {
+      "subagent_id": "snerv_branch_b_rate_attack_20260609",
+      "status": "in_progress",
+      "step": 7,
+      "next_action": "Full ladder N=48 in progress pid 32009: R0 reproduces G1b EXACTLY (d_seg=0.002468 pose=0.1426 total 387.642). Awaiting R1-R7 + 4 lf-floor rows. Then report+ingest+commit.",
+      "written_at_utc": "2026-06-10T00:21:32.728812+00:00"
+    },
+    {
+      "subagent_id": "pr110pp_r1_paired_eval_20260609",
+      "status": "in_progress",
+      "step": 3,
+      "next_action": "Re-dispatch 3 Modal CPU evals with fixed wrapper (distinct per-job lane_ids); validate frontier baseline scores; then strict + r1plus; harvest; ingest exact rows",
+      "written_at_utc": "2026-06-10T00:19:55.465189+00:00"
+    },
+    {
+      "subagent_id": "pact_dashboard_maturity_20260609",
+      "status": "in_progress",
+      "step": 2,
+      "next_action": "evidence gathered; write generator module + tests",
+      "written_at_utc": "2026-06-10T00:19:37.513181+00:00"
+    },
+    {
+      "subagent_id": "atlas_engine_mlx_jacobian_20260609",
+      "status": "in_progress",
+      "step": 4,
+      "next_action": "Await 600-pair sweep completion (pid 62686, pair 75/600), fill memo headline, commit via serializer",
+      "written_at_utc": "2026-06-10T00:18:58.657092+00:00"
+    },
+    {
+      "subagent_id": "snerv_g1b_export_binding_20260609",
+      "status": "in_progress",
+      "step": 10,
+      "next_action": "AWAIT advisory daemon (pid 94482) monitor event, then: .venv/bin/python /Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z/g1b_consolidate_verdict.py (one command). All decisive work committed (acbe76a7a). If session dies: successor runs the consolidation script + reads memo for full context.",
+      "written_at_utc": "2026-06-09T22:40:58.610738+00:00"
+    },
+    {
+      "subagent_id": "b1_campaign_v2",
+      "status": "in_progress",
+      "step": 8,
+      "next_action": "write campaign ledger + register lane + review-gate + commit; record prereq-evidence blocker chain",
+      "written_at_utc": "2026-06-09T04:51:56.793210+00:00"
+    },
+    {
+      "subagent_id": "b1_campaign",
+      "status": "in_progress",
+      "step": 5,
+      "next_action": "PRIORITY 3 wired+validated (curriculum engages, blocker drops). Add wiring tests + run existing runner tests for regression + ruff; commit; then LAUNCH full curriculum.",
+      "written_at_utc": "2026-06-09T04:10:12.292136+00:00"
+    },
+    {
+      "subagent_id": "hinerv_60kb_mps_fit_probe_20260602",
+      "status": "in_progress",
+      "step": 1,
+      "next_action": "Write probe script: build chosen HiNeRV cfg, MPS faithful fit (~300 steps), CPU-mirror measure d_seg/d_pose + packed rate",
+      "written_at_utc": "2026-06-02T11:19:22.975426+00:00"
+    },
+    {
+      "subagent_id": "snerv_learned_hf_decoder_20260601",
+      "status": "in_progress",
+      "step": 5,
+      "next_action": "Write learned_trainer.py: MLX score-aware trainer (saliency-weighted DWT-domain HF objective via faithful MPS scorers + pose/seg saliency push; orthonormal Parseval => DWT-coeff loss == pixel loss)",
+      "written_at_utc": "2026-06-01T22:01:05.479631+00:00"
+    },
+    {
+      "subagent_id": "inverse_steganalysis_phase1_carrier_wirein_20260601",
+      "status": "in_progress",
+      "step": 1,
+      "next_action": "read L-inf gate + score_exact_saliency + hprc_synthesis_adjoint + pr101 packer/codec + locate decoder state_dict; design G3 adjoint into HNeRV latent domain",
+      "written_at_utc": "2026-06-01T20:19:23.177141+00:00"
+    },
+    {
+      "subagent_id": "z8_p18_p19_freeze_vs_implicit_kkt_comparison_20260531",
+      "status": "in_progress",
+      "step": 4,
+      "next_action": "Write >=10 NO-FAKE tests",
+      "written_at_utc": "2026-05-31T17:59:16.652365+00:00"
+    },
+    {
+      "subagent_id": "z8_joint_p18_p19_deadzone_rate_attack_20260531",
+      "status": "in_progress",
+      "step": 12,
+      "next_action": "Committed ad73c2863 (impl+tests+lane); memo+MEMORY.md landed; 600-pair (pid 18962) building baseline; poll for completion to refine memo with full-scale numbers",
+      "written_at_utc": "2026-05-31T17:48:37.445700+00:00"
+    }
+  ],
+  "frontier": {
+    "status": "ok",
+    "contest_cpu_score": 0.19198533626623068,
+    "contest_cpu_archive_sha256": "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c",
+    "contest_cuda_score": 0.20533002902019143,
+    "contest_cuda_archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+    "submitted_pr_number_for_current_frontier": null,
+    "last_refreshed_utc": "2026-06-09T07:07:25.354047+00:00",
+    "pointer_path": "/Users/adpena/Projects/pact/.omx/state/canonical_frontier_pointer.json"
+  },
+  "notes": [
+    "Maturity is assigned FROM EVIDENCE (see each row's maturity_evidence); no level is asserted without a machine-readable basis.",
+    "Scores are POINTER-ONLY (canonical_frontier_pointer.json); never hardcoded.",
+    "SCHEMA GAP: vehicle_fidelity_manifest.v1 has no maturity_level field; the canonical per-vehicle declared maturity lives in constants_provenance (declared_maturity_level) where a constants manifest exists (only hi_nerv today). The dashboard derives maturity from the union of fidelity + reachability + constants + the typed verdict rows.",
+    "snerv fidelity manifest id is 'snerv_inverse_steg_carrier'; reachability id is 'snerv' \u2014 bound via VehicleSpec.fidelity_id/reachability_id."
+  ],
+  "schema_gaps": [
+    {
+      "surface": "vehicle_fidelity_manifest.v1",
+      "gap": "no maturity_level field",
+      "consequence": "maturity cannot be recorded in-manifest via the canonical emitter; the dashboard derives it from fidelity + reachability + constants + typed verdict rows instead.",
+      "remediation": "council/operator-approved schema addition (a maturity_level field on VehicleFidelityManifest) \u2014 a design decision, NOT a hand-edit; OR standardize on constants_provenance.declared_maturity_level for ALL vehicles (only hi_nerv has a constants manifest today)."
+    }
+  ]
+}
