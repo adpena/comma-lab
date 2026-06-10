@@ -1,0 +1,259 @@
+# SPDX-License-Identifier: MIT
+"""The original VQ-NeRV bundle with explicit-pose-FiLM injection (Task #78).
+
+The bundle is a thin, ORIGINAL composition over two verified MLX kernels:
+
+* ``HNeRVDecoderMLX`` (the PR95 bit-exact decoder backbone, #81/#82).
+* ``VectorQuantizerEMAMLX`` (the van den Oord VQ-EMA primitive, pact_nerv_vq).
+
+The ORIGINAL synthesis (ours):
+
+1. **Per-pair latent ``z_e``** (learnable, ``(num_pairs, latent_dim)``).
+2. **VQ quantize** ``z_e -> z_q`` via the EMA codebook + straight-through
+   estimator. The *index* is what the archive stores (bit-packed); the codebook
+   is free in the native decode. The commitment loss is exposed for the
+   score-aware Lagrangian.
+3. **FiLM-pose injection**: the STORED 6-dim GT pose ``p`` (passed in per batch)
+   is mapped by a tiny learned MLP to a ``(gamma, beta)`` pair over the decoder
+   stem channels; the stem feature is modulated ``f -> gamma * f + beta`` BEFORE
+   the upsample cascade. This injects the pose grammar into the render so the
+   pose term is inherited from the stored scalars (Quantizr's store-pose
+   approach), sidestepping the seg/pose small-conv antagonism.
+
+The forward returns the same ``(B, 2, 3, 384, 512)`` N2CHW render the #82 bridge
+consumes, so the working score-aware loop drives it unchanged. The bundle also
+exposes ``last_commitment_loss`` and ``vq_indices(...)`` for the trainer + export.
+
+NO MPS anywhere; pure MLX-GPU decode + torch-CPU scorer (the exact authority).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import numpy as np
+
+from tac.local_acceleration.pr95_hnerv_mlx import HNeRVDecoderMLX
+from tac.substrates.pact_nerv_vq.mlx_renderer import VectorQuantizerEMAMLX
+
+try:  # pragma: no cover - import guard
+    import mlx.core as mx
+    import mlx.nn as nn
+except Exception:  # pragma: no cover
+    mx = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+
+
+def _require_mlx() -> None:
+    if mx is None or nn is None:  # pragma: no cover
+        raise RuntimeError("tac.capstone_vq_nerv.vq_nerv_bundle requires mlx.")
+
+
+# The contest PoseNet output is 6-dim (the first 6 pose dims the evaluator scores).
+POSE_DIM = 6
+
+
+@dataclass
+class CapstoneVqNervConfig:
+    """Config for the original VQ-NeRV + FiLM-pose bundle.
+
+    Defaults target the ~88K-class small basis that produced Quantizr's
+    operating point (d_pose 0.00051 at 88K params). ``base_channels`` controls
+    the decoder size; ``codebook_size`` controls the per-pair index bit cost
+    (``ceil(log2(K))`` bits/pair).
+    """
+
+    num_pairs: int = 600
+    latent_dim: int = 28
+    base_channels: int = 36
+    codebook_size: int = 256  # 8 bits/pair index; 600 pairs -> 600 bytes packed.
+    codebook_decay: float = 0.99
+    commitment_weight: float = 0.25
+    # FiLM-pose: the stored 6-dim pose is mapped to (gamma, beta) over the
+    # stem channels by a tiny 2-layer MLP. film_hidden is the bottleneck width.
+    film_enabled: bool = True
+    film_hidden: int = 32
+    pose_normalize: bool = True  # standardize stored pose before the FiLM MLP.
+    seed: int = 0
+
+
+class _PoseFiLM(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Tiny MLP mapping a stored 6-dim pose to per-channel (gamma, beta).
+
+    ``gamma`` is initialized near 1 and ``beta`` near 0 (identity FiLM at init)
+    so the untrained bundle renders exactly the no-FiLM decoder — the FiLM only
+    *adds* pose grammar as it trains. This keeps the #82 descent intact at init.
+    """
+
+    def __init__(self, *, pose_dim: int, channels: int, hidden: int) -> None:
+        _require_mlx()
+        super().__init__()
+        self.channels = int(channels)
+        self.fc1 = nn.Linear(int(pose_dim), int(hidden))
+        # Output 2*channels: [gamma_pre, beta]. gamma = 1 + tanh(gamma_pre).
+        self.fc2 = nn.Linear(int(hidden), 2 * int(channels))
+        # Zero-init the second layer so FiLM is identity at init (gamma=1,beta=0).
+        self.fc2.weight = mx.zeros_like(self.fc2.weight)  # type: ignore[union-attr]
+        self.fc2.bias = mx.zeros_like(self.fc2.bias)  # type: ignore[union-attr]
+
+    def __call__(self, pose: Any) -> tuple[Any, Any]:
+        h = mx.sin(self.fc1(pose))  # type: ignore[union-attr]  # NeRF-style activation
+        gb = self.fc2(h)
+        gamma_pre = gb[:, : self.channels]
+        beta = gb[:, self.channels :]
+        gamma = 1.0 + mx.tanh(gamma_pre)  # type: ignore[union-attr]  # in (0, 2), =1 at init
+        return gamma, beta
+
+
+class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Original VQ-NeRV decoder bundle with explicit-pose-FiLM injection.
+
+    Forward signature: ``bundle(indices, pose=None) -> render (B,2,3,384,512)``.
+    ``indices`` selects per-pair latents; ``pose`` is the stored 6-dim GT pose
+    for the same pairs (the FiLM conditioning). When ``pose is None`` the FiLM
+    is identity (the no-pose render).
+
+    Trainer contract:
+      - ``last_commitment_loss`` holds the most-recent VQ commitment loss.
+      - ``vq_indices(indices)`` returns the int32 codebook index per pair.
+      - ``ema_update_from_last()`` applies the VQ EMA codebook update from the
+        most-recent forward's ``(z_e, indices)`` (call once per training step).
+      - ``trainable_parameters()`` excludes the EMA codebook buffers (they are
+        EMA-updated, not gradient-updated), matching the pact_nerv_vq contract.
+    """
+
+    def __init__(self, cfg: CapstoneVqNervConfig) -> None:
+        _require_mlx()
+        super().__init__()
+        self.cfg = cfg
+        key = mx.random.key(int(cfg.seed))  # type: ignore[union-attr]
+        # Per-pair learnable latent z_e.
+        self.latents = (
+            mx.random.normal((int(cfg.num_pairs), int(cfg.latent_dim)), key=key)  # type: ignore[union-attr]
+            * 0.1
+        )
+        # VQ-EMA quantizer (codebook free in decode; index bit-packs).
+        self.quantizer = VectorQuantizerEMAMLX(
+            codebook_size=int(cfg.codebook_size),
+            latent_dim=int(cfg.latent_dim),
+            decay=float(cfg.codebook_decay),
+        )
+        # The decoder backbone (PR95 bit-exact, M-arch skip+refine ON).
+        self.decoder = HNeRVDecoderMLX(
+            latent_dim=int(cfg.latent_dim),
+            base_channels=int(cfg.base_channels),
+        )
+        # FiLM-pose injection over the stem channels (channels[0]).
+        self.stem_channels = int(self.decoder.channels[0])
+        self.film_enabled = bool(cfg.film_enabled)
+        if self.film_enabled:
+            self.pose_film = _PoseFiLM(
+                pose_dim=POSE_DIM,
+                channels=self.stem_channels,
+                hidden=int(cfg.film_hidden),
+            )
+        # Pose standardization stats (set by the trainer from the stored pose).
+        self._pose_mean = mx.zeros((POSE_DIM,))  # type: ignore[union-attr]
+        self._pose_std = mx.ones((POSE_DIM,))  # type: ignore[union-attr]
+        # Telemetry from the most-recent forward.
+        self.last_commitment_loss: Any = mx.array(0.0)  # type: ignore[union-attr]
+        self._last_z_e: Any = None
+        self._last_indices: Any = None
+
+    # ---- pose standardization (set once from the stored GT pose) -------------
+
+    def set_pose_stats(self, pose_mean: Any, pose_std: Any) -> None:
+        """Set the FiLM input standardization (mean/std over stored GT pose)."""
+        _require_mlx()
+        self._pose_mean = mx.array(np.asarray(pose_mean, dtype=np.float32))  # type: ignore[union-attr]
+        std = np.asarray(pose_std, dtype=np.float32)
+        std = np.where(std < 1e-6, 1.0, std)  # guard zero-variance dims
+        self._pose_std = mx.array(std)  # type: ignore[union-attr]
+
+    def _norm_pose(self, pose: Any) -> Any:
+        if not self.cfg.pose_normalize:
+            return pose
+        return (pose - self._pose_mean) / self._pose_std
+
+    # ---- forward -------------------------------------------------------------
+
+    def _quantize(self, indices: Any) -> Any:
+        """Gather per-pair latents, VQ-quantize, return the straight-through z_q."""
+        z_e = mx.take(self.latents, indices, axis=0)  # type: ignore[union-attr]  (B, latent_dim)
+        z_q_st, vq_idx, commit = self.quantizer(z_e)
+        self.last_commitment_loss = commit
+        self._last_z_e = z_e
+        self._last_indices = vq_idx
+        return z_q_st
+
+    def _decode_with_film(self, z_q: Any, pose: Any | None) -> Any:
+        """Decode z_q through the backbone, FiLM-modulating the stem feature."""
+        dec = self.decoder
+        batch = int(z_q.shape[0])
+        x = dec.stem(z_q)
+        x = mx.reshape(  # type: ignore[union-attr]
+            x, (batch, dec.channels[0], dec.base_h, dec.base_w)
+        )
+        x = mx.transpose(x, (0, 2, 3, 1))  # type: ignore[union-attr]  -> NHWC
+        x = mx.sin(x)  # type: ignore[union-attr]
+        # FiLM-pose injection on the stem feature (NHWC, channels-last).
+        if self.film_enabled and pose is not None:
+            gamma, beta = self.pose_film(self._norm_pose(pose))  # (B, C) each
+            gamma = mx.reshape(gamma, (batch, 1, 1, self.stem_channels))  # type: ignore[union-attr]
+            beta = mx.reshape(beta, (batch, 1, 1, self.stem_channels))  # type: ignore[union-attr]
+            x = gamma * x + beta
+        for block in dec.blocks:
+            x = block(x)
+        refined = dec.refine1(dec.refine0(x))
+        feat = x + 0.1 * mx.sin(refined)  # type: ignore[union-attr]
+        f0 = mx.sigmoid(dec.rgb_0(feat)) * 255.0  # type: ignore[union-attr]
+        f1 = mx.sigmoid(dec.rgb_1(feat)) * 255.0  # type: ignore[union-attr]
+        pair = mx.stack([f0, f1], axis=1)  # type: ignore[union-attr]  (B,2,H,W,C)
+        return mx.transpose(pair, (0, 1, 4, 2, 3))  # type: ignore[union-attr]  -> N2CHW
+
+    def __call__(self, indices: Any, pose: Any | None = None) -> Any:
+        """Render the pair batch for ``indices`` with optional pose-FiLM."""
+        _require_mlx()
+        z_q = self._quantize(indices)
+        return self._decode_with_film(z_q, pose)
+
+    # ---- VQ accessors + EMA update -------------------------------------------
+
+    def vq_indices(self, indices: Any) -> Any:
+        """Return the int32 codebook index per selected pair (for export)."""
+        _require_mlx()
+        z_e = mx.take(self.latents, indices, axis=0)  # type: ignore[union-attr]
+        _, vq_idx, _ = self.quantizer(z_e)
+        mx.eval(vq_idx)
+        return vq_idx
+
+    def all_vq_indices(self) -> np.ndarray:
+        """Return the full ``(num_pairs,)`` codebook index array as numpy int32."""
+        _require_mlx()
+        idx = self.vq_indices(mx.arange(int(self.cfg.num_pairs)))  # type: ignore[union-attr]
+        return np.asarray(idx, dtype=np.int32)
+
+    def ema_update_from_last(self) -> None:
+        """Apply the VQ EMA codebook update from the most-recent forward."""
+        if self._last_z_e is None or self._last_indices is None:
+            return
+        self.quantizer.ema_update(self._last_z_e, self._last_indices)
+
+    def trainable_parameters(self) -> dict[str, Any]:
+        """Trainable params EXCLUDING the EMA codebook buffers.
+
+        The quantizer's ``_codebook`` / ``_ema_*`` are EMA-updated, not
+        gradient-updated, so they must not enter ``mx.vjp``. MLX's
+        ``VectorQuantizerEMAMLX`` stores them as plain arrays (not nn.Parameter),
+        so ``trainable_parameters()`` already excludes them. We surface this
+        method to make the contract explicit + testable.
+        """
+        return super().trainable_parameters()
+
+
+__all__ = [
+    "POSE_DIM",
+    "CapstoneVqNervBundle",
+    "CapstoneVqNervConfig",
+]
