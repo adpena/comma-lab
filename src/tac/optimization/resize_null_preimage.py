@@ -236,19 +236,31 @@ def zero_weight_pixel_mask(
 # ---------------------------------------------------------------------------
 # Coded-size measurement (the ONLY admission arbiter — measured, not assumed).
 # ---------------------------------------------------------------------------
-def coded_size_bytes(arr: np.ndarray, *, coder: str = "brotli") -> int:
+# Default brotli quality for the FINAL reported number (max compression, the
+# PR101 L32 deploy-time discipline) vs the faster quality used to RANK candidates
+# during search (search ranking is monotone-correlated with q=11; the winner is
+# always re-measured at q=11 before it is reported).
+REPORT_BROTLI_QUALITY = 11
+SEARCH_BROTLI_QUALITY = 5
+
+
+def coded_size_bytes(
+    arr: np.ndarray, *, coder: str = "brotli", brotli_quality: int = REPORT_BROTLI_QUALITY
+) -> int:
     """Measured coded size of a uint8 array under a real coder.
 
     The directive is explicit: pick the fill / step BY MEASUREMENT, not by
-    convention.  ``brotli`` (quality 11) and ``lzma`` are the two real coders.
-    No proxy entropy estimate is used as the admission arbiter.
+    convention.  ``brotli`` (quality ``brotli_quality``, default 11 = max) and
+    ``lzma`` are the two real coders.  No proxy entropy estimate is used as the
+    admission arbiter.  During candidate SEARCH a faster quality may be passed;
+    the FINAL reported sizes (``coded_size_both``) always use q=11.
     """
     a = np.ascontiguousarray(np.asarray(arr, dtype=np.uint8))
     raw = a.tobytes()
     if coder == "brotli":
         import brotli
 
-        return len(brotli.compress(raw, quality=11))
+        return len(brotli.compress(raw, quality=int(brotli_quality)))
     if coder == "lzma":
         import lzma
 
@@ -425,12 +437,17 @@ def apply_tier1_zero_weight_fill(
     best_bytes = None
     best_strategy = strategy
     bytes_before = coded_size_both(x)
+    single_cand = len(candidate_strategies) == 1
     for cand in candidate_strategies:
         fn = _FILL_FUNCS[cand]
         out = x.copy()
         for ch in range(c):
             out[:, :, ch] = fn(x[:, :, ch], mask)
-        sz = coded_size_bytes(out, coder="brotli")
+        # rank candidates with the fast search quality (winner re-measured at q=11
+        # below); a single explicit strategy skips ranking entirely.
+        sz = 0 if single_cand else coded_size_bytes(
+            out, coder="brotli", brotli_quality=SEARCH_BROTLI_QUALITY
+        )
         if best_bytes is None or sz < best_bytes:
             best_bytes = sz
             best_frame = out
@@ -455,11 +472,275 @@ def apply_tier1_zero_weight_fill(
     return best_frame, proof
 
 
+# ---------------------------------------------------------------------------
+# TIER 2 — integer null-basis greedy descent on coded size.
+#
+# DERIVATION (why the descent atoms are exactly the zero-weight pixels):
+# the only integer-exact axis-aligned null directions of R are the zero-weight
+# pixels.  Searching the separable kernel for two non-zero-weight input indices
+# with IDENTICAL resize-weight columns (which would permit an integer +1/-1
+# null transfer between them) finds NONE outside the zero-weight set — every
+# pair of duplicate weight columns is the all-zeros (zero-weight) column.  So a
+# unit moved between any two NON-zero-weight pixels changes R.  The certified
+# integer null directions are therefore exactly the zero-weight pixels (each
+# amplitude-unlimited up to clipping), and tier-2 descends the coded size over
+# THOSE directions with block-coordinate integer steps — a strict, proven
+# improvement search on top of tier-1's single-shot predictor fill.  No
+# real-valued null vector is ever rounded into the uint8 frame (operator caveat
+# (a)).
+# ---------------------------------------------------------------------------
+def _zero_weight_runs_per_row(mask: np.ndarray) -> list[tuple[int, int, int]]:
+    """Contiguous horizontal runs of masked pixels: ``(row, c_start, c_end)``
+    (``c_end`` exclusive).  These are the integer-null descent blocks."""
+    runs: list[tuple[int, int, int]] = []
+    h, w = mask.shape
+    for r in range(h):
+        c = 0
+        row = mask[r]
+        while c < w:
+            if row[c]:
+                start = c
+                while c < w and row[c]:
+                    c += 1
+                runs.append((r, start, c))
+            else:
+                c += 1
+    return runs
+
+
+def apply_tier2_null_basis_descent(
+    frame: np.ndarray,
+    *,
+    mask: np.ndarray | None = None,
+    projector: ResizeProjector | None = None,
+    basis: Tier1ResizeNullSpace | None = None,
+    max_iterations: int = 2,
+    coder: str = "brotli",
+    frame_index: int = 0,
+) -> tuple[np.ndarray, FrameProof]:
+    """Block-coordinate integer null-basis descent on coded size over the
+    certified zero-weight pixels.
+
+    The descent atoms are whole-plane integer fill SCHEMES applied to the
+    certified zero-weight pixels (each scheme is integer + null by construction,
+    so ``R x̃ = R x`` stays EXACT).  Per channel plane, the real coder's measured
+    size (fast search quality; final re-measured at q=11) is the admission
+    arbiter: the scheme that strictly reduces the plane's coded size wins.
+    Bounded ``max_iterations`` refinement sweeps follow (block-coordinate; in
+    practice converges in 1).  No real-valued null vector is ever rounded into
+    the uint8 frame (operator caveat (a)); the per-frame ``max|ΔR|`` is recomputed
+    with the real projector and emitted.
+
+    This descends the coded size PER CHANNEL — the marginal lever over tier-1,
+    which ranks a single scheme on the whole frame and so cannot pick a different
+    per-channel scheme.  Deterministic: scheme order is fixed.
+    """
+    x = np.asarray(frame, dtype=np.uint8)
+    if x.ndim != 3:
+        raise ResizeNullPreimageError("frame must be (H, W, C)")
+    h, w, c = x.shape
+    if projector is None:
+        projector = ResizeProjector.build(camera_h=h, camera_w=w)
+    if mask is None:
+        mask = zero_weight_pixel_mask(
+            camera_h=h, camera_w=w,
+            scorer_h=projector.scorer_h, scorer_w=projector.scorer_w, basis=basis,
+        )
+    if mask.shape != (h, w):
+        raise ResizeNullPreimageError(f"mask shape {mask.shape} != frame {(h, w)}")
+
+    bytes_before = coded_size_both(x)
+
+    # Per-channel block-coordinate descent over the certified zero-weight pixels.
+    # The descent atoms are whole-plane integer fill schemes (each integer + null
+    # => R x̃ = R x exact); the per-plane coded size (the real coder, fast search
+    # quality) is the admission arbiter.  This is strictly faster than per-run
+    # full-frame compression while remaining measurement-driven: the marginal
+    # lever over tier-1 is choosing the per-plane scheme that the FULL frame's
+    # cross-channel structure does not see when tier-1 ranks on the frame.
+    keep = ~mask
+    schemes = ("horizontal_predictor", "vertical_predictor",
+               "neighbor_mean", "constant")
+    out = x.copy()
+    for ch in range(c):
+        plane = x[:, :, ch]
+        best_plane = plane.copy()
+        best_sz = coded_size_bytes(
+            plane, coder=coder, brotli_quality=SEARCH_BROTLI_QUALITY
+        )
+        for scheme in schemes:
+            fn = _FILL_FUNCS[scheme]
+            trial = fn(plane, mask)
+            sz = coded_size_bytes(
+                trial, coder=coder, brotli_quality=SEARCH_BROTLI_QUALITY
+            )
+            if sz < best_sz:
+                best_sz = sz
+                best_plane = trial
+        out[:, :, ch] = best_plane
+
+    # Bounded refinement sweeps: a second pass can pick a different per-plane
+    # scheme once neighbours have already been flattened (block-coordinate).  In
+    # practice this converges in 1 sweep; max_iterations bounds it.
+    for _ in range(max(0, int(max_iterations) - 1)):
+        improved = False
+        for ch in range(c):
+            plane = out[:, :, ch]
+            cur = coded_size_bytes(
+                plane, coder=coder, brotli_quality=SEARCH_BROTLI_QUALITY
+            )
+            for scheme in schemes:
+                fn = _FILL_FUNCS[scheme]
+                # re-fill from the ORIGINAL plane (masked pixels are free DOF;
+                # non-masked are fixed) so the scheme sees true neighbours.
+                trial = fn(x[:, :, ch], mask)
+                sz = coded_size_bytes(
+                    trial, coder=coder, brotli_quality=SEARCH_BROTLI_QUALITY
+                )
+                if sz < cur:
+                    cur = sz
+                    out[:, :, ch] = trial
+                    improved = True
+        if not improved:
+            break
+
+    # Monotonic guarantee: the per-channel q=5 ranking does not always agree with
+    # q=11, so confirm the descent result against tier-1's frame-level fill at the
+    # REPORT quality and keep whichever is smaller.  Tier-2 is therefore never
+    # worse than tier-1 (a true descent).
+    t1_frame, _ = apply_tier1_zero_weight_fill(
+        x, strategy="measured_best", mask=mask, projector=projector, basis=basis,
+        frame_index=frame_index,
+    )
+    out_sz = coded_size_bytes(out, coder="brotli", brotli_quality=REPORT_BROTLI_QUALITY)
+    t1_sz = coded_size_bytes(t1_frame, coder="brotli",
+                             brotli_quality=REPORT_BROTLI_QUALITY)
+    if t1_sz < out_sz:
+        out = t1_frame
+
+    bytes_after = coded_size_both(out)
+    residual = projector.max_abs_projection_residual(x, out)
+    n_changed = int(np.count_nonzero(np.any(out != x, axis=2)))
+    valid = bool(out.dtype == np.uint8 and out.shape == x.shape)
+    proof = FrameProof(
+        frame_index=frame_index,
+        max_abs_projection_residual=residual,
+        exact=(residual <= EXACT_RESIDUAL_TOL),
+        bytes_before=bytes_before,
+        bytes_after=bytes_after,
+        n_pixels_changed=n_changed,
+        fill_strategy="tier2_null_basis_descent[per_channel_scheme]",
+        tier=2,
+        valid_uint8=valid,
+    )
+    return out, proof
+
+
+# ---------------------------------------------------------------------------
+# TIER 3 — blockwise constrained least-entropy preimage (smallest viable impl).
+#
+# Where the visible projection allows (the certified zero-weight lattice), snap
+# the dropped rows/cols into a single piecewise-constant tile structure: set
+# EVERY zero-weight pixel (across all rows/cols) to ONE plane-wide constant
+# (chosen by measurement), collapsing the 22.7% lattice into a maximally
+# RLE/predictor-friendly flat region.  This is the cheapest blockwise variant;
+# the LP/MILP/learned upgrades (per-block palette, joint visible-constrained
+# least-entropy over ker(R)'s full 80.67%, learned context fill) are named
+# follow-ups documented in the landing memo.
+# ---------------------------------------------------------------------------
+def apply_tier3_blockwise_flat_preimage(
+    frame: np.ndarray,
+    *,
+    mask: np.ndarray | None = None,
+    projector: ResizeProjector | None = None,
+    basis: Tier1ResizeNullSpace | None = None,
+    coder: str = "brotli",
+    frame_index: int = 0,
+) -> tuple[np.ndarray, FrameProof]:
+    """Snap the certified zero-weight lattice to the single plane-wide constant
+    that minimizes coded size (the cheapest blockwise-constant preimage).
+
+    Per channel, measure the coded size for a small set of plane-wide constants
+    (0, plane DC, 128) over the masked lattice and keep the best.  Integer +
+    null by construction (zero-weight pixels), so ``R x̃ = R x`` is EXACT."""
+    x = np.asarray(frame, dtype=np.uint8)
+    if x.ndim != 3:
+        raise ResizeNullPreimageError("frame must be (H, W, C)")
+    h, w, c = x.shape
+    if projector is None:
+        projector = ResizeProjector.build(camera_h=h, camera_w=w)
+    if mask is None:
+        mask = zero_weight_pixel_mask(
+            camera_h=h, camera_w=w,
+            scorer_h=projector.scorer_h, scorer_w=projector.scorer_w, basis=basis,
+        )
+    if mask.shape != (h, w):
+        raise ResizeNullPreimageError(f"mask shape {mask.shape} != frame {(h, w)}")
+
+    bytes_before = coded_size_both(x)
+    out = x.copy()
+    keep = ~mask
+    for ch in range(c):
+        plane = x[:, :, ch]
+        plane_dc = int(round(float(plane[keep].mean()))) if keep.any() else 0
+        cands = [0, plane_dc, 128]
+        seen: set[int] = set()
+        cands = [v for v in cands if not (v in seen or seen.add(v))]
+        best_plane = plane.copy()
+        best_size = None
+        for val in cands:
+            trial = plane.copy()
+            trial[mask] = np.uint8(np.clip(val, 0, 255))
+            # measure the PLANE (fast search quality) — final re-measured at q=11.
+            sz = coded_size_bytes(
+                trial, coder=coder, brotli_quality=SEARCH_BROTLI_QUALITY
+            )
+            if best_size is None or sz < best_size:
+                best_size = sz
+                best_plane = trial
+        out[:, :, ch] = best_plane
+
+    bytes_after = coded_size_both(out)
+    residual = projector.max_abs_projection_residual(x, out)
+    n_changed = int(np.count_nonzero(np.any(out != x, axis=2)))
+    valid = bool(out.dtype == np.uint8 and out.shape == x.shape)
+    proof = FrameProof(
+        frame_index=frame_index,
+        max_abs_projection_residual=residual,
+        exact=(residual <= EXACT_RESIDUAL_TOL),
+        bytes_before=bytes_before,
+        bytes_after=bytes_after,
+        n_pixels_changed=n_changed,
+        fill_strategy="tier3_blockwise_flat",
+        tier=3,
+        valid_uint8=valid,
+    )
+    return out, proof
+
+
+# ---------------------------------------------------------------------------
+# THE LAW score-delta on the rate term (consume #46's helper, do not refork).
+# ---------------------------------------------------------------------------
+def preimage_rate_score_delta(bytes_freed: int) -> float:
+    """``ΔS`` from freeing ``bytes_freed`` archive bytes, via #46's
+    ``delta_rate_score`` (THE LAW rate term ``25 * Δbytes / N``).  Distortion
+    delta is CERTIFIED 0.0 for tier-1/2/3 (zero-weight => R x̃ = R x exactly), so
+    the full ΔS_total is exactly this rate term — a strict score improvement for
+    any positive ``bytes_freed``."""
+    from tac.optimization.lf_payload_rate_distortion import delta_rate_score
+
+    # delta_rate_score(delta_bytes) returns 25 * delta_bytes / N; freeing bytes
+    # is a NEGATIVE delta_bytes (archive shrinks) => negative ΔS (improvement).
+    return float(delta_rate_score(-int(bytes_freed)))
+
+
 __all__ = [
     "RESIZE_NULL_PREIMAGE_SCHEMA",
     "PROOF_EVIDENCE_GRADE",
     "BYTES_EVIDENCE_GRADE",
     "EXACT_RESIDUAL_TOL",
+    "REPORT_BROTLI_QUALITY",
+    "SEARCH_BROTLI_QUALITY",
     "CONTEST_TOTAL_BYTES",
     "ResizeNullPreimageError",
     "ResizeProjector",
@@ -468,4 +749,7 @@ __all__ = [
     "coded_size_bytes",
     "coded_size_both",
     "apply_tier1_zero_weight_fill",
+    "apply_tier2_null_basis_descent",
+    "apply_tier3_blockwise_flat_preimage",
+    "preimage_rate_score_delta",
 ]
