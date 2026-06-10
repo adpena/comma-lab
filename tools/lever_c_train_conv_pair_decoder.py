@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Lever-C: train the small per-pair-latent CONV frame1 decoder JOINTLY seg+pose (task #62).
+"""Lever-C: train the small per-pair-latent CONV frame1 decoder JOINTLY seg+pose (task #62 / #63).
 
 THE ORIGINAL METHODOLOGY (no leaderboard entry uses this combination): a fresh-init small conv
 decoder (Conv+PixelShuffle+bilinear-skip+sin, PR95 L18) generates frame1, trained DIRECTLY against
@@ -10,9 +10,19 @@ the FROZEN scorers with three original terms:
      cheap to be wrong; small-margin boundary pixels are protected).
   2. Jacobian-aimed pose: frame0 (and frame1) recon-MSE WEIGHTED by the MEASURED PoseNet pixel-Jacobian
      (#61 posenet_jacobian_saliency) + the EXACT 6-dim PoseNet pose-MSE objective in the loop.
-  3. argmax-polytope-constrained seg: soft d_seg surrogate = boundary-weighted cross-entropy against
-     the GT SegNet argmax (the precomputed targets) — the exact argmax-flip d_seg is RE-MEASURED on the
-     frozen SegNet.
+  3. seg term — ONE of THREE selectable d_seg losses (task #63 decisive test, ``--seg-loss``):
+       * ``argmax_ce``      — boundary-weighted cross-entropy against the GT SegNet argmax labels (the
+                              #62 baseline; the gradient touches the SegNet only via the GT-class
+                              log-prob).
+       * ``kl_distill_t2``  — PR95's actual trick: ``T^2 * KL(log_softmax(student/T) || softmax(
+                              teacher/T))`` at T=2.0, teacher = frozen SegNet logits on GT frame1. The
+                              gradient flows through the FULL soft 5-class distribution.
+       * ``margin_hinge``   — the boundary-solver (#52/#55) gradient as a differentiable term:
+                              ``max(0, gamma - (logit[GT_class] - max_{c!=GT} logit[c]))``, pushing the
+                              student argmax margin past the flip point via the REAL SegNet input-
+                              Jacobian (autograd through the frozen SegNet).
+     The recon + pose terms are IDENTICAL across all three arms — only the seg term varies (the #63
+     decisive test). The exact argmax-flip d_seg is RE-MEASURED on the frozen SegNet for every arm.
 
 eval_roundtrip (uint8 STE) + differentiable rgb_to_yuv6 in the inner loop (CLAUDE.md non-negotiable).
 EMA shadow is the inference checkpoint. The numpy-portable conv forward (``decoder_frame``) is verified
@@ -208,6 +218,95 @@ def _to_camera(decoder_out_chw: torch.Tensor) -> torch.Tensor:
     )[0]
 
 
+# ---------------------------------------------------------------------------
+# The THREE selectable d_seg loss terms (task #63 decisive test).
+# Each takes student SegNet logits (1,5,384,512) [gradient flows] + the per-pair
+# precomputed targets; returns a scalar. The ONLY thing that varies across arms.
+# ---------------------------------------------------------------------------
+SEG_LOSS_CHOICES = ("argmax_ce", "kl_distill_t2", "margin_hinge")
+KL_TEMPERATURE = 2.0  # PR95 / Quantizr canon (Hinton-Vinyals-Dean 2014, T=2.0)
+MARGIN_HINGE_GAMMA = 1.0  # slack past the flip point (logit-margin units)
+
+
+def _seg_loss_argmax_ce(
+    student_logits: torch.Tensor, seg_label: torch.Tensor, w_boundary: torch.Tensor
+) -> torch.Tensor:
+    """Arm 1 (#62 baseline): boundary-weighted CE against the GT SegNet argmax labels.
+
+    Gradient touches the SegNet only through the GT-argmax-class log-prob.
+    """
+
+    ce = F.cross_entropy(student_logits, seg_label[None], reduction="none")[0]  # (384,512)
+    return (ce * w_boundary).mean()
+
+
+def _seg_loss_kl_distill_t2(
+    student_logits: torch.Tensor, teacher_logits: torch.Tensor, *, temperature: float = KL_TEMPERATURE
+) -> torch.Tensor:
+    """Arm 2 (PR95): ``T^2 * KL(log_softmax(student/T) || softmax(teacher/T))`` at T=2.0.
+
+    Mirrors ``tac.losses.u_die_kl.kl_distill_segnet_term`` (the canonical PR95 SegNet-logit
+    distillation) for the single-frame1 SegNet path the trainer uses. The teacher is the FROZEN
+    SegNet logits on GT frame1 (detached, no grad). The gradient flows through the FULL soft 5-class
+    distribution — boundary-aware by construction (runner-up mass near a boundary).
+    """
+
+    T = float(temperature)
+    log_p = F.log_softmax(student_logits / T, dim=1)
+    q = F.softmax(teacher_logits / T, dim=1).detach()
+    kl_per_pixel = F.kl_div(log_p, q, reduction="none").sum(dim=1)  # (1,384,512)
+    return kl_per_pixel.mean() * (T * T)
+
+
+def _seg_loss_margin_hinge(
+    student_logits: torch.Tensor,
+    seg_label: torch.Tensor,
+    w_boundary: torch.Tensor,
+    *,
+    gamma: float = MARGIN_HINGE_GAMMA,
+) -> torch.Tensor:
+    """Arm 3 (#52/#55 boundary-solver gradient): differentiable argmax-margin hinge.
+
+    For the GT-argmax source class ``s = A_GT(p)`` at each pixel, penalize
+    ``max(0, gamma - (logit[s] - max_{c != s} logit[c]))``. This directly pushes the student argmax
+    margin toward and past the flip point, using the REAL SegNet input-Jacobian
+    ``g_p = J_{s,p} - J_{c2,p}`` via autograd through the frozen SegNet (the exact polytope coefficient
+    the closed-form #55 solver is written over). Boundary-weighted by the same ``w_boundary``.
+    """
+
+    logits = student_logits[0]  # (5,384,512)
+    n_cls = logits.shape[0]
+    s = seg_label.long()  # (384,512), source = GT argmax class
+    # logit of the source class per pixel
+    src_logit = torch.gather(logits, 0, s[None])[0]  # (384,512)
+    # max logit over the WRONG classes: mask the source class to -inf then max over classes.
+    onehot = F.one_hot(s, num_classes=n_cls).permute(2, 0, 1).bool()  # (5,384,512)
+    masked = logits.masked_fill(onehot, float("-inf"))
+    max_wrong = masked.max(dim=0).values  # (384,512)
+    margin = src_logit - max_wrong  # > 0 where student argmax == GT argmax
+    hinge = F.relu(float(gamma) - margin)  # penalize margin below gamma (incl. flipped pixels)
+    return (hinge * w_boundary).mean()
+
+
+def _compute_seg_loss(
+    seg_loss_mode: str,
+    student_logits: torch.Tensor,
+    *,
+    seg_label: torch.Tensor,
+    w_boundary: torch.Tensor,
+    teacher_logits: torch.Tensor | None,
+) -> torch.Tensor:
+    if seg_loss_mode == "argmax_ce":
+        return _seg_loss_argmax_ce(student_logits, seg_label, w_boundary)
+    if seg_loss_mode == "kl_distill_t2":
+        if teacher_logits is None:
+            raise ValueError("kl_distill_t2 requires teacher_logits (GT-frame1 SegNet logits)")
+        return _seg_loss_kl_distill_t2(student_logits, teacher_logits)
+    if seg_loss_mode == "margin_hinge":
+        return _seg_loss_margin_hinge(student_logits, seg_label, w_boundary)
+    raise ValueError(f"unknown seg_loss_mode={seg_loss_mode!r}; choose from {SEG_LOSS_CHOICES}")
+
+
 def train(
     targets_dir: Path,
     out_dir: Path,
@@ -221,12 +320,15 @@ def train(
     pose_carrier_mode: bool,
     seg_floor: float,
     pose_floor: float,
+    seg_loss_mode: str = "argmax_ce",
 ) -> dict[str, Any]:
     import render_and_score_lib as L
 
     from tac.boundary_math.margin_polytope import free_budget_from_margin_jacobian
     from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally, unpatch_upstream_yuv6
 
+    if seg_loss_mode not in SEG_LOSS_CHOICES:
+        raise ValueError(f"seg_loss_mode={seg_loss_mode!r} not in {SEG_LOSS_CHOICES}")
     _refuse_tmp(out_dir, "out_dir")
     out_dir.mkdir(parents=True, exist_ok=True)
     torch.manual_seed(seed)
@@ -282,6 +384,17 @@ def train(
     print(f"[setup] measured PoseNet pixel-Jacobian fields {time.time()-t0:.1f}s", flush=True)
 
     segnet = _load_segnet()
+
+    # ── teacher SegNet logits on GT frame1 (arm 2 KL-T=2.0 target; frozen, detached) ──
+    # The d_seg metric reads SegNet on the resize-to-(384,512) last frame; the teacher is the SAME
+    # path on the GT frame1. Computed once per pair (cheap for the smoke pair-count).
+    teacher_logits: dict[int, torch.Tensor] = {}
+    if seg_loss_mode == "kl_distill_t2":
+        with torch.no_grad():
+            for pi in pairs:
+                teacher_logits[pi] = segnet(_seg_in(gt1[pi])).detach()  # (1,5,384,512)
+        print(f"[setup] teacher SegNet logits (GT frame1) for KL-T2 {time.time()-t0:.1f}s", flush=True)
+
     model = TorchConvPairDecoder(cfg).to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
     ema = EMA(model, decay=0.997)
@@ -309,10 +422,14 @@ def train(
                 recon_w = 0.5 * seg_w_cam + 0.5 * jac_weight[pi]
                 recon_mse = (recon_err * recon_w).mean()
 
-                # (3) argmax-polytope-constrained seg: boundary-weighted CE against GT SegNet argmax.
+                # (3) seg term — ONE of {argmax_ce, kl_distill_t2, margin_hinge} (#63 decisive test).
+                # student logits flow gradient through the frozen SegNet; ONLY the seg loss varies.
                 seg_logits = segnet(_seg_in(f1))  # (1,5,384,512)
-                ce = F.cross_entropy(seg_logits, seg_labels[pi][None], reduction="none")[0]  # (384,512)
-                seg_loss = (ce * seg_ce_weight[pi]).mean()
+                seg_loss = _compute_seg_loss(
+                    seg_loss_mode, seg_logits,
+                    seg_label=seg_labels[pi], w_boundary=seg_ce_weight[pi],
+                    teacher_logits=teacher_logits.get(pi),
+                )
 
                 # (2) Jacobian-aimed pose: EXACT 6-dim PoseNet pose-MSE (the objective).
                 # pose_carrier_mode reuses frame1 for frame0 (degenerate placeholder; off by default).
@@ -368,10 +485,11 @@ def train(
     joint_hold = bool(exact["mean_d_seg"] < 0.01 and exact["mean_d_pose"] < 0.01
                       and byte_acct.total_bytes < 120_000)
     result = {
-        "subagent": "task62_lever_c_viability_smoke",
+        "subagent": "task63_dseg_loss_decisive_test",
         "utc": _utc(),
         "evidence_grade": "[local CPU-torch advisory]",
         "promotion_eligible": False, "score_claim": False, "ready_for_exact_eval_dispatch": False,
+        "seg_loss_mode": seg_loss_mode,
         "config": cfg.to_dict(),
         "param_count": decoder_param_count(cfg),
         "n_pairs": len(pairs),
@@ -456,6 +574,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="decoder also makes frame0 (joint); default frame0=GT0 for pure frame1 RD")
     ap.add_argument("--seg-floor", type=float, default=0.05)
     ap.add_argument("--pose-floor", type=float, default=0.05)
+    ap.add_argument("--seg-loss", type=str, default="argmax_ce", choices=SEG_LOSS_CHOICES,
+                    help="the #63 decisive-test d_seg loss arm (the ONLY thing that varies across arms)")
     # capacity knobs
     ap.add_argument("--latent-dim", type=int, default=24)
     ap.add_argument("--seed-ch", type=int, default=32)
@@ -472,6 +592,7 @@ def main(argv: list[str] | None = None) -> int:
         args.targets_dir, args.out_dir, cfg, n_pairs=args.n_pairs, epochs=args.epochs,
         lr=args.lr, seed=args.seed, eval_every=args.eval_every,
         pose_carrier_mode=args.pose_carrier_mode, seg_floor=args.seg_floor, pose_floor=args.pose_floor,
+        seg_loss_mode=args.seg_loss,
     )
     print("\n=== LEVER-C TRAIN RESULT ===")
     print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=2))
