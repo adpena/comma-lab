@@ -173,6 +173,22 @@ or a retrain. Re-quant-without-retrain on this substrate is a dead end.
    between "scorer-slack exists (crush it)" vs "weights are score-load-bearing
    (don't)"; the verdict is the latter.
 
+## Canonical-equation anchor (Catalog #344)
+
+<!-- FORMALIZATION_PENDING: this is a NEGATIVE falsification of the whole-tensor
+re-quant implementation, not a new promotable predictive model. The closest
+canonical equation is the contest score `100*d_seg + sqrt(10*d_pose) + 25*rate`
+(used verbatim in `tac.score_aware_weight_requant.contest_score_from_components`).
+The empirical content here is the falsification constraint (whole-tensor post-hoc
+re-quant is Pareto-dominated: distortion penalty / rate saving = 13.8x at the
+gentlest operating point) which is recorded as a Pareto-constraint + sensitivity-map
+contribution (6-hook §) rather than a standalone equation. A predictive model of
+per-channel sensitivity is the reactivation #1 deliverable; it will register a
+canonical equation when it produces a positive (or bounded) prediction. The
+verdict is [contest-CPU advisory] (local exact scorer reproducing the eval
+geometry within 1e-7 d_seg), NOT Linux-x86_64 [contest-CPU] authority, so it must
+NOT mutate a promotable equation registry. -->
+
 ## Provenance
 
 - Frontier archive: `experiments/results/pr110_payload_entropy_recode_20260610/submission_dir/archive.zip`
