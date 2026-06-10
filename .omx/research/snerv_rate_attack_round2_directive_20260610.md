@@ -87,6 +87,41 @@ delta_score_total, authority_tier, metric_family, first_failed_surface, keep_or_
 prose-only optimization; (d) atlas-measured values enter ONLY with measurement_scope (no new magic
 constants from one sweep).
 
+## S7+ — THE CLEVER TIER (operator 2026-06-10: "aggressively attack rate, get clever in ways we
+haven't thought of yet"). Don't just code the blob — QUESTION whether the blob should exist.
+
+- **S7 SYNTHESIZE-don't-store (the mean-field inversion — the big one):** the fleet's "disease"
+  (every NeRV renders a blurry low-frequency mean-field at ~21dB) is EXACTLY AN LL-BAND GENERATOR.
+  The thing our carriers do for free is the thing we're paying 26-581MB to store. Rung: a tiny
+  decoder (the failed carriers' own mean-field, or distilled) synthesizes the LL approximation at
+  inflate time; store only sparse pose-correcting residuals where the cone says the synthesis is
+  outside budget. The disease becomes the cure.
+- **S8 COMPOSE-the-frontier (the 178KB LL generator that already exists):** the 0.19199 archive's
+  HNeRV+selector renders the full video evaluator-close for 178,417 bytes TOTAL. At the receiver:
+  run it → DWT → take ITS LL as skip_high → SNeRV's MFU/HFR machinery refines on top; store only
+  residuals where the frontier render is weak (the cone/atlas knows where). This is vehicle
+  composition (#31) arriving early through the rate door — and its bytes bar is "residuals must
+  pay rent vs the frontier alone," the honest comparison.
+- **S9 EGO-MOTION WARP (the dispersion-plane move):** dashcam LL ≈ smooth gradients + a coherent
+  6-dof camera warp. Store sparse LL keyframes (every Nth pair) + the pose trajectory (~600×6
+  floats, trivial bytes) + warp; residual-correct the rest. The Maxwell/dispersion basis
+  operationalized; also the most PoseNet-aligned representation possible (it literally stores
+  what PoseNet measures).
+- **S10 PLANE-CODEBOOK (VQ over time):** 1200 LL planes, far fewer distinct scenes. K exemplar
+  planes + per-plane index + cheap affine/illumination correction. pact_nerv_vq's genuine VQ
+  machinery is the reuse surface.
+- **S11 PROGRAM-not-samples (inflate-as-interpreter):** 30 receiver-minutes are an interpreter
+  budget. Fit procedural models (sky gradient + road plane + horizon spline over time) per region;
+  store coefficients, not samples. The V6 witness-program thesis applied to the LL band.
+- **The information-theoretic license for all of S7-S11:** the evaluator never sees skip_high —
+  it sees rendered frames through MFU/HFR then the scorers. The required information is bounded by
+  the SCORER response entropy (the atlas/cone measure exactly this), not the pixel entropy of the
+  planes. Any generator whose output lands inside the same scorer cells is byte-free-equivalent.
+
+Order: S8 first (cheapest to test — the frontier archive is on disk; a receiver-side compose +
+N=48 exact re-measure prices it immediately), then S7 (distill-the-mean-field), S9, S10, S11.
+Same guards: byte-closed, exact re-measure, V3 rows, runtime inside the 30-min budget.
+
 ## The strategic bar (record in the round-1/2 memos)
 
 skip_high is SOURCE-DERIVED state, so compressing it is a recursive instance of the contest itself —
