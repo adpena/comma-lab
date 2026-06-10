@@ -1,5 +1,17 @@
 # AGENTS
 
+> # ⛔ SUPREME RULE — NO FAKE IMPLEMENTATIONS ⛔
+> **This is the #1 non-negotiable, ABOVE EVERY OTHER RULE in this file. Highest possible emphasis.**
+> An implementation that does not ACTUALLY perform — on the REAL inputs — the work its name claims is a
+> FAKE and is FORBIDDEN. No exceptions. It does not matter how many tests pass, how clean the metadata
+> is, how plausible the proxy looks, or how close to the frontier it sits. A **score**, a **"done"**, an
+> **"original"**, a **"compiler"**, or a **"solver"** that the exact contest oracle (`upstream/evaluate.py`,
+> 600-sample, authority tier) AND the actual code do not JOINTLY prove is a FAKE CLAIM. When in doubt:
+> do LESS, but make it REAL — a smaller honest result beats a larger fake one every single time.
+> The **eight forbidden classes**, the catch-and-fix cascade, and the cross-references are the canonical
+> **`## NO FAKE IMPLEMENTATIONS`** section below. READ IT before writing, claiming, marking-done, or
+> submitting ANYTHING. A reuse/name/mechanism claim the code does not honor is a bug, not a shortcut.
+
 ## Local Disk, SSD Spill, Auto-Cleanup, And Provenance — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 Local disk is for source, small manifests, and live metadata. Bulky rebuildable
@@ -98,13 +110,16 @@ the 10 non-negotiable claim rules, the objective-activation rules, the per-famil
 the dashboard discipline, and the subagent-produces-manifest-not-prose contract all live in that doc. This
 section is the pointer; the doc is canonical.
 
-## NO FAKE IMPLEMENTATIONS — NON-NEGOTIABLE, HIGHEST EMPHASIS
+## NO FAKE IMPLEMENTATIONS — THE #1 NON-NEGOTIABLE, SUPREME OVER ALL OTHER RULES, HIGHEST POSSIBLE EMPHASIS
+
+**This rule outranks every other rule in this file. If any other rule appears to permit a fake, this
+rule wins. See the supreme-rule banner at the very top of `CLAUDE.md` — this section is its canonical body.**
 
 **Source:** operator binding directive 2026-05-30 verbatim *"add non negotiable instrucitons no fake implmenetations to claude.md"* + sister directive *"make sure that tasks marked as done are actually done and no fake implmenetations"*. Anchor memos: `feedback_15_item_audit_validate_fix_harden_test_blanket_approval_1to1_fidelity_with_documented_adaptations_standing_directive_20260529.md` + `feedback_optimize_iterate_highest_ev_boldest_individually_fractally_optimized_mlx_deployed_aggressive_frontier_breaking_no_fake_implementations_standing_directive_20260529.md` + Slot EEE fake-implementation audit `feedback_slot_eee_fake_implementation_audit_on_today_l0_scaffolds_per_operator_binding_must_review_for_fake_implementations_landed_20260529.md`. Empirical anchor: Slot EEE audit found 1-of-7 L0 scaffolds (Slot RR) was structurally FAKE (`apply_pose_axis_null_projection` returned Tier A markers + canonical menu size constants but applied ZERO perturbation; 64 tests verified menu-size constants not behavior) and 5-of-7 PARTIAL (real math primitives + documented adaptations or structural simplifications under explicit FALSIFIED-AT-IMPLEMENTATION-LEVEL classification per Catalog #307).
 
 **The rule.** Every implementation claimed to perform a technique MUST actually perform that technique on the actual inputs the technique is defined over. Tier A observability-only consumer markers per Catalog #341 do NOT exempt the underlying function from doing the work it names. A function named `apply_X_via_Y` that returns canonical metadata without applying Y to the inputs is a FAKE implementation regardless of test coverage on metadata fields.
 
-**Five forbidden classes** (each is canonical FAKE per Catalog #307 IMPLEMENTATION-LEVEL):
+**Eight forbidden classes** (each is canonical FAKE per Catalog #307 IMPLEMENTATION-LEVEL):
 
 1. **Returns-canonical-markers-without-doing-work.** Function claims to apply a transform / probe / measurement but returns only `{predicted_delta_adjustment=0.0, promotable=False, axis_tag="[predicted]"}` (Catalog #341 Tier A markers) + canonical reference strings + no observable mutation of the inputs. Slot RR canonical anchor.
 
@@ -116,10 +131,16 @@ section is the pointer; the doc is canonical.
 
 5. **Enum-padding-without-distinct-implementations.** A 4-value canonical strategy enum where 3 of the 4 values dispatch to the same underlying allocation / filter / transform. Catalog #308 alternative-probe-methodology enumeration is structurally padded — looks comprehensive but each branch is the same code. Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" — each enum branch must be a structurally distinct implementation OR the enum value MUST be removed from the canonical surface.
 
-**Sister rule: tasks marked done must actually be done.** Per operator directive 2026-05-30: never mark a TaskList row `completed` when the underlying work is a fake implementation per the 5 classes above. Per CLAUDE.md "Memos must be implemented" — a landed memo describing canonical work that was actually placeholder-emission is itself a fake-implementation incident at the documentation surface. The 6-hook wire-in declaration per Catalog #125 + the canonical apparatus mutation chain (lane registry + memory entry + landing memo + canonical posterior anchor) MUST reflect actual behavior, not claimed behavior.
+6. **Search-masquerading-as-a-solver/compiler (the candidate-search trap; operator anchor 2026-06-10).** A surface named `compiler` / `solver` / `synthesizer` / `quotient` / `inverse-solve` that, on the real inputs, only ENUMERATES candidates and scores them (brute-force / greedy / beam / random / sweep search) is a SEARCH, not a solver — naming it a compiler/solver is FAKE unless (a) the artifact is honestly labeled as candidate-search AND (b) its real mechanism is documented (the search space, the ranking signal, and the explicit absence of a closed-form / variational / preimage solve). Operator verbatim 2026-06-10: *"our interpreter/compiler architecture is interesting but still kind of a fake implementation ... there are much more direct and elegant ways of math ... derivatives and integrals and manifolds and partial diff equations."* The fix is BOTH: be honest (call the search a search) AND, where the directive actually demands a solver, build the real solve (variational / KKT / preimage / closed-form against the measured oracle geometry), not a fancier search wrapper wearing a solver's name.
+
+7. **Borrowed-substrate-passed-as-original-work (the absorb-recode-as-innovation trap; operator anchor 2026-06-10).** Claiming a result is "original" / "innovative" / "novel" / "class shift" / "competitive" when it is in substance an absorb-recode of a competitor's published method (canonical anchor: the recoded-R3 hold, −2.59e-5 over PR#112 and within contest reporting precision, built FROM PR#112's codec) is FAKE originality. Every innovation/originality/competitive claim MUST be backed by an itemized `borrowed_substrate_accounting` that separates ours-original bytes/mechanisms from borrowed ones; a borrowed substrate is a DEFENSIVE BANK for readiness, NEVER the innovative submission. Per the Innovation Gate in `.omx/research/GOAL_standing_v3_20260610.md` — the "competitive OR innovative" statement on any submission must be UNQUESTIONABLE.
+
+8. **Surrogate-optimized-but-not-exact-authority-verified (the proxy-score trap; sister of "MPS auth eval is NOISE").** Claiming a score improvement / frontier / promotion / kill / "beats baseline" from a surrogate — proxy loss, telemetry, PSNR, MLX research-signal, local-CPU advisory, foreign-host FP, and ABSOLUTELY MPS — WITHOUT the exact contest `evaluate.py` 600-sample row at the authority tier the claim actually asserts is a FAKE score claim. Surrogates are gradient rows + priors ONLY; the exact argmax-`d_seg` / official-`d_pose` / real archive bytes are authority; any surrogate↔exact gap is itself a finding, never the verdict. MPS is NEVER authority (corrupts 95.5% of orderings — a contamination marker requiring rebuild). GT decodes ONLY via `frame_utils.yuv420_to_rgb` (PyAV rgb24 manufactures ~100× phantom pose). Recompute the score from components — the rounded `final_score` field lies. Per CLAUDE.md "MPS auth eval is NOISE" + "Submission auth eval — BOTH CPU AND CUDA" + "Frontier scores are pointer-only" + the authority ladder.
+
+**Sister rule: tasks marked done must actually be done.** Per operator directive 2026-05-30: never mark a TaskList row `completed` when the underlying work is a fake implementation per the 8 classes above. Per CLAUDE.md "Memos must be implemented" — a landed memo describing canonical work that was actually placeholder-emission is itself a fake-implementation incident at the documentation surface. The 6-hook wire-in declaration per Catalog #125 + the canonical apparatus mutation chain (lane registry + memory entry + landing memo + canonical posterior anchor) MUST reflect actual behavior, not claimed behavior.
 
 **The fix when caught.** Per CLAUDE.md "Forbidden premature KILL without research exhaustion" + Catalog #307 paradigm-vs-implementation classification: a FAKE implementation surfaced via audit is canonical reactivation territory (the paradigm is intact; the specific implementation is falsified). The remediation cascade:
-1. Classify the fake-implementation incident per the 5 forbidden classes above + record per Catalog #307 IMPLEMENTATION-LEVEL falsification.
+1. Classify the fake-implementation incident per the 8 forbidden classes above + record per Catalog #307 IMPLEMENTATION-LEVEL falsification.
 2. Apply the canonical 2-landing pattern per "Bugs must be permanently fixed AND self-protected against": (a) immediate code fix that makes the function actually do the work it names; (b) NEW STRICT preflight gate OR canonical-helper invariant that refuses re-introduction of the fake-implementation class.
 3. Honest reframe of any landing memo / canonical equation anchor / lane registry evidence that cited the fake implementation as empirical anchor — per Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE, the original anchor is NOT mutated; a NEW row supersedes it with the falsification classification.
 4. Sister-substrate audit: if the same FAKE pattern exists in sister substrates (per the META-meta finding from a8bc7e79 sweep — bug classes have 6-7× spread across the repo), enumerate + fix in the same commit batch.
