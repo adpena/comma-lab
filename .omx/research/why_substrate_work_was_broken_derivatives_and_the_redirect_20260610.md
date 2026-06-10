@@ -51,6 +51,19 @@ Spending months stuck fixing a broken derivative IS the antithesis of the missio
    the frontier-score-lowering possibility with a FULL STACK designed around it for max synergy. The
    shared-harness false economy is exactly what this prevents.
 
+## The operator's actual intent (clarified 2026-06-10): a 1:1 MLX PORT, not an inspired harness
+*"I didn't want a PR95-inspired harness I wanted a 1:1 MLX port ... tested and iterated and optimized
+for determinism and correctness and optimization."* This is the precise gap. We built a loose
+"PR95-inspired" MLX harness with its own (wrong) defaults. The operator wanted a **faithful 1:1 MLX
+port of PR95's `hnerv_muon`** — and crucially, one with a **torch-parity GATE**: the MLX port must
+produce bit-/score-identical output to PR95's torch loop on the same input. That gate is the fidelity
+discipline that was missing — it would have caught EVERY divergence the moment it appeared:
+- scorer-weights=0.0 → fails parity (PR95's weights are nonzero) → caught.
+- skip-free decoder → fails parity (PR95 has bilinear-skip+HF-refine) → caught.
+- AdamW-not-Muon-throughout → fails parity (PR95 runs Muon) → caught.
+A 1:1 port is defined by its parity test, NOT by "it looks like PR95." MLX-first was correct; the
+missing piece was **1:1 fidelity + a parity gate + tested determinism + correctness, THEN optimization.**
+
 ## Durable lesson (so this never recurs)
 - **Vendor proven code verbatim; never re-implement it into a shared harness with its own defaults.** A
   shared harness is a single point of failure — a wrong default (scorer-weights=0.0) silently breaks
