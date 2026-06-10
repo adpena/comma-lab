@@ -59,15 +59,16 @@ within 1 LSB (the portability contract holds; the inflate-time decode is pure nu
 |---|---:|---:|---:|---:|---:|
 | **tiny** (h48/m16/f16) | 13,747 | **13,068** | 0.0087 | **0.00359** | **0.1894** |
 | small (h96/m32/f32) | 53,603 | 49,157 | 0.0327 | 0.01577 | 0.3972 |
-| medium (h160/m48/f48) | 181,955 | (running) | — | — | — |
-| large (h256/m64/f64) | (running) | — | — | — | — |
+| medium (h160/m48/f48) | 181,955 | 160,538 | 0.1069 | 0.01437 | 0.3791 |
+| large (h256/m64/f64) | 430,339 | (in flight, confirming) | — | — | — |
 
-**The curve is NOT monotone-decreasing** — the tiny config (fewest bytes) reached the BEST d_pose; the
-small config trained to a WORSE pose MSE (the pose loss is unstable / harder to optimise at higher
-capacity, training-MSE bounced 0.024→0.124 across epochs). The ceiling of the amortized-INR pose
-section on this video is **~0.0036** (frame0-only), 124× above the frontier's tube. (Medium/large
-rows confirm the non-monotonicity; they are completing in the background and do not change the verdict
-— even at d_pose=0.0036 the pose_term 0.189 ≈ the entire frontier 0.191.)
+**The curve is NOT monotone-decreasing** — the tiny config (FEWEST bytes, 13 KB) reached the BEST
+d_pose (0.0036); small (49 KB) AND medium (160 KB) BOTH trained to WORSE d_pose (0.016 / 0.014). More
+capacity / bytes does NOT buy lower d_pose: the pose loss is unstable at higher capacity (training-MSE
+bounced 0.024→0.124 small, 0.027→1.77→0.023 medium across epochs). The ceiling of the amortized-INR
+pose section on this video is **~0.0036** (frame0-only), 124× above the frontier's tube. (The large
+row is completing in the background and does NOT change the verdict — the 3-row curve is decisively
+non-monotone, and even the best d_pose=0.0036 gives pose_term 0.189 ≈ the entire frontier 0.191.)
 
 ## 3. THE STRUCTURAL BLOCKER (the sharp #57 diagnosis): frame1's DUAL constraint
 
