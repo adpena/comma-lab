@@ -60,6 +60,19 @@ falsifications → **the deferred fleet REACTIVATES once #76 lands the working l
 capstone (#78) arch is specified: E-NeRV + bilinear-skip+HF-refine + FFNeRV-flow + fixed-codebook-VQ →
 ~42-74KB → sub-0.15. Critical path: #76 (loop) + #77 (optimizer) → #78 (capstone). #68 deliverable: commit `89e8829c6`.
 
+## ★ UNLOCK (#76, 2026-06-10) — the inert loop is FIXED; d_seg descends
+NOT a pointer move (no exact-eval candidate yet) but the PREREQUISITE that unblocks the entire retraining
+campaign. With the fixed loop (`tac.score_aware_loop`: direct CE through the LIVE frozen SegNet + GT-argmax
+targets + eval-roundtrip STE + simple 100·seg+1·pose + AdamW + EMA), the live-render exact d_seg DESCENDS
+**0.508 → 0.081 (84%)** in 8 CE epochs on real pairs — the 3000-epoch mean-field wall DISSOLVES. Root cause
+(confirmed): (a) the harness used a learnable-student-head KL surrogate (NOT direct CE) because the ported
+MLX SegNet NaN's in 2nd-order autograd; (b) a 6-term Lagrangian where pose dwarfed seg 170× → grad clipped
+to noise. The operator's thesis CONFIRMED: the fleet-wide d_seg plateau was the broken loop, not the
+paradigms. RESIDUAL LANDMINE: default EMA decay 0.999 lags so hard a 30-ep EMA-shadow showed NO descent
+while the live render fell 84% — some past "no descent" verdicts may be EMA-shadow-lag artifacts (re-validate).
+Next: #81 (re-test the pose-capacity-wall #74 on the working loop) → #82 (1:1 MLX port, parity-gated, fixes
+the SegNet-NaN) → #78 (the capstone, on the working loop).
+
 ## Pending movers (will append a row on landing, via the schema firewall)
 - #69 score-aware Q* re-quant (rate) · ~~#71 Q* structural compression~~ (CLOSED post-hoc; reopens only as score-domain RETRAINING)
 - #72 lever-D margin-conditional residual coder (d_seg) · #54 cross-pair waterfilled corrector (pose)
