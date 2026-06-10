@@ -71925,15 +71925,15 @@
       "id": "lane_pr110pp_r3_onhost_mode_table_20260610",
       "name": "PR110++ R3 on-host per-mode pose table + corrected selector",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "on-host pose-table Modal job + corrected selector builder; experiments/results/pr110pp_r3_onhost_mode_table_20260610/"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[contest-CPU] paired eval candidate=0.19198275 vs frontier=0.19198534 dS=-2.58e-6; candidate_cpu_eval/contest_auth_eval.json fc-01KTQMWVQJJSP28GGBWZ91SYQC"
         },
         "contest_cuda": {
           "status": false,
@@ -71952,8 +71952,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/pr110pp_r3_onhost_selector_verdict_20260610.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -72002,6 +72002,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_frontier_decoder_axis_waterfill_20260610",
+      "name": "Frontier decoder-axis q-coarsen waterfill (THE LAW on 162127B decoder blob)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/results/frontier_decoder_axis_waterfill_20260610/ build_per_tensor_sensitivity_map.py + build_decoder_coarsen_candidates.py + no-op detector PASSED (consumption_proven all 3); GT-decode bug fix + tracked guard ee80865b1"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "exact [contest-CPU] paired eval 4 archives: frontier 0.19198534; c1/c2/c3 +0.0709/+0.0902/+0.1648 (all above_frontier pays_rent=False); call_ids fc-01KTQQCXA54H0H31SJ3C226ZW3 et al; .omx/research/frontier_decoder_axis_waterfill_verdict_20260610.md"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/frontier_decoder_axis_waterfill_verdict_20260610.md (DEFER-pending-research; naive q-coarsen FALSIFIED-AT-IMPLEMENTATION Catalog #307; reactivation: per-weight score-aware quant / QAT-recovery / latent-axis)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72011,5 +72052,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T02:14:07Z"
+  "updated_at": "2026-06-10T03:06:06Z"
 }
