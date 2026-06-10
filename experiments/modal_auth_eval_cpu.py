@@ -158,11 +158,18 @@ base_image = (
 eval_image = (
     base_image
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "src",
-        remote_path=str(REMOTE_REPO / "src"),
-        ignore=ignore_generated_mount_path,
-    )
+    # REGRESSION FIX 2026-06-09 (pr110pp_r1): the whole-tree
+    # ``add_local_dir("src", remote_path=/workspace/pact/src)`` lazy-mount
+    # (copy=False) silently failed to land tac on the container (it never
+    # appeared in the "Created mount" build output) AND, being a copy=False
+    # startup mount that overlaps the add_local_python_source("tac") package
+    # path, it poisoned the sibling copy=False ``upstream`` startup mount so the
+    # contest_auth_eval.py subprocess saw ``upstream missing evaluate.py``. The
+    # ONLY thing the eval chain needs from src/ is the ``tac`` package, now
+    # provided by add_local_python_source("tac") below (verified: no comma_lab
+    # imports in contest_auth_eval.py / evaluate.py / modules.py). Removing the
+    # redundant whole-src mount also extincts the concurrent-sibling-write
+    # ``modified during build process`` failure on src/comma_lab/*.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "upstream",
         remote_path=str(REMOTE_REPO / "upstream"),
