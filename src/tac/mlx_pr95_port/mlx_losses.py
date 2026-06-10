@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: MIT
+"""1:1 MLX port of PR95 ``hnerv_muon/src/losses.py`` — the score-aware losses.
+
+These are the FOUR stage segmentation losses + the pose loss + the exact-d_seg
+observable, ported verbatim from the proven PR95 torch implementation
+(``submissions/hnerv_muon/src/losses.py``), in native MLX so they can be
+parity-GATED against the torch reference (bit-/score-close per component).
+
+The parity gate is the whole point of a 1:1 port: every MLX loss here is tested
+in :mod:`tac.mlx_pr95_port.tests.test_torch_parity` to match the torch reference
+to fp32 epsilon on the SAME logits + targets. A divergence FAILS the gate.
+
+Loss progression (PR95 L14 8-stage curriculum):
+  Stage 1 (CE):           :func:`ce_seg_loss_mlx`
+  Stage 2 (tau-softplus): :func:`tau_softplus_seg_loss_mlx`  (tau=0.3)
+  Stage 3+4 (smooth):     :func:`smooth_disagreement_seg_loss_mlx`  (tau=0.3)
+  Stage 5+ (L7):          :func:`l7_softplus_seg_loss_mlx`
+  Pose (all stages):      :func:`pose_loss_mlx`  = sqrt(10*MSE)
+
+The seg-loss signature is ``(seg_logits, targets_hard)`` where ``seg_logits`` is
+``(B, C, H, W)`` (the torch SegNet layout — we keep it identical so the parity
+test feeds the SAME tensor to both backends) and ``targets_hard`` is
+``(B, H, W)`` int. The exact d_seg is the argmax-disagreement RATE that
+``upstream/evaluate.py`` charges.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+try:  # pragma: no cover - import guard
+    import mlx.core as mx
+except Exception:  # pragma: no cover - mlx optional at import
+    mx = None  # type: ignore[assignment]
+
+
+def _require_mlx() -> None:
+    if mx is None:  # pragma: no cover - environment guard
+        raise RuntimeError(
+            "tac.mlx_pr95_port.mlx_losses requires mlx.core (Apple Silicon)."
+        )
+
+
+# A very negative number used to mask the target channel before the max over the
+# competing classes (matches PR95's ``-1e9`` scatter sentinel).
+_NEG_INF_SENTINEL = -1.0e9
+
+
+def _target_margin_mlx(seg_logits: Any, targets_hard: Any) -> Any:
+    """Return the per-pixel margin ``target_logit - max_competing_logit``.
+
+    1:1 with the PR95 torch ``gather`` + ``scatter(-1e9)`` + ``max`` pattern.
+    ``seg_logits`` is ``(B, C, H, W)``; ``targets_hard`` is ``(B, H, W)`` int.
+    Returns ``(B, 1, H, W)`` (channel dim kept, as in torch's ``keepdim=True``).
+    """
+    _require_mlx()
+    c = int(seg_logits.shape[1])  # channel (class) count
+    # one-hot over the channel axis for the target class.
+    tgt = targets_hard.astype(mx.int32)  # (B,H,W)
+    onehot = mx.stack(
+        [(tgt == k).astype(seg_logits.dtype) for k in range(c)], axis=1
+    )  # (B,C,H,W)
+    target_logits = mx.sum(seg_logits * onehot, axis=1, keepdims=True)  # (B,1,H,W)
+    # mask the target channel to -inf, then max over channels => best competitor.
+    masked = seg_logits + onehot * _NEG_INF_SENTINEL
+    competitor = mx.max(masked, axis=1, keepdims=True)  # (B,1,H,W)
+    return target_logits - competitor
+
+
+def ce_seg_loss_mlx(seg_logits: Any, targets_hard: Any) -> Any:
+    """Stage-1 cross-entropy seg loss (1:1 with ``F.cross_entropy``).
+
+    ``F.cross_entropy`` = mean over all pixels of ``-log_softmax(logit)[target]``.
+    """
+    _require_mlx()
+    log_probs = seg_logits - mx.logsumexp(seg_logits, axis=1, keepdims=True)
+    c = int(seg_logits.shape[1])  # channel (class) count
+    tgt = targets_hard.astype(mx.int32)
+    onehot = mx.stack(
+        [(tgt == k).astype(seg_logits.dtype) for k in range(c)], axis=1
+    )
+    nll = -mx.sum(log_probs * onehot, axis=1)  # (B,H,W)
+    return mx.mean(nll)
+
+
+def tau_softplus_seg_loss_mlx(
+    seg_logits: Any, targets_hard: Any, tau: float = 0.3
+) -> Any:
+    """Stage-2 tau-softplus margin surrogate (1:1 with PR95).
+
+    ``mean(tau * softplus(-margin / tau))``.
+    """
+    _require_mlx()
+    margin = _target_margin_mlx(seg_logits, targets_hard)
+    # softplus(z) = log(1 + exp(z)); MLX provides logaddexp for numerical safety.
+    z = -margin / tau
+    softplus = mx.logaddexp(mx.zeros_like(z), z)
+    return mx.mean(tau * softplus)
+
+
+def smooth_disagreement_seg_loss_mlx(
+    seg_logits: Any, targets_hard: Any, tau: float = 0.3
+) -> Any:
+    """Stage-3/4 smooth disagreement loss (1:1 with PR95): ``mean(sigmoid(-margin/tau))``."""
+    _require_mlx()
+    margin = _target_margin_mlx(seg_logits, targets_hard)
+    return mx.mean(mx.sigmoid(-margin / tau))
+
+
+def l7_softplus_seg_loss_mlx(
+    seg_logits: Any,
+    targets_hard: Any,
+    tau: float = 0.3,
+    l7_threshold: float = 1.0,
+    l7_mult: float = 4.0,
+) -> Any:
+    """Stage-5+ L7-weighted softplus (1:1 with PR95).
+
+    Pixels where ``margin < threshold`` get a ``(1 + l7_mult)`` boost,
+    renormalized to mean 1, concentrating gradient on hard pixels. The weight is
+    computed under ``stop_gradient`` (PR95 ``torch.no_grad``).
+    """
+    _require_mlx()
+    margin = _target_margin_mlx(seg_logits, targets_hard)
+    z = -margin / tau
+    per_pixel = tau * mx.logaddexp(mx.zeros_like(z), z)
+    weights = 1.0 + l7_mult * (margin < l7_threshold).astype(seg_logits.dtype)
+    weights = mx.stop_gradient(weights / mx.mean(weights))
+    return mx.mean(per_pixel * weights)
+
+
+def pose_loss_mlx(pose_pred: Any, pose_target: Any) -> Any:
+    """Pose loss ``sqrt(10*MSE)`` (1:1 with PR95, constant across all stages)."""
+    _require_mlx()
+    mse = mx.mean((pose_pred - pose_target) ** 2)
+    return mx.sqrt(10.0 * mse + 1e-12)
+
+
+def exact_d_seg_from_logits_mlx(seg_logits: Any, targets_hard: Any) -> float:
+    """Return the EXACT SegNet argmax-disagreement RATE (the evaluator's d_seg).
+
+    ``mean(argmax(seg_logits, axis=channel) != targets_hard)``. This is the
+    non-proxy observable; a working loop drives it down.
+    """
+    _require_mlx()
+    pred = mx.argmax(seg_logits, axis=1)  # (B,H,W)
+    disagree = (pred != targets_hard.astype(pred.dtype)).astype(mx.float32)
+    return float(mx.mean(disagree).item())
+
+
+# Registry mirrors PR95's per-stage seg-loss family (parity with the torch
+# ``STAGE_SEG_LOSS_FNS`` in :mod:`tac.score_aware_loop.live_segnet_loss`).
+STAGE_SEG_LOSS_FNS_MLX = {
+    "ce_seg_loss": ce_seg_loss_mlx,
+    "tau_softplus_seg_loss": tau_softplus_seg_loss_mlx,
+    "smooth_disagreement_seg_loss": smooth_disagreement_seg_loss_mlx,
+    "l7_softplus_seg_loss": l7_softplus_seg_loss_mlx,
+}
+
+
+__all__ = [
+    "STAGE_SEG_LOSS_FNS_MLX",
+    "ce_seg_loss_mlx",
+    "exact_d_seg_from_logits_mlx",
+    "l7_softplus_seg_loss_mlx",
+    "pose_loss_mlx",
+    "smooth_disagreement_seg_loss_mlx",
+    "tau_softplus_seg_loss_mlx",
+]
