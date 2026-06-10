@@ -72517,11 +72517,11 @@
       "id": "lane_score_aware_weight_requant_20260610",
       "name": "Score-aware per-tensor weight re-quant (Task #69)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tac.score_aware_weight_requant + tools/score_aware_weight_requant_sweep.py; 22 NO-FAKE tests pass; commits 0bd7b4389/bfc1562fd/bc16a94bf/ad3c2358c/0e1da7d48"
         },
         "real_archive_empirical": {
           "status": false,
@@ -72540,19 +72540,24 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "module+harness 2x review-gate passes; recursive review found+fixed 4 test issues + 2 harness bugs (byte-close mkdir, print key)"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/score_aware_weight_requant_20260610T180751Z.md (NEGATIVE: whole-tensor re-quant falsified, best +0.160 worse; pointer unchanged 0.19109982; [contest-CPU advisory] /bin/zsh)"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only NEGATIVE. [contest-CPU advisory] exact-scorer local harness. $0 spend. Pointer UNCHANGED 0.19109982. Per-tensor scorer-sensitivity ranking landed (120x spread; blocks.5/blocks.0 most sensitive, blocks.4/blocks.2 most tolerant).",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Per-channel (not per-tensor) re-quant sensitivity map OR score-aware QAT fine-tune of low-bit levels. Whole-tensor uniform re-quant FALSIFIED (best crush4_int6 +0.160 worse): distortion penalty 13.8x rate saving; cascaded-conv weights are score-load-bearing",
+        "no post-hoc slack to reclaim."
+      ]
     },
     {
       "id": "lane_cross_pair_waterfilled_corrector_20260610",
@@ -72640,6 +72645,47 @@
         "score-domain RETRAINED smaller renderer (funded KD/QAT campaign against alpha*B+beta*d_seg+gamma*sqrt(d_pose))",
         "compose with #69 requant if it relaxes per-tensor distortion budget >=70x"
       ]
+    },
+    {
+      "id": "lane_inert_score_aware_loop_fix_20260610",
+      "name": "Inert score-aware loop fix (task #76): PR95-faithful live-SegNet trainer",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PR95-faithful direct-live-SegNet score-aware loop landed in package tac.score_aware_loop (live_segnet_loss + trainer + tiny_carrier + targets); ruff clean; 24 dedicated behavior tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=false; lane_class=substrate_engineering. Fix for the INERT score-aware loop (task #75 elephant): tac.score_aware_loop is the WORKING PR95-faithful surface (direct CE/margin through LIVE frozen SegNet + GT-argmax targets + eval-roundtrip STE + 100*seg+1*pose + AdamW + EMA-shadow). Root cause of inertness: learnable-student-head KL distill surrogate (not direct-live CE) + dual-ascent multi-term Lagrangian where pose=271 drowned seg=1.59 -> grad_norm 5e4-7e6 hard-clipped 1.0 every step (clip scale 1.87e-5). archive_grammar=N/A (loop surface, not a carrier); score_aware_loss=tac.score_aware_loop.ScoreAwareTrainer. Consumed by #74/#63/#65. [macOS-CPU advisory] proofs; NON-promotable. Memo .omx/research/inert_loop_fix_*.md."
     }
   ],
   "level_rules": {
@@ -72649,5 +72695,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T18:47:53Z"
+  "updated_at": "2026-06-10T19:39:29Z"
 }
