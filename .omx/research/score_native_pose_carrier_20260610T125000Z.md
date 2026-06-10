@@ -60,15 +60,17 @@ within 1 LSB (the portability contract holds; the inflate-time decode is pure nu
 | **tiny** (h48/m16/f16) | 13,747 | **13,068** | 0.0087 | **0.00359** | **0.1894** |
 | small (h96/m32/f32) | 53,603 | 49,157 | 0.0327 | 0.01577 | 0.3972 |
 | medium (h160/m48/f48) | 181,955 | 160,538 | 0.1069 | 0.01437 | 0.3791 |
-| large (h256/m64/f64) | 430,339 | (in flight, confirming) | — | — | — |
+| large (h256/m64/f64) | 430,339 | 366,873 | 0.2443 | 0.00351 | 0.1875 |
 
-**The curve is NOT monotone-decreasing** — the tiny config (FEWEST bytes, 13 KB) reached the BEST
-d_pose (0.0036); small (49 KB) AND medium (160 KB) BOTH trained to WORSE d_pose (0.016 / 0.014). More
+**The curve is NOT monotone-decreasing** (`rd_monotone_decreasing=False`) — the tiny config (FEWEST
+bytes, 13 KB) reached d_pose 0.0036; small (49 KB) AND medium (160 KB) BOTH trained to WORSE d_pose
+(0.016 / 0.014); the large config (367 KB, **28× the tiny bytes**) only TIES tiny (0.0035). More
 capacity / bytes does NOT buy lower d_pose: the pose loss is unstable at higher capacity (training-MSE
-bounced 0.024→0.124 small, 0.027→1.77→0.023 medium across epochs). The ceiling of the amortized-INR
-pose section on this video is **~0.0036** (frame0-only), 124× above the frontier's tube. (The large
-row is completing in the background and does NOT change the verdict — the 3-row curve is decisively
-non-monotone, and even the best d_pose=0.0036 gives pose_term 0.189 ≈ the entire frontier 0.191.)
+bounced 0.024→0.124 small, 0.027→1.77→0.023 medium, 0.016→0.101→0.021 large across epochs). The
+**ceiling of the amortized-INR pose section on this video is ~0.0035** (frame0-only, best_pose_term
+0.187), **~120× above the frontier's tube** (2.9e-5) — and even that best d_pose gives pose_term 0.187
+≈ the ENTIRE frontier 0.191. The decisive reading: a coordinate-INR cannot amortize the 2-frame luma
+motion to tube precision at ANY capacity in this family; 28× more bytes (tiny→large) buys NO pose gain.
 
 ## 3. THE STRUCTURAL BLOCKER (the sharp #57 diagnosis): frame1's DUAL constraint
 
