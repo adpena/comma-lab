@@ -40,6 +40,19 @@ from tac.boundary_math.contour_codec import (
     encode_partition,
     partition_description_bytes,
 )
+from tac.boundary_math.legal_frame_bridge import (
+    ClassPalette,
+    fit_palette_gt_region_mean,
+    rasterize_palette_frame,
+)
+from tac.boundary_math.lever_b_generator import (
+    GeneratorConfig,
+    ResidualComponentStats,
+    generator_argmax,
+    load_generator_npz,
+    residual_component_stats,
+    save_generator_npz,
+)
 from tac.boundary_math.margin_polytope import (
     PerPixelFreeBudget,
     free_budget_from_margin_jacobian,
@@ -66,11 +79,14 @@ from tac.boundary_math.seg_core import (
 
 __all__ = [
     "WATER_LEVEL_BYTES_PER_FLIP",
+    "ClassPalette",
     "ContourCode",
+    "GeneratorConfig",
     "PerPixelFreeBudget",
     "Region",
     "RegionAdjacencyGraph",
     "RegionMergePlan",
+    "ResidualComponentStats",
     "SegCoreResult",
     "build_and_measure_lstar",
     "build_region_adjacency_graph",
@@ -81,9 +97,15 @@ __all__ = [
     "decode_gt_frame1_pairs",
     "decode_partition",
     "encode_partition",
+    "fit_palette_gt_region_mean",
     "free_budget_from_margin_jacobian",
+    "generator_argmax",
+    "load_generator_npz",
     "load_real_segnet",
     "partition_description_bytes",
+    "rasterize_palette_frame",
+    "residual_component_stats",
+    "save_generator_npz",
     "segnet_argmax_and_margin",
     "solve_candidate_against_lstar",
     "solve_mdl_region_merge",
