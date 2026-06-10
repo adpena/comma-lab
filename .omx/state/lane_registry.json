@@ -71838,6 +71838,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_evaluator_response_atlas_engine_20260609",
+      "name": "Evaluator Response Atlas Engine (per-pair scorer Jacobian/margin index over 600 pairs)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/evaluator_response_atlas.py + tools/build_evaluator_response_atlas.py; 24 tests pass [src/tac/tests/test_evaluator_response_atlas.py]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/evaluator_response_atlas_engine_landed_20260609.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "task #36; research_only=true; [macOS-CPU advisory]+[macOS-MLX research-signal] non-promotable; INDEX over #35 cone producer + action_effect IR + contest_exploits vocabulary; MLX cross-video reduce + numpy reference (Catalog #383); NEVER MPS; consumers: #46 LF waterfiller, rate-attack repair, PR110++ selector"
+    },
+    {
+      "id": "lane_evaluator_invisibility_basis_20260609",
+      "name": "Evaluator invisibility basis (task #47)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/evaluator_invisibility_basis.py + consumers + tools/build_evaluator_invisibility_basis.py (closed-form tier-1 + tier-2 + CLI); commits a0744896d + 7e4ac638b"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "40 dedicated tests pass; certification (in-basis bit-identical residual==0.0, out-of-basis differs, clipping honored); ruff clean; 127 incl sister waterfiller regression"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/evaluator_invisibility_basis_landed_20260610.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -71847,5 +71929,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T00:02:33Z"
+  "updated_at": "2026-06-10T01:22:30Z"
 }
