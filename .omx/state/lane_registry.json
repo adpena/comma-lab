@@ -72094,11 +72094,11 @@
       "id": "lane_frontier_decoder_qat_recovery_20260610",
       "name": "Frontier decoder QAT/LSQ recovery (coarsen-then-retrain)",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/frontier_decoder_qat_recovery_20260610/recovery_lib.py + recovery_train.py + parity_check.py (parity PASS <=1 LSB); coarsen-then-grid-LSQ-retrain implemented + tested end-to-end"
         },
         "real_archive_empirical": {
           "status": false,
@@ -72121,15 +72121,16 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/frontier_decoder_qat_recovery_verdict_20260610.md"
         },
         "deploy_runbook": {
           "status": false,
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true; FALSIFIED-AT-IMPL (Catalog #307); [macOS-CPU advisory] kill-gate fired at +0.056 (best of sweep, ~9x rate gain); no Modal eval (MVP-first kill-gate fired); frontier remains 0.19198534. DEFER-pending-research reactivation: per-weight free-int8+entropy-penalty quant / latent-axis / full-decoder smaller-arch retrain.",
+      "research_only": true
     },
     {
       "id": "lane_frontier_seg_repair_pool_20260610",
@@ -72184,5 +72185,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T04:25:26Z"
+  "updated_at": "2026-06-10T04:37:21Z"
 }
