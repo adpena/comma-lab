@@ -32,12 +32,15 @@ with the latest pointer + whether it moved.
 
 | 9 | #52 lever-G engineered 0-byte correction | — (no candidate) | local CPU-torch advisory / exact_pair_scorer | **0.0** | unmoved | n/a (zero-byte distortion lever) | NEGATIVE / SUBCLASS-CLOSED: the GLOBAL-fixed-rule subclass (G1 per-channel offset, G3 low-pass blend) selects the IDENTITY on train (best_b=[0,0,0], α=0) — NO rule cuts held-out d_seg subject to the Δd_pose≤+1e-6 pose guard. Crux: bidirectional-symmetric boundary flips cancel under any global pixel op + the frontier ALREADY applies PR95-L28 channel postproc (at the global optimum). Zero archive bytes; pointer UNMOVED. DEFER not KILL: reactivation = a rule SPATIALLY conditioned on the renderer's OWN edge map (inflate-legal, no scorer), else route firepower to lever C (smaller amortizer). Measured: `lever_g_engineered_correction_smoke_20260610T095654Z.md` + `lever_g_result.json`. |
 
-## Convergent meta-finding (9 no-moves)
+## Convergent meta-finding (8 post-hoc no-moves + #74 the live retrain exception)
 #64 (lossless exhausted) + #69 (whole-tensor re-quant: int8 already at the score floor, 6-conv cascade compounds quant error) + #72 (residual codes cheap @0.856 B/flip but collateral kills application) + #73
 (generic-basis feasibility needs ≥625KB) + #71 (the LEARNED basis itself cannot be pruned/factored ~73× cheaper
-than the rate it buys; SVD even costs bytes) + #54 (pose-selector saturation) confirm from SIX directions that
-**no $0–$1 POST-HOC operation on the frozen 162–177 KB frontier weights lowers the rate without an
-equal-or-larger distortion penalty** — the FROZEN basis is at its post-hoc-compression floor (minimal for the
+than the rate it buys; SVD even costs bytes) + #54 (pose-selector saturation) + #79 (PACKAGING: archive.zip at
+the 100 B container floor + payload at the 7.999 bits/byte entropy floor — zero recoverable bytes) + #52 lever-G
+(zero-byte global decode-rule: G1 offset + G3 lowpass select the IDENTITY; bidirectional-symmetric boundary
+flips cancel + the L28 channel postproc is already applied) confirm from EIGHT directions that
+**no $0–$1 POST-HOC operation on the frozen 162–177 KB frontier weights/bytes/decode lowers the score without an
+equal-or-larger penalty** — the FROZEN carrier is at its post-hoc floor on rate AND distortion (minimal for the
 SCORE, not an over-parameterized memorized point). **#74 is the EXCEPTION that opens the door: a fresh SMALLER
 learned student distilled onto the teacher's frames is NOT post-hoc — it RELOCATES the floor.** The 8-pair sweep
 shows a 40kb student reaching exact d_seg 3.44e-3 (6.4× teacher) / d_pose 2.43e-3 (105× teacher), S 0.530, a
