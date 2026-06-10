@@ -61,6 +61,33 @@ Compute the actual minimum bits to specify a member of the evaluator's equivalen
 video (the lower-bound ledger's T_floor). Not a score move alone, but it proves how much headroom
 exists, makes the goal's threshold ladder principled, and is publishable original analysis.
 
+### G. Engineered deterministic corrections — ZERO-byte distortion lever (operator, 2026-06-10)
+inflate.py-resident DETERMINISTIC transforms on the decoded frames (NO scorer loaded at inflate per the
+strict-scorer rule; NO archive bytes — pure code in the rate-free inflate program) that nudge frame1
+toward the SegNet-argmax cell and the pair toward the PoseNet tube. **Canonical proof it works:** the
+PR95-family L28 decode-side channel postprocess (subtract 1.0 from specific RGB channels; 0 archive
+bytes; ~−0.0001 to −0.0005 [contest]). The MATH (must be a real solve, not a per-pixel search — class-6
+fake): a fixed correction field c(x) DERIVED from the measured flip-map / atlas / cone — flip the
+most-flip-prone boundary pixels back (where the SegNet top-2 margin is smallest, our 91% margin<0.5
+set) and shrink the dominant pose residual direction — applied as one closed-form decode-time op.
+Because it costs ZERO archive bytes and touches only decoded frames, it stacks ORTHOGONALLY on EVERY
+carrier and is the cleanest move on the "distortion threshold at CONSTANT bytes" path to sub-0.15.
+**Reuse (verified present):** `src/tac/engineered_corrections.py` + `engineered_corrections_v2.py` +
+`engineered_correction_readiness.py` (+ tests). Risk: must be DERIVED from the oracle geometry and
+exact-eval-ratified, never a brute-force per-pixel sweep dressed up as a "correction."
+
+### H. Super-cheap small postfilters — low-byte distortion lever (operator, 2026-06-10)
+A TINY (target ≤ a few KB quantized) learned residual postfilter run at inflate time on decoded frames,
+trained SCORE-AWARE (eval_roundtrip + differentiable YUV6; NO scorer at inflate; within the 30-min T4
+budget) to reduce d_seg/d_pose. Distinct from G: G is zero-byte deterministic, H is small-byte learned —
+so H MUST PAY RENT (its quantized weight bytes enter the archive; admit only if ΔS_distortion beats
+Δrate, the pays-rent gate). Stack G (free) FIRST, then H only if it still pays on the corrected base.
+**Reuse (verified present):** `experiments/train_postfilter_on_renderer.py` +
+`experiments/modal_hdm8_postfilter_sweep.py` + `experiments/postfilter_weights/` + the postfilter
+loader/parity/no-op tests. MLX-first for training; QAT-in-loop so the deployed int8 weights are what was
+scored. Both G and H are sequential-admit distortion moves under the composition algebra (re-measure +
+cone-ledger debit), and both compose on top of the carrier the offensive lever (B/C) produces.
+
 ## Routing under goal v2
 The recoded-R3 hold is banked (CUDA pairing in flight = readiness, NOT the submission we want). The
 offensive lever is B or C (the cleanest class shifts with all aiming surfaces in hand), with A as the

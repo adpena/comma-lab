@@ -42,6 +42,13 @@ The offensive levers (ranked, `innovation_mandate_and_original_directions_202606
      theory, principled past the 1.525 B/flip naive sidecar floor)
   E. Generative/implicit micro-prior carrier (novel, higher-risk)
   F. Information-theoretic floor derivation (original analysis; sets T_floor, proves headroom)
+  G. Engineered deterministic corrections — ZERO-byte distortion lever (inflate.py decode-time field
+     DERIVED from flip-map/atlas/cone, no scorer load, 0 archive bytes; PR95-L28 proves it; the cleanest
+     constant-byte move toward sub-0.15; reuse engineered_corrections{,_v2,_readiness}.py — must be a
+     real solve, NOT a per-pixel search dressed as a correction, per NO-FAKE class 6)
+  H. Super-cheap small postfilters — low-byte distortion lever (≤few-KB learned residual at inflate,
+     score-aware eval_roundtrip+diff-YUV6, MUST pay rent; reuse train_postfilter_on_renderer.py +
+     modal_hdm8_postfilter_sweep.py; stack AFTER G)
 Continuously research + propose directions NOT YET conceived; the menu is open, not closed.
 
 ## AUTONOMY CONTRACT — DECIDE, DON'T DEFER
