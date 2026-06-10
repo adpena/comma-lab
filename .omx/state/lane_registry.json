@@ -72043,6 +72043,93 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_frontier_latent_axis_waterfill_20260610",
+      "name": "Frontier latent-axis waterfill (latent blob + sidecar rate attack)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "build_latent_sensitivity_map.py + build_latent_candidates.py + local_predicted_band_smoke.py all run; 4 byte-closed candidates (decoder identical); no-op L1 consumption_proven=True"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "L1 sidecar-drop exact [contest-CPU] 0.19486984 (call_id fc-01KTQTGDF1NZGVMM1R0EKVT036, 600 samples); dS_total +0.00289 above frontier; pays_rent=False; verdict DEFER-pending-research (latent byte-transform PTQ falsified-at-implementation, Catalog #307)"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/frontier_latent_axis_waterfill_verdict_20260610.md (kill-gate: all 4 latent levers advisory-UNFAVORABLE; sidecar pays rent ~8x; L1 exact eval in flight)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Latent-axis waterfill. Sidecar pays rent ~7x (L27 ratified on frontier). Coding floor exhausted; 2nd-order re-prediction worse. All byte-transform distortion levers above frontier. DEFER-pending-research.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Latent byte-transform PTQ falsified-at-implementation (L1 +0.00289 contest-CPU; L2/L3/L4 kill-gate dominated). DEFER. Reactivate via: (1) score-aware per-element latent QAT (re-train to recover d_seg at coarser precision); (2) score-aware latent dim reduction (<28 dims); (3) INVERTED direction - a LARGER sidecar (it pays ~7x rent",
+        "so adding corrections may buy score below frontier)."
+      ]
+    },
+    {
+      "id": "lane_frontier_decoder_qat_recovery_20260610",
+      "name": "Frontier decoder QAT/LSQ recovery (coarsen-then-retrain)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72052,5 +72139,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T03:06:06Z"
+  "updated_at": "2026-06-10T03:58:15Z"
 }
