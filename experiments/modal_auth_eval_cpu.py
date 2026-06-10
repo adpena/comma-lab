@@ -170,19 +170,36 @@ eval_image = (
     # imports in contest_auth_eval.py / evaluate.py / modules.py). Removing the
     # redundant whole-src mount also extincts the concurrent-sibling-write
     # ``modified during build process`` failure on src/comma_lab/*.
+    # REGRESSION FIX 2026-06-10 (pr110pp_r1 5th-bug): the prior copy=False
+    # (lazy startup) mount of ``upstream`` SILENTLY DROPPED ``evaluate.py`` on
+    # the container — the contest_auth_eval.py subprocess crashed in 0.11s with
+    # ``--upstream-dir missing evaluate.py: /workspace/pact/upstream`` while the
+    # directory itself existed. Modal lazy mounts (copy=False) with a callable
+    # ``ignore`` over a tree containing ``.git`` (whose ephemeral
+    # fsmonitor--daemon.ipc socket is recreated by concurrent git invocations)
+    # materialize non-deterministically at startup. ``copy=True`` bakes the dir
+    # into the image layer at BUILD time, guaranteeing evaluate.py / modules.py /
+    # frame_utils.py / videos / public_test_video_names.txt are present
+    # deterministically. Only the THREE runtime-critical mounts on the canonical
+    # archive.zip -> inflate.sh -> upstream/evaluate.py path get copy=True; the
+    # two large public-PR intakes below stay lazy (not on this path, keep build
+    # fast). Sister fix in experiments/modal_auth_eval.py.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "upstream",
         remote_path=str(REMOTE_REPO / "upstream"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "submissions/robust_current",
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/public_runtime_adapters",
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     # NB: ``experiments/results/public_pr_intake_full`` is ~17 GB total. Only

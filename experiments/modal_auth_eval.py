@@ -133,24 +133,37 @@ eval_image = (
         }
     )
     # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; mounts public-PR intake clones + robust_current + contest_auth_eval; trainer-discovery N/A
+    # REGRESSION FIX 2026-06-10 (pr110pp_r1 5th-bug sister): copy=False (lazy
+    # startup) mounts of runtime-critical dirs SILENTLY DROP files (the CPU
+    # wrapper's upstream lazy mount dropped evaluate.py -> contest_auth_eval.py
+    # crashed in 0.11s 'missing evaluate.py'). Modal lazy mounts with a callable
+    # ignore over a tree containing .git (ephemeral fsmonitor--daemon.ipc socket)
+    # materialize non-deterministically. copy=True bakes the dirs into the image
+    # layer at BUILD time. Applied to the runtime-critical mounts on the canonical
+    # archive.zip -> inflate.sh -> upstream/evaluate.py path. Sister fix in
+    # experiments/modal_auth_eval_cpu.py.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
         "src",
         remote_path=str(REMOTE_REPO / "src"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
         "upstream",
         remote_path=str(REMOTE_REPO / "upstream"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; submissions subset
         "submissions/robust_current",
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR runtime adapters
         "experiments/public_runtime_adapters",
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
+        copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR95 intake clone
