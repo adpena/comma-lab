@@ -204,6 +204,24 @@ eval_image = (
     )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    # REGRESSION FIX 2026-06-09 (pr110pp_r1): commit 826cc63ab set
+    # ``include_source=False`` to extinct the fsmonitor-socket crash, but that
+    # ALSO disabled Modal's automatic inclusion of THIS entrypoint module. The
+    # remote container then raised ``ModuleNotFoundError: No module named
+    # 'modal_auth_eval_cpu'`` and EVERY contest-CPU dispatch since 2026-05-31
+    # failed silently (0 scored rows; z5/v15 stuck "pending"). The function is
+    # serialized by module name ``modal_auth_eval_cpu`` (this file's stem when
+    # run via ``modal run experiments/modal_auth_eval_cpu.py``); the remote MUST
+    # be able to import it. ``add_local_python_source`` re-adds exactly that one
+    # module without re-enabling the repo-root automount scan that triggers the
+    # fsmonitor socket bug. Sister fix in experiments/modal_auth_eval.py.
+    # The entrypoint module imports ``tac.*`` at module-load time (before the
+    # ``.env`` PYTHONPATH applies to the import system), so ``tac`` must be
+    # importable as a top-level python source too — the ``add_local_dir("src")``
+    # mount above provides the runtime assets at /workspace/pact/src, but
+    # add_local_python_source places ``tac`` where Modal's entrypoint import
+    # resolves it. Without this the remote raises ``No module named 'tac'``.
+    .add_local_python_source("modal_auth_eval_cpu", "tac")  # MODAL_ENTRYPOINT_SELF_MOUNT_OK:include_source=False requires the entrypoint module + its tac.* imports be re-added explicitly
 )
 
 
@@ -682,9 +700,28 @@ def _run_auth_eval_inner(
         )
         if allow_large_scorer_input_cache_tensor_export:
             cmd.append("--allow-large-scorer-input-cache-tensor-export")
+    # REGRESSION FIX 2026-06-09 (pr110pp_r1): with include_source=False the
+    # ``add_local_dir("src")`` mount does not reliably land tac at
+    # /workspace/pact/src (and concurrent sibling writes to src/ can break a
+    # whole-src mount at build time), so the contest_auth_eval.py SUBPROCESS
+    # raised ``No module named 'tac'`` even though the function process could
+    # import tac via the add_local_python_source("tac") PythonPackage. Resolve
+    # tac's actual on-container location at runtime and prepend its parent dir
+    # to the subprocess PYTHONPATH so the canonical
+    # archive.zip -> inflate.sh -> evaluate.py path can import tac regardless of
+    # where Modal placed the PythonPackage.
+    _subprocess_pythonpath = REMOTE_PYTHONPATH
+    try:
+        import tac as _tac_pkg  # PythonPackage added via add_local_python_source
+
+        _tac_parent = str(Path(_tac_pkg.__file__).resolve().parent.parent)
+        if _tac_parent not in _subprocess_pythonpath.split(os.pathsep):
+            _subprocess_pythonpath = os.pathsep.join([_tac_parent, _subprocess_pythonpath])
+    except Exception:  # pragma: no cover - defensive; falls back to REMOTE_PYTHONPATH
+        pass
     env = {
         **os.environ,
-        "PYTHONPATH": REMOTE_PYTHONPATH,
+        "PYTHONPATH": _subprocess_pythonpath,
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         "UV_BIN": "/usr/local/bin/uv",
         "UV_LINK_MODE": "copy",

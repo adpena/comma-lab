@@ -172,6 +172,16 @@ eval_image = (
     )
     .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
     .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    # REGRESSION FIX 2026-06-09 (pr110pp_r1, sister of modal_auth_eval_cpu.py):
+    # commit 826cc63ab set ``include_source=False`` which disabled Modal's
+    # automatic inclusion of THIS entrypoint module, so the remote container
+    # raised ``ModuleNotFoundError: No module named 'modal_auth_eval'``.
+    # ``add_local_python_source`` re-adds exactly the entrypoint module without
+    # re-enabling the repo-root automount scan that triggers the fsmonitor bug.
+    # The entrypoint imports ``tac.*`` at module-load time, so ``tac`` must be a
+    # top-level python source too (without this the remote raises
+    # ``No module named 'tac'``). Sister fix in modal_auth_eval_cpu.py.
+    .add_local_python_source("modal_auth_eval", "tac")  # MODAL_ENTRYPOINT_SELF_MOUNT_OK:include_source=False requires the entrypoint module + its tac.* imports be re-added explicitly
 )
 
 
@@ -677,9 +687,24 @@ def _run_auth_eval_inner(
             cmd.append("--allow-large-scorer-input-cache-tensor-export")
     for item in inflate_env_overrides:
         cmd.extend(["--inflate-env", item])
+    # REGRESSION FIX 2026-06-09 (sister of modal_auth_eval_cpu.py): with
+    # include_source=False the contest_auth_eval.py subprocess can raise
+    # ``No module named 'tac'`` because the add_local_dir("src") mount does not
+    # reliably land tac at /workspace/pact/src. Resolve tac's actual container
+    # location (added via add_local_python_source("tac")) and prepend its parent
+    # dir to the subprocess PYTHONPATH.
+    _subprocess_pythonpath = REMOTE_PYTHONPATH
+    try:
+        import tac as _tac_pkg
+
+        _tac_parent = str(Path(_tac_pkg.__file__).resolve().parent.parent)
+        if _tac_parent not in _subprocess_pythonpath.split(os.pathsep):
+            _subprocess_pythonpath = os.pathsep.join([_tac_parent, _subprocess_pythonpath])
+    except Exception:  # pragma: no cover - defensive; falls back to REMOTE_PYTHONPATH
+        pass
     env = {
         **os.environ,
-        "PYTHONPATH": REMOTE_PYTHONPATH,
+        "PYTHONPATH": _subprocess_pythonpath,
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         "UV_BIN": "/usr/local/bin/uv",
         "UV_LINK_MODE": "copy",
