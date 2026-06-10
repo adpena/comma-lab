@@ -129,4 +129,167 @@ exact collateral measurement are the genuine new science either way.
 
 ---
 
-## 5. (verdict appended below after the smoke)
+## 5. VERDICT (appended after the $0 smoke)
+
+**LEAD — EXACT POINTER DELTA: the frontier pointer did NOT move. It stays at contest-CPU
+`0.19109982419209975` (sha `b46897267ded…`, 177,169 B). NO byte-closed candidate was built, NO paired
+eval fired — because the waterfill admits ZERO net-positive flips: every frame-1 correction on the
+frontier base creates more new bad flips (collateral) than it fixes. The CONDITIONAL per-flip code cost
+is `0.856 B/flip` (τ=0.5) — well BELOW the `1.27 B/flip` waterline (and below the `1.768 B/flip`
+unconditional) — so the RATE side WINS, but the DISTORTION side DIES on receptive-field collateral.**
+
+### The two-sided result (the genuine new science)
+
+This lever splits cleanly into a rate side and a distortion side. They have OPPOSITE verdicts, and that
+split is the finding:
+
+| side | metric | result | gate |
+|---|---|---|---|
+| **RATE (code cost)** | conditional B/flip (τ=0.5) | **0.856** (0.616 pos + 0.241 class) | **< 1.27 → CLEARS** |
+| | unconditional B/flip (#51 floor) | 1.768 (1.528 pos + 0.241 class) | > 1.27 (loses, as #51 found) |
+| | conditional saving vs unconditional | **0.91 B/flip** | the margin prior is real |
+| **DISTORTION (collateral)** | strongest override: fixed / new-bad | **467 / 2,823** (net −2,356, 6.0×) | net < 0 → DIES |
+| | GT-snap control: fixed / new-bad | 240 / 1,023 (net −783, 4.3×) | net < 0 (matches #51) |
+| | per-flip waterfill (most-isolated, gentlest) | **0 of 24 net-positive; best net = 0** | admit 0 → no bytes |
+
+### Lever 1 (RATE) — CONFIRMED, and it overturns the #51 rate-floor framing
+
+The decoder regenerates the SegNet margin field FOR FREE from its own render. At τ=0.5 the
+decoder-known boundary set `B = {m < 0.5}` is only ~613 pixels/frame (0.31% of the 196,608 grid), and it
+captures **91.2%** of the flips. So the position cost collapses from `log2 C(196608, K) = 1.528 B/flip`
+(the #51 unconditional floor) to `log2 C(613, K) = 0.616 B/flip` — a **0.91 B/flip saving**, taking the
+total (position + the ~0.24 B/flip class cost) to **0.856 B/flip**, comfortably below the 1.27 waterline.
+This is exactly the MWCC hypothesis: **margin-weighting IS the missing reactivation lever the
+STC-clean-source DEFER named.** It works. The #51 verdict ("1.525 B/flip position floor is over the 1.27
+break-even → no sidecar can clear THE LAW") was an UNCONDITIONAL bound; conditioning on the free margin
+prior beats it. (τ sweep: 0.25→1.045, 0.5→0.856, 1.0→0.878, 2.0→0.998 B/flip — all below 1.27.)
+
+### Lever 2 (DISTORTION) — DIES, and it is the TRUE floor (not the rate floor #51 named)
+
+The fatal gate is the receptive-field collateral, exactly as #51 (GT-snap net −536) and #55 (Gα-solve
+net-negative) found — but measured here at maximum strength and with per-flip attribution:
+
+- The **strongest realizable per-pixel argmax override** (gradient-ascent on the real SegNet to maximize
+  the target-class logit at each stored flip pixel) DOES flip the stored pixels (467 fixed confirms the
+  correction works — NO FAKE), but creates **2,823 new bad flips** (6.0× collateral) → net −2,356 → exact
+  d_seg goes UP (worse). Driving the logit hard creates sharper local discontinuities the SegNet U-Net
+  reads as new boundaries.
+- The **per-flip waterfill admission test** — correcting the MOST-ISOLATED flips (isolation up to 56
+  pixels from the nearest other flip) ONE AT A TIME with the GENTLEST correction (step 8, radius 2, 6
+  steps) — found **0 of 24 flips with positive net value**; the BEST case is **net = 0** (1 fixed, 1 new
+  bad). Even an isolation-56 flip creates ≥1 new bad flip. **There is NO collateral-free flip on the
+  frontier base.** The EfficientNet-B2 U-Net's receptive field always couples ≥1 neighbor when you
+  perturb the camera-res region that maps to a scorer pixel.
+
+The waterfill therefore admits NONE: `n_admitted = 0`, `admitted_net_value_flips = 0`,
+`admitted_code_bytes = 0`, `net_score_delta = 0.0`. **No improvement despite the rate win.**
+
+### Against the pre-registered prediction + kill criterion
+
+- **Rate-side prediction (conditional beats 1.27 for a non-trivial subset): CONFIRMED** — 0.856 B/flip,
+  91% of flips, well below 1.27.
+- **Collateral-side prediction (net drop ≪ stored count, likely net-positive/worse on the frontier base
+  unless a collateral-free class exists): CONFIRMED** — best per-flip net = 0; no collateral-free class;
+  all-flips override net −2,356.
+- **Combined prediction (net ΔS < 0 only if a subset clears BOTH gates; predicted small-to-empty):
+  CONFIRMED EMPTY.** The waterfill admits 0.
+- **KILL CRITERION: "conditional code cost clears 1.27 for a subset BUT exact-decode collateral makes net
+  d_seg drop ≤ 0" → DEFER-to-a-contiguous-residual-base + record the collateral floor.** This is the
+  branch that fired. **DEFER, not KILL** (per Forbidden-premature-KILL): the conditional CODER is proven
+  to clear the rate gate (its reusable value stands); the FRONTIER BASE is at its frame-1 seg-repair
+  collateral floor. The receptive-field collateral, not the code rate, is the irreducible blocker.
+- **NO Modal dispatch** (the local kill-gate fired correctly): no byte-closed candidate can show advisory
+  net ΔS < 0, so firing ~$0.3–0.6 to confirm a non-improvement is the forbidden waste. **No paired eval
+  pre-registered.** `$0` total spend.
+
+### The conditional per-flip cost vs 1.27 (the headline curve the spec asked for)
+
+```
+unconditional (no margin context, #51):  1.768 B/flip   [ABOVE 1.27 — loses]
+conditional τ=0.25:                       1.045 B/flip   [below — clears]
+conditional τ=0.5  (best):                0.856 B/flip   [below — clears, 33% under]
+conditional τ=1.0:                        0.878 B/flip   [below — clears]
+conditional τ=2.0:                        0.998 B/flip   [below — clears]
+                                          ── waterline ── 1.27 B/flip
+```
+
+The fundable-subset size on the rate axis is **~91% of the 66,039 pool flips** (the τ=0.5 boundary
+fraction). But the fundable-subset size on the NET-VALUE axis is **ZERO** (collateral makes every flip
+net ≤ 0). The binding constraint is collateral, not code rate.
+
+### EXACT d_seg drop + sidecar bytes + net ΔS
+
+| quantity | value |
+|---|---|
+| flips fixable on the rate axis (cond < 1.27) | ~60,000 of 66,039 (91% at τ=0.5) |
+| flips fixable on the NET axis (waterfill-admitted) | **0** |
+| stored residual sidecar bytes | **0** (nothing admitted) |
+| exact d_seg drop (net, after collateral) | **0** (all-flips override is +Δd_seg = worse) |
+| net ΔS | **0.0 — pointer unmoved** |
+| beat frontier? | **NO** |
+| paired eval fired? | **NO** (local kill-gate; no advisory improvement) |
+| pointer update | **NONE** (stays 0.19109982419209975) |
+
+### Reactivation criteria (the DEFER, per #55's handoff)
+
+1. **A contiguous-residual base (the real next move):** the conditional coder's rate win is REAL; it dies
+   only on the frontier's salt-and-pepper single-pixel collateral (95% single-pixel components, 3.2%
+   temporal persistence — confirmed here). On a base whose seg residual is CONTIGUOUS multi-pixel patches
+   (the lever-B score-native generator's under-fit regions, per #55 + #51 reactivation), a patch
+   correction can flip a whole region with one camera-res region edit, amortizing the receptive-field
+   collateral across many fixed pixels — the net-value gate may flip positive. Run `measure_code_cost` +
+   the per-flip collateral attribution on the lever-B base.
+2. **The decoder/latent axis (the #51 routing):** a renderer change that fixes the systematic boundary
+   error in the existing 91%-decoder bytes (no sidecar) pays zero rate and zero collateral.
+3. **A flip class with a large coupled POSE gain:** a flip whose correction ALSO lowers d_pose lifts its
+   net value above the collateral floor (the flip-map's pose-coupling rows are the input).
+
+### NO-FAKE self-checks (all pass)
+
+- **Class 1 (real work):** the stored residual ACTUALLY flips the stored pixels on the exact SegNet
+  (fixed=467 for the all-flips override; the per-flip test confirms each correction moves ITS scorer
+  argmax). The collateral (new_bad) is the exact count of correct pixels that became wrong — measured, not
+  assumed.
+- **Class 8 (exact authority):** d_seg from the exact `upstream/modules.SegNet` argmax; GT via
+  `yuv420_to_rgb` ONLY; NEVER MPS. The NO-FAKE SPOT-CHECK confirmed the cached flip-map matches the
+  CURRENT frontier's rendered flips exactly (pair 0: 114 == 114, identical positions) — the cache (built
+  on the decode-identical `b7106c9bdbb8` re-encode) is valid for `b46897267d`.
+- **Conditional beats unconditional:** measured 0.856 < 1.768 on the REAL flip-set; the codec test-suite
+  proves a coder that does NOT concentrate (boundary = whole grid) gets ZERO saving.
+- **Waterfill cutoff at 1.27 + net-positive:** the selector admits iff `cost/net < 1.27` AND `net > 0`; a
+  select-all stub fails (it admits net-negative flips); at-the-waterline is rejected (strict `<`).
+
+### Wire-in (Catalog #125)
+
+1. **sensitivity-map — ACTIVE:** the conditional per-flip `(position_bits, class_bits, net_value)` is the
+   refined seg-axis sensitivity input; the headline is "rate-axis fundable, net-axis empty on the frontier
+   base; collateral is the binding constraint."
+2. **Pareto — ACTIVE:** the frontier base is at its frame-1 seg-repair Pareto vertex; no frame-1
+   correction lowers d_seg without paying more collateral than it saves (now proven down to the
+   single-isolated-pixel level).
+3. **bit-allocator — ACTIVE:** `waterfill_select` IS the bit-allocator gate (admit iff net-value cost <
+   1.27); it correctly allocates ZERO bytes on the frontier base. The conditional code-cost model is the
+   refined byte-cost input for any future contiguous-residual base.
+4. **cathedral-autopilot — N/A:** advisory verdict; no byte-closed candidate cleared the local kill-gate,
+   so no on-host dispatch minted (the disciplined refusal — do not re-confirm a non-improvement).
+5. **continual-learning — ACTIVE:** reseeds the planner: the conditional margin coder OVERTURNS the #51
+   rate floor (margin conditioning gets to 0.856 B/flip, beating 1.27), exposing that the TRUE
+   frontier-base seg floor is the receptive-field COLLATERAL, not the code rate. The next probe is the
+   contiguous-residual lever-B base, not a tighter coder.
+6. **probe-disambiguator — RESOLVED two ways:** (a) "does conditioning beat the 1.27 waterline?" → YES
+   (0.856, the MWCC hypothesis confirmed); (b) "is the residual worth storing on the frontier base?" → NO
+   (collateral makes every flip net ≤ 0; the waterfill admits 0). The two answers together are the lever's
+   verdict.
+
+### Cross-references
+
+`frontier_seg_repair_pool_verdict_20260610.md` (#51 — the unconditional 1.525 B/flip floor this lever's
+conditional coder beats; the GT-snap collateral this confirms) · `closed_spec_boundary_solver_v1_20260610T105830Z.md`
+(#55 — the Gα-solve collateral DEFER + the explicit "lever D contour coder" reactivation this executes) ·
+`sota_plus_original_inventions_20260610T125100Z.md` (the MWCC design + its "risk it stays above 1.27" the
+rate side disproves + the "missing reactivation lever" the rate side confirms) ·
+`lossless_stack_pointer_move_20260610T165749Z.md` (the current-frontier decode-parity that validates the
+cache reuse) · `src/tac/boundary_math/margin_conditional_residual.py` + tests (the codec deliverable) ·
+`experiments/results/lever_d_margin_conditional_residual_20260610/` (the three measurement tools +
+`analysis_summaries/`) · `upstream/{modules.py,frame_utils.py}` (frozen authority).
+
