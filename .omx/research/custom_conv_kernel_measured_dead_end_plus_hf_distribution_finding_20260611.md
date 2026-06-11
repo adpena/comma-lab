@@ -94,5 +94,28 @@ MLX). The maintainers are *actively* working this area (the lead opened #2369 hi
 The custom conv kernel — in Mojo, JAX, Rust, Swift, assembly, or MSL — is a **measured dead end for
 both speed and score**: depthwise is bandwidth-bound and MLX is already near the M5's ceiling. The one
 real surprise is the *opposite* of the kernel question: **HF genuinely has a Metal kernel-builder + Hub
-distribution**, so the portable work we ALREADY built is shareable there (DRAFT-gated). Frontier UNMOVED
+distribution** (but see the same-day correction below — it targets torch-MPS, not MLX). Frontier UNMOVED
 0.19110; the pointer-mover stays the capacity-de-risked paid n600.
+
+## ⚠️ SAME-DAY CORRECTION (2026-06-11, from the MLX-surface agent) — Findings 3 & 4 overstated
+
+Two claims above are corrected by a later measurement (NO-FAKE catch-and-fix; original text preserved
+above for provenance):
+
+1. **Finding 4 (HF as a distribution destination for OUR kernel) was OVERSTATED.** HF `kernel-builder`'s
+   Metal path produces **PyTorch/MPS extensions, NOT MLX kernels** (precedent
+   `kernels-community/mlx-quantization-metal-kernels` is MLX-*derived* but packaged + auto-loaded as a
+   **torch-MPS** artifact). So HF kernel-builder is **NOT** a distribution channel for our MLX scorer
+   kernel, and it rides **MPS — which is forbidden as authority in this lab**. Distribution of an *MLX*
+   artifact is via the MLX-on-Hub model integration / a normal repo, not kernel-builder. The honest
+   residual: HF can host our MLX *ports* as MLX-on-Hub models (DRAFT-gated), but the "ship our kernel as
+   an HF Metal artifact" framing only applies to a torch-MPS kernel we are not building.
+2. **Finding 3 (the megakernel attacks the launch-overhead gap) is an UNVALIDATED HYPOTHESIS.** MLX's
+   lazy graph **already batches the whole forward into ONE Metal command buffer** at `mx.eval` (the
+   per-dispatch ~1ms overhead is already collapsed; ZMLX prior art shows the residual launch lever is
+   single-digit %, not 7–9×). So the 7–9×-off-floor gap is **more likely slow MLX depthwise `conv_general`
+   COMPUTE** (issue #1409: 10–150× slower than MPS) + HBM re-reads — which a fusion megakernel does NOT
+   fix. **Two $0 checks GATE any megakernel build:** (a) run the full scorer forward as one lazy graph
+   with a single terminal `mx.eval` (no interior `.item()`/`np.array()` syncs); (b) wrap in `mx.compile`
+   and re-measure. If those close the gap, there is **no megakernel to build** — and building one anyway
+   would be a fake optimization (optimizing a non-bottleneck). The design/profile agent runs this audit.
