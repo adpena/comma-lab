@@ -45,6 +45,25 @@ import torch
 RATE_DENOM = 37_545_489  # evaluate.py:64
 
 
+class _StreamingTelemetry(list):
+    """Telemetry sink that STREAMS each trajectory row to a JSONL + stdout as the
+    trainer appends it (``CapstoneTrainer.train`` calls ``cfg.telemetry.append``
+    per eval_every). Without this the trajectory is only returned at the END of
+    train() — a long run shows NO mid-run signal (the "Max observability"
+    non-negotiable). Tail the JSONL for the live RD curve."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__()
+        self._fh = open(path, "w")  # noqa: SIM115 (lifetime = the run)
+
+    def append(self, row: dict) -> None:  # type: ignore[override]
+        super().append(row)
+        self._fh.write(json.dumps(row) + "\n")
+        self._fh.flush()
+        print(f"  [epoch {row.get('epoch')}] exact_d_seg={row.get('exact_d_seg'):.5f} "
+              f"mean_d_pose={row.get('mean_d_pose'):.5f}", flush=True)
+
+
 def _archive_with_config(payload: bytes, config: dict) -> bytes:
     """Wrap ``payload`` (member ``x``) + the ``capstone_config_v1`` JSON sidecar
     in a STORED ZIP. The sidecar carries the render basis config the contest
@@ -164,6 +183,7 @@ def main() -> int:
         epochs=args.epochs, seg_weight=args.seg_weight, pose_weight=args.pose_weight,
         muon_lr=args.muon_lr, grad_clip=args.grad_clip, grad_clip_muon=args.grad_clip_muon,
         eval_every=args.eval_every, seed=args.seed,
+        telemetry=_StreamingTelemetry(out / "trajectory.jsonl"),  # live mid-run RD curve
     )
     trainer = CapstoneTrainer(bundle, bridge, pose_store, cfg)
 
