@@ -1,0 +1,58 @@
+{
+  "device": "gpu",
+  "pairs": 100,
+  "windows": 25,
+  "elapsed_s": 56.92,
+  "pairs_per_s": 1.757,
+  "verdict": "FAIL_MLX_TORCH_SCORER_PARITY_SWEEP",
+  "passed": false,
+  "seg_argmax_diff_pixels": {
+    "max": 14.0,
+    "mean": 9.72,
+    "p95": 13.799999999999997,
+    "count": 25
+  },
+  "seg_argmax_mismatch_pixels_total": 243,
+  "seg_argmax_diff_fraction": {
+    "max": 1.7801920572916668e-05,
+    "mean": 1.2359619140625e-05,
+    "p95": 1.7547607421875e-05,
+    "count": 25
+  },
+  "seg_mismatch_min_top2_margin": {
+    "max": 0.0002372264862060547,
+    "mean": 5.207538604736328e-05,
+    "p95": 0.00015425682067871083,
+    "count": 25
+  },
+  "seg_logit_abs_max": {
+    "max": 0.09643781185150146,
+    "mean": 0.061478262841701506,
+    "p95": 0.09297712147235869,
+    "count": 25
+  },
+  "pose_output_abs_max": {
+    "max": 0.04070281982421875,
+    "mean": 0.0364483642578125,
+    "p95": 0.039717102050781244,
+    "count": 25
+  },
+  "pose_component_abs_max": {
+    "max": 0.0002762524818535894,
+    "mean": 0.0002222932584118098,
+    "p95": 0.0002630512870382517,
+    "count": 25
+  },
+  "passed_windows": 0,
+  "failed_windows": 25,
+  "blockers": [
+    "window_failed:index=0:pair_window=[0, 4]",
+    "window_failed:index=1:pair_window=[4, 8]",
+    "window_failed:index=2:pair_window=[8, 12]",
+    "window_failed:index=3:pair_window=[12, 16]",
+    "window_failed:index=4:pair_window=[16, 20]",
+    "window_failed:index=5:pair_window=[20, 24]",
+    "window_failed:index=6:pair_window=[24, 28]",
+    "window_failed:index=7:pair_window=[28, 32]"
+  ]
+}

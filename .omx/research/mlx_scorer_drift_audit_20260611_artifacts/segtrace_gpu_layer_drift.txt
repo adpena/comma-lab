@@ -1,0 +1,10 @@
+drift_cliff {"index": 4, "name": "encoder.stage_0.block_0.se", "present_in_torch": true, "present_in_mlx": true, "shape_match": true, "torch_shape": [2, 32, 192, 256], "mlx_shape": [2, 32, 192, 256], "max_abs_delta": 0.003966331481933594, "mean_abs_delta": 6.391669977704871e-05, "rms_delta": 0.0001003143823897305, "p95_abs_delta": 0.0002281665802001953, "p99_abs_delta": 0.0002847909927368164, "blockers": [], "exceeds_cliff_threshold": true}
+seg_argmax_diff_pixels 8
+segmentation_head.logits                   max_abs=0.096438 mean_abs=0.0028662 cliff=True
+decoder.block_1                            max_abs=0.068711 mean_abs=0.00083466 cliff=True
+encoder.stage_1.block_2.bn2                max_abs=0.064575 mean_abs=0.00016783 cliff=True
+encoder.stage_1.block_0.conv_pw            max_abs=0.04718 mean_abs=0.00091634 cliff=True
+encoder.stage_3.block_0.conv_pw            max_abs=0.038742 mean_abs=0.0023598 cliff=True
+encoder.stage_2.block_2.conv_pw            max_abs=0.035187 mean_abs=0.0016045 cliff=True
+encoder.stage_3.block_2.bn2                max_abs=0.034901 mean_abs=0.00014706 cliff=True
+encoder.stage_0.block_1.conv_dw            max_abs=0.034622 mean_abs=0.00087744 cliff=True

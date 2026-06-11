@@ -1,0 +1,20 @@
+{
+  "mlx_gpu_forward": {
+    "device": "gpu",
+    "batch": 8,
+    "iters": 12,
+    "total_pairs": 96,
+    "elapsed_s": 11.036,
+    "pairs_per_s": 8.7,
+    "ms_per_batch": 919.6
+  },
+  "torch_cpu_forward_contended": {
+    "batch": 8,
+    "iters": 6,
+    "total_pairs": 48,
+    "elapsed_s": 14.984,
+    "pairs_per_s": 3.2,
+    "ms_per_batch": 2497.4
+  },
+  "note": "torch-CPU contended by capstone daemon; ratio is lower bound"
+}

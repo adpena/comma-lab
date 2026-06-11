@@ -1,0 +1,52 @@
+{
+  "device": "cpu",
+  "pairs": 100,
+  "windows": 25,
+  "elapsed_s": 147.43,
+  "pairs_per_s": 0.678,
+  "verdict": "FAIL_MLX_TORCH_SCORER_PARITY_SWEEP",
+  "passed": false,
+  "seg_argmax_diff_pixels": {
+    "max": 1.0,
+    "mean": 0.08,
+    "p95": 0.7999999999999972,
+    "count": 25
+  },
+  "seg_argmax_mismatch_pixels_total": 2,
+  "seg_argmax_diff_fraction": {
+    "max": 1.2715657552083333e-06,
+    "mean": 1.0172526041666666e-07,
+    "p95": 1.017252604166663e-06,
+    "count": 25
+  },
+  "seg_mismatch_min_top2_margin": {
+    "max": 4.76837158203125e-07,
+    "mean": 2.384185791015625e-07,
+    "p95": 4.5299530029296873e-07,
+    "count": 2
+  },
+  "seg_logit_abs_max": {
+    "max": 5.6624412536621094e-05,
+    "mean": 4.384934902191162e-05,
+    "p95": 5.59091567993164e-05,
+    "count": 25
+  },
+  "pose_output_abs_max": {
+    "max": 2.288818359375e-05,
+    "mean": 9.918212890625e-06,
+    "p95": 1.831054687499999e-05,
+    "count": 25
+  },
+  "pose_component_abs_max": {
+    "max": 8.732748552064962e-11,
+    "mean": 1.9893860777470128e-11,
+    "p95": 5.628405519431106e-11,
+    "count": 25
+  },
+  "passed_windows": 23,
+  "failed_windows": 2,
+  "blockers": [
+    "window_failed:index=2:pair_window=[8, 12]",
+    "window_failed:index=16:pair_window=[64, 68]"
+  ]
+}
