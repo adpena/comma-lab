@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.local_acceleration import EVIDENCE_TAG_MLX
 from tac.local_acceleration.mlx_preprocess import ScorerInputBatch, write_scorer_input_cache
@@ -574,3 +575,86 @@ def _write_test_cache_with_pair_count(path: Path, *, pair_count: int) -> Path:
 
 def _write_test_cache(path: Path, *, pair_count: int = 1) -> Path:
     return _write_test_cache_with_pair_count(path, pair_count=pair_count)
+
+
+# --- Real-0.mkv-input MLX-CPU bit-faithfulness gate (NO-FAKE: real input, not synthetic) ---
+#
+# The fixture tests above use synthetic caches. This gate certifies, on the REAL
+# reference-video (0.mkv) scorer-input cache, that MLX-CPU reproduces the
+# torch-CPU authority for the exact contest-charged quantities (d_seg argmax
+# flips + d_pose component). It is the regression guard behind the audit
+# `.omx/research/mlx_scorer_port_drift_audit_20260611.md` finding that MLX-CPU
+# is bit-faithful (2 flips / 19.66M pixels, both at fp32-ULP argmax ties).
+# torch-CPU remains the only authority; MLX numbers stay research-signal.
+
+_REAL_REFERENCE_VIDEO_CACHE = (
+    REPO
+    / "experiments"
+    / "results"
+    / "mlx_scorer_input_cache_reference_video_20260521T2304Z_full600"
+)
+
+
+def _real_reference_cache_available() -> bool:
+    return all(
+        (_REAL_REFERENCE_VIDEO_CACHE / name).is_file()
+        for name in ("segnet_last_rgb.npy", "posenet_yuv6_pair.npy", "pair_indices.npy")
+    )
+
+
+@pytest.mark.skipif(
+    not _real_reference_cache_available(),
+    reason=(
+        "real 0.mkv reference scorer-input cache not present "
+        "(experiments/results/mlx_scorer_input_cache_reference_video_20260521T2304Z_full600); "
+        "rebuild via mlx_preprocess.write_scorer_input_cache_from_video_file"
+    ),
+)
+def test_mlx_cpu_bit_faithful_vs_torch_cpu_on_real_reference_video_cache() -> None:
+    """MLX-CPU reproduces torch-CPU on real 0.mkv scorer inputs (d_seg/d_pose).
+
+    Measured 2026-06-11 on 100 real pairs: 2 argmax flips / 19.66M pixels (both
+    fp32-ULP ties), pose component abs max 8.7e-11. We assert a loose-but-faithful
+    bound (a handful of near-tie flips, pose component within fp32 round-off) so
+    the gate certifies bit-faithfulness without being brittle to ULP ties.
+    """
+
+    n_pairs = 8
+    manifest = build_mlx_scorer_torch_parity_sweep_manifest(
+        cache_dir=_REAL_REFERENCE_VIDEO_CACHE,
+        repo_root=REPO,
+        device_type="cpu",
+        start_pair=0,
+        max_pairs=n_pairs,
+        window_pairs=4,
+        stride_pairs=4,
+        run_id="real_reference_video_cpu_bit_faithful_gate",
+    )
+
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["requires_exact_eval_before_promotion"] is True
+    assert manifest["device_type"] == "cpu"
+
+    summary = manifest["summary"]
+    pixel_counts = [
+        int(row["deltas"]["segnet_argmax_pixel_count"]) for row in manifest["rows"]
+    ]
+    total_pixels = sum(pixel_counts)
+    assert total_pixels > 0  # real SegNet logits, not a degenerate fixture
+
+    # d_seg: MLX-CPU must be bit-faithful — only fp32-ULP argmax ties may flip.
+    # Allow a tiny absolute count (ties scale with pixels); flip RATE must be ~1e-6.
+    flipped = int(summary["segnet_argmax_mismatch_pixels_total"])
+    flip_rate = flipped / float(total_pixels)
+    assert flip_rate <= 5.0e-6, (
+        f"MLX-CPU d_seg drift too large: {flipped} flips / {total_pixels} pixels "
+        f"(rate {flip_rate:.3e}); CPU parity should be bit-faithful"
+    )
+
+    # d_pose: component abs max must be within fp32 round-off (authority is torch-CPU).
+    pose_component_max = summary["posenet_component_abs_max"]["max"]
+    assert pose_component_max is not None
+    assert float(pose_component_max) <= 1.0e-8, (
+        f"MLX-CPU d_pose component drift {pose_component_max} exceeds fp32 round-off bound"
+    )
