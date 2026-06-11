@@ -100,6 +100,42 @@ Pose: 6 scalars/pair stored directly (~1KB) + FiLM. The invisible subspace gets 
 | Inflate | scorer-free, numpy-portable: C0(latent,FiLM(pose)) + C1 boundary-residual (self-predicted) + C2 pose-texture → RGB; ≤100 LOC, ≤2 dep, CPU+CUDA |
 | Score-aware | the bit-allocator IS the score-awareness — capacity follows the frozen scorer's marginal value, measured once on 0.mkv |
 
+## 4b. FIRMWARE-GRADE BYTE-ENCODING — the constrained-env extreme-optimization layer (operator 2026-06-11)
+
+**Source:** operator directive — "remember the thinking about firmware and edge computing and constrained-env
+extreme optimization and bit packing and shifting and clever multi-representation tricks." This is the
+BYTE-ENCODING layer, distinct from the architecture (C0/C1/C2): once the carrier's content is fixed, treat
+the archive like FIRMWARE — every bit counts, pack/shift at bit granularity, pick the cheapest representation
+per section. It directly attacks the two MEASURED byte-gaps below.
+
+**The measured gaps it must close:**
+- **ARM-vs-real ×2.85** [MEASURED, B1-CLOSE]: the Cool-Chic byte-close used int8 weights (1 B/param) + a
+  per-grid empirical freq table. Recover via: (a) **sub-byte weight packing** — int4/int2/ternary per-tensor
+  where the ~500-param synth's d_seg tolerance allows (the synth is tiny + over-precise); (b) **block-FP
+  self-compression** of the synth weights (`block_fp_jfg.py`, `hessian_block_fp.py`, `self_compressing_nn.py`
+  — the PR56 1.017-bpw selfcomp lesson); (c) **tighter latent entropy** — temporal-delta uint8 (PR95 L25) +
+  raw LZMA1 filters (L24) + a real context-model ARM instead of the coarse per-grid freq table.
+- **flip-delta 187 B/flip → <2 B/flip** [MEASURED, #98]: encode the flip as **(combinatorial colex-rank
+  position, PR95 L31) + (sign bit) + (few-bit margin-quantum)**, bit-packed — NOT 3 full int8 RGB channels.
+  This is the in-flight cheap-encoding (#98 sub-node).
+
+**The multi-representation per-section rule (PR95 L20–L32, reuse `pr101_split_brotli_codec_derivers.py` +
+`packet_section_transform.py`):** per archive section, pick the cheapest of {split-brotli-q11 (L23/L32),
+raw-LZMA1 (L24), range/arithmetic (L30), per-tensor byte-map zig/twos/off (L21) + conv storage perm (L22)}.
+Monolithic 0.bin, fixed offsets in source. fp16 per-tensor scales (L29). Canonical-Huffman length-vector
+rank for the sidecar (L26).
+
+**Native bit-exact lowering (the firmware/edge end-state):** the settled byte-encoding lowers into
+`runtime-rs/crates/tac-packet-compiler` (+ `qma-codec`/`residual-codec`) with golden_vectors + a Python
+oracle (per the "Deterministic packet compiler" + "Native eval-time runtime discipline" non-negotiables) —
+bit-identical, ≤100-LOC numpy-portable inflate as the reference, native as the speed/control layer. Payload
+stays clean (no learned/video-derived constant outside archive.zip).
+
+**Queued node (B1-PACK):** a firmware-grade byte-encoding pass on the Cool-Chic byte-close — sub-byte +
+block-FP weight pack + the L20–L32 per-section multi-representation + the colex-rank flip-delta — measured
+real-bytes recovery vs the ×2.85 baseline. Launch when API recovers (currently 529-overloaded). Reuse the
+arsenal above; do not rebuild.
+
 ## 5. INNOVATION ACCOUNTING (NO-FAKE originality gate)
 
 - **Ours-original:** the scorer-marginal-shaped capacity allocation (C0/C1/C2 factoring by the measured
