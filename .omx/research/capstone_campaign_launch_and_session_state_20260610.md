@@ -139,6 +139,37 @@ overfittable) + eval_every=2 → first RD point ~6-8 min, clear curve ~30-40 min
 **pid 46817, base_ch=20, 48 pairs, eval_every=2, crux-fixed per-frame FiLM**, out
 `experiments/results/capstone_daemon_b20_n48_stream/`.
 
+## ★ VIABILITY SMOKE RESULT (2026-06-11T00:38Z, base_ch=20, 48 pairs, crux-fixed per-frame FiLM)
+Full RD curve (eval_every=2, streamed): `experiments/results/capstone_daemon_b20_n48_stream/trajectory.jsonl`
+| epoch | 2 | 4 | 6 | 8 | 10 | 12 | 14 |
+|---|---|---|---|---|---|---|---|
+| d_seg | 0.2754 | 0.0248 | 0.0151 | 0.0129 | 0.0123 | 0.0113 | **0.0106** |
+| d_pose | 17.81 | 0.243 | 0.096 | 0.335 | 0.062 | 0.207 | **0.140** |
+
+**VERDICT: crux fix CONFIRMED · d_seg INCONCLUSIVE (NOT a kill — needs a long train).**
+- **Pose crux fix EMPIRICALLY CONFIRMED:** d_pose 135→~0.1 (the old shared-FiLM stalled at 0.437). The
+  per-frame FiLM controls the frame0↔frame1 motion. It oscillates 0.06–0.34 (needs the v2 √-loss/EMA/LR
+  stabilization to lock to the tube, but it's structurally solved). **This validates the whole turn's
+  central fix.**
+- **d_seg: 0.505 → 0.0106 in 14 epochs, still descending (~0.0007/2ep) but slowing (~14× slower than the
+  initial drop).** At 14 epochs the seg term is ~1.06 — far above sub-0.15's 0.056. BUT: the frontier's
+  d_seg 5.6e-4 came from PR95's **29,650-epoch** 8-stage curriculum; 14 epochs is nothing. Declaring a
+  "seg-capacity wall" here would be a Catalog #307 error (paradigm KILL from an under-trained
+  implementation). The honest state: **the d_seg asymptote is unresolved** — it could keep grinding down
+  over thousands of epochs (under-training) OR plateau ~0.008–0.010 (capacity). The slowing rate leans
+  toward a capacity concern, but 14 epochs cannot decide.
+- **Pipeline fully validated:** GT-targets → MLX train → per-frame-FiLM render → int8 byte-close →
+  contest-inflatable archive → (numpy inflate, d_seg-exact) is end-to-end correct + observable.
+
+**ROUTING (the decisive next test):** a LONG train (≥1000s of epochs, PR95-class curriculum) to resolve
+the d_seg asymptote. This is the campaign (#65). Local MLX is ~2–3 min/epoch (48 pairs) → 1000 epochs ≈
+40 hrs (a multi-day detached daemon, $0) — OR the numpy reference now enables a **torch/CUDA port** for
+fast Modal training (the MLX→numpy→torch portability path). **This is the real fork: invest a multi-day
+local run or a funded CUDA port to find whether the smaller basis can reach frontier-class d_seg.** If it
+plateaus high → the smaller-basis-for-rate path is genuinely walled (frontier is near-minimal, confirming
+#71) and sub-0.15 needs lever A (class-shift). If it reaches ~5.6e-4 at the 97 KB budget → sub-0.15
+candidate → contest eval → pointer move.
+
 ## Harvest contract (next session / wakeup)
 **`tail experiments/results/capstone_daemon_b20_n48_stream/trajectory.jsonl`** (live per-epoch RD curve)
 OR read `…/capstone_result.json` (final). Latest log: `.omx/tmp/capstone_daemon/LATEST_LOG.txt`.
