@@ -175,6 +175,22 @@ class CapstoneTrainConfig:
     # caller are UNTOUCHED; only this substrate can fork the routing of its own
     # FiLM weights via the optimizer-step's additive ``force_adamw_substrings`` hook.
     force_film_to_adamw: bool = False
+    # [MLX-GPU] Scorer-loss backend for the per-step gradient. The torch-CPU
+    # frozen-scorer bridge (``torch_cpu_bridge``, DEFAULT) is the ~18min/epoch
+    # bottleneck on Apple-Silicon (slow_conv2d_forward). ``mlx_gpu`` routes the
+    # per-step score-aware FORWARD+BACKWARD through the full MLX SegNet/PoseNet
+    # port on the Metal GPU (``MLXGpuScorerBridge``), the throughput unlock for
+    # the 600-pair gate. The MLX-GPU loss is a FAST TRAINING SIGNAL ONLY — torch-CPU
+    # stays the AUTHORITY: every ``authority_recheck_every`` steps AND every eval,
+    # the reported d_seg/d_pose are recomputed on the torch-CPU bridge (the GPU
+    # pose drift ~2.76e-4 can swamp a frontier d_pose ~3e-5, so absolute d_pose
+    # near the frontier MUST come from torch-CPU). See
+    # ``.omx/research/mlx_scorer_port_drift_audit_20260611.md`` + the wire-in memo.
+    scorer_backend: str = "torch_cpu_bridge"
+    # torch-CPU authority re-score cadence (steps) when ``scorer_backend=mlx_gpu``.
+    # 0 disables per-step re-scoring (eval still uses torch-CPU). Used only for
+    # telemetry; it does NOT change the gradient (the MLX-GPU loss drives it).
+    authority_recheck_every: int = 0
     telemetry: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -246,6 +262,50 @@ class CapstoneTrainer:
         self._cosine_base_lr: float = float(config.adamw_lr)
         self._cosine_total_epochs: int = int(config.epochs)
         self._current_epoch: int = 0
+        # [MLX-GPU] Resolve the per-step gradient bridge. torch-CPU bridge is the
+        # default + the AUTHORITY for exact_d_seg/mean_d_pose; the MLX-GPU bridge
+        # (when selected) drives ONLY the per-step pixel cotangent (fast signal).
+        # The MLX-GPU bridge mirrors the torch bridge's exact preprocessing
+        # (eval_roundtrip + per-frame resize + rgb_to_yuv6) + the same PR95
+        # seg-loss family, so the gradient it produces matches torch-CPU within
+        # the measured Metal fp32 reduction-order drift bound.
+        self._loss_bridge: Any = self.bridge
+        if config.scorer_backend == "mlx_gpu":
+            from tac.mlx_pr95_port.mlx_gpu_score_bridge import MLXGpuScorerBridge
+
+            self._loss_bridge = MLXGpuScorerBridge(
+                self.bridge.dnet,
+                self.bridge.seg_targets_hard,
+                self.bridge.pose_targets,
+                seg_loss_form=getattr(self.bridge, "seg_loss_form", None)
+                or self._resolve_bridge_seg_loss_form(),
+                seg_weight=self.bridge.seg_weight,
+                pose_weight=self.bridge.pose_weight,
+                eval_roundtrip=self.bridge.eval_roundtrip,
+                scorer_hw=self.bridge.scorer_hw,
+                device_type="gpu",
+            )
+        elif config.scorer_backend != "torch_cpu_bridge":
+            raise ValueError(
+                "scorer_backend must be 'torch_cpu_bridge' or 'mlx_gpu', got "
+                f"{config.scorer_backend!r}"
+            )
+
+    def _resolve_bridge_seg_loss_form(self) -> str:
+        """Reverse-map the torch bridge's seg_loss_fn to its canonical form name.
+
+        The torch bridge stores the resolved callable (``seg_loss_fn``), not the
+        form name. The MLX-GPU bridge needs the name to pick its sister MLX
+        seg-loss. Reverse-lookup the name from the canonical registry; fall back
+        to the default ``ce_seg_loss`` if a custom callable was injected.
+        """
+        from tac.score_aware_loop.live_segnet_loss import STAGE_SEG_LOSS_FNS
+
+        fn = getattr(self.bridge, "seg_loss_fn", None)
+        for name, candidate in STAGE_SEG_LOSS_FNS.items():
+            if candidate is fn:
+                return name
+        return "ce_seg_loss"
 
     def _pose_mx(self, idx_np: np.ndarray) -> Any:
         return mx.array(self.pose_store[idx_np])
@@ -334,7 +394,20 @@ class CapstoneTrainer:
         idx_t = torch.from_numpy(idx_np.astype(np.int64))
         render = self._render(indices, pose)
         mx.eval(render, self.bundle.last_commitment_loss)
-        result = self.bridge.loss_and_pixel_grad(render, idx_t)
+        # [MLX-GPU] The per-step gradient comes from the loss bridge (torch-CPU by
+        # default; MLX-GPU when scorer_backend=mlx_gpu). torch-CPU stays the
+        # AUTHORITY for the reported d_seg/d_pose (recomputed at eval + on the
+        # authority_recheck_every cadence below).
+        result = self._loss_bridge.loss_and_pixel_grad(render, idx_t)
+        authority_d_seg = result.d_seg
+        if (
+            self._loss_bridge is not self.bridge
+            and self.cfg.authority_recheck_every > 0
+            and (self._mech_step % self.cfg.authority_recheck_every == 0)
+        ):
+            # torch-CPU authority re-score of THIS batch's d_seg (telemetry only;
+            # does NOT change the gradient — the MLX-GPU loss already drove it).
+            authority_d_seg = self.bridge.exact_d_seg(render, idx_t)
         grads = self._vjp_grads(
             indices, pose, result.pixel_cotangent, self.cfg.commitment_weight
         )
@@ -358,6 +431,7 @@ class CapstoneTrainer:
             "pose": result.pose_loss_value,
             "commit": float(self.bundle.last_commitment_loss),
             "d_seg_batch": result.d_seg,
+            "d_seg_batch_authority": authority_d_seg,
             "lr_scale": float(summary.get("lr_scale", lr_scale)),
             "effective_muon_lr": float(summary.get("effective_muon_lr", 0.0)),
             "grad_clip_would_clip": summary.get(
@@ -459,6 +533,11 @@ class CapstoneTrainer:
         from tac.mlx_pr95_port.curriculum import resolve_use_muon
 
         self.bridge.set_seg_loss_form(spec.seg_loss_form)
+        # [MLX-GPU] keep the loss bridge's stage seg-loss + weights in sync.
+        if self._loss_bridge is not self.bridge:
+            self._loss_bridge.set_seg_loss_form(spec.seg_loss_form)
+            self._loss_bridge.seg_weight = float(spec.seg_weight)
+            self._loss_bridge.pose_weight = float(spec.pose_weight)
         self.cfg.seg_weight = spec.seg_weight
         self.cfg.pose_weight = spec.pose_weight
         use_muon = resolve_use_muon(spec, optimizer_schedule)

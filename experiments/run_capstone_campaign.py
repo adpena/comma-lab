@@ -195,6 +195,23 @@ def main() -> int:
              "canonical counts. Default: use --epochs as the total.",
     )
     ap.add_argument("--device", default="cpu")  # torch scorer device; NEVER mps
+    ap.add_argument(
+        "--scorer-backend",
+        choices=("torch_cpu_bridge", "mlx_gpu"),
+        default="torch_cpu_bridge",
+        help="Per-step score-aware gradient backend. torch_cpu_bridge (DEFAULT) = "
+             "the frozen torch-CPU scorer (the AUTHORITY; ~18min/epoch bottleneck). "
+             "mlx_gpu = the MLX-GPU end-to-end scorer-loss path (fast training "
+             "SIGNAL; torch-CPU re-scores every --authority-recheck-every steps + "
+             "every eval for the reported d_seg/d_pose). See "
+             ".omx/research/mlx_gpu_scorer_training_wirein_20260611.md.",
+    )
+    ap.add_argument(
+        "--authority-recheck-every", type=int, default=0,
+        help="torch-CPU authority d_seg re-score cadence (steps) when "
+             "--scorer-backend=mlx_gpu. 0 disables per-step re-scoring (eval still "
+             "uses torch-CPU). Telemetry only; does NOT change the gradient.",
+    )
     ap.add_argument("--out-dir", default="experiments/results/capstone_smoke")
     ap.add_argument("--targets-cache", default="experiments/results/capstone_gt_targets_cache")
     args = ap.parse_args()
@@ -231,6 +248,8 @@ def main() -> int:
         epochs=args.epochs, seg_weight=args.seg_weight, pose_weight=args.pose_weight,
         muon_lr=args.muon_lr, grad_clip=args.grad_clip, grad_clip_muon=args.grad_clip_muon,
         eval_every=args.eval_every, seed=args.seed,
+        scorer_backend=args.scorer_backend,
+        authority_recheck_every=args.authority_recheck_every,
         telemetry=_StreamingTelemetry(out / "trajectory.jsonl"),  # live mid-run RD curve
     )
     trainer = CapstoneTrainer(bundle, bridge, pose_store, cfg)
