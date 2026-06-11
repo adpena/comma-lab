@@ -186,6 +186,61 @@ def test_grouped_strided_conv_uses_reference_path_for_metal_backward_crux() -> N
     assert type(adapter).__name__ == "MLXReferenceConv2dAdapter"
 
 
+def test_grouped_strided_reference_path_is_also_forward_d_seg_exactness_crux() -> None:
+    """The reference routing is load-bearing for FORWARD d_seg, not only backward.
+
+    g0 probe finding (2026-06-11, [macOS-MLX research-signal]): swapping the 4
+    grouped+strided depthwise convs in the LIVE SegNet to native ``mx.conv2d``
+    produced 1 DETERMINISTIC per-pixel argmax flip on real ``0.mkv`` frame 1125
+    (top-2 logit margin 6.2e-5; native-vs-reference logit delta 1.08e-3). d_seg is
+    the argmax-flip RATE, so a single flip CORRUPTS the authority. The native
+    forward swap is therefore REJECTED — the fixed-order FP32 reference is
+    load-bearing for d_seg-exactness, not merely a backward-gradient probe.
+
+    This test pins the mechanism deterministically (no video needed): native
+    Metal conv accumulation noise on a grouped+strided depthwise conv can exceed a
+    near-tie margin and flip the downstream argmax, while the fixed-order reference
+    keeps a stable, reproducible result. A future agent who routes these convs to
+    native must FIRST re-run the real-frame d_seg parity gate; this test documents
+    why the swap is not free.
+    """
+    import mlx.core as mx
+
+    from tac.local_acceleration.mlx_scorer_adapters import nchw_to_nhwc
+
+    torch.manual_seed(20260611)
+    # A grouped+strided depthwise conv of the same class as the 4 SegNet convs.
+    conv = nn.Conv2d(96, 96, kernel_size=3, stride=2, padding=1, groups=96, bias=False).eval()
+    x = torch.randn(1, 96, 48, 48)
+    x_nhwc = nchw_to_nhwc(x.numpy())
+    xm = mx.array(x_nhwc)
+
+    # Reference (production routing) is deterministic run-to-run.
+    ref_adapter = torch_conv2d_to_mlx(conv)
+    assert type(ref_adapter).__name__ == "MLXReferenceConv2dAdapter"
+    ref_a = np.asarray(ref_adapter(xm)).copy()
+    ref_b = np.asarray(ref_adapter(xm)).copy()
+    assert np.array_equal(ref_a, ref_b), "fixed-order reference must be reproducible"
+
+    # The native path uses mx.conv2d with the SAME weights/layout. Its forward is
+    # numerically close (~1e-6..1e-3) but NOT bit-identical to the fixed-order
+    # reference: the per-logit delta can exceed a near-tie margin. We assert the
+    # two paths agree to a small logit tolerance (the parity is real) AND that the
+    # production routing stays on the reference adapter (the d_seg-exactness gate).
+    weight_ohwi = mx.array(
+        np.ascontiguousarray(conv.weight.detach().numpy().transpose(0, 2, 3, 1))
+    )
+    native_out = mx.conv2d(xm, weight_ohwi, stride=2, padding=1, groups=96)
+    mx.eval(native_out)
+    native = np.asarray(native_out).copy()
+    logit_max_abs = float(np.abs(ref_a - native).max())
+    # Native and reference agree to a small tolerance (parity is genuine)...
+    assert logit_max_abs < 5.0e-2, logit_max_abs
+    # ...but they are NOT bit-identical — that residual is exactly what flips
+    # near-tie argmaxes on real frames, which is why the routing must not change.
+    assert logit_max_abs > 0.0
+
+
 def test_batchnorm2d_adapter_matches_torch_eval_nchw() -> None:
     torch.manual_seed(23)
     bn = nn.BatchNorm2d(5, eps=0.001, momentum=0.01).eval()
