@@ -111,6 +111,25 @@ decoder; if even base_ch=20 (85K) can't reach it, the architecture is the ceilin
 PROVEN and we optimize *down* to 16 for lower rate. Switched the running daemon 16→20 (only ~8 min in;
 GT cache persists). base_ch≥24 overshoots the byte budget. This is the capacity refinement of v2 lever 1.
 
+## INFLATE RUNTIME BUILT — the contest exact-eval path is UNBLOCKED (commits `60b1d6635` + `dfb1cb4fe`)
+The MLX→numpy portability contract + contest inflate now exist and are score-parity-verified:
+- `src/tac/capstone_vq_nerv/numpy_reference.py` — pure-numpy port of `_decode_with_film` (incl per-frame
+  FiLM), parameterized over base_channels. Parity vs the MLX render: **d_seg |Δ| = 0.0 (EXACT)**, d_pose Δ
+  = fp16 pose-store roundtrip (rel 5e-5, argmax-invariant). No MLX/torch (runs on Linux/CUDA).
+- `src/tac/capstone_vq_nerv/inflate.py` (≤70 LOC) + `runtime/inflate.sh` — parse archive → numpy decode →
+  write `(N,874,1164,3)` uint8 frames `TensorVideoDataset` reads. No scorer at inflate.
+- **NO-FAKE find + fix:** the prior export archived only `decoder.parameters()`, DROPPING the per-frame
+  FiLM weights + pose-norm stats the render depends on (a decoder-only archive is un-inflatable for a FiLM
+  bundle). The runner (`run_capstone_campaign.py::_export_int8_archive`) now uses
+  `full_render_weights_from_bundle` (decoder+FiLM, contest naming) + a `capstone_config_v1` sidecar
+  (pose_mean/std/base_channels). **Verified roundtrip: runner export → inflate.py → (8,874,1164,3) frames.**
+- ⟹ the chain **trained bundle → byte-closed contest-inflatable archive → inflate → evaluate.py** is
+  CLOSED. The ONLY remaining blockers to a pointer move are (1) viability confirmation (the running daemon)
+  and (2) the paired contest CPU+CUDA exact eval (Modal, paid). The inflate is no longer a blocker.
+- NOTE: the running daemon (pid 26696) loaded the OLD runner export (uninflatable) — fine, its value is the
+  d_seg/d_pose trajectory + byte count, not inflation; the 600-pair CONTEST candidate run will use the
+  fixed runner and produce an inflatable archive.
+
 ## Harvest contract (next session / wakeup)
 Read `experiments/results/capstone_daemon_b20_n100_perframe/capstone_result.json` (final) OR `tail` the
 latest daemon log (`.omx/tmp/capstone_daemon/LATEST_LOG.txt`) for the eval_every=5 RD trajectory.
