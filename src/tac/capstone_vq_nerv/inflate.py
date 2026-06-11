@@ -117,6 +117,8 @@ def decode_archive(archive_bytes: bytes, config: dict) -> dict:
             pose_normalize=bool(config.get("pose_normalize", True)),
             pose_mean=tuple(float(v) for v in config.get("pose_mean", (0.0,) * 6)),
             pose_std=tuple(float(v) for v in config.get("pose_std", (1.0,) * 6)),
+            hinerv_grid_pe=bool(config.get("hinerv_grid_pe", False)),
+            grid_pe_num_freqs=int(config.get("grid_pe_num_freqs", 4)),
         )
         return {
             "carrier": carrier,
@@ -146,6 +148,8 @@ def decode_archive(archive_bytes: bytes, config: dict) -> dict:
         pose_normalize=bool(config.get("pose_normalize", True)),
         pose_mean=tuple(float(v) for v in config.get("pose_mean", (0.0,) * 6)),
         pose_std=tuple(float(v) for v in config.get("pose_std", (1.0,) * 6)),
+        hinerv_grid_pe=bool(config.get("hinerv_grid_pe", False)),
+        grid_pe_num_freqs=int(config.get("grid_pe_num_freqs", 4)),
     )
     return {
         "carrier": carrier,

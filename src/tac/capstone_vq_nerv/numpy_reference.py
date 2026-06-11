@@ -54,6 +54,17 @@ class CapstoneDecodeConfig:
     ``codebook_size`` are carried for completeness. ``film_enabled`` mirrors the
     bundle flag; ``pose_normalize`` + ``pose_mean`` / ``pose_std`` reproduce the
     FiLM input standardization.
+
+    ``hinerv_grid_pe`` (default ``False``, byte-identical-when-off): the HiNeRV
+    delta over HNeRV. When enabled, a DETERMINISTIC multi-frequency sinusoidal
+    coordinate grid (computed at inflate from coordinates — ~0 stored bytes) is
+    projected by a tiny learned linear (``grid_pe_proj.{weight,bias}``, the only
+    new stored params; ``channels[0] x pe_dim``) and ADDED to the stem feature
+    BEFORE the ``sin`` activation. This injects the spatial inductive bias the
+    pure latent->Linear stem lacks (the ~72.3% BD-rate HiNeRV lever's grid-PE
+    half; the bilinear-skip half is ALREADY structurally present in every
+    upsample block). ``grid_pe_num_freqs`` controls the encoding bandwidth
+    (``pe_dim = 4 * num_freqs`` = sin/cos x {x, y} x num_freqs).
     """
 
     base_channels: int = 36
@@ -65,6 +76,9 @@ class CapstoneDecodeConfig:
     pose_normalize: bool = True
     pose_mean: tuple[float, ...] = (0.0,) * POSE_DIM
     pose_std: tuple[float, ...] = (1.0,) * POSE_DIM
+    # HiNeRV grid positional-encoding (opt-in; default-off = byte-identical).
+    hinerv_grid_pe: bool = False
+    grid_pe_num_freqs: int = 4
 
     def channels(self) -> list[int]:
         """The PR95 channel taper (matches ``HNeRVDecoderMLX.channels``)."""
@@ -298,6 +312,48 @@ def bilinear_resize_to_nhwc(
 # --------------------------------------------------------------------------
 
 
+def grid_positional_encoding(
+    base_h: int, base_w: int, num_freqs: int
+) -> np.ndarray:
+    """DETERMINISTIC multi-frequency sinusoidal coordinate grid (HiNeRV grid-PE).
+
+    Returns ``(base_h * base_w, pe_dim)`` fp32 where ``pe_dim = 4 * num_freqs``
+    (``sin`` and ``cos`` of ``{x, y}`` over ``num_freqs`` geometric frequencies).
+
+    The grid is computed PURELY from coordinates (no stored values — the inflate
+    runtime regenerates it from ``base_h``/``base_w``/``num_freqs``, ~0 archive
+    bytes), so it is identical on every host and between the MLX and numpy paths.
+
+    Coordinate convention (matches the stem reshape ``(C, base_h, base_w)`` then
+    NHWC transpose -> rows iterate ``base_h`` first, then ``base_w``):
+
+        y in linspace(0, 1, base_h), x in linspace(0, 1, base_w), row-major flat.
+
+    Frequencies are ``2**k * pi`` for ``k in [0, num_freqs)`` (NeRF-style). The
+    feature order is ``[sin(f0 x), cos(f0 x), sin(f0 y), cos(f0 y), sin(f1 x),
+    ...]`` so MLX + numpy build the SAME column layout op-for-op.
+    """
+    bh, bw, nf = int(base_h), int(base_w), int(num_freqs)
+    if bh < 1 or bw < 1:
+        raise ValueError(f"base grid must be positive; got ({bh}, {bw})")
+    if nf < 1:
+        raise ValueError(f"grid_pe_num_freqs must be >= 1; got {nf}")
+    ys = np.linspace(0.0, 1.0, bh, dtype=np.float32)
+    xs = np.linspace(0.0, 1.0, bw, dtype=np.float32)
+    # row-major (y outer, x inner) to match the NHWC stem layout.
+    yy, xx = np.meshgrid(ys, xs, indexing="ij")  # (bh, bw) each
+    y_flat = yy.reshape(-1).astype(np.float32)  # (bh*bw,)
+    x_flat = xx.reshape(-1).astype(np.float32)
+    cols: list[np.ndarray] = []
+    for k in range(nf):
+        freq = np.float32((2.0**k) * np.pi)
+        cols.append(np.sin(freq * x_flat))
+        cols.append(np.cos(freq * x_flat))
+        cols.append(np.sin(freq * y_flat))
+        cols.append(np.cos(freq * y_flat))
+    return np.stack(cols, axis=1).astype(np.float32)  # (bh*bw, 4*nf)
+
+
 def _norm_pose(
     pose6: np.ndarray, cfg: CapstoneDecodeConfig
 ) -> np.ndarray:
@@ -324,6 +380,24 @@ def _pose_film(
     return gamma.astype(np.float32), beta.astype(np.float32)
 
 
+def _grid_pe_weight_keys(
+    weights: dict[str, np.ndarray]
+) -> tuple[str | None, str | None]:
+    """Resolve the grid-PE projection (weight, bias) keys in the render dict.
+
+    The MLX export emits ``grid_pe_proj.proj.weight`` / ``grid_pe_proj.proj.bias``
+    (the ``_GridPE`` module nests the projection in ``self.proj = nn.Linear``,
+    so ``tree_flatten`` keeps the ``.proj.`` segment, exactly as FiLM keeps
+    ``fc1``/``fc2``). The flat ``grid_pe_proj.weight`` form is accepted for
+    forward-compatibility. Returns ``(None, None)`` when no grid-PE proj exists.
+    """
+    if "grid_pe_proj.proj.weight" in weights:
+        return "grid_pe_proj.proj.weight", "grid_pe_proj.proj.bias"
+    if "grid_pe_proj.weight" in weights:
+        return "grid_pe_proj.weight", "grid_pe_proj.bias"
+    return None, None
+
+
 def _features_nhwc(
     z_q: np.ndarray, weights: dict[str, np.ndarray], cfg: CapstoneDecodeConfig
 ) -> np.ndarray:
@@ -333,7 +407,26 @@ def _features_nhwc(
     # stem (Linear) -> (B, channels[0]*base_h*base_w)
     x = linear(z_q, weights["stem.weight"], weights["stem.bias"])
     x = x.reshape(B, ch[0], cfg.base_h, cfg.base_w)
-    x = np.transpose(x, (0, 2, 3, 1))  # NHWC
+    x = np.transpose(x, (0, 2, 3, 1))  # NHWC -> (B, base_h, base_w, channels[0])
+    # HiNeRV grid-PE: add a DETERMINISTIC coordinate grid (projected by the small
+    # learned grid_pe_proj) to the stem feature BEFORE sin. The grid is regenerated
+    # from coords here (0 stored bytes); only the projection weights are stored.
+    # Op-for-op with the MLX bundle's _decode_with_film grid-PE injection.
+    #
+    # The exported key is ``grid_pe_proj.proj.weight`` (the MLX ``_GridPE`` wraps the
+    # projection in ``self.proj = nn.Linear``, so ``tree_flatten`` emits the nested
+    # ``.proj.`` name, mirroring how FiLM emits ``pose_film0.fc1.weight``). The
+    # legacy flat ``grid_pe_proj.weight`` is also accepted for forward-compat.
+    pe_w_key, pe_b_key = _grid_pe_weight_keys(weights)
+    if cfg.hinerv_grid_pe and pe_w_key is not None:
+        pe = grid_positional_encoding(
+            cfg.base_h, cfg.base_w, cfg.grid_pe_num_freqs
+        )  # (base_h*base_w, pe_dim)
+        pe_proj = linear(
+            pe, weights[pe_w_key], weights.get(pe_b_key) if pe_b_key else None
+        )  # (base_h*base_w, channels[0])
+        pe_proj = pe_proj.reshape(cfg.base_h, cfg.base_w, ch[0])[None, ...]
+        x = x + pe_proj
     x = _sin(x)
     # 6 upsample blocks
     for i in range(6):
@@ -422,6 +515,10 @@ def full_render_weights_from_bundle(bundle: Any) -> dict[str, np.ndarray]:
             film = getattr(bundle, prefix)
             for k, v in tree_flatten(film.parameters()):
                 out[f"{prefix}.{k}"] = np.asarray(v, dtype=np.float32)
+    # HiNeRV grid-PE projection (the only new stored params; tiny: channels[0] x pe_dim).
+    if getattr(bundle, "hinerv_grid_pe", False) and hasattr(bundle, "grid_pe_proj"):
+        for k, v in tree_flatten(bundle.grid_pe_proj.parameters()):
+            out[f"grid_pe_proj.{k}"] = np.asarray(v, dtype=np.float32)
     return out
 
 
@@ -438,6 +535,8 @@ def decode_config_from_bundle(bundle: Any) -> CapstoneDecodeConfig:
         pose_normalize=bool(cfg.pose_normalize),
         pose_mean=tuple(float(v) for v in np.asarray(bundle._pose_mean)),
         pose_std=tuple(float(v) for v in np.asarray(bundle._pose_std)),
+        hinerv_grid_pe=bool(getattr(cfg, "hinerv_grid_pe", False)),
+        grid_pe_num_freqs=int(getattr(cfg, "grid_pe_num_freqs", 4)),
     )
 
 
@@ -450,6 +549,7 @@ __all__ = [
     "conv2d_nhwc",
     "decode_config_from_bundle",
     "full_render_weights_from_bundle",
+    "grid_positional_encoding",
     "linear",
     "numpy_decode_pair",
     "pixel_shuffle_2x_nhwc",

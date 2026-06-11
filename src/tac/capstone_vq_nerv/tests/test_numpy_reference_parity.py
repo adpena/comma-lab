@@ -360,3 +360,267 @@ def test_inflate_reads_zip_with_config_sidecar(tmp_path):
     frames = render_all_camera_frames(decoded)
     assert frames.shape == (3 * 2, CAMERA_H, CAMERA_W, 3)
     assert frames.dtype == np.uint8
+
+
+# --------------------------------------------------------------------------
+# (5) HiNeRV grid-PE upgrade (opt-in, default-off): parity + NO-FAKE gates
+# --------------------------------------------------------------------------
+#
+# The HiNeRV delta over HNeRV (the ~72.3% BD-rate-over-HNeRV lever): the
+# bilinear-skip + PixelShuffle + sin upsample blocks are ALREADY in every
+# HNeRVDecoderMLX block (audited 2026-06-11), so the genuinely-missing HiNeRV
+# mechanism is the multi-resolution GRID positional-encoding fed to the stem.
+# These tests are the portability GATE for that mechanism:
+#   * OFF (default) is byte-identical to the pre-switch decoder (no extra params,
+#     no forward change) — proved structurally + by render equality;
+#   * ON is reproduced EXACTLY by the pure-numpy inflate (the portability
+#     contract) — both at init (zero-proj) and after the proj is trained;
+#   * NO-FAKE: a TRAINED grid-PE proj ACTUALLY changes the render (it is not a
+#     no-op) AND the grid is deterministic + adds ~0 archive bytes.
+
+
+def _make_grid_pe_bundle(num_pairs=4, base_ch=16, K=16, seed=0, num_freqs=4, train_proj=False):
+    """A grid-PE-ENABLED FiLM bundle; optionally nudge the proj off zero-init.
+
+    With ``train_proj=False`` the grid-PE projection is zero-init (identity: the
+    ON-render == the OFF-render). With ``train_proj=True`` the projection weight +
+    bias are nudged off zero so the grid grammar is LIVE (the NO-FAKE case).
+    """
+    from tac.capstone_vq_nerv.vq_nerv_bundle import (
+        CapstoneVqNervBundle,
+        CapstoneVqNervConfig,
+    )
+
+    b = CapstoneVqNervBundle(
+        CapstoneVqNervConfig(
+            num_pairs=num_pairs,
+            base_channels=base_ch,
+            codebook_size=K,
+            hinerv_grid_pe=True,
+            grid_pe_num_freqs=num_freqs,
+            seed=seed,
+        )
+    )
+    rng = np.random.default_rng(seed)
+    b.set_pose_stats(
+        rng.standard_normal(6).astype(np.float32),
+        (np.abs(rng.standard_normal(6)) + 0.5).astype(np.float32),
+    )
+    # Nudge FiLM off identity (per-frame, like _make_film_bundle).
+    for prefix, sign in (("pose_film0", 1.0), ("pose_film1", -1.0)):
+        film = getattr(b, prefix)
+        w2 = np.asarray(film.fc2.weight).copy()
+        w2 += sign * 0.05 * rng.standard_normal(w2.shape).astype(np.float32)
+        film.fc2.weight = mx.array(w2)
+        bb = np.asarray(film.fc2.bias).copy()
+        bb += sign * 0.1 * rng.standard_normal(bb.shape).astype(np.float32)
+        film.fc2.bias = mx.array(bb)
+    if train_proj:
+        pw = np.asarray(b.grid_pe_proj.proj.weight).copy()
+        pw += 0.3 * rng.standard_normal(pw.shape).astype(np.float32)
+        b.grid_pe_proj.proj.weight = mx.array(pw)
+        pb = np.asarray(b.grid_pe_proj.proj.bias).copy()
+        pb += 0.2 * rng.standard_normal(pb.shape).astype(np.float32)
+        b.grid_pe_proj.proj.bias = mx.array(pb)
+    return b
+
+
+def _build_grid_pe_config(bundle, *, decoder_dtype="fp16"):
+    """Config sidecar for a grid-PE bundle (adds the two grid-PE flags)."""
+    cfg = decode_config_from_bundle(bundle)
+    return {
+        "decoder_dtype": decoder_dtype,
+        "num_pairs": int(bundle.cfg.num_pairs),
+        "codebook_size": int(bundle.cfg.codebook_size),
+        "latent_dim": int(bundle.cfg.latent_dim),
+        "base_channels": int(cfg.base_channels),
+        "base_h": int(cfg.base_h),
+        "base_w": int(cfg.base_w),
+        "film_enabled": bool(cfg.film_enabled),
+        "pose_normalize": bool(cfg.pose_normalize),
+        "pose_mean": list(cfg.pose_mean),
+        "pose_std": list(cfg.pose_std),
+        "hinerv_grid_pe": bool(cfg.hinerv_grid_pe),
+        "grid_pe_num_freqs": int(cfg.grid_pe_num_freqs),
+    }
+
+
+def test_grid_pe_off_is_byte_identical_no_extra_params():
+    """DEFAULT-OFF contract: no grid_pe_proj module, no grid-PE weight keys, flag off.
+
+    The opt-in is byte-identical when off: an OFF bundle never constructs the
+    ``_GridPE`` module, so its trainable + render-basis weight sets are exactly the
+    pre-switch decoder's (the archive bytes are unchanged). NO-FAKE: if the OFF path
+    silently added the grid-PE params this assertion fails.
+    """
+    from tac.capstone_vq_nerv.vq_nerv_bundle import (
+        CapstoneVqNervBundle,
+        CapstoneVqNervConfig,
+    )
+
+    b_off = CapstoneVqNervBundle(
+        CapstoneVqNervConfig(num_pairs=4, base_channels=16, codebook_size=16, seed=0)
+    )
+    assert b_off.cfg.hinerv_grid_pe is False
+    assert b_off.hinerv_grid_pe is False
+    assert not hasattr(b_off, "grid_pe_proj")
+    cfg = decode_config_from_bundle(b_off)
+    assert cfg.hinerv_grid_pe is False
+    if _HAVE_MLX:
+        w = full_render_weights_from_bundle(b_off)
+        assert not any("grid_pe" in k for k in w), (
+            f"OFF must carry NO grid-PE params; found {[k for k in w if 'grid_pe' in k]}"
+        )
+
+
+@skip_no_mlx
+def test_grid_pe_on_at_init_equals_off_render():
+    """Identity-at-init: zero-init proj => grid-PE ON-render == OFF-render.
+
+    The grid_pe_proj is zero-init so the PE contribution is 0 before training.
+    This proves the upgrade is a SAFE default-off opt-in: enabling it does not
+    perturb an untrained decoder. (Built on a single set of decoder weights by
+    toggling only the cfg flag in the numpy decode, so the codebook RNG is held
+    fixed — the comparison isolates the grid-PE branch.)
+    """
+    b = _make_grid_pe_bundle(num_pairs=4, base_ch=16, seed=2, train_proj=False)
+    rng = np.random.default_rng(2)
+    pose = rng.standard_normal((4, 6)).astype(np.float32)
+    cb = np.asarray(b.quantizer.codebook, dtype=np.float32)
+    z_q = cb[b.all_vq_indices()]
+    weights = full_render_weights_from_bundle(b)
+    cfg_on = decode_config_from_bundle(b)
+    from dataclasses import replace
+
+    cfg_off = replace(cfg_on, hinerv_grid_pe=False)
+    r_on = numpy_decode_pair(z_q, pose, weights, cfg_on)
+    r_off = numpy_decode_pair(z_q, pose, weights, cfg_off)
+    assert float(np.max(np.abs(r_on - r_off))) < 1e-3, "zero-init grid-PE must be identity"
+
+
+@skip_no_mlx
+@pytest.mark.parametrize("train_proj", [False, True])
+def test_grid_pe_numpy_matches_mlx_render(train_proj):
+    """PORTABILITY GATE: pure-numpy inflate reproduces the MLX grid-PE render.
+
+    Both at init (zero proj) AND after the proj is trained (the case that broke
+    before the ``grid_pe_proj.proj.weight`` key fix — numpy silently skipped the
+    grid-PE and diverged by ~34). This is THE contract: MLX fast path == numpy
+    reference == (eventually) torch. Tolerance matches the existing FiLM parity
+    (small fp32 conv-accumulation drift, NOT score-affecting).
+    """
+    b = _make_grid_pe_bundle(num_pairs=4, base_ch=16, seed=5, train_proj=train_proj)
+    rng = np.random.default_rng(5)
+    pose = rng.standard_normal((4, 6)).astype(np.float32)
+    idx = mx.arange(4)
+    r_mlx = np.asarray(b(idx, pose=mx.array(pose)), dtype=np.float32)
+    cb = np.asarray(b.quantizer.codebook, dtype=np.float32)
+    z_q = cb[b.all_vq_indices()]
+    r_np = numpy_decode_pair(z_q, pose, full_render_weights_from_bundle(b), decode_config_from_bundle(b))
+    drift = float(np.max(np.abs(r_mlx - r_np)))
+    assert drift < 0.5, f"grid-PE numpy<->MLX parity broke (train_proj={train_proj}): {drift}"
+
+
+@skip_no_mlx
+def test_grid_pe_trained_actually_changes_render_not_a_noop():
+    """NO-FAKE: a TRAINED grid-PE proj measurably changes the render vs OFF.
+
+    If the grid-PE were a no-op (e.g. the projection never wired into the stem, or
+    the key mismatch silently dropped it), the ON-trained render would equal the
+    OFF render. It must NOT. This is the teeth: the mechanism does real work.
+    """
+    b = _make_grid_pe_bundle(num_pairs=4, base_ch=16, seed=9, train_proj=True)
+    rng = np.random.default_rng(9)
+    pose = rng.standard_normal((4, 6)).astype(np.float32)
+    cb = np.asarray(b.quantizer.codebook, dtype=np.float32)
+    z_q = cb[b.all_vq_indices()]
+    weights = full_render_weights_from_bundle(b)
+    cfg_on = decode_config_from_bundle(b)
+    from dataclasses import replace
+
+    cfg_off = replace(cfg_on, hinerv_grid_pe=False)
+    r_on = numpy_decode_pair(z_q, pose, weights, cfg_on)
+    r_off = numpy_decode_pair(z_q, pose, weights, cfg_off)
+    delta = float(np.max(np.abs(r_on - r_off)))
+    assert delta > 1.0, f"trained grid-PE must change the render; max|Δ|={delta} (no-op!)"
+
+
+def test_grid_pe_is_deterministic_and_storage_free():
+    """The grid is regenerated from coords (~0 archive bytes) + fully deterministic.
+
+    The positional grid stores NO values in the archive — only the tiny
+    ``channels[0] x pe_dim`` projection. The grid op itself is a pure function of
+    ``(base_h, base_w, num_freqs)`` so the inflate reproduces it on any host.
+    """
+    from tac.capstone_vq_nerv.numpy_reference import grid_positional_encoding
+
+    g1 = grid_positional_encoding(6, 8, 4)
+    g2 = grid_positional_encoding(6, 8, 4)
+    assert g1.shape == (6 * 8, 4 * 4)  # pe_dim = 4 * num_freqs
+    assert np.array_equal(g1, g2), "grid must be deterministic"
+    # band-limited to [-1, 1] (sin/cos) and not all-zero (carries real coords).
+    assert float(np.max(np.abs(g1))) <= 1.0 + 1e-6
+    assert float(np.max(np.abs(g1))) > 0.1
+    with pytest.raises(ValueError):
+        grid_positional_encoding(6, 8, 0)
+
+
+@skip_no_mlx
+def test_grid_pe_inflate_end_to_end_with_trained_proj(tmp_path):
+    """END-TO-END: a grid-PE archive byte-closes + the real numpy inflate decodes it.
+
+    Builds a trained grid-PE bundle, byte-closes the FULL render basis (decoder +
+    FiLM + grid_pe_proj) into the contest archive, writes the zip + config sidecar
+    with the grid-PE flags, then runs the REAL contest inflate. The decoded camera
+    frames score-match the MLX render on the frozen scorer — proving the grid-PE
+    survives the int8 archive roundtrip + the scorer-free numpy inflate.
+    """
+    n_pairs, h, w = 4, 48, 64
+    b = _make_grid_pe_bundle(num_pairs=n_pairs, base_ch=16, seed=11, train_proj=True)
+    rng = np.random.default_rng(11)
+    pose_np = rng.standard_normal((n_pairs, 6)).astype(np.float32)
+    b.pose_store_for_test = pose_np  # type: ignore[attr-defined]
+
+    weights = full_render_weights_from_bundle(b)
+    assert any("grid_pe" in k for k in weights), "grid-PE proj must be in the render basis"
+    cb = np.asarray(b.quantizer.codebook, dtype=np.float32)
+    vq = b.all_vq_indices()
+    archive, _account = build_capstone_archive_bytes(
+        decoder_weights=weights,
+        codebook=cb,
+        vq_indices=vq,
+        pose_scalars=pose_np,
+        codebook_size=b.cfg.codebook_size,
+        decoder_dtype="fp16",
+    )
+    config = _build_grid_pe_config(b)
+    from tac.capstone_vq_nerv.inflate import CAPSTONE_CONFIG_MEMBER, _read_archive_and_config
+
+    zpath = tmp_path / "archive.zip"
+    with zipfile.ZipFile(zpath, "w") as zf:
+        zf.writestr("x", archive)
+        zf.writestr(CAPSTONE_CONFIG_MEMBER, json.dumps(config))
+    rb, rc = _read_archive_and_config(zpath)
+    assert rc["hinerv_grid_pe"] is True
+    decoded = decode_archive(rb, rc)
+
+    # score-parity vs MLX render on the frozen proto DistortionNet.
+    dnet = _build_frozen_dnet(with_pose=True)
+    seg_tgt = torch.zeros(n_pairs, h, w, dtype=torch.long)
+    bands = [(0, 10), (10, 20), (20, 30), (30, 40), (40, h)]
+    for i in range(n_pairs):
+        for cls, (r0, r1) in enumerate(bands):
+            seg_tgt[i, r0:r1, :] = (cls + i) % 5
+    pose_tgt = torch.from_numpy(rng.standard_normal((n_pairs, 6)).astype(np.float32))
+
+    r_mlx = _mlx_render(b, pose_np)
+    cam_mlx = _camera_from_render(r_mlx)
+    d_seg_mlx, d_pose_mlx = _score_frames(dnet, cam_mlx, seg_tgt, pose_tgt)
+
+    cam_np = render_all_camera_frames(decoded)
+    assert cam_np.shape == (n_pairs * 2, CAMERA_H, CAMERA_W, 3)
+    d_seg_np, d_pose_np = _score_frames(dnet, cam_np, seg_tgt, pose_tgt)
+    assert abs(d_seg_np - d_seg_mlx) < 1e-3, f"grid-PE inflate d_seg parity: mlx={d_seg_mlx} np={d_seg_np}"
+    assert abs(d_pose_np - d_pose_mlx) <= max(1e-3, 5e-3 * abs(d_pose_mlx) + 1e-3), (
+        f"grid-PE inflate d_pose parity: mlx={d_pose_mlx} np={d_pose_np}"
+    )

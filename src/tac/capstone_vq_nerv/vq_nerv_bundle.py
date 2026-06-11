@@ -95,6 +95,19 @@ class CapstoneVqNervConfig:
     film_enabled: bool = True
     film_hidden: int = 32
     pose_normalize: bool = True  # standardize stored pose before the FiLM MLP.
+    # HiNeRV grid positional-encoding (opt-in; default-off = byte-identical to the
+    # pre-switch decoder). The HiNeRV delta over HNeRV. When ON, a DETERMINISTIC
+    # multi-frequency sinusoidal coordinate grid (computed from coords at decode --
+    # ~0 stored bytes) is projected by a tiny learned linear (grid_pe_proj;
+    # channels[0] x pe_dim, the only new stored params) and ADDED to the stem
+    # feature BEFORE the sin. This injects the spatial inductive bias the pure
+    # latent->Linear stem lacks (the grid-PE half of the ~72.3% BD-rate HiNeRV
+    # lever; the bilinear-skip half is ALREADY structurally present in every
+    # HNeRVDecoderMLX upsample block). pe_dim = 4 * grid_pe_num_freqs (sin/cos x
+    # {x,y} x num_freqs). Identity at init (zero-init grid_pe_proj) so the
+    # untrained ON-render == the OFF-render -- only training adds the grid grammar.
+    hinerv_grid_pe: bool = False
+    grid_pe_num_freqs: int = 4
     seed: int = 0
 
 
@@ -124,6 +137,44 @@ class _PoseFiLM(nn.Module if nn is not None else object):  # type: ignore[misc]
         beta = gb[:, self.channels :]
         gamma = 1.0 + mx.tanh(gamma_pre)  # type: ignore[union-attr]  # in (0, 2), =1 at init
         return gamma, beta
+
+
+class _GridPE(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """HiNeRV grid positional-encoding: deterministic coord grid + learned proj.
+
+    Holds the DETERMINISTIC ``(base_h*base_w, pe_dim)`` sinusoidal coordinate grid
+    (built once from :func:`tac.capstone_vq_nerv.numpy_reference.grid_positional_encoding`
+    so the MLX + numpy paths share the EXACT same grid op-for-op) as a NON-trainable
+    constant, plus a tiny learned ``nn.Linear(pe_dim, channels[0])`` projection
+    (``grid_pe_proj``). The projection is zero-init so the PE contribution is 0 at
+    init (the untrained ON-render == the OFF-render); training adds the grid grammar.
+
+    The grid itself stores ~0 archive bytes (regenerated from coords at inflate);
+    only the projection ``weight``/``bias`` (``channels[0] x pe_dim``) are stored.
+    """
+
+    def __init__(self, *, base_h: int, base_w: int, num_freqs: int, channels: int) -> None:
+        _require_mlx()
+        super().__init__()
+        from tac.capstone_vq_nerv.numpy_reference import grid_positional_encoding
+
+        grid = grid_positional_encoding(base_h, base_w, num_freqs)  # (HW, pe_dim) numpy
+        self.base_h = int(base_h)
+        self.base_w = int(base_w)
+        self.channels = int(channels)
+        self.pe_dim = int(grid.shape[1])
+        # Non-trainable deterministic grid (plain array, NOT nn.Parameter, so it is
+        # excluded from trainable_parameters() and never enters mx.vjp).
+        self._grid = mx.array(grid)  # type: ignore[union-attr]  (HW, pe_dim)
+        self.proj = nn.Linear(self.pe_dim, self.channels)
+        # Zero-init so grid-PE contributes 0 at init (ON == OFF before training).
+        self.proj.weight = mx.zeros_like(self.proj.weight)  # type: ignore[union-attr]
+        self.proj.bias = mx.zeros_like(self.proj.bias)  # type: ignore[union-attr]
+
+    def __call__(self) -> Any:
+        """Return the projected grid feature ``(base_h, base_w, channels)``."""
+        proj = self.proj(self._grid)  # (HW, channels)
+        return mx.reshape(proj, (self.base_h, self.base_w, self.channels))  # type: ignore[union-attr]
 
 
 class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -185,6 +236,18 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         # DIFFERENTLY before each rgb head, giving direct control of the motion.
         self.stem_channels = int(self.decoder.channels[0])
         self.feat_channels = int(self.decoder.channels[-1])
+        # HiNeRV grid-PE (opt-in; default-off byte-identical). Built ONLY when
+        # enabled so the OFF path has no grid_pe_proj param and the forward is
+        # byte-identical to the pre-switch decoder.
+        self.hinerv_grid_pe = bool(cfg.hinerv_grid_pe)
+        self.grid_pe_num_freqs = int(cfg.grid_pe_num_freqs)
+        if self.hinerv_grid_pe:
+            self.grid_pe_proj = _GridPE(
+                base_h=int(self.decoder.base_h),
+                base_w=int(self.decoder.base_w),
+                num_freqs=self.grid_pe_num_freqs,
+                channels=self.stem_channels,
+            )
         self.film_enabled = bool(cfg.film_enabled)
         if self.film_enabled:
             self.pose_film0 = _PoseFiLM(
@@ -258,6 +321,12 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
             x, (batch, dec.channels[0], dec.base_h, dec.base_w)
         )
         x = mx.transpose(x, (0, 2, 3, 1))  # type: ignore[union-attr]  -> NHWC
+        # HiNeRV grid-PE: add the DETERMINISTIC coordinate grid (projected by the
+        # tiny learned grid_pe_proj) to the stem feature BEFORE sin. Op-for-op with
+        # numpy_reference._features_nhwc so the inflate reproduces it exactly.
+        if self.hinerv_grid_pe:
+            pe = self.grid_pe_proj()  # (base_h, base_w, channels[0])
+            x = x + mx.reshape(pe, (1, dec.base_h, dec.base_w, dec.channels[0]))  # type: ignore[union-attr]
         x = mx.sin(x)  # type: ignore[union-attr]
         for block in dec.blocks:
             x = block(x)
