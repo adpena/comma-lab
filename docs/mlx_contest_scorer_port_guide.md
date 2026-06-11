@@ -266,19 +266,119 @@ zero-init parity hides weight-key mismatches).
 
 ## 5. Benchmark: ours vs alternatives
 
-> **PENDING** — this section will be filled in with the ours-vs-others fidelity + performance comparison
-> currently running. The intended table compares the owned MLX port against the OSS reuse paths in §4
-> (e.g. mlx-image EfficientNet-B2 + ported heads, and the ExecuTorch-MLX delegate where it exports) on:
-> per-net forward throughput, `d_seg` argmax-flip rate vs PyTorch-CPU, and `d_pose` component drift vs
-> PyTorch-CPU, on both MLX-CPU and MLX-GPU. Until then, the measured envelope in §3 is the authoritative
-> fidelity reference for the owned port.
+We measured every viable Apple-GPU backend for this scorer against the PyTorch-CPU authority, on the same
+real reference-video scorer-input cache (the byte-identical `frame_utils.yuv420_to_rgb` decode, not a
+PyAV rgb24 path). The fidelity columns are the exact contest charges: `d_seg` is the per-pixel
+argmax-disagreement count vs `[torch-CPU authority]`, and `d_pose` is the abs drift on the first-6 PoseNet
+dims (the way the scorer charges it). Every non-authority number is `[research-signal]` and
+**non-promotable** — this is a portability + fidelity + speed characterization, not a score claim.
 
-| Path | Device | Throughput | `d_seg` flip rate vs torch-CPU | `d_pose` abs drift vs torch-CPU |
-|---|---|---|---|---|
-| _owned MLX port_ | MLX-CPU | _pending_ | 1.0e-7 (measured, §3) | 8.7e-11 (measured, §3) |
-| _owned MLX port_ | MLX-GPU | ~8.7 pairs/s (measured, §3) | 1.24e-5 (measured, §3) | 2.76e-4 (measured, §3) |
-| _mlx-image EfficientNet-B2 + ported heads_ | MLX-CPU/GPU | _pending_ | _pending_ | _pending_ |
-| _ExecuTorch-MLX delegate (if exports)_ | MLX-GPU | _pending_ | _pending_ | _pending_ |
+### 5.1 The unified table
+
+| Backend | Device | `d_seg` flip vs authority | `d_pose` abs drift vs authority | GPU? | port effort | fidelity verdict |
+|---|---|---|---|---|---|---|
+| **PyTorch-CPU** | CPU | **0 (AUTHORITY)** | **0 (AUTHORITY)** | No | none (the oracle) | `[torch-CPU authority]` — the oracle, but no GPU |
+| **owned MLX port** | `[MLX-CPU]` | **2 / 19.66M** (1.0e-7; both fp32 ties) | 8.7e-11 (≈round-off) | No | reuse (built) | **bit-faithful** = PyTorch-CPU |
+| **owned MLX port** | `[MLX-GPU]` (default arch) | 243 / 19.66M (1.24e-5; all boundary near-ties) | 2.76e-4 (mean 2.22e-4) | Yes | reuse (built) | seg OK for training; pose needs authority gate near the operating point |
+| **owned MLX port** | `[MLX-GPU]` **+ arch override** | **0 / 19.66M** (0.0) | **8.7e-11** (≈round-off) | Yes | reuse (built) + 1 env var | **FP32-exact** — see §5.2 |
+| **ExecuTorch-MLX delegate** PoseNet | `[ExecuTorch-MLX]` | n/a (PoseNet only) | **7.6e-6** (rel-MSE ~5e-14) | Yes | none (zero-port) | **FP32-exact** ✅ |
+| **ExecuTorch-MLX delegate** SegNet | `[ExecuTorch-MLX]` **+ arch override** | **0 / 1.57M** (0.0; logit Δ 4.3e-5) | n/a | Yes | none (zero-port) + 1 env var | **FP32-exact** ✅ (was a kernel-bug NO-GO without the override — see §5.2) |
+| **CoreML** FP32 SegNet | `[CoreML-FP32]` | **0 / 1.97M** (0.0; logit Δ 4.5e-5) | n/a | Yes (GPU/ANE) | reuse (trivial export) | **FP32-exact** ✅ |
+| **CoreML** FP32 PoseNet | `[CoreML-FP32]` | n/a | **1.9e-5** (rel-MSE ~6e-14) | Yes (GPU/ANE) | reuse (trivial export) | **FP32-exact** ✅ |
+| **mlx-image** EfficientNet-B2 | `[MLX-GPU]` | **arch mismatch** (not a SegNet drop-in) | n/a (encoder-only) | Yes | hand-port (timm→torchvision remap) | backbone port itself is exact (cosine 0.99999999 vs torchvision-CPU) but it is the **torchvision** B2, **not** the **timm** B2 the contest SegNet uses |
+
+Notes on the table:
+
+- All fidelity numbers are traced to the measured memos (the owned-port envelope is the §3 drift audit; the
+  arch-override, ExecuTorch, CoreML, and mlx-image rows are the backend-comparison + arch-override audits).
+  CoreML / ExecuTorch per-call latency is round-trip-dominated, not a throughput ceiling, so we report
+  **fidelity** (the load-bearing result) rather than head-to-head throughput; the owned MLX-GPU forward
+  runs at ~8.7 pairs/s (SegNet+PoseNet, batch-8) `[MLX-GPU]` from §3.
+- **mlx-image is faithful but the wrong variant.** Its EfficientNet-B2 is essentially exact (cosine
+  0.99999999, top-1 20/20) and ~30× faster on GPU than torchvision-CPU — but it is the *torchvision* B2,
+  whose feature-pyramid taper (`[32, 16, 24, 48, 88, 120, 208, 352, 1408]`) differs from the *timm*
+  `tu-efficientnet_b2` encoder our SegNet uses (`[3, 16, 24, 48, 120, 352]`). Hosting the contest SegNet
+  encoder there would need a verified per-tensor timm→torchvision weight remap **and** a re-derivation of
+  the Unet decoder's skip-connection indices — a real hand-port, not a drop-in. It is the right *reference +
+  tooling*, not a reusable SegNet.
+
+### 5.2 The share-worthy reusable insight: `MLX_METAL_GPU_ARCH` makes MLX-GPU FP32-exact on NAX-capable Apple GPUs
+
+This is the genuinely-useful finding for the Apple-Silicon ML community, and it generalizes far beyond this
+scorer. §3 traced the MLX-GPU drift to **Metal-vs-CPU float32 reduction-order non-associativity**, first
+amplified at the Squeeze-and-Excite global-average-pool and accumulating through the pointwise GEMMs. We
+have since localized the *specific* cause and a one-line fix:
+
+- On recent Apple GPUs that are **NAX-capable** (the M5's GPU reports architecture `applegpu_g17s`), MLX
+  routes fused convolution/GEMM epilogues (the many 1×1 pointwise convs in EfficientNet-B2, the FastViT
+  GEMMs) through a **NAX-tile reduction-order kernel** (`steel_gemm_fused_nax`). That tile's accumulation
+  order differs from PyTorch-CPU's at float32 — **this NAX reduction order is the drift source.**
+- Forcing a **non-NAX GPU arch** routes the same ops through the plain `steel_gemm_fused` kernel, whose
+  reduction order matches PyTorch-CPU at float32. MLX exposes a documented env var for exactly this kernel
+  selection:
+
+  ```
+  MLX_METAL_GPU_ARCH=applegpu_g15      # (or g14 / g16 — any non-NAX arch)
+  ```
+
+  The variable must be set **before the MLX runtime initializes** (before `import mlx` in the process).
+
+Measured effect on the owned MLX-GPU scorer, over the same 100 real pairs (19.66M argmax pixels):
+
+| Quantity | `[MLX-GPU]` default (g17s / NAX) | `[MLX-GPU]` + override (g15 / non-NAX) |
+|---|---|---|
+| `d_seg` argmax flips (of 19.66M) | 243 | **0** |
+| `d_seg` flip rate | 1.24e-5 | **0.0** |
+| SegNet logit abs-max delta | 9.64e-2 | **1.02e-4** (float32 ULP) |
+| `d_pose` component abs-max (the charged term) | 2.76e-4 | **8.7e-11** (≈round-off) |
+| parity gate verdict | FAIL | **PASS** |
+| forward throughput | baseline | **unchanged** (≤4% noise at batch 4/8/16) |
+
+Three properties make this trustworthy rather than a coincidence:
+
+- **It is kernel-selection, not a numerics change.** The fixed result is **arch-invariant** across g14 /
+  g15 / g16 (all non-NAX → the same plain kernel), giving identical 0-flip / ~2e-11 results. The override
+  changes which Metal GEMM kernel JIT-compiles; it does not alter what the scorer computes.
+- **It is free.** Forward throughput is unchanged within noise at every batch size — the "more faithful AND
+  not slower" outcome. The deterministic Kahan / fp64 accumulator modes the port ships (§3.1) become
+  unnecessary in production: the override alone reaches 0 flips.
+- **It generalizes.** The same one-line override independently makes the PyTorch-official **ExecuTorch-MLX
+  delegate** FP32-exact on the Apple GPU for **both** nets — its SegNet path was otherwise a hard NO-GO,
+  crashing in the NAX GEMM JIT (a missing-type-name compile error in the NAX-tile kernel). The fix is the
+  same: route ExecuTorch's MLX runtime to the non-NAX kernel. So this is not a quirk of one hand-port; it
+  is a property of the NAX kernel path that any MLX-on-Apple-GPU user of an argmax-sensitive vision model
+  can apply.
+
+> **Anti-knob (load-bearing):** **never set `MLX_ENABLE_TF32`** for a fidelity path. TF32 is lower than
+> float32 and would silently re-introduce drift. The arch override reaches float32-exactness *with* MLX's
+> default fast-math on; the only knob that matters is `MLX_METAL_GPU_ARCH`, and the only knob to avoid is
+> `MLX_ENABLE_TF32`. (`MLX_DISABLE_COMPILE` is numerics-neutral and only slows things down; leave it unset.)
+
+One integration caveat: `MLX_METAL_GPU_ARCH` is **process-wide**, so it forces *all* MLX work in that
+process onto the non-NAX kernels. For a scorer that is fine (it's the win); for a co-resident MLX workload
+that genuinely wants the native NAX kernels, either run the scorer in its own process or accept the
+override process-wide after confirming the rest of the pipeline tolerates non-NAX (a small decoder, for
+instance, does not hit the NAX-fused-GEMM path and is unaffected).
+
+### 5.3 Recommended backend pairing
+
+Putting the table and the override together, the practical recommendation for a GPU-fast, fidelity-safe
+scorer on Apple Silicon:
+
+- **PoseNet → ExecuTorch-MLX FP32 (or CoreML-FP32).** Both are FP32-exact and zero-port. PoseNet is the
+  net whose drift can rival its own signal near a good operating point, so a faithful zero-port GPU PoseNet
+  is the higher-value win.
+- **SegNet → MLX-GPU with the `MLX_METAL_GPU_ARCH=applegpu_g15` override** (already built, MLX-native so
+  gradients are available for a training loss, and FP32-exact under the override). CoreML-FP32 SegNet (also
+  0 flips) is an excellent forward-only alternative when you want the most faithful absolute readout and do
+  not need an MLX-native gradient path.
+- **PyTorch-CPU stays the authority gate.** Recompute the absolute `d_seg` / `d_pose` on PyTorch-CPU before
+  any decision that depends on the absolute value. With the arch override the GPU↔CPU gap is at the float32
+  floor, so the gate becomes a periodic confirmation rather than a per-step necessity — but it remains the
+  only authority, and `[MLX-CPU]` is the cheap bit-faithful cross-check between gates.
+
+mlx-image EfficientNet-B2 is **not** recommended as a SegNet path (wrong B2 variant; would require a
+hand-port). It remains the best open reference if you ever do port the SegNet encoder from scratch.
 
 ---
 
