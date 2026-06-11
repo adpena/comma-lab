@@ -119,3 +119,38 @@ above for provenance):
    with a single terminal `mx.eval` (no interior `.item()`/`np.array()` syncs); (b) wrap in `mx.compile`
    and re-measure. If those close the gap, there is **no megakernel to build** — and building one anyway
    would be a fake optimization (optimizing a non-bottleneck). The design/profile agent runs this audit.
+
+## ✅ MEGAKERNEL RESOLVED (all 3 agents converge) — DON'T build it; the real win is "g0" (a Python-loop fix)
+
+The design/profile agent ran the audit. **The 7–9×-off-floor "launch gap" is ~98% a Python-loop
+reference-conv FALLBACK artifact, not intrinsic launch overhead or a fusion prize.** The repo routes the
+4 strided-depthwise convs through `mlx_reference_conv2d_nhwc` (a Python triple-loop, `mlx_scorer_adapters.py:456/591/1064`)
+which emits **~22,464 elementwise MLX ops = ~98% of the encoder's op-launch count** (vs ~452 native
+launches for the entire rest of the net). All three agents converge:
+
+- **g0 (the MVP, measured 5.7× @ b=32 / 11.2× @ b=1): swap the 4 strided-dw convs to native `mx.conv2d`
+  on the forward/eval path.** A ONE-FUNCTION change, no kernel authoring, forward-parity already tested.
+  This is the real, cheap win — not a megakernel.
+- **g0 is FORWARD/EVAL-tail SAFE only.** The 4 convs are on the reference path *because native MLX Metal
+  reverse-mode produces extreme gradients for strided grouped Conv2d* (a real upstream MLX bug, worth
+  filing). So g0 accelerates eval/monitoring + the exploit-tail VJP forward, NOT the training backward
+  through those 4 layers.
+- **`mx.compile`** (already in the repo, 30 sites; composes with `value_and_grad` for fwd+bwd) is MLX's
+  CUDA-Graph analog and the other cheap lever — a measurement (is the conv step inside a compile
+  boundary?), not a build.
+- **A hand megakernel (g1 fuse-one-MBConv … g5 whole-auth-eval) is NOT worth building now:** every
+  dedicated-megakernel result (Mirage/Hazy/ThunderKittens) is CUDA-only + inference-only + batch-1-decode
+  mechanism = a mismatch to batch-32 CNN *training*; the one architecturally-matched paper (FCM, DW+PW+BN
+  fusion, 3.7× memory-bound) is CUDA-only + forward-only = a design template, not portable code; g1's
+  hard part is the 4-layer strided-dw *backward* (the same instability g0 sidesteps); g5 gains are capped
+  by g0+g1 and sacrifice the swappable-tail modularity.
+
+**Disposition (DAG-first, NO-FAKE):** g0 is a REAL, low-risk local-throughput win — but a SECONDARY MEANS.
+Its training use-case (faster local 30k of a smaller basis) was just REFUTED by the capacity verdict
+(`capacity_verdict_smaller_basis_by_rate_REFUTED_pivot_to_waterfiller_20260611.md`). Its remaining real
+value is accelerating the **waterfiller pivot's exact-ΔS forward loop + the atlas margin-field/Jacobian
+VJP** — so g0 should be landed WHEN the waterfiller pivot (#30) is activated (serving an imminent
+exact-row loop), not as standalone infra now. The megakernel (g1+) is SHELVED with a clear reactivation
+criterion: only if the reframed frontier-class #90 paid retrain is pursued AND its forward loop is the
+measured bottleneck. **No megakernel is built this turn; the frontier is UNMOVED 0.19110; this work
+refused a fake build and identified a real one-function eval-loop accelerator for the pivot.**
