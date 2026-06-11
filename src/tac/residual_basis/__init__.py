@@ -55,10 +55,14 @@ See also
 from __future__ import annotations
 
 from tac.residual_basis.c3_encoder_l2 import (
+    DEFAULT_BYTE_BUDGET as C3_DEFAULT_BYTE_BUDGET,
+)
+from tac.residual_basis.c3_encoder_l2 import (
+    PER_FRAME_BYTES as C3_PER_FRAME_BYTES,
+)
+from tac.residual_basis.c3_encoder_l2 import (
     C3EncoderL2Error,
     C3EncoderL2Result,
-    DEFAULT_BYTE_BUDGET as C3_DEFAULT_BYTE_BUDGET,
-    PER_FRAME_BYTES as C3_PER_FRAME_BYTES,
     dense_c3_residual_blob_bytes,
     encode_c3_residual_l2,
 )
@@ -69,12 +73,22 @@ from tac.residual_basis.c3_residual import (
     compute_c3_residual_stats,
     compute_conditional_residual,
 )
+from tac.residual_basis.cool_chic_carrier import (
+    CoolChicGridSpec,
+    CoolChicPairCarrier,
+)
+from tac.residual_basis.cool_chic_encoder_l2 import (
+    DEFAULT_BYTE_BUDGET as COOL_CHIC_DEFAULT_BYTE_BUDGET,
+)
+from tac.residual_basis.cool_chic_encoder_l2 import (
+    DEFAULT_N_LEVELS as COOL_CHIC_DEFAULT_N_LEVELS,
+)
+from tac.residual_basis.cool_chic_encoder_l2 import (
+    MAX_N_LEVELS as COOL_CHIC_MAX_N_LEVELS,
+)
 from tac.residual_basis.cool_chic_encoder_l2 import (
     CoolChicEncoderL2Error,
     CoolChicEncoderL2Result,
-    DEFAULT_BYTE_BUDGET as COOL_CHIC_DEFAULT_BYTE_BUDGET,
-    DEFAULT_N_LEVELS as COOL_CHIC_DEFAULT_N_LEVELS,
-    MAX_N_LEVELS as COOL_CHIC_MAX_N_LEVELS,
     dense_cool_chic_residual_blob_bytes,
     encode_cool_chic_residual_l2,
 )
@@ -85,11 +99,12 @@ from tac.residual_basis.cool_chic_residual import (
     compute_cool_chic_residual_stats,
     compute_pyramid_residual,
 )
-from tac.residual_basis.l2_score_aware_loss import (
-    L2ScoreAwareLossError,
-    ResidualByteBudget,
-    ScoreAwareLagrangian,
-    compute_score_aware_proxy_loss,
+from tac.residual_basis.cool_chic_synthesis_numpy import (
+    SynthesisWeightsNumpy,
+    bilinear_upsample_numpy,
+    laplacian_rate_bits_numpy,
+    synthesize_rgb_numpy,
+    total_synthesis_param_count,
 )
 from tac.residual_basis.coordinate_mlp_residual import (
     CoordinateMlpResidualError,
@@ -97,6 +112,12 @@ from tac.residual_basis.coordinate_mlp_residual import (
     CoordinateMlpSmoothnessStats,
     compute_coordinate_mlp_residual_stats,
     compute_finite_difference_laplacian,
+)
+from tac.residual_basis.l2_score_aware_loss import (
+    L2ScoreAwareLossError,
+    ResidualByteBudget,
+    ScoreAwareLagrangian,
+    compute_score_aware_proxy_loss,
 )
 from tac.residual_basis.numpy_inverse_dwt import (
     NumpyInverseDWTError,
@@ -123,7 +144,11 @@ from tac.residual_basis.siren_residual import (
 )
 from tac.residual_basis.wavelet_encoder_l2 import (
     DEFAULT_BYTE_BUDGET as WAVELET_DEFAULT_BYTE_BUDGET,
+)
+from tac.residual_basis.wavelet_encoder_l2 import (
     PER_FRAME_BYTES as WAVELET_PER_FRAME_BYTES,
+)
+from tac.residual_basis.wavelet_encoder_l2 import (
     WaveletEncoderL2Error,
     WaveletEncoderL2Result,
     dense_wavelet_residual_blob_bytes,
@@ -140,20 +165,27 @@ from tac.residual_basis.wavelet_residual_pr106 import (
 )
 
 __all__ = [
-    "BandStats",
-    "BuildResidualArchiveResult",
-    "C3ConditionalStats",
     "C3_DEFAULT_BYTE_BUDGET",
-    "C3EncoderL2Error",
-    "C3EncoderL2Result",
     "C3_PER_FRAME_BYTES",
-    "C3ResidualError",
-    "C3ResidualResult",
     "COOL_CHIC_DEFAULT_BYTE_BUDGET",
     "COOL_CHIC_DEFAULT_N_LEVELS",
     "COOL_CHIC_MAX_N_LEVELS",
+    "PR106_RESIDUAL_FORMAT_IDS",
+    "PR106_RESIDUAL_FORMAT_NAMES",
+    "PR106_RESIDUAL_MAGIC",
+    "WAVELET_DEFAULT_BYTE_BUDGET",
+    "WAVELET_PER_FRAME_BYTES",
+    "BandStats",
+    "BuildResidualArchiveResult",
+    "C3ConditionalStats",
+    "C3EncoderL2Error",
+    "C3EncoderL2Result",
+    "C3ResidualError",
+    "C3ResidualResult",
     "CoolChicEncoderL2Error",
     "CoolChicEncoderL2Result",
+    "CoolChicGridSpec",
+    "CoolChicPairCarrier",
     "CoolChicPyramidLevelStats",
     "CoolChicResidualError",
     "CoolChicResidualResult",
@@ -162,9 +194,6 @@ __all__ = [
     "CoordinateMlpSmoothnessStats",
     "L2ScoreAwareLossError",
     "NumpyInverseDWTError",
-    "PR106_RESIDUAL_FORMAT_IDS",
-    "PR106_RESIDUAL_FORMAT_NAMES",
-    "PR106_RESIDUAL_MAGIC",
     "ParsedResidualArchive",
     "ResidualArchiveError",
     "ResidualByteBudget",
@@ -172,12 +201,12 @@ __all__ = [
     "SirenFrequencyBandStats",
     "SirenResidualError",
     "SirenResidualResult",
-    "WAVELET_DEFAULT_BYTE_BUDGET",
-    "WAVELET_PER_FRAME_BYTES",
+    "SynthesisWeightsNumpy",
     "WaveletEncoderL2Error",
     "WaveletEncoderL2Result",
     "WaveletResidualError",
     "WaveletResidualResult",
+    "bilinear_upsample_numpy",
     "build_archive",
     "compute_c3_residual_stats",
     "compute_conditional_residual",
@@ -189,17 +218,20 @@ __all__ = [
     "compute_score_aware_proxy_loss",
     "compute_siren_residual_stats",
     "compute_wavelet_residual_stats",
+    "decompose_frame_to_bands",
     "dense_c3_residual_blob_bytes",
     "dense_cool_chic_residual_blob_bytes",
     "dense_wavelet_residual_blob_bytes",
-    "decompose_frame_to_bands",
     "encode_c3_residual_l2",
     "encode_cool_chic_residual_l2",
     "encode_wavelet_residual_l2",
     "expect_format_id",
     "haar_inverse_2d_multi_level",
     "haar_inverse_2d_single_level",
+    "laplacian_rate_bits_numpy",
     "load_decoded_raw_frames",
     "parse_archive",
     "reconstruct_frame_from_bands",
+    "synthesize_rgb_numpy",
+    "total_synthesis_param_count",
 ]
