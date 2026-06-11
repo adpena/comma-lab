@@ -1,5 +1,68 @@
 # Cool-Chic non-conv basis — param-at-d_seg-basin — design + measurement plan (2026-06-11)
 
+## BYTE-CLOSED ADVISORY-S (B1→B-byteclose, 2026-06-11; the decisive measure)
+
+**VERDICT: `promising-but-rate-inflated-by-x2.7-AND-seg/pose-undertrained`.**
+B1's ARM byte ESTIMATE is now a REAL byte-closed archive + a numpy-portable
+inflate, re-scored through the EXACT frozen scorer. The basis-switch's RATE
+advantage is REAL and confirmed; S is NOT yet competitive because d_seg/d_pose
+are undertrained at the CPU-tractable epoch budget (NOT a basis limit — B1's
+120-ep full-res fit reached d_seg 0.0084).
+
+Pipeline: quantize latents (step 0.05) → REAL range-code
+(`tac.lossless.range_coder.encode_static_symbols`, per-grid empirical freq table
+in the header) + int8-pack synth weights (per-tensor fp16 scale) → single
+length-prefixed blob → `inflate_numpy` (pure numpy) → render → re-score.
+Module `src/tac/residual_basis/cool_chic_byte_close.py`; runner
+`experiments/run_cool_chic_byte_closed_advisory_s.py`; results
+`byte_closed_advisory_s.json`. n48 cache, 8 pairs, 192×256 scorer, torch-CPU.
+
+Parity proof: full-precision numpy render vs torch render is BIT-EXACT (max |Δ| =
+0.0000 on the 255 scale, on REAL non-zero weights — the fake-parity guard
+passes). Byte-closed re-score d_seg tracks the full-precision re-score within
+≤0.002 (quant near-lossless on the argmax); d_seg is measured on the
+RE-SEGMENTED inflated RGB through the eval roundtrip (NOT training logits);
+d_pose = PoseNet MSE on the inflated 2-frame pair through the same roundtrip.
+
+| REAL B | ARM est B | factor | d_seg(bc) | d_pose(bc) | rate term | advisory S | config |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 2,746 | 963 | **×2.85** | 0.0885 | 2.49 | 1.8e-3 | 13.84 | 24×32 g3 ep30 |
+| 2,679 | 1,042 | **×2.57** | 0.0507 | 0.168 | 1.8e-3 | 6.36 | 24×32 g4 ep30 |
+| 9,458 | 3,493 | **×2.71** | 0.0276 | 0.063 | 6.3e-3 | 3.56 | 48×64 g4 ep22 (basin cfg) |
+
+**The REAL-vs-ARM gap (the headline correction):** real byte-closed archive is
+**×2.6–2.9** the ARM `-log2 p` estimate — the ARM (continuous-Laplacian) rate
+under-counts because the real archive pays (a) integer quantization + range-coder
+overhead, (b) the per-grid empirical frequency TABLE in the header, (c) int8
+weight bytes at 1 B/param (not fp16's 2). B1's "3,082 B" headline is really
+**~8–9 KB byte-closed** at the basin config. Still ~17–60× smaller than
+conv-HNeRV's 162,164 B decoder → the rate-term basis advantage SURVIVES
+byte-close.
+
+**Why S is far above the 0.19110 frontier (the honest gap):** the rate term is
+tiny (≤0.006) but S is **seg+pose dominated**. Frontier has d_seg≈5.6e-4 /
+d_pose≈2.94e-5; the best byte-closed config has d_seg 0.0276 (≈49×) and d_pose
+0.063 (≈2150×). These are UNDERTRAINED (22–45 ep at 192×256 vs B1's 120 ep at
+384×512). The basin (d_seg 5.6e-4) was NOT reached even by B1's full-res fit
+(0.0084). So: the basis-switch decisively lowers the RATE term, but it has NOT
+been shown to reach the d_seg/d_pose basin — the wall that remains is convergence
++ the SegNet/PoseNet fidelity floor of a ~500-param synth at 8 pairs, NOT bytes.
+
+**Pose is the sharpest problem:** d_pose 0.063–2.49 ≫ frontier 2.94e-5. The
+Cool-Chic carrier's per-pair coarse frame1-delta is too weak to fit PoseNet's
+two-frame ego-motion. The Quantizr lesson (STORE the 6 pose scalars, don't
+reconstruct them) applies: a ~1 KB stored-pose+FiLM sidecar would collapse the
+pose term to ~0 at trivial byte cost — the highest-EV next step.
+
+**Verdict for the operator decision tree:** `promising-but-rate-inflated-by-x2.7`
+— PROCEED is NOT warranted on the current byte-closed S (3.56 ≫ frontier). The
+basis-switch's value is the RATE term; to convert it to a sub-frontier S needs:
+(1) the stored-pose sidecar (collapses d_pose), (2) far more epochs / full-res /
+more pairs to push d_seg toward the 5.6e-4 basin, (3) only THEN an n600 archive +
+Linux-x86_64 evaluate.py. n48→n600 caveat: 8 pairs is a tiny, easy subset; d_seg
+on the full 600 will be higher; advisory→exact caveat: torch-CPU here is NOT the
+contest CPU axis (Linux x86_64) — the pointer cannot move from this row.
+
 ## EMPIRICAL RESULTS (the deliverable; all `[macOS-CPU advisory]`, LIVE exact d_seg)
 
 **VERDICT: BASIS-SPECIFIC wall — CONFIRMED.** The conv-HNeRV param↔d_seg wall
