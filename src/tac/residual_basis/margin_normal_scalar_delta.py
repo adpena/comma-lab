@@ -136,20 +136,51 @@ def _histogram_freqs(symbols: np.ndarray, n_symbols: int) -> list[int]:
     return np.maximum(counts, 1).tolist()
 
 
+# Flat pixel index < H*W <= 384*512 = 196608 < 2^24, so 3 little-endian bytes hold
+# any index gap.  Fixed-width keeps the gap-symbol alphabet bounded at 256 (no dense
+# freq-table blowup) AND avoids a per-gap length sidecar; small gaps make the high
+# byte-planes ~all-zero so the entropy coder spends ~0 bits on them.
+_GAP_BYTES = 3
+
+
+def _gaps_to_byteplanes(gaps: np.ndarray) -> list[int]:
+    """Decompose each gap into ``_GAP_BYTES`` little-endian bytes (flat, gap-major)."""
+    if gaps.size == 0:
+        return []
+    g = gaps.astype(np.int64)
+    if int(g.max()) >= (1 << (8 * _GAP_BYTES)):
+        raise ValueError("index gap exceeds 3-byte range")
+    planes = np.stack([(g >> (8 * b)) & 0xFF for b in range(_GAP_BYTES)], axis=1)
+    return planes.reshape(-1).astype(np.int64).tolist()
+
+
+def _byteplanes_to_gaps(byte_syms: list[int], k: int) -> np.ndarray:
+    """Reassemble ``k`` gaps from ``k*_GAP_BYTES`` little-endian byte symbols."""
+    if k == 0:
+        return np.zeros((0,), dtype=np.int64)
+    arr = np.asarray(byte_syms[: k * _GAP_BYTES], dtype=np.int64).reshape(k, _GAP_BYTES)
+    val = np.zeros((k,), dtype=np.int64)
+    for b in range(_GAP_BYTES):
+        val |= arr[:, b] << (8 * b)
+    return val
+
+
 def byte_close_margin_normal_scalar(
     plans: list[MarginNormalScalarPlan], *, l_inf_budget: float
 ) -> bytes:
     """Range-code all per-pair cheap scalar deltas into a self-contained blob.
 
     Three entropy-coded streams share empirical tables in the header:
-      - pixel-index gaps (delta-encoded sorted flat pixel indices),
+      - pixel-index gaps (delta-encoded sorted flat pixel indices), decomposed into
+        little-endian base-256 BYTES so the gap alphabet is bounded at 256 (a single
+        large gap must NOT blow the dense JSON freq table to ~10^5 entries),
       - dominant-channel ids (3 symbols),
       - int8 signed magnitudes (scale = l_inf/127, shifted non-negative).
     The cost is REAL (every byte charged), not estimated.
     """
 
     header: dict = {"version": 1, "l_inf_budget": float(l_inf_budget), "pairs": []}
-    all_gaps: list[int] = []
+    all_gap_bytes: list[int] = []
     all_chan: list[int] = []
     all_mag: list[int] = []
     mag_scale = float(l_inf_budget) / 127.0 if l_inf_budget > 0 else 1.0
@@ -160,6 +191,7 @@ def byte_close_margin_normal_scalar(
         else:
             gaps = np.zeros((0,), dtype=np.int64)
         qm = np.clip(np.rint(p.mag / mag_scale), -127, 127).astype(np.int64)
+        all_gap_bytes.extend(_gaps_to_byteplanes(gaps))
         header["pairs"].append(
             {
                 "pair_idx": p.pair_idx,
@@ -167,26 +199,24 @@ def byte_close_margin_normal_scalar(
                 "k": int(p.flat_px.size),
             }
         )
-        all_gaps.extend(gaps.tolist())
         all_chan.extend(p.chan.astype(np.int64).tolist())
         all_mag.extend(qm.tolist())
 
-    gaps_arr = np.asarray(all_gaps, dtype=np.int64)
+    gapb_arr = np.asarray(all_gap_bytes, dtype=np.int64)
     chan_arr = np.asarray(all_chan, dtype=np.int64)
     mag_arr = np.asarray(all_mag, dtype=np.int64)
     mag_off = int(-mag_arr.min()) if mag_arr.size else 0
     mag_syms = (mag_arr + mag_off).astype(np.int64)
 
-    gap_nsym = int(gaps_arr.max()) + 1 if gaps_arr.size else 1
     mag_nsym = int(mag_syms.max()) + 1 if mag_syms.size else 1
-    gap_freqs = _histogram_freqs(gaps_arr, gap_nsym) if gaps_arr.size else [1]
+    gapb_freqs = _histogram_freqs(gapb_arr, 256) if gapb_arr.size else [1] * 256
     chan_freqs = _histogram_freqs(chan_arr, 3) if chan_arr.size else [1, 1, 1]
     mag_freqs = _histogram_freqs(mag_syms, mag_nsym) if mag_syms.size else [1]
 
     header.update(
         {
-            "idxgap_freqs": gap_freqs,
-            "idxgap_count": int(gaps_arr.size),
+            "idxgapbyte_freqs": gapb_freqs,
+            "idxgapbyte_count": int(gapb_arr.size),
             "chan_freqs": chan_freqs,
             "chan_count": int(chan_arr.size),
             "mag_offset": mag_off,
@@ -197,8 +227,8 @@ def byte_close_margin_normal_scalar(
     )
 
     gap_stream = (
-        encode_static_symbols(gaps_arr.tolist(), frequencies=gap_freqs)
-        if gaps_arr.size
+        encode_static_symbols(gapb_arr.tolist(), frequencies=gapb_freqs)
+        if gapb_arr.size
         else b""
     )
     chan_stream = (
@@ -241,15 +271,12 @@ def inflate_margin_normal_scalar(blob: bytes) -> list[MarginNormalScalarPlan]:
         pos += slen
     gap_stream, chan_stream, mag_stream = streams
 
-    gaps = (
-        np.asarray(
-            decode_static_symbols(
-                gap_stream, count=header["idxgap_count"], frequencies=header["idxgap_freqs"]
-            ),
-            dtype=np.int64,
+    gap_bytes = (
+        decode_static_symbols(
+            gap_stream, count=header["idxgapbyte_count"], frequencies=header["idxgapbyte_freqs"]
         )
-        if header["idxgap_count"]
-        else np.zeros((0,), dtype=np.int64)
+        if header["idxgapbyte_count"]
+        else []
     )
     chans = (
         np.asarray(
@@ -274,13 +301,16 @@ def inflate_margin_normal_scalar(blob: bytes) -> list[MarginNormalScalarPlan]:
     mags = (mag_syms - header["mag_offset"]).astype(np.float64) * header["mag_scale"]
 
     plans: list[MarginNormalScalarPlan] = []
-    cur = 0
+    cur = 0  # cursor over magnitudes/channels
+    gb = 0  # cursor over gap bytes
     for pm in header["pairs"]:
         k = pm["k"]
-        gseg = gaps[cur : cur + k]
         cseg = chans[cur : cur + k]
         mseg = mags[cur : cur + k]
         cur += k
+        # reassemble fixed-width base-256 byteplanes -> gaps -> prefix-sum indices.
+        gseg = _byteplanes_to_gaps(gap_bytes[gb : gb + k * _GAP_BYTES], k)
+        gb += k * _GAP_BYTES
         flat = np.cumsum(gseg).astype(np.int64) if k else np.zeros((0,), dtype=np.int64)
         plans.append(
             MarginNormalScalarPlan(

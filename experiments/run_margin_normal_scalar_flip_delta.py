@@ -307,8 +307,12 @@ def main():
     rgb_bytes, mns_bytes = len(rgb_blob), len(mns_blob)
     s_rgb, pt_rgb, rt_rgb = _adv_s(d_seg_rgb_bc, d_pose_rgb_bc, rgb_bytes)
     s_mns, pt_mns, rt_mns = _adv_s(d_seg_mns_bc, d_pose_mns_bc, mns_bytes)
-    bpf_rgb = rgb_bytes / max(n_support_total, 1)
-    bpf_mns = mns_bytes / max(n_support_total, 1)
+    # The honest denominator is the codec's OWN coded support (one scalar per coded
+    # pixel), not the atom's pre-collapse support_mask count.
+    mns_coded_support = int(sum(p.n_support_pixels for p in mns_plans))
+    rgb_coded_entries = int(sum(p.flat_idx.size for p in rgb_plans))
+    bpf_rgb = rgb_bytes / max(rgb_coded_entries, 1)
+    bpf_mns = mns_bytes / max(mns_coded_support, 1)
     # 600-pair delta-byte projection (linear in support; header amortizes => upper bound)
     proj_mns_600 = mns_bytes * (600.0 / n)
     proj_rgb_600 = rgb_bytes * (600.0 / n)
@@ -319,6 +323,7 @@ def main():
                    "support_top_fraction": args.support_top_fraction,
                    "boundary_margin_percentile": args.boundary_margin_percentile},
         "base_bytes": base_bytes, "support_pixels_total": n_support_total,
+        "mns_coded_support": mns_coded_support, "rgb_coded_entries": rgb_coded_entries,
         "d_seg_base_no_delta": d_seg_base, "d_pose_base_no_delta": d_pose_base,
         "rgb_delta": {
             "delta_bytes": rgb_bytes, "bytes_per_flip": bpf_rgb,
