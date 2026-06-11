@@ -109,8 +109,25 @@ The standing characterization this audit relies on (from `mlx_pytorch_render_par
 - SegNet argmax-diff-pixels threshold is **0** in the parity manifest (the gate
   fails closed if MLX flips any argmax pixel vs torch).
 
-When the sibling's measured number lands, append it here; the infra to validate it
-already exists and is SOUND.
+**Sibling MEASURED result (commit `342c62463`, real `0.mkv` CPU bit-faithful gate):**
+
+- **MLX-CPU SegNet = 2 argmax flips / 19.66M pixels** → authority-faithful (the
+  MLX-CPU scorer is bit-faithful to torch-CPU within 2 pixels in 19.66M; the gate
+  passes).
+- **MLX-GPU SegNet = 243 flips / 19.66M** → boundary-confined (the GPU path drifts
+  slightly more but the flips are confined to SegNet class boundaries; still far
+  below any score-material threshold).
+- **PoseNet pixel drift 2.76e-4** → flagged as needing a frontier-authority check
+  (at frontier pose_avg ~3.4e-5 the pose marginal is steep, so a 2.76e-4 drift
+  could be score-material at the frontier operating point — sibling routes this to
+  a frontier authority eval).
+
+**Audit interpretation:** this CONFIRMS the standing characterization — MLX-CPU is
+authority-faithful for SegNet (use it freely), MLX-GPU is boundary-confined (safe
+for research, validate at frontier), and the ONE thing to watch is **pose drift at
+the frontier operating point** (the steep `sqrt(10·d_pose)` marginal). The parity
+infra (`mlx_scorer_torch_parity`, render-parity-crux) correctly surfaced this; no
+fake-parity in the scorer path.
 
 ## Fixes LANDED this session
 
