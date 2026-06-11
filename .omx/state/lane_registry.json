@@ -72768,6 +72768,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_cool_chic_residual_flip_delta_20260611",
+      "name": "Cool-Chic residual argmax-flip delta (Yousfi eureka)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/residual_basis/residual_flip_delta.py + experiments/run_residual_flip_delta_advisory_s.py (sweep) + surgical_v2; 10 NO-FAKE tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "cheap margin-normal scalar codec lever-D reactivation: 1.277 B/flip [macOS-CPU advisory] experiments/results/lane_cool_chic_residual_flip_delta_20260611/margin_normal_scalar_screened_FIXED.json; 8 NO-FAKE codec tests pass"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "deliverable: surgical flip-delta NET-reduces d_seg (0.0248->0.0126 on GT-derived base @ d_seg~0.025; fixed 2922 vs off 513) but per-flip byte cost ~187 B/flip = 147x over contest water level -> blocked at 600-pair scale"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72777,5 +72818,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-11T15:23:01Z"
+  "updated_at": "2026-06-11T17:45:14Z"
 }
