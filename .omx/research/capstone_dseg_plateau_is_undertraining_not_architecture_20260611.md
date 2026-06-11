@@ -84,3 +84,53 @@ The capstone is **not broken** — faithful decoder, pose solved, EMA artifact r
 d_seg basin with PR95-scale epochs?) is answered cheapest by a free local n48 deep-train, gating a
 paid n600 run. The pointer is UNMOVED at 0.191 and this tick did not move it — it sharpened the
 critical path and refuted the architecture-gap red herring.
+
+---
+
+## ⚠️ SAME-DAY ADVERSARIAL-REVIEW CORRECTION (2026-06-11, post-review) — "under-training" is OVER-OPTIMISTIC
+
+A 3-lens adversarial + fresh-eyes review (operator-requested) **partially refutes the "under-training,
+not capacity" headline above.** The original reasoning is preserved (the EMA-fix layer is correct; the
+decoder IS PR95-bit-exact); but the *conclusion* is corrected:
+
+1. **The muon arm asymptotes ~0.0025–0.003 d_seg — a CAPACITY signature, not "ran out of epochs."**
+   The consecutive d_seg delta-ratios are 0.68–0.84 (slow geometric decay); extrapolated asymptote
+   ≈ 0.0025–0.003 = **~5× above the 5.6e-4 target.** "Still falling at ep110" was real but is converging
+   to a floor ~5× too high, not heading to the basin.
+2. **The 5.6e-4 basin was NEVER measured on our architecture.** It was measured only on A1/PR101/PR102/
+   PR103 — **~178K-param UNTIED frontier HNeRV decoders.** Our capstone is **85K params with
+   `tie_depth=2` weight-tying** (shared convs = a real capacity reduction). "base_ch=20 reaches the basin"
+   is **unsupported**; "PR95-bit-exact forward ⇒ reaches PR95 d_seg" is a **non-sequitur** (bit-exact
+   forward says nothing about the minimum a smaller/tied net reaches).
+3. **The pr95_8stage curriculum is likely BUGGED, not just slow.** muon (0.004) BEATS the curriculum
+   (0.010); in c1prime, stage-3 `smooth_disagreement` (the loss whose minimizer IS d_seg) made d_seg go
+   **UP**, and `clip_would_fraction = 1.0 every step` (grad_clip_muon=1.0 throttling every update) vs
+   0.03 in the muon arm. So "run the PR95 curriculum longer" may be the WRONG lever — the curriculum is
+   a bug to fix, and muon-only may already be the better recipe.
+4. **The REAL anchor (not extrapolation): bc20_p48 is byte-closed at advisory S = 0.46790** (seg 0.376 +
+   pose 0.037 + rate 0.055; `capstone_capacity_ablation_2x2_20260611/bc20_p48/capstone_result.json`;
+   `[macOS-CPU advisory]`, quant-gap d_seg 2.6e-5). At the *easy* n48 case the favorable arm is **2.45×
+   above frontier, d_seg-dominated.** n600 makes d_seg worse → a base_ch=20 n600 train would NOT reach
+   sub-0.15; firing it would be means-hoarding.
+5. **Meta-signal (the strongest finding): the d_seg plateau has been re-diagnosed FOUR times in two days**
+   (0.505 wall → EMA artifact → true plateau → "under-training" → now "capacity + broken curriculum").
+   Each "wall" dissolved into an artifact/reframe. The discipline correction is **STOP DIAGNOSING, START
+   MEASURING** — anchor the R-D curve with measured byte-closed S rows, not another interpretation.
+
+### Corrected critical path (supersedes the "queued next steps" list above)
+
+1. **Capacity verdict FIRST (the unrun half of the 2×2 + an UNTIED arm):** run bc24 (and ideally a
+   frontier-class ~178K UNTIED) arm to n48 → does more/untied capacity lower the d_seg floor toward
+   5.6e-4? This is the decisive capacity-vs-undertraining test. (bc20_p192, running, gives the
+   pairs-scaling half.) GPU-gated behind the live bc20_p192 mlx_gpu run.
+2. **$0 muon-resume-with-LIVE-d_seg** (Review 1's test): resume bc20_p48 muon +400ep logging
+   `use_ema_for_eval=False` alongside the shadow → kills the residual-shadow-lag confound AND reads the
+   true asymptote (<0.0015 ⇒ under-training; ≥0.0025 ⇒ capacity ceiling).
+3. **Fix the curriculum bug** (grad_clip_muon=1.0 throttling; smooth_disagreement raising d_seg) — $0.
+4. **Only after a capacity verdict**: a paid n600 PR95-scale run at the RIGHT capacity (frontier-class
+   untied, NOT 85K tied) — local n600 is ~5–6 months on either backend (measured: torch-CPU 8.9 min/ep
+   @ n600; mlx_gpu only ~1.2–1.5× faster because the FP32-exact arch-override forces the slow non-NAX
+   kernel + depthwise convs are memory-bound), so the pointer-mover REQUIRES a paid GPU (few GPU-hours).
+
+The original "under-training, fire n600 at base_ch=20" framing is **SUPERSEDED** by this correction.
+The pointer remains UNMOVED at 0.191.
