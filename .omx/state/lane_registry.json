@@ -72760,7 +72760,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/cool_chic_param_at_dseg_basin_design_20260611.md (design + empirical results + verdict)"
+          "evidence": "[macOS-CPU advisory] FIELDS-MEDAL hinge A/B/C: margin-polytope hinge -29% d_seg vs CE @matched 1029B (B=0.0199 vs A=0.0282); C richer 2762B=0.0178 only -10%; ALL plateau 32-50x basin (5.6e-4) -> basin capacity-bound on compact Cool-Chic synth; runner experiments/run_fields_medal_hinge_abc.py; data experiments/results/lane_cool_chic_score_aware_basis_20260611/fields_medal_hinge_abc.json"
         },
         "deploy_runbook": {
           "status": false,
@@ -72818,5 +72818,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-11T17:45:14Z"
+  "updated_at": "2026-06-11T18:25:58Z"
 }
