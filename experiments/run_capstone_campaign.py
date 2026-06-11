@@ -45,13 +45,19 @@ import torch
 RATE_DENOM = 37_545_489  # evaluate.py:64
 
 
-def _minimal_zip(payload: bytes, member: str = "x") -> bytes:
-    """Wrap ``payload`` in a STORED single-member ZIP (the #79 100 B-floor
-    container the frontier uses). The result is exactly what evaluate.py counts
-    (``archive.zip``)."""
+def _archive_with_config(payload: bytes, config: dict) -> bytes:
+    """Wrap ``payload`` (member ``x``) + the ``capstone_config_v1`` JSON sidecar
+    in a STORED ZIP. The sidecar carries the render basis config the contest
+    inflate needs (base_channels / pose_mean,std / film_enabled / num_pairs /
+    decoder_dtype) — a payload-only archive is NOT inflatable for a FiLM bundle
+    (the subagent NO-FAKE find). Both STORED (the payload is already compressed);
+    the sidecar adds ~one ZIP member of overhead (~250 B), the price of a
+    contest-VALID archive vs the #79 minimal-but-uninflatable container."""
+    cfg_bytes = json.dumps(config, separators=(",", ":"), sort_keys=True).encode("utf-8")
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_STORED) as zf:
-        zf.writestr(member, payload)
+        zf.writestr("x", payload)
+        zf.writestr("capstone_config_v1", cfg_bytes)
     return buf.getvalue()
 
 
@@ -76,19 +82,20 @@ def _load_or_build_targets(max_pairs: int, cache_dir: Path, device: str):
 
 
 def _export_int8_archive(bundle, pose_store: np.ndarray, decoder_dtype: str):
-    """Extract the trained carrier (decoder weights + codebook + REAL trained vq
-    indices + stored pose) and byte-close the int8 archive. Returns
-    (archive_zip_bytes, account, payload_bytes)."""
-    from mlx.utils import tree_flatten
+    """Byte-close the CONTEST-INFLATABLE int8 archive: the FULL render basis
+    (decoder + per-frame FiLM, contest-keyed via ``full_render_weights_from_bundle``)
+    + codebook + REAL trained bit-packed VQ indices + stored pose + the
+    ``capstone_config_v1`` sidecar. Verified score-parity with the numpy inflate
+    (d_seg EXACT). Returns (archive_zip_bytes, account, payload_bytes)."""
+    import dataclasses
 
     from tac.capstone_vq_nerv.export import build_capstone_archive_bytes
+    from tac.capstone_vq_nerv.numpy_reference import (
+        decode_config_from_bundle,
+        full_render_weights_from_bundle,
+    )
 
-    flat = tree_flatten(bundle.trainable_parameters())
-    decoder_weights = {}
-    for k, v in flat:
-        if k.startswith("latents"):  # the VQ index is the carrier; latents not stored
-            continue
-        decoder_weights[k] = np.asarray(v, dtype=np.float32)
+    decoder_weights = full_render_weights_from_bundle(bundle)  # decoder + FiLM, contest naming
     codebook = np.asarray(bundle.quantizer._codebook, dtype=np.float32)
     vq_indices = np.asarray(bundle.all_vq_indices(), dtype=np.int32)  # REAL trained carrier
     payload, account = build_capstone_archive_bytes(
@@ -99,7 +106,10 @@ def _export_int8_archive(bundle, pose_store: np.ndarray, decoder_dtype: str):
         codebook_size=int(codebook.shape[0]),
         decoder_dtype=decoder_dtype,
     )
-    archive_zip = _minimal_zip(payload)
+    config = dataclasses.asdict(decode_config_from_bundle(bundle))
+    config["num_pairs"] = int(pose_store.shape[0])
+    config["decoder_dtype"] = decoder_dtype
+    archive_zip = _archive_with_config(payload, config)
     return archive_zip, account, payload
 
 
