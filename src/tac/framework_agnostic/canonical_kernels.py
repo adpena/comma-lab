@@ -234,6 +234,29 @@ def _gumbel_softmax_sample_numpy(
     return exp / np.sum(exp, axis=-1, keepdims=True)
 
 
+def _apply_unimix_to_logits_mlx(logits: Any, unimix_alpha: float, mx: Any) -> Any:
+    """Apply unimix-alpha robustness mixture per Hafner 2023 §3 (native MLX).
+
+    The canonical Hafner 2023 §3 form mixes the categorical softmax with a
+    uniform distribution then re-logs:
+    ``probs := (1 - alpha) * softmax(logits) + alpha / K`` → ``log(probs)``.
+
+    NATIVE end-to-end (``mx.softmax`` / ``mx.log``) so the autograd graph
+    flows from the returned logits back to ``logits``. This is the gradient-
+    preserving sibling of :func:`_apply_unimix_to_logits_numpy` and is
+    behaviourally identical to ``tac.substrates.dreamer_v3_rssm.module.
+    apply_unimix_to_logits`` (the canonical reference impl this dedups).
+    """
+    if unimix_alpha == 0.0:
+        return logits
+    K = int(logits.shape[-1])
+    probs = mx.softmax(logits, axis=-1)
+    mixed = (1.0 - float(unimix_alpha)) * probs + float(unimix_alpha) / float(K)
+    # Re-log to recover logits whose softmax equals the mixture. The +1e-30
+    # floor mirrors the numpy reference for numerical-stability parity.
+    return mx.log(mixed + 1e-30)
+
+
 def _gumbel_softmax_sample_mlx(
     logits: Any,
     *,
@@ -241,26 +264,55 @@ def _gumbel_softmax_sample_mlx(
     unimix_alpha: float,
     seed: int | None,
 ) -> Any:
-    """MLX backend forward (delegates to numpy reference + converts).
+    """MLX backend forward — REAL gradient-preserving native ``mx`` ops.
 
-    Per CLAUDE.md "MLX auth eval is NOISE" + Catalog #1 / #192 / #317:
-    MLX outputs are non-promotable per Catalog #192. The forward routes
-    through numpy reference for byte-stable cross-backend parity per
-    Slot 16 numerical tolerance.
+    Per the MLX-port adversarial audit 2026-06-11
+    (``.omx/research/mlx_port_adversarial_audit_and_takeover_20260611.md``
+    HIGH item #1): the prior impl did ``mlx → numpy → forward → mlx`` which
+    SEVERED the MLX autograd graph (forward-only). That made this canonical
+    primitive unusable for training, which is why the substrate trainers kept
+    LOCAL gumbel impls — the Catalog #383 dedup goal was unfulfilled. This is
+    the fix: a fully native MLX forward whose gradient FLOWS to ``logits``.
+
+    Math (Jang 2016 + Maddison 2016 + Hafner 2023 §3 unimix): apply the unimix
+    mixture to the logits, perturb with Gumbel(0,1) noise
+    ``g = -log(-log(u)), u ~ Uniform(0,1)``, divide by temperature, softmax.
+    The Gumbel noise is reparametrization noise (no gradient through it); the
+    gradient flows through ``(logits + g)/τ`` → softmax, which is exactly the
+    Gumbel-softmax reparametrization estimator.
+
+    Determinism: a Python ``int`` ``seed`` maps to ``mx.random.key(seed)`` so
+    a fixed seed yields a reproducible sample; ``seed is None`` defers to the
+    global MLX rng. This is the same key-based determinism the canonical
+    DreamerV3 reference uses.
+
+    Per CLAUDE.md "MLX auth eval is NOISE" + Catalog #192 / #317: MLX outputs
+    remain non-promotable; this is a training-grade primitive, NOT a score
+    claim. The cross-backend parity gate (``assert_cross_backend_parity``)
+    proves it is mathematically equivalent to the numpy/torch references.
     """
     try:
         import mlx.core as mx
     except ImportError as exc:
         raise BackendUnavailableError(f"gumbel_softmax_sample MLX backend: mlx.core not installed ({exc}).") from exc
-    # Convert MLX → numpy → forward → MLX
-    logits_np = np.asarray(logits)
-    result_np = _gumbel_softmax_sample_numpy(
-        logits_np,
-        temperature=temperature,
-        unimix_alpha=unimix_alpha,
-        seed=seed,
-    )
-    return mx.array(result_np)
+    # Keep MLX-native: do NOT round-trip through numpy (that severs autograd).
+    logits_mx = logits if isinstance(logits, mx.array) else mx.array(np.asarray(logits, dtype=np.float32))
+    # Gumbel(0, 1) noise: g = -log(-log(u)), u ~ Uniform(0, 1). Reparametrization
+    # noise — mx.random produces a constant (no grad through it) so the gradient
+    # flows only through (logits + g)/τ → softmax, the canonical estimator. The
+    # unimix mixture (Hafner 2023 §3) is applied to the perturbed logits to match
+    # the numpy reference ordering exactly (parity-tested below).
+    shape = logits_mx.shape
+    if seed is not None:
+        key = mx.random.key(int(seed))
+        uniform = mx.random.uniform(low=1e-9, high=1.0, shape=shape, key=key)
+    else:
+        uniform = mx.random.uniform(low=1e-9, high=1.0, shape=shape)
+    gumbel_noise = -mx.log(-mx.log(uniform))
+    perturbed = (logits_mx + gumbel_noise) / float(temperature)
+    if unimix_alpha > 0.0:
+        perturbed = _apply_unimix_to_logits_mlx(perturbed, unimix_alpha, mx)
+    return mx.softmax(perturbed, axis=-1)
 
 
 def _gumbel_softmax_sample_pytorch(

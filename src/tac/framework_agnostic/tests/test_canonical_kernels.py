@@ -425,16 +425,174 @@ class TestCrossBackendParityMLX:
         assert np.allclose(np.asarray(g[0]), 2.0, atol=1e-5)
         assert np.allclose(np.asarray(g[1]), 2.0, atol=1e-5)
 
-    def test_gumbel_softmax_numpy_vs_mlx_parity(self):
-        logits = np.array([[1.0, 2.0, 3.0]], dtype=np.float32)
-        result_numpy = gumbel_softmax_sample(logits, temperature=1.0, backend=Backend.NUMPY, seed=42)
-        result_mlx = gumbel_softmax_sample(logits, temperature=1.0, backend=Backend.MLX, seed=42)
-        assert_cross_backend_parity(
-            result_numpy,
-            result_mlx,
-            atol=CANONICAL_CROSS_BACKEND_FP32_ATOL,
-            name="gumbel_softmax_mlx_parity",
+    def test_gumbel_softmax_low_temperature_argmax_parity_numpy_vs_mlx(self):
+        # NOTE: a same-seed bit-for-bit numpy↔MLX parity test is IMPOSSIBLE for a
+        # real native-MLX gumbel — MLX's RNG differs from numpy's default_rng for
+        # the same integer seed (the prior test ONLY passed because the MLX path
+        # was a numpy roundtrip = fake-MLX). The CORRECT cross-backend equivalence
+        # at the seed-noise level is structural: at near-zero temperature BOTH
+        # backends concentrate on the argmax-logit category regardless of RNG.
+        logits = np.array([[0.0, 0.0, 10.0, 0.0]], dtype=np.float32)
+        result_numpy = gumbel_softmax_sample(logits, temperature=0.01, backend=Backend.NUMPY, seed=42)
+        result_mlx = np.asarray(
+            gumbel_softmax_sample(logits, temperature=0.01, backend=Backend.MLX, seed=42)
         )
+        assert int(np.argmax(result_numpy[0])) == 2
+        assert int(np.argmax(result_mlx[0])) == 2
+        assert result_numpy[0, 2] > 0.9
+        assert result_mlx[0, 2] > 0.9
+
+    def test_gumbel_softmax_deterministic_functional_parity_numpy_vs_mlx(self):
+        # REAL cross-backend parity of the DETERMINISTIC transform: inject the
+        # SAME Gumbel noise into both backends' private functionals and assert
+        # the unimix+softmax math agrees within Slot 16 tolerance. This is the
+        # parity that actually proves the MLX op computes the same function as
+        # the numpy reference (the RNG is the only legitimate source of divergence
+        # and is held identical here).
+        import mlx.core as mx
+
+        from tac.framework_agnostic.canonical_kernels import _apply_unimix_to_logits_mlx
+
+        rng = np.random.RandomState(11)
+        logits = rng.standard_normal((3, 5)).astype(np.float32)
+        gumbel_noise = rng.standard_normal((3, 5)).astype(np.float32)
+        temperature = 0.7
+        unimix_alpha = CANONICAL_UNIMIX_ALPHA
+
+        # numpy reference functional (mirror the canonical_kernels numpy path).
+        from tac.framework_agnostic.canonical_kernels import _apply_unimix_to_logits_numpy
+
+        perturbed_np = (logits + gumbel_noise) / temperature
+        perturbed_np = _apply_unimix_to_logits_numpy(perturbed_np, unimix_alpha)
+        perturbed_np = perturbed_np - np.max(perturbed_np, axis=-1, keepdims=True)
+        exp = np.exp(perturbed_np)
+        ref = (exp / np.sum(exp, axis=-1, keepdims=True)).astype(np.float32)
+
+        # MLX-native functional with identical injected noise.
+        perturbed_mx = (mx.array(logits) + mx.array(gumbel_noise)) / temperature
+        perturbed_mx = _apply_unimix_to_logits_mlx(perturbed_mx, unimix_alpha, mx)
+        got = mx.softmax(perturbed_mx, axis=-1)
+
+        assert_cross_backend_parity(
+            ref, got, atol=CANONICAL_CROSS_BACKEND_FP32_ATOL, name="gumbel_functional_mlx_parity"
+        )
+
+    def test_gumbel_softmax_mlx_gradient_flows_to_logits(self):
+        # THE no-fake gate: the numpy roundtrip the audit flagged produced a
+        # constant w.r.t. the MLX logits (gradient = 0 / undefined). A native
+        # MLX forward must produce a NON-ZERO gradient flowing back to logits.
+        # A test that PASSES on the broken forward-only version is forbidden;
+        # this one would FAIL on it (mx.grad through a numpy-roundtripped value
+        # is identically zero / errors).
+        import mlx.core as mx
+
+        logits = mx.array(np.array([[1.0, 2.0, 0.5, -1.0]], dtype=np.float32))
+        target = mx.array(np.array([[0.0, 1.0, 0.0, 0.0]], dtype=np.float32))
+
+        def loss(lg):
+            out = gumbel_softmax_sample(
+                lg, temperature=0.5, unimix_alpha=CANONICAL_UNIMIX_ALPHA, backend=Backend.MLX, seed=7
+            )
+            return mx.sum(out * target)
+
+        grad = mx.grad(loss)(logits)
+        mx.eval(grad)
+        grad_np = np.asarray(grad)
+        assert grad_np.shape == (1, 4)
+        assert np.any(grad_np != 0.0), "MLX gumbel gradient is identically zero — fake-MLX roundtrip regressed"
+        assert np.all(np.isfinite(grad_np)), "MLX gumbel gradient has non-finite entries"
+        assert float(np.max(np.abs(grad_np))) > 1e-4
+
+    def test_gumbel_softmax_mlx_does_not_roundtrip_through_numpy(self):
+        # Structural no-fake guard: the MLX path must operate on (and return) an
+        # mx.array end-to-end. A numpy roundtrip is detectable because mx.grad
+        # cannot differentiate a freshly-constructed mx.array(numpy_result) w.r.t.
+        # the input — covered by the gradient test — and the output must be an
+        # mx.array (not a numpy array silently wrapped).
+        import mlx.core as mx
+
+        logits = mx.array(np.array([[0.5, 1.5, -0.5]], dtype=np.float32))
+        out = gumbel_softmax_sample(logits, temperature=1.0, backend=Backend.MLX, seed=3)
+        assert isinstance(out, mx.array)
+        # The native softmax output is a valid simplex.
+        out_np = np.asarray(out)
+        np.testing.assert_allclose(out_np.sum(axis=-1), 1.0, atol=1e-5)
+        assert (out_np >= 0.0).all()
+
+    def test_gumbel_softmax_mlx_deterministic_under_fixed_seed(self):
+        import mlx.core as mx
+
+        logits = mx.array(np.array([[1.0, 2.0, 3.0, 0.0]], dtype=np.float32))
+        r1 = np.asarray(gumbel_softmax_sample(logits, temperature=0.8, backend=Backend.MLX, seed=99))
+        r2 = np.asarray(gumbel_softmax_sample(logits, temperature=0.8, backend=Backend.MLX, seed=99))
+        np.testing.assert_allclose(r1, r2, atol=0.0)  # exact-equal under fixed key
+        r3 = np.asarray(gumbel_softmax_sample(logits, temperature=0.8, backend=Backend.MLX, seed=100))
+        assert not np.allclose(r1, r3)
+
+    def test_gumbel_softmax_mlx_matches_torch_low_temperature_argmax(self):
+        # Forward-direction parity vs the torch reference at the discrete limit:
+        # both concentrate on the argmax-logit category. (Bit-for-bit torch↔MLX
+        # parity is RNG-divergent; the discrete limit is the backend-agnostic
+        # invariant both must satisfy.)
+        pytest.importorskip("torch")
+
+        logits = np.array([[0.0, 5.0, 0.0]], dtype=np.float32)
+        mlx_out = np.asarray(
+            gumbel_softmax_sample(logits, temperature=0.05, unimix_alpha=0.0, backend=Backend.MLX, seed=5)
+        )
+        torch_out = (
+            gumbel_softmax_sample(logits, temperature=0.05, unimix_alpha=0.0, backend=Backend.PYTORCH, seed=5)
+            .detach()
+            .numpy()
+        )
+        assert int(np.argmax(mlx_out[0])) == 1
+        assert int(np.argmax(torch_out[0])) == 1
+        assert mlx_out[0, 1] > 0.9
+        assert torch_out[0, 1] > 0.9
+
+    def test_gumbel_softmax_mlx_gradient_direction_matches_torch(self):
+        # Straight-through-direction parity: the gumbel-softmax gradient w.r.t.
+        # logits should point the SAME way in MLX and torch (the reparametrized
+        # softmax gradient sign agrees, given the same noise is averaged out over
+        # the seed). We compare the SIGN pattern of the gradient on a sharply
+        # separable problem where the reparametrization noise does not flip it.
+        import mlx.core as mx
+
+        torch = pytest.importorskip("torch")
+        import torch.nn.functional as F
+
+        base = np.array([[2.0, -2.0, 0.0]], dtype=np.float32)
+        target_idx = 0
+        tau = 1.0
+
+        # MLX gradient (average over seeds to wash out reparametrization noise).
+        def mlx_loss(lg, seed):
+            out = gumbel_softmax_sample(lg, temperature=tau, unimix_alpha=0.0, backend=Backend.MLX, seed=seed)
+            return -mx.log(out[0, target_idx] + 1e-9)
+
+        mlx_grads = []
+        for s in range(20):
+            g = mx.grad(lambda lg, seed=s: mlx_loss(lg, seed))(mx.array(base))
+            mx.eval(g)
+            mlx_grads.append(np.asarray(g))
+        mlx_grad = np.mean(mlx_grads, axis=0)
+
+        # torch gradient (average over seeds similarly).
+        torch_grads = []
+        for s in range(20):
+            torch.manual_seed(s)
+            lt = torch.from_numpy(base.copy()).requires_grad_(True)
+            out = F.gumbel_softmax(lt, tau=tau, hard=False, dim=-1)
+            loss = -torch.log(out[0, target_idx] + 1e-9)
+            loss.backward()
+            torch_grads.append(lt.grad.detach().numpy())
+        torch_grad = np.mean(torch_grads, axis=0)
+
+        # The averaged gradient should push the target logit UP (negative grad on
+        # a -log loss) in BOTH backends — same sign on the target coordinate.
+        assert np.sign(mlx_grad[0, target_idx]) == np.sign(torch_grad[0, target_idx])
+        assert mlx_grad[0, target_idx] < 0.0
+        assert torch_grad[0, target_idx] < 0.0
 
     def test_rgb_to_yuv6_numpy_vs_mlx_parity(self):
         rgb = np.random.RandomState(42).uniform(0, 1, size=(1, 3, 8, 8)).astype(np.float32)

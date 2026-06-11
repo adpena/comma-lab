@@ -269,6 +269,17 @@ def gumbel_softmax_sample_mlx(
 ):
     """Gumbel-Softmax reparametrization (Jang et al. 2016) - MLX implementation.
 
+    DEDUP 2026-06-11 (Catalog #383 canonicalization debt, MLX-port audit
+    HIGH item #1): the SOFT path now routes through the canonical kernel
+    ``tac.framework_agnostic.canonical_kernels.gumbel_softmax_sample`` which —
+    as of the audit fix — is a REAL gradient-preserving native-MLX forward
+    (the prior canonical impl was a numpy roundtrip that severed autograd,
+    which is WHY this local duplicate existed). We pass ``unimix_alpha=0.0``
+    to preserve this substrate's exact prior behaviour (no Hafner unimix on
+    the categorical posterior here). The HARD (straight-through one-hot)
+    branch is gradient-free and not part of the canonical single-tensor
+    contract, so it stays local.
+
     Args:
         logits: ``(B, G, K)`` mx.array of categorical logits.
         temperature: Gumbel-Softmax temperature (default 1.0).
@@ -283,28 +294,35 @@ def gumbel_softmax_sample_mlx(
         raise ValueError(f"logits must be 3D (B, G, K); got {logits.shape}")
     if temperature <= 0.0:
         raise ValueError(f"temperature must be > 0; got {temperature}")
-    # Sample Gumbel noise per Catalog #1255 mitigation: explicit fp32
-    # MLX gumbel: -log(-log(uniform)) via uniform + transform
+    if not hard:
+        # Canonical gradient-preserving native-MLX soft sample (no unimix to
+        # preserve this substrate's exact prior categorical-posterior behaviour).
+        from tac.framework_agnostic import Backend
+        from tac.framework_agnostic.canonical_kernels import (
+            gumbel_softmax_sample as _canonical_gumbel_softmax_sample,
+        )
+
+        return _canonical_gumbel_softmax_sample(
+            logits.astype(mx.float32),
+            temperature=temperature,
+            unimix_alpha=0.0,
+            backend=Backend.MLX,
+        )
+    # HARD straight-through one-hot: argmax forward (gradient-free); not part of
+    # the canonical single-tensor soft contract so kept local.
     uniform = mx.random.uniform(
         low=1e-10, high=1.0 - 1e-10, shape=logits.shape, dtype=mx.float32
     )
     gumbel_noise = -mx.log(-mx.log(uniform))
-    # Add noise + scale by 1/temperature
     perturbed = (logits.astype(mx.float32) + gumbel_noise) / temperature
-    # Numerically-stable softmax: subtract per-group max
     max_per_group = mx.max(perturbed, axis=-1, keepdims=True)
     exp_shifted = mx.exp(perturbed - max_per_group)
     soft = exp_shifted / mx.sum(exp_shifted, axis=-1, keepdims=True)
-    if hard:
-        # Straight-through: argmax forward, soft gradient backward
-        # MLX does not yet support stop_gradient elegantly; for inference use argmax
-        K = logits.shape[-1]
-        argmax_idx = mx.argmax(soft, axis=-1)
-        # Manual one-hot
-        range_K = mx.arange(K, dtype=mx.int32)
-        one_hot_hard = (argmax_idx[..., None] == range_K[None, None, :]).astype(mx.float32)
-        return one_hot_hard
-    return soft
+    K = logits.shape[-1]
+    argmax_idx = mx.argmax(soft, axis=-1)
+    range_K = mx.arange(K, dtype=mx.int32)
+    one_hot_hard = (argmax_idx[..., None] == range_K[None, None, :]).astype(mx.float32)
+    return one_hot_hard
 
 
 def make_pixel_coords_mlx(
