@@ -1,0 +1,19 @@
+{
+  "arch": "applegpu_g15",
+  "n_pairs": 8,
+  "grad_cosine_vs_torch_cpu": 0.9999216974593127,
+  "grad_rel_l2_error": 0.012523454810787607,
+  "grad_abs_max_delta": 0.00022932750289328396,
+  "grad_torch_abs_max": 0.005372549407184124,
+  "grad_gpu_abs_max": 0.005380168091505766,
+  "grad_is_nonzero_nofake": true,
+  "loss_rel_error": 5.617731721960731e-06,
+  "seg_loss_abs_delta": 9.298324584960938e-06,
+  "pose_loss_abs_delta": 0.000640869140625,
+  "d_seg_gpu": 0.5072727203369141,
+  "d_seg_torch": 0.5072727203369141,
+  "d_seg_abs_delta": 0.0,
+  "loss_value_gpu": 282.4846496582031,
+  "loss_value_torch": 282.4830627441406,
+  "fwdbwd_wall_s": 11.209
+}

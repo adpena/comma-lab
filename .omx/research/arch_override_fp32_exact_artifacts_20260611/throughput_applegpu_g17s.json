@@ -1,0 +1,20 @@
+{
+  "arch": "applegpu_g17s",
+  "batches": {
+    "4": {
+      "fwdbwd_pairs_per_s": 0.6358,
+      "fwd_only_pairs_per_s": 5.0716,
+      "fwdbwd_s_per_step": 6.2914
+    },
+    "8": {
+      "fwdbwd_pairs_per_s": 0.7237,
+      "fwd_only_pairs_per_s": 8.3578,
+      "fwdbwd_s_per_step": 11.0538
+    },
+    "16": {
+      "fwdbwd_pairs_per_s": 0.7684,
+      "fwd_only_pairs_per_s": 12.744,
+      "fwdbwd_s_per_step": 20.8238
+    }
+  }
+}

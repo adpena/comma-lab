@@ -1,0 +1,19 @@
+{
+  "arch": "applegpu_g17s",
+  "n_pairs": 8,
+  "grad_cosine_vs_torch_cpu": 0.9998574379435344,
+  "grad_rel_l2_error": 0.016888348751582752,
+  "grad_abs_max_delta": 0.0004048571572639048,
+  "grad_torch_abs_max": 0.005383194424211979,
+  "grad_gpu_abs_max": 0.005395475309342146,
+  "grad_is_nonzero_nofake": true,
+  "loss_rel_error": 0.0005233155214457653,
+  "seg_loss_abs_delta": 0.0015215873718261719,
+  "pose_loss_abs_delta": 0.0043487548828125,
+  "d_seg_gpu": 0.5072727203369141,
+  "d_seg_torch": 0.5072727203369141,
+  "d_seg_abs_delta": 0.0,
+  "loss_value_gpu": 282.33404541015625,
+  "loss_value_torch": 282.48187255859375,
+  "fwdbwd_wall_s": 10.942
+}

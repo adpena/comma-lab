@@ -1,0 +1,15 @@
+{
+  "arch": "applegpu_g15",
+  "n_pairs": 48,
+  "decoder_fwd_s_per_call": 0.112,
+  "decoder_pairs_per_s": 428.411,
+  "render_sum_checksum": 7220606976.0,
+  "render_mean": 127.5205078125,
+  "render_shape": [
+    48,
+    2,
+    3,
+    384,
+    512
+  ]
+}
