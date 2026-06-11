@@ -317,8 +317,15 @@ def test_bridge_pytorch_strict_false_missing_only_selectors_buffer(tmp_path: Pat
 def test_archive_candidate_export_helper_imports_and_produces_psv4_bytes(
     tmp_path: Path,
 ) -> None:
-    """Verify the archive_candidate.export_*_archive helper produces PSV4 bytes."""
+    """Verify the archive_candidate.export_*_archive helper produces PSV4 bytes.
+
+    NO-FAKE: the production pack refuses silent all-zero (inert) selectors per the
+    archive_candidate hardened guard, so this test sets NON-TRIVIAL selectors
+    before export. An export that "succeeded" with the default all-zero selectors
+    would be exercising the inert path that carries no candidate authority.
+    """
     import mlx.core as mx
+    import numpy as np
 
     from tac.substrates.pact_nerv_selector_v4.architecture import (
         PactNervSelectorV4Config,
@@ -334,6 +341,10 @@ def test_archive_candidate_export_helper_imports_and_produces_psv4_bytes(
     cfg = PactNervSelectorV4Config(num_pairs=4)
     model = PactNervSelectorV4SubstrateMLX(cfg)
     mx.eval(model.parameters())
+    # Non-trivial, in-palette selectors (NOT the inert all-zero default the
+    # production guard refuses).
+    selectors = np.array([0, 3, 7, 15], dtype=np.int64)
+    model.set_selectors(selectors)
     out_dir = tmp_path / "psv4_export"
     archive_zip, sha, size = export_pact_nerv_selector_v4_mlx_archive(
         model, out_dir, repo_root=REPO_ROOT
@@ -345,9 +356,14 @@ def test_archive_candidate_export_helper_imports_and_produces_psv4_bytes(
     bin_path = out_dir / "0.bin"
     assert bin_path.exists()
     assert bin_path.read_bytes()[:4] == b"PSV4"
-    # pack helper alone produces PSV4 bytes.
+    # pack helper alone produces PSV4 bytes (explicit selectors required).
     sd = model.export_state_dict()
     blob = pack_archive_from_exported_state_dict(
-        exported_state_dict=sd, cfg=cfg
+        exported_state_dict=sd, cfg=cfg, selectors=selectors
     )
     assert blob[:4] == b"PSV4"
+    # NO-FAKE guard: the silent (selectors-absent) default MUST be refused
+    # because exported_state_dict drops the selectors buffer, so omitting the
+    # kwarg would silently fall back to an inert no-authority export.
+    with pytest.raises(ValueError, match="inert"):
+        pack_archive_from_exported_state_dict(exported_state_dict=sd, cfg=cfg)
