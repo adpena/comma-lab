@@ -93,7 +93,12 @@ class StageSpec:
     seg_weight: float = 100.0
     pose_weight: float = 1.0
     latent_lr_mult: float = 10.0
-    ema_decay: float = 0.999
+    # [B4-FIX] 0.997 is the CLAUDE.md EMA mandate ("Quantizr decay = 0.997"); the
+    # prior 0.999 (time const 1000 steps) was a sister of the EMA-lag bug fixed in
+    # ``_CapstoneWeightEMA.effective_decay`` (warmup). The warmup ramp governs the
+    # short-run regime regardless of this cap; this cap governs the long-run
+    # averaging window (333 steps at 0.997 vs the over-slow 1000 at 0.999).
+    ema_decay: float = 0.997
     grad_clip: float = 1.0
     grad_clip_muon: float = 1.0
     muon_weight_decay: float = 0.0

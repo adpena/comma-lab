@@ -430,3 +430,77 @@ def test_a4_mean_d_pose_uses_roundtrip_bridge_path():
     mx.eval(render)
     direct = bridge.exact_d_pose(render, torch.from_numpy(idx.astype(np.int64)))
     assert d_pose == pytest.approx(direct, rel=1e-5, abs=1e-6)
+
+
+# ===========================================================================
+# [B4-FIX] EMA WARMUP decay — the shadow TRACKS the live weights from step 1, so
+# exact_d_seg/exact_d_pose (and the EXPORT) reflect the trained weights, NOT a
+# stale near-init shadow. The bug this guards (confirmed 2026-06-11,
+# ``experiments/diag_curriculum_ema_lag.py``): with a constant decay 0.999, the
+# shadow stayed ~init on a 25-epoch run, freezing exact_d_seg at 0.507 while the
+# LIVE weights descended to 0.041 — a measurement+export poison falsely read as a
+# "seg-capacity wall."
+# ===========================================================================
+
+
+@skip_no_mlx
+def test_b4fix_ema_effective_decay_warms_up_from_low_to_cap():
+    """``effective_decay`` ramps from ~0.1 at update 1 toward the cap as t grows.
+
+    FAILS if the warmup is reverted to a constant decay (the lag bug): a constant
+    decay would return the cap (0.997) at update 1 instead of ~0.18.
+    """
+    from tac.capstone_vq_nerv.capstone_trainer import _CapstoneWeightEMA
+
+    bundle, *_ = _setup(n_pairs=4, with_pose=False)
+    ema = _CapstoneWeightEMA(bundle, decay=0.997)
+    # update 1: warmup (1+1)/(10+1)=0.1818 << cap. A constant-decay revert returns 0.997.
+    ema._num_updates = 1
+    assert ema.effective_decay() == pytest.approx(2.0 / 11.0, rel=1e-6)
+    assert ema.effective_decay() < 0.5, "warmup must start far below the cap (shadow~live)"
+    # update 30: still well below the cap, but climbing (the ramp is monotone).
+    ema._num_updates = 30
+    d30 = ema.effective_decay()
+    assert 0.7 < d30 < 0.97
+    # far future: saturates AT the cap (never exceeds it).
+    ema._num_updates = 1_000_000
+    assert ema.effective_decay() == pytest.approx(0.997, abs=1e-4)
+
+
+@skip_no_mlx
+def test_b4fix_ema_shadow_tracks_live_weights_on_short_run():
+    """After a short run, the EMA-shadow WEIGHTS track the live weights.
+
+    The fundamental, scorer-independent property the warmup restores: the shadow
+    follows the live weights as they move from init. The constant-decay-0.999 bug
+    left the shadow ~init (||shadow-live|| ~= ||live-init||); the warmup makes
+    ||shadow-live|| a small fraction of the movement. Measured on the largest
+    trainable decoder tensor (relative L2). FAILS if the warmup is reverted.
+    """
+    bundle, bridge, pose_store, Cfg, Trainer = _setup(n_pairs=8, with_pose=True, base_ch=16)
+    init_w = {k: np.asarray(v).copy() for k, v in tree_flatten(bundle.trainable_parameters())}
+    cfg = Cfg(
+        epochs=20, batch_size=8, eval_every=20, seed=0,
+        muon_lr=2e-2, adamw_lr=2e-2, grad_clip=50.0, grad_clip_muon=50.0,
+        ema_decay=0.999, use_ema_for_eval=True, cosine_lr_schedule=False,
+    )
+    trainer = Trainer(bundle, bridge, pose_store, cfg)
+    trainer.train()
+    live_w = {k: np.asarray(v) for k, v in tree_flatten(bundle.trainable_parameters())}
+    shadow_w = {k: np.asarray(v) for k, v in trainer._ema.shadow.items()}
+    # pick the tensor that moved the MOST from init (the clearest tracking signal).
+    moved = {k: float(np.linalg.norm(live_w[k] - init_w[k])) for k in live_w if k in init_w}
+    key = max(moved, key=moved.get)
+    movement = moved[key]
+    assert movement > 1e-4, f"live weights must move from init (tensor {key})"
+    shadow_to_live = float(np.linalg.norm(shadow_w[key] - live_w[key]))
+    shadow_to_init = float(np.linalg.norm(shadow_w[key] - init_w[key]))
+    # warmup: the shadow is much CLOSER to live than to init (it tracked).
+    # constant-0.999 bug: the shadow stays ~init -> shadow_to_init ~ 0, shadow_to_live ~ movement.
+    assert shadow_to_live < 0.5 * movement, (
+        f"EMA shadow must TRACK live (warmup): tensor={key} ||shadow-live||="
+        f"{shadow_to_live} ||shadow-init||={shadow_to_init} movement={movement}"
+    )
+    assert shadow_to_live < shadow_to_init, (
+        "shadow must be closer to LIVE than to INIT (the lag bug inverts this)"
+    )
