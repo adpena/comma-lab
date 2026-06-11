@@ -110,13 +110,16 @@ the adapter is MLX-native so `mx.vjp` through it is available; that wiring + a p
 the build.)
 
 ## Reproduce
+Durable scripts + raw JSON committed at `.omx/research/mlx_scorer_drift_audit_20260611_artifacts/`:
 ```
-.venv/bin/python .omx/tmp/mlx_drift_run.py gpu 100   # MLX-GPU vs torch-CPU
-.venv/bin/python .omx/tmp/mlx_drift_run.py cpu 100   # MLX-CPU vs torch-CPU
-.venv/bin/python .omx/tmp/mlx_segtrace_gpu.py        # SegNet layer-trace drift localization
-.venv/bin/python .omx/tmp/mlx_fwd_throughput.py gpu 8 12   # pure MLX-GPU forward throughput
+A=.omx/research/mlx_scorer_drift_audit_20260611_artifacts
+.venv/bin/python $A/mlx_drift_run.py gpu 100   # MLX-GPU vs torch-CPU  -> $A/gpu_100.json
+.venv/bin/python $A/mlx_drift_run.py cpu 100   # MLX-CPU vs torch-CPU  -> $A/cpu_100.json
+.venv/bin/python $A/mlx_segtrace_gpu.py        # SegNet layer-trace drift localization
+.venv/bin/python $A/mlx_fwd_throughput.py gpu 8 12   # pure MLX-GPU forward throughput
 ```
-Raw JSON: `.omx/tmp/mlx_drift_out/{gpu_100,cpu_100}.json`.
+Regression gate (certifies MLX-CPU bit-faithful on real 0.mkv):
+`pytest src/tac/tests/test_mlx_scorer_torch_parity.py::test_mlx_cpu_bit_faithful_vs_torch_cpu_on_real_reference_video_cache`
 
 ## Caveats / NO-FAKE notes
 - All MLX numbers are `[macOS-MLX research-signal]`; torch-CPU is authority. No score/promotion claim is made.
