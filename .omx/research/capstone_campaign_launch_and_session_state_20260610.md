@@ -1,5 +1,16 @@
 # Capstone campaign launch + session state (2026-06-10, resume-from-disk)
 
+> ⚠️ **CORRECTION BANNER (2026-06-11, adversarial review):** several POSITIVE claims below are OVERSTATED.
+> Per the adversarial-review synthesis (`capstone_adversarial_synthesis_and_honest_corrections_20260611T015018Z.md`):
+> (1) "pose crux fix EMPIRICALLY CONFIRMED" → RETRACTED to "plausible, NOT confirmed" (the 0.437 was one bounce
+> of an oscillating series; the "shared-FiLM J≈0" mechanism is wrong — separate rgb_0/rgb_1 heads make the
+> differential learnable; needs a controlled A/B). (2) "d_seg could keep grinding down" → "CE plateaus ~0.008"
+> (geometric decay, ratios 0.49/0.33). (3) Best capstone state recomputes to **S ≈ 1.75 — 9× WORSE than the
+> 0.191 frontier** (d_pose ~0.1 alone = pose term 1.0 = 5× the frontier). (4) The "smaller-than-frontier basis"
+> thesis FIGHTS the lab's own param↔d_seg curve (need MORE params for lower d_seg); the realistic path is
+> frontier-CLASS params (base_ch≈22–24, still in budget) + the factorized `[seg-blob]⊕[pose-store+FiLM]`
+> carrier. Read the synthesis memo for the refined plan; the verdict sections below predate the correction.
+
 **Lead:** The exact frontier pointer is **0.19109982 [contest-CPU]** (`b46897267…`, 177,169 B,
 recoded-R3 defensive bank) — **UNMOVED**. This session did NOT move it. What it DID: (1) fixed an
 apparatus bug (the canonical pointer JSON was null → repopulated from real eval anchors via the
