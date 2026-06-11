@@ -116,6 +116,10 @@ class CarrierState:
     delta_proj: np.ndarray  # (c_in, c0)
     out_hw: tuple[int, int]
     coarse_shape: tuple[int, int, int]
+    # Stored-pose FiLM (the Quantizr pose-fold). When ``pose_film`` is None the
+    # state renders identically to the no-FiLM Cool-Chic carrier.
+    stored_pose: np.ndarray | None = None  # (n_pairs, pose_dim)
+    pose_film: dict | None = None  # {"fc1_w","fc1_b","fc2_w","fc2_b","channels"}
 
 
 def carrier_to_state(carrier) -> CarrierState:
@@ -124,6 +128,18 @@ def carrier_to_state(carrier) -> CarrierState:
 
     with torch.no_grad():
         grids = [g.detach().cpu().numpy().astype(np.float64) for g in carrier.latent_grids]
+        stored_pose = None
+        pose_film = None
+        if getattr(carrier, "pose_film_enabled", False) and carrier.pose_film is not None:
+            stored_pose = carrier.stored_pose.detach().cpu().numpy().astype(np.float64)
+            pf = carrier.pose_film
+            pose_film = {
+                "fc1_w": pf.fc1.weight.detach().cpu().numpy().astype(np.float64),
+                "fc1_b": pf.fc1.bias.detach().cpu().numpy().astype(np.float64),
+                "fc2_w": pf.fc2.weight.detach().cpu().numpy().astype(np.float64),
+                "fc2_b": pf.fc2.bias.detach().cpu().numpy().astype(np.float64),
+                "channels": int(pf.channels),
+            }
         return CarrierState(
             grids=grids,
             frame1_delta=carrier.frame1_delta.detach().cpu().numpy().astype(np.float64),
@@ -134,6 +150,8 @@ def carrier_to_state(carrier) -> CarrierState:
             delta_proj=carrier.delta_proj.detach().cpu().numpy().astype(np.float64),
             out_hw=(int(carrier.out_hw[0]), int(carrier.out_hw[1])),
             coarse_shape=tuple(int(v) for v in carrier._coarse_shape),
+            stored_pose=stored_pose,
+            pose_film=pose_film,
         )
 
 
@@ -170,7 +188,19 @@ def render_pair_numpy(state: CarrierState, idx: int) -> tuple[np.ndarray, np.nda
     flat = feat1.reshape(c_in, h * w)
     from tac.residual_basis.cool_chic_synthesis_numpy import _gelu
 
-    hidden = _gelu(weights.w1 @ flat + weights.b1[:, None])
+    pre = weights.w1 @ flat + weights.b1[:, None]  # (hidden, HW)
+    # Stored-pose FiLM (matches CoolChicPairCarrier._synth): h -> gamma*h + beta
+    # BEFORE the GELU. gamma = 1 + tanh(fc2(sin(fc1(pose)))[:channels]).
+    if state.pose_film is not None and state.stored_pose is not None:
+        pf = state.pose_film
+        pose_v = state.stored_pose[idx]  # (pose_dim,)
+        h1 = np.sin(pf["fc1_w"] @ pose_v + pf["fc1_b"])  # (film_hidden,)
+        gb = pf["fc2_w"] @ h1 + pf["fc2_b"]  # (2*channels,)
+        ch = int(pf["channels"])
+        gamma = 1.0 + np.tanh(gb[:ch])  # (channels,)
+        beta = gb[ch:]  # (channels,)
+        pre = gamma[:, None] * pre + beta[:, None]
+    hidden = _gelu(pre)
     out = weights.w2 @ hidden + weights.b2[:, None]
     rgb1 = (1.0 / (1.0 + np.exp(-out))).reshape(3, h, w) * 255.0
     return rgb0, rgb1
@@ -186,6 +216,7 @@ def byte_close(
     *,
     grid_step: float = 0.05,
     delta_step: float = 0.05,
+    pose_step: float = 0.002,
 ) -> bytes:
     """Encode the carrier state into a single self-contained archive blob.
 
@@ -201,9 +232,12 @@ def byte_close(
         "delta_shape": list(state.frame1_delta.shape),
         "grid_step": grid_step,
         "delta_step": delta_step,
+        "pose_step": pose_step,
         "grids": [],
         "delta": None,
         "weights": {},
+        "pose": None,  # stored-pose range-coded payload (the pose-fold)
+        "pose_film": None,  # FiLM int8 weights
     }
     streams: list[bytes] = []
 
@@ -226,6 +260,28 @@ def byte_close(
     header["delta"] = {"offset": offset, "n_sym": n_sym, "freqs": freqs, "count": int(syms.size)}
     streams.append(coded)
 
+    # --- stored pose (the Quantizr pose-fold payload) ---
+    # Stored RAW as quantized int32 symbols (near-lossless at ``pose_step``). The
+    # pose payload is tiny (n_pairs x pose_dim scalars), but its dynamic range is
+    # large: the contest forward-translation pose dim reaches ~35, so at a FINE
+    # ``pose_step`` the integer-symbol range is ~17K. A static range-coder
+    # frequency table would then enumerate ~17K symbols (mostly count-1) into the
+    # JSON header = a ~36 KB phantom payload that DWARFS the actual pose scalars.
+    # Raw little-endian int32 symbols are the honest, minimal encoding here: the
+    # REAL cost is exactly ``n_pairs * pose_dim * 4`` bytes (the ~1 KB the
+    # pose-fold pays), not a histogram artifact. (Bit-level entropy discipline:
+    # range-coding a payload smaller than its own frequency table is a net loss.)
+    if state.stored_pose is not None and state.pose_film is not None:
+        psyms, poffset = quantize_to_symbols(state.stored_pose, pose_step)
+        praw = psyms.astype(np.int64).ravel().astype("<i4").tobytes()
+        header["pose"] = {
+            "offset": poffset,
+            "count": int(psyms.size),
+            "shape": list(state.stored_pose.shape),
+            "raw_int32": True,
+        }
+        streams.append(praw)
+
     # --- synthesis weights (int8) ---
     weight_blobs: list[bytes] = []
     for name in ("w1", "b1", "w2", "b2", "delta_proj"):
@@ -233,6 +289,17 @@ def byte_close(
         b, scale = _int8_pack(w)
         header["weights"][name] = {"shape": list(w.shape), "scale": scale, "nbytes": len(b)}
         weight_blobs.append(b)
+
+    # --- FiLM weights (int8), if the pose-fold is active ---
+    if state.pose_film is not None:
+        header["pose_film"] = {"channels": int(state.pose_film["channels"]), "tensors": {}}
+        for name in ("fc1_w", "fc1_b", "fc2_w", "fc2_b"):
+            w = state.pose_film[name]
+            b, scale = _int8_pack(w)
+            header["pose_film"]["tensors"][name] = {
+                "shape": list(w.shape), "scale": scale, "nbytes": len(b)
+            }
+            weight_blobs.append(b)
 
     header_bytes = json.dumps(header, separators=(",", ":")).encode("utf-8")
     out = bytearray()
@@ -286,6 +353,29 @@ def inflate_numpy(blob: bytes) -> CarrierState:
         header["delta_step"],
     )
 
+    # stored-pose stream (the pose-fold payload), if present
+    stored_pose = None
+    if header.get("pose") is not None:
+        (slen,) = struct.unpack_from("<I", blob, pos)
+        pos += 4
+        coded = blob[pos : pos + slen]
+        pos += slen
+        pmeta = header["pose"]
+        if pmeta.get("raw_int32"):
+            psyms = np.frombuffer(coded, dtype="<i4").astype(np.int64)
+        else:  # legacy range-coded pose payload
+            psyms = np.asarray(
+                decode_static_symbols(
+                    coded, count=pmeta["count"], frequencies=pmeta["freqs"]
+                ),
+                dtype=np.int64,
+            )
+        stored_pose = dequantize_symbols(
+            psyms.reshape(pmeta["shape"]),
+            pmeta["offset"],
+            header["pose_step"],
+        )
+
     # weights
     wvals: dict[str, np.ndarray] = {}
     for name in ("w1", "b1", "w2", "b2", "delta_proj"):
@@ -293,6 +383,18 @@ def inflate_numpy(blob: bytes) -> CarrierState:
         nb = wm["nbytes"]
         wvals[name] = _int8_unpack(blob[pos : pos + nb], tuple(wm["shape"]), wm["scale"])
         pos += nb
+
+    # FiLM weights, if present
+    pose_film = None
+    if header.get("pose_film") is not None:
+        pf_meta = header["pose_film"]
+        pf: dict = {"channels": int(pf_meta["channels"])}
+        for name in ("fc1_w", "fc1_b", "fc2_w", "fc2_b"):
+            tm = pf_meta["tensors"][name]
+            nb = tm["nbytes"]
+            pf[name] = _int8_unpack(blob[pos : pos + nb], tuple(tm["shape"]), tm["scale"])
+            pos += nb
+        pose_film = pf
 
     return CarrierState(
         grids=grids,
@@ -304,4 +406,6 @@ def inflate_numpy(blob: bytes) -> CarrierState:
         delta_proj=wvals["delta_proj"],
         out_hw=tuple(header["out_hw"]),
         coarse_shape=tuple(header["coarse_shape"]),
+        stored_pose=stored_pose,
+        pose_film=pose_film,
     )
