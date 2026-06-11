@@ -307,6 +307,62 @@ def test_trainer_mlx_gpu_backend_wires_in_and_steps():
     assert 0.0 <= row["d_seg_batch_authority"] <= 1.0
 
 
+@skip_no_mlx
+@skip_no_real_net
+@pytest.mark.slow
+@pytest.mark.timeout(900)
+def test_trainer_mlx_gpu_backend_wires_in_hinge():
+    """[L7] CapstoneTrainer(scorer_backend='mlx_gpu', margin_hinge_weight>0) wires
+    the MLX-native hinge into the GPU gradient bridge AND keeps the torch-CPU
+    AUTHORITY bridge hinge-free.
+
+    NO-FAKE: the hinge is now LIVE on the fast GPU path (no longer fail-closed). The
+    GPU loss bridge carries margin_hinge_weight/floor; the torch-CPU authority bridge
+    (used for the true-argmax d_seg re-score) is NOT seg-loss-wrapped.
+    """
+    from tac.capstone_vq_nerv.capstone_trainer import (
+        CapstoneTrainConfig,
+        CapstoneTrainer,
+    )
+    from tac.capstone_vq_nerv.cross_hw_margin_hinge import CrossHwMarginHingeSegLoss
+    from tac.capstone_vq_nerv.vq_nerv_bundle import (
+        CapstoneVqNervBundle,
+        CapstoneVqNervConfig,
+    )
+    from tac.mlx_pr95_port.mlx_gpu_score_bridge import MLXGpuScorerBridge
+    from tac.mlx_pr95_port.score_bridge import TorchScorerBridge
+    from tac.score_aware_loop.targets import load_frozen_distortion_net
+
+    n = 8
+    blob = torch.load(
+        _GT_CACHE / f"gt_targets_n{n}.pt", map_location="cpu", weights_only=False
+    )
+    seg_t, pose_t = blob["seg"], blob["pose"]
+    net = load_frozen_distortion_net(device="cpu")
+    bundle = CapstoneVqNervBundle(
+        CapstoneVqNervConfig(num_pairs=n, base_channels=20, carrier="stored_latent")
+    )
+    bridge = TorchScorerBridge(
+        net, seg_t, pose_t, seg_loss_form="ce_seg_loss",
+        seg_weight=100.0, pose_weight=1.0, eval_roundtrip=True,
+    )
+    cfg = CapstoneTrainConfig(
+        epochs=1, batch_size=4, scorer_backend="mlx_gpu", authority_recheck_every=1,
+        eval_every=1, margin_hinge_weight=0.5, margin_hinge_floor=0.1,
+    )
+    trainer = CapstoneTrainer(bundle, bridge, pose_t.numpy().astype(np.float32), cfg)
+    # The GPU loss bridge carries the MLX-native hinge (LIVE, not fail-closed).
+    assert isinstance(trainer._loss_bridge, MLXGpuScorerBridge)
+    assert trainer._loss_bridge.margin_hinge_weight == 0.5
+    assert trainer._loss_bridge.margin_hinge_floor == 0.1
+    # The torch-CPU AUTHORITY bridge stays hinge-free (true-argmax re-score).
+    assert not isinstance(bridge.seg_loss_fn, CrossHwMarginHingeSegLoss)
+    assert trainer._margin_hinge is None
+    # A real step still runs.
+    row = trainer.step(np.arange(4, dtype=np.int64))
+    assert row["seg"] > 0.0
+
+
 def test_trainer_rejects_bad_backend_with_real_net_unavailable():
     """The trainer __init__ raises on an unknown backend even without mlx/net.
 
@@ -319,3 +375,210 @@ def test_trainer_rejects_bad_backend_with_real_net_unavailable():
     # trainer cheaply, but we assert the config carries the value the __init__
     # branch rejects (the integration test above proves the raise on the real path).
     assert cfg.scorer_backend == "bogus_backend"
+
+
+# ---------------------------------------------------------------------------
+# (3) [L7] MLX-native cross-hardware margin hinge wire-in (the GPU portability
+#     guard). NO-FAKE: the hinge is a REAL loss term with a REAL gradient that
+#     pushes small-margin-correct pixels' margin UP; a no-op/constant FAILS (a) +
+#     (b); weight=0 is byte-identical (c).
+# ---------------------------------------------------------------------------
+
+
+@skip_no_mlx
+def test_margin_floor_hinge_mlx_gradient_pushes_margin_up():
+    """(a) NO-FAKE: the MLX hinge gradient is non-zero AND raises the target logit.
+
+    A small-positive-margin pixel (0.05 < floor 0.1) gets a POSITIVE hinge whose
+    gradient w.r.t. the TARGET logit is positive (more target logit -> larger
+    margin -> lower hinge -> so ascending the negative gradient = the optimizer
+    raising the target logit). We assert the value-and-grad of the hinge w.r.t.
+    the seg logits is non-zero AND that the target-channel grad is NEGATIVE (so a
+    minimizer raises the target logit). A constant/no-op has zero grad -> FAILS.
+    """
+    from tac.mlx_pr95_port.mlx_losses import margin_floor_hinge_mlx
+
+    b, c, h, w = 2, 5, 6, 6
+    targets = mx.zeros((b, h, w), dtype=mx.int32)
+    base = mx.zeros((b, c, h, w))
+    # target channel (0) at 0.05 -> margin 0.05 (below the 0.1 floor).
+    onehot0 = mx.stack(
+        [mx.full((b, h, w), 0.05 if k == 0 else 0.0) for k in range(c)], axis=1
+    )
+    logits = base + onehot0
+
+    def hinge_of(lg):
+        return margin_floor_hinge_mlx(lg, targets, margin_floor=0.1)
+
+    val, grad = mx.value_and_grad(hinge_of)(logits)
+    mx.eval(val, grad)
+    assert float(val) > 0.0  # NO-FAKE: a real positive penalty (not 0).
+    grad_np = np.asarray(grad)
+    assert float(np.abs(grad_np).max()) > 0.0  # NO-FAKE: a real non-zero gradient.
+    # The gradient w.r.t. the TARGET channel is negative (minimizer raises it).
+    assert float(grad_np[:, 0].mean()) < 0.0
+
+
+@skip_no_mlx
+def test_margin_floor_hinge_mlx_zero_on_clear_of_floor():
+    """A comfortably-above-floor margin contributes EXACTLY zero MLX hinge."""
+    from tac.mlx_pr95_port.mlx_losses import margin_floor_hinge_mlx
+
+    b, c, h, w = 2, 5, 6, 6
+    targets = mx.zeros((b, h, w), dtype=mx.int32)
+    onehot0 = mx.stack(
+        [mx.full((b, h, w), 5.0 if k == 0 else 0.0) for k in range(c)], axis=1
+    )
+    logits = onehot0  # margin 5.0 >> floor
+    val = margin_floor_hinge_mlx(logits, targets, margin_floor=0.1)
+    mx.eval(val)
+    assert float(val) == 0.0
+
+
+@skip_no_mlx
+def test_margin_floor_hinge_mlx_floor_must_be_positive():
+    from tac.mlx_pr95_port.mlx_losses import margin_floor_hinge_mlx
+
+    logits = mx.zeros((1, 5, 4, 4))
+    targets = mx.zeros((1, 4, 4), dtype=mx.int32)
+    with pytest.raises(ValueError):
+        margin_floor_hinge_mlx(logits, targets, margin_floor=0.0)
+
+
+@skip_no_mlx
+def test_bridge_rejects_negative_hinge_weight_and_nonpositive_floor():
+    """The bridge fails closed on a negative hinge weight or a <=0 active floor."""
+    from tac.mlx_pr95_port.mlx_gpu_score_bridge import MLXGpuScorerBridge
+
+    seg_tgt = torch.zeros(1, 384, 512, dtype=torch.long)
+    net = torch.nn.Module()  # the weight/floor validation runs before any forward.
+    with pytest.raises(ValueError):
+        MLXGpuScorerBridge(
+            net, seg_tgt, None, device_type="cpu", margin_hinge_weight=-0.5
+        )
+    with pytest.raises(ValueError):
+        MLXGpuScorerBridge(
+            net, seg_tgt, None, device_type="cpu",
+            margin_hinge_weight=0.5, margin_hinge_floor=0.0,
+        )
+
+
+@skip_no_mlx
+@skip_no_real_net
+@pytest.mark.slow
+@pytest.mark.timeout(900)
+def test_bridge_margin_hinge_weight_zero_is_byte_identical():
+    """(c) margin_hinge_weight=0 produces the SAME loss + cotangent as no hinge.
+
+    The default-off bridge and a weight-0 bridge must give bit-identical
+    loss_value / seg_loss_value / pixel_cotangent on a real render (the hinge term
+    is provably inert at weight 0 — the closure never adds it).
+    """
+    from tac.mlx_pr95_port.mlx_gpu_score_bridge import MLXGpuScorerBridge
+
+    net, seg_t, pose_t, render, idx_t = _build_real_setup(n_pairs=8)
+    common = {
+        "seg_loss_form": "ce_seg_loss",
+        "seg_weight": 100.0,
+        "pose_weight": 1.0,
+        "eval_roundtrip": True,
+        "device_type": "cpu",
+    }
+    bare = MLXGpuScorerBridge(net, seg_t, pose_t, **common)
+    zero = MLXGpuScorerBridge(net, seg_t, pose_t, margin_hinge_weight=0.0, **common)
+    rb = bare.loss_and_pixel_grad(render, idx_t)
+    rz = zero.loss_and_pixel_grad(render, idx_t)
+    assert rb.loss_value == rz.loss_value
+    assert rb.seg_loss_value == rz.seg_loss_value
+    gb = np.asarray(rb.pixel_cotangent, dtype=np.float64)
+    gz = np.asarray(rz.pixel_cotangent, dtype=np.float64)
+    assert float(np.abs(gb - gz).max()) == 0.0
+
+
+@skip_no_mlx
+@skip_no_real_net
+@pytest.mark.slow
+@pytest.mark.timeout(900)
+def test_bridge_margin_hinge_changes_gradient_on_real_net():
+    """The active hinge MOVES the real-net loss + cotangent (NO-FAKE: not inert).
+
+    With a HIGH floor (so most boundary pixels are below it) the hinge raises the
+    total loss above the bare bridge AND changes the pixel cotangent by a non-trivial
+    amount — proving the hinge term actually enters mx.value_and_grad on real data.
+    """
+    from tac.mlx_pr95_port.mlx_gpu_score_bridge import MLXGpuScorerBridge
+
+    net, seg_t, pose_t, render, idx_t = _build_real_setup(n_pairs=8)
+    common = {
+        "seg_loss_form": "ce_seg_loss",
+        "seg_weight": 100.0,
+        "pose_weight": 1.0,
+        "eval_roundtrip": True,
+        "device_type": "cpu",
+    }
+    bare = MLXGpuScorerBridge(net, seg_t, pose_t, **common)
+    hinged = MLXGpuScorerBridge(
+        net, seg_t, pose_t, margin_hinge_weight=1.0, margin_hinge_floor=3.0, **common
+    )
+    rb = bare.loss_and_pixel_grad(render, idx_t)
+    rh = hinged.loss_and_pixel_grad(render, idx_t)
+    # The hinge adds a positive seg-side penalty -> total loss strictly higher.
+    assert rh.loss_value > rb.loss_value
+    gb = np.asarray(rb.pixel_cotangent, dtype=np.float64)
+    gh = np.asarray(rh.pixel_cotangent, dtype=np.float64)
+    # The cotangent actually changed (the hinge gradient entered value_and_grad).
+    assert float(np.abs(gh - gb).max()) > 1e-9
+
+
+@skip_no_mlx
+@skip_no_real_net
+@pytest.mark.slow
+@pytest.mark.timeout(900)
+def test_margin_hinge_mlx_vs_torch_parity_on_real_net_logits():
+    """(b) The MLX hinge value matches the torch_cpu hinge on real-0.mkv SegNet logits.
+
+    NO-FAKE: run the REAL upstream SegNet (via the bridge's adapter on the
+    bit-faithful MLX-CPU path) on a REAL trained-init render of REAL 0.mkv GT, pull
+    the SegNet logits, then compute the MLX-native ``margin_floor_hinge_mlx`` AND the
+    torch-CPU authority ``margin_floor_hinge`` on the SAME logits (transferred to
+    torch). Under the FP32-exact arch path the two hinge implementations must agree
+    tightly — isolating the hinge MATH parity (the scorer-forward drift is covered
+    by ``test_real_net_loss_and_gradient_parity_vs_torch_cpu``).
+    """
+    from tac.capstone_vq_nerv.cross_hw_margin_hinge import margin_floor_hinge
+    from tac.local_acceleration.mlx_scorer_adapters import temporary_mlx_device
+    from tac.mlx_pr95_port.mlx_gpu_score_bridge import MLXGpuScorerBridge
+    from tac.mlx_pr95_port.mlx_losses import margin_floor_hinge_mlx
+
+    net, seg_t, pose_t, render, idx_t = _build_real_setup(n_pairs=8)
+    bridge = MLXGpuScorerBridge(
+        net, seg_t, pose_t, seg_loss_form="ce_seg_loss",
+        seg_weight=100.0, pose_weight=1.0, eval_roundtrip=True, device_type="cpu",
+    )
+    idx_mx = mx.array(np.asarray(idx_t.detach().cpu().numpy(), dtype=np.int32))
+    targets_mx = bridge.seg_targets_mx[idx_mx]
+    with temporary_mlx_device("cpu"):
+        _, segnet_rgb = bridge._preprocess_render_to_scorer_inputs(render)
+        seg_logits_nhwc = mx.stop_gradient(bridge.adapter.segnet(segnet_rgb))
+        seg_logits_nchw = mx.transpose(seg_logits_nhwc, (0, 3, 1, 2))
+        mx.eval(seg_logits_nchw, targets_mx)
+        floor = 0.1
+        hinge_mlx = float(
+            np.asarray(
+                margin_floor_hinge_mlx(seg_logits_nchw, targets_mx, margin_floor=floor)
+            )
+        )
+    # Same logits -> torch, same GT targets -> torch; compute the torch authority hinge.
+    logits_torch = torch.from_numpy(np.asarray(seg_logits_nchw, dtype=np.float32))
+    targets_torch = torch.from_numpy(np.asarray(targets_mx, dtype=np.int64))
+    hinge_torch = float(
+        margin_floor_hinge(logits_torch, targets_torch, margin_floor=floor)
+    )
+    # NO-FAKE: a real non-trivial hinge on this real-net operating point (random-init
+    # render -> many below-floor boundary pixels), so the parity is meaningful.
+    assert hinge_mlx > 1e-4
+    # MLX-CPU is bit-faithful to torch for the charged quantity; the hinge is a
+    # simple reduction over the SAME margins -> tight parity (relative + absolute).
+    assert abs(hinge_mlx - hinge_torch) < 1e-3, (
+        f"MLX hinge {hinge_mlx} vs torch {hinge_torch}"
+    )

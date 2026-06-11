@@ -200,8 +200,12 @@ class CapstoneTrainConfig:
     # ``l7_softplus_seg_loss`` (which reweights, not floors). Default-OFF
     # (``margin_hinge_weight=0``) = byte-identical to the bare stage loss. The floor
     # anchors slightly above the 0.096 drift; the weight is a Lagrange multiplier on
-    # the portability constraint. See
-    # ``.omx/research/optimal_capstone_vehicle_spec_20260611.md`` section 3 L7.
+    # the portability constraint. LIVE on BOTH scorer backends: torch_cpu_bridge via
+    # the ``CrossHwMarginHingeSegLoss`` wrapper, mlx_gpu via the MLX-native
+    # ``margin_floor_hinge_mlx`` term in the bridge's value_and_grad closure (so the
+    # GPU-fast 600-pair run is BOTH fast AND margin-protected). See
+    # ``.omx/research/optimal_capstone_vehicle_spec_20260611.md`` section 3 L7 +
+    # ``.omx/research/mlx_gpu_margin_hinge_wirein_20260611.md`` (the wire-in memo).
     margin_hinge_weight: float = 0.0
     margin_hinge_floor: float = 0.1
     telemetry: list[dict[str, Any]] = field(default_factory=list)
@@ -227,19 +231,13 @@ class CapstoneTrainer:
         config: CapstoneTrainConfig,
     ) -> None:
         _require_mlx()
-        # [L7] Fail closed EARLY (before any bridge construction) when the margin
-        # hinge is requested with the mlx_gpu backend — the shared MLX-GPU bridge has
-        # no wrappable seg_loss_fn hook, so the hinge would be a silent no-op in the
-        # gradient (NO-FAKE). The hinge + mlx_gpu are mutually exclusive in this lane.
-        if config.margin_hinge_weight > 0.0 and config.scorer_backend == "mlx_gpu":
-            raise ValueError(
-                "margin_hinge_weight>0 is not supported with scorer_backend="
-                "'mlx_gpu': the MLX-GPU bridge computes its seg loss by form-name "
-                "inside its value_and_grad closure (no wrappable seg_loss_fn), so "
-                "the hinge would NOT enter the gradient (a silent no-op, NO-FAKE). "
-                "Use scorer_backend='torch_cpu_bridge' with the margin hinge, or set "
-                "margin_hinge_weight=0 for the mlx_gpu run."
-            )
+        # [L7] The cross-hardware margin hinge is now LIVE on BOTH scorer backends:
+        # torch_cpu_bridge gets it via the ``CrossHwMarginHingeSegLoss`` seg_loss_fn
+        # wrapper (below); mlx_gpu gets it via the MLX-native ``margin_floor_hinge_mlx``
+        # term carried by ``MLXGpuScorerBridge``'s value_and_grad closure (passed
+        # through at bridge construction). The earlier mlx_gpu fail-closed was removed
+        # when the MLX-native hinge landed (the GPU-fast path is now both fast AND
+        # margin-protected — the wire-in this lane delivers).
         self.bundle = bundle
         self.bridge = bridge
         self.cfg = config
@@ -310,30 +308,39 @@ class CapstoneTrainer:
                 eval_roundtrip=self.bridge.eval_roundtrip,
                 scorer_hw=self.bridge.scorer_hw,
                 device_type="gpu",
+                # [L7] the cross-hardware margin hinge is now LIVE on the GPU path:
+                # the MLX-native ``margin_floor_hinge_mlx`` term enters the bridge's
+                # value_and_grad closure (so ``--scorer-backend mlx_gpu
+                # --margin-hinge-weight X`` actually applies the floor in the
+                # gradient — the 600-pair-run portability guard).
+                margin_hinge_weight=config.margin_hinge_weight,
+                margin_hinge_floor=config.margin_hinge_floor,
             )
         elif config.scorer_backend != "torch_cpu_bridge":
             raise ValueError(
                 "scorer_backend must be 'torch_cpu_bridge' or 'mlx_gpu', got "
                 f"{config.scorer_backend!r}"
             )
-        # [L7] Install the cross-hardware-robust margin hinge wrapper (opt-in). When
-        # enabled it wraps the torch-CPU bridge's ACTIVE stage seg-loss and adds the
-        # margin-floor hinge; ``configure_stage`` re-points the wrapped base loss on
-        # each transition so the hinge always stacks on the CURRENT stage surrogate.
-        # Default-OFF (weight 0) leaves the bridge loss untouched (byte-identical).
+        # [L7] Install the cross-hardware-robust margin hinge wrapper on the
+        # TORCH-CPU gradient path (opt-in). When enabled it wraps the torch-CPU
+        # bridge's ACTIVE stage seg-loss and adds the margin-floor hinge;
+        # ``configure_stage`` re-points the wrapped base loss on each transition so
+        # the hinge always stacks on the CURRENT stage surrogate. Default-OFF
+        # (weight 0) leaves the bridge loss untouched (byte-identical).
         #
-        # NO-FAKE scope: the hinge wraps the torch-CPU bridge's single ``seg_loss_fn``
-        # (the AUTHORITY + default gradient backend). The shared MLX-GPU bridge
-        # computes its seg loss by FORM NAME inside its ``mx.value_and_grad`` closure
-        # (no single wrappable ``seg_loss_fn`` hook) and lives in ``mlx_pr95_port``
-        # (a shared lane file) — wiring an MLX-native hinge into it requires editing
-        # that shared bridge, which is out of this lane's collision-safe scope. So we
-        # FAIL CLOSED rather than silently NOT enforce the floor in the mlx_gpu
-        # gradient: the hinge + the mlx_gpu backend are mutually exclusive until the
-        # MLX-native hinge is wired (a follow-up that edits the shared bridge).
+        # NO-FAKE scope split by backend:
+        #   * torch_cpu_bridge: the gradient comes from ``self.bridge`` — install
+        #     the wrapper here so the hinge enters that gradient.
+        #   * mlx_gpu: the gradient comes from ``self._loss_bridge`` (the MLX-GPU
+        #     bridge), which carries the MLX-native ``margin_floor_hinge_mlx`` term
+        #     INSIDE its value_and_grad closure (wired at its construction above).
+        #     Do NOT also wrap ``self.bridge.seg_loss_fn`` on the mlx_gpu path:
+        #     ``self.bridge`` is the torch-CPU AUTHORITY re-score path, whose d_seg
+        #     MUST stay the true hinge-free argmax (the authority must not see the
+        #     surrogate floor). So the hinge enters the GPU gradient via the bridge
+        #     term, and the torch authority re-score stays clean.
         self._margin_hinge: Any = None
-        if config.margin_hinge_weight > 0.0:
-            # (mlx_gpu mutual-exclusion already enforced at the top of __init__.)
+        if config.margin_hinge_weight > 0.0 and config.scorer_backend != "mlx_gpu":
             from tac.capstone_vq_nerv.cross_hw_margin_hinge import (
                 CrossHwMarginHingeSegLoss,
             )

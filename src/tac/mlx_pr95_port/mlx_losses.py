@@ -129,6 +129,45 @@ def l7_softplus_seg_loss_mlx(
     return mx.mean(per_pixel * weights)
 
 
+def margin_floor_hinge_mlx(
+    seg_logits: Any, targets_hard: Any, *, margin_floor: float
+) -> Any:
+    """Cross-hardware margin-floor hinge: ``mean(relu(margin_floor - margin))``.
+
+    The MLX-native twin of
+    :func:`tac.capstone_vq_nerv.cross_hw_margin_hinge.margin_floor_hinge` (the
+    torch-CPU authority hinge). Same math, same ``_target_margin_mlx`` margin
+    core (``target_logit - max_competing_logit``), so the two are 1:1 up to the
+    measured Metal fp32 reduction-order drift. It pushes every below-floor pixel
+    margin PAST ``margin_floor`` so the LOCAL SegNet argmax survives the
+    macOS->numpy->Linux/CUDA fp32 logit drift (lever-map L7, the
+    numpy-portability guard).
+
+    The ``relu`` (``mx.maximum(.., 0)``) is the boundary selector: an interior
+    pixel whose margin already clears ``margin_floor`` contributes EXACTLY 0
+    (and 0 gradient), while a below-floor (or argmax-wrong, ``margin < 0``)
+    pixel gets a positive penalty whose gradient raises the target logit. This
+    is a REAL loss term with a REAL gradient — NOT a constant (a no-op would
+    have zero gradient and could not push the margin up).
+
+    Args:
+        seg_logits: live MLX SegNet logits ``(B, C, H, W)`` (NCHW; the same
+            layout the canonical MLX PR95 seg-loss family consumes).
+        targets_hard: GT SegNet argmax ``(B, H, W)`` int.
+        margin_floor: required margin (anchor ~0.1 > the measured ~0.096
+            cross-hardware logit drift). Must be > 0.
+
+    Returns:
+        Scalar MLX hinge loss (``relu(margin_floor - margin)`` averaged over all
+        pixels; the relu zeroes the clear-of-floor pixels).
+    """
+    _require_mlx()
+    if margin_floor <= 0.0:
+        raise ValueError(f"margin_floor must be > 0; got {margin_floor}")
+    margin = _target_margin_mlx(seg_logits, targets_hard)  # (B,1,H,W)
+    return mx.mean(mx.maximum(margin_floor - margin, 0.0))
+
+
 def pose_loss_mlx(pose_pred: Any, pose_target: Any) -> Any:
     """Pose loss ``sqrt(10*MSE)`` (1:1 with PR95, constant across all stages)."""
     _require_mlx()
@@ -266,6 +305,7 @@ __all__ = [
     "exact_d_seg_from_logits_mlx",
     "fake_quantize_mlx",
     "l7_softplus_seg_loss_mlx",
+    "margin_floor_hinge_mlx",
     "pose_loss_mlx",
     "smooth_disagreement_seg_loss_mlx",
     "tau_softplus_seg_loss_mlx",

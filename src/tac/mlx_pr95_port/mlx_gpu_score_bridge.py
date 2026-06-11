@@ -124,6 +124,14 @@ class MLXGpuScorerBridge:
             same semantics as ``TorchScorerBridge``.
         device_type: ``"gpu"`` (the fast path) or ``"cpu"`` (the bit-faithful
             reference path — used by the parity validation).
+        margin_hinge_weight: weight on the L7 cross-hardware margin-floor hinge
+            ``margin_floor_hinge_mlx`` added to the seg loss in the gradient
+            closure (default 0 = no-op, byte-identical to the bare bridge). The
+            same numpy-portability guard the torch-CPU bridge gets via
+            ``CrossHwMarginHingeSegLoss`` — now LIVE on the fast GPU path.
+        margin_hinge_floor: required boundary margin (anchor ~0.1 > the measured
+            ~0.096 cross-hardware fp32 logit drift); used only when the hinge is
+            active.
     """
 
     def __init__(
@@ -139,6 +147,8 @@ class MLXGpuScorerBridge:
         scorer_hw: tuple[int, int] = SCORER_HW,
         device_type: str = "gpu",
         num_classes: int = 5,
+        margin_hinge_weight: float = 0.0,
+        margin_hinge_floor: float = 0.1,
     ) -> None:
         _require_mlx()
         from tac.local_acceleration.mlx_scorer_adapters import (
@@ -154,6 +164,17 @@ class MLXGpuScorerBridge:
                 )
         if device_type not in {"cpu", "gpu"}:
             raise ValueError(f"device_type must be 'cpu' or 'gpu', got {device_type!r}")
+        # [L7] Validate the margin-hinge knobs EARLY (before the heavy adapter build)
+        # so a bad config fails closed cheaply.
+        if margin_hinge_weight < 0.0:
+            raise ValueError(
+                f"margin_hinge_weight must be >= 0; got {margin_hinge_weight}"
+            )
+        if margin_hinge_weight > 0.0 and margin_hinge_floor <= 0.0:
+            raise ValueError(
+                f"margin_hinge_floor must be > 0 when the hinge is active; "
+                f"got {margin_hinge_floor}"
+            )
         self._seg_loss_fns = _resolve_mlx_seg_loss_fns()
         if seg_loss_form not in self._seg_loss_fns:
             raise ValueError(
@@ -184,6 +205,17 @@ class MLXGpuScorerBridge:
         self.scorer_hw = (int(scorer_hw[0]), int(scorer_hw[1]))
         self.num_classes = int(num_classes)
         self.camera_hw = CAMERA_HW
+        # [L7] Cross-hardware-robust margin hinge (the numpy-portability guard) on
+        # the MLX-GPU gradient path. ``margin_hinge_weight > 0`` ADDS the MLX-native
+        # ``margin_floor_hinge_mlx`` term to the seg loss INSIDE the value_and_grad
+        # closure, so ``mx.value_and_grad`` carries ``d(hinge)/d(pixels)`` into the
+        # render cotangent (the same floor-enforcing gradient the torch-CPU bridge
+        # gets via the ``CrossHwMarginHingeSegLoss`` wrapper). Default-OFF (weight 0)
+        # is provably inert (the closure never adds the term). See the torch-CPU twin
+        # ``tac.capstone_vq_nerv.cross_hw_margin_hinge`` + the wire-in memo. (The
+        # weight/floor are validated early, before the heavy adapter build.)
+        self.margin_hinge_weight = float(margin_hinge_weight)
+        self.margin_hinge_floor = float(margin_hinge_floor)
 
     def set_seg_loss_form(self, seg_loss_form: str) -> None:
         """Switch the stage seg-loss (PR95 curriculum stage transition)."""
@@ -285,9 +317,11 @@ class MLXGpuScorerBridge:
         seg_weight = self.seg_weight
         pose_weight = self.pose_weight
         pose_enabled = self.pose_enabled
+        margin_hinge_weight = self.margin_hinge_weight
+        margin_hinge_floor = self.margin_hinge_floor
         targets = self.seg_targets_mx[idx_mx]
 
-        from tac.mlx_pr95_port.mlx_losses import pose_loss_mlx
+        from tac.mlx_pr95_port.mlx_losses import margin_floor_hinge_mlx, pose_loss_mlx
 
         # The gradient closure returns ONLY the scalar ``total`` (the optimizer
         # objective). MLX 0.31.1 has no ``has_aux``; capturing the seg/pose
@@ -300,9 +334,19 @@ class MLXGpuScorerBridge:
             posenet_yuv6, segnet_rgb = self._preprocess_render_to_scorer_inputs(render)
             seg_logits_nhwc = self.adapter.segnet(segnet_rgb)
             seg_logits_nchw = mx.transpose(seg_logits_nhwc, (0, 3, 1, 2))
-            total = seg_weight * self._seg_loss_fns[self.seg_loss_form](
-                seg_logits_nchw, targets
-            )
+            # [L7] base stage seg loss + the optional cross-hardware margin-floor
+            # hinge, BOTH scaled by seg_weight — 1:1 with the torch-CPU bridge,
+            # whose ``CrossHwMarginHingeSegLoss`` returns ``base + w*hinge`` and is
+            # multiplied by ``seg_weight``. The hinge is INSIDE this closure so its
+            # gradient w.r.t. the render pixels enters the cotangent (NO-FAKE: a
+            # real loss term carried by ``mx.value_and_grad``, not a constant). The
+            # ``margin_hinge_weight == 0`` default skips the term (provably inert).
+            seg_term = self._seg_loss_fns[self.seg_loss_form](seg_logits_nchw, targets)
+            if margin_hinge_weight > 0.0:
+                seg_term = seg_term + margin_hinge_weight * margin_floor_hinge_mlx(
+                    seg_logits_nchw, targets, margin_floor=margin_hinge_floor
+                )
+            total = seg_weight * seg_term
             if pose_enabled:
                 pose_out = self.adapter.posenet(posenet_yuv6)["pose"][..., :6]
                 total = total + pose_weight * pose_loss_mlx(

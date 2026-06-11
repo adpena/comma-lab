@@ -313,9 +313,15 @@ def test_hinge_wrapper_rebases_on_stage_switch():
 
 
 @skip_no_mlx
-def test_trainer_installs_hinge_and_fails_closed_on_mlx_gpu():
-    """The trainer wires the hinge onto the torch-CPU bridge and FAILS CLOSED when
-    the hinge is requested with the mlx_gpu backend (no silent no-op)."""
+def test_trainer_installs_hinge_on_torch_cpu_path():
+    """torch-CPU + hinge installs the seg_loss_fn wrapper (the gradient backend).
+
+    NOTE: the mlx_gpu path is NO LONGER fail-closed (the MLX-native hinge wire-in):
+    that branch builds the real-upstream MLX adapter, so its hinge-wiring assertion
+    lives in the real-net GPU bridge suite
+    (``test_mlx_gpu_score_bridge.py::test_trainer_mlx_gpu_backend_wires_in_hinge``)
+    — the cheap color-proto stub net here cannot convert to the MLX adapter.
+    """
     import sys
     from pathlib import Path
 
@@ -338,22 +344,13 @@ def test_trainer_installs_hinge_and_fails_closed_on_mlx_gpu():
     pose = torch.zeros(n, 6)
     bridge = TorchScorerBridge(dnet, seg, pose, scorer_hw=(h, w), eval_roundtrip=False)
     b = CapstoneVqNervBundle(CapstoneVqNervConfig(num_pairs=n, base_channels=24, seed=0))
-    # torch-CPU + hinge: installs the wrapper.
+    # torch-CPU + hinge: installs the seg_loss_fn wrapper.
     tr = CapstoneTrainer(
         b, bridge, pose.numpy(),
         CapstoneTrainConfig(epochs=1, batch_size=n, margin_hinge_weight=0.5),
     )
     assert isinstance(bridge.seg_loss_fn, CrossHwMarginHingeSegLoss)
     assert tr._margin_hinge is not None
-    # mlx_gpu + hinge: fail closed.
-    b2 = CapstoneVqNervBundle(CapstoneVqNervConfig(num_pairs=n, base_channels=24, seed=0))
-    with pytest.raises(ValueError, match="mlx_gpu"):
-        CapstoneTrainer(
-            b2, bridge, pose.numpy(),
-            CapstoneTrainConfig(
-                epochs=1, batch_size=n, margin_hinge_weight=0.5, scorer_backend="mlx_gpu"
-            ),
-        )
 
 
 # ---------------------------------------------------------------------------
