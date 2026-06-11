@@ -20,15 +20,24 @@ The facts the design must exploit:
 
 1. **Rate is 62% of S** [MEASURED: 0.118 of 0.191]. The carrier is byte-minimal above all else. seg 0.056
    (d_seg 5.6e-4) + pose 0.017 (d_pose 2.94e-5) are the other 38%.
-2. **Appearance ≫ partition (3–5× cheaper)** [MEASURED, B-WITNESS — ⚠️ UNDER AUDIT 2026-06-11]: storing
-   the SegNet argmax partition directly costs ~525KB (896 B/frame) — BUT that B-WITNESS number is the
-   **LOSSLESS** store (`build_and_measure_lstar`, d_seg=0 by construction). The frontier operates at d_seg
-   **5.6e-4 tolerance**, not 0, and the **tolerance-exploiting MDL-region-merge + UNIWARD margin-weighted**
-   partition store (`solve_mdl_region_merge`, `uniward_delta`, `stc_dasher` — all built/orphaned) was NOT
-   measured. So "appearance ≫ partition" is PROVISIONAL: if the margin-weighted lossy partition store (drop
-   sub-flip-threshold wiggle) comes in under 162KB, the cheapest carrier may be NON-NEURAL (tolerance-coded
-   partition + pose), inverting C0–C2. The Yousfi-consult re-measure decides this. Until then, treat this
-   memo's neural C0/C1/C2 as ONE branch; the non-neural tolerance-coded branch is co-equal pending the audit.
+2. **Appearance ≫ partition — CONFIRMED at the tolerance** [MEASURED, B-WITNESS lossless + Yousfi tolerance
+   re-audit 2026-06-11]: the Yousfi re-measure RAN the tolerance-exploiting solve B-WITNESS skipped
+   (`solve_mdl_region_merge` + UNIWARD margin-weighting; tolerance sweep had ZERO prior callers). Result:
+   the standalone partition store is rate **0.31–0.33 at the frontier d_seg band** (5× d_seg budget → only
+   ~12% bytes); even a *perfect* STC chain-coder is ~0.16–0.22 — **no crossover with neural 0.108 exists.**
+   The reason is an **amortization gap, not the coder**: the neural decoder amortizes the boundary across
+   600 frames via shared weights; a per-frame partition store re-pays boundary entropy (2,782 cracks/frame)
+   every frame. ⇒ the cheapest carrier IS the neural appearance basis (C0). The non-neural standalone branch
+   is **CLOSED** (structural ~2× gap). The boundaries are expensive to *describe* per-frame, cheap to
+   *amortize+regenerate* — exactly the neural carrier's win.
+
+   **C1 REFINED (the Yousfi eureka):** C1 is NOT a generic boundary residual — it is the **sparse
+   residual-FLIP delta**: code ONLY the pixels where the (compact, not-yet-floored) neural base's argmax
+   disagrees with L*, via region-merge + `pack_sparse_delta` at UNIWARD-margin cost → bytes ∝ *residual
+   flips*, not boundary cracks. On the frozen frontier this has ~0 headroom (already floored, 14-byte
+   delta); its headroom is on a SMALLER base (B1 Cool-Chic) that hasn't reached the floor — nudge its few
+   remaining flips cheaply instead of training all the way down. C1 composes ON C0, sequenced after the
+   C0 base byte-closes (depends on B1-CLOSE #97).
 3. **SegNet reacts ONLY at decision boundaries** [MEASURED: spectral atlas — SegNet broadly weak, max
    H_seg ~0.009; d_seg = argmax-flip RATE; frontier d_seg 5.6e-4 ≈ ~5 flipped px/frame]. The interior of
    each region is argmax-robust; only the thin boundary band (long wiggly contours, ~2.16% of px [MEASURED,
