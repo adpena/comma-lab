@@ -131,6 +131,92 @@ def l7_softplus_seg_loss(
     return (per_pixel * weights).mean()
 
 
+def margin_polytope_hinge_seg_loss(
+    seg_logits: torch.Tensor,
+    targets_hard: torch.Tensor,
+    margin_target: float = 0.5,
+    hard_pixel_only: bool = False,
+) -> torch.Tensor:
+    """Margin-polytope hinge: push each pixel to the CHEAPEST-interior side.
+
+    The hypothesis under test (seg_core #52/#63, FIELDS-MEDAL decisive test
+    2026-06-11): CE optimizes the full per-pixel class probability simplex
+    (driving the target logit arbitrarily high), which spends optimizer capacity
+    on already-correct pixels and leaves the DIFFUSE argmax-instability near the
+    SegNet decision boundary unresolved. The margin polytope is the convex region
+    ``{margin >= margin_target}`` (correct side of the boundary plus a small
+    slack). The hinge ``relu(margin_target - margin)`` is the L1 distance to that
+    polytope: it is ZERO once a pixel clears the boundary by ``margin_target`` and
+    applies gradient ONLY to pixels that are wrong or marginally-correct. This is
+    the "cheapest interior" objective — it stops optimizing a pixel the moment it
+    is safely on the correct side, concentrating all capacity on flip-prone
+    boundary pixels (exactly the source of d_seg, per the diffuse-instability
+    deep-profile).
+
+    ``margin = target_logit - max_other_class_logit`` (the shared PR95 core). The
+    gradient w.r.t. the logits is a constant ``+1`` on the target class and
+    ``-1`` on the current runner-up for every pixel inside the hinge band, and 0
+    outside — a clean, well-conditioned push across the class line.
+
+    Args:
+        seg_logits: live SegNet logits ``(B, C, H, W)``.
+        targets_hard: GT SegNet argmax labels ``(B, H, W)`` int64.
+        margin_target: required positive margin (slack). 0.5 = clear the boundary
+            by half a logit unit. Larger = push harder past the boundary.
+        hard_pixel_only: if True, mask the hinge to pixels currently argmax-WRONG
+            (``margin <= 0``) — the curriculum mode (see
+            :func:`hard_pixel_curriculum_seg_loss`). Note: with this mask the
+            already-correct-but-marginal pixels (0 < margin < margin_target) are
+            DROPPED, so use it only once d_seg is near floor (where the
+            aggregate-surrogate signal is noise but the per-flipped-pixel signal
+            is not, per #92).
+
+    Returns:
+        scalar mean hinge loss.
+    """
+    margin = _target_minus_runnerup_margin(seg_logits, targets_hard)
+    hinge = F.relu(margin_target - margin)
+    if hard_pixel_only:
+        with torch.no_grad():
+            flipped = (margin <= 0.0).float()
+        denom = flipped.sum().clamp_min(1.0)
+        return (hinge * flipped).sum() / denom
+    return hinge.mean()
+
+
+def hard_pixel_curriculum_seg_loss(
+    seg_logits: torch.Tensor,
+    targets_hard: torch.Tensor,
+    margin_target: float = 0.5,
+    curriculum_d_seg_threshold: float = 3.0e-3,
+    current_d_seg: float | None = None,
+) -> torch.Tensor:
+    """Margin hinge with a d_seg-gated hard-pixel curriculum.
+
+    While d_seg is far from floor (``current_d_seg >= threshold`` or unknown),
+    the full margin-polytope hinge runs over ALL pixels (broad descent). Once
+    d_seg drops below ``curriculum_d_seg_threshold``, the loss MASKS to the
+    currently-flipped pixels (``margin <= 0``) so the remaining optimizer capacity
+    is spent only on the residual disagreements — where, per #92, the aggregate
+    surrogate is dominated by easy-pixel noise but the per-boundary-pixel signal
+    is still informative.
+
+    Args:
+        current_d_seg: the EXACT live-render d_seg for THIS batch (the trainer
+            passes ``compute_loss``'s measured value). If ``None`` the curriculum
+            stays in the broad (all-pixel) phase.
+    """
+    in_hard_phase = (
+        current_d_seg is not None and current_d_seg < curriculum_d_seg_threshold
+    )
+    return margin_polytope_hinge_seg_loss(
+        seg_logits,
+        targets_hard,
+        margin_target=margin_target,
+        hard_pixel_only=in_hard_phase,
+    )
+
+
 def pose_loss(pose_pred: torch.Tensor, pose_target: torch.Tensor) -> torch.Tensor:
     """sqrt(10*MSE) pose surrogate, constant across PR95 stages (``losses.py``).
 
@@ -149,7 +235,14 @@ STAGE_SEG_LOSS_FNS = {
     "tau_softplus_seg_loss": tau_softplus_seg_loss,
     "smooth_disagreement_seg_loss": smooth_disagreement_seg_loss,
     "l7_softplus_seg_loss": l7_softplus_seg_loss,
+    "margin_polytope_hinge_seg_loss": margin_polytope_hinge_seg_loss,
+    "hard_pixel_curriculum_seg_loss": hard_pixel_curriculum_seg_loss,
 }
+
+# Loss forms that accept the trainer's measured per-batch d_seg via a
+# ``current_d_seg`` kwarg (the hard-pixel curriculum gate). The trainer threads
+# the value only for these forms so the registry stays uniform.
+CURRICULUM_SEG_LOSS_FORMS = frozenset({"hard_pixel_curriculum_seg_loss"})
 
 
 def exact_d_seg_from_logits(

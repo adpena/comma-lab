@@ -45,6 +45,7 @@ import torch.nn.functional as F
 
 from tac.differentiable_eval_roundtrip import apply_eval_roundtrip_during_training
 from tac.score_aware_loop.live_segnet_loss import (
+    CURRICULUM_SEG_LOSS_FORMS,
     STAGE_SEG_LOSS_FNS,
     exact_d_seg_from_logits,
     pose_loss,
@@ -216,11 +217,19 @@ class ScoreAwareTrainer:
         bhwc = self._render_pair_scorer_input(idx)
         posenet_in, segnet_in = self.dnet.preprocess_input(bhwc)
         seg_out = self.dnet.segnet(segnet_in)
-        seg_l = self.seg_loss_fn(seg_out, self.seg_targets_hard[idx])
+        # Measure the exact per-batch d_seg first so the hard-pixel curriculum
+        # can gate its phase on it (the curriculum forms take ``current_d_seg``).
+        with torch.no_grad():
+            d_seg_batch = exact_d_seg_from_logits(seg_out, self.seg_targets_hard[idx])
+        if self.cfg.seg_loss_form in CURRICULUM_SEG_LOSS_FORMS:
+            seg_l = self.seg_loss_fn(
+                seg_out, self.seg_targets_hard[idx], current_d_seg=d_seg_batch
+            )
+        else:
+            seg_l = self.seg_loss_fn(seg_out, self.seg_targets_hard[idx])
         total = self.cfg.seg_weight * seg_l
         out: dict[str, Any] = {"seg": seg_l}
-        with torch.no_grad():
-            out["d_seg"] = exact_d_seg_from_logits(seg_out, self.seg_targets_hard[idx])
+        out["d_seg"] = d_seg_batch
         if self.cfg.pose_enabled and self.pose_targets is not None:
             pose_out = self.dnet.posenet(posenet_in)
             pose_pred = pose_out["pose"][:, :6]

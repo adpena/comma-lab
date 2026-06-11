@@ -15,7 +15,9 @@ import torch
 from tac.score_aware_loop.live_segnet_loss import (
     ce_seg_loss,
     exact_d_seg_from_logits,
+    hard_pixel_curriculum_seg_loss,
     l7_softplus_seg_loss,
+    margin_polytope_hinge_seg_loss,
     pose_loss,
     smooth_disagreement_seg_loss,
     tau_softplus_seg_loss,
@@ -140,6 +142,96 @@ def test_ce_loss_rejects_wrong_shapes():
         _target_minus_runnerup_margin(logits, targets[:, 0])  # wrong target ndim
     with pytest.raises(ValueError):
         _target_minus_runnerup_margin(logits[0], targets)  # wrong logit ndim
+
+
+def test_margin_hinge_descends_d_seg():
+    # NO-FAKE: free logits optimized against the margin-polytope hinge must
+    # reduce the EXACT d_seg toward 0. A constant/no-op hinge would not.
+    torch.manual_seed(2)
+    targets = torch.randint(0, 5, (2, 6, 6))
+    logits = torch.zeros(2, 5, 6, 6, requires_grad=True)
+    opt = torch.optim.Adam([logits], lr=0.5)
+    d0 = exact_d_seg_from_logits(logits.detach(), targets)
+    for _ in range(80):
+        opt.zero_grad()
+        margin_polytope_hinge_seg_loss(logits, targets, margin_target=0.5).backward()
+        opt.step()
+    d1 = exact_d_seg_from_logits(logits.detach(), targets)
+    assert d1 < d0
+    assert d1 < 0.05
+
+
+def test_margin_hinge_is_zero_past_target_margin():
+    # Pixels already past margin_target contribute exactly 0 (cheapest interior:
+    # the loss STOPS optimizing a pixel safely on the correct side).
+    targets = torch.zeros(1, 2, 2, dtype=torch.long)
+    logits = torch.full((1, 5, 2, 2), -10.0)
+    logits[:, 0] = 10.0  # margin = 20 >> margin_target
+    assert float(margin_polytope_hinge_seg_loss(logits, targets, margin_target=0.5)) == 0.0
+
+
+def test_margin_hinge_positive_inside_band():
+    # A marginally-correct pixel (0 < margin < margin_target) still has loss > 0
+    # (it is inside the hinge band, not yet at the cheapest interior).
+    targets = torch.zeros(1, 1, 1, dtype=torch.long)
+    logits = torch.full((1, 5, 1, 1), 0.0)
+    logits[:, 0, 0, 0] = 0.2  # margin = 0.2 < 0.5
+    assert float(margin_polytope_hinge_seg_loss(logits, targets, margin_target=0.5)) > 0.0
+
+
+def test_margin_hinge_gradient_only_on_target_and_runnerup():
+    # The hinge gradient is +1 target / -1 runner-up for in-band pixels, 0 for
+    # other classes (well-conditioned boundary push). Verify a non-runner-up
+    # class gets ~0 gradient while target & runner-up are nonzero.
+    targets = torch.zeros(1, 1, 1, dtype=torch.long)
+    logits = torch.zeros(1, 5, 1, 1, requires_grad=True)
+    with torch.no_grad():
+        logits[:, 1, 0, 0] = 0.1  # class 1 is the runner-up
+    margin_polytope_hinge_seg_loss(logits, targets, margin_target=0.5).backward()
+    g = logits.grad[0, :, 0, 0]
+    assert float(g[0]) < 0.0  # target logit pushed UP (loss decreases as it rises)
+    assert float(g[1]) > 0.0  # runner-up pushed DOWN
+    assert abs(float(g[2])) < 1e-6  # a non-competing class gets no gradient
+
+
+def test_hard_pixel_only_mask_ignores_correct_pixels():
+    # With hard_pixel_only, an in-band-but-correct pixel (0<margin<target) is
+    # DROPPED; only argmax-wrong pixels (margin<=0) contribute.
+    targets = torch.zeros(1, 1, 2, dtype=torch.long)
+    logits = torch.zeros(1, 5, 1, 2)
+    logits[:, 0, 0, 0] = 0.2   # correct but marginal (margin=0.2>0) -> dropped
+    logits[:, 1, 0, 1] = 1.0   # WRONG (argmax=1, target=0, margin=-1) -> counted
+    full = float(margin_polytope_hinge_seg_loss(logits, targets, hard_pixel_only=False))
+    hard = float(margin_polytope_hinge_seg_loss(logits, targets, hard_pixel_only=True))
+    # hard-only averages over 1 flipped pixel (the wrong one); full averages over 2.
+    assert hard > full  # the wrong pixel's hinge is bigger than the 2-pixel mean
+
+
+def test_curriculum_switches_phase_on_d_seg():
+    # Below threshold -> hard-pixel phase (matches hard_pixel_only=True);
+    # above/None -> broad phase (matches hard_pixel_only=False).
+    targets = torch.zeros(1, 1, 2, dtype=torch.long)
+    logits = torch.zeros(1, 5, 1, 2)
+    logits[:, 0, 0, 0] = 0.2
+    logits[:, 1, 0, 1] = 1.0
+    broad = float(
+        hard_pixel_curriculum_seg_loss(
+            logits, targets, curriculum_d_seg_threshold=3e-3, current_d_seg=0.5
+        )
+    )
+    hard = float(
+        hard_pixel_curriculum_seg_loss(
+            logits, targets, curriculum_d_seg_threshold=3e-3, current_d_seg=1e-3
+        )
+    )
+    none_phase = float(
+        hard_pixel_curriculum_seg_loss(
+            logits, targets, curriculum_d_seg_threshold=3e-3, current_d_seg=None
+        )
+    )
+    assert broad == none_phase  # None stays in broad phase
+    assert hard == float(margin_polytope_hinge_seg_loss(logits, targets, hard_pixel_only=True))
+    assert broad == float(margin_polytope_hinge_seg_loss(logits, targets, hard_pixel_only=False))
 
 
 def test_l7_weight_boost_concentrates_on_hard_pixels():
