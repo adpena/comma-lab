@@ -130,9 +130,18 @@ The MLX→numpy portability contract + contest inflate now exist and are score-p
   d_seg/d_pose trajectory + byte count, not inflation; the 600-pair CONTEST candidate run will use the
   fixed runner and produce an inflatable archive.
 
+## RUNNER FIX: streaming telemetry (commit `39ad7752d`) — prior daemons ran BLIND
+`CapstoneTrainer.train()` returns the trajectory only at the END (no per-epoch print), so the 100-pair
+daemons logged nothing for ~10 hrs — useless for mid-run harvest (a "Max observability" violation). Fixed:
+the runner passes a `_StreamingTelemetry` that writes each eval row to `<out>/trajectory.jsonl` + stdout.
+ALSO right-sized the viability run: **48 pairs** (≈2× faster epochs than 100, still non-trivially-
+overfittable) + eval_every=2 → first RD point ~6-8 min, clear curve ~30-40 min. Current daemon:
+**pid 46817, base_ch=20, 48 pairs, eval_every=2, crux-fixed per-frame FiLM**, out
+`experiments/results/capstone_daemon_b20_n48_stream/`.
+
 ## Harvest contract (next session / wakeup)
-Read `experiments/results/capstone_daemon_b20_n100_perframe/capstone_result.json` (final) OR `tail` the
-latest daemon log (`.omx/tmp/capstone_daemon/LATEST_LOG.txt`) for the eval_every=5 RD trajectory.
+**`tail experiments/results/capstone_daemon_b20_n48_stream/trajectory.jsonl`** (live per-epoch RD curve)
+OR read `…/capstone_result.json` (final). Latest log: `.omx/tmp/capstone_daemon/LATEST_LOG.txt`.
 **Decisive read: does d_pose now HOLD/descend toward the tube (crux fixed) vs bounce ~0.4 (old shared
 FiLM)?** Route: (a) d_pose holds + d_seg descends → fund the 600-pair candidate (needs the MLX→torch port
 for CUDA, OR a multi-day local MLX run) → byte-close → paired CPU+CUDA exact eval → pointer move; (b)
