@@ -117,3 +117,16 @@ redundancy left for that budget to losslessly reclaim.
 axis_tag `[macOS-CPU advisory]`; score_claim=false; promotion_eligible=false;
 ready_for_exact_eval_dispatch=false. mission=frontier_breaking (negative result that
 correctly aims the next unit at retrain, not at a phantom $0 rate door).
+
+## 5. MEASURED lossy step-2 row (appended on eval completion)
+
+| | seg | pose | rate | **S** |
+|---|---|---|---|---|
+| NO-OP baseline (local) | 0.05599 | 0.01715 | 0.11797 | **0.19111** |
+| lossy step-2 (measured) | 0.14267 | 0.03119 | 0.10770 | **0.28156** |
+| dS | +0.08668 | +0.01404 | **−0.01027** | **+0.09045 (WORSE)** |
+
+- archive 161,745 B (−15,424 B), sha `e321fc975897b1cb4dde77f43068d82d3f71e6e92b0ac930c4f9b884e580b7c7`
+- **rate saved 0.01027; distortion cost 0.10072 → distortion/rate ratio = 9.81×.**
+- The R-D wall is now MEASURED: the frontier sits ~10:1 past the R-D knee. The lossy
+  inflate-time door is closed by measurement, confirming the prediction. **dS +0.0905, WORSE.**
