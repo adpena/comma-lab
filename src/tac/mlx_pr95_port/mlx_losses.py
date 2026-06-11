@@ -136,6 +136,106 @@ def pose_loss_mlx(pose_pred: Any, pose_target: Any) -> Any:
     return mx.sqrt(10.0 * mse + 1e-12)
 
 
+def cat_entropy_v2_mlx(
+    weight_tensors: Any,
+    sigma: float = 0.2,
+    sample_size: int = 2000,
+    rng_key: Any = None,
+) -> Any:
+    """Stage-5+ C1a coder-aware entropy regularizer (1:1 MLX port of PR95).
+
+    Size-weighted soft-histogram entropy over the decoder's Conv2d/Linear weight
+    tensors. For each weight tensor: per-tensor symmetric INT8 normalization to
+    ``[-127, 127]``, a Gaussian soft-assignment to the 255 integer grid bins with
+    bandwidth ``sigma``, then categorical entropy (bits/weight). The per-tensor
+    entropies are weighted by tensor ``numel`` and averaged.
+
+    Pushing this term down (small sigma + big lambda) biases the post-INT8 weight
+    distribution toward integer grid points (brotli-friendly), per PR95 L16.
+
+    This is the EXACT torch ``cat_entropy_v2`` math (``submissions/hnerv_muon/src/
+    losses.py``). The torch version iterates ``decoder.named_modules()`` selecting
+    ``nn.Conv2d``/``nn.Linear`` and reads ``mod.weight``; here the caller passes the
+    equivalent list of weight arrays (the ``*.weight`` ndim>=2 entries of the MLX
+    decoder tree). The per-tensor math (abs-max normalize + soft histogram + entropy)
+    is layout-invariant, so the NHWC MLX weights give the SAME value as the torch
+    OIHW weights for identical weight values (verified bit-exact in the parity gate).
+
+    Args:
+        weight_tensors: iterable of MLX weight arrays (Conv2d/Linear weights).
+        sigma: Gaussian soft-assignment bandwidth (PR95 0.2 -> 0.1 across stages).
+        sample_size: subsample cap per tensor for the soft histogram (PR95 2000).
+        rng_key: optional MLX random key for the subsample permutation. When None,
+            uses the global MLX RNG (matches the torch ``torch.randperm`` default of
+            consuming the ambient RNG stream).
+
+    Returns:
+        Scalar MLX array: the size-weighted mean entropy (bits/weight).
+    """
+    _require_mlx()
+    bins = mx.arange(-127, 128).astype(mx.float32)  # (255,)
+    total_numel = 0
+    weighted_entropy = mx.zeros(())
+    for w in weight_tensors:
+        numel = int(w.size)
+        ma = mx.stop_gradient(mx.max(mx.abs(w)))
+        if float(ma.item()) < 1e-12:
+            continue
+        wn = mx.reshape(w / (ma / 127.0), (-1,))
+        if int(wn.size) > sample_size:
+            if rng_key is not None:
+                rng_key, sub = mx.random.split(rng_key)
+                perm = mx.argsort(mx.random.uniform(shape=(int(wn.size),), key=sub))
+            else:
+                perm = mx.argsort(mx.random.uniform(shape=(int(wn.size),)))
+            wn = mx.take(wn, perm[:sample_size], axis=0)
+        # Gaussian soft-assignment to the integer grid (B, 255).
+        diff = (mx.expand_dims(wn, 1) - mx.expand_dims(bins, 0)) / sigma
+        sa = mx.exp(-0.5 * diff * diff)
+        sa = sa / (mx.sum(sa, axis=1, keepdims=True) + 1e-12)
+        bp = mx.mean(sa, axis=0)
+        bp = bp / (mx.sum(bp) + 1e-12)
+        entropy = -mx.sum(bp * (mx.log(bp + 1e-12) / mx.log(mx.array(2.0))))
+        weighted_entropy = weighted_entropy + numel * entropy
+        total_numel += numel
+    return weighted_entropy / max(total_numel, 1)
+
+
+def fake_quantize_mlx(tensor: Any, n_levels: int = 127) -> Any:
+    """Per-tensor symmetric INT8 fake-quant with straight-through estimator (1:1 PR95).
+
+    Forward returns the rounded/clamped/dequantized weight; backward passes the
+    gradient through unchanged (``(q*scale - tensor).stop_gradient + tensor``).
+    The per-tensor abs-max scale is layout-invariant (NHWC == OIHW for identical
+    values), so this matches the torch ``fake_quantize`` bit-for-bit.
+    """
+    _require_mlx()
+    ma = mx.max(mx.abs(tensor))
+    scale = mx.where(ma > 0, ma / n_levels, mx.array(1.0))
+    q = mx.clip(mx.round(tensor / scale), -n_levels, n_levels)
+    dequant = q * scale
+    return mx.stop_gradient(dequant - tensor) + tensor
+
+
+def apply_sigma_noise_mlx(weight: Any, sigma: float, rng_key: Any = None) -> Any:
+    """Additive Gaussian weight noise ``w + sigma*N(0,1)`` (PR95 L17 sigma schedule).
+
+    The PR95 sigma schedule (0.2 in stages 1-6 -> 0.1 in stages 7-8) injects
+    Gaussian noise to simulate the uint8 quantization roundtrip during training
+    (sister of the eval_roundtrip non-negotiable). ``sigma<=0`` is a no-op
+    (returns the weight unchanged) so a stage with the schedule disabled is byte-
+    identical to no-noise.
+    """
+    _require_mlx()
+    if sigma <= 0.0:
+        return weight
+    if rng_key is not None:
+        noise = mx.random.normal(shape=weight.shape, key=rng_key)
+    else:
+        noise = mx.random.normal(shape=weight.shape)
+    return weight + sigma * noise
+
+
 def exact_d_seg_from_logits_mlx(seg_logits: Any, targets_hard: Any) -> float:
     """Return the EXACT SegNet argmax-disagreement RATE (the evaluator's d_seg).
 
@@ -160,8 +260,11 @@ STAGE_SEG_LOSS_FNS_MLX = {
 
 __all__ = [
     "STAGE_SEG_LOSS_FNS_MLX",
+    "apply_sigma_noise_mlx",
+    "cat_entropy_v2_mlx",
     "ce_seg_loss_mlx",
     "exact_d_seg_from_logits_mlx",
+    "fake_quantize_mlx",
     "l7_softplus_seg_loss_mlx",
     "pose_loss_mlx",
     "smooth_disagreement_seg_loss_mlx",

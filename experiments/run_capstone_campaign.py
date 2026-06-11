@@ -146,6 +146,23 @@ def main() -> int:
     ap.add_argument("--grad-clip-muon", type=float, default=50.0)
     ap.add_argument("--eval-every", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--curriculum", choices=("none", "pr95_8stage"), default="none",
+        help="PR95 L14 8-stage curriculum (the d_seg-floor-breaking schedule). "
+             "'none' = the legacy single fixed stage (ce_seg_loss + fixed Muon LR).",
+    )
+    ap.add_argument(
+        "--optimizer-schedule",
+        choices=("pr95_adamw_then_muon", "muon_throughout"),
+        default="muon_throughout",
+        help="pr95_adamw_then_muon = FAITHFUL to PR95 (AdamW stages 1-7, Muon stage 8 "
+             "only). muon_throughout = #77 deviation (Muon from stage 1).",
+    )
+    ap.add_argument(
+        "--curriculum-total-epochs", type=int, default=None,
+        help="Spread this many epochs across the 8 stages proportionally to the "
+             "canonical counts. Default: use --epochs as the total.",
+    )
     ap.add_argument("--device", default="cpu")  # torch scorer device; NEVER mps
     ap.add_argument("--out-dir", default="experiments/results/capstone_smoke")
     ap.add_argument("--targets-cache", default="experiments/results/capstone_gt_targets_cache")
@@ -190,9 +207,40 @@ def main() -> int:
     d_seg_init = trainer.exact_d_seg()
     d_pose_init = trainer.mean_d_pose()
     print(f"[init] n={n} base_ch={args.base_channels} d_seg={d_seg_init:.5f} "
-          f"d_pose={d_pose_init:.5f}", flush=True)
+          f"d_pose={d_pose_init:.5f} curriculum={args.curriculum} "
+          f"opt_schedule={args.optimizer_schedule}", flush=True)
 
-    train_out = trainer.train()
+    if args.curriculum == "none":
+        train_out = trainer.train()
+    else:
+        from tac.mlx_pr95_port.curriculum import build_pr95_8stage_curriculum
+
+        total = args.curriculum_total_epochs or args.epochs
+        stages = build_pr95_8stage_curriculum(total_epochs=total)
+        print(f"[curriculum] {args.curriculum}: 8 stages, "
+              f"{[s.epochs for s in stages]} epochs (total {sum(s.epochs for s in stages)}), "
+              f"opt_schedule={args.optimizer_schedule}", flush=True)
+
+        def _on_stage_done(i, spec, summary):
+            print(f"[curriculum] stage {i+1}/8 {spec.name} DONE: "
+                  f"d_seg {summary['d_seg_initial']:.5f}->{summary['d_seg_final']:.5f} "
+                  f"(best {summary['d_seg_best']:.5f}) muon={summary['use_muon']} "
+                  f"qat={spec.use_qat} c1a_lambda={spec.cat_lambda} "
+                  f"sigma_noise={spec.sigma_weight_noise}", flush=True)
+
+        cur_result = trainer.run_curriculum(
+            stages, optimizer_schedule=args.optimizer_schedule,
+            on_stage_done=_on_stage_done,
+        )
+        train_out = {
+            "curriculum": args.curriculum,
+            "optimizer_schedule": cur_result.optimizer_schedule,
+            "d_seg_initial": cur_result.d_seg_initial,
+            "d_seg_final": cur_result.d_seg_final,
+            "d_seg_best": cur_result.d_seg_best,
+            "stages": cur_result.stages,
+        }
+
     d_seg = trainer.exact_d_seg()
     d_pose = trainer.mean_d_pose()
 
@@ -213,6 +261,8 @@ def main() -> int:
         "base_channels": args.base_channels,
         "decoder_dtype": args.decoder_dtype,
         "epochs": args.epochs,
+        "curriculum": args.curriculum,
+        "optimizer_schedule": args.optimizer_schedule,
         "muon_lr": args.muon_lr,
         "grad_clip": args.grad_clip,
         "d_seg_init": d_seg_init, "d_pose_init": d_pose_init,
@@ -229,6 +279,9 @@ def main() -> int:
         "sub_0_19": score < 0.19,
         "wall_s": time.time() - t_start,
         "traj": train_out.get("traj") if isinstance(train_out, dict) else None,
+        "curriculum_stages": (
+            train_out.get("stages") if isinstance(train_out, dict) else None
+        ),
     }
     (out / "capstone_result.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2), flush=True)

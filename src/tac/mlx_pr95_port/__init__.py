@@ -31,10 +31,31 @@ runs on MLX. Non-promotable per Catalog #192; a contest score requires
 ``upstream/evaluate.py`` on paired CUDA + Linux-x86_64 CPU.
 """
 
+from tac.mlx_pr95_port.curriculum import (
+    CURRICULA,
+    OPTIMIZER_SCHEDULE_MUON_THROUGHOUT,
+    OPTIMIZER_SCHEDULE_PR95,
+    OPTIMIZER_SCHEDULES,
+    CurriculumResult,
+    CurriculumTrainerProtocol,
+    StageSpec,
+    build_pr95_8stage_curriculum,
+    resolve_use_muon,
+    run_curriculum,
+)
+from tac.mlx_pr95_port.curriculum_mechanisms import (
+    StageMechanisms,
+    add_c1a_entropy_gradient,
+    apply_stage_weight_transforms,
+    weight_tensor_keys,
+)
 from tac.mlx_pr95_port.mlx_losses import (
     STAGE_SEG_LOSS_FNS_MLX,
+    apply_sigma_noise_mlx,
+    cat_entropy_v2_mlx,
     ce_seg_loss_mlx,
     exact_d_seg_from_logits_mlx,
+    fake_quantize_mlx,
     l7_softplus_seg_loss_mlx,
     pose_loss_mlx,
     smooth_disagreement_seg_loss_mlx,
@@ -65,10 +86,16 @@ from tac.mlx_pr95_port.score_bridge import (
 
 __all__ = [
     "CAMERA_HW",
+    "CURRICULA",
     "INSTABILITY_BLOWUP_FACTOR",
+    "OPTIMIZER_SCHEDULES",
+    "OPTIMIZER_SCHEDULE_MUON_THROUGHOUT",
+    "OPTIMIZER_SCHEDULE_PR95",
     "POSE_DIM",
     "SCORER_HW",
     "STAGE_SEG_LOSS_FNS_MLX",
+    "CurriculumResult",
+    "CurriculumTrainerProtocol",
     "MlxScoreAwareConfig",
     "MlxScoreAwareTrainer",
     "PoseFiLMDecoderMLX",
@@ -76,13 +103,24 @@ __all__ = [
     "PoseFilmTrainerConfig",
     "ScoreBridgeResult",
     "StabilizedRecipe",
+    "StageMechanisms",
+    "StageSpec",
     "StoredPoseBundleMLX",
     "TorchScorerBridge",
+    "add_c1a_entropy_gradient",
+    "apply_sigma_noise_mlx",
+    "apply_stage_weight_transforms",
+    "build_pr95_8stage_curriculum",
+    "cat_entropy_v2_mlx",
     "ce_seg_loss_mlx",
     "exact_d_seg_from_logits_mlx",
+    "fake_quantize_mlx",
     "l7_softplus_seg_loss_mlx",
     "pose_loss_mlx",
+    "resolve_use_muon",
+    "run_curriculum",
     "smooth_disagreement_seg_loss_mlx",
     "stored_pose_bytes",
     "tau_softplus_seg_loss_mlx",
+    "weight_tensor_keys",
 ]
