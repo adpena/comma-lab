@@ -1,5 +1,15 @@
 # SPIKE: ExecuTorch MLX delegate vs the exact contest scorer — GO/NO-GO (2026-06-11)
 
+> **UPDATE 2026-06-11 — SegNet blocker FIXED (see `executorch_mlx_delegate_segnet_fix_20260611.md`).**
+> The `steel_gemm_fused_nax` JIT crash is a NAX-tile GEMM bug gated on GPU arch (M5 = `applegpu_g17s`).
+> Setting `MLX_METAL_GPU_ARCH=applegpu_g15` (any non-NAX arch) forces the plain `steel_gemm_fused`
+> kernel → SegNet runs on the Apple GPU and is **d_seg-EXACT vs torch-CPU** (0 argmax flips / 1.57M px,
+> logit-err 4.3e-5). The same override keeps PoseNet FP32-exact. The "CONDITIONAL NO-GO" below now
+> flips to **GO** — ExecuTorch gives BOTH nets zero-port FP32-exact on the GPU. The benchmark memo's
+> "NOT pip-pinnable / vendored kernel" diagnosis is superseded: kernels come from the installed mlx,
+> and an arch env var is the fix.
+
+
 **Operator ask (2026-06-11, "so we don't do a lot of work for nothing"):** test whether the
 PyTorch-official **ExecuTorch MLX delegate** can run our EXACT contest scorer (SegNet +
 PoseNet) on the Apple GPU at FP32 fidelity — the ZERO-PORT path that, if it works, moots
