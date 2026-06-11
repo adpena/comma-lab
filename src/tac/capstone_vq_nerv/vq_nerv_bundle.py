@@ -198,6 +198,16 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         _require_mlx()
         super().__init__()
         self.cfg = cfg
+        # [SEEDS-PINNED FIX 2026-06-11] Seed the GLOBAL MLX RNG from cfg.seed BEFORE
+        # constructing the nn layers (decoder convs / FiLM MLP / grid-PE proj draw
+        # their init from the global RNG). Previously only the per-pair latent used
+        # an explicit key (below) while the decoder/FiLM init was nondeterministic —
+        # the campaign called ``mx.random.seed`` only inside train()/run_curriculum
+        # (AFTER construction), so runs were not bit-reproducible and the
+        # real-scorer test flaked on the unseeded init. Deterministic-by-construction
+        # now (CLAUDE.md "Seeds pinned" non-negotiable); required for clean grid-PE
+        # on/off + int8 A/B comparisons (same init both arms).
+        mx.random.seed(int(cfg.seed))  # type: ignore[union-attr]
         self.carrier = str(cfg.carrier)
         if self.carrier not in {"vq_index", "stored_latent"}:
             raise ValueError(
