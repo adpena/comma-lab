@@ -72727,6 +72727,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_cool_chic_score_aware_basis_20260611",
+      "name": "Cool-Chic score-aware non-conv basis (param-at-d_seg-basin)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/residual_basis/cool_chic_carrier.py + cool_chic_synthesis_numpy.py + cool_chic_synthesis_mlx.py + experiments/run_cool_chic_param_at_basin_sweep.py; 11 tests pass src/tac/tests/test_cool_chic_basis.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-CPU advisory] deep_fit_fullres.json: 3082 charged B (2040 lat+1042 wt, 521 synth params) -> exact d_seg 0.0084 @ full 384x512, 120ep, still descending; vs conv-HNeRV 162164 B (PR101 DECODER_BLOB_LEN). ~50x fewer bytes at comparable-order d_seg. experiments/results/lane_cool_chic_score_aware_basis_20260611/deep_fit_fullres.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "MLX<->numpy synth parity on REAL non-zero inputs (test_mlx_synth_matches_numpy_reference_on_real_inputs); torch<->numpy parity; ARM rate non-constant; gradient-flow verified; 11/11 NO-FAKE tests"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/cool_chic_param_at_dseg_basin_design_20260611.md (design + empirical results + verdict)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -72736,5 +72777,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-10T21:59:00Z"
+  "updated_at": "2026-06-11T15:23:01Z"
 }
