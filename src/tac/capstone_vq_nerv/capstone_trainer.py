@@ -91,15 +91,16 @@ class CapstoneTrainConfig:
     cast_muon_float32_to_bfloat16: bool = True
     ema_decay: float = 0.999
     use_ema_for_eval: bool = False  # eval LIVE weights (the 0.999-lag landmine).
-    # Route the pose-FiLM MLP weights to AdamW (not Muon). Muon's Newton-Schulz
-    # orthogonalization gives grad-norm-INDEPENDENT O(1) step magnitudes; for a
-    # small zero-init pose MLP this can over/under-shoot the pose basin. PR95's
-    # Muon class is conv-hidden-weights only — the pose path is a capstone addition
-    # that belongs in AdamW (faithful-core + adapted-synergy; CLAUDE.md
-    # "UNIQUE-AND-COMPLETE-PER-METHOD"). The shared partition fn + every other
-    # caller are UNTOUCHED; only this substrate forks the routing of its own
+    # OPT-IN hook to route the pose-FiLM MLP weights to AdamW (not Muon). PR95's
+    # Muon class is conv-hidden-weights only; the pose path is a capstone addition.
+    # The optimizer-poison audit #3 hypothesized Muon destabilizes the small pose
+    # MLP, but the synthetic A/B REFUTED that as a win (Muon-FiLM beat AdamW-FiLM;
+    # see .omx/research/quantizr_pose_implementation_audit_*.md §4). DEFAULT FALSE
+    # (do not regress validated behavior on an unproven fix); the hook is here for a
+    # real-FastViT-PoseNet A/B to decide. The shared partition fn + every other
+    # caller are UNTOUCHED; only this substrate can fork the routing of its own
     # FiLM weights via the optimizer-step's additive ``force_adamw_substrings`` hook.
-    force_film_to_adamw: bool = True
+    force_film_to_adamw: bool = False
     telemetry: list[dict[str, Any]] = field(default_factory=list)
 
 

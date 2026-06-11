@@ -140,6 +140,16 @@ class PoseFilmTrainerConfig:
     cast_muon_float32_to_bfloat16: bool = True
     use_ema_for_eval: bool = False
     scorer_hw: tuple[int, int] = (384, 512)
+    # OPT-IN hook to route the pose-FiLM MLP weights to AdamW (not Muon). The
+    # optimizer-poison audit #3 HYPOTHESIZED Muon's Newton-Schulz (grad-norm-
+    # INDEPENDENT O(1) steps) destabilizes the small zero-init pose MLP. EMPIRICAL
+    # A/B on this trainer's synthetic reachable-pose harness REFUTED that as a win:
+    # Muon-FiLM reached a LOWER d_pose than AdamW-FiLM at equal budget AND every LR
+    # (see .omx/research/quantizr_pose_implementation_audit_*.md §4). So the default
+    # is FALSE (preserve the validated Muon-FiLM behavior); the hook stays available
+    # for the REAL-FastViT-PoseNet path, where the conditioning is harder and the
+    # routing may help — to be decided by a real-scorer A/B, not the synthetic proxy.
+    force_film_to_adamw: bool = False
     telemetry: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -204,6 +214,9 @@ class PoseFilmTrainer:
         self._fingerprint = build_parameter_group_lr_policy_fingerprint(
             pr95_mlx_parameter_shape_records(bundle.parameters())
         )
+        self._force_adamw_substrings: tuple[str, ...] | None = (
+            ("film",) if config.force_film_to_adamw else None
+        )
 
     def _vjp_grads(self, indices: Any, pixel_cotangent: Any) -> Any:
         flat = tree_flatten(self.bundle.trainable_parameters())
@@ -234,6 +247,7 @@ class PoseFilmTrainer:
             self.opt_state,
             self.opt_config,
             parameter_group_fingerprint=self._fingerprint,
+            force_adamw_substrings=self._force_adamw_substrings,
         )
         mx.eval(self.bundle.parameters())
         return {
@@ -242,6 +256,7 @@ class PoseFilmTrainer:
             "pose": result.pose_loss_value,
             "d_seg_batch": result.d_seg,
             "grad_clip_would_clip": summary.get("gradient_clip_would_clip_count", 0),
+            "forced_to_adamw": summary.get("forced_to_adamw_parameter_names", []),
         }
 
     def _eval_metric(self, which: str) -> float:
