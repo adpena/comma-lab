@@ -76,15 +76,23 @@ __all__ = [
     "ORIENTATIONS",
     "SCHEMA_VERSION",
     "SCORER_INPUT_HW",
+    "AtlasGrid",
     "BandSpec",
     "EnergyAudit",
     "FrequencyCoordinates",
+    "aggregate_atlas_from_cells",
     "apply_frame_incidence",
     "band_limited_field",
     "band_radius_grid",
+    "cell_key",
+    "cell_key_str",
+    "cell_seed_for",
     "energy_audit_for_perturbation",
+    "enumerate_cell_keys",
     "frequency_coordinates_for_band",
     "full_yuv_to_rgb",
+    "iter_atlas_cells",
+    "measure_atlas",
     "oriented_band_mask",
     "perturb_channel_basis",
     "rgb_to_full_yuv",
@@ -598,23 +606,49 @@ def energy_audit_for_perturbation(
 def _area_downsample(arr_hwc: _np.ndarray, out_h: int, out_w: int) -> _np.ndarray:
     """Deterministic area-average downsample of (H, W, C) -> (out_h, out_w, C).
 
-    A bilinear-energy proxy: bins source pixels into the output grid and averages.
-    Used only for the energy diagnostic; not the scorer forward.
+    A bilinear-energy proxy: bins source pixels into the output grid and averages
+    each bin. Vectorized via ``np.add.reduceat`` along each axis (the prior
+    nested-Python double-loop was O(out_h*out_w) iterations per call — a large
+    hidden per-cell cost at the scorer-input target 384x512). Bit-identical to
+    the loop: same integer bin edges, same per-bin mean. Pure numpy.
     """
     import numpy as np
 
     arr = np.asarray(arr_hwc, dtype=np.float64)
     h, w, c = arr.shape
-    # integer-bin area average via reshape when divisible, else linear-interp grid.
-    ys = (np.linspace(0, h, out_h + 1)).astype(int)
-    xs = (np.linspace(0, w, out_w + 1)).astype(int)
-    out = np.empty((out_h, out_w, c), dtype=np.float64)
-    for iy in range(out_h):
-        y0, y1 = ys[iy], max(ys[iy] + 1, ys[iy + 1])
-        for ix in range(out_w):
-            x0, x1 = xs[ix], max(xs[ix] + 1, xs[ix + 1])
-            out[iy, ix] = arr[y0:y1, x0:x1].mean(axis=(0, 1))
-    return out
+    ys = np.linspace(0, h, out_h + 1).astype(int)
+    xs = np.linspace(0, w, out_w + 1).astype(int)
+    # Each output bin spans rows [ys[i], max(ys[i]+1, ys[i+1])) so a degenerate
+    # (zero-width) bin still averages exactly its single starting row/col.
+    y_starts = ys[:-1]
+    x_starts = xs[:-1]
+    y_ends = np.maximum(y_starts + 1, ys[1:])
+    x_ends = np.maximum(x_starts + 1, xs[1:])
+    y_counts = y_ends - y_starts
+    x_counts = x_ends - x_starts
+
+    # Sum over row bins via reduceat at the bin start indices, then divide by the
+    # per-bin row count. (reduceat sums arr[start_i : start_{i+1}); for the last
+    # bin it sums to the array end — which equals our end because the final edge
+    # is h. Degenerate bins are handled by the max(...,start+1) end via an
+    # explicit per-bin re-slice fallback only when a start repeats.)
+    if np.all(np.diff(y_starts) > 0):
+        row_sums = np.add.reduceat(arr, y_starts, axis=0)
+    else:  # rare: out_h > h produces repeated starts; fall back to explicit bins
+        row_sums = np.stack(
+            [arr[s:e].sum(axis=0) for s, e in zip(y_starts, y_ends, strict=True)],
+            axis=0,
+        )
+    row_avg = row_sums / y_counts[:, None, None]
+
+    if np.all(np.diff(x_starts) > 0):
+        col_sums = np.add.reduceat(row_avg, x_starts, axis=1)
+    else:
+        col_sums = np.stack(
+            [row_avg[:, s:e].sum(axis=1) for s, e in zip(x_starts, x_ends, strict=True)],
+            axis=1,
+        )
+    return col_sums / x_counts[None, :, None]
 
 
 # ---------------------------------------------------------------------------
@@ -908,7 +942,11 @@ def _aggregate_cell(
     """
     import numpy as np
 
-    H, W = CAMERA_HW
+    # Field dims MUST match the actual source frames (pairs are camera-res in the
+    # real pipeline; tests use small frames). Deriving from source_pairs rather
+    # than the CAMERA_HW constant avoids a shape-mismatch and keeps the physics
+    # resolution-agnostic.
+    H, W = int(source_pairs.shape[2]), int(source_pairs.shape[3])
     rng = np.random.default_rng(seed)
     n_pairs = source_pairs.shape[0]
 
@@ -1034,41 +1072,207 @@ def build_band_specs(
     ]
 
 
-def measure_atlas(
-    source_pairs: _np.ndarray,
-    grid: AtlasGrid,
-    *,
-    device: str = "cpu",
-    progress: bool = True,
-) -> dict[str, Any]:
-    """Measure the full v2 spectral-sensitivity atlas over ``source_pairs``.
+# ---------------------------------------------------------------------------
+# Deterministic cell identity + seed (THE resumability foundation).
+#
+# A cell's RNG seed is derived ONLY from its key (the 7 axes) + the grid's
+# global seed + the AXIS-VALUE itself (not the axis INDEX within the grid).
+# Using the axis VALUE (band_index, the orientation/basis/channel/incidence
+# string, the amplitude) rather than its position in the grid lists means the
+# seed is INVARIANT to grid ordering and to which subset of axes a run sweeps.
+# That is what makes resume EXACT: a cell computed in run A and re-attempted in
+# run B (possibly with the cells visited in a different order, or a superset
+# grid) draws the SAME random-phase field and therefore produces a
+# bit-identical scorer response. Per CLAUDE.md "Seeds pinned".
+# ---------------------------------------------------------------------------
 
-    ``source_pairs`` is ``(N, 2, H, W, 3)`` uint8/float — N source frame pairs at
-    camera resolution. Returns the full machine-readable artifact dict (schema
-    ``scorer_spectral_sensitivity.v2``) carrying every cell, the per-band
-    coordinate conversions, the measured baseline + boundary threshold, and the
-    headline peaks (where H_seg / H_pose peak, with the SIREN-w-equivalent of
-    each peak). Authority is ``[macOS-CPU advisory]`` / ``exact_pair_scorer`` ->
-    ``mechanism_update_eligible`` only.
+# Stable enumeration of the orientation / basis / channel / incidence label
+# spaces so the per-cell seed is computed from a FIXED index that never depends
+# on the particular grid subset being swept.
+_ORIENTATION_SEED_INDEX: dict[str, int] = {o: i for i, o in enumerate(ORIENTATIONS)}
+_BASIS_SEED_INDEX: dict[str, int] = {b: i for i, b in enumerate(CHANNEL_BASES)}
+_INCIDENCE_SEED_INDEX: dict[str, int] = {fi: i for i, fi in enumerate(FRAME_INCIDENCES)}
+# Channel index is per-basis and stable across the canonical 4-label space.
+_CHANNEL_SEED_INDEX: dict[str, dict[str, int]] = {
+    basis: {ch: i for i, ch in enumerate(CHANNEL_LABELS[basis])}
+    for basis in CHANNEL_BASES
+}
+
+
+def cell_seed_for(
+    *,
+    global_seed: int,
+    band_index: int,
+    orientation: str,
+    amplitude_lsb: float,
+    channel_basis: str,
+    channel: str,
+    frame_incidence: str,
+) -> int:
+    """Deterministic per-cell RNG seed from the cell key + the global seed.
+
+    The seed is a function of the cell's INTRINSIC identity (band index, the
+    fixed label-space index of each categorical axis, and the amplitude value),
+    NOT of the cell's position within whatever grid subset is being swept. This
+    is the contract that makes resume bit-exact: the same cell drawn in any run
+    (any grid ordering, any axis subset) produces the same random-phase field.
+
+    NOTE: this reproduces the exact arithmetic the original ``measure_atlas``
+    loop used inline, EXCEPT that the categorical-axis multipliers now key off
+    the canonical fixed label-space index instead of ``grid.<axis>.index(...)``
+    (which depended on the swept subset). For the canonical full grid the two
+    agree; for a subset grid the fixed-index form is the correct, order-stable
+    seed. Amplitude contributes via ``int(amplitude * 4)`` (LSB amplitudes are
+    quarter-LSB-resolved in the default grid).
+    """
+    return (
+        int(global_seed)
+        + 1009 * int(band_index)
+        + 7919 * _ORIENTATION_SEED_INDEX[orientation]
+        + 104729 * round(float(amplitude_lsb) * 4)
+        + 1299709 * _BASIS_SEED_INDEX[channel_basis]
+        + 15485863 * _CHANNEL_SEED_INDEX[channel_basis][channel]
+        + 86028121 * _INCIDENCE_SEED_INDEX[frame_incidence]
+    ) % (2**31)
+
+
+def cell_key(
+    *,
+    band_index: int,
+    orientation: str,
+    amplitude_lsb: float,
+    channel_basis: str,
+    channel: str,
+    frame_incidence: str,
+) -> dict[str, Any]:
+    """The canonical 6-axis identity dict for one atlas cell (JSON-stable).
+
+    (The 7th axis, the source-pair set, is held fixed per run and recorded at
+    the artifact level, not per cell.) Two runs that produce a cell with the
+    same ``cell_key`` over the same source pairs + global seed MUST produce
+    bit-identical responses.
+    """
+    return {
+        "band_index": int(band_index),
+        "orientation": str(orientation),
+        "amplitude_lsb": float(amplitude_lsb),
+        "channel_basis": str(channel_basis),
+        "channel": str(channel),
+        "frame_incidence": str(frame_incidence),
+    }
+
+
+def cell_key_str(key: dict[str, Any]) -> str:
+    """Canonical compact string of a cell key (the resume dedup token).
+
+    Amplitude is formatted to a fixed precision so float repr noise can never
+    split one logical cell into two keys.
+    """
+    return (
+        f"b{int(key['band_index'])}"
+        f"|o:{key['orientation']}"
+        f"|a:{float(key['amplitude_lsb']):.6g}"
+        f"|cb:{key['channel_basis']}"
+        f"|ch:{key['channel']}"
+        f"|fi:{key['frame_incidence']}"
+    )
+
+
+def enumerate_cell_keys(grid: AtlasGrid) -> list[dict[str, Any]]:
+    """All cell keys for ``grid`` in the canonical sweep order (the same order
+    ``measure_atlas`` / ``iter_atlas_cells`` visit them)."""
+    keys: list[dict[str, Any]] = []
+    for orientation in grid.orientations:
+        band_specs = build_band_specs(
+            grid.n_bands, orientation, spacing=grid.band_spacing
+        )
+        for band in band_specs:
+            for amplitude in grid.amplitudes_lsb:
+                for basis in grid.channel_bases:
+                    for channel in grid.channels_for(basis):
+                        for incidence in grid.frame_incidences:
+                            keys.append(
+                                cell_key(
+                                    band_index=band.band_index,
+                                    orientation=orientation,
+                                    amplitude_lsb=amplitude,
+                                    channel_basis=basis,
+                                    channel=channel,
+                                    frame_incidence=incidence,
+                                )
+                            )
+    return keys
+
+
+def _cell_record(
+    *,
+    band: BandSpec,
+    orientation: str,
+    amplitude: float,
+    basis: str,
+    channel: str,
+    incidence: str,
+    coords: FrequencyCoordinates,
+    result: CellResult,
+) -> dict[str, Any]:
+    """Assemble one machine-readable cell dict from a measured ``CellResult``.
+
+    Single source of truth for the cell schema, shared by ``measure_atlas`` and
+    the streaming/resumable path so the JSONL and the in-memory atlas are
+    byte-for-byte the same shape.
+    """
+    return {
+        "band_index": band.band_index,
+        "orientation": orientation,
+        "r_lo": band.r_lo,
+        "r_hi": band.r_hi,
+        "r_center": band.r_center,
+        "amplitude_lsb": amplitude,
+        "channel_basis": basis,
+        "channel": channel,
+        "frame_incidence": incidence,
+        "frequency_coordinates": _coords_as_dict(coords),
+        # Level-1
+        "H_logit_margin_drop_mean": result.d_logit_margin_mean,
+        "logit_margin_drop_p10": result.d_logit_margin_p10,
+        "logit_l2_delta": result.logit_l2_delta,
+        # Level-2
+        "H_seg": result.d_seg,
+        "flip_count_total": result.flip_count_total,
+        "flip_count_boundary": result.flip_count_boundary,
+        "flip_count_interior": result.flip_count_interior,
+        # Level-3
+        "d_seg_exact": result.d_seg_exact,
+        "H_pose": result.d_pose,
+        "score_nonrate": result.score_nonrate,
+        # CI + energy
+        "n_pairs": result.n_pairs,
+        "n_phase_samples": result.n_phase_samples,
+        "d_seg_std": result.d_seg_std,
+        "d_pose_std": result.d_pose_std,
+        "energy": result.energy,
+    }
+
+
+def _measure_baseline_and_threshold(
+    scorer: FrozenScorer, pairs: _np.ndarray
+) -> tuple[dict[str, float], float]:
+    """Measure the source-vs-source baseline + the boundary-margin threshold.
+
+    Deterministic given ``pairs`` + the frozen scorer (no RNG), so the resumed
+    aggregation reconstructs the same baseline every time.
     """
     import numpy as np
 
-    pairs = np.asarray(source_pairs)
-    if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[-1] != 3:
-        raise ValueError(
-            f"source_pairs must be (N, 2, H, W, 3); got shape {pairs.shape}"
-        )
-    n_pairs = min(int(grid.n_pairs), pairs.shape[0])
-    pairs = pairs[:n_pairs]
-
-    scorer = FrozenScorer(device=device)
-
-    # Measured baseline: source-vs-source (the ~0 floor every H is measured above).
-    base_levels: list[dict[str, float]] = []
+    n_pairs = pairs.shape[0]
     src_frames_for_thresh = pairs.reshape(-1, *pairs.shape[2:])  # (N*2, H, W, 3)
     boundary_thresh = estimate_boundary_margin_threshold(
-        scorer, src_frames_for_thresh, percentile=25.0, max_frames=min(8, src_frames_for_thresh.shape[0])
+        scorer,
+        src_frames_for_thresh,
+        percentile=25.0,
+        max_frames=min(8, src_frames_for_thresh.shape[0]),
     )
+    base_levels: list[dict[str, float]] = []
     for pi in range(n_pairs):
         p = pairs[pi].astype(np.float64)
         base_levels.append(
@@ -1081,14 +1285,56 @@ def measure_atlas(
             np.mean([b["d_logit_margin_mean"] for b in base_levels])
         ),
     }
+    return baseline, boundary_thresh
 
-    cells: list[dict[str, Any]] = []
-    seg_peak: dict[str, Any] | None = None
-    pose_peak: dict[str, Any] | None = None
-    margin_peak: dict[str, Any] | None = None
 
-    total = grid.total_cells()
-    done = 0
+def iter_atlas_cells(
+    source_pairs: _np.ndarray,
+    grid: AtlasGrid,
+    *,
+    device: str = "cpu",
+    skip_cell_keys: set[str] | None = None,
+    scorer: FrozenScorer | None = None,
+    baseline: dict[str, float] | None = None,
+    boundary_margin_thresh: float | None = None,
+):
+    """Yield ``(cell_dict, key_str)`` per atlas cell — the RESUMABLE generator.
+
+    This is ``measure_atlas`` decomposed into a streaming producer so the CLI
+    can write each cell to a durable JSONL as it is computed and SKIP cells
+    already present (idempotent resume). Each cell is measured with the
+    deterministic per-cell seed from :func:`cell_seed_for`, so a cell yielded
+    here is bit-identical to the same cell from :func:`measure_atlas` (the
+    end-to-end resume-idempotency guarantee).
+
+    * ``skip_cell_keys`` — a set of ``cell_key_str`` already completed; those
+      cells are NOT recomputed (resume).
+    * ``scorer`` / ``baseline`` / ``boundary_margin_thresh`` — pass them in to
+      avoid reloading the frozen scorer / re-measuring the baseline across
+      resume sessions; if omitted they are constructed/measured here.
+
+    The baseline + boundary threshold are deterministic given the source pairs,
+    so a resumed session reconstructs the same H = response - baseline floor.
+    """
+    import numpy as np
+
+    pairs = np.asarray(source_pairs)
+    if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[-1] != 3:
+        raise ValueError(
+            f"source_pairs must be (N, 2, H, W, 3); got shape {pairs.shape}"
+        )
+    n_pairs = min(int(grid.n_pairs), pairs.shape[0])
+    pairs = pairs[:n_pairs]
+
+    if scorer is None:
+        scorer = FrozenScorer(device=device)
+    if baseline is None or boundary_margin_thresh is None:
+        baseline, boundary_margin_thresh = _measure_baseline_and_threshold(
+            scorer, pairs
+        )
+
+    skip = skip_cell_keys or set()
+
     for orientation in grid.orientations:
         band_specs = build_band_specs(
             grid.n_bands, orientation, spacing=grid.band_spacing
@@ -1099,16 +1345,26 @@ def measure_atlas(
                 for basis in grid.channel_bases:
                     for channel in grid.channels_for(basis):
                         for incidence in grid.frame_incidences:
-                            # Independent seed per cell (reproducible, decorrelated).
-                            cell_seed = (
-                                grid.seed
-                                + 1009 * band.band_index
-                                + 7919 * grid.orientations.index(orientation)
-                                + 104729 * int(amplitude * 4)
-                                + 1299709 * grid.channel_bases.index(basis)
-                                + 15485863 * grid.channels_for(basis).index(channel)
-                                + 86028121 * grid.frame_incidences.index(incidence)
-                            ) % (2**31)
+                            key = cell_key(
+                                band_index=band.band_index,
+                                orientation=orientation,
+                                amplitude_lsb=amplitude,
+                                channel_basis=basis,
+                                channel=channel,
+                                frame_incidence=incidence,
+                            )
+                            ks = cell_key_str(key)
+                            if ks in skip:
+                                continue
+                            cell_seed = cell_seed_for(
+                                global_seed=grid.seed,
+                                band_index=band.band_index,
+                                orientation=orientation,
+                                amplitude_lsb=amplitude,
+                                channel_basis=basis,
+                                channel=channel,
+                                frame_incidence=incidence,
+                            )
                             result = _aggregate_cell(
                                 scorer,
                                 pairs,
@@ -1119,62 +1375,52 @@ def measure_atlas(
                                 incidence=incidence,
                                 n_phase_samples=grid.n_phase_samples,
                                 seed=cell_seed,
-                                boundary_margin_thresh=boundary_thresh,
+                                boundary_margin_thresh=boundary_margin_thresh,
                                 baseline=baseline,
                             )
-                            cell = {
-                                "band_index": band.band_index,
-                                "orientation": orientation,
-                                "r_lo": band.r_lo,
-                                "r_hi": band.r_hi,
-                                "r_center": band.r_center,
-                                "amplitude_lsb": amplitude,
-                                "channel_basis": basis,
-                                "channel": channel,
-                                "frame_incidence": incidence,
-                                "frequency_coordinates": _coords_as_dict(coords),
-                                # Level-1
-                                "H_logit_margin_drop_mean": result.d_logit_margin_mean,
-                                "logit_margin_drop_p10": result.d_logit_margin_p10,
-                                "logit_l2_delta": result.logit_l2_delta,
-                                # Level-2
-                                "H_seg": result.d_seg,
-                                "flip_count_total": result.flip_count_total,
-                                "flip_count_boundary": result.flip_count_boundary,
-                                "flip_count_interior": result.flip_count_interior,
-                                # Level-3
-                                "d_seg_exact": result.d_seg_exact,
-                                "H_pose": result.d_pose,
-                                "score_nonrate": result.score_nonrate,
-                                # CI + energy
-                                "n_pairs": result.n_pairs,
-                                "n_phase_samples": result.n_phase_samples,
-                                "d_seg_std": result.d_seg_std,
-                                "d_pose_std": result.d_pose_std,
-                                "energy": result.energy,
-                            }
-                            cells.append(cell)
-                            if seg_peak is None or cell["H_seg"] > seg_peak["H_seg"]:
-                                seg_peak = cell
-                            if pose_peak is None or cell["H_pose"] > pose_peak["H_pose"]:
-                                pose_peak = cell
-                            if (
-                                margin_peak is None
-                                or cell["H_logit_margin_drop_mean"]
-                                > margin_peak["H_logit_margin_drop_mean"]
-                            ):
-                                margin_peak = cell
-                            done += 1
-                            if progress and done % 25 == 0:
-                                print(
-                                    f"[spectral.v2] cell {done}/{total} "
-                                    f"band{band.band_index} {orientation} "
-                                    f"a={amplitude} {basis}:{channel} {incidence} "
-                                    f"H_seg={cell['H_seg']:+.5f} H_pose={cell['H_pose']:+.4f}",
-                                    flush=True,
-                                )
+                            cell = _cell_record(
+                                band=band,
+                                orientation=orientation,
+                                amplitude=amplitude,
+                                basis=basis,
+                                channel=channel,
+                                incidence=incidence,
+                                coords=coords,
+                                result=result,
+                            )
+                            yield cell, ks
 
-    artifact: dict[str, Any] = {
+
+def aggregate_atlas_from_cells(
+    cells: list[dict[str, Any]],
+    grid: AtlasGrid,
+    *,
+    baseline: dict[str, float],
+    boundary_margin_threshold: float,
+    n_pairs: int,
+) -> dict[str, Any]:
+    """Build the final atlas artifact from a (possibly partial) list of cells.
+
+    Re-aggregatable any time from the durable JSONL — a partial run still yields
+    a valid atlas over the cells completed so far. The schema/authority flags +
+    headline-peak selection mirror :func:`measure_atlas` exactly.
+    """
+    seg_peak: dict[str, Any] | None = None
+    pose_peak: dict[str, Any] | None = None
+    margin_peak: dict[str, Any] | None = None
+    for cell in cells:
+        if seg_peak is None or cell["H_seg"] > seg_peak["H_seg"]:
+            seg_peak = cell
+        if pose_peak is None or cell["H_pose"] > pose_peak["H_pose"]:
+            pose_peak = cell
+        if (
+            margin_peak is None
+            or cell["H_logit_margin_drop_mean"]
+            > margin_peak["H_logit_margin_drop_mean"]
+        ):
+            margin_peak = cell
+
+    return {
         "schema": SCHEMA_VERSION,
         "authority_tier": "exact_cpu_advisory",
         "metric_family": "exact_pair_scorer",
@@ -1195,10 +1441,11 @@ def measure_atlas(
             "yuv_channels": list(grid.yuv_channels),
             "n_phase_samples": grid.n_phase_samples,
             "seed": grid.seed,
-            "total_cells": total,
+            "total_cells": grid.total_cells(),
         },
+        "cells_measured": len(cells),
         "baseline": baseline,
-        "boundary_margin_threshold": boundary_thresh,
+        "boundary_margin_threshold": boundary_margin_threshold,
         "boundary_margin_threshold_note": (
             "MEASURED p25 of the SegNet source-class margin over real source "
             "frames (not a hand-set constant). Flips at pixels below this margin "
@@ -1221,7 +1468,71 @@ def measure_atlas(
             ".omx/research/principled_frequency_basis_synthesis_20260609.md"
         ),
     }
-    return artifact
+
+
+def measure_atlas(
+    source_pairs: _np.ndarray,
+    grid: AtlasGrid,
+    *,
+    device: str = "cpu",
+    progress: bool = True,
+) -> dict[str, Any]:
+    """Measure the full v2 spectral-sensitivity atlas over ``source_pairs``.
+
+    ``source_pairs`` is ``(N, 2, H, W, 3)`` uint8/float — N source frame pairs at
+    camera resolution. Returns the full machine-readable artifact dict (schema
+    ``scorer_spectral_sensitivity.v2``) carrying every cell, the per-band
+    coordinate conversions, the measured baseline + boundary threshold, and the
+    headline peaks (where H_seg / H_pose peak, with the SIREN-w-equivalent of
+    each peak). Authority is ``[macOS-CPU advisory]`` / ``exact_pair_scorer`` ->
+    ``mechanism_update_eligible`` only.
+
+    This is now a thin in-memory wrapper over the streaming producer
+    (:func:`iter_atlas_cells`) + the aggregator (:func:`aggregate_atlas_from_cells`),
+    so the all-at-once path and the resumable JSONL path share ONE cell-production
+    codepath (the bit-identical-resume contract).
+    """
+    import numpy as np
+
+    pairs = np.asarray(source_pairs)
+    if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[-1] != 3:
+        raise ValueError(
+            f"source_pairs must be (N, 2, H, W, 3); got shape {pairs.shape}"
+        )
+    n_pairs = min(int(grid.n_pairs), pairs.shape[0])
+    pairs = pairs[:n_pairs]
+
+    scorer = FrozenScorer(device=device)
+    baseline, boundary_thresh = _measure_baseline_and_threshold(scorer, pairs)
+
+    cells: list[dict[str, Any]] = []
+    total = grid.total_cells()
+    for cell, _ks in iter_atlas_cells(
+        pairs,
+        grid,
+        device=device,
+        scorer=scorer,
+        baseline=baseline,
+        boundary_margin_thresh=boundary_thresh,
+    ):
+        cells.append(cell)
+        if progress and len(cells) % 25 == 0:
+            print(
+                f"[spectral.v2] cell {len(cells)}/{total} "
+                f"band{cell['band_index']} {cell['orientation']} "
+                f"a={cell['amplitude_lsb']} {cell['channel_basis']}:{cell['channel']} "
+                f"{cell['frame_incidence']} "
+                f"H_seg={cell['H_seg']:+.5f} H_pose={cell['H_pose']:+.4f}",
+                flush=True,
+            )
+
+    return aggregate_atlas_from_cells(
+        cells,
+        grid,
+        baseline=baseline,
+        boundary_margin_threshold=boundary_thresh,
+        n_pairs=n_pairs,
+    )
 
 
 def _coords_as_dict(coords: FrequencyCoordinates) -> dict[str, Any]:

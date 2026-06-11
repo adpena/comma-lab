@@ -78,6 +78,13 @@ def _utc() -> str:
     ).stdout.strip()
 
 
+def _tier_names() -> tuple[str, ...]:
+    """Canonical tier names from the runner's preset dict (single source)."""
+    from tac.analysis.scorer_spectral_atlas_runner import TIER_PRESETS
+
+    return tuple(TIER_PRESETS)
+
+
 def _band_limited_perturbation(
     shape: tuple[int, int, int], r_lo: float, r_hi: float, rng: Any
 ) -> Any:
@@ -300,6 +307,187 @@ def _run_v2(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_v2_resume(args: argparse.Namespace) -> int:
+    """The RESUMABLE, multi-tier atlas (operator standing directive 2026-06-11).
+
+    Streams each cell to a durable JSONL as it is computed, SKIPS cells already
+    present on startup (idempotent resume), and re-aggregates the final atlas
+    from the full JSONL. ``--tier {quick,medium,exhaustive}`` selects a preset
+    grid; explicit grid flags override the preset. Writes a DONE.marker + a
+    progress sidecar so an external check sees %-complete without parsing the
+    JSONL.
+    """
+    import hi_nerv_renderer_sanity_ladder as ladder
+    import numpy as np
+
+    from tac.analysis import scorer_spectral_atlas_runner as runner
+
+    work = args.work_dir.resolve()
+    if "/tmp" in str(work):
+        raise SystemExit("work-dir must not be under /tmp (durable SSD only)")
+    work.mkdir(parents=True, exist_ok=True)
+
+    paths = runner.AtlasRunPaths.under(work, atlas_out=args.out)
+
+    # Tier preset -> base grid; explicit flags override the preset values.
+    grid = runner.grid_for_tier(args.tier, seed=int(args.seed))
+    overrides: dict[str, object] = {}
+    if args.n_pairs is not None:
+        overrides["n_pairs"] = int(args.n_pairs)
+    if args.n_bands is not None:
+        overrides["n_bands"] = int(args.n_bands)
+    if args.band_spacing is not None:
+        overrides["band_spacing"] = args.band_spacing
+    if args.amplitudes_lsb is not None:
+        overrides["amplitudes_lsb"] = tuple(args.amplitudes_lsb)
+    if args.orientations is not None:
+        overrides["orientations"] = tuple(args.orientations)
+    if args.frame_incidences is not None:
+        overrides["frame_incidences"] = tuple(args.frame_incidences)
+    if args.channel_bases is not None:
+        overrides["channel_bases"] = tuple(args.channel_bases)
+    if args.rgb_channels is not None:
+        overrides["rgb_channels"] = tuple(args.rgb_channels)
+    if args.yuv_channels is not None:
+        overrides["yuv_channels"] = tuple(args.yuv_channels)
+    if args.n_phase_samples is not None:
+        overrides["n_phase_samples"] = int(args.n_phase_samples)
+    if overrides:
+        from dataclasses import replace
+
+        grid = replace(grid, **overrides)
+
+    H, W, C = ladder._frame_dims()
+    # Decode the source pairs (camera-res GT) once.
+    src_raw = work / "source.raw"
+    ladder.decode_source_to_raw(
+        _REPO / "upstream" / "videos" / "0.mkv",
+        src_raw,
+        max_frames=2 * int(grid.n_pairs),
+    )
+    frames = np.memmap(src_raw, dtype=np.uint8, mode="r").reshape(-1, H, W, C)
+    n_avail = frames.shape[0] // 2
+    n_pairs = min(int(grid.n_pairs), n_avail)
+    pairs = np.array(frames[: 2 * n_pairs]).reshape(n_pairs, 2, H, W, C)
+
+    total = grid.total_cells()
+    # rough ETA from the killed-run anchor (~2.3 min/cell at n_pairs=12, phases=3
+    # on the CPU scorer); scaled by this run's pairs*phases vs that anchor.
+    anchor_sec_per_cell = 138.0  # 2.3 min/cell @ 12 pairs * 3 phases (the kill anchor)
+    anchor_work = 12 * 3
+    this_work = max(1, n_pairs * int(grid.n_phase_samples))
+    est_sec_per_cell = anchor_sec_per_cell * (this_work / anchor_work)
+    est_total_h = est_sec_per_cell * total / 3600.0
+    completed_keys, _ = runner.load_completed_cells(paths.cells_jsonl)
+    print(
+        f"[spectral.v2-resume] tier={args.tier} cells={total} "
+        f"(already_done={len(completed_keys)}) n_pairs={n_pairs} "
+        f"phases={grid.n_phase_samples} rough_ETA~{est_total_h:.2f}h "
+        f"(~{est_total_h - est_sec_per_cell*len(completed_keys)/3600.0:.2f}h remaining) "
+        f"device={args.device}\n"
+        f"  jsonl={paths.cells_jsonl}\n  progress={paths.progress_json}\n"
+        f"  done_marker={paths.done_marker}\n  atlas={paths.atlas_json}",
+        flush=True,
+    )
+
+    exit_code = 0
+    try:
+        atlas = runner.run_resumable_atlas(
+            pairs,
+            grid,
+            paths,
+            tier=args.tier,
+            device=args.device,
+            progress_every=int(args.progress_every),
+        )
+        hl = atlas.get("headline", {})
+        print("=== scorer spectral-sensitivity ATLAS (v2-resume) ===")
+        print(f"  cells_measured={atlas.get('cells_measured')}/{total}")
+        for name, key in (("SEG", "seg_peak"), ("POSE", "pose_peak"), ("MARGIN", "logit_margin_peak")):
+            p = hl.get(key) or {}
+            if not p:
+                continue
+            print(
+                f"  {name:6s} peak: H={p['H']:+.5f} @ band{p['band_index']} {p['orientation']} "
+                f"a={p['amplitude_lsb']}LSB {p['channel_basis']}:{p['channel']} {p['frame_incidence']} "
+                f"| w_equiv={p['siren_w_equivalent']:.1f} aliases={p['aliases_at_scorer']}"
+            )
+        lo = atlas.get("lowering_opportunities", {})
+        shed = lo.get("shed_here_low_sensitivity_cells", [])
+        print(
+            f"  SHED-BYTES candidates (scorer-blind cells): {lo.get('n_shed_candidate_cells', 0)} "
+            f"(top {len(shed)} reported); consumer={lo.get('consumer')}"
+        )
+        print(f"  wrote {paths.atlas_json}")
+    except KeyboardInterrupt:
+        exit_code = 130
+        print("[spectral.v2-resume] interrupted; progress preserved in JSONL", flush=True)
+    except Exception as exc:
+        exit_code = 1
+        print(f"[spectral.v2-resume] FAILED: {exc!r}; progress preserved in JSONL", flush=True)
+        raise
+    finally:
+        completed_now, _ = runner.load_completed_cells(paths.cells_jsonl)
+        runner.write_done_marker(
+            paths.done_marker,
+            exit_code=exit_code,
+            completed=len(completed_now),
+            total=total,
+        )
+    return exit_code
+
+
+def _run_v2_aggregate(args: argparse.Namespace) -> int:
+    """Re-aggregate the atlas (+ lowering analysis) from a partial JSONL.
+
+    Lets an operator inspect the atlas + the score-lowering opportunities of a
+    STILL-RUNNING (or killed) sweep WITHOUT touching the daemon — purely reads
+    the durable JSONL, rebuilds the headline + lowering analysis. No scorer load.
+    """
+    from tac.analysis import scorer_spectral_atlas_runner as runner
+
+    jsonl = args.cells_jsonl.resolve()
+    if not jsonl.exists():
+        raise SystemExit(f"cells JSONL not found: {jsonl}")
+    _keys, cells = runner.load_completed_cells(jsonl)
+    if not cells:
+        raise SystemExit(f"no cells in {jsonl}")
+
+    lo = runner.analyze_lowering_opportunities(cells)
+    out = {
+        "schema": "scorer_spectral_atlas_aggregate.v1",
+        "utc": runner._utc_iso(),
+        "authority_tier": "exact_cpu_advisory",
+        "metric_family": "exact_pair_scorer",
+        "promotable": False,
+        "mechanism_update_eligible": True,
+        "cells_jsonl": str(jsonl),
+        "cells_measured": len(cells),
+        "lowering_opportunities": lo,
+    }
+    # headline peaks via the same selection used in the live aggregation
+    seg = max(cells, key=lambda c: c.get("H_seg", 0.0))
+    pose = max(cells, key=lambda c: c.get("H_pose", 0.0))
+    out["seg_peak_cell"] = seg
+    out["pose_peak_cell"] = pose
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+    print(f"[spectral.v2-aggregate] {len(cells)} cells -> {args.out}")
+    print(
+        f"  SEG peak H_seg={seg.get('H_seg'):+.5f} @ band{seg.get('band_index')} "
+        f"{seg.get('orientation')} {seg.get('channel_basis')}:{seg.get('channel')}"
+    )
+    print(
+        f"  POSE peak H_pose={pose.get('H_pose'):+.4f} @ band{pose.get('band_index')} "
+        f"{pose.get('orientation')} {pose.get('channel_basis')}:{pose.get('channel')}"
+    )
+    print(
+        f"  SHED-BYTES candidates: {lo.get('n_shed_candidate_cells', 0)}; "
+        f"consumer={lo.get('consumer')}"
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd")
@@ -373,7 +561,55 @@ def main(argv: list[str] | None = None) -> int:
     v2p.add_argument("--out", required=True, type=Path)
     v2p.set_defaults(_fn=_run_v2)
 
+    # v2-resume (the RESUMABLE, multi-tier atlas — Deliverable 2026-06-11).
+    v2r = sub.add_parser(
+        "v2-resume",
+        help="RESUMABLE multi-tier atlas: per-cell JSONL, skip-completed resume, tiers, DONE.marker",
+    )
+    v2r.add_argument(
+        "--tier",
+        default="medium",
+        choices=tuple(_tier_names()),
+        help="resolution preset: quick (~32 cells, min) | medium (~192 cells, ~1-2h) | exhaustive (~6400, ~days)",
+    )
+    # Explicit grid overrides (None = use the tier preset's value).
+    v2r.add_argument("--n-pairs", type=int, default=None, help="override tier n_pairs")
+    v2r.add_argument("--n-bands", type=int, default=None, help="override tier n_bands")
+    v2r.add_argument(
+        "--band-spacing", default=None, choices=("linear", "log"), help="override tier band spacing"
+    )
+    v2r.add_argument("--amplitudes-lsb", type=_csv_floats, default=None, help="override tier amplitudes")
+    v2r.add_argument("--orientations", type=_csv_strs, default=None, help="override tier orientations")
+    v2r.add_argument("--frame-incidences", type=_csv_strs, default=None, help="override tier frame incidences")
+    v2r.add_argument("--channel-bases", type=_csv_strs, default=None, help="override tier channel bases")
+    v2r.add_argument("--rgb-channels", type=_csv_strs, default=None, help="override tier rgb channels")
+    v2r.add_argument("--yuv-channels", type=_csv_strs, default=None, help="override tier yuv channels")
+    v2r.add_argument("--n-phase-samples", type=int, default=None, help="override tier phase samples")
+    v2r.add_argument("--progress-every", type=int, default=1, help="refresh progress sidecar every N cells")
+    v2r.add_argument("--device", default="cpu")
+    v2r.add_argument("--seed", type=int, default=0)
+    v2r.add_argument("--work-dir", required=True, type=Path)
+    v2r.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="final atlas json (default: <work-dir>/atlas.json)",
+    )
+    v2r.set_defaults(_fn=_run_v2_resume)
+
+    # v2-aggregate (re-aggregate atlas + lowering analysis from a PARTIAL JSONL).
+    v2a = sub.add_parser(
+        "v2-aggregate",
+        help="re-aggregate atlas + score-lowering analysis from a partial/complete cells JSONL (no scorer load)",
+    )
+    v2a.add_argument("--cells-jsonl", required=True, type=Path, help="path to atlas_cells.jsonl")
+    v2a.add_argument("--out", required=True, type=Path, help="aggregate json output")
+    v2a.set_defaults(_fn=_run_v2_aggregate)
+
     args = ap.parse_args(argv)
+    # v2-resume: --out defaults to <work-dir>/atlas.json (computed post-parse).
+    if getattr(args, "cmd", None) == "v2-resume" and args.out is None:
+        args.out = args.work_dir.resolve() / "atlas.json"
     if not getattr(args, "_fn", None):
         ap.print_help()
         return 2
