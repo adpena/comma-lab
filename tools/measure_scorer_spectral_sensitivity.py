@@ -320,6 +320,7 @@ def _run_v2_resume(args: argparse.Namespace) -> int:
     import hi_nerv_renderer_sanity_ladder as ladder
     import numpy as np
 
+    from tac.analysis import scorer_spectral_atlas_parallel as parallel
     from tac.analysis import scorer_spectral_atlas_runner as runner
 
     work = args.work_dir.resolve()
@@ -371,19 +372,33 @@ def _run_v2_resume(args: argparse.Namespace) -> int:
     pairs = np.array(frames[: 2 * n_pairs]).reshape(n_pairs, 2, H, W, C)
 
     total = grid.total_cells()
+
+    # Resolve the worker count: --workers auto -> auto_worker_count() (leaves
+    # headroom for the coexisting capstone daemon); an explicit int is used as-is;
+    # 1 is the serial path (the bit-identity reference).
+    workers = (
+        parallel.auto_worker_count()
+        if args.workers == "auto"
+        else max(1, int(args.workers))
+    )
+
     # rough ETA from the killed-run anchor (~2.3 min/cell at n_pairs=12, phases=3
-    # on the CPU scorer); scaled by this run's pairs*phases vs that anchor.
+    # on the CPU scorer); scaled by this run's pairs*phases vs that anchor, then
+    # DIVIDED by the worker count (cells are independent — near-linear speedup).
     anchor_sec_per_cell = 138.0  # 2.3 min/cell @ 12 pairs * 3 phases (the kill anchor)
     anchor_work = 12 * 3
     this_work = max(1, n_pairs * int(grid.n_phase_samples))
     est_sec_per_cell = anchor_sec_per_cell * (this_work / anchor_work)
-    est_total_h = est_sec_per_cell * total / 3600.0
     completed_keys, _ = runner.load_completed_cells(paths.cells_jsonl)
+    remaining = total - len(completed_keys)
+    est_remaining_h = est_sec_per_cell * remaining / 3600.0 / max(1, workers)
+    est_total_h = est_sec_per_cell * total / 3600.0 / max(1, workers)
     print(
         f"[spectral.v2-resume] tier={args.tier} cells={total} "
         f"(already_done={len(completed_keys)}) n_pairs={n_pairs} "
-        f"phases={grid.n_phase_samples} rough_ETA~{est_total_h:.2f}h "
-        f"(~{est_total_h - est_sec_per_cell*len(completed_keys)/3600.0:.2f}h remaining) "
+        f"phases={grid.n_phase_samples} workers={workers} "
+        f"rough_ETA~{est_total_h:.2f}h "
+        f"(~{est_remaining_h:.2f}h remaining at {workers} workers) "
         f"device={args.device}\n"
         f"  jsonl={paths.cells_jsonl}\n  progress={paths.progress_json}\n"
         f"  done_marker={paths.done_marker}\n  atlas={paths.atlas_json}",
@@ -392,12 +407,15 @@ def _run_v2_resume(args: argparse.Namespace) -> int:
 
     exit_code = 0
     try:
-        atlas = runner.run_resumable_atlas(
+        atlas = parallel.run_resumable_atlas_parallel(
             pairs,
             grid,
             paths,
             tier=args.tier,
+            workers=workers,
+            raw_path=src_raw,
             device=args.device,
+            torch_threads_per_worker=int(args.torch_threads_per_worker),
             progress_every=int(args.progress_every),
         )
         hl = atlas.get("headline", {})
@@ -586,6 +604,21 @@ def main(argv: list[str] | None = None) -> int:
     v2r.add_argument("--yuv-channels", type=_csv_strs, default=None, help="override tier yuv channels")
     v2r.add_argument("--n-phase-samples", type=int, default=None, help="override tier phase samples")
     v2r.add_argument("--progress-every", type=int, default=1, help="refresh progress sidecar every N cells")
+    v2r.add_argument(
+        "--workers",
+        default="auto",
+        help=(
+            "cell-level parallelism: 'auto' (=min(12, physical_cores-4), leaves "
+            "headroom for the capstone daemon) | an int | 1 (serial, the "
+            "bit-identity reference). Cells are independent => near-linear speedup."
+        ),
+    )
+    v2r.add_argument(
+        "--torch-threads-per-worker",
+        type=int,
+        default=1,
+        help="torch.set_num_threads + OMP/MKL per worker (workers*threads <= ~cores)",
+    )
     v2r.add_argument("--device", default="cpu")
     v2r.add_argument("--seed", type=int, default=0)
     v2r.add_argument("--work-dir", required=True, type=Path)
