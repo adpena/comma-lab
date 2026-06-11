@@ -178,6 +178,29 @@ arsenal above; do not rebuild.
 - The originality is the SHAPING by measured scorer economics; the components are reused per the
   no-duplicative-code directive.
 
+## 5b. THE CORRECTED BAR — sub-frontier needs d_seg ~0.001, NOT the basin (operator 2026-06-11)
+
+**The verdict criterion was wrong** ("reach the 5.6e-4 basin"). The rate advantage (Cool-Chic ~13–90KB vs
+the frontier's 177KB) buys ~0.06–0.11 of budget, so the carrier beats S=0.19110 at a MUCH looser d_seg.
+MEASURED bar to BEAT the frontier (`100·d_seg + sqrt(10·d_pose) + 25·bytes/N < 0.19110`):
+
+| CC rate | d_pose | **d_seg bar to beat 0.191** | ×basin |
+|---|---|---|---|
+| 20KB (0.0133) | 3e-4 (collapsed) | **0.00123** | 2.2× |
+| 40KB (0.0266) | 3e-4 | 0.00110 | 2.0× |
+| 13KB (0.0087) | 2.9e-5 (frontier) | 0.00165 | 3.0× |
+| 90KB (0.0599) | 3e-4 | 0.00076 | 1.4× |
+
+So the target is **d_seg ≈ 0.0011–0.0017 (2–3× basin)**, ~5–7× below B1's current 0.0084 — NOT 15× to the
+basin. **BINDING CAVEAT:** every row at the coarse-synth pose level (d_pose=0.0376) is IMPOSSIBLE (pose term
+0.61 alone blows the budget) — so **sub-frontier hard-requires pose collapsed to ~3e-4**, which needs a
+**texture-richer synth** (the coarse 1×1 synth can't, per pose-fold). The double-win: a texture-richer synth
+collapses pose AND stabilizes the argmax (the deep-dig instability root cause), costs only 40–90KB (rate
+0.027–0.060, still 2–4× under frontier), and **amortizes across 600 frames** (more affordable at n600). The
+verdict criterion is therefore: *can a moderately texture-richer scorer-shaped Cool-Chic (40–90KB) reach
+d_seg ~0.001 with pose collapsed?* — judged against the exact `modules.py`/`evaluate.py`/0.mkv oracle.
+Risks: n48→n600 (real d_seg higher) + advisory→exact (Linux contest).
+
 ## 6. WHY IT'S CHEAPER THAN THE FRONTIER [DERIVED — to be MEASURED]
 
 The frontier's 162KB decoder reconstructs all pixels uniformly (~80% invisible-subspace waste). If capacity
