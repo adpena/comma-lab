@@ -1,0 +1,127 @@
+# The cheapest carrier — ORIGINAL full-stack design from measured scorer economics (2026-06-11)
+
+**Operator directive (2026-06-11, verbatim intent):** "the cheapest carrier is likely not currently
+elaborated in literature and we likely need to design the full stack ourselves using all lessons learned
+about PoseNet and SegNet economics and contest scorer including long wiggly boundaries and residuals and
+sensitivity and profiling and marginal values and everything."
+
+**Authority:** design synthesis; every economic fact below is tagged [MEASURED] (this effort's exact-scorer
+artifacts) or [DERIVED]. Frontier UNMOVED 0.19110 [contest-CPU], 177,169 B. `N=37,545,489`. This memo is the
+design (a means); the build + byte-closed exact eval is the end. NO score claim here.
+
+---
+
+## 1. THE MEASURED ECONOMICS (the design constraints — what the carrier must obey)
+
+Every off-the-shelf neural codec (Cool-Chic, KAN, HNeRV, hyperprior) is **scorer-AGNOSTIC**: it spends
+decoder capacity ~uniformly to reconstruct ALL pixels. But the contest scorer is **wildly non-uniform**.
+The cheapest carrier is the one whose every byte is allocated by the scorer's measured marginal value.
+The facts the design must exploit:
+
+1. **Rate is 62% of S** [MEASURED: 0.118 of 0.191]. The carrier is byte-minimal above all else. seg 0.056
+   (d_seg 5.6e-4) + pose 0.017 (d_pose 2.94e-5) are the other 38%.
+2. **Appearance ≫ partition (3–5× cheaper)** [MEASURED, B-WITNESS — ⚠️ UNDER AUDIT 2026-06-11]: storing
+   the SegNet argmax partition directly costs ~525KB (896 B/frame) — BUT that B-WITNESS number is the
+   **LOSSLESS** store (`build_and_measure_lstar`, d_seg=0 by construction). The frontier operates at d_seg
+   **5.6e-4 tolerance**, not 0, and the **tolerance-exploiting MDL-region-merge + UNIWARD margin-weighted**
+   partition store (`solve_mdl_region_merge`, `uniward_delta`, `stc_dasher` — all built/orphaned) was NOT
+   measured. So "appearance ≫ partition" is PROVISIONAL: if the margin-weighted lossy partition store (drop
+   sub-flip-threshold wiggle) comes in under 162KB, the cheapest carrier may be NON-NEURAL (tolerance-coded
+   partition + pose), inverting C0–C2. The Yousfi-consult re-measure decides this. Until then, treat this
+   memo's neural C0/C1/C2 as ONE branch; the non-neural tolerance-coded branch is co-equal pending the audit.
+3. **SegNet reacts ONLY at decision boundaries** [MEASURED: spectral atlas — SegNet broadly weak, max
+   H_seg ~0.009; d_seg = argmax-flip RATE; frontier d_seg 5.6e-4 ≈ ~5 flipped px/frame]. The interior of
+   each region is argmax-robust; only the thin boundary band (long wiggly contours, ~2.16% of px [MEASURED,
+   B6: 4252 px/frame]) is flip-prone. ⇒ appearance fidelity matters ONLY in the boundary band.
+4. **PoseNet needs DENSE texture, both frames, but only in a narrow subspace** [MEASURED: spectral atlas —
+   PoseNet strongest at LOW spatial freq + HORIZONTAL orientation (H_pose 0.587 band0-horizontal); pose
+   marginal 271 = 2.7× seg's 100; pose-null = low-Mahalanobis directions]. ⇒ the carrier must preserve
+   low-freq-horizontal texture across both frames, but can shed pose-null detail.
+5. **~80% of appearance is in the certified-invisible subspace** [DERIVED, GOAL_v3 / null_space_exploiter]:
+   directions the scorer's Jacobian ignores. ⇒ spend ZERO bytes there.
+6. **The surrogate is suprafloor-valid only** [MEASURED, #92: smooth_disagreement ρ=0.99 for d_seg>5e-3,
+   noise at the 5.6e-4 basin]. ⇒ the training curriculum descends with the surrogate to ~5e-3, then the
+   FINAL approach to the basin needs exact-d_seg-in-the-loop (boundary-band-gated) — pose uses its
+   per-dim Mahalanobis tube throughout.
+7. **Pose is stored, not reconstructed** [Quantizr lesson, MEASURED capstone: stored_latent holds d_pose
+   ≤3e-4]. ⇒ store the 6 pose scalars/pair directly (~1KB total) + FiLM-condition the decoder.
+8. **The decoder weights are ~94% of the bytes** [MEASURED, PR95 lineage]. ⇒ the rate lever is the DECODER
+   capacity, and the only legal way to cut it (B2 [MEASURED]: a shipped base-init is an illegal large
+   artifact) is a structurally smaller decoder — shaped by 3/4/5 above.
+
+## 2. THE ORIGINAL PRINCIPLE — a scorer-marginal-shaped appearance carrier
+
+**Insight (the synthesis):** a uniform 162KB decoder wastes ~80% of its bytes reconstructing
+invisible-subspace appearance. The cheapest carrier allocates decoder capacity by the scorer's measured
+marginal-value-per-byte (the joint P18/P19 field), so bytes land ONLY where the scorer reacts:
+
+`capacity(region, freq, frame) ∝ marginal_value = 100·|∂d_seg/∂x| (boundary-band, frame1)
+                                                   + (5/√(10·d_pose))·‖J_pose‖_{Σ⁻¹} (low-freq-horiz, both frames)`
+
+and ≈ 0 in the invisible subspace / region interiors / pose-null. This is NOT a literature codec — it is a
+decoder whose ARCHITECTURE + BIT-ALLOCATION are derived from the frozen scorer's geometry on THIS video.
+
+## 3. THE ARCHITECTURE — three factored carriers, each scorer-shaped
+
+A factored appearance decoder (sum of three cheap streams), NOT one uniform HNeRV:
+
+- **(C0) Coarse global appearance** — a tiny low-freq base decoder (HNeRV-class, but a fraction of 162KB),
+  shared across all pairs + per-pair latent + FiLM(pose). Carries the gist that makes SegNet roughly right
+  and PoseNet's low-freq-horizontal structure. This is the bulk-but-cheap stream (low-freq = few bytes).
+- **(C1) Boundary-band high-freq residual** — capacity added ONLY in the SegNet boundary band (the long
+  wiggly contours where flips live). A sparse, spatially-gated residual (predicted from C0's own margin
+  field — no scorer at inflate) that sharpens the argmax exactly where d_seg is binding. This is where the
+  "long wiggly boundary" lesson pays: we don't *describe* the boundary (525KB), we *spend a little residual
+  capacity to regenerate it sharply* (cheap, because it's only 2% of pixels and predicted, not stored
+  per-pixel).
+- **(C2) Pose-texture channel** — a low-freq, horizontal-biased texture across BOTH frames in the
+  pose-sensitive subspace, FiLM-driven by the stored 6-pose scalars. Holds d_pose in its Mahalanobis tube;
+  carries nothing in the pose-null.
+
+Pose: 6 scalars/pair stored directly (~1KB) + FiLM. The invisible subspace gets ZERO capacity in all three.
+
+## 4. THE FULL STACK
+
+| Layer | Design (scorer-economics-shaped) |
+|---|---|
+| Representation | C0 coarse + C1 boundary-residual + C2 pose-texture; per-pair latent + 6 pose scalars |
+| Bit-allocator | joint P18/P19 marginal-value-per-byte field (`joint_p18_p19_waterfill.py` + boundary-mass + null_space_exploiter) shapes per-region/per-freq/per-frame capacity; THE law `keep iff −ΔS_dist > 25·Δbytes/N` (`lf_payload_rate_distortion.py`) |
+| Training | PR95 8-stage curriculum; loss = 100·(suprafloor smooth_disagreement → boundary-band CE → exact-d_seg-gated) + Σ per-dim-Mahalanobis pose (both frames); EMA warmup; eval-roundtrip in-loop; the #92 surrogate suprafloor + exact d_seg at the basin |
+| Archive grammar | monolithic 0.bin: C0 weights (int8+brotli) + C1 residual codebook + C2 channel + per-pair latents (temporal-delta LZMA) + 6-pose scalars + the allocation map; PR95 L20-L32 entropy stack |
+| Inflate | scorer-free, numpy-portable: C0(latent,FiLM(pose)) + C1 boundary-residual (self-predicted) + C2 pose-texture → RGB; ≤100 LOC, ≤2 dep, CPU+CUDA |
+| Score-aware | the bit-allocator IS the score-awareness — capacity follows the frozen scorer's marginal value, measured once on 0.mkv |
+
+## 5. INNOVATION ACCOUNTING (NO-FAKE originality gate)
+
+- **Ours-original:** the scorer-marginal-shaped capacity allocation (C0/C1/C2 factoring by the measured
+  P18/P19 field + invisible-subspace shedding); the boundary-band self-predicted residual (regenerate, not
+  describe, the wiggly contour); the pose-sensitive-subspace texture channel. None is a literature codec.
+- **Borrowed (defensive substrate):** the HNeRV base block (C0), the PR95 entropy stack (grammar), the
+  curriculum, the joint P18/P19 + null-space + contour infra (all CONSUMED in-repo, our prior work).
+- The originality is the SHAPING by measured scorer economics; the components are reused per the
+  no-duplicative-code directive.
+
+## 6. WHY IT'S CHEAPER THAN THE FRONTIER [DERIVED — to be MEASURED]
+
+The frontier's 162KB decoder reconstructs all pixels uniformly (~80% invisible-subspace waste). If capacity
+follows marginal value, the carrier spends bytes on: the ~2% boundary band (C1) + the low-freq-horizontal
+pose subspace (C2) + a coarse low-freq base (C0) — plausibly a fraction of 162KB at the same d_seg/d_pose.
+Pre-registered target: decoder+latents → 60–110KB (rate 0.040–0.073) at d_seg≤8e-4, d_pose-tube held →
+S ≈ 0.10–0.15. The decisive UNKNOWN is whether C1's self-predicted boundary residual reaches d_seg≤8e-4 at
+the reduced C0 capacity — the build measures it.
+
+## 7. RECURSIVE-GREENUP + BUILD PLAN (the operator's senior-engineer loop)
+
+1. **Adversarial design review** (3-clean-pass, question-all-interpretations): does C1's self-predicted
+   residual leak scorer access at inflate (illegal)? does the invisible-subspace shedding survive
+   uint8/resize? does C0's reduced capacity still let SegNet re-derive the partition (the appearance≫
+   partition economics assumed a 162KB carrier — does it hold at 60KB)? is the P18/P19 field stable across
+   the training trajectory (it's a local tangent at one archive)?
+2. **$0 measure (the gate):** on n48, ablate C0 capacity at fixed C1/C2 → the param-at-d_seg-basin curve
+   for the SHAPED carrier (vs B1's uniform Cool-Chic) — does shaping reach the basin at fewer bytes?
+3. **Build full-stack** (top-AIML, export+numpy-parity from byte zero) → byte-close → advisory S → if local
+   sub-T_1, paired contest-CPU/CUDA exact eval (the pointer-mover).
+
+Folds into the DAG (`sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md`) as the THREAD-B capstone
+carrier; B1 (Cool-Chic uniform) is the baseline this scorer-shaped design must beat; A2' (full-Jacobian
+postfilter) is a refinement layer on top of C0–C2.
