@@ -184,6 +184,77 @@ def bilinear_resize2x_nhwc(x_nhwc: np.ndarray) -> np.ndarray:
     return np.stack([even_h, odd_h], axis=2).reshape(B, H * 2, W * 2, C).astype(np.float32)
 
 
+def _cubic_conv_weights(t: np.ndarray, a: float = -0.75) -> np.ndarray:
+    """PyTorch bicubic cubic-convolution kernel weights for fractional offsets ``t``.
+
+    Matches ``aten::upsample_bicubic2d`` (Keys cubic convolution, a=-0.75). For each
+    output sample the 4 input taps at offsets ``(t+1, t, 1-t, 2-t)`` get weights from
+    the piecewise cubic. Returns ``(N, 4)`` weights summing to 1, tap order
+    ``[x-1, x, x+1, x+2]`` (i.e. offsets ``1+t, t, 1-t, 2-t``).
+    """
+    t = np.asarray(t, dtype=np.float64)
+
+    def w(d: np.ndarray) -> np.ndarray:
+        d = np.abs(d)
+        out = np.zeros_like(d)
+        m1 = d <= 1.0
+        m2 = (d > 1.0) & (d < 2.0)
+        out[m1] = ((a + 2.0) * d[m1] - (a + 3.0)) * d[m1] * d[m1] + 1.0
+        out[m2] = (((d[m2] - 5.0) * d[m2] + 8.0) * d[m2] - 4.0) * a
+        return out
+
+    w0 = w(t + 1.0)
+    w1 = w(t)
+    w2 = w(1.0 - t)
+    w3 = w(2.0 - t)
+    return np.stack([w0, w1, w2, w3], axis=-1)
+
+
+def bicubic_resize_to_nhwc(
+    x_nhwc: np.ndarray, target_h: int, target_w: int
+) -> np.ndarray:
+    """Bicubic resize (align_corners=False) — matches PyTorch ``F.interpolate(mode='bicubic')``.
+
+    [A3] This is the CAMERA upsample PR95 uses (``score.py::_decoded_to_camera`` +
+    ``stages/common.py`` both ``F.interpolate(..., mode='bicubic', align_corners=False)``).
+    The inflate runtime previously used BILINEAR for the 384x512 -> camera upscale,
+    which diverges from the eval roundtrip — so the advisory could not predict the
+    real ``inflate.sh -> evaluate.py``. This is the byte-stable bicubic port.
+
+    Op-for-op with ``aten::upsample_bicubic2d``: align_corners=False source mapping
+    ``src = (dst + 0.5) * (in/out) - 0.5``, Keys cubic convolution kernel a=-0.75,
+    4x4 separable taps with edge-clamped indices. Matches torch to fp32 eps.
+    """
+    x = x_nhwc.astype(np.float64)
+    B, H, W, C = x.shape
+    if target_h == H and target_w == W:
+        return x.astype(np.float32)
+    h_scale = H / target_h
+    w_scale = W / target_w
+    # align_corners=False source coordinates.
+    hy = (np.arange(target_h, dtype=np.float64) + 0.5) * h_scale - 0.5
+    wx = (np.arange(target_w, dtype=np.float64) + 0.5) * w_scale - 0.5
+    h_floor = np.floor(hy)
+    w_floor = np.floor(wx)
+    h_t = hy - h_floor
+    w_t = wx - w_floor
+    h_w = _cubic_conv_weights(h_t)  # (target_h, 4)
+    w_w = _cubic_conv_weights(w_t)  # (target_w, 4)
+    h_idx0 = h_floor.astype(np.int64)
+    w_idx0 = w_floor.astype(np.int64)
+    # 4 tap indices per output, edge-clamped to [0, H-1] / [0, W-1].
+    h_taps = np.clip(h_idx0[:, None] + np.array([-1, 0, 1, 2]), 0, H - 1)  # (target_h, 4)
+    w_taps = np.clip(w_idx0[:, None] + np.array([-1, 0, 1, 2]), 0, W - 1)  # (target_w, 4)
+    # Horizontal pass: gather W taps, weight, sum -> (B, H, target_w, C).
+    # x_w[b, h, j, k, c] = x[b, h, w_taps[j, k], c]
+    gathered_w = x[:, :, w_taps, :]  # (B, H, target_w, 4, C)
+    horiz = np.einsum("bhjkc,jk->bhjc", gathered_w, w_w)  # (B, H, target_w, C)
+    # Vertical pass: gather H taps, weight, sum -> (B, target_h, target_w, C).
+    gathered_h = horiz[:, h_taps, :, :]  # (B, target_h, 4, target_w, C)
+    out = np.einsum("bikjc,ik->bijc", gathered_h, h_w)  # (B, target_h, target_w, C)
+    return out.astype(np.float32)
+
+
 def bilinear_resize_to_nhwc(
     x_nhwc: np.ndarray, target_h: int, target_w: int
 ) -> np.ndarray:
@@ -373,6 +444,7 @@ def decode_config_from_bundle(bundle: Any) -> CapstoneDecodeConfig:
 __all__ = [
     "POSE_DIM",
     "CapstoneDecodeConfig",
+    "bicubic_resize_to_nhwc",
     "bilinear_resize2x_nhwc",
     "bilinear_resize_to_nhwc",
     "conv2d_nhwc",

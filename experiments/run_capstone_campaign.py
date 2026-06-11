@@ -100,21 +100,24 @@ def _load_or_build_targets(max_pairs: int, cache_dir: Path, device: str):
     return net, seg_t, pose_t, n
 
 
-def _export_int8_archive(bundle, pose_store: np.ndarray, decoder_dtype: str):
+def _export_int8_archive(trainer, pose_store: np.ndarray, decoder_dtype: str):
     """Byte-close the CONTEST-INFLATABLE int8 archive: the FULL render basis
-    (decoder + per-frame FiLM, contest-keyed via ``full_render_weights_from_bundle``)
-    + codebook + REAL trained bit-packed VQ indices + stored pose + the
-    ``capstone_config_v1`` sidecar. Verified score-parity with the numpy inflate
-    (d_seg EXACT). Returns (archive_zip_bytes, account, payload_bytes)."""
+    (decoder + per-frame FiLM, contest-keyed) + codebook + REAL trained bit-packed
+    VQ indices + stored pose + the ``capstone_config_v1`` sidecar. Verified
+    score-parity with the numpy inflate (d_seg EXACT). Returns (archive_zip_bytes,
+    account, payload_bytes).
+
+    [A1] The render-basis weights are the EMA SHADOW (via
+    ``trainer.export_render_weights()``) — NOT the live final-step weights. This is
+    the EMA non-negotiable: the archive bytes equal the same averaged shadow the
+    advisory d_seg/d_pose are measured on (eval+export the shadow)."""
     import dataclasses
 
     from tac.capstone_vq_nerv.export import build_capstone_archive_bytes
-    from tac.capstone_vq_nerv.numpy_reference import (
-        decode_config_from_bundle,
-        full_render_weights_from_bundle,
-    )
+    from tac.capstone_vq_nerv.numpy_reference import decode_config_from_bundle
 
-    decoder_weights = full_render_weights_from_bundle(bundle)  # decoder + FiLM, contest naming
+    bundle = trainer.bundle
+    decoder_weights = trainer.export_render_weights()  # [A1] EMA shadow, contest naming
     codebook = np.asarray(bundle.quantizer._codebook, dtype=np.float32)
     vq_indices = np.asarray(bundle.all_vq_indices(), dtype=np.int32)  # REAL trained carrier
     payload, account = build_capstone_archive_bytes(
@@ -129,7 +132,7 @@ def _export_int8_archive(bundle, pose_store: np.ndarray, decoder_dtype: str):
     config["num_pairs"] = int(pose_store.shape[0])
     config["decoder_dtype"] = decoder_dtype
     archive_zip = _archive_with_config(payload, config)
-    return archive_zip, account, payload
+    return archive_zip, account, payload, config
 
 
 def main() -> int:
@@ -241,17 +244,36 @@ def main() -> int:
             "stages": cur_result.stages,
         }
 
-    d_seg = trainer.exact_d_seg()
-    d_pose = trainer.mean_d_pose()
+    # [A1] live (EMA-shadow) advisory: the shadow d_seg/d_pose, the SAME point the
+    # archive bytes (the EMA shadow is exported below).
+    d_seg_live = trainer.exact_d_seg()
+    d_pose_live = trainer.mean_d_pose()
 
-    archive_zip, account, payload = _export_int8_archive(bundle, pose_store, args.decoder_dtype)
+    archive_zip, account, payload, config = _export_int8_archive(
+        trainer, pose_store, args.decoder_dtype
+    )
     archive_bytes = len(archive_zip)
     (out / "archive.zip").write_bytes(archive_zip)
+
+    # [A2] RELOAD the int8 archive and re-score the reloaded int8 frames through the
+    # SAME bridge. THIS (the int8-quantized archive's d_seg/d_pose) is the honest
+    # inflate.sh->evaluate.py predictor; the live number is reported alongside for
+    # the quant gap. The advisory score is computed on the RELOADED int8 terms.
+    from tac.capstone_vq_nerv.advisory import score_reloaded_int8_archive
+
+    reloaded = score_reloaded_int8_archive(payload, config, bridge)
+    d_seg = reloaded.d_seg
+    d_pose = reloaded.d_pose
 
     rate_term = 25.0 * archive_bytes / RATE_DENOM
     seg_term = 100.0 * d_seg
     pose_term = float(np.sqrt(10.0 * d_pose))
     score = seg_term + pose_term + rate_term
+
+    # The live (pre-quant) advisory score, for the gap.
+    seg_term_live = 100.0 * d_seg_live
+    pose_term_live = float(np.sqrt(10.0 * d_pose_live))
+    score_live = seg_term_live + pose_term_live + rate_term
 
     summary = {
         "axis": "[macOS-CPU advisory]",
@@ -263,10 +285,19 @@ def main() -> int:
         "epochs": args.epochs,
         "curriculum": args.curriculum,
         "optimizer_schedule": args.optimizer_schedule,
+        "cosine_lr_schedule": cfg.cosine_lr_schedule,
+        "ema_decay": cfg.ema_decay,
+        "use_ema_for_eval": cfg.use_ema_for_eval,
         "muon_lr": args.muon_lr,
         "grad_clip": args.grad_clip,
         "d_seg_init": d_seg_init, "d_pose_init": d_pose_init,
+        # [A2] the advisory d_seg/d_pose are the RELOADED int8 terms (the honest
+        # contest predictor); the live (pre-quant, EMA-shadow fp32) terms alongside.
         "d_seg_final": d_seg, "d_pose_final": d_pose,
+        "d_seg_final_live": d_seg_live, "d_pose_final_live": d_pose_live,
+        "reloaded_int8_advisory": reloaded.as_dict(),
+        "advisory_quant_gap_d_seg": d_seg - d_seg_live,
+        "advisory_quant_gap_score": score - score_live,
         "archive_bytes": archive_bytes,
         "payload_bytes": len(payload),
         "decoder_bytes": account.decoder_bytes,
@@ -275,6 +306,7 @@ def main() -> int:
         "score_pose_contribution": pose_term,
         "score_rate_contribution": rate_term,
         "advisory_score": score,
+        "advisory_score_live_prequant": score_live,
         "sub_0_15": score < 0.15,
         "sub_0_19": score < 0.19,
         "wall_s": time.time() - t_start,
@@ -285,8 +317,11 @@ def main() -> int:
     }
     (out / "capstone_result.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2), flush=True)
-    print(f"\nADVISORY S = {score:.5f}  (seg {seg_term:.4f} + pose {pose_term:.4f} "
-          f"+ rate {rate_term:.4f})  [macOS-CPU advisory, NOT a pointer move]", flush=True)
+    print(f"\nADVISORY S = {score:.5f}  (reloaded int8: seg {seg_term:.4f} + "
+          f"pose {pose_term:.4f} + rate {rate_term:.4f})  "
+          f"[macOS-CPU advisory, NOT a pointer move]", flush=True)
+    print(f"  live (pre-quant EMA-shadow) S = {score_live:.5f}  "
+          f"quant gap dS = {score - score_live:+.5f}", flush=True)
     return 0
 
 

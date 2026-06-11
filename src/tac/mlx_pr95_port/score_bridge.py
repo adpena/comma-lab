@@ -71,6 +71,77 @@ def _require_mlx() -> None:
         raise RuntimeError("tac.mlx_pr95_port.score_bridge requires mlx.core.")
 
 
+class Yuv6NotPatchedError(RuntimeError):
+    """Raised when the pose path's upstream ``rgb_to_yuv6`` is not differentiable."""
+
+
+def _posenet_routes_through_upstream_yuv6(distortion_net: Any) -> bool:
+    """True iff this scorer's PoseNet is the REAL upstream one (routes via the global).
+
+    Only the upstream ``modules.PoseNet`` calls the module-level
+    ``modules.rgb_to_yuv6`` in ``preprocess_input`` (``upstream/modules.py:74``).
+    Proto / stand-in PoseNets in the test suite have their OWN preprocess and do
+    NOT depend on the global patch, so the fail-closed check must not fire on them
+    (a false positive would break the proto-scorer fixtures and force a worse
+    workaround). We detect the real one by class identity against the upstream
+    ``modules.PoseNet`` (the only consumer of the global ``rgb_to_yuv6``).
+    """
+    from tac.differentiable_eval_roundtrip import _resolve_upstream_modules
+
+    posenet = getattr(distortion_net, "posenet", None)
+    if posenet is None:
+        return False
+    _frame_utils, modules = _resolve_upstream_modules()
+    upstream_posenet_cls = getattr(modules, "PoseNet", None) if modules else None
+    if upstream_posenet_cls is None:
+        return False
+    return isinstance(posenet, upstream_posenet_cls)
+
+
+def _assert_yuv6_patched_for_pose_gradient(distortion_net: Any) -> None:
+    """Fail closed unless ``modules.rgb_to_yuv6`` is the differentiable patch ([C1]).
+
+    Upstream ``PoseNet.preprocess_input`` (``upstream/modules.py:74``) calls the
+    module-level ``rgb_to_yuv6`` that ``modules.py`` imported from ``frame_utils``
+    at its own import time. Upstream's implementation is ``@torch.no_grad()`` /
+    in-place, so the pose pixel-gradient is SEVERED — the loss is silently
+    pose-inert. ``patch_upstream_yuv6_globally`` (called by
+    ``tac.score_aware_loop.targets.load_frozen_distortion_net``) overwrites
+    ``modules.rgb_to_yuv6`` with ``differentiable_rgb_to_yuv6``. This asserts that
+    swap is in place so a caller that builds the bridge over an un-patched REAL
+    upstream scorer gets a clear error instead of a silently broken pose objective.
+
+    The check ONLY applies when the scorer's PoseNet is the real upstream
+    ``modules.PoseNet`` (the only consumer of the global). Proto / stand-in
+    PoseNets (their own preprocess; no global dependency) are exempt — they cannot
+    be severed by the un-patched global, so enforcing it on them would be a false
+    positive (CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+    the gate must be precise, not over-broad).
+    """
+    if not _posenet_routes_through_upstream_yuv6(distortion_net):
+        return  # proto / non-upstream PoseNet: not severable by the global.
+    from tac.differentiable_eval_roundtrip import (
+        _resolve_upstream_modules,
+        differentiable_rgb_to_yuv6,
+    )
+
+    _frame_utils, modules = _resolve_upstream_modules()
+    if modules is None or not hasattr(modules, "rgb_to_yuv6"):  # pragma: no cover
+        return
+    if modules.rgb_to_yuv6 is not differentiable_rgb_to_yuv6:
+        raise Yuv6NotPatchedError(
+            "TorchScorerBridge: pose is enabled and the scorer is the REAL upstream "
+            "PoseNet, but `modules.rgb_to_yuv6` is NOT the differentiable patch (it "
+            f"is {getattr(modules.rgb_to_yuv6, '__name__', modules.rgb_to_yuv6)!r}). "
+            "PoseNet.preprocess_input would sever the pose pixel-gradient, making "
+            "the loss silently pose-inert. Call "
+            "`tac.differentiable_eval_roundtrip.patch_upstream_yuv6_globally()` "
+            "(or build the scorer via `load_frozen_distortion_net`, which patches) "
+            "BEFORE constructing the bridge. (CLAUDE.md 'eval_roundtrip' + "
+            "'Comment-only contracts FORBIDDEN'.)"
+        )
+
+
 class TorchScorerBridge:
     """Compute the PR95 score-aware loss + ``dL/d(pixels)`` via the frozen torch scorer.
 
@@ -105,6 +176,16 @@ class TorchScorerBridge:
                     "frozen (requires_grad=False) so the gradient only updates "
                     "the carrier (CLAUDE.md 'Strict scorer rule')."
                 )
+        # [C1] Fail closed if the upstream yuv6 is NOT the differentiable patch when
+        # pose is enabled. PoseNet.preprocess_input calls the module-level
+        # ``modules.rgb_to_yuv6`` (upstream/modules.py:74); upstream's is
+        # ``@torch.no_grad()`` / in-place, which SEVERS the pose pixel-grad — a
+        # silently pose-INERT loss. ``patch_upstream_yuv6_globally`` (done by
+        # ``load_frozen_distortion_net``) swaps in ``differentiable_rgb_to_yuv6``.
+        # A future caller with an un-patched scorer must get a clear error, not a
+        # silent regression (CLAUDE.md "Comment-only contracts FORBIDDEN").
+        if pose_targets is not None:
+            _assert_yuv6_patched_for_pose_gradient(distortion_net)
         self.dnet = distortion_net
         self.seg_targets_hard = seg_targets_hard
         self.pose_targets = pose_targets
@@ -271,4 +352,5 @@ __all__ = [
     "SCORER_HW",
     "ScoreBridgeResult",
     "TorchScorerBridge",
+    "Yuv6NotPatchedError",
 ]

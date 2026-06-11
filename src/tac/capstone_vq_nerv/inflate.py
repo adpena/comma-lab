@@ -35,7 +35,7 @@ from tac.capstone_vq_nerv.export import (
 )
 from tac.capstone_vq_nerv.numpy_reference import (
     CapstoneDecodeConfig,
-    bilinear_resize_to_nhwc,
+    bicubic_resize_to_nhwc,
     numpy_decode_pair,
 )
 
@@ -125,7 +125,10 @@ def render_all_camera_frames(decoded: dict, *, batch: int = 16) -> np.ndarray:
         for k in range(2):  # frame0, frame1
             frame_nchw = render[:, k]  # (b,3,H,W)
             frame_nhwc = np.transpose(frame_nchw, (0, 2, 3, 1))  # (b,H,W,3)
-            cam = bilinear_resize_to_nhwc(frame_nhwc, CAMERA_H, CAMERA_W)
+            # [A3] BICUBIC camera upscale (PR95 score.py::_decoded_to_camera uses
+            # F.interpolate(mode='bicubic', align_corners=False)); previously
+            # BILINEAR, which diverged from the eval roundtrip.
+            cam = bicubic_resize_to_nhwc(frame_nhwc, CAMERA_H, CAMERA_W)
             cam = np.clip(np.round(cam), 0, 255).astype(np.uint8)
             out[(s + np.arange(e - s)) * 2 + k] = cam
     return out

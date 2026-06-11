@@ -90,6 +90,10 @@ class MlxScoreAwareConfig:
     grad_clip: float | None = 1.0
     grad_clip_muon: float | None = 1.0
     cast_muon_float32_to_bfloat16: bool = True
+    # [B1] PR95 per-epoch cosine LR schedule (both LRs, per stage); the dominant
+    # d_seg-floor fix. ``lr_floor_ratio`` is PR95's ``cfg.lr_floor_ratio``.
+    cosine_lr_schedule: bool = True
+    lr_floor_ratio: float = 5e-6
     # EMA: PR95 default 0.999. For short runs the shadow lags; eval the LIVE
     # weights (use_ema_for_eval=False) to see the true descent, per the
     # 0.999-lag landmine in the audit.
@@ -173,6 +177,23 @@ class MlxScoreAwareTrainer:
         self.mechanisms = StageMechanisms()
         self._weight_keys = weight_tensor_keys(bundle.trainable_parameters())
         self._mech_step = 0
+        # [B1] cosine-LR schedule state (base LR for the eta_min floor + the
+        # current stage's epoch span). configure_stage resets these per stage.
+        self._cosine_base_lr: float = float(config.adamw_lr)
+        self._cosine_total_epochs: int = int(config.epochs)
+
+    def _lr_scale_for_epoch(self, epoch: int) -> float:
+        """[B1] The PR95 cosine multiplier for ``epoch`` within the current stage."""
+        if not self.cfg.cosine_lr_schedule:
+            return 1.0
+        from tac.local_acceleration.pr95_hnerv_mlx import pr95_cosine_lr_scale
+
+        return pr95_cosine_lr_scale(
+            epoch,
+            self._cosine_total_epochs,
+            base_lr=self._cosine_base_lr,
+            lr_floor_ratio=self.cfg.lr_floor_ratio,
+        )
 
     def _render(self, indices: Any) -> Any:
         """Render the pair batch (N2CHW) from the bundle for ``indices``."""
@@ -235,8 +256,12 @@ class MlxScoreAwareTrainer:
         self._mech_step += 1
         return grads
 
-    def step(self, idx_np: np.ndarray) -> dict[str, Any]:
-        """One training step on the given pair indices. Returns telemetry."""
+    def step(self, idx_np: np.ndarray, *, lr_scale: float = 1.0) -> dict[str, Any]:
+        """One training step on the given pair indices. Returns telemetry.
+
+        ``lr_scale`` is the PR95 per-epoch cosine multiplier (audit [B1]); the epoch
+        loop computes it once per epoch and threads it to every batch in that epoch.
+        """
         _require_mlx()
         indices = mx.array(idx_np.astype(np.int32))
         idx_t = torch.from_numpy(idx_np.astype(np.int64))
@@ -253,6 +278,7 @@ class MlxScoreAwareTrainer:
             self.opt_state,
             self.opt_config,
             parameter_group_fingerprint=self._fingerprint,
+            lr_scale=lr_scale,
         )
         mx.eval(self.bundle.parameters())
         return {
@@ -260,6 +286,7 @@ class MlxScoreAwareTrainer:
             "seg": result.seg_loss_value,
             "pose": result.pose_loss_value,
             "d_seg_batch": result.d_seg,
+            "lr_scale": float(summary.get("lr_scale", lr_scale)),
             "grad_clip_would_clip": summary.get("gradient_clip_would_clip_count", 0),
             "grad_clip_applied": summary.get(
                 "gradient_clip_actual_application_count", 0
@@ -295,8 +322,12 @@ class MlxScoreAwareTrainer:
 
         Sets the bridge seg-loss family, rebuilds the optimizer config (LR +
         Muon-vs-AdamW per the resolved schedule + per-stage grad-clip/EMA/wd), and
-        arms the per-stage QAT / C1a / sigma-noise mechanisms. Optimizer + EMA STATE
-        is PRESERVED (PR95 inter-stage transitions resume weights + buffers).
+        arms the per-stage QAT / C1a / sigma-noise mechanisms.
+
+        [B2] PR95 builds a FRESH optimizer + a FRESH cosine scheduler per stage, so
+        this RESETS the optimizer step counter (AdamW bias-correction warmup +
+        momentum restart) and the cosine span. The WEIGHTS + the EMA shadow carry
+        across stages (PR95 resumes the decoder/latents between stages).
         """
         from tac.mlx_pr95_port.curriculum import resolve_use_muon
 
@@ -317,6 +348,12 @@ class MlxScoreAwareTrainer:
             grad_clip_muon=spec.grad_clip_muon,
             cast_muon_float32_to_bfloat16=self.cfg.cast_muon_float32_to_bfloat16,
         )
+        # [B2] fresh optimizer state per stage (bias-correction warmup + momentum
+        # restart), matching PR95's per-stage optimizer rebuild.
+        self.opt_state = Pr95MlxOptimizerState()
+        # [B1] fresh cosine schedule per stage.
+        self._cosine_base_lr = float(spec.adamw_lr)
+        self._cosine_total_epochs = int(spec.epochs)
         self.mechanisms = StageMechanisms(
             use_qat=spec.use_qat,
             sigma_weight_noise=spec.sigma_weight_noise,
@@ -338,6 +375,8 @@ class MlxScoreAwareTrainer:
         cfg = self.cfg
         if getattr(self, "_ema", None) is None:
             self._ema = _MlxEMA(self.bundle, cfg.ema_decay)
+        # [B1] the cosine spans THIS call's epoch count.
+        self._cosine_total_epochs = int(epochs)
 
         d_seg_initial = self.exact_d_seg(use_ema=False)
         trajectory: list[dict[str, Any]] = []
@@ -346,13 +385,14 @@ class MlxScoreAwareTrainer:
         total_steps = 0
 
         for epoch in range(epochs):
+            lr_scale = self._lr_scale_for_epoch(epoch)  # [B1] per-epoch cosine
             perm = np.random.permutation(self.n_pairs)
             ep_seg = 0.0
             ep_loss = 0.0
             nb = 0
             for start in range(0, self.n_pairs, cfg.batch_size):
                 idx_np = perm[start : start + cfg.batch_size]
-                row = self.step(idx_np)
+                row = self.step(idx_np, lr_scale=lr_scale)
                 self._ema.update(self.bundle)
                 ep_seg += row["seg"]
                 ep_loss += row["loss"]
@@ -412,6 +452,9 @@ class MlxScoreAwareTrainer:
         np.random.seed(cfg.seed)
         mx.random.seed(cfg.seed)
         self._ema = _MlxEMA(self.bundle, cfg.ema_decay)
+        # [B1] single cosine over cfg.epochs; base LR for eta_min is cfg.adamw_lr.
+        self._cosine_base_lr = float(cfg.adamw_lr)
+        self._cosine_total_epochs = int(cfg.epochs)
 
         d_seg_initial = self.exact_d_seg(use_ema=False)
         trajectory: list[dict[str, Any]] = []
@@ -420,13 +463,14 @@ class MlxScoreAwareTrainer:
         total_steps = 0
 
         for epoch in range(cfg.epochs):
+            lr_scale = self._lr_scale_for_epoch(epoch)  # [B1] per-epoch cosine
             perm = np.random.permutation(self.n_pairs)
             ep_seg = 0.0
             ep_loss = 0.0
             nb = 0
             for start in range(0, self.n_pairs, cfg.batch_size):
                 idx_np = perm[start : start + cfg.batch_size]
-                row = self.step(idx_np)
+                row = self.step(idx_np, lr_scale=lr_scale)
                 self._ema.update(self.bundle)
                 ep_seg += row["seg"]
                 ep_loss += row["loss"]

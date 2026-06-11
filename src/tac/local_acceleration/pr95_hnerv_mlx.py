@@ -2456,6 +2456,46 @@ def _clip_flat_gradients(
     return summary
 
 
+def pr95_cosine_lr_scale(
+    epoch: int,
+    total_epochs: int,
+    *,
+    base_lr: float,
+    lr_floor_ratio: float = 5e-6,
+) -> float:
+    """The PR95 per-epoch cosine LR multiplier (audit [B1], the dominant d_seg fix).
+
+    1:1 port of PR95 ``stages/common.py:152-157``::
+
+        eta_min_ratio = max(cfg.lr_floor_ratio / cfg.adamw_lr, 1e-3)
+        def lr_lambda(epoch):
+            return max(0.5 * (1 + cos(pi * epoch / cfg.epochs)), eta_min_ratio)
+
+    PR95 builds this as a ``LambdaLR`` and steps it ONCE PER EPOCH (after the batch
+    loop), so ``epoch=0`` returns ``1.0`` and the multiplier anneals to the floor at
+    ``epoch=total_epochs``. ``base_lr`` is the schedule's reference LR (PR95 uses
+    ``cfg.adamw_lr`` for the ``eta_min_ratio`` denominator regardless of which group
+    the scale applies to — the SAME cosine multiplies BOTH the AdamW and Muon LRs).
+
+    Args:
+        epoch: 0-based epoch index within the stage (PR95 ``range(cfg.epochs)``).
+        total_epochs: the stage's epoch count (PR95 ``cfg.epochs``); the cosine
+            argument is ``pi * epoch / total_epochs``.
+        base_lr: the reference LR for the ``eta_min_ratio`` floor (PR95 ``adamw_lr``).
+        lr_floor_ratio: PR95 ``lr_floor_ratio`` (default ``5e-6``, the torch default).
+
+    Returns:
+        The cosine multiplier in ``(0, 1]``, floored at ``eta_min_ratio``.
+    """
+    if total_epochs <= 0:
+        raise ValueError(f"total_epochs must be positive, got {total_epochs!r}")
+    if base_lr <= 0.0:
+        raise ValueError(f"base_lr must be positive, got {base_lr!r}")
+    eta_min_ratio = max(lr_floor_ratio / base_lr, 1e-3)
+    cosine = 0.5 * (1.0 + math.cos(math.pi * int(epoch) / int(total_epochs)))
+    return max(cosine, eta_min_ratio)
+
+
 def apply_pr95_mlx_optimizer_step(
     module: Any,
     gradients: Any,
@@ -2463,6 +2503,7 @@ def apply_pr95_mlx_optimizer_step(
     config: Pr95MlxOptimizerConfig,
     parameter_group_fingerprint: Mapping[str, Any] | None = None,
     force_adamw_substrings: Sequence[str] | None = None,
+    lr_scale: float = 1.0,
 ) -> dict[str, Any]:
     """Apply one PR95-shaped optimizer step to an MLX module.
 
@@ -2477,9 +2518,23 @@ def apply_pr95_mlx_optimizer_step(
     + every other caller are untouched). PR95's own rule already excludes the
     conv-hidden-weights-only Muon class; this extends that exclusion to the pose
     path PR95 does not have.
+
+    ``lr_scale`` is the PR95 per-epoch cosine multiplier (audit [B1]; PR95
+    ``stages/common.py:152-157,218-220`` builds a cosine ``LambdaLR``
+    ``max(0.5*(1+cos(pi*ep/eps)), eta_min_ratio)`` and steps it per-epoch for BOTH
+    the AdamW and the Muon optimizers). It scales BOTH ``config.muon_lr`` and
+    ``config.adamw_lr`` (and therefore the AdamW bias-corrected LR) by the same
+    factor. Default ``1.0`` = no schedule (byte-identical to the pre-[B1] behavior);
+    the caller is responsible for computing the cosine factor per-epoch. PR95 steps
+    the scheduler AFTER each epoch's batch loop, so epoch 0 trains at ``lr_scale=1.0``
+    and the final epoch at the floor. d_seg is an argmax-flip RATE — late training
+    needs ever-finer boundary corrections, and a constant large LR overshoots them
+    (the dominant d_seg-floor poison).
     """
 
     require_mlx()
+    if lr_scale <= 0.0:
+        raise ValueError(f"lr_scale must be positive, got {lr_scale!r}")
     params_flat = dict(tree_flatten(module.parameters()))  # type: ignore[misc]
     grads_flat = dict(tree_flatten(gradients))  # type: ignore[misc]
     if parameter_group_fingerprint is None:
@@ -2519,6 +2574,9 @@ def apply_pr95_mlx_optimizer_step(
 
     state.step += 1
     beta1, beta2 = config.adamw_betas
+    # [B1] PR95 per-epoch cosine multiplier scales BOTH the Muon and AdamW LRs.
+    muon_lr = config.muon_lr * lr_scale
+    adamw_lr_base = config.adamw_lr * lr_scale
     updated: dict[str, Any] = {}
     for name, param in params_flat.items():
         grad = grads_flat.get(name)
@@ -2527,7 +2585,7 @@ def apply_pr95_mlx_optimizer_step(
             continue
         if name in muon_names:
             base = (
-                param * (1.0 - config.muon_lr * config.muon_weight_decay)
+                param * (1.0 - muon_lr * config.muon_weight_decay)
                 if config.muon_weight_decay
                 else param
             )
@@ -2562,10 +2620,10 @@ def apply_pr95_mlx_optimizer_step(
                     cast_float32_to_bfloat16=config.cast_muon_float32_to_bfloat16,
                 )
                 update = update * max(1.0, math.sqrt(rows / cols))
-            updated[name] = base - config.muon_lr * update
+            updated[name] = base - muon_lr * update
             continue
 
-        lr = config.adamw_lr * (
+        lr = adamw_lr_base * (
             config.latent_lr_mult
             if parameter_classes.get(name) == "embedding_like"
             else 1.0
@@ -2594,6 +2652,9 @@ def apply_pr95_mlx_optimizer_step(
     return {
         "schema": "pr95_hnerv_mlx_optimizer_step_summary_v1",
         "step": state.step,
+        "lr_scale": float(lr_scale),
+        "effective_muon_lr": float(muon_lr),
+        "effective_adamw_lr": float(adamw_lr_base),
         "use_muon": config.use_muon,
         "muon_tensor_count": len(muon_names),
         "adamw_tensor_count": len(adamw_names),
@@ -3066,6 +3127,7 @@ __all__ = [
     "parse_pr95_public_archive_zip",
     "partition_pr95_mlx_parameter_names",
     "pixel_shuffle_2x_nhwc",
+    "pr95_cosine_lr_scale",
     "pr95_default_optimizer_descriptor_id",
     "pr95_mlx_conv2d_accumulation_overrides_from_items",
     "pr95_mlx_conv2d_accumulation_overrides_from_preset",

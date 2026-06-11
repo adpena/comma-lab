@@ -65,6 +65,51 @@ def _require_mlx() -> None:
         raise RuntimeError("tac.capstone_vq_nerv.capstone_trainer requires mlx.")
 
 
+class _CapstoneWeightEMA:
+    """Param-wise EMA shadow over the bundle's TRAINABLE parameter tree (audit [A1]).
+
+    Ported from ``tac.mlx_pr95_port.mlx_trainer._MlxEMA``, but the shadow is taken
+    over ``bundle.trainable_parameters()`` (decoder + per-frame FiLM weights) — NOT
+    ``bundle.parameters()`` — because the VQ codebook has its OWN van-den-Oord EMA
+    (``bundle.ema_update_from_last()``) and is a plain array (not a trainable leaf).
+    The weight-EMA must not double-average the codebook. This is the EMA
+    non-negotiable for the capstone: the inference/archive bytes come from the EMA
+    shadow (the averaged, lower-variance, lower-d_seg point), never the live
+    final-step weights. The shadow is applied at eval (snapshot+restore) and at
+    EXPORT (the trainer's ``export_render_weights`` snapshot-restore contract).
+    """
+
+    def __init__(self, bundle: Any, decay: float) -> None:
+        _require_mlx()
+        self.decay = float(decay)
+        self.shadow = {
+            k: mx.array(v) for k, v in tree_flatten(bundle.trainable_parameters())
+        }
+
+    def update(self, bundle: Any) -> None:
+        d = self.decay
+        for k, v in tree_flatten(bundle.trainable_parameters()):
+            if k in self.shadow:
+                self.shadow[k] = self.shadow[k] * d + v * (1.0 - d)
+            else:
+                self.shadow[k] = mx.array(v)
+        mx.eval(list(self.shadow.values()))
+
+    @staticmethod
+    def _snapshot_live(bundle: Any) -> dict[str, Any]:
+        return {k: mx.array(v) for k, v in tree_flatten(bundle.trainable_parameters())}
+
+    def apply_to(self, bundle: Any) -> dict[str, Any]:
+        """Install the shadow into the bundle; return the live params to restore."""
+        orig = self._snapshot_live(bundle)
+        bundle.update(tree_unflatten(list(self.shadow.items())))
+        return orig
+
+    @staticmethod
+    def restore(bundle: Any, orig: dict[str, Any]) -> None:
+        bundle.update(tree_unflatten(list(orig.items())))
+
+
 @dataclass
 class CapstoneTrainConfig:
     """Config for the capstone joint-descent loop (PR95-faithful, C1-C9 fixed)."""
@@ -89,8 +134,19 @@ class CapstoneTrainConfig:
     grad_clip: float | None = 1.0
     grad_clip_muon: float | None = 1.0
     cast_muon_float32_to_bfloat16: bool = True
-    ema_decay: float = 0.999
-    use_ema_for_eval: bool = False  # eval LIVE weights (the 0.999-lag landmine).
+    # [B1] PR95 per-epoch cosine LR schedule (the dominant d_seg-floor fix). The
+    # cosine anneals from 1.0 at epoch 0 to ``eta_min_ratio`` at the final epoch,
+    # per stage (a fresh cosine each curriculum stage, like PR95's per-stage
+    # optimizer rebuild). ``lr_floor_ratio`` is PR95's ``cfg.lr_floor_ratio``.
+    cosine_lr_schedule: bool = True
+    lr_floor_ratio: float = 5e-6
+    # [A1] Weight-EMA in the capstone (the EMA non-negotiable: eval + EXPORT the
+    # shadow, NOT live). [B4]/[B5] default decay 0.997 (the CLAUDE.md-mandated value;
+    # 0.999 lags ~1000 steps) and EVAL the shadow by default (the lag is gone at
+    # 0.997). The EXPORT path bytes the shadow via ``export_render_weights`` /
+    # ``export_codebook`` (the trainer's snapshot-restore-around-export contract).
+    ema_decay: float = 0.997
+    use_ema_for_eval: bool = True
     # OPT-IN hook to route the pose-FiLM MLP weights to AdamW (not Muon). PR95's
     # Muon class is conv-hidden-weights only; the pose path is a capstone addition.
     # The optimizer-poison audit #3 hypothesized Muon destabilizes the small pose
@@ -162,6 +218,16 @@ class CapstoneTrainer:
         self._force_adamw_substrings: tuple[str, ...] | None = (
             ("film",) if config.force_film_to_adamw else None
         )
+        # [A1] Weight-EMA over the trainable params (decoder + FiLM); the VQ codebook
+        # keeps its own van-den-Oord EMA. Built once; updated after every step.
+        self._ema = _CapstoneWeightEMA(self.bundle, config.ema_decay)
+        # [B1] cosine-LR schedule state: the base LR for the eta_min floor + the
+        # epoch span of the CURRENT stage + the global epoch offset within that
+        # stage. ``configure_stage`` resets these per stage (PR95 rebuilds a fresh
+        # cosine per stage); ``_current_epoch`` is set by the epoch loop.
+        self._cosine_base_lr: float = float(config.adamw_lr)
+        self._cosine_total_epochs: int = int(config.epochs)
+        self._current_epoch: int = 0
 
     def _pose_mx(self, idx_np: np.ndarray) -> Any:
         return mx.array(self.pose_store[idx_np])
@@ -225,8 +291,25 @@ class CapstoneTrainer:
         self._mech_step += 1
         return grads
 
-    def step(self, idx_np: np.ndarray) -> dict[str, Any]:
-        """One joint training step. Returns telemetry."""
+    def _lr_scale_for_epoch(self, epoch: int) -> float:
+        """[B1] The PR95 cosine multiplier for ``epoch`` within the current stage."""
+        if not self.cfg.cosine_lr_schedule:
+            return 1.0
+        from tac.local_acceleration.pr95_hnerv_mlx import pr95_cosine_lr_scale
+
+        return pr95_cosine_lr_scale(
+            epoch,
+            self._cosine_total_epochs,
+            base_lr=self._cosine_base_lr,
+            lr_floor_ratio=self.cfg.lr_floor_ratio,
+        )
+
+    def step(self, idx_np: np.ndarray, *, lr_scale: float = 1.0) -> dict[str, Any]:
+        """One joint training step. Returns telemetry.
+
+        ``lr_scale`` is the PR95 per-epoch cosine multiplier (audit [B1]); the epoch
+        loop computes it once per epoch and threads it to every batch in that epoch.
+        """
         _require_mlx()
         indices = mx.array(idx_np.astype(np.int32))
         pose = self._pose_mx(idx_np)
@@ -244,9 +327,12 @@ class CapstoneTrainer:
             self.opt_config,
             parameter_group_fingerprint=self._fingerprint,
             force_adamw_substrings=self._force_adamw_substrings,
+            lr_scale=lr_scale,
         )
         # VQ EMA codebook update from the most-recent forward (van den Oord §3.2).
         self.bundle.ema_update_from_last()
+        # [A1] Weight-EMA update over the trainable params AFTER the optimizer step.
+        self._ema.update(self.bundle)
         mx.eval(self.bundle.parameters())
         return {
             "loss": result.loss_value,
@@ -254,31 +340,47 @@ class CapstoneTrainer:
             "pose": result.pose_loss_value,
             "commit": float(self.bundle.last_commitment_loss),
             "d_seg_batch": result.d_seg,
+            "lr_scale": float(summary.get("lr_scale", lr_scale)),
+            "effective_muon_lr": float(summary.get("effective_muon_lr", 0.0)),
             "grad_clip_would_clip": summary.get(
                 "gradient_clip_would_clip_count", 0
             ),
         }
 
-    def exact_d_seg(self) -> float:
-        """Mean EXACT live-render d_seg over all pairs (pose-FiLM render)."""
-        _require_mlx()
-        total = 0.0
-        n = 0
-        for start in range(0, self.n_pairs, self.cfg.batch_size):
-            idx_np = np.arange(
-                start, min(start + self.cfg.batch_size, self.n_pairs)
-            )
-            indices = mx.array(idx_np.astype(np.int32))
-            render = self._render(indices, self._pose_mx(idx_np))
-            mx.eval(render)
-            d = self.bridge.exact_d_seg(
-                render, torch.from_numpy(idx_np.astype(np.int64))
-            )
-            total += d * len(idx_np)
-            n += len(idx_np)
-        return total / max(n, 1)
+    def _resolve_use_ema(self, use_ema: bool | None) -> bool:
+        return self.cfg.use_ema_for_eval if use_ema is None else bool(use_ema)
 
-    def mean_d_pose(self) -> float:
+    def exact_d_seg(self, *, use_ema: bool | None = None) -> float:
+        """Mean EXACT live-render d_seg over all pairs (pose-FiLM render).
+
+        [A1] When ``use_ema`` resolves True (the default = ``cfg.use_ema_for_eval``),
+        the EMA shadow is installed (snapshot+restore) so the reported d_seg is the
+        averaged, lower-variance shadow's d_seg — the SAME point the export bytes.
+        """
+        _require_mlx()
+        do_ema = self._resolve_use_ema(use_ema)
+        orig = self._ema.apply_to(self.bundle) if do_ema else None
+        try:
+            total = 0.0
+            n = 0
+            for start in range(0, self.n_pairs, self.cfg.batch_size):
+                idx_np = np.arange(
+                    start, min(start + self.cfg.batch_size, self.n_pairs)
+                )
+                indices = mx.array(idx_np.astype(np.int32))
+                render = self._render(indices, self._pose_mx(idx_np))
+                mx.eval(render)
+                d = self.bridge.exact_d_seg(
+                    render, torch.from_numpy(idx_np.astype(np.int64))
+                )
+                total += d * len(idx_np)
+                n += len(idx_np)
+            return total / max(n, 1)
+        finally:
+            if orig is not None:
+                _CapstoneWeightEMA.restore(self.bundle, orig)
+
+    def mean_d_pose(self, *, use_ema: bool | None = None) -> float:
         """Mean EXACT PoseNet MSE over all pairs (the pose half of the score).
 
         Re-measures the PoseNet output on the LIVE pose-FiLM render vs the GT
@@ -300,28 +402,41 @@ class CapstoneTrainer:
         bridge = self.bridge
         if bridge.pose_targets is None:
             return 0.0
-        total = 0.0
-        n = 0
-        for start in range(0, self.n_pairs, self.cfg.batch_size):
-            idx_np = np.arange(
-                start, min(start + self.cfg.batch_size, self.n_pairs)
-            )
-            indices = mx.array(idx_np.astype(np.int32))
-            render = self._render(indices, self._pose_mx(idx_np))
-            mx.eval(render)
-            idx_t = torch.from_numpy(idx_np.astype(np.int64))
-            d = bridge.exact_d_pose(render, idx_t)
-            total += d * len(idx_np)
-            n += len(idx_np)
-        return total / max(n, 1)
+        do_ema = self._resolve_use_ema(use_ema)
+        orig = self._ema.apply_to(self.bundle) if do_ema else None
+        try:
+            total = 0.0
+            n = 0
+            for start in range(0, self.n_pairs, self.cfg.batch_size):
+                idx_np = np.arange(
+                    start, min(start + self.cfg.batch_size, self.n_pairs)
+                )
+                indices = mx.array(idx_np.astype(np.int32))
+                render = self._render(indices, self._pose_mx(idx_np))
+                mx.eval(render)
+                idx_t = torch.from_numpy(idx_np.astype(np.int64))
+                d = bridge.exact_d_pose(render, idx_t)
+                total += d * len(idx_np)
+                n += len(idx_np)
+            return total / max(n, 1)
+        finally:
+            if orig is not None:
+                _CapstoneWeightEMA.restore(self.bundle, orig)
 
     def configure_stage(self, spec: StageSpec, *, optimizer_schedule: str) -> None:
         """Switch to a PR95 curriculum stage (CurriculumTrainerProtocol).
 
         Sets the bridge seg-loss family, rebuilds the optimizer config (LR +
         Muon-vs-AdamW per the resolved schedule + per-stage grad-clip/wd), and arms
-        the per-stage QAT / C1a / sigma-noise mechanisms. Optimizer + VQ-EMA STATE is
-        PRESERVED across stages (PR95 inter-stage transitions resume weights).
+        the per-stage QAT / C1a / sigma-noise mechanisms.
+
+        [B2] PR95 builds a FRESH optimizer + a FRESH cosine scheduler per stage (each
+        ``stage{n}.main()`` constructs its own ``AdamW``/``Muon`` + ``LambdaLR``). So
+        this RESETS the optimizer step counter (the AdamW bias-correction warmup
+        restarts) and the cosine schedule base/span per stage. The WEIGHTS + the
+        weight-EMA shadow + the VQ codebook carry across stages (PR95 resumes the
+        decoder/latents between stages); only the optimizer MOMENTUM/bias-correction
+        and the cosine restart per stage, which is the PR95 inter-stage contract.
         """
         from tac.mlx_pr95_port.curriculum import resolve_use_muon
 
@@ -342,12 +457,23 @@ class CapstoneTrainer:
             grad_clip_muon=spec.grad_clip_muon,
             cast_muon_float32_to_bfloat16=self.cfg.cast_muon_float32_to_bfloat16,
         )
+        # [B2] fresh optimizer state per stage (bias-correction warmup + momentum
+        # restart), matching PR95's per-stage optimizer rebuild.
+        self.opt_state = Pr95MlxOptimizerState()
+        # [B1] fresh cosine schedule per stage: base LR for the eta_min floor +
+        # the stage's epoch span. The epoch loop steps the cosine over [0, epochs).
+        self._cosine_base_lr = float(spec.adamw_lr)
+        self._cosine_total_epochs = int(spec.epochs)
+        self._current_epoch = 0
         self.mechanisms = StageMechanisms(
             use_qat=spec.use_qat,
             sigma_weight_noise=spec.sigma_weight_noise,
             cat_lambda=spec.cat_lambda,
             cat_sigma=spec.cat_sigma,
         )
+        # [A1] per-stage EMA decay can change with the stage spec (PR95 carries one
+        # decay; the StageSpec exposes ema_decay so the curriculum can sweep it).
+        self._ema.decay = float(getattr(spec, "ema_decay", self.cfg.ema_decay))
 
     def run_stage_epochs(self, spec: StageSpec) -> dict[str, Any]:
         """Run ``spec.epochs`` epochs of the configured stage (CurriculumTrainerProtocol)."""
@@ -370,21 +496,28 @@ class CapstoneTrainer:
         """Run ``epochs`` epochs of the joint loop with the CURRENT stage config."""
         _require_mlx()
         cfg = self.cfg
+        # [B1] the cosine spans THIS call's epoch count (configure_stage set the
+        # stage span; the un-curriculum'd train() sets it to cfg.epochs).
+        self._cosine_total_epochs = int(epochs)
 
-        d_seg_initial = self.exact_d_seg()
-        d_pose_initial = self.mean_d_pose()
+        d_seg_initial = self.exact_d_seg(use_ema=False)
+        d_pose_initial = self.mean_d_pose(use_ema=False)
         trajectory: list[dict[str, Any]] = []
         best_d_seg = float("inf")
         clip_would_steps = 0
         total_steps = 0
+        last_lr_scale = 1.0
 
         for epoch in range(epochs):
+            self._current_epoch = epoch
+            lr_scale = self._lr_scale_for_epoch(epoch)  # [B1] per-epoch cosine
+            last_lr_scale = lr_scale
             perm = np.random.permutation(self.n_pairs)
             ep_seg = ep_loss = ep_commit = 0.0
             nb = 0
             for start in range(0, self.n_pairs, cfg.batch_size):
                 idx_np = perm[start : start + cfg.batch_size]
-                row = self.step(idx_np)
+                row = self.step(idx_np, lr_scale=lr_scale)
                 ep_seg += row["seg"]
                 ep_loss += row["loss"]
                 ep_commit += row["commit"]
@@ -405,6 +538,7 @@ class CapstoneTrainer:
                     "loss_mean": ep_loss / max(nb, 1),
                     "seg_loss_mean": ep_seg / max(nb, 1),
                     "commit_mean": ep_commit / max(nb, 1),
+                    "lr_scale": lr_scale,
                     "clip_would_fraction": clip_would_steps / max(total_steps, 1),
                 }
                 trajectory.append(trow)
@@ -418,6 +552,7 @@ class CapstoneTrainer:
             "d_seg_final": trajectory[-1]["exact_d_seg"] if trajectory else d_seg_initial,
             "d_pose_final": trajectory[-1]["mean_d_pose"] if trajectory else d_pose_initial,
             "d_seg_best": best_d_seg if best_d_seg != float("inf") else d_seg_initial,
+            "lr_scale_final": last_lr_scale,
             "seg_descended": (
                 trajectory[-1]["exact_d_seg"] < d_seg_initial - 1e-4
                 if trajectory
@@ -432,21 +567,29 @@ class CapstoneTrainer:
         cfg = self.cfg
         np.random.seed(cfg.seed)
         mx.random.seed(cfg.seed)
+        # [B1] the un-curriculum'd run is a single cosine over cfg.epochs; the base
+        # LR for the eta_min floor is cfg.adamw_lr (PR95's eta_min denominator).
+        self._cosine_base_lr = float(cfg.adamw_lr)
+        self._cosine_total_epochs = int(cfg.epochs)
 
-        d_seg_initial = self.exact_d_seg()
-        d_pose_initial = self.mean_d_pose()
+        d_seg_initial = self.exact_d_seg(use_ema=False)
+        d_pose_initial = self.mean_d_pose(use_ema=False)
         trajectory: list[dict[str, Any]] = []
         best_d_seg = float("inf")
         clip_would_steps = 0
         total_steps = 0
+        last_lr_scale = 1.0
 
         for epoch in range(cfg.epochs):
+            self._current_epoch = epoch
+            lr_scale = self._lr_scale_for_epoch(epoch)  # [B1] per-epoch cosine
+            last_lr_scale = lr_scale
             perm = np.random.permutation(self.n_pairs)
             ep_seg = ep_loss = ep_commit = 0.0
             nb = 0
             for start in range(0, self.n_pairs, cfg.batch_size):
                 idx_np = perm[start : start + cfg.batch_size]
-                row = self.step(idx_np)
+                row = self.step(idx_np, lr_scale=lr_scale)
                 ep_seg += row["seg"]
                 ep_loss += row["loss"]
                 ep_commit += row["commit"]
@@ -466,6 +609,7 @@ class CapstoneTrainer:
                     "loss_mean": ep_loss / max(nb, 1),
                     "seg_loss_mean": ep_seg / max(nb, 1),
                     "commit_mean": ep_commit / max(nb, 1),
+                    "lr_scale": lr_scale,
                     "clip_would_fraction": clip_would_steps / max(total_steps, 1),
                 }
                 trajectory.append(trow)
@@ -477,6 +621,7 @@ class CapstoneTrainer:
             "d_seg_final": trajectory[-1]["exact_d_seg"] if trajectory else None,
             "d_pose_final": trajectory[-1]["mean_d_pose"] if trajectory else None,
             "d_seg_best": best_d_seg,
+            "lr_scale_final": last_lr_scale,
             "seg_descended": (
                 trajectory[-1]["exact_d_seg"] < d_seg_initial - 1e-4
                 if trajectory
@@ -490,28 +635,29 @@ class CapstoneTrainer:
             "trajectory": trajectory,
         }
 
+    def export_render_weights(self) -> dict[str, np.ndarray]:
+        """[A1] The render-basis weights to EXPORT = the EMA shadow (NOT live).
 
-@torch.no_grad()
-def _exact_d_pose(bridge: Any, render_n2chw: Any, idx: torch.Tensor) -> float:
-    """Re-measure PoseNet MSE on the live render vs GT pose (the d_pose term)."""
-    import torch.nn.functional as F
-
-    np_render = np.asarray(render_n2chw, dtype=np.float32)
-    leaf = torch.tensor(np_render, dtype=torch.float32)
-    b = leaf.shape[0]
-    flat = leaf.reshape(b * 2, 3, leaf.shape[-2], leaf.shape[-1])
-    if (int(flat.shape[-2]), int(flat.shape[-1])) != bridge.scorer_hw:
-        flat = F.interpolate(
-            flat, size=bridge.scorer_hw, mode="bilinear", align_corners=False
+        The EMA non-negotiable: the archive bytes come from ``ema.state_dict()``.
+        This installs the EMA shadow over the bundle's trainable params (decoder +
+        FiLM), extracts the full contest-keyed render-weight dict via
+        ``full_render_weights_from_bundle`` (the SAME path the live export used), then
+        restores the live params. If ``use_ema_for_eval`` is False the caller has
+        opted out of the shadow entirely, so the live weights are returned (the
+        explicit research-only escape hatch, consistent with the eval path).
+        """
+        _require_mlx()
+        from tac.capstone_vq_nerv.numpy_reference import (
+            full_render_weights_from_bundle,
         )
-    flat = flat.clamp(0.0, 255.0)
-    bchw = flat.reshape(b, 2, 3, bridge.scorer_hw[0], bridge.scorer_hw[1])
-    bhwc = bchw.permute(0, 1, 3, 4, 2).contiguous()
-    posenet_in, _ = bridge.dnet.preprocess_input(bhwc)
-    pose_out = bridge.dnet.posenet(posenet_in)
-    pose_pred = pose_out["pose"][:, :6]
-    target = bridge.pose_targets[idx]
-    return float(((pose_pred - target) ** 2).mean().item())
+
+        if not self.cfg.use_ema_for_eval:
+            return full_render_weights_from_bundle(self.bundle)
+        orig = self._ema.apply_to(self.bundle)
+        try:
+            return full_render_weights_from_bundle(self.bundle)
+        finally:
+            _CapstoneWeightEMA.restore(self.bundle, orig)
 
 
 __all__ = [
