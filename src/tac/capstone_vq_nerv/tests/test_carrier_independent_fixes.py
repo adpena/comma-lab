@@ -504,3 +504,61 @@ def test_b4fix_ema_shadow_tracks_live_weights_on_short_run():
     assert shadow_to_live < shadow_to_init, (
         "shadow must be closer to LIVE than to INIT (the lag bug inverts this)"
     )
+
+
+# ===========================================================================
+# [RECIPE-FIX BUG-A 2026-06-11] muon_throughout uses the CONFIG muon_lr/grad_clip,
+# NOT the StageSpec's torch-tuned 2e-4/1.0 (the d_seg-wall recipe bug). The faithful
+# pr95_adamw_then_muon path is byte-UNCHANGED (uses the StageSpec values).
+# See .omx/research/pr95_seg_convergence_mechanism_and_recipe_gap_audit_20260611.md
+# ===========================================================================
+
+
+@skip_no_mlx
+def test_bugA_muon_throughout_uses_config_muon_lr_not_stagespec():
+    """Under muon_throughout, configure_stage must use cfg.muon_lr (the working 0.03),
+    NOT the StageSpec's torch-tuned 2e-4 — the 150x-too-small value that walled d_seg."""
+    from tac.mlx_pr95_port.curriculum import build_pr95_8stage_curriculum
+
+    bundle, bridge, pose_store, Cfg, Trainer = _setup(n_pairs=4, with_pose=False)
+    # config carries the WORKING small-basis values (the muon-only arm reached 0.0037
+    # with these); the StageSpec hardcodes muon_lr=2e-4, grad_clip_muon=1.0.
+    cfg = Cfg(epochs=2, batch_size=4, seed=0, muon_lr=0.03, grad_clip=50.0, grad_clip_muon=50.0)
+    trainer = Trainer(bundle, bridge, pose_store, cfg)
+    stages = build_pr95_8stage_curriculum(total_epochs=16)
+    # stage 1 (CE) under muon_throughout -> Muon active, config LR must win.
+    trainer.configure_stage(stages[0], optimizer_schedule="muon_throughout")
+    assert trainer.opt_config.muon_lr == pytest.approx(0.03), (
+        "muon_throughout must use cfg.muon_lr (0.03), got "
+        f"{trainer.opt_config.muon_lr} (the StageSpec 2e-4 would be the BUG)"
+    )
+    assert trainer.opt_config.grad_clip_muon == pytest.approx(50.0), (
+        "muon_throughout must use cfg.grad_clip_muon (50), got "
+        f"{trainer.opt_config.grad_clip_muon} (StageSpec 1.0 = the 100%-clip BUG)"
+    )
+    assert trainer.opt_config.grad_clip == pytest.approx(50.0)
+    # NO-FAKE: the StageSpec's OWN value really is the small one (the bug we route around).
+    assert stages[0].muon_lr == pytest.approx(2e-4)
+    assert stages[0].grad_clip_muon == pytest.approx(1.0)
+
+
+@skip_no_mlx
+def test_bugA_faithful_pr95_schedule_still_uses_stagespec_values_byte_unchanged():
+    """The FAITHFUL pr95_adamw_then_muon schedule is byte-UNCHANGED by the fix:
+    it must still use the StageSpec's muon_lr/grad_clip (only stage 8 uses Muon)."""
+    from tac.mlx_pr95_port.curriculum import build_pr95_8stage_curriculum
+
+    bundle, bridge, pose_store, Cfg, Trainer = _setup(n_pairs=4, with_pose=False)
+    cfg = Cfg(epochs=2, batch_size=4, seed=0, muon_lr=0.03, grad_clip=50.0, grad_clip_muon=50.0)
+    trainer = Trainer(bundle, bridge, pose_store, cfg)
+    stages = build_pr95_8stage_curriculum(total_epochs=16)
+    # stage 8 muon_finetune under the FAITHFUL schedule -> StageSpec values must win
+    # (config 0.03 must NOT leak in; the faithful path is unchanged by the fix).
+    trainer.configure_stage(stages[7], optimizer_schedule="pr95_adamw_then_muon")
+    assert trainer.opt_config.muon_lr == pytest.approx(stages[7].muon_lr), (
+        "faithful schedule must use StageSpec muon_lr (byte-unchanged), got "
+        f"{trainer.opt_config.muon_lr} vs spec {stages[7].muon_lr}"
+    )
+    assert trainer.opt_config.grad_clip_muon == pytest.approx(stages[7].grad_clip_muon)
+    assert trainer.opt_config.grad_clip == pytest.approx(stages[7].grad_clip)
+    assert trainer.opt_config.use_muon is True  # stage 8 IS the muon stage

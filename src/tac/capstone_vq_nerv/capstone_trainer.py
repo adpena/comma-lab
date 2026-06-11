@@ -609,17 +609,42 @@ class CapstoneTrainer:
         self.cfg.seg_weight = spec.seg_weight
         self.cfg.pose_weight = spec.pose_weight
         use_muon = resolve_use_muon(spec, optimizer_schedule)
+        # [RECIPE-FIX BUG-A, 2026-06-11] The PR95 StageSpec hardcodes the TORCH-tuned
+        # ``muon_lr=2e-4`` + ``grad_clip_muon=1.0`` — values tuned for a 178K-param
+        # net over 5000 stage-8 epochs. On our SMALLER (85K, tie_depth=2) MLX basis at
+        # COMPRESSED epoch counts, 2e-4 is ~150x too small and grad_clip_muon=1.0 clips
+        # 100% of steps, so the curriculum CRAWLED at d_seg ~0.010 while the bare
+        # ``muon_throughout`` arm (which uses the CONFIG muon_lr=0.03 + grad_clip=50)
+        # reached 0.0037 — the curriculum was WORSE than no curriculum (a recipe bug,
+        # not a curriculum benefit). The ``muon_throughout`` schedule is OUR #77
+        # deviation (Muon from stage 1, which PR95 never did), so it OWNS the muon
+        # step-size + clip — under it we use the config's working values, NOT the
+        # StageSpec's torch-tuned ones. The curriculum STRUCTURE (seg-loss family /
+        # QAT / C1a / sigma / AdamW-LR schedule) is UNCHANGED — only the muon knob the
+        # deviation already controls. The FAITHFUL ``pr95_adamw_then_muon`` path is
+        # BYTE-UNCHANGED (it uses the StageSpec values, Muon only in stage 8). See
+        # ``.omx/research/pr95_seg_convergence_mechanism_and_recipe_gap_audit_20260611.md``.
+        from tac.mlx_pr95_port.curriculum import OPTIMIZER_SCHEDULE_MUON_THROUGHOUT
+
+        muon_throughout = optimizer_schedule == OPTIMIZER_SCHEDULE_MUON_THROUGHOUT
+        stage_muon_lr = self.cfg.muon_lr if muon_throughout else spec.muon_lr
+        stage_grad_clip = (
+            self.cfg.grad_clip if muon_throughout else spec.grad_clip
+        )
+        stage_grad_clip_muon = (
+            self.cfg.grad_clip_muon if muon_throughout else spec.grad_clip_muon
+        )
         self.opt_config = Pr95MlxOptimizerConfig(
             use_muon=use_muon,
             adamw_lr=spec.adamw_lr,
             latent_lr_mult=spec.latent_lr_mult,
-            muon_lr=spec.muon_lr,
+            muon_lr=stage_muon_lr,
             muon_momentum=self.cfg.muon_momentum,
             muon_nesterov=self.cfg.muon_nesterov,
             muon_ns_steps=self.cfg.muon_ns_steps,
             muon_weight_decay=spec.muon_weight_decay,
-            grad_clip=spec.grad_clip,
-            grad_clip_muon=spec.grad_clip_muon,
+            grad_clip=stage_grad_clip,
+            grad_clip_muon=stage_grad_clip_muon,
             cast_muon_float32_to_bfloat16=self.cfg.cast_muon_float32_to_bfloat16,
         )
         # [B2] fresh optimizer state per stage (bias-correction warmup + momentum
