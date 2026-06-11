@@ -240,6 +240,57 @@ score-lowering campaign default" (how to convert a floor-breaking family into an
 "Submission auth eval — BOTH CPU AND CUDA" (what makes an exact row authoritative) · "Results must become
 system intelligence" (the decade-compounding mechanism).
 
+## ANTI-SIGNAL-LOSS — no deferral of READY high-EV work; janky-prototype closures RE-OPEN; measurement-first — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator binding directive 2026-06-11 verbatim — *"everything we closed were like janky prototypes
+and far from the top-AIML versions our project calls for ... many deferred and retired and orphaned are
+causing similar signal loss which caused us to get leapfrogged over [241]LOC when everything was sitting
+ready and your own research directive had that on the path ... but as deferred when it was obviously a top
+high-EV priority."* Empirical anchor: the May 4 2026 race — a **241-LOC silver medal shipped past our ready
+stack that we held as "deferred"** (sister of "Race-mode rigor inversion" below). This section is the
+standing extinction of the **signal-loss-via-deferral**, the **janky-prototype-closure**, and the
+**re-diagnose-instead-of-measure** failure class. Only NO-FAKE and THE GOAL outrank it.
+
+### 1. Anti-deferral / EV-readiness gate (DEFER is FORBIDDEN for READY ∧ high-EV nodes)
+`DEFER / RETIRE / ORPHAN` is a **forbidden resting state** for any node that is BOTH (a) **READY** — its
+code/contract already exists OR its first step is a $0 local smoke — AND (b) **high-EV** — it clears the
+break-even / sits on the critical path to a lower exact score. Such a node is **ACTIONABLE-NOW**, not parked.
+Every node carries the gate tag `{READY: y/n | EV: high/med/low | STATUS: DOING-NOW / blocked-by-<named-
+measured-X> / genuinely-deferred-because-<named-measured-blocker>}`. A node may be `genuinely-deferred` ONLY
+with a NAMED, MEASURED blocker (e.g. "needs paid GPU $X" / "exact eval returned S=0.46"). "Looked hard,"
+"felt lower priority," or "a prototype gave a bad result" are NOT valid deferrals — the last RE-OPENS the
+node per rule 2. A READY ∧ high-EV node sitting un-launched is the bug this rule extincts; fan it out
+(sister: "Race-mode rigor inversion + parallel-dispatch first" + the 2–3-subagents-running directive).
+
+### 2. Janky-prototype → top-AIML RE-OPEN (closure requires top-AIML + measured row + recursive greenup)
+Per Catalog #307 (paradigm-vs-implementation falsification): a verdict reached on a **janky prototype**
+falsifies the IMPLEMENTATION, not the PARADIGM. **Every prior `closed / falsified / DEFER / retired /
+orphaned` verdict that rested on a prototype-grade implementation is IMPLEMENTATION-LEVEL falsified,
+PARADIGM INTACT, and RE-OPENED for a top-AIML (SOTA-grade) re-attempt.** A closure is valid ONLY when ALL
+THREE hold: (a) a **top-AIML implementation** (export contract + numpy-portable inflate + torch-parity gate
+from byte zero, per HNeRV-parity discipline — not a sketch); (b) a **MEASURED exact-scorer byte-closed row**
+(advisory local is the gate, paired contest-CPU/CUDA is the verdict); (c) a **3-clean-pass recursive
+senior-engineer greenup review** (per "Recursive adversarial review protocol") that QUESTIONS ALL
+INTERPRETATIONS — any unresolved interpretation resets the counter. Anchors: the orphaned inverse-scorer
+103-surface inventory (`evaluator_inverse_orphan_inventory_20260609.md`), the LEARNED-CNN postfilter
+abandoned on proxy/PSNR (never closed on the exact scorer), the deterministic/boundary levers retired as
+prototypes.
+
+### 3. Measurement-first — stop re-diagnosing
+Interpretations are cheap and have been wrong repeatedly: the capstone d_seg plateau was re-diagnosed FOUR
+times in two days (0.505 wall → EMA-shadow artifact → true plateau → under-training → capacity+broken-
+curriculum), each "wall" dissolving into an artifact. **Every cycle MUST produce a MEASURED byte-closed S
+row OR a $0 smoke with a falsification threshold — NOT another interpretation.** Measured rows are the
+currency; a session that ends with N interpretations and 0 new measured rows has lost signal. (Sister of
+NO-FAKE "surrogate-optimized-but-not-exact-authority-verified" + "Results must become system intelligence.")
+
+**Operating consequence:** when the conversation/DAG surfaces a finding (orphaned surface, futuristic path,
+adapter lever), it is FOLDED INTO the work-graph with the rule-1 gate tag and, if READY ∧ high-EV, LAUNCHED —
+not summarized as a means. The canonical work-graph is
+`.omx/research/sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md`. Cross-refs: "Forbidden premature
+KILL without research exhaustion," Catalog #307, "Race-mode rigor inversion + parallel-dispatch first,"
+"THE GOAL — SUB-0.15" (the means/ends firewall this protects).
+
 ## Race-mode rigor inversion + parallel-dispatch first — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Postmortem source:** `~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_may_4_hnerv_race_postmortem_20260505.md`. The May 4 2026 contest was decided in a **4 hour 8 minute race window** after PR #95 (HNeRV root) was published at 07:47:15 UTC. Final top 3 (PR #101 / #103 / #102 at 0.193 / 0.195 / 0.195) all submitted between 11:50 and 11:55 UTC. Silver medal (rem2 PR #103) was **241 lines of code in 2 files**. Our PR #107 apogee landed at 0.229 (~11th) — we had every primitive needed but spent the race window building meta-Lagrangian + predictor + sanity gates (sequential validation harness) instead of fanning out parallel dispatches.
