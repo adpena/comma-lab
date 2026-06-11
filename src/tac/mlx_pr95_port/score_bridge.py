@@ -71,6 +71,64 @@ def _require_mlx() -> None:
         raise RuntimeError("tac.mlx_pr95_port.score_bridge requires mlx.core.")
 
 
+def configure_torch_cpu_threads(num_threads: int | None = None) -> int:
+    """Pin the torch-CPU scorer thread count to the measured-optimal value.
+
+    The frozen contest scorer (EfficientNet-B2 SegNet + FastViT PoseNet) is the
+    >97%-of-wall-clock bottleneck of the capstone training step (the MLX render /
+    numpy copy / eval_roundtrip are <3%). On Apple-Silicon arm64 torch has NO
+    mkldnn / NO MKL (``torch.backends.mkldnn.is_available()`` is False), so the
+    depthwise convolutions dispatch to ``aten::_slow_conv2d_forward`` — the naive
+    reference kernel — and the ONLY genuinely-fast axes are (a) scorer-batch
+    amortization (caller-side: render more pairs per scorer call) and (b) the
+    torch thread count, tuned here.
+
+    Measured on the 6-performance-core M5 Max (``tools/profile_capstone_training_
+    throughput.py`` thread sweep, full fwd+bwd step): the per-step wall-clock is
+    flat from ~6 to ~10 threads and DEGRADES at >=14 (cross-core cache thrash on
+    the slow-conv path makes 14-18 threads SLOWER than 6). So the sane policy is
+    to pin to the performance-core count (default torch picks 6 on this box,
+    which is already near-optimal) and NEVER let it run up to the full logical
+    core count.
+
+    This is a numerics-preserving knob: thread count changes only the float
+    reduction order inside the conv/matmul kernels (sub-ULP), never the SegNet
+    argmax (the exact d_seg is bit-stable across thread counts — verified in the
+    bridge test suite). A daemon should call this ONCE at startup before the
+    first scorer forward.
+
+    Args:
+        num_threads: explicit thread count to pin. ``None`` (default) resolves to
+            ``min(performance_core_count, 8)`` — the measured sweet spot — falling
+            back to the current ``torch.get_num_threads()`` if the perf-core count
+            cannot be read.
+
+    Returns:
+        The thread count that was set (the resolved value).
+    """
+    if num_threads is None:
+        perf_cores: int | None = None
+        try:  # macOS perf-core count (the cores the scorer should run on).
+            import subprocess
+
+            perf_cores = int(
+                subprocess.check_output(
+                    ["sysctl", "-n", "hw.perflevel0.physicalcpu"]
+                ).decode().strip()
+            )
+        except Exception:  # pragma: no cover - non-macOS / sysctl missing
+            perf_cores = None
+        resolved = (
+            min(perf_cores, 8)
+            if perf_cores and perf_cores > 0
+            else int(torch.get_num_threads())
+        )
+    else:
+        resolved = max(1, int(num_threads))
+    torch.set_num_threads(resolved)
+    return resolved
+
+
 class Yuv6NotPatchedError(RuntimeError):
     """Raised when the pose path's upstream ``rgb_to_yuv6`` is not differentiable."""
 
@@ -346,6 +404,76 @@ class TorchScorerBridge:
         pose_pred = pose_out["pose"][:, :6]
         return float(F.mse_loss(pose_pred, self.pose_targets[idx]).item())
 
+    def _eval_preprocess(self, render_n2chw: Any) -> tuple[Any, Any]:
+        """Shared eval-side preprocess (resize -> eval_roundtrip -> NHWC -> split).
+
+        Returns ``(posenet_in, segnet_in)`` for the frozen scorer. This is the
+        SAME ladder ``exact_d_seg`` / ``exact_d_pose`` apply (bilinear resize to
+        scorer HW if needed, then the bicubic-up/bilinear-down/STE-uint8
+        eval_roundtrip, then NHWC + ``preprocess_input``), factored out so a fused
+        eval can run SegNet AND PoseNet on ONE preprocess instead of two. Pure
+        refactor of the existing per-method code (byte-identical to running each
+        method's preamble) — no behavior change.
+        """
+        np_render = np.asarray(render_n2chw, dtype=np.float32)
+        leaf = torch.tensor(np_render, dtype=torch.float32)
+        b = leaf.shape[0]
+        flat = leaf.reshape(b * 2, 3, leaf.shape[-2], leaf.shape[-1])
+        if (int(flat.shape[-2]), int(flat.shape[-1])) != self.scorer_hw:
+            flat = F.interpolate(
+                flat, size=self.scorer_hw, mode="bilinear", align_corners=False
+            )
+        if self.eval_roundtrip:
+            cam_h = max(round(self.scorer_hw[0] * 874 / 384), self.scorer_hw[0] + 1)
+            cam_w = max(round(self.scorer_hw[1] * 1164 / 512), self.scorer_hw[1] + 1)
+            flat = apply_eval_roundtrip_during_training(
+                flat,
+                simulate_uint8=True,
+                simulate_resize=True,
+                ste_round=True,
+                target_h=cam_h,
+                target_w=cam_w,
+            )
+        else:
+            flat = flat.clamp(0.0, 255.0)
+        bchw = flat.reshape(b, 2, 3, self.scorer_hw[0], self.scorer_hw[1])
+        bhwc = bchw.permute(0, 1, 3, 4, 2).contiguous()
+        return self.dnet.preprocess_input(bhwc)
+
+    @torch.inference_mode()
+    def fused_d_seg_d_pose(
+        self, render_n2chw: Any, idx: torch.Tensor
+    ) -> tuple[float, float]:
+        """Return ``(d_seg, d_pose)`` from ONE shared preprocess (eval throughput).
+
+        Equivalent to calling ``exact_d_seg`` and ``exact_d_pose`` on the same
+        ``render_n2chw`` / ``idx``, but runs the resize + eval_roundtrip +
+        ``preprocess_input`` ONCE and feeds the result to BOTH SegNet and
+        PoseNet, instead of the separate-call path that re-renders + re-preprocesses
+        for each. The avoided work (one preprocess + one eval_roundtrip per batch)
+        is small relative to the SegNet forward, but it is real and the result is
+        numerics-faithful: ``d_seg`` is bit-identical to ``exact_d_seg`` (the same
+        SegNet argmax on the same preprocessed frames) and ``d_pose`` is identical
+        to ``exact_d_pose`` (the same PoseNet MSE). Uses ``torch.inference_mode``
+        so NO autograd graph is built (eval-only; the loss path keeps its graph).
+
+        Fails closed if pose is not enabled (no PoseNet / no targets) — a fused
+        d_seg/d_pose has no meaning without the pose half.
+        """
+        _require_mlx()
+        if not self.pose_enabled:
+            raise ValueError(
+                "fused_d_seg_d_pose requires a PoseNet + pose_targets (pose not "
+                "enabled); use exact_d_seg for the seg-only path."
+            )
+        posenet_in, segnet_in = self._eval_preprocess(render_n2chw)
+        seg_out = self.dnet.segnet(segnet_in)
+        d_seg = float(exact_d_seg_from_logits(seg_out, self.seg_targets_hard[idx]))
+        pose_out = self.dnet.posenet(posenet_in)
+        pose_pred = pose_out["pose"][:, :6]
+        d_pose = float(F.mse_loss(pose_pred, self.pose_targets[idx]).item())
+        return d_seg, d_pose
+
 
 __all__ = [
     "CAMERA_HW",
@@ -353,4 +481,5 @@ __all__ = [
     "ScoreBridgeResult",
     "TorchScorerBridge",
     "Yuv6NotPatchedError",
+    "configure_torch_cpu_threads",
 ]

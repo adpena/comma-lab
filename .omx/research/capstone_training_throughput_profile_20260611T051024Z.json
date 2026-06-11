@@ -1,0 +1,74 @@
+{
+  "axis": "[macOS-CPU advisory]",
+  "tool": "profile_capstone_training_throughput",
+  "n_pairs": 16,
+  "base_channels": 20,
+  "torch_num_threads": 6,
+  "torch_num_interop_threads": 18,
+  "torch_mkldnn_available": false,
+  "torch_mkl_available": false,
+  "section_breakdown": {
+    "mlx_render_and_sync_ms": 39.84,
+    "np_copy_render_to_leaf_ms": 0.0,
+    "eval_roundtrip_bicubic_ms": 196.89,
+    "permute_contiguous_ms": 0.01,
+    "preprocess_input_ms": 27.59,
+    "segnet_forward_ms": 4696.56,
+    "posenet_forward_ms": 1225.19,
+    "forward_subtotal_ms": 6146.24,
+    "backward_estimate_ms": 8094.23,
+    "full_step_fwd_bwd_ms": 14280.31,
+    "scorer_fwd_bwd_fraction": 0.9815
+  },
+  "eval_pass_cost": {
+    "eval_batch": 8,
+    "separate_d_seg_then_d_pose_ms": 8658.6,
+    "fused_d_seg_d_pose_ms": 8476.5,
+    "fused_speedup": 1.021
+  },
+  "batch_amortization_sweep": [
+    {
+      "pairs": 1,
+      "frames": 2,
+      "segnet_fwd_ms": 1017.6,
+      "per_frame_ms": 508.8
+    },
+    {
+      "pairs": 4,
+      "frames": 8,
+      "segnet_fwd_ms": 2624.5,
+      "per_frame_ms": 328.1
+    },
+    {
+      "pairs": 8,
+      "frames": 16,
+      "segnet_fwd_ms": 3788.9,
+      "per_frame_ms": 236.8
+    },
+    {
+      "pairs": 16,
+      "frames": 32,
+      "segnet_fwd_ms": 4718.3,
+      "per_frame_ms": 147.4
+    }
+  ],
+  "thread_sweep": [
+    {
+      "threads": 4,
+      "full_step_ms": 13508.8
+    },
+    {
+      "threads": 6,
+      "full_step_ms": 14453.7
+    },
+    {
+      "threads": 8,
+      "full_step_ms": 15623.6
+    },
+    {
+      "threads": 12,
+      "full_step_ms": 17582.3
+    }
+  ],
+  "wall_s": 412.6
+}
