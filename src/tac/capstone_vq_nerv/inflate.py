@@ -119,6 +119,7 @@ def decode_archive(archive_bytes: bytes, config: dict) -> dict:
             pose_std=tuple(float(v) for v in config.get("pose_std", (1.0,) * 6)),
             hinerv_grid_pe=bool(config.get("hinerv_grid_pe", False)),
             grid_pe_num_freqs=int(config.get("grid_pe_num_freqs", 4)),
+            tie_depth=int(config.get("tie_depth", 0)),
         )
         return {
             "carrier": carrier,

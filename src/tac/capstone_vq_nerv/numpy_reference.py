@@ -79,6 +79,13 @@ class CapstoneDecodeConfig:
     # HiNeRV grid positional-encoding (opt-in; default-off = byte-identical).
     hinerv_grid_pe: bool = False
     grid_pe_num_freqs: int = 4
+    # L1 weight-tie depth (opt-in; ``<=1`` = no tie = byte-identical). When ``>=2``
+    # the leading ``tie_depth`` upsample blocks (all ``base_ch->base_ch``) share the
+    # ONE stored ``tied_conv.{weight,bias}`` + per-stage ``tied_stage_film.{i}.*``
+    # symmetry-breakers, instead of their own ``blocks.{i}.conv.*``. The inflate
+    # reads ``tie_depth`` from the config sidecar and dispatches the leading stages
+    # to the shared conv (op-for-op with the MLX ``_tied_block_forward``).
+    tie_depth: int = 0
 
     def channels(self) -> list[int]:
         """The PR95 channel taper (matches ``HNeRVDecoderMLX.channels``)."""
@@ -428,10 +435,31 @@ def _features_nhwc(
         pe_proj = pe_proj.reshape(cfg.base_h, cfg.base_w, ch[0])[None, ...]
         x = x + pe_proj
     x = _sin(x)
-    # 6 upsample blocks
+    # 6 upsample blocks. With the L1 weight-tie (tie_depth>=2), the leading
+    # ``tie_depth`` blocks use the SHARED ``tied_conv`` (+ per-stage FiLM) instead
+    # of their own ``blocks.{i}.conv``; the rest use their own convs. Op-for-op with
+    # the MLX ``CapstoneVqNervBundle._tied_block_forward`` / per-block forward.
+    tie_depth = int(cfg.tie_depth)
+    has_tie = tie_depth >= 2 and "tied_conv.weight" in weights
     for i in range(6):
-        in_c = int(x.shape[-1])
         identity = bilinear_resize2x_nhwc(x)
+        if has_tie and i < tie_depth:
+            # Tied leading stage: shared conv (no skip_conv since base_ch->base_ch),
+            # then the per-stage FiLM symmetry-breaker on the pre-sin sum (stage 0
+            # has no FiLM = identity).
+            decoded = pixel_shuffle_2x_nhwc(
+                conv2d_nhwc(
+                    x, weights["tied_conv.weight"], weights["tied_conv.bias"],
+                    padding=1,
+                )
+            )
+            y = decoded + identity
+            if i >= 1:
+                gamma_delta = weights[f"tied_stage_films.{i - 1}.gamma_delta"]
+                beta = weights[f"tied_stage_films.{i - 1}.beta"]
+                y = (1.0 + gamma_delta) * y + beta
+            x = _sin(y)
+            continue
         skip_w = weights.get(f"blocks.{i}.skip_conv.weight")
         if skip_w is not None:
             identity = conv2d_nhwc(
@@ -444,7 +472,6 @@ def _features_nhwc(
             )
         )
         x = _sin(decoded + identity)
-        del in_c
     # refine
     refined = conv2d_nhwc(x, weights["refine0.weight"], weights["refine0.bias"], padding=2, dilation=2)
     refined = conv2d_nhwc(refined, weights["refine1.weight"], weights["refine1.bias"], padding=1)
@@ -508,8 +535,29 @@ def full_render_weights_from_bundle(bundle: Any) -> dict[str, np.ndarray]:
     from mlx.utils import tree_flatten  # local import: MLX only on the train host
 
     out: dict[str, np.ndarray] = {}
+    tie_depth = int(getattr(bundle, "tie_depth", 0) or 0)
+    has_tie = tie_depth >= 2 and hasattr(bundle, "tied_conv")
     for k, v in tree_flatten(bundle.decoder.parameters()):
+        # L1 weight-tie: the leading ``tie_depth`` blocks' own per-block conv weights
+        # are REPLACED by the shared tied_conv at decode, so they are dead bytes —
+        # DROP them from the export (the whole rate point). The decoder still holds
+        # them (it is the shared backbone), but the archive must not carry them.
+        if has_tie:
+            dropped = False
+            for i in range(tie_depth):
+                if k.startswith(f"blocks.{i}.conv."):
+                    dropped = True
+                    break
+            if dropped:
+                continue
         out[k] = np.asarray(v, dtype=np.float32)
+    # L1 weight-tie: export the ONE shared conv + the per-stage FiLM symmetry-breakers.
+    if has_tie:
+        for k, v in tree_flatten(bundle.tied_conv.parameters()):
+            out[f"tied_conv.{k}"] = np.asarray(v, dtype=np.float32)
+        for stage_idx, film in enumerate(bundle.tied_stage_films):
+            for k, v in tree_flatten(film.parameters()):
+                out[f"tied_stage_films.{stage_idx}.{k}"] = np.asarray(v, dtype=np.float32)
     if getattr(bundle, "film_enabled", False) and hasattr(bundle, "pose_film0"):
         for prefix in ("pose_film0", "pose_film1"):
             film = getattr(bundle, prefix)
@@ -537,6 +585,7 @@ def decode_config_from_bundle(bundle: Any) -> CapstoneDecodeConfig:
         pose_std=tuple(float(v) for v in np.asarray(bundle._pose_std)),
         hinerv_grid_pe=bool(getattr(cfg, "hinerv_grid_pe", False)),
         grid_pe_num_freqs=int(getattr(cfg, "grid_pe_num_freqs", 4)),
+        tie_depth=int(getattr(bundle, "tie_depth", 0) or 0),
     )
 
 

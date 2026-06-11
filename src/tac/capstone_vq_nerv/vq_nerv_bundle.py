@@ -108,6 +108,22 @@ class CapstoneVqNervConfig:
     # untrained ON-render == the OFF-render -- only training adds the grid grammar.
     hinerv_grid_pe: bool = False
     grid_pe_num_freqs: int = 4
+    # L1 weight-tie (the inflate-compute rate lever; opt-in, default-off =
+    # byte-identical to the untied decoder). The leading upsample blocks of the
+    # PR95 taper are ALL ``base_channels -> base_channels`` (block 0/1/2 share the
+    # IDENTICAL conv shape ``(base_ch*4, base_ch, 3, 3)`` + have NO skip_conv), so
+    # they can share ONE conv weight set with a per-stage learnable FiLM
+    # (gamma/beta over ``base_channels``) as the symmetry-breaker. ``tie_depth=N``
+    # ties blocks ``0..N-1`` to the shared conv; ``tie_depth<=1`` = no tie (the
+    # default; the bundle constructs the normal per-block convs and is
+    # byte-identical to the pre-switch decoder). The maximum legal ``tie_depth`` is
+    # the number of leading ``base_ch->base_ch`` blocks (3 for the canonical
+    # taper). The rate win: each tied conv (the LARGEST tensors, ~20.8K params at
+    # base_ch=24) is stored ONCE instead of ``tie_depth`` times, removing
+    # ``(tie_depth-1)`` conv tensors from the int8 decoder blob. The per-stage FiLM
+    # is ~``2*base_ch`` params/stage (negligible) and is identity at init (gamma=1,
+    # beta=0) so the UNTRAINED tied render == the untied render.
+    tie_depth: int = 0
     seed: int = 0
 
 
@@ -175,6 +191,52 @@ class _GridPE(nn.Module if nn is not None else object):  # type: ignore[misc]
         """Return the projected grid feature ``(base_h, base_w, channels)``."""
         proj = self.proj(self._grid)  # (HW, channels)
         return mx.reshape(proj, (self.base_h, self.base_w, self.channels))  # type: ignore[union-attr]
+
+
+def tieable_leading_block_count(channels: list[int]) -> int:
+    """Number of LEADING upsample blocks that are ``base_ch -> base_ch`` (tieable).
+
+    A block ``i`` is tieable into the shared conv iff its ``(in, out)`` channels
+    equal ``(channels[0], channels[0])`` (same conv shape, no skip_conv). The PR95
+    taper ``[bc, bc, bc, 0.75bc, ...]`` makes blocks 0/1/2 all ``bc->bc``, so the
+    canonical count is 3. We stop at the first block whose channels deviate (the
+    tie must be a CONTIGUOUS leading prefix so the iterative decode is well-defined).
+    """
+    c0 = int(channels[0])
+    count = 0
+    for i in range(6):
+        if int(channels[i]) == c0 and int(channels[i + 1]) == c0:
+            count += 1
+        else:
+            break
+    return count
+
+
+class _TiedStageFiLM(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Per-stage learnable FiLM (gamma, beta over channels) — the tie symmetry-breaker.
+
+    When the leading upsample blocks share ONE conv weight set, each stage still
+    needs its OWN degrees of freedom so the shared conv is not forced to render
+    every stage identically. A tiny per-stage affine modulation ``y = gamma * x +
+    beta`` over the ``channels`` axis (``2*channels`` params/stage) supplies that —
+    far cheaper than a full per-stage conv (``channels*4 * channels * 9`` params),
+    which is the whole rate point. Identity at init (``gamma=1``, ``beta=0``) so the
+    UNTRAINED tied render is bit-identical to the untied render; training adds the
+    per-stage grammar. Applied to the pre-``sin`` sum ``decoded + identity`` so it
+    modulates the same quantity the per-block conv would have shaped.
+    """
+
+    def __init__(self, *, channels: int) -> None:
+        _require_mlx()
+        super().__init__()
+        self.channels = int(channels)
+        # gamma stored as ``1 + gamma_delta`` (gamma_delta zero-init -> gamma=1).
+        self.gamma_delta = mx.zeros((self.channels,))  # type: ignore[union-attr]
+        self.beta = mx.zeros((self.channels,))  # type: ignore[union-attr]
+
+    def __call__(self, x: Any) -> Any:
+        # x is NHWC ``(B, H, W, channels)``; broadcast the per-channel affine.
+        return (1.0 + self.gamma_delta) * x + self.beta
 
 
 class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ignore[misc]
@@ -258,6 +320,35 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
                 num_freqs=self.grid_pe_num_freqs,
                 channels=self.stem_channels,
             )
+        # L1 weight-tie: when enabled, the leading ``tie_depth`` upsample blocks
+        # (all ``base_ch->base_ch``) share ONE conv weight set (the LARGEST stored
+        # tensors) + per-stage FiLM as the symmetry-breaker. ``tie_depth<=1`` = no
+        # tie (byte-identical: the bundle uses the decoder's own per-block convs).
+        from tac.local_acceleration.pr95_hnerv_mlx import _PR95Conv2dMLX
+
+        max_tieable = tieable_leading_block_count(list(self.decoder.channels))
+        self.tie_depth = int(cfg.tie_depth)
+        if self.tie_depth > max_tieable:
+            raise ValueError(
+                f"tie_depth={self.tie_depth} exceeds the {max_tieable} leading "
+                f"base_ch->base_ch blocks of the taper {list(self.decoder.channels)}; "
+                f"only a contiguous leading prefix of equal-channel blocks is tieable."
+            )
+        if self.tie_depth >= 2:
+            # ONE shared conv for the tied stages (in=out=base_ch, kernel 3x3, pad 1,
+            # out_channels = base_ch*4 for the pixel-shuffle, EXACTLY the per-block
+            # conv shape it replaces). Seeded deterministically (mx.random.seed set
+            # above) so the tied init is reproducible.
+            self.tied_conv = _PR95Conv2dMLX(
+                self.stem_channels, self.stem_channels * 4, 3, padding=1
+            )
+            # Per-stage FiLM symmetry-breaker (identity at init). Stage 0 carries NO
+            # FiLM (it is the canonical reference stage; gamma=1/beta=0 would be a
+            # no-op), so we build ``tie_depth - 1`` FiLMs for stages ``1..tie_depth-1``.
+            self.tied_stage_films = [
+                _TiedStageFiLM(channels=self.stem_channels)
+                for _ in range(self.tie_depth - 1)
+            ]
         self.film_enabled = bool(cfg.film_enabled)
         if self.film_enabled:
             self.pose_film0 = _PoseFiLM(
@@ -322,6 +413,28 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         self._last_indices = vq_idx
         return z_q_st
 
+    def _tied_block_forward(self, x: Any, *, stage: int) -> Any:
+        """One tied upsample stage: shared conv + per-stage FiLM symmetry-breaker.
+
+        EXACT _HNeRVUpsampleBlockMLX forward for a ``base_ch->base_ch`` block (no
+        skip_conv, since in==out): ``identity = bilinear_2x(x)``; ``decoded =
+        pixel_shuffle_2x(shared_conv(x))``; ``y = decoded + identity``; then the
+        per-stage FiLM modulates ``y`` (stage 0 has no FiLM = identity); ``sin(y)``.
+        The FiLM is applied to the PRE-sin sum so it shapes the same quantity the
+        per-block conv would have. Op-for-op with the numpy reference tied path.
+        """
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            bilinear_resize2x_align_corners_false_nhwc,
+            pixel_shuffle_2x_nhwc,
+        )
+
+        identity = bilinear_resize2x_align_corners_false_nhwc(x)
+        decoded = pixel_shuffle_2x_nhwc(self.tied_conv(x))
+        y = decoded + identity
+        if stage >= 1:
+            y = self.tied_stage_films[stage - 1](y)
+        return mx.sin(y)  # type: ignore[union-attr]
+
     def _decode_with_film(self, z_q: Any, pose: Any | None) -> Any:
         """Decode z_q through the backbone, FiLM-modulating the stem feature."""
         dec = self.decoder
@@ -338,8 +451,16 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
             pe = self.grid_pe_proj()  # (base_h, base_w, channels[0])
             x = x + mx.reshape(pe, (1, dec.base_h, dec.base_w, dec.channels[0]))  # type: ignore[union-attr]
         x = mx.sin(x)  # type: ignore[union-attr]
-        for block in dec.blocks:
-            x = block(x)
+        # Upsample cascade. With the L1 weight-tie, the leading ``tie_depth`` blocks
+        # use the SHARED conv (+ per-stage FiLM) instead of their own per-block conv;
+        # the remaining blocks use the decoder's own convs unchanged. The block math
+        # is the EXACT _HNeRVUpsampleBlockMLX forward (bilinear-skip identity +
+        # pixel-shuffle(conv) + sin), so the numpy reference reproduces it op-for-op.
+        for i, block in enumerate(dec.blocks):
+            if self.tie_depth >= 2 and i < self.tie_depth:  # noqa: SIM108
+                x = self._tied_block_forward(x, stage=i)
+            else:
+                x = block(x)
         refined = dec.refine1(dec.refine0(x))
         feat = x + 0.1 * mx.sin(refined)  # type: ignore[union-attr]  (B,H,W,feat_channels)
         # PER-FRAME FiLM-pose injection: modulate the shared feature DIFFERENTLY
@@ -417,15 +538,34 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         self.quantizer.ema_update(self._last_z_e, self._last_indices)
 
     def trainable_parameters(self) -> dict[str, Any]:
-        """Trainable params EXCLUDING the EMA codebook buffers.
+        """Trainable params EXCLUDING the EMA codebook buffers AND tied-dead convs.
 
         The quantizer's ``_codebook`` / ``_ema_*`` are EMA-updated, not
         gradient-updated, so they must not enter ``mx.vjp``. MLX's
         ``VectorQuantizerEMAMLX`` stores them as plain arrays (not nn.Parameter),
         so ``trainable_parameters()`` already excludes them. We surface this
         method to make the contract explicit + testable.
+
+        L1 weight-tie: when ``tie_depth>=2`` the leading ``tie_depth`` decoder
+        blocks' OWN per-block convs (``decoder.blocks.{i}.conv.*``) are REPLACED by
+        the shared ``tied_conv`` at decode (``_tied_block_forward`` never calls
+        them), so they are DEAD parameters — they get ~zero gradient and would only
+        waste optimizer + EMA work and inflate the trainable count. Prune them from
+        the trainable tree so the param count is HONEST (fewer stored params, the
+        rate point) and the optimizer trains only the live basis.
         """
-        return super().trainable_parameters()
+        tree = super().trainable_parameters()
+        if int(getattr(self, "tie_depth", 0) or 0) < 2:
+            return tree
+        decoder_tree = tree.get("decoder")
+        blocks = decoder_tree.get("blocks") if isinstance(decoder_tree, dict) else None
+        if isinstance(blocks, list):
+            for idx in range(min(self.tie_depth, len(blocks))):
+                # Drop the dead per-block conv (the tie replaces it); these tied
+                # blocks are base_ch->base_ch so they have no skip_conv to keep.
+                if isinstance(blocks[idx], dict):
+                    blocks[idx].pop("conv", None)
+        return tree
 
 
 __all__ = [

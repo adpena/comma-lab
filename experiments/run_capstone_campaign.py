@@ -170,6 +170,38 @@ def main() -> int:
              "directly (temporal-delta + LZMA, the frontier's pose-capable carrier).",
     )
     ap.add_argument("--codebook-size", type=int, default=256)
+    ap.add_argument(
+        "--hinerv-grid-pe", action="store_true",
+        help="Enable the HiNeRV grid positional-encoding (deterministic coord grid "
+             "+ tiny learned projection added to the stem feature; ~0 stored bytes "
+             "beyond the projection). Default off = byte-identical to the HNeRV stem.",
+    )
+    ap.add_argument(
+        "--grid-pe-num-freqs", type=int, default=4,
+        help="Grid-PE encoding bandwidth (pe_dim = 4*num_freqs). Default 4 (the "
+             "spectral-atlas-principled low-freq budget: scorer energy is LOW-freq).",
+    )
+    ap.add_argument(
+        "--tie-depth", type=int, default=0,
+        help="L1 weight-tie: share the first N leading base_ch->base_ch upsample "
+             "blocks' conv (the LARGEST tensors) with a per-stage FiLM symmetry-"
+             "breaker — the inflate-compute rate lever that removes (N-1) conv "
+             "tensors from the int8 decoder blob. 0/1 = no tie (byte-identical). The "
+             "canonical taper allows max 2 (blocks 0,1 are base_ch->base_ch).",
+    )
+    ap.add_argument(
+        "--margin-hinge-weight", type=float, default=0.0,
+        help="[L7] Cross-hardware-robust margin hinge weight. >0 ADDS "
+             "weight*mean(relu(margin_floor - margin)) to the stage seg-loss so the "
+             "boundary argmax survives macOS->numpy->Linux/CUDA logit drift "
+             "(numpy-portability guard). 0 = off. NOT supported with --scorer-backend "
+             "mlx_gpu (fails closed; the shared MLX-GPU bridge has no wrappable hook).",
+    )
+    ap.add_argument(
+        "--margin-hinge-floor", type=float, default=0.1,
+        help="[L7] The required margin floor (anchor ~0.1 > the measured ~0.096 "
+             "cross-hardware logit drift). Used only when --margin-hinge-weight>0.",
+    )
     ap.add_argument("--seg-weight", type=float, default=100.0)
     ap.add_argument("--pose-weight", type=float, default=1.0)
     ap.add_argument("--muon-lr", type=float, default=3e-2)
@@ -219,6 +251,23 @@ def main() -> int:
     if args.device == "mps":
         raise SystemExit("MPS is NEVER an authority (CLAUDE.md). Use --device cpu.")
 
+    # [FP32-EXACT GPU SCORER] When the MLX-GPU training scorer is selected, force the
+    # non-NAX Metal GEMM kernel via the arch override so the GPU SegNet/PoseNet are
+    # FP32-EXACT vs torch-CPU (243->0 d_seg flips, pose 2.76e-4->8.7e-11), at zero
+    # throughput cost, decoder unaffected (whole-process override is safe). MUST be
+    # set BEFORE the first ``import mlx`` (MLX reads the env at runtime init); the
+    # campaign imports MLX lazily inside the trainer/bundle, so setting it here at the
+    # top of main() (before those imports) is in time. Per
+    # ``.omx/research/arch_override_fp32_exact_gpu_training_scorer_20260611.md``.
+    if args.scorer_backend == "mlx_gpu":
+        import os
+
+        os.environ.setdefault("MLX_METAL_GPU_ARCH", "applegpu_g15")
+        print(
+            f"[fp32-exact] MLX_METAL_GPU_ARCH={os.environ['MLX_METAL_GPU_ARCH']} "
+            "(non-NAX -> GPU scorer FP32-exact vs torch-CPU)", flush=True
+        )
+
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     t_start = time.time()
@@ -235,6 +284,9 @@ def main() -> int:
         CapstoneVqNervConfig(
             num_pairs=n, base_channels=args.base_channels,
             codebook_size=args.codebook_size, carrier=args.carrier, seed=args.seed,
+            hinerv_grid_pe=args.hinerv_grid_pe,
+            grid_pe_num_freqs=args.grid_pe_num_freqs,
+            tie_depth=args.tie_depth,
         )
     )
     bridge = TorchScorerBridge(
@@ -250,6 +302,8 @@ def main() -> int:
         eval_every=args.eval_every, seed=args.seed,
         scorer_backend=args.scorer_backend,
         authority_recheck_every=args.authority_recheck_every,
+        margin_hinge_weight=args.margin_hinge_weight,
+        margin_hinge_floor=args.margin_hinge_floor,
         telemetry=_StreamingTelemetry(out / "trajectory.jsonl"),  # live mid-run RD curve
     )
     trainer = CapstoneTrainer(bundle, bridge, pose_store, cfg)
