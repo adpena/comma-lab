@@ -30,7 +30,7 @@ NO MPS anywhere; pure MLX-GPU decode + torch-CPU scorer (the exact authority).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -62,11 +62,31 @@ class CapstoneVqNervConfig:
     operating point (d_pose 0.00051 at 88K params). ``base_channels`` controls
     the decoder size; ``codebook_size`` controls the per-pair index bit cost
     (``ceil(log2(K))`` bits/pair).
+
+    ``carrier`` selects the per-pair carrier geometry (Arm 2 of the pose A/B,
+    the VQ-index-impoverishment fix per
+    ``.omx/research/capstone_carrier_pivot_vq_index_impoverishment_*``):
+
+    * ``"vq_index"`` (DEFAULT, the legacy behaviour, byte-identical to before this
+      switch): the per-pair 28-d latent is VQ-quantized to an 8-bit codebook index
+      (``ceil(log2(K))`` bits/pair). The codebook is free in the native decode; the
+      INDEX is the budgeted carrier. **But 8 bits/pair cannot encode 600 distinct
+      ego-motions** -> the per-pair content the FiLM/decoder sees is ~K buckets, so
+      pose wanders (d_pose 0.06-0.34, never the ~1e-4 tube).
+    * ``"stored_latent"`` (the frontier's / PR95's OWN carrier): the per-pair 28-d
+      latent is stored DIRECTLY (no VQ, no codebook, no commitment loss) via
+      temporal-delta + raw-LZMA (PR95 L24/L25). 28 floats/pair >> 8 bits, so the
+      per-pair content is rich enough for pose, while temporal-delta keeps it
+      rate-efficient (~10-15 KB for 600 pairs). The frontier reaches d_pose 2.9e-5
+      with this carrier.
     """
 
     num_pairs: int = 600
     latent_dim: int = 28
     base_channels: int = 36
+    # Per-pair carrier geometry. "vq_index" is the legacy default (byte-identical
+    # to pre-switch); "stored_latent" stores the rich 28-d latent directly.
+    carrier: Literal["vq_index", "stored_latent"] = "vq_index"
     codebook_size: int = 256  # 8 bits/pair index; 600 pairs -> 600 bytes packed.
     codebook_decay: float = 0.99
     commitment_weight: float = 0.25
@@ -127,18 +147,28 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         _require_mlx()
         super().__init__()
         self.cfg = cfg
+        self.carrier = str(cfg.carrier)
+        if self.carrier not in {"vq_index", "stored_latent"}:
+            raise ValueError(
+                f"carrier must be 'vq_index' or 'stored_latent'; got {self.carrier!r}"
+            )
         key = mx.random.key(int(cfg.seed))  # type: ignore[union-attr]
         # Per-pair learnable latent z_e.
         self.latents = (
             mx.random.normal((int(cfg.num_pairs), int(cfg.latent_dim)), key=key)  # type: ignore[union-attr]
             * 0.1
         )
-        # VQ-EMA quantizer (codebook free in decode; index bit-packs).
-        self.quantizer = VectorQuantizerEMAMLX(
-            codebook_size=int(cfg.codebook_size),
-            latent_dim=int(cfg.latent_dim),
-            decay=float(cfg.codebook_decay),
-        )
+        # VQ-EMA quantizer (codebook free in decode; index bit-packs). Only built
+        # for the "vq_index" carrier — "stored_latent" stores the rich 28-d latent
+        # directly (no codebook, no commitment loss), so the quantizer is None.
+        if self.carrier == "vq_index":
+            self.quantizer = VectorQuantizerEMAMLX(
+                codebook_size=int(cfg.codebook_size),
+                latent_dim=int(cfg.latent_dim),
+                decay=float(cfg.codebook_decay),
+            )
+        else:
+            self.quantizer = None
         # The decoder backbone (PR95 bit-exact, M-arch skip+refine ON).
         self.decoder = HNeRVDecoderMLX(
             latent_dim=int(cfg.latent_dim),
@@ -193,8 +223,26 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
     # ---- forward -------------------------------------------------------------
 
     def _quantize(self, indices: Any) -> Any:
-        """Gather per-pair latents, VQ-quantize, return the straight-through z_q."""
+        """Gather per-pair latents and produce the decoder input ``z``.
+
+        ``vq_index`` carrier: VQ-quantize z_e -> straight-through z_q (the 8-bit
+        index is the budgeted carrier; the commitment loss conditions the STE).
+
+        ``stored_latent`` carrier: NO VQ — the gathered per-pair 28-d latent IS
+        ``z`` directly (the rich carrier the frontier uses). The gradient flows
+        straight into ``self.latents`` (no codebook, no STE), and the commitment
+        loss is identically 0 (there is nothing to commit to). This is the
+        VQ-index-impoverishment fix: 28 floats/pair >> 8 bits, so the per-pair
+        content is rich enough for the FiLM/decoder to express distinct pose.
+        """
         z_e = mx.take(self.latents, indices, axis=0)  # type: ignore[union-attr]  (B, latent_dim)
+        if self.carrier == "stored_latent":
+            # The stored latent IS the decoder input — no quantization. Commitment
+            # loss is 0 (no codebook); the gradient updates self.latents directly.
+            self.last_commitment_loss = mx.array(0.0)  # type: ignore[union-attr]
+            self._last_z_e = z_e
+            self._last_indices = None
+            return z_e
         z_q_st, vq_idx, commit = self.quantizer(z_e)
         self.last_commitment_loss = commit
         self._last_z_e = z_e
@@ -240,11 +288,21 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         z_q = self._quantize(indices)
         return self._decode_with_film(z_q, pose)
 
-    # ---- VQ accessors + EMA update -------------------------------------------
+    # ---- carrier accessors + EMA update --------------------------------------
 
     def vq_indices(self, indices: Any) -> Any:
-        """Return the int32 codebook index per selected pair (for export)."""
+        """Return the int32 codebook index per selected pair (for export).
+
+        Only valid for the ``vq_index`` carrier; ``stored_latent`` has no codebook
+        and stores the latent directly (use :meth:`all_latents`).
+        """
         _require_mlx()
+        if self.carrier != "vq_index":
+            raise RuntimeError(
+                "vq_indices() is only valid for the 'vq_index' carrier; the "
+                f"'{self.carrier}' carrier stores the latent directly "
+                "(use all_latents())."
+            )
         z_e = mx.take(self.latents, indices, axis=0)  # type: ignore[union-attr]
         _, vq_idx, _ = self.quantizer(z_e)
         mx.eval(vq_idx)
@@ -256,8 +314,25 @@ class CapstoneVqNervBundle(nn.Module if nn is not None else object):  # type: ig
         idx = self.vq_indices(mx.arange(int(self.cfg.num_pairs)))  # type: ignore[union-attr]
         return np.asarray(idx, dtype=np.int32)
 
+    def all_latents(self) -> np.ndarray:
+        """Return the full ``(num_pairs, latent_dim)`` per-pair latent as numpy fp32.
+
+        This is the ``stored_latent`` carrier: the rich 28-d per-pair latent the
+        archive stores directly (temporal-delta + LZMA), NOT a quantized index.
+        Valid for BOTH carriers (the underlying ``self.latents`` exists in both),
+        but it is the EXPORT carrier only for ``stored_latent``.
+        """
+        _require_mlx()
+        mx.eval(self.latents)  # type: ignore[union-attr]
+        return np.asarray(self.latents, dtype=np.float32)
+
     def ema_update_from_last(self) -> None:
-        """Apply the VQ EMA codebook update from the most-recent forward."""
+        """Apply the VQ EMA codebook update from the most-recent forward.
+
+        No-op for the ``stored_latent`` carrier (no codebook to EMA-update).
+        """
+        if self.carrier != "vq_index":
+            return
         if self._last_z_e is None or self._last_indices is None:
             return
         self.quantizer.ema_update(self._last_z_e, self._last_indices)

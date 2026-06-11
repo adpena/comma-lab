@@ -70,8 +70,7 @@ def score_reloaded_int8_archive(
     """
     decoded = decode_archive(archive_bytes, config)
     weights = decoded["weights"]
-    codebook = decoded["codebook"]
-    vq_indices = decoded["vq_indices"]
+    latents = decoded["latents"]  # carrier-agnostic per-pair decoder input
     pose = decoded["pose"]
     cfg = decoded["cfg"]
     num_pairs = int(decoded["num_pairs"])
@@ -83,7 +82,7 @@ def score_reloaded_int8_archive(
     for start in range(0, num_pairs, batch_size):
         end = min(start + batch_size, num_pairs)
         idx_np = np.arange(start, end)
-        z_q = codebook[vq_indices[start:end]]
+        z_q = latents[start:end]
         # numpy decode of the RELOADED int8 weights -> (b, 2, 3, 384, 512) float32
         render = numpy_decode_pair(z_q, pose[start:end], weights, cfg)
         idx_t = torch.from_numpy(idx_np.astype(np.int64))

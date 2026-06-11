@@ -31,7 +31,9 @@ import numpy as np
 from tac.capstone_vq_nerv.export import (
     _decode_int8_brotli,
     bit_unpack_vq_indices,
+    decode_stored_latents,
     parse_capstone_archive_bytes,
+    parse_capstone_stored_latent_archive_bytes,
 )
 from tac.capstone_vq_nerv.numpy_reference import (
     CapstoneDecodeConfig,
@@ -79,11 +81,54 @@ def _decode_weight_section(blob: bytes, decoder_dtype: str) -> dict[str, np.ndar
 
 
 def decode_archive(archive_bytes: bytes, config: dict) -> dict:
-    """Parse the capstone archive + config into the numpy render inputs."""
+    """Parse the capstone archive + config into the numpy render inputs.
+
+    Branches on ``config["carrier"]`` (default ``"vq_index"`` for backward
+    compatibility): the ``vq_index`` archive carries ``(codebook, vq_indices)``
+    (4 sections); the ``stored_latent`` archive carries the per-pair latent blob
+    directly (3 sections, no codebook/index). The returned dict always exposes a
+    per-pair ``latents`` array (``codebook[vq_indices]`` for vq_index, the decoded
+    latent blob for stored_latent) so the render path is carrier-agnostic.
+    """
     import brotli
 
+    carrier = str(config.get("carrier", "vq_index"))
     decoder_dtype = str(config.get("decoder_dtype", "fp16"))
     num_pairs = int(config["num_pairs"])
+
+    if carrier == "stored_latent":
+        latent_dim = int(config["latent_dim"])
+        blobs = parse_capstone_stored_latent_archive_bytes(archive_bytes)
+        weights = _decode_weight_section(blobs["decoder"], decoder_dtype)
+        latents = decode_stored_latents(blobs["latent"], num_pairs, latent_dim)
+        pose_raw = brotli.decompress(blobs["pose"])
+        pose = (
+            np.frombuffer(pose_raw, dtype=np.float16)
+            .astype(np.float32)
+            .reshape(num_pairs, 6)
+        )
+        cfg = CapstoneDecodeConfig(
+            base_channels=int(config["base_channels"]),
+            latent_dim=latent_dim,
+            codebook_size=int(config.get("codebook_size", 0)),
+            base_h=int(config.get("base_h", 6)),
+            base_w=int(config.get("base_w", 8)),
+            film_enabled=bool(config.get("film_enabled", True)),
+            pose_normalize=bool(config.get("pose_normalize", True)),
+            pose_mean=tuple(float(v) for v in config.get("pose_mean", (0.0,) * 6)),
+            pose_std=tuple(float(v) for v in config.get("pose_std", (1.0,) * 6)),
+        )
+        return {
+            "carrier": carrier,
+            "weights": weights,
+            "codebook": None,
+            "vq_indices": None,
+            "latents": latents,
+            "pose": pose,
+            "cfg": cfg,
+            "num_pairs": num_pairs,
+        }
+
     codebook_size = int(config["codebook_size"])
     blobs = parse_capstone_archive_bytes(archive_bytes)
     weights = _decode_weight_section(blobs["decoder"], decoder_dtype)
@@ -103,9 +148,11 @@ def decode_archive(archive_bytes: bytes, config: dict) -> dict:
         pose_std=tuple(float(v) for v in config.get("pose_std", (1.0,) * 6)),
     )
     return {
+        "carrier": carrier,
         "weights": weights,
         "codebook": codebook,
         "vq_indices": vq_indices,
+        "latents": codebook[vq_indices],
         "pose": pose,
         "cfg": cfg,
         "num_pairs": num_pairs,
@@ -113,14 +160,19 @@ def decode_archive(archive_bytes: bytes, config: dict) -> dict:
 
 
 def render_all_camera_frames(decoded: dict, *, batch: int = 16) -> np.ndarray:
-    """Render every pair -> camera-resolution uint8 frames ``(N*2, 874, 1164, 3)``."""
-    weights, codebook = decoded["weights"], decoded["codebook"]
-    vq_indices, pose, cfg = decoded["vq_indices"], decoded["pose"], decoded["cfg"]
+    """Render every pair -> camera-resolution uint8 frames ``(N*2, 874, 1164, 3)``.
+
+    Carrier-agnostic: ``decoded["latents"]`` is the per-pair decoder input
+    (``codebook[vq_indices]`` for the vq_index carrier; the decoded stored-latent
+    blob for the stored_latent carrier) so the render path is identical for both.
+    """
+    weights = decoded["weights"]
+    latents, pose, cfg = decoded["latents"], decoded["pose"], decoded["cfg"]
     num_pairs = int(decoded["num_pairs"])
     out = np.empty((num_pairs * 2, CAMERA_H, CAMERA_W, 3), dtype=np.uint8)
     for s in range(0, num_pairs, batch):
         e = min(s + batch, num_pairs)
-        z_q = codebook[vq_indices[s:e]]
+        z_q = latents[s:e]
         render = numpy_decode_pair(z_q, pose[s:e], weights, cfg)  # (b,2,3,H,W)
         for k in range(2):  # frame0, frame1
             frame_nchw = render[:, k]  # (b,3,H,W)

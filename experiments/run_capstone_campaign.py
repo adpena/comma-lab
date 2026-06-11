@@ -101,36 +101,58 @@ def _load_or_build_targets(max_pairs: int, cache_dir: Path, device: str):
 
 
 def _export_int8_archive(trainer, pose_store: np.ndarray, decoder_dtype: str):
-    """Byte-close the CONTEST-INFLATABLE int8 archive: the FULL render basis
-    (decoder + per-frame FiLM, contest-keyed) + codebook + REAL trained bit-packed
-    VQ indices + stored pose + the ``capstone_config_v1`` sidecar. Verified
-    score-parity with the numpy inflate (d_seg EXACT). Returns (archive_zip_bytes,
-    account, payload_bytes).
+    """Byte-close the CONTEST-INFLATABLE archive (carrier-aware) + config sidecar.
 
-    [A1] The render-basis weights are the EMA SHADOW (via
-    ``trainer.export_render_weights()``) — NOT the live final-step weights. This is
+    Branches on ``trainer.bundle.carrier``:
+
+    * ``vq_index``: the FULL render basis (decoder + per-frame FiLM, contest-keyed)
+      + codebook + REAL trained bit-packed VQ indices + stored pose.
+    * ``stored_latent``: the FULL render basis + REAL trained per-pair 28-d latent
+      (temporal-delta + LZMA, NO codebook/index) + stored pose. The rich-carrier
+      VQ-index-impoverishment fix (28 floats/pair >> 8 bits the index gives).
+
+    Verified score-parity with the numpy inflate (d_seg EXACT). Returns
+    (archive_zip_bytes, account, payload_bytes, config).
+
+    [A1] The render-basis weights AND the per-pair carrier (vq codebook or stored
+    latents) are the EMA SHADOW (via ``trainer.export_render_weights()`` /
+    ``trainer.export_stored_latents()``) — NOT the live final-step weights. This is
     the EMA non-negotiable: the archive bytes equal the same averaged shadow the
     advisory d_seg/d_pose are measured on (eval+export the shadow)."""
     import dataclasses
 
-    from tac.capstone_vq_nerv.export import build_capstone_archive_bytes
+    from tac.capstone_vq_nerv.export import (
+        build_capstone_archive_bytes,
+        build_capstone_stored_latent_archive_bytes,
+    )
     from tac.capstone_vq_nerv.numpy_reference import decode_config_from_bundle
 
     bundle = trainer.bundle
     decoder_weights = trainer.export_render_weights()  # [A1] EMA shadow, contest naming
-    codebook = np.asarray(bundle.quantizer._codebook, dtype=np.float32)
-    vq_indices = np.asarray(bundle.all_vq_indices(), dtype=np.int32)  # REAL trained carrier
-    payload, account = build_capstone_archive_bytes(
-        decoder_weights=decoder_weights,
-        codebook=codebook,
-        vq_indices=vq_indices,
-        pose_scalars=np.asarray(pose_store, dtype=np.float32),
-        codebook_size=int(codebook.shape[0]),
-        decoder_dtype=decoder_dtype,
-    )
     config = dataclasses.asdict(decode_config_from_bundle(bundle))
     config["num_pairs"] = int(pose_store.shape[0])
     config["decoder_dtype"] = decoder_dtype
+    config["carrier"] = bundle.carrier
+
+    if bundle.carrier == "stored_latent":
+        latents = trainer.export_stored_latents()  # [A1] EMA shadow, REAL trained
+        payload, account = build_capstone_stored_latent_archive_bytes(
+            decoder_weights=decoder_weights,
+            latents=latents,
+            pose_scalars=np.asarray(pose_store, dtype=np.float32),
+            decoder_dtype=decoder_dtype,
+        )
+    else:
+        codebook = np.asarray(bundle.quantizer._codebook, dtype=np.float32)
+        vq_indices = np.asarray(bundle.all_vq_indices(), dtype=np.int32)  # REAL trained
+        payload, account = build_capstone_archive_bytes(
+            decoder_weights=decoder_weights,
+            codebook=codebook,
+            vq_indices=vq_indices,
+            pose_scalars=np.asarray(pose_store, dtype=np.float32),
+            codebook_size=int(codebook.shape[0]),
+            decoder_dtype=decoder_dtype,
+        )
     archive_zip = _archive_with_config(payload, config)
     return archive_zip, account, payload, config
 
@@ -141,6 +163,12 @@ def main() -> int:
     ap.add_argument("--base-channels", type=int, default=16)
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--decoder-dtype", choices=("fp16", "int8"), default="int8")
+    ap.add_argument(
+        "--carrier", choices=("vq_index", "stored_latent"), default="vq_index",
+        help="Per-pair carrier geometry. vq_index = the legacy 8-bit VQ codebook "
+             "index (pose-impoverished). stored_latent = store the rich 28-d latent "
+             "directly (temporal-delta + LZMA, the frontier's pose-capable carrier).",
+    )
     ap.add_argument("--codebook-size", type=int, default=256)
     ap.add_argument("--seg-weight", type=float, default=100.0)
     ap.add_argument("--pose-weight", type=float, default=1.0)
@@ -189,7 +217,7 @@ def main() -> int:
     bundle = CapstoneVqNervBundle(
         CapstoneVqNervConfig(
             num_pairs=n, base_channels=args.base_channels,
-            codebook_size=args.codebook_size, seed=args.seed,
+            codebook_size=args.codebook_size, carrier=args.carrier, seed=args.seed,
         )
     )
     bridge = TorchScorerBridge(
@@ -281,6 +309,7 @@ def main() -> int:
         "promotion_eligible": False,
         "n_pairs": n,
         "base_channels": args.base_channels,
+        "carrier": args.carrier,
         "decoder_dtype": args.decoder_dtype,
         "epochs": args.epochs,
         "curriculum": args.curriculum,
@@ -300,8 +329,11 @@ def main() -> int:
         "advisory_quant_gap_score": score - score_live,
         "archive_bytes": archive_bytes,
         "payload_bytes": len(payload),
+        "account": account.as_dict(),
         "decoder_bytes": account.decoder_bytes,
         "codebook_bytes": account.codebook_bytes,
+        "index_bytes": account.index_bytes,
+        "latent_bytes": account.latent_bytes,
         "score_seg_contribution": seg_term,
         "score_pose_contribution": pose_term,
         "score_rate_contribution": rate_term,

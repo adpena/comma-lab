@@ -659,6 +659,32 @@ class CapstoneTrainer:
         finally:
             _CapstoneWeightEMA.restore(self.bundle, orig)
 
+    def export_stored_latents(self) -> np.ndarray:
+        """[A1] The per-pair latents to EXPORT for the ``stored_latent`` carrier.
+
+        The per-pair latents ARE trainable params (in the weight-EMA shadow), so —
+        exactly like ``export_render_weights`` — the EXPORTED latents are the EMA
+        SHADOW (the averaged, lower-variance point the advisory d_seg/d_pose are
+        measured on), NOT the live final-step latents. This keeps the archive bytes
+        consistent with the eval/advisory shadow (the EMA non-negotiable applied to
+        the carrier). When ``use_ema_for_eval`` is False the caller has opted out of
+        the shadow, so the live latents are returned (the research-only escape hatch,
+        consistent with the eval + render-weight paths).
+        """
+        _require_mlx()
+        if self.bundle.carrier != "stored_latent":
+            raise RuntimeError(
+                "export_stored_latents() is only valid for the 'stored_latent' "
+                f"carrier; this bundle is '{self.bundle.carrier}'."
+            )
+        if not self.cfg.use_ema_for_eval:
+            return self.bundle.all_latents()
+        orig = self._ema.apply_to(self.bundle)
+        try:
+            return self.bundle.all_latents()
+        finally:
+            _CapstoneWeightEMA.restore(self.bundle, orig)
+
 
 __all__ = [
     "CapstoneTrainConfig",
