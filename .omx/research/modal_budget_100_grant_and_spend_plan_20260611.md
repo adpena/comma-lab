@@ -13,13 +13,15 @@ sits unmoved; do NOT blindly spend on un-de-risked substrates.
 
 ## The spend plan (priority order, each gated on a MEASURED-ready candidate)
 
-1. **~$0.3 — R1+R2+R3 lossless entropy recode paired exact eval (IMMINENT, the first bank).** Gated on the
-   running build+measure (a0adabcba) showing a REAL local byte-shave vs 177,169 (lossless → d_seg/d_pose
-   unchanged → only rate moves). If it shaves bytes → fire the paired Linux-x86_64-CPU + CUDA-T4 exact eval
-   → bank the lower frontier (a defensive lossless bank, GOAL-approved; 0.19110 → ~0.190xx). If no shave →
-   floor confirmed, no spend. **This is the cheapest, highest-readiness exact row.**
-2. **~$20–30 — the PR95-scale frontier-class / capstone training run (THE distortion-axis pointer-mover),
-   GATED on a clean local de-risk.** Per MVP-first phasing + "Substrate MUST be at OPTIMAL FORM before paid
+1. **~~$0.3 R1+R2+R3 recode eval~~ — CANCELLED 2026-06-11 (MEASURED already-banked).** The build+measure
+   (a0adabcba) proved the recode win is ALREADY in the frontier: the current 177,169 B / 0.19109982 sha
+   `b46897267d` IS the recode output (leapfrog_pr112_absorb_recode, 2026-06-10, −1,326 B / −0.000883,
+   lossless 3.66GB bit-identical). The recoded sections measure 7.999 bits/byte (brotli/lzma GROW them) →
+   **the post-hoc frozen-byte rate lever is at the entropy floor, GENUINELY CLOSED.** No spend. (The two
+   audits didn't disagree — the orphan audit read the pre-recode ledger; measurement settled it.)
+2. **~$20–30 — the PR95-scale frontier-class / capstone score-aware RETRAINING run — now the SOLE
+   pointer-mover (rate AND distortion), GATED on a clean local de-risk.** With the post-hoc rate lever
+   closed, the only remaining win is fewer/smaller decoder params via a better-trained renderer. Per MVP-first phasing + "Substrate MUST be at OPTIMAL FORM before paid
    dispatch" + the dispatch optimization protocol (Catalog #270) + the per-substrate symposium (#325): do
    NOT fire until a $0 local advisory confirms the recipe reaches the corrected bar (d_seg ~0.001 + pose
    collapsed + sub-frontier bytes). The de-risk is in flight: (a) the latent-heavy capacity test (Cool-Chic
