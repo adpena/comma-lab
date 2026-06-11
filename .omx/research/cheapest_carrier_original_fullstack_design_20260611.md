@@ -89,6 +89,38 @@ A factored appearance decoder (sum of three cheap streams), NOT one uniform HNeR
 
 Pose: 6 scalars/pair stored directly (~1KB) + FiLM. The invisible subspace gets ZERO capacity in all three.
 
+## 3b. THE COOL-CHIC-FAMILY REALIZATION + OPTIMAL CAPACITY (operator 2026-06-11)
+
+**Source:** operator — "could Cool-Chic or Cool-Chic-like be adapted for our own contest-custom optimal
+carrier design such that it has optimal capacity?" YES — Cool-Chic is the right BACKBONE (MEASURED 17×
+rate win, B1-CLOSE), and C0/C1/C2 above are its scorer-shaped realization. The capacity splits three ways:
+multiresolution **latent grids** (per-frame info), the **shared synthesis net** (amortized over 600 frames),
+the **ARM entropy model** (codes latents). "Optimal capacity" = allocate each by the scorer's marginal value
++ size the synth to ARGMAX-STABILITY, not pixel-perfection.
+
+**The capacity-requirement insight (why the basin could be cheap):** under CE (pixel-perfect target) the
+synth needs ~162KB conv-HNeRV-class capacity to reconstruct full appearance. Under the **margin-polytope
+hinge** (correct-SIDE-of-`modules.py`-boundary target) it only needs enough to put each pixel's SegNet
+logits on the right side → far less. The deep seg-profile [MEASURED] proved ~500 params is too small
+(diffuse argmax-instability, post-hoc repair a wash); the optimum is between ~500 and 162KB, and the hinge
+pushes it toward the small end. **The A/B/C re-fit (running) measures exactly where it sits.**
+
+**The contest-custom optimal-capacity carrier (the design):**
+- **Shared synth** sized to argmax-stability + pose-faithful texture (hinge-minimized, NOT pixel-perfect).
+- **Per-frame latents** multiresolution, allocated by the joint P18/P19 field: FINE at the SegNet boundary
+  band + pose-sensitive regions, COARSE in the invisible interiors (the per-frame-byte "spend where the
+  scorer reacts").
+- **ARM entropy** with the validated QA-entropy (#92) so coded bits == real archive bytes.
+- **Stored 6-pose-scalar + FiLM** (pose tube) + the validated **1.28 B/flip flip-delta** for final-mile
+  d_seg cleanup once the base is near-basin.
+- **Optimal capacity = the RD optimum**: minimize bytes s.t. d_seg ≤ basin ∧ d_pose ≤ tube; the hinge +
+  scorer-shaping move that optimum to the smallest argmax-stable carrier.
+
+**HONEST risk (non-sycophantic):** if even the optimal scorer-shaped Cool-Chic-family needs near-162KB to
+stabilize the argmax, the rate advantage shrinks toward conv-HNeRV and the basin is capacity-bound (→
+Cool-Chic stays a rate-only win; sub-0.15 needs frontier-class capacity + PR95-scale compute). The A/B/C
+re-fit decides this empirically against the exact `modules.py`/`evaluate.py`/0.mkv oracle.
+
 ## 4. THE FULL STACK
 
 | Layer | Design (scorer-economics-shaped) |
