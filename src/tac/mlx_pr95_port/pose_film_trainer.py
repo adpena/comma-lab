@@ -159,10 +159,16 @@ class _MlxEMA:
     def __init__(self, module: Any, decay: float) -> None:
         _require_mlx()
         self.decay = float(decay)
+        self._num_updates = 0
         self.shadow = {k: mx.array(v) for k, v in tree_flatten(module.parameters())}
 
     def update(self, module: Any) -> None:
-        d = self.decay
+        # [B4-FIX] warmup decay (the ONE canonical schedule) so the shadow tracks
+        # the live weights on short runs (operator 2026-06-11 poisoned-tree fix).
+        from tac.ema_warmup import warmup_ema_decay
+
+        self._num_updates += 1
+        d = warmup_ema_decay(self._num_updates, self.decay)
         for k, v in tree_flatten(module.parameters()):
             if k in self.shadow:
                 self.shadow[k] = self.shadow[k] * d + v * (1.0 - d)

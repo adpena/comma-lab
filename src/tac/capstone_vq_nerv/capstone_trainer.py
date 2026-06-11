@@ -91,23 +91,17 @@ class _CapstoneWeightEMA:
     def effective_decay(self) -> float:
         """[B4-FIX] Warmup decay so the shadow TRACKS the live weights early.
 
-        The bug this fixes (confirmed empirically 2026-06-11,
-        ``diag_curriculum_ema_lag.py``): a constant ``decay`` (0.997/0.999) has a
-        time constant of 1/(1-decay) = 333/1000 STEPS. On our short MLX runs (48
-        pairs / bs 8 = 6 steps/epoch; a curriculum stage is ~240 steps) the shadow
-        stays ~init weights, so ``exact_d_seg`` (which renders the SHADOW) reads a
-        frozen near-init value EVEN THOUGH the live weights solved seg (CE->~0).
-        That poisoned BOTH the d_seg verdict (the "0.505 seg wall" was the stale
-        shadow) AND the export (export bytes the shadow -> would ship near-init seg).
+        Delegates to the ONE canonical warmup schedule
+        (:func:`tac.ema_warmup.warmup_ema_decay`) so the fix lives in a single
+        place across every weight-EMA in the repo (operator 2026-06-11: *"the
+        source MLX port is the source of the poison, all must be fixed, reuse as
+        much as possible"*). See that module for the full bug writeup; the short
+        version: a constant decay (0.997/0.999) lags ~333/1000 STEPS, so on a short
+        MLX run the shadow stays ~init and ``exact_d_seg``/export read near-init
+        weights even though the live weights solved seg."""
+        from tac.ema_warmup import warmup_ema_decay
 
-        The canonical fix (timm ``ModelEmaV2`` / diffusion EMA): ramp the decay from
-        ~0.1 at step 1 up to the target ``decay`` as updates accumulate, so the
-        shadow == live early (nothing to average yet) and only slows down once
-        enough updates justify the target averaging window. Correct for a
-        WEIGHT-INIT EMA (the Adam-style ``/(1-decay^t)`` bias correction assumes a
-        ZERO init and would be wrong here)."""
-        warmup = (1.0 + self._num_updates) / (10.0 + self._num_updates)
-        return min(self.decay, warmup)
+        return warmup_ema_decay(self._num_updates, self.decay)
 
     def update(self, bundle: Any) -> None:
         self._num_updates += 1

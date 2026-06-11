@@ -1766,6 +1766,7 @@ class PolyakEMAShadow:
         *,
         enable_kahan: bool = False,
         strict_kahan: bool = False,
+        enable_warmup: bool = False,
     ):
         """Construct canonical Polyak EMA shadow primitive.
 
@@ -1805,6 +1806,17 @@ class PolyakEMAShadow:
                 "PolyakEMAShadow duck-typing contract."
             )
         self.decay = decay
+        # [B4-FIX 2026-06-11] OPT-IN warmup of the effective per-step decay so the
+        # shadow tracks live on SHORT runs (the poisoned-tree fix). Default OFF to
+        # preserve the canonical Catalog #2 exact-Polyak-averaging contract (and the
+        # Kahan ULP-drift-bound proof, which assumes a CONSTANT decay) — short-run
+        # callers (smokes / few-epoch probes) pass ``enable_warmup=True``. The
+        # active-poison MLX/capstone weight-EMAs warm up by DEFAULT; this long-run
+        # torch primitive keeps the exact contract unless asked. ``self.decay`` is
+        # the cap external readers see; ``update`` ramps it per step then restores.
+        self._target_decay = decay
+        self._num_updates = 0
+        self.enable_warmup = bool(enable_warmup)
         self.enable_kahan = bool(enable_kahan)
         self.strict_kahan = bool(strict_kahan)
         if self.strict_kahan and not self.enable_kahan:
@@ -1865,6 +1877,29 @@ class PolyakEMAShadow:
         return cloned
 
     def update(self, model: Any) -> None:
+        """[B4-FIX 2026-06-11] Warmup-decay wrapper around the canonical Polyak update.
+
+        Ramps the effective per-step decay (``min(target,(1+t)/(10+t))``,
+        :func:`tac.ema_warmup.warmup_ema_decay`) so the shadow TRACKS the live
+        weights on short runs instead of lagging ~333 steps behind a constant
+        0.997 (the poisoned-tree fix; negligible on long runs). ``self.decay`` is
+        ramped for the duration of the update then restored to the cap, so external
+        readers always see the configured ``decay``. No-op (exact canonical Polyak)
+        unless ``enable_warmup=True``."""
+        self._num_updates += 1
+        if not self.enable_warmup:
+            self._update_impl(model)
+            return
+        from tac.ema_warmup import warmup_ema_decay
+
+        cap = self._target_decay
+        self.decay = warmup_ema_decay(self._num_updates, cap)
+        try:
+            self._update_impl(model)
+        finally:
+            self.decay = cap
+
+    def _update_impl(self, model: Any) -> None:
         """Update shadow via canonical Polyak averaging.
 
         When ``enable_kahan=True``, the per-tensor update uses Kahan (1965)

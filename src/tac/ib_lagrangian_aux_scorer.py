@@ -646,19 +646,28 @@ class _EMA:
                 f"_EMA: decay must be in [0.99, 1.0); got {decay}"
             )
         self.decay = decay
+        self._num_updates = 0
         self.shadow: dict[str, Any] = {}
         for name, param in model.state_dict().items():
             self.shadow[name] = param.detach().clone()
 
     def update(self, model: Any) -> None:
+        # [B4-FIX 2026-06-11] warmup decay (the ONE canonical schedule) so the
+        # shadow tracks the live weights on short runs (the poisoned-tree fix).
+        # ``self.decay`` stays the validated [0.99,1.0) cap; the warmup ramps the
+        # PER-STEP effective decay up to it.
+        from tac.ema_warmup import warmup_ema_decay
+
+        self._num_updates += 1
+        eff_decay = warmup_ema_decay(self._num_updates, self.decay)
         for name, param in model.state_dict().items():
             if name not in self.shadow:
                 self.shadow[name] = param.detach().clone()
                 continue
             if param.dtype.is_floating_point:
                 # In-place EMA update: shadow = decay * shadow + (1 - decay) * live.
-                self.shadow[name].mul_(self.decay).add_(
-                    param.detach(), alpha=(1.0 - self.decay)
+                self.shadow[name].mul_(eff_decay).add_(
+                    param.detach(), alpha=(1.0 - eff_decay)
                 )
             else:
                 # Non-float buffer: copy directly (per training.py L359-364

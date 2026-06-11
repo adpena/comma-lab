@@ -90,13 +90,19 @@ class _EMA:
 
     def __init__(self, model: torch.nn.Module, decay: float) -> None:
         self.decay = float(decay)
+        self._num_updates = 0
         self.shadow = {
             k: v.detach().clone() for k, v in model.state_dict().items()
         }
 
     @torch.no_grad()
     def update(self, model: torch.nn.Module) -> None:
-        d = self.decay
+        # [B4-FIX 2026-06-11] warmup decay (the ONE canonical schedule) so the
+        # shadow tracks the live weights on short runs (the poisoned-tree fix).
+        from tac.ema_warmup import warmup_ema_decay
+
+        self._num_updates += 1
+        d = warmup_ema_decay(self._num_updates, self.decay)
         for k, v in model.state_dict().items():
             s = self.shadow[k]
             if s.is_floating_point():

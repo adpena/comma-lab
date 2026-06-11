@@ -109,12 +109,26 @@ class _MlxEMA:
     def __init__(self, module: Any, decay: float) -> None:
         _require_mlx()
         self.decay = float(decay)
+        self._num_updates = 0
         self.shadow = {
             k: mx.array(v) for k, v in tree_flatten(module.parameters())
         }
 
+    def effective_decay(self) -> float:
+        """Warmup decay so the shadow TRACKS the live weights early.
+
+        Delegates to the ONE canonical warmup schedule
+        (:func:`tac.ema_warmup.warmup_ema_decay`). ``use_ema_for_eval`` defaults
+        False here (the eval path already sidesteps the lag by reading LIVE), but
+        the EXPORT path can still byte the shadow — this warmup keeps the shadow
+        honest on short runs too."""
+        from tac.ema_warmup import warmup_ema_decay
+
+        return warmup_ema_decay(self._num_updates, self.decay)
+
     def update(self, module: Any) -> None:
-        d = self.decay
+        self._num_updates += 1
+        d = self.effective_decay()
         for k, v in tree_flatten(module.parameters()):
             if k in self.shadow:
                 self.shadow[k] = self.shadow[k] * d + v * (1.0 - d)
