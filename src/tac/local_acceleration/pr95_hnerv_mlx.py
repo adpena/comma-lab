@@ -2462,8 +2462,22 @@ def apply_pr95_mlx_optimizer_step(
     state: Pr95MlxOptimizerState,
     config: Pr95MlxOptimizerConfig,
     parameter_group_fingerprint: Mapping[str, Any] | None = None,
+    force_adamw_substrings: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """Apply one PR95-shaped optimizer step to an MLX module."""
+    """Apply one PR95-shaped optimizer step to an MLX module.
+
+    ``force_adamw_substrings`` is an OPTIONAL, purely-additive substrate-adaptation
+    hook (default ``None`` = behavior byte-identical to the PR95-faithful core). Any
+    parameter whose (lowercased) name contains one of these substrings is routed to
+    the AdamW group even if the PR95 Muon partition would place it in Muon. This is
+    the capstone's faithful-core + adapted-synergy fix for Muon's Newton-Schulz
+    orthogonalization (grad-norm-INDEPENDENT O(1) step magnitudes) destabilizing a
+    small zero-init pose-FiLM MLP (CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD": fork
+    only the routing that suppresses THIS substrate's score; the PR95 partition fn
+    + every other caller are untouched). PR95's own rule already excludes the
+    conv-hidden-weights-only Muon class; this extends that exclusion to the pose
+    path PR95 does not have.
+    """
 
     require_mlx()
     params_flat = dict(tree_flatten(module.parameters()))  # type: ignore[misc]
@@ -2478,6 +2492,18 @@ def apply_pr95_mlx_optimizer_step(
         if isinstance(record, Mapping)
     }
     split = partition_pr95_mlx_parameter_names(module.parameters())
+    forced_adamw: list[str] = []
+    if force_adamw_substrings:
+        needles = tuple(str(s).lower() for s in force_adamw_substrings if str(s))
+        if needles:
+            kept_muon: list[str] = []
+            for name in split["muon"]:
+                low = name.lower()
+                if any(needle in low for needle in needles):
+                    forced_adamw.append(name)
+                else:
+                    kept_muon.append(name)
+            split = {"muon": kept_muon, "adamw": sorted(split["adamw"] + forced_adamw)}
     muon_names = split["muon"] if config.use_muon else []
     adamw_names = list(split["adamw"] + ([] if config.use_muon else split["muon"]))
     adamw_clip_summary = _clip_flat_gradients(
@@ -2573,6 +2599,7 @@ def apply_pr95_mlx_optimizer_step(
         "adamw_tensor_count": len(adamw_names),
         "muon_parameter_names": muon_names,
         "adamw_parameter_names": sorted(adamw_names),
+        "forced_to_adamw_parameter_names": sorted(forced_adamw),
         "adamw_gradient_clip": adamw_clip_summary,
         "muon_gradient_clip": muon_clip_summary,
         "gradient_clip_actual_application_count": int(

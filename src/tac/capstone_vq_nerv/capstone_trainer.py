@@ -40,9 +40,16 @@ from tac.local_acceleration.pr95_hnerv_mlx import (
     build_parameter_group_lr_policy_fingerprint,
     pr95_mlx_parameter_shape_records,
 )
+from tac.mlx_pr95_port.curriculum_mechanisms import (
+    StageMechanisms,
+    add_c1a_entropy_gradient,
+    apply_stage_weight_transforms,
+    weight_tensor_keys,
+)
 
 if TYPE_CHECKING:
     from tac.capstone_vq_nerv.vq_nerv_bundle import CapstoneVqNervBundle
+    from tac.mlx_pr95_port.curriculum import StageSpec
     from tac.mlx_pr95_port.score_bridge import TorchScorerBridge
 
 try:  # pragma: no cover - import guard
@@ -84,6 +91,15 @@ class CapstoneTrainConfig:
     cast_muon_float32_to_bfloat16: bool = True
     ema_decay: float = 0.999
     use_ema_for_eval: bool = False  # eval LIVE weights (the 0.999-lag landmine).
+    # Route the pose-FiLM MLP weights to AdamW (not Muon). Muon's Newton-Schulz
+    # orthogonalization gives grad-norm-INDEPENDENT O(1) step magnitudes; for a
+    # small zero-init pose MLP this can over/under-shoot the pose basin. PR95's
+    # Muon class is conv-hidden-weights only — the pose path is a capstone addition
+    # that belongs in AdamW (faithful-core + adapted-synergy; CLAUDE.md
+    # "UNIQUE-AND-COMPLETE-PER-METHOD"). The shared partition fn + every other
+    # caller are UNTOUCHED; only this substrate forks the routing of its own
+    # FiLM weights via the optimizer-step's additive ``force_adamw_substrings`` hook.
+    force_film_to_adamw: bool = True
     telemetry: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -136,6 +152,15 @@ class CapstoneTrainer:
         self._fingerprint = build_parameter_group_lr_policy_fingerprint(
             pr95_mlx_parameter_shape_records(bundle.trainable_parameters())
         )
+        # Curriculum weight-domain mechanisms (off by default = single fixed stage).
+        self.mechanisms = StageMechanisms()
+        self._weight_keys = weight_tensor_keys(bundle.trainable_parameters())
+        self._mech_step = 0
+        # Pose-FiLM -> AdamW routing (optimizer-poison audit #3): the small zero-init
+        # pose MLP belongs in AdamW, not Muon (see CapstoneTrainConfig.force_film_to_adamw).
+        self._force_adamw_substrings: tuple[str, ...] | None = (
+            ("film",) if config.force_film_to_adamw else None
+        )
 
     def _pose_mx(self, idx_np: np.ndarray) -> Any:
         return mx.array(self.pose_store[idx_np])
@@ -153,22 +178,51 @@ class CapstoneTrainer:
         cotangent on the render and ``commit_cotangent`` (= commitment_weight) on
         the scalar commitment loss, so the gradient updates the carrier for BOTH
         the score-aware pixel objective AND the VQ commitment.
+
+        When a curriculum stage has QAT or sigma-noise active, the traced forward
+        first applies :func:`apply_stage_weight_transforms` to the (traced) weight
+        arrays (STE fake-quant / weight-noise, part of the autodiff graph). The C1a
+        entropy gradient (a function of the decoder weights alone) is added AFTER the
+        vjp via :func:`add_c1a_entropy_gradient`.
         """
         flat = tree_flatten(self.bundle.trainable_parameters())
         names = [k for k, _ in flat]
         primals = [v for _, v in flat]
+        mech = self.mechanisms
+        noise_key = None
+        if mech.sigma_weight_noise > 0.0:
+            noise_key = mx.random.key(self.cfg.seed * 1_000_003 + self._mech_step)
 
         def forward(*param_arrays: Any) -> list[Any]:
-            self.bundle.update(
-                tree_unflatten(list(zip(names, param_arrays, strict=True)))
-            )
+            arrays_by_name = dict(zip(names, param_arrays, strict=True))
+            if mech.any_weight_transform:
+                arrays_by_name = apply_stage_weight_transforms(
+                    arrays_by_name, self._weight_keys, mech, noise_key=noise_key
+                )
+            self.bundle.update(tree_unflatten(list(arrays_by_name.items())))
             render = self.bundle(indices, pose=pose)
             commit = self.bundle.last_commitment_loss
             return [render, commit]
 
         cotangents = [pixel_cotangent, mx.array(float(commit_cotangent))]
         _, vjps = mx.vjp(forward, list(primals), cotangents)
-        return tree_unflatten(list(zip(names, vjps, strict=True)))
+        # The traced forward installed the (possibly QAT/noise-transformed) weights
+        # into the bundle as a side effect; restore the ORIGINAL primals so the
+        # optimizer step updates the un-quantized/un-noised live weights (STE).
+        if mech.any_weight_transform:
+            self.bundle.update(tree_unflatten(list(zip(names, primals, strict=True))))
+        grads = tree_unflatten(list(zip(names, vjps, strict=True)))
+        if mech.c1a_active:
+            c1a_key = mx.random.key(self.cfg.seed * 7 + self._mech_step)
+            grads = add_c1a_entropy_gradient(
+                grads,
+                self.bundle.trainable_parameters(),
+                self._weight_keys,
+                mech,
+                rng_key=c1a_key,
+            )
+        self._mech_step += 1
+        return grads
 
     def step(self, idx_np: np.ndarray) -> dict[str, Any]:
         """One joint training step. Returns telemetry."""
@@ -188,6 +242,7 @@ class CapstoneTrainer:
             self.opt_state,
             self.opt_config,
             parameter_group_fingerprint=self._fingerprint,
+            force_adamw_substrings=self._force_adamw_substrings,
         )
         # VQ EMA codebook update from the most-recent forward (van den Oord §3.2).
         self.bundle.ema_update_from_last()
@@ -228,6 +283,17 @@ class CapstoneTrainer:
         Re-measures the PoseNet output on the LIVE pose-FiLM render vs the GT
         pose targets the bridge holds — the same per-pair pose MSE the evaluator
         charges (``d_pose``). This is the decisive POSE observable.
+
+        MEASUREMENT-CONSISTENCY FIX (optimizer-poison audit #4): this routes through
+        ``bridge.exact_d_pose``, which applies the SAME eval_roundtrip (bicubic-up
+        874x1164 -> bilinear-down 384x512 -> STE/uint8 round) that the LOSS path and
+        ``bridge.exact_d_seg`` apply. The prior bespoke ``_exact_d_pose`` did a
+        clamp-only measurement (NO uint8 roundtrip), so the reported d_pose
+        UNDERSTATED the contest value — uint8 luma quant is exactly where pose
+        drifts, and a "pose held" verdict on a clamp-only number could send a
+        candidate to a paid eval that misses the tube. The honest measurement uses
+        the bridge's roundtrip-consistent path (CLAUDE.md "eval_roundtrip" +
+        "Apples-to-apples evidence discipline").
         """
         _require_mlx()
         bridge = self.bridge
@@ -243,10 +309,121 @@ class CapstoneTrainer:
             render = self._render(indices, self._pose_mx(idx_np))
             mx.eval(render)
             idx_t = torch.from_numpy(idx_np.astype(np.int64))
-            d = _exact_d_pose(bridge, render, idx_t)
+            d = bridge.exact_d_pose(render, idx_t)
             total += d * len(idx_np)
             n += len(idx_np)
         return total / max(n, 1)
+
+    def configure_stage(self, spec: StageSpec, *, optimizer_schedule: str) -> None:
+        """Switch to a PR95 curriculum stage (CurriculumTrainerProtocol).
+
+        Sets the bridge seg-loss family, rebuilds the optimizer config (LR +
+        Muon-vs-AdamW per the resolved schedule + per-stage grad-clip/wd), and arms
+        the per-stage QAT / C1a / sigma-noise mechanisms. Optimizer + VQ-EMA STATE is
+        PRESERVED across stages (PR95 inter-stage transitions resume weights).
+        """
+        from tac.mlx_pr95_port.curriculum import resolve_use_muon
+
+        self.bridge.set_seg_loss_form(spec.seg_loss_form)
+        self.cfg.seg_weight = spec.seg_weight
+        self.cfg.pose_weight = spec.pose_weight
+        use_muon = resolve_use_muon(spec, optimizer_schedule)
+        self.opt_config = Pr95MlxOptimizerConfig(
+            use_muon=use_muon,
+            adamw_lr=spec.adamw_lr,
+            latent_lr_mult=spec.latent_lr_mult,
+            muon_lr=spec.muon_lr,
+            muon_momentum=self.cfg.muon_momentum,
+            muon_nesterov=self.cfg.muon_nesterov,
+            muon_ns_steps=self.cfg.muon_ns_steps,
+            muon_weight_decay=spec.muon_weight_decay,
+            grad_clip=spec.grad_clip,
+            grad_clip_muon=spec.grad_clip_muon,
+            cast_muon_float32_to_bfloat16=self.cfg.cast_muon_float32_to_bfloat16,
+        )
+        self.mechanisms = StageMechanisms(
+            use_qat=spec.use_qat,
+            sigma_weight_noise=spec.sigma_weight_noise,
+            cat_lambda=spec.cat_lambda,
+            cat_sigma=spec.cat_sigma,
+        )
+
+    def run_stage_epochs(self, spec: StageSpec) -> dict[str, Any]:
+        """Run ``spec.epochs`` epochs of the configured stage (CurriculumTrainerProtocol)."""
+        return self._run_epochs(spec.epochs, stage_name=spec.name)
+
+    def run_curriculum(
+        self, stages: Any, *, optimizer_schedule: str, on_stage_done: Any = None
+    ) -> Any:
+        """Run a full PR95 curriculum on this capstone trainer (convenience wrapper)."""
+        from tac.mlx_pr95_port.curriculum import run_curriculum as _run
+
+        np.random.seed(self.cfg.seed)
+        mx.random.seed(self.cfg.seed)
+        return _run(
+            self, stages, optimizer_schedule=optimizer_schedule,
+            on_stage_done=on_stage_done,
+        )
+
+    def _run_epochs(self, epochs: int, *, stage_name: str | None = None) -> dict[str, Any]:
+        """Run ``epochs`` epochs of the joint loop with the CURRENT stage config."""
+        _require_mlx()
+        cfg = self.cfg
+
+        d_seg_initial = self.exact_d_seg()
+        d_pose_initial = self.mean_d_pose()
+        trajectory: list[dict[str, Any]] = []
+        best_d_seg = float("inf")
+        clip_would_steps = 0
+        total_steps = 0
+
+        for epoch in range(epochs):
+            perm = np.random.permutation(self.n_pairs)
+            ep_seg = ep_loss = ep_commit = 0.0
+            nb = 0
+            for start in range(0, self.n_pairs, cfg.batch_size):
+                idx_np = perm[start : start + cfg.batch_size]
+                row = self.step(idx_np)
+                ep_seg += row["seg"]
+                ep_loss += row["loss"]
+                ep_commit += row["commit"]
+                if row["grad_clip_would_clip"] > 0:
+                    clip_would_steps += 1
+                total_steps += 1
+                nb += 1
+
+            if (epoch + 1) % cfg.eval_every == 0 or epoch == epochs - 1:
+                d_seg = self.exact_d_seg()
+                d_pose = self.mean_d_pose()
+                best_d_seg = min(best_d_seg, d_seg)
+                trow = {
+                    "epoch": epoch + 1,
+                    "stage": stage_name,
+                    "exact_d_seg": d_seg,
+                    "mean_d_pose": d_pose,
+                    "loss_mean": ep_loss / max(nb, 1),
+                    "seg_loss_mean": ep_seg / max(nb, 1),
+                    "commit_mean": ep_commit / max(nb, 1),
+                    "clip_would_fraction": clip_would_steps / max(total_steps, 1),
+                }
+                trajectory.append(trow)
+                cfg.telemetry.append(trow)
+
+        return {
+            "stage": stage_name,
+            "epochs": epochs,
+            "d_seg_initial": d_seg_initial,
+            "d_pose_initial": d_pose_initial,
+            "d_seg_final": trajectory[-1]["exact_d_seg"] if trajectory else d_seg_initial,
+            "d_pose_final": trajectory[-1]["mean_d_pose"] if trajectory else d_pose_initial,
+            "d_seg_best": best_d_seg if best_d_seg != float("inf") else d_seg_initial,
+            "seg_descended": (
+                trajectory[-1]["exact_d_seg"] < d_seg_initial - 1e-4
+                if trajectory
+                else False
+            ),
+            "trajectory": trajectory,
+        }
 
     def train(self) -> dict[str, Any]:
         """Run the joint loop. Returns the joint-descent summary + trajectory."""
