@@ -44,6 +44,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--train-device", default=None, choices=[None, "cpu", "cuda", "mps"],
                    help="GRADIENT backend (per-step fwd+bwd). mps=Apple GPU ~104x faster; "
                         "eval stays on --device (CPU authority). Default: same as --device.")
+    p.add_argument("--split-by-head", action="store_true",
+                   help="POSE-AXIS SALVAGE: run the SegNet path fwd+bwd on --train-device "
+                        "(MPS, validated bit-identical on d_seg) and the PoseNet path on the "
+                        "CPU authority --device (zero pose drift); sum the two frame "
+                        "cotangents. Requires --train-device != --device. The full-MPS "
+                        "gradient REJECTED the descent gate on the POSE axis; this salvage "
+                        "is descent-equivalent on BOTH terms by construction.")
     p.add_argument("--video-path", type=Path, default=None,
                    help="contest video (default: vendored data.get_default_video_path())")
     p.add_argument("--seed", type=int, default=0)
@@ -87,10 +94,12 @@ def main(argv: list[str] | None = None) -> int:
         eval_every=args.eval_every,
         device=args.device,
         train_device=args.train_device,
+        split_by_head=args.split_by_head,
         seed=args.seed,
     )
     scorer = RealScorerContext(
-        video_path, device=args.device, train_device=args.train_device
+        video_path, device=args.device, train_device=args.train_device,
+        split_by_head=args.split_by_head,
     )
     driver = TorchVehicleDriver(cfg, scorer=scorer, vendored=import_vendored_bundle())
     summary = driver.run()

@@ -56,6 +56,7 @@ class RealScorerContext:
         device: str = "cpu",
         *,
         train_device: str | None = None,
+        split_by_head: bool = False,
         max_pairs: int | None = None,
         targets_cache: str | Path | None = None,
     ):
@@ -68,6 +69,20 @@ class RealScorerContext:
         self.device = torch.device(device)  # AUTHORITY/eval device
         self.train_device = torch.device(train_device) if train_device else self.device
         self.split_device = self.train_device != self.device
+        # Split-by-HEAD (the pose-axis salvage): run the SegNet-path forward+backward
+        # on the FAST train device (MPS — bit-identical on d_seg per the gate) and the
+        # PoseNet-path forward+backward on the CPU AUTHORITY (zero pose drift). The
+        # two per-head frame cotangents are summed at the frame tensor → a combined
+        # gradient that is descent-equivalent on BOTH terms by construction (the pose
+        # part IS the authority gradient). Requires split_device (train != authority).
+        self.split_by_head = bool(split_by_head)
+        if self.split_by_head and not self.split_device:
+            raise ValueError(
+                "split_by_head requires a split device (train_device != device): "
+                "the SegNet path runs on train_device (MPS) and the PoseNet path on "
+                "the CPU authority. Pass train_device='mps' (or another fast device) "
+                "distinct from device='cpu'."
+            )
         self.video_path = Path(video_path)
         from tac.torch_vehicle.vendored_imports import import_vendored
 
@@ -148,6 +163,24 @@ class RealScorerContext:
         pose_out = net.posenet(posenet_in)
         return seg_out, pose_out["pose"][:, :6]
 
+    def seg_forward_train(self, decoded_bhwc_train: torch.Tensor) -> torch.Tensor:
+        """SegNet-path forward on the TRAIN device (MPS — the 90x lever; validated
+        bit-identical on d_seg by the descent-equivalence gate). ``decoded_bhwc_train``
+        is on ``train_device``; returns seg logits on ``train_device``."""
+        net = self.train_distortion_net
+        _posenet_in_unused, segnet_in = net.preprocess_input(decoded_bhwc_train)
+        return net.segnet(segnet_in)
+
+    def pose_forward_authority(self, decoded_bhwc_cpu: torch.Tensor) -> torch.Tensor:
+        """PoseNet-path forward on the CPU AUTHORITY net (zero MPS pose drift — the
+        whole point of the split-by-head salvage). ``decoded_bhwc_cpu`` is on the
+        authority ``device``; returns pose6 on the authority ``device``. Because this
+        IS the authority PoseNet, its backward gives the AUTHORITY pose gradient."""
+        net = self.distortion_net
+        posenet_in, _segnet_in_unused = net.preprocess_input(decoded_bhwc_cpu)
+        pose_out = net.posenet(posenet_in)
+        return pose_out["pose"][:, :6]
+
     def exact_eval(self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int):
         """Canonical d_seg/d_pose/rate/score on the EMA shadow (BEST tracker).
 
@@ -209,11 +242,13 @@ class SyntheticScorerContext:
     research_only = True
 
     def __init__(
-        self, n_pairs: int = 6, device: str = "cpu", seed: int = 0, *, train_device: str | None = None
+        self, n_pairs: int = 6, device: str = "cpu", seed: int = 0, *,
+        train_device: str | None = None, split_by_head: bool = False,
     ):
         self.device = torch.device(device)  # authority/eval device
         self.train_device = torch.device(train_device) if train_device else self.device
         self.split_device = self.train_device != self.device
+        self.split_by_head = bool(split_by_head)
         self.n_pairs = int(n_pairs)
         # Authority scorer (eval) + train scorer (forward). Same frozen weights;
         # only the device differs (mirrors RealScorerContext split-device).
@@ -243,6 +278,16 @@ class SyntheticScorerContext:
         pooled = decoded_bhwc.mean(dim=(1, 2, 3)) / 255.0  # (B,3)
         pose_pred6 = self._train_scorer.pose(pooled)  # (B,6)
         return seg_out, pose_pred6
+
+    def seg_forward_train(self, decoded_bhwc_train: torch.Tensor) -> torch.Tensor:
+        """SegNet-path forward on the TRAIN scorer (mirrors RealScorerContext)."""
+        last = decoded_bhwc_train[:, -1].permute(0, 3, 1, 2) / 255.0
+        return self._train_scorer.seg(last)
+
+    def pose_forward_authority(self, decoded_bhwc_cpu: torch.Tensor) -> torch.Tensor:
+        """PoseNet-path forward on the AUTHORITY scorer (mirrors RealScorerContext)."""
+        pooled = decoded_bhwc_cpu.mean(dim=(1, 2, 3)) / 255.0
+        return self._scorer.pose(pooled)
 
     def exact_eval(self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int):
         """A deterministic synthetic 'score' from the EMA shadow argmax-flip vs

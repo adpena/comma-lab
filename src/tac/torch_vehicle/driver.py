@@ -130,6 +130,15 @@ class TorchVehicleConfig:
     # gate (BOTH d_seg AND d_pose at the real n); the EXACT metric is always re-run
     # on ``device`` (CPU authority). Defaults to ``device`` (single-device legacy).
     train_device: str | None = None
+    # ``split_by_head`` (the pose-axis SALVAGE): run the SegNet-path forward+backward
+    # on ``train_device`` (MPS — the 90x lever, validated bit-identical on d_seg) and
+    # the PoseNet-path forward+backward on the CPU AUTHORITY ``device`` (zero pose
+    # drift). The two per-head frame cotangents are summed at the frame tensor, so the
+    # combined decoder gradient is descent-equivalent on BOTH terms BY CONSTRUCTION
+    # (the pose part IS the authority gradient). The prior full-MPS gradient REJECTED
+    # the descent-equivalence gate on the POSE axis (d_seg PASS / d_pose REJECT, gap
+    # 0.06->7.02). Requires a split device. Defaults False (full train_device forward).
+    split_by_head: bool = False
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -143,6 +152,12 @@ class TorchVehicleConfig:
             )
         if self.train_device is None:
             self.train_device = self.device
+        if self.split_by_head and self.train_device == self.device:
+            raise ValueError(
+                "split_by_head requires train_device != device (the SegNet path runs "
+                "on train_device, the PoseNet path on the CPU authority device). Set "
+                "device='cpu' and train_device='mps'."
+            )
         self.out_dir = Path(self.out_dir)
 
 
@@ -188,6 +203,12 @@ class TorchVehicleDriver:
         self.device = torch.device(cfg.device)
         self.train_device = torch.device(cfg.train_device or cfg.device)
         self.split_device = self.train_device != self.device
+        # Split-by-HEAD: SegNet grad on train_device (MPS), PoseNet grad on the CPU
+        # authority, summed at the frame tensor. Honored only when the scorer context
+        # exposes the per-head forwards (RealScorerContext / SyntheticScorerContext).
+        self.split_by_head = bool(cfg.split_by_head) and getattr(
+            scorer, "split_by_head", False
+        )
         self.n_pairs = int(scorer.n_pairs)
         if curriculum is None:
             from tac.torch_vehicle.curriculum import build_curriculum
@@ -333,23 +354,42 @@ class TorchVehicleDriver:
             decoded_rounded = decoded_clamped.round()
             decoded_bhwc = decoded_clamped + (decoded_rounded - decoded_clamped).detach()
 
-            seg_out, pose_pred6 = self.scorer.seg_pose_forward(decoded_bhwc)
-
-            seg_l = spec.seg_loss_fn(seg_out, self.scorer.seg_targets_hard[idx])
-            pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
-            pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
-
-            loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
-            if spec.cat_lambda > 0:
-                ent = self.v.cat_entropy_v2(
-                    decoder, sigma=spec.cat_sigma, sample_size=2000, device=self.train_device
-                )
-                loss = loss + spec.cat_lambda * ent
-
             rt.adamw_opt.zero_grad()
             if rt.muon_opt is not None:
                 rt.muon_opt.zero_grad()
-            loss.backward()
+
+            if self.split_by_head:
+                loss_val, pose_mse_val = self._split_by_head_backward(
+                    decoded_bhwc, idx, spec
+                )
+                # The categorical-entropy regularizer does NOT depend on the frames
+                # (it reads the decoder weights), so it backprops straight to the
+                # decoder — add it as a separate scalar backward (accumulates into
+                # the same .grad buffers the frame-cotangent backward populated).
+                if spec.cat_lambda > 0:
+                    ent = self.v.cat_entropy_v2(
+                        decoder, sigma=spec.cat_sigma, sample_size=2000,
+                        device=self.train_device,
+                    )
+                    (spec.cat_lambda * ent).backward()
+                    loss_val += float(spec.cat_lambda * ent.item())
+            else:
+                seg_out, pose_pred6 = self.scorer.seg_pose_forward(decoded_bhwc)
+
+                seg_l = spec.seg_loss_fn(seg_out, self.scorer.seg_targets_hard[idx])
+                pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
+                pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
+
+                loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
+                if spec.cat_lambda > 0:
+                    ent = self.v.cat_entropy_v2(
+                        decoder, sigma=spec.cat_sigma, sample_size=2000,
+                        device=self.train_device,
+                    )
+                    loss = loss + spec.cat_lambda * ent
+                loss.backward()
+                loss_val = float(loss.item())
+                pose_mse_val = float(pose_mse.item())
             gn_adamw = torch.nn.utils.clip_grad_norm_(
                 [*rt.adamw_params, latents], spec.grad_clip
             )
@@ -366,14 +406,81 @@ class TorchVehicleDriver:
                 rt.ema_decoder, decoder, rt.ema_latents, latents, decay=spec.ema_decay
             )
 
-            epoch_loss += float(loss.item())
-            epoch_pose += float(pose_mse.item())
+            epoch_loss += loss_val
+            epoch_pose += pose_mse_val
             nb += 1
 
         rt.adamw_sched.step()
         if rt.muon_sched is not None:
             rt.muon_sched.step()
         return epoch_loss / max(nb, 1), epoch_pose / max(nb, 1), last_gn_adamw, last_gn_muon
+
+    # -- split-by-head combined-gradient backward (the pose-axis salvage) -----
+    def _split_by_head_backward(
+        self, decoded_bhwc: torch.Tensor, idx: torch.Tensor, spec: StageSpec
+    ) -> tuple[float, float]:
+        """Compute the COMBINED frame-gradient (SegNet path on the fast train device,
+        PoseNet path on the CPU authority) and inject it into the decoder graph via a
+        single ``decoded_bhwc.backward(gradient=combined_cotangent)``.
+
+        The math (why this is descent-equivalent on BOTH terms BY CONSTRUCTION):
+        the full loss ``L = w_seg * seg_l(F) + w_pose * pose_l(F)`` is a sum of two
+        terms that each depend on the SAME frame tensor ``F = decoded_bhwc``. By the
+        chain rule, ``dL/dF = w_seg * d(seg_l)/dF + w_pose * d(pose_l)/dF`` — the two
+        per-head frame cotangents SUM at the frame tensor, and ``dL/dtheta`` (decoder)
+        follows from ``dL/dF`` by the SAME vjp regardless of how dL/dF was assembled.
+        So we:
+          1. detach two frame leaves that share F's values (one on train_device for
+             SegNet, one on the CPU authority for PoseNet),
+          2. backprop each head's weighted loss to its own leaf (``leaf.grad`` = that
+             head's frame cotangent),
+          3. sum the two cotangents on the train device (move the CPU pose cotangent
+             over — a value transfer, the gradient is already computed on the CPU
+             authority PoseNet so it carries ZERO MPS pose drift),
+          4. ``decoded_bhwc.backward(gradient=combined)`` — flows the exact combined
+             gradient into the decoder.
+
+        The SegNet cotangent is the (validated bit-identical on d_seg) MPS gradient;
+        the PoseNet cotangent is the CPU AUTHORITY gradient (zero drift). Returns
+        ``(loss_value, pose_mse_value)`` for telemetry (recomputed from the detached
+        head losses; not authority — telemetry only)."""
+        # --- SegNet path on the TRAIN device (MPS) ---
+        frames_seg = decoded_bhwc.detach().requires_grad_(True)  # train_device leaf
+        seg_out = self.scorer.seg_forward_train(frames_seg)
+        seg_targets = self.scorer.seg_targets_hard[idx]
+        seg_l = spec.seg_loss_fn(seg_out, seg_targets)
+        (spec.seg_weight * seg_l).backward()
+        cot_seg = frames_seg.grad  # d(w_seg*seg_l)/dF on train_device
+
+        # --- PoseNet path on the CPU AUTHORITY (zero pose drift) ---
+        frames_pose = (
+            decoded_bhwc.detach().to(self.device).requires_grad_(True)
+        )  # authority-device leaf, same values
+        pose_pred6 = self.scorer.pose_forward_authority(frames_pose)
+        pose_targets = self._pose_targets_authority()[idx.to(self.device)]
+        pose_mse = F.mse_loss(pose_pred6, pose_targets)
+        pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
+        (spec.pose_weight * pose_l).backward()
+        cot_pose = frames_pose.grad  # d(w_pose*pose_l)/dF on the CPU authority
+
+        # --- sum the two cotangents at the frame tensor + inject into the decoder ---
+        combined = cot_seg + cot_pose.to(cot_seg.device)
+        decoded_bhwc.backward(gradient=combined)
+
+        loss_val = float((spec.seg_weight * seg_l).item()) + float(
+            (spec.pose_weight * pose_l).item()
+        )
+        return loss_val, float(pose_mse.item())
+
+    def _pose_targets_authority(self) -> torch.Tensor:
+        """The pose targets on the AUTHORITY device (cached). For split-by-head the
+        PoseNet path runs on the CPU authority, so its targets must live there too
+        (the scorer holds them on train_device for the non-split path)."""
+        cached = getattr(self, "_pose_targets_authority_cache", None)
+        if cached is None or cached.device != self.device:
+            cached = self.scorer.pose_targets.to(self.device)
+            self._pose_targets_authority_cache = cached
+        return cached
 
     # -- checkpoint state capture / restore ----------------------------------
     def _capture_state(self, rt: _StageRuntime, spec: StageSpec) -> dict[str, Any]:
