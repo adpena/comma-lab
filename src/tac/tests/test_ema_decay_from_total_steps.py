@@ -171,11 +171,20 @@ def test_decay_from_total_steps_is_classmethod_no_instance_required() -> None:
 
 
 def test_existing_ema_init_signature_preserved() -> None:
-    """ADDITIVE extension: original EMA.__init__ contract unchanged."""
+    """ADDITIVE extension: original EMA.__init__ positional contract is
+    backward-compatible. The EMA-shadow-lag fix (commit f771e6e00 ported to
+    torch) adds a KEYWORD-ONLY ``warmup`` param (default True) — existing
+    positional callers ``EMA(model)`` / ``EMA(model, decay)`` are unchanged.
+    """
     import inspect
 
     sig = inspect.signature(EMA.__init__)
     params = list(sig.parameters.keys())
-    assert params == ["self", "model", "decay"]
+    # The first three positional params are unchanged (backward compat).
+    assert params[:3] == ["self", "model", "decay"]
     # default decay remains 0.997 (the Quantizr empirical anchor)
     assert sig.parameters["decay"].default == 0.997
+    # warmup is keyword-only with the safe default (the bug fix).
+    assert "warmup" in sig.parameters
+    assert sig.parameters["warmup"].kind == inspect.Parameter.KEYWORD_ONLY
+    assert sig.parameters["warmup"].default is True

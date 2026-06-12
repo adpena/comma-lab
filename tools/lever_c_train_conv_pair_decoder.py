@@ -69,6 +69,13 @@ from tac.boundary_math.posenet_jacobian_saliency import (  # noqa: E402
     compute_posenet_pixel_saliency,
     saliency_to_weight_map,
 )
+# Canonical EMA WITH warmup (Catalog #388 / commit f771e6e00 ported to torch).
+# The prior inline EMA used a CONSTANT decay with no warmup; on this 8-pair /
+# ~120-epoch SHORT run the shadow FROZE near init, so exact d_seg read the
+# near-init constant-frame floor 0.507 ("moved by zero") — the EMA-shadow-LAG
+# artifact (negative_results_resurrection_ledger_20260611.md R1). The canonical
+# EMA warms up min(decay,(1+t)/(10+t)) so the shadow tracks live from step 1.
+from tac.training import EMA  # noqa: E402
 
 CAMERA_H, CAMERA_W = 874, 1164
 SEG_H, SEG_W = 384, 512
@@ -135,24 +142,6 @@ class TorchConvPairDecoder(nn.Module):
         weights["out.bias"] = self.out.bias.detach().cpu().numpy().astype(np.float32)
         latents = self.latents.detach().cpu().numpy().astype(np.float32)
         return weights, latents
-
-
-class EMA:
-    """Quantizr-0.997 EMA shadow (CLAUDE.md EMA non-negotiable). Applied at eval, snapshot+restore."""
-
-    def __init__(self, model: nn.Module, decay: float = 0.997):
-        self.decay = decay
-        self.shadow = {k: v.detach().clone() for k, v in model.state_dict().items()}
-
-    def update(self, model: nn.Module) -> None:
-        for k, v in model.state_dict().items():
-            if v.dtype.is_floating_point:
-                self.shadow[k].mul_(self.decay).add_(v.detach(), alpha=1.0 - self.decay)
-            else:
-                self.shadow[k] = v.detach().clone()
-
-    def state_dict(self) -> dict[str, torch.Tensor]:
-        return {k: v.clone() for k, v in self.shadow.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +310,7 @@ def train(
     seg_floor: float,
     pose_floor: float,
     seg_loss_mode: str = "argmax_ce",
+    eval_weights: str = "ema",
 ) -> dict[str, Any]:
     import render_and_score_lib as L
 
@@ -468,16 +458,45 @@ def train(
             f"= {epochs * MIN_SEC_PER_EPOCH:.2f}s — refusing a stub training loop (NO FAKE)."
         )
 
-    # --- EMA shadow is the inference checkpoint (CLAUDE.md EMA non-negotiable) ---
+    # --- R1 disambiguator: measure BOTH the warmup-EMA shadow AND the LIVE
+    #     weights. The original lever-C verdict used the CONSTANT-decay EMA
+    #     shadow on an 8-pair/180ep short run, which FROZE near init → exact
+    #     d_seg read the constant-frame floor 0.507 ("moved by zero"). With
+    #     the canonical warmup EMA (Catalog #388) the shadow tracks live, and
+    #     measuring LIVE directly removes any residual shadow-lag question.
     orig_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+    scorer = L.ExactScorer()
+
+    # (A) LIVE weights measurement.
+    weights_live, latents_live = model.numpy_params()
+    exact_live = _exact_measure(
+        scorer, weights_live, latents_live, cfg, gt_pairs, pairs, pose_carrier_mode
+    )
+
+    # (B) warmup-EMA shadow measurement.
     model.load_state_dict(ema.state_dict())
     try:
-        weights, latents = model.numpy_params()
-        save_decoder_npz(out_dir / "decoder.npz", weights, latents, cfg)
-        byte_acct = measure_decoder_bytes(weights, latents, cfg)
+        weights_ema, latents_ema = model.numpy_params()
+        exact_ema = _exact_measure(
+            scorer, weights_ema, latents_ema, cfg, gt_pairs, pairs, pose_carrier_mode
+        )
+    finally:
+        model.load_state_dict(orig_state)
+
+    # The inference checkpoint shipped is selected by eval_weights (default ema
+    # = CLAUDE.md EMA-shadow-as-checkpoint discipline, now warmup-correct).
+    if eval_weights == "live":
+        weights, latents, exact = weights_live, latents_live, exact_live
+    else:
+        weights, latents, exact = weights_ema, latents_ema, exact_ema
+    save_decoder_npz(out_dir / "decoder.npz", weights, latents, cfg)
+    byte_acct = measure_decoder_bytes(weights, latents, cfg)
+    # parity on the SELECTED weights: reload them so the torch model mirrors
+    # the numpy export being byte-accounted.
+    sel_state = ema.state_dict() if eval_weights != "live" else orig_state
+    model.load_state_dict(sel_state)
+    try:
         parity = _verify_parity(model, weights, latents, cfg, pairs[:4])
-        scorer = L.ExactScorer()
-        exact = _exact_measure(scorer, weights, latents, cfg, gt_pairs, pairs, pose_carrier_mode)
     finally:
         model.load_state_dict(orig_state)
 
@@ -505,6 +524,27 @@ def train(
         "portability_parity": parity,
         "joint_hold_under_120kb": joint_hold,
         "constant_frame_control": exact.get("constant_control"),
+        # R1 disambiguator: side-by-side LIVE vs warmup-EMA exact d_seg/d_pose.
+        # If LIVE d_seg << EMA d_seg, the original "moved by zero" verdict was
+        # the EMA-shadow-LAG artifact. If both agree near the floor, the
+        # carrier is genuinely seg-blind (the verdict survives the fix).
+        "eval_weights_selected": eval_weights,
+        "r1_disambiguator": {
+            "live_d_seg": exact_live["mean_d_seg"],
+            "live_d_pose": exact_live["mean_d_pose"],
+            "warmup_ema_d_seg": exact_ema["mean_d_seg"],
+            "warmup_ema_d_pose": exact_ema["mean_d_pose"],
+            "live_vs_ema_d_seg_gap": float(
+                exact_ema["mean_d_seg"] - exact_live["mean_d_seg"]
+            ),
+            "constant_frame_floor_d_seg": (
+                exact.get("constant_control", {}) or {}
+            ).get("d_seg"),
+            "live_descended_below_floor": bool(
+                exact_live["mean_d_seg"]
+                < (exact.get("constant_control", {}) or {}).get("d_seg", 1.0) - 0.01
+            ),
+        },
     }
     (out_dir / "train_result.json").write_text(json.dumps(result, indent=2))
     return result
@@ -576,6 +616,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pose-floor", type=float, default=0.05)
     ap.add_argument("--seg-loss", type=str, default="argmax_ce", choices=SEG_LOSS_CHOICES,
                     help="the #63 decisive-test d_seg loss arm (the ONLY thing that varies across arms)")
+    ap.add_argument("--eval-weights", type=str, default="ema", choices=("ema", "live"),
+                    help="inference checkpoint: warmup-EMA shadow (default) or LIVE weights. "
+                         "Both d_seg/d_pose are ALWAYS reported in r1_disambiguator regardless.")
     # capacity knobs
     ap.add_argument("--latent-dim", type=int, default=24)
     ap.add_argument("--seed-ch", type=int, default=32)
@@ -592,7 +635,7 @@ def main(argv: list[str] | None = None) -> int:
         args.targets_dir, args.out_dir, cfg, n_pairs=args.n_pairs, epochs=args.epochs,
         lr=args.lr, seed=args.seed, eval_every=args.eval_every,
         pose_carrier_mode=args.pose_carrier_mode, seg_floor=args.seg_floor, pose_floor=args.pose_floor,
-        seg_loss_mode=args.seg_loss,
+        seg_loss_mode=args.seg_loss, eval_weights=args.eval_weights,
     )
     print("\n=== LEVER-C TRAIN RESULT ===")
     print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=2))

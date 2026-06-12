@@ -25,8 +25,12 @@ class TestEMA:
                 assert v.abs().sum() > 0, f"EMA shadow {k} should track model"
 
     def test_high_decay_stability(self):
+        # warmup=False isolates the constant-decay arithmetic invariant
+        # (high decay -> shadow barely moves on a single step). With warmup
+        # on, the step-1 effective decay is ~0.18 (the EMA-shadow-lag fix),
+        # so this constant-decay invariant must opt out of warmup.
         model = build_postfilter("standard", hidden=8)
-        ema = EMA(model, decay=0.999)
+        ema = EMA(model, decay=0.999, warmup=False)
         orig = {k: v.clone() for k, v in ema.shadow.items()}
         with torch.no_grad():
             for p in model.parameters():
@@ -49,8 +53,12 @@ class TestEMA:
         """
         import torch.nn as nn
 
+        # warmup=False isolates the module-add seeding + constant-decay
+        # arithmetic invariant (the second update's 3.5 mean assumes a
+        # constant 0.5 decay). The warmup path is covered by the dedicated
+        # warmup guard tests below.
         model = build_postfilter("standard", hidden=8)
-        ema = EMA(model, decay=0.5)
+        ema = EMA(model, decay=0.5, warmup=False)
 
         # Add a brand-new module post-snapshot.
         new_module = nn.Linear(4, 4)
@@ -77,6 +85,97 @@ class TestEMA:
             ema.shadow["late_added.weight"],
             torch.full_like(ema.shadow["late_added.weight"], 3.5),
         ), f"second update produced {ema.shadow['late_added.weight'].mean().item()}"
+
+    # ── Warmup guard tests (EMA-shadow-lag fix, commit f771e6e00 ported to
+    #    torch). These are the NO-FAKE behavioral anchors: they FAIL if the
+    #    update path reverts to constant decay on short runs (re-introducing
+    #    the "d_seg 0.505 seg-wall" / lever-C "moved by zero" artifact).
+
+    def _converge_far_from_init(self, model, target=5.0):
+        """Snap live weights far from init in one optimizer-like step."""
+        with torch.no_grad():
+            for p in model.parameters():
+                if p.is_floating_point():
+                    p.fill_(target)
+
+    def test_warmup_is_default_and_tracks_live_on_short_run(self):
+        """POSITIVE: with warmup ON (default), a SHORT run's shadow TRACKS
+        the live weights instead of freezing near init. This is the bug fix
+        — the constant-decay shadow would lag ~init for hundreds of steps.
+        """
+        model = build_postfilter("standard", hidden=8)
+        ema = EMA(model, decay=0.997)  # warmup defaults True
+        assert ema.warmup is True
+        # Live converges far from init; only ~30 short steps.
+        for _ in range(30):
+            self._converge_far_from_init(model, target=5.0)
+            ema.update(model)
+        # Shadow must be CLOSE to the converged live weights (tracking),
+        # NOT frozen near the original init.
+        gaps = []
+        for k, v in model.state_dict().items():
+            if v.is_floating_point():
+                gaps.append((ema.shadow[k] - v).abs().mean().item())
+        max_gap = max(gaps)
+        assert max_gap < 0.5, (
+            f"warmup EMA shadow must track live on a short run; max gap "
+            f"{max_gap} (a frozen constant-decay shadow would be ~5.0)"
+        )
+
+    def test_constant_decay_FREEZES_on_short_run_the_bug_we_fixed(self):
+        """NEGATIVE / artifact anchor: warmup=False (constant decay) on the
+        SAME short run FREEZES the shadow far from the converged live
+        weights. This documents the EMA-shadow-lag artifact and proves the
+        warmup path is materially different (not a no-op rename).
+        """
+        model = build_postfilter("standard", hidden=8)
+        ema = EMA(model, decay=0.997, warmup=False)
+        for _ in range(30):
+            self._converge_far_from_init(model, target=5.0)
+            ema.update(model)
+        gaps = []
+        for k, v in model.state_dict().items():
+            if v.is_floating_point():
+                gaps.append((ema.shadow[k] - v).abs().mean().item())
+        max_gap = max(gaps)
+        # Constant decay 0.997 over 30 steps barely moves: shadow ~init,
+        # live ~5.0, so the gap stays large. This is the FROZEN signature.
+        assert max_gap > 2.0, (
+            f"constant-decay short-run shadow should be FROZEN far from live; "
+            f"max gap {max_gap} (if this fails, warmup may be leaking in)"
+        )
+        # And warmup MUST close it: the warmup gap is far smaller.
+        model2 = build_postfilter("standard", hidden=8)
+        ema2 = EMA(model2, decay=0.997, warmup=True)
+        for _ in range(30):
+            self._converge_far_from_init(model2, target=5.0)
+            ema2.update(model2)
+        warm_gaps = [
+            (ema2.shadow[k] - v).abs().mean().item()
+            for k, v in model2.state_dict().items()
+            if v.is_floating_point()
+        ]
+        assert max(warm_gaps) < max_gap / 4.0, (
+            "warmup must close the short-run shadow-lag gap by >=4x"
+        )
+
+    def test_effective_decay_ramps_from_low_to_target(self):
+        """VALUE: effective_decay() warms up min(decay,(1+t)/(10+t)) so the
+        first update is low-decay (shadow≈live) and it ramps to the target.
+        """
+        model = build_postfilter("standard", hidden=8)
+        ema = EMA(model, decay=0.997)
+        # Before any update, t=0 → warmup 1/10=0.1.
+        assert abs(ema.effective_decay() - 0.1) < 1e-9
+        ema.update(model)  # t=1 → 2/11 ≈ 0.1818
+        assert abs(ema.effective_decay() - (2.0 / 11.0)) < 1e-9
+        # After many updates it saturates at the target decay.
+        for _ in range(10000):
+            ema._num_updates += 1
+        assert abs(ema.effective_decay() - 0.997) < 1e-9
+        # warmup=False is always the constant target.
+        ema_const = EMA(model, decay=0.997, warmup=False)
+        assert ema_const.effective_decay() == 0.997
 
 
 class TestTrainerConstruction:

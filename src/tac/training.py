@@ -502,13 +502,60 @@ class TrainConfig(BaseModel):
 
 
 class EMA:
-    """Exponential moving average of model parameters."""
+    """Exponential moving average of model parameters.
 
-    def __init__(self, model: nn.Module, decay: float = 0.997):
+    Warmup discipline (CLAUDE.md "EMA" non-negotiable; canonical fix
+    2026-06-11 commit ``f771e6e00`` ported from the MLX
+    ``_CapstoneWeightEMA``): the constant-decay shadow has time constant
+    ``1/(1 - decay)`` STEPS (333 at 0.997, 1000 at 0.999). On a SHORT run
+    (few pairs / few epochs → few optimizer steps) that constant-decay
+    shadow stays bit-frozen near the model init, so any metric rendered
+    from the shadow (e.g. exact d_seg) reads a stale near-init value EVEN
+    THOUGH the live weights solved the task. This is the EMA-shadow-LAG
+    measurement artifact that produced the "d_seg 0.505 seg-capacity wall"
+    (capstone) and the lever-C "d_seg moved by zero" false-negative — the
+    shadow froze at init while the LIVE d_seg descended to ~0.04.
+
+    The fix (``warmup=True`` default; timm ``ModelEmaV2`` / diffusion EMA):
+    ramp the effective decay from ~0.1 at step 1 up to the target
+    ``decay`` as updates accumulate via ``min(decay, (1 + t)/(10 + t))``,
+    so the shadow == live early (nothing to average yet) and only slows
+    to the target averaging window once enough updates justify it. Correct
+    for a WEIGHT-INIT EMA; the Adam-style ``/(1 - decay^t)`` bias
+    correction assumes a ZERO init and would be wrong here. Pass
+    ``warmup=False`` ONLY for an explicit constant-decay ablation (which
+    re-introduces the short-run freeze).
+    """
+
+    def __init__(
+        self,
+        model: nn.Module,
+        decay: float = 0.997,
+        *,
+        warmup: bool = True,
+    ):
         self.decay = decay
+        self.warmup = warmup
+        # Number of EMA updates so far — drives the warmup decay below.
+        self._num_updates = 0
         self.shadow = {k: v.clone().detach() for k, v in model.state_dict().items()}
 
+    def effective_decay(self) -> float:
+        """Warmup decay so the shadow TRACKS live weights early.
+
+        Returns ``min(self.decay, (1 + t)/(10 + t))`` where ``t`` is the
+        number of ``update()`` calls so far, when ``self.warmup`` is True;
+        otherwise the constant ``self.decay``. See the class docstring for
+        the EMA-shadow-LAG artifact this extincts (commit ``f771e6e00``).
+        """
+        if not self.warmup:
+            return self.decay
+        warmup = (1.0 + self._num_updates) / (10.0 + self._num_updates)
+        return min(self.decay, warmup)
+
     def update(self, model: nn.Module):
+        self._num_updates += 1
+        decay = self.effective_decay()
         with torch.no_grad():
             for k, v in model.state_dict().items():
                 # Codex finding 2 hardening: if a module was added to the
@@ -525,7 +572,7 @@ class EMA:
                     # EMA decay on integers produces garbage — copy directly instead.
                     self.shadow[k].copy_(v)
                 else:
-                    self.shadow[k].mul_(self.decay).add_(v, alpha=1 - self.decay)
+                    self.shadow[k].mul_(decay).add_(v, alpha=1 - decay)
 
     def apply(self, model: nn.Module):
         """Load EMA weights into model."""

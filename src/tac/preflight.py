@@ -4651,6 +4651,19 @@ def preflight_all(
             lambda: check_training_paths_use_ema_correctly(strict=True, verbose=verbose),
         )
 
+        # Catalog #388 (EMA-shadow-LAG fix; R2 of the 2026-06-11 resurrection
+        # sweep): refuse training paths whose exported EMA shadow uses constant
+        # decay with NO warmup (freezes near init on short runs → the
+        # "d_seg 0.505 seg-wall" / lever-C "moved by zero" false-negatives).
+        # STRICT-flipped atomically: the fix (canonical tac.training.EMA warmup
+        # + 5 inline-EMA fleet fixes) drove live count to 0 in the same batch.
+        # Memory: feedback_capstone_ema_shadow_lag_reverses_seg_wall_20260611.md.
+        _parallel.run(
+            "check_torch_ema_uses_warmup",
+            "[torch-ema-warmup]",
+            lambda: check_torch_ema_uses_warmup(strict=True, verbose=verbose),
+        )
+
         # Check 89 (Council B UNIWARD NO-OP incident): encode-then-discard
         # antipattern in remote_lane_*.sh scripts. Initially warn-only while
         # 14 live hits were classified as intentional anchor staging vs true
@@ -18224,6 +18237,212 @@ def check_training_paths_use_ema_correctly(
             + "\n".join(f"  - {v}" for v in violations)
             + "\n\nEMA EVERYWHERE (CLAUDE.md non-negotiable). Reference "
             "audit: .omx/research/council_ema_audit_20260429.md."
+        )
+    return violations
+
+
+# ── Catalog #388 (EMA-shadow-LAG fix; R2 of the 2026-06-11 resurrection
+#    sweep): a training path that constructs/uses an EMA whose shadow is
+#    exported AS the inference checkpoint MUST warm up the decay on short
+#    runs. A constant-decay shadow (decay 0.997 -> 333-step time constant)
+#    FREEZES near init on a short run (few pairs / few epochs -> few
+#    optimizer steps), so any metric rendered from the shadow (exact d_seg)
+#    or any exported archive reads a stale near-init value EVEN THOUGH the
+#    live weights solved the task. This is the EMA-shadow-LAG artifact that
+#    produced the capstone "d_seg 0.505 seg-wall" AND the lever-C "moved by
+#    zero" false-negative. The MLX fix (commit f771e6e00) ported to the
+#    canonical torch ``tac.training.EMA`` (warmup default True); this gate
+#    refuses re-introduction of the constant-decay freeze at TWO surfaces:
+#
+#    (1) an INLINE EMA class (a `class ...EMA...` with an `update` method
+#        that does `self.shadow[...].mul_(self.decay)...` or `* self.decay`
+#        / `* d` constant-decay) that does NOT also define a warmup ramp
+#        (`effective_decay` / `(1 + ...)/(10 + ...)` / `_num_updates`). The
+#        canonical fix is to delete the inline copy and import
+#        ``tac.training.EMA`` (which warms up), not to hand-roll a frozen
+#        shadow.
+#    (2) an explicit `tac.training.EMA(..., warmup=False)` construction —
+#        the constant-decay ablation opt-out — in a training-shaped script.
+#
+#    Both surfaces accept a head-of-file `# TORCH_EMA_WARMUP_WAIVED:<reason>`
+#    waiver (first 8 lines; placeholder `<reason>`/`<rationale>` rejected per
+#    Catalog #287 sister discipline) for a deliberate constant-decay
+#    research ablation that does NOT export a short-run shadow.
+#
+#    Memory: feedback_capstone_ema_shadow_lag_reverses_seg_wall_20260611.md
+#    + .omx/research/negative_results_resurrection_ledger_20260611.md (R2).
+
+# [ \t]* (not \s*) so the rationale capture cannot span a newline into the
+# next line of code (which would let `# TORCH_EMA_WARMUP_WAIVED:\nimport ...`
+# self-waive with "import" as a phantom rationale).
+_TORCH_EMA_WARMUP_WAIVER_RE = re.compile(r"#[ \t]*TORCH_EMA_WARMUP_WAIVED:[ \t]*(\S.*)")
+_PLACEHOLDER_RATIONALE_RE = re.compile(r"^<\s*(?:reason|rationale)\s*>$", re.IGNORECASE)
+
+
+def _torch_ema_warmup_waiver_ok(text: str) -> bool:
+    """True if a non-placeholder ``# TORCH_EMA_WARMUP_WAIVED:`` marker is in
+    the first 8 lines. Placeholder rationales are rejected so the docstring
+    example cannot self-waive (Catalog #287 sister discipline)."""
+    head = "\n".join(text.split("\n")[:8])
+    m = _TORCH_EMA_WARMUP_WAIVER_RE.search(head)
+    if not m:
+        return False
+    rationale = m.group(1).strip()
+    if not rationale or _PLACEHOLDER_RATIONALE_RE.match(rationale):
+        return False
+    return True
+
+
+def _ema_class_update_has_constant_decay_no_warmup(
+    cls_node: ast.ClassDef,
+) -> bool:
+    """True if a class's ``update`` method multiplies the shadow by a
+    constant decay (``mul_(self.decay)`` / ``* self.decay`` / ``* d``) and
+    the class does NOT define a warmup ramp (no ``effective_decay`` method,
+    no ``_num_updates`` attribute, no ``(1 + t)/(10 + t)`` warmup formula).
+    """
+    # Does the class define a warmup ramp anywhere in its body?
+    cls_src = ast.unparse(cls_node)
+    has_warmup_ramp = (
+        "effective_decay" in cls_src
+        or "_num_updates" in cls_src
+        or re.search(r"\(\s*1\.?0?\s*\+", cls_src) is not None
+        and "10" in cls_src
+        and "min(" in cls_src
+    )
+    if has_warmup_ramp:
+        return False
+    # Find the update method and check for a constant-decay shadow multiply.
+    for item in cls_node.body:
+        if not isinstance(item, ast.FunctionDef) or item.name != "update":
+            continue
+        upd_src = ast.unparse(item)
+        # mul_(self.decay) / .mul_(self.decay) / * self.decay / * d  where the
+        # shadow is the receiver. Conservative: require a `.decay`-driven
+        # multiply on a `shadow`-named target.
+        if "shadow" not in upd_src:
+            return False
+        if (
+            "mul_(self.decay)" in upd_src
+            or "* self.decay" in upd_src
+            or re.search(r"shadow\b.*\*\s*d\b", upd_src) is not None
+            or re.search(r"\bd\s*=\s*self\.decay\b", upd_src) is not None
+        ):
+            return True
+    return False
+
+
+def _ema_construct_has_explicit_warmup_false(tree: ast.Module) -> bool:
+    """True if any ``EMA(...)`` / ``...EMA(...)`` call passes
+    ``warmup=False`` (the constant-decay opt-out)."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        is_ema = (isinstance(node.func, ast.Name) and node.func.id == "EMA") or (
+            isinstance(node.func, ast.Attribute) and node.func.attr == "EMA"
+        )
+        if not is_ema:
+            continue
+        for kw in node.keywords:
+            if kw.arg == "warmup" and isinstance(kw.value, ast.Constant) and kw.value.value is False:
+                return True
+    return False
+
+
+def _scan_script_for_torch_ema_warmup(path: Path, repo_root: Path) -> list[str]:
+    """Return EMA-warmup violations for one training-shaped script."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+    # Only training-shaped scripts (call optimizer.step()).
+    if not _ema_script_calls_optimizer_step(tree):
+        return []
+    if _torch_ema_warmup_waiver_ok(text):
+        return []
+    violations: list[str] = []
+    # Surface (1): inline EMA class with constant-decay, no warmup.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and "EMA" in node.name:
+            if _ema_class_update_has_constant_decay_no_warmup(node):
+                violations.append(
+                    f"{rel}: inline EMA class `{node.name}` uses a CONSTANT-decay "
+                    f"shadow update (`mul_(self.decay)`) with NO warmup ramp. On a "
+                    f"SHORT run the shadow FREEZES near init (the EMA-shadow-LAG "
+                    f"artifact: the lever-C 'd_seg moved by zero' / capstone 'd_seg "
+                    f"0.505 seg-wall' false-negatives). Delete the inline copy and "
+                    f"import the canonical `from tac.training import EMA` (warmup "
+                    f"default True), OR add a head-of-file "
+                    f"`# TORCH_EMA_WARMUP_WAIVED:<real reason>` if this is a "
+                    f"deliberate constant-decay ablation that does NOT export a "
+                    f"short-run shadow."
+                )
+    # Surface (2): explicit tac EMA construction with warmup=False.
+    if _ema_construct_has_explicit_warmup_false(tree):
+        violations.append(
+            f"{rel}: constructs `EMA(..., warmup=False)` (the constant-decay "
+            f"opt-out) in a training-shaped script. On a SHORT run this FREEZES "
+            f"the exported shadow near init (EMA-shadow-LAG). Use the default "
+            f"`warmup=True` so the shadow tracks live from step 1, OR add a "
+            f"head-of-file `# TORCH_EMA_WARMUP_WAIVED:<real reason>` if this is a "
+            f"deliberate ablation that does NOT export a short-run shadow."
+        )
+    return violations
+
+
+def check_torch_ema_uses_warmup(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #388: refuse training paths whose exported EMA shadow uses
+    constant decay with no warmup (the EMA-shadow-LAG artifact).
+
+    Scans `experiments/train_*.py`, `src/tac/experiments/train_*.py`, and
+    `tools/*train*.py` / `tools/lever_*.py` (the short-run smoke trainers
+    most prone to the freeze). Reference: CLAUDE.md "EMA" non-negotiable +
+    "Bugs must be permanently fixed AND self-protected against"; commit
+    f771e6e00 (MLX) ported to `tac.training.EMA`.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    candidates: list[Path] = []
+    for d in ("experiments", "src/tac/experiments"):
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for p in sorted(d_path.glob("train_*.py")):
+            candidates.append(p)
+    tools_dir = root / "tools"
+    if tools_dir.exists():
+        for pat in ("*train*.py", "lever_*.py"):
+            for p in sorted(tools_dir.glob(pat)):
+                if p not in candidates:
+                    candidates.append(p)
+    for p in candidates:
+        n_scanned += 1
+        violations.extend(_scan_script_for_torch_ema_warmup(p, root))
+
+    if verbose and violations:
+        print(
+            f"  [torch-ema-warmup] {len(violations)} violation(s) across "
+            f"{n_scanned} files:"
+        )
+        for v in violations:
+            print(f"    - {v}")
+    elif verbose:
+        print(f"  [torch-ema-warmup] OK: {n_scanned} training scripts scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "TORCH EMA WARMUP violations (EMA-shadow-LAG artifact class):\n"
+            + "\n".join(f"  - {v}" for v in violations)
+            + "\n\nEMA shadow MUST warm up on short runs (CLAUDE.md \"EMA\" "
+            "non-negotiable). Memory: "
+            "feedback_capstone_ema_shadow_lag_reverses_seg_wall_20260611.md."
         )
     return violations
 

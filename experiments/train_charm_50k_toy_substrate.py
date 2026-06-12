@@ -611,9 +611,16 @@ class EMA:
 
     def __init__(self, model: nn.Module, decay: float = 0.997):
         self.decay = decay
+        # Warmup ramp (Catalog #388 / commit f771e6e00): on a SHORT run the
+        # constant-decay shadow FREEZES near init; warmup min(decay,(1+t)/(10+t))
+        # makes the shadow track live from step 1, extincting the EMA-shadow-LAG
+        # artifact (the "d_seg 0.505 seg-wall" / "moved by zero" false-negatives).
+        self._num_updates = 0
         self.shadow = {k: v.clone().detach() for k, v in model.state_dict().items()}
 
     def update(self, model: nn.Module):
+        self._num_updates += 1
+        decay = min(self.decay, (1.0 + self._num_updates) / (10.0 + self._num_updates))
         with torch.no_grad():
             for k, v in model.state_dict().items():
                 if k not in self.shadow:
@@ -622,7 +629,7 @@ class EMA:
                 if not v.is_floating_point():
                     self.shadow[k].copy_(v)
                 else:
-                    self.shadow[k].mul_(self.decay).add_(v, alpha=1 - self.decay)
+                    self.shadow[k].mul_(decay).add_(v, alpha=1 - decay)
 
     def apply(self, model: nn.Module) -> dict:
         """Return original state_dict for restore; copy shadow into model."""

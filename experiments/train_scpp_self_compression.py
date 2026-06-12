@@ -322,6 +322,11 @@ class EMA:
 
     def __init__(self, model: nn.Module, decay: float = 0.997) -> None:
         self.decay = decay
+        # Warmup ramp (Catalog #388 / commit f771e6e00): on a SHORT run the
+        # constant-decay shadow FREEZES near init; warmup min(decay,(1+t)/(10+t))
+        # makes the shadow track live from step 1, extincting the EMA-shadow-LAG
+        # artifact (the "d_seg 0.505 seg-wall" / "moved by zero" false-negatives).
+        self._num_updates = 0
         self.shadow: dict[str, torch.Tensor] = {}
         for k, v in model.state_dict().items():
             if v.dtype.is_floating_point:
@@ -331,11 +336,13 @@ class EMA:
                 self.shadow[k] = v.detach().clone()
 
     def update(self, model: nn.Module) -> None:
+        self._num_updates += 1
+        decay = min(self.decay, (1.0 + self._num_updates) / (10.0 + self._num_updates))
         for k, v in model.state_dict().items():
             if k not in self.shadow:
                 self.shadow[k] = v.detach().clone()
             elif v.dtype.is_floating_point:
-                self.shadow[k].mul_(self.decay).add_(v.detach(), alpha=1.0 - self.decay)
+                self.shadow[k].mul_(decay).add_(v.detach(), alpha=1.0 - decay)
             else:
                 # Non-FP buffers: copy-not-EMA (no fractional int)
                 self.shadow[k] = v.detach().clone()

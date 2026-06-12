@@ -31,7 +31,10 @@ def test_ema_tracks_float_weights_and_copies_integer_buffers() -> None:
     model = _ToyModel()
     with torch.no_grad():
         model.linear.weight.fill_(1.0)
-    ema = EMA(model, decay=0.5)
+    # warmup=False isolates the integer-buffer-copy invariant under exact
+    # constant-decay arithmetic (decay 0.5 -> float mean 2.0). The integer
+    # copy holds identically under warmup; warmup is covered in test_training.
+    ema = EMA(model, decay=0.5, warmup=False)
 
     with torch.no_grad():
         model.linear.weight.fill_(3.0)
