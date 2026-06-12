@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import tempfile
 
+import pytest
 import torch
 import torch.nn.functional as F
 
@@ -527,6 +528,14 @@ def test_lever5_margin_weight_is_monotone_decreasing_in_margin():
 # ===========================================================================
 # CLAIM C — COMPOSE ALL FIVE end-to-end (train -> byte-close -> inflate/parse).
 # ===========================================================================
+# This is the heaviest lever test: a 3-epoch synthetic driver run with ALL FIVE
+# levers + QAT + pose-FiLM + C1a + a full codec byte-close + parse-back. It runs
+# ~55s on an UNLOADED machine — perilously close to the global ``timeout = 60``
+# (pyproject.toml). R3 review measured it time out (>60s) under heavy CPU
+# contention (concurrent test suites + probes) while the SAME test passed in 54.6s
+# in isolation — a pytest-timeout FLAKE, not a lever regression. A per-test 300s
+# timeout removes the false-failure so a multi-day run's CI does not trip on load.
+@pytest.mark.timeout(300)
 def test_compose_all_five_levers_end_to_end(tmp_path):
     """A synthetic driver run with Levers 1+2(+anneal)+3+4+5 ALL ENABLED runs to a
     DONE marker, byte-closes an archive (WITH the Lever-3 pose section), and the
