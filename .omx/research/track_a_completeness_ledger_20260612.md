@@ -83,15 +83,34 @@ advisory number exists · `UNBUILT` not started.
   +worse. Expected net win is 0 until path (a) or (b) lands — do NOT count it in the stack yet.**
 
 ## ITEM C — L3 distortion finishing-kit (PR98 color-bias / T10 boundary / S12 null-preimage / Lever-D margin-residual)
-- **State:** BUILDING (background agent `ae43ac8d`). `distortion_finishing_kit.py` + probe
-  in-flight. PR98 re-fit correctly re-fits all 6 (frame,channel) bias slots on the REAL scorer
-  (exploits "SegNet reads ONLY frame_1 ⇒ a frame_0 bias moves ONLY d_pose"). NOT landed.
-- **`[CORE]`** all four operate on decoded frames + the real scorer at inflate-time — agnostic.
-- **`[ADAPTER]`** applied post-render in the inflate path; the only base_ch20 coupling is where the
-  bias/residual sidecar bytes live in the archive grammar.
-- **GATE TO SEAL:** on land → recursive review (3 clean) → prove default-OFF byte-identical →
-  MEASURE each bolt-on's real ΔS-per-byte (admit only if it pays rent).
-- **Cumulative est −0.0003 to −0.0015 (PR98 + T10 + S12 + Lever-D), stacked.**
+- **State (LANDED 2026-06-12 by partner ae43ac8d; commits de6cf6597 / c1a331376 / 38f748bf7;
+  memo `.omx/research/track_a_distortion_finishing_kit_20260612T220727Z.md`):** built, wired
+  default-OFF byte-identical (`cfg.distortion_kit=None`), 27 tests green, pure-numpy postproc AFTER
+  the pristine vendored inflate.py. MEASURED (n=24, real scorer, MID-BASIN ep340 fork-point,
+  `[contest-CPU advisory]`):
+  - **PR98 re-fit** bias `[[+1,+1,+1],[−1,−1,−1]]` → distortion-score −0.048, **POSE-axis** (d_pose
+    −64%, d_seg flat). KEY: PR101's canonical constants do NOT transfer (worse than zero) — re-fit
+    mandatory.
+  - **T10** small per-channel affine → −0.010 more (pose-axis). Full kit PR98+T10 = **−0.058
+    distortion-score** (0 bytes).
+  - **S12** invisibility mask certified-exact (residual 0.0, d_seg/d_pose bit-identical) but NO byte
+    lever on a render base (stores decoder+latents, not frames).
+  - **LeverD NO-GO at convergence** (the probe's "GO" is a MID-BASIN artifact crediting the
+    un-converged 0.35 seg term — reproduces the witness flip-count crux). d_seg win belongs IN
+    TRAINING (Lever-5), not a stored sidecar. Kit ships no seg-repair section.
+- **`[CORE]`** decoded-frame postproc + real scorer — agnostic. **`[ADAPTER]`** a fixed 54-B section
+  appended post-render; numpy-portable inflate unchanged.
+- **GATE TO SEAL — TWO open risks, both UNDER-POWERED (the operator's lens):** (1) C ran NO formal
+  3-clean recursive review (spawned pre-directive) → needs it; (2) PR98/T10 are n=24 MID-BASIN
+  pose-axis wins — the SAME operating-point risk that flipped LeverD: the converged decoder (trained
+  against the real scorer) may have ALREADY learned the color balance (→ win shrinks to ~0, an
+  under-training artifact) OR the win persists as a uint8-round-trip artifact (PR101 shipped PR98 on
+  a converged decoder). DECISIVE $0 TEST: apply the kit to the basin ep2236 best (d_pose 0.00034, far
+  more converged) and see if the PR98/T10 gain shrinks-with-convergence or persists. Until resolved,
+  the kit is a CONVERGENCE-GATED candidate, NOT a banked win.
+- **HONEST VALUE: 0 banked today — the −0.058 is a mid-basin advisory that must be re-validated on
+  the converged decoder via `kit_aware_exact_eval` before any score claim. READY to apply via the
+  single `enabled=True` switch the moment the distortion arm converges.**
 
 ## ITEM D — L3 rate recodes
 - **D1 — T1 cross-pair latent dedup:** **BUILT + SEALED — MEASURED HONEST NEGATIVE on the
