@@ -386,19 +386,22 @@ _PAGE = r"""<!doctype html>
 :root{--bg:#0b0e14;--panel:#141a24;--panel2:#1b2330;--ink:#e6edf3;--muted:#8b98a9;
 --good:#3fb950;--warn:#d29922;--bad:#f85149;--accent:#58a6ff;--line:#263041;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:hidden}
 .wrap{max-width:1160px;margin:0 auto;padding:18px}
 h1{font-size:15px;margin:0 0 2px;letter-spacing:.04em}
 .sub{color:var(--muted);font-size:12px}
 .row{display:flex;gap:14px;flex-wrap:wrap}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-wrap:anywhere;word-break:break-word;min-width:0;overflow:hidden}
 .hdr .card{flex:1;min-width:300px}
 .score{font-size:30px;font-weight:700;letter-spacing:.02em}
 .tag{font-size:11px;color:var(--muted)}
-.kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-top:3px}
-.kv b{color:var(--ink);font-weight:600;text-align:right}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-top:3px;min-width:0}
+.kv b{color:var(--ink);font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.kv span{flex:0 0 auto}
 .kv.stack{flex-direction:column;align-items:flex-start;gap:1px}
-.kv.stack b{word-break:break-all;text-align:left;line-height:1.3}
+.kv.stack b{word-break:break-all;text-align:left;line-height:1.3;width:100%}
+.metric .v{overflow-wrap:anywhere}
+#run-name{overflow-wrap:anywhere;word-break:break-all}
 .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--line)}
 .pill.cpu{color:var(--accent);border-color:#234}
 .pill.cuda{color:var(--good);border-color:#243}
@@ -431,14 +434,14 @@ svg{display:block}
   <div class="row hdr">
     <div class="card"><div class="tag"><span class="pill cpu">contest-CPU</span> &nbsp;public-leaderboard axis</div>
       <div class="score" id="cpu-score">—</div>
-      <div class="kv"><span>technique</span><b id="cpu-tech">—</b></div>
+      <div class="kv stack"><span>technique</span><b id="cpu-tech">—</b></div>
       <div class="kv"><span>archive bytes</span><b id="cpu-bytes">—</b></div>
       <div class="kv"><span>measured</span><b id="cpu-when">—</b></div>
       <div class="kv"><span>sha</span><b id="cpu-sha">—</b></div>
     </div>
     <div class="card"><div class="tag"><span class="pill cuda">contest-CUDA</span> &nbsp;T4 axis</div>
       <div class="score" id="cuda-score">—</div>
-      <div class="kv"><span>technique</span><b id="cuda-tech">—</b></div>
+      <div class="kv stack"><span>technique</span><b id="cuda-tech">—</b></div>
       <div class="kv"><span>archive bytes</span><b id="cuda-bytes">—</b></div>
       <div class="kv"><span>measured</span><b id="cuda-when">—</b></div>
       <div class="kv"><span>sha</span><b id="cuda-sha">—</b></div>
