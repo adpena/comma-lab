@@ -36,47 +36,132 @@ class RealScorerContext:
     vendored ``precompute_targets``), holds the frozen ``distortion_net``, and
     routes the per-step forward + the BEST-tracking exact eval through the
     vendored primitives unchanged.
+
+    Split-device (the 104x MPS lever): pass ``train_device='mps'`` to run the
+    per-step ``seg_pose_forward`` (the gradient backend) on the Apple GPU while
+    ``exact_eval`` ALWAYS runs on the AUTHORITY device (``device``, CPU-TRUSTED /
+    CUDA) — the exact d_seg/d_pose that pick BEST are NEVER read off MPS
+    (CLAUDE.md "MPS auth eval is NOISE": 23x pose drift). Two frozen scorer
+    instances are held (authority on ``device``, train on ``train_device``); the
+    weights are identical (frozen), only the device differs. The targets are held
+    on the train device (where the per-step loss is computed); ``exact_eval``
+    streams fresh GT through the authority net so it needs no target copy.
     """
 
     research_only = False
 
-    def __init__(self, video_path: str | Path, device: str = "cpu"):
+    def __init__(
+        self,
+        video_path: str | Path,
+        device: str = "cpu",
+        *,
+        train_device: str | None = None,
+        max_pairs: int | None = None,
+        targets_cache: str | Path | None = None,
+    ):
         if str(device).lower().startswith("mps"):
-            raise ValueError("MPS is NEVER trusted (CLAUDE.md). Use 'cpu' (TRUSTED) or 'cuda'.")
-        self.device = torch.device(device)
+            raise ValueError(
+                "MPS is NEVER trusted as the AUTHORITY device (CLAUDE.md). Use 'cpu' "
+                "(TRUSTED) or 'cuda' for device; pass train_device='mps' to use the "
+                "Apple GPU as the per-step GRADIENT backend only (split-device)."
+            )
+        self.device = torch.device(device)  # AUTHORITY/eval device
+        self.train_device = torch.device(train_device) if train_device else self.device
+        self.split_device = self.train_device != self.device
         self.video_path = Path(video_path)
         from tac.torch_vehicle.vendored_imports import import_vendored
 
         self._data = import_vendored("data")  # applies the differentiable-yuv6 patch
         self._score = import_vendored("score")
-        (
+        # The AUTHORITY scorer (eval) is always built on ``device`` (CPU-TRUSTED).
+        from tac.score_aware_loop.targets import load_frozen_distortion_net
+
+        self.distortion_net = load_frozen_distortion_net(device=str(self.device))
+        # Targets are the frozen scorer's OWN output on GT (the d_seg/d_pose
+        # reference) — ALWAYS computed on the CPU AUTHORITY (never MPS). For the
+        # full basis we use the uncapped vendored ``precompute_targets``; for a
+        # cheap-n A/B / smoke (max_pairs set) we use the CAPPED, cached
+        # ``build_gt_targets`` so the per-step target precompute does not pay the
+        # full 600-pair CPU cost (~2.5h) — only the n we actually train on.
+        if max_pairs is None:
+            (
+                _net,
+                seg_targets_hard,
+                pose_targets,
+                _gt_half,
+                self.n_pairs,
+            ) = self._data.precompute_targets(self.video_path, self.device)
+        else:
+            seg_targets_hard, pose_targets = self._build_capped_targets(
+                int(max_pairs), targets_cache
+            )
+            self.n_pairs = int(seg_targets_hard.shape[0])
+        # The per-step loss runs on the train device; hold the targets there.
+        self.seg_targets_hard = seg_targets_hard.to(self.train_device)
+        self.pose_targets = pose_targets.to(self.train_device)
+        # The TRAIN-side frozen scorer (gradient backend). Identical frozen weights
+        # to the authority net; only the device differs. When not split-device this
+        # IS the authority net (no second copy).
+        if self.split_device:
+            from tac.score_aware_loop.targets import load_frozen_distortion_net
+
+            self.train_distortion_net = load_frozen_distortion_net(
+                device=str(self.train_device)
+            )
+        else:
+            self.train_distortion_net = self.distortion_net
+
+    def _build_capped_targets(
+        self, max_pairs: int, targets_cache: str | Path | None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Build (or load from cache) the first ``max_pairs`` CPU-authority GT
+        targets via the capped ``build_gt_targets`` path. Cached to disk so a
+        repeated A/B / smoke does not re-pay the per-pair CPU scorer cost."""
+        from tac.score_aware_loop.targets import build_gt_targets
+
+        cache_file: Path | None = None
+        if targets_cache is not None:
+            cache_dir = Path(targets_cache)
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file = cache_dir / f"gt_targets_n{max_pairs}.pt"
+            if cache_file.exists():
+                blob = torch.load(cache_file, map_location="cpu", weights_only=False)
+                return blob["seg"][:max_pairs], blob["pose"][:max_pairs]
+        seg_t, pose_t, _n = build_gt_targets(
             self.distortion_net,
-            self.seg_targets_hard,
-            self.pose_targets,
-            _gt_half,
-            self.n_pairs,
-        ) = self._data.precompute_targets(self.video_path, self.device)
+            video_path=str(self.video_path),
+            max_pairs=max_pairs,
+            device=str(self.device),  # CPU AUTHORITY
+        )
+        if cache_file is not None:
+            torch.save({"seg": seg_t.cpu(), "pose": pose_t.cpu()}, cache_file)
+        return seg_t, pose_t
 
     def seg_pose_forward(self, decoded_bhwc: torch.Tensor):
         """Run the real frozen scorer on roundtripped decoder output, 1:1 with
-        ``common.py:187-189``."""
-        posenet_in, segnet_in = self.distortion_net.preprocess_input(decoded_bhwc)
-        seg_out = self.distortion_net.segnet(segnet_in)
-        pose_out = self.distortion_net.posenet(posenet_in)
+        ``common.py:187-189`` — on the TRAIN device (the gradient backend, possibly
+        the Apple GPU). This is the only path that uses MPS; its gradient is
+        research-signal until the descent-equivalence gate clears it."""
+        net = self.train_distortion_net
+        posenet_in, segnet_in = net.preprocess_input(decoded_bhwc)
+        seg_out = net.segnet(segnet_in)
+        pose_out = net.posenet(posenet_in)
         return seg_out, pose_out["pose"][:, :6]
 
     def exact_eval(self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int):
         """Canonical d_seg/d_pose/rate/score on the EMA shadow (BEST tracker).
 
-        Routes through the vendored ``evaluate_decoder`` (streams GT via
-        ``yuv420_to_rgb``) + ``compute_score`` (the official metric). The
-        archive_bytes is the BYTE-CLOSED size from the build_archive the driver
-        already produced (so the rate term is the real archive bytes)."""
+        ALWAYS on the AUTHORITY device (``self.device``), NEVER the train device:
+        the score that picks BEST is the CPU-TRUSTED exact metric (CLAUDE.md "MPS
+        auth eval is NOISE"). Routes through the vendored ``evaluate_decoder``
+        (streams GT via ``yuv420_to_rgb``) + ``compute_score`` (the official
+        metric). The archive_bytes is the BYTE-CLOSED size from the build_archive
+        the driver already produced (so the rate term is the real archive bytes)."""
         tvb = self._score.total_video_bytes(self.video_path)
         dist = self._score.evaluate_decoder(
             ema_decoder,
             ema_latents.to(self.device),
-            self.distortion_net,
+            self.distortion_net,  # the AUTHORITY net (device=self.device)
             self.video_path,
             batch_pairs=8,
             device=self.device,
@@ -123,30 +208,49 @@ class SyntheticScorerContext:
 
     research_only = True
 
-    def __init__(self, n_pairs: int = 6, device: str = "cpu", seed: int = 0):
-        self.device = torch.device(device)
+    def __init__(
+        self, n_pairs: int = 6, device: str = "cpu", seed: int = 0, *, train_device: str | None = None
+    ):
+        self.device = torch.device(device)  # authority/eval device
+        self.train_device = torch.device(train_device) if train_device else self.device
+        self.split_device = self.train_device != self.device
         self.n_pairs = int(n_pairs)
+        # Authority scorer (eval) + train scorer (forward). Same frozen weights;
+        # only the device differs (mirrors RealScorerContext split-device).
         self._scorer = _TinyFrozenScorer(seed=seed).to(self.device).eval()
+        self._train_scorer = (
+            _TinyFrozenScorer(seed=seed).to(self.train_device).eval()
+            if self.split_device
+            else self._scorer
+        )
         g = torch.Generator().manual_seed(seed + 1)
         # GT targets: random-but-fixed seg labels (0..4) over 384x512, pose 6-d.
+        # Held on the TRAIN device (where the per-step loss is computed).
         self.seg_targets_hard = torch.randint(
             0, 5, (self.n_pairs, 384, 512), generator=g
-        ).to(self.device)
-        self.pose_targets = torch.empty(self.n_pairs, 6).uniform_(-1, 1, generator=g).to(self.device)
+        ).to(self.train_device)
+        self.pose_targets = (
+            torch.empty(self.n_pairs, 6).uniform_(-1, 1, generator=g).to(self.train_device)
+        )
 
     def seg_pose_forward(self, decoded_bhwc: torch.Tensor):
         """decoded_bhwc: (B, 2, 384, 512, 3) float [0,255]. Use last frame for seg
-        (matching the contest's last-frame seg), both-frame mean for pose."""
+        (matching the contest's last-frame seg), both-frame mean for pose. Runs on
+        the TRAIN scorer (gradient backend; mirrors RealScorerContext split)."""
         last = decoded_bhwc[:, -1].permute(0, 3, 1, 2) / 255.0  # (B,3,384,512)
-        seg_out = self._scorer.seg(last)  # (B,5,384,512)
+        seg_out = self._train_scorer.seg(last)  # (B,5,384,512)
         # pose from a cheap global pool of the pair mean.
         pooled = decoded_bhwc.mean(dim=(1, 2, 3)) / 255.0  # (B,3)
-        pose_pred6 = self._scorer.pose(pooled)  # (B,6)
+        pose_pred6 = self._train_scorer.pose(pooled)  # (B,6)
         return seg_out, pose_pred6
 
     def exact_eval(self, ema_decoder: nn.Module, ema_latents: torch.Tensor, archive_bytes: int):
         """A deterministic synthetic 'score' from the EMA shadow argmax-flip vs
-        targets + a byte rate. RESEARCH-ONLY — not a contest score."""
+        targets + a byte rate. RESEARCH-ONLY — not a contest score. ALWAYS on the
+        AUTHORITY device/scorer (mirrors RealScorerContext: eval is never on the
+        train device)."""
+        seg_targets = self.seg_targets_hard.to(self.device)
+        pose_targets = self.pose_targets.to(self.device)
         with torch.inference_mode():
             n = min(self.n_pairs, ema_latents.shape[0])
             z = ema_latents[:n].to(self.device)
@@ -154,13 +258,13 @@ class SyntheticScorerContext:
             last = decoded[:, -1] / 255.0  # (n,3,384,512)
             seg_logits = self._scorer.seg(last)
             d_seg = (
-                (seg_logits.argmax(dim=1) != self.seg_targets_hard[:n]).float().mean().item()
+                (seg_logits.argmax(dim=1) != seg_targets[:n]).float().mean().item()
             )
             pooled = decoded.mean(dim=(1, 3, 4)) / 255.0  # (n,3)... careful dims
             # decoded is (n,2,3,384,512); mean over frames+spatial -> (n,3)
             pooled = decoded.mean(dim=(1, 3, 4))[:, :3] / 255.0
             pose_pred = self._scorer.pose(pooled)
-            d_pose = torch.nn.functional.mse_loss(pose_pred, self.pose_targets[:n]).item()
+            d_pose = torch.nn.functional.mse_loss(pose_pred, pose_targets[:n]).item()
         rate = archive_bytes / 37_545_489.0
         score = 100.0 * d_seg + (10.0 * d_pose + 1e-12) ** 0.5 + 25.0 * rate
         return {

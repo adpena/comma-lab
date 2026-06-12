@@ -39,7 +39,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--ema-decay", type=float, default=0.999, help="PR95-faithful EMA decay (0.999)")
     p.add_argument("--eval-every", type=int, default=None, help="override per-stage eval cadence")
     p.add_argument("--checkpoint-every-epochs", type=int, default=1, help="a death costs <= this many epochs")
-    p.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="cpu TRUSTED; cuda for Modal. NO mps.")
+    p.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
+                   help="AUTHORITY/eval device: cpu TRUSTED; cuda for Modal. NO mps (auth is noise).")
+    p.add_argument("--train-device", default=None, choices=[None, "cpu", "cuda", "mps"],
+                   help="GRADIENT backend (per-step fwd+bwd). mps=Apple GPU ~104x faster; "
+                        "eval stays on --device (CPU authority). Default: same as --device.")
     p.add_argument("--video-path", type=Path, default=None,
                    help="contest video (default: vendored data.get_default_video_path())")
     p.add_argument("--seed", type=int, default=0)
@@ -82,9 +86,12 @@ def main(argv: list[str] | None = None) -> int:
         ema_decay=args.ema_decay,
         eval_every=args.eval_every,
         device=args.device,
+        train_device=args.train_device,
         seed=args.seed,
     )
-    scorer = RealScorerContext(video_path, device=args.device)
+    scorer = RealScorerContext(
+        video_path, device=args.device, train_device=args.train_device
+    )
     driver = TorchVehicleDriver(cfg, scorer=scorer, vendored=import_vendored_bundle())
     summary = driver.run()
     print(json.dumps(summary, indent=2, sort_keys=True))

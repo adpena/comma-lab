@@ -119,16 +119,30 @@ class TorchVehicleConfig:
     total_epoch_budget: int | None = None
     ema_decay: float = 0.999
     eval_every: int | None = None
-    device: str = "cpu"  # CPU TRUSTED; NO MPS (raises on mps below)
+    # ``device`` is the AUTHORITY/eval device — the exact d_seg/d_pose that pick
+    # the BEST checkpoint and seed the telemetry MUST be CPU-TRUSTED (or CUDA);
+    # MPS is FORBIDDEN here (CLAUDE.md "MPS auth eval is NOISE": 23x pose drift).
+    device: str = "cpu"
+    # ``train_device`` is the GRADIENT backend ONLY — the per-step forward+backward
+    # of the decoder→roundtrip→frozen-scorer graph. MPS is ALLOWED here (and is the
+    # whole point: ~104x faster fwd+bwd than torch-CPU per the bench). The MPS
+    # gradient is research-signal until it passes the descent-equivalence acceptance
+    # gate (BOTH d_seg AND d_pose at the real n); the EXACT metric is always re-run
+    # on ``device`` (CPU authority). Defaults to ``device`` (single-device legacy).
+    train_device: str | None = None
     seed: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if str(self.device).lower().startswith("mps"):
             raise ValueError(
-                "MPS is NEVER trusted (CLAUDE.md): corrupts SegNet/PoseNet argmax. "
-                "Use device='cpu' (TRUSTED) or 'cuda'."
+                "MPS is NEVER trusted as the AUTHORITY device (CLAUDE.md): corrupts "
+                "SegNet/PoseNet argmax (23x pose drift). The exact d_seg/d_pose that "
+                "pick BEST must be CPU/CUDA. Set device='cpu' and train_device='mps' "
+                "to use the Apple GPU as the GRADIENT backend only (split-device)."
             )
+        if self.train_device is None:
+            self.train_device = self.device
         self.out_dir = Path(self.out_dir)
 
 
@@ -169,7 +183,11 @@ class TorchVehicleDriver:
         self.cfg = cfg
         self.scorer = scorer
         self.v = vendored
+        # AUTHORITY/eval device (CPU-TRUSTED or CUDA) — the exact d_seg/d_pose live
+        # here. ``train_device`` is the GRADIENT backend (may be MPS for the 104x).
         self.device = torch.device(cfg.device)
+        self.train_device = torch.device(cfg.train_device or cfg.device)
+        self.split_device = self.train_device != self.device
         self.n_pairs = int(scorer.n_pairs)
         if curriculum is None:
             from tac.torch_vehicle.curriculum import build_curriculum
@@ -200,12 +218,15 @@ class TorchVehicleDriver:
         self._stop_after_global_epoch: int | None = None
 
     # -- architecture construction (base_ch threaded — the FINDING-1 fix) -----
-    def _new_decoder(self) -> nn.Module:
+    def _new_decoder(self, device: torch.device | None = None) -> nn.Module:
+        """Build a fresh base_ch-threaded decoder on ``device`` (default: the
+        TRAIN device — the gradient backend). The parse-back EVAL decoder is built
+        on the AUTHORITY device explicitly (``device=self.device``)."""
         return self.v.HNeRVDecoder(
             latent_dim=self.cfg.latent_dim,
             base_channels=self.cfg.base_channels,
             eval_size=(_EVAL_H, _EVAL_W),
-        ).to(self.device)
+        ).to(device if device is not None else self.train_device)
 
     def _build_stage_runtime(
         self,
@@ -283,7 +304,10 @@ class TorchVehicleDriver:
         n_pairs = self.n_pairs
         bs = spec.batch_size
         # torch.randperm honors the global torch RNG (captured/restored on resume).
-        pair_indices = torch.randperm(n_pairs, device=self.device)
+        # Build on CPU then move so the RNG draw is device-independent (MPS has its
+        # own RNG stream) — this keeps the resume bit-identical regardless of the
+        # train device, and keeps the permutation reproducible vs a CPU-arm A/B.
+        pair_indices = torch.randperm(n_pairs).to(self.train_device)
         epoch_loss = 0.0
         epoch_pose = 0.0
         nb = 0
@@ -318,7 +342,7 @@ class TorchVehicleDriver:
             loss = spec.seg_weight * seg_l + spec.pose_weight * pose_l
             if spec.cat_lambda > 0:
                 ent = self.v.cat_entropy_v2(
-                    decoder, sigma=spec.cat_sigma, sample_size=2000, device=self.device
+                    decoder, sigma=spec.cat_sigma, sample_size=2000, device=self.train_device
                 )
                 loss = loss + spec.cat_lambda * ent
 
@@ -375,12 +399,15 @@ class TorchVehicleDriver:
         }
 
     def _restore_into(self, rt: _StageRuntime, merged: dict[str, Any]) -> None:
-        rt.decoder.load_state_dict({k: v.to(self.device) for k, v in merged["decoder"].items()})
-        rt.latents.data = merged["latents"].to(self.device)
+        # The TRAIN runtime (decoder/latents/EMA shadow) lives on the train device
+        # (the gradient backend, possibly MPS); the checkpoint is CPU-resident.
+        td = self.train_device
+        rt.decoder.load_state_dict({k: v.to(td) for k, v in merged["decoder"].items()})
+        rt.latents.data = merged["latents"].to(td)
         rt.ema_decoder.load_state_dict(
-            {k: v.to(self.device) for k, v in merged["ema_decoder"].items()}
+            {k: v.to(td) for k, v in merged["ema_decoder"].items()}
         )
-        rt.ema_latents = merged["ema_latents"].to(self.device)
+        rt.ema_latents = merged["ema_latents"].to(td)
         rt.adamw_opt.load_state_dict(merged["adamw"])
         if rt.muon_opt is not None and merged.get("muon") is not None:
             rt.muon_opt.load_state_dict(merged["muon"])
@@ -407,7 +434,9 @@ class TorchVehicleDriver:
         Returns the eval dict (d_seg / d_pose / rate / score / archive_bytes /
         is_best). The BEST EMA shadow + archive are written to ``out_dir/best/``.
         """
-        ema_sd = rt.ema_decoder.state_dict()
+        # Move the EMA shadow to CPU for the archive build (int8 quant is a
+        # numpy/CPU path; an MPS-resident state_dict would otherwise break it).
+        ema_sd = {k: v.detach().cpu().clone() for k, v in rt.ema_decoder.state_dict().items()}
         archive = self.v.build_archive(
             ema_sd,
             rt.ema_latents.cpu(),
@@ -420,9 +449,13 @@ class TorchVehicleDriver:
         )
         archive_bytes = len(archive)
         # Parse-back: the int8-dequantized decoder + delta-decoded latents — the
-        # contest-visible artifact (faithful to common.py).
+        # contest-visible artifact (faithful to common.py). The exact eval runs on
+        # the AUTHORITY device (CPU-TRUSTED / CUDA), NEVER the train device — even
+        # when training on MPS the score that picks BEST is the CPU authority
+        # (CLAUDE.md "MPS auth eval is NOISE"). So the eval decoder is built on
+        # self.device and the scorer's exact_eval routes through its authority net.
         eval_decoder_sd, eval_latents, _meta = self.v.parse_archive(archive)
-        eval_dec = self._new_decoder()
+        eval_dec = self._new_decoder(device=self.device)
         eval_dec.load_state_dict({k: v.to(self.device) for k, v in eval_decoder_sd.items()})
         eval_dec.eval()
         ev = self.scorer.exact_eval(eval_dec, eval_latents.to(self.device), archive_bytes)
@@ -520,10 +553,15 @@ class TorchVehicleDriver:
                 merged is not None and stage_index == resume_pos.stage_index
             )
             if carry_decoder is None:
-                decoder = self._new_decoder()
+                decoder = self._new_decoder()  # train-device (gradient backend)
                 if spec.init_latents_random:
+                    # Draw on CPU (deterministic via the global seed) then move to the
+                    # train device — MPS has its own RNG stream, so a CPU draw keeps
+                    # the init reproducible vs a CPU-arm descent-equivalence A/B.
                     latents = nn.Parameter(
-                        torch.randn(self.n_pairs, self.cfg.latent_dim, device=self.device) * 0.1
+                        (torch.randn(self.n_pairs, self.cfg.latent_dim) * 0.1).to(
+                            self.train_device
+                        )
                     )
                 elif resuming_into_this_stage:
                     # The latents will be overwritten by ``_restore_into`` below; a
@@ -531,7 +569,7 @@ class TorchVehicleDriver:
                     # vendored loop loads ``final_latents.pt`` here — we load from
                     # the checkpoint).
                     latents = nn.Parameter(
-                        torch.zeros(self.n_pairs, self.cfg.latent_dim, device=self.device)
+                        torch.zeros(self.n_pairs, self.cfg.latent_dim, device=self.train_device)
                     )
                 else:
                     # Fail closed (faithful to vendored common.py:122): a non-stage-1
