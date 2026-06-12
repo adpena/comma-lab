@@ -48,7 +48,9 @@ from flask import Flask, jsonify, render_template_string, request
 RATE_DENOM = 37_545_489  # contest archive-size normalizer
 TARGET_FLOOR = 0.19      # T_1 — floor of acceptable
 TARGET_GOAL = 0.15       # T_3 — THE target
-DEFAULT_TOTAL_EPOCHS = 2000  # the base_ch=20 n600 curriculum budget (planned)
+DEFAULT_TOTAL_EPOCHS = 29650  # faithful full PR95 8-stage curriculum
+# (3000+5650+1500+500+9000+2000+3000+5000); the basin runs this when the launcher's
+# total_epoch_budget is unset (None). A compressed budget is auto-detected per-run.
 DEFAULT_PORT = 8765          # canonical dashboard port (hardcoded)
 DEFAULT_HOST = "127.0.0.1"
 
@@ -544,7 +546,10 @@ function sparkline(vals){const svg=$('spark');svg.innerHTML='';if(!vals||vals.le
   const c=el('circle');c.setAttribute('cx',pts[pts.length-1][0]);c.setAttribute('cy',pts[pts.length-1][1]);c.setAttribute('r','2.6');c.setAttribute('fill','#3fb950');svg.appendChild(c);
   $('spark-range').textContent=`min ${sci(mn)} · max ${sci(mx)} · n=${vals.length}`;}
 async function tick(){
-  let st;try{st=await (await fetch('/api/state'+location.search)).json();}catch(e){$('subline').textContent='api error: '+e;return;}
+  let st;
+  try{const _r=await fetch('/api/state'+location.search);st=await _r.json();}
+  catch(e){$('subline').textContent='reconnecting… (dashboard server restarting; auto-retries every 2.5s)';return;}
+  try{
   const now=st.now_unix;
   // frontier
   const fr=st.frontier||{};
@@ -605,6 +610,7 @@ async function tick(){
       `<td>${row.lr==null?'—':(+row.lr).toFixed(4)}</td><td>${dur(row.elapsed_s)}</td>`;
     tb.appendChild(tr);}
   $('foot').textContent='advisory display only · authority d_seg/d_pose are torch-CPU · frontier is pointer-only · poll ~2.5s · clock 1s';
+  }catch(e){$('subline').textContent='render hiccup ('+e+') — retrying';}
 }
 // 1s local ticker: elapsed + ETA + progress advance smoothly between polls (operator: realtime, regardless of poll rate)
 function liveClock(){
