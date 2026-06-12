@@ -1458,11 +1458,14 @@ def kit_aware_exact_eval(
 ) -> dict[str, float]:
     """Faithful kit-aware exact eval — MIRRORS the vendored ``score.evaluate_decoder``
     (render → bicubic↑ camera → clamp/round/uint8 → ``compute_distortion``) but
-    INSERTS the distortion-kit postproc on the camera frames BEFORE the round/cast,
-    so the BEST-tracked score reflects the FINISHED frames. NO vendored edit.
+    INSERTS the distortion-kit postproc on the POST-ROUND uint8 frames — EXACTLY where
+    the substrate's ``inflate.sh`` runs ``apply_distortion_kit_to_raw_frames`` after
+    the vendored ``inflate.py``. So the BEST-tracked score equals what the FINISHED
+    contest packet produces (the production inflate path), not a pre-round
+    approximation (the ≤1 ULP gap matters for a ±1-bias fit). NO vendored edit.
 
     A ``distortion_kit=None`` (or disabled/identity) is the byte-identical no-op:
-    the camera frames pass through unchanged so the score equals the vendored eval.
+    the frames pass through unchanged so the score equals the vendored eval.
     """
     import av
 
@@ -1470,7 +1473,7 @@ def kit_aware_exact_eval(
 
     from tac.torch_vehicle.distortion_finishing_kit import (
         DistortionKitConfig,
-        apply_distortion_kit_to_camera_float,
+        apply_distortion_kit_to_raw_frames,
     )
 
     _EVAL_H, _EVAL_W = 384, 512
@@ -1517,9 +1520,19 @@ def kit_aware_exact_eval(
             flat, size=(_CAM_H, _CAM_W), mode="bicubic", align_corners=False
         )
         cam_float = up.reshape(b, 2, 3, _CAM_H, _CAM_W).permute(0, 1, 3, 4, 2)
-        # --- THE KIT HOOK: postproc the camera frames BEFORE the round/cast. ---
-        cam_float = apply_distortion_kit_to_camera_float(cam_float, distortion_kit)
+        # Vendored-inflate-faithful: the contest packet rounds/casts to uint8 in the
+        # vendored inflate.py, THEN the substrate's inflate.sh runs the numpy raw-frame
+        # kit postproc. So the eval applies the kit POST-round (on the uint8 frames)
+        # to match the PRODUCTION inflate path EXACTLY (not pre-round; the ≤1 ULP gap
+        # matters for a ±1-bias fit). NO vendored edit — this MIRRORS the substrate's
+        # own inflate.sh chain (vendored inflate -> apply_distortion_kit_to_raw_frames).
         cand = cam_float.clamp(0, 255).round().to(torch.uint8)
+        if not (distortion_kit is None or distortion_kit.is_identity):
+            # Flatten (B,2,...) -> (2B,...) so frame PARITY matches the raw-frame layout
+            # (pair k -> frames 2k, 2k+1), apply the numpy kit, reshape back.
+            raw = cand.reshape(b * 2, _CAM_H, _CAM_W, 3).cpu().numpy()
+            finished = apply_distortion_kit_to_raw_frames(raw, distortion_kit)
+            cand = torch.from_numpy(finished).reshape(b, 2, _CAM_H, _CAM_W, 3).to(dev)
         pose_d, seg_d = distortion_net.compute_distortion(gt, cand)
         seg_total += float(seg_d.sum().item())
         pose_total += float(pose_d.sum().item())
@@ -1602,8 +1615,8 @@ __all__ = [
     "TorchVehicleConfig",
     "TorchVehicleDriver",
     "VendoredBundle",
+    "finish_checkpoint_with_distortion_kit",
     "import_vendored_bundle",
     "kit_aware_exact_eval",
-    "finish_checkpoint_with_distortion_kit",
     "split_finished_archive",
 ]
