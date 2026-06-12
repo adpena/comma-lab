@@ -65,12 +65,21 @@ On the real smoke's trained latents (`bits_per_std=5.0`, 32 levels/std; lossless
 - **Pure AR-entropy gain ≈ 20-25 %** over a minimal fixed-width store at the SAME grid. This is the entropy coder doing real work the AR prior enables — a no-op / fixed-width store cannot achieve it (asserted in `test_ar_coded_concentrated_latents_beats_fixed_width`).
 - **vs raw int16 ≈ 50-63 %** combines requant + entropy (both lossless-to-grid). The requant half is a legitimate, separate lever (the int16 grid was absurdly over-precise); the entropy half is the AR coder.
 
-**FULL 600-pair total (bits_per_std=5):** *(filled from `ar_entropy_measure_bps5.json` when the run completes; the representative window is the lower bound — the full run's pure-entropy gain is typically ≥ the window because the AR chain has more context).*
+**FULL 600-pair total (bits_per_std=5; MEASURED, `ar_entropy_measure_bps5.json`, lossless round-trip CONFIRMED on the complete 9.2M-element archive):**
 
-- raw-int16 latent bytes → AR-coded latent bytes: see JSON `raw_int16_latent_bytes` → `ar_coded_latent_bytes`.
-- new total archive (was 18,445,862 B): JSON `ccv2_total_bytes`.
-- advisory rate term `25·B/37,545,489`: CCV1 `0.01228` → CCV2 see `ccv2_advisory_rate_term`.
-- lossless round-trip: JSON `lossless_roundtrip_verified: true`.
+| Quantity | CCV1 (raw int16) | CCV2 (AR-coded) | Reduction |
+|---|---:|---:|---:|
+| **latent bytes** | **18,432,000** | **7,827,734** | **57.5 %** |
+| — coarse | 3,686,400 | 1,552,987 | 57.9 % |
+| — fine | 14,745,600 | 6,274,747 | 57.4 % |
+| fixed-width @grid (entropy baseline) | — | 10,368,000 | — |
+| **total archive `0.bin`** | **18,445,862** | **7,841,525** | **57.5 %** |
+| advisory rate term `25·B/N` | 12.28 | **5.22** | — |
+
+- **Pure AR-entropy gain (vs fixed-width @same grid): 24.5 %** — the entropy coder doing real work the AR prior enables (matches the 60-pair window estimate; the full chain confirms it).
+- **vs raw int16: 57.5 %** — combines requant (16-bit→32-levels/std) + AR entropy, both lossless-to-grid.
+- **Lossless round-trip: CONFIRMED (`lossless_roundtrip_verified: true`)** — the full CCV2 archive decodes back to the exact integer grid (9.2M elements).
+- Encode wall-clock: coarse 91.8 s + fine 365.4 s (pure-Python coder; functionally correct, not throughput-optimized — a production port would vectorize the per-symbol loop or move to constriction/native).
 
 ---
 
@@ -108,7 +117,7 @@ Cool-Chic's lane history includes pose folding (`cool_chic_carrier._PoseFiLM`, `
 **Yes, Cool-Chic is now a REAL rate carrier** (the entropy coder is real, lossless, and shrinks bytes — the L0 INERT-AR-prior gap is closed). **But the Track-B thesis (latent floor below HNeRV's decoder-weight floor) is NOT YET proven, and the honest gating fact is the AR prior quality.**
 
 - HNeRV's floor is its decoder-weight blob (~91 % of its ~177 KB frontier archive ≈ 161 KB decoder). Cool-Chic's analogous floor is the AR-coded latent rate.
-- **At the current under-trained AR prior**, the 600-pair AR-coded latent rate is far above HNeRV's 161 KB decoder floor (the smoke latents at bits_per_std=5 code to ~MB-scale — see the JSON; the 6-epoch prior + 32-levels/std grid is nowhere near a competitive operating point). So **on this smoke, Cool-Chic does NOT beat HNeRV's floor.**
+- **At the current under-trained AR prior**, the 600-pair AR-coded latent rate is **7.83 MB** (advisory rate term **5.22**, vs HNeRV's frontier rate term ~0.108 and total archive 177 KB). The 6-epoch prior + 32-levels/std grid is **~44× above HNeRV's decoder-weight floor** on this smoke. So **on this smoke, Cool-Chic does NOT beat HNeRV's floor** — by a wide margin. The 57.5 % reduction is real but starts from an 18 MB baseline; the absolute rate is still dominated by the latents needing far more aggressive coding (coarser grid + a TRAINED conditional prior + T1/T8).
 - **The structural reason it COULD:** Cool-Chic's rate is `H(latents | AR prior)` which, with a well-trained conditional prior on a single near-stationary dashcam drive, has large temporal redundancy to exploit (T1/T8 headroom is `−0.003 to −0.006` per the bolt-on inventory — larger than HNeRV's whole PR112 win). The latent floor is set by the genuine information content of the appearance the synthesis MLP needs, which CAN be below a fixed decoder-weight blob IF the AR prior + grid + T1/T8 are pushed to their operating point.
 - **The blocker is Layer-2 training, not the coder.** The coder is built and correct; what it codes against (the AR prior) must be trained to a tight conditional σ. This is the reactivation criterion: re-measure after a long in-curriculum AR-rate training run (the L0→L1 lane reactivation path).
 
