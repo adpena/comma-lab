@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,8 @@ RATE_DENOM = 37_545_489  # contest archive-size normalizer
 TARGET_FLOOR = 0.19      # T_1 — floor of acceptable
 TARGET_GOAL = 0.15       # T_3 — THE target
 DEFAULT_TOTAL_EPOCHS = 2000  # the base_ch=20 n600 curriculum budget (planned)
+DEFAULT_PORT = 8765          # canonical dashboard port (hardcoded)
+DEFAULT_HOST = "127.0.0.1"
 
 _TRAJECTORY_NAMES = ("torch_vehicle_trajectory.jsonl", "trajectory.jsonl")
 
@@ -104,14 +107,36 @@ def _is_ancillary(path: Path) -> bool:
     return any(m in s for m in _ANCILLARY_MARKERS)
 
 
-def discover_runs(root: Path) -> list[Path]:
-    """Every trajectory file under experiments/results/, newest mtime first."""
+_RUNS_CACHE: dict[str, Any] = {"ts": 0.0, "runs": []}
+_RUNS_TTL_S = 15.0
+
+
+def discover_runs(root: Path, *, ttl: float = _RUNS_TTL_S) -> list[Path]:
+    """Trajectory files under experiments/results/, newest mtime first.
+
+    CRITICAL: experiments/results/ holds 200k+ files (inflated frames,
+    checkpoints, artifacts). A recursive ``**`` glob walks ALL of them (~3s) and
+    would hang the dashboard on every poll. Instead we glob only the BOUNDED
+    depths where trajectory files actually live (``results/<run>/`` and one or
+    two levels under, e.g. ``.../arm_clean/``) and CACHE the result for ``ttl``
+    seconds — the run LIST changes rarely; the live trajectory CONTENT is read
+    fresh per request (one small file)."""
+    now = time.time()
+    if (now - _RUNS_CACHE["ts"]) < ttl and _RUNS_CACHE["runs"]:
+        return _RUNS_CACHE["runs"]
     results = root / "experiments" / "results"
+    seen: set[Path] = set()
     found: list[Path] = []
     for name in _TRAJECTORY_NAMES:
-        found.extend(results.glob(f"**/{name}"))
-    found = [p for p in found if p.is_file()]
+        for depth in ("*/", "*/*/", "*/*/*/"):  # bounded — NOT a full ** walk
+            for p in results.glob(depth + name):
+                if p in seen or not p.is_file():
+                    continue
+                seen.add(p)
+                found.append(p)
     found.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    _RUNS_CACHE["ts"] = now
+    _RUNS_CACHE["runs"] = found
     return found
 
 
@@ -138,32 +163,39 @@ def _f(row: dict, *keys: str) -> float | None:
 
 
 def _normalize_row(row: dict) -> dict | None:
+    """Normalize BOTH formats. The capstone ``trajectory.jsonl`` records only
+    eval rows (every row has ``exact_d_seg``); the torch-vehicle
+    ``torch_vehicle_trajectory.jsonl`` records EVERY epoch (loss/pose_mse) with
+    ``d_seg``/``d_pose`` populated only on eval epochs. Keep ALL rows so the
+    realtime per-epoch telemetry is visible; ``d_seg`` is None on non-eval rows."""
     if row.get("event") == "init":
+        d = _f(row, "exact_d_seg", "d_seg")
         return {
-            "epoch": 0,
-            "stage": "init",
-            "d_seg": _f(row, "exact_d_seg", "d_seg"),
-            "d_pose": _f(row, "mean_d_pose", "d_pose"),
-            "rate": _f(row, "rate"),
-            "archive_bytes": row.get("archive_bytes"),
-            "best_d_seg": _f(row, "exact_d_seg", "d_seg"),
+            "epoch": 0, "stage": "init", "d_seg": d, "d_pose": _f(row, "mean_d_pose", "d_pose"),
+            "loss": None, "pose_mse": None, "grad_norm": None,
+            "rate": _f(row, "rate"), "archive_bytes": row.get("archive_bytes"),
+            "best_d_seg": d,
             "elapsed_s": _f(row, "elapsed_s", "wall_clock_s", "wall_s", "elapsed") or 0.0,
             "lr": _f(row, "lr_scale", "lr"),
         }
-    epoch = row.get("global_epoch") or row.get("epoch")
-    d_seg = _f(row, "exact_d_seg", "d_seg")
-    if epoch is None or d_seg is None:
+    epoch = row.get("global_epoch")
+    if epoch is None:
+        epoch = row.get("epoch")
+    if epoch is None:
         return None
     return {
         "epoch": int(epoch),
         "stage": row.get("stage") or row.get("stage_name") or "",
-        "d_seg": d_seg,
+        "d_seg": _f(row, "exact_d_seg", "d_seg"),  # None on non-eval rows
         "d_pose": _f(row, "mean_d_pose", "d_pose"),
+        "loss": _f(row, "loss"),
+        "pose_mse": _f(row, "pose_mse"),
+        "grad_norm": _f(row, "grad_norm_adamw", "grad_norm_muon", "grad_norm"),
         "rate": _f(row, "rate"),
         "archive_bytes": row.get("archive_bytes"),
         "best_d_seg": _f(row, "best_d_seg"),
         "elapsed_s": _f(row, "elapsed_s", "wall_clock_s", "wall_s", "elapsed"),
-        "lr": _f(row, "lr_scale", "lr"),
+        "lr": _f(row, "lr_scale", "lr", "adamw_lr", "muon_lr"),
     }
 
 
@@ -199,70 +231,86 @@ def load_run(path: Path, total_epochs: int) -> dict[str, Any]:
         if nr is not None:
             rows.append(nr)
     rows.sort(key=lambda r: r["epoch"])
-
-    evals = [r for r in rows if r["stage"] != "init"]
-    latest = evals[-1] if evals else (rows[-1] if rows else None)
     mtime = path.stat().st_mtime
+    is_done = any((path.parent / m).exists()
+                  for m in ("DONE_MARKER", "done.json", "done.marker", "DONE", "done_marker.json"))
 
-    # best by d_seg (the descent the run is driving)
+    evals = [r for r in rows if r.get("d_seg") is not None]  # authority-eval rows
+    latest_train = rows[-1] if rows else None                # latest ANY epoch (realtime)
+    latest_eval = evals[-1] if evals else None               # latest authority eval
+
     best = None
     for r in evals:
-        if r["d_seg"] is not None and (best is None or r["d_seg"] < best["d_seg"]):
+        if best is None or r["d_seg"] < best["d_seg"]:
             best = r
 
     # started time: latest elapsed_s is seconds-since-start -> start = mtime - elapsed
-    started_unix = None
-    if latest and latest.get("elapsed_s"):
-        started_unix = mtime - latest["elapsed_s"]
+    if latest_train and latest_train.get("elapsed_s"):
+        started_unix = mtime - latest_train["elapsed_s"]
     else:
         started_unix = path.stat().st_ctime
 
-    cur_epoch = latest["epoch"] if latest else 0
-    elapsed_s = (latest.get("elapsed_s") if latest else None) or max(time.time() - started_unix, 0.0)
+    cur_epoch = latest_train["epoch"] if latest_train else 0
+    elapsed_s = (latest_train.get("elapsed_s") if latest_train else None) or max(time.time() - started_unix, 0.0)
     avg_s_per_epoch = (elapsed_s / cur_epoch) if cur_epoch > 0 else None
     total = max(total_epochs, cur_epoch)
-    remaining = max(total - cur_epoch, 0)
-    eta_s = (avg_s_per_epoch * remaining) if avg_s_per_epoch else None
+    eta_s = (avg_s_per_epoch * max(total - cur_epoch, 0)) if avg_s_per_epoch else None
     progress = (cur_epoch / total) if total else 0.0
 
     def _with_score(r: dict) -> dict:
-        s, full = _score(r["d_seg"], r.get("d_pose"), r.get("archive_bytes"))
+        s, full = _score(r.get("d_seg"), r.get("d_pose"), r.get("archive_bytes"))
         return {**r, "score": s, "score_is_full": full}
 
-    latest_s = _with_score(latest) if latest else None
+    # per-epoch realtime training telemetry (updates EVERY epoch, not just evals)
+    train = None
+    if latest_train:
+        train = {k: latest_train.get(k) for k in
+                 ("epoch", "stage", "loss", "pose_mse", "grad_norm", "lr", "elapsed_s")}
+
+    latest_eval_s = _with_score(latest_eval) if latest_eval else None
     best_s = _with_score(best) if best else None
 
-    # summary / meta across the run
-    d_segs = [r["d_seg"] for r in evals if r["d_seg"] is not None]
-    init_d_seg = rows[0]["d_seg"] if rows and rows[0]["d_seg"] is not None else None
-    descent = (init_d_seg - latest["d_seg"]) if (init_d_seg is not None and latest and latest["d_seg"] is not None) else None
+    # sparkline: prefer the dense per-epoch loss; fall back to eval d_seg
+    loss_series = [r["loss"] for r in rows if r.get("loss") is not None][-160:]
+    if loss_series:
+        spark, spark_kind = loss_series, "loss"
+    else:
+        spark, spark_kind = [r["d_seg"] for r in evals][-160:], "d_seg"
+
+    d_segs = [r["d_seg"] for r in evals]
+    init_d_seg = next((r["d_seg"] for r in rows if r.get("d_seg") is not None), None)
+    descent = ((init_d_seg - latest_eval["d_seg"])
+               if (init_d_seg is not None and latest_eval) else None)
     summary = {
+        "n_records": len(rows),
         "n_eval_epochs": len(evals),
         "init_d_seg": init_d_seg,
         "d_seg_descent": descent,
         "d_seg_min": min(d_segs) if d_segs else None,
-        "d_seg_max": max(d_segs) if d_segs else None,
         "avg_s_per_epoch": avg_s_per_epoch,
         "elapsed_s": elapsed_s,
-        # recent descent rate: Δd_seg over the last up-to-5 eval points
         "recent_dseg_per_epoch": _recent_rate(evals),
+        "latest_loss": (latest_train.get("loss") if latest_train else None),
     }
 
     return {
         "run_dir": str(path.parent.relative_to(_repo_root())),
         "trajectory_file": path.name,
         "mtime": mtime,
-        "is_live": (time.time() - mtime) < 180,  # updated in last 3 min
+        "is_live": (time.time() - mtime) < 180,  # trajectory written in last 3 min
+        "is_done": is_done,
         "started_unix": started_unix,
         "current_epoch": cur_epoch,
         "total_epochs": total,
         "progress": progress,
         "eta_s": eta_s,
-        "latest": latest_s,
+        "train": train,                # realtime per-epoch
+        "latest_eval": latest_eval_s,  # periodic authority eval
         "best": best_s,
         "summary": summary,
-        "rows": [_with_score(r) for r in evals[-40:]],  # last 40 for the table/sparkline
-        "spark": [r["d_seg"] for r in evals[-120:] if r["d_seg"] is not None],
+        "rows": [_with_score(r) for r in evals[-40:]],
+        "spark": spark,
+        "spark_kind": spark_kind,
     }
 
 
@@ -283,6 +331,10 @@ def create_app(*, total_epochs: int = DEFAULT_TOTAL_EPOCHS,
                run_dir: str | None = None) -> Flask:
     app = Flask(__name__)
     root = _repo_root()
+
+    # Warm the run-discovery cache in the background so the server boots instantly
+    # AND the first browser request hits a warm cache (no cold-glob stall).
+    threading.Thread(target=lambda: discover_runs(root), daemon=True).start()
 
     def _pick_run() -> Path | None:
         return pick_live_run(root, request.args.get("run") or run_dir)
@@ -309,8 +361,8 @@ def create_app(*, total_epochs: int = DEFAULT_TOTAL_EPOCHS,
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--host", default=DEFAULT_HOST)
+    ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--total-epochs", type=int, default=DEFAULT_TOTAL_EPOCHS,
                     help="planned total epochs for the progress bar / ETA")
     ap.add_argument("--run-dir", default=None,
@@ -344,7 +396,9 @@ h1{font-size:15px;margin:0 0 2px;letter-spacing:.04em}
 .score{font-size:30px;font-weight:700;letter-spacing:.02em}
 .tag{font-size:11px;color:var(--muted)}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-top:3px}
-.kv b{color:var(--ink);font-weight:600}
+.kv b{color:var(--ink);font-weight:600;text-align:right}
+.kv.stack{flex-direction:column;align-items:flex-start;gap:1px}
+.kv.stack b{word-break:break-all;text-align:left;line-height:1.3}
 .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--line)}
 .pill.cpu{color:var(--accent);border-color:#234}
 .pill.cuda{color:var(--good);border-color:#243}
@@ -407,14 +461,19 @@ svg{display:block}
     <div class="kv"><span id="run-epochs" class="sub"></span><span id="run-eta" class="sub"></span></div>
   </div>
 
-  <div class="section-t">Realtime — authority eval (torch-CPU)</div>
+  <div class="section-t">Realtime — live training (per-epoch) + authority eval (torch-CPU, periodic)</div>
   <div class="big">
-    <div class="card metric"><div class="l">d_seg (latest)</div><div class="v" id="m-dseg">—</div>
+    <div class="card metric"><div class="l">epoch (live)</div><div class="v" id="m-epoch">—</div>
+       <div class="tag" id="m-stage"></div></div>
+    <div class="card metric"><div class="l">loss (live)</div><div class="v" id="m-loss">—</div>
+       <div class="tag" id="m-posemse"></div></div>
+    <div class="card metric"><div class="l">d_seg (eval)</div><div class="v" id="m-dseg">—</div>
        <div class="tag" id="m-dseg-best"></div></div>
-    <div class="card metric"><div class="l">d_pose (latest)</div><div class="v" id="m-dpose">—</div></div>
+    <div class="card metric"><div class="l">d_pose (eval)</div><div class="v" id="m-dpose">—</div>
+       <div class="tag" id="m-eval-ep"></div></div>
     <div class="card metric"><div class="l" id="m-score-l">score S</div><div class="v" id="m-score">—</div>
        <div class="tag" id="m-score-note"></div></div>
-    <div class="card metric" style="flex:2;min-width:280px"><div class="l">d_seg trajectory</div>
+    <div class="card metric" style="flex:2;min-width:260px"><div class="l" id="spark-l">trajectory</div>
        <svg id="spark" width="100%" height="64" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
        <div class="tag" id="spark-range"></div></div>
   </div>
@@ -438,6 +497,7 @@ svg{display:block}
 </div>
 <script>
 const $=id=>document.getElementById(id);
+let G=null;  // live-clock state, refreshed each poll; the 1s ticker interpolates from it
 const fmt=(x,d=6)=>x==null?'—':(+x).toFixed(d);
 const sci=x=>x==null?'—':(Math.abs(x)<1e-3&&x!==0?(+x).toExponential(2):(+x).toFixed(6));
 const bytes=x=>x==null?'—':(+x).toLocaleString()+' B';
@@ -470,34 +530,41 @@ async function tick(){
   $('frontier-refreshed').textContent='pointer refreshed '+ago(fr.last_refreshed_utc?Date.parse(fr.last_refreshed_utc)/1000:null,now);
   // run
   const r=st.run;
-  if(!r){$('subline').textContent='no training run found under experiments/results/';return;}
-  $('subline').textContent='watching '+r.run_dir+'  ·  '+(r.available_runs?.length||0)+' runs on disk';
+  if(!r){$('subline').textContent='no training run found under experiments/results/';G=null;return;}
+  $('subline').textContent='watching '+r.run_dir+'  ·  '+(st.available_runs?.length||0)+' runs on disk';
   $('run-name').textContent=r.run_dir+'  ('+r.trajectory_file+')';
   $('run-started').textContent='started '+ago(r.started_unix,now)+'  ·  '+whenUTC(new Date(r.started_unix*1000).toISOString());
   const dot=$('live-dot'),word=$('live-word');
-  if(r.is_live){dot.classList.add('on');word.textContent='LIVE · last row '+ago(r.mtime,now);word.className='live';}
-  else{dot.classList.remove('on');word.textContent='stale · last row '+ago(r.mtime,now);word.className='stale';}
-  const pct=(100*(r.progress||0));
-  $('bar').style.width=Math.min(100,pct).toFixed(1)+'%';
-  $('bar-lbl').textContent=pct.toFixed(1)+'%';
+  if(r.is_done){dot.classList.remove('on');word.textContent='done';word.className='sub';}
+  else if(r.is_live){dot.classList.add('on');word.textContent='LIVE · last row '+ago(r.mtime,now);word.className='live';}
+  else{dot.classList.remove('on');word.textContent='running · last row '+ago(r.mtime,now)+' (slow eval?)';word.className='stale';}
+  // store live-clock state for the 1s ticker (elapsed/ETA tick locally between polls)
+  G={started:r.started_unix,serverNow:st.now_unix,pollLocal:Date.now()/1000,
+     eta:r.eta_s,avg:r.summary.avg_s_per_epoch,total:r.total_epochs,
+     epoch:r.current_epoch,progress:r.progress,running:!r.is_done};
   $('run-epochs').textContent='epoch '+r.current_epoch+' / '+r.total_epochs;
-  $('run-eta').textContent='ETA '+dur(r.eta_s)+'  ·  '+(r.summary.avg_s_per_epoch?dur(r.summary.avg_s_per_epoch)+'/epoch':'');
-  // realtime metrics
-  const L=r.latest||{},B=r.best||{};
-  $('m-dseg').textContent=sci(L.d_seg);
-  $('m-dseg-best').innerHTML=B.d_seg!=null?`best <span class="gx">${sci(B.d_seg)}</span> @ ep ${B.epoch}`:'';
-  $('m-dpose').textContent=sci(L.d_pose);
-  $('m-score').textContent=L.score==null?'—':(+L.score).toFixed(5);
-  $('m-score-l').textContent=L.score_is_full?'score S (full)':'score S (distortion-only)';
-  $('m-score-note').textContent=L.score_is_full?'100·d_seg+√(10·d_pose)+25·B/N':'pre-byte-close · rate term not yet added';
+  // train (live per-epoch) + latest_eval (periodic authority)
+  const T=r.train||{},E=r.latest_eval||{},B=r.best||{};
+  $('m-epoch').textContent=T.epoch==null?'—':T.epoch;
+  $('m-stage').textContent=T.stage||'';
+  $('m-loss').textContent=T.loss==null?'—':(+T.loss).toFixed(4);
+  $('m-posemse').textContent=T.pose_mse==null?'':'pose_mse '+(+T.pose_mse).toFixed(5)+(T.grad_norm!=null?' · |g| '+(+T.grad_norm).toFixed(1):'');
+  $('m-dseg').textContent=sci(E.d_seg);
+  $('m-dseg-best').innerHTML=B.d_seg!=null?`best <span class="gx">${sci(B.d_seg)}</span> @ ep ${B.epoch}`:'awaiting first eval';
+  $('m-dpose').textContent=sci(E.d_pose);
+  $('m-eval-ep').textContent=E.epoch!=null?'@ ep '+E.epoch:'';
+  $('m-score').textContent=E.score==null?'—':(+E.score).toFixed(5);
+  $('m-score-l').textContent=E.score_is_full?'score S (full)':'score S (distortion-only)';
+  $('m-score-note').textContent=E.score_is_full?'100·d_seg+√(10·d_pose)+25·B/N':'pre-byte-close · rate term not yet added';
+  $('spark-l').textContent=(r.spark_kind==='loss'?'loss':'d_seg')+' trajectory';
   sparkline(r.spark);
   // summary
   const s=r.summary;
-  $('s-neval').textContent=s.n_eval_epochs;
+  $('s-neval').textContent=s.n_eval_epochs+(s.n_records?' / '+s.n_records+' rows':'');
   $('s-descent').textContent=s.d_seg_descent==null?'—':s.d_seg_descent.toFixed(4);
   $('s-rate').textContent=s.recent_dseg_per_epoch==null?'—':s.recent_dseg_per_epoch.toExponential(2);
   $('s-spe').textContent=s.avg_s_per_epoch==null?'—':s.avg_s_per_epoch.toFixed(1);
-  $('s-elapsed').textContent=dur(s.elapsed_s);
+  liveClock();  // immediate elapsed/ETA paint; the 1s ticker continues it
   // table
   const tb=$('tbody');tb.innerHTML='';
   for(const row of [...r.rows].reverse()){const tr=document.createElement('tr');
@@ -507,9 +574,28 @@ async function tick(){
       `<td>${row.score==null?'—':(+row.score).toFixed(5)}</td><td>${sci(row.best_d_seg)}</td>`+
       `<td>${row.lr==null?'—':(+row.lr).toFixed(4)}</td><td>${dur(row.elapsed_s)}</td>`;
     tb.appendChild(tr);}
-  $('foot').textContent='advisory display only · authority d_seg/d_pose are torch-CPU · frontier is pointer-only · refresh ~2.5s';
+  $('foot').textContent='advisory display only · authority d_seg/d_pose are torch-CPU · frontier is pointer-only · poll ~2.5s · clock 1s';
 }
-tick();setInterval(tick,2500);
+// 1s local ticker: elapsed + ETA + progress advance smoothly between polls (operator: realtime, regardless of poll rate)
+function liveClock(){
+  if(!G)return;
+  const dLocal=Math.max(0,Date.now()/1000 - G.pollLocal);
+  const baseElapsed=(G.serverNow!=null&&G.started!=null)?(G.serverNow-G.started):0;
+  const elapsed=baseElapsed+(G.running?dLocal:0);
+  $('s-elapsed').textContent=dur(elapsed);
+  if(G.eta!=null&&G.running){
+    const eta=Math.max(0,G.eta-dLocal);
+    $('run-eta').textContent='ETA '+dur(eta)+'  ·  '+(G.avg?dur(G.avg)+'/epoch':'');
+    // nudge the progress bar forward fractionally within the current epoch
+    if(G.avg&&G.total){const frac=Math.min(1,dLocal/G.avg);
+      const pct=Math.min(100,100*((G.epoch+frac)/G.total));
+      $('bar').style.width=pct.toFixed(2)+'%';$('bar-lbl').textContent=pct.toFixed(1)+'%';}
+  } else {
+    $('run-eta').textContent=G.running?'ETA —':'finished';
+    const pct=Math.min(100,100*(G.progress||0));$('bar').style.width=pct.toFixed(1)+'%';$('bar-lbl').textContent=pct.toFixed(1)+'%';
+  }
+}
+tick();setInterval(tick,2500);setInterval(liveClock,1000);
 </script>
 </body></html>"""
 
