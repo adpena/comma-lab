@@ -64,6 +64,28 @@ that beats the advisory bar is the RIGHT default (decide-don't-defer)": a paid n
 scale → byte-close → paired CPU+CUDA exact eval is now the right spend. The $100 grant exists for exactly
 this. Operator decision: commit the $100 to the de-risked capstone n600?
 
+## Trajectory COMPLETED (`a28f8a9c` final, commit 5133fe82a) — strengthens the verdict
+
+The fixed arm finished all 3 stages (el=1172s): **d_seg 0.50727 → 0.06647 → 0.01646 → 0.01197** (stage 1
+CE → stage 2 tau_softplus → stage 3 smooth), 42× descent, still falling. **The decisive strengthening:
+stage 3 `smooth_disagreement` REFINED d_seg (0.0165 → 0.0120) under the correct recipe — the SAME stage
+that RAISED d_seg in the buggy `c1prime`.** This directly refutes BUG-C as anything but a throttle
+consequence: the surrogate was never the problem; the dropped muon_lr + LR-floor were. Monotonic descent
+across all three stages on a held-fixed small basis = the cleanest possible "not capacity-walled" signal.
+Basin (5.6e-4) still not reached at n8 — that remains the paid n600 measurement.
+
+### Compute-heavy probe reconciled (`a6b41ea9`, commit e3459719d) — confirms "recipe, not compute"
+
+The parallel compute-heavy weight-tied-decoder probe (K inflate passes, hinge recipe, n8/35ep) found d_seg
+**compute-INVARIANT** (best 0.0158 at K=4, degrades at K≥8) — more inflate-time compute does NOT lower
+d_seg. Its own "hardens the capacity verdict / pivot to waterfiller" framing is OUTDATED (it ran in
+parallel, never saw the recipe-bug result). Reconciled correctly: its 0.0158 plateau is the SAME
+~0.012–0.016 band a28f8a9c's fixed-recipe single pass reached — so the honest reading is **compute is not
+the lever, the recipe is.** The unified cross-agent verdict: the d_seg wall is **not capacity** (a28f8a9c
+falsified), **not compute** (a6b41ea9 compute-invariant), but **recipe + scale** — the fixed recipe
+unfreezes the descent; reaching the basin is the epoch-budget question (PR95 = 29,650 epochs at n600 = the
+paid run). (Open lower-prior residual: implicit coordinate-MLP "capacity from compute" untested.)
+
 ## Bottom line (non-sycophantic)
 
 For the first time this session, the d_seg wall has a specific, fixable name and the fix is MEASURED to
