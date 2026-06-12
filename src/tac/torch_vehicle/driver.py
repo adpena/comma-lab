@@ -65,6 +65,77 @@ if TYPE_CHECKING:  # StageSpec used only in annotations at module level
     from tac.torch_vehicle.curriculum import StageSpec
 
 _EVAL_H, _EVAL_W = 384, 512
+_SEG_NUM_CLASSES = 5  # contest SegNet head (upstream/modules.py: smp.Unet classes=5)
+
+
+def _seg_loss_for_spec(
+    spec: StageSpec,
+    seg_out: torch.Tensor,
+    seg_targets_hard: torch.Tensor,
+) -> torch.Tensor:
+    """Score-domain seg loss router (Lever 2) — DEFAULT-PRESERVING.
+
+    ``spec.seg_surrogate is None`` (the default for every vendored-projected
+    ``StageSpec``) returns ``spec.seg_loss_fn(seg_out, seg_targets_hard)`` EXACTLY
+    as the legacy non-routed call did — byte-for-byte identical, so a basin that
+    resumes onto this code is unchanged (verified by
+    ``test_default_seg_surrogate_is_byte_identical_to_vendored_call`` +
+    ``test_default_seg_surrogate_gradient_is_byte_identical`` in
+    ``tests/test_seg_surrogate_lever.py``).
+
+    When ``spec.seg_surrogate`` is a surrogate name (``"soft_cosine"`` /
+    ``"fisher_rao"`` / ``"sinkhorn"``) the seg term is routed through the
+    differentiable score-domain d_seg surrogate
+    :func:`tac.losses.core.segnet_surrogate_per_pixel`. The contest d_seg is the
+    per-pixel SegNet ARGMAX-DISAGREEMENT rate; the surrogate concentrates the
+    gradient where the argmax actually flips (HNeRV parity L6), unlike CE which
+    spends capacity on confident-interior pixels the argmax already gets right.
+
+    GT side-information: the curriculum caches the HARD per-pixel target argmax
+    (``seg_targets_hard``, ``(B, 384, 512)`` int64), not GT logits. The score-domain
+    surrogate needs a GT class distribution; we build SHARP one-hot GT LOGITS from
+    the hard target (argmax(GT logits) == the cached hard class), so the GT stays
+    hard while only the PRED is temperature-softened (see the inline comment below).
+    With one-hot GT, soft-cosine ``1 - Σ_c softmax(pred/T)_c · onehot_c =
+    1 - softmax(pred/T)[gt]`` is EXACTLY the per-pixel "pred's probability mass NOT
+    on the GT-argmax class" — the differentiable argmax-flip surrogate the memo
+    specifies, cache-free (argmax is all the surrogate's per-pixel target needs).
+    """
+    if spec.seg_surrogate is None:
+        # Legacy vendored path — UNCHANGED. Do not touch (basin-resume safety).
+        return spec.seg_loss_fn(seg_out, seg_targets_hard)
+
+    from tac.losses.core import segnet_surrogate_per_pixel
+
+    # seg_out: (B, 5, H, W) logits. seg_targets_hard: (B, H, W) int64 class indices.
+    # Build SHARP one-hot GT LOGITS (B, 5, H, W): the GT-argmax class gets a large
+    # positive logit, all others ~0. ``softmax(gt_logits / T)`` is then ~one-hot for
+    # ANY reasonable T (at the memo's coldest T=0.05, 30/0.05=600 → exactly one-hot),
+    # so the GT is NOT temperature-softened (it is hard, as the contest d_seg is a
+    # hard argmax) while ``spec.seg_temperature`` softens ONLY the PREDICTION. With
+    # one-hot GT, soft_cosine reduces to ``1 - softmax(pred/T)[gt]`` EXACTLY — the
+    # differentiable argmax-flip surrogate the memo specifies (verified
+    # bit-equal to a hand-computed reference at T∈{1.0, 0.5, 0.1} in the lever test).
+    # Passing GT as LOGITS (``gt_already_probs=False``) — NOT cached probs — is what
+    # lets the surrogate honor non-unit ``temperature`` (the helper refuses cached
+    # probs at T≠1 because cached probs are softmax@T=1; a one-hot logit has no such
+    # constraint). This generalizes to fisher_rao / sinkhorn (same one-hot GT logits).
+    _ONEHOT_GT_LOGIT = 30.0  # softmax(30·onehot/T) ≈ one-hot for all T ≥ ~0.02
+    gt_onehot = F.one_hot(
+        seg_targets_hard.long(), num_classes=_SEG_NUM_CLASSES
+    )  # (B, H, W, 5)
+    gt_logits = (
+        gt_onehot.permute(0, 3, 1, 2).to(seg_out.dtype) * _ONEHOT_GT_LOGIT
+    )  # (B, 5, H, W) sharp one-hot logits
+    per_pixel = segnet_surrogate_per_pixel(
+        seg_out,
+        gt_logits,
+        surrogate=spec.seg_surrogate,
+        temperature=spec.seg_temperature,
+        gt_already_probs=False,
+        num_classes=_SEG_NUM_CLASSES,
+    )  # (B, H, W)
+    return per_pixel.mean()
 
 
 class _SimulatedDeath(Exception):
@@ -416,7 +487,9 @@ class TorchVehicleDriver:
             else:
                 seg_out, pose_pred6 = self.scorer.seg_pose_forward(decoded_bhwc)
 
-                seg_l = spec.seg_loss_fn(seg_out, self.scorer.seg_targets_hard[idx])
+                seg_l = _seg_loss_for_spec(
+                    spec, seg_out, self.scorer.seg_targets_hard[idx]
+                )
                 pose_mse = F.mse_loss(pose_pred6, self.scorer.pose_targets[idx])
                 pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
 
@@ -488,7 +561,7 @@ class TorchVehicleDriver:
         frames_seg = decoded_bhwc.detach().requires_grad_(True)  # train_device leaf
         seg_out = self.scorer.seg_forward_train(frames_seg)
         seg_targets = self.scorer.seg_targets_hard[idx]
-        seg_l = spec.seg_loss_fn(seg_out, seg_targets)
+        seg_l = _seg_loss_for_spec(spec, seg_out, seg_targets)
         (spec.seg_weight * seg_l).backward()
         cot_seg = frames_seg.grad  # d(w_seg*seg_l)/dF on train_device
 

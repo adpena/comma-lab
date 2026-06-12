@@ -63,6 +63,18 @@ class StageSpec:
     cat_sigma: float
     use_qat: bool
     init_latents_random: bool
+    # -- Lever 2 (score-domain seg surrogate) — DEFAULT-PRESERVING ------------
+    # ``seg_surrogate is None`` (the default) reproduces the vendored ``seg_loss_fn``
+    # path BYTE-FOR-BYTE: the driver calls ``spec.seg_loss_fn(seg_out, targets_hard)``
+    # exactly as before. Set it to a surrogate name (``"soft_cosine"`` / ``"fisher_rao"``
+    # / ``"sinkhorn"``) to route the seg term through the differentiable score-domain
+    # d_seg surrogate ``tac.losses.core.segnet_surrogate_per_pixel`` instead (the
+    # argmax-flip-concentrated loss; HNeRV parity L6). ``seg_temperature`` is the
+    # surrogate's softmax temperature (1.0 = unit; anneal toward hard with T→small).
+    # These fields are LAST + defaulted so every existing positional ``StageSpec(...)``
+    # construction (tests, the vendored projection) is unchanged.
+    seg_surrogate: str | None = None
+    seg_temperature: float = 1.0
 
 
 def _spec_from_stage_config(cfg: Any, epochs_override: int | None, ema_decay: float) -> StageSpec:
